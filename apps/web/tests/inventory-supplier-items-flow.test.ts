@@ -13,8 +13,8 @@ test("supplier item management is permission-gated and tenant-scoped", () => {
   const actions = readRepo(
     "apps/web/app/(protected)/inventory/suppliers/[id]/items/actions.ts",
   );
-  const page = readRepo(
-    "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx",
+  const suppliersPage = readRepo(
+    "apps/web/app/(protected)/inventory/suppliers/page.tsx",
   );
 
   assert.match(
@@ -23,8 +23,31 @@ test("supplier item management is permission-gated and tenant-scoped", () => {
   );
   assert.match(actions, /\.eq\("tenant_id", claims\.tenant_id\)/);
   assert.match(actions, /\.eq\("supplier_id", data\.supplierId\)/);
-  assert.match(page, /PERMISSION_KEYS\.PROCUREMENT_PRICE_LIST_READ/);
-  assert.match(page, /\.eq\("is_active", true\)/);
+  assert.match(suppliersPage, /PERMISSION_KEYS\.PROCUREMENT_PRICE_LIST_READ/);
+  assert.match(suppliersPage, /\.eq\("tenant_id", claims\.tenant_id\)/);
+  assert.match(suppliersPage, /\.eq\("is_active", true\)/);
+});
+
+test("supplier rows open one addressable AppDialog and detail URL redirects", () => {
+  const suppliersClient = readRepo(
+    "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx",
+  );
+  const itemsClient = readRepo(
+    "apps/web/app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
+  );
+  const detailPage = readRepo(
+    "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx",
+  );
+
+  assert.match(suppliersClient, /next\.set\("supplierId", String\(row\.id\)\)/);
+  assert.match(suppliersClient, /onRowClick=\{canReadItems \? openItems/);
+  assert.match(suppliersClient, /<SupplierItemsClient/);
+  assert.doesNotMatch(
+    suppliersClient,
+    /router\.push\(`\/inventory\/suppliers\/\$\{row\.id\}\/items`\)/,
+  );
+  assert.match(itemsClient, /<AppDialog/);
+  assert.match(detailPage, /redirect\(`\/inventory\/suppliers\?supplierId=/);
 });
 
 test("retrospective procurement maps active ingredients through the GRN", () => {
@@ -39,7 +62,10 @@ test("retrospective procurement maps active ingredients through the GRN", () => 
   assert.doesNotMatch(poPage, /\.from\("supplier_items"\)/);
   assert.doesNotMatch(poClient, /supplierIds|ingredient options/);
   assert.match(grnLoader, /\.from\("supplier_items"\)/);
-  assert.match(grnLoader, /allowedIngredientIds\.has\(ingredient\.id\)/);
+  assert.match(
+    grnLoader,
+    /suppliersByIngredient\.get\(ingredient\.id\)\?\.length \?\? 0\) > 0/,
+  );
 });
 
 test("Server Actions reject supplier-mismatched PO and GRN line writes", () => {
@@ -52,7 +78,10 @@ test("Server Actions reject supplier-mismatched PO and GRN line writes", () => {
 
   assert.match(poActions, /validateSupplierIngredients/);
   assert.match(poActions, /Có nguyên liệu chưa được gán cho nhà cung cấp\./);
-  assert.match(grnActions, /\.eq\("supplier_id", grn\.supplier_id\)/);
+  assert.match(
+    grnActions,
+    /grn\.supplier_id != null && data\.supplierId !== grn\.supplier_id/,
+  );
   assert.match(grnActions, /Nguyên liệu chưa được gán cho nhà cung cấp\./);
 });
 

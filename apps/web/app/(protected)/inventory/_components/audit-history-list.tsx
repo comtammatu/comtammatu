@@ -22,7 +22,9 @@ export function AuditHistoryList({ logs }: { logs: AuditLogRow[] }) {
           <ItemContent>
             <ItemTitle>{formatAction(log.action)}</ItemTitle>
             <ItemDescription>
-              {log.userId ?? INVENTORY_VI.systemActor} · {formatVNDateTime(log.createdAt)}
+              {log.actorName ??
+                (log.userId ? UNKNOWN_LABEL_VI : INVENTORY_VI.systemActor)}{" "}
+              · {formatVNDateTime(log.createdAt)}
             </ItemDescription>
           </ItemContent>
         </Item>
@@ -43,6 +45,8 @@ function formatAction(action: string): string {
     void: "Vô hiệu",
     "inventory.grn.created_from_po": "Tạo phiếu nhập từ đơn đặt hàng",
     "inventory.grn.line_amended": "Sửa dòng phiếu nhập",
+    "inventory.grn.saved": "Lưu phiếu nhập",
+    "inventory.grn.cancelled": "Huỷ phiếu nhập",
   };
   return action.includes(" · ") ? action : (map[action] ?? UNKNOWN_LABEL_VI);
 }

@@ -36,6 +36,34 @@ test("Wave E GRN DETAIL uses AppPageTabs document/history", () => {
   );
 });
 
+test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", () => {
+  const client = read(
+    "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
+  );
+  const surface = read("app/components/surface.tsx");
+
+  assert.match(
+    client,
+    /stickyList=\{!embedded && presentation !== "dialog"\}/,
+    "dialog tabs must not use the Owner shell sticky offset",
+  );
+  assert.match(
+    client,
+    /title=\{grn\.code\}[\s\S]*description=\{statusBadge\.label\}/,
+    "dialog header must not repeat supplier and receiving warehouse metadata",
+  );
+  assert.match(
+    surface,
+    /in-\[\[data-slot=dialog-footer\]\]:static[\s\S]*in-\[\[data-slot=dialog-footer\]\]:w-full/,
+    "sticky detail footers fill the dialog footer instead of floating right",
+  );
+  assert.match(
+    surface,
+    /in-\[\[data-slot=dialog-footer\]\]:border-0[\s\S]*in-\[\[data-slot=dialog-footer\]\]:bg-transparent[\s\S]*in-\[\[data-slot=dialog-footer\]\]:shadow-none/,
+    "dialog footer owns its border, background, and elevation",
+  );
+});
+
 test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () => {
   const client = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
@@ -187,25 +215,20 @@ test("Wave E GRN DETAIL draft aligns with create DOC density", () => {
     /draftQcHint/,
     "draft section has no instructional fluff description",
   );
-  assert.match(
+  assert.doesNotMatch(
     client,
     /pb-24/,
-    "draft workspace reserves sticky footer clearance",
+    "shared detail footer owns its layout without route-local padding",
   );
   assert.match(
     client,
-    /showDeskEditor &&[\s\S]*lg:grid-cols-\[minmax\(0,1fr\)_minmax\(18rem,22rem\)\]/,
-    "draft desk editor column only when a line is open",
+    /render: \(line, idx\) =>[\s\S]*canMutateDraft && isDesktopLineEdit \? \([\s\S]*<LineRow[\s\S]*showHeader=\{false\}[\s\S]*onChange=\{\(p\) => patch\(idx, p\)\}/,
+    "draft desktop table edits delivered and rejected quantities inline",
   );
-  assert.match(
+  assert.doesNotMatch(
     client,
-    /lg:sticky lg:top-3[\s\S]*lg:max-h-\[calc\(100dvh-8\.5rem\)\][\s\S]*lg:overflow-hidden/,
-    "draft desk editor sticks and scrolls above sticky footer",
-  );
-  assert.match(
-    client,
-    /contentClassName="min-h-0 flex-1 gap-3 overflow-y-auto"/,
-    "draft desk editor fields scroll independently inside panel",
+    /showDeskEditor|<aside|lg:grid-cols-\[minmax\(0,1fr\)_minmax\(18rem,22rem\)\]/,
+    "draft desktop table has no side editor panel",
   );
   assert.match(
     client,

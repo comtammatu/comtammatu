@@ -106,6 +106,8 @@ DECLARE
   v_second jsonb;
   v_request_id bigint;
   v_partial_request_id bigint;
+  v_po_id bigint;
+  v_grn_id bigint;
   v_stock_request_id bigint;
 BEGIN
   SELECT profile.id, profile.tenant_id
@@ -366,6 +368,31 @@ BEGIN
          AND request_item.ingredient_id = v_unmapped_ingredient
      ) THEN
     RAISE EXCEPTION 'WORKFLOW RPC: mixed supplier coverage partial PO failed';
+  END IF;
+
+  v_po_id := (v_first #>> '{purchase_orders,0,po_id}')::bigint;
+
+  SELECT grn.id
+  INTO v_grn_id
+  FROM public.goods_received_notes AS grn
+  WHERE grn.tenant_id = v_tenant
+    AND grn.po_id = v_po_id
+    AND grn.status = 'draft';
+
+  IF v_grn_id IS NULL THEN
+    RAISE EXCEPTION 'WORKFLOW RPC: automatic draft GRN missing';
+  END IF;
+
+  PERFORM public.cancel_purchase_order(
+    v_po_id,
+    'Test cancellation with draft GRN'
+  );
+
+  IF (SELECT status FROM public.purchase_orders WHERE id = v_po_id)
+       <> 'cancelled'
+     OR (SELECT status FROM public.goods_received_notes WHERE id = v_grn_id)
+       <> 'cancelled' THEN
+    RAISE EXCEPTION 'WORKFLOW RPC: PO cancellation with draft GRN failed';
   END IF;
 
   v_first := public.save_stock_request(

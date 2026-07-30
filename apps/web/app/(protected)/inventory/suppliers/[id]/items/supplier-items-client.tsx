@@ -26,7 +26,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, MultiSelectCombobox } from "@/components/form";
+import { AppDialog, FormDialog, MultiSelectCombobox } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
@@ -36,13 +36,7 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import {
-  AppBackLink,
-  AppListFrame,
-  AppPage,
-  AppPageHeader,
-  AppToolbar,
-} from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
@@ -165,11 +159,15 @@ export function SupplierItemsClient({
   ingredients,
   rows,
   canManage,
+  open,
+  onOpenChange,
 }: {
   supplier: { id: number; name: string };
   ingredients: SupplierIngredientOption[];
   rows: SupplierItemRow[];
   canManage: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -319,29 +317,14 @@ export function SupplierItemsClient({
 
   return (
     <>
-      <AppPage width="wide" scroll>
-        <AppPageHeader
-          breadcrumb={
-            <AppBackLink href="/inventory/suppliers">
-              {messages.inventory.suppliers.title}
-            </AppBackLink>
-          }
-          title={supplier.name}
-          description={copy.description}
-          actions={
-            canManage ? (
-              <Button
-                type="button"
-                size="touch"
-                disabled={availableIngredients.length === 0}
-                onClick={() => setDialogOpen(true)}
-              >
-                <IconPackagePlus />
-                {copy.addAction}
-              </Button>
-            ) : null
-          }
-        />
+      <AppDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={supplier.name}
+        description={copy.description}
+        contentClassName="max-h-dvh-95 overflow-hidden sm:max-w-4xl"
+        bodyClassName="min-h-0 overflow-y-auto p-0"
+      >
         <AppListFrame
           toolbar={
             <AppToolbar
@@ -359,6 +342,19 @@ export function SupplierItemsClient({
                     aria-label={copy.searchPlaceholder}
                   />
                 </InputGroup>
+              }
+              actions={
+                canManage ? (
+                  <Button
+                    type="button"
+                    size="touch"
+                    disabled={availableIngredients.length === 0}
+                    onClick={() => setDialogOpen(true)}
+                  >
+                    <IconPackagePlus />
+                    {copy.addAction}
+                  </Button>
+                ) : null
               }
               reset={
                 <Badge variant="outline" className="rounded-full">
@@ -421,7 +417,7 @@ export function SupplierItemsClient({
             )}
           />
         </AppListFrame>
-      </AppPage>
+      </AppDialog>
 
       <FormDialog
         open={dialogOpen}

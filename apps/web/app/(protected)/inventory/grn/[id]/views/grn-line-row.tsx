@@ -30,6 +30,7 @@ export function LineRow({
   onDelete,
   onAmend,
   chrome = "card",
+  showHeader = true,
 }: {
   tenantId: number;
   grnId: number;
@@ -41,6 +42,7 @@ export function LineRow({
   onDelete?: () => void;
   onAmend: () => void;
   chrome?: "card" | "plain";
+  showHeader?: boolean;
 }) {
   const qualityStatus = deriveGrnQualityStatus(line.actual, line.rejected);
   const qualityLabel =
@@ -50,76 +52,80 @@ export function LineRow({
         ? grnCopy.line.qualityPartial
         : grnCopy.line.qualityRejected;
   const acceptedQuantity = Math.max(line.actual - line.rejected, 0);
-  const excessQuantity = Math.max(
-    acceptedQuantity - line.poAppliedQuantity,
-    0,
-  );
+  const excessQuantity = Math.max(acceptedQuantity - line.poAppliedQuantity, 0);
   const shortageQuantity = Math.max(
     line.remainingQuantity - line.poAppliedQuantity,
     0,
   );
   const content = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-bold">{line.name}</p>
-          {!isDraft ? (
-            <>
-              <p className="text-xs text-muted-foreground">
-                {grnCopy.line.orderedDeliveredAccepted(
-                  line.required,
-                  line.actual,
-                  acceptedQuantity,
-                  line.rejected,
-                  line.unit,
-                )}
-              </p>
-              {excessQuantity > 0 || shortageQuantity > 0 ? (
-                <p className="text-xs text-warning-foreground">
-                  {excessQuantity > 0
-                    ? `Dư ngoài đơn ${formatQty(excessQuantity)} ${line.unit}`
-                    : `Còn thiếu ${formatQty(shortageQuantity)} ${line.unit}`}
+      {showHeader ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-bold">{line.name}</p>
+            {!isDraft ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {grnCopy.line.orderedDeliveredAccepted(
+                    line.required,
+                    line.actual,
+                    acceptedQuantity,
+                    line.rejected,
+                    line.unit,
+                  )}
                 </p>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge
-            variant={
-              qualityStatus === "accepted"
-                ? "success"
-                : qualityStatus === "partial"
-                  ? "warning"
-                  : "destructive"
-            }
-          >
-            {qualityStatus === "accepted" ? (
-              <IconCircleCheck className="size-3.5" />
-            ) : (
-              <IconTriangleAlert className="size-3.5" />
-            )}
-            {qualityLabel}
-          </Badge>
-          {showAmendAffordance ? (
-            <Button type="button" variant="outline" size="sm" onClick={onAmend}>
-              {grnCopy.amend.action}
-            </Button>
-          ) : null}
-          {isDraft && onDelete ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-destructive hover:text-destructive"
-              onClick={onDelete}
-              aria-label={grnCopy.line.deleteLineAria}
+                {excessQuantity > 0 || shortageQuantity > 0 ? (
+                  <p className="text-xs text-warning-foreground">
+                    {excessQuantity > 0
+                      ? `Dư ngoài đơn ${formatQty(excessQuantity)} ${line.unit}`
+                      : `Còn thiếu ${formatQty(shortageQuantity)} ${line.unit}`}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge
+              variant={
+                qualityStatus === "accepted"
+                  ? "success"
+                  : qualityStatus === "partial"
+                    ? "warning"
+                    : "destructive"
+              }
             >
-              <IconTrash className="size-4" />
-            </Button>
-          ) : null}
+              {qualityStatus === "accepted" ? (
+                <IconCircleCheck className="size-3.5" />
+              ) : (
+                <IconTriangleAlert className="size-3.5" />
+              )}
+              {qualityLabel}
+            </Badge>
+            {showAmendAffordance ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAmend}
+              >
+                {grnCopy.amend.action}
+              </Button>
+            ) : null}
+            {isDraft && onDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+                onClick={onDelete}
+                aria-label={grnCopy.line.deleteLineAria}
+              >
+                <IconTrash className="size-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {isDraft ? (
         <>

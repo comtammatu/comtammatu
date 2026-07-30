@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -212,8 +218,11 @@ export function PurchaseRequestsClient({
       : (rows.find((row) => row.id === selectedId) ?? null);
   const unassignedPoItems =
     selected?.items.filter((item) => unassignedPoItemIds.includes(item.id)) ?? [];
-  const createOpen = mode === "create" || mode === "edit";
+  const createOpen =
+    mode === "create" || (mode === "edit" && selected != null);
   const poOpen = mode === "create-po" && selected != null;
+  const recordMode =
+    mode === "view" || mode === "edit" || mode === "create-po";
   const filtered = useMemo(
     () =>
       rows.filter((row) =>
@@ -252,19 +261,28 @@ export function PurchaseRequestsClient({
     return JSON.stringify([nextDate, nextDrafts]);
   }
 
-  function updateUrl(
-    nextRequestId: number | null,
-    nextMode: "view" | "edit" | "create" | "create-po" | null,
-    method: "push" | "replace" = "push",
-  ) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (nextRequestId == null) params.delete("requestId");
-    else params.set("requestId", String(nextRequestId));
-    if (nextMode == null) params.delete("mode");
-    else params.set("mode", nextMode);
-    const href = params.size > 0 ? `${pathname}?${params}` : pathname;
-    router[method](href, { scroll: false });
-  }
+  const updateUrl = useCallback(
+    (
+      nextRequestId: number | null,
+      nextMode: "view" | "edit" | "create" | "create-po" | null,
+      method: "push" | "replace" = "push",
+    ) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (nextRequestId == null) params.delete("requestId");
+      else params.set("requestId", String(nextRequestId));
+      if (nextMode == null) params.delete("mode");
+      else params.set("mode", nextMode);
+      const href = params.size > 0 ? `${pathname}?${params}` : pathname;
+      router[method](href, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  useEffect(() => {
+    if (!recordMode || selectedId == null || selected != null) return;
+    toast.error(copy.notFound);
+    updateUrl(null, null, "replace");
+  }, [recordMode, selected, selectedId, updateUrl]);
 
   useEffect(() => {
     if (mode !== "edit" || !selected) return;

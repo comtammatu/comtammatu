@@ -37,7 +37,8 @@ export function HistoryTab({
       action: `${messages.owner.staffAudit.actionLabels[entry.action] ?? UNKNOWN_LABEL_VI} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
       entityType: "permission",
       entityId: entry.actorUserId,
-      userId: actorNameById.get(entry.actorUserId) ?? UNKNOWN_LABEL_VI,
+      userId: entry.actorUserId,
+      actorName: actorNameById.get(entry.actorUserId) ?? UNKNOWN_LABEL_VI,
       createdAt: entry.at,
     };
   });

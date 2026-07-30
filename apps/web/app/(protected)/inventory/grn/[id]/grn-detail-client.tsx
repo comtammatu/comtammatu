@@ -24,7 +24,6 @@ import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
-  Pencil as IconPencil,
   Receipt as IconReceipt,
   Save as IconDeviceFloppy,
   Plus as IconPlus,
@@ -166,8 +165,7 @@ export function GRNDetailClient({
       startConfirm,
       grnListBasePath,
       grnMobileBackPath,
-      onConfirmed:
-        presentation === "dialog" ? closeOwnerDialogUrl : undefined,
+      onConfirmed: presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
 
   function cancelDraft() {
@@ -195,11 +193,6 @@ export function GRNDetailClient({
       ? -1
       : lines.findIndex((line) => line.lineId === editingLineId);
   const editingLine = editingIdx >= 0 ? lines[editingIdx] : null;
-  const showDeskEditor =
-    canMutateDraft &&
-    isDesktopLineEdit &&
-    editingLine != null &&
-    editingIdx >= 0;
 
   const receivingLocationName = grn.locationName;
 
@@ -304,26 +297,40 @@ export function GRNDetailClient({
       {
         key: "actual",
         header: grnCopy.lineHeaderThisReceipt,
-        className: "align-top",
-        render: (line) => (
-          <div>
-            <p
-              className={cn(
-                "font-mono font-medium tabular-nums",
-                line.actual <= 0 && "font-sans text-muted-foreground",
-              )}
-            >
-              {line.actual > 0
-                ? `${formatQty(line.actual)} ${line.unit}`
-                : grnCopy.line.enterQuantity}
-            </p>
-            {line.rejected > 0 ? (
-              <p className="mt-1 text-xs text-warning">
-                {grnCopy.line.rejectedShort(line.rejected, line.unit)}
+        className: "min-w-80 align-top",
+        render: (line, idx) =>
+          canMutateDraft && isDesktopLineEdit ? (
+            <LineRow
+              tenantId={grn.tenantId}
+              grnId={grn.id}
+              line={line}
+              idx={idx}
+              isDraft
+              showAmendAffordance={false}
+              showHeader={false}
+              chrome="plain"
+              onChange={(p) => patch(idx, p)}
+              onAmend={() => undefined}
+            />
+          ) : (
+            <div>
+              <p
+                className={cn(
+                  "font-mono font-medium tabular-nums",
+                  line.actual <= 0 && "font-sans text-muted-foreground",
+                )}
+              >
+                {line.actual > 0
+                  ? `${formatQty(line.actual)} ${line.unit}`
+                  : grnCopy.line.enterQuantity}
               </p>
-            ) : null}
-          </div>
-        ),
+              {line.rejected > 0 ? (
+                <p className="mt-1 text-xs text-warning">
+                  {grnCopy.line.rejectedShort(line.rejected, line.unit)}
+                </p>
+              ) : null}
+            </div>
+          ),
       },
       {
         key: "applied",
@@ -370,7 +377,7 @@ export function GRNDetailClient({
         ),
         className: "w-20 align-top text-right",
         render: (line) =>
-          canMutateDraft ? (
+          canChangeLineSet ? (
             <div
               className="flex items-center justify-end gap-1"
               onClick={(event) => event.stopPropagation()}
@@ -379,30 +386,24 @@ export function GRNDetailClient({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => setEditingLineId(line.lineId)}
-                aria-label={GRN_CREATE_COPY.editLineAria}
+                size="icon"
+                className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => void handleDeleteLine(line)}
+                aria-label={grnCopy.line.deleteLineAria}
               >
-                <IconPencil className="size-4" />
-                {grnCopy.line.enterQuantity}
+                <IconTrash className="size-4" />
               </Button>
-              {canChangeLineSet ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => void handleDeleteLine(line)}
-                  aria-label={grnCopy.line.deleteLineAria}
-                >
-                  <IconTrash className="size-4" />
-                </Button>
-              ) : null}
             </div>
           ) : null,
       },
     ],
-    [canChangeLineSet, canMutateDraft, handleDeleteLine, isDraft],
+    [
+      canChangeLineSet,
+      canMutateDraft,
+      handleDeleteLine,
+      isDesktopLineEdit,
+      isDraft,
+    ],
   );
 
   const confirmedColumns = draftColumns;
@@ -615,12 +616,13 @@ export function GRNDetailClient({
       }
     >
       <DataTable
-        className="p-4 md:p-0"
         columns={draftColumns}
         data={lines}
         getRowKey={(line) => line.lineId}
         onRowClick={
-          canMutateDraft ? (line) => setEditingLineId(line.lineId) : undefined
+          canMutateDraft && !isDesktopLineEdit
+            ? (line) => setEditingLineId(line.lineId)
+            : undefined
         }
         emptyTitle={grnCopy.overviewLinesEmpty}
         mobileCardRender={(line, idx) =>
@@ -658,7 +660,6 @@ export function GRNDetailClient({
       contentFlush
     >
       <DataTable
-        className="p-4 md:p-0"
         columns={confirmedColumns}
         data={lines}
         getRowKey={(line) => line.lineId}
@@ -699,75 +700,8 @@ export function GRNDetailClient({
       {contextStrip}
 
       {isDraft ? (
-        <div
-          className={cn(
-            // pb-24 clears sticky AppDetailFooter; desk editor max-h stays above it.
-            "flex min-w-0 flex-col gap-3 pb-24",
-            showDeskEditor &&
-              "lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-start lg:gap-4",
-          )}
-        >
+        <div className="flex min-w-0 flex-col gap-3">
           <div className="flex min-w-0 flex-col gap-3">{draftLinesSection}</div>
-          {showDeskEditor && editingLine && editingIdx >= 0 ? (
-            <aside className="hidden lg:sticky lg:top-3 lg:z-0 lg:flex lg:max-h-[calc(100dvh-8.5rem)] lg:flex-col lg:overflow-hidden">
-              <AppSection
-                size="sm"
-                title={editingLine.name}
-                description={
-                  editingLine.sku
-                    ? `${editingLine.sku} · ${editingLine.unit}`
-                    : editingLine.unit
-                }
-                className="flex min-h-0 max-h-full flex-col overflow-hidden"
-                contentClassName="min-h-0 flex-1 gap-3 overflow-y-auto"
-                footer={
-                  <div className="flex w-full flex-col gap-2">
-                    {canChangeLineSet ? (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => {
-                          void handleDeleteLine(editingLine);
-                          closeLineEdit();
-                        }}
-                        className="w-full"
-                      >
-                        {ACTIONS_VI.delete}
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={closeLineEdit}
-                      className="w-full"
-                    >
-                      {ACTIONS_VI.close}
-                    </Button>
-                  </div>
-                }
-              >
-                <LineRow
-                  tenantId={grn.tenantId}
-                  grnId={grn.id}
-                  line={editingLine}
-                  idx={editingIdx}
-                  isDraft
-                  showAmendAffordance={false}
-                  chrome="plain"
-                  onChange={(p) => patch(editingIdx, p)}
-                  onDelete={
-                    canChangeLineSet
-                      ? () => {
-                          void handleDeleteLine(editingLine);
-                          closeLineEdit();
-                        }
-                      : undefined
-                  }
-                  onAmend={() => undefined}
-                />
-              </AppSection>
-            </aside>
-          ) : null}
         </div>
       ) : (
         confirmedLinesSection
@@ -917,7 +851,7 @@ export function GRNDetailClient({
         },
       ]}
       defaultValue="document"
-      stickyList={!embedded}
+      stickyList={!embedded && presentation !== "dialog"}
     >
       <TabsContent value="document" className="mt-4">
         {documentBody}
@@ -985,7 +919,7 @@ export function GRNDetailClient({
         }}
         variant="document"
         title={grn.code}
-        description={`${statusBadge.label} · ${grn.supplier} · ${grn.branchName}`}
+        description={statusBadge.label}
         footer={footer}
       >
         {tabs}

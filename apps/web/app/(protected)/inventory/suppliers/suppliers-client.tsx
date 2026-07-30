@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PackageSearch as IconPackageSearch,
   Pencil as IconPencil,
@@ -42,6 +42,11 @@ import { StatusBadge } from "@/components/status-badge";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
+import {
+  SupplierItemsClient,
+  type SupplierIngredientOption,
+  type SupplierItemRow,
+} from "./[id]/items/supplier-items-client";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { SupplierRow } from "./supplier-dialog";
@@ -97,7 +102,19 @@ function SupplierMobileCard({
       minHeight="mobile"
       padding="default"
       className="flex-col items-stretch gap-2"
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
       onClick={onOpen ? () => onOpen(supplier) : undefined}
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onOpen(supplier);
+              }
+            }
+          : undefined
+      }
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -143,11 +160,19 @@ function SupplierMobileCard({
 export function SuppliersClient({
   initial,
   canReadItems,
+  canManageItems,
+  ingredients,
+  items,
 }: {
   initial: SupplierRow[];
   canReadItems: boolean;
+  canManageItems: boolean;
+  ingredients: SupplierIngredientOption[];
+  items: SupplierItemRow[];
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -156,6 +181,13 @@ export function SuppliersClient({
     null,
   );
   const [, startTransition] = useTransition();
+  const selectedSupplierId = Number(searchParams.get("supplierId"));
+  const selectedSupplier =
+    canReadItems && Number.isSafeInteger(selectedSupplierId)
+      ? (rows.find((supplier) => supplier.id === selectedSupplierId) ?? null)
+      : null;
+
+  useEffect(() => setRows(initial), [initial]);
 
   const filtered = useMemo(() => {
     const q = search.trim();
@@ -179,7 +211,18 @@ export function SuppliersClient({
   }
 
   function openItems(row: SupplierRow) {
-    router.push(`/inventory/suppliers/${row.id}/items`);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("supplierId", String(row.id));
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }
+
+  function closeItems() {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("supplierId");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   }
 
   function handleDelete(id: number) {
@@ -214,7 +257,7 @@ export function SuppliersClient({
             key: "items",
             label: suppliersCopy.items.openAria(s.name),
             icon: <IconPackageSearch />,
-            href: `/inventory/suppliers/${s.id}/items`,
+            onSelect: () => openItems(s),
           } satisfies RowActionItem,
         ]
       : []),
@@ -398,6 +441,18 @@ export function SuppliersClient({
         supplier={editingSupplier}
         onSaved={reload}
       />
+      {selectedSupplier ? (
+        <SupplierItemsClient
+          open
+          onOpenChange={(open) => {
+            if (!open) closeItems();
+          }}
+          supplier={selectedSupplier}
+          ingredients={ingredients}
+          rows={items}
+          canManage={canManageItems}
+        />
+      ) : null}
     </>
   );
 }

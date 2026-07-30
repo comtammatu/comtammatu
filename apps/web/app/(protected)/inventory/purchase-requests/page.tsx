@@ -13,6 +13,9 @@ import {
   type PurchaseRequestRow,
 } from "./purchase-requests-client";
 
+const REQUEST_SELECT =
+  "id, request_number, branch_id, status, needed_by, notes, created_at, updated_at, purchase_request_items(id, ingredient_id, quantity, entry_unit_id, notes, ingredients(name), units!purchase_request_items_entry_unit_id_fkey(code, name)), purchase_orders(id, po_number, display_id, status, supplier_id, purchase_order_items(purchase_request_item_id, quantity))";
+
 type RequestRecord = {
   id: number;
   request_number: string;
@@ -51,7 +54,20 @@ function one<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export default async function PurchaseRequestsPage() {
+export default async function PurchaseRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ requestId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const rawRequestId = Array.isArray(params.requestId)
+    ? params.requestId[0]
+    : params.requestId;
+  const parsedRequestId = Number(rawRequestId);
+  const focusedRequestId =
+    Number.isInteger(parsedRequestId) && parsedRequestId > 0
+      ? parsedRequestId
+      : null;
   const copy = messages.inventory.purchaseRequests;
   const { supabase, claims } = await loadAuthState();
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
@@ -66,9 +82,7 @@ export default async function PurchaseRequestsPage() {
   ] = await Promise.all([
     supabase
       .from("purchase_requests" as never)
-      .select(
-        "id, request_number, branch_id, status, needed_by, notes, created_at, updated_at, purchase_request_items(id, ingredient_id, quantity, entry_unit_id, notes, ingredients(name), units!purchase_request_items_entry_unit_id_fkey(code, name)), purchase_orders(id, po_number, display_id, status, supplier_id, purchase_order_items(purchase_request_item_id, quantity))" as never,
-      )
+      .select(REQUEST_SELECT as never)
       .eq("tenant_id" as never, claims.tenant_id)
       .order("updated_at" as never, { ascending: false })
       .limit(200),
@@ -103,13 +117,39 @@ export default async function PurchaseRequestsPage() {
     );
   }
 
+  const requestRecords = (requestResult.data ?? []) as unknown as RequestRecord[];
+  if (
+    focusedRequestId != null &&
+    !requestRecords.some((request) => request.id === focusedRequestId)
+  ) {
+    const focusedResult = await supabase
+      .from("purchase_requests" as never)
+      .select(REQUEST_SELECT as never)
+      .eq("tenant_id" as never, claims.tenant_id)
+      .eq("id" as never, focusedRequestId)
+      .maybeSingle();
+    if (focusedResult.error) {
+      return (
+        <AppPage width="xwide" density="compact">
+          <AppPageHeader title={copy.title} description={copy.description} />
+          <AppEmptyState mode="error" title={copy.loadFailed} />
+        </AppPage>
+      );
+    }
+    if (focusedResult.data != null) {
+      requestRecords.unshift(
+        focusedResult.data as unknown as RequestRecord,
+      );
+    }
+  }
+
   const branchNames = new Map(
     procurementBranches.map((branch) => [branch.id, branch.name]),
   );
   const supplierNames = new Map(
     (supplierResult.data ?? []).map((supplier) => [supplier.id, supplier.name]),
   );
-  const rows = ((requestResult.data ?? []) as unknown as RequestRecord[]).map(
+  const rows = requestRecords.map(
     (request): PurchaseRequestRow => {
       const orderedByItem = new Map<number, number>();
       for (const po of request.purchase_orders ?? []) {
@@ -185,11 +225,17 @@ export default async function PurchaseRequestsPage() {
     supplierItemResult.data ?? [],
     (item) => String(item.supplier_id),
   );
+  const requestBranches =
+    claims.user_role === "owner"
+      ? procurementBranches
+      : procurementBranches.filter(
+          (branch) => branch.id === claims.branch_id,
+        );
 
   return (
     <PurchaseRequestsClient
       rows={rows}
-      branches={procurementBranches.map((branch) => ({
+      branches={requestBranches.map((branch) => ({
         id: branch.id,
         name: branch.name,
       }))}
@@ -206,7 +252,7 @@ export default async function PurchaseRequestsPage() {
           .filter((item) => item.is_preferred)
           .map((item) => item.ingredient_id),
       }))}
-      canCreateRequest={canCreateRequest}
+      canCreateRequest={canCreateRequest && requestBranches.length > 0}
       canCreatePo={canCreatePo && monetary.purchasePrice}
     />
   );

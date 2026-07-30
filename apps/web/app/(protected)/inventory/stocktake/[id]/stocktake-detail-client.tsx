@@ -561,7 +561,6 @@ function CountingPhase({
         emptyTitle={stocktakeDetailCopy.emptyCountTitle}
         emptyDescription={stocktakeDetailCopy.emptyCountDescription}
         emptyMode="no-data"
-        className="gap-2 max-md:divide-y"
         mobileCardRender={(line) => (
           <div className="flex flex-col gap-2 px-4 py-3">
             <div className="flex items-center justify-between gap-2">
@@ -829,7 +828,6 @@ function ResultsPhase({
           emptyDescription={stocktakeDetailCopy.results.emptyDescription}
           emptyMode="no-data"
           rowClassName={(line) => getVarianceBg(line)}
-          className="gap-2 max-md:divide-y"
           mobileCardRender={(line) => {
             const varianceColor = getVarianceColor(line);
             const variance = line.variance ?? 0;

@@ -314,7 +314,6 @@ export function TransferDetailClient({
             contentFlush
           >
             <DataTable
-              className="p-4 md:p-0"
               columns={lineColumns}
               data={transfer.items}
               getRowKey={(item) => item.sku || item.name}

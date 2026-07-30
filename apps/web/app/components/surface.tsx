@@ -1253,6 +1253,9 @@ export function AppDetailFooter({
               "in-[[data-owner-shell-scroll]]:-mx-3 in-[[data-owner-shell-scroll]]:md:-mx-4",
               "in-[[data-owner-shell-scroll]]:px-3 in-[[data-owner-shell-scroll]]:md:px-4",
               "in-[[data-owner-shell-scroll]]:lg:rounded-b-lg",
+              "in-[[data-slot=dialog-footer]]:static in-[[data-slot=dialog-footer]]:w-full",
+              "in-[[data-slot=dialog-footer]]:border-0 in-[[data-slot=dialog-footer]]:bg-transparent",
+              "in-[[data-slot=dialog-footer]]:px-0 in-[[data-slot=dialog-footer]]:py-0 in-[[data-slot=dialog-footer]]:shadow-none",
             ]
           : "gap-3 py-6",
         className,

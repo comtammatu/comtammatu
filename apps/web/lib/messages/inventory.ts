@@ -515,6 +515,7 @@ export const inventory = {
     emptyTitle: "Chưa có yêu cầu mua",
     emptyDescription: "Tạo yêu cầu khi kho cần mua hàng từ nhà cung cấp.",
     loadFailed: "Không thể tải danh sách yêu cầu mua.",
+    notFound: "Yêu cầu mua không còn tồn tại.",
     codeColumn: "Yêu cầu mua",
     branchColumn: "Kho yêu cầu",
     statusColumn: "Trạng thái",

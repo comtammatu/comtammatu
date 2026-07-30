@@ -92,6 +92,51 @@ test("PO creation keeps unmapped ingredients outstanding while saving mapped ord
   assert.match(purchaseActions, /supplier_item_mapping_required/);
 });
 
+test("purchase requests keep branch-scoped staff inside their assigned site and recover stale edit URLs", () => {
+  const requestPage = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/page.tsx",
+  );
+  const requestClient = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  );
+
+  assert.match(
+    requestPage,
+    /claims\.user_role === "owner"[\s\S]*procurementBranches[\s\S]*branch\.id === claims\.branch_id/,
+  );
+  assert.match(
+    requestPage,
+    /branches=\{requestBranches\.map\(\(branch\) => \(\{/,
+  );
+  assert.match(
+    requestPage,
+    /focusedRequestId[\s\S]*\.eq\("id" as never, focusedRequestId\)[\s\S]*\.maybeSingle\(\)/,
+  );
+  assert.match(
+    requestClient,
+    /mode === "view" \|\| mode === "edit" \|\| mode === "create-po"[\s\S]*!recordMode \|\| selectedId == null \|\| selected != null[\s\S]*copy\.notFound[\s\S]*updateUrl\(null, null, "replace"\)/,
+  );
+  assert.match(
+    requestClient,
+    /mode === "create" \|\| \(mode === "edit" && selected != null\)/,
+  );
+});
+
+test("PO cancellation permits only trusted cancellation after linked GRNs are cancelled", () => {
+  const migration = read(
+    "supabase/migrations/20260730120000_allow_po_cancel_after_draft_grn.sql",
+  );
+
+  assert.match(
+    migration,
+    /OLD\.status IN \('draft', 'sent'\)[\s\S]*NEW\.status = 'cancelled'/,
+  );
+  assert.match(
+    migration,
+    /v_trusted_rpc IS TRUE[\s\S]*AND NOT EXISTS \([\s\S]*goods_received_notes[\s\S]*grn\.status <> 'cancelled'/,
+  );
+});
+
 test("GRN compatibility detail route remains list-addressed", () => {
   const source = read(
     "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",

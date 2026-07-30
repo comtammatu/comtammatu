@@ -1023,6 +1023,12 @@ export const upsertGrnLine = withAction(
         error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình.",
       };
     }
+    if (grn.supplier_id != null && data.supplierId !== grn.supplier_id) {
+      return {
+        success: false,
+        error: "Nguyên liệu chưa được gán cho nhà cung cấp.",
+      };
+    }
 
     const { data: supplierItem, error: supplierItemError } = await supabase
       .from("supplier_items")

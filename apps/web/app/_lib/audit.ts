@@ -32,6 +32,7 @@ export type AuditLogRow = {
   entityType: string;
   entityId: string;
   userId: string | null;
+  actorName: string | null;
   createdAt: string;
 };
 
@@ -49,12 +50,24 @@ export async function fetchEntityAuditLogs(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  return (data ?? []).map((row) => ({
+  const rows = data ?? [];
+  const userIds = [
+    ...new Set(rows.flatMap((row) => (row.user_id ? [row.user_id] : []))),
+  ];
+  const { data: profiles } = userIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
+    : { data: [] as { id: string; full_name: string }[] };
+  const actorNameById = new Map(
+    (profiles ?? []).map((profile) => [profile.id, profile.full_name]),
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     action: row.action,
     entityType: row.entity_type,
     entityId: String(row.entity_id ?? ""),
     userId: row.user_id,
+    actorName: row.user_id ? (actorNameById.get(row.user_id) ?? null) : null,
     createdAt: row.created_at,
   }));
 }
