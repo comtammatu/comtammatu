@@ -4,6 +4,11 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
+import {
   Item,
   ItemContent,
   ItemDescription,
@@ -42,6 +47,106 @@ const NEXT_ACTION_LABELS = {
   none: "Theo dõi",
 } as const;
 
+function TransferLinks({
+  data,
+  mode,
+  onTransferOpen,
+  siteKind,
+}: {
+  data: StockRequestDetailData;
+  mode: "branch" | "central";
+  onTransferOpen?: (transferId: number) => void;
+  siteKind: "central_supply" | "central_kitchen";
+}) {
+  const sourceItems = data.items.filter(
+    (item) => item.fulfillSiteKind === siteKind,
+  );
+  const linkedIds = new Set(
+    sourceItems.flatMap((item) =>
+      item.transferId == null ? [] : [item.transferId],
+    ),
+  );
+  const transfers = data.transfers.filter(
+    (transfer) =>
+      linkedIds.has(transfer.id) ||
+      (!data.items.some((item) => item.transferId === transfer.id) &&
+        transfer.fromBranchKind === siteKind),
+  );
+  if (transfers.length === 0) return null;
+
+  return (
+    <>
+      {transfers.map((transfer) =>
+        onTransferOpen ? (
+          <Button
+            key={transfer.id}
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto px-0 font-mono"
+            onClick={() => onTransferOpen(transfer.id)}
+          >
+            {transfer.transferNumber}
+          </Button>
+        ) : (
+          <Button
+            key={transfer.id}
+            variant="link"
+            size="sm"
+            className="h-auto px-0 font-mono"
+            render={
+              <Link
+                href={
+                  mode === "branch"
+                    ? `/br/${data.branchId}/stock/transfer/${transfer.id}`
+                    : `/inventory/transfers/${transfer.id}`
+                }
+              />
+            }
+          >
+            {transfer.transferNumber}
+          </Button>
+        ),
+      )}
+    </>
+  );
+}
+
+function RequestMetaSections({ data }: { data: StockRequestDetailData }) {
+  return (
+    <>
+      <AppSection title={copy.infoTitle}>
+        <DescriptionList
+          items={[
+            {
+              term: copy.neededAt,
+              description: data.neededAt
+                ? formatVNDateTime(data.neededAt)
+                : copy.notRequired,
+            },
+            { term: copy.notes, description: data.notes || "—" },
+            {
+              term: copy.referenceCode,
+              description: (
+                <span className="font-mono tabular-nums">
+                  {data.requestNumber}
+                </span>
+              ),
+            },
+            ...(data.statusReason
+              ? [{ term: copy.outcome, description: data.statusReason }]
+              : []),
+          ]}
+        />
+      </AppSection>
+
+      <AppSection title={copy.history}>
+        <AuditHistoryList logs={data.auditLogs} />
+      </AppSection>
+    </>
+  );
+}
+
 export function StockRequestDetailView({
   data,
   mode,
@@ -71,7 +176,88 @@ export function StockRequestDetailView({
   );
   const sourceLabel = (siteKind: (typeof sourceKinds)[number]) =>
     siteKind === "central_supply" ? copy.centralSupply : copy.centralKitchen;
-  const content = (
+  const workFirst = Boolean(actions) && embedded && mode === "central";
+  const sourcesWithTrips = sourceKinds.filter((siteKind) => {
+    const sourceItems = data.items.filter(
+      (item) => item.fulfillSiteKind === siteKind,
+    );
+    const linkedIds = new Set(
+      sourceItems.flatMap((item) =>
+        item.transferId == null ? [] : [item.transferId],
+      ),
+    );
+    return data.transfers.some(
+      (transfer) =>
+        linkedIds.has(transfer.id) ||
+        (!data.items.some((item) => item.transferId === transfer.id) &&
+          transfer.fromBranchKind === siteKind),
+    );
+  });
+
+  const content = workFirst ? (
+    <>
+      {sourcesWithTrips.length > 0 ? (
+        <AppSection title={copy.tripsTitle}>
+          <ItemGroup>
+            {sourcesWithTrips.map((siteKind) => {
+              const sourceItems = data.items.filter(
+                (item) => item.fulfillSiteKind === siteKind,
+              );
+              const linkedIds = new Set(
+                sourceItems.flatMap((item) =>
+                  item.transferId == null ? [] : [item.transferId],
+                ),
+              );
+              const transfers = data.transfers.filter(
+                (transfer) =>
+                  linkedIds.has(transfer.id) ||
+                  (!data.items.some((item) => item.transferId === transfer.id) &&
+                    transfer.fromBranchKind === siteKind),
+              );
+              return (
+                <Item key={siteKind} variant="outline" size="sm">
+                  <ItemContent>
+                    <ItemTitle>{sourceLabel(siteKind)}</ItemTitle>
+                    <ItemDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                      <TransferLinks
+                        data={data}
+                        mode={mode}
+                        onTransferOpen={onTransferOpen}
+                        siteKind={siteKind}
+                      />
+                    </ItemDescription>
+                  </ItemContent>
+                  <Badge variant="secondary">
+                    {copy.transferCount(transfers.length)}
+                  </Badge>
+                </Item>
+              );
+            })}
+          </ItemGroup>
+        </AppSection>
+      ) : null}
+
+      {actions}
+
+      <Collapsible>
+        <CollapsibleTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start px-0"
+            />
+          }
+        >
+          {copy.detailsToggle}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="flex flex-col gap-4 pt-2">
+          <RequestMetaSections data={data} />
+        </CollapsibleContent>
+      </Collapsible>
+    </>
+  ) : (
     <>
       {data.submittedAt ? (
         <Item variant="outline">
@@ -159,38 +345,12 @@ export function StockRequestDetailView({
                   <ItemDescription>
                     {STOCK_JOURNEY_STAGE_LABELS[sourceJourney.stage]}
                   </ItemDescription>
-                  {transfers.map((transfer) =>
-                    onTransferOpen ? (
-                      <Button
-                        key={transfer.id}
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="h-auto px-0 font-mono"
-                        onClick={() => onTransferOpen(transfer.id)}
-                      >
-                        {transfer.transferNumber}
-                      </Button>
-                    ) : (
-                      <Button
-                        key={transfer.id}
-                        variant="link"
-                        size="sm"
-                        className="h-auto px-0 font-mono"
-                        render={
-                          <Link
-                            href={
-                              mode === "branch"
-                                ? `/br/${data.branchId}/stock/transfer/${transfer.id}`
-                                : `/inventory/transfers/${transfer.id}`
-                            }
-                          />
-                        }
-                      >
-                        {transfer.transferNumber}
-                      </Button>
-                    ),
-                  )}
+                  <TransferLinks
+                    data={data}
+                    mode={mode}
+                    onTransferOpen={onTransferOpen}
+                    siteKind={siteKind}
+                  />
                 </ItemContent>
                 <Badge variant="secondary">
                   {copy.transferCount(
@@ -228,34 +388,7 @@ export function StockRequestDetailView({
         </AppSection>
       ))}
 
-      <AppSection title={copy.infoTitle}>
-        <DescriptionList
-          items={[
-            {
-              term: copy.neededAt,
-              description: data.neededAt
-                ? formatVNDateTime(data.neededAt)
-                : copy.notRequired,
-            },
-            { term: copy.notes, description: data.notes || "—" },
-            {
-              term: copy.referenceCode,
-              description: (
-                <span className="font-mono tabular-nums">
-                  {data.requestNumber}
-                </span>
-              ),
-            },
-            ...(data.statusReason
-              ? [{ term: copy.outcome, description: data.statusReason }]
-              : []),
-          ]}
-        />
-      </AppSection>
-
-      <AppSection title={copy.history}>
-        <AuditHistoryList logs={data.auditLogs} />
-      </AppSection>
+      <RequestMetaSections data={data} />
 
       {actions}
     </>

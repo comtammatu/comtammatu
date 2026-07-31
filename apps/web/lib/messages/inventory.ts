@@ -354,8 +354,14 @@ export const inventory = {
       headerDescription: (branchLabel: string, statusLabel: string) =>
         `Chi nhánh yêu cầu: ${branchLabel} · Trạng thái: ${statusLabel}`,
       selectLineAria: (name: string) => `Chọn ${name}`,
-      lineDescription: (quantity: number, statusLabel: string) =>
-        `SL ${quantity} · ${statusLabel}`,
+      selectColumn: "Chọn",
+      ingredientColumn: "Nguyên liệu",
+      quantityColumn: "Số lượng",
+      statusColumn: "Trạng thái",
+      emptyLinesTitle: "Không có dòng",
+      emptyLinesDescription: "Nguồn này chưa có nguyên liệu trên phiếu.",
+      lineQtyUnit: (quantity: number, unit: string) =>
+        `${formatQuantity(quantity)} ${unit}`.trim(),
       toastSelectLine: "Chọn ít nhất một dòng chờ xử lý.",
       toastSelectLocation: "Chọn vị trí xuất hàng.",
       toastFulfillFailed: "Không đáp ứng được yêu cầu.",
@@ -498,6 +504,8 @@ export const inventory = {
       centralSupply: "Kho Tổng",
       centralKitchen: "Bếp Trung Tâm",
       infoTitle: "Thông tin yêu cầu",
+      detailsToggle: "Chi tiết và lịch sử",
+      tripsTitle: "Chuyến đã tạo",
       neededAt: "Cần trước",
       notRequired: "Không yêu cầu",
       notes: "Ghi chú",
@@ -1498,12 +1506,8 @@ export const inventory = {
       receiveFrom: (branch: string) => `từ ${branch}`,
       receiveNotReady: "Yêu cầu chưa ở trạng thái nhận",
       receiveNotReadyDescription:
-        "Mở yêu cầu để xem chi tiết hoặc chờ kho gửi xác nhận xuất.",
-      receiveWaitingTransit: "Phiếu đã xuất, chưa chuyển sang vận chuyển",
-      receiveWaitingTransitDescription:
-        "Kho gửi cần chuyển phiếu sang đang vận chuyển trước khi nhận.",
-      receiveOpenDetail: "Mở yêu cầu chuyển hàng",
-      receiveBackToList: "Quay lại danh sách nhận",
+        "Mở phiếu điều chuyển để bắt đầu kiểm nhận hoặc chờ kho xuất hàng.",
+      receiveOpenDetail: "Mở phiếu điều chuyển",
       receiveSuccess: "Đã nhận hàng thành công.",
     },
     createNative: {

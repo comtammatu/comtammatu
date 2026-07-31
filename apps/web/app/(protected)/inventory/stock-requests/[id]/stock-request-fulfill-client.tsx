@@ -7,13 +7,15 @@ import {
   getInventorySiteKindLabelVi,
   type SiteKind,
 } from "@comtammatu/shared/labels";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Label } from "@comtammatu/ui/components/label";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import {
   Item,
+  ItemActions,
   ItemContent,
-  ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -25,6 +27,10 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsOnline } from "@/components/pwa-runtime";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { AppDialogFooter } from "@/components/form";
 import {
   AppDetailFooter,
@@ -55,9 +61,27 @@ interface StockRequestFulfillClientProps {
 }
 
 type FulfillSiteKind = StockRequestFulfillGroup["fulfillSiteKind"];
+type FulfillLine = StockRequestFulfillGroup["lines"][number];
 
 function siteKindLabel(kind: SiteKind): string {
   return getInventorySiteKindLabelVi(kind);
+}
+
+function pendingLineIds(group: StockRequestFulfillGroup): number[] {
+  return group.lines
+    .filter((line) => line.status === "pending")
+    .map((line) => line.id);
+}
+
+function seedPendingSelection(
+  groups: StockRequestFulfillGroup[],
+): Record<string, Set<number>> {
+  return Object.fromEntries(
+    groups.map((group) => [
+      group.fulfillSiteKind,
+      new Set(pendingLineIds(group)),
+    ]),
+  );
 }
 
 export function StockRequestFulfillClient({
@@ -75,11 +99,7 @@ export function StockRequestFulfillClient({
   const [isPending, startTransition] = useTransition();
   const [selectedByGroup, setSelectedByGroup] = useState<
     Record<string, Set<number>>
-  >(() =>
-    Object.fromEntries(
-      groups.map((group) => [group.fulfillSiteKind, new Set<number>()]),
-    ),
-  );
+  >(() => seedPendingSelection(groups));
   const [locationByGroup, setLocationByGroup] = useState<
     Record<string, string>
   >(() =>
@@ -107,6 +127,16 @@ export function StockRequestFulfillClient({
   const activeGroup =
     groups.find((group) => group.fulfillSiteKind === activeGroupKind) ??
     groups[0];
+
+  function activateSource(groupKind: FulfillSiteKind) {
+    const group = groups.find((entry) => entry.fulfillSiteKind === groupKind);
+    setActiveGroupKind(groupKind);
+    if (!group) return;
+    setSelectedByGroup((current) => ({
+      ...current,
+      [groupKind]: new Set(pendingLineIds(group)),
+    }));
+  }
 
   function toggleLine(
     groupKind: FulfillSiteKind,
@@ -199,6 +229,55 @@ export function StockRequestFulfillClient({
     });
   }
 
+  function lineColumns(
+    group: StockRequestFulfillGroup,
+  ): DataTableColumn<FulfillLine>[] {
+    return [
+      {
+        key: "select",
+        header: copy.selectColumn,
+        className: "w-14",
+        render: (line) =>
+          line.status === "pending" ? (
+            <Checkbox
+              size="touch"
+              checked={
+                selectedByGroup[group.fulfillSiteKind]?.has(line.id) ?? false
+              }
+              onCheckedChange={(value) =>
+                toggleLine(group.fulfillSiteKind, line.id, value === true)
+              }
+              disabled={isPending}
+              aria-label={copy.selectLineAria(line.ingredientName)}
+            />
+          ) : null,
+      },
+      {
+        key: "ingredient",
+        header: copy.ingredientColumn,
+        render: (line) => (
+          <span className="font-medium">{line.ingredientName}</span>
+        ),
+      },
+      {
+        key: "quantity",
+        header: copy.quantityColumn,
+        className: "text-right font-mono tabular-nums",
+        render: (line) => copy.lineQtyUnit(line.quantity, line.unitLabel),
+      },
+      {
+        key: "status",
+        header: copy.statusColumn,
+        className: "w-36",
+        render: (line) => (
+          <Badge variant="secondary">
+            {stockRequestCopy.statusLabel(line.status)}
+          </Badge>
+        ),
+      },
+    ];
+  }
+
   const content = (
     <>
       {groups.length === 0 ? (
@@ -225,7 +304,7 @@ export function StockRequestFulfillClient({
                       size="touch"
                       className="-mx-2 w-[calc(100%+1rem)] justify-between px-2 text-left"
                       aria-pressed={isActive}
-                      onClick={() => setActiveGroupKind(group.fulfillSiteKind)}
+                      onClick={() => activateSource(group.fulfillSiteKind)}
                     >
                       <span>
                         {copy.sourceTitle(siteKindLabel(group.fulfillSiteKind))}
@@ -238,49 +317,52 @@ export function StockRequestFulfillClient({
                       </span>
                     </Button>
                   }
+                  contentFlush
                 >
-                  <ul className="mb-3 flex flex-col gap-2">
-                    {group.lines.map((line) => (
-                      <li key={line.id}>
-                        <Item variant="outline" size="sm">
-                          {line.status === "pending" ? (
-                            <label className="flex min-h-12 min-w-12 shrink-0 items-start justify-center pt-1">
-                              <input
-                                type="checkbox"
-                                className="mt-1 size-5"
-                                checked={selectedByGroup[
-                                  group.fulfillSiteKind
-                                ]?.has(line.id)}
-                                onChange={(event) =>
-                                  toggleLine(
-                                    group.fulfillSiteKind,
-                                    line.id,
-                                    event.target.checked,
-                                  )
-                                }
-                                disabled={isPending}
-                                aria-label={copy.selectLineAria(
-                                  line.ingredientName,
-                                )}
-                              />
-                            </label>
-                          ) : null}
-                          <ItemContent>
-                            <ItemTitle>{line.ingredientName}</ItemTitle>
-                            <ItemDescription>
-                              {copy.lineDescription(
-                                line.quantity,
-                                stockRequestCopy.statusLabel(line.status),
-                              )}
-                            </ItemDescription>
-                          </ItemContent>
-                        </Item>
-                      </li>
-                    ))}
-                  </ul>
+                  <DataTable
+                    columns={lineColumns(group)}
+                    data={group.lines}
+                    getRowKey={(line) => line.id}
+                    emptyTitle={copy.emptyLinesTitle}
+                    emptyDescription={copy.emptyLinesDescription}
+                    mobileCardRender={(line) => (
+                      <Item variant="outline" size="sm">
+                        {line.status === "pending" ? (
+                          <Checkbox
+                            size="touch"
+                            checked={
+                              selectedByGroup[group.fulfillSiteKind]?.has(
+                                line.id,
+                              ) ?? false
+                            }
+                            onCheckedChange={(value) =>
+                              toggleLine(
+                                group.fulfillSiteKind,
+                                line.id,
+                                value === true,
+                              )
+                            }
+                            disabled={isPending}
+                            aria-label={copy.selectLineAria(line.ingredientName)}
+                          />
+                        ) : null}
+                        <ItemContent>
+                          <ItemTitle>{line.ingredientName}</ItemTitle>
+                        </ItemContent>
+                        <ItemActions className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="font-mono text-sm tabular-nums">
+                            {copy.lineQtyUnit(line.quantity, line.unitLabel)}
+                          </span>
+                          <Badge variant="secondary">
+                            {stockRequestCopy.statusLabel(line.status)}
+                          </Badge>
+                        </ItemActions>
+                      </Item>
+                    )}
+                  />
 
                   {pendingLines.length > 0 ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 p-3 pt-0 md:p-0 md:pt-2">
                       <Button
                         type="button"
                         variant="outline"

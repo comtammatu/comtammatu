@@ -63,6 +63,10 @@ test("stock request details stay canonical and expose the full timeline", () => 
   assert.match(detail, /onTransferOpen/);
   assert.match(detail, /copy\.referenceCode/);
   assert.match(detail, /AuditHistoryList/);
+  assert.match(detail, /workFirst/);
+  assert.match(detail, /copy\.tripsTitle/);
+  assert.match(detail, /Collapsible/);
+  assert.match(detail, /copy\.detailsToggle/);
   assert.doesNotMatch(branchDetail, /useSearchParams|redirect\(/);
 });
 
@@ -113,8 +117,35 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(fulfill, /const activeGroup/);
   assert.equal(fulfill.match(/<AppDetailFooter/g)?.length, 2);
   assert.match(fulfill, /AppDialogFooter/);
+  assert.match(fulfill, /DataTable/);
+  assert.match(fulfill, /Checkbox/);
+  assert.match(fulfill, /size="touch"/);
+  assert.match(fulfill, /seedPendingSelection|pendingLineIds/);
+  assert.match(fulfill, /copy\.lineQtyUnit/);
+  assert.doesNotMatch(fulfill, /lineDescription|type="checkbox"/);
   assert.match(detailLoader, /data\.branchId === claims\.branch_id/);
   assert.match(detailLoader, /item\.fulfillSiteKind === actorKind/);
+  assert.match(detailLoader, /unitLabel: item\.unitLabel/);
+});
+
+test("embedded transfer dialog drops timeline and history chrome", () => {
+  const transfer = read(
+    "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
+  );
+  assert.match(transfer, /embedded \? null : \([\s\S]*TimelineStepper/);
+  assert.match(transfer, /const embeddedLayout = pageLayout/);
+  assert.doesNotMatch(
+    transfer,
+    /const embeddedLayout = \([\s\S]*historySectionTitle/,
+  );
+});
+
+test("branch confirm_receive navigates into native receive workspace", () => {
+  const branchDetail = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
+  );
+  assert.match(branchDetail, /actionConfig\.kind === "confirm_receive"/);
+  assert.match(branchDetail, /router\.push\(receiveHref\)/);
 });
 
 test("mixed-source requests expose source ownership without source tabs", () => {
@@ -135,8 +166,23 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(fulfill, /aria-pressed=\{isActive\}/);
   assert.match(fulfill, /AppDialogFooter/);
   assert.match(fulfill, /size="touch"/);
+  assert.match(fulfill, /activateSource/);
+  assert.match(fulfill, /ItemActions/);
   assert.doesNotMatch(transfer, /IconPrinter/);
   assert.match(transfer, /AppDialogFooter/);
+});
+
+test("fulfill copy shows quantity with unit and drops SL status string", () => {
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
+  const fulfillBlock = inventoryMessages.slice(
+    inventoryMessages.indexOf("fulfill: {"),
+    inventoryMessages.indexOf("branch: {"),
+  );
+
+  assert.match(fulfillBlock, /lineQtyUnit:/);
+  assert.match(fulfillBlock, /formatQuantity\(quantity\)/);
+  assert.doesNotMatch(fulfillBlock, /lineDescription:/);
+  assert.doesNotMatch(fulfillBlock, /`SL \$\{quantity\}/);
 });
 
 test("central kitchen request route and database authority stay supply-only", () => {

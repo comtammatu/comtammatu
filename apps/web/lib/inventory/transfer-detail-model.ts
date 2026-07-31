@@ -60,6 +60,8 @@ export function getTransferActionConfig({
     };
   }
 
+  // Rare recovery for pre-unify / failed auto-transit rows. Happy-path ship
+  // already lands on in_transit via stock_transfer_confirm_ship wrapper.
   if (transfer.status === "confirmed_ship") {
     return {
       kind: "mark_in_transit",

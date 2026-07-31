@@ -20,6 +20,7 @@ export type StockRequestFulfillGroup = {
     id: number;
     ingredientName: string;
     quantity: number;
+    unitLabel: string;
     fulfillSiteKind: FulfillSiteKind;
     status: string;
   }>;
@@ -157,6 +158,7 @@ export async function loadStockRequestFulfillmentDetail({
         id: item.id,
         ingredientName: item.ingredientName,
         quantity: item.quantity,
+        unitLabel: item.unitLabel,
         fulfillSiteKind: item.fulfillSiteKind,
         status: item.status,
       }));

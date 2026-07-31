@@ -110,6 +110,9 @@ export function BranchTransferDetailClient({
       }
 
       toast.success(actionLabel ?? copy.completedSlip);
+      if (actionConfig.kind === "confirm_receive") {
+        router.push(receiveHref);
+      }
       router.refresh();
     });
   }

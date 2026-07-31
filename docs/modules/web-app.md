@@ -125,7 +125,7 @@ Các detail pages của Inventory không còn chỉ là read-only shells:
   under `finance/supplier-invoices/` (ADR 0018 Wave 2).
   `/inventory/supplier-invoices` is a `REDIRECT-SHIM` only.
 - `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
-- `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
+- `transfers/[id]`: state machine `draft -> in_transit -> confirmed_receive -> received` (ship RPC auto-advances through `confirmed_ship`)
 - `supplier-returns`: không thuộc daily Inventory UI; stock-return/credit-note/AP đi qua quyết định riêng trước khi có CTA
 - `stocktake/conflicts` và `stocktake/[id]/escalate`: conflict/recount/escalation không nằm trong daily UI; current stocktake flow là open/count/complete
 

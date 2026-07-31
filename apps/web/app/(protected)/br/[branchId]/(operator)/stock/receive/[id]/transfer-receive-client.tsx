@@ -67,7 +67,6 @@ export function TransferReceiveClient({
   const [isPending, startTransition] = useTransition();
 
   const isReceiveMode = isTransferReceiveReady(transfer.status);
-  const isWaitingForTransit = transfer.status === "confirmed_ship";
   const remaining = total - confirmed.size;
   const progress = total === 0 ? 0 : confirmed.size / total;
 
@@ -156,28 +155,16 @@ export function TransferReceiveClient({
           <AppEmptyState
             compact
             mode="no-data"
-            title={
-              isWaitingForTransit
-                ? receiveCopy.receiveWaitingTransit
-                : receiveCopy.receiveNotReady
-            }
-            description={
-              isWaitingForTransit
-                ? receiveCopy.receiveWaitingTransitDescription
-                : receiveCopy.receiveNotReadyDescription
-            }
+            title={receiveCopy.receiveNotReady}
+            description={receiveCopy.receiveNotReadyDescription}
             symbol="riceGrain"
           >
             <Button
               variant="outline"
               size="sm"
-              render={
-                <Link href={isWaitingForTransit ? backHref : detailHref} />
-              }
+              render={<Link href={detailHref} />}
             >
-              {isWaitingForTransit
-                ? receiveCopy.receiveBackToList
-                : receiveCopy.receiveOpenDetail}
+              {receiveCopy.receiveOpenDetail}
             </Button>
           </AppEmptyState>
         </div>

@@ -258,7 +258,7 @@ test.describe("branch route shell ownership", () => {
 
     await page.goto(`/br/${branchId}/stock/receive`);
     await expect(page).toHaveURL(
-      `/br/${branchId}/stock/transfer?queue=receive`,
+      `/br/${branchId}/stock/transfer?work=receive`,
     );
 
     expect(health.consoleErrors).toEqual([]);

@@ -502,9 +502,11 @@ export function TransferDetailClient({
             />
           </AppSection>
 
-          <AppSection>
-            <TimelineStepper steps={transferSteps} orientation="vertical" />
-          </AppSection>
+          {embedded ? null : (
+            <AppSection>
+              <TimelineStepper steps={transferSteps} orientation="vertical" />
+            </AppSection>
+          )}
 
           {transfer.note && (
             <AppSection title={copy.transportNote}>
@@ -668,14 +670,7 @@ export function TransferDetailClient({
     </AppPageTabs>
   );
 
-  const embeddedLayout = (
-    <>
-      {pageLayout}
-      <AppSection title={historySectionTitle}>
-        <AuditHistoryList logs={auditLogs} />
-      </AppSection>
-    </>
-  );
+  const embeddedLayout = pageLayout;
 
   if (embedded) {
     if (!embeddedHeader) return embeddedLayout;

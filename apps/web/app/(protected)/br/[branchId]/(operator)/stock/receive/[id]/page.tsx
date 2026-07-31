@@ -31,7 +31,7 @@ export default async function OperatorStockReceiveDetailPage({
   return (
     <TransferReceiveClient
       transfer={data.transfer}
-      backHref={`/br/${branchId}/stock/transfer?queue=receive`}
+      backHref={`/br/${branchId}/stock/transfer?work=receive`}
       detailHref={`/br/${branchId}/stock/transfer/${transferId}`}
     />
   );

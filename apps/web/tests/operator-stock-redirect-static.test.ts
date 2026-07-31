@@ -82,7 +82,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   assert.match(receiveRoute, /permanentRedirect/);
   assert.match(
     receiveRoute,
-    /permanentRedirect\(`\/br\/\$\{branchId\}\/stock\/transfer\?queue=receive`\)/,
+    /permanentRedirect\(`\/br\/\$\{branchId\}\/stock\/transfer\?work=receive`\)/,
   );
   assert.doesNotMatch(receiveRoute, /TransfersPageContent|embedded|DataTable/);
   assert.match(transferRoute, /StockFulfillmentHubClient/);
@@ -122,7 +122,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   );
   assert.match(
     receiveDetailRoute,
-    /backHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\?queue=receive`\}/,
+    /backHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\?work=receive`\}/,
   );
   assert.match(
     receiveDetailRoute,
@@ -738,15 +738,12 @@ test("transfer receive requires inspection and keeps the atomic receive action",
   );
   assert.match(detailClient, /embedded=\{embedded\}/);
   assert.equal(
-    (detailClient.match(/size=\{embedded \? "touch" : "default"\}/g) ?? [])
-      .length,
+    (detailClient.match(/size="touch"/g) ?? []).length,
     2,
     "embedded transfer detail footer actions must be touch-sized",
   );
-  assert.match(
-    detailClient,
-    /buttonSize=\{embedded \? "touch" : "default"\}/,
-  );
+  assert.match(detailClient, /buttonSize="touch"/);
+  assert.match(detailClient, /buttonSize="default"/);
   assert.match(detailClient, /className=\{embedded \? "h-12" : "h-9"\}/);
   assert.match(transferActions, /stock_transfer_receive/);
   assert.match(transferActions, /p_items: items \?\? null/);

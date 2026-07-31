@@ -110,7 +110,9 @@ export function StockFulfillmentHubClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const rawWork = searchParams.get("work");
+  const rawWork =
+    searchParams.get("work") ??
+    (searchParams.get("queue") === "receive" ? "receive" : null);
   const rawState = searchParams.get("state");
   const work: WorkFilter =
     rawWork === "request" || rawWork === "dispatch" || rawWork === "receive"

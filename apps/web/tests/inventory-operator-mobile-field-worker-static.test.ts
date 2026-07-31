@@ -42,16 +42,10 @@ test("operator transfer receive requires an inspection step and shortage notes",
     transferDetailModelSource,
     /return status === "confirmed_receive";/,
   );
-  assert.match(
-    receiveClientSource,
-    /const isWaitingForTransit = transfer\.status === "confirmed_ship"/,
-  );
-  assert.match(receiveClientSource, /receiveCopy\.receiveWaitingTransit/);
-  assert.match(
-    receiveClientSource,
-    /isWaitingForTransit \? backHref : detailHref/,
-  );
-  assert.match(receiveClientSource, /receiveCopy\.receiveBackToList/);
+  assert.doesNotMatch(receiveClientSource, /isWaitingForTransit/);
+  assert.doesNotMatch(receiveClientSource, /receiveWaitingTransit/);
+  assert.match(receiveClientSource, /receiveCopy\.receiveOpenDetail/);
+  assert.match(receiveClientSource, /render=\{<Link href=\{detailHref\}/);
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
   assert.match(receiveClientSource, /qty < item\.qty && note\.length < 5/);
   assert.match(receiveClientSource, /copy\.shortageNoteMinLength/);
