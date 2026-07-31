@@ -446,6 +446,18 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
   );
 
   assert.match(source, /AppListFrame/);
+  assert.match(
+    source,
+    /<AppListFrame\s+toolbar=\{\s*<AppToolbar[\s\S]*?filters=\{\s*<>\s*\{viewModeTabs\}\s*\{filterPopover\}\s*<\/>/,
+  );
+  assert.doesNotMatch(
+    source,
+    /<AppListFrame[\s\S]{0,400}title=\{viewMode/,
+  );
+  assert.doesNotMatch(
+    source,
+    /<AppListFrame[\s\S]{0,400}action=\{viewModeTabs\}/,
+  );
   assert.match(source, /SheetFooter/);
   assert.match(source, /sm:max-w-xl/);
   assert.match(source, /outstandingPayable/);

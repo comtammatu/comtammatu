@@ -33,6 +33,7 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
+  InputGroupText,
 } from "@comtammatu/ui/components/input-group";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
@@ -2539,7 +2540,7 @@ export function SupplierInvoicesClient({
     >
       <TabsList
         variant="toolbar"
-        size="touch"
+        size={controlSize === "touch" ? "touch" : "default"}
         className="w-full sm:w-fit"
         aria-label={copy.groupByLabel}
       >
@@ -2773,13 +2774,10 @@ export function SupplierInvoicesClient({
       />
 
       <AppListFrame
-        title={viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo}
-        headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
-        action={viewModeTabs}
         toolbar={
           <AppToolbar
             variant="inline"
-            className="[&>[data-slot=toolbar-group]:first-child]:min-w-0 sm:[&>[data-slot=toolbar-group]:first-child]:min-w-64"
+            className="items-stretch sm:items-center [&>[data-slot=toolbar-group]:first-child]:min-w-0 sm:[&>[data-slot=toolbar-group]:first-child]:min-w-64"
             search={
               <InputGroup size={controlSize} className="min-w-0 flex-1">
                 <InputGroupAddon>
@@ -2792,9 +2790,19 @@ export function SupplierInvoicesClient({
                   placeholder={copy.searchPlaceholder}
                   aria-label={copy.searchPlaceholder}
                 />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>
+                    {copy.groupCount(allInvoiceGroups.length, totalCount)}
+                  </InputGroupText>
+                </InputGroupAddon>
               </InputGroup>
             }
-            filters={filterPopover}
+            filters={
+              <>
+                {viewModeTabs}
+                {filterPopover}
+              </>
+            }
           />
         }
       >
