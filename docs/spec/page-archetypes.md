@@ -481,8 +481,7 @@ allowlist, not a precedent for stretching another archetype's definition:
    `/inventory/stock` (or `/inventory/grn` for accountant). Not a rendered
    archetype.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
-   master-detail pair with responsive composition; also hosts Min-stock alert
-   strip. Classified **LIST**.
+   master-detail pair with responsive composition. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —
    detail half of the same pair. Classified **DETAIL**.
 6. `apps/web/app/(protected)/notifications/page.tsx` — feed list without

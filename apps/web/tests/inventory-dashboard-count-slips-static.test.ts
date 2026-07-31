@@ -6,16 +6,16 @@ function readWebFile(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-test("inventory stock hosts Min-threshold alerts after hub removal", () => {
+test("inventory stock stays a LIST after hub removal without alert strip", () => {
   const stockClient = readWebFile(
     "app/(protected)/inventory/stock/stock-client.tsx",
   );
   const page = readWebFile("app/(protected)/inventory/page.tsx");
 
-  assert.match(stockClient, /stockCopy\.attention\.title/);
-  assert.match(stockClient, /isStockReorderRisk/);
-  assert.match(stockClient, /underThresholdItems/);
-  assert.match(stockClient, /NoteCallout/);
+  assert.doesNotMatch(stockClient, /NoteCallout/);
+  assert.doesNotMatch(stockClient, /underThresholdItems/);
+  assert.doesNotMatch(stockClient, /stockCopy\.attention/);
+  assert.match(stockClient, /underThresholdButton/);
   assert.doesNotMatch(page, /DashboardClient|dashboard-client/);
 });
 
