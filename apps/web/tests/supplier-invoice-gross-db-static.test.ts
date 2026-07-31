@@ -13,6 +13,13 @@ const migrationName = readdirSync(migrationDir).find((name) =>
 
 assert.ok(migrationName);
 const migration = readFileSync(resolve(migrationDir, migrationName), "utf8");
+const poFirstWorkflowTest = readFileSync(
+  resolve(
+    import.meta.dirname,
+    "../../../supabase/tests/po_first_purchase_workflow_test.sql",
+  ),
+  "utf8",
+);
 
 test("supplier invoice migration backfills NET unit price and locks additive line invariants", () => {
   assert.match(
@@ -32,6 +39,12 @@ test("supplier invoice migration drops the gross-first pricing evidence columns"
   assert.match(migration, /DROP COLUMN IF EXISTS gross_unit_price/);
   assert.doesNotMatch(migration, /ADD COLUMN pricing_mode/);
   assert.doesNotMatch(migration, /pricing_mode IN \('gross_total', 'unit_price'\)/);
+});
+
+test("po-first workflow SQL test sends additive NET unit_price payload", () => {
+  assert.match(poFirstWorkflowTest, /'unit_price',\s*100/);
+  assert.doesNotMatch(poFirstWorkflowTest, /'pricing_mode'/);
+  assert.doesNotMatch(poFirstWorkflowTest, /'gross_unit_price'/);
 });
 
 test("supplier invoice migration keeps matching on net lines and secures RPC", () => {

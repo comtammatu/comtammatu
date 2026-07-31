@@ -32,7 +32,15 @@ test("supplier invoice RPC payload persists net unit price and additive gross li
   assert.match(action, /line_total: line\.lineTotal/);
   assert.match(
     action,
-    /supplier_invoice_lines \( id,[\s\S]*gross_line_total/,
+    /supplier_invoice_lines \( id,[\s\S]*unit_price,[\s\S]*gross_line_total/,
+  );
+  assert.match(
+    action,
+    /calculateSupplierInvoiceNetLineTotal\(\s*line\.quantity,\s*line\.unitPrice,\s*"0\.00",?\s*\)/,
+  );
+  assert.doesNotMatch(
+    action,
+    /calculateSupplierInvoiceGrossLineTotal\(line\.lineTotal, "0\.00"\)/,
   );
   assert.doesNotMatch(action, /pricing_mode,/);
   assert.doesNotMatch(action, /gross_unit_price,/);
