@@ -16,7 +16,6 @@ import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   computeStockStatus,
   isStockReorderRisk,
-  needsInventoryValuationRestore,
   type StockActionPermissions,
   type StockIngredient,
   type StockLocationBreakdown,
@@ -367,7 +366,5 @@ export async function loadStockOnHandPageData({
     permissions,
     summary,
     totalValue,
-    valuationRestoreRequired:
-      valueVisibility.system && needsInventoryValuationRestore(ingredients),
   };
 }

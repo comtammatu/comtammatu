@@ -70,11 +70,11 @@ test("stock on hand exposes only WAC and inventory value", () => {
   assert.doesNotMatch(stockModel, /referenceUnitCost/);
   assert.doesNotMatch(stockClient, /reference-cost|referenceCostPerUnit/);
   assert.match(stockClient, /averageUnitCost == null \? null/);
-  assert.match(stockData, /valuationRestoreRequired:/);
-  assert.match(stockClient, /valuationRestoreRequired/);
-  assert.match(
+  assert.doesNotMatch(stockData, /valuationRestoreRequired/);
+  assert.doesNotMatch(stockClient, /valuationRestoreRequired/);
+  assert.doesNotMatch(
     valueActions,
-    /restoreInventoryValuationFromSupplierInvoices[\s\S]*prepare_inventory_valuation_cutover/,
+    /restoreInventoryValuationFromSupplierInvoices/,
   );
 });
 

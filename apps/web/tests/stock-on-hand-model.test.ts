@@ -6,7 +6,6 @@ import {
   filterStockOnHandIngredients,
   hasStockOnHandFilters,
   isPristineStockOnHand,
-  needsInventoryValuationRestore,
   type StockIngredient,
   type StockOnHandFilters,
 } from "../lib/inventory/stock-on-hand-model";
@@ -95,21 +94,4 @@ test("pristine stock and active filter state remain distinct", () => {
   );
   assert.equal(hasStockOnHandFilters(defaultFilters), false);
   assert.equal(hasStockOnHandFilters({ ...defaultFilters, status: "low" }), true);
-});
-
-test("valuation restore is offered only when every stocked ingredient lacks WAC", () => {
-  assert.equal(
-    needsInventoryValuationRestore([
-      makeIngredient({ id: 1, monetary: { averageUnitCost: 0 } }),
-      makeIngredient({ id: 2, monetary: { averageUnitCost: null } }),
-      makeIngredient({ id: 3, qty: 0, monetary: { averageUnitCost: 20 } }),
-    ]),
-    true,
-  );
-  assert.equal(
-    needsInventoryValuationRestore([
-      makeIngredient({ id: 1, monetary: { averageUnitCost: 20 } }),
-    ]),
-    false,
-  );
 });

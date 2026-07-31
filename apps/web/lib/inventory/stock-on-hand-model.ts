@@ -63,7 +63,6 @@ export interface StockOnHandPageData {
   permissions: StockActionPermissions;
   summary: StockWorkSummary;
   totalValue: number | null;
-  valuationRestoreRequired: boolean;
 }
 
 export interface StockOnHandFilters {
@@ -138,18 +137,6 @@ export function isPristineStockOnHand(ingredients: StockIngredient[]): boolean {
         item.qty === 0 &&
         (!item.lastCount ||
           item.lastCount === messages.inventory.common.noValue),
-    )
-  );
-}
-
-export function needsInventoryValuationRestore(
-  ingredients: StockIngredient[],
-): boolean {
-  const stockedIngredients = ingredients.filter((item) => item.qty > 0);
-  return (
-    stockedIngredients.length > 0 &&
-    stockedIngredients.every(
-      (item) => (item.monetary?.averageUnitCost ?? 0) <= 0,
     )
   );
 }
