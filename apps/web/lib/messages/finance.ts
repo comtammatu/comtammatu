@@ -347,7 +347,7 @@ export const finance = {
     needsActionFilter: "Cần xử lý",
     loadErrorTitle: "Không thể tải sổ Chi phí vận hành",
     loadErrorDescription: "Không tải được số liệu kỳ này. Thử tải lại.",
-    tenantLevel: "Cả quán",
+    tenantLevel: "Công ty",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
       description: "Thêm khoản chi để theo dõi chi phí và dòng tiền.",
@@ -424,8 +424,8 @@ export const finance = {
     },
     table: {
       date: "Ngày",
-      branch: "Chi nhánh",
-      category: "Khoản mục",
+      branch: "Nơi chi",
+      category: "Khoản chi",
       method: "Phương thức",
       paymentState: "Trạng thái",
       amount: "Số tiền",

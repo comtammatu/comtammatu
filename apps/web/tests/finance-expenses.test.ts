@@ -291,8 +291,8 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
   );
   assert.match(client, /buildExpenseVatBreakdown/);
   assert.match(client, /PhotoUploadInput/);
-  assert.match(client, /key: "vat"/);
-  assert.match(client, /key: "attachment"/);
+  assert.match(client, /name=\{`lines\.\$\{index\}\.vatRate`\}/);
+  assert.match(client, /name=\{`lines\.\$\{index\}\.vatAmount`\}/);
   assert.doesNotMatch(client, /được khấu trừ/);
   assert.match(migration, /normalize_expense_vat_breakdown/);
   assert.match(migration, /expense_vat_snapshot_immutable/);
@@ -342,4 +342,21 @@ test("expense list opens read-only detail from row click", () => {
   assert.match(client, /copy\.detail\.vatBreakdown/);
   assert.match(client, /selectedExpense\.vat_breakdown\.map/);
   assert.match(messages, /detail:\s*\{[\s\S]*title:\s*"Chi tiết khoản chi"/);
+});
+
+test("expense list keeps the ledger compact and uses consistent operator terms", () => {
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const messages = readWeb("lib/messages/finance.ts");
+  const columns = client.slice(
+    client.indexOf("const columns: DataTableColumn<ExpenseRow>[] = ["),
+    client.indexOf("  return (", client.indexOf("const columns:")),
+  );
+
+  assert.doesNotMatch(columns, /key: "(?:payment_state|vat|attachment)"/);
+  assert.match(messages, /branch: "Nơi chi"/);
+  assert.match(messages, /category: "Khoản chi"/);
+  assert.match(messages, /branchTenantLevel: "Công ty"/);
+  assert.match(client, /className="grid gap-4 md:grid-cols-2"/);
+  assert.match(client, /className="md:col-span-2"/);
+  assert.match(client, /branchLabel=\{copy\.form\.branch\}/);
 });

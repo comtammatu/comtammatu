@@ -260,65 +260,69 @@ function ExpenseFormFields({
 
   return (
     <>
-      <BusinessDateField
-        control={form.control}
-        name="expenseDate"
-        label={copy.form.date}
-        required
-      />
-      <SelectField
-        control={form.control}
-        name="branchId"
-        label={copy.form.branch}
-        options={branchOptions}
-        placeholder={copy.form.branchTenantLevel}
-      />
-      <SelectField
-        control={form.control}
-        name="category"
-        label={copy.form.category}
-        options={CATEGORY_OPTIONS}
-        placeholder={copy.form.categoryPlaceholder}
-        required
-      />
-      <TextareaField
-        control={form.control}
-        name="note"
-        label={copy.form.note}
-        placeholder={copy.form.notePlaceholder}
-        required
-      />
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">{copy.form.paymentSection}</p>
-        {paymentMethodReadOnly ? (
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">{copy.form.method}</p>
-            <p>
-              {
-                copy.paymentMethodLabels[
+      <div className="grid gap-4 md:grid-cols-2">
+        <BusinessDateField
+          control={form.control}
+          name="expenseDate"
+          label={copy.form.date}
+          required
+        />
+        <SelectField
+          control={form.control}
+          name="branchId"
+          label={copy.form.branch}
+          options={branchOptions}
+          placeholder={copy.form.branchTenantLevel}
+        />
+        <SelectField
+          control={form.control}
+          name="category"
+          label={copy.form.category}
+          options={CATEGORY_OPTIONS}
+          placeholder={copy.form.categoryPlaceholder}
+          required
+        />
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{copy.form.paymentSection}</p>
+          {paymentMethodReadOnly ? (
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium">{copy.form.method}</p>
+              <p>
+                {
+                  copy.paymentMethodLabels[
+                    form.watch("paymentMethod") as ExpensePaymentMethod
+                  ]
+                }
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {copy.form.methodEditHint}
+              </p>
+            </div>
+          ) : (
+            <SelectField
+              control={form.control}
+              name="paymentMethod"
+              label={copy.form.method}
+              options={METHOD_OPTIONS}
+              placeholder={copy.form.methodPlaceholder}
+              description={
+                copy.form.methodHints[
                   form.watch("paymentMethod") as ExpensePaymentMethod
                 ]
               }
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {copy.form.methodEditHint}
-            </p>
-          </div>
-        ) : (
-          <SelectField
+              required
+            />
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <TextareaField
             control={form.control}
-            name="paymentMethod"
-            label={copy.form.method}
-            options={METHOD_OPTIONS}
-            placeholder={copy.form.methodPlaceholder}
-            description={
-              copy.form.methodHints[
-                form.watch("paymentMethod") as ExpensePaymentMethod
-              ]
-            }
+            name="note"
+            label={copy.form.note}
+            placeholder={copy.form.notePlaceholder}
             required
           />
-        )}
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         <div>
@@ -828,47 +832,10 @@ export function ExpensesClient({
       render: (row) => methodLabel(row),
     },
     {
-      key: "payment_state",
-      header: copy.table.paymentState,
-      className: "w-32",
-      render: (row) => (
-        <StatusBadge
-          domain="expense-payment"
-          value={classifyExpensePaymentState(row)}
-        />
-      ),
-    },
-    {
       key: "amount",
       header: copy.table.amount,
       className: "text-right font-mono tabular-nums",
       render: (row) => formatAccountingVND(row.amount),
-    },
-    {
-      key: "vat",
-      header: copy.table.vat,
-      className: "text-right font-mono tabular-nums text-muted-foreground",
-      render: (row) => formatAccountingVND(row.vat_amount),
-    },
-    {
-      key: "attachment",
-      header: copy.table.attachment,
-      className: "w-24",
-      render: (row) =>
-        row.invoice_attachment_url ? (
-          <a
-            href={row.invoice_attachment_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary underline-offset-2 hover:underline"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <IconExternalLink className="size-3.5" aria-hidden />
-            {copy.table.attachmentOpen}
-          </a>
-        ) : (
-          "—"
-        ),
     },
     {
       key: "detail",
@@ -909,6 +876,8 @@ export function ExpensesClient({
         branches={branches}
         basePath="/finance/expenses"
         hide={["compare", "granularity"]}
+        branchLabel={copy.form.branch}
+        branchPlaceholder={copy.form.branchTenantLevel}
       />
 
       <KpiRow density="compact">
@@ -1025,10 +994,6 @@ export function ExpensesClient({
                     {detail || "—"}
                   </ItemDescription>
                   <div className="flex shrink-0 items-center gap-2">
-                    <StatusBadge
-                      domain="expense-payment"
-                      value={classifyExpensePaymentState(row)}
-                    />
                     <span
                       className="shrink-0 whitespace-nowrap font-mono text-sm font-semibold tabular-nums"
                       title={formatAccountingVND(row.amount)}
@@ -1037,27 +1002,6 @@ export function ExpensesClient({
                     </span>
                   </div>
                 </ItemFooter>
-                {row.vat_amount > 0 || row.invoice_attachment_url ? (
-                  <ItemDescription className="px-4 pb-3">
-                    {row.vat_amount > 0
-                      ? `${copy.table.vat}: ${formatAccountingVND(row.vat_amount)}`
-                      : null}
-                    {row.vat_amount > 0 && row.invoice_attachment_url
-                      ? " · "
-                      : null}
-                    {row.invoice_attachment_url ? (
-                      <a
-                        href={row.invoice_attachment_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline-offset-2 hover:underline"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {copy.table.attachmentOpen}
-                      </a>
-                    ) : null}
-                  </ItemDescription>
-                ) : null}
               </Item>
             );
           }}

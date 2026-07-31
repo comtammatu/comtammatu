@@ -62,6 +62,9 @@ interface FilterBarProps {
   trailing?: ReactNode;
   compact?: boolean;
   className?: string;
+  branchLabel?: string;
+  branchPlaceholder?: string;
+  allBranchesLabel?: string;
 }
 
 type FilterBarControl =
@@ -112,6 +115,9 @@ export function FilterBar({
   trailing,
   compact = false,
   className,
+  branchLabel = filterCopy.branch,
+  branchPlaceholder = filterCopy.branchPlaceholder,
+  allBranchesLabel = messages.finance.common.allBranches,
 }: FilterBarProps) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -213,18 +219,18 @@ export function FilterBar({
               disabled={isPending}
             >
               <SelectTrigger
-                aria-label={filterCopy.branch}
+                aria-label={branchLabel}
                 size={controlSize}
                 className="w-full sm:w-48"
               >
-                <SelectValue placeholder={filterCopy.branchPlaceholder} />
+                <SelectValue placeholder={branchPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
                   value={ALL_BRANCHES_VALUE}
                   size={optionSize}
                 >
-                  {messages.finance.common.allBranches}
+                  {allBranchesLabel}
                 </SelectItem>
                 {branches.map((b) => (
                   <SelectItem
@@ -279,21 +285,21 @@ export function FilterBar({
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {showBranch && (
           <div className="grid gap-1.5">
-            <Label className="text-xs">{filterCopy.branch}</Label>
+            <Label className="text-xs">{branchLabel}</Label>
             <Select
               value={branchValue}
               onValueChange={handleBranchChange}
               disabled={isPending}
             >
               <SelectTrigger size={controlSize}>
-                <SelectValue placeholder={filterCopy.branchPlaceholder} />
+                <SelectValue placeholder={branchPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
                   value={ALL_BRANCHES_VALUE}
                   size={optionSize}
                 >
-                  {messages.finance.common.allBranches}
+                  {allBranchesLabel}
                 </SelectItem>
                 {branches.map((b) => (
                   <SelectItem
