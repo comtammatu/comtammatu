@@ -1,6 +1,13 @@
 "use client";
 
-import { Clock, Home, Package, Users } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  Home,
+  Package,
+  UserCircle,
+  Users,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { AppBottomNav } from "@/components/app-bottom-nav";
@@ -39,6 +46,22 @@ export function OperatorBottomNav({
               `/br/${branchId}/shift/checkout-approvals`,
             ],
           },
+          {
+            href: `/br/${branchId}/shift/schedule`,
+            label: messages.operator.nav.schedule,
+            icon: CalendarDays,
+            exact: false,
+          },
+          ...(!showBranchManagement
+            ? [
+                {
+                  href: `/br/${branchId}/profile`,
+                  label: messages.operator.nav.profile,
+                  icon: UserCircle,
+                  exact: false,
+                },
+              ]
+            : []),
         ]
       : []),
     ...(showBranchManagement

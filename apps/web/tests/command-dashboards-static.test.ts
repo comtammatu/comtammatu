@@ -62,6 +62,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.ingredientCost\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryMovement\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingResult\}/);
   assert.match(
     page,
@@ -102,13 +103,14 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /ingredientCost: "Giá vốn món"/);
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
   assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
+  assert.match(copy, /inventoryMovement: "Biến động tồn kho"/);
   assert.match(copy, /operatingResult: "Kết quả vận hành"/);
   assert.match(copy, /inventory: "Tài sản hiện có"/);
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
-    4,
+    5,
   );
-  assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 2);
+  assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 3);
   assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 2);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);

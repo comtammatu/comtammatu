@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { ArrowRight as IconArrowRight } from "lucide-react";
-import {
-  formatCount,
-  formatPercent,
-  formatVND,
-} from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -128,7 +124,7 @@ export default async function FinancePage({
       >
         <KpiRow
           density="compact"
-          className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+          className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
         >
           <div className="min-w-0 md:grid md:gap-2 xl:contents">
             <span
@@ -160,10 +156,7 @@ export default async function FinancePage({
                   ? formatVND(cockpit.kpis.ingredientCost)
                   : financeCopy.basic.kpis.missingCost
               }
-              hint={financeCopy.basic.kpis.ingredientCostHint(
-                formatCount(cockpit.kpis.costCoverageOrderCount),
-                formatCount(cockpit.kpis.orderCount),
-              )}
+              hint={financeCopy.basic.kpis.ingredientCostHint}
               tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
               href="/finance/food-cost"
             />
@@ -201,7 +194,16 @@ export default async function FinancePage({
               href="/finance/food-cost"
             />
           </div>
+        </KpiRow>
 
+        <div className="mt-2 flex min-h-6 items-center text-sm font-medium text-muted-foreground xl:justify-end">
+          {financeCopy.basic.kpis.operatingResultBase}
+        </div>
+
+        <KpiRow
+          density="compact"
+          className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+        >
           <div className="grid min-w-0 gap-2 xl:contents">
             <span className={formulaOperatorClass}>
               <span aria-hidden>−</span>
@@ -222,6 +224,22 @@ export default async function FinancePage({
                 cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
               }
               href="/finance/expenses"
+            />
+          </div>
+
+          <div className="grid min-w-0 gap-2 xl:contents">
+            <span className={formulaOperatorClass}>
+              <span aria-hidden>−</span>
+              <span className="sr-only">
+                {financeCopy.basic.operators.subtract}
+              </span>
+            </span>
+            <KpiCard
+              density="compact"
+              label={financeCopy.basic.kpis.inventoryMovement}
+              value={formatVND(cockpit.kpis.inventoryMovement)}
+              hint={financeCopy.basic.kpis.inventoryMovementHint}
+              tone="neutral"
             />
           </div>
 

@@ -37,8 +37,8 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
 - `business_documents` workflow kernel
 - vendor portal
 - payment proposal batches / approval nhiều cấp
-- labor, overhead, accounting giữa pháp nhân/nội bộ doanh nghiệp
-- location hierarchy enterprise nhiều tầng
+- labor, overhead, accounting ngoài phạm vi Inventory
+- location hierarchy nhiều tầng
 
 ---
 
@@ -306,7 +306,7 @@ Ngoài phạm vi v1:
 - payment proposal batches,
 - debit note / credit note engine đầy đủ,
 - approval thanh toán nhiều cấp,
-- AP giữa pháp nhân/nội bộ doanh nghiệp.
+- AP giữa các đơn vị không thuộc phạm vi.
 
 ---
 

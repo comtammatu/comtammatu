@@ -1,12 +1,13 @@
-# Cơm Tấm Má Tư — Bộ phần mềm quản lý vận hành và bán hàng
+# Cơm Tấm Má Tư — Operations and Sales Management Software
 
-Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
+Operations and sales management software for Hộ kinh doanh Cơm Tấm Má Tư.
 Single-tenant, multi-branch.
 
-Nhiệm vụ: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ đúng,
-và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
+Mission: sell correctly, send the correct work to the kitchen, collect the correct
+amount, print and issue the correct documents, deduct stock correctly, and give
+the owner or manager a truthful daily view of operations.
 
-Hierarchy: `Tenant (L0) → Branch (L1)`.
+Hierarchy: `Hộ Kinh Doanh (L0) → Chi nhánh (L1)`.
 
 This file is the agent entrypoint. Keep it short and stable. Detailed, topic-specific rules live under `docs/agent/rules/`.
 
@@ -60,13 +61,9 @@ it elsewhere — point here.
 
 - **Agent-to-agent text → English.** Subagent prompts, T3/T2 debate transcripts, multi-agent handoffs, structured tool I/O, and any reasoning exchanged between agents are English. English keeps the shared context window dense and reads identically across every runtime (Claude Code, Codex).
 - **Code, identifiers, comments, and commit subjects → English** (see Critical Constraints). Comments state only non-obvious constraints.
-- **Owner-facing chat replies → Vietnamese.** Answer the owner in Vietnamese — concise but complete (gọn gàng, không bỏ chi tiết cần truyền đạt). Keep code, symbols, commands, file paths, identifiers, and log/error excerpts verbatim; never translate them.
-- **Persisted docs follow a declared per-surface default; never flip an existing file's language as a side effect.** Language is assigned by purpose. Each surface has a default for NEW files; existing files are grandfathered — if a file already differs from its surface default, keep it.
-  - **Vietnamese** (owner/human planning, domain, operator-facing): `docs/ref/`, `docs/user-guides/`, `docs/plan/` (incl. `docs/plan/decisions.md`), `docs/architecture/`, `docs/README.md`, business/legal docs.
-  - **English** (agent rules, technical contracts, agent-internal staging): `docs/agent/rules/`, `docs/modules/`, `docs/spec/`, `docs/plan/adr/`, `docs/worklog/README.md`, `docs/CODEBASE_MAP.md`, `tasks/` (incl. `tasks/todo.md`, `tasks/lessons.md`, `tasks/regressions.md`), and root `AGENTS.md` / `CLAUDE.md`.
-  - **English default, Vietnamese allowed for operator-facing checklists:** `docs/runbooks/`.
-  - Root `README.md` is intentionally bilingual: Vietnamese mission/overview + English tech stack.
-- **One prose language per doc.** Within a single doc, explanatory prose stays in one language. Vietnamese domain/legal terms, UI-copy strings, role labels, env vars, and code identifiers are kept verbatim inside prose of either language and do NOT count as mixing — an English doc carrying verbatim Vietnamese domain nouns (e.g. HĐĐT, HKD, "doanh thu") is a correct English doc, not a half-translated one.
+- **Owner-facing chat replies → Vietnamese.** Answer the owner in Vietnamese — concise but complete. Keep code, symbols, commands, file paths, identifiers, and log/error excerpts verbatim; never translate them.
+- **Persisted documentation → English prose.** `docs/`, `tasks/`, agent rules, plans, decisions, references, runbooks, specs, and module docs use English explanatory prose. Keep product names, Vietnamese legal terms, operator-facing UI copy, role labels, env vars, and code identifiers verbatim where they are part of the contract.
+- **One prose language per doc.** Within a single doc, explanatory prose stays in English. Verbatim Vietnamese domain terms, legal terms, UI-copy strings, role labels, env vars, and code identifiers do not count as mixed prose.
 
 ## Critical Constraints
 
@@ -85,7 +82,7 @@ it elsewhere — point here.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - NEVER leave tombstone or provenance notes about deleted code, files, flows, or projects — in code comments, docs, or SQL. Delete cleanly; git history is the record.
-- Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no "đã xóa/đã gỡ", no owner-decision dates in code).
+- Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no deletion notes or owner-decision dates in code).
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 - MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
 - NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs (including Parked ADRs for owner-kept future options with a revisit trigger) according to the content type; `docs/worklog/` is policy-only.

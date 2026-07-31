@@ -2,6 +2,7 @@ export interface FinanceResultInput {
   netRevenueBeforeVat: number;
   ingredientCost: number;
   operatingExpense: number;
+  inventoryMovement: number;
   costAvailable: boolean;
   operatingExpenseRecorded: boolean;
 }
@@ -16,6 +17,7 @@ export function calculateFinanceResult({
   netRevenueBeforeVat,
   ingredientCost,
   operatingExpense,
+  inventoryMovement,
   costAvailable,
   operatingExpenseRecorded,
 }: FinanceResultInput): FinanceResult {
@@ -34,7 +36,7 @@ export function calculateFinanceResult({
     grossMargin:
       netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0,
     operatingResult: operatingExpenseRecorded
-      ? grossProfit - operatingExpense
+      ? grossProfit - operatingExpense - inventoryMovement
       : null,
   };
 }

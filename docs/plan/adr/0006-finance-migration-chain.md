@@ -1,12 +1,12 @@
 # ADR 0006 — Finance Migration Chain And Operating-Finance Boundary
 
 **Status:** Accepted (2026-06-16)
-**Decision drivers:** D020 (enterprise accounting outside the HKD product, owner-approved 2026-06-13, applied prod 2026-06-14); D012 (HKD operating-finance posture); baseline-first migration policy
+**Decision drivers:** D020 (advanced accounting outside the HKD product, owner-approved 2026-06-13, applied prod 2026-06-14); D012 (HKD operating-finance posture); baseline-first migration policy
 
 Má Tư is a Hộ kinh doanh. The current Finance product is operating finance:
 revenue, HĐĐT, operating expenses, food-cost signal, supplier-invoice handoff,
-cash summary, and accountant-export support. Enterprise double-entry accounting
-is outside the product unless D020 is amended first.
+cash summary, and accountant-export support. Advanced double-entry accounting is
+outside the product.
 
 This ADR records the finance migration dependency order so production,
 fresh-environment installs, and rollback planning keep payment, GRN, transfer,
@@ -24,7 +24,7 @@ The canonical D020 chain is:
    `payment_status` intact and strips accounting reverse-posting from refund.
    Must precede D020.
 3. Code deploy — re-source the finance cockpit to the operating-finance
-   surfaces so app code no longer calls enterprise-accounting RPCs.
+   surfaces so app code no longer calls advanced-accounting RPCs.
 4. `20260614100000_d020_retire_enterprise_gl` — one atomic transaction: rewrite
    the 8 business RPCs while preserving every non-accounting behavior, drop the
    accounting FK columns/functions/triggers/tables, and keep
@@ -56,7 +56,7 @@ run file-based `supabase db push` against prod.
 
 ## Reintroduction Gate
 
-Reintroducing enterprise accounting requires amending D020 and this ADR first.
+Reintroducing advanced accounting requires amending D020 and this ADR first.
 The safe order is constrained by FK direction:
 
 - Tables before dependents.
@@ -68,7 +68,7 @@ The safe order is constrained by FK direction:
 
 - Future finance work adds operating-finance migrations only.
 - Questions about revenue, expense, HĐĐT, cash summary, or accountant export
-  resolve to the operating-finance docs and modules, not to enterprise-accounting
+  resolve to the operating-finance docs and modules, not to advanced-accounting
   screens.
 - Rollbacks or baselines must respect the D020 chain; partial replay creates
   payment/refund failures.

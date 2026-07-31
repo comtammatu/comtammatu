@@ -97,7 +97,7 @@ Turborepo owns task ordering in `turbo.json`:
 - `corepack pnpm verify` runs dependency audit (including Node runtime drift),
   baseline hygiene, typecheck, lint/guards, build, and tests.
 
-GitHub Actions runs the standard gates on pull requests and `main`. Conditional
+GitHub Actions runs the standard gates on pull requests and `phuoc-hai`. Conditional
 jobs replay the from-empty database baseline and run the POS → payment → KDS
 smoke against the CI-only isolated Supabase stack.
 
@@ -157,7 +157,7 @@ Full setup: `docs/ref/setup.md`. Preview database setup:
 
 | Deliverable | Promotion path                                                               | Completion evidence                                                        |
 | ----------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Web         | PR → CI → merge to `main` → Vercel production deployment                     | CI URL/status and Vercel deployment evidence                               |
+| Web         | PR → CI → merge to `phuoc-hai` → Vercel production deployment                 | CI URL/status and Vercel deployment evidence                               |
 | Database    | migration file → review/Preview proof → merge → owner-gated production apply | Target ref, migration ledger/schema check, generated types when applicable |
 | Print-agent | build bundle → deploy Windows service per branch → on-site smoke             | Version heartbeat, Realtime subscription, physical print and retry proof   |
 

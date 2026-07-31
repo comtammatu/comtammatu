@@ -1,8 +1,11 @@
 import {
   CalendarDays as IconBirthDate,
+  CalendarDays as IconSchedule,
+  CalendarX as IconLeave,
   LogOut as IconLogout,
   Mail as IconMail,
   Phone as IconPhone,
+  Wallet as IconWallet,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -14,6 +17,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import {
   BranchOperatorActionBar,
+  BranchOperatorActionSection,
   BranchOperatorDetailList,
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -120,6 +124,32 @@ export async function StaffProfilePageContent({
       </Button>
     </form>
   );
+  const personalLinks =
+    effectiveBranchId == null || claims.user_role === "owner"
+      ? []
+      : [
+          {
+            key: "schedule",
+            href: `/br/${effectiveBranchId}/shift/schedule`,
+            icon: IconSchedule,
+            title: copy.scheduleActionTitle,
+            description: copy.scheduleActionDescription,
+          },
+          {
+            key: "leave",
+            href: `/br/${effectiveBranchId}/shift/schedule/leave`,
+            icon: IconLeave,
+            title: copy.leaveActionTitle,
+            description: copy.leaveActionDescription,
+          },
+          {
+            key: "payslip",
+            href: `/br/${effectiveBranchId}/profile/payslip`,
+            icon: IconWallet,
+            title: copy.payrollTitle,
+            description: copy.payrollDescription,
+          },
+        ];
 
   if (plane === "branch") {
     return (
@@ -218,6 +248,15 @@ export async function StaffProfilePageContent({
             />
           </div>
         </BranchOperatorPanel>
+
+        <BranchOperatorActionSection
+          title={copy.personalToolsTitle}
+          description={copy.personalToolsDescription}
+          links={personalLinks}
+          columns={2}
+          mobileColumns={1}
+          presentation="plain"
+        />
 
         <BranchOperatorActionBar align="end">
           {signOutAction}

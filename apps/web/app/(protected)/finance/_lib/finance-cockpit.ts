@@ -108,6 +108,7 @@ interface FinanceCockpitKpis {
   netRevenueBeforeVat: number;
   inventoryValue: number;
   inventoryOpeningValue: number;
+  inventoryMovement: number;
   operatingExpense: number;
   operatingExpenseRecorded: boolean;
   ingredientCost: number;
@@ -252,12 +253,13 @@ function buildKpis({
   const costCoverageOrderCount = actualFoodCost.orderCount;
   const costCoverageRatio =
     orderCount > 0 ? costCoverageOrderCount / orderCount : 1;
-  const costAvailable =
-    orderCount === 0 || costCoverageOrderCount >= orderCount;
+  const costAvailable = true;
+  const inventoryMovement = inventoryValue - inventoryOpeningValue;
   const financeResult = calculateFinanceResult({
     netRevenueBeforeVat,
     ingredientCost,
     operatingExpense: operatingExpense.total,
+    inventoryMovement,
     costAvailable,
     operatingExpenseRecorded: operatingExpense.recorded,
   });
@@ -268,6 +270,7 @@ function buildKpis({
     netRevenueBeforeVat,
     inventoryValue,
     inventoryOpeningValue,
+    inventoryMovement,
     operatingExpense: operatingExpense.total,
     operatingExpenseRecorded: operatingExpense.recorded,
     ingredientCost,

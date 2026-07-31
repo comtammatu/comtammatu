@@ -70,21 +70,21 @@ Luật, thuế suất, ngưỡng doanh thu, và biểu thuế là dữ liệu d�
 chỉ khóa thuật ngữ; số luật cụ thể phải lấy từ `legal-framework-2026.md` và
 `einvoice-tax.md` tại thời điểm triển khai.
 
-## Quy ước ngôn ngữ
+## Documentation language convention
 
 | Lớp                                   | Ngôn ngữ chuẩn      | Quy ước                                                                                          |
 | ------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
-| UI cho người dùng nội bộ              | Tiếng Việt          | Dùng nhãn tiếng Việt hoặc acronym đã duyệt đứng riêng; không dùng label song ngữ                 |
-| Docs nghiệp vụ                        | Tiếng Việt là chính | Nếu cần đối chiếu thuật ngữ, tách cột `canonical_term` và `label_vi`; không viết chung một label |
-| Code, DB schema, type, RPC, file path | Tiếng Anh           | Không đặt identifier bằng tiếng Việt hoặc tiếng Việt không dấu                                   |
-| Comment kỹ thuật                      | Tiếng Anh           | Chỉ ghi constraint không hiển nhiên; không ghi lịch sử thay đổi                                  |
+| Internal operator UI                  | Vietnamese          | Use approved Vietnamese labels or standalone acronyms; do not use bilingual labels              |
+| Business/reference docs               | English             | Keep Vietnamese legal, product, UI, and `label_vi` values verbatim; do not mix explanatory prose |
+| Code, DB schema, type, RPC, file path | English             | Do not create Vietnamese or unaccented Vietnamese identifiers                              |
+| Technical comments                    | English             | State only non-obvious constraints; do not record change history                               |
 
-Persisted identifiers gồm table/column/function/RPC name, enum value, permission
-key, position code, role template name, feature flag key, URL query token,
-payload field, và storage bucket/object contract. Các identifier này dùng
-`lower_snake_case` hoặc route slug ASCII bằng tiếng Anh. Tiếng Việt chỉ nằm ở
-label/copy/user data, ví dụ `label_vi`, seeded branch names, menu item names,
-hoặc nội dung in/hiển thị.
+Persisted identifiers include table/column/function/RPC names, enum values,
+permission keys, position codes, role-template names, feature-flag keys, URL
+query tokens, payload fields, and storage bucket/object contracts. These
+identifiers use English `lower_snake_case` or ASCII route slugs. Vietnamese is
+limited to labels, copy, and user data such as `label_vi`, seeded branch names,
+menu item names, or printed/displayed content.
 
 ## Quy ước chính tả tiếng Việt
 

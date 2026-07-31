@@ -17,18 +17,15 @@ Không phải nền tảng nhiều merchant, không phải hệ thống quản l
 
 ## Mô hình pháp lý hiện hành
 
-Cơm Tấm Má Tư vận hành theo mô hình **Hộ kinh doanh (HKD)**, không phải
-Công ty Cổ phần. Trong docs hiện hành, `HKD` là thuật ngữ pháp lý mặc định;
-`CTCP`, `JSC`, `cổ phần`, `báo cáo tài chính doanh nghiệp`, và `VAS/TT200`
-chỉ được dùng khi nói về lịch sử, năng lực nâng cấp sau này, hoặc trường hợp
-chuyển đổi sang doanh nghiệp.
+Cơm Tấm Má Tư vận hành theo một mô hình duy nhất: **Hộ kinh doanh (HKD)**.
+`HKD` là thuật ngữ pháp lý và business authority mặc định của toàn hệ thống.
 
 Các nguyên tắc vận hành đến ngày 08/07/2026:
 
 - HKD do chủ hộ hoặc thành viên hộ gia đình đăng ký; chủ hộ/chủ thể đăng ký
   chịu trách nhiệm với hoạt động kinh doanh theo quy định về HKD.
-- Không mặc định coi HKD là pháp nhân doanh nghiệp. Trong DB, `tenant` là
-  hồ sơ chủ thể kinh doanh single-tenant, không phải "công ty mẹ".
+- Trong DB, `tenant` là hồ sơ duy nhất của Hộ Kinh Doanh; không có nguồn tổ chức
+  song song.
 - Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng phương pháp thuế khoán
   và không còn nộp lệ phí môn bài theo NQ 198/2025/QH15; hệ thống phải ưu tiên
   số liệu doanh thu, hóa đơn, chứng từ và sổ theo dõi đủ để kê khai.
@@ -40,16 +37,14 @@ Các nguyên tắc vận hành đến ngày 08/07/2026:
 - Chế độ kế toán HKD theo TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026),
   bộ sổ tổ chức theo nhóm doanh thu; export của hệ thống phải đối chiếu được
   với bộ sổ này.
-- Báo cáo tài chính VAS/BCTC doanh nghiệp không phải requirement mặc định cho
-  HKD. Finance mặc định là báo cáo vận hành: doanh thu, tiền đã thu, chi phí,
+- Finance mặc định là báo cáo vận hành HKD: doanh thu, tiền đã thu, chi phí,
   giá vốn món, tồn kho, công nợ NCC, HĐĐT, và export cho kế toán.
 
 ## Nghĩa vụ nghiệp vụ chính
 
 ### 1. HĐĐT và thuế HKD
 
-- HĐĐT bán ra theo cấu hình HKD đã đăng ký với cơ quan thuế/provider, không
-  hardcode assumption "doanh nghiệp GTGT khấu trừ".
+- HĐĐT bán ra theo cấu hình HKD đã đăng ký với cơ quan thuế/provider.
 - POS phải lưu đủ dữ liệu order/payment/buyer để phát hành, tra cứu, hủy/thay
   thế, và xuất lại HĐĐT.
 - HĐĐT thất bại không được làm mất trạng thái đã thu tiền; Finance xử lý hàng
@@ -67,8 +62,7 @@ Các nguyên tắc vận hành đến ngày 08/07/2026:
 
 - Báo cáo mặc định: doanh thu theo ngày/chi nhánh, lợi nhuận gộp trước VAT,
   giá vốn món, tồn kho, chênh lệch kiểm kê, thanh toán, HĐĐT cần xử lý.
-- Advanced COA/Journal/BCTC không thuộc UX hiện tại cho HKD; chỉ xem xét lại
-  khi mô hình pháp lý/chuyển đổi doanh nghiệp thay đổi bằng quyết định riêng.
+- Advanced COA/Journal/BCTC không thuộc UX hiện tại cho HKD.
 
 ## Yêu cầu đăng ký cho `tenants` table
 

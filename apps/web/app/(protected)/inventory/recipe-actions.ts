@@ -11,6 +11,7 @@ import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
+import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 
 /* ─── Recipes (branch WAC + menu-item recipes) ─── */
 
@@ -93,13 +94,24 @@ export async function fetchBranchWacMap(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
+  const stockBearingLocationIds = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId: claims.tenant_id,
+    ...(parsedBranchId.data != null
+      ? { branchId: parsedBranchId.data }
+      : {}),
+  });
+  if (stockBearingLocationIds.length === 0) {
+    return { success: true, data: {} };
+  }
+
   let query = supabase
     .from("stock_levels")
     .select(
-      "ingredient_id, avg_unit_cost, branch_id, branches!inner ( branch_kind )",
+      "ingredient_id, avg_unit_cost, branch_id",
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("branches.branch_kind", "branch")
+    .in("location_id", stockBearingLocationIds)
     .not("avg_unit_cost", "is", null);
 
   if (parsedBranchId.data != null) {

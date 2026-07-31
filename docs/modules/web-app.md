@@ -1,32 +1,31 @@
-# Phân hệ Web App
+# Web App Module
 
-## Tổng quan
+## Overview
 
-Ứng dụng Next.js App Router phục vụ Owner surface, Branch home, POS/KDS và
-public/auth. Package manifest sở hữu phiên bản framework;
-route runtime và generated matrix sở hữu danh sách route hiện hành.
+The Next.js App Router application serves the Owner surface, Branch home,
+POS/KDS, and public/auth. Package manifests own framework versions; route runtime
+and the generated matrix own the current route list.
 
-**Phạm vi sở hữu:** `apps/web/`
+**Owned scope:** `apps/web/`
 
-## Cấu trúc route
+## Route Structure
 
-Route group `(protected)` và `(public)` là URL-neutral. Cây bên dưới tổ chức
-theo runtime surface; file thực tế hiện nằm dưới
-`apps/web/app/(protected)/*` cho các surface app đã đăng nhập và
-`apps/web/app/(public)/*` cho các surface public/auth/return.
+Route groups `(protected)` and `(public)` are URL-neutral. The tree below is
+organized by runtime surface; files currently live under
+`apps/web/app/(protected)/*` for authenticated app surfaces and
+`apps/web/app/(public)/*` for public/auth/return surfaces.
 
-## Route contract hiện tại
+## Current Route Contract
 
-Runtime route contract sống ở `packages/shared/src/auth/route-map.ts`, còn
-quyền truy cập vẫn sống ở `packages/shared/src/auth/module-acl.ts`. Khi sửa
-route hoặc shell, cập nhật cả hai nơi liên quan: ACL quyết định ai được vào;
-route-map quyết định route thuộc surface nào, dùng chrome nào, và rời surface
-theo quy tắc nào.
+The runtime route contract lives in `packages/shared/src/auth/route-map.ts`,
+while access authority lives in `packages/shared/src/auth/module-acl.ts`. When
+changing a route or shell, update both relevant sources: ACL decides who may
+enter; route-map decides which surface owns the route, which chrome it uses, and
+how it leaves the surface.
 
-Role/scope/route boundary canonical sống ở
-`docs/spec/role-route-matrix.md`: `/*` là L0 Tenant Command cho
-owner; Branch Manager dùng L1 Branch Command dưới
-`/br/[branchId]/*`.
+The canonical role/scope/route boundary lives in
+`docs/spec/role-route-matrix.md`: `/*` is the L0 Tenant Command for Owner;
+Branch Manager uses the L1 Branch Command under `/br/[branchId]/*`.
 
 | Surface           | Route family                                                                                                 | Entry point                                            | Navigation / back contract                                                                                                                                                  | Breadcrumb / scope contract                                                                  |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -152,5 +151,5 @@ Browser request
 - **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
   và payslip nằm trong Branch. HR Owner surface và `/hr/payroll/*` chỉ dành
   cho Owner.
-- **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán doanh nghiệp và đóng/mở lại kỳ không nằm trong app surface hiện tại.
+- **Finance mặc định là tài chính vận hành HKD:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Các route kế toán nâng cao và đóng/mở lại kỳ không nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`.

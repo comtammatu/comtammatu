@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { resolve } from "node:path";
 import { getRecipeLineBaseQuantity } from "../app/(protected)/inventory/_lib/recipe-cost";
 import type { IngredientUnitRow } from "../lib/inventory/types";
+
+const repoRoot = resolve(process.cwd(), "../..");
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   return {
@@ -53,4 +57,17 @@ test("recipe display cost quantity keeps unitless lines unchanged", () => {
     }),
     3,
   );
+});
+
+test("recipe display WAC uses active stock-bearing locations", () => {
+  const source = readFileSync(
+    resolve(
+      repoRoot,
+      "apps/web/app/(protected)/inventory/recipe-actions.ts",
+    ),
+    "utf8",
+  );
+
+  assert.match(source, /fetchStockBearingLocationIds/);
+  assert.match(source, /\.in\("location_id", stockBearingLocationIds\)/);
 });

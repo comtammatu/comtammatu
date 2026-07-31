@@ -2,11 +2,11 @@
 
 ## Product Boundary
 
-Enterprise accounting is outside the current Finance product boundary.
+Finance serves HKD operating finance only.
 
 Finance Basic is the default Finance experience when `/finance` opens as
 `Tổng quan tài chính`. The first section shows one period-result formula across
-five cards:
+six cards:
 
 - **Doanh thu thuần**: paid-order merchandise value after discount and before
   VAT.
@@ -15,7 +15,9 @@ five cards:
 - **Chi phí vận hành**: posted operating spend for rent,
   utilities, payroll, repairs, supplies, marketing, fees/tax, and other
   operating categories?
-- **Kết quả vận hành**: gross profit minus recorded operating expense.
+- **Biến động tồn kho**: period-end inventory value minus period-opening value.
+- **Kết quả vận hành**: gross profit minus recorded operating expense minus
+  inventory movement.
 
 Missing food-cost coverage makes both gross profit and operating result
 unavailable. A period with no recorded operating expense keeps operating result
@@ -64,10 +66,8 @@ The attention queue remains the last section. Tax and GTGT reporting are not
 added to this landing formula; HĐĐT and tax workflows keep their existing
 separate routes and contracts.
 
-Do not expand Finance by default into a full enterprise accounting product.
-The current business model is HKD, so the Finance surface must serve restaurant
-operating finance first: daily money, stock value, food cost, expenses, HĐĐT,
-and accountant export.
+The Finance surface must serve restaurant operating finance first: daily money,
+stock value, food cost, expenses, HĐĐT, and accountant export.
 
 Finance metrics, cards, titles, and overview summaries must also follow
 `docs/ref/operational-data-contract.md`. Do not add a new finance KPI or reuse a
@@ -78,8 +78,8 @@ states the exact source, formula, exclusions, confidence, and drilldown.
 
 ## Reporting Maturity
 
-Finance grows by reporting maturity, not by exposing enterprise accounting
-screens to every operator from day one.
+Finance grows by reporting maturity, without exposing advanced-accounting screens
+to every operator.
 
 | Stage | Key                    | Default audience               | Product intent                                                                         |
 | ----- | ---------------------- | ------------------------------ | -------------------------------------------------------------------------------------- |
@@ -95,7 +95,7 @@ level operating reports.
 
 ### Finance Basic
 
-Finance Basic is the current finance surface. Its landing owns five primary
+Finance Basic is the current finance surface. Its landing owns six primary
 period-result cards:
 
 1. **Net revenue**
@@ -127,14 +127,20 @@ period-result cards:
      cash-to-bank deposits/transfers from the top-line operating expense number.
    - If no operating expense has been recorded, display `Chưa ghi nhận`.
 
-5. **Operating result**
-   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành`.
+5. **Inventory movement**
+   - `Biến động tồn kho = Tồn cuối kỳ - Tồn đầu kỳ`.
+   - A positive movement is subtracted from operating result; a negative
+     movement increases it.
+
+6. **Operating result**
+   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành - (Tồn cuối kỳ - Tồn đầu kỳ)`.
    - Do not call it net profit. Keep it unavailable when food cost is incomplete
      or operating expense has not been recorded.
 
 After the formula, show the unfiltered current-funds section, the filtered
-period-end inventory value, then the attention queue. Desktop uses five columns,
-tablet uses two, and mobile uses one.
+period-end inventory value, then the attention queue. Desktop splits the six
+formula cards into two three-card rows; tablet uses two columns, and mobile uses
+one.
 
 Supporting workflows remain available but are not the first screen:
 
@@ -184,11 +190,11 @@ the bank-reconciliation workflow; changing the payment method never rewrites a
 The current application authorization model exposes Finance to `owner`; there
 is no canonical `accountant` staff role. Therefore:
 
-| Actor | Current system access | Must review or act on |
-| --- | --- | --- |
-| Owner | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, and append-only fund adjustments | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds |
-| Accountant | No authenticated Finance role or write authority in the current model | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner |
+| Actor          | Current system access                                                                                                                                    | Must review or act on                                                                                                                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owner          | Tenant-wide `/finance`; owner-only bank import/reconciliation, payment-method correction, one-time fund initialization, and append-only fund adjustments | Daily landing metrics and formulas; current cash/bank opening and adjustments; exact POS cash variances; unmatched SePay movements; VietQR payments missing bank evidence; operating expenses; AP; HĐĐT; inventory opening/closing evidence; exports |
+| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance, bank import/reconciliation, opening-balance, fund-adjustment, or payment-correction authority  | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds                                         |
+| Accountant     | No authenticated Finance role or write authority in the current model                                                                                    | Receive Owner-controlled revenue/payment exports, canonical SePay evidence, expense/AP evidence, HĐĐT evidence, and inventory opening/closing evidence; report discrepancies back to the Owner                                                       |
 
 The system must not silently map `office` or another position to Finance
 access. A separate authenticated accountant workspace requires an explicit
@@ -205,7 +211,7 @@ they never add or subtract a second bank movement.
 ### Accounting Advanced Boundary (D020)
 
 Má Tư operates as a Hộ kinh doanh on single-entry bookkeeping (TT 152/2025).
-Enterprise double-entry accounting (TT 200 / VAS) is outside the current Finance scope.
+Kế toán nâng cao không thuộc Finance hiện tại.
 
 `accounting_periods` and the close/reopen RPCs remain database-only owner-gated
 support. No current app route exposes period close/reopen. Reopening that scope
@@ -219,7 +225,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
 | `/finance`                   | Four-card basic landing      | Show completed-payment revenue, sales after discount, inventory value, and operating expense |
 | `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                                        |
-| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
+| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not advanced accounting                                          |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
 
@@ -239,7 +245,7 @@ Finance Basic is operationally acceptable only when all of these are true:
 5. Gross profit remains supporting read-only analysis derived from revenue before VAT after discounts minus food cost.
 6. Labels avoid advanced accounting terms unless the user is inside an advanced accounting route.
 7. Support workflows for HĐĐT, payment/order desync, cash sessions, and supplier payables stay accessible but do not dominate the first screen.
-8. No current operating action depends on enterprise-accounting screens.
+8. No current operating action depends on advanced-accounting screens.
 
 ## Stop Rules
 
@@ -247,13 +253,13 @@ Do not implement new Accounting Advanced work until Finance Basic passes the acc
 
 Do not add new finance KPIs unless they answer a daily operator question or a required accountant export question.
 
-Do not expose VAS/TT200 routes as the primary Finance experience for owner or branch operations while Má Tư is operating as HKD.
+Do not expose advanced-accounting routes as the primary Finance experience for owner or branch operations.
 
-Do not call the module "done" because enterprise-accounting objects exist in old migrations or archived references. Restaurant finance readiness is operating cash, revenue, expense, HĐĐT, inventory value, and accountant export.
+Restaurant finance readiness is operating cash, revenue, expense, HĐĐT, inventory value, and accountant export.
 
 ## Current Gaps
 
-- Chi phí vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense, not enterprise accounting.
+- Chi phí vận hành is captured in `/finance/expenses`; keep it as single-entry HKD operating expense.
 - Inventory value detail stays in Inventory; Finance shows only the current-value card.
 - HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
   cancellation, and replacement; provider-side artifacts and status lookup stay

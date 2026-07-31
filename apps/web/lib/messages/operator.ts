@@ -7,6 +7,7 @@ export const operator = {
   },
   nav: {
     schedule: "Lịch ca",
+    profile: "Cá nhân",
     profileShort: "Hồ sơ",
   },
   todayStatus: {

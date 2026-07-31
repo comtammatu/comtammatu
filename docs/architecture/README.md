@@ -1,35 +1,30 @@
 # Architecture Landing
 
-Điểm vào chung cho tài liệu kiến trúc cấp hệ thống. `docs/ref/glossary.md` là
-vocabulary chuẩn của hệ thống hiện tại; target Greenfield vocabulary nằm trong
-các target architecture docs cho tới khi được owner chấp nhận và viết lại trong
-repo mới.
+Common entry point for system-level architecture documentation.
+`docs/ref/glossary.md` is the canonical vocabulary for the current system.
 
-## Nên đọc trước
+## Read First
 
-- [../ref/glossary.md](../ref/glossary.md) — current-state vocabulary của hệ thống đang chạy
-- [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
-- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md) — Modules, Tech Specs, Infra và Project Structure mục tiêu
-- [target-auth-authorization.md](target-auth-authorization.md) — Auth, scoped RBAC, route access, RLS và RPC mục tiêu
-- [../plan/greenfield/README.md](../plan/greenfield/README.md) — kế hoạch fork, dọn authority và chuyển giao greenfield
-- [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
-- [../modules/auth.md](../modules/auth.md) — Auth, JWT claims và ACL của hệ thống hiện tại
-- [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm
-- [../ref/inventory.md](../ref/inventory.md) — semantics chuẩn cho procurement, production, stock, và transfer
+- [../ref/glossary.md](../ref/glossary.md) — current-system vocabulary
+- [../spec/architecture.md](../spec/architecture.md) — current system architecture overview
+- [../spec/database-schema.md](../spec/database-schema.md) — canonical schema and data boundaries
+- [../modules/auth.md](../modules/auth.md) — Auth, JWT claims, and current-system ACL
+- [../ref/business-context.md](../ref/business-context.md) — business boundary and product scope
+- [../ref/inventory.md](../ref/inventory.md) — canonical procurement, production, stock, and transfer semantics
 
-## Mục tiêu của thư mục này
+## Purpose of This Directory
 
-- Gói các quyết định kiến trúc cấp hệ thống vào một chỗ dễ tìm
-- Dẫn người đọc sang đúng current-state hoặc target vocabulary trước khi viết
-  docs, đặt tên module, hoặc thêm copy mới
-- Giảm drift giữa business docs, specs, UI copy, và code comments
+- Keep system-level architecture decisions in one discoverable place.
+- Direct readers to the correct current-state vocabulary before writing docs,
+  naming modules, or adding copy.
+- Reduce drift between business docs, specs, UI copy, and code comments.
 
 ## Boundary
 
-- `docs/architecture/*`: cross-cutting architecture, decision narrative, và
-  entry points tới đúng current-state hoặc target vocabulary
-- `docs/ref/glossary.md`: source of truth cho current-state vocabulary và naming
+- `docs/architecture/*`: cross-cutting architecture, decision narrative, and
+  entry points to the correct current-state vocabulary
+- `docs/ref/glossary.md`: source of truth for current-system vocabulary and naming
   policy
-- `docs/ref/*`: business rules và semantics chi tiết theo domain
-- `docs/spec/*`: schema, data flow, diagrams, implementation-facing structure
-- `docs/modules/*`: module-level onboarding và blast-radius notes
+- `docs/ref/*`: detailed domain business rules and semantics
+- `docs/spec/*`: schema, data flow, diagrams, and implementation-facing structure
+- `docs/modules/*`: module-level onboarding and blast-radius notes

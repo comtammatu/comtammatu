@@ -1,22 +1,22 @@
 # Codebase Map — Cơm Tấm Má Tư
 
-> **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
-> **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
-> **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
-> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), task tracker chi tiết (xem `tasks/todo.md`)
+> **Audience:** New engineers, feature owners, and sprint planners
+> **Primary goals:** (1) understand system structure and the auth flow, (2) know where to add new functionality, and (3) estimate change blast radius
+> **Decision points:** Sprint planning, onboarding, and architecture review
+> **Out of scope:** Business requirements (see `docs/ref/`) and detailed task tracking (see `tasks/todo.md`)
 
-## Trạng thái
+## Current State
 
-- **Operating track:** production đang vận hành in-place trên repo `comtammatu`.
-  Current work lives in `tasks/todo.md`; durable architecture choices live in
-  active ADRs or the owning spec/ref/rule doc.
+- **Operating branch:** Production runs in place on `phuoc-hai`. Current work
+  lives in `tasks/todo.md`; durable architecture decisions live in active ADRs
+  or the owning spec/ref/rule document.
 - **Current surface:** Auth, Owner, Master Data, Inventory, Orders, POS, KDS,
   Print, Payments (Cash + VietQR), Finance Basic, HR/payroll basics, and
   HĐĐT via Viettel S-invoice are the current production surface.
 - **Tech stack:** Next.js, React, TypeScript, Tailwind, Zod, Supabase, and
   Turborepo. Package manifests own exact versions.
 
-## Chỉ mục phân hệ
+## Module Index
 
 | Module         | Doc                                            | Purpose                                                 | Risk Level                  |
 | -------------- | ---------------------------------------------- | ------------------------------------------------------- | --------------------------- |
@@ -31,14 +31,14 @@
 
 ## Documentation Index
 
-Khi cần đi sâu hơn theo loại tài liệu:
+For deeper reading by document type:
 
-- [docs/README.md](README.md) — cổng vào chung cho toàn bộ docs
-- [agent/rules/skills.md](agent/rules/skills.md) — routing cho external skills, plugins, MCP/browser tools, và subagents
-- [docs/ref/glossary.md](ref/glossary.md) — glossary chuẩn duy nhất cho toàn repo
-- [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
+- [docs/README.md](README.md) — common entry point for all docs
+- [agent/rules/skills.md](agent/rules/skills.md) — routing for external skills, plugins, MCP/browser tools, and subagents
+- [docs/ref/glossary.md](ref/glossary.md) — the repository-wide canonical glossary
+- [docs/architecture/README.md](architecture/README.md) — system architecture and cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
-- [runbooks/README.md](runbooks/README.md) — readiness và smoke gates
+- [runbooks/README.md](runbooks/README.md) — readiness and smoke gates
 - [worklog/README.md](worklog/README.md) — worklog policy; no historical archive
 
 ## Authority And Change Routing
@@ -80,7 +80,7 @@ Use this matrix when adding or moving files. It is the practical replacement for
 
 ```mermaid
 flowchart LR
-    supplier["Nhà cung cấp"] -->|GRN| warehouse["Một Kho chi nhánh đang hoạt động"]
+    supplier["Supplier"] -->|GRN| warehouse["One active Branch warehouse"]
     warehouse --> production["Production run"]
     production --> warehouse
     warehouse -->|approved consumption| pos["POS / KDS / completed orders"]
@@ -88,7 +88,7 @@ flowchart LR
 
 ## Landing Files (High Blast Radius)
 
-Đây là các file có nhiều chỗ phụ thuộc nhất. Mọi thay đổi ở đây sẽ tác động rộng trong hệ thống.
+These files have the largest dependency footprint. Changes here have broad system impact.
 
 | File                                            | Importers                          | Impact                                                    |
 | ----------------------------------------------- | ---------------------------------- | --------------------------------------------------------- |

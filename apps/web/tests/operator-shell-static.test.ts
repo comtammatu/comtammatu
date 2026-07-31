@@ -22,7 +22,7 @@ test("operator routes use a route group without wrapping station apps", () => {
   }
 });
 
-test("operator bottom nav stays limited to daily jobs", () => {
+test("operator bottom nav exposes the right daily and personal actions", () => {
   const bottomNav = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
@@ -30,6 +30,7 @@ test("operator bottom nav stays limited to daily jobs", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
   );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
+  const operatorMessages = read("apps/web/lib/messages/operator.ts");
 
   for (const expected of ["`/br/${branchId}`", "`/br/${branchId}/shift`"]) {
     assert.ok(bottomNav.includes(expected), expected);
@@ -37,7 +38,14 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.doesNotMatch(bottomNav, /shift\/profile/);
   assert.doesNotMatch(bottomNav, /shift\/leave/);
   assert.doesNotMatch(bottomNav, /shift\/payslip/);
-  assert.doesNotMatch(bottomNav, /shift\/schedule/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/shift\/schedule`/);
+  assert.match(bottomNav, /label: messages\.operator\.nav\.schedule/);
+  assert.match(bottomNav, /icon: CalendarDays/);
+  assert.match(bottomNav, /!showBranchManagement/);
+  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/profile`/);
+  assert.match(bottomNav, /label: messages\.operator\.nav\.profile/);
+  assert.match(bottomNav, /icon: UserCircle/);
+  assert.match(operatorMessages, /profile: "Cá nhân"/);
   assert.ok(bottomNav.includes("showBranchManagement"));
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/team`/);
   assert.match(bottomNav, /`\/br\/\$\{branchId\}\/stock`/);
@@ -52,14 +60,7 @@ test("operator bottom nav stays limited to daily jobs", () => {
   );
   assert.doesNotMatch(bottomNav, /branchManagementOverflowPrefixes/);
   assert.doesNotMatch(bottomNav, /Ellipsis/);
-  assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/profile`/);
-  assert.doesNotMatch(
-    bottomNav,
-    /label: messages\.operator\.nav\.profileShort/,
-  );
-  assert.doesNotMatch(bottomNav, /label: messages\.operator\.nav\.schedule/);
   assert.doesNotMatch(bottomNav, /messages\.employee\.nav/);
-  assert.doesNotMatch(bottomNav, /icon: User\b/);
   assert.doesNotMatch(bottomNav, /"\/notifications"/);
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
   assert.match(settingsMessages, /centralNavStock: "Kho"/);
@@ -101,6 +102,10 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
   assert.match(layout, /\{APP_COPY_VI\.branchCommand\}/);
   assert.match(layout, /IconUser/);
+  assert.match(
+    layout,
+    /const showProfileHeader = !canUseShiftTab \|\| canManageBranch/,
+  );
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
   assert.match(
@@ -680,7 +685,13 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(operatorProfile, /showWorkspaceLinks/);
   assert.doesNotMatch(profile, /showWorkspaceLinks/);
   assert.doesNotMatch(profile, /resolveQuickLaunchGroups/);
-  assert.doesNotMatch(profile, /EmployeeActionSection/);
+  assert.match(profile, /BranchOperatorActionSection/);
+  assert.match(profile, /copy\.personalToolsTitle/);
+  assert.match(profile, /copy\.scheduleActionTitle/);
+  assert.match(profile, /copy\.leaveActionTitle/);
+  assert.match(profile, /copy\.payrollTitle/);
+  assert.match(profile, /shift\/schedule\/leave/);
+  assert.match(profile, /profile\/payslip/);
   assert.doesNotMatch(profile, /EmployeeHomePageContent/);
   assert.doesNotMatch(profile, /attendance_records/);
   assert.doesNotMatch(profile, /bank_account/);

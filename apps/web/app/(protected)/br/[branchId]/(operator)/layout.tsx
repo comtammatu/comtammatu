@@ -68,6 +68,7 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
+  const showProfileHeader = !canUseShiftTab || canManageBranch;
   const canOpenOwnerHome = claims.user_role === "owner";
   const usesHeaderOverflow = canOpenOwnerHome || canManageBranch;
   const unreadResult = await unreadPromise;
@@ -137,14 +138,16 @@ export default async function OperatorLayout({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
-              <Button
-                variant="outline"
-                size="icon-touch"
-                aria-label={messages.operator.nav.profileShort}
-                render={<Link href={`/br/${context.branchId}/profile`} />}
-              >
-                <IconUser />
-              </Button>
+              {showProfileHeader ? (
+                <Button
+                  variant="outline"
+                  size="icon-touch"
+                  aria-label={messages.operator.nav.profileShort}
+                  render={<Link href={`/br/${context.branchId}/profile`} />}
+                >
+                  <IconUser />
+                </Button>
+              ) : null}
               <Button
                 variant="outline"
                 size="icon-touch"

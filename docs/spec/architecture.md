@@ -3,9 +3,9 @@
 ## Hierarchy
 
 ```
-Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
-  └── Branch (L1, multiple: Chi nhánh Q1, Q3, ...)
-        └── Staff (profiles, role-based)
+Hộ Kinh Doanh (L0, one row: Cơm Tấm Má Tư)
+  └── Chi nhánh (L1, multiple branches: Q1, Q3, ...)
+        └── Nhân viên (profiles, by role)
 ```
 
 ## System Topology
@@ -32,7 +32,7 @@ printers, not a second business-data authority.
 
 | Concern              | Contract                                                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Product shape        | Single tenant, multiple branches, path-based surfaces on one web domain                                                                |
+| Product shape        | One Hộ Kinh Doanh, multiple branches, path-based surfaces on one web domain                                                           |
 | Web runtime          | Node.js 24.x, Next.js App Router on Vercel; RSC, Server Actions, route handlers, and scheduled routes share one app                    |
 | Data authority       | Supabase Cloud owns Auth, Postgres, PostgREST, RLS, Realtime, and Storage                                                              |
 | Authorization        | `proxy.ts` gates session/surface/scope; RLS and authorized RPCs own data/action authority                                              |
@@ -66,7 +66,7 @@ Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
 | Role                | Route                                             |
 | ------------------- | ------------------------------------------------- |
-| `owner`             | `/`, rồi resolver mở branch khi chỉ có một branch |
+| `owner`             | `/`, then the resolver opens the branch when exactly one branch is active |
 | Branch-pinned staff | `/br/{branchId}`                                  |
 
 Root `/` delegates to this same resolver; multiple active branches produce the

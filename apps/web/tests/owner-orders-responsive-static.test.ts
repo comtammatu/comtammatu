@@ -40,12 +40,16 @@ test("Owner finance results stay one column on mobile, two on tablet, and expose
 
   assert.match(
     page,
-    /className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]"/,
+    /className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]"/,
   );
-  assert.equal((page.match(/density="compact"/g) ?? []).length, 9);
+  assert.match(
+    page,
+    /className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-\[auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]"/,
+  );
+  assert.equal((page.match(/density="compact"/g) ?? []).length, 11);
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
-    4,
+    5,
   );
   assert.match(
     currentFunds,

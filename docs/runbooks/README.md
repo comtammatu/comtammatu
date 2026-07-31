@@ -1,19 +1,20 @@
 # Runbooks
 
-Checklist vận hành và readiness gates.
+Operational checklists and readiness gates.
 
-- Dùng khi cần verify một flow trước khi coi là sẵn sàng.
-- Không dùng thư mục này làm source of truth cho business rules; canonical rules vẫn nằm ở `docs/ref/`.
+- Use when verifying a flow before considering it ready.
+- Do not use this directory as the source of truth for business rules; canonical
+  rules remain in `docs/ref/`.
 
 ## Inventory
 
-- [inventory/pre-release-qa.md](inventory/pre-release-qa.md): smoke + readiness checklist cho Inventory
+- [inventory/pre-release-qa.md](inventory/pre-release-qa.md): Inventory smoke and readiness checklist
 
 ## POS / KDS
 
-- [operations-smoke-gate.md](operations-smoke-gate.md): gate vận hành đầu cuối theo mission `bán đúng -> bếp nhận đúng -> thu tiền đúng -> in/HĐĐT đúng -> kho trừ đúng -> quản lý nhìn đúng`
-- [hddt-viettel-operations.md](hddt-viettel-operations.md): smoke/reconcile/archive cho Viettel S-invoice
-- [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): rollout checklist cho print-agent daemon ESC/POS tại chi nhánh
+- [operations-smoke-gate.md](operations-smoke-gate.md): end-to-end operating gate for the mission `sell correctly -> kitchen receives correctly -> collect correctly -> print/issue HĐĐT correctly -> deduct stock correctly -> management sees correctly`
+- [hddt-viettel-operations.md](hddt-viettel-operations.md): Viettel S-invoice smoke/reconcile/archive
+- [pos-kds/print-agent-rollout.md](pos-kds/print-agent-rollout.md): branch ESC/POS print-agent daemon rollout checklist
 - [pos-kds/realtime-load-testing.md](pos-kds/realtime-load-testing.md): load test realtime POS/KDS
 
 ## Finance
@@ -25,9 +26,9 @@ Checklist vận hành và readiness gates.
 - [../spec/database-schema.md](../spec/database-schema.md): source ladder, migration status vocabulary, and baseline-first layout
 - [../../supabase/migrations/README.md](../../supabase/migrations/README.md): fresh-env install order for the public baseline and managed surfaces
 
-## Cách dùng
+## How to Use
 
-1. Đọc canonical doc tương ứng trong `docs/ref/`
-2. Chạy verify bắt buộc của repo
-3. Dùng runbook để kiểm scope vừa thay đổi
-4. Nếu có lệch giữa doc và code, cập nhật doc trước khi đánh dấu xong
+1. Read the corresponding canonical doc in `docs/ref/`.
+2. Run the repository's required verification.
+3. Use the runbook to check the changed scope.
+4. If docs and code disagree, update the doc before marking the work complete.

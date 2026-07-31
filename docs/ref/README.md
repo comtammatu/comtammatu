@@ -1,26 +1,26 @@
 # Reference Docs
 
-Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không dùng thư mục này
-để lưu session notes, backlog, checklist tạm, hoặc ghi chú agent.
+Long-lived business reference documents for Cơm Tấm Má Tư. Do not use this
+directory for session notes, backlog items, temporary checklists, or agent notes.
 
-## Đọc theo nhu cầu
+## Read by need
 
-| Khi cần | Đọc |
+| When needed | Read |
 | --- | --- |
-| Bối cảnh HKD, mục tiêu sản phẩm, phạm vi không làm | `business-context.md` |
-| Thuật ngữ và tên gọi canonical | `glossary.md` |
-| Kiến thức nền F&B và tài chính vận hành | `domain-encyclopedia.md` |
-| Metric, KPI, card, workflow data contract | `operational-data-contract.md` |
-| Thuế HKD, GTGT, HĐĐT, hóa đơn đầu vào/đầu ra | `legal-framework-2026.md` trước, rồi `einvoice-tax.md` |
-| TNCN từ lương, payroll, BHXH/BHYT/BHTN, HĐLĐ | `legal-framework-2026.md` trước, rồi `payroll-pit.md` và `labor-contracts.md` |
+| HKD context, product goals, and non-goals | `business-context.md` |
+| Canonical terminology and names | `glossary.md` |
+| F&B and operating-finance foundations | `domain-encyclopedia.md` |
+| Metrics, KPIs, cards, and workflow data contracts | `operational-data-contract.md` |
+| HKD tax, GTGT, HĐĐT, and supplier/customer invoices | `legal-framework-2026.md` first, then `einvoice-tax.md` |
+| Payroll PIT, BHXH/BHYT/BHTN, and HĐLĐ | `legal-framework-2026.md` first, then `payroll-pit.md` and `labor-contracts.md` |
 | Inventory | `inventory.md`, `inventory-sop.md`, `inventory-taxonomy-v1.md` |
-| Tích hợp bên thứ ba | `third-party-integrations.md` |
-| Setup local project | `setup.md` |
+| Third-party integrations | `third-party-integrations.md` |
+| Local project setup | `setup.md` |
 | Screen context / UI workflow | `screen-context-map.md` |
 
 ## Hygiene
 
-- Một fact chỉ có một source of truth. Nếu ref chuyên sâu đổi nghĩa, cập nhật
-  file chuyên sâu thay vì thêm ghi chú cạnh tranh ở đây.
-- Không giữ ref đã bị thay thế. Promote rule hiện hành vào file canonical hoặc
-  xóa ghi chú cũ; git history là archive.
+- One fact has one source of truth. If a deep reference changes meaning, update
+  the deep reference instead of adding competing notes here.
+- Do not keep superseded references. Promote the current rule into the canonical
+  file or delete the old note; git history is the archive.

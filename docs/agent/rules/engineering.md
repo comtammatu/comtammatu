@@ -21,7 +21,7 @@ live in `AGENTS.md`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - NEVER leave tombstone or provenance notes about deleted code, files, flows, or projects — in code comments, docs, or SQL. Delete cleanly; git history is the record.
-- Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no "đã xóa/đã gỡ", no owner-decision dates in code).
+- Code comments MUST be English and only state non-obvious constraints. NEVER add narrative, explanatory, or change-log comments (no deletion notes or owner-decision dates in code).
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 - MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
 - NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/` or `docs/superpowers/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, decisions, or ADRs (including Parked ADRs for owner-kept future options with a revisit trigger) according to the content type; `docs/worklog/` is policy-only.

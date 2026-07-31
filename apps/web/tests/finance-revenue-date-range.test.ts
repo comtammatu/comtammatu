@@ -230,7 +230,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
 });
 
-test("Finance gates gross profit and operating result on data coverage", () => {
+test("Finance treats missing food cost as zero for KPI calculation", () => {
   const cockpit = read(
     "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
   );
@@ -244,12 +244,9 @@ test("Finance gates gross profit and operating result on data coverage", () => {
   );
   assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
   assert.match(cockpit, /orderIds\.add\(row\.order_id\)/);
-  assert.match(
-    cockpit,
-    /const costAvailable =\s*orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,
-    "gross profit must not be trusted when only a subset of paid orders has posted consumption",
-  );
-  assert.match(cockpit, /missingCostCoverageHint/);
+  assert.match(cockpit, /const costAvailable = true;/);
+  assert.doesNotMatch(cockpit, /orderCount === 0 \|\| costCoverageOrderCount >= orderCount/);
+  assert.match(financeMessages, /ingredientCostHint: "Đơn thiếu giá vốn được tính 0"/);
   assert.match(page, /basic\.kpis\.grossProfit/);
   assert.match(page, /basic\.kpis\.operatingResult/);
   assert.doesNotMatch(page, /basic\.kpis\.moneyCollected/);
@@ -314,7 +311,7 @@ test("Finance live copy stays HKD operating-first without two-mode labels", () =
   );
   assert.match(
     financeMessages,
-    /stageCompanyReporting: "Hỗ trợ kế toán để riêng"/,
+    /stageAccountantReporting: "Hỗ trợ xuất dữ liệu kế toán"/,
     "support accounting should be framed as a separate helper area",
   );
   assert.match(

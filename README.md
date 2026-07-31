@@ -1,26 +1,27 @@
 # Cơm Tấm Má Tư
 
-Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
-Single-tenant, multi-branch, đa kho.
+Operations and sales management software for Hộ kinh doanh Cơm Tấm Má Tư.
+One Hộ Kinh Doanh, multiple branches, multiple warehouses.
 
-Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
-kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
-Không phải nền tảng nhiều merchant, không phải ERP đa ngành.
+System mission: sell correctly, send the correct work to the kitchen, collect
+correctly, print and issue correctly, deduct stock correctly, and give the
+owner/manager a truthful daily operating view. It is not a multi-merchant
+platform or a multi-industry ERP.
 
-Mô hình vận hành production: **Tenant → Chi nhánh**.
+Production operating model: **Hộ Kinh Doanh → Chi nhánh**.
 
 ## Modules
 
 | #   | Module               | Scope                                                                                                | Status  |
 | --- | -------------------- | ---------------------------------------------------------------------------------------------------- | ------- |
-| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                                          | SHIPPED |
+| M0  | Management shell     | Operating cockpit, sidebar, foundation, and operating reports                                          | SHIPPED |
 | M1  | Menu                 | Categories, items, variants, modifiers, sides                                                        | SHIPPED |
 | M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                             | SHIPPED |
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                                 | SHIPPED |
 | M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm).                                                           | SHIPPED |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, branch production                          | SHIPPED |
-| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Enterprise COA/Journal outside HKD scope | PARTIAL |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip, payroll calc. BHXH/PIT export/reconcile partial           | PARTIAL |
+| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export | PARTIAL |
+| M7  | HR & payroll         | Employees, contracts, attendance, payslip, payroll calculation, partial BHXH/PIT export/reconciliation | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 

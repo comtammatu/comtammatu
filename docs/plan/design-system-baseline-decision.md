@@ -1,12 +1,12 @@
 # Baseline Decision Brief — Má Tư Design System
 
-> Mốc: C0
-> Phạm vi: source/docs/static gates tại worktree `codex/design-system-rollout`
-> Quyết định: giữ foundation hiện hành, tune debt có bằng chứng, không dựng lại một Design System cạnh tranh.
+> Checkpoint: C0
+> Scope: source/docs/static gates in worktree `codex/design-system-rollout`
+> Decision: keep the current foundation, tune evidenced debt, and do not rebuild a competing Design System.
 
-## 1. Kết luận
+## 1. Conclusion
 
-Baseline hiện tại đã có đúng authority và layering:
+The current baseline has the correct authority and layering:
 
 ```text
 Base UI behavior
@@ -15,71 +15,74 @@ Base UI behavior
 → route/domain UI
 ```
 
-Không có bằng chứng để chạy `shadcn init`, tạo CSS root thứ hai, thay Base UI, xóa `Field`/`FormField` hoặc rebuild toàn bộ `@comtammatu/ui`. Chương trình tiếp tục theo hướng convergence: xóa debt chết, khóa contract bằng guard, bổ sung accessibility/PWA runtime evidence và rollout từng route family.
+There is no evidence to run `shadcn init`, create a second CSS root, replace Base
+UI, remove `Field`/`FormField`, or rebuild all of `@comtammatu/ui`. Continue
+convergence: remove dead debt, lock contracts with guards, add accessibility/PWA
+runtime evidence, and roll out by route family.
 
-## 2. Baseline định lượng
+## 2. Quantitative baseline
 
-| Hạng mục | Kết quả | Quyết định |
+| Area | Result | Decision |
 | --- | --- | --- |
-| Page census | 123/123 page được map; không thiếu hoặc stale | Giữ archetype registry; P6 review từng route |
-| Archetype | LIST 46, DETAIL 16, SETTINGS-PANEL 13, DOC-WORKFLOW 12, LANDING 9, EMBED-WRAPPER 8, REPORT 6, BOARD 3, DASHBOARD 3, GATE/AUTH 3, REDIRECT-SHIM 3, PUBLIC-WORKFLOW 1 | Không thêm archetype mới |
-| Shared UI adoption | Registry phân loại toàn bộ shared/app/domain adapters; các blocking-zero signal hiện bằng 0 | Giữ registry và ratchet |
-| Base UI boundary | Direct imports chỉ nằm trong `packages/ui` | Giữ và tiếp tục block app escape |
-| CSS SSOT | Chỉ có `packages/ui/src/styles/globals.css` | Giữ một root |
-| Legacy CSS variable names | Không có tên chứa `legacy`, `old`, `v1`, `compat` | Thêm preventive guard; không đụng `Field` |
-| Raw palette / `transition-all` | Không có runtime finding | Giữ blocking-zero |
-| Inline style | Chủ yếu là runtime geometry, CSS variables, chart/progress, theme/error boundary | Phân loại và ratchet; không mass-delete |
-| Shadcn | Không có runtime config hoặc generated component | Giữ reference-only |
-| Accessibility automation | Chưa có `@axe-core/playwright` | Bổ sung ở P3 |
-| PWA | SW boundary và static tests đúng; runtime browser proof chưa đủ | Giữ strategy, bổ sung coverage/proof |
+| Page census | 123/123 pages mapped; none missing or stale | Keep archetype registry; review each route in P6 |
+| Archetype | LIST 46, DETAIL 16, SETTINGS-PANEL 13, DOC-WORKFLOW 12, LANDING 9, EMBED-WRAPPER 8, REPORT 6, BOARD 3, DASHBOARD 3, GATE/AUTH 3, REDIRECT-SHIM 3, PUBLIC-WORKFLOW 1 | Add no new archetype |
+| Shared UI adoption | Registry classifies all shared/app/domain adapters; blocking-zero signals are currently zero | Keep registry and ratchet |
+| Base UI boundary | Direct imports exist only in `packages/ui` | Keep and continue blocking app escapes |
+| CSS SSoT | Only `packages/ui/src/styles/globals.css` | Keep one root |
+| Legacy CSS variable names | No names contain `legacy`, `old`, `v1`, or `compat` | Add preventive guard; do not touch `Field` |
+| Raw palette / `transition-all` | No runtime finding | Keep blocking-zero |
+| Inline style | Mostly runtime geometry, CSS variables, chart/progress, theme/error boundary | Classify and ratchet; do not mass-delete |
+| Shadcn | No runtime config or generated component | Keep reference-only |
+| Accessibility automation | No `@axe-core/playwright` yet | Add in P3 |
+| PWA | SW boundary and static tests are correct; browser runtime proof is incomplete | Keep strategy; add coverage/proof |
 
-Static green không được coi là browser, assistive-technology hoặc Production proof.
+Static green is not browser, assistive-technology, or Production proof.
 
-## 3. Reconciliation external agents
+## 3. External-agent reconciliation
 
-| Agent | Kết quả thực tế | Finding dùng được |
+| Agent | Observed result | Usable finding |
 | --- | --- | --- |
-| `claude` | Hoàn thành read-only review, có evidence `path:line` | Ba custom utility không có consumer; số page `135` trong prose đã stale; giữ SW, registry, focus/motion foundation |
-| `cursor-agent` | Hoàn thành plan-mode review, có evidence `path:line` | Thiếu keep/tune/rebuild census, thiếu axe, PWA proof mới là static, `Input.size` là compatibility alias có thể migrate |
-| `agy` | Không tạo review dùng được | Headless bị chặn MCP permission; interactive báo chưa đăng nhập/hết credit. Không dùng unsafe permission bypass và không gán finding giả |
+| `claude` | Completed a read-only review with `path:line` evidence | Three custom utilities have no consumers; page count `135` is stale in prose; retain SW, registry, and focus/motion foundations |
+| `cursor-agent` | Completed a plan-mode review with `path:line` evidence | Keep/tune/rebuild census and Axe coverage were missing; PWA proof was static only; `Input.size` is a migratable compatibility alias |
+| `agy` | Produced no usable review | Headless execution was blocked by MCP permissions; interactive execution reported no login/credit. Do not bypass permissions or invent findings |
 
-Codex đã kiểm chứng lại các finding được nhận bằng source hiện tại. Các đề xuất rebuild chung, đổi SW cache strategy, xóa `Field`/`FormField`, thay Button default toàn cục hoặc đưa Liquid Glass lên data/form workspace đều bị loại.
+Codex rechecked accepted findings against current source. Broad rebuild proposals, SW cache-strategy changes, removing `Field`/`FormField`, changing the global Button default, and applying Liquid Glass to data/form workspaces were rejected.
 
-## 4. Debt classification được chốt
+## 4. Confirmed debt classification
 
-### Tune ngay tại shared owner
+### Tune immediately at the shared owner
 
-- Xóa `bg-glass-nav`, `scrollbar-thin` và `active-touch-press`: cả ba chỉ còn definition, không có consumer.
-- Migrate toàn bộ `Input size=` sang `controlSize=` rồi xóa compatibility alias.
-- Thêm guard cấm CSS variable name mang nghĩa legacy và cấm tái tạo `Input.size` alias.
-- Sửa prose archetype `135` về current census; số liệu sống vẫn do script sở hữu.
-- Bổ sung `@axe-core/playwright` và representative accessibility project.
-- Bổ sung Runner manifest test để POS/KDS/Runner có contract coverage đối xứng.
+- Remove `bg-glass-nav`, `scrollbar-thin`, and `active-touch-press`: all three have only a definition and no consumer.
+- Migrate every `Input size=` use to `controlSize=`, then remove the compatibility alias.
+- Add a guard against legacy-meaning CSS variable names and recreation of the `Input.size` alias.
+- Correct archetype prose from `135` to the current census; the live number remains script-owned.
+- Add `@axe-core/playwright` and a representative accessibility project.
+- Add a Runner manifest test so POS/KDS/Runner have symmetric contract coverage.
 
-### Giữ có chủ sở hữu
+### Keep with an explicit owner
 
-- Inline style cho chart, geometry, progress, CSS variable bridge, theme bootstrap và `global-error` boundary.
-- Safe-area, print, PWA và dynamic-viewport utilities đang có consumer.
-- Serwist `NetworkOnly` cho mutation/RSC/Supabase/Self-order/authenticated navigations.
-- Reduced-motion global backstop và named motion tokens.
-- Card/surface/component registry hiện hành.
+- Inline styles for charts, geometry, progress, CSS-variable bridges, theme bootstrap, and the `global-error` boundary.
+- Safe-area, print, PWA, and dynamic-viewport utilities with active consumers.
+- Serwist `NetworkOnly` for mutations, RSC, Supabase, Self-order, and authenticated navigations.
+- The global reduced-motion backstop and named motion tokens.
+- The current card/surface/component registry.
 
-### Route tune tranche đầu tiên
+### First route-tune tranche
 
-`/br/[branchId]/shift/checkout-approvals` được chọn làm tranche Branch runtime nhỏ vì có finding cụ thể: details Drawer dùng `ScrollArea` chỉ có `maxHeight`, label tự style và checklist tự dựng chrome. Fix ở shared staff-runtime presenter, không đổi loader/action/authority.
+`/br/[branchId]/shift/checkout-approvals` is the first small Branch runtime tranche because it has a concrete finding: the details Drawer uses `ScrollArea` with only `maxHeight`, a self-styled label, and a checklist with self-built chrome. Fix it in the shared staff-runtime presenter without changing the loader, action, or authority.
 
-## 5. Disposition sơ bộ toàn repo
+## 5. Preliminary repository disposition
 
-Ở C0, 123/123 page có disposition sơ bộ `keep` đối với authority/archetype hiện tại vì route census và UI contract đều xanh. `keep` ở đây chỉ có nghĩa “không có lý do source-level để rebuild”; không phải browser approval.
+At C0, all 123/123 pages have a preliminary `keep` disposition for their current authority/archetype because the route census and UI contract are green. Here, `keep` means only “no source-level reason to rebuild”; it is not browser approval.
 
-Các override ban đầu:
+Initial overrides:
 
-- `tune`: `/br/[branchId]/shift/checkout-approvals` theo finding ở trên.
-- `tune`: representative public/auth/system surfaces để bổ sung axe evidence, không đổi IA.
-- `tune`: PWA manifest/runtime test surface, không đổi cache strategy.
-- `rebuild`: chưa có route nào đủ evidence tại C0.
+- `tune`: `/br/[branchId]/shift/checkout-approvals` for the finding above.
+- `tune`: representative public/auth/system surfaces to add Axe evidence without changing IA.
+- `tune`: PWA manifest/runtime test surface without changing cache strategy.
+- `rebuild`: no route has sufficient evidence at C0.
 
-P6 bắt buộc mở lại disposition theo UI Advisor Gate và runtime evidence cho từng route family. Một route chỉ giữ `keep` cuối cùng khi đã có viewport/state/accessibility evidence phù hợp.
+P6 must reopen disposition through the UI Advisor Gate and runtime evidence for each route family. A route keeps its final `keep` status only after appropriate viewport, state, and accessibility evidence exists.
 
 ## 6. UI Advisor Gate — Branch checkout approvals
 
@@ -96,11 +99,11 @@ UI Advisor Gate
 - Verification: focused static tests, 390/768/1024 runtime when authenticated environment is available, keyboard/focus and axe in representative suite
 ```
 
-## 7. Thứ tự wave đã chốt
+## 7. Confirmed wave order
 
-1. P2: dead CSS, compatibility alias, docs và guards.
-2. P3: axe dependency/project/spec và focused accessibility fixes.
-3. P4: xác nhận CSS/motion convergence sau ratchet.
-4. P5: Runner coverage và production-like PWA proof boundary.
-5. P6: Branch checkout approvals, rồi operational/global chrome tranches theo living plan.
-6. P7: tối đa hai vòng observe/measure/challenge/fix/verify/encode cho mỗi tranche.
+1. P2: dead CSS, compatibility aliases, docs, and guards.
+2. P3: Axe dependency/project/spec and focused accessibility fixes.
+3. P4: confirm CSS/motion convergence after ratcheting.
+4. P5: Runner coverage and the production-like PWA proof boundary.
+5. P6: Branch checkout approvals, followed by operational/global chrome tranches in the living plan.
+6. P7: at most two observe/measure/challenge/fix/verify/encode loops per tranche.
