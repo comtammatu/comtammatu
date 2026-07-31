@@ -1,5 +1,10 @@
 import { cache } from "react";
-import type { JwtClaims, StaffRole } from "@comtammatu/shared/auth";
+import {
+  requiredOperatorBranchKindForRole,
+  type BranchKind,
+  type JwtClaims,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 
 export interface OperatorBranchOption {
   id: number;
@@ -47,11 +52,15 @@ interface BranchContextClient {
 
 const OPERATOR_TENANT_WIDE_ROLES: readonly StaffRole[] = ["owner"];
 
-function operatorBranches(
+function operatorBranchesForRole(
   branches: readonly OperatorBranchOption[],
-  operableKind: string,
+  role: StaffRole,
 ): OperatorBranchOption[] {
-  return branches.filter((branch) => branch.branch_kind === operableKind);
+  const requiredKind = requiredOperatorBranchKindForRole(role);
+  if (requiredKind === null) return [...branches];
+  return branches.filter(
+    (branch) => (branch.branch_kind as BranchKind) === requiredKind,
+  );
 }
 
 function pickDefaultBranchId(
@@ -103,15 +112,16 @@ export function selectBranchScope(
 }
 
 /**
- * Branch home scope is tenant-wide for privileged roles, but every role only
- * operates active sites whose branch_kind is "branch".
+ * Branch home scope is tenant-wide for Owner. Store roles operate
+ * `branch_kind = "branch"`; central_supply_ops / central_kitchen_lead operate
+ * their pinned central site kind. Owner may browse every active site kind.
  */
 export function selectOperatorBranchScope(
   claims: JwtClaims,
   branches: readonly OperatorBranchOption[],
   requestedBranchId: number | null,
 ): BranchScopeSelection {
-  const operableBranches = operatorBranches(branches, "branch");
+  const operableBranches = operatorBranchesForRole(branches, claims.user_role);
   const scope = selectBranchScope(
     claims,
     operableBranches,

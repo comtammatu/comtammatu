@@ -90,11 +90,12 @@ function dateValue(value: string | string[] | undefined): string {
 }
 
 export async function loadGrnListPageData(
-  params: GrnListSearchParams,
+  params: GrnListSearchParams & { routeBranchId?: number },
 ): Promise<GrnListPageData> {
   const auth = await loadAuthState();
   const { supabase, claims } = auth;
   const scope = await resolveInventoryListScope(supabase, claims, {
+    routeBranchId: params.routeBranchId,
     queryBranchId: params.branchId,
   });
   if (scope.outOfScope) notFound();

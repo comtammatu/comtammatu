@@ -76,7 +76,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx":
-    "REDIRECT-SHIM",
+    "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-requests/page.tsx":
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/page.tsx":
@@ -115,6 +117,8 @@ export const PAGE_ARCHETYPES = {
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/page.tsx":
     "DETAIL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx":
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx":

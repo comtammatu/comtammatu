@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Revive Central Operator Hub for Kho Tổng / Bếp TT
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/operator-shell
+Exit: `central_supply_ops` / `central_kitchen_lead` login → `/br/{pinnedSiteId}` touch hub (bottom nav + job tiles); GRN/SX/YCM/fulfillment on central kinds; CN keeps D093 redirects; Owner/Accountant keep `/inventory`.
+Evidence: ACL/scope/proxy/home chrome; OPERATOR_TILE_ITEMS; restored GRN/production/purchase-requests/transfer pages; docs role-ops/screen-map/ui/matrix; static auth/scope/nav contracts; typecheck.
+
+- [ ] Authenticated CS/CK responsive smoke at `390×844`, `768×1024`, `1440×900`: home → GRN → fulfill → tồn; CK thêm SX + Yêu cầu Kho Tổng.
+
 ## Fix production recipe entry unit role pipe
 
 State: verify

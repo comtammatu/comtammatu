@@ -29,7 +29,7 @@ function claims(
   };
 }
 
-test("selectOperatorBranchScope -> owner operates active branch-kind sites only", () => {
+test("selectOperatorBranchScope -> owner operates every active site kind", () => {
   const selected = selectOperatorBranchScope(
     claims("owner", null),
     BRANCHES,
@@ -38,7 +38,7 @@ test("selectOperatorBranchScope -> owner operates active branch-kind sites only"
 
   assert.deepEqual(
     selected.allowedBranches.map((branch) => branch.id),
-    [1, 2],
+    [1, 2, 10, 20],
   );
   assert.equal(selected.currentBranchId, 1);
   assert.equal(selected.defaultBranchId, 1);
@@ -53,12 +53,12 @@ test("selectOperatorBranchScope -> requested operating branch wins only when all
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 10)
       .currentBranchId,
-    1,
+    10,
   );
   assert.equal(
     selectOperatorBranchScope(claims("owner", null), BRANCHES, 20)
       .currentBranchId,
-    1,
+    20,
   );
   assert.equal(
     selectOperatorBranchScope(claims("cashier", 2), BRANCHES, 1)
@@ -92,6 +92,34 @@ test("selectOperatorBranchScope -> branch-scoped roles never see central-kind si
     selected.allowedBranches.map((branch) => branch.id),
     [1],
   );
+});
+
+test("selectOperatorBranchScope -> central_supply_ops pinned to own central site", () => {
+  const selected = selectOperatorBranchScope(
+    claims("central_supply_ops", 20),
+    BRANCHES,
+    null,
+  );
+
+  assert.deepEqual(
+    selected.allowedBranches.map((branch) => branch.id),
+    [20],
+  );
+  assert.equal(selected.currentBranchId, 20);
+});
+
+test("selectOperatorBranchScope -> central_kitchen_lead pinned to own central site", () => {
+  const selected = selectOperatorBranchScope(
+    claims("central_kitchen_lead", 10),
+    BRANCHES,
+    null,
+  );
+
+  assert.deepEqual(
+    selected.allowedBranches.map((branch) => branch.id),
+    [10],
+  );
+  assert.equal(selected.currentBranchId, 10);
 });
 
 test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
@@ -177,7 +205,8 @@ test("resolveBranchContext queries active sites once and returns current branch"
     claims("owner", null),
     10,
   );
-  assert.equal(centralContext, null);
+  assert.equal(centralContext?.branchId, 10);
+  assert.equal(centralContext?.branch.branch_kind, "central_kitchen");
 });
 
 /* ─── parseBranchIdParam / resolveListScope (D058 W3b) ─── */

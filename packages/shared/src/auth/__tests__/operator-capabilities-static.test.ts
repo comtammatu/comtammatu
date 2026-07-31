@@ -135,7 +135,7 @@ test("resolveOperatorTiles -> branch home does not duplicate Owner surface links
   assert.equal(hrefs.includes("/inventory/production"), false);
 });
 
-test("resolveOperatorTiles -> fulfillment hub replaces GRN/production", () => {
+test("resolveOperatorTiles -> branch kind keeps GRN/production off the stock hub", () => {
   for (const role of ["owner", "branch_manager"] as const) {
     const groups = resolveOperatorTiles(role, 3, "branch");
     const stock = groups.find((group) => group.id === "stock");
@@ -143,12 +143,12 @@ test("resolveOperatorTiles -> fulfillment hub replaces GRN/production", () => {
     assert.equal(
       stock?.tiles.some((tile) => tile.href === "/br/3/stock/production"),
       false,
-      `${role} must not see production tile`,
+      `${role} must not see production tile on branch`,
     );
     assert.equal(
       stock?.tiles.some((tile) => tile.href === "/br/3/stock/grn"),
       false,
-      `${role} must not see GRN tile`,
+      `${role} must not see GRN tile on branch`,
     );
     const fulfillmentTile = stock?.tiles.find(
       (tile) => tile.href === "/br/3/stock/transfer",
@@ -156,6 +156,38 @@ test("resolveOperatorTiles -> fulfillment hub replaces GRN/production", () => {
     assert.ok(fulfillmentTile, `${role} must see fulfillment hub`);
     assert.equal(fulfillmentTile?.label, "Giao nhận hàng");
   }
+});
+
+test("resolveOperatorTiles -> central kinds expose GRN and fulfill tiles", () => {
+  const supply = resolveOperatorTiles("central_supply_ops", 20, "central_supply");
+  const supplyStock = supply.find((group) => group.id === "stock");
+  assert.equal(
+    supplyStock?.tiles.some((tile) => tile.href === "/br/20/stock/grn"),
+    true,
+  );
+  assert.equal(
+    supplyStock?.tiles.some((tile) => tile.href === "/br/20/stock/production"),
+    false,
+  );
+  assert.equal(
+    supplyStock?.tiles.some((tile) => tile.href === "/br/20/stock/transfer"),
+    true,
+  );
+
+  const kitchen = resolveOperatorTiles(
+    "central_kitchen_lead",
+    10,
+    "central_kitchen",
+  );
+  const kitchenStock = kitchen.find((group) => group.id === "stock");
+  assert.equal(
+    kitchenStock?.tiles.some((tile) => tile.href === "/br/10/stock/grn"),
+    true,
+  );
+  assert.equal(
+    kitchenStock?.tiles.some((tile) => tile.href === "/br/10/stock/production"),
+    true,
+  );
 });
 
 test("resolveOperatorTiles -> branch stock group renders the D093 tile set", () => {

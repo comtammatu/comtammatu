@@ -11,6 +11,7 @@ export {
   canManageTenantStrategySettings,
   ROLE_LABEL_VI,
   requiredBranchKindForPositionCode,
+  requiredOperatorBranchKindForRole,
   staffRoleFromPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";

@@ -289,15 +289,20 @@ Cấu hình Google Stitch MCP Server được khai báo tại `.mcp.json` / `.co
 
 ## Branch Operator Landing
 
-Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh ở
-`/br/[branchId]`. Nó dùng Branch operator adapter, không wrapper control_surface và
-không gọi trực tiếp vocabulary Employee ở các route Branch:
+Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh, Kho Tổng
+(`central_supply`), và Bếp Trung Tâm (`central_kitchen`) ở `/br/[branchId]`.
+Nó dùng Branch operator adapter, không wrapper control_surface và không gọi
+trực tiếp vocabulary Employee ở các route Branch:
 
-- Branch và control_surface là hai mặt phẳng presentation khác nhau. Branch giữ
-  mobile/tablet touch-first tại `/br/[branchId]/*`; control_surface giữ desktop
-  management workspace responsive tại `/`, `/inventory`, `/finance`,
-  `/hr`, `/menu`, `/orders`, và `/branches`. Mã dùng chung dưới
-  `br/_shared/settings` chỉ là source directory, không phải route.
+- Branch và control_surface là hai mặt phẳng presentation khác nhau. Operator
+  plane giữ mobile/tablet touch-first tại `/br/[branchId]/*` cho mọi site kind
+  được phép theo role; control_surface giữ desktop management workspace
+  responsive tại `/`, `/inventory`, `/finance`, `/hr`, `/menu`, `/orders`, và
+  `/branches` (Owner/Accountant). Mã dùng chung dưới `br/_shared/settings` chỉ
+  là source directory, không phải route.
+- `central_supply_ops` / `central_kitchen_lead` land trên `/br/{pinnedSiteId}`
+  với bottom nav và job tiles theo kind; GRN/SX chỉ mở trên kind trung tâm
+  (CN giữ redirect D093).
 - data loader, Server Action, RPC và permission check có thể dùng chung giữa
   hai plane; presentation không được dùng chung nếu control_surface component tạo cảm
   giác desktop thu nhỏ trong Branch. Khi cần tách, Branch route dùng native

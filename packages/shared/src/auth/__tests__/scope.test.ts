@@ -175,6 +175,16 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
       href: "/access-denied?reason=branch-scope-mismatch",
     });
   }
+
+  for (const role of [
+    "central_supply_ops",
+    "central_kitchen_lead",
+  ] as const) {
+    assert.deepEqual(resolveRoleHomeLink(role, 3), {
+      label: "Hôm nay",
+      href: "/br/3",
+    });
+  }
 });
 
 test("resolveRouteFamilyContract → classifies active app surfaces", () => {

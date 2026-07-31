@@ -6,6 +6,7 @@ import {
   extractClaimsFromAccessToken,
   isOwnerRoutePath,
   isPublicAppPath,
+  requiredOperatorBranchKindForRole,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   type BlockedStateReasonCode,
@@ -230,13 +231,11 @@ export async function proxy(request: NextRequest) {
 
       if (needsBranchSurface) {
         // Stations (POS/KDS/runner) stay branch-kind "branch". Owner enters
-        // any ACTIVE site's non-station surfaces;
-        // every other role is already pinned to its own branch above.
+        // any ACTIVE site's non-station surfaces; central roles are pinned to
+        // their site kind; store roles stay on branch-kind sites.
         const requiredBranchKind = isStationRoute
           ? "branch"
-          : allowCrossBranch
-            ? null
-            : "branch";
+          : requiredOperatorBranchKindForRole(claims.user_role);
         const branchSurface = await getBranchSurface(
           supabase,
           claims.tenant_id,

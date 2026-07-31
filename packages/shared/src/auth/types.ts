@@ -148,6 +148,20 @@ export function requiredBranchKindForPositionCode(
   return POSITION_CODE_TO_REQUIRED_BRANCH_KIND[code] ?? null;
 }
 
+/**
+ * Operator-plane `/br/{id}` stock/home surface kind gate by staff role.
+ * `null` = any active site kind (Owner oversight). Central roles are pinned
+ * to their site kind; every other operator role is store-branch only.
+ */
+export function requiredOperatorBranchKindForRole(
+  role: StaffRole,
+): BranchKind | null {
+  if (role === "owner") return null;
+  if (role === "central_supply_ops") return "central_supply";
+  if (role === "central_kitchen_lead") return "central_kitchen";
+  return "branch";
+}
+
 /** JWT custom claims injected by Supabase auth hook */
 export interface JwtClaims {
   tenant_id: number;

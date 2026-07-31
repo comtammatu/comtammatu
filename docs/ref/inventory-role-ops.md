@@ -69,21 +69,24 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 
 ### 4.3 Quản lý kho Tổng (`central_supply_ops`)
 
-- **Surface:** `/inventory/*` (site `central_supply`); L0 `/inventory` redirect → Tồn
+- **Surface:** `/br/{pinnedSiteId}/*` (operator shell, site `central_supply`);
+  home login → hub Kho Tổng. Owner/Accountant oversight vẫn trên
+  control_surface `/inventory/*`.
 - **Làm:** Yêu cầu mua + GRN Kho Tổng; tồn/kiểm kê/hao hụt site; inbox dòng yêu cầu
   `central_supply`; fulfill → DC; ship/receive tại site
-- **Nav hiện:** Tồn, GRN, Yêu cầu (inbox), Điều chuyển, tiêu hao/hao hụt,
-  NCC, Nguyên liệu (chỉ xem) — **không** PO, Sản xuất, Định mức món bán
-- **Không:** PO/giá; SX; CRUD danh mục nguyên liệu; branch stock UI
+- **Nav hiện (hub + bottom nav):** Nhập (GRN), Tồn, Giao nhận, Yêu cầu mua,
+  Kiểm kê, Hao hụt, Tiêu hao, Danh mục (chỉ xem) — **không** PO, Sản xuất,
+  Định mức món bán
+- **Không:** PO/giá; SX; CRUD danh mục nguyên liệu; station POS/KDS/Runner
 
 ### 4.4 Bếp trưởng Bếp TT (`central_kitchen_lead`)
 
-- Như Kho Tổng tại `central_kitchen` **+ Production** và
-  **ProductionRecipe**
+- Như Kho Tổng tại `/br/{pinnedSiteId}` (`central_kitchen`) **+ Production**
+  và **ProductionRecipe** (tab trong `/br/.../stock/production`)
+- Có thể **Yêu cầu Kho Tổng** cho nguyên liệu nguồn `central_supply`
 - Inbox dòng `central_kitchen`; fulfill → DC
 - Nguyên liệu: chỉ xem (Owner CRUD + `default_fulfill_site_kind`)
-- **Không:** PO; tạo DC ad-hoc ngoài fulfill (trừ khi có grant);
-  `MenuRecipe`/định mức món bán; CRUD danh mục
+- **Không:** PO; `MenuRecipe`/định mức món bán; CRUD danh mục; POS/KDS/Runner
 
 ### 4.5 Quản lý chi nhánh (`branch_manager`)
 

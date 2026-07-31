@@ -345,9 +345,9 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     if (role === "central_supply_ops" || role === "central_kitchen_lead") {
       rows.push({
         role,
-        desktop: "/inventory",
-        phone: "/inventory",
-        note: "D076 adapter until ADR 0015; D091 scopes Inventory work to the pinned central site.",
+        desktop: "/br/{branchId} (central site operator hub)",
+        phone: "/br/{branchId} (central site operator hub)",
+        note: "Pinned central site roles land on the operator hub for their JWT branch_id; Owner/Accountant keep control_surface /inventory oversight.",
       });
       continue;
     }
@@ -447,7 +447,7 @@ function renderActionGateTable(
     .flatMap((f) => {
       if (f.id === "inventory") {
         return [
-          `| inventory-home | \`/inventory\` (exact, redirect-shim → \`/inventory/stock\` or \`/inventory/grn\`) | ${formatRoles(["inventory"])} | ${formatKeys(["inventory"])} |`,
+          `| inventory-home | \`/inventory\` (exact, redirect → \`/inventory/stock\` or \`/inventory/grn\`) | ${formatRoles(["inventory"])} | ${formatKeys(["inventory"])} |`,
           `| inventory-procurement | ${formatPrefixes(inventoryRoutePrefixes.procurement)} | ${formatRoles(["inventory"])} | ${formatKeys(["procurement"])} |`,
           `| inventory-operations | ${formatPrefixes(inventoryRoutePrefixes.operations)} | ${formatRoles(["inventory_operations"])} | ${formatKeys(["inventory", "procurement"])} |`,
         ];

@@ -132,6 +132,8 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "cashier",
       "chef",
       "branch_staff",
+      "central_supply_ops",
+      "central_kitchen_lead",
     ],
     label: getModuleLabelVi("branch_home"),
   },
@@ -167,7 +169,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   branch_stock: {
     path: "/br/*/stock",
-    allowedRoles: ["owner", "branch_manager"],
+    allowedRoles: [
+      "owner",
+      "branch_manager",
+      "central_supply_ops",
+      "central_kitchen_lead",
+    ],
     label: getModuleLabelVi("branch_stock"),
   },
   branch_orders: {

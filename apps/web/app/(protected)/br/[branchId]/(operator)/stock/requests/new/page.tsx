@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import {
   StockRequestEditor,
@@ -36,23 +37,43 @@ export default async function BranchStockRequestNewPage({
 
   const { supabase, claims } = await loadAuthState();
   const branchContext = await resolveBranchContext(supabase, claims, branchId);
-  if (!branchContext || branchContext.branch.branch_kind !== "branch") {
+  if (!branchContext) notFound();
+
+  const kind = branchContext.branch.branch_kind;
+  if (kind === "central_supply") {
+    notFound();
+  }
+  if (kind !== "branch" && kind !== "central_kitchen") {
     notFound();
   }
 
   const requestId = Number(query.requestId);
   const editing =
     Number.isInteger(requestId) && requestId > 0 ? requestId : null;
+
+  const ingredientsQuery =
+    kind === "central_kitchen"
+      ? supabase
+          .from("ingredients")
+          .select(
+            "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_active", true)
+          .eq("default_fulfill_site_kind", "central_supply")
+          .order("name")
+      : supabase
+          .from("ingredients")
+          .select(
+            "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_active", true)
+          .not("default_fulfill_site_kind", "is", null)
+          .order("name");
+
   const [ingredientsResult, requestResult] = await Promise.all([
-    supabase
-      .from("ingredients")
-      .select(
-        "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .not("default_fulfill_site_kind", "is", null)
-      .order("name"),
+    ingredientsQuery,
     editing == null
       ? Promise.resolve({ data: null, error: null })
       : supabase
@@ -121,10 +142,23 @@ export default async function BranchStockRequestNewPage({
     quantity: Number(item.quantity),
   }));
 
+  const journeyCopy = messages.inventory.stockRequests.journey;
+  const isCentralKitchen = kind === "central_kitchen";
+
   return (
     <BranchOperatorPage
-      title={editing == null ? "Yêu cầu hàng" : "Sửa yêu cầu hàng"}
-      description="Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu."
+      title={
+        isCentralKitchen
+          ? journeyCopy.centralSupplyRequestAction
+          : editing == null
+            ? "Yêu cầu hàng"
+            : "Sửa yêu cầu hàng"
+      }
+      description={
+        isCentralKitchen
+          ? journeyCopy.centralSupplyRequestDescription(branchContext.branch.name)
+          : "Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu."
+      }
     >
       <StockRequestEditor
         branchId={branchId}
@@ -134,6 +168,11 @@ export default async function BranchStockRequestNewPage({
         initialStatus={request?.status ?? null}
         initialNeededAt={request?.needed_at ?? null}
         initialNotes={request?.notes ?? null}
+        returnHref={
+          isCentralKitchen
+            ? `/br/${branchId}/stock/transfer?requestId=:requestId`
+            : undefined
+        }
       />
     </BranchOperatorPage>
   );

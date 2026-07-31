@@ -86,7 +86,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   );
   assert.doesNotMatch(receiveRoute, /TransfersPageContent|embedded|DataTable/);
   assert.match(transferRoute, /StockFulfillmentHubClient/);
-  assert.match(transferRoute, /mode="branch"/);
+  assert.match(transferRoute, /isBranchKind \? "branch" : "central"/);
   assert.match(transferRoute, /stock\/requests\/new/);
   assert.doesNotMatch(
     navConfig,
@@ -469,7 +469,7 @@ test("Owner surface stock workbench keeps manager action affordances after the p
   );
 });
 
-test("retired branch GRN list and detail redirect to the fulfillment hub", () => {
+test("branch GRN routes keep branch redirect; central restores operator clients", () => {
   const grnRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   );
@@ -483,21 +483,26 @@ test("retired branch GRN list and detail redirect to the fulfillment hub", () =>
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
   );
 
+  assert.match(grnRoute, /branch_kind === "branch"/);
   assert.match(grnRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
-  assert.doesNotMatch(grnRoute, /BranchGrnListClient|loadGrnListPageData/);
+  assert.match(grnRoute, /BranchGrnListClient|loadGrnListPageData/);
+  assert.match(grnDetailRoute, /branch_kind === "branch"/);
   assert.match(
     grnDetailRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/,
   );
-  assert.doesNotMatch(grnDetailRoute, /GrnReviewOperatorClient|loadGrnDetail/);
+  assert.match(grnDetailRoute, /GrnReviewOperatorClient|loadGrnDetail/);
+  assert.match(grnNewRoute, /branch_kind === "branch"/);
   assert.match(
     grnNewRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
+  assert.match(grnCreateRoute, /branch_kind === "branch"/);
   assert.match(
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
+  assert.match(grnCreateRoute, /BranchGrnCreateClient|loadGrnCreatePageData/);
 });
 
 test("operator stock branch-native extensions keep issue and report actions in the branch shell", () => {
@@ -679,7 +684,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.doesNotMatch(reportsClient, /supplierInvoicesHref|embedded/);
 });
 
-test("GRN create routes into streamlined procurement entrypoints", () => {
+test("GRN create routes keep branch redirect; central restores operator create flow", () => {
   const grnNewRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
   );
@@ -690,23 +695,22 @@ test("GRN create routes into streamlined procurement entrypoints", () => {
     "apps/web/app/(protected)/inventory/grn/new/page.tsx",
   );
 
+  assert.match(grnNewRoute, /branch_kind === "branch"/);
   assert.match(
     grnNewRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.doesNotMatch(
+  assert.match(
     grnNewRoute,
-    /BranchGrnCreateClient|loadGrnCreatePageData|GrnNewPageContent/,
+    /BranchGrnSourcePickerClient|loadGrnSourcePageData/,
   );
 
+  assert.match(grnCreateRoute, /branch_kind === "branch"/);
   assert.match(
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.doesNotMatch(
-    grnCreateRoute,
-    /loadGrnCreatePageData|BranchGrnCreateClient/,
-  );
+  assert.match(grnCreateRoute, /loadGrnCreatePageData|BranchGrnCreateClient/);
 
   assert.match(grnNewPage, /redirect\("\/inventory\/grn"\)/);
 });
@@ -948,7 +952,7 @@ test("operator and central routes share the fulfillment hub while details stay c
   assert.match(transferRoute, /BranchOperatorPage/);
   assert.match(transferRoute, /loadStockFulfillmentRows/);
   assert.match(transferRoute, /StockFulfillmentHubClient/);
-  assert.match(transferRoute, /mode="branch"/);
+  assert.match(transferRoute, /isBranchKind \? "branch" : "central"/);
   assert.match(transferRoute, /stock.requests.new/);
   assert.doesNotMatch(
     transferRoute,
@@ -1011,7 +1015,7 @@ test("operator count assignments render branch-native inside the branch operator
   );
 });
 
-test("D093 branch production routes redirect to stock landing; Owner surface keeps production", () => {
+test("D093 branch production routes keep branch redirect; central restores operator clients", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
   );
@@ -1030,20 +1034,17 @@ test("D093 branch production routes redirect to stock landing; Owner surface kee
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(route, /params: Promise<\{ branchId: string \}>/);
+  assert.match(route, /branch_kind === "branch"/);
   assert.match(route, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.doesNotMatch(route, /ProductionOperatorClient|ProductionPageContent/);
+  assert.match(route, /ProductionOperatorClient/);
 
+  assert.match(newRoute, /branch_kind === "branch"/);
   assert.match(newRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.doesNotMatch(
-    newRoute,
-    /BranchProductionNewClient|ProductionNewClient/,
-  );
+  assert.match(newRoute, /BranchProductionNewClient/);
 
+  assert.match(detailRoute, /branch_kind === "branch"/);
   assert.match(detailRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.doesNotMatch(
-    detailRoute,
-    /BranchProductionDetailClient|fetchProductionRunById/,
-  );
+  assert.match(detailRoute, /BranchProductionDetailClient|fetchProductionRunById/);
 
   assert.match(ownerPage, /export async function ProductionPageContent/);
   assert.match(ownerPage, /routeBranchId\?: number/);
@@ -1063,9 +1064,9 @@ test("D093 branch production routes redirect to stock landing; Owner surface kee
     /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,
   );
 
-  assert.doesNotMatch(
+  assert.match(
     navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production"/,
+    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production"[\s\S]*kinds: \["central_kitchen"\]/,
   );
   assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
 });

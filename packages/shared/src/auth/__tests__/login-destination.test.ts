@@ -31,14 +31,14 @@ test("D076 accountant lands at finance", () => {
   assert.equal(getDefaultRedirect(claims("accountant", null)), "/finance");
 });
 
-test("D076 central site roles land at inventory", () => {
+test("D076 central site roles land at operator branch home", () => {
   assert.equal(
     getDefaultRedirect(claims("central_supply_ops", 15)),
-    "/inventory",
+    "/br/15",
   );
   assert.equal(
     getDefaultRedirect(claims("central_kitchen_lead", 16)),
-    "/inventory",
+    "/br/16",
   );
 });
 

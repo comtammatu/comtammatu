@@ -1,4 +1,32 @@
-import type { ResolvedOperatorTileGroup } from "@comtammatu/shared/auth";
+import type {
+  BranchKind,
+  ResolvedOperatorTileGroup,
+} from "@comtammatu/shared/auth";
+
+/**
+ * Curated home job tiles for central sites. Deeper jobs live under the stock
+ * hub / More destinations. No recipes tree — production L0 tab owns recipes.
+ */
+export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
+  Record<BranchKind, readonly string[]>
+> = {
+  central_supply: [
+    "/stock/grn",
+    "/stock",
+    "/stock/transfer",
+    "/stock/stocktake",
+    "/stock/purchase-requests",
+    "/stock/catalog",
+  ],
+  central_kitchen: [
+    "/stock/grn",
+    "/stock/production",
+    "/stock/transfer",
+    "/stock",
+    "/stock/stocktake",
+    "/stock/purchase-requests",
+  ],
+} as const satisfies Partial<Record<BranchKind, readonly string[]>>;
 
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
@@ -26,8 +54,23 @@ export function getBranchHomeTileLimit(
 
 export function getOperatorHomeTileHrefs(
   groups: ResolvedOperatorTileGroup[],
+  branchKind: BranchKind = "branch",
   role?: string,
 ): Set<string> {
+  if (branchKind !== "branch") {
+    const suffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind];
+    if (!suffixes) return new Set();
+    const stockTiles =
+      groups.find((group) => group.id === "stock")?.tiles ?? [];
+    return new Set(
+      stockTiles
+        .filter((tile) =>
+          suffixes.some((suffix) => tile.href.endsWith(suffix)),
+        )
+        .map((tile) => tile.href),
+    );
+  }
+
   if (role === "branch_manager" || role === "owner") {
     const result = new Set<string>();
     for (const group of groups) {
@@ -91,7 +134,7 @@ export function getBranchManagerHomePhaseGroups(
   if (role !== "branch_manager" && role !== "owner") {
     return result;
   }
-  const eligible = getOperatorHomeTileHrefs(groups, role);
+  const eligible = getOperatorHomeTileHrefs(groups, "branch", role);
   const phaseOrder: BranchManagerHomePhase[] = ["open", "run", "close"];
   for (const group of groups) {
     for (const tile of group.tiles) {

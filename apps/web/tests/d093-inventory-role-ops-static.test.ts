@@ -169,12 +169,13 @@ test("D093 nav-config exposes one branch fulfillment hub", () => {
   );
 });
 
-test("D093 branch GRN list route redirects to stock requests", () => {
+test("D093 branch GRN list route keeps branch redirect; central mounts list", () => {
+  assert.match(branchGrnPage, /branch_kind === "branch"/);
   assert.match(
     branchGrnPage,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/,
   );
-  assert.doesNotMatch(branchGrnPage, /BranchGrnListClient|loadGrnListPageData/);
+  assert.match(branchGrnPage, /BranchGrnListClient|loadGrnListPageData/);
 });
 
 test("D093 inventory-nav includes one fulfillment hub", () => {
@@ -183,7 +184,7 @@ test("D093 inventory-nav includes one fulfillment hub", () => {
   assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 
-test("D093 inventory L0 landing is a redirect shim without hub dashboard", () => {
+test("D093 inventory L0 landing is a redirect without hub dashboard", () => {
   assert.match(inventoryHome, /\/inventory\/stock/);
   assert.match(inventoryHome, /accountant/);
   assert.match(inventoryHome, /\/inventory\/grn/);

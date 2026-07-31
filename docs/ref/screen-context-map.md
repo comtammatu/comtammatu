@@ -126,30 +126,33 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   hơn nhóm Nền tảng nhưng giữ cùng thứ tự thông tin.
   Chỉ Owner được vào mọi route top-level của control_surface.
 
-### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`, `/shift`, `/team`
+### 2.4A. Trung tâm vận hành Chi nhánh / Kho Tổng / Bếp TT — `/br/[branchId]`
 
 - **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace **hai tab** (`Theo dõi ca`, `Nhân sự`). Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
-- **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
+- **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`), Quản lý kho Tổng (`central_supply_ops`), Bếp trưởng Bếp TT (`central_kitchen_lead`), Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab/kind.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
 - **Quy chuẩn UX/UI:**
-  - Bottom nav Operate: `Hôm nay` · `Ca` · `Đội` · `Kho` · `Phản hồi`. `Điều hành` và `Thiết lập` nằm trong overflow header — không phải peer home thứ hai/ba cạnh `Hôm nay`.
-  - `Hôm nay` chỉ hiển thị hàng chờ có số lượng > 0, rồi điểm vào bán hàng/bếp và lối tắt quản lý. Queue **không** còn GRN/SX (D093).
-  - **Exception hẹp (manager-like):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` (target + Progress + %) theo `finance.revenue.monthly_target_progress` cho đúng chi nhánh URL. Không Lợi nhuận gộp, chi phí, quỹ, biểu đồ, so sánh chuỗi, CSV, chỉnh chỉ tiêu, hay dùng “Tổng tiền đã thu” làm số chính. Cashier/chef/staff không thấy strip. Branch Dashboard vẫn cấm `KpiRow`/finance mosaic.
-  - `Ca` sở hữu ngày làm việc cá nhân. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
-  - `Đội` mở hai tab `Theo dõi ca` và `Nhân sự`. Tab theo dõi ưu tiên `Cần xử lý`, rồi `Đang làm`; không hiển thị bộ lọc kết quả 0.
-  - `Nhân sự` giữ đủ danh sách nhưng bỏ chip lọc bằng 0.
+  - Bottom nav **chi nhánh** (`branch_kind=branch`): `Hôm nay` · `Ca` · `Đội` · `Kho` · `Phản hồi`. `Điều hành` và `Thiết lập` nằm trong overflow header.
+  - Bottom nav **Kho Tổng**: `Hôm nay` · `Nhập` · `Tồn` · `Giao nhận` · `Thêm` (stock hub).
+  - Bottom nav **Bếp TT**: `Bếp` · `Nhập` · `Sản xuất` · `Giao nhận` · `Thêm`.
+  - Hub CN: hàng chờ > 0 rồi điểm vào bán hàng/bếp; queue **không** GRN/SX (D093).
+  - Hub trung tâm: CTA chính (Nhận hàng / Tạo lệnh SX) + job tiles theo kind; không POS/KDS/Runner.
+  - **Exception hẹp (manager-like CN):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` … Cashier/chef/staff không thấy strip. Hub trung tâm không hiện strip doanh thu.
+  - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
+  - `Đội` mở hai tab `Theo dõi ca` và `Nhân sự` (CN).
 
 ---
 
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
-- **Planes (ADR 0012 / 0018):** Owner `/inventory/*` và Branch Stock
-  `/br/[branchId]/stock/*` là hai plane tách chrome/IA. Owner filter site mọi
-  `branch_kind` ngang hàng. Branch Stock không mirror Owner sidebar/tile.
+- **Planes (ADR 0012 / 0018):** Owner/Accountant `/inventory/*` (control_surface)
+  và operator stock `/br/[branchId]/stock/*` (CN + Kho Tổng + Bếp TT) là hai
+  plane tách chrome/IA. Owner filter site mọi `branch_kind` trên L0; operator
+  hub pin theo kind/role.
 - **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Detail GRN, consumption và issue Branch thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
-- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) trên
-  mọi site; `/br/[branchId]/stock` dành cho Quản lý chi nhánh (`branch_manager`)
-  và thao tác ca — plane riêng, action bị permission + branch scope giới hạn.
+- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) và
+  Kế toán; `/br/[branchId]/stock` dành cho `branch_manager`, `central_supply_ops`,
+  `central_kitchen_lead` — plane touch, action bị permission + site kind giới hạn.
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
@@ -176,13 +179,17 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Nên hiển thị:** Danh sách nguyên liệu kèm tồn khả dụng, đơn vị tính; Trạng thái các phiếu kho (Nháp / Đang giao / Hoàn thành); Cảnh báo tồn dưới mức an toàn.
   - **KHÔNG hiển thị:** Doanh thu bán hàng chi tiết, thông tin thẻ tín dụng của khách, bảng lương nhân sự.
 - **Quy chuẩn UX/UI:**
-  - Branch `/br/[branchId]/stock` (D093): ưu tiên `Tồn kho` → `Yêu cầu hàng` →
+  - CN `/br/[branchId]/stock` (D093): ưu tiên `Tồn kho` → `Yêu cầu hàng` →
     `Tiêu hao`; kiểm kê, hao hụt, giao đếm, danh mục ở nhóm sau. **Không** tile
-    Nhập hàng (GRN) hay Sản xuất. Nhận hàng nội bộ qua DC gắn yêu cầu.
-  - Branch `/br/[branchId]/stock/requests` — phiếu yêu cầu hàng (LIST/DOC).
-  - On-hand “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
-  - GRN + production Branch routes retired; GRN/SX sống trên `/inventory` tại
-    site trung tâm. Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
+    Nhập hàng (GRN) hay Sản xuất trên kind `branch` (route redirect). Nhận hàng
+    nội bộ qua DC gắn yêu cầu.
+  - Kho Tổng / Bếp TT `/br/[siteId]/stock`: tile GRN, Giao nhận, Yêu cầu mua,
+    Tồn/Kiểm/Hao hụt; Bếp TT thêm Sản xuất. Route GRN/SX chỉ mount khi
+    `branch_kind` trung tâm.
+  - Branch `/br/[branchId]/stock/requests` — phiếu yêu cầu hàng (LIST/DOC);
+    Bếp TT dùng cùng route để yêu cầu Kho Tổng.
+  - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
+  - Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
   - Branch `/br/[branchId]/stock/on-hand` là danh sách quyết định touch-first ở mọi viewport điện thoại/tablet, kể cả `1024px` landscape: nếu có hàng chạm ngưỡng, một khối `Cần bổ sung` đứng trước danh sách với đúng một CTA yêu cầu hàng; các hàng rủi ro luôn xếp đầu và nêu rõ `Hết hàng`/`Thấp`/`Chạm reorder`. Mỗi hàng chỉ giữ tên/SKU, loại hàng, tồn + đơn vị và chạm để xem chi tiết; tìm kiếm và bộ lọc cùng một trạng thái thu gọn trên phone/tablet. One-warehouse topology không hiển thị bộ lọc vị trí. Không đưa WAC, giá trị tồn hoặc KPI control_surface vào màn tra cứu trong ca.
   - Branch `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: ưu tiên trạng thái/tồn hiện tại, vị trí tồn, chuyển động gần đây, sau đó là ngưỡng và action được cấp quyền. Nhận từ NCC mở GRN, còn `/stock/receive` chỉ dành cho phiếu chuyển nội bộ; route không tải hoặc hiển thị WAC, giá trị tồn, audit/correction, hoặc control_surface detail chrome.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.

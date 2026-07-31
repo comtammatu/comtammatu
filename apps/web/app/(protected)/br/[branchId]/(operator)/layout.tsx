@@ -9,7 +9,13 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
 } from "lucide-react";
-import { canAccess, MODULE_ACL, ROLE_LABEL_VI, canSubscribeBranchOpsTopic } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  MODULE_ACL,
+  ROLE_LABEL_VI,
+  canSubscribeBranchOpsTopic,
+  type BranchKind,
+} from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -183,6 +189,7 @@ export default async function OperatorLayout({
           branchId={context.branchId}
           showEmployeeLinks={canUseShiftTab}
           showBranchManagement={canManageBranch}
+          branchKind={context.branch.branch_kind as BranchKind}
         />
       </div>
     </PwaRuntimeProvider>
