@@ -228,42 +228,47 @@ export const upsertMenuRecipeLines = withAction(
     const ingredientIds = [
       ...new Set(data.lines.map((line) => line.ingredientId)),
     ];
-    const { data: outputUnits, error: outputUnitsError } = await supabase
-      .from("ingredient_units")
-      .select("ingredient_id, unit_id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_base", true)
-      .eq("is_active", true)
-      .in("ingredient_id", ingredientIds);
-    if (outputUnitsError) {
+    const { data: configuredUnits, error: configuredUnitsError } =
+      await supabase
+        .from("ingredient_units")
+        .select("ingredient_id, unit_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .in("ingredient_id", ingredientIds);
+    if (configuredUnitsError) {
       return {
         success: false,
         error: messages.inventory.menuRecipes.saveFailed,
       };
     }
 
-    const outputUnitByIngredient = new Map(
-      (outputUnits ?? []).map((unit) => [unit.ingredient_id, unit.unit_id]),
-    );
+    const unitsByIngredient = new Map<number, Set<number>>();
+    for (const unit of configuredUnits ?? []) {
+      const set = unitsByIngredient.get(unit.ingredient_id) ?? new Set();
+      set.add(unit.unit_id);
+      unitsByIngredient.set(unit.ingredient_id, set);
+    }
     if (
       data.lines.some((line) => {
-        const outputUnitId = outputUnitByIngredient.get(line.ingredientId);
+        const allowed = unitsByIngredient.get(line.ingredientId);
         return (
-          outputUnitId == null ||
-          (line.entryUnitId != null && line.entryUnitId !== outputUnitId)
+          allowed == null ||
+          allowed.size === 0 ||
+          line.entryUnitId == null ||
+          !allowed.has(line.entryUnitId)
         );
       })
     ) {
       return {
         success: false,
-        error: messages.inventory.menuRecipes.outputUnitRequired,
+        error: messages.inventory.menuRecipes.entryUnitRequired,
       };
     }
 
     const lines = data.lines.map((line) => ({
       ingredient_id: line.ingredientId,
       quantity: line.quantity,
-      entry_unit_id: outputUnitByIngredient.get(line.ingredientId) ?? null,
+      entry_unit_id: line.entryUnitId ?? null,
       note: line.note ?? null,
     }));
 

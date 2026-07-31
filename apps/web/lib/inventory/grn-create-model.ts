@@ -14,6 +14,8 @@ export type GrnCreateIngredient = {
   sku: string | null;
   unit: string;
   category: string | null;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
   /** Active supplier_items mappings for this ingredient. */
   suppliers: GrnCreateSupplierOption[];

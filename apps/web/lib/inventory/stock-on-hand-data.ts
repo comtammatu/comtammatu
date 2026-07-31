@@ -23,6 +23,7 @@ import {
   type StockWorkSummary,
 } from "./stock-on-hand-model";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
+import { resolveStockDisplayUnit } from "@/(protected)/inventory/_lib/stock-unit-format";
 
 type StockLevelLocationRow = {
   id: number;
@@ -57,6 +58,8 @@ type StockIngredientRow = {
   reorder_point: number | null;
   storage_type: string | null;
   is_active: boolean;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -274,11 +277,20 @@ export async function loadStockOnHandPageData({
       const reorder = row.reorder_point ?? 0;
       const locationBreakdown = locationMap.get(row.id) ?? [];
 
+      const issueUnit = resolveStockDisplayUnit(
+        row.units,
+        row.issue_unit_id ?? null,
+      );
       return {
         id: row.id,
         name: row.name,
         sku: row.sku ?? "",
-        unit: row.unit,
+        unit:
+          issueUnit?.unit_name?.trim() ||
+          issueUnit?.unit_code ||
+          row.unit,
+        receipt_unit_id: row.receipt_unit_id ?? null,
+        issue_unit_id: row.issue_unit_id ?? null,
         units: row.units,
         category: row.category ?? "",
         itemKind: row.item_kind ?? "raw_material",

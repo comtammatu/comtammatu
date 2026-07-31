@@ -1,7 +1,7 @@
 import type { IngredientUnitRow } from "./types";
 import {
   getIngredientRoleUnit,
-  getIngredientRoleUnitOptions,
+  getRoleUnitOptions,
   type InventoryUnitOption,
 } from "./unit-options";
 
@@ -12,16 +12,17 @@ export type PurchaseUnitOption = InventoryUnitOption;
 type IngredientWithUnits = {
   units?: IngredientUnitRow[];
   receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
 };
 
 /**
- * Selectable purchase units for an ingredient: every active ingredient_units
- * row, base unit first.
+ * Selectable GRN/purchase entry units: configured receipt and issue roles.
+ * Production-only units are excluded.
  */
 export function getPurchaseUnitOptions(
   ingredient: IngredientWithUnits | undefined,
 ): PurchaseUnitOption[] {
-  return getIngredientRoleUnitOptions(ingredient, "receipt");
+  return getRoleUnitOptions(ingredient, ["receipt", "issue"]);
 }
 
 export function getDefaultPurchaseUnit(

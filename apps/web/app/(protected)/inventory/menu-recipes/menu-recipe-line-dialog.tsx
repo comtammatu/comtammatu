@@ -18,6 +18,8 @@ export interface IngredientOption {
   id: number;
   name: string;
   unitLabel: string;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 }
 
@@ -38,7 +40,7 @@ const menuRecipeLineRowSchema = z.object({
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
   unitLabel: z.string().optional(),
-  entry_unit_id: z.string().optional(),
+  entry_unit_id: z.string().min(1, { error: INVENTORY_VI.selectUnit }),
   note: z.string().max(200, { error: INVENTORY_VI.noteMax200 }).optional(),
 });
 
@@ -202,6 +204,8 @@ export function MenuRecipeLineDialog({
                 errors={errors}
                 ingredients={ingredients}
                 bulkAdd
+                unitEditable
+                unitMode="all"
                 showYield={false}
               />
 

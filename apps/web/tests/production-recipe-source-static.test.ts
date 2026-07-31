@@ -86,8 +86,38 @@ test("production recipe UI pipes production_unit_id into entry_unit_id", () => {
   assert.match(panelSource, /production_unit_id: item\.production_unit_id/);
   assert.match(panelSource, /getDefaultProductionUnit/);
   assert.match(editorSource, /production_unit_id\?: number \| null/);
+  assert.match(editorSource, /missingProductionUnit/);
+  assert.match(editorSource, /productionUnitMissingHint/);
+  assert.match(
+    editorSource,
+    /missingProductionUnit && "rounded-md border border-destructive"/,
+  );
+  assert.doesNotMatch(
+    editorSource,
+    /missingProductionUnit[\s\S]{0,80}productionRecipeProductionUnitRequired/,
+  );
+  assert.doesNotMatch(
+    editorSource,
+    /defaultUnit\?\.label \?\? ing\?\.unitLabel|defaultUnit\?\.label \?\? ing\.unitLabel/,
+  );
   assert.match(recipeActionSource, /inventory_unit_role_mismatch/);
   assert.match(recipeActionSource, /entryUnitId: z\.coerce\.number\(\)\.int\(\)\.positive/);
   assert.match(quickCreateFn, /production_unit_id: unitId/);
   assert.doesNotMatch(quickCreateFn, /production_unit_id: null/);
+});
+
+test("production recipe upsert uses output_quantity and omits yield_factor", () => {
+  const panelSource = readFileSync(
+    "app/(protected)/inventory/production-recipe-panel.tsx",
+    "utf8",
+  );
+
+  assert.match(recipeActionSource, /outputQuantity: z\.coerce\.number\(\)\.positive/);
+  assert.match(recipeActionSource, /p_output_quantity: data\.outputQuantity/);
+  assert.match(recipeActionSource, /output_quantity,/);
+  assert.doesNotMatch(recipeActionSource, /yieldFactor|yield_factor/);
+  assert.match(panelSource, /name="output_quantity"/);
+  assert.match(panelSource, /showYield=\{false\}/);
+  assert.match(panelSource, /output_quantity: ""/);
+  assert.doesNotMatch(panelSource, /yieldFactor:/);
 });

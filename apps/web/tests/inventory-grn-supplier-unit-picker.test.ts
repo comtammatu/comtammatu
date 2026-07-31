@@ -19,11 +19,11 @@ function readRepo(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
-test("GRN supplier line resolves a non-base purchase unit as the entry unit", () => {
-  // "Thùng" (case, non-base) alongside "Lon" (base) — mirrors a real
-  // ingredient_units row shape (is_base false, 24x factor).
+test("GRN supplier line resolves receipt and issue units as entry options", () => {
+  // "Thùng" (receipt) alongside "Lon" (issue/base).
   const ingredient = {
     receipt_unit_id: 200,
+    issue_unit_id: 100,
     units: [
       {
         id: 1,
@@ -49,23 +49,16 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   };
 
   const options = getPurchaseUnitOptions(ingredient);
-  assert.equal(options.length, 1);
+  assert.equal(options.length, 2);
   assert.deepEqual(
     options.map((o) => o.code),
-    ["Thùng"],
-  );
-  assert.deepEqual(
-    options.map((o) => o.label),
-    ["thùng"],
+    ["Thùng", "Lon"],
   );
 
-  // Purchase defaults to the largest active unit so reference prices are useful
-  // for receiving/procurement instead of tiny base-unit prices.
+  // GRN defaults to the configured receipt role.
   const defaultUnit = getDefaultPurchaseUnit(ingredient);
   assert.equal(defaultUnit?.unitId, 200);
-  const nonBase = options.find((o) => o.code === "Thùng");
-  assert.equal(nonBase?.unitId, 200);
-  assert.equal(nonBase?.isBase, false);
+  assert.equal(defaultUnit?.isBase, false);
 });
 
 test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would reject it)", () => {
@@ -121,9 +114,11 @@ test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would
   assert.equal(defaultUnit?.unitId, 100);
 });
 
-test("getPurchaseUnitOptions only exposes the configured receipt unit", () => {
+test("getPurchaseUnitOptions exposes receipt and issue, never production-only", () => {
   const ingredient = {
     receipt_unit_id: 200,
+    issue_unit_id: 100,
+    production_unit_id: 300,
     units: [
       {
         id: 1,
@@ -145,17 +140,28 @@ test("getPurchaseUnitOptions only exposes the configured receipt unit", () => {
         is_active: true,
         sort_order: 1,
       },
+      {
+        id: 3,
+        unit_id: 300,
+        unit_code: "g",
+        unit_name: "g",
+        to_base_factor: 0.001,
+        is_base: false,
+        is_active: true,
+        sort_order: 2,
+      },
     ],
   };
 
   const options = getPurchaseUnitOptions(ingredient);
   assert.deepEqual(
     options.map((o) => o.code),
-    ["bich"],
+    ["bich", "kg"],
   );
-  assert.deepEqual(
-    options.map((o) => o.label),
-    ["bịch"],
+  assert.equal(
+    options.some((o) => o.unitId === 300),
+    false,
+    "production-only unit must not appear on GRN picker",
   );
 });
 
@@ -220,13 +226,23 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
   assert.equal(getIngredientUnitDisplayName(units, 200, "bich"), "bịch");
 });
 
-test("inventory unit option helpers use the configured document role", () => {
+test("inventory unit option helpers use configured document roles", () => {
   const sharedSource = readRepo("apps/web/lib/inventory/unit-options.ts");
   assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
+  assert.match(sharedSource, /export function getRoleUnitOptions/);
+
+  const purchase = readRepo("apps/web/lib/inventory/purchase-units.ts");
+  assert.match(purchase, /getRoleUnitOptions\(ingredient, \["receipt", "issue"\]\)/);
+
+  const issue = readRepo(
+    "apps/web/app/(protected)/inventory/_lib/issue-units.ts",
+  );
+  assert.match(
+    issue,
+    /getRoleUnitOptionsWithFactor\(ingredient, \["issue", "receipt"\]\)/,
+  );
 
   for (const path of [
-    "apps/web/lib/inventory/purchase-units.ts",
-    "apps/web/app/(protected)/inventory/_lib/issue-units.ts",
     "apps/web/app/(protected)/inventory/_lib/production-units.ts",
     "apps/web/app/(protected)/inventory/_lib/count-units.ts",
   ]) {

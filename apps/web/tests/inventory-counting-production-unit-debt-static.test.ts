@@ -101,10 +101,18 @@ test("classic stocktake count inputs keep stable keys across saved refreshes", (
 test("production create client consumes server-action recipe usage values", () => {
   assert.match(productionRunActionsSource, /default_usage_per_fg: number/);
   assert.match(productionRunActionsSource, /default_usage_per_fg:/);
+  assert.match(
+    productionRunActionsSource,
+    /Number\(ingredient\.recipe_quantity\) \/ outputQuantity/,
+  );
   assert.match(productionNewClientSource, /ing\.default_usage_per_fg/);
   assert.doesNotMatch(
     productionNewClientSource,
-    /ing\.recipe_quantity\) \/ ing\.yield_factor/,
+    /ing\.recipe_quantity\) \/ ing\.output_quantity/,
   );
-  assert.doesNotMatch(productionNewClientSource, /ing\.recipe_quantity \/ ing\.yield_factor/);
+  assert.doesNotMatch(
+    productionNewClientSource,
+    /ing\.recipe_quantity \/ ing\.output_quantity/,
+  );
+  assert.doesNotMatch(productionNewClientSource, /ing\.yield_factor/);
 });

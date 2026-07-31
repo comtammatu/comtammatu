@@ -15,8 +15,12 @@ import {
   type StockIngredientDetailMovement,
 } from "./stock-on-hand-detail-model";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
+import {
+  resolveStockDisplayUnit,
+  toStockDisplayUnitCost,
+} from "@/(protected)/inventory/_lib/stock-unit-format";
 
-type UnitRef = { code: string };
+type UnitRef = { code: string; name: string | null };
 
 type IngredientUnitJoin = {
   unit_id: number;
@@ -36,6 +40,7 @@ type IngredientRow = {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string | null;
+  issue_unit_id?: number | null;
   ingredient_units: IngredientUnitJoin[] | null;
 };
 
@@ -93,7 +98,8 @@ function ingredientSelect(includeValuation: boolean): string {
     "max_stock_level",
     "reorder_point",
     "storage_type",
-    "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code))",
+    "issue_unit_id",
+    "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code, name))",
   ]
     .filter((field): field is string => Boolean(field))
     .join(", ");
@@ -219,18 +225,28 @@ export async function loadStockIngredientDetailData({
   ]);
 
   const units: IngredientUnitRow[] = (ingredientRow.ingredient_units ?? []).map(
-    (unit) => ({
-      id: 0,
-      unit_id: unit.unit_id,
-      unit_code: relatedOne(unit.units)?.code ?? "",
-      to_base_factor: Number(unit.to_base_factor ?? 1),
-      is_base: unit.is_base,
-      is_active: unit.is_active,
-      sort_order: 0,
-    }),
+    (unit) => {
+      const ref = relatedOne(unit.units);
+      return {
+        id: 0,
+        unit_id: unit.unit_id,
+        unit_code: ref?.code ?? "",
+        unit_name: ref?.name ?? ref?.code ?? "",
+        to_base_factor: Number(unit.to_base_factor ?? 1),
+        is_base: unit.is_base,
+        is_active: unit.is_active,
+        sort_order: 0,
+      };
+    },
   );
-  const baseUnit = ingredientRow.ingredient_units?.find((unit) => unit.is_base);
-  const unit = relatedOne(baseUnit?.units)?.code ?? "";
+  const issueUnit = resolveStockDisplayUnit(
+    units,
+    ingredientRow.issue_unit_id ?? null,
+  );
+  const unit =
+    issueUnit?.unit_name?.trim() ||
+    issueUnit?.unit_code ||
+    "";
   const stockRows = (stockResult.data ?? []) as unknown as StockLevelRow[];
   const movementRows = (movementResult.data ?? []) as unknown as MovementRow[];
   const locations: StockIngredientDetailLocation[] = stockRows.map((row) => {
@@ -289,12 +305,14 @@ export async function loadStockIngredientDetailData({
         0,
       )
     : null;
+  const ledgerWac =
+    totalQty > 0 ? (totalValue ?? 0) / totalQty : referenceUnitCost;
   const valuation =
     totalValue == null
       ? null
       : {
           totalValue,
-          wac: totalQty > 0 ? totalValue / totalQty : referenceUnitCost,
+          wac: toStockDisplayUnitCost(ledgerWac, issueUnit) ?? ledgerWac,
         };
   const min = Number(ingredientRow.min_stock_level ?? 0);
   const max = Number(ingredientRow.max_stock_level ?? 0);
@@ -312,6 +330,7 @@ export async function loadStockIngredientDetailData({
       sku: ingredientRow.sku ?? "",
       category: ingredientRow.category ?? "",
       unit,
+      issue_unit_id: ingredientRow.issue_unit_id ?? null,
       units,
       min,
       max,

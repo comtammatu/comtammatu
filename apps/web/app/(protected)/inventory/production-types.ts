@@ -47,6 +47,7 @@ export type RawIngredientOption = {
 export type ProductionRecipeGroup = {
   finishedGoodId: number;
   finishedGoodName: string;
+  outputQuantity: number;
   lines: ProductionRecipeRow[];
 };
 

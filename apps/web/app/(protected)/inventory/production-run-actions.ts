@@ -704,7 +704,7 @@ export interface ProductionRecipeIngredient {
   unit_name: string;
   entry_unit_id: number | null;
   recipe_quantity: number;
-  yield_factor: number;
+  output_quantity: number;
   default_usage_per_fg: number;
   current_quantity_base: number;
   required_base_per_fg: number;
@@ -804,12 +804,12 @@ export async function fetchProductionRecipeContext(
   }
 
   const ingredients = (data ?? []).map((ingredient) => {
-    const yieldFactor = Number(ingredient.yield_factor);
+    const outputQuantity = Number(ingredient.output_quantity);
     return {
       ...ingredient,
       default_usage_per_fg:
-        Number.isFinite(yieldFactor) && yieldFactor > 0
-          ? Number(ingredient.recipe_quantity) / yieldFactor
+        Number.isFinite(outputQuantity) && outputQuantity > 0
+          ? Number(ingredient.recipe_quantity) / outputQuantity
           : 0,
     };
   });

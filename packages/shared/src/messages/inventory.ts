@@ -226,12 +226,20 @@ export const INVENTORY_VI = {
   productionRecipeMinLines: "Cần ít nhất một nguyên liệu trong công thức.",
   productionRecipeDuplicateIngredient: "Nguyên liệu bị trùng trong công thức.",
   productionRecipeDialogIntro:
-    "Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu công thức.",
+    "Chọn thành phẩm, nhập số lượng thành phẩm của công thức, thêm nguyên liệu rồi lưu.",
   productionRecipeFinishedGoodLabel: "Thành phẩm *",
+  productionRecipeOutputQuantityLabel: "Số lượng thành phẩm *",
+  productionRecipeOutputQuantityHint:
+    "Số lượng thành phẩm mà định mức nguyên liệu bên dưới tạo ra (theo đơn vị sản xuất của thành phẩm).",
+  enterProductionRecipeOutputQuantity: "Nhập số lượng thành phẩm",
+  productionRecipeOutputQuantityPositive: "Số lượng thành phẩm phải > 0",
+  productionRecipeOutputQuantityMismatch:
+    "Số lượng thành phẩm không khớp giữa các dòng cùng công thức.",
+  productionRecipeOutputQuantity: "Số lượng thành phẩm",
   noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
   noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
   productionRecipeLinesLabel: "Dòng công thức",
-  productionUnitMissingHint: "Chưa có ĐV sản xuất",
+  productionUnitMissingHint: "Chưa thiết lập",
   productionRecipeProductionUnitRequired:
     "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
   productionRecipeUnitRoleMismatch:

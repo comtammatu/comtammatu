@@ -10,6 +10,10 @@ import { parseBranchIdParam } from "@/(protected)/inventory/_lib/inventory-scope
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import type { WasteFormContext } from "@lib/inventory/waste-create-model";
+import {
+  getDefaultIssueUnit,
+  getIssueUnitOptions,
+} from "@/(protected)/inventory/_lib/issue-units";
 import { messages } from "@lib/messages";
 import { WasteCreateClient } from "./waste-create-client";
 
@@ -86,7 +90,7 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, receipt_unit_id, issue_unit_id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -131,19 +135,25 @@ export async function WasteNewPageContent({
       kind: l.location_kind ?? "warehouse",
     })),
     ingredients: (ingredientsRes.data ?? []).map((i) => {
-      const issueUnits = (i.ingredient_units ?? [])
-        .filter((u) => (u.units?.code ?? "") !== "")
-        .sort((a, b) => {
-          if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-          return a.sort_order - b.sort_order;
-        })
+      const units = (i.ingredient_units ?? [])
+        .filter((u) => u.is_active !== false && (u.units?.code ?? "") !== "")
         .map((u) => ({
-          unitId: u.unit_id,
-          code: u.units?.code ?? "",
-          label: u.units?.name ?? u.units?.code ?? "",
-          isBase: u.is_base,
-          toBaseFactor: Number(u.to_base_factor ?? 1),
+          id: u.unit_id,
+          unit_id: u.unit_id,
+          unit_code: u.units?.code ?? "",
+          unit_name: u.units?.name ?? u.units?.code ?? "",
+          to_base_factor: Number(u.to_base_factor ?? 1),
+          is_base: u.is_base,
+          is_active: true,
+          sort_order: u.sort_order,
         }));
+      const roleIngredient = {
+        receipt_unit_id: i.receipt_unit_id,
+        issue_unit_id: i.issue_unit_id,
+        units,
+      };
+      const issueUnits = getIssueUnitOptions(roleIngredient);
+      const defaultUnit = getDefaultIssueUnit(roleIngredient);
       const ingredientStockLevels = (stockLevels ?? [])
         .filter((level) => level.ingredient_id === i.id)
         .map((level) => ({
@@ -153,10 +163,7 @@ export async function WasteNewPageContent({
       return {
         id: i.id,
         name: i.name,
-        unit:
-          issueUnits.find((unit) => unit.isBase)?.label ??
-          issueUnits[0]?.label ??
-          "kg",
+        unit: defaultUnit?.label ?? issueUnits[0]?.label ?? "kg",
         issueUnits,
         stockLevels: ingredientStockLevels,
       };

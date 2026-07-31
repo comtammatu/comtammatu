@@ -19,6 +19,7 @@ import {
   type SheetDef,
 } from "@/_lib/spreadsheet";
 import { messages } from "@lib/messages";
+import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   idSchema,
   PRODUCTION_ROLES,
@@ -46,7 +47,6 @@ const productionRecipeLineUpsertSchema = z.object({
   entryUnitId: z.coerce.number().int().positive({
     error: "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
   }),
-  yieldFactor: z.coerce.number().positive().default(1),
   note: z.string().optional(),
 });
 
@@ -54,6 +54,9 @@ const productionRecipeLinesSchema = z
   .object({
     finishedGoodId: z.coerce.number().int().positive(),
     oldFinishedGoodId: z.coerce.number().int().positive().optional().nullable(),
+    outputQuantity: z.coerce.number().positive({
+      error: "Số lượng thành phẩm phải lớn hơn 0",
+    }),
     lines: z.array(productionRecipeLineUpsertSchema).min(1, {
       error: "Cần ít nhất một nguyên liệu trong công thức.",
     }),
@@ -75,11 +78,11 @@ const productionRecipeLinesSchema = z
 type ProductionRecipeSheetRow = {
   finished_good_id: number | "";
   finished_good_name: string;
+  output_quantity: number | "";
   ingredient_id: number | "";
   ingredient_name: string;
   quantity: number | "";
   unit: string;
-  yield_factor: number | "";
   note: string;
 };
 
@@ -95,7 +98,9 @@ const importProductionRecipeRowSchema = z.object({
   ingredientId: z.number().int().positive(),
   quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
   entryUnitId: z.number().int().positive(),
-  yieldFactor: z.number().positive({ error: "Tỷ lệ thu hồi phải lớn hơn 0" }),
+  outputQuantity: z.number().positive({
+    error: "Số lượng thành phẩm phải lớn hơn 0",
+  }),
   note: z.string().trim().optional(),
 });
 
@@ -153,6 +158,12 @@ function mapProductionRecipeImportError(
     return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
   }
   if (
+    message?.includes("output_quantity_invalid") ||
+    message?.includes("invalid_group_shape")
+  ) {
+    return "Số lượng thành phẩm phải lớn hơn 0.";
+  }
+  if (
     code === PG_ERR.INVALID_TEXT_REPRESENTATION ||
     code === PG_ERR.CHECK_VIOLATION
   ) {
@@ -185,6 +196,9 @@ function mapProductionRecipeUpsertError(
   }
   if (message?.includes("inventory_unit_role_mismatch")) {
     return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
+  }
+  if (message?.includes("output_quantity_invalid")) {
+    return "Số lượng thành phẩm phải lớn hơn 0.";
   }
   return "Không thể lưu công thức sản xuất.";
 }
@@ -263,7 +277,7 @@ export interface ProductionRecipeRow {
   quantity: number;
   unitLabel: string;
   entry_unit_id: number | null;
-  yield_factor: number;
+  output_quantity: number;
   note: string | null;
 }
 
@@ -273,7 +287,7 @@ type ProductionRecipeQueryRow = {
   ingredient_id: number;
   quantity: number | string;
   entry_unit_id: number | null;
-  yield_factor: number | string | null;
+  output_quantity: number | string;
   note: string | null;
   finished_good: { id: number; name: string } | null;
   ingredient: {
@@ -338,7 +352,7 @@ export async function fetchProductionRecipes(): Promise<
       ingredient_id,
       quantity,
       entry_unit_id,
-      yield_factor,
+      output_quantity,
       note,
       finished_good:ingredients!production_recipes_finished_good_id_fkey ( id, name ),
       ingredient:ingredients!production_recipes_ingredient_id_fkey (
@@ -401,7 +415,7 @@ export async function fetchProductionRecipes(): Promise<
           quantity: Number(row.quantity),
           unitLabel,
           entry_unit_id: row.entry_unit_id ?? null,
-          yield_factor: Number(row.yield_factor ?? 1),
+          output_quantity: Number(row.output_quantity),
           note: row.note ?? null,
         };
       }) ?? [],
@@ -417,11 +431,15 @@ function buildProductionRecipeSheets(
       columns: [
         { header: "Mã thành phẩm", key: "finished_good_id", width: 14 },
         { header: "Thành phẩm", key: "finished_good_name", width: 32 },
+        {
+          header: "Số lượng thành phẩm",
+          key: "output_quantity",
+          width: 16,
+        },
         { header: "Mã nguyên liệu", key: "ingredient_id", width: 14 },
         { header: "Nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Số lượng", key: "quantity", width: 14 },
         { header: "Đơn vị", key: "unit", width: 12 },
-        { header: "Tỷ lệ thu hồi", key: "yield_factor", width: 14 },
         { header: "Ghi chú", key: "note", width: 28 },
       ],
       rows,
@@ -435,11 +453,11 @@ function productionRecipeToSheetRow(
   return {
     finished_good_id: recipe.finished_good_id,
     finished_good_name: recipe.finished_good_name,
+    output_quantity: recipe.output_quantity,
     ingredient_id: recipe.ingredient_id,
     ingredient_name: recipe.ingredient_name,
     quantity: recipe.quantity,
     unit: recipe.unitLabel,
-    yield_factor: recipe.yield_factor,
     note: recipe.note ?? "",
   };
 }
@@ -506,12 +524,12 @@ export async function downloadProductionRecipeTemplate(): Promise<
     {
       finished_good_id: "",
       finished_good_name: "Sườn ướp sẵn (ví dụ)",
+      output_quantity: 10,
       ingredient_id: "",
       ingredient_name: "Sườn cốt lết sống (ví dụ)",
-      quantity: 1,
+      quantity: 12,
       unit: "kg",
-      yield_factor: 0.9,
-      note: "Hao hụt sơ chế 10%",
+      note: "Định mức cho 10 kg thành phẩm",
     },
   ]);
   const buf = await buildXlsx(sheets);
@@ -648,11 +666,11 @@ export async function importProductionRecipes(
   const groups = new Map<
     number,
     {
+      outputQuantity: number;
       lines: Array<{
         ingredientId: number;
         quantity: number;
         entryUnitId: number;
-        yieldFactor: number;
         note: string | null;
       }>;
     }
@@ -768,18 +786,17 @@ export async function importProductionRecipes(
       return;
     }
 
-    const yieldRaw = readCell(
+    const outputQuantityRaw = readCell(
       raw,
-      "Tỷ lệ thu hồi",
-      "Yield",
-      "yield_factor",
+      "Số lượng thành phẩm",
+      "output_quantity",
     );
-    const yieldFactor = yieldRaw ? parseCsvNumber(yieldRaw) : 1;
-    if (yieldFactor == null) {
+    const outputQuantity = parseCsvNumber(outputQuantityRaw);
+    if (outputQuantity == null) {
       issues.push({
         row: rowNumber,
-        field: "Tỷ lệ thu hồi",
-        message: "Tỷ lệ thu hồi không hợp lệ.",
+        field: "Số lượng thành phẩm",
+        message: "Số lượng thành phẩm không hợp lệ.",
       });
       return;
     }
@@ -803,7 +820,7 @@ export async function importProductionRecipes(
       ingredientId: ingredient.id,
       quantity,
       entryUnitId: entryUnit.unit_id,
-      yieldFactor,
+      outputQuantity,
       note: readCell(raw, "Ghi chú", "note") || undefined,
     });
 
@@ -817,13 +834,26 @@ export async function importProductionRecipes(
     }
 
     const group = groups.get(parsedRow.data.finishedGoodId) ?? {
-      lines: [],
+      outputQuantity: parsedRow.data.outputQuantity,
+      lines: [] as Array<{
+        ingredientId: number;
+        quantity: number;
+        entryUnitId: number;
+        note: string | null;
+      }>,
     };
+    if (group.outputQuantity !== parsedRow.data.outputQuantity) {
+      issues.push({
+        row: rowNumber,
+        field: "Số lượng thành phẩm",
+        message: INVENTORY_VI.productionRecipeOutputQuantityMismatch,
+      });
+      return;
+    }
     group.lines.push({
       ingredientId: parsedRow.data.ingredientId,
       quantity: parsedRow.data.quantity,
       entryUnitId: parsedRow.data.entryUnitId,
-      yieldFactor: parsedRow.data.yieldFactor,
       note: parsedRow.data.note?.trim() ? parsedRow.data.note.trim() : null,
     });
     groups.set(parsedRow.data.finishedGoodId, group);
@@ -847,12 +877,12 @@ export async function importProductionRecipes(
     {
       p_groups: [...groups].map(([finishedGoodId, group]) => ({
         finished_good_id: finishedGoodId,
+        output_quantity: group.outputQuantity,
         lines: group.lines.map((line) => ({
           ingredient_id: line.ingredientId,
           quantity: line.quantity,
           entry_unit_id: line.entryUnitId,
           note: line.note,
-          yield_factor: line.yieldFactor,
         })),
       })),
     },
@@ -908,13 +938,13 @@ export const upsertProductionRecipeLines = withAction(
       quantity: line.quantity,
       entry_unit_id: line.entryUnitId,
       note: line.note?.trim() ? line.note.trim() : null,
-      yield_factor: line.yieldFactor,
     }));
 
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("upsert_production_recipe_lines", {
       p_finished_good_id: data.finishedGoodId,
       p_lines: lines,
+      p_output_quantity: data.outputQuantity,
       p_old_finished_good_id: data.oldFinishedGoodId ?? null,
     });
 

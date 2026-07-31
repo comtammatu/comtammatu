@@ -22,6 +22,8 @@ export interface TransferIngredientOption {
   name: string;
   is_active: boolean;
   itemKind: string | null;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 }
 

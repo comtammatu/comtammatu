@@ -5866,10 +5866,10 @@ export type Database = {
           id: number
           ingredient_id: number
           note: string | null
+          output_quantity: number
           quantity: number
           tenant_id: number
           updated_at: string
-          yield_factor: number
         }
         Insert: {
           created_at?: string
@@ -5880,10 +5880,10 @@ export type Database = {
           id?: never
           ingredient_id: number
           note?: string | null
+          output_quantity: number
           quantity: number
           tenant_id: number
           updated_at?: string
-          yield_factor?: number
         }
         Update: {
           created_at?: string
@@ -5894,10 +5894,10 @@ export type Database = {
           id?: never
           ingredient_id?: number
           note?: string | null
+          output_quantity?: number
           quantity?: number
           tenant_id?: number
           updated_at?: string
-          yield_factor?: number
         }
         Relationships: [
           {
@@ -8931,12 +8931,10 @@ export type Database = {
           created_at: string
           description: string
           gross_line_total: number | null
-          gross_unit_price: number | null
           id: number
           ingredient_id: number | null
           line_discount_amount: number
           line_total: number
-          pricing_mode: string | null
           quantity: number
           source_line_key: string | null
           supplier_invoice_id: number
@@ -8951,12 +8949,10 @@ export type Database = {
           created_at?: string
           description: string
           gross_line_total?: number | null
-          gross_unit_price?: number | null
           id?: never
           ingredient_id?: number | null
           line_discount_amount?: number
           line_total: number
-          pricing_mode?: string | null
           quantity: number
           source_line_key?: string | null
           supplier_invoice_id: number
@@ -8971,12 +8967,10 @@ export type Database = {
           created_at?: string
           description?: string
           gross_line_total?: number | null
-          gross_unit_price?: number | null
           id?: never
           ingredient_id?: number | null
           line_discount_amount?: number
           line_total?: number
-          pricing_mode?: string | null
           quantity?: number
           source_line_key?: string | null
           supplier_invoice_id?: number
@@ -13642,6 +13636,7 @@ export type Database = {
           p_finished_good_id: number
           p_lines: Json
           p_old_finished_good_id?: number
+          p_output_quantity: number
         }
         Returns: Json
       }

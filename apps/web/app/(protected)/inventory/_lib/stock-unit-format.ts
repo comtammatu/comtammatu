@@ -7,21 +7,18 @@ function snapNearInteger(value: number): number {
   return Math.abs(value - integer) <= QUANTITY_EPSILON ? integer : value;
 }
 
-/**
- * Two-line stock quantity: mixed packaging on top when whole larger units
- * exist (`2 thùng + 30 ml`), exact base-unit total below. Below one largest
- * pack, only the base line is shown.
- */
-export function formatStockUnits(
-  qtyBase: number,
+export function resolveStockDisplayUnit(
   units: IngredientUnitRow[] | undefined,
-  formatNumber: (n: number) => string,
-): { big: string | null; base: string } {
+  preferredUnitId?: number | null,
+): IngredientUnitRow | undefined {
   const usable = (units ?? []).filter(
     (u) => u.is_active && u.unit_code.trim() !== "",
   );
-
-  const baseRow =
+  if (preferredUnitId != null) {
+    const preferred = usable.find((unit) => unit.unit_id === preferredUnitId);
+    if (preferred) return preferred;
+  }
+  return (
     usable.find((u) => u.is_base) ??
     usable.reduce<IngredientUnitRow | undefined>(
       (smallest, unit) =>
@@ -29,16 +26,61 @@ export function formatStockUnits(
           ? unit
           : smallest,
       undefined,
-    );
-  const baseCode = baseRow?.unit_code ?? "";
-  const base = `${formatNumber(qtyBase)} ${baseCode}`.trim();
+    )
+  );
+}
+
+/** Convert ledger (base) quantity into the operator-facing display unit. */
+export function toStockDisplayQuantity(
+  qtyBase: number,
+  displayUnit: Pick<IngredientUnitRow, "to_base_factor"> | null | undefined,
+): number {
+  const factor = Number(displayUnit?.to_base_factor ?? 1);
+  if (!Number.isFinite(qtyBase) || !(factor > 0)) return qtyBase;
+  return snapNearInteger(qtyBase / factor);
+}
+
+/** Convert ledger (base) WAC into the operator-facing display unit. */
+export function toStockDisplayUnitCost(
+  wacBase: number | null | undefined,
+  displayUnit: Pick<IngredientUnitRow, "to_base_factor"> | null | undefined,
+): number | null {
+  if (wacBase == null) return null;
+  const factor = Number(displayUnit?.to_base_factor ?? 1);
+  if (!Number.isFinite(wacBase) || !(factor > 0)) return wacBase;
+  return wacBase * factor;
+}
+
+/**
+ * Two-line stock quantity: mixed packaging on top when whole larger units
+ * exist (`2 thùng + 30 chai`), exact display-unit total below. Display unit
+ * defaults to issue/export when preferredUnitId is provided; otherwise is_base.
+ */
+export function formatStockUnits(
+  qtyBase: number,
+  units: IngredientUnitRow[] | undefined,
+  formatNumber: (n: number) => string,
+  options?: { preferredUnitId?: number | null },
+): { big: string | null; base: string } {
+  const usable = (units ?? []).filter(
+    (u) => u.is_active && u.unit_code.trim() !== "",
+  );
+
+  const displayRow = resolveStockDisplayUnit(
+    usable,
+    options?.preferredUnitId,
+  );
+  const displayCode = displayRow?.unit_code ?? "";
+  const displayFactor = Number(displayRow?.to_base_factor ?? 1);
+  const displayQty = toStockDisplayQuantity(qtyBase, displayRow);
+  const base = `${formatNumber(displayQty)} ${displayCode}`.trim();
 
   if (usable.length <= 1 || !Number.isFinite(qtyBase) || qtyBase <= 0) {
     return { big: null, base };
   }
 
   const ladder = usable
-    .filter((unit) => unit.to_base_factor > 1)
+    .filter((unit) => unit.to_base_factor > displayFactor)
     .toSorted((left, right) => right.to_base_factor - left.to_base_factor);
 
   if (ladder.length === 0) {
@@ -51,7 +93,7 @@ export function formatStockUnits(
 
   for (const unit of ladder) {
     const factor = unit.to_base_factor;
-    if (!(factor > 1)) continue;
+    if (!(factor > displayFactor)) continue;
     const whole = Math.floor(
       snapNearInteger(remaining / factor) + QUANTITY_EPSILON,
     );
@@ -63,10 +105,11 @@ export function formatStockUnits(
   }
 
   if (remaining > QUANTITY_EPSILON) {
-    parts.push(`${formatNumber(remaining)} ${baseCode}`.trim());
+    const remainderDisplay = toStockDisplayQuantity(remaining, displayRow);
+    parts.push(`${formatNumber(remainderDisplay)} ${displayCode}`.trim());
   }
 
-  // No whole larger pack: operators see base only (not "0 thùng + 125 ml").
+  // No whole larger pack: operators see display unit only.
   if (!hasPackagingPart) {
     return { big: null, base };
   }

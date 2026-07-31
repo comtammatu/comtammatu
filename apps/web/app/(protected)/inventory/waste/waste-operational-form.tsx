@@ -66,9 +66,7 @@ export function WasteOperationalForm({
 
   function selectIngredient(uid: string, value: string) {
     const ingredient = ingredientById.get(Number(value));
-    const defaultUnit =
-      ingredient?.issueUnits.find((unit) => unit.isBase) ??
-      ingredient?.issueUnits[0];
+    const defaultUnit = ingredient?.issueUnits[0];
     patchLine(uid, {
       ingredientId: ingredient?.id ?? null,
       entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",

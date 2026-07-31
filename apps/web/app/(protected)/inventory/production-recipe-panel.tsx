@@ -32,7 +32,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { ComboboxField, FormDialog } from "@/components/form";
+import { ComboboxField, FormDialog, NumberField } from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   IngredientLinesEditor,
@@ -91,10 +91,7 @@ const recipeLineItemSchema = z.object({
     .refine((v) => Number(v) > 0, {
       error: INVENTORY_VI.productionRecipeProductionUnitRequired,
     }),
-  yield_factor: z
-    .string()
-    .min(1, { error: INVENTORY_VI.enterYield })
-    .refine((v) => Number(v) > 0, { error: INVENTORY_VI.yieldPositive }),
+  yield_factor: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -107,6 +104,12 @@ const recipeFormSchema = z
       })
       .refine((v) => Number(v) > 0, {
         error: INVENTORY_VI.productionRecipeFinishedGoodInvalid,
+      }),
+    output_quantity: z
+      .string()
+      .min(1, { error: INVENTORY_VI.enterProductionRecipeOutputQuantity })
+      .refine((v) => Number(v) > 0, {
+        error: INVENTORY_VI.productionRecipeOutputQuantityPositive,
       }),
     lines: z.array(recipeLineItemSchema).min(1, {
       error: INVENTORY_VI.productionRecipeMinLines,
@@ -150,7 +153,7 @@ function recipeToLineFormValue(
     unitLabel: recipe.unitLabel,
     entry_unit_id:
       recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
-    yield_factor: String(recipe.yield_factor),
+    yield_factor: "1",
     note: recipe.note ?? "",
   };
 }
@@ -162,6 +165,7 @@ function toRecipeFormValues(
   if (group) {
     return {
       finished_good_id: String(group.finishedGoodId),
+      output_quantity: String(group.lines[0]?.output_quantity ?? ""),
       lines:
         group.lines.length > 0
           ? group.lines.map(recipeToLineFormValue)
@@ -171,6 +175,7 @@ function toRecipeFormValues(
 
   return {
     finished_good_id: defaultFinishedGoodId ?? "",
+    output_quantity: "",
     lines: [emptyRecipeLine()],
   };
 }
@@ -240,7 +245,7 @@ function RecipeDialogFields({
     const nextLine = {
       ...emptyRecipeLine(),
       ingredient_id: String(ingredient.id),
-      unitLabel: defaultUnit?.label ?? ingredient.unit,
+      unitLabel: defaultUnit?.label ?? "",
       entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
     };
     if (targetIndex < 0) {
@@ -303,7 +308,16 @@ function RecipeDialogFields({
             </p>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2">
+        <NumberField
+          control={form.control}
+          name="output_quantity"
+          id="recipe-output-quantity"
+          label={INVENTORY_VI.productionRecipeOutputQuantityLabel}
+          description={INVENTORY_VI.productionRecipeOutputQuantityHint}
+          maxFractionDigits={3}
+          required
+        />
+        <div className="flex flex-col gap-2 md:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium">
@@ -340,6 +354,7 @@ function RecipeDialogFields({
         errors={form.formState.errors}
         ingredients={recipeLinesEditorIngredients}
         unitEditable
+        showYield={false}
       />
 
       <QuickFinishedGoodDialog
@@ -443,6 +458,7 @@ export function ProductionRecipePanel({
       groups.set(recipe.finished_good_id, {
         finishedGoodId: recipe.finished_good_id,
         finishedGoodName: recipe.finished_good_name,
+        outputQuantity: recipe.output_quantity,
         lines: [recipe],
       });
     }
@@ -525,11 +541,11 @@ export function ProductionRecipePanel({
       oldFinishedGoodId: pendingFinishedGoodId
         ? Number(pendingFinishedGoodId)
         : undefined,
+      outputQuantity: Number(values.output_quantity),
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
         entryUnitId: Number(line.entry_unit_id),
-        yieldFactor: Number(line.yield_factor),
         note: line.note?.trim() || undefined,
       })),
     });
@@ -609,11 +625,6 @@ export function ProductionRecipePanel({
           {formatQuantity(recipe.quantity)} {recipe.unitLabel}
         </span>
       ),
-    },
-    {
-      key: "yield",
-      header: INVENTORY_VI.yield,
-      render: (recipe) => formatQuantity(recipe.yield_factor),
     },
     {
       key: "note",
@@ -766,6 +777,7 @@ export function ProductionRecipePanel({
             <AppSection
               key={group.finishedGoodId}
               title={group.finishedGoodName}
+              description={`${INVENTORY_VI.productionRecipeOutputQuantity} ${formatQuantity(group.outputQuantity)}`}
               badge={{
                 children: INVENTORY_VI.ingredientCountBadge(group.lines.length),
                 variant: badgeVariantFromTone("neutral"),
@@ -875,8 +887,7 @@ function RecipeLineItemCard({
             </Badge>
           </div>
           <ItemDescription className="truncate text-xs">
-            {INVENTORY_VI.yield} {formatQuantity(recipe.yield_factor)}{" "}
-            {recipe.note ? `· ${recipe.note}` : ""}
+            {recipe.note || "—"}
           </ItemDescription>
         </ItemContent>
         {canManageRecipes ? (
@@ -916,7 +927,6 @@ function RecipeLineItemCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {INVENTORY_VI.yield} {formatQuantity(recipe.yield_factor)} ·{" "}
           {recipe.note ?? INVENTORY_VI.noNote}
         </ItemDescription>
       </ItemContent>

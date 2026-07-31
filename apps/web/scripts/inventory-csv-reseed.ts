@@ -41,7 +41,7 @@ type ProductionRecipeCsvRow = {
   ingredientId: number;
   quantity: number;
   unitCode: string;
-  yieldFactor: number;
+  outputQuantity: number;
   note: string | null;
 };
 
@@ -414,16 +414,19 @@ function readProductionRecipes(rows: CsvRow[]): ProductionRecipeCsvRow[] {
     const finishedGoodId = parseNumber(row["thanh_pham_id"] ?? "");
     const ingredientId = parseNumber(row["nguyen_lieu_id"] ?? "");
     const quantity = parseNumber(row["dinh_muc"] ?? "");
-    const yieldFactor = parseNumber(row["yield_factor"] ?? "") ?? 1;
+    const outputQuantity =
+      parseNumber(row["so_luong_thanh_pham"] ?? "") ??
+      parseNumber(row["output_quantity"] ?? "");
     const unit = unitCode(row["don_vi_nhap"] ?? "");
     if (
       finishedGoodId == null ||
       ingredientId == null ||
       quantity == null ||
+      outputQuantity == null ||
       !Number.isInteger(finishedGoodId) ||
       !Number.isInteger(ingredientId) ||
       quantity <= 0 ||
-      yieldFactor <= 0 ||
+      outputQuantity <= 0 ||
       !unit
     ) {
       throw new Error(`cong_thuc_san_xuat.csv:${line}: invalid recipe row`);
@@ -433,7 +436,7 @@ function readProductionRecipes(rows: CsvRow[]): ProductionRecipeCsvRow[] {
       ingredientId,
       quantity,
       unitCode: unit,
-      yieldFactor,
+      outputQuantity,
       note: cleanText(row["ghi_chu"] ?? "") || null,
     };
   });
@@ -626,25 +629,25 @@ function buildSql(
   const productionRecipeValues = productionRecipes
     .map(
       (row) =>
-        `(${row.finishedGoodId}, ${row.ingredientId}, ${row.quantity}, ${sqlString(row.unitCode)}, ${row.yieldFactor}, ${sqlString(row.note)})`,
+        `(${row.finishedGoodId}, ${row.ingredientId}, ${row.quantity}, ${sqlString(row.unitCode)}, ${row.outputQuantity}, ${sqlString(row.note)})`,
     )
     .join(",\n    ");
   const productionRecipeSql = options.catalogOnly
     ? "-- production_recipes intentionally not re-imported in catalog-only mode."
-    : `WITH recipe_rows(finished_good_id, ingredient_id, quantity, unit_code, yield_factor, note) AS (
+    : `WITH recipe_rows(finished_good_id, ingredient_id, quantity, unit_code, output_quantity, note) AS (
   VALUES
     ${productionRecipeValues}
 )
 INSERT INTO public.production_recipes (
   tenant_id, finished_good_id, ingredient_id, quantity,
-  yield_factor, note, entry_unit_id
+  output_quantity, note, entry_unit_id
 )
 SELECT
   t.id,
   r.finished_good_id,
   r.ingredient_id,
   r.quantity,
-  r.yield_factor,
+  r.output_quantity,
   r.note,
   u.id
 FROM target_tenants t

@@ -656,6 +656,8 @@ export const inventory = {
     capacityLoadFailed: "Không thể tải phần bán được.",
     saveFailed: "Không thể lưu định mức món bán.",
     outputUnitRequired: "Định mức phải dùng đơn vị xuất của nguyên liệu.",
+    entryUnitRequired:
+      "Định mức phải chọn một đơn vị đang cấu hình trên nguyên liệu.",
     menuItemsLoadFailed: "Không thể tải món.",
   },
   productionRecipes: {

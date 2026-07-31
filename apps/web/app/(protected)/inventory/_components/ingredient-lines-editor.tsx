@@ -34,6 +34,12 @@ import {
   getDefaultProductionUnit,
   getProductionUnitOptions,
 } from "../_lib/production-units";
+import {
+  getDefaultIngredientUnit,
+  getIngredientRoleUnit,
+  getIngredientUnitOptions,
+  type InventoryUnitOption,
+} from "@lib/inventory/unit-options";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   FORM_VI,
@@ -42,12 +48,38 @@ import {
   STATES_VI,
 } from "@comtammatu/shared/messages";
 
+export type IngredientLineUnitMode = "production" | "all";
+
 export interface IngredientLineOption {
   id: number;
   name: string;
   unitLabel: string;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
   production_unit_id?: number | null;
   units?: IngredientUnitRow[];
+}
+
+function getLineUnitOptions(
+  ingredient: IngredientLineOption | undefined,
+  unitMode: IngredientLineUnitMode,
+): InventoryUnitOption[] {
+  return unitMode === "all"
+    ? getIngredientUnitOptions(ingredient)
+    : getProductionUnitOptions(ingredient);
+}
+
+function getDefaultLineUnit(
+  ingredient: IngredientLineOption | undefined,
+  unitMode: IngredientLineUnitMode,
+): InventoryUnitOption | null {
+  if (unitMode === "all") {
+    return (
+      getIngredientRoleUnit(ingredient, "issue") ??
+      getDefaultIngredientUnit(getIngredientUnitOptions(ingredient))
+    );
+  }
+  return getDefaultProductionUnit(ingredient);
 }
 
 export interface IngredientLineRowValue {
@@ -77,8 +109,10 @@ interface IngredientLinesEditorProps<T extends FieldValues> {
   errors: FieldErrors<T>;
   ingredients: IngredientLineOption[];
   name?: Path<T> & ArrayPath<T>;
-  /** false → use the ingredient output unit; true → allow any configured unit. */
+  /** false → readonly default unit; true → selectable from unitMode options. */
   unitEditable?: boolean;
+  /** production → BOM role only; all → every active ladder unit (menu recipes). */
+  unitMode?: IngredientLineUnitMode;
   /** true → render the bulk-add MultiSelectCombobox. */
   bulkAdd?: boolean;
   showYield?: boolean;
@@ -92,6 +126,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
   ingredients,
   name = "lines" as Path<T> & ArrayPath<T>,
   unitEditable = false,
+  unitMode = "production",
   bulkAdd = false,
   showYield = true,
 }: IngredientLinesEditorProps<T>) {
@@ -124,11 +159,11 @@ export function IngredientLinesEditor<T extends FieldValues>({
   function handleBulkAdd(ingredientIds: string[]) {
     const newRows: IngredientLineRowValue[] = ingredientIds.map((id) => {
       const ing = ingredientMap.get(Number(id));
-      const defaultUnit = getDefaultProductionUnit(ing);
+      const defaultUnit = getDefaultLineUnit(ing, unitMode);
       return {
         ingredient_id: id,
         quantity: "",
-        unitLabel: defaultUnit?.label ?? ing?.unitLabel ?? "",
+        unitLabel: defaultUnit?.label ?? "",
         entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
         yield_factor: "1",
         note: "",
@@ -154,8 +189,9 @@ export function IngredientLinesEditor<T extends FieldValues>({
     if (!ing) return;
     const unitLabelPath = `${name}.${index}.unitLabel` as Path<T>;
     const entryUnitPath = `${name}.${index}.entry_unit_id` as Path<T>;
-    const defaultUnit = getDefaultProductionUnit(ing);
-    setValue(unitLabelPath, (defaultUnit?.label ?? ing.unitLabel) as never, {
+    const defaultUnit = getDefaultLineUnit(ing, unitMode);
+    // Production mode: missing production role must leave entry_unit_id empty.
+    setValue(unitLabelPath, (defaultUnit?.label ?? "") as never, {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -175,8 +211,8 @@ export function IngredientLinesEditor<T extends FieldValues>({
               value: String(ing.id),
               label: ing.name,
               hint:
-                getDefaultProductionUnit(ing)?.label ??
-                (ing.production_unit_id == null
+                getDefaultLineUnit(ing, unitMode)?.label ??
+                (unitMode === "production" && ing.production_unit_id == null
                   ? INVENTORY_VI.productionUnitMissingHint
                   : ing.unitLabel),
               alreadySelected: alreadySelectedIds.has(String(ing.id)),
@@ -232,6 +268,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
               rowError={lineErrors?.[index]}
               canRemove={rows.length > 1}
               unitEditable={unitEditable}
+              unitMode={unitMode}
               showYield={showYield}
               onRemove={() => remove(index)}
               onIngredientChange={(value) =>
@@ -255,6 +292,7 @@ function IngredientLineRow<T extends FieldValues>({
   rowError,
   canRemove,
   unitEditable,
+  unitMode,
   showYield,
   onRemove,
   onIngredientChange,
@@ -268,6 +306,7 @@ function IngredientLineRow<T extends FieldValues>({
   rowError: FieldErrors<IngredientLineRowValue> | undefined;
   canRemove: boolean;
   unitEditable: boolean;
+  unitMode: IngredientLineUnitMode;
   showYield: boolean;
   onRemove: () => void;
   onIngredientChange: (value: string) => void;
@@ -284,11 +323,22 @@ function IngredientLineRow<T extends FieldValues>({
   const selectedIngredient = selectedIngredientId
     ? ingredientMap.get(Number(selectedIngredientId))
     : undefined;
-  const unitOptions = getProductionUnitOptions(selectedIngredient);
+  const unitOptions = getLineUnitOptions(selectedIngredient, unitMode);
+  const missingProductionUnit =
+    unitMode === "production" &&
+    unitEditable &&
+    selectedIngredient != null &&
+    getDefaultProductionUnit(selectedIngredient) == null;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
+      <div
+        className={cn(
+          "grid items-center gap-2 px-3 py-2",
+          GRID_TEMPLATE,
+          missingProductionUnit && "rounded-md border border-destructive",
+        )}
+      >
         <div className="min-w-0 md:col-span-3">
           <Controller
             control={control}
@@ -304,8 +354,8 @@ function IngredientLineRow<T extends FieldValues>({
                   value: String(ing.id),
                   label: ing.name,
                   hint:
-                    getDefaultProductionUnit(ing)?.label ??
-                    (ing.production_unit_id == null
+                    getDefaultLineUnit(ing, unitMode)?.label ??
+                    (unitMode === "production" && ing.production_unit_id == null
                       ? INVENTORY_VI.productionUnitMissingHint
                       : ing.unitLabel),
                 }))}
@@ -345,7 +395,15 @@ function IngredientLineRow<T extends FieldValues>({
         </div>
 
         <div className="min-w-0 md:col-span-2">
-          {unitEditable && unitOptions.length > 0 ? (
+          {unitEditable && missingProductionUnit ? (
+            <Input
+              value={INVENTORY_VI.productionUnitMissingHint}
+              readOnly
+              aria-readonly="true"
+              aria-invalid="true"
+              className="h-9 bg-muted"
+            />
+          ) : unitEditable && unitOptions.length > 0 ? (
             <Controller
               control={control}
               name={entryUnitName}
@@ -368,9 +426,12 @@ function IngredientLineRow<T extends FieldValues>({
                   <SelectTrigger
                     className={cn(
                       "h-9",
-                      rowError?.unitLabel && "border-destructive",
+                      (rowError?.unitLabel || rowError?.entry_unit_id) &&
+                        "border-destructive",
                     )}
-                    aria-invalid={!!rowError?.unitLabel}
+                    aria-invalid={
+                      !!rowError?.unitLabel || !!rowError?.entry_unit_id
+                    }
                     aria-label={FORM_VI.unit}
                   >
                     <SelectValue placeholder={INVENTORY_VI.selectUnit} />
@@ -384,14 +445,6 @@ function IngredientLineRow<T extends FieldValues>({
                   </SelectContent>
                 </Select>
               )}
-            />
-          ) : unitEditable && selectedIngredient ? (
-            <Input
-              value={INVENTORY_VI.productionUnitMissingHint}
-              readOnly
-              aria-readonly="true"
-              aria-invalid="true"
-              className="h-9 border-destructive bg-muted/30"
             />
           ) : (
             <Controller
@@ -407,7 +460,7 @@ function IngredientLineRow<T extends FieldValues>({
                   aria-invalid={!!rowError?.unitLabel}
                   className={cn(
                     "h-9",
-                    "bg-muted/30",
+                    "bg-muted",
                     rowError?.unitLabel && "border-destructive",
                   )}
                 />
@@ -471,14 +524,15 @@ function IngredientLineRow<T extends FieldValues>({
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>
       </div>
-      {rowError && (
+      {rowError ? (
         <p className="px-3 text-xs text-destructive" role="alert">
           {rowError.ingredient_id?.message ??
             rowError.quantity?.message ??
+            rowError.entry_unit_id?.message ??
             rowError.unitLabel?.message ??
             rowError.yield_factor?.message}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -125,7 +125,8 @@ Các cột trên và generated database types là contract hiện hành.
 vai trò, trong đó Nhập và Xuất là bắt buộc:
 
 - **Đơn vị nhập:** đơn vị dùng khi nhận/mua nguyên liệu.
-- **Đơn vị xuất:** đơn vị dùng để trừ tồn và nhập định mức món bán.
+- **Đơn vị xuất:** đơn vị mặc định khi trừ tồn / UI tồn kho; định mức món bán
+  có thể chọn mọi đơn vị ladder.
 - **Đơn vị sản xuất:** chỉ bật cho item dùng trong BOM/lệnh sản xuất.
 - Quy cách luôn theo `Nhập ≥ Xuất ≥ Sản xuất`; cùng đơn vị thì hệ số là `1`.
 
@@ -139,11 +140,19 @@ Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon kh
 SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
-> và giá vốn BQ lưu theo **đơn vị tồn chuẩn**. PO/GRN dùng Nhập; yêu cầu hàng,
-> điều chuyển, xuất, tiêu hao, hao hụt và kiểm kê dùng Xuất; BOM/lệnh sản xuất
-> dùng Sản xuất. Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor.
-> Owner được thêm/đổi đơn vị và quy đổi bất kỳ lúc nào; khi đổi đơn vị tồn chuẩn,
-> RPC `save_ingredient_catalog` quy đổi tồn hiện tại, ngưỡng, WAC và số lượng
+> và giá vốn BQ **lưu** theo **đơn vị tồn chuẩn**. UI tồn kho / cột giá vốn BQ
+> **hiển thị mặc định theo Đơn vị xuất** (quy đổi từ tồn chuẩn khi hai vai trò
+> khác nhau). Cho phép chọn `entry_unit_id` trên chứng từ:
+>
+> - PO: chỉ Nhập
+> - GRN: Nhập hoặc Xuất (không Sản xuất)
+> - Điều chuyển / xuất / tiêu hao / hao hụt: Xuất hoặc Nhập (không Sản xuất)
+> - Định mức món bán: mọi đơn vị active trên ladder
+> - BOM / lệnh sản xuất: chỉ Sản xuất
+>
+> Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor. Owner được thêm/đổi
+> đơn vị và quy đổi bất kỳ lúc nào; khi đổi đơn vị tồn chuẩn, RPC
+> `save_ingredient_catalog` quy đổi tồn hiện tại, ngưỡng, WAC và số lượng
 > valuation hiện hành trong cùng transaction (tổng giá trị không đổi). Snapshot
 > lịch sử không bị viết lại.
 
@@ -152,7 +161,7 @@ SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **Đơn vị xuất**.
+Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` (đơn vị tồn chuẩn); UI tồn kho chiếu sang **Đơn vị xuất**.
 
 - `item_kind = raw_material`: nguyên liệu đầu vào.
 - `item_kind = finished_good`: thành phẩm sản xuất tại chi nhánh hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing location của chi nhánh.
@@ -160,8 +169,8 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **Đơn vị xuất** của nguyên liệu.
-- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **Đơn vị xuất**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
+- **`current_quantity`:** tồn thực theo **đơn vị tồn chuẩn** (`is_base`).
+- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó theo **đơn vị tồn chuẩn**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất). UI tồn kho hiển thị cả hai theo **Đơn vị xuất**.
 
 ---
 
@@ -176,9 +185,9 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 
 Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi
 đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP).
-`recipes.quantity` luôn là lượng tiêu hao trực tiếp theo **Đơn vị xuất** của
-nguyên liệu và `recipes.entry_unit_id` phải trỏ tới đơn vị đó. Định mức món bán
-không có Yield.
+`recipes.entry_unit_id` có thể là bất kỳ đơn vị active trên ladder; số lượng
+được quy về đơn vị tồn chuẩn qua `entry_to_base_factor` khi trừ tồn. UI mặc định
+gợi ý Đơn vị xuất. Định mức món bán không có Yield.
 
 ```sql
 -- Mục tiêu schema (triển khai theo migration)
@@ -200,7 +209,7 @@ CREATE TABLE recipes (
 
 Sản xuất dùng bộ bảng riêng:
 
-- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `entry_unit_id` và `yield_factor`.
+- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `entry_unit_id` và `output_quantity` (số lượng thành phẩm mà định mức tạo ra; denormalize trên mọi dòng cùng thành phẩm).
 - `production_runs`: mẻ sản xuất tại site; state machine
   `draft -> in_progress -> completed` (hoặc `cancelled`).
 
@@ -232,22 +241,19 @@ Quy tắc kế hoạch so với thực tế:
   thực tế rồi ghi consumption, output, stock level và trạng thái trong cùng một
   giao dịch.
 
-### 3c. Yield Factor của công thức sản xuất — hao hụt sơ chế
+### 3c. `output_quantity` của công thức sản xuất
 
 > Boundary: đây là current Inventory control; không kéo theo multi-level BOM hay costing engine mới.
 
-- `production_recipes.yield_factor` biểu diễn tỷ lệ giữ lại sau sơ chế; không áp dụng cho `recipes` của món bán.
-- Mặc định `1.0` = không hao hụt; ví dụ `0.85` = 15% hao hụt.
-- Khi áp dụng, lượng gross để mua / tiêu hao được tính:
+- `production_recipes.output_quantity` là số lượng thành phẩm mà BOM dòng nguyên liệu tạo ra (theo đơn vị sản xuất của thành phẩm).
+- Bắt buộc `> 0`; form tạo mới không prefills giá trị mặc định.
+- Khi lập / chốt mẻ, nhu cầu nguyên liệu scale theo:
 
 ```
-gross_quantity = net_quantity / yield_factor
+raw_need = planned_output × (ingredient.quantity / output_quantity)
 ```
 
-- Ứng dụng thực tế:
-  - đặt hàng chính xác hơn cho nguyên liệu có hao hụt sơ chế,
-  - giải thích chênh lệch giữa định mức net và lượng mua thực tế,
-  - giữ WAC model hiện tại, không cần chuyển sang FIFO.
+- Menu `recipes.yield_factor` (định mức món bán) là domain riêng; không dùng cho production BOM.
 
 Ngoài phạm vi v1:
 

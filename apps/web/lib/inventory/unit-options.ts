@@ -67,9 +67,11 @@ export function getLargestIngredientUnit<T extends InventoryUnitOptionWithFactor
   );
 }
 
+export type InventoryUnitRole = "receipt" | "issue" | "production";
+
 export function getIngredientRoleUnit(
   ingredient: IngredientWithUnitRoles | undefined,
-  role: "receipt" | "issue" | "production",
+  role: InventoryUnitRole,
 ): InventoryUnitOption | null {
   const unitId = ingredient?.[`${role}_unit_id`];
   if (unitId == null) return null;
@@ -80,8 +82,37 @@ export function getIngredientRoleUnit(
 
 export function getIngredientRoleUnitOptions(
   ingredient: IngredientWithUnitRoles | undefined,
-  role: "receipt" | "issue" | "production",
+  role: InventoryUnitRole,
 ): InventoryUnitOption[] {
-  const unit = getIngredientRoleUnit(ingredient, role);
-  return unit ? [unit] : [];
+  return getRoleUnitOptions(ingredient, [role]);
+}
+
+/**
+ * Unique active units for the given catalog roles, preserving `roles` order
+ * and dropping duplicates when the same unit fills more than one role.
+ */
+export function getRoleUnitOptions(
+  ingredient: IngredientWithUnitRoles | undefined,
+  roles: readonly InventoryUnitRole[],
+): InventoryUnitOption[] {
+  const seen = new Set<number>();
+  const options: InventoryUnitOption[] = [];
+  for (const role of roles) {
+    const unit = getIngredientRoleUnit(ingredient, role);
+    if (!unit || seen.has(unit.unitId)) continue;
+    seen.add(unit.unitId);
+    options.push(unit);
+  }
+  return options;
+}
+
+export function getRoleUnitOptionsWithFactor(
+  ingredient: IngredientWithUnitRoles | undefined,
+  roles: readonly InventoryUnitRole[],
+): InventoryUnitOptionWithFactor[] {
+  return getRoleUnitOptions(ingredient, roles).map((unit) => {
+    const factor = ingredient?.units?.find((row) => row.unit_id === unit.unitId)
+      ?.to_base_factor;
+    return { ...unit, toBaseFactor: factor ?? 1 };
+  });
 }

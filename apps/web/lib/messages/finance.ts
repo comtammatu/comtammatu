@@ -247,7 +247,7 @@ export const finance = {
     page: {
       title: "Chỉ tiêu doanh thu tháng",
       description:
-        "Một chỉ tiêu/tháng theo chi nhánh, trên Doanh thu thuần (sau giảm giá, chưa VAT).",
+        "Một chỉ tiêu/tháng theo chi nhánh, trên Doanh thu thuần (sau giảm giá, chưa thuế GTGT).",
     },
     monthLabel: "Tháng",
     applyMonth: "Áp dụng",

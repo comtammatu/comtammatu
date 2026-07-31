@@ -96,6 +96,8 @@ export default async function MenuRecipesPage({
     ? (ingredientsRes.data as Array<{
         id: number;
         name: string;
+        receipt_unit_id?: number | null;
+        issue_unit_id?: number | null;
         ingredient_units?: {
           is_base: boolean;
           units: { code: string } | null;
@@ -119,31 +121,26 @@ export default async function MenuRecipesPage({
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
         const catalogIngredient = ingredientById.get(ingredientId);
-        const outputQuantity = getMenuRecipeLineBaseQuantity({
+        const baseQuantity = getMenuRecipeLineBaseQuantity({
           quantity: qty,
           entryUnitId,
           units: catalogIngredient?.units,
         });
-        const outputUnit =
-          catalogIngredient?.units?.find(
-            (unit) => unit.is_active && unit.is_base,
-          ) ?? catalogIngredient?.units?.find((unit) => unit.is_base);
-        const outputUnitId = outputUnit?.unit_id ?? entryUnitId;
         const fallbackUnit =
           line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units
             ?.code ?? "";
         return {
           ingredientId,
           ingredientName: line.ingredients?.name ?? "—",
-          qty: outputQuantity,
+          qty,
           unitLabel: getIngredientUnitDisplayName(
             catalogIngredient?.units,
-            outputUnitId,
+            entryUnitId,
             fallbackUnit,
           ),
-          entryUnitId: outputUnitId,
+          entryUnitId,
           note: line.note ?? null,
-          lineCost: outputQuantity * unitCost,
+          lineCost: baseQuantity * unitCost,
         };
       });
 
@@ -172,7 +169,12 @@ export default async function MenuRecipesPage({
     ? ingredientRows.map((i) => ({
         id: i.id,
         name: i.name,
-        unitLabel: i.units?.find((u) => u.is_base)?.unit_code ?? "",
+        unitLabel:
+          i.units?.find((u) => u.unit_id === i.issue_unit_id)?.unit_code ??
+          i.units?.find((u) => u.is_base)?.unit_code ??
+          "",
+        receipt_unit_id: i.receipt_unit_id ?? null,
+        issue_unit_id: i.issue_unit_id ?? null,
         units: i.units,
       }))
     : [];

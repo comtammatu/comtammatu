@@ -16,6 +16,28 @@ Evidence: ACL/scope/proxy/home chrome; OPERATOR_TILE_ITEMS; restored GRN/product
 
 - [ ] Authenticated CS/CK responsive smoke at `390×844`, `768×1024`, `1440×900`: home → GRN → fulfill → tồn; CK thêm SX + Yêu cầu Kho Tổng.
 
+## Unit role picker + stock display contract
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/units
+Exit: GRN picks receipt|issue (default receipt); Issue/DC/waste pick issue|receipt (default issue); menu recipes accept any active ladder unit; stock UI qty/WAC display in issue unit while ledger stays `is_base`; PO stays receipt-only and BOM/LSX stay production-only.
+Evidence: helpers + UI wired; migration `20260801001600_inventory_entry_unit_receipt_or_issue.sql` + SQL test; docs `inventory.md`/`glossary.md`; static contract tests; `typecheck`/`lint`/`build` green. Production ledger already has `20260801001600` (`private.entry_unit_matches_roles`; GRN trigger `receipt,issue`; issue/transfer `issue,receipt`); dry-run `supabase-production-push.mjs --dry-run` → remote up to date. Owner delegated apply 2026-08-01; no-op apply needed.
+
+- [ ] Smoke: ingredient Nhập≠Xuất≠Sản xuất → GRN chọn Xuất OK; DC/Xuất chọn Nhập OK; Sản xuất trên GRN/Xuất fail; định mức món chọn đơn vị bất kỳ; màn tồn hiện SL/WAC theo Xuất.
+
+## Replace production recipe yield_factor with output_quantity
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/production
+Exit: Production BOM stores and requires `output_quantity` (no prefills of 1 on create); `yield_factor` removed from `production_recipes`; scale uses `planned × qty / output_quantity`; menu `recipes.yield_factor` unchanged.
+Evidence: migration `20260801001549` already on Production (`output_quantity` NOT NULL, no default, `yield_factor` dropped, upsert takes `p_output_quantity`); `db:types` regenerated; static tests + typecheck/lint/build passed.
+
+- [ ] Owner smoke on `/inventory/production`: tạo công thức không prefills 1 → lưu với N → lệnh sản xuất scale đúng.
+
 ## Fix production recipe entry unit role pipe
 
 State: verify

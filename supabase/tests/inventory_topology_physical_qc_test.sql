@@ -1075,8 +1075,8 @@ BEGIN
           'private.execute_bulk_import_production_recipes(jsonb)'::text
         ),
         (
-          'public.upsert_production_recipe_lines(bigint,jsonb,bigint)'::text,
-          'private.execute_upsert_production_recipe_lines(bigint,jsonb,bigint)'::text
+          'public.upsert_production_recipe_lines(bigint,jsonb,numeric,bigint)'::text,
+          'private.execute_upsert_production_recipe_lines(bigint,jsonb,numeric,bigint)'::text
         )
     ) AS expected(public_signature, private_signature)
     WHERE to_regprocedure(expected.public_signature) IS NULL
@@ -2916,10 +2916,9 @@ BEGIN
       'quantity',
       1,
       'entry_unit_id',
-      v_unit,
-      'yield_factor',
-      1
+      v_unit
     )),
+    1,
     NULL
   );
   IF v_result ->> 'kept_count' <> '1' THEN
@@ -4489,10 +4488,9 @@ BEGIN
       'quantity',
       2,
       'entry_unit_id',
-      v_unit,
-      'yield_factor',
-      1
+      v_unit
     )),
+    1,
     NULL
   );
   IF v_result ->> 'kept_count' <> '1' THEN
@@ -6080,11 +6078,10 @@ BEGIN
         'quantity',
         999,
         'entry_unit_id',
-        v_unit,
-        'yield_factor',
-        1
+        v_unit
       )),
-      NULL
+    1,
+    NULL
     );
   EXCEPTION
     WHEN insufficient_privilege THEN
@@ -6104,6 +6101,8 @@ BEGIN
       jsonb_build_array(jsonb_build_object(
         'finished_good_id',
         v_finished_good,
+        'output_quantity',
+        1,
         'lines',
         jsonb_build_array(jsonb_build_object(
           'ingredient_id',
@@ -6111,9 +6110,7 @@ BEGIN
           'quantity',
           999,
           'entry_unit_id',
-          v_unit,
-          'yield_factor',
-          1
+          v_unit
         ))
       ))
     );
@@ -6827,7 +6824,7 @@ BEGIN
       ),
       (
         'production_recipes',
-        'production_recipes_yield_factor_valid'
+        'production_recipes_output_quantity_valid'
       ),
       ('recipes', 'recipes_quantity_valid'),
       ('recipes', 'recipes_yield_factor_valid'),
@@ -8996,6 +8993,8 @@ BEGIN
     jsonb_build_array(jsonb_build_object(
       'finished_good_id',
       v_finished_good,
+        'output_quantity',
+        1,
       'lines',
       jsonb_build_array(jsonb_build_object(
         'ingredient_id',
@@ -9003,9 +9002,7 @@ BEGIN
         'quantity',
         3,
         'entry_unit_id',
-        v_unit,
-        'yield_factor',
-        1
+        v_unit
       ))
     ))
   );
@@ -9018,7 +9015,7 @@ BEGIN
          AND recipe.finished_good_id = v_finished_good
          AND recipe.ingredient_id = v_ingredient
          AND recipe.quantity = 3
-         AND recipe.yield_factor = 1
+         AND recipe.output_quantity = 1
      ) THEN
     RAISE EXCEPTION
       'BULK IMPORT: Owner production recipe import failed: %',
@@ -9091,6 +9088,8 @@ BEGIN
       jsonb_build_array(jsonb_build_object(
         'finished_good_id',
         v_finished_good,
+        'output_quantity',
+        1,
         'lines',
         jsonb_build_array(jsonb_build_object(
           'ingredient_id',
@@ -9098,9 +9097,7 @@ BEGIN
           'quantity',
           'Infinity',
           'entry_unit_id',
-          v_unit,
-          'yield_factor',
-          1
+          v_unit
         ))
       ))
     );

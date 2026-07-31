@@ -14,8 +14,8 @@ type HasUnits = {
 };
 
 /**
- * Selectable production units for an ingredient: every active ingredient_units
- * row, base unit first.
+ * Selectable production units for an ingredient: only the catalog
+ * `production_unit_id` role unit when configured.
  */
 export function getProductionUnitOptions(
   ingredient: HasUnits | undefined,
@@ -24,8 +24,8 @@ export function getProductionUnitOptions(
 }
 
 /**
- * Default production unit for an ingredient: the base unit when present, else
- * the first active unit, else null.
+ * Default production unit for an ingredient: catalog `production_unit_id`
+ * only. Never fall back to base/display unit — missing role stays null.
  */
 export function getDefaultProductionUnit(
   ingredient: HasUnits | undefined,
