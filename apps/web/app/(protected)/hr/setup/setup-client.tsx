@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AppSection } from "@/components/surface";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { PositionTasksClient } from "../position-tasks-client";
 import type { PositionTasksData } from "../position-tasks-actions";
@@ -61,11 +61,31 @@ export function HrSetupClient({
         />
       </AppSection>
       <AppSection
-        title={copy.positionTasks.title}
-        description={copy.positionTasks.description}
-        headerHint={copy.positionTasks.hint}
+        title={copy.setupSteps.templates.title}
+        description={copy.setupSteps.templates.description}
+        headerHint={copy.setupSteps.templates.hint}
+      >
+        <AppEmptyState
+          title={copy.templatesPlaceholderTitle}
+          description={copy.templatesPlaceholderDescription}
+        />
+      </AppSection>
+      <AppSection
+        title={copy.setupSteps.positionTasks.title}
+        description={copy.setupSteps.positionTasks.description}
+        headerHint={copy.setupSteps.positionTasks.hint}
       >
         <PositionTasksClient initialData={positionTasksData} />
+      </AppSection>
+      <AppSection
+        title={copy.setupSteps.roster.title}
+        description={copy.setupSteps.roster.description}
+        headerHint={copy.setupSteps.roster.hint}
+      >
+        <AppEmptyState
+          title={copy.rosterPlaceholderTitle}
+          description={copy.rosterPlaceholderDescription}
+        />
       </AppSection>
     </>
   );

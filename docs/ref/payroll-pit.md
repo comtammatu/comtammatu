@@ -144,7 +144,7 @@ chi nhánh, tìm nhân viên và `standard_days` (mặc định 26). Không có 
 | --- | --- | --- |
 | Công làm | `attendance_records` có `check_out` | Theo D027: ca đã kết thúc quy đổi ngày công; không tự suy diễn ca vắng. |
 | Phép có lương / nghỉ không lương | `leave_requests` đã `approved` | Phép năm được tách theo entitlement hiện hành; các ngày vượt quyền lợi và loại nghỉ khác là không lương. |
-| Lương tháng / mức đóng BH | HĐLĐ active trong kỳ, fallback `employees` | Không có nguồn lương thì hàng được gắn trạng thái thiếu dữ liệu, không được im lặng coi là 0 hợp lệ. |
+| Lương tháng / mức đóng BH | HĐLĐ có hiệu lực trong kỳ, fallback `employees` | Không có nguồn lương thì hàng được gắn trạng thái thiếu dữ liệu, không được im lặng coi là 0 hợp lệ. `pay_basis` phải lấy từ HĐLĐ có hiệu lực và được snapshot khi chốt, không suy từ JWT role. |
 | Thưởng, phụ cấp, tạm ứng, khấu trừ | `payroll_adjustments` theo nhân viên-tháng | Mỗi điều chỉnh có loại, số tiền dương, ghi chú và người tạo; đây là nguồn live duy nhất cho các khoản nhập bổ sung. |
 | Dự kiến thực lĩnh | Các nguồn trên + engine version-aware | Tính tại thời điểm mở/lọc workspace, không ghi `payroll_entries`. |
 
@@ -154,6 +154,14 @@ toàn bộ dòng vào `payroll_entries`, gắn người/thời điểm chốt v�
 snapshot đó. UI sau chốt dùng nhãn **Thực lĩnh đã chốt**; trước chốt dùng
 **Dự kiến thực lĩnh**. Chốt lại chỉ được phép khi snapshot còn ở trạng thái có
 thể sửa theo state machine; không được thay đổi snapshot đã giao cho Finance.
+
+Với `pay_basis = fixed_monthly`, attendance là hồ sơ tuân thủ/vận hành nhưng
+chênh lệch attendance thông thường không prorate lương cơ bản. Phép hưởng lương
+đã duyệt không giảm lương. Phép không hưởng lương đã duyệt phải tạo khoản khấu
+trừ tường minh trong nguồn adjustment/snapshot hiện hành. Vắng chưa được duyệt
+phải được xử lý qua thẩm quyền điều chỉnh attendance/payroll trước khi chốt,
+không tự đổi thành proration. Quy tắc này hiện áp dụng cho HĐLĐ Kế toán đã cấu
+hình `fixed_monthly`, nhưng thuộc tính HĐLĐ chứ không thuộc role.
 
 Trước khi gọi snapshot, `/hr/payroll` chạy preflight chỉ đọc. Snapshot bị chặn
 khi còn nhân viên thiếu mức lương, ca đã quá giờ nhưng chưa có giờ ra, hoặc yêu

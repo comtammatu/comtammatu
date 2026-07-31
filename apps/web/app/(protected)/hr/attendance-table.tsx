@@ -147,6 +147,8 @@ interface AttendanceTableProps {
   initialDay?: string | null;
   initialEmployeeId?: number | null;
   initialCalendarScope?: CalendarScope;
+  /** Preserve Owner IA tab (`today` / `timesheet`) across filter replaces. */
+  urlTab?: string;
 }
 
 export function AttendanceTable({
@@ -157,6 +159,7 @@ export function AttendanceTable({
   initialDay = null,
   initialEmployeeId = null,
   initialCalendarScope = "all",
+  urlTab,
 }: AttendanceTableProps) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -206,6 +209,7 @@ export function AttendanceTable({
       month,
       view: nextView,
     });
+    if (urlTab) params.set("tab", urlTab);
     if (nextView === "calendar" && nextDay) {
       params.set("day", nextDay);
     }
@@ -266,6 +270,7 @@ export function AttendanceTable({
       month: selectedMonth,
       view: "calendar",
     });
+    if (urlTab) params.set("tab", urlTab);
     if (date) params.set("day", date);
     if (selectedEmployeeId != null) {
       params.set("employee", String(selectedEmployeeId));
@@ -284,6 +289,7 @@ export function AttendanceTable({
       month: selectedMonth,
       view: "calendar",
     });
+    if (urlTab) params.set("tab", urlTab);
     if (employeeId != null) params.set("employee", String(employeeId));
     if (calendarScope === "attention") {
       params.set("filter", "attention");
@@ -299,6 +305,7 @@ export function AttendanceTable({
       month: selectedMonth,
       view: "calendar",
     });
+    if (urlTab) params.set("tab", urlTab);
     if (selectedEmployeeId != null) {
       params.set("employee", String(selectedEmployeeId));
     }

@@ -98,8 +98,10 @@ test("HR long screens preserve hierarchy and LIST viewport width", () => {
   );
 
   assert.match(attendance, /<AppPageTabs/);
-  assert.match(attendance, /<TabsContent value="attendance">/);
-  assert.match(attendance, /<TabsContent value="leave">/);
+  assert.match(attendance, /<TabsContent value="today">/);
+  assert.match(attendance, /<TabsContent value="approvals">/);
+  assert.match(attendance, /<TabsContent value="timesheet">/);
+  assert.match(attendance, /<TabsContent value="schedule">/);
   assert.doesNotMatch(setup, /<div className="flex flex-col gap-4">/);
   assert.match(staff, /<AppPage width="xwide">/);
   assert.match(audit, /<AppPage width="xwide">/);

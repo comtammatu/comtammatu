@@ -15,6 +15,7 @@ export type ModuleKey =
   | "staff"
   | "hr"
   | "hr_payroll"
+  | "me"
   | "finance"
   | "branches"
   | "settings"
@@ -92,6 +93,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/hr/payroll",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("hr_payroll"),
+  },
+  me: {
+    path: "/me",
+    allowedRoles: STAFF_ROLES.filter((role) => role !== "owner"),
+    label: "Công việc của tôi",
   },
   finance: {
     path: "/finance",
@@ -206,6 +212,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
 
 /** Check if a role can access a module */
 export function canAccess(role: StaffRole, moduleKey: ModuleKey): boolean {
+  if (role === "owner" && moduleKey === "me") return false;
   if (role === "owner") return true;
   return MODULE_ACL[moduleKey].allowedRoles.includes(role);
 }

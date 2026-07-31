@@ -152,10 +152,9 @@ test("floor clock-in returns cashier/chef to branch home (unlocked tiles)", () =
   const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
   // Branch home is where POS/KDS tiles unlock after clock-in.
   assert.match(clockPage, /home: `\/br\/\$\{branchId\}`/);
-  // The RPC clock-in path is reached only by floor roles (manager-simple
-  // returns earlier), so it lands them on branch home.
+  // The universal RPC clock-in path returns floor roles to branch home.
   const rpcBlock = actions.slice(
-    actions.indexOf("employee_clock_in_with_checklist"),
+    actions.indexOf("self_service_clock_in"),
   );
   assert.match(rpcBlock, /nextPath: "home"/);
 });

@@ -271,21 +271,76 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ---
 
-### 2.8. Quản lý Nhân sự & Phân quyền — `/hr/staff`
+### 2.8. Hồ sơ nhân sự — `/hr`
+
+- **Archetype:** `LIST`.
+- **Đối tượng sử dụng chính:** Chủ sở hữu (`owner`) — admin HR duy nhất trên control surface.
+- **Mục tiêu Nghiệp vụ (Why?):** Quản lý hồ sơ NLĐ, HĐLĐ, chế độ lương (`Theo công` / `Lương tháng`), site/vị trí; là cổng vào các hub Thời gian / Lương / Thiết lập / Tài khoản.
+- **Mục tiêu Người dùng (Goal):** Thấy việc cần xử lý (duyệt, thiếu HĐ/lương), mở đúng hàng đợi; onboard NV theo 4 bước trong một form.
+- **Luồng thao tác (Workflow):**
+  1. Đọc strip **Cần xử lý** → mở Duyệt hoặc lọc NV thiếu HĐ/lương.
+  2. **Onboard:** Hồ sơ → Vị trí/site → HĐ + chế độ lương → Tài khoản (email/mật khẩu; quyền tinh chỉnh tại `/hr/staff`).
+  3. Sửa hồ sơ / HĐ / chế độ lương trên dialog; không chấm công thay NV.
+- **Thông tin hiển thị:**
+  - **Nên hiển thị:** Tên, vị trí, site (hoặc Văn phòng), trạng thái, có lương/HĐ; số pending duyệt và thiếu dữ liệu lương.
+  - **KHÔNG hiển thị:** KPI doanh thu/kho; bảng công tháng chi tiết (sang `/hr/attendance`); raw `pay_basis`.
+- **Quy chuẩn UX/UI:** Desktop bảng + dialog; cùng IA trên mobile. Owner không có self-service `/me`.
+
+### 2.8a. Thời gian / ngày công — `/hr/attendance`
+
+- **Archetype:** `LIST` + tab URL (`tab`).
+- **Đối tượng:** `owner`.
+- **Mục tiêu Nghiệp vụ:** Theo dõi vào/ra ca, hàng đợi duyệt kết ca & phép (floor + tenant), bảng công; lịch ca tuần khi phân ca sẵn sàng.
+- **Mục tiêu Người dùng:** Đầu ngày xử lý hàng đợi Duyệt; trong tháng xem Bảng công; không sửa lương tại đây.
+- **Luồng thao tác:**
+  1. Tab **Hôm nay** — tình trạng ca trong ngày (filter site/ngày trên URL).
+  2. Tab **Duyệt** — nghỉ phép chờ duyệt + liên kết duyệt kết ca Owner.
+  3. Tab **Bảng công** — tổng hợp/tháng/lịch sử công.
+  4. Tab **Lịch ca** — phân ca tuần (hoặc empty state cho đến khi roster live).
+- **Nên hiển thị:** Pending counts trên tab Duyệt; site gồm Văn phòng (`branch_id` null).
+- **KHÔNG hiển thị:** Phân quyền; chỉnh `pay_basis`; KPI bán hàng.
+- **Quy chuẩn:** Filter `date`/`site`/`tab`/`month`/`view` trên URL. Duyệt tách khỏi cấu hình Setup.
+
+### 2.8b. Lương — `/hr/payroll`
+
+- **Archetype:** `LIST` / document kỳ.
+- **Đối tượng:** `owner` (`hr_payroll`).
+- **Mục tiêu Nghiệp vụ:** Tạm tính → đối soát → chốt kỳ; phân biệt chế độ Theo công vs Lương tháng.
+- **Mục tiêu Người dùng:** Preflight thiếu HĐ/`pay_basis`/entitlement → tính → điều chỉnh → chốt.
+- **Luồng thao tác:** Chọn tháng/kỳ → xem blocker → mở kỳ → điều chỉnh → chốt (thanh toán thuộc Finance).
+- **Nên hiển thị:** Cột chế độ lương tiếng Việt; khấu trừ nghỉ không lương; link sang hồ sơ NV để đổi chế độ.
+- **KHÔNG hiển thị:** Chấm công giúp NV; đổi quyền; raw technical keys.
+
+### 2.8c. Thiết lập ca & việc — `/hr/setup`
+
+- **Archetype:** `WORKFLOW` (các `AppSection` tuần tự).
+- **Đối tượng:** `owner`.
+- **Mục tiêu Nghiệp vụ:** Cấu hình quy tắc ít đụng hàng ngày: chính sách phép tháng → khung ca → mẫu việc → việc theo vị trí → phân ca tuần.
+- **Mục tiêu Người dùng:** Thiết lập đúng thứ tự để clock-in nhận đúng việc; preview việc theo vị trí.
+- **Luồng thao tác:**
+  1. Chính sách ngày công & phép tháng.
+  2. Khung ca (mở/đóng ca; bật lại ca tắt).
+  3. Mẫu việc (thư viện; áp dụng copy vào vị trí) — empty/CTA đến khi library live.
+  4. Việc theo vị trí (`position_shift_tasks`) — chỉnh sau mẫu.
+  5. Phân ca tuần — empty/CTA đến khi roster live.
+- **Nên hiển thị:** Preview việc NV sẽ thấy; cảnh báo tắt ca đang được gán.
+- **KHÔNG hiển thị:** Sửa snapshot việc của ca đã chấm; bảng lương.
+
+### 2.8d. Quản lý Nhân sự & Phân quyền — `/hr/staff`
 
 - **Archetype:** `LIST`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`) (độc quyền phân quyền), Quản lý chi nhánh (chỉ xem hồ sơ nhân viên thuộc quyền).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Quản lý thông tin NLĐ, gán đúng chức danh, chi nhánh làm việc và cấp đúng quyền truy cập hệ thống để bảo mật dữ liệu, tránh nhân viên xem hoặc sửa dữ liệu vượt cấp (ví dụ: Thu ngân sửa giá món, Bếp xem báo cáo doanh thu chuỗi).
-- **Mục tiêu Người dùng (Goal):** Thêm nhân viên mới, gán chi nhánh và cấp quyền cho họ chỉ trong 3 bước.
+- **Mục tiêu Người dùng (Goal):** Sau khi có hồ sơ tại `/hr`, tinh chỉnh tài khoản và quyền; onboard quyền trong vài bước.
 - **Luồng thao tác (Workflow):**
-  1. **Tạo hồ sơ:** Nhập thông tin cá nhân (Họ tên, SĐT, Số CCCD, Ngày sinh).
-  2. **Gán vị trí:** Chọn chức danh (ví dụ: Thu ngân, Đầu bếp) -> Chọn chi nhánh hoạt động chính.
-  3. **Cấp tài khoản:** Nhập email -> Hệ thống tạo tài khoản auth và chuyển thẳng đến bước xác nhận quyền.
-  4. **Xác nhận quyền (Chỉ Owner):** Hệ thống đề xuất bộ quyền theo chức vụ và chi nhánh đã chọn; Owner xác nhận trước khi cấp, sau đó chỉ thêm quyền riêng khi công việc thực tế cần ngoại lệ.
+  1. Mở từ hồ sơ `/hr` hoặc deep nav Tài khoản & quyền.
+  2. **Gán vị trí / site** trên tài khoản nếu chưa khớp hồ sơ.
+  3. **Xác nhận quyền (Chỉ Owner):** Hệ thống đề xuất bộ quyền theo chức vụ; Owner xác nhận, rồi thêm ngoại lệ khi cần.
+  4. Kiểm tra nhật ký tại `/hr/staff/audit`.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Danh sách tài khoản nhân sự kèm chức danh và chi nhánh; bộ quyền theo chức vụ được chia theo nhóm công việc bằng tiếng Việt; quyền đang có, nguồn cấp, phạm vi và thời hạn.
-  - **KHÔNG hiển thị:** Doanh thu, số lượng tồn kho nguyên liệu, chi tiết công nợ NCC.
+  - **Nên hiển thị:** Danh sách tài khoản nhân sự kèm chức danh và chi nhánh; bộ quyền theo chức vụ được chia theo nhóm công việc bằng tiếng Việt; quyền đang có, nguồn cấp, phạm vi và thời hạn; link sang hồ sơ lương `/hr`.
+  - **KHÔNG hiển thị:** Doanh thu, số lượng tồn kho nguyên liệu, chi tiết công nợ NCC, bảng công, chỉnh `pay_basis`.
 - **Quy chuẩn UX/UI:**
   - Toàn bộ thao tác thay đổi phân quyền phải ghi nhận vào nhật ký phân quyền (`hr/staff/audit`) để phục vụ việc hậu kiểm an ninh hệ thống.
   - Không dùng `position_code`, `role_templates.name`, `permission_keys.module`, permission key hoặc mô tả kỹ thuật tiếng Anh làm nhãn chính trên UI. Mã kỹ thuật chỉ là dữ liệu nội bộ; quyền cấp riêng vẫn phải hiển thị bằng ngôn ngữ công việc.

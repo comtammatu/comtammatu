@@ -1649,7 +1649,10 @@ function resolveFamilyPath(route) {
   return best;
 }
 
-const protectedPages = walkFiles("apps/web/app/(protected)", [".tsx"])
+const protectedPages = [
+  ...walkFiles("apps/web/app/(protected)", [".tsx"]),
+  ...walkFiles("apps/web/app/(self)", [".tsx"]),
+]
   .map(toPosix)
   .filter((file) => file.endsWith("/page.tsx"));
 const routeManifestPages = protectedPages;

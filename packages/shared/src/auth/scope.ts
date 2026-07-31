@@ -135,6 +135,39 @@ export function getSafeInternalReturnTo(
   }
 }
 
+const SELF_SERVICE_BRANCH_PATHS = [
+  ["/me/clock", "/shift/clock"],
+  ["/me/schedule", "/shift/schedule"],
+  ["/me/profile", "/profile"],
+  ["/me/payslip", "/profile/payslip"],
+  ["/me", "/shift"],
+] as const;
+
+export function canonicalizeSelfServicePath(
+  claims: JwtClaims,
+  path: string,
+): string | null {
+  const targetUrl = new URL(path, "http://localhost");
+  if (
+    targetUrl.pathname !== "/me" &&
+    !targetUrl.pathname.startsWith("/me/")
+  ) {
+    return path;
+  }
+  if (claims.user_role === "owner") return null;
+  if (claims.branch_id == null) return path;
+
+  const mapping = SELF_SERVICE_BRANCH_PATHS.find(
+    ([source]) =>
+      targetUrl.pathname === source ||
+      targetUrl.pathname.startsWith(`${source}/`),
+  );
+  if (!mapping) return null;
+  const [source, destination] = mapping;
+  targetUrl.pathname = `/br/${claims.branch_id}${destination}${targetUrl.pathname.slice(source.length)}`;
+  return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+}
+
 /**
  * Resolve the post-login destination for a user.
  *
@@ -160,6 +193,12 @@ export function resolvePostLoginRedirect(
   // Guard against bouncing the user back to the login route itself.
   if (targetUrl.pathname === "/login") {
     return fallback;
+  }
+
+  const canonicalSelfPath = canonicalizeSelfServicePath(claims, safeReturnTo);
+  if (canonicalSelfPath === null) return fallback;
+  if (canonicalSelfPath !== safeReturnTo) {
+    return canonicalSelfPath;
   }
 
   if (isRunnerPublicDisplayPath(targetUrl.pathname)) {

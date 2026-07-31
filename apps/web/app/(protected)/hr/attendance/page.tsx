@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { ClipboardCheck as IconClipboardCheck } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { getVNMonthString } from "@comtammatu/shared/time";
+import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { AttendanceTable } from "../attendance-table";
@@ -18,6 +19,8 @@ type AttendanceSearchParams = {
   tab?: string;
   view?: string;
 };
+
+type AttendanceTab = "today" | "approvals" | "timesheet" | "schedule";
 
 function resolveMonth(value: string | undefined) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value ?? "")
@@ -45,6 +48,23 @@ function resolveCalendarScope(value: string | undefined) {
   return value === "attention" ? "attention" : "all";
 }
 
+function resolveTab(
+  value: string | undefined,
+  pendingApprovals: number,
+): AttendanceTab {
+  if (value === "leave") return "approvals";
+  if (value === "attendance") return "timesheet";
+  if (
+    value === "today" ||
+    value === "approvals" ||
+    value === "timesheet" ||
+    value === "schedule"
+  ) {
+    return value;
+  }
+  return pendingApprovals > 0 ? "approvals" : "today";
+}
+
 export default async function HrAttendancePage({
   searchParams,
 }: {
@@ -52,14 +72,32 @@ export default async function HrAttendancePage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const { data } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name");
+  const [{ data }, leaveCountResult, checkoutCountResult] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id, name, branch_kind")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("leave_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "pending"),
+    supabase
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .not("checkout_requested_at", "is", null)
+      .is("checkout_approved_at", null)
+      .is("check_out", null),
+  ]);
   const branches = (data ?? []) as BranchOption[];
+  const pendingApprovals =
+    (leaveCountResult.count ?? 0) + (checkoutCountResult.count ?? 0);
   const month = resolveMonth(params.month);
+  const today = getVNDateString();
+  const todayMonth = today.slice(0, 7);
   const requestedBranchId = Number(params.branch);
   const initialBranchId = branches.some(
     (branch) => branch.id === requestedBranchId,
@@ -71,6 +109,7 @@ export default async function HrAttendancePage({
       ? params.view
       : "summary";
   const copy = messages.hr.client;
+  const tab = resolveTab(params.tab, pendingApprovals);
 
   return (
     <AppPage width="xwide">
@@ -85,12 +124,46 @@ export default async function HrAttendancePage({
       />
       <AppPageTabs
         items={[
-          { value: "attendance", label: copy.tabs.attendance },
-          { value: "leave", label: messages.hr.leave.approvalsTitle },
+          { value: "today", label: copy.attendanceTabs.today },
+          {
+            value: "approvals",
+            label: copy.attendanceTabs.approvals,
+            count: pendingApprovals > 0 ? pendingApprovals : undefined,
+          },
+          { value: "timesheet", label: copy.attendanceTabs.timesheet },
+          { value: "schedule", label: copy.attendanceTabs.schedule },
         ]}
-        defaultValue={params.tab === "leave" ? "leave" : "attendance"}
+        defaultValue={tab}
+        ariaLabel={copy.attendanceTabs.ariaLabel}
       >
-        <TabsContent value="attendance">
+        <TabsContent value="today">
+          <AttendanceTable
+            branches={branches}
+            initialBranchId={initialBranchId}
+            initialMonth={todayMonth}
+            initialView="clock"
+            initialDay={today}
+            initialEmployeeId={null}
+            initialCalendarScope="all"
+            urlTab="today"
+          />
+        </TabsContent>
+        <TabsContent value="approvals">
+          <AppSection
+            title={copy.checkoutApprovalsAction}
+            description={copy.checkoutApprovalsHint}
+          >
+            <Button
+              size="touch"
+              render={<Link href="/hr/attendance/checkout-approvals" />}
+            >
+              <IconClipboardCheck data-icon="inline-start" />
+              {copy.checkoutApprovalsAction}
+            </Button>
+          </AppSection>
+          <LeaveRequestsTable branches={branches} />
+        </TabsContent>
+        <TabsContent value="timesheet">
           <AttendanceTable
             branches={branches}
             initialBranchId={initialBranchId}
@@ -109,10 +182,22 @@ export default async function HrAttendancePage({
                 ? resolveCalendarScope(params.filter)
                 : "all"
             }
+            urlTab="timesheet"
           />
         </TabsContent>
-        <TabsContent value="leave">
-          <LeaveRequestsTable branches={branches} />
+        <TabsContent value="schedule">
+          <AppEmptyState
+            title={copy.schedulePlaceholderTitle}
+            description={copy.schedulePlaceholderDescription}
+          >
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href="/hr/setup" />}
+            >
+              {copy.schedulePlaceholderAction}
+            </Button>
+          </AppEmptyState>
         </TabsContent>
       </AppPageTabs>
     </AppPage>

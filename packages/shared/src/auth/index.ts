@@ -26,6 +26,7 @@ export {
 } from "./permissions";
 export {
   canSubscribeBranchOpsTopic,
+  canonicalizeSelfServicePath,
   extractClaimsFromAccessToken,
   getDefaultRedirect,
   getSafeInternalReturnTo,

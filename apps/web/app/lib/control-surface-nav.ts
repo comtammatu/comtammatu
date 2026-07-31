@@ -23,7 +23,7 @@ import {
   type ResolvedNavLink,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import {
   resolveInventoryNav,
   type InventoryNavFlags,
@@ -131,7 +131,7 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   const peopleItems: ShellNavItem[] = [
     {
       href: MODULE_ACL.hr.path,
-      label: APP_COPY_VI.hrWorkspace,
+      label: messages.hr.client.tabs.employees,
       icon: IconBriefcase,
     },
     {
@@ -143,7 +143,7 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   if (canAccess(role, "hr_payroll")) {
     peopleItems.push({
       href: MODULE_ACL.hr_payroll.path,
-      label: MODULE_LABELS_VI.hr_payroll,
+      label: messages.hr.client.tabs.payroll,
       icon: IconWallet,
     });
   }

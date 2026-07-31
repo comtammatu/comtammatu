@@ -462,11 +462,12 @@ export function PayrollListClient({
       return;
     }
     if (blocker.kind === "pending_leave") {
-      router.push("/hr/attendance?tab=leave");
+      router.push("/hr/attendance?tab=approvals");
       return;
     }
 
     const params = new URLSearchParams({
+      tab: "timesheet",
       month: monthValue(preview.year, preview.month),
       view: "calendar",
       filter: "attention",
@@ -501,6 +502,12 @@ export function PayrollListClient({
           </p>
         </div>
       ),
+    },
+    {
+      key: "pay-basis",
+      header: copy.table.payBasis,
+      className: "w-28 whitespace-nowrap text-sm",
+      render: (entry) => messages.hr.payBasis.label(entry.payBasis),
     },
     {
       key: "working-days",

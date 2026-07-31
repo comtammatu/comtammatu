@@ -78,7 +78,9 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2 right-2"
+                // Pin to header cell so absolute close does not create an
+                // implicit second grid column under AppDialog document rows.
+                className="absolute top-2 right-2 z-10 col-start-1 row-start-1"
                 size="icon-touch"
               >
                 <IconX />

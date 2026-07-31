@@ -28,9 +28,10 @@ reference framing.
 - Top-level modules (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, and
   `/branches`) belong to control_surface even though their URLs remain stable.
   Branch Manager and Staff use Branch-native workflows under `/br/[branchId]`.
-- The only valid authenticated entries are `/` for Owner and
-  `/br/[branchId]` for branch-pinned roles. There is no route alias, picker
-  root, or compatibility redirect.
+- Valid authenticated entries are `/` for Owner, `/br/[branchId]` for
+  branch-pinned roles, and `/me` for branchless non-Owner staff. Site-pinned
+  `/me/*` requests canonicalize to the equivalent claimed Branch route. Owner
+  is explicitly denied `/me/*`.
 
 ## Scope Layers
 
@@ -39,6 +40,7 @@ reference framing.
 | L0 Tenant     | Chain identity, branch network, roles, finance, inventory oversight, and tenant settings | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*` | `owner`                                |
 | L1 Branch     | Store floor, POS/KDS setup, Branch staff day flow, menu limits, and local operations     | `/br/[branchId]/*`                                                                               | `branch_manager`, with Owner oversight |
 | Staff Runtime | Profile, attendance, leave request, payslip, notifications                               | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`, `/notifications/*`                         | Branch-pinned roles                    |
+| Self Runtime  | Personal workday for branchless staff; no tenant administration                         | `/me/*`                                                                                          | `accountant`; never `owner`            |
 
 ## Canonical Surfaces
 
@@ -53,6 +55,7 @@ reference framing.
 | HR Administration   | `/hr/*`                                                                                                                                            | L0      | `owner`                                                                | Tenant-wide staff CRUD, attendance, leave, payroll, labor contracts, compensation, insurance, accounts, and permissions.                                                                                           |
 | Finance             | `/finance/*`                                                                                                                                       | L0      | `owner`, `accountant`                                                  | Operating finance, revenue, expenses, supplier AP, cash summary, inventory value handoff, food-cost signal, tax-support exports, and HĐĐT support.                                                               |
 | Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                                                               | L1/self | branch-pinned roles                                                    | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Not an HR admin substitute.                                                                                        |
+| Self                | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip`                                                                                   | L0/self | `accountant`; Owner explicitly denied                                  | Branchless personal attendance/tasks, schedule/leave, profile, and payslip. Scope is derived from auth and stored with `branch_id = NULL`; no fake HQ branch.                                                     |
 
 ## HR Administration Semantics
 
@@ -65,8 +68,8 @@ workflows under the current branch URL; they do not inherit Owner HR actions.
 | Employee record, salary profile, HĐLĐ | `/hr` employees tab                                                                                       | `employees` + active `employment_contracts`. Owner writes employee/compensation/contract fields; branch manager only reads the branch-safe subset.        |
 | Assignment / position work            | `/hr` setup tab                                                                                           | Owner defines positions, employee assignment, and workday rules. Inventory count assignment remains in the Branch stock module.                           |
 | Ca làm                                | `/hr` setup tab                                                                                           | Owner manages the global shift catalog and open/close flags. Actual clock-in/out and checklist execution happen under `/br/[branchId]/shift/*`.           |
-| Phép nghỉ                             | `/br/[branchId]/shift/schedule/leave`, `/br/[branchId]/shift/leave-approvals`, Owner `/hr` attendance tab | Staff requests leave in Branch runtime. Owner or the assigned Branch Manager may approve/reject; self, peer-manager, and cross-branch review fail closed. |
-| Lương                                 | `/hr/payroll/*`                                                                                           | Owner-only payroll calculation/export. Payroll reads attendance, paid leave, and active contracts; it is not a branch shift UI.                           |
+| Phép nghỉ                             | Branch schedule/approval routes, `/me/schedule`, Owner `/hr` attendance tab                                  | Floor uses Branch Manager approval; central and Accountant use Owner approval. Immutable site/null creation scope and self/cross-scope review fail closed. |
+| Lương                                 | `/hr/payroll/*`                                                                                              | Owner-only calculation/export. Effective-dated contract `pay_basis` controls attendance proration; `fixed_monthly` keeps base salary and records unpaid leave as an explicit deduction. |
 
 ## Role Boundaries
 
@@ -81,6 +84,8 @@ boundary enforced by route ACL, Server Actions, permission keys, RPC, and RLS.
 | `cashier`        | POS orders, payments, receipts according to grants                                                                                                                     | Branch settings owner                                               |
 | `chef`           | KDS ready/recall and kitchen status according to grants                                                                                                                | Inventory production manager                                        |
 | `branch_staff`   | Shift/profile day runtime according to branch assignment                                                                                                               | POS/KDS or tenant admin by label                                    |
+| `accountant`     | Finance plus branchless `/me/*` personal runtime                                                                                                                       | Owner, fake-HQ Branch user, or attendance-prorated by role inference |
+| `central_supply_ops` / `central_kitchen_lead` | Assigned central site operations and full personal attendance/leave runtime                                                                      | Cross-site operator or Branch Manager checkout approver             |
 
 ## Role And Module Ownership
 
@@ -141,6 +146,7 @@ by direct URL or as a redirect target.
 | `staff` | `/hr/staff` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
 | `hr` | `/hr` | Chủ sở hữu | Control surface nav |
 | `hr_payroll` | `/hr/payroll` | Chủ sở hữu | (not advertised in nav — direct URL / redirect target only) |
+| `me` | `/me` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `finance` | `/finance` | Chủ sở hữu, Kế toán | Control surface nav |
 | `branches` | `/branches` | Chủ sở hữu | Control surface nav |
 | `settings` | `/settings` | Chủ sở hữu | Control surface nav |
@@ -181,6 +187,7 @@ declared before their broader siblings.
 | `branches` | owner | `/branches` | `/branches` | `branches` | no |
 | `hr` | owner | `/hr` | `/hr` | `hr`, `hr_payroll`, `staff` | no |
 | `notifications` | utility | `/notifications` | `/notifications` | `notifications` | no |
+| `self` | self | `/me` | `/me` | `me` | no |
 | `branch-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `branch_home` | yes |
 | `branch-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
 | `branch-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
@@ -236,6 +243,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | accountant/branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| self | `/me` | accountant/branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

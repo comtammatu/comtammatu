@@ -19,7 +19,9 @@ infrastructure ngoài nhiệm vụ được owner ủy quyền rõ ràng. Canoni
 ## D009: Path-based routing
 
 **Net effect:** Owner ở `/`; Branch runtime ở `/br/[branchId]/*`; ACL tập trung
-tại proxy và module ACL. Canonical: `docs/spec/architecture.md`.
+tại proxy và module ACL. Nhân sự không gắn site dùng self-service `/me/*`;
+Owner bị từ chối tường minh khỏi route family này. Canonical:
+`docs/spec/architecture.md`, ADR 0012.
 
 ## D010: Form contract
 
@@ -52,7 +54,9 @@ không đặt stock mutation vào client/payment UI. Canonical:
 ## D017: Owner L0, Branch Manager L1
 
 **Net effect:** Owner quản lý Tenant; Branch Manager vận hành đúng chi nhánh.
-Canonical: ADR 0012 và `docs/spec/role-route-matrix.md`.
+Self plane chỉ phục vụ hồ sơ/ngày làm của nhân viên không phải Owner và không
+tạo thêm cấp quản trị. Canonical: ADR 0012 và
+`docs/spec/role-route-matrix.md`.
 
 ## D018: Không có tenant-admin phụ
 
@@ -85,14 +89,19 @@ void-after-paid đã được contract cho phép. Canonical: `docs/modules/finan
 ## D026: HR theo Người, Ngày công, Lương
 
 **Net effect:** HR đọc nguồn vận hành hiện tại; payroll entry là snapshot khi
-chốt. HR chốt nghĩa vụ lương, Finance ghi nhận thanh toán. Canonical:
-`docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`.
+chốt. Kế toán dùng `pay_basis` có hiệu lực theo hợp đồng:
+`fixed_monthly` không prorate lương cơ bản theo attendance, phép hưởng lương
+không giảm lương, phép không hưởng lương tạo khoản khấu trừ tường minh. Không
+suy `pay_basis` từ JWT role. HR chốt nghĩa vụ lương, Finance ghi nhận thanh
+toán. Canonical: `docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`.
 
 ## D027: Chấm công theo ca
 
 **Net effect:** Đơn vị attendance là ca; shift là cấu hình chung; mỗi lượt vào/ra
-và việc trong ca thuộc một shift record. Canonical:
-`docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`.
+và việc trong ca thuộc một shift record. Mọi non-Owner đều có self-service:
+floor/central lưu site được gán, Kế toán lưu `branch_id = NULL`; Owner không
+punch. Checkout floor do Branch Manager duyệt, central/Kế toán vào queue Owner.
+Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0012.
 
 ## D028: Kết quả vận hành và kiểm soát nguyên liệu
 
@@ -165,8 +174,9 @@ scope lấy từ URL và verified claims. Canonical: ADR 0012.
 
 ## D052: Việc trong ca theo vị trí
 
-**Net effect:** Checklist template gắn vị trí; lịch sử consumption/checkout
-không tạo role hoặc workflow song song.
+**Net effect:** `position_shift_tasks` là SSOT việc trong ca theo vị trí; clock-in
+snapshot task để giữ lịch sử. Sao chép từ vị trí khác là thao tác mẫu; không hồi
+sinh `shift_checklist_templates` hoặc tạo workflow song song.
 
 ## D053: KDS/POS/Inventory truth
 

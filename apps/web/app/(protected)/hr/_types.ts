@@ -26,6 +26,8 @@ export interface EmployeeRow {
     gross_salary: number;
     insurance_base_salary: number;
     status: string;
+    /** Present after pay_basis migration; UI never shows the raw key. */
+    pay_basis?: "attendance_prorated" | "fixed_monthly" | string | null;
   }[];
   profiles: {
     id: string;

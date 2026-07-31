@@ -113,6 +113,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/hr/staff")) return "staff";
   if (matchesPathPrefix(pathname, "/hr/payroll")) return "hr_payroll";
   if (matchesPathPrefix(pathname, "/hr")) return "hr";
+  if (matchesPathPrefix(pathname, "/me")) return "me";
   if (/^\/br\/\d+\/?$/.test(pathname)) return "branch_home";
   // Approval routes use dedicated module keys and must precede the generic
   // shift prefix so only explicit approver roles pass the route gate.

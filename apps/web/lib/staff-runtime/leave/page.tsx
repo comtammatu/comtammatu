@@ -47,23 +47,7 @@ export async function EmployeeLeavePageContent({
       ? ctx.branchName
       : null;
 
-  if (!branchId) {
-    return (
-      <Page
-        title={copy.unavailableTitle}
-        description={copy.description}
-        hideHeaderOnMobile={hideHeaderOnMobile}
-      >
-        <EmployeeMissingProfileEmpty
-          title={copy.unavailableTitle}
-          description={copy.missingBranchDescription}
-          profileHref={profileHref}
-        />
-      </Page>
-    );
-  }
-
-  const { data: requestsData } = await ctx.supabase
+  let requestsQuery = ctx.supabase
     .from("leave_requests")
     .select(
       `
@@ -73,10 +57,14 @@ export async function EmployeeLeavePageContent({
     )
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("employee_id", ctx.employeeId)
-    .eq("branch_id", branchId)
     .order("start_date", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(30);
+  requestsQuery =
+    branchId == null
+      ? requestsQuery.is("branch_id", null)
+      : requestsQuery.eq("branch_id", branchId);
+  const { data: requestsData } = await requestsQuery;
 
   const initialRequests = (requestsData ?? []) as LeaveRequestRow[];
 
@@ -108,21 +96,14 @@ export async function EmployeeLeavePageContent({
 }
 
 export type LeaveRequestStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+  "pending" | "approved" | "rejected" | "cancelled";
 
 export type LeaveRequestType =
-  | "annual"
-  | "sick"
-  | "unpaid"
-  | "personal"
-  | "other";
+  "annual" | "sick" | "unpaid" | "personal" | "other";
 
 export interface LeaveRequestRow {
   id: number;
-  branch_id: number;
+  branch_id: number | null;
   employee_id: number;
   status: LeaveRequestStatus;
   start_date: string;

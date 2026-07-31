@@ -19,9 +19,7 @@ const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
   "owner",
   "branch_manager",
 ];
-const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [
-  "branch_manager",
-];
+const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const MAX_PHOTO_BYTES = 3_500_000;
 const PHOTO_MIME_TO_EXT = {
@@ -68,17 +66,20 @@ async function resolveCurrentShiftForEmployee(
   calendarDate: string,
   nowMinutes: number,
 ): Promise<{ shiftId: number; businessDate: string } | null> {
-  if (ctx.branchId == null) return null;
   const previousDate = addVNDateDays(calendarDate, -1);
+  let shiftsQuery = service
+    .from("shifts")
+    .select("id, start_time, end_time")
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("is_active", true);
+  shiftsQuery =
+    ctx.branchId == null
+      ? shiftsQuery.is("branch_id", null)
+      : shiftsQuery.or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`);
 
   const [{ data: branchShifts }, { data: attendanceRecords }] =
     await Promise.all([
-      service
-        .from("shifts")
-        .select("id, start_time, end_time")
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`)
-        .eq("is_active", true),
+      shiftsQuery,
       service
         .from("attendance_records")
         .select("date, shift_id, check_out")
@@ -97,6 +98,8 @@ async function resolveCurrentShiftForEmployee(
 }
 
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
+  revalidatePath("/me");
+  revalidatePath("/me/clock");
   if (typeof branchId !== "number") return;
   revalidatePath(`/br/${branchId}`);
   revalidatePath(`/br/${branchId}/shift`);
@@ -206,13 +209,6 @@ export async function clockInWithPhoto(
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
-  if (!ctx.branchId) {
-    return {
-      success: false,
-      error: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
-    };
-  }
-
   const photo = getPhotoFromFormData(formData);
   if (!photo || photo.size <= 0) {
     return { success: false, error: "Cần chụp hoặc chọn ảnh chấm công." };
@@ -265,36 +261,6 @@ export async function clockInWithPhoto(
     return reuseExistingClockIn(existing, ctx.claims.user_role);
   }
 
-  const managerAttendanceOnly = isManagerSimpleAttendanceRole(
-    ctx.claims.user_role,
-  );
-
-  if (managerAttendanceOnly) {
-    const [{ data: employee }, { data: branch }] = await Promise.all([
-      service
-        .from("employees")
-        .select("id")
-        .eq("id", ctx.employeeId)
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .maybeSingle(),
-      service
-        .from("branches")
-        .select("id")
-        .eq("id", ctx.branchId)
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .eq("is_active", true)
-        .maybeSingle(),
-    ]);
-
-    if (!employee) {
-      return { success: false, error: mapClockInError("employee_not_found") };
-    }
-    if (!branch) {
-      return { success: false, error: mapClockInError("branch_not_found") };
-    }
-  }
-
   const ext = PHOTO_MIME_TO_EXT[photo.type];
   const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await photo.arrayBuffer());
@@ -313,66 +279,9 @@ export async function clockInWithPhoto(
     };
   }
 
-  if (managerAttendanceOnly) {
-    const { data: result, error: insertError } = await service
-      .from("attendance_records")
-      .insert({
-        tenant_id: ctx.claims.tenant_id,
-        branch_id: ctx.branchId,
-        employee_id: ctx.employeeId,
-        shift_id: shiftId,
-        date: businessDate,
-        check_in: now.toISOString(),
-        status: "present",
-        method: "pwa",
-        check_in_photo_path: photoPath,
-      })
-      .select("id, check_in")
-      .single();
-
-    if (insertError || !result) {
-      await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
-
-      if (
-        insertError?.code === "23505" ||
-        insertError?.message.includes("duplicate_clock_in")
-      ) {
-        const { data: duplicate } = await service
-          .from("attendance_records")
-          .select("id, check_in, check_out, checkout_requested_at")
-          .eq("employee_id", ctx.employeeId)
-          .eq("tenant_id", ctx.claims.tenant_id)
-          .eq("date", businessDate)
-          .eq("shift_id", shiftId)
-          .maybeSingle();
-
-        if (duplicate) {
-          return reuseExistingClockIn(duplicate, ctx.claims.user_role);
-        }
-      }
-
-      return {
-        success: false,
-        error: mapClockInError(insertError?.message),
-      };
-    }
-
-    revalidateEmployeeWorkPaths(ctx.branchId);
-    return {
-      success: true,
-      data: {
-        attendanceId: result.id,
-        checkInTime: result.check_in ?? new Date().toISOString(),
-        nextPath: "home",
-      },
-    };
-  }
-
-  const { data: attendanceId, error: rpcError } = await service.rpc(
-    "employee_clock_in_with_checklist",
+  const { data: attendanceId, error: rpcError } = await ctx.supabase.rpc(
+    "self_service_clock_in",
     {
-      p_tenant_id: ctx.claims.tenant_id,
-      p_employee_id: ctx.employeeId,
       p_branch_id: ctx.branchId,
       p_shift_id: shiftId,
       p_business_date: businessDate,
@@ -435,50 +344,10 @@ export async function toggleChecklistItem(input: {
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
-  const service = createServiceClient();
-  const { data: item } = await service
-    .from("attendance_checklist_items")
-    .select("id, attendance_record_id")
-    .eq("id", parsed.data.itemId)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .maybeSingle();
-
-  if (!item) {
-    return { success: false, error: "Không tìm thấy việc trong ca." };
-  }
-
-  const { data: record } = await service
-    .from("attendance_records")
-    .select("id, check_out, checkout_requested_at")
-    .eq("id", item.attendance_record_id)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("employee_id", ctx.employeeId)
-    .maybeSingle();
-
-  if (!record) {
-    return { success: false, error: "Không có quyền cập nhật việc này." };
-  }
-  if (record.check_out) {
-    return {
-      success: false,
-      error: "Ca đã kết thúc, không thể sửa việc trong ca.",
-    };
-  }
-  if (record.checkout_requested_at) {
-    return {
-      success: false,
-      error: "Yêu cầu kết ca đã gửi, không thể sửa việc trong ca.",
-    };
-  }
-
-  const { error } = await service
-    .from("attendance_checklist_items")
-    .update({
-      is_done: parsed.data.done,
-      completed_at: parsed.data.done ? new Date().toISOString() : null,
-    })
-    .eq("id", item.id)
-    .eq("tenant_id", ctx.claims.tenant_id);
+  const { error } = await ctx.supabase.rpc("self_service_toggle_task", {
+    p_item_id: parsed.data.itemId,
+    p_done: parsed.data.done,
+  });
 
   if (error) {
     return { success: false, error: "Không thể cập nhật việc trong ca." };
@@ -501,13 +370,6 @@ export async function requestCheckoutApproval(
 
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
-  if (!ctx.branchId) {
-    return {
-      success: false,
-      error: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
-    };
-  }
-
   const service = createServiceClient();
   const now = new Date();
   const calendarDate = getTodayVN(now);
@@ -530,7 +392,6 @@ export async function requestCheckoutApproval(
     .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("branch_id", ctx.branchId)
     .eq("date", currentShift.businessDate)
     .eq("shift_id", currentShift.shiftId)
     .is("check_out", null)
@@ -540,13 +401,9 @@ export async function requestCheckoutApproval(
     return { success: false, error: "Không tìm thấy ca đang mở để kết ca." };
   }
 
-  const { data: requestedAt, error } = await service.rpc(
-    "employee_request_clock_out",
-    {
-      p_tenant_id: ctx.claims.tenant_id,
-      p_employee_id: ctx.employeeId,
-      p_attendance_id: record.id,
-    },
+  const { data: requestedAt, error } = await ctx.supabase.rpc(
+    "self_service_request_checkout",
+    { p_attendance_id: record.id },
   );
 
   if (error || !requestedAt) {
@@ -579,27 +436,11 @@ export async function cancelCheckoutRequest(
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
-  const now = new Date().toISOString();
-  // check_out / checkout_approved_at NOT NULL ⇒ an approval already won the
-  // race; the guarded predicate makes the update a no-op (result null) then.
-  const { data: result, error } = await createServiceClient()
-    .from("attendance_records")
-    .update({
-      checkout_requested_at: null,
-      checkout_requested_by_role: null,
-      checkout_approval_target_roles: [],
-      updated_at: now,
-    })
-    .eq("id", parsed.data.attendanceId)
-    .eq("employee_id", ctx.employeeId)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .is("check_out", null)
-    .is("checkout_approved_at", null)
-    .not("checkout_requested_at", "is", null)
-    .select("id")
-    .maybeSingle();
+  const { error } = await ctx.supabase.rpc("self_service_cancel_checkout", {
+    p_attendance_id: parsed.data.attendanceId,
+  });
 
-  if (error || !result) {
+  if (error) {
     if (error) {
       console.error("[employee/clock] cancel checkout request failed", {
         code: error.code,
@@ -720,7 +561,7 @@ export async function approveCheckoutRequest(input: {
   );
   const review = result?.[0];
 
-  if (error || !review?.check_out || !review.branch_id) {
+  if (error || !review?.check_out) {
     if (error) {
       console.error("[employee/clock] approve checkout rpc failed", {
         code: error.code,
@@ -765,7 +606,7 @@ export async function rejectCheckoutRequest(input: {
   );
   const review = result?.[0];
 
-  if (error || !review?.rejected || !review.branch_id) {
+  if (error || !review?.rejected) {
     if (error) {
       console.error("[employee/clock] reject checkout request failed", {
         code: error.code,

@@ -132,6 +132,7 @@ export interface PayrollPreviewEntry {
   branchName: string | null;
   positionLabel: string | null;
   salarySource: "contract" | "employee" | "missing";
+  payBasis: "attendance_prorated" | "fixed_monthly";
   monthlySalary: number;
   workingDays: number;
   workHours: number;
@@ -313,9 +314,7 @@ async function buildPayrollPreview(
   ] = await Promise.all([
     supabase
       .from("employment_contracts")
-      .select(
-        "employee_id, gross_salary, insurance_base_salary, start_date, end_date",
-      )
+      .select("*")
       .eq("tenant_id", claims.tenant_id)
       .eq("status", "active")
       .in("employee_id", employeeIds)
@@ -467,9 +466,21 @@ async function buildPayrollPreview(
 
   const contractByEmployee = new Map<
     number,
-    { gross_salary: number; insurance_base_salary: number; start_date: string }
+    {
+      gross_salary: number;
+      insurance_base_salary: number;
+      pay_basis: "attendance_prorated" | "fixed_monthly";
+      start_date: string;
+    }
   >();
-  for (const contract of [...(contractsResult.data ?? [])].sort((left, right) =>
+  const contracts = (contractsResult.data ?? []) as unknown as Array<{
+    employee_id: number;
+    gross_salary: number;
+    insurance_base_salary: number;
+    pay_basis: "attendance_prorated" | "fixed_monthly";
+    start_date: string;
+  }>;
+  for (const contract of [...contracts].sort((left, right) =>
     right.start_date.localeCompare(left.start_date),
   )) {
     if (!contractByEmployee.has(contract.employee_id)) {
@@ -569,6 +580,7 @@ async function buildPayrollPreview(
         : monthlySalary > 0
           ? "employee"
           : "missing";
+      const payBasis = contract?.pay_basis ?? "attendance_prorated";
       const insuranceBaseSalary = numberValue(
         contract?.insurance_base_salary ?? employee.insurance_base_salary,
       );
@@ -620,14 +632,18 @@ async function buildPayrollPreview(
                   annualSplit.annualLeaveUsedDays,
               ),
             };
-      const payableDays = calculatePayableDays({
-        workingDays: workdays,
-        paidLeaveDays,
-        standardDays,
-      });
-      const proratedSalary = Math.round(
-        (monthlySalary * payableDays) / standardDays,
-      );
+      const payableDays =
+        payBasis === "fixed_monthly"
+          ? Math.max(0, standardDays - unpaidLeaveDays)
+          : calculatePayableDays({
+              workingDays: workdays,
+              paidLeaveDays,
+              standardDays,
+            });
+      const proratedSalary =
+        payBasis === "fixed_monthly"
+          ? monthlySalary
+          : Math.round((monthlySalary * payableDays) / standardDays);
       const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
       const adjustmentTotals = adjustments.reduce((total, adjustment) => {
         if (adjustment.kind === "bonus") total.bonus += adjustment.amount;
@@ -643,6 +659,12 @@ async function buildPayrollPreview(
           total.otherDeductions += adjustment.amount;
         return total;
       }, emptyAdjustmentTotals());
+      const fixedMonthlyUnpaidLeaveDeduction =
+        payBasis === "fixed_monthly"
+          ? Math.round((monthlySalary * unpaidLeaveDays) / standardDays)
+          : 0;
+      const otherDeductions =
+        adjustmentTotals.otherDeductions + fixedMonthlyUnpaidLeaveDeduction;
       const grossTotal =
         proratedSalary +
         adjustmentTotals.taxableAllowances +
@@ -654,7 +676,7 @@ async function buildPayrollPreview(
         dependentCount: employee.dependents_count ?? 0,
         charityDeduction: 0,
         advanceDeduction: adjustmentTotals.advanceDeduction,
-        otherDeductions: adjustmentTotals.otherDeductions,
+        otherDeductions,
         effectiveDate: endDate,
       });
       const profile = employee.profiles;
@@ -667,6 +689,7 @@ async function buildPayrollPreview(
         branchName: profile?.branches?.name ?? null,
         positionLabel: profile?.positions?.label_vi ?? null,
         salarySource,
+        payBasis,
         monthlySalary,
         workingDays: workdays,
         workHours: workHoursByEmployee.get(employee.id) ?? 0,
@@ -681,7 +704,7 @@ async function buildPayrollPreview(
         taxExemptAllowances: adjustmentTotals.taxExemptAllowances,
         bonus: adjustmentTotals.bonus,
         advanceDeduction: adjustmentTotals.advanceDeduction,
-        otherDeductions: adjustmentTotals.otherDeductions,
+        otherDeductions,
         grossTotal,
         bhxhEmployee: calculation.bhxhEmployee,
         bhytEmployee: calculation.bhytEmployee,

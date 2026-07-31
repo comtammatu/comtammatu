@@ -60,36 +60,16 @@ test("Employee profile stays focused on self-service actions", () => {
   );
 });
 
-test("Branch Manager self-attendance is only clock in and clock out", () => {
+test("Branch Manager self-attendance uses the universal approval lifecycle", () => {
   assert.match(
-    employeeHomeSource,
-    /state\.managerAttendanceOnly \? copy\.clockOutDirect : copy\.clockOut/,
-    "Branch Manager home CTA should go directly to clock-out instead of approval checkout copy",
-  );
-  assert.match(
-    employeeHomeSource,
-    /const todaySummaryItems = state\.managerAttendanceOnly[\s\S]*copy\.checkInShort[\s\S]*copy\.checkOutShort/,
-    "Branch Manager home should summarize the direct attendance state without a personal checklist rail",
+    employeeClockActionSource,
+    /MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole\[\] = \[\]/,
+    "Branch Manager must not bypass the approval lifecycle",
   );
   assert.match(
     employeeClockActionSource,
-    /MANAGER_SIMPLE_ATTENDANCE_ROLES[\s\S]*"branch_manager"/,
-    "Branch Manager direct attendance must be role-explicit",
-  );
-  assert.match(
-    employeeClockActionSource,
-    /managerAttendanceOnly[\s\S]*\.from\("attendance_records"\)[\s\S]*\.insert\(/,
-    "Branch Manager clock-in must skip role checklist snapshot",
-  );
-  assert.match(
-    employeeClockActionSource,
-    /export async function clockOutManagerShift[\s\S]*checkout_requested_at: null[\s\S]*\.eq\("employee_id", ctx\.employeeId\)[\s\S]*\.eq\("branch_id", ctx\.branchId\)/,
-    "Branch Manager direct checkout must only close their own assigned-branch attendance and clear approval pending fields",
-  );
-  assert.match(
-    employeeClockPageSource,
-    /routes: EmployeeClockRoutes[\s\S]*state\.managerAttendanceOnly \? routes\.managerHr : routes\.tasks/,
-    "Branch Manager clock page should require its owning surface to provide the management route",
+    /"self_service_clock_in"[\s\S]*"self_service_request_checkout"/,
+    "Branch Manager attendance must use guarded universal RPCs",
   );
   assert.doesNotMatch(employeeClockPageSource, /DEFAULT_CLOCK_ROUTES|"\/hr"/);
 });

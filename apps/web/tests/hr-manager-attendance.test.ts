@@ -67,8 +67,8 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     hrMessagesSource,
-    /attendance:\s*"Ngày công"/,
-    "HR attendance tab should use Ngày công wording",
+    /attendance:\s*"Thời gian"/,
+    "HR attendance hub should use Thời gian wording",
   );
   assert.match(
     attendanceTableSource,

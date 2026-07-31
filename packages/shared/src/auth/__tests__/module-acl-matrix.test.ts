@@ -58,20 +58,22 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "employee_checkout_approvals",
     "employee_leave_approvals",
     "kds",
+    "me",
     "notifications",
     "branch_home",
     "pos",
     "runner",
   ],
-  cashier: ["branch_orders", "notifications", "branch_home", "pos", "runner"],
-  chef: ["kds", "notifications", "branch_home", "runner"],
-  branch_staff: ["notifications", "branch_home"],
-  accountant: ["finance", "inventory", "notifications"],
+  cashier: ["branch_orders", "me", "notifications", "branch_home", "pos", "runner"],
+  chef: ["kds", "me", "notifications", "branch_home", "runner"],
+  branch_staff: ["me", "notifications", "branch_home"],
+  accountant: ["finance", "inventory", "me", "notifications"],
   central_supply_ops: [
     "branch_home",
     "branch_stock",
     "inventory",
     "inventory_operations",
+    "me",
     "notifications",
   ],
   central_kitchen_lead: [
@@ -79,6 +81,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_stock",
     "inventory",
     "inventory_operations",
+    "me",
     "notifications",
   ],
 };
@@ -92,9 +95,13 @@ for (const [role, expected] of Object.entries(EXPECTED_MATRIX)) {
   });
 }
 
-test("owner reaches every module", () => {
+test("owner reaches every module except self-service", () => {
   const ownerModules = new Set(accessibleModules("owner"));
   for (const key of ALL_MODULE_KEYS) {
-    assert.equal(ownerModules.has(key), true, `owner must reach ${key}`);
+    assert.equal(
+      ownerModules.has(key),
+      key !== "me",
+      `owner access mismatch for ${key}`,
+    );
   }
 });

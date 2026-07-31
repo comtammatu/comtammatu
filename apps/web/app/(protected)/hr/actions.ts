@@ -31,6 +31,7 @@ const SHIFT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
+const PAY_BASIS_VALUES = ["attendance_prorated", "fixed_monthly"] as const;
 const hrActionCopy = messages.hr.actions;
 
 /* ─── Employees ─── */
@@ -59,6 +60,7 @@ const createEmployeeAccountSchema = z.object({
   contractEndDate: z.string().optional(),
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
+  payBasis: z.enum(PAY_BASIS_VALUES).optional(),
 });
 
 const updateEmployeeSchema = z.object({
@@ -88,6 +90,7 @@ const updateEmployeeSchema = z.object({
   contractEndDate: z.string().optional(),
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
+  payBasis: z.enum(PAY_BASIS_VALUES).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -105,6 +108,7 @@ interface ContractPayload {
   insuranceBaseSalary: number | undefined;
   position: string | null | undefined;
   workLocation: string | null | undefined;
+  payBasis?: (typeof PAY_BASIS_VALUES)[number];
 }
 
 async function upsertActiveContract(
@@ -142,15 +146,19 @@ async function upsertActiveContract(
     position: payload.position || "Nhân viên",
     work_location: payload.workLocation || null,
     status: "active",
+    // Column lands with universal HR migration; cast until db:types.
+    pay_basis: payload.payBasis ?? "attendance_prorated",
   };
 
   const query = existing
     ? service
         .from("employment_contracts")
-        .update(contractRow)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pay_basis ahead of generated types
+        .update(contractRow as any)
         .eq("id", existing.id)
         .eq("tenant_id", payload.tenantId)
-    : service.from("employment_contracts").insert(contractRow);
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pay_basis ahead of generated types
+      service.from("employment_contracts").insert(contractRow as any);
 
   const { error } = await query;
   if (error) {
@@ -454,6 +462,7 @@ export const createEmployeeAccount = withAction(
       insuranceBaseSalary: data.insuranceBaseSalary,
       position: data.positionCode,
       workLocation: branchName,
+      payBasis: data.payBasis,
     });
     if (!contractResult.success) {
       await service.auth.admin.deleteUser(userId);
@@ -470,6 +479,7 @@ export const createEmployeeAccount = withAction(
         contract_type: data.contractType ?? null,
         contract_number: data.contractNumber ?? null,
         dependents_count: data.dependentsCount,
+        pay_basis: data.payBasis ?? "attendance_prorated",
       },
     });
 
@@ -698,6 +708,7 @@ export const updateEmployee = withAction(
         employee.profiles?.positions?.code ??
         null,
       workLocation: employee.profiles?.branches?.name ?? null,
+      payBasis: data.payBasis,
     });
     if (!contractResult.success) return contractResult;
 
@@ -1171,7 +1182,7 @@ export const getAttendancePhotoUrl = withAction(
 
 const forceCloseStaleAttendanceSchema = z.object({
   attendanceId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().nullable(),
   note: z
     .string()
     .trim()
@@ -1200,9 +1211,6 @@ export const forceCloseStaleAttendance = withAction(
   {
     roles: HR_EMPLOYEE_VIEW_ROLES,
     schema: forceCloseStaleAttendanceSchema,
-    permission: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
   },
   async (data, { supabase, claims, user }) => {
     if (
@@ -1219,7 +1227,7 @@ export const forceCloseStaleAttendance = withAction(
       "force_close_stale_attendance",
       {
         p_tenant_id: claims.tenant_id,
-        p_branch_id: data.branchId,
+        p_branch_id: data.branchId as number,
         p_attendance_id: data.attendanceId,
         p_approved_by: user.id,
         p_note: data.note,

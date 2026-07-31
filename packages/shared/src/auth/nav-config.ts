@@ -27,6 +27,11 @@ export interface BranchScopedNavItemConfig extends NavItemConfig {
 
 export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
 export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
+
+export const SELF_SERVICE_ITEMS: readonly NavItemConfig[] = [
+  { moduleKey: "me", icon: "ListChecks", label: "Việc trong ca" },
+];
+
 export type OperatorTileGroupId =
   "my_shift" | "approvals" | "sales_kitchen" | "stock";
 

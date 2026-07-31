@@ -82,6 +82,7 @@ const STATUS_DOMAINS = {
     variants: {
       unpaid: "warning",
       cash_paid: "secondary",
+      transfer_paid: "secondary",
       transfer_matched: "success",
       transfer_needs_match: "warning",
     },

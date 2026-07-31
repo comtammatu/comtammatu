@@ -2,11 +2,13 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js App Router phục vụ **hai nửa sản phẩm** (Product Dual Thesis —
-`docs/spec/architecture.md`):
+Ứng dụng Next.js App Router phục vụ hai plane quản trị/vận hành và một self
+runtime dùng chung domain contract (`docs/spec/architecture.md`, ADR 0012):
 
 1. **Quản lý hệ thống** — `control_surface` (L0 `/…`, `AppShell`, adapters `App*`)
 2. **Vận hành bán hàng** — `branch_surface` + `station_chrome` (`/br/[branchId]/…`)
+3. **Tự phục vụ cá nhân** — `self_surface` (`/me/*`) cho nhân sự không gắn site;
+   Owner bị loại tường minh
 
 Plus public/auth. Package manifest sở hữu phiên bản framework; route runtime và
 generated matrix sở hữu danh sách route hiện hành.
@@ -41,6 +43,7 @@ owner; Branch Manager dùng L1 Branch Command dưới
 | Utility           | `/notifications/*`                                                                                                 | Link kèm `returnTo`              | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                                   |
 | Branch operations | `/br/[branchId]/*`, gồm landing, dashboard, shift, profile, stock, pos, kds, runner, settings                      | `/br/[branchId]`                 | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Owner. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                    |
 | Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                               | `/br/[branchId]/shift`           | Dùng Branch runtime bottom nav và shared Employee components; URL luôn mang `branchId`.                                                                                     | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                   |
+| Self runtime      | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip`                                                   | `/me`                            | Wrapper mỏng dùng chung `staff-runtime`; không có control-surface nav. Site-pinned entry redirect về route Branch tương ứng.                                                | Kế toán dùng scope auth với `branch_id = NULL`; Owner luôn bị từ chối.                                    |
 
 Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
 `Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
@@ -178,8 +181,9 @@ Browser request
 - **control_surface là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
 - **Inventory là surface độc lập:** `/inventory/*` là domain vận hành Inventory
   canonical; exact `/inventory` redirect vào Tồn (hoặc GRN với kế toán).
-- **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
-  và payslip nằm trong Branch. HR control_surface và `/hr/payroll/*` chỉ dành
-  cho Owner.
+- **Staff runtime dùng chung:** profile, clock, attendance, schedule, leave
+  request và payslip nằm trong Branch cho role gắn site, dưới `/me/*` cho Kế
+  toán. HR control_surface và `/hr/payroll/*` chỉ dành cho Owner; Owner không có
+  self runtime.
 - **Finance mặc định là tài chính vận hành:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Sổ kế toán doanh nghiệp, BCTC và đóng/mở lại kỳ chưa nằm trong app surface hiện tại.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/menu-recipes`. `/inventory/recipes` chỉ là redirect tương thích.

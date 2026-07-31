@@ -3,6 +3,7 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
+  canonicalizeSelfServicePath,
   extractClaimsFromAccessToken,
   isOwnerRoutePath,
   isPublicAppPath,
@@ -182,6 +183,22 @@ export async function proxy(request: NextRequest) {
   // `user_role` or `position`.
   if (!claims) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
+  }
+
+  if (pathname === "/me" || pathname.startsWith("/me/")) {
+    const canonicalPath = canonicalizeSelfServicePath(
+      claims,
+      `${pathname}${request.nextUrl.search}`,
+    );
+    if (
+      canonicalPath !== null &&
+      canonicalPath !== `${pathname}${request.nextUrl.search}`
+    ) {
+      return redirectWithCookies(
+        new URL(canonicalPath, request.nextUrl.origin),
+        response,
+      );
+    }
   }
 
   // Owner-plane routes default to owner-only. D076 operational roles may access

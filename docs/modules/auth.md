@@ -58,7 +58,9 @@ an application role from it.
 Discovery invariant: tenant-level navigation comes only from owner-filtered
 `CONTROL_SURFACE_NAV_GROUPS`. `MODULE_ACL.hr_payroll` still gates `/hr/payroll/*` for
 Owner but remains a deep HR entry, not a primary control_surface card. Branch
-Manager/Staff discovery contains Branch groups only.
+Manager/Staff discovery contains Branch groups only. `MODULE_ACL.me` is a
+separate self-service family for branchless non-Owner staff; `canAccess`
+explicitly denies Owner before its blanket administrative override.
 
 ## Role Hierarchy
 
@@ -172,10 +174,12 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 ## HR Permission Contract
 
-`/hr` is an Owner-only control_surface module. Daily staff runtime and Branch
-Manager people oversight remain under `/br/[branchId]/*`, including
-`/br/[branchId]/team` and shift/profile routes. Checkout and leave approval
-routes are available to Owner and the assigned Branch Manager for that branch.
+`/hr` is an Owner-only control_surface module. Daily branch-pinned staff runtime
+and Branch Manager people oversight remain under `/br/[branchId]/*`, including
+`/br/[branchId]/team` and shift/profile routes. Branchless Accountant runtime
+lives under `/me/*`. Owner cannot enter or invoke self-service. Floor
+checkout/leave approval remains with the assigned Branch Manager; central-site
+and Accountant requests route to Owner.
 
 | HR operation                          | Route ACL                                                                            | Permission / action gate                                                                                | Server action / RPC                                                                                                                         | RLS / table boundary                                                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -185,6 +189,7 @@ routes are available to Owner and the assigned Branch Manager for that branch.
 | Global shift and position-task setup  | `hr` -> Owner-only control_surface                                                     | Owner-only action roles                                                                                 | `createShift`, `updateShift`, `deactivateShift`, `setShiftBoundaries`, `savePositionTasks`                                                  | `shifts` and `position_shift_tasks` are tenant/global setup, not Branch staff runtime             |
 | Attendance and leave administration   | Owner: `/hr`; Owner + Branch Manager: `/br/[branchId]/shift/*-approvals`             | `hr:approve_leave_request`, `hr:approve_checkout`; Branch Manager grants must equal the assigned branch | `fetchAttendance`, `fetchAttendanceSummary`, `forceCloseStaleAttendance`, leave and checkout approval actions                               | RLS/RPC deny self-review, peer-manager review, and cross-branch review                            |
 | Branch people visibility              | Branch Manager: `/br/[branchId]/team`; staff self-service under shift/profile routes | Branch-scoped `staff:view`                                                                              | Branch-safe employee, attendance, and leave projections                                                                                     | Read-only projection; no employee, contract, payroll, HĐLĐ, BHXH, or permission write             |
+| Branchless self-service                | Accountant: `/me/*`; Owner denied                                                     | Own active employee derived from `auth.uid()`                                                           | Guarded attendance, task, leave, profile, and payslip actions                                                                                | Immutable `branch_id IS NULL`; caller cannot supply tenant, employee, role, or branch scope        |
 
 Branch Manager gets branch-safe employee, attendance, and leave visibility plus
 same-branch checkout and leave approval. Tenant-wide HR setup, staff CRUD,
@@ -229,9 +234,10 @@ The `proxy(request)` function evaluates in order:
 2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo)`; unauthenticated users see the form.
 3. **Unauthenticated → `/login`**.
 4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-5. **control_surface ACL:** `isOwnerRoutePath(pathname)` classifies the tenant management family; `canAccess(role, "owner")` gates it. Failure redirects to the role's Branch-first default route.
+5. **control_surface ACL:** `isOwnerRoutePath(pathname)` classifies the tenant management family; `canAccess(role, "owner")` gates it. Failure redirects to the role's default route.
 6. **Module capability ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except control_surface routes redirect to the role's default route.
-7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
+7. **Self canonicalization:** branch-pinned non-Owner `/me/*` requests map to the equivalent `/br/{claims.branch_id}` path with safe query preservation; branchless roles stay on `/me/*`; Owner and invalid claims fail closed.
+8. **Branch-scope for POS/KDS/branch settings/menu limits:** if a protected branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS and future protected Runner child routes reject missing, inactive, or non-operational branches in proxy. The exact public Runner display rejects invalid/non-operational branches inside the page because it has no staff claims.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo)` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. The underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 

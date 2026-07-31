@@ -37,6 +37,7 @@ const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
   "/branches": "/branches/settings",
   "/hr": "/hr/staff",
   "/notifications": "/notifications/settings",
+  "/me": "/me/clock",
   "/br/[branchId]/shift": `/br/${BRANCH_ID}/shift/clock`,
   "/br/[branchId]/shift/checkout-approvals": `/br/${BRANCH_ID}/shift/checkout-approvals`,
   "/br/[branchId]/shift/leave-approvals": `/br/${BRANCH_ID}/shift/leave-approvals`,

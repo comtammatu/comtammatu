@@ -4,12 +4,13 @@ import {
   CONTROL_SURFACE_NAV_GROUPS,
   BRANCH_MANAGEMENT_ITEMS,
   BRANCH_OPERATION_ITEMS,
+  SELF_SERVICE_ITEMS,
   type BranchScopedNavItemConfig,
 } from "./nav-config";
 import { NAV_GROUP_LABELS_VI } from "../labels";
 
 export type AppDiscoverySurface =
-  "owner" | "branch_management" | "branch_operation";
+  "owner" | "self" | "branch_management" | "branch_operation";
 
 export type AppDiscoveryStatus = "available" | "blocked";
 
@@ -169,6 +170,21 @@ export function resolveBranchOperationDiscoveryGroup(
   );
 }
 
+export function resolveSelfServiceDiscoveryGroup(
+  role: StaffRole,
+  branchId?: number | null,
+): DiscoveredAppGroup | null {
+  if (branchId != null) return null;
+  const items = SELF_SERVICE_ITEMS.filter((item) =>
+    canAccess(role, item.moduleKey),
+  ).map((item) =>
+    resolveAvailableLink(item, "self", MODULE_ACL[item.moduleKey].path),
+  );
+  return items.length > 0
+    ? { title: "Cá nhân", surface: "self", items }
+    : null;
+}
+
 export function resolveDiscoveredAppGroups(
   role: StaffRole,
   branchId?: number | null,
@@ -186,9 +202,11 @@ export function resolveDiscoveredAppGroups(
     branchId,
     options,
   );
+  const selfServiceGroup = resolveSelfServiceDiscoveryGroup(role, branchId);
 
   return [
     ...resolveControlSurfaceDiscoveryGroups(role),
+    selfServiceGroup,
     branchManagementGroup,
     branchOperationGroup,
   ].filter((group): group is DiscoveredAppGroup => group != null);

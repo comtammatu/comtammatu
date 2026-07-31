@@ -4,6 +4,7 @@ import { isPublicAppPath, resolveModuleFromPath } from "./route-resolution";
 
 export type RouteSurface =
   | "owner" // code alias for product plane `control_surface` (Quản lý hệ thống)
+  | "self"
   | "branch_management"
   | "branch_operation"
   | "utility"
@@ -176,6 +177,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     moduleKeys: ["notifications"],
     primaryNav: "none",
     backBehavior: "role-home",
+    breadcrumbRoot: null,
+    requiresBranchId: false,
+  },
+  {
+    id: "self",
+    label: MODULE_ACL.me.label,
+    surface: "self",
+    entryPath: MODULE_ACL.me.path,
+    matchPrefixes: [MODULE_ACL.me.path],
+    moduleKeys: ["me"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
     breadcrumbRoot: null,
     requiresBranchId: false,
   },

@@ -11,18 +11,24 @@ import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { EmployeeFormDialog } from "./employee-form-dialog";
 import { EmployeeTable } from "./employee-table";
+import { HrAttentionStrip } from "./hr-attention-strip";
+import type { HrAttentionSummary } from "./hr-attention";
 import type { BranchOption, EmployeeRow } from "./_types";
 
 interface HrClientProps {
   employees: EmployeeRow[];
   branches: BranchOption[];
   positionOptions: Array<{ value: string; label: string }>;
+  attention: HrAttentionSummary;
+  initialSalaryFilter?: "all" | "missing" | "recorded";
 }
 
 export function HrClient({
   employees,
   branches,
   positionOptions,
+  attention,
+  initialSalaryFilter = "all",
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
   const copy = messages.hr.client;
@@ -50,11 +56,13 @@ export function HrClient({
           </div>
         }
       />
+      <HrAttentionStrip summary={attention} />
       <EmployeeTable
         employees={employees}
         branches={branches}
         positionOptions={positionOptions}
         canManage
+        initialSalaryFilter={initialSalaryFilter}
       />
       <EmployeeFormDialog
         open={addOpen}

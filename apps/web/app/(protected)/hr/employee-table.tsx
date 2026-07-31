@@ -51,6 +51,8 @@ interface EmployeeTableProps {
   branches: BranchOption[];
   positionOptions: { value: string; label: string }[];
   canManage: boolean;
+  /** URL-driven salary filter: `missing` maps to salary-missing. */
+  initialSalaryFilter?: "all" | "missing" | "recorded";
 }
 
 const ALL_FILTER_VALUE = "all";
@@ -64,6 +66,7 @@ export function EmployeeTable({
   branches,
   positionOptions,
   canManage,
+  initialSalaryFilter = "all",
 }: EmployeeTableProps) {
   const controlSize = useFormControlSize();
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
@@ -71,7 +74,11 @@ export function EmployeeTable({
   const [showInactive, setShowInactive] = useState(false);
   const [branchFilter, setBranchFilter] = useState(ALL_FILTER_VALUE);
   const [positionFilter, setPositionFilter] = useState(ALL_FILTER_VALUE);
-  const [salaryFilter, setSalaryFilter] = useState(ALL_FILTER_VALUE);
+  const [salaryFilter, setSalaryFilter] = useState(() => {
+    if (initialSalaryFilter === "missing") return SALARY_MISSING_FILTER_VALUE;
+    if (initialSalaryFilter === "recorded") return SALARY_RECORDED_FILTER_VALUE;
+    return ALL_FILTER_VALUE;
+  });
   const [contractTypeFilter, setContractTypeFilter] =
     useState(ALL_FILTER_VALUE);
   const filteredEmployees = useMemo(() => {

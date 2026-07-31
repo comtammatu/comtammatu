@@ -1,5 +1,9 @@
 import { formatCount, formatDecimal } from "@comtammatu/shared/format";
-import { LEAVE_TYPE_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  LEAVE_TYPE_LABELS_VI,
+  PAY_BASIS_LABELS_VI,
+  getPayBasisLabelVi,
+} from "@comtammatu/shared/labels";
 
 export const hr = {
   workspace: {
@@ -11,6 +15,36 @@ export const hr = {
     branchManagerDescription:
       "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
   },
+  payBasis: {
+    labels: PAY_BASIS_LABELS_VI,
+    label: getPayBasisLabelVi,
+    fieldLabel: "Chế độ lương",
+    fieldDescription:
+      "Theo công: lương theo ngày công và phép có lương. Lương tháng: giữ nguyên lương tháng; nghỉ không lương khấu trừ riêng.",
+    options: [
+      {
+        value: "attendance_prorated" as const,
+        label: PAY_BASIS_LABELS_VI.attendance_prorated,
+      },
+      {
+        value: "fixed_monthly" as const,
+        label: PAY_BASIS_LABELS_VI.fixed_monthly,
+      },
+    ],
+  },
+  attention: {
+    title: "Cần xử lý",
+    description: "Việc nhân sự cần làm trước khi vận hành hoặc chốt lương.",
+    approvals: (count: number) =>
+      `${formatCount(count)} yêu cầu chờ duyệt (kết ca / nghỉ phép)`,
+    approvalsAction: "Mở Duyệt",
+    missingContract: (count: number) =>
+      `${formatCount(count)} nhân viên thiếu HĐLĐ hoặc mức lương`,
+    missingContractAction: "Xem hồ sơ thiếu",
+    missingContractHint:
+      "Bổ sung HĐLĐ hoặc mức lương trước khi tính / chốt kỳ.",
+    empty: "Không có việc nhân sự đang chờ xử lý.",
+  },
   actions: {
     fetchEmployeesFailed: "Không thể tải danh sách nhân viên.",
     fetchShiftsFailed: "Không thể tải danh sách ca.",
@@ -20,28 +54,90 @@ export const hr = {
   client: {
     tabs: {
       employees: "Người",
-      attendance: "Ngày công",
+      attendance: "Thời gian",
       payroll: "Lương",
-      setup: "Thiết lập",
+      setup: "Quy tắc",
+    },
+    attendanceTabs: {
+      today: "Hôm nay",
+      approvals: "Duyệt",
+      timesheet: "Bảng công",
+      schedule: "Lịch ca",
+      ariaLabel: "Tab thời gian nhân sự",
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
     attendanceDescription:
-      "Theo dõi vào/ra ca, việc bắt buộc và ca treo.",
+      "Theo dõi vào/ra ca, hàng đợi duyệt, bảng công và lịch ca.",
+    schedulePlaceholderTitle: "Chưa mở phân ca tuần",
+    schedulePlaceholderDescription:
+      "Khi phân ca sẵn sàng, Chủ sở hữu gán ca theo tuần tại đây hoặc trong Quy tắc.",
+    schedulePlaceholderAction: "Mở Quy tắc",
+    checkoutApprovalsAction: "Duyệt kết ca",
+    checkoutApprovalsHint:
+      "Kết ca của Kế toán và địa điểm trung tâm chờ Chủ sở hữu duyệt.",
     setupTitle: "Thiết lập ca làm và việc trong ca",
-    setupDescription: "Khung ca và việc trong ca theo từng vị trí.",
+    setupDescription:
+      "Chính sách phép, khung ca, mẫu việc, việc theo vị trí và phân ca tuần.",
     setupSteps: {
       leavePolicy: {
-        title: "Ngày công & phép",
+        title: "1. Ngày công & phép",
         description:
           "Thiết lập ngày công chuẩn và phép tháng dùng chung cho toàn bộ nhân viên.",
-        hint: "Chính sách lương",
+        hint: "Chính sách",
       },
       shifts: {
-        title: "Bước 1: Ca làm",
+        title: "2. Ca làm",
         description:
           "Tạo khung ca để việc trong ca và bảng công bám đúng thời điểm.",
-        hint: "Nền vận hành",
+        hint: "Khung ca",
       },
+      templates: {
+        title: "3. Mẫu việc",
+        description:
+          "Thư viện mẫu việc; áp dụng sẽ sao chép sang việc theo vị trí để tuỳ chỉnh.",
+        hint: "Mẫu",
+      },
+      positionTasks: {
+        title: "4. Việc theo vị trí",
+        description:
+          "Chỉnh danh sách việc nhân viên nhận khi chấm công vào (sau khi áp mẫu).",
+        hint: "Theo vị trí",
+      },
+      roster: {
+        title: "5. Phân ca tuần",
+        description:
+          "Gán nhân viên vào ca theo tuần tại từng địa điểm. Không gán thì vẫn chấm theo khung giờ ca.",
+        hint: "Phân ca",
+      },
+    },
+    templatesPlaceholderTitle: "Chưa có thư viện mẫu việc",
+    templatesPlaceholderDescription:
+      "Sắp có: tạo mẫu tên, rồi áp dụng để sao chép việc vào từng vị trí.",
+    rosterPlaceholderTitle: "Chưa mở phân ca tuần",
+    rosterPlaceholderDescription:
+      "Sắp có: lưới tuần theo địa điểm để gán hoặc hủy ca đã gán.",
+    onboardSteps: {
+      profile: {
+        title: "Bước 1 · Hồ sơ",
+        description: "Họ tên và thông tin định danh cơ bản.",
+      },
+      placement: {
+        title: "Bước 2 · Vị trí & địa điểm",
+        description: "Chức vụ và chi nhánh / Kho Tổng / Bếp TT / Văn phòng.",
+      },
+      contract: {
+        title: "Bước 3 · HĐLĐ & chế độ lương",
+        description:
+          "Hợp đồng, mức lương, BHXH và chế độ Theo công / Lương tháng.",
+      },
+      account: {
+        title: "Bước 4 · Tài khoản",
+        description:
+          "Email đăng nhập và mật khẩu. Tinh chỉnh quyền tại Tài khoản & quyền.",
+      },
+      next: "Tiếp",
+      back: "Quay lại",
+      staffLink: "Sau khi tạo, tinh chỉnh quyền tại Tài khoản & quyền.",
     },
     leavePolicy: {
       standardWorkdaysLabel: "Ngày công chuẩn",
@@ -345,6 +441,7 @@ export const hr = {
       table: {
         index: "#",
         employee: "Họ tên",
+        payBasis: "Chế độ lương",
         workingDays: "Công",
         workHours: "Giờ công",
         leaveDays: "Nghỉ phép",

@@ -33,7 +33,7 @@ const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
 const checkoutReviewRowSchema = z.object({
   id: z.number().int().positive(),
   date: z.string(),
-  branch_id: z.number().int().positive(),
+  branch_id: z.number().int().positive().nullable(),
   check_in: z.string().nullable(),
   checkout_requested_at: z.string(),
   checkout_requested_by_role: z.string().nullable(),
@@ -57,7 +57,8 @@ const checkoutReviewRowSchema = z.object({
 });
 
 interface CheckoutApprovalsPageContentProps {
-  routeBranchId: number;
+  routeBranchId: number | null;
+  ownerHomeHref?: string;
   focusAttendanceId?: number;
   hideHeaderOnMobile?: boolean;
   plane?: CheckoutApprovalsPlane;
@@ -67,6 +68,7 @@ type CheckoutApprovalsPlane = "employee" | "branch";
 
 export async function StaffCheckoutApprovalsPageContent({
   routeBranchId,
+  ownerHomeHref,
   focusAttendanceId,
   hideHeaderOnMobile,
   plane = "employee",
@@ -74,7 +76,10 @@ export async function StaffCheckoutApprovalsPageContent({
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
   const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
   const { supabase, claims } = await loadAuthState();
-  const homeLink = { href: `/br/${routeBranchId}`, label: "Nay" };
+  const homeLink =
+    routeBranchId == null
+      ? { href: ownerHomeHref ?? "/", label: "Chấm công" }
+      : { href: `/br/${routeBranchId}`, label: "Nay" };
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,
   );
@@ -107,19 +112,23 @@ export async function StaffCheckoutApprovalsPageContent({
   }
 
   const scopedOut =
-    claims.user_role === "branch_manager" && claims.branch_id !== routeBranchId;
+    claims.user_role === "branch_manager" &&
+    (routeBranchId == null || claims.branch_id !== routeBranchId);
 
-  const canApprovePromise = supabase.rpc("has_permission", {
-    p_branch_id: routeBranchId,
-    p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-  });
+  const canApprovePromise =
+    claims.user_role === "owner"
+      ? Promise.resolve({ data: true })
+      : supabase.rpc("has_permission", {
+          p_branch_id: routeBranchId as number,
+          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+        });
 
   const [{ data: canApprove }, queueResult] = await Promise.all([
     canApprovePromise,
     scopedOut
       ? Promise.resolve({ data: [] })
       : supabase.rpc("get_checkout_review_queue", {
-          p_branch_id: routeBranchId,
+          p_branch_id: routeBranchId as number,
           p_include_rows: true,
         }),
   ]);

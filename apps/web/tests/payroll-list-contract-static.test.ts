@@ -110,7 +110,7 @@ test("payroll preflight exposes blockers before the snapshot action", () => {
   assert.match(client, /preview\.preflight\.blockers/);
   assert.match(client, /openPreflightBlocker/);
   assert.match(client, /filter: "attention"/);
-  assert.match(client, /\/hr\/attendance\?tab=leave/);
+  assert.match(client, /\/hr\/attendance\?tab=approvals/);
   assert.match(actions, /preflight\.blockers\.length === 0/);
   assert.match(actions, /preview\.preflight\.blockers\.length > 0/);
 });

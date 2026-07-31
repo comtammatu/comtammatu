@@ -440,7 +440,7 @@ export type Database = {
       }
       attendance_records: {
         Row: {
-          branch_id: number
+          branch_id: number | null
           check_in: string | null
           check_in_photo_path: string | null
           check_out: string | null
@@ -465,7 +465,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          branch_id: number
+          branch_id?: number | null
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
@@ -490,7 +490,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          branch_id?: number
+          branch_id?: number | null
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
@@ -1444,6 +1444,7 @@ export type Database = {
           gross_salary: number
           id: number
           insurance_base_salary: number
+          pay_basis: string
           position: string
           probation_end_date: string | null
           signed_date: string
@@ -1467,6 +1468,7 @@ export type Database = {
           gross_salary: number
           id?: never
           insurance_base_salary: number
+          pay_basis?: string
           position: string
           probation_end_date?: string | null
           signed_date: string
@@ -1490,6 +1492,7 @@ export type Database = {
           gross_salary?: number
           id?: never
           insurance_base_salary?: number
+          pay_basis?: string
           position?: string
           probation_end_date?: string | null
           signed_date?: string
@@ -3708,7 +3711,7 @@ export type Database = {
       }
       leave_requests: {
         Row: {
-          branch_id: number
+          branch_id: number | null
           created_at: string
           employee_id: number
           end_date: string
@@ -3724,7 +3727,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          branch_id: number
+          branch_id?: number | null
           created_at?: string
           employee_id: number
           end_date: string
@@ -3740,7 +3743,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          branch_id?: number
+          branch_id?: number | null
           created_at?: string
           employee_id?: number
           end_date?: string
@@ -4795,6 +4798,7 @@ export type Database = {
           overtime_hours: number
           overtime_pay: number
           paid_leave_days: number
+          pay_basis: string
           payable_days: number
           payroll_period_id: number
           personal_deduction: number
@@ -4834,6 +4838,7 @@ export type Database = {
           overtime_hours?: number
           overtime_pay?: number
           paid_leave_days?: number
+          pay_basis?: string
           payable_days?: number
           payroll_period_id: number
           personal_deduction?: number
@@ -4873,6 +4878,7 @@ export type Database = {
           overtime_hours?: number
           overtime_pay?: number
           paid_leave_days?: number
+          pay_basis?: string
           payable_days?: number
           payroll_period_id?: number
           personal_deduction?: number
@@ -13297,6 +13303,27 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: number
+      }
+      self_service_cancel_checkout: {
+        Args: { p_attendance_id: number }
+        Returns: undefined
+      }
+      self_service_clock_in: {
+        Args: {
+          p_branch_id: number
+          p_business_date: string
+          p_photo_path: string
+          p_shift_id: number
+        }
+        Returns: number
+      }
+      self_service_request_checkout: {
+        Args: { p_attendance_id: number }
+        Returns: string
+      }
+      self_service_toggle_task: {
+        Args: { p_done: boolean; p_item_id: number }
+        Returns: undefined
       }
       send_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       set_branch_kind: {

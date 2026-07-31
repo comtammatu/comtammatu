@@ -1,6 +1,7 @@
 export type {
   InventoryLocationLabelLength,
   ModuleLabelKey,
+  PayBasisCode,
   SiteKind,
 } from "./vi";
 export { LEGAL_FIXED_VI } from "./legal-fixed";
@@ -14,6 +15,8 @@ export {
   MODULE_LABELS_VI,
   NAV_GROUP_LABELS_VI,
   PAYROLL_PERIOD_STATUS_LABELS_VI,
+  PAY_BASIS_LABELS_VI,
+  getPayBasisLabelVi,
   CONSUMPTION_REPORT_STATUS_LABELS_VI,
   INVENTORY_STATUS_LABELS_VI,
   PURCHASE_ORDER_STATUS_LABELS_VI,

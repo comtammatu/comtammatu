@@ -120,8 +120,9 @@ test("HR Server Action gates match the route contract", () => {
   );
   assert.match(
     hrActions,
-    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_APPROVE_CHECKOUT,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
+    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*\}/,
   );
+  assert.match(hrActions, /"force_close_stale_attendance"/);
   assert.match(
     hrActions,
     /fetchAttendance = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,

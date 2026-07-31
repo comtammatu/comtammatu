@@ -22,9 +22,7 @@ export type TodayWorkStatus =
   | "done";
 
 export type TodayChecklistTaskKind =
-  | "standard"
-  | "consumption_report"
-  | "inventory_count";
+  "standard" | "consumption_report" | "inventory_count";
 export type TodayChecklistPhase = "start_of_shift" | "end_of_shift";
 
 export interface TodayChecklistItem {
@@ -94,11 +92,12 @@ const DEFAULT_ATTENDANCE_ROLES: readonly StaffRole[] = [
   "cashier",
   "chef",
   "branch_staff",
+  "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
 ];
 
-const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [
-  "branch_manager",
-];
+const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [];
 
 function isDefaultAttendanceRole(role: StaffRole): boolean {
   return DEFAULT_ATTENDANCE_ROLES.includes(role);
@@ -109,7 +108,12 @@ function isManagerSimpleAttendanceRole(role: StaffRole | null): boolean {
 }
 
 function getApprovalTargetLabel(role: StaffRole | null): string {
-  return role === "branch_manager" ? "quản lý cấp trên" : "quản lý chi nhánh";
+  return role === "branch_manager" ||
+    role === "accountant" ||
+    role === "central_supply_ops" ||
+    role === "central_kitchen_lead"
+    ? "Chủ sở hữu"
+    : "quản lý chi nhánh";
 }
 
 function normalizeBranch(branch: unknown): { name: string | null } | null {
@@ -430,7 +434,11 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   let status: TodayWorkStatus;
   if (!attendance && !attendanceRequired) {
     status = "not_required";
-  } else if (!attendance && !ctx.branchId) {
+  } else if (
+    !attendance &&
+    !ctx.branchId &&
+    claims.user_role !== "accountant"
+  ) {
     status = "missing_branch";
   } else if (!attendance?.checkIn) {
     status = "not_started";

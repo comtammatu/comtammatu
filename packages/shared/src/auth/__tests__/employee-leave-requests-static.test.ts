@@ -185,8 +185,8 @@ test("Branch staff runtime exposes leave request self-service from Schedule", ()
   }
 
   for (const expected of [
-    "PERMISSION_KEYS.HR_REQUEST_LEAVE",
-    "permissionBranchId: (data) => data.branchId",
+    "getEmployeeContext",
+    'ctx.claims.user_role === "owner"',
     '"submit_leave_request"',
     '"cancel_leave_request"',
     "Không thể gửi yêu cầu nghỉ",

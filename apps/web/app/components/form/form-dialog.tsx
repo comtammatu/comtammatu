@@ -76,6 +76,16 @@ export interface FormDialogProps<TValues extends FieldValues> {
   actionSize?: ComponentProps<typeof Button>["size"];
   cancelLabel?: string;
   contentClassName?: string;
+  /** Replaces the default Cancel + Submit footer when provided. */
+  renderFooter?: (api: {
+    formId: string;
+    isPending: boolean;
+    requestClose: () => void;
+    submitLabel: string;
+    submitVariant: ComponentProps<typeof Button>["variant"];
+    actionSize: ComponentProps<typeof Button>["size"];
+    cancelLabel: string;
+  }) => ReactNode;
   children: (form: FormContext<TValues>) => ReactNode;
 }
 
@@ -130,6 +140,7 @@ export function FormDialog<TValues extends FieldValues>({
   actionSize = "touch",
   cancelLabel = "Hủy",
   contentClassName,
+  renderFooter,
   children,
 }: FormDialogProps<TValues>) {
   const formId = useId();
@@ -219,27 +230,39 @@ export function FormDialog<TValues extends FieldValues>({
         showCloseButton={!isPending}
         key={entityKey ?? "new"}
         footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size={actionSize}
-              onClick={requestClose}
-              disabled={isPending}
-            >
-              {cancelLabel}
-            </Button>
-            <Button
-              type="submit"
-              form={formId}
-              variant={submitVariant}
-              size={actionSize}
-              disabled={isPending}
-            >
-              {isPending && <Spinner />}
-              {submitLabel}
-            </Button>
-          </>
+          renderFooter ? (
+            renderFooter({
+              formId,
+              isPending,
+              requestClose,
+              submitLabel,
+              submitVariant,
+              actionSize,
+              cancelLabel,
+            })
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size={actionSize}
+                onClick={requestClose}
+                disabled={isPending}
+              >
+                {cancelLabel}
+              </Button>
+              <Button
+                type="submit"
+                form={formId}
+                variant={submitVariant}
+                size={actionSize}
+                disabled={isPending}
+              >
+                {isPending && <Spinner />}
+                {submitLabel}
+              </Button>
+            </>
+          )
         }
       >
         <form
@@ -349,6 +372,16 @@ export function AppDialog({
   const { body, slottedFooter } = splitAppDialogChildren(children);
   const resolvedFooter = footer ?? slottedFooter;
   const showFooterChrome = resolvedFooter != null || documentVariant;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !documentVariant) return;
+    // URL/list-first opens focus the first nested control by default, which
+    // scrollIntoViews mid-body and clips the header/body seam. Reset + focus
+    // the dialog frame instead.
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [open, documentVariant, title]);
 
   return (
     <Dialog
@@ -357,9 +390,19 @@ export function AppDialog({
       disablePointerDismissal={disablePointerDismissal}
     >
       <DialogContent
+        ref={contentRef}
         showCloseButton={showCloseButton}
+        initialFocus={
+          documentVariant
+            ? () =>
+                contentRef.current ??
+                document.querySelector<HTMLElement>(
+                  '[data-slot="dialog-content"]:not([hidden])',
+                )
+            : undefined
+        }
         className={cn(
-          "grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden p-0",
+          "grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden p-0",
           documentVariant
             ? "h-dvh max-h-dvh max-w-none rounded-none sm:h-[min(900px,95dvh)] sm:max-h-[95dvh] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
             : "max-h-[calc(100dvh-2rem)] sm:max-w-lg",
@@ -368,8 +411,11 @@ export function AppDialog({
       >
         <DialogHeader
           className={cn(
-            "mx-0 pr-14",
-            documentVariant ? "px-4 py-4 sm:px-6" : "px-4 pt-4",
+            "col-span-full mx-0",
+            // Keep pr-14 for the absolute close control; px-* would drop it.
+            documentVariant
+              ? "py-4 pl-4 pr-14 sm:pl-6"
+              : "pt-4 pl-4 pr-14",
           )}
         >
           <DialogTitle>{title}</DialogTitle>
@@ -379,8 +425,9 @@ export function AppDialog({
         </DialogHeader>
         {body.length > 0 ? (
           <div
+            ref={bodyRef}
             className={cn(
-              "app-dialog-body flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain",
+              "app-dialog-body col-span-full flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain [overflow-anchor:none]",
               documentVariant ? "px-4 py-4 sm:px-6" : "px-4 py-4",
               bodyClassName,
             )}
@@ -391,13 +438,16 @@ export function AppDialog({
         {showFooterChrome ? (
           <DialogFooter
             className={cn(
-              "border-t bg-popover",
+              "col-span-full border-t bg-popover",
               documentVariant ? "px-4 py-3 sm:px-6" : "px-4 py-3",
               footerClassName,
             )}
           >
             {resolvedFooter}
-            <div data-app-dialog-footer-slot className="contents" />
+            <div
+              data-app-dialog-footer-slot
+              className="flex min-w-0 flex-1 flex-col gap-2 empty:hidden sm:flex-row sm:items-center sm:justify-between"
+            />
           </DialogFooter>
         ) : null}
       </DialogContent>

@@ -9,9 +9,8 @@ shift-based. The repository also had unresolved proposals for contract revision
 history, probation semantics, and payroll treatment when a contract changes
 mid-period. Those proposals would alter D012, D026, and D027. With owner
 approval on 2026-08-01, the roster boundary and contract/probation semantics
-are now authorized; a fresh CodeGraph/source audit of the current attendance,
-payroll, contract, and employee-provisioning flows was completed in
-`docs/plan/hrm-f1-f15-plan.md`.
+are now authorized. Remaining HRM finding revalidation lives in
+`tasks/todo.md` under the HR domain-integrity outcome.
 
 ## Decision
 
@@ -50,8 +49,8 @@ payroll, contract, and employee-provisioning flows was completed in
 
 - D012 rostering clause is reversed; D026 IA and D027 no-rostering restatements
   are amended. All other D012/D026/D027 clauses remain in force.
-- P5 (rostering overlay) and P6A/P6B (contract history, terminate, probation)
-  in `docs/plan/hrm-f1-f15-plan.md` are now authorized to proceed.
+- Rostering overlay and contract history/terminate/probation work are now
+  authorized; deliver them as bounded outcomes in `tasks/todo.md`.
 - Regression guard `D012-rostering` flips to "rostering overlay optional".
   Payroll guards (`PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC`,
   `PAYROLL-PRORATION-CAP-AT-STANDARD`, `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`,
@@ -59,6 +58,5 @@ payroll, contract, and employee-provisioning flows was completed in
 
 ## Canonical
 
-- `docs/plan/hrm-f1-f15-plan.md` (implementation plan, Phases P5, P6A, P6B)
-- `docs/plan/hrm-d100-proposal.md` (detailed decision text)
 - `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
+- `tasks/todo.md` → HR domain-integrity outcome for remaining finding routing

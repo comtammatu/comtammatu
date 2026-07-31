@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Drop confirmed-dead purchase-request create/submit RPCs after demand cutover
+
+State: triage
+Kind: debt
+Tier: T3
+Lane: database/rpc-cleanup
+Exit: `create_purchase_request` and `submit_purchase_request` are absent from Production after deployed callers and data proof; types regenerated; 6-channel scan + `pg_depend`/`pg_stat_user_functions` evidence recorded.
+Evidence: 2026-08-01 inventory — both RPCs have zero JS `.rpc()` callers and no active SQL call/trigger/cron/policy refs beyond their own CREATE/GRANT; still present in types and additive migration `20260729180000`. Related blocked outcomes already cover `create_supplier_payment` and purchase-request retirement smoke.
+
+- [ ] Reconfirm zero callers against Production catalogs (`pg_proc`, `pg_depend`, `pg_stat_user_functions.calls`) before writing a DROP migration.
+- [ ] Drop only after the purchase-demand cutover Exit is proven and owner delegates Production apply; keep rollback bodies per `RPC-ROLLBACK-MUST-INCLUDE-BODY`.
+
 ## Revive Central Operator Hub for Kho Tổng / Bếp TT
 
 State: verify
@@ -123,7 +135,7 @@ Kind: debt
 Tier: T3
 Lane: hr/domain-integrity
 Exit: Every HRM finding is rechecked against current source and routed once: confirmed defects become bounded outcomes or executable guards, stable contracts move to their owning HR docs, and unconfirmed or superseded claims are dropped.
-Evidence: CodeGraph traces for employee provisioning, attendance, checklist, contract, leave, and payroll flows plus focused current tests and the owner decision boundary in ADR 0019.
+Evidence: ADR 0019 Accepted; non-durable plan snapshot removed; position-task editor shows all assignable positions (no staff/task filter bypass). Remaining findings still need CodeGraph/source re-audit.
 
 - [ ] Re-audit the current HR flows, then split only confirmed and independently deliverable outcomes.
 

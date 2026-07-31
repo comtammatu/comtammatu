@@ -61,14 +61,12 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
     "expected new Employee Daily Work server actions",
   );
   assert.ok(
-    actionSrc.includes("employee_clock_in_with_checklist") &&
-      actionSrc.includes("employee_request_clock_out") &&
-      actionSrc.includes(
-        "!isManagerSimpleAttendanceRole(ctx.claims.user_role)",
-      ) &&
-      actionSrc.includes("checkout_requested_at: null") &&
+    actionSrc.includes("self_service_clock_in") &&
+      actionSrc.includes("self_service_toggle_task") &&
+      actionSrc.includes("self_service_request_checkout") &&
+      actionSrc.includes("self_service_cancel_checkout") &&
       actionSrc.includes(".remove([photoPath])"),
-    "expected floor-staff clock-in/out to use RPCs, manager self-checkout to stay direct and scoped, and failed photo rows to clean up",
+    "expected self-service attendance mutations to use guarded RPCs and failed photo rows to clean up",
   );
   assert.ok(
     actionSrc.includes("alreadyRecorded") &&
@@ -446,9 +444,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
     "branch_staff must require the same staff-runtime attendance/checklist flow as cashier and chef",
   );
   assert.ok(
-    baselineSrc.includes(
-      "CREATE FUNCTION public.employee_request_clock_out",
-    ),
+    baselineSrc.includes("CREATE FUNCTION public.employee_request_clock_out"),
     "production baseline must retain the current checkout RPC before the forward repair",
   );
   assert.ok(

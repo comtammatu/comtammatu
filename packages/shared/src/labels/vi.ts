@@ -159,6 +159,23 @@ export const PAYROLL_PERIOD_STATUS_LABELS_VI = {
   paid: "Đã trả",
 } as const;
 
+/** Contract compensation pay basis — never show raw enum keys in Owner UI. */
+export const PAY_BASIS_LABELS_VI = {
+  attendance_prorated: "Theo công",
+  fixed_monthly: "Lương tháng",
+} as const;
+
+export type PayBasisCode = keyof typeof PAY_BASIS_LABELS_VI;
+
+export function getPayBasisLabelVi(
+  payBasis: string | null | undefined,
+): string {
+  if (payBasis === "attendance_prorated" || payBasis === "fixed_monthly") {
+    return PAY_BASIS_LABELS_VI[payBasis];
+  }
+  return UNKNOWN_LABEL_VI;
+}
+
 export const CONSUMPTION_REPORT_STATUS_LABELS_VI = {
   draft: "Nháp",
   submitted: "Chờ duyệt",
@@ -413,6 +430,7 @@ export const PAYMENT_RECORD_STATUS_LABELS_VI = {
 export const EXPENSE_PAYMENT_STATE_LABELS_VI = {
   unpaid: "Chưa trả",
   cash_paid: "Đã trả TM",
+  transfer_paid: "Đã chuyển khoản",
   transfer_matched: "Đã khớp NH",
   transfer_needs_match: "Cần khớp NH",
 } as const;

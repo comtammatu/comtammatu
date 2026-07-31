@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   canSubscribeBranchOpsTopic,
+  canonicalizeSelfServicePath,
   extractClaimsFromAccessToken,
   resolvePostLoginRedirect,
   getSafeInternalReturnTo,
@@ -200,6 +201,7 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   );
   assert.equal(resolveRouteFamilyContract("/settings/tables")?.id, "settings");
   assert.equal(resolveRouteFamilyContract("/")?.surface, "owner");
+  assert.equal(resolveRouteFamilyContract("/me/clock")?.surface, "self");
   assert.equal(
     resolveRouteFamilyContract("/inventory/grn/123")?.surface,
     "owner",
@@ -320,6 +322,37 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/finance"),
     "/finance",
+  );
+});
+
+test("self-service excludes Owner and canonicalizes site-pinned roles", () => {
+  for (const path of [
+    "/me",
+    "/me/clock",
+    "/me/schedule",
+    "/me/profile",
+    "/me/payslip",
+  ]) {
+    assert.equal(resolvePostLoginRedirect(makeClaims("owner"), path), "/");
+  }
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("cashier", 3),
+      "/me/schedule/leave?month=2026-08",
+    ),
+    "/br/3/shift/schedule/leave?month=2026-08",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("accountant"), "/me/clock?from=home"),
+    "/me/clock?from=home",
+  );
+  assert.equal(
+    canonicalizeSelfServicePath(makeClaims("chef", 9), "/me/profile/payslip"),
+    "/br/9/profile/payslip",
+  );
+  assert.equal(
+    canonicalizeSelfServicePath(makeClaims("owner"), "/me/clock"),
+    null,
   );
 });
 
@@ -537,6 +570,7 @@ test("resolveModuleFromPath → branch operation controls and finance workspace 
   );
   assert.equal(resolveModuleFromPath("/hr"), "hr");
   assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
+  assert.equal(resolveModuleFromPath("/me/profile"), "me");
   assert.equal(resolveModuleFromPath("/br/3/dashboard"), "branch_dashboard");
   assert.equal(
     resolveModuleFromPath("/br/3/menu-limits"),
@@ -723,6 +757,21 @@ test("canAccess → Owner surface HR and payroll are owner-only", () => {
   assert.equal(canAccess("owner", "hr_payroll"), true);
 });
 
+test("canAccess → self-service explicitly excludes Owner", () => {
+  assert.equal(canAccess("owner", "me"), false);
+  for (const role of [
+    "accountant",
+    "central_supply_ops",
+    "central_kitchen_lead",
+    "branch_manager",
+    "cashier",
+    "chef",
+    "branch_staff",
+  ] as const) {
+    assert.equal(canAccess(role, "me"), true);
+  }
+});
+
 test("resolveDiscoveredApps → settings entries are discoverable for authorized roles", () => {
   const ownerApps = resolveDiscoveredApps("owner");
   assert.ok(
@@ -831,6 +880,16 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   assert.equal(
     cashierApps.some((app) => app.moduleKey === "branch_settings"),
     false,
+  );
+
+  assert.equal(
+    resolveDiscoveredApps("owner").some((app) => app.moduleKey === "me"),
+    false,
+  );
+  assert.ok(
+    resolveDiscoveredApps("accountant").some(
+      (app) => app.moduleKey === "me" && app.href === "/me",
+    ),
   );
 });
 

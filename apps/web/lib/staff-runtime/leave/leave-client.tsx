@@ -43,7 +43,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 
 interface LeaveRequestClientProps {
-  branchId: number;
+  branchId: number | null;
   branchName: string | null;
   initialRequests: LeaveRequestRow[];
   plane?: "employee" | "branch";
