@@ -125,3 +125,41 @@ test("production recipe upsert uses output_quantity and omits yield_factor", () 
   assert.doesNotMatch(panelSource, /productionRecipeOutputQuantityHint/);
   assert.doesNotMatch(panelSource, /yieldFactor:/);
 });
+
+test("production recipe ingredients accept raw_material only", () => {
+  const panelSource = readFileSync(
+    "app/(protected)/inventory/production-recipe-panel.tsx",
+    "utf8",
+  );
+  const migrationSource = readFileSync(
+    "../../supabase/migrations/20260801013626_production_recipe_ingredients_raw_material_only.sql",
+    "utf8",
+  );
+
+  assert.match(
+    panelSource,
+    /filter\(\(ingredient\) => ingredient\.item_kind === "raw_material"\)/,
+  );
+  assert.doesNotMatch(
+    panelSource,
+    /item_kind === "raw_material" \|\|[\s\S]*item_kind === "finished_good"/,
+  );
+  assert.match(
+    recipeActionSource,
+    /if \(ingredient\.item_kind === "raw_material"\) \{\s*addNameLookup\(rawIngredientByName/,
+  );
+  assert.match(
+    recipeActionSource,
+    /if \(!ingredient \|\| ingredient\.item_kind !== "raw_material"\)/,
+  );
+  assert.doesNotMatch(
+    recipeActionSource,
+    /item_kind !== "raw_material" &&[\s\S]*item_kind !== "finished_good"/,
+  );
+  assert.match(migrationSource, /i\.item_kind = 'raw_material'/);
+  assert.match(migrationSource, /ingredients\.item_kind = 'raw_material'/);
+  assert.doesNotMatch(
+    migrationSource,
+    /item_kind IN \('raw_material', 'finished_good'\)/,
+  );
+});

@@ -654,10 +654,7 @@ export async function importProductionRecipes(
     if (ingredient.item_kind === "finished_good") {
       addNameLookup(finishedGoodByName, ingredient);
     }
-    if (
-      ingredient.item_kind === "raw_material" ||
-      ingredient.item_kind === "finished_good"
-    ) {
+    if (ingredient.item_kind === "raw_material") {
       addNameLookup(rawIngredientByName, ingredient);
     }
   }
@@ -751,11 +748,7 @@ export async function importProductionRecipes(
       }
       ingredient = resolved;
     }
-    if (
-      !ingredient ||
-      (ingredient.item_kind !== "raw_material" &&
-        ingredient.item_kind !== "finished_good")
-    ) {
+    if (!ingredient || ingredient.item_kind !== "raw_material") {
       issues.push({
         row: rowNumber,
         field: "Nguyên liệu",

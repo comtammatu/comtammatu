@@ -456,11 +456,7 @@ export function ProductionRecipePanel({
   >(() =>
     sortRawIngredients(
       ingredients
-        .filter(
-          (ingredient) =>
-            ingredient.item_kind === "raw_material" ||
-            ingredient.item_kind === "finished_good",
-        )
+        .filter((ingredient) => ingredient.item_kind === "raw_material")
         .map((ingredient) => ({
           id: ingredient.id,
           name: ingredient.name,
@@ -491,11 +487,7 @@ export function ProductionRecipePanel({
     setRawIngredientsOptions(
       sortRawIngredients(
         ingredients
-          .filter(
-            (ingredient) =>
-              ingredient.item_kind === "raw_material" ||
-              ingredient.item_kind === "finished_good",
-          )
+          .filter((ingredient) => ingredient.item_kind === "raw_material")
           .map((ingredient) => ({
             id: ingredient.id,
             name: ingredient.name,
