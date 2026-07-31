@@ -47,6 +47,8 @@ const FUNCTION_BODY =
 const DEFINER_FUNCTION =
   /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 const FUNCTION_CALL = /\b(?:public\.)?([a-zA-Z_][\w]*)\s*\(/g;
+const FUNCTION_RENAME =
+  /ALTER\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+RENAME\s+TO\s+([a-zA-Z_][\w]*)\s*;/gi;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -61,7 +63,7 @@ function browserGrantPattern(functionName: string): RegExp {
 
 function browserRevokePattern(functionName: string, role: string): RegExp {
   return new RegExp(
-    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
+    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+[^;]*?(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)[^;]*?FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
     "i",
   );
 }
@@ -87,6 +89,28 @@ function browserRolesAreFinallyRevoked(
       lastMatchIndex(source, browserRevokePattern(functionName, role)) >
       lastGrant,
   );
+}
+
+function isFinallySecurityInvoker(
+  source: string,
+  functionName: string,
+): boolean {
+  const escapedName = escapeRegExp(functionName);
+  const lastDefiner = lastMatchIndex(
+    source,
+    new RegExp(
+      `CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+(?:public\\.)?${escapedName}\\s*\\([\\s\\S]*?SECURITY\\s+DEFINER`,
+      "i",
+    ),
+  );
+  const lastInvoker = lastMatchIndex(
+    source,
+    new RegExp(
+      `ALTER\\s+FUNCTION\\s+(?:public\\.)?${escapedName}\\s*\\([^;]*?\\)\\s+SECURITY\\s+INVOKER`,
+      "i",
+    ),
+  );
+  return lastInvoker > lastDefiner;
 }
 
 function bodyHasDirectAuthBoundary(body: string): boolean {
@@ -165,6 +189,7 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
         delegatesToPrivateAuthorizedFunction(body, allSource);
       if (
         !hasAuthBoundary &&
+        !isFinallySecurityInvoker(finalSource, functionName) &&
         !browserRolesAreFinallyRevoked(finalSource, functionName)
       ) {
         violations.push(`${migration.name}: ${functionName}`);
@@ -225,7 +250,16 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
         ]);
       }
     }
-
+    for (const match of sql.matchAll(FUNCTION_RENAME)) {
+      const previousName = match[1];
+      const nextName = match[2];
+      if (previousName && nextName) {
+        functionBodies.set(nextName, [
+          ...(functionBodies.get(nextName) ?? []),
+          ...(functionBodies.get(previousName) ?? []),
+        ]);
+      }
+    }
   }
 
   for (const { name, sql } of migrations) {
@@ -234,6 +268,7 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
       if (!functionName) continue;
       if (BROAD_GRANT_ALLOWLIST.has(functionName)) continue;
       if (browserRolesAreFinallyRevoked(finalSource, functionName)) continue;
+      if (isFinallySecurityInvoker(finalSource, functionName)) continue;
 
       if (!bodyHasAuthBoundary(functionName)) {
         violations.push(`${name}: ${functionName}`);

@@ -55,7 +55,7 @@ function browserGrantPattern(functionName: string): RegExp {
 
 function browserRevokePattern(functionName: string, role: string): RegExp {
   return new RegExp(
-    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)\\s+FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
+    `REVOKE\\s+(?:ALL|EXECUTE)\\s+ON\\s+FUNCTION\\s+[^;]*?(?:public\\.)?${escapeRegExp(functionName)}\\s*\\([^;]*?\\)[^;]*?FROM\\s+[^;]*\\b${escapeRegExp(role)}\\b`,
     "i",
   );
 }
@@ -80,6 +80,28 @@ function browserRolesAreFinallyRevoked(
       lastMatchIndex(source, browserRevokePattern(functionName, role)) >
       lastGrant,
   );
+}
+
+function isFinallySecurityInvoker(
+  source: string,
+  functionName: string,
+): boolean {
+  const escapedName = escapeRegExp(functionName);
+  const lastDefiner = lastMatchIndex(
+    source,
+    new RegExp(
+      `CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+(?:public\\.)?${escapedName}\\s*\\([\\s\\S]*?SECURITY\\s+DEFINER`,
+      "i",
+    ),
+  );
+  const lastInvoker = lastMatchIndex(
+    source,
+    new RegExp(
+      `ALTER\\s+FUNCTION\\s+(?:public\\.)?${escapedName}\\s*\\([^;]*?\\)\\s+SECURITY\\s+INVOKER`,
+      "i",
+    ),
+  );
+  return lastInvoker > lastDefiner;
 }
 
 function delegatesToPrivateAuthorizedFunction(
@@ -113,7 +135,9 @@ function delegatesToPrivateAuthorizedFunction(
       const rename = Array.from(finalSource.matchAll(renamePattern)).at(-1);
       if (rename?.index !== undefined) {
         const sourceBeforeRename = finalSource.slice(0, rename.index);
-        for (const match of sourceBeforeRename.matchAll(definerFunctionPattern)) {
+        for (const match of sourceBeforeRename.matchAll(
+          definerFunctionPattern,
+        )) {
           if (match[1] === rename[1]) delegatedBody = match[3]!;
         }
       }
@@ -237,15 +261,24 @@ test("forward SECURITY DEFINER migrations include an auth boundary or browser-ro
         finalSource,
         functionName,
       );
+      const becomesSecurityInvoker = isFinallySecurityInvoker(
+        finalSource,
+        functionName,
+      );
       const isServiceRoleOnly =
         /auth\.role\(\)\s+IS\s+DISTINCT\s+FROM\s+'service_role'/i.test(body);
 
-      if (!hasAuthBoundary && !revokesBrowserRoles) {
+      if (!hasAuthBoundary && !revokesBrowserRoles && !becomesSecurityInvoker) {
         failures.push(
           `${migration.path}: public.${functionName} lacks an in-body auth boundary and remains executable by a browser role`,
         );
       }
-      if (!hasAuthBoundary && grantsBrowserRole && !revokesBrowserRoles) {
+      if (
+        !hasAuthBoundary &&
+        grantsBrowserRole &&
+        !revokesBrowserRoles &&
+        !becomesSecurityInvoker
+      ) {
         failures.push(
           `${migration.path}: public.${functionName} grants a browser role without an in-body auth boundary`,
         );

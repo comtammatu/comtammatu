@@ -26,7 +26,7 @@ const topology = readFileSync(
   "utf8",
 );
 
-test("advisor harden revokes anon EXECUTE on the two flagged SECURITY DEFINER RPCs", () => {
+test("Production advisor harden revokes anon EXECUTE on the two flagged SECURITY DEFINER RPCs", () => {
   assert.match(
     migration,
     /REVOKE ALL ON FUNCTION public\.next_inventory_doc_number\(bigint, text\)\s+FROM PUBLIC, anon/,
