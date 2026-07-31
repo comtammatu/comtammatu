@@ -25,6 +25,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsOnline } from "@/components/pwa-runtime";
+import { AppDialogFooter } from "@/components/form";
 import {
   AppDetailFooter,
   AppPage,
@@ -354,59 +355,119 @@ export function StockRequestFulfillClient({
       {activeGroup &&
       status === "submitted" &&
       activeGroup.lines.some((line) => line.status === "pending") ? (
-        <AppDetailFooter
-          sticky={embedded}
-          leading={
-            <div className="flex flex-wrap gap-2">
+        embedded ? (
+          <AppDialogFooter>
+            <AppDetailFooter
+              sticky
+              leading={
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    disabled={
+                      isPending ||
+                      !isOnline ||
+                      (selectedByGroup[activeGroup.fulfillSiteKind]?.size ??
+                        0) === 0
+                    }
+                    onClick={() =>
+                      setReasonAction({ kind: "reject", group: activeGroup })
+                    }
+                  >
+                    {copy.rejectSelected}
+                  </Button>
+                  {canClose ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="touch"
+                      disabled={isPending || !isOnline}
+                      onClick={() => setReasonAction({ kind: "close" })}
+                    >
+                      {copy.closeRemaining}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+              trailing={
+                <Button
+                  type="button"
+                  size="touch"
+                  disabled={
+                    isPending ||
+                    !isOnline ||
+                    activeGroup.locations.length === 0 ||
+                    (selectedByGroup[activeGroup.fulfillSiteKind]?.size ??
+                      0) === 0
+                  }
+                  onClick={() => handleFulfill(activeGroup)}
+                >
+                  {isPending
+                    ? copy.processing
+                    : copy.fulfillButton(
+                        siteKindLabel(activeGroup.fulfillSiteKind),
+                      )}
+                </Button>
+              }
+            />
+          </AppDialogFooter>
+        ) : (
+          <AppDetailFooter
+            sticky={false}
+            leading={
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={
+                    isPending ||
+                    !isOnline ||
+                    (selectedByGroup[activeGroup.fulfillSiteKind]?.size ??
+                      0) === 0
+                  }
+                  onClick={() =>
+                    setReasonAction({ kind: "reject", group: activeGroup })
+                  }
+                >
+                  {copy.rejectSelected}
+                </Button>
+                {canClose ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="touch"
+                    disabled={isPending || !isOnline}
+                    onClick={() => setReasonAction({ kind: "close" })}
+                  >
+                    {copy.closeRemaining}
+                  </Button>
+                ) : null}
+              </div>
+            }
+            trailing={
               <Button
                 type="button"
-                variant="outline"
                 size="touch"
                 disabled={
                   isPending ||
                   !isOnline ||
+                  activeGroup.locations.length === 0 ||
                   (selectedByGroup[activeGroup.fulfillSiteKind]?.size ?? 0) ===
                     0
                 }
-                onClick={() =>
-                  setReasonAction({ kind: "reject", group: activeGroup })
-                }
+                onClick={() => handleFulfill(activeGroup)}
               >
-                {copy.rejectSelected}
+                {isPending
+                  ? copy.processing
+                  : copy.fulfillButton(
+                      siteKindLabel(activeGroup.fulfillSiteKind),
+                    )}
               </Button>
-              {canClose ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="touch"
-                  disabled={isPending || !isOnline}
-                  onClick={() => setReasonAction({ kind: "close" })}
-                >
-                  {copy.closeRemaining}
-                </Button>
-              ) : null}
-            </div>
-          }
-          trailing={
-            <Button
-              type="button"
-              size="touch"
-              disabled={
-                isPending ||
-                !isOnline ||
-                activeGroup.locations.length === 0 ||
-                (selectedByGroup[activeGroup.fulfillSiteKind]?.size ?? 0) === 0
-              }
-              onClick={() => handleFulfill(activeGroup)}
-            >
-              {isPending
-                ? copy.processing
-                : copy.fulfillButton(
-                    siteKindLabel(activeGroup.fulfillSiteKind),
-                  )}
-            </Button>
-          }
-        />
+            }
+          />
+        )
       ) : null}
       <ReasonConfirmDialog
         open={reasonAction != null}

@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { CorrectionBranchOption } from "../../_components/document-stock-correction-dialog";
+import { AppDialogFooter } from "@/components/form";
 import {
   AppBackLink,
   AppDetailFooter,
@@ -516,57 +517,115 @@ export function TransferDetailClient({
       </div>
 
       {/* Footer Action Bar */}
-      <AppDetailFooter
-        sticky={embedded}
-        leading={
-          <>
-            {transfer.status === "draft" ? (
+      {embedded ? (
+        <AppDialogFooter>
+          <AppDetailFooter
+            sticky
+            leading={
+              <>
+                {transfer.status === "draft" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    disabled={isPending || !isOnline}
+                    onClick={() => setCancelOpen(true)}
+                  >
+                    {copy.actions.cancel}
+                  </Button>
+                ) : null}
+                {transfer.status !== "draft" &&
+                correctionBranches.length > 0 &&
+                transfer.items.length > 0 ? (
+                  <DocumentStockCorrectionDialog
+                    documentType="transfer"
+                    documentId={transfer.id}
+                    documentCode={transfer.code}
+                    branchOptions={correctionBranches}
+                    buttonSize="touch"
+                    itemOptions={transfer.items.map((item) => ({
+                      ingredientId: item.ingredientId,
+                      name: item.name,
+                      unit: item.unit,
+                    }))}
+                  />
+                ) : null}
+              </>
+            }
+            trailing={
               <Button
                 type="button"
-                variant="outline"
-                size={embedded ? "touch" : "default"}
-                disabled={isPending || !isOnline}
-                onClick={() => setCancelOpen(true)}
+                disabled={
+                  isPending ||
+                  !isOnline ||
+                  !actionConfig?.enabled ||
+                  (isReceiveMode &&
+                    actionConfig?.kind === "receive" &&
+                    !noteOk)
+                }
+                size="touch"
+                className="px-4 font-bold"
+                onClick={handlePrimaryAction}
               >
-                {copy.actions.cancel}
+                <IconCircleCheck className="size-5" />
+                {actionLabel}
               </Button>
-            ) : null}
-            {transfer.status !== "draft" &&
-            correctionBranches.length > 0 &&
-            transfer.items.length > 0 ? (
-              <DocumentStockCorrectionDialog
-                documentType="transfer"
-                documentId={transfer.id}
-                documentCode={transfer.code}
-                branchOptions={correctionBranches}
-                buttonSize={embedded ? "touch" : "default"}
-                itemOptions={transfer.items.map((item) => ({
-                  ingredientId: item.ingredientId,
-                  name: item.name,
-                  unit: item.unit,
-                }))}
-              />
-            ) : null}
-          </>
-        }
-        trailing={
-          <Button
-            type="button"
-            disabled={
-              isPending ||
-              !isOnline ||
-              !actionConfig?.enabled ||
-              (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
             }
-            size={embedded ? "touch" : "default"}
-            className="px-4 font-bold"
-            onClick={handlePrimaryAction}
-          >
-            <IconCircleCheck className="size-5" />
-            {actionLabel}
-          </Button>
-        }
-      />
+          />
+        </AppDialogFooter>
+      ) : (
+        <AppDetailFooter
+          sticky={false}
+          leading={
+            <>
+              {transfer.status === "draft" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  disabled={isPending || !isOnline}
+                  onClick={() => setCancelOpen(true)}
+                >
+                  {copy.actions.cancel}
+                </Button>
+              ) : null}
+              {transfer.status !== "draft" &&
+              correctionBranches.length > 0 &&
+              transfer.items.length > 0 ? (
+                <DocumentStockCorrectionDialog
+                  documentType="transfer"
+                  documentId={transfer.id}
+                  documentCode={transfer.code}
+                  branchOptions={correctionBranches}
+                  buttonSize="default"
+                  itemOptions={transfer.items.map((item) => ({
+                    ingredientId: item.ingredientId,
+                    name: item.name,
+                    unit: item.unit,
+                  }))}
+                />
+              ) : null}
+            </>
+          }
+          trailing={
+            <Button
+              type="button"
+              disabled={
+                isPending ||
+                !isOnline ||
+                !actionConfig?.enabled ||
+                (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
+              }
+              size="default"
+              className="px-4 font-bold"
+              onClick={handlePrimaryAction}
+            >
+              <IconCircleCheck className="size-5" />
+              {actionLabel}
+            </Button>
+          }
+        />
+      )}
       <ReasonConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}

@@ -98,7 +98,7 @@ test("branch source has no same-branch kitchen destination after D091", () => {
   );
 });
 
-test("central owner source can dispatch only to active branch warehouses", () => {
+test("central supply can dispatch to active branch warehouses and Central Kitchen", () => {
   const policy = resolveTransferCreatePolicy({
     branches,
     userBranchId: 20,
@@ -107,7 +107,7 @@ test("central owner source can dispatch only to active branch warehouses", () =>
   assert.equal(policy.canCreateOutbound, true);
   assert.deepEqual(
     policy.outboundDestinationOptions.map((option) => option.value),
-    ["10:warehouse", "40:warehouse"],
+    ["10:warehouse", "30:warehouse", "40:warehouse"],
   );
 });
 

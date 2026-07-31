@@ -111,7 +111,8 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(hub, /onTransferCreated/);
   assert.equal(hub.match(/<AppDialog/g)?.length, 1);
   assert.match(fulfill, /const activeGroup/);
-  assert.equal(fulfill.match(/<AppDetailFooter/g)?.length, 1);
+  assert.equal(fulfill.match(/<AppDetailFooter/g)?.length, 2);
+  assert.match(fulfill, /AppDialogFooter/);
   assert.match(detailLoader, /data\.branchId === claims\.branch_id/);
   assert.match(detailLoader, /item\.fulfillSiteKind === actorKind/);
 });
@@ -132,9 +133,10 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(editor, /hint: copy\.sourceHint/);
   assert.doesNotMatch(fulfill, /role="tablist"/);
   assert.match(fulfill, /aria-pressed=\{isActive\}/);
-  assert.match(fulfill, /sticky=\{embedded\}/);
+  assert.match(fulfill, /AppDialogFooter/);
   assert.match(fulfill, /size="touch"/);
   assert.doesNotMatch(transfer, /IconPrinter/);
+  assert.match(transfer, /AppDialogFooter/);
 });
 
 test("central kitchen request route and database authority stay supply-only", () => {

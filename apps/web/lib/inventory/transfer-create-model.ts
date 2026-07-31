@@ -189,6 +189,19 @@ export function getTransferOutboundDestinationOptions({
       ];
     }
 
+    if (
+      sourceBranchKind === "central_supply" &&
+      (branchKind === "branch" || branchKind === "central_kitchen")
+    ) {
+      return [
+        {
+          value: transferTargetValue(branch.id, "warehouse"),
+          branch,
+          kind: "warehouse" as const,
+        },
+      ];
+    }
+
     if (sourceBranchKind === "branch" && branchKind === "central_kitchen") {
       return [
         {

@@ -1,15 +1,20 @@
 "use client";
 
 import {
+  Children,
+  isValidElement,
+  useLayoutEffect,
+  useState,
   useEffect,
   useId,
   useRef,
-  useState,
   useTransition,
   type ComponentProps,
   type FormEvent,
+  type ReactElement,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   useForm,
   type DefaultValues,
@@ -283,6 +288,49 @@ export interface AppDialogProps {
   footerClassName?: string;
 }
 
+/** Marks action chrome for AppDialog to lift into the fixed footer slot. */
+export function AppDialogFooter({ children }: { children: ReactNode }) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    const slots = document.querySelectorAll<HTMLElement>(
+      "[data-app-dialog-footer-slot]",
+    );
+    setSlot(slots.length > 0 ? slots[slots.length - 1]! : null);
+  }, []);
+
+  if (slot) {
+    return createPortal(children, slot);
+  }
+  return <>{children}</>;
+}
+AppDialogFooter.displayName = "AppDialogFooter";
+
+function isAppDialogFooter(
+  child: ReactNode,
+): child is ReactElement<{ children?: ReactNode }> {
+  return isValidElement(child) && child.type === AppDialogFooter;
+}
+
+function splitAppDialogChildren(children: ReactNode): {
+  body: ReactNode[];
+  slottedFooter: ReactNode | null;
+} {
+  const body: ReactNode[] = [];
+  const footers: ReactNode[] = [];
+  Children.forEach(children, (child) => {
+    if (isAppDialogFooter(child)) {
+      footers.push(child.props.children);
+      return;
+    }
+    body.push(child);
+  });
+  return {
+    body,
+    slottedFooter: footers.length > 0 ? <>{footers}</> : null,
+  };
+}
+
 export function AppDialog({
   variant = "default",
   open,
@@ -297,7 +345,11 @@ export function AppDialog({
   bodyClassName,
   footerClassName,
 }: AppDialogProps) {
-  const document = variant === "document";
+  const documentVariant = variant === "document";
+  const { body, slottedFooter } = splitAppDialogChildren(children);
+  const resolvedFooter = footer ?? slottedFooter;
+  const showFooterChrome = resolvedFooter != null || documentVariant;
+
   return (
     <Dialog
       open={open}
@@ -307,40 +359,45 @@ export function AppDialog({
       <DialogContent
         showCloseButton={showCloseButton}
         className={cn(
-          document
-            ? "h-dvh max-h-dvh max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden rounded-none p-0 sm:h-[min(900px,95dvh)] sm:max-h-[95dvh] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
-            : "sm:max-w-lg",
+          "grid-rows-[auto_minmax(0,1fr)_auto] gap-[0px] overflow-hidden p-0",
+          documentVariant
+            ? "h-dvh max-h-dvh max-w-none rounded-none sm:h-[min(900px,95dvh)] sm:max-h-[95dvh] sm:w-[min(1120px,96vw)] sm:max-w-[min(1120px,96vw)] sm:rounded-lg"
+            : "max-h-[calc(100dvh-2rem)] sm:max-w-lg",
           contentClassName,
         )}
       >
         <DialogHeader
-          className={document ? "mx-0 px-4 py-4 pr-14 sm:px-6" : undefined}
+          className={cn(
+            "mx-0 pr-14",
+            documentVariant ? "px-4 py-4 sm:px-6" : "px-4 pt-4",
+          )}
         >
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className={description ? undefined : "sr-only"}>
             {description ?? title}
           </DialogDescription>
         </DialogHeader>
-        {children ? (
+        {body.length > 0 ? (
           <div
             className={cn(
-              "flex flex-col gap-4",
-              document &&
-                "min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6",
+              "app-dialog-body flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain",
+              documentVariant ? "px-4 py-4 sm:px-6" : "px-4 py-4",
               bodyClassName,
             )}
           >
-            {children}
+            {body}
           </div>
         ) : null}
-        {footer ? (
+        {showFooterChrome ? (
           <DialogFooter
             className={cn(
-              document && "border-t bg-popover px-4 py-3 sm:px-6",
+              "border-t bg-popover",
+              documentVariant ? "px-4 py-3 sm:px-6" : "px-4 py-3",
               footerClassName,
             )}
           >
-            {footer}
+            {resolvedFooter}
+            <div data-app-dialog-footer-slot className="contents" />
           </DialogFooter>
         ) : null}
       </DialogContent>

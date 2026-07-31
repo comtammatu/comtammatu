@@ -26,6 +26,7 @@ export { FormField } from "./form-field";
 export { MultiSelectCombobox } from "./multi-select-combobox";
 export {
   AppDialog,
+  AppDialogFooter,
   FileImportDialog,
   FormDialog,
   valuesToFormData,

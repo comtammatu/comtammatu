@@ -1256,6 +1256,8 @@ export function AppDetailFooter({
               "in-[[data-slot=dialog-footer]]:static in-[[data-slot=dialog-footer]]:w-full",
               "in-[[data-slot=dialog-footer]]:border-0 in-[[data-slot=dialog-footer]]:bg-transparent",
               "in-[[data-slot=dialog-footer]]:px-0 in-[[data-slot=dialog-footer]]:py-0 in-[[data-slot=dialog-footer]]:shadow-none",
+              // Nested sticky CTA inside AppDialog body overlays lines — keep in flow.
+              "in-[.app-dialog-body]:static in-[.app-dialog-body]:z-auto in-[.app-dialog-body]:shadow-none",
             ]
           : "gap-3 py-6",
         className,
