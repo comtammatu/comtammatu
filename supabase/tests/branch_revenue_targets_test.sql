@@ -24,6 +24,7 @@ BEGIN
 
   IF to_regprocedure('public.list_branch_revenue_targets(date)') IS NULL
     OR to_regprocedure('public.upsert_branch_revenue_targets(date,jsonb)') IS NULL
+    OR to_regprocedure('public.delete_branch_revenue_target(date,bigint)') IS NULL
     OR to_regprocedure('public.list_branch_revenue_target_reward_tiers(date)') IS NULL
     OR to_regprocedure('public.get_branch_revenue_target_progress(bigint,date)') IS NULL
     OR to_regprocedure('public.list_branch_revenue_target_progress(date)') IS NULL
@@ -53,6 +54,17 @@ BEGIN
     OR v_definition NOT LIKE '%reward_tiers%'
   THEN
     RAISE EXCEPTION 'upsert_branch_revenue_targets must stay owner-only and persist reward tiers';
+  END IF;
+
+  SELECT pg_get_functiondef(
+    to_regprocedure('public.delete_branch_revenue_target(date,bigint)')
+  )
+  INTO v_definition;
+
+  IF v_definition NOT LIKE '%auth_is_owner%'
+    OR v_definition NOT LIKE '%DELETE FROM public.branch_revenue_targets%'
+  THEN
+    RAISE EXCEPTION 'delete_branch_revenue_target must stay owner-only';
   END IF;
 
   SELECT pg_get_functiondef(

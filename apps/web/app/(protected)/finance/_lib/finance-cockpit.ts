@@ -3,6 +3,7 @@ import {
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
+import { addMoney } from "@comtammatu/shared/money";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -68,6 +69,11 @@ interface ActualFoodCostSnapshot {
 interface OperatingExpenseSummary {
   total: number;
   recorded: boolean;
+}
+
+interface FinanceVatSummary {
+  inputRecorded: string | null;
+  outputIssued: string | null;
 }
 
 interface TopItemRow {
@@ -157,6 +163,7 @@ export interface FinanceException {
 export interface FinanceCockpitData {
   branches: BranchOption[];
   canViewInventoryValuation: boolean;
+  vat: FinanceVatSummary;
   kpis: FinanceCockpitKpis;
   compareKpis: Pick<
     FinanceCockpitKpis,
@@ -336,6 +343,101 @@ export async function fetchOperatingExpenseSummary({
       0,
     ),
     recorded: operatingRows.length > 0,
+  };
+}
+
+async function fetchFinanceVatSummary({
+  supabase,
+  tenantId,
+  branchId,
+  startDate,
+  endDate,
+}: {
+  supabase: SupabaseClient;
+  tenantId: number;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+}): Promise<FinanceVatSummary> {
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
+  const supplierInvoiceSelect =
+    branchId == null
+      ? "vat_amount"
+      : "vat_amount, goods_received_notes!inner ( branch_id )";
+
+  let supplierInvoiceQuery = supabase
+    .from("supplier_invoices")
+    .select(supplierInvoiceSelect)
+    .eq("tenant_id", tenantId)
+    .in("document_status", ["confirmed", "adjusted"])
+    .gte("invoice_date", startIso)
+    .lt("invoice_date", endIso);
+  if (branchId != null) {
+    supplierInvoiceQuery = supplierInvoiceQuery.eq(
+      "goods_received_notes.branch_id",
+      branchId,
+    );
+  }
+
+  let expenseQuery = supabase
+    .from("expenses")
+    .select("vat_amount")
+    .eq("tenant_id", tenantId)
+    .gte("expense_date", startDate)
+    .lte("expense_date", endDate);
+  if (branchId != null) expenseQuery = expenseQuery.eq("branch_id", branchId);
+
+  let outputInvoiceQuery = supabase
+    .from("tax_invoices")
+    .select("vat_amount")
+    .eq("tenant_id", tenantId)
+    .eq("status", "issued")
+    .gte("issued_at", startIso)
+    .lt("issued_at", endIso);
+  if (branchId != null) {
+    outputInvoiceQuery = outputInvoiceQuery.eq("branch_id", branchId);
+  }
+
+  const [supplierInvoices, expenses, outputInvoices] = await Promise.all([
+    supplierInvoiceQuery,
+    expenseQuery,
+    outputInvoiceQuery,
+  ]);
+
+  if (supplierInvoices.error || expenses.error) {
+    console.error("[finance:vat-input] summary query failed", {
+      supplierCode: supplierInvoices.error?.code,
+      expenseCode: expenses.error?.code,
+    });
+  }
+  if (outputInvoices.error) {
+    console.error("[finance:vat-output] summary query failed", {
+      code: outputInvoices.error.code,
+    });
+  }
+
+  const sumVat = (rows: unknown[] | null): string =>
+    addMoney(
+      (rows ?? []).map((row) => {
+        const value =
+          typeof row === "object" && row !== null && "vat_amount" in row
+            ? row.vat_amount
+            : null;
+        return String(value ?? "0");
+      }),
+    );
+
+  return {
+    inputRecorded:
+      supplierInvoices.error || expenses.error
+        ? null
+        : addMoney([
+            sumVat(supplierInvoices.data as unknown[] | null),
+            sumVat(expenses.data as unknown[] | null),
+          ]),
+    outputIssued: outputInvoices.error
+      ? null
+      : sumVat(outputInvoices.data as unknown[] | null),
   };
 }
 
@@ -955,6 +1057,7 @@ export async function fetchFinanceCockpit(
     compareOperatingExpenseSummary,
     unpaidSupplierInvoices,
     paymentDesync,
+    vat,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     fetchRevenueKpis(params.branch, resolved.start, resolved.end),
@@ -1034,6 +1137,13 @@ export async function fetchFinanceCockpit(
     }),
     fetchPaymentOrderDesync({
       supabase,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+    }),
+    fetchFinanceVatSummary({
+      supabase,
+      tenantId: claims.tenant_id,
       branchId: params.branch,
       startDate: resolved.start,
       endDate: resolved.end,
@@ -1126,6 +1236,7 @@ export async function fetchFinanceCockpit(
   return {
     branches,
     canViewInventoryValuation: canReadRequestedValuation,
+    vat,
     kpis,
     compareKpis: compareKpis
       ? {

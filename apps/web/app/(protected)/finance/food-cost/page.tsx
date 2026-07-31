@@ -60,6 +60,7 @@ export default async function FoodCostPage({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={messages.finance.nav.items.foodCost}
+        description={messages.finance.foodCost.description}
       />
       {loadFailed ? (
         <AppEmptyState

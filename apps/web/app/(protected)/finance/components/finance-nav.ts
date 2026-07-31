@@ -3,7 +3,6 @@ import {
   FileCheck as IconFileCheck,
   FileText as IconFileText,
   Landmark as IconLandmark,
-  LockKeyhole as IconLockKeyhole,
   Receipt as IconReceipt,
   Target as IconTarget,
   TrendingUp as IconTrendingUp,
@@ -20,12 +19,10 @@ export function resolveFinanceNav({
   showInvoices,
   showSupplierPayables,
   showRevenueTargets = false,
-  showCostClose = false,
 }: {
   showInvoices: boolean;
   showSupplierPayables: boolean;
   showRevenueTargets?: boolean;
-  showCostClose?: boolean;
 }): ShellNavGroup[] {
   const groups: ShellNavGroup[] = [
     {
@@ -63,15 +60,6 @@ export function resolveFinanceNav({
                 href: "/finance/targets",
                 label: financeNav.items.revenueTargets,
                 icon: IconTarget,
-              },
-            ]
-          : []),
-        ...(showCostClose
-          ? [
-              {
-                href: "/finance/cost-close",
-                label: financeNav.items.costClose,
-                icon: IconLockKeyhole,
               },
             ]
           : []),

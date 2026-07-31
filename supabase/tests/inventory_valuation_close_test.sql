@@ -6,15 +6,6 @@ DO $$
 DECLARE
   v_definition text;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.permission_keys
-    WHERE key = 'accounting:period_close'
-      AND NOT is_delegable_to_staff
-  ) THEN
-    RAISE EXCEPTION 'COST CLOSE: owner close permission is missing';
-  END IF;
-
   SELECT pg_catalog.pg_get_functiondef(procedure.oid)
   INTO v_definition
   FROM pg_catalog.pg_proc AS procedure
@@ -31,16 +22,10 @@ BEGIN
     RAISE EXCEPTION 'COST CLOSE: cutover blockers are incomplete';
   END IF;
 
-  SELECT pg_catalog.pg_get_functiondef(procedure.oid)
-  INTO v_definition
-  FROM pg_catalog.pg_proc AS procedure
-  WHERE procedure.oid =
-    'public.close_inventory_cost_period(integer,integer,text,uuid)'::pg_catalog.regprocedure;
-  IF v_definition !~ 'inventory_cost_close_waiver_required'
-     OR v_definition !~ 'inventory_valuation_movement_unposted'
-     OR v_definition !~ 'inventory_valuation_cost_pending'
-     OR v_definition !~ 'close_period_hard' THEN
-    RAISE EXCEPTION 'COST CLOSE: hard-close gates are incomplete';
+  IF pg_catalog.to_regprocedure(
+    'public.close_inventory_cost_period(integer,integer,text,uuid)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'valuation must not hard-close accounting periods';
   END IF;
 
   IF NOT EXISTS (

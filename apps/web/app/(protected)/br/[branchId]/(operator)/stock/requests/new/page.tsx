@@ -13,6 +13,7 @@ type IngredientJoin = {
   id: number;
   name: string;
   sku: string | null;
+  default_fulfill_site_kind: "central_supply" | "central_kitchen" | null;
   ingredient_units: Array<{
     unit_id: number;
     is_base: boolean;
@@ -46,7 +47,7 @@ export default async function BranchStockRequestNewPage({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -86,6 +87,7 @@ export default async function BranchStockRequestNewPage({
     id: ingredient.id,
     name: ingredient.name,
     sku: ingredient.sku,
+    fulfillSiteKind: ingredient.default_fulfill_site_kind ?? "central_supply",
     units: (ingredient.ingredient_units ?? [])
       .filter((unit) => unit.is_active)
       .sort((a, b) => a.sort_order - b.sort_order)

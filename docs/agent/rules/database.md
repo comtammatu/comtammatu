@@ -88,6 +88,42 @@ over older task notes, regressions, and memory.
 ## Migration Policy
 
 - Every migration is T3. Write the migration file before applying it.
+- `supabase/migrations/` is the active, ordered install input. A file placed
+  there is a proposal to apply in the next `db push`; it must belong to the
+  current task/PR and its purpose must be named in the owner approval. Keep
+  historical SQL only in `supabase/migration-archive/`.
+- Create an active file only with `corepack pnpm exec supabase migration new
+  <lower_snake_case_name>` from the repository root. The CLI supplies its
+  14-digit UTC version; never hand-pick a timestamp, backdate, rename, or
+  reuse one. The name describes one business/schema purpose, uses lower snake
+  case, and contains no environment, person, ticket, or implementation-status
+  label. Before creating it, snapshot `git status --short --
+  supabase/migrations` and stop if another pending migration is outside the
+  task scope or would share the apply batch.
+- An applied migration is immutable source history. Do not edit, retimestamp,
+  delete, or recreate it to make a ledger error disappear. Establish version,
+  name, and SQL-content evidence against `supabase_migrations.schema_migrations`;
+  then use the re-baseline/archive workflow or create a new corrective migration.
+  `migration repair` is never a routine recovery tool and is owner-operated only
+  under a separately approved, reviewed reconciliation procedure.
+- Run `corepack pnpm lint:migration-lineage` after creating or changing any
+  migration. Before an apply, run the target-specific dry-run and inspect its
+  complete `Would push these migrations` list. The list must equal the reviewed
+  task-owned files exactly. Any extra, missing, historical, or unknown entry is
+  a stop condition: do not use `--include-all`, do not move aside another
+  writer's file, and do not apply a subset through a different tool.
+- For Greenfield, the only CLI apply path is `node
+  scripts/supabase-greenfield-push.mjs --dry-run`, followed by the same wrapper
+  with `--apply` after exact owner delegation. It pins the registered Session
+  Pooler target. Never invoke raw `supabase db push`, `supabase link`,
+  `supabase db reset --linked`, or `supabase db pull` against a Cloud target.
+- Supabase MCP is for target verification and read-only evidence (`get_project`,
+  `list_migrations`, `execute_sql` with read-only catalog/schema queries,
+  advisors, and type inspection). Do not use MCP `apply_migration` for the
+  active Greenfield chain: it bypasses the wrapper's complete-batch dry-run and
+  makes source/ledger reconciliation harder. A disposable verified Preview may
+  use it only for an explicitly scoped rehearsal, never as a substitute for the
+  Greenfield apply path.
 - Verify the target ref before every apply. Preview Branch creation requires the
   literal registered Production parent and per-action parent verification by the
   guard. `supabase/migration-lineage.json` validates the local baseline/install

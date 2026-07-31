@@ -876,10 +876,20 @@ function safeSupabaseCliHelp(args) {
   return !args.slice(2, -1).some((token) => token.startsWith("-"));
 }
 
+function localMigrationNew(args) {
+  return (
+    args.length === 3 &&
+    args[0] === "migration" &&
+    args[1] === "new" &&
+    /^[a-z][a-z0-9_]*$/.test(args[2])
+  );
+}
+
 function readOnlySupabaseCli(args) {
   if (!args || args.length === 0) return false;
   if (
     safeSupabaseCliHelp(args) ||
+    localMigrationNew(args) ||
     [
       "--help",
       "-h",
@@ -955,6 +965,7 @@ function productionSupabaseCliReadAllowed(args) {
 function unboundSafeSupabaseCli(args) {
   return (
     safeSupabaseCliHelp(args) ||
+    localMigrationNew(args) ||
     ["--help", "-h", "--version", "-v", "version", "help", "completion"].includes(
       args[0],
     )

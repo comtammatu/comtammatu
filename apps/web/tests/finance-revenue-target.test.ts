@@ -7,6 +7,7 @@ import {
   monthStartFromIsoDate,
   normalizeRevenueRewardTiers,
   paceTargetAmount,
+  previewTargetProgress,
   targetProgressTone,
 } from "../app/(protected)/finance/_lib/revenue-target";
 
@@ -30,6 +31,14 @@ describe("revenue-target helpers", () => {
     assert.equal(daysInMonthFromStart("2026-07-01"), 31);
     assert.equal(paceTargetAmount(310_000, 10, 31), 100_000);
     assert.equal(paceTargetAmount(0, 10, 31), 0);
+  });
+
+  it("previews progress against the edited target without inventing loaded revenue", () => {
+    assert.deepEqual(previewTargetProgress(400_000, 1_000_000), {
+      progressPct: 40,
+      gapAmount: 600_000,
+    });
+    assert.equal(previewTargetProgress(null, 1_000_000), null);
   });
 
   it("normalizes fixed and revenue-percent reward tiers", () => {

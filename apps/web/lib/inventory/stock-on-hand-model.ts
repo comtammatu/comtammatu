@@ -27,7 +27,9 @@ export type StockIngredient = {
   category: string;
   itemKind: string;
   qty: number;
-  monetary: { cost: number; referenceCost: number } | null;
+  monetary: {
+    averageUnitCost: number | null;
+  } | null;
   min: number;
   max: number;
   reorder: number;

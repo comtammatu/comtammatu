@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import {
@@ -25,6 +26,8 @@ import {
   FormattedNumberInput,
   MoneyVndInput,
 } from "@/components/form";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { RowActionsMenu } from "@/components/row-actions-menu";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
 import {
   DataTable,
@@ -32,11 +35,13 @@ import {
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
 import {
+  deleteBranchRevenueTarget,
   upsertBranchRevenueTargets,
   type BranchRevenueTargetRow,
 } from "./actions";
 import {
   normalizeRevenueRewardTiers,
+  previewTargetProgress,
   type RevenueRewardTier,
   type RevenueRewardType,
 } from "../_lib/revenue-target";
@@ -50,9 +55,14 @@ type EditableRewardTier = {
   rewardValue: string;
 };
 
+type RevenueTargetSetupRow = BranchRevenueTargetRow & {
+  currentNetRevenue: number | null;
+};
+
 type EditableRow = BranchRevenueTargetRow & {
   draft: string;
   tierDrafts: EditableRewardTier[];
+  currentNetRevenue: number | null;
 };
 
 function toEditableRewardTier(
@@ -84,7 +94,7 @@ export function RevenueTargetsClient({
   initialRows,
 }: {
   yearMonth: string;
-  initialRows: BranchRevenueTargetRow[];
+  initialRows: RevenueTargetSetupRow[];
 }) {
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((row) => ({
@@ -100,6 +110,10 @@ export function RevenueTargetsClient({
   const [editingBranchId, setEditingBranchId] = useState<number | null>(null);
   const editingRow =
     rows.find((row) => row.branchId === editingBranchId) ?? null;
+
+  function openEditor(branchId: number) {
+    setEditingBranchId(branchId);
+  }
 
   function patchRewardTier(
     branchId: number,
@@ -172,27 +186,47 @@ export function RevenueTargetsClient({
         ),
       },
       {
+        key: "current",
+        header: copy.currentMonth,
+        className: "text-right",
+        render: (row) => (
+          <span className="font-mono tabular-nums">
+            {row.currentNetRevenue == null
+              ? copy.progress.unavailable
+              : formatVND(row.currentNetRevenue)}
+          </span>
+        ),
+      },
+      {
         key: "target",
         header: copy.target,
         className: "text-right",
-        render: (row) => (
-          <MoneyVndInput
-            className="ml-auto max-w-40 text-right font-mono tabular-nums"
-            value={row.draft}
-            disabled={pending}
-            controlSize="field"
-            onValueChange={(value) => {
-              setRows((current) =>
-                current.map((item) =>
-                  item.branchId === row.branchId
-                    ? { ...item, draft: value }
-                    : item,
-                ),
-              );
-            }}
-            aria-label={`${copy.target} ${row.branchName}`}
-          />
-        ),
+        render: (row) => {
+          const preview =
+            row.targetAmount == null
+              ? null
+              : previewTargetProgress(
+                  row.currentNetRevenue,
+                  row.targetAmount,
+                );
+          return (
+            <div>
+              <span className="font-mono tabular-nums">
+                {row.targetAmount == null
+                  ? copy.progress.noTarget
+                  : formatVND(row.targetAmount)}
+              </span>
+              {preview != null ? (
+                <span className="mt-1 block text-right text-xs text-muted-foreground tabular-nums">
+                  {formatPercent(preview.progressPct)}
+                  {preview.gapAmount > 0
+                    ? ` · ${copy.progress.remaining(formatVND(preview.gapAmount))}`
+                    : null}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         key: "rewardTiers",
@@ -218,7 +252,7 @@ export function RevenueTargetsClient({
                 variant="outline"
                 size="sm"
                 disabled={pending}
-                onClick={() => setEditingBranchId(row.branchId)}
+                onClick={() => openEditor(row.branchId)}
               >
                 {row.tierDrafts.length === 0
                   ? copy.rewardTiers.configure
@@ -228,41 +262,84 @@ export function RevenueTargetsClient({
           );
         },
       },
+      {
+        key: "actions",
+        header: "",
+        className: "w-12",
+        render: (row) => (
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <RowActionsMenu
+              label={`${copy.branch} ${row.branchName}`}
+              triggerSize="icon-sm"
+              items={[
+                {
+                  key: row.targetAmount == null ? "add" : "edit",
+                  label: row.targetAmount == null ? copy.add : copy.edit,
+                  icon: row.targetAmount == null ? <Plus /> : <Pencil />,
+                  onSelect: () => openEditor(row.branchId),
+                },
+                ...(row.targetAmount == null
+                  ? []
+                  : [
+                      {
+                        key: "delete",
+                        label: copy.delete,
+                        icon: <Trash2 />,
+                        destructive: true,
+                        onSelect: () => void onDelete(row),
+                      },
+                    ]),
+              ]}
+            />
+          </div>
+        ),
+      },
     ],
-    [pending],
+    [onDelete, openEditor, pending],
   );
 
-  function onSave() {
-    const payload: Array<{
-      branch_id: number;
-      target_amount: number;
-      reward_tiers: Array<{
-        threshold_pct: number;
-        reward_type: RevenueRewardType;
-        reward_value: number;
-      }>;
-    }> = [];
-
-    for (const row of rows) {
-      if (!row.draft.trim() && row.tierDrafts.length === 0) continue;
-      const amount = Number(row.draft);
-      const rewardTiers = parseRewardTiers(row.tierDrafts);
-      if (!Number.isFinite(amount) || amount <= 0 || !rewardTiers) {
-        toast.error(copy.errors.invalidPayload);
+  async function onDelete(targetRow: EditableRow) {
+    const ok = await confirm({
+      title: copy.deleteTitle(targetRow.branchName),
+      description: copy.deleteConfirm,
+      confirmText: copy.delete,
+      cancelText: copy.deleteCancel,
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteBranchRevenueTarget({
+        year_month: yearMonth,
+        branch_id: targetRow.branchId,
+      });
+      if (!result.success) {
+        toast.error(result.error);
         return;
       }
-      payload.push({
-        branch_id: row.branchId,
-        target_amount: amount,
-        reward_tiers: rewardTiers.map((tier) => ({
-          threshold_pct: tier.thresholdPct,
-          reward_type: tier.rewardType,
-          reward_value: tier.rewardValue,
-        })),
-      });
-    }
+      toast.success(copy.deleted);
+      setRows((current) =>
+        current.map((row) => {
+          if (row.branchId !== targetRow.branchId) return row;
+          return {
+            ...row,
+            targetAmount: null,
+            draft: "",
+            rewardTiers: [],
+            tierDrafts: [],
+          };
+        }),
+      );
+    });
+  }
 
-    if (payload.length === 0) {
+  function onSave() {
+    if (!editingRow) return;
+    const amount = Number(editingRow.draft);
+    const rewardTiers = parseRewardTiers(editingRow.tierDrafts);
+    if (!Number.isFinite(amount) || amount <= 0 || !rewardTiers) {
       toast.error(copy.errors.invalidPayload);
       return;
     }
@@ -270,38 +347,40 @@ export function RevenueTargetsClient({
     startTransition(async () => {
       const result = await upsertBranchRevenueTargets({
         year_month: yearMonth,
-        rows: payload,
+        rows: [
+          {
+            branch_id: editingRow.branchId,
+            target_amount: amount,
+            reward_tiers: rewardTiers.map((tier) => ({
+              threshold_pct: tier.thresholdPct,
+              reward_type: tier.rewardType,
+              reward_value: tier.rewardValue,
+            })),
+          },
+        ],
       });
       if (!result.success) {
         toast.error(result.error);
         return;
       }
-      toast.success(copy.saved(String(result.data?.updated ?? payload.length)));
       setRows((current) =>
-        current.map((row) => {
-          const saved = payload.find((item) => item.branch_id === row.branchId);
-          if (!saved) return row;
-          return {
-            ...row,
-            targetAmount: saved.target_amount,
-            draft: String(saved.target_amount),
-            rewardTiers: saved.reward_tiers.map((tier) => ({
-              thresholdPct: tier.threshold_pct,
-              rewardType: tier.reward_type,
-              rewardValue: tier.reward_value,
-            })),
-            tierDrafts: saved.reward_tiers.map((tier, index) =>
-              toEditableRewardTier(
-                {
-                  thresholdPct: tier.threshold_pct,
-                  rewardType: tier.reward_type,
-                  rewardValue: tier.reward_value,
-                },
-                `${row.branchId}-${index}`,
-              ),
-            ),
-          };
-        }),
+        current.map((row) =>
+          row.branchId === editingRow.branchId
+            ? {
+                ...row,
+                targetAmount: amount,
+                draft: String(amount),
+                rewardTiers,
+                tierDrafts: rewardTiers.map((tier, index) =>
+                  toEditableRewardTier(tier, `${row.branchId}-${index}`),
+                ),
+              }
+            : row,
+        ),
+      );
+      setEditingBranchId(null);
+      toast.success(
+        editingRow.targetAmount == null ? copy.added : copy.updated,
       );
     });
   }
@@ -318,8 +397,17 @@ export function RevenueTargetsClient({
     <>
       <div className="flex flex-col gap-4">
         <AppToolbar>
-          <Button type="button" onClick={onSave} disabled={pending}>
-            {pending ? copy.saving : copy.save}
+          <Button
+            type="button"
+            onClick={() => {
+              const row = rows.find((item) => item.targetAmount == null);
+              if (row) openEditor(row.branchId);
+              else toast.error(copy.allConfigured);
+            }}
+            disabled={pending || !rows.some((row) => row.targetAmount == null)}
+          >
+            <Plus />
+            {copy.add}
           </Button>
         </AppToolbar>
         <DataTable
@@ -338,23 +426,51 @@ export function RevenueTargetsClient({
         }}
         title={
           editingRow
-            ? copy.rewardTiers.title(editingRow.branchName)
-            : copy.rewardTiers.column
+            ? editingRow.targetAmount == null
+              ? copy.editor.addTitle(editingRow.branchName)
+              : copy.editor.editTitle(editingRow.branchName)
+            : copy.editor.editTitle("")
         }
-        description={copy.rewardTiers.description}
+        description={copy.editor.description}
         contentClassName="sm:max-w-3xl"
         footer={
           <Button
             type="button"
-            onClick={() => setEditingBranchId(null)}
+            onClick={onSave}
             disabled={pending}
           >
-            {copy.rewardTiers.done}
+            {pending ? copy.saving : copy.editor.save}
           </Button>
         }
       >
         {editingRow ? (
           <>
+            <Field>
+              <FieldLabel htmlFor="revenue-target-amount">
+                {copy.editor.targetLabel}
+              </FieldLabel>
+              <MoneyVndInput
+                id="revenue-target-amount"
+                value={editingRow.draft}
+                onValueChange={(value) =>
+                  setRows((current) =>
+                    current.map((row) =>
+                      row.branchId === editingRow.branchId
+                        ? { ...row, draft: value }
+                        : row,
+                    ),
+                  )
+                }
+                controlSize="field"
+                disabled={pending}
+              />
+            </Field>
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium">{copy.rewardTiers.column}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {copy.rewardTiers.description}
+              </p>
+            </div>
             <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
               {editingRow.tierDrafts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">

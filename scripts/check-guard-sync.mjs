@@ -1479,6 +1479,16 @@ const FIXTURES = [
   ["allow: supabase top-level version", 0, bash("supabase --version")],
   ["allow: supabase short top-level version", 0, bash("supabase -v")],
   [
+    "allow: local Supabase migration scaffold with a lower snake case name",
+    0,
+    bash("supabase migration new add_supplier_status"),
+  ],
+  [
+    "block: local Supabase migration scaffold with a non-canonical name",
+    2,
+    bash("supabase migration new add-supplier-status"),
+  ],
+  [
     "allow: supabase top-level completions",
     0,
     bash("supabase --completions zsh"),

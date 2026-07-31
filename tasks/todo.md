@@ -14,15 +14,6 @@ Lane: inventory/fulfillment
 Exit: One stock request renders as one fulfillment row and one Owner/Ops document dialog across Central Supply and Central Kitchen lanes; only manual transfers render independently; Central Kitchen can request Central Supply ingredients at its pinned site while Branch keeps its Page/fullscreen touch workflow.
 Evidence: pure projection and static UI tests, stock fulfillment rollback SQL test, repository gates, and authenticated Owner/Central Supply/Central Kitchen/Branch responsive smoke after the additive migration is applied to an authorized target.
 
-### T3 review
-
-- **PM:** Keep one operator task from request through dispatch and receipt without merging the two legal stock documents.
-- **BA:** Source lanes retain separate authority; Central Kitchen may request only Central Supply ingredients, while mixed Branch requests retain both sources.
-- **Senior Dev:** Reuse the current request/transfer tables, RPCs, detail loaders, presenters, and AppDialog URL pattern; projection owns row deduplication.
-- **QA:** Prove one row, one dialog, two-source progress, deep links, filter retention, pinned-site authority, idempotency, notification expiry, and real-role receive actions.
-
-Synthesis: no journey table, workflow engine, availability query, feature flag, or parallel detail implementation.
-
 - [ ] Apply the migration to an owner-authorized Greenfield target, regenerate types, run the rollback SQL test, and complete authenticated responsive smoke at `390×844`, `768×1024`, and `1440×900`.
 
 ## Standardize vi-VN money and VAT precision
@@ -34,25 +25,30 @@ Lane: finance/tax-money
 Exit: Finance, expense VAT, and supplier invoice amounts preserve scale-2 values from input through PostgreSQL while POS, menu, cash, VietQR, and shift settlement remain whole-VND.
 Evidence: shared fixed-point and formatter tests, form/static contracts, expense and supplier-invoice SQL regressions, data audits, repository gates, and authenticated Preview smoke.
 
-### T3 review
-
-- **PM:** Limit the correction to accounting money and VAT accuracy; keep POS settlement and payment-provider boundaries whole-VND.
-- **BA:** Accept at most two money decimals, retain manual document VAT over auto calculation, reject excess scale before persistence, and never rewrite historical values without accounting approval.
-- **Senior Dev:** Put deterministic decimal parsing and half-up arithmetic in shared fixed-point utilities, mirror scale constraints in Zod and PostgreSQL, and derive persisted headers from normalized lines.
-- **QA:** Prove vi-VN round trips, exact VAT and addition examples, manual VAT persistence, many-line reconciliation, excess-scale rejection, and unchanged VietQR/Viettel/POS behavior.
-
-Synthesis: canonical decimal strings cross application boundaries; scaled integers own arithmetic; RPCs and triggers reject rather than silently round; fixed-2 display is reserved for Finance, tax, and document detail.
-
-- [x] Implement the scale-2 formatter/fixed-point contract, Finance and supplier
-  form boundaries, whole-VND POS/menu adapters, fail-closed migration, and SQL
-  regression.
-- [x] Run the registered Greenfield read-only anomaly audit; every expense,
-  supplier invoice, menu/POS/payment, and shift-settlement group returned zero.
-- [x] Apply the migration and its runtime `COALESCE` correction to the
-  owner-authorized Greenfield target, regenerate database types, and verify the
-  catalog guards, RPC grants, excess-scale rejection, and zero-anomaly audit.
 - [ ] Run DB tests in the CI database container and complete the authenticated
-  expense/supplier-invoice smoke before Production consideration.
+      expense/supplier-invoice smoke before Production consideration.
+
+## Route document stock corrections through the inventory ledger RPC
+
+State: ready
+Kind: defect
+Tier: T3
+Lane: inventory/ledger
+Exit: GRN, issue, transfer, and production document corrections use one authenticated, idempotent RPC that validates source, scope, stock, and actor in the same transaction; runtime code cannot insert `stock_movements` directly; invoice, payment, VAT, and WAC facts remain unchanged.
+Evidence: CodeGraph flow from every document dialog to the mutation boundary, focused SQL and static regressions, repository gates, authorized Greenfield apply, and authenticated correction smoke.
+
+- [ ] Replace `createInventoryDocumentCorrection` direct DML with the atomic RPC and add the smallest executable guard that rejects future runtime inserts into `stock_movements`.
+
+## Revalidate the HRM F1-F15 findings against current authority
+
+State: triage
+Kind: debt
+Tier: T3
+Lane: hr/domain-integrity
+Exit: Every HRM finding is rechecked against current source and routed once: confirmed defects become bounded outcomes or executable guards, stable contracts move to their owning HR docs, and unconfirmed or superseded claims are dropped.
+Evidence: CodeGraph traces for employee provisioning, attendance, checklist, contract, leave, and payroll flows plus focused current tests and the owner decision boundary in ADR 0019.
+
+- [ ] Re-audit the current HR flows, then split only confirmed and independently deliverable outcomes.
 
 ## Stabilize supplier invoice matching, payment, and advance
 
@@ -62,21 +58,6 @@ Tier: T3
 Lane: finance/procurement-ap
 Exit: Goods invoices match all confirmed receipt allocations through one DB helper with a ±1 VND tolerance; service invoices require reasoned verification; Owner and Accountant record invoice-bound payments while only Owner allocates visible supplier advances; retry and later allocation never duplicate payment or money movement.
 Evidence: additive migration replay, focused DB tests, permission/static UI tests, repository gates, and authenticated Owner/Accountant responsive smoke after the migration is applied to an authorized target.
-
-### T3 review
-
-- **PM:** Keep supplier AP compact: invoice evidence, matching state, payable state, and visible advances only; no approval engine or general ledger.
-- **BA:** Goods invoices allocate confirmed GRNs/POs from one supplier; service invoices have no receipt allocation. Accountant owns document matching and invoice-bound payment, while Owner alone owns advance creation and allocation.
-- **Senior Dev:** Creation and recompute share one locked helper; payment and later advance allocation are append-only, idempotent RPCs. Direct authenticated DML is removed.
-- **QA:** Cover multi-GRN equality, ±1 VND, discrepancy acceptance, unverified service/VAT blocks, Owner/Accountant payment, Accountant advance rejection, exact replay, advance reuse, money-once behavior, URL history, and one-overlay behavior.
-
-Synthesis: reuse the current supplier invoice list/Sheet and RPC seams. Persist matching evidence and advance balance; do not create a second AP workflow or routing abstraction.
-
-### UI Advisor Gate
-
-- **Surfaces:** Keep the full-width list as the workspace, the existing right Sheet for document detail, and sequential FormDialogs for create, pay, credit, and advance.
-- **Primary action:** Invoice state and permission decide the single next action; service uses `Xác minh chứng từ`, goods uses matching actions, Owner and Accountant see invoice payment, and only Owner sees advance allocation.
-- **Responsive:** Keep one overlay open at a time; URL params restore detail/mode through Back, Forward, refresh, and deep links.
 
 - [ ] Run authenticated Owner/Accountant smoke when Greenfield has valid QA credentials.
 - [ ] Run the cleanup migration only after deployed callers no longer use direct DML or old payment/matching RPC signatures.
@@ -90,15 +71,6 @@ Lane: inventory/procurement
 Exit: Warehouse submits purchase demand without supplier or price; Accountant allocates the exact quantity across active suppliers and atomically creates supplier-specific approved POs plus one GRN draft per PO; supplier invoice lines remain the only commercial purchase-price input; Owner/Accountant invoice payment and Owner-only advances remain idempotent.
 Evidence: additive migration replay, atomic RPC behavior tests, role/static workflow contracts, repository gates, and authenticated responsive smoke after the migration is applied to an authorized target.
 
-### T3 review
-
-- **PM:** Reuse `purchase_requests` as the operator-facing Nhu cầu mua record and keep one `Mua hàng` workspace with `needs` and `orders` tabs; do not add a workflow engine.
-- **BA:** Warehouse records quantity only. Accountant must allocate every demand line exactly across active suppliers; approval creates one PO and one GRN draft per supplier. Cancelling an unreceived PO returns its quantity to the original demand.
-- **Senior Dev:** Existing purchase request, PO, GRN, supplier mapping, AppDialog, and URL-param seams are reused. Locked RPCs own allocation, grouping, idempotency, and recovery; compatibility RPCs remain during additive rollout.
-- **QA:** Cover missing suppliers at submit versus approve, exact allocation, invalid mappings, retries, PO cancellation recovery, one-GRN-per-PO, price payload absence, Back/Forward/deep links, dirty close, and responsive overlays.
-
-Synthesis: keep demand, supplier allocation, receiving, invoice evidence, and payment as explicit boundaries. Preserve YCH/Transfer, Branch/Owner separation, monetary authority, and old RPC compatibility until deployed callers are proven migrated.
-
 - [ ] Apply the additive migrations to the authorized Greenfield target, regenerate database types, and run authenticated Warehouse/Accountant/Owner smoke before cleanup.
 
 ## Retire purchase request → PO compatibility
@@ -109,15 +81,6 @@ Tier: T3
 Lane: inventory/procurement-finance
 Exit: No new application caller, navigation item, or canonical route creates YCM; legacy RPCs/columns remain only through additive rollout and are removed after deployed-caller and data cleanup proof.
 Evidence: additive migration replayed from the current baseline and applied to Greenfield; 38 focused PO/GRN/Finance acceptance tests; URL-filtered unified GRN list; regenerated Greenfield database types; post-apply RLS, RPC grants, and advisor checks.
-
-### T3 review
-
-- **PM:** The operational queue starts from approved POs that still have undelivered quantity. Internal `stock_requests` remain separate. No promotion engine, OCR, multi-currency, or speculative approval workflow is added.
-- **BA:** `purchase_request → purchase_order → goods_received_note` is one-to-many at each boundary, while every new PO and GRN has exactly one parent. Free goods are ordinary zero-price PO lines. Unplanned accepted excess is stored separately from PO fulfillment and has zero receipt value. Invoices, payments, and credits use allocation rows; returns do not mutate AP automatically.
-- **Senior Dev:** Multi-row writes stay in locked RPCs. Duplicate ingredient PO lines are preserved by line identity, not ingredient aggregation. Legacy confirmed GRNs and retrospective links remain readable; no heuristic split or destructive backfill is allowed. Monetary list payloads are selected only for authorized roles.
-- **QA:** Concurrency, idempotency, partial deliveries, zero-price lines, excess, rejection, stable pagination, URL filters, role-based payload absence, invoice matching, payment allocation, and legacy compatibility each require executable coverage.
-
-Synthesis: replace only the active procurement path and keep compatibility columns/functions read-only where existing records still depend on them. Database constraints and RPC locks own invariants; UI reflects the resulting state and does not recreate business rules.
 
 - [ ] Run authenticated `390×844`, `768×1024`, and `1440×900` smoke after the migration is applied to the authorized target.
 - [ ] Smoke supplier invoice URL modes at `390×844` and `1440×900`: create from GRN, Back/Forward detail, view → pay/credit, filter retention, and permission-hidden create action.

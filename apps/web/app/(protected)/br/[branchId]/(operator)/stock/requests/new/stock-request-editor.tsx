@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Combobox } from "@comtammatu/ui/components/combobox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Item, ItemContent, ItemTitle } from "@comtammatu/ui/components/item";
@@ -29,6 +30,7 @@ export type StockRequestIngredientOption = {
   id: number;
   name: string;
   sku: string | null;
+  fulfillSiteKind: "central_supply" | "central_kitchen";
   units: Array<{ id: number; label: string; isBase: boolean }>;
 };
 
@@ -59,6 +61,14 @@ const ingredientFilter = (
   [option.label, ...(option.keywords ?? [])].some((value) =>
     value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi")),
   );
+
+function fulfillSiteLabel(
+  kind: StockRequestIngredientOption["fulfillSiteKind"],
+): string {
+  return kind === "central_supply"
+    ? copy.sourceCentralSupply
+    : copy.sourceCentralKitchen;
+}
 
 function toLocalDateTime(value: string | null): string {
   if (!value) return "";
@@ -197,13 +207,26 @@ export function StockRequestEditor({
                   options={ingredients.map((item) => ({
                     value: String(item.id),
                     label: item.name,
-                    keywords: item.sku ? [item.sku] : undefined,
+                    keywords: [
+                      ...(item.sku ? [item.sku] : []),
+                      fulfillSiteLabel(item.fulfillSiteKind),
+                    ],
+                    hint: copy.sourceHint(
+                      fulfillSiteLabel(item.fulfillSiteKind),
+                    ),
                   }))}
                   placeholder={copy.chooseIngredient}
                   searchPlaceholder={copy.searchIngredient}
                   emptyMessage={copy.ingredientNotFound}
                   filter={ingredientFilter}
                 />
+                {ingredient ? (
+                  <Badge variant="secondary" className="w-fit">
+                    {copy.sourceHint(
+                      fulfillSiteLabel(ingredient.fulfillSiteKind),
+                    )}
+                  </Badge>
+                ) : null}
                 <div className="grid grid-cols-[minmax(0,1fr)_7rem_auto] gap-2">
                   <FormattedNumberInput
                     value={line.quantity}

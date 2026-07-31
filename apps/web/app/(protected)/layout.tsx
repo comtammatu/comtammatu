@@ -121,7 +121,6 @@ export default async function ProtectedLayout({
         showInvoices,
         showSupplierPayables,
         showRevenueTargets: isOwner,
-        showCostClose: isOwner,
       }}
     >
       {children}

@@ -702,9 +702,6 @@ REVOKE ALL ON FUNCTION
   private.lock_inventory_valuation_pool(bigint, bigint, bigint, bigint)
 FROM PUBLIC, anon, authenticated;
 
-REVOKE ALL ON FUNCTION
-  public.get_inventory_valuation_reconciliation(integer, integer, bigint)
-FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION
   public.get_inventory_valuation_reconciliation(integer, integer, bigint)
 TO authenticated, service_role;

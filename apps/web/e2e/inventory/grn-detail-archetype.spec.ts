@@ -85,12 +85,12 @@ test.describe("GRN list-first document dialog", () => {
     });
     if (signInError) throw new Error("Failed to authenticate E2E owner.");
 
-    const { data: requestResult, error: requestError } = await ownerClient.rpc(
-      "save_purchase_request" as never,
+    const { data: poResult, error: poError } = await ownerClient.rpc(
+      "save_purchase_order_group" as never,
       {
-        p_request_id: null,
+        p_group_key: null,
         p_branch_id: centralSupply.id,
-        p_needed_by: null,
+        p_expected_delivery_date: null,
         p_notes: "GRN dialog E2E",
         p_lines: [
           {
@@ -100,44 +100,6 @@ test.describe("GRN list-first document dialog", () => {
           },
         ],
         p_submit: true,
-        p_idempotency_key: crypto.randomUUID(),
-      } as never,
-    );
-    const requestId = Number(
-      (requestResult as { request_id?: unknown } | null)?.request_id,
-    );
-    if (requestError || !Number.isSafeInteger(requestId)) {
-      throw new Error("Failed to seed E2E purchase request.");
-    }
-
-    const { data: requestLine, error: requestLineError } = await ownerClient
-      .from("purchase_request_items")
-      .select("id")
-      .eq("tenant_id", tenantId)
-      .eq("purchase_request_id", requestId)
-      .single();
-    if (requestLineError || !requestLine) {
-      throw new Error("Failed to resolve E2E purchase request line.");
-    }
-
-    const { data: poResult, error: poError } = await ownerClient.rpc(
-      "save_purchase_orders_from_request" as never,
-      {
-        p_request_id: requestId,
-        p_orders: [
-          {
-            supplier_id: supplierId,
-            expected_delivery_date: null,
-            lines: [
-              {
-                request_item_id: requestLine.id,
-                quantity: 10,
-                unit_price: 10000,
-              },
-            ],
-          },
-        ],
-        p_send: true,
         p_idempotency_key: crypto.randomUUID(),
       } as never,
     );
@@ -153,10 +115,11 @@ test.describe("GRN list-first document dialog", () => {
     }
 
     const { error: grnError } = await ownerClient.rpc(
-      "create_grn_draft_from_po" as never,
+      "review_purchase_order" as never,
       {
         p_po_id: poId,
-        p_idempotency_key: crypto.randomUUID(),
+        p_action: "approve",
+        p_reason: null,
       } as never,
     );
     if (grnError) throw new Error("Failed to seed E2E GRN.");

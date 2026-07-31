@@ -86,8 +86,6 @@ BEGIN
   ) IS NULL OR pg_catalog.to_regprocedure(
     'public.get_supplier_invoice_valuation_summary(bigint)'
   ) IS NULL OR pg_catalog.to_regprocedure(
-    'public.close_inventory_cost_period(integer,integer,text,uuid)'
-  ) IS NULL OR pg_catalog.to_regprocedure(
     'public.get_inventory_valuation_period_value(date,date,bigint)'
   ) IS NULL THEN
     RAISE EXCEPTION 'valuation public RPC contract is incomplete';

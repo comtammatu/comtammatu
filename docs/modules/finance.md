@@ -226,7 +226,6 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/targets`           | Monthly revenue target setup | Owner-only target and non-cumulative reward tiers; no automatic payroll allocation           |
 | `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
-| `/finance/cost-close`        | Inventory cost close         | Owner-only valuation reconciliation and period close; no statutory GL or period reopen UI    |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
 
 Inventory owns the detailed stock-value workspace. Finance displays only the

@@ -20,6 +20,7 @@ const PERSISTED_SNAPSHOT_MARKERS = [
   ["docs/spec/database-schema.md", "## Current Snapshot"],
 ];
 const TASK_PATH = "tasks/todo.md";
+const DECISION_PATH = "docs/plan/decisions.md";
 const TASK_FIELDS = ["State", "Kind", "Tier", "Lane", "Exit", "Evidence"];
 const TASK_STATES = new Set(["triage", "ready", "doing", "verify", "blocked"]);
 const TASK_KINDS = new Set([
@@ -105,6 +106,23 @@ function validateTaskDoc(taskDoc) {
   if (/^Status:/im.test(taskDoc)) {
     reasons.push("Status is not a task field; use the State lifecycle");
   }
+  if (/^### (?:T[23] review|UI Advisor Gate)\s*$/im.test(taskDoc)) {
+    reasons.push("review transcripts belong in the task or PR conversation");
+  }
+  return reasons;
+}
+
+function validateDecisionDoc(decisionDoc) {
+  const reasons = [];
+  if (
+    /^<!--\s*DRAFT\b/m.test(decisionDoc) ||
+    /^## D\d+:.*(?:\((?:DRAFT|NHÁP)\)|\[(?:DRAFT|NHÁP)\])/m.test(decisionDoc)
+  ) {
+    reasons.push("draft decisions belong in a Parked ADR");
+  }
+  if (/^\*\*(?:Status|Trạng thái):\*\*/m.test(decisionDoc)) {
+    reasons.push("decision status belongs in an ADR, not decisions.md");
+  }
   return reasons;
 }
 
@@ -156,6 +174,13 @@ function collectViolations() {
   } else {
     for (const reason of validateTaskDoc(readFileSync(TASK_PATH, "utf8"))) {
       violations.push({ path: TASK_PATH, reason });
+    }
+  }
+  if (existsSync(DECISION_PATH)) {
+    for (const reason of validateDecisionDoc(
+      readFileSync(DECISION_PATH, "utf8"),
+    )) {
+      violations.push({ path: DECISION_PATH, reason });
     }
   }
   return violations;
@@ -212,6 +237,25 @@ Blocker: External dependency. Recheck after it changes.
       /Status is not/.test(reason),
     ),
   );
+  assert.ok(
+    validateTaskDoc(`${valid}\n### T3 review\n\n- PM: transcript\n`).some(
+      (reason) => /review transcripts/.test(reason),
+    ),
+  );
+  assert.deepEqual(
+    validateDecisionDoc("## D001: Accepted\n\n**Decision:** Keep it.\n"),
+    [],
+  );
+  assert.ok(
+    validateDecisionDoc("## D001: Option (NHÁP)\n").some((reason) =>
+      /Parked ADR/.test(reason),
+    ),
+  );
+  assert.ok(
+    validateDecisionDoc("## D001: Option\n\n**Status:** Draft\n").some(
+      (reason) => /not decisions\.md/.test(reason),
+    ),
+  );
   assert.equal(isDurablePath("docs/plan/design-system-rollout.md"), true);
   assert.equal(
     isDurablePath("docs/plan/design-system-baseline-decision.md"),
@@ -221,7 +265,7 @@ Blocker: External dependency. Recheck after it changes.
     isDurablePath(["docs", "plan", "another-rollout.md"].join("/")),
     false,
   );
-  console.log("doc-staleness self-test: 12 lifecycle fixtures passed.");
+  console.log("doc-staleness self-test: 16 lifecycle fixtures passed.");
 }
 
 function main() {

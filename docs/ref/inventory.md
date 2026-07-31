@@ -150,7 +150,7 @@ diễn giải lại ledger cũ.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` là **giá nhập tham chiếu**; **giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **Đơn vị xuất**.
+Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và tính trên **Đơn vị xuất**.
 
 - `item_kind = raw_material`: nguyên liệu đầu vào.
 - `item_kind = finished_good`: thành phẩm sản xuất tại chi nhánh hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing location của chi nhánh.
@@ -159,7 +159,7 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
 - **`current_quantity`:** tồn thực theo **Đơn vị xuất** của nguyên liệu.
-- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **Đơn vị xuất**, cập nhật khi **GRN** (tại Kho CN của chi nhánh) và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
+- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó, tính theo **Đơn vị xuất**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
 
 ---
 
@@ -281,32 +281,31 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 2. Kho Tổng hoặc Bếp Trung Tâm tạo **Yêu cầu mua**. Đây là nhu cầu mua ngoài;
    **Yêu cầu hàng** vẫn chỉ dùng cho cấp hàng nội bộ về chi nhánh.
 3. Kế toán hoặc Owner tạo một hay nhiều **PO** từ Yêu cầu mua. Mỗi PO thuộc đúng
-   một Yêu cầu mua và một NCC. Có thể giữ nhiều dòng cùng nguyên liệu; hàng tặng
-   biết trước là dòng riêng có `unit_price_est = 0`.
+   một Yêu cầu mua và một NCC; PO chỉ xác nhận nhu cầu, NCC, số lượng và đơn vị.
 4. Khi PO chuyển sang `sent`, hệ thống tạo ngay đúng một GRN nháp
    **Chờ nhập hàng**, sao chép các dòng còn thiếu và khóa nháp thứ hai của cùng
    PO. Người nhận hàng làm việc trực tiếp từ danh sách GRN, không cần quay lại
    PO để tạo phiếu.
 5. Kho nhập thực nhận và từ chối. Khi xác nhận, RPC khóa PO/GRN/dòng, tính phần
-   áp dụng PO, ghi tăng số lượng đúng một lần và tạo receipt cost origin theo
-   giá vận hành tạm tính. PO chuyển `partially_received` hoặc `received` trong
-   cùng transaction; nếu còn thiếu, hệ thống tự tạo GRN nháp kế tiếp.
+   áp dụng PO và ghi tăng số lượng đúng một lần. Giá tạm chỉ có thể lấy từ một
+   Hóa đơn NCC đã xác nhận trước đó; nếu chưa có thì dòng chờ Hóa đơn NCC. PO
+   chuyển `partially_received` hoặc `received` trong cùng transaction; nếu còn
+   thiếu, hệ thống tự tạo GRN nháp kế tiếp.
 6. Finance ghi nhận **Hóa đơn NCC** riêng, có thể đối chiếu nhiều GRN/PO cùng
    NCC; thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn.
 
-**Nguyên tắc D096:** `purchase_order_items.unit_price_est` là giá theo đơn vị
-nhập. `grn_items.po_applied_quantity` là phần thực nhận dùng hoàn thành PO.
-`accepted_quantity - po_applied_quantity` là dư ngoài đơn và có giá nhập `0`.
-Kho không được nhận monetary payload từ server.
+**Nguyên tắc D096:** `grn_items.po_applied_quantity` là phần thực nhận dùng
+hoàn thành PO. Giá cuối cùng thuộc dòng Hóa đơn NCC đã xác nhận và được phân bổ
+vào GRN; PO không là nguồn giá. Kho không được nhận monetary payload từ server.
 
 PO mới chỉ dùng nguyên liệu có mapping `supplier_items.is_active = true` với NCC
 của PO. Bỏ mapping không sửa chứng từ lịch sử. GRN mới suy NCC từ PO và không
 cho đổi nguyên liệu, quy cách hoặc NCC.
 
-Đối soát tiền dùng phần giá trị áp dụng PO trước VAT. Dòng PO giá `0` và phần dư
-giá `0` không xuất hiện trên hóa đơn vẫn khớp. Nếu NCC tính tiền phần dư, Finance
-ghi `unplanned_billed_quantity`; việc chấp nhận chênh lệch bắt buộc có lý do và
-không sửa lịch sử GRN hoặc WAC.
+Đối soát tiền dùng giá trị dòng Hóa đơn NCC trước VAT và chiết khấu chứng từ,
+phân bổ theo số lượng thực nhận trên GRN. Nếu NCC tính tiền phần dư, Finance ghi
+`unplanned_billed_quantity`; việc chấp nhận chênh lệch bắt buộc có lý do và
+không sửa số lượng lịch sử GRN.
 `vat_amount` chỉ cộng vào công nợ phải trả; không làm tăng giá trị hàng nhận
 trong bước đối soát này. `supplier_invoices.vat_breakdown` giữ từng nhóm
 0%/5%/8%/10% của chứng từ; header `subtotal`, `vat_amount` và `total_amount`
@@ -336,7 +335,7 @@ variance/baseline/evidence hoặc quyết định review.
 ## 6. Phương pháp tính giá xuất kho
 
 - **Current:** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập
-  nhật khi xác nhận GRN tại chi nhánh.
+  nhật từ sổ định giá khi Hóa đơn NCC được xác nhận.
 - **FIFO / FEFO theo lô:** hướng mở rộng sau (cần bảng lô/batch); phần mở đầu §6 cũ nhắc FIFO như **nguyên tắc thực phẩm**, không mâu thuẫn nếu ghi rõ **hệ thống v1 dùng WAC**.
 
 Công thức WAC sau mỗi dòng nhập (đơn giản hóa):
@@ -348,10 +347,10 @@ WAC_new = (Q_old × WAC_old + Q_recv_base × đơn_giá_nhập_quy_đổi_về_t
 
 ### 6.1 Kiểm soát giá
 
-Owner/Kế toán kiểm soát đơn giá khi duyệt PO. Inventory không tính ngưỡng lệch
-giá, không yêu cầu Kho giải trình/đính ảnh giá và không tạo approval thứ hai tại
-GRN. Finance có thể đối soát PO/GRN/HĐ NCC sau đó; kết quả đối soát không thay
-đổi QC vật lý hay làm phát sinh price-QC trong Inventory.
+Kế toán hoặc Owner nhập và xác nhận đơn giá trên Hóa đơn NCC. Inventory không
+tính ngưỡng lệch giá, không yêu cầu Kho giải trình/đính ảnh giá và không tạo
+approval thứ hai tại GRN. Kết quả đối soát không thay đổi QC vật lý hay làm phát
+sinh price-QC trong Inventory.
 
 ---
 
@@ -448,7 +447,7 @@ Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, ho
 `/inventory/expiry`.
 
 - GRN draft ghi số thực nhận / đơn vị nhập / số từ chối / lý do + ảnh khi có;
-  đơn giá mua sync từ PO khi duyệt. Không ghi lô/HSD/nhiệt độ.
+  giá chỉ được nhận từ Hóa đơn NCC đã xác nhận. Không ghi lô/HSD/nhiệt độ.
 - Stock control dùng WAC + tồn theo location; cảnh báo ưu tiên hiện tại là tồn thấp/reorder và phiếu đang mở.
 - Khi cần quản lý hạn dùng thật, phải thiết kế lại thành lot ledger hoàn chỉnh.
 
@@ -457,7 +456,7 @@ Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, ho
 ## 10. Báo cáo (gợi ý truy vấn)
 
 - **Food cost (chi nhánh):** lọc `stock_movements` `type = 'consumption'` theo `branch_id` và kỳ thời gian; join `ingredients`.
-- **Giá trị tồn:** `sum(current_quantity * avg_unit_cost)` trên stock-bearing locations (hoặc `ingredients.unit_cost` nếu chưa có WAC tại kho).
+- **Giá trị tồn:** `sum(current_quantity * avg_unit_cost)` trên stock-bearing locations.
 - **AP aging:** nhóm `supplier_invoices` chưa `paid` theo bucket `current / 1-30 / 31-60 / 61-90 / >90 ngày` khi Finance handoff mở; không phải gate đóng ngày Inventory.
 - **Consumption variance:** so sánh tiêu hao lý thuyết từ recipe (`mv_food_cost`) với actual approved consumption (`stock_movements.consumption/sale_consumption`) để tìm site lệch lớn.
 

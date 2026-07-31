@@ -341,6 +341,8 @@ export const inventory = {
       sourceSelectorAria: "Nguồn xử lý yêu cầu",
       noLinesInScope: "Không có dòng trong phạm vi nguồn của bạn.",
       sourceTitle: (label: string) => `Nguồn: ${label}`,
+      sourcePendingSummary: (pending: number, total: number) =>
+        `${formatCount(pending)}/${formatCount(total)} dòng chờ xử lý`,
       selectAllPending: "Chọn tất cả chờ xử lý",
       exportLocation: "Vị trí xuất",
       chooseExportLocation: "Chọn vị trí xuất",
@@ -442,6 +444,9 @@ export const inventory = {
       chooseIngredient: "Chọn nguyên liệu",
       searchIngredient: "Tìm nguyên liệu",
       ingredientNotFound: "Không tìm thấy nguyên liệu",
+      sourceHint: (label: string) => `Nguồn đáp ứng: ${label}`,
+      sourceCentralSupply: "Kho Tổng",
+      sourceCentralKitchen: "Bếp Trung Tâm",
       quantity: "Số lượng",
       unitAria: "Đơn vị tính",
       unitShort: "ĐVT",
@@ -601,7 +606,8 @@ export const inventory = {
   value: {
     eyebrow: "Báo cáo",
     title: "Giá trị tồn kho",
-    description: "Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền.",
+    description:
+      "Giá trị ghi sổ của số lượng còn trong kho theo phạm vi được phân quyền.",
     tabs: {
       system: "Toàn hệ thống",
       branch: "Theo chi nhánh",
@@ -610,7 +616,7 @@ export const inventory = {
     viewScope: "Phạm vi xem",
     systemScope: "Toàn hệ thống",
     systemDescription:
-      "Tổng hợp tất cả chi nhánh theo giá vốn BQ hoặc giá nhập tham chiếu.",
+      "Tổng giá trị ghi sổ của tồn hiện có; không phải giá mua hoặc giá vốn món.",
     branchTotal: "Tổng theo chi nhánh",
     inventoryValue: "Giá trị tồn kho",
     loadFailed: "Không thể tải dữ liệu",
@@ -1046,8 +1052,8 @@ export const inventory = {
       listHint: "Mặt hàng cần xử lý được xếp đầu danh sách.",
     },
     metrics: {
-      selectedWarehouse: "Kho chọn",
-      wholeSystem: "Toàn hệ thống",
+      selectedWarehouse: "Giá trị tồn kho · Kho đang xem",
+      wholeSystem: "Giá trị tồn kho · Toàn hệ thống",
       underThreshold: "Dưới ngưỡng",
       pending: "Chờ xử lý",
     },
@@ -1078,8 +1084,8 @@ export const inventory = {
       noRecentHistory: "Chưa có biến động gần đây cho nguyên liệu này.",
       chooseIngredientDetail: "Chọn một nguyên liệu để xem chi tiết thao tác.",
       wac: "Giá vốn bình quân",
-      wacPerUnit: (unit: string) => `Giá vốn BQ / ${unit}`,
-      wacValue: (amount: string) => `Giá vốn BQ: ${amount}`,
+      wacPerUnit: (unit: string) => `Giá vốn bình quân / ${unit}`,
+      wacValue: (amount: string) => `Giá vốn bình quân: ${amount}`,
       movementUnitCost: "Đơn giá ghi sổ",
       filteredSummary: (count: number, value: string) =>
         `Tổng theo bộ lọc: ${formatCount(count)} mặt hàng · ${value}`,

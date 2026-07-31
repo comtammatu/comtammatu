@@ -604,8 +604,10 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `base_unit`             | đơn vị tồn chuẩn                    | Đơn vị duy nhất `is_base = true` của nguyên liệu; ledger và tồn chuẩn lưu theo đơn vị này.                   | đơn vị nhập, đơn vị đóng gói          |
 | `to_base_factor`        | quy đổi về tồn chuẩn                | Hệ số quy đổi dạng `1 đơn vị nhập/đếm = N đơn vị tồn chuẩn`. UI hiển thị canonical như `1 thùng = 24 chai`.  | hệ số đảo chiều                       |
 | `purchase_unit_cost`    | đơn giá nhập                        | Snapshot giá PO theo đơn vị nhập cho phần `po_applied_quantity`; phần dư ngoài đơn có giá `0` (D096).         | giá vốn BQ, giá do Kho nhập, price-QC |
-| `reference_unit_cost`   | giá nhập tham chiếu                 | Giá tham chiếu trên `ingredients.unit_cost`, dùng fallback khi chưa có giá vốn BQ.                           | giá vốn BQ chính thức                 |
-| `average_unit_cost`     | giá vốn bình quân                   | `stock_levels.avg_unit_cost`, tính theo đơn vị tồn chuẩn. UI ngắn được dùng `Giá vốn BQ`.                    | đơn giá nhập                          |
+| `ingredient_price`      | giá nguyên liệu (cần nói rõ loại)   | Không phải một chỉ số độc lập. UI phải gọi đúng là giá tham chiếu, đơn giá nhập, hoặc giá vốn bình quân.      | giá trị tồn kho, giá vốn món          |
+| `reference_unit_cost`   | giá tham chiếu                      | Giá trên `ingredients.unit_cost` để tham khảo khi chưa có giá vốn bình quân; không thay giá đã ghi sổ.        | đơn giá nhập, giá vốn BQ              |
+| `average_unit_cost`     | giá vốn bình quân gia quyền (`WAC`) | `stock_levels.avg_unit_cost` của một đơn vị tồn chuẩn đang còn trong kho; không phải đơn giá nhập hay giá món. | đơn giá nhập, giá trị tồn, giá vốn món |
+| `inventory_value`       | giá trị tồn kho                     | Tổng giá trị ghi sổ của số lượng còn trong kho theo phạm vi. Khi valuation hoạt động, lấy `book_value`; trước đó là tồn × WAC. | tiền mua/trả NCC, giá vốn món |
 | `movement_unit_cost`    | đơn giá ghi sổ                      | `stock_movements.unit_cost`, snapshot đơn giá dùng cho một movement; không gọi là WAC trên lịch sử movement. | giá vốn BQ hiện tại                   |
 | `raw_material`          | nguyên liệu                         | Item đầu vào.                                                                                                | vật tư nếu không phải ngữ cảnh rộng   |
 | `finished_good`         | thành phẩm                          | Hàng được sản xuất hoặc giữ tồn tại warehouse của site.                                                      | món bán nếu đang nói menu             |
@@ -613,7 +615,7 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                                                        | định mức (POS)                        |
 | `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại site; entity runtime là `production_runs`. Mã: `LSX-DDMMYYYY-####`.                        | work order                            |
 | `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                                                                   | matching chung                        |
-| `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Costing chuẩn hiện tại.                                                                                      | FIFO nếu hệ thống không dùng          |
+| `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Phương pháp tính giá vốn bình quân cho tồn hiện có.                                                          | FIFO nếu hệ thống không dùng          |
 
 KDS/POS “bếp” là workflow chế biến, không phải stock location. Inventory current
 contract không có target Bếp trong cùng chi nhánh.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 
@@ -29,35 +29,26 @@ test("supplier invoice confirmation exposes valuation settlement", () => {
   assert.match(client, /valuation\?\.warning/);
 });
 
-test("cost close is an owner finance workflow with no reopen control", () => {
-  const page = readWeb("app/(protected)/finance/cost-close/page.tsx");
-  const actions = readWeb("app/(protected)/finance/cost-close/actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/cost-close/cost-close-client.tsx",
+test("inventory valuation has no period-close management surface", () => {
+  const financeNav = readWeb(
+    "app/(protected)/finance/components/finance-nav.ts",
   );
+  const surfaceNav = readWeb("app/lib/control-surface-nav.ts");
   const archetypes = readRoot("scripts/page-archetypes.mjs");
 
-  assert.match(page, /user_role !== "owner"/);
-  assert.match(actions, /ACCOUNTING_PERIOD_CLOSE/);
-  assert.match(actions, /get_inventory_valuation_bootstrap_readiness/);
-  assert.match(actions, /prepare_inventory_valuation_cutover/);
-  assert.match(actions, /activate_inventory_valuation_cutover/);
-  assert.match(actions, /bootstrapReadinessSchema/);
-  assert.match(actions, /shadowRemainingDays/);
-  assert.match(actions, /close_inventory_cost_period/);
-  assert.match(page, /year\?: string \| string\[\]/);
-  assert.match(client, /\/finance\/cost-close\?year=/);
-  assert.match(client, /prepareInventoryValuationCutover/);
-  assert.match(client, /activateInventoryValuationCutover/);
-  assert.match(client, /copy\.prepare/);
-  assert.match(client, /copy\.activate/);
-  assert.match(client, /status\.canPrepare/);
-  assert.match(client, /status\.shadowRemainingDays/);
-  assert.match(client, /copy\.blocked/);
-  assert.match(client, /copy\.attention/);
-  assert.match(client, /copy\.reconciled/);
-  assert.doesNotMatch(`${page}\n${client}`, /reopen|Mở lại kỳ/i);
-  assert.match(archetypes, /finance\/cost-close\/page\.tsx": "DOC-WORKFLOW"/);
+  assert.equal(
+    existsSync(
+      resolve(
+        import.meta.dirname,
+        "..",
+        "app/(protected)/finance/cost-close",
+      ),
+    ),
+    false,
+  );
+  assert.doesNotMatch(financeNav, /cost-close|showCostClose|LockKeyhole/);
+  assert.doesNotMatch(surfaceNav, /showCostClose/);
+  assert.doesNotMatch(archetypes, /finance\/cost-close/);
 });
 
 test("finance valuation surfaces do not fall back to mutable reference cost", () => {

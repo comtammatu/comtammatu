@@ -43,8 +43,6 @@ type StockLevelRow = {
 type TenantStockLevelRow = {
   current_quantity: number | null;
   avg_unit_cost: number | null;
-  ingredients:
-  { unit_cost: number | null } | { unit_cost: number | null }[] | null;
 };
 
 type StockIngredientRow = {
@@ -54,7 +52,6 @@ type StockIngredientRow = {
   unit: string;
   category: string | null;
   item_kind: string | null;
-  unit_cost: number | null;
   min_stock_level: number | null;
   max_stock_level: number | null;
   reorder_point: number | null;
@@ -87,9 +84,8 @@ function locationKindRank(locationKind: string): number {
 function inventoryLineValue(
   quantityBase: number | null,
   avgUnitCost: number | null,
-  referenceUnitCost: number | null,
 ): number {
-  return (quantityBase ?? 0) * (avgUnitCost ?? referenceUnitCost ?? 0);
+  return (quantityBase ?? 0) * (avgUnitCost ?? 0);
 }
 
 function storageTemp(type: string | null): string | null {
@@ -271,8 +267,7 @@ export async function loadStockOnHandPageData({
     .map((row) => {
       const stock = stockMap.get(row.id);
       const qty = stock?.currentQuantity ?? 0;
-      const referenceCost = row.unit_cost ?? 0;
-      const cost = stock?.avgUnitCost ?? referenceCost;
+      const averageUnitCost = stock?.avgUnitCost ?? null;
       const min = row.min_stock_level ?? 0;
       const max = row.max_stock_level ?? 0;
       const reorder = row.reorder_point ?? 0;
@@ -287,7 +282,11 @@ export async function loadStockOnHandPageData({
         category: row.category ?? "",
         itemKind: row.item_kind ?? "raw_material",
         qty,
-        monetary: showUnitCosts ? { cost, referenceCost } : null,
+        monetary: showUnitCosts
+          ? {
+              averageUnitCost,
+            }
+          : null,
         min,
         max,
         reorder,
@@ -301,7 +300,11 @@ export async function loadStockOnHandPageData({
     includeValuation && canViewBranch
       ? ingredients.reduce(
         (sum, ingredient) =>
-          sum + ingredient.qty * (ingredient.monetary?.cost ?? 0),
+          sum +
+          inventoryLineValue(
+            ingredient.qty,
+            ingredient.monetary?.averageUnitCost ?? null,
+          ),
         0,
       )
       : null;
@@ -322,9 +325,7 @@ export async function loadStockOnHandPageData({
         tenantStockBearingLocationIds.length > 0
           ? await (monetaryAccess.client ?? supabase)
               .from("stock_levels")
-              .select(
-                "current_quantity, avg_unit_cost, ingredients ( unit_cost )",
-              )
+              .select("current_quantity, avg_unit_cost")
               .eq("tenant_id", claims.tenant_id)
               .in("location_id", tenantStockBearingLocationIds)
           : { data: [] };
@@ -334,7 +335,6 @@ export async function loadStockOnHandPageData({
           inventoryLineValue(
             row.current_quantity,
             row.avg_unit_cost,
-            relatedOne(row.ingredients)?.unit_cost ?? null,
           ),
         0,
       );

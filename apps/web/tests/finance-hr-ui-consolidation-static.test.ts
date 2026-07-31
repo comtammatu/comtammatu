@@ -74,6 +74,20 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(workQueue, /rounded-md border p-3/);
 });
 
+test("Finance landing shows recorded input and issued output VAT totals", () => {
+  const page = read("apps/web/app/(protected)/finance/page.tsx");
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+
+  assert.match(page, /cockpit\.vat\.inputRecorded/);
+  assert.match(page, /cockpit\.vat\.outputIssued/);
+  assert.match(cockpit, /\.from\("supplier_invoices"\)/);
+  assert.match(cockpit, /\.from\("expenses"\)/);
+  assert.match(cockpit, /\.from\("tax_invoices"\)/);
+  assert.match(cockpit, /\.eq\("status", "issued"\)/);
+});
+
 test("HR long screens preserve hierarchy and LIST viewport width", () => {
   const attendance = read("apps/web/app/(protected)/hr/attendance/page.tsx");
   const setup = read("apps/web/app/(protected)/hr/setup/setup-client.tsx");

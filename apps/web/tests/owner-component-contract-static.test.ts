@@ -197,7 +197,7 @@ test("shared recovery navigation owns touch targets and focus visibility", () =>
   assert.match(globalError, /minHeight: "44px"/);
 });
 
-test("Owner monitors use DataTable while the branch launcher keeps its action grid", () => {
+test("Owner monitors use DataTable while the branch launcher keeps a responsive, site-aware action grid", () => {
   for (const file of [PRINT_JOBS, STAFF_AUDIT_TABLE]) {
     const source = read(file);
     assert.match(source, /@\/components\/data-table\/data-table/);
@@ -207,6 +207,19 @@ test("Owner monitors use DataTable while the branch launcher keeps its action gr
   const branchLauncher = read(BRANCH_TABLE);
   assert.match(branchLauncher, /role="list"/);
   assert.match(branchLauncher, /filtered\.map\(\(branch\) =>/);
+  assert.match(
+    branchLauncher,
+    /grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3/,
+  );
+  assert.match(branchLauncher, /resolveSiteKind\(branch\)/);
+  assert.match(branchLauncher, /\.\.\.\(isActive && isBranchSite/);
+  assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}\/dashboard`\}/);
+  assert.match(
+    branchLauncher,
+    /href=\{`\/inventory\?branchId=\$\{branch\.id\}`\}/,
+  );
+  assert.match(branchLauncher, /copy\.openBranch\.short/);
+  assert.match(branchLauncher, /copy\.openBranch\.long/);
   assert.doesNotMatch(branchLauncher, /@comtammatu\/ui\/components\/table/);
 
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/card/);

@@ -16,6 +16,7 @@ import { z } from "zod";
 import {
   TriangleAlert as IconAlertTriangle,
   Eye as IconEye,
+  ListFilter as IconFilter,
   ReceiptText as IconReceipt,
   Search as IconSearch,
   Trash as IconTrash,
@@ -35,6 +36,13 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@comtammatu/ui/components/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -43,6 +51,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -83,7 +92,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import { inventoryListFilterSelectClassName } from "../../inventory/_components/inventory-list-frame";
 import {
   attachSupplierInvoiceVatEvidence,
   acceptSupplierInvoiceDiscrepancy,
@@ -1381,6 +1389,14 @@ export function SupplierInvoicesClient({
   const viewMode: SupplierInvoiceViewMode = filters.viewMode;
   const showOnlyOverdue = filters.overdueOnly;
   const showOnlyMissingVat = filters.vatEvidence === "missing";
+  const activeFilterCount = [
+    filters.query,
+    filters.supplierId,
+    filters.matchStatus,
+    filters.paymentStatus,
+    filters.overdueOnly,
+    filters.vatEvidence,
+  ].filter(Boolean).length;
   const selectedInvoiceId = preselectInvoiceId;
   const detailOpen =
     selectedInvoiceId != null &&
@@ -2309,15 +2325,19 @@ export function SupplierInvoicesClient({
               )}
             </span>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{copy.paidAmount}</span>
-            <span className="font-mono">
-              {messages.inventory.common.currencyCompact(
-                formatVND(group.paidAmount),
-              )}
-            </span>
-          </div>
-          {group.creditAppliedAmount > 0 ? (
+          {viewMode === "supplier" ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">
+                {copy.paidAmount}
+              </span>
+              <span className="font-mono">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(group.paidAmount),
+                )}
+              </span>
+            </div>
+          ) : null}
+          {viewMode === "supplier" && group.creditAppliedAmount > 0 ? (
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">
                 {copy.supplierCredit}
@@ -2363,7 +2383,11 @@ export function SupplierInvoicesClient({
       render: (group) => (
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-foreground">{group.title}</p>
-          <p className="text-xs text-muted-foreground">{group.subtitle}</p>
+          <p className="text-xs text-muted-foreground">
+            {viewMode === "po"
+              ? `${copy.supplier}: ${group.supplierName}`
+              : group.subtitle}
+          </p>
           <div className="flex flex-wrap gap-1">
             {group.overdueCount > 0 ? (
               <Badge
@@ -2387,7 +2411,10 @@ export function SupplierInvoicesClient({
     },
     {
       key: "invoiceCount",
-      header: copy.invoiceCountHeader,
+      header:
+        viewMode === "supplier"
+          ? copy.invoiceCountHeader
+          : copy.relatedInvoicesHeader,
       className: viewMode === "supplier" ? "min-w-20 text-right" : "min-w-40",
       render: (group) =>
         viewMode === "supplier" ? (
@@ -2421,30 +2448,34 @@ export function SupplierInvoicesClient({
         </span>
       ),
     },
-    {
-      key: "paid",
-      header: copy.paidAmount,
-      className: "min-w-36 text-right",
-      render: (group) => (
-        <div className="flex flex-col items-end gap-1 text-right">
-          <span className="font-mono text-sm tabular-nums">
-            {messages.inventory.common.currencyCompact(
-              formatVND(group.paidAmount),
-            )}
-          </span>
-          {group.creditAppliedAmount > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {copy.supplierCredit}:{" "}
-              <span className="font-mono tabular-nums">
-                {messages.inventory.common.currencyCompact(
-                  formatVND(group.creditAppliedAmount),
-                )}
-              </span>
-            </span>
-          ) : null}
-        </div>
-      ),
-    },
+    ...(viewMode === "supplier"
+      ? [
+          {
+            key: "paid",
+            header: copy.paidAmount,
+            className: "min-w-36 text-right",
+            render: (group: SupplierInvoiceGroup) => (
+              <div className="flex flex-col items-end gap-1 text-right">
+                <span className="font-mono text-sm tabular-nums">
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(group.paidAmount),
+                  )}
+                </span>
+                {group.creditAppliedAmount > 0 ? (
+                  <span className="text-xs text-muted-foreground">
+                    {copy.supplierCredit}:{" "}
+                    <span className="font-mono tabular-nums">
+                      {messages.inventory.common.currencyCompact(
+                        formatVND(group.creditAppliedAmount),
+                      )}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       key: "outstanding",
       header: copy.outstandingPayable,
@@ -2481,66 +2512,178 @@ export function SupplierInvoicesClient({
     },
   ];
 
-  const viewModeActions = (
-    <div className="flex flex-wrap gap-2">
-      <Select
-        value={viewMode}
-        onValueChange={(value) =>
-          replaceListParam("view", value === "supplier" ? null : value)
-        }
+  const viewModeTabs = (
+    <Tabs
+      value={viewMode}
+      onValueChange={(value) =>
+        replaceListParam("view", value === "supplier" ? null : value)
+      }
+      aria-label={copy.groupByAria}
+    >
+      <TabsList
+        variant="toolbar"
+        size="touch"
+        className="w-full sm:w-fit"
+        aria-label={copy.groupByLabel}
       >
-        <SelectTrigger
-          size={controlSize}
-          className={
-            controlSize === "touch"
-              ? "w-full"
-              : inventoryListFilterSelectClassName
-          }
-          aria-label={copy.groupByAria}
-        >
-          <SelectValue placeholder={copy.groupByLabel} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            value="supplier"
-            size={controlSize === "touch" ? "touch" : "default"}
+        <TabsTrigger value="supplier">{copy.viewBySupplier}</TabsTrigger>
+        <TabsTrigger value="po">{copy.viewByPo}</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+
+  const filterPopover = (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button type="button" variant="outline" size={controlSize}>
+            <IconFilter data-icon="inline-start" />
+            {copy.filterAction}
+            {activeFilterCount > 0 ? (
+              <Badge variant="secondary" className="ml-1 rounded-full px-1.5">
+                {activeFilterCount}
+              </Badge>
+            ) : null}
+          </Button>
+        }
+      />
+      <PopoverContent align="end" className="w-[min(20rem,calc(100vw-2rem))]">
+        <PopoverHeader>
+          <PopoverTitle>{copy.filterAction}</PopoverTitle>
+          <p className="text-muted-foreground">{copy.filterHint}</p>
+        </PopoverHeader>
+        <div className="flex flex-col gap-2">
+          <Combobox
+            value={supplierFilter}
+            onValueChange={(value) =>
+              replaceListParam(
+                "supplierId",
+                value === ALL_FILTER_VALUE ? null : value,
+              )
+            }
+            options={[
+              { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+              ...supplierOptions,
+            ]}
+            placeholder={copy.supplierPlaceholder}
+            searchPlaceholder={copy.supplierSearchPlaceholder}
+            aria-label={copy.supplierFilterAria}
+            size={controlSize}
+            triggerClassName="w-full"
+          />
+
+          <Select
+            value={matchStatusFilter}
+            onValueChange={(value) =>
+              replaceListParam(
+                "matchStatus",
+                value === ALL_FILTER_VALUE ? null : value,
+              )
+            }
           >
-            {copy.viewBySupplier}
-          </SelectItem>
-          <SelectItem
-            value="po"
-            size={controlSize === "touch" ? "touch" : "default"}
+            <SelectTrigger size={controlSize} className="w-full">
+              <SelectValue placeholder={copy.matchingPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={ALL_FILTER_VALUE}
+                size={controlSize === "touch" ? "touch" : "default"}
+              >
+                {copy.allMatching}
+              </SelectItem>
+              {MATCH_FILTER_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  size={controlSize === "touch" ? "touch" : "default"}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={paymentStatusFilter}
+            onValueChange={(value) =>
+              replaceListParam(
+                "paymentStatus",
+                value === ALL_FILTER_VALUE ? null : value,
+              )
+            }
           >
-            {copy.viewByPo}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <Button
-        type="button"
-        size={controlSize}
-        variant={showOnlyOverdue ? "default" : "outline"}
-        onClick={() =>
-          replaceListParam("overdue", showOnlyOverdue ? null : "1")
-        }
-        aria-pressed={showOnlyOverdue}
-      >
-        <IconAlertTriangle data-icon="inline-start" />
-        {copy.overdueOnly}
-      </Button>
-      <Button
-        type="button"
-        size={controlSize}
-        variant={showOnlyMissingVat ? "default" : "outline"}
-        onClick={() =>
-          replaceListParam("vat", showOnlyMissingVat ? null : "missing")
-        }
-        aria-pressed={showOnlyMissingVat}
-        aria-label={copy.vatMissingOnlyAria}
-      >
-        <IconReceipt data-icon="inline-start" />
-        {copy.vatMissingOnly}
-      </Button>
-    </div>
+            <SelectTrigger size={controlSize} className="w-full">
+              <SelectValue placeholder={copy.paymentPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={ALL_FILTER_VALUE}
+                size={controlSize === "touch" ? "touch" : "default"}
+              >
+                {copy.allPayments}
+              </SelectItem>
+              {PAYMENT_FILTER_OPTIONS.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  size={controlSize === "touch" ? "touch" : "default"}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            type="button"
+            size={controlSize}
+            variant={showOnlyOverdue ? "default" : "outline"}
+            className="justify-start"
+            onClick={() =>
+              replaceListParam("overdue", showOnlyOverdue ? null : "1")
+            }
+            aria-pressed={showOnlyOverdue}
+          >
+            <IconAlertTriangle data-icon="inline-start" />
+            {copy.overdueOnly}
+          </Button>
+          <Button
+            type="button"
+            size={controlSize}
+            variant={showOnlyMissingVat ? "default" : "outline"}
+            className="justify-start"
+            onClick={() =>
+              replaceListParam("vat", showOnlyMissingVat ? null : "missing")
+            }
+            aria-pressed={showOnlyMissingVat}
+            aria-label={copy.vatMissingOnlyAria}
+          >
+            <IconReceipt data-icon="inline-start" />
+            {copy.vatMissingOnly}
+          </Button>
+          {activeFilterCount > 0 ? (
+            <Button
+              type="button"
+              size={controlSize}
+              variant="ghost"
+              className="justify-start"
+              onClick={() =>
+                updateListParams({
+                  q: null,
+                  supplierId: null,
+                  matchStatus: null,
+                  paymentStatus: null,
+                  overdue: null,
+                  vat: null,
+                })
+              }
+            >
+              {copy.clearFilters}
+            </Button>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 
   const activeGroupId = selectedGroupId;
@@ -2615,10 +2758,11 @@ export function SupplierInvoicesClient({
       <AppListFrame
         title={viewMode === "supplier" ? copy.viewBySupplier : copy.viewByPo}
         headerHint={copy.groupCount(allInvoiceGroups.length, totalCount)}
+        action={viewModeTabs}
         toolbar={
           <AppToolbar
             variant="inline"
-            className="[&>[data-slot=toolbar-group]:first-child]:min-w-64"
+            className="[&>[data-slot=toolbar-group]:first-child]:min-w-0 sm:[&>[data-slot=toolbar-group]:first-child]:min-w-64"
             search={
               <InputGroup size={controlSize} className="min-w-0 flex-1">
                 <InputGroupAddon>
@@ -2633,109 +2777,7 @@ export function SupplierInvoicesClient({
                 />
               </InputGroup>
             }
-            filters={
-              <>
-                <Combobox
-                  value={supplierFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "supplierId",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                  options={[
-                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                    ...supplierOptions,
-                  ]}
-                  placeholder={copy.supplierPlaceholder}
-                  searchPlaceholder={copy.supplierSearchPlaceholder}
-                  aria-label={copy.supplierFilterAria}
-                  size={controlSize}
-                  triggerClassName={
-                    controlSize === "touch"
-                      ? "w-full"
-                      : inventoryListFilterSelectClassName
-                  }
-                />
-
-                <Select
-                  value={matchStatusFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "matchStatus",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    size={controlSize}
-                    className={
-                      controlSize === "touch"
-                        ? "w-full"
-                        : inventoryListFilterSelectClassName
-                    }
-                  >
-                    <SelectValue placeholder={copy.matchingPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value={ALL_FILTER_VALUE}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
-                      {copy.allMatching}
-                    </SelectItem>
-                    {MATCH_FILTER_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={controlSize === "touch" ? "touch" : "default"}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={paymentStatusFilter}
-                  onValueChange={(value) =>
-                    replaceListParam(
-                      "paymentStatus",
-                      value === ALL_FILTER_VALUE ? null : value,
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    size={controlSize}
-                    className={
-                      controlSize === "touch"
-                        ? "w-full"
-                        : inventoryListFilterSelectClassName
-                    }
-                  >
-                    <SelectValue placeholder={copy.paymentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      value={ALL_FILTER_VALUE}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
-                      {copy.allPayments}
-                    </SelectItem>
-                    {PAYMENT_FILTER_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={controlSize === "touch" ? "touch" : "default"}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            }
-            actions={viewModeActions}
+            filters={filterPopover}
           />
         }
       >

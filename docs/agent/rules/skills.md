@@ -24,7 +24,7 @@ Skill plan: repo rules = engineering.md + <topic-rule>.md; external skills = <na
 ```
 
 Name only what the task actually uses. The repo-owned skill bundle is mandatory:
-every fresh checkout must pass `corepack pnpm agent:skills` before agent work.
+every fresh checkout must pass `corepack pnpm agent:start` before agent work.
 External plugins and MCP tools remain adapters, not substitutes for the bundle.
 
 ## Capability Registry

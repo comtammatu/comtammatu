@@ -73,6 +73,25 @@ export function clampProgressValue(
   return Math.max(0, Math.min(100, progressPct));
 }
 
+export function previewTargetProgress(
+  currentNetRevenue: number | null,
+  targetAmount: number | null,
+): { progressPct: number; gapAmount: number } | null {
+  if (
+    currentNetRevenue == null ||
+    targetAmount == null ||
+    !Number.isFinite(currentNetRevenue) ||
+    !Number.isFinite(targetAmount) ||
+    targetAmount <= 0
+  ) {
+    return null;
+  }
+  return {
+    progressPct: (currentNetRevenue / targetAmount) * 100,
+    gapAmount: Math.max(targetAmount - currentNetRevenue, 0),
+  };
+}
+
 /** Linear pace target for day index (1-based) within a month. */
 export function paceTargetAmount(
   monthlyTarget: number,

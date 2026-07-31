@@ -16,9 +16,9 @@ This file is the agent entrypoint. Keep it short and stable. Detailed, topic-spe
 In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the
 repo root), keep the graph fresh instead of trusting a previous session:
 
-- Start each implementation session/task with `codegraph index .` before relying
-  on graph output. `codegraph status .` is a post-refresh check, not a substitute
-  after active code or DB churn.
+- Start each implementation session/task with `corepack pnpm agent:start`. It
+  verifies the tracked skill bundle, then runs `codegraph index .` and
+  `codegraph status .` when `.codegraph/` exists.
 - Use CodeGraph before grep/find/manual file reads for source lookup:
   `codegraph explore "..."` / MCP `codegraph_explore`, and `codegraph node ...`
   for a specific file or symbol.
@@ -32,7 +32,7 @@ repo root), keep the graph fresh instead of trusting a previous session:
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for core constraints, import/runtime boundaries, and Git conventions. Root command and architecture summaries stay here; detailed authority is routed by `references.md`.
-- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs. Every fresh checkout must pass `corepack pnpm agent:skills` before agent work; the tracked `.agents/skills` bundle is mandatory.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents. Its **Authority Order** and **Required Routing Matrix** give layer-first and task-signal routing into the rules, skills, and verification a task needs. Every fresh checkout must pass `corepack pnpm agent:start` before agent work; the tracked `.agents/skills` bundle is mandatory.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for behavior changes, review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates. Only editorial changes that do not alter policy, authority, behavior, or source-of-truth routing are T1-eligible.
@@ -118,6 +118,7 @@ corepack pnpm typecheck    # Type checking across all packages
 corepack pnpm lint         # Repo guard checks (copy, UI, storage, rules, agent skills, guard sync, baseline, review tier, docs, routes) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps audit + baseline hygiene + typecheck + lint + build + test
+corepack pnpm agent:start  # Verify skills + refresh/status CodeGraph when indexed
 corepack pnpm agent:skills # Verify the required tracked agent skill bundle
 corepack pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
 ```

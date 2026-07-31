@@ -223,6 +223,60 @@ export async function upsertBranchRevenueTargets(
   };
 }
 
+export async function deleteBranchRevenueTarget(
+  input: unknown,
+): Promise<ActionResult<{ deleted: number; yearMonth: string }>> {
+  const parsed = z
+    .object({
+      year_month: yearMonthSchema,
+      branch_id: z.coerce.number().int().positive(),
+    })
+    .safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: targetCopy.errors.invalidPayload };
+  }
+
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
+  if (!ctx || ctx.claims.user_role !== "owner") {
+    return { success: false, error: targetCopy.errors.forbidden };
+  }
+
+  const { data, error } = await ctx.supabase.rpc(
+    "delete_branch_revenue_target" as never,
+    {
+      p_year_month: parsed.data.year_month,
+      p_branch_id: parsed.data.branch_id,
+    } as never,
+  );
+
+  if (error) {
+    console.error("[finance:targets:delete] RPC failed", error.code);
+    return { success: false, error: targetCopy.errors.deleteFailed };
+  }
+
+  const result = z
+    .object({
+      deleted: z.coerce.number().int().min(0),
+      year_month: z.string(),
+    })
+    .safeParse(data);
+  if (!result.success) {
+    return { success: false, error: targetCopy.errors.deleteFailed };
+  }
+
+  revalidatePath("/finance");
+  revalidatePath("/finance/revenue");
+  revalidatePath("/finance/targets");
+
+  return {
+    success: true,
+    data: {
+      deleted: result.data.deleted,
+      yearMonth: result.data.year_month,
+    },
+  };
+}
+
 export async function listBranchRevenueTargetProgress(
   yearMonth: string,
 ): Promise<ActionResult<BranchRevenueTargetProgressRow[]>> {

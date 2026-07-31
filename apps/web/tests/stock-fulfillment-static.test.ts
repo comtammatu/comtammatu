@@ -116,6 +116,27 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(detailLoader, /item\.fulfillSiteKind === actorKind/);
 });
 
+test("mixed-source requests expose source ownership without source tabs", () => {
+  const editor = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/new/stock-request-editor.tsx",
+  );
+  const fulfill = read(
+    "apps/web/app/(protected)/inventory/stock-requests/[id]/stock-request-fulfill-client.tsx",
+  );
+  const transfer = read(
+    "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
+  );
+
+  assert.match(editor, /fulfillSiteKind/);
+  assert.match(editor, /sourceHint/);
+  assert.match(editor, /hint: copy\.sourceHint/);
+  assert.doesNotMatch(fulfill, /role="tablist"/);
+  assert.match(fulfill, /aria-pressed=\{isActive\}/);
+  assert.match(fulfill, /sticky=\{embedded\}/);
+  assert.match(fulfill, /size="touch"/);
+  assert.doesNotMatch(transfer, /IconPrinter/);
+});
+
 test("central kitchen request route and database authority stay supply-only", () => {
   const route = read(
     "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx",

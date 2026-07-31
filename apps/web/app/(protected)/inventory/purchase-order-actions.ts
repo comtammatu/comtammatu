@@ -11,21 +11,9 @@ import {
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, type ActionContext } from "@/_lib/with-action";
-import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
-});
-
-const poPricesSchema = poIdSchema.extend({
-  lines: z
-    .array(
-      z.object({
-        lineId: z.coerce.number().int().positive(),
-        unitPrice: z.coerce.number().nonnegative(),
-      }),
-    )
-    .min(1),
 });
 
 async function validateSupplierIngredients(
@@ -127,46 +115,6 @@ const reviewPurchaseDemandSchema = z
       });
     }
   });
-
-const createPoFromRequestSchema = purchaseRequestIdSchema.extend({
-  supplierId: z.coerce.number().int().positive(),
-  expectedDeliveryDate: z.iso.date().nullable().optional(),
-  lines: z
-    .array(
-      z.object({
-        requestItemId: z.coerce.number().int().positive(),
-        quantity: z.coerce.number().positive(),
-        unitPrice: z.coerce.number().nonnegative(),
-      }),
-    )
-    .min(1)
-    .max(200),
-});
-
-const createPurchaseOrdersFromRequestSchema = purchaseRequestIdSchema.extend({
-  orders: z
-    .array(createPoFromRequestSchema.omit({ requestId: true }))
-    .min(1)
-    .max(100),
-  send: z.boolean().default(true),
-  idempotencyKey: z.string().uuid().optional(),
-});
-
-const savePurchaseOrderSchema = poIdSchema.extend({
-  expectedDeliveryDate: z.iso.date().nullable().optional(),
-  notes: z.string().trim().max(500).optional(),
-  lines: z
-    .array(
-      z.object({
-        lineId: z.coerce.number().int().positive(),
-        quantity: z.coerce.number().positive(),
-        unitPrice: z.coerce.number().nonnegative(),
-      }),
-    )
-    .min(1)
-    .optional(),
-  send: z.boolean().default(false),
-});
 
 const poReasonSchema = poIdSchema.extend(documentReasonSchema.shape);
 
@@ -757,133 +705,6 @@ export const closePurchaseRequest = withAction(
   },
 );
 
-export const createPurchaseOrderFromRequest = withAction(
-  {
-    roles: PO_MUTATE_ROLES,
-    schema: createPoFromRequestSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async (
-    { requestId, supplierId, expectedDeliveryDate, lines },
-    { supabase, claims },
-  ) => {
-    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-    if (!monetary.purchasePrice) {
-      return { success: false, error: "Không có quyền nhập giá mua." };
-    }
-    const { data, error } = await supabase.rpc(
-      "create_purchase_order_from_request" as never,
-      {
-        p_request_id: requestId,
-        p_supplier_id: supplierId,
-        p_expected_delivery_date: expectedDeliveryDate ?? null,
-        p_notes: "",
-        p_lines: lines.map((line) => ({
-          request_item_id: line.requestItemId,
-          quantity: line.quantity,
-          unit_price: line.unitPrice,
-        })),
-      } as never,
-    );
-    if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể tạo đơn đặt hàng."),
-      };
-    }
-    const parsed = z
-      .object({
-        po_id: z.coerce.number().int().positive(),
-        po_number: z.string(),
-        status: z.literal("draft"),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi tạo đơn đặt hàng không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-requests");
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return {
-      success: true,
-      data: { id: parsed.data.po_id, code: parsed.data.po_number },
-    };
-  },
-);
-
-export const savePurchaseOrdersFromRequest = withAction(
-  {
-    roles: PO_MUTATE_ROLES,
-    schema: createPurchaseOrdersFromRequestSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async (
-    { requestId, orders, send, idempotencyKey },
-    { supabase, claims },
-  ) => {
-    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-    if (!monetary.purchasePrice) {
-      return { success: false, error: "Không có quyền nhập giá mua." };
-    }
-    const { data, error } = await supabase.rpc(
-      "save_purchase_orders_from_request" as never,
-      {
-        p_request_id: requestId,
-        p_orders: orders.map((order) => ({
-          supplier_id: order.supplierId,
-          expected_delivery_date: order.expectedDeliveryDate ?? null,
-          notes: "",
-          lines: order.lines.map((line) => ({
-            request_item_id: line.requestItemId,
-            quantity: line.quantity,
-            unit_price: line.unitPrice,
-          })),
-        })),
-        p_send: send,
-        p_idempotency_key: idempotencyKey ?? null,
-      } as never,
-    );
-    if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể tạo đơn đặt hàng."),
-      };
-    }
-    const parsed = z
-      .object({
-        purchase_orders: z
-          .array(
-            z.object({
-              po_id: z.coerce.number().int().positive(),
-              po_number: z.string(),
-              status: z.enum(["draft", "sent"]),
-            }),
-          )
-          .min(1),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi tạo đơn đặt hàng không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-requests");
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return {
-      success: true,
-      data: parsed.data.purchase_orders.map((order) => ({
-        id: order.po_id,
-        code: order.po_number,
-      })),
-    };
-  },
-);
-
 export const createGrnDraftFromPurchaseOrder = withAction(
   {
     roles: PROCUREMENT_ROLES,
@@ -961,105 +782,6 @@ export const createGrnDraftFromPurchaseOrder = withAction(
         code: parsed.data.grn_number,
       },
     };
-  },
-);
-
-export const updatePurchaseOrderPrices = withAction(
-  {
-    roles: PO_MUTATE_ROLES,
-    schema: poPricesSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async ({ poId, lines }, { supabase, claims }) => {
-    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-    if (!monetary.purchasePrice) {
-      return { success: false, error: "Không có quyền nhập giá mua." };
-    }
-    const { data: po, error: loadError } = await supabase
-      .from("purchase_orders")
-      .select("branch_id, status")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("id", poId)
-      .maybeSingle();
-
-    if (loadError || !po) {
-      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
-    }
-    if (
-      !isProcurementBranchInScope(
-        claims.user_role,
-        claims.branch_id,
-        po.branch_id,
-      )
-    ) {
-      return {
-        success: false,
-        error: "Đơn đặt hàng nằm ngoài phạm vi chi nhánh.",
-      };
-    }
-    if (po.status !== "draft") {
-      return {
-        success: false,
-        error: "Chỉ cập nhật giá cho đơn mua đang nháp.",
-      };
-    }
-
-    const { error } = await supabase.rpc(
-      "update_purchase_order_prices_protected" as never,
-      {
-        p_po_id: poId,
-        p_lines: lines.map((line) => ({
-          line_id: line.lineId,
-          unit_price: line.unitPrice,
-        })),
-      } as never,
-    );
-    if (error) {
-      return { success: false, error: "Không thể lưu giá mua." };
-    }
-
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return { success: true };
-  },
-);
-
-export const savePurchaseOrder = withAction(
-  {
-    roles: PO_MUTATE_ROLES,
-    schema: savePurchaseOrderSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async (
-    { poId, expectedDeliveryDate, notes, lines, send },
-    { supabase, claims },
-  ) => {
-    const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-    if (lines && !monetary.purchasePrice) {
-      return { success: false, error: "Không có quyền nhập giá mua." };
-    }
-    const { error } = await supabase.rpc("save_purchase_order" as never, {
-      p_po_id: poId,
-      p_expected_delivery_date: expectedDeliveryDate ?? null,
-      p_notes: notes ?? "",
-      p_lines:
-        lines?.map((line) => ({
-          line_id: line.lineId,
-          quantity: line.quantity,
-          unit_price: line.unitPrice,
-        })) ?? null,
-      p_send: send,
-    } as never);
-    if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể lưu đơn đặt hàng."),
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/purchase-requests");
-    revalidateSurfacePath("/inventory/grn");
-    return { success: true };
   },
 );
 

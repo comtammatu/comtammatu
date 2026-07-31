@@ -11144,15 +11144,6 @@ export type Database = {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
-      close_inventory_cost_period: {
-        Args: {
-          p_idempotency_key: string
-          p_month: number
-          p_waiver_reason: string
-          p_year: number
-        }
-        Returns: Json
-      }
       close_period_hard: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
@@ -11567,6 +11558,10 @@ export type Database = {
       }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      delete_branch_revenue_target: {
+        Args: { p_branch_id: number; p_year_month: string }
+        Returns: Json
+      }
       delete_payroll_adjustment: {
         Args: { p_adjustment_id: number }
         Returns: undefined

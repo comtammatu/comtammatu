@@ -32,7 +32,11 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  ACTIVE_STATE_LABELS_VI,
+  getSiteKindLabelVi,
+  resolveSiteKind,
+} from "@comtammatu/shared/labels";
 import { matchesSearch } from "@lib/search";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
@@ -94,12 +98,13 @@ export function BranchTable({ branches }: BranchTableProps) {
 
   function renderBranchActions(branch: BranchRow) {
     const isActive = branch.is_active !== false;
+    const isBranchSite = resolveSiteKind(branch) === "branch";
 
     return (
       <RowActionsMenu
         triggerSize="icon-touch"
         items={[
-          ...(isActive
+          ...(isActive && isBranchSite
             ? [
                 {
                   key: "pos",
@@ -173,89 +178,124 @@ export function BranchTable({ branches }: BranchTableProps) {
       ) : (
         <div
           role="list"
-          className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
         >
           {filtered.map((branch) => {
             const isActive = branch.is_active !== false;
+            const siteKind = resolveSiteKind(branch);
+            const isBranchSite = siteKind === "branch";
 
             return (
               <Item
                 key={branch.id}
                 role="listitem"
                 variant="outline"
-                className={`items-start gap-3 p-3 ${isPending ? "opacity-60" : ""}`}
+                className={`h-full flex-nowrap flex-col items-stretch gap-3 p-4 ${isPending ? "opacity-60" : ""}`}
               >
-                <ItemHeader>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ItemTitle size="heading" className="min-w-0 truncate">
-                      {branch.name}
-                    </ItemTitle>
+                <ItemHeader className="items-start">
+                  <ItemTitle
+                    size="heading"
+                    className="line-clamp-none min-w-0 flex-1"
+                  >
+                    {branch.name}
+                  </ItemTitle>
+                  <ItemActions className="shrink-0">
+                    {renderBranchActions(branch)}
+                  </ItemActions>
+                </ItemHeader>
+                <ItemContent className="basis-full gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      {getSiteKindLabelVi(siteKind)}
+                    </Badge>
                     <Badge variant={isActive ? "default" : "outline"}>
                       {isActive
                         ? ACTIVE_STATE_LABELS_VI.active
                         : ACTIVE_STATE_LABELS_VI.inactive}
                     </Badge>
                   </div>
-                  <ItemActions>{renderBranchActions(branch)}</ItemActions>
-                </ItemHeader>
-                <ItemContent className="basis-full">
                   <ItemDescription>{branch.address || "—"}</ItemDescription>
                   <ItemDescription>{branch.phone || "—"}</ItemDescription>
                 </ItemContent>
                 <ItemFooter className="grid grid-cols-2 gap-2 border-t pt-3">
-                  <Button
-                    size="touch"
-                    className="w-full"
-                    disabled={!isActive}
-                    render={
-                      isActive ? <Link href={`/br/${branch.id}`} /> : undefined
-                    }
-                  >
-                    <IconArrowUpRight data-icon="inline-start" />
-                    {copy.openBranch}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="touch"
-                    className="w-full"
-                    disabled={!isActive}
-                    render={
-                      isActive ? (
-                        <Link href={`/br/${branch.id}/settings`} />
-                      ) : undefined
-                    }
-                  >
-                    <IconSliders data-icon="inline-start" />
-                    {copy.openSettings}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="touch"
-                    className="w-full"
-                    disabled={!isActive}
-                    render={
-                      isActive ? (
-                        <Link href={`/br/${branch.id}/settings/tables`} />
-                      ) : undefined
-                    }
-                  >
-                    <IconQrCode data-icon="inline-start" />
-                    {copy.selfOrder}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="touch"
-                    className="w-full"
-                    disabled={!isActive}
-                    render={
-                      isActive ? (
-                        <Link href={`/br/${branch.id}/feedback`} />
-                      ) : undefined
-                    }
-                  >
-                    <IconMessageCircle data-icon="inline-start" />
-                    {copy.feedback}
-                  </Button>
+                  {isBranchSite ? (
+                    <>
+                      <Button
+                        size="touch"
+                        className="w-full"
+                        aria-label={`${copy.openBranch.long}: ${branch.name}`}
+                        disabled={!isActive}
+                        render={
+                          isActive ? (
+                            <Link href={`/br/${branch.id}/dashboard`} />
+                          ) : undefined
+                        }
+                      >
+                        <IconArrowUpRight data-icon="inline-start" />
+                        {copy.openBranch.short}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="touch"
+                        className="w-full"
+                        aria-label={`${copy.openSettings.long}: ${branch.name}`}
+                        disabled={!isActive}
+                        render={
+                          isActive ? (
+                            <Link href={`/br/${branch.id}/settings`} />
+                          ) : undefined
+                        }
+                      >
+                        <IconSliders data-icon="inline-start" />
+                        {copy.openSettings.short}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="touch"
+                        className="w-full"
+                        aria-label={`${copy.selfOrder.long}: ${branch.name}`}
+                        disabled={!isActive}
+                        render={
+                          isActive ? (
+                            <Link href={`/br/${branch.id}/settings/tables`} />
+                          ) : undefined
+                        }
+                      >
+                        <IconQrCode data-icon="inline-start" />
+                        {copy.selfOrder.short}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="touch"
+                        className="w-full"
+                        aria-label={`${copy.feedback.long}: ${branch.name}`}
+                        disabled={!isActive}
+                        render={
+                          isActive ? (
+                            <Link href={`/br/${branch.id}/feedback`} />
+                          ) : undefined
+                        }
+                      >
+                        <IconMessageCircle data-icon="inline-start" />
+                        {copy.feedback.short}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="touch"
+                      className="col-span-2 w-full"
+                      aria-label={`${copy.openInventory.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      render={
+                        isActive ? (
+                          <Link href={`/inventory?branchId=${branch.id}`} />
+                        ) : undefined
+                      }
+                    >
+                      <IconArrowUpRight data-icon="inline-start" />
+                      {copy.openInventory.short}
+                    </Button>
+                  )}
                 </ItemFooter>
               </Item>
             );
@@ -276,7 +316,6 @@ export function BranchTable({ branches }: BranchTableProps) {
           branch={{ id: networkBranch.id, name: networkBranch.name }}
         />
       )}
-
     </>
   );
 }

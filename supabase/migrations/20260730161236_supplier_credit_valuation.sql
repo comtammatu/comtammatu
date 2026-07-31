@@ -11,9 +11,7 @@ DECLARE
   v_invoice public.supplier_invoices%ROWTYPE;
   v_source record;
   v_total_basis numeric(20,2);
-  v_invoice_inventory_basis numeric(20,2);
-  v_net_inventory_credit numeric(20,2);
-  v_remaining numeric(20,2);
+  v_remaining numeric(20,2) := -NEW.amount;
   v_share numeric(20,2);
   v_position integer := 0;
   v_count integer;
@@ -39,27 +37,6 @@ BEGIN
      OR private.inventory_valuation_mode(NEW.tenant_id) = 'inactive' THEN
     RETURN NEW;
   END IF;
-
-  SELECT coalesce(pg_catalog.sum(
-    allocation.confirmed_net_inventory_amount
-  ), 0)
-  INTO v_invoice_inventory_basis
-  FROM public.supplier_invoice_receipt_allocations AS allocation
-  WHERE allocation.tenant_id = NEW.tenant_id
-    AND allocation.supplier_invoice_id = NEW.supplier_invoice_id;
-
-  IF v_invoice_inventory_basis <= 0 OR v_invoice.total_amount <= 0 THEN
-    RETURN NEW;
-  END IF;
-  v_net_inventory_credit := pg_catalog.round(
-    NEW.amount
-      * pg_catalog.least(
-          1,
-          v_invoice_inventory_basis / v_invoice.total_amount
-        ),
-    2
-  );
-  v_remaining := -v_net_inventory_credit;
 
   IF v_credit.return_id IS NOT NULL THEN
     SELECT
@@ -115,9 +92,7 @@ BEGIN
       v_share := CASE
         WHEN v_position = v_count THEN v_remaining
         ELSE pg_catalog.round(
-          -v_net_inventory_credit
-            * v_source.returned_value
-            / v_total_basis,
+          -NEW.amount * v_source.returned_value / v_total_basis,
           2
         )
       END;
@@ -224,7 +199,7 @@ BEGIN
       v_share := CASE
         WHEN v_position = v_count THEN v_remaining
         ELSE pg_catalog.round(
-          -v_net_inventory_credit
+          -NEW.amount
             * v_source.confirmed_net_inventory_amount
             / v_total_basis,
           2

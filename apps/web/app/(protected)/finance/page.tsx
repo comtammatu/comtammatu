@@ -371,6 +371,33 @@ export default async function FinancePage({
         </AppSection>
       ) : null}
 
+      <AppSection size="sm" title={financeCopy.basic.sections.vat}>
+        <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2">
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.vatInput}
+            value={
+              cockpit.vat.inputRecorded == null
+                ? financeCopy.basic.kpis.vatUnavailable
+                : formatVND(cockpit.vat.inputRecorded)
+            }
+            hint={financeCopy.basic.kpis.vatInputHint}
+            href="/finance/supplier-invoices"
+          />
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.vatOutput}
+            value={
+              cockpit.vat.outputIssued == null
+                ? financeCopy.basic.kpis.vatUnavailable
+                : formatVND(cockpit.vat.outputIssued)
+            }
+            hint={financeCopy.invoicesPage.description}
+            href="/finance/invoices"
+          />
+        </KpiRow>
+      </AppSection>
+
       <FinanceAttentionSection exceptions={cockpit.exceptions} />
     </AppPage>
   );

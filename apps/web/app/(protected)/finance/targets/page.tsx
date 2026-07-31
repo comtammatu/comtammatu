@@ -10,7 +10,10 @@ import {
   currentVnMonthStart,
   monthStartFromIsoDate,
 } from "../_lib/revenue-target";
-import { listBranchRevenueTargets } from "./actions";
+import {
+  listBranchRevenueTargetProgress,
+  listBranchRevenueTargets,
+} from "./actions";
 import { RevenueTargetsClient } from "./targets-client";
 
 const copy = messages.finance.revenueTargets;
@@ -34,8 +37,23 @@ export default async function FinanceRevenueTargetsPage({
         )
       : currentVnMonthStart();
 
-  const result = await listBranchRevenueTargets(yearMonth);
+  const [result, progressResult] = await Promise.all([
+    listBranchRevenueTargets(yearMonth),
+    listBranchRevenueTargetProgress(yearMonth),
+  ]);
   const rows = result.success ? (result.data ?? []) : [];
+  const progressByBranch = new Map(
+    progressResult.success
+      ? (progressResult.data ?? []).map((row) => [row.branchId, row])
+      : [],
+  );
+  const rowsWithProgress = rows.map((row) => {
+    const progress = progressByBranch.get(row.branchId);
+    return {
+      ...row,
+      currentNetRevenue: progress?.netRevenue ?? null,
+    };
+  });
   const monthInputValue = yearMonth.slice(0, 7);
 
   return (
@@ -67,7 +85,10 @@ export default async function FinanceRevenueTargetsPage({
       {!result.success ? (
         <p className="text-sm text-destructive">{result.error}</p>
       ) : (
-        <RevenueTargetsClient yearMonth={yearMonth} initialRows={rows} />
+        <RevenueTargetsClient
+          yearMonth={yearMonth}
+          initialRows={rowsWithProgress}
+        />
       )}
     </AppPage>
   );

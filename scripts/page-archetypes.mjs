@@ -127,7 +127,6 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
   "apps/web/app/(protected)/branches/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
-  "apps/web/app/(protected)/finance/cost-close/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/finance/expenses/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/food-cost/page.tsx": "REPORT",
   "apps/web/app/(protected)/finance/invoices/page.tsx": "LIST",

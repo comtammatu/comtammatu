@@ -8,7 +8,6 @@ import {
   ArrowLeft as IconArrowLeft,
   MapPin as IconMapPin,
   CircleCheck as IconCircleCheck,
-  Printer as IconPrinter,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -532,15 +531,6 @@ export function TransferDetailClient({
                 {copy.actions.cancel}
               </Button>
             ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size={embedded ? "touch" : "default"}
-              className="px-4 font-bold text-muted-foreground"
-            >
-              <IconPrinter className="size-5" />
-              {copy.printSlip}
-            </Button>
             {transfer.status !== "draft" &&
             correctionBranches.length > 0 &&
             transfer.items.length > 0 ? (
@@ -618,8 +608,17 @@ export function TransferDetailClient({
     </AppPageTabs>
   );
 
+  const embeddedLayout = (
+    <>
+      {pageLayout}
+      <AppSection title={historySectionTitle}>
+        <AuditHistoryList logs={auditLogs} />
+      </AppSection>
+    </>
+  );
+
   if (embedded) {
-    if (!embeddedHeader) return tabs;
+    if (!embeddedHeader) return embeddedLayout;
     return (
       <div className="flex w-full flex-col gap-3">
         <div className="flex items-center gap-2">
@@ -652,7 +651,7 @@ export function TransferDetailClient({
             {statusBadge.label}
           </Badge>
         </div>
-        {tabs}
+        {embeddedLayout}
       </div>
     );
   }

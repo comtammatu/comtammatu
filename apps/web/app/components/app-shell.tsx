@@ -27,7 +27,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -177,9 +176,6 @@ export function AppShell({
 
         <SidebarContent className="px-2 py-3">
           <SidebarGroup className="px-0 py-0">
-            <SidebarGroupLabel className="px-2 font-medium">
-              {ownerCopy.nav.modules}
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <nav aria-label={ownerCopy.nav.ariaLabel}>
                 <SidebarMenu className="gap-1">

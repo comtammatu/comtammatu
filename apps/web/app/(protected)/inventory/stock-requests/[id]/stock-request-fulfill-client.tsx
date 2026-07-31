@@ -53,6 +53,8 @@ interface StockRequestFulfillClientProps {
   onTransferCreated?: (transferId: number) => void;
 }
 
+type FulfillSiteKind = StockRequestFulfillGroup["fulfillSiteKind"];
+
 function siteKindLabel(kind: SiteKind): string {
   return getInventorySiteKindLabelVi(kind);
 }
@@ -105,7 +107,12 @@ export function StockRequestFulfillClient({
     groups.find((group) => group.fulfillSiteKind === activeGroupKind) ??
     groups[0];
 
-  function toggleLine(groupKind: string, lineId: number, checked: boolean) {
+  function toggleLine(
+    groupKind: FulfillSiteKind,
+    lineId: number,
+    checked: boolean,
+  ) {
+    setActiveGroupKind(groupKind);
     setSelectedByGroup((current) => {
       const next = new Set(current[groupKind] ?? []);
       if (checked) next.add(lineId);
@@ -114,7 +121,8 @@ export function StockRequestFulfillClient({
     });
   }
 
-  function selectAllPending(groupKind: string, lineIds: number[]) {
+  function selectAllPending(groupKind: FulfillSiteKind, lineIds: number[]) {
+    setActiveGroupKind(groupKind);
     setSelectedByGroup((current) => ({
       ...current,
       [groupKind]: new Set(lineIds),
@@ -196,157 +204,164 @@ export function StockRequestFulfillClient({
         <p className="text-sm text-muted-foreground">{copy.noLinesInScope}</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {groups.length > 1 ? (
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label={copy.sourceSelectorAria}
-            >
-              {groups.map((group) => (
-                <Button
+          <div
+            className="flex flex-col gap-2"
+            aria-label={copy.sourceSelectorAria}
+          >
+            {groups.map((group) => {
+              const pendingLines = group.lines.filter(
+                (line) => line.status === "pending",
+              );
+              const isActive =
+                group.fulfillSiteKind === activeGroup?.fulfillSiteKind;
+              return (
+                <AppSection
                   key={group.fulfillSiteKind}
-                  type="button"
-                  role="tab"
-                  size="sm"
-                  variant={
-                    group.fulfillSiteKind === activeGroup?.fulfillSiteKind
-                      ? "default"
-                      : "outline"
+                  title={
+                    <Button
+                      type="button"
+                      variant={isActive ? "secondary" : "ghost"}
+                      size="touch"
+                      className="-mx-2 w-[calc(100%+1rem)] justify-between px-2 text-left"
+                      aria-pressed={isActive}
+                      onClick={() => setActiveGroupKind(group.fulfillSiteKind)}
+                    >
+                      <span>
+                        {copy.sourceTitle(siteKindLabel(group.fulfillSiteKind))}
+                      </span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {copy.sourcePendingSummary(
+                          pendingLines.length,
+                          group.lines.length,
+                        )}
+                      </span>
+                    </Button>
                   }
-                  aria-selected={
-                    group.fulfillSiteKind === activeGroup?.fulfillSiteKind
-                  }
-                  onClick={() => setActiveGroupKind(group.fulfillSiteKind)}
                 >
-                  {siteKindLabel(group.fulfillSiteKind)}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-          {activeGroup ? (
-            <AppSection
-              key={activeGroup.fulfillSiteKind}
-              title={copy.sourceTitle(
-                siteKindLabel(activeGroup.fulfillSiteKind),
-              )}
-            >
-              <ul className="mb-3 flex flex-col gap-2">
-                {activeGroup.lines.map((line) => (
-                  <li key={line.id}>
-                    <Item variant="outline" size="sm">
-                      {line.status === "pending" ? (
-                        <input
-                          type="checkbox"
-                          className="mt-1 shrink-0"
-                          checked={selectedByGroup[
-                            activeGroup.fulfillSiteKind
-                          ]?.has(line.id)}
-                          onChange={(event) =>
-                            toggleLine(
-                              activeGroup.fulfillSiteKind,
-                              line.id,
-                              event.target.checked,
-                            )
-                          }
-                          disabled={isPending}
-                          aria-label={copy.selectLineAria(line.ingredientName)}
-                        />
-                      ) : null}
-                      <ItemContent>
-                        <ItemTitle>{line.ingredientName}</ItemTitle>
-                        <ItemDescription>
-                          {copy.lineDescription(
-                            line.quantity,
-                            stockRequestCopy.statusLabel(line.status),
-                          )}
-                        </ItemDescription>
-                      </ItemContent>
-                    </Item>
-                  </li>
-                ))}
-              </ul>
+                  <ul className="mb-3 flex flex-col gap-2">
+                    {group.lines.map((line) => (
+                      <li key={line.id}>
+                        <Item variant="outline" size="sm">
+                          {line.status === "pending" ? (
+                            <label className="flex min-h-12 min-w-12 shrink-0 items-start justify-center pt-1">
+                              <input
+                                type="checkbox"
+                                className="mt-1 size-5"
+                                checked={selectedByGroup[
+                                  group.fulfillSiteKind
+                                ]?.has(line.id)}
+                                onChange={(event) =>
+                                  toggleLine(
+                                    group.fulfillSiteKind,
+                                    line.id,
+                                    event.target.checked,
+                                  )
+                                }
+                                disabled={isPending}
+                                aria-label={copy.selectLineAria(
+                                  line.ingredientName,
+                                )}
+                              />
+                            </label>
+                          ) : null}
+                          <ItemContent>
+                            <ItemTitle>{line.ingredientName}</ItemTitle>
+                            <ItemDescription>
+                              {copy.lineDescription(
+                                line.quantity,
+                                stockRequestCopy.statusLabel(line.status),
+                              )}
+                            </ItemDescription>
+                          </ItemContent>
+                        </Item>
+                      </li>
+                    ))}
+                  </ul>
 
-              {activeGroup.lines.some((line) => line.status === "pending") ? (
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() =>
-                      selectAllPending(
-                        activeGroup.fulfillSiteKind,
-                        activeGroup.lines
-                          .filter((line) => line.status === "pending")
-                          .map((line) => line.id),
-                      )
-                    }
-                  >
-                    {copy.selectAllPending}
-                  </Button>
-
-                  {activeGroup.locations.length > 1 ? (
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor={`fulfill-location-${activeGroup.fulfillSiteKind}`}
-                      >
-                        {copy.exportLocation}
-                      </Label>
-                      <Select
-                        value={
-                          locationByGroup[activeGroup.fulfillSiteKind] ?? ""
-                        }
-                        onValueChange={(value) =>
-                          setLocationByGroup((current) => ({
-                            ...current,
-                            [activeGroup.fulfillSiteKind]: value,
-                          }))
+                  {pendingLines.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="touch"
+                        disabled={isPending}
+                        onClick={() =>
+                          selectAllPending(
+                            group.fulfillSiteKind,
+                            pendingLines.map((line) => line.id),
+                          )
                         }
                       >
-                        <SelectTrigger
-                          id={`fulfill-location-${activeGroup.fulfillSiteKind}`}
-                          className="w-full"
-                        >
-                          <SelectValue
-                            placeholder={copy.chooseExportLocation}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeGroup.locations.map((location) => (
-                            <SelectItem
-                              key={location.id}
-                              value={String(location.id)}
+                        {copy.selectAllPending}
+                      </Button>
+
+                      {group.locations.length > 1 ? (
+                        <div className="flex flex-col gap-1.5">
+                          <Label
+                            htmlFor={`fulfill-location-${group.fulfillSiteKind}`}
+                          >
+                            {copy.exportLocation}
+                          </Label>
+                          <Select
+                            value={locationByGroup[group.fulfillSiteKind] ?? ""}
+                            onValueChange={(value) => {
+                              setActiveGroupKind(group.fulfillSiteKind);
+                              setLocationByGroup((current) => ({
+                                ...current,
+                                [group.fulfillSiteKind]: value,
+                              }));
+                            }}
+                          >
+                            <SelectTrigger
+                              id={`fulfill-location-${group.fulfillSiteKind}`}
+                              size="touch"
+                              className="w-full"
                             >
-                              {location.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                              <SelectValue
+                                placeholder={copy.chooseExportLocation}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {group.locations.map((location) => (
+                                <SelectItem
+                                  key={location.id}
+                                  value={String(location.id)}
+                                  size="touch"
+                                >
+                                  {location.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : group.locations.length === 1 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {copy.exportFrom(group.locations[0]!.label)}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-destructive">
+                          {copy.noStockLocation}
+                        </p>
+                      )}
                     </div>
-                  ) : activeGroup.locations.length === 1 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {copy.exportFrom(activeGroup.locations[0]!.label)}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-destructive">
-                      {copy.noStockLocation}
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </AppSection>
-          ) : null}
+                  ) : null}
+                </AppSection>
+              );
+            })}
+          </div>
         </div>
       )}
       {activeGroup &&
       status === "submitted" &&
       activeGroup.lines.some((line) => line.status === "pending") ? (
         <AppDetailFooter
+          sticky={embedded}
           leading={
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
+                size="touch"
                 disabled={
                   isPending ||
                   !isOnline ||
@@ -363,6 +378,7 @@ export function StockRequestFulfillClient({
                 <Button
                   type="button"
                   variant="destructive"
+                  size="touch"
                   disabled={isPending || !isOnline}
                   onClick={() => setReasonAction({ kind: "close" })}
                 >
@@ -374,6 +390,7 @@ export function StockRequestFulfillClient({
           trailing={
             <Button
               type="button"
+              size="touch"
               disabled={
                 isPending ||
                 !isOnline ||

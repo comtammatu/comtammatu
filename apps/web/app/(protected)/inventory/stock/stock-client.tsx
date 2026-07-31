@@ -158,7 +158,8 @@ function branchHref(branchId: number, path: string): string {
 }
 
 function stockValue(item: StockIngredient): number | null {
-  return item.monetary == null ? null : item.qty * item.monetary.cost;
+  const averageUnitCost = item.monetary?.averageUnitCost;
+  return averageUnitCost == null ? null : item.qty * averageUnitCost;
 }
 
 function StockItemStatus({
@@ -436,8 +437,9 @@ export function StockClient({
             className: "min-w-28 text-right",
             render: (item: StockIngredient) => (
               <span className="font-mono tabular-nums">
-                {item.monetary && item.monetary.cost > 0
-                  ? `${inventoryCommon.currencyCompact(formatVND(item.monetary.cost))}/${item.unit}`
+                {item.monetary?.averageUnitCost != null &&
+                item.monetary.averageUnitCost > 0
+                  ? `${inventoryCommon.currencyCompact(formatVND(item.monetary.averageUnitCost))}/${item.unit}`
                   : inventoryCommon.noValue}
               </span>
             ),
@@ -720,9 +722,10 @@ export function StockClient({
                 {stockCopy.table.wacPerUnit(item.unit)}
               </p>
               <p className="font-mono tabular-nums">
-                {item.monetary.cost > 0
+                {item.monetary.averageUnitCost != null &&
+                item.monetary.averageUnitCost > 0
                   ? inventoryCommon.currencyCompact(
-                      formatVND(item.monetary.cost),
+                      formatVND(item.monetary.averageUnitCost),
                     )
                   : inventoryCommon.noValue}
               </p>

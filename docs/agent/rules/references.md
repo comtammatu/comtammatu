@@ -38,7 +38,8 @@ Adapter directories wire tools back to repo authority; they do not own rules.
 The tracked capability contract and required bundle are
 `docs/agent/rules/skills.md` and `.agents/skills/`. Its exact tree is locked by
 `docs/agent/skills-manifest.json`; every fresh checkout must pass
-`corepack pnpm agent:skills` before agent work, and CI verifies it in `lint`.
+`corepack pnpm agent:start` before agent work, and CI verifies the skill bundle
+in `lint`.
 Global skill catalogs, plugin caches, and per-user plugin state are additive only.
 `.claude/settings.json` enables the shared Claude plugin subset;
 `.codex/config.toml` registers Codex MCP servers. Neither adapter can replace or
