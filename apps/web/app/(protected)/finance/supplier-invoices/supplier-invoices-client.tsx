@@ -143,6 +143,7 @@ import {
 import {
   addMoney,
   hasMaximumScale,
+  canonicalizeMoney,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
 } from "@comtammatu/shared/money";
@@ -238,7 +239,7 @@ const positiveMoneySchema = optionalMoneySchema.refine(
 );
 
 function canonicalMoney(value: string | number): string {
-  return minorUnitsToCanonical(parseMoneyToMinorUnits(String(value || 0)));
+  return canonicalizeMoney(value || 0);
 }
 
 function minimumMinorUnits(values: readonly bigint[]): bigint {

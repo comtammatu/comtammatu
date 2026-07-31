@@ -220,7 +220,7 @@ test("operating KPI counts only the rows it sums", () => {
   // bank_deposit / cogs_manual) would not match the amount above it.
   assert.match(
     page,
-    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal \+= row\.amount;[\s\S]*?acc\.operatingCount \+= 1;/,
+    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[acc\.operatingTotal, String\(row\.amount\)\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
   );
   assert.doesNotMatch(page, /formatCount\(rows\.length\)/);
 });

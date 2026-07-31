@@ -1,4 +1,5 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { addMoney } from "@comtammatu/shared/money";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
@@ -39,7 +40,7 @@ export default async function ExpensesPage({
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
   ]);
 
   if (!branchesRes.success || !expensesRes.success) {
@@ -67,19 +68,19 @@ export default async function ExpensesPage({
   const summary = rows.reduce(
     (acc, row) => {
       if (isOperatingExpenseCategory(row.category)) {
-        acc.operatingTotal += row.amount;
+        acc.operatingTotal = addMoney([acc.operatingTotal, String(row.amount)]);
         acc.operatingCount += 1;
       }
       if (expenseNeedsAction(row)) {
-        acc.needsActionTotal += row.amount;
+        acc.needsActionTotal = addMoney([acc.needsActionTotal, String(row.amount)]);
         acc.needsActionCount += 1;
       }
       return acc;
     },
     {
-      operatingTotal: 0,
+      operatingTotal: "0.00",
       operatingCount: 0,
-      needsActionTotal: 0,
+      needsActionTotal: "0.00",
       needsActionCount: 0,
     },
   );

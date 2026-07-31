@@ -2,7 +2,9 @@ const CANONICAL_DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
 
 function parseScaledInteger(value: string, scale: number): bigint {
   if (!hasMaximumScale(value, scale)) {
-    throw new RangeError(`Expected a canonical decimal with at most ${scale} fraction digits`);
+    throw new RangeError(
+      `Expected a canonical decimal with at most ${scale} fraction digits`,
+    );
   }
 
   const negative = value.startsWith("-");
@@ -30,7 +32,11 @@ function roundHalfUpDivision(numerator: bigint, denominator: bigint): bigint {
 }
 
 export function hasMaximumScale(value: string, scale: number): boolean {
-  if (!Number.isInteger(scale) || scale < 0 || !CANONICAL_DECIMAL_PATTERN.test(value)) {
+  if (
+    !Number.isInteger(scale) ||
+    scale < 0 ||
+    !CANONICAL_DECIMAL_PATTERN.test(value)
+  ) {
     return false;
   }
 
@@ -42,12 +48,44 @@ export function parseMoneyToMinorUnits(value: string): bigint {
   return parseScaledInteger(value, 2);
 }
 
+export function canonicalizeMoney(value: string | number): string {
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new RangeError("Expected a finite money value");
+  }
+
+  return minorUnitsToCanonical(
+    parseMoneyToMinorUnits(
+      typeof value === "number" ? numberToDecimal(value) : value,
+    ),
+  );
+}
+
 export function minorUnitsToCanonical(value: bigint): string {
   const negative = value < 0n;
   const absolute = negative ? -value : value;
   const whole = absolute / 100n;
   const fraction = (absolute % 100n).toString().padStart(2, "0");
   return `${negative ? "-" : ""}${whole}.${fraction}`;
+}
+
+function numberToDecimal(value: number): string {
+  const raw = String(value);
+  const match = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(raw);
+  if (!match) return raw;
+
+  const sign = match[1] ?? "";
+  const whole = match[2] ?? "";
+  const fraction = match[3] ?? "";
+  const exponent = Number(match[4] ?? "");
+  const digits = `${whole}${fraction}`;
+  const decimalIndex = whole.length + exponent;
+  if (decimalIndex <= 0) {
+    return `${sign}0.${"0".repeat(-decimalIndex)}${digits}`;
+  }
+  if (decimalIndex >= digits.length) {
+    return `${sign}${digits}${"0".repeat(decimalIndex - digits.length)}`;
+  }
+  return `${sign}${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
 }
 
 export function addMoney(values: readonly string[]): string {
@@ -64,10 +102,7 @@ export function subtractMoney(left: string, right: string): string {
   );
 }
 
-export function multiplyUnitPrice(
-  quantity: string,
-  unitPrice: string,
-): string {
+export function multiplyUnitPrice(quantity: string, unitPrice: string): string {
   const quantityMilliunits = parseScaledInteger(quantity, 3);
   const unitPriceMinorUnits = parseMoneyToMinorUnits(unitPrice);
   return minorUnitsToCanonical(

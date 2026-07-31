@@ -27,6 +27,8 @@ const DOT_TONE: Record<KpiTone, string> = {
 interface KpiCardProps {
   label: string;
   value: ReactNode;
+  shortValue?: ReactNode;
+  valueLabel?: string;
   /** Compare delta (built via buildCompareDelta) */
   delta?: CompareDelta | null;
   /** Compare period label e.g. "so với kỳ trước" */
@@ -50,6 +52,8 @@ interface KpiCardProps {
 export function KpiCard({
   label,
   value,
+  shortValue,
+  valueLabel,
   delta,
   compareHint = "so với kỳ trước",
   hint,
@@ -107,8 +111,9 @@ export function KpiCard({
           isCompact ? "text-xl" : "text-2xl",
           VALUE_TONE[tone],
         )}
+        title={shortValue && typeof value === "string" ? value : undefined}
       >
-        {value}
+        {shortValue ?? value}
       </p>
       {delta ? (
         <CompareChip label={delta.label} tone={delta.tone} hint={compareHint} />
@@ -155,7 +160,9 @@ export function KpiCard({
         "block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2",
         className,
       )}
-      aria-label={typeof value === "string" ? `${label}: ${value}` : label}
+      aria-label={
+        valueLabel ?? (typeof value === "string" ? `${label}: ${value}` : label)
+      }
     >
       <Card
         size={isCompact ? "sm" : "default"}

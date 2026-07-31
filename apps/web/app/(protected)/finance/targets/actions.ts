@@ -15,6 +15,7 @@ import {
 
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const targetCopy = messages.finance.revenueTargets;
+const MAX_TARGET_AMOUNT = 9_999_999_999_999.99;
 function scaleTwoAmount(maximum: number) {
   return z
     .union([z.string().trim().min(1), z.number()])
@@ -32,7 +33,7 @@ const rewardTierSchema = z
   .object({
     threshold_pct: z.coerce.number().positive().max(1000),
     reward_type: z.enum(["fixed_amount", "revenue_percent"]),
-    reward_value: scaleTwoAmount(1_000_000_000_000),
+    reward_value: scaleTwoAmount(MAX_TARGET_AMOUNT),
   })
   .superRefine((tier, ctx) => {
     if (
@@ -59,7 +60,7 @@ const rewardTiersSchema = z
 
 const upsertRowSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
-  target_amount: scaleTwoAmount(1_000_000_000_000),
+  target_amount: scaleTwoAmount(MAX_TARGET_AMOUNT),
   reward_tiers: rewardTiersSchema.default([]),
 });
 

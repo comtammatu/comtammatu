@@ -16,6 +16,7 @@ import {
 import {
   formatCount,
   formatAccountingVND,
+  formatCompactVND,
   formatPercent,
 } from "@comtammatu/shared/format";
 import {
@@ -114,9 +115,9 @@ interface Branch {
 }
 
 interface ExpenseListSummary {
-  operatingTotal: number;
+  operatingTotal: string;
   operatingCount: number;
-  needsActionTotal: number;
+  needsActionTotal: string;
   needsActionCount: number;
 }
 
@@ -622,6 +623,8 @@ export function ExpensesClient({
         <KpiCard
           label={copy.totalLabel}
           value={formatAccountingVND(summary.operatingTotal)}
+          shortValue={formatCompactVND(summary.operatingTotal)}
+          valueLabel={`${copy.totalLabel}: ${formatAccountingVND(summary.operatingTotal)}`}
           hint={copy.totalHint(formatCount(summary.operatingCount))}
           tone="primary"
           density="compact"
@@ -629,6 +632,8 @@ export function ExpensesClient({
         <KpiCard
           label={copy.needsActionLabel}
           value={formatAccountingVND(summary.needsActionTotal)}
+          shortValue={formatCompactVND(summary.needsActionTotal)}
+          valueLabel={`${copy.needsActionLabel}: ${formatAccountingVND(summary.needsActionTotal)}`}
           hint={copy.needsActionHint(formatCount(summary.needsActionCount))}
           tone={summary.needsActionCount > 0 ? "warning" : "neutral"}
           density="compact"
@@ -723,15 +728,20 @@ export function ExpensesClient({
                     </ItemActions>
                   ) : null}
                 </ItemHeader>
-                <ItemFooter>
-                  <ItemDescription>{detail || "—"}</ItemDescription>
+                <ItemFooter className="items-end gap-2">
+                  <ItemDescription className="min-w-0 flex-1">
+                    {detail || "—"}
+                  </ItemDescription>
                   <div className="flex shrink-0 items-center gap-2">
                     <StatusBadge
                       domain="expense-payment"
                       value={classifyExpensePaymentState(row)}
                     />
-                    <span className="font-mono text-sm font-semibold tabular-nums">
-                      {formatAccountingVND(row.amount)}
+                    <span
+                      className="shrink-0 whitespace-nowrap font-mono text-sm font-semibold tabular-nums"
+                      title={formatAccountingVND(row.amount)}
+                    >
+                      {formatCompactVND(row.amount)}
                     </span>
                   </div>
                 </ItemFooter>
@@ -772,7 +782,7 @@ export function ExpensesClient({
           onSubmit={onSubmit}
           onSuccess={onCreateSuccess}
           submitLabel={copy.form.submit}
-          contentClassName="sm:max-w-xl"
+          variant="document"
         >
           {(form) => {
             const formValues = form.watch();
@@ -950,7 +960,7 @@ export function ExpensesClient({
             ? `${formatVNBusinessDate(selectedExpense.expense_date)} · ${branchLabel(selectedExpense.branch_id)} · ${methodLabel(selectedExpense)}`
             : undefined
         }
-        contentClassName="sm:max-w-xl"
+        variant="document"
         footer={
           <Button type="button" variant="outline" onClick={closeDetail}>
             {ACTIONS_VI.close}

@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { Controller } from "react-hook-form";
 import { z } from "zod";
 import { Landmark as IconBank, Wallet as IconWallet } from "lucide-react";
-import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND as formatVND,
+  formatCompactVND,
+} from "@comtammatu/shared/format";
 import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import { formatVNDateTime, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
@@ -30,9 +33,9 @@ import {
 import type { CashSummary } from "../_lib/cash-cockpit";
 
 const copy = messages.finance;
-const FUND_AMOUNT = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
-const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
-const MAX_FUND_MINOR_UNITS = 10_000_000_000_000n;
+const FUND_AMOUNT = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
+const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
+const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
 const requiredFundAmount = z
   .string()
   .trim()
@@ -178,6 +181,9 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             value={
               cash.hasOpening ? formatVND(cash.cashOnHand) : copy.cash.verifying
             }
+            shortValue={
+              cash.hasOpening ? formatCompactVND(cash.cashOnHand) : undefined
+            }
             hint={
               cash.hasOpening
                 ? copy.cash.openingMeta(openingDate)
@@ -193,6 +199,9 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             label={copy.basic.kpis.bankOnHand}
             value={
               cash.hasOpening ? formatVND(cash.bankOnHand) : copy.cash.verifying
+            }
+            shortValue={
+              cash.hasOpening ? formatCompactVND(cash.bankOnHand) : undefined
             }
             hint={
               cash.hasOpening

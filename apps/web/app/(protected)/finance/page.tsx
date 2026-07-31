@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowRight as IconArrowRight } from "lucide-react";
 import {
   formatAccountingVND as formatVND,
+  formatCompactVND,
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
@@ -237,6 +238,7 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.netRevenue}
               value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
+              shortValue={formatCompactVND(cockpit.kpis.netRevenueBeforeVat)}
               hint={targetHint}
               tone="primary"
               href={netRevenueHref}
@@ -257,6 +259,11 @@ export default async function FinancePage({
                 cockpit.kpis.costAvailable
                   ? formatVND(cockpit.kpis.ingredientCost)
                   : financeCopy.basic.kpis.missingCost
+              }
+              shortValue={
+                cockpit.kpis.costAvailable
+                  ? formatCompactVND(cockpit.kpis.ingredientCost)
+                  : undefined
               }
               hint={financeCopy.basic.kpis.ingredientCostHint(
                 formatCount(cockpit.kpis.costCoverageOrderCount),
@@ -281,6 +288,9 @@ export default async function FinancePage({
                 grossProfit == null
                   ? financeCopy.basic.kpis.notCalculated
                   : formatVND(grossProfit)
+              }
+              shortValue={
+                grossProfit == null ? undefined : formatCompactVND(grossProfit)
               }
               hint={
                 grossProfit == null || cockpit.kpis.grossMargin == null
@@ -315,6 +325,11 @@ export default async function FinancePage({
                   ? formatVND(cockpit.kpis.operatingExpense)
                   : financeCopy.basic.kpis.notRecorded
               }
+              shortValue={
+                cockpit.kpis.operatingExpenseRecorded
+                  ? formatCompactVND(cockpit.kpis.operatingExpense)
+                  : undefined
+              }
               hint={financeCopy.basic.kpis.operatingExpenseHint}
               tone={
                 cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
@@ -337,6 +352,11 @@ export default async function FinancePage({
                 operatingResult == null
                   ? financeCopy.basic.kpis.notCalculated
                   : formatVND(operatingResult)
+              }
+              shortValue={
+                operatingResult == null
+                  ? undefined
+                  : formatCompactVND(operatingResult)
               }
               hint={financeCopy.basic.kpis.operatingResultHint}
               tone={
@@ -363,6 +383,7 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.inventoryClosingValue}
               value={formatVND(cockpit.kpis.inventoryValue)}
+              shortValue={formatCompactVND(cockpit.kpis.inventoryValue)}
               hint={financeCopy.basic.kpis.inventoryValueHint(
                 formatVND(cockpit.kpis.inventoryOpeningValue),
               )}
@@ -381,6 +402,11 @@ export default async function FinancePage({
                 ? financeCopy.basic.kpis.vatUnavailable
                 : formatVND(cockpit.vat.inputRecorded)
             }
+            shortValue={
+              cockpit.vat.inputRecorded == null
+                ? undefined
+                : formatCompactVND(cockpit.vat.inputRecorded)
+            }
             hint={financeCopy.basic.kpis.vatInputHint}
             href="/finance/supplier-invoices"
           />
@@ -391,6 +417,11 @@ export default async function FinancePage({
               cockpit.vat.outputIssued == null
                 ? financeCopy.basic.kpis.vatUnavailable
                 : formatVND(cockpit.vat.outputIssued)
+            }
+            shortValue={
+              cockpit.vat.outputIssued == null
+                ? undefined
+                : formatCompactVND(cockpit.vat.outputIssued)
             }
             hint={financeCopy.invoicesPage.description}
             href="/finance/invoices"

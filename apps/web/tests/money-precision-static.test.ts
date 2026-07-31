@@ -25,18 +25,12 @@ test("money and whole-VND adapters lock their semantic precision", () => {
     source,
     /function MoneyVndInput[\s\S]*?inputMode="decimal"[\s\S]*?maxFractionDigits=\{2\}/,
   );
-  assert.match(
-    source,
-    /function MoneyVndField[\s\S]*?maxFractionDigits=\{2\}/,
-  );
+  assert.match(source, /function MoneyVndField[\s\S]*?maxFractionDigits=\{2\}/);
   assert.match(
     source,
     /function WholeVndInput[\s\S]*?inputMode="numeric"[\s\S]*?maxFractionDigits=\{0\}/,
   );
-  assert.match(
-    source,
-    /function WholeVndField[\s\S]*?maxFractionDigits=\{0\}/,
-  );
+  assert.match(source, /function WholeVndField[\s\S]*?maxFractionDigits=\{0\}/);
   assert.match(barrel, /WholeVndField/);
   assert.match(barrel, /WholeVndInput/);
 });
@@ -75,7 +69,11 @@ test("whole-VND entry points and server schemas reject fractional POS/menu money
     "app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
     "app/(protected)/br/[branchId]/pos/_components/order-detail/service-charge-sheet.tsx",
   ]) {
-    assert.match(read(relativePath), /\bWholeVnd(?:Input|Field)\b/, relativePath);
+    assert.match(
+      read(relativePath),
+      /\bWholeVnd(?:Input|Field)\b/,
+      relativePath,
+    );
   }
 
   const menuActions = read("app/(protected)/menu/actions.ts");
@@ -109,4 +107,39 @@ test("Finance surfaces use the fixed-two accounting formatter", () => {
       path.relative(webRoot, file),
     );
   }
+});
+
+test("Finance money KPI cards use compact values at large scales", () => {
+  for (const relativePath of [
+    "app/(protected)/finance/components/current-funds-section.tsx",
+    "app/(protected)/finance/components/branch-target-competition.tsx",
+    "app/(protected)/finance/food-cost/food-cost-client.tsx",
+    "app/(protected)/finance/revenue/revenue-client.tsx",
+    "app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx",
+    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx",
+  ]) {
+    const source = read(relativePath);
+    assert.match(source, /\bformatCompactVND\b/, relativePath);
+    assert.match(source, /\bshortValue=/, relativePath);
+  }
+});
+
+test("Finance money entry limits align to the numeric(15,2) ceiling", () => {
+  const maximum = "999_999_999_999_999";
+  assert.match(
+    read("app/(protected)/finance/cash-actions.ts"),
+    new RegExp(`MAX_FUND_MINOR_UNITS = ${maximum}n`),
+  );
+  assert.match(
+    read("app/(protected)/finance/components/current-funds-section.tsx"),
+    new RegExp(`MAX_FUND_MINOR_UNITS = ${maximum}n`),
+  );
+  assert.match(
+    read("app/(protected)/finance/expense-actions.ts"),
+    new RegExp(`MAX_EXPENSE_MINOR_UNITS = ${maximum}n`),
+  );
+  assert.match(
+    read("app/(protected)/finance/targets/actions.ts"),
+    /MAX_TARGET_AMOUNT = 9_999_999_999_999\.99/,
+  );
 });

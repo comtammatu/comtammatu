@@ -4,6 +4,7 @@ import { INVENTORY_VI } from "../../messages/inventory";
 import {
   formatCount,
   formatAccountingVND,
+  formatCompactVND,
   formatPercent,
   formatQuantity,
   formatVND,
@@ -16,6 +17,12 @@ test("vi-VN display formatters use dot grouping and comma fractions", () => {
   assert.equal(formatVND("1234.50"), "1.234,5đ");
   assert.equal(formatAccountingVND(1_234.5), "1.234,50đ");
   assert.equal(formatAccountingVND("invalid"), "0,00đ");
+  assert.equal(formatVND(1e21), "1.000.000.000.000.000.000.000đ");
+  assert.equal(
+    formatAccountingVND(1e21),
+    "1.000.000.000.000.000.000.000,00đ",
+  );
+  assert.equal(formatCompactVND("1234567890123.45"), "1.234,57 tỷ");
   assert.equal(formatCount(1_234), "1.234");
   assert.equal(formatQuantity(1_234.5), "1.234,5");
   assert.equal(formatPercent(12.5), "12,5%");

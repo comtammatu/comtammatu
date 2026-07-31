@@ -41,6 +41,7 @@ import {
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_EXPENSE_MINOR_UNITS = 999_999_999_999_999n;
 
 export type {
   ExpenseMatchOption,
@@ -124,7 +125,7 @@ export async function createExpense(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền ghi chi phí." };
 
@@ -133,7 +134,10 @@ export async function createExpense(
   const vatBreakdown = toExpenseVatBreakdownPayload(parsed.data.vatBreakdown);
   const amount = expenseGrossFromBreakdown(parsed.data.vatBreakdown);
   const amountMinorUnits = parseMoneyToMinorUnits(amount);
-  if (amountMinorUnits <= 0n || amountMinorUnits > 1_000_000_000_000n) {
+  if (
+    amountMinorUnits <= 0n ||
+    amountMinorUnits > MAX_EXPENSE_MINOR_UNITS
+  ) {
     return { success: false, error: "Số tiền không hợp lệ" };
   }
 
@@ -285,7 +289,7 @@ export async function transitionExpensePayment(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
@@ -336,7 +340,7 @@ export async function deleteExpense(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền xóa chi phí." };
 
@@ -489,11 +493,7 @@ export async function fetchActualFoodCostSummary(params: {
     return { success: false, error: "Không có quyền xem giá vốn." };
   }
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  if (
-    !monetary.valuation ||
-    !monetary.client ||
-    (claims.user_role !== "owner" && params.branchId == null)
-  ) {
+  if (!monetary.client) {
     return { success: false, error: "Không có quyền xem giá vốn." };
   }
   const { startIso, endIso } = getVNDateRangeUtc(
@@ -718,7 +718,7 @@ export async function searchSepayRefundOptions(input: {
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) {
     return { success: false, error: "Không có quyền xem khoản hoàn tiền." };
@@ -854,7 +854,7 @@ export async function matchSepayTransactionWithExpenses(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
@@ -912,7 +912,7 @@ export async function matchSepayTransactionWithSupplierPayments(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_AP_PAY,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) {
     return { success: false, error: "Không có quyền đối soát công nợ NCC." };
@@ -996,7 +996,7 @@ export async function matchSepayTransactionWithRefunds(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) {
     return { success: false, error: "Không có quyền đối soát hoàn tiền." };

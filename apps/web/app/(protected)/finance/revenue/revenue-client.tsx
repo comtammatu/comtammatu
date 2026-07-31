@@ -15,6 +15,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   formatAccountingVND as formatVND,
+  formatCompactVND,
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
@@ -248,8 +249,8 @@ export function RevenueClient({
   const daysInMonth = daysInMonthFromStart(monthStart);
   const paceTarget =
     showTargetMonth && params.branch != null
-      ? (targetRows.find((row) => row.branchId === params.branch)?.targetAmount ??
-        null)
+      ? (targetRows.find((row) => row.branchId === params.branch)
+          ?.targetAmount ?? null)
       : showTargetMonth
         ? targetRows
             .filter((row) => row.targetAmount != null)
@@ -522,6 +523,7 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.netRevenue}
           value={formatVND(netRevenuePreVat)}
+          shortValue={formatCompactVND(netRevenuePreVat)}
           tone="primary"
           hint={revCopy.kpi.netRevenueHint}
           delta={delta(netRevenuePreVat, prevNetPreVat, "higher_better")}
@@ -531,6 +533,7 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.totalCollected}
           value={formatVND(kpis?.net_revenue ?? 0)}
+          shortValue={formatCompactVND(kpis?.net_revenue ?? 0)}
           hint={revCopy.kpi.totalCollectedHint}
           delta={delta(
             kpis?.net_revenue ?? 0,
@@ -551,6 +554,9 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.aovOrder}
           value={aovPerOrder > 0 ? formatVND(aovPerOrder) : "—"}
+          shortValue={
+            aovPerOrder > 0 ? formatCompactVND(aovPerOrder) : undefined
+          }
           hint={revCopy.kpi.aovOrderHint}
           delta={delta(aovPerOrder, prevAovOrder, "higher_better")}
         />

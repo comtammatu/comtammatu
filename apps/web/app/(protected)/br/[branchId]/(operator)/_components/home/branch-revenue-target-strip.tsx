@@ -1,4 +1,8 @@
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCompactVND,
+  formatPercent,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { KpiRow } from "@/components/surface";
@@ -26,6 +30,7 @@ export function BranchRevenueTargetStrip({
         density="compact"
         label={progressCopy.revenueLabel}
         value={formatVND(progress.netRevenueMtd)}
+        shortValue={formatCompactVND(progress.netRevenueMtd)}
         hint={progressCopy.mtdHint}
         tone="primary"
       />
@@ -36,6 +41,9 @@ export function BranchRevenueTargetStrip({
           hasTarget
             ? formatVND(progress.targetAmount ?? 0)
             : progressCopy.noTarget
+        }
+        shortValue={
+          hasTarget ? formatCompactVND(progress.targetAmount ?? 0) : undefined
         }
         tone={hasTarget ? tone : "neutral"}
         hint={

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { addMoney } from "@comtammatu/shared/money";
 import {
   expenseGrossFromBreakdown,
   expenseVatLineSchema,
@@ -49,5 +50,12 @@ test("expense gross totals reconcile without number aggregation", () => {
       { taxableAmount: "0.10", vatAmount: "0.20" },
     ]),
     "59401.38",
+  );
+});
+
+test("expense summary aggregation keeps thousands-of-billions exact", () => {
+  assert.equal(
+    addMoney(["9999999999999.99", "9999999999999.99"]),
+    "19999999999999.98",
   );
 });

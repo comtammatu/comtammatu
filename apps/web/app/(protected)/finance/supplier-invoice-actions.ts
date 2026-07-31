@@ -7,6 +7,7 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import {
   addMoney,
   minorUnitsToCanonical,
+  canonicalizeMoney,
   parseMoneyToMinorUnits,
   subtractMoney,
 } from "@comtammatu/shared/money";
@@ -69,9 +70,7 @@ const moneyEquals = (left: string, right: string) =>
   parseMoneyToMinorUnits(left) === parseMoneyToMinorUnits(right);
 const rpcMoneyResultSchema = z
   .union([z.string(), z.number()])
-  .transform((value) =>
-    minorUnitsToCanonical(parseMoneyToMinorUnits(String(value))),
-  );
+  .transform((value) => canonicalizeMoney(value));
 
 const invoiceSchema = z
   .object({
@@ -1116,15 +1115,11 @@ export async function fetchSupplierInvoicesPage(
       const allocated = Array.isArray(payment.supplier_payment_allocations)
         ? addMoney(
             payment.supplier_payment_allocations.map((allocation) =>
-              minorUnitsToCanonical(
-                parseMoneyToMinorUnits(String(allocation.amount ?? 0)),
-              ),
+              canonicalizeMoney(allocation.amount ?? 0),
             ),
           )
         : "0.00";
-      const paymentAmount = minorUnitsToCanonical(
-        parseMoneyToMinorUnits(String(payment.amount ?? 0)),
-      );
+      const paymentAmount = canonicalizeMoney(payment.amount ?? 0);
       const rawAdvanceAmount = subtractMoney(paymentAmount, allocated);
       const advanceAmount =
         parseMoneyToMinorUnits(rawAdvanceAmount) > 0n

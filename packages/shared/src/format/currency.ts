@@ -6,6 +6,7 @@ export {
   type NumericInputParseResult,
 } from "./numeric-input";
 import {
+  canonicalizeMoney,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
 } from "../money/index";
@@ -37,11 +38,29 @@ export function formatAccountingVND(amount: DecimalLike): string {
   return `${formatCanonicalDecimal(canonical, true)}đ`;
 }
 
+export function formatCompactVND(amount: DecimalLike): string {
+  const canonical = toCanonicalMoney(amount);
+  if (canonical == null) return "0đ";
+
+  const minorUnits = parseMoneyToMinorUnits(canonical);
+  const billionMinorUnits = 100_000_000_000n;
+  if (minorUnits > -billionMinorUnits && minorUnits < billionMinorUnits) {
+    return formatVND(canonical);
+  }
+
+  const negative = minorUnits < 0n;
+  const absolute = negative ? -minorUnits : minorUnits;
+  const scaled = absolute * 100n;
+  const rounded = (scaled + billionMinorUnits / 2n) / billionMinorUnits;
+  const display = formatCanonicalDecimal(minorUnitsToCanonical(rounded));
+  return `${negative ? "-" : ""}${display} tỷ`;
+}
+
 function toCanonicalMoney(value: DecimalLike): string | null {
   if (typeof value === "number" && !Number.isFinite(value)) return null;
 
   try {
-    return minorUnitsToCanonical(parseMoneyToMinorUnits(String(value)));
+    return canonicalizeMoney(value);
   } catch {
     return null;
   }

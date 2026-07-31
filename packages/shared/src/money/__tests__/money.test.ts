@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   addMoney,
   calculateVatAmount,
+  canonicalizeMoney,
   hasMaximumScale,
   minorUnitsToCanonical,
   multiplyUnitPrice,
@@ -36,4 +37,10 @@ test("scale validation rejects values that PostgreSQL would silently round", () 
   assert.equal(hasMaximumScale("4400.081", 2), false);
   assert.equal(hasMaximumScale("1e3", 2), false);
   assert.throws(() => parseMoneyToMinorUnits("4400.081"));
+});
+
+test("database numeric values normalize scientific notation before money arithmetic", () => {
+  assert.equal(canonicalizeMoney(1e21), "1000000000000000000000.00");
+  assert.equal(canonicalizeMoney(1234.5), "1234.50");
+  assert.throws(() => canonicalizeMoney(Number.NaN));
 });

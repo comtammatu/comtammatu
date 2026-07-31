@@ -9,6 +9,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import {
   formatAccountingVND as formatVND,
+  formatCompactVND,
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
@@ -125,6 +126,7 @@ export function FoodCostClient({
         <KpiCard
           label={foodCopy.actualFoodCost}
           value={formatVND(actualFoodCost)}
+          shortValue={formatCompactVND(actualFoodCost)}
           hint={foodCopy.actualFoodCostHint}
           tone={
             totalOrderCount > 0 && coveredOrderCount < totalOrderCount
@@ -182,9 +184,9 @@ export function FoodCostClient({
                     {formatVND(Number(row.revenue ?? 0))}
                   </ItemDescription>
                   <ItemDescription>
-                    {foodCopy.unitFoodCostCurrency}: {" "}
+                    {foodCopy.unitFoodCostCurrency}:{" "}
                     {formatVND(Number(row.unit_ingredient_cost ?? 0))} ·{" "}
-                    {foodCopy.foodCostCurrency}: {" "}
+                    {foodCopy.foodCostCurrency}:{" "}
                     {formatVND(Number(row.ingredient_cost ?? 0))}
                   </ItemDescription>
                 </ItemContent>

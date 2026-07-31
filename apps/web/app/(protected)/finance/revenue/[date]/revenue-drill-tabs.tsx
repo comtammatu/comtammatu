@@ -14,6 +14,7 @@ import { Frame } from "@comtammatu/ui/components/frame";
 import { Progress } from "@comtammatu/ui/components/progress";
 import {
   formatAccountingVND as formatVND,
+  formatCompactVND,
   formatCount,
 } from "@comtammatu/shared/format";
 import {
@@ -284,15 +285,18 @@ export function RevenueDrillTabs({
           <KpiCard
             label={copy.kpis.netRevenue}
             value={formatVND(netRevenue)}
+            shortValue={formatCompactVND(netRevenue)}
             tone="primary"
           />
           <KpiCard
             label={copy.kpis.totalCollected}
             value={formatVND(totalRevenue)}
+            shortValue={formatCompactVND(totalRevenue)}
           />
           <KpiCard
             label={copy.kpis.discount}
             value={formatVND(totalDiscount)}
+            shortValue={formatCompactVND(totalDiscount)}
           />
         </KpiRow>
       </TabsContent>

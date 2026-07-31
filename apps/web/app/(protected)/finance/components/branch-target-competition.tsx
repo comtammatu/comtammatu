@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   formatAccountingVND as formatVND,
+  formatCompactVND,
   formatPercent,
 } from "@comtammatu/shared/format";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -19,10 +20,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
-import {
-  clampProgressValue,
-  targetProgressTone,
-} from "../_lib/revenue-target";
+import { clampProgressValue, targetProgressTone } from "../_lib/revenue-target";
 import type { BranchRevenueTargetProgressRow } from "../targets/actions";
 import type { FinanceParams } from "../_lib/finance-params";
 import { serializeFinanceParams } from "../_lib/finance-params";
@@ -45,8 +43,7 @@ export function BranchTargetCompetition({
     0,
   );
   const chainPct = totalTarget > 0 ? (totalNet / totalTarget) * 100 : null;
-  const chainGap =
-    totalTarget > 0 ? Math.max(totalTarget - totalNet, 0) : null;
+  const chainGap = totalTarget > 0 ? Math.max(totalTarget - totalNet, 0) : null;
   const chainTone = targetProgressTone(chainPct);
 
   const columns: DataTableColumn<BranchRevenueTargetProgressRow>[] = [
@@ -78,7 +75,9 @@ export function BranchTargetCompetition({
       header: copy.revenueLabel,
       className: "text-right",
       render: (row) => (
-        <span className="font-mono tabular-nums">{formatVND(row.netRevenue)}</span>
+        <span className="font-mono tabular-nums">
+          {formatVND(row.netRevenue)}
+        </span>
       ),
     },
     {
@@ -143,6 +142,7 @@ export function BranchTargetCompetition({
             density="compact"
             label={copy.revenueLabel}
             value={formatVND(totalNet)}
+            shortValue={formatCompactVND(totalNet)}
             tone="primary"
           />
           <KpiCard
@@ -166,6 +166,7 @@ export function BranchTargetCompetition({
             density="compact"
             label={copy.gapLabel}
             value={formatVND(chainGap ?? 0)}
+            shortValue={formatCompactVND(chainGap ?? 0)}
             tone={chainGap != null && chainGap > 0 ? "warning" : "success"}
           />
         </KpiRow>
@@ -199,9 +200,7 @@ export function BranchTargetCompetition({
                     targetProgressTone(row.progressPct) === "neutral"
                       ? "default"
                       : (targetProgressTone(row.progressPct) as
-                          | "success"
-                          | "warning"
-                          | "destructive")
+                          "success" | "warning" | "destructive")
                   }
                   className="mt-2 h-1.5 rounded-full"
                 />

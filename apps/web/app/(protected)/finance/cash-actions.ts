@@ -11,9 +11,9 @@ import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 /** Fund bootstrap / privileged ledger writes stay Owner-only. */
 const OWNER_FUND_ROLES = ["owner"] as const;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_FUND_MINOR_UNITS = 10_000_000_000_000n;
-const MONEY = /^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
-const SIGNED_MONEY = /^-?(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/;
+const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
+const MONEY = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
+const SIGNED_MONEY = /^-?(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
 const requiredFundAmount = z.preprocess(
   (value) =>
     typeof value === "string" && value.trim() === "" ? undefined : value,

@@ -366,7 +366,7 @@ export const finance = {
       methodHints: {
         cash: "Ghi đã trả bằng tiền mặt.",
         transfer: "Tạo nội dung CK; đánh dấu đã trả khi SePay khớp.",
-        unpaid: "Lưu để trả sau · chưa trừ tiền mặt/NH.",
+        unpaid: "Ghi nhận công nợ · chưa trừ tiền mặt/NH.",
       },
       vendor: "Nơi chi",
       vendorPlaceholder: "Tùy chọn",
@@ -472,12 +472,12 @@ export const finance = {
     paymentMethodLabels: {
       cash: "Tiền mặt",
       transfer: "Chuyển khoản",
-      unpaid: "Chưa trả",
+      unpaid: "Ghi nợ",
     },
     paymentChoiceLabels: {
       cash: "Đã trả tiền mặt",
       transfer: "Tạo nội dung chuyển khoản",
-      unpaid: "Chưa trả",
+      unpaid: "Ghi nợ",
     },
   },
   supplierInvoicesPage: {
