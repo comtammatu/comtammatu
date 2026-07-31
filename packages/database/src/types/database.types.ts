@@ -13054,29 +13054,12 @@ export type Database = {
           p_category_id: number
           p_default_fulfill_site_kind: string
           p_ingredient_id: number
-          p_item_kind: string
-          p_max_stock_level: number
-          p_min_stock_level: number
-          p_name: string
-          p_reorder_point: number
-          p_shelf_life_days: number
-          p_sku: string
-          p_storage_type: string
-          p_units: Json
-        }
-        Returns: number
-      }
-      save_ingredient_catalog_v2: {
-        Args: {
-          p_category_id: number
-          p_default_fulfill_site_kind: string
-          p_ingredient_id: number
           p_issue_unit_id: number
           p_item_kind: string
           p_max_stock_level: number
           p_min_stock_level: number
           p_name: string
-          p_production_unit_id?: number
+          p_production_unit_id: number
           p_receipt_unit_id: number
           p_reorder_point: number
           p_shelf_life_days: number
@@ -13606,23 +13589,6 @@ export type Database = {
       upsert_branch_revenue_targets: {
         Args: { p_rows: Json; p_year_month: string }
         Returns: Json
-      }
-      upsert_ingredient_catalog: {
-        Args: {
-          p_category_id: number
-          p_ingredient_id: number
-          p_item_kind: string
-          p_max_stock_level: number
-          p_min_stock_level: number
-          p_name: string
-          p_reorder_point: number
-          p_shelf_life_days: number
-          p_sku: string
-          p_storage_type: string
-          p_unit_cost: number
-          p_units: Json
-        }
-        Returns: number
       }
       upsert_payroll_adjustment: {
         Args: {

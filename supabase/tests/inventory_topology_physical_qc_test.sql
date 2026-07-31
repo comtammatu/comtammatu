@@ -1343,14 +1343,20 @@ BEGIN
   END IF;
 
   IF to_regprocedure(
-       'public.upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)'
      ) IS NULL
      OR to_regprocedure(
        'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)'
-     ) IS NULL
+     ) IS NOT NULL
+     OR to_regprocedure(
+       'public.save_ingredient_catalog_v2(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)'
+     ) IS NOT NULL
+     OR to_regprocedure(
+       'public.upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
+     ) IS NOT NULL
      OR to_regprocedure(
        'private.execute_upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
-     ) IS NULL
+     ) IS NOT NULL
      OR to_regprocedure(
        'public.bulk_import_ingredients(jsonb)'
      ) IS NULL
@@ -1359,17 +1365,7 @@ BEGIN
      ) IS NULL
      OR has_function_privilege(
        'authenticated',
-       'private.execute_upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)',
-       'EXECUTE'
-     )
-     OR has_function_privilege(
-       'authenticated',
        'private.execute_bulk_import_ingredients(jsonb)',
-       'EXECUTE'
-     )
-     OR has_function_privilege(
-       'service_role',
-       'private.execute_upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)',
        'EXECUTE'
      )
      OR has_function_privilege(
@@ -1379,24 +1375,24 @@ BEGIN
      )
      OR NOT has_function_privilege(
        'authenticated',
-       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)',
        'EXECUTE'
      )
      OR NOT has_function_privilege(
        'service_role',
-       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)',
        'EXECUTE'
      )
      OR has_function_privilege(
        'anon',
-       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)',
+       'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)',
        'EXECUTE'
      )
      OR NOT EXISTS (
        SELECT 1
        FROM pg_catalog.pg_proc AS procedure
        WHERE procedure.oid = to_regprocedure(
-         'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text)'
+         'public.save_ingredient_catalog(bigint,text,text,bigint,text,text,numeric,numeric,numeric,integer,jsonb,text,bigint,bigint,bigint)'
        )
          AND procedure.prosecdef IS TRUE
          AND procedure.proconfig @>
@@ -1404,21 +1400,9 @@ BEGIN
          AND procedure.prosrc ILIKE
            '%v_preserved_unit_cost%'
          AND procedure.prosrc ILIKE
-           '%execute_upsert_ingredient_catalog%'
-         AND procedure.prosrc ILIKE
            '%default_fulfill_site_kind%'
-         AND procedure.prosrc ILIKE '%auth_role() <> ''owner''%'
-     )
-     OR NOT EXISTS (
-       SELECT 1
-       FROM pg_catalog.pg_proc AS procedure
-       WHERE procedure.oid = to_regprocedure(
-         'public.upsert_ingredient_catalog(bigint,text,text,bigint,numeric,text,text,numeric,numeric,numeric,integer,jsonb)'
-       )
-         AND procedure.prosrc ILIKE
-           '%v_preserved_unit_cost%'
-         AND procedure.prosrc ILIKE
-           '%FOR UPDATE%'
+         AND procedure.prosrc ILIKE '%receipt_unit_id%'
+         AND procedure.prosrc ILIKE '%issue_unit_id%'
          AND procedure.prosrc ILIKE '%auth_role() <> ''owner''%'
      )
      OR NOT EXISTS (
@@ -1804,7 +1788,7 @@ BEGIN
       'upsert_production_recipe_lines',
       'execute_upsert_production_recipe_lines',
       'upsert_recipe_lines',
-      'upsert_ingredient_catalog',
+      'save_ingredient_catalog',
       'bulk_import_ingredients',
       'toggle_ingredient_active',
       'enforce_stock_transfer_direction',
@@ -3714,31 +3698,6 @@ BEGIN
 
   v_cost_snapshot := v_ingredient_record.unit_cost;
 
-  PERFORM public.upsert_ingredient_catalog(
-    v_ingredient,
-    v_ingredient_record.name,
-    v_ingredient_record.sku,
-    v_ingredient_record.category_id,
-    NULL,
-    v_ingredient_record.item_kind,
-    v_ingredient_record.storage_type,
-    v_ingredient_record.min_stock_level,
-    v_ingredient_record.max_stock_level,
-    v_ingredient_record.reorder_point,
-    v_ingredient_record.shelf_life_days,
-    v_units_payload
-  );
-
-  IF (
-    SELECT ingredient.unit_cost
-    FROM public.ingredients AS ingredient
-    WHERE ingredient.id = v_ingredient
-      AND ingredient.tenant_id = v_tenant
-  ) IS DISTINCT FROM v_cost_snapshot THEN
-    RAISE EXCEPTION
-      'PRICE AUTHORITY: catalog edit with null price changed WAC';
-  END IF;
-
   PERFORM public.save_ingredient_catalog(
     v_ingredient,
     v_ingredient_record.name,
@@ -3751,7 +3710,10 @@ BEGIN
     v_ingredient_record.reorder_point,
     v_ingredient_record.shelf_life_days,
     v_units_payload,
-    v_ingredient_record.default_fulfill_site_kind
+    v_ingredient_record.default_fulfill_site_kind,
+    v_ingredient_record.receipt_unit_id,
+    v_ingredient_record.issue_unit_id,
+    v_ingredient_record.production_unit_id
   );
 
   IF (
@@ -3780,7 +3742,10 @@ BEGIN
       NULL,
       NULL,
       v_units_payload,
-      'invalid_site_kind'
+      'invalid_site_kind',
+      v_ingredient_record.receipt_unit_id,
+      v_ingredient_record.issue_unit_id,
+      v_ingredient_record.production_unit_id
     );
   EXCEPTION
     WHEN check_violation THEN
@@ -3809,7 +3774,10 @@ BEGIN
     NULL,
     NULL,
     v_units_payload,
-    'central_supply'
+    'central_supply',
+    v_ingredient_record.receipt_unit_id,
+    v_ingredient_record.issue_unit_id,
+    v_ingredient_record.production_unit_id
   );
 
   IF NOT EXISTS (
@@ -3819,6 +3787,9 @@ BEGIN
       AND ingredient.tenant_id = v_tenant
       AND ingredient.unit_cost = 0
       AND ingredient.default_fulfill_site_kind = 'central_supply'
+      AND ingredient.receipt_unit_id = v_ingredient_record.receipt_unit_id
+      AND ingredient.issue_unit_id = v_ingredient_record.issue_unit_id
+      AND ingredient.production_unit_id IS NOT DISTINCT FROM v_ingredient_record.production_unit_id
   ) THEN
     RAISE EXCEPTION
       'CATALOG ATOMICITY: create did not persist catalog and fulfill kind';
@@ -3836,7 +3807,10 @@ BEGIN
     NULL,
     NULL,
     v_units_payload,
-    'central_kitchen'
+    'central_kitchen',
+    v_ingredient_record.receipt_unit_id,
+    v_ingredient_record.issue_unit_id,
+    v_ingredient_record.production_unit_id
   );
 
   IF (
@@ -3861,7 +3835,10 @@ BEGIN
     NULL,
     NULL,
     v_units_payload,
-    NULL
+    NULL,
+    v_ingredient_record.receipt_unit_id,
+    v_ingredient_record.issue_unit_id,
+    v_ingredient_record.production_unit_id
   );
 
   IF EXISTS (
@@ -3883,6 +3860,30 @@ BEGIN
   FROM public.units AS unit
   WHERE unit.id = v_unit
     AND unit.tenant_id = v_tenant;
+
+  v_atomic_name := '__catalog_bulk_' || gen_random_uuid()::text;
+  PERFORM public.bulk_import_ingredients(
+    jsonb_build_array(jsonb_build_object(
+      'name', v_atomic_name,
+      'unit', v_unit_code,
+      'item_kind', 'raw_material',
+      'unit_cost', 0,
+      'min_stock_level', 0,
+      'storage_type', 'ambient'
+    ))
+  );
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.ingredients AS ingredient
+    WHERE ingredient.tenant_id = v_tenant
+      AND ingredient.name = v_atomic_name
+      AND ingredient.receipt_unit_id = v_unit
+      AND ingredient.issue_unit_id = v_unit
+      AND ingredient.production_unit_id IS NULL
+  ) THEN
+    RAISE EXCEPTION
+      'CATALOG IMPORT: new item did not persist import and issue unit roles';
+  END IF;
 
   v_result := public.stock_transfer_confirm_ship(v_transfer);
   IF v_result ->> 'status' <> 'confirmed_ship' THEN
@@ -6242,34 +6243,6 @@ BEGIN
   v_rejected := FALSE;
   v_message := NULL;
   BEGIN
-    PERFORM public.upsert_ingredient_catalog(
-      v_ingredient,
-      v_ingredient_name,
-      NULL,
-      NULL,
-      v_expected_cost + 12345,
-      'raw_material',
-      'ambient',
-      0,
-      NULL,
-      NULL,
-      NULL,
-      v_units_payload
-    );
-  EXCEPTION
-    WHEN insufficient_privilege THEN
-      v_rejected := TRUE;
-      v_message := SQLERRM;
-  END;
-  IF NOT v_rejected OR v_message <> 'forbidden' THEN
-    RAISE EXCEPTION
-      'CATALOG AUTHORITY: branch manager reached catalog upsert: %',
-      v_message;
-  END IF;
-
-  v_rejected := FALSE;
-  v_message := NULL;
-  BEGIN
     PERFORM public.save_ingredient_catalog(
       v_ingredient,
       v_ingredient_name,
@@ -6282,6 +6255,9 @@ BEGIN
       NULL,
       NULL,
       v_units_payload,
+      NULL,
+      v_unit,
+      v_unit,
       NULL
     );
   EXCEPTION

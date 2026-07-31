@@ -42,8 +42,8 @@ const fulfillKindGrantMigration = readFileSync(
   "../../supabase/migrations/20260729140500_grant_ingredients_default_fulfill_site_kind.sql",
   "utf8",
 );
-const atomicCatalogMigration = readFileSync(
-  "../../supabase/migrations/20260729150305_save_ingredient_catalog_atomic.sql",
+const catalogSaveMigration = readFileSync(
+  "../../supabase/migrations/20260731182614_catalog_save_unit_roles.sql",
   "utf8",
 );
 const ingredientActions = readFileSync(
@@ -104,32 +104,40 @@ test("D093 default_fulfill_site_kind is granted to authenticated after column lo
   );
 });
 
-test("ingredient catalog save is atomic and keeps direct table DML locked", () => {
+test("ingredient catalog uses one atomic role-aware RPC", () => {
   assert.match(
-    atomicCatalogMigration,
+    catalogSaveMigration,
     /CREATE FUNCTION public\.save_ingredient_catalog\(/,
   );
-  assert.match(atomicCatalogMigration, /SECURITY DEFINER/);
-  assert.match(atomicCatalogMigration, /SET search_path TO ''/);
+  assert.match(catalogSaveMigration, /SECURITY DEFINER/);
+  assert.match(catalogSaveMigration, /SET search_path TO ''/);
   assert.match(
-    atomicCatalogMigration,
-    /private\.execute_upsert_ingredient_catalog\(/,
+    catalogSaveMigration,
+    /receipt_unit_id,\s+issue_unit_id, production_unit_id/,
   );
   assert.match(
-    atomicCatalogMigration,
-    /UPDATE public\.ingredients AS ingredient[\s\S]*default_fulfill_site_kind/,
+    catalogSaveMigration,
+    /DROP FUNCTION public\.save_ingredient_catalog_v2\(/,
   );
   assert.match(
-    atomicCatalogMigration,
+    catalogSaveMigration,
+    /DROP FUNCTION public\.upsert_ingredient_catalog\(/,
+  );
+  assert.match(
+    catalogSaveMigration,
+    /CREATE OR REPLACE FUNCTION private\.execute_bulk_import_ingredients\([\s\S]*receipt_unit_id, issue_unit_id/,
+  );
+  assert.match(
+    catalogSaveMigration,
     /REVOKE ALL ON FUNCTION public\.save_ingredient_catalog\([\s\S]*FROM PUBLIC, anon/,
   );
   assert.match(
-    atomicCatalogMigration,
+    catalogSaveMigration,
     /GRANT EXECUTE ON FUNCTION public\.save_ingredient_catalog\([\s\S]*TO authenticated, service_role/,
   );
   assert.doesNotMatch(
-    atomicCatalogMigration,
-    /GRANT (?:INSERT|UPDATE|DELETE)[\s\S]*ON (?:TABLE )?public\.ingredients/,
+    ingredientActions,
+    /save_ingredient_catalog_v2|upsert_ingredient_catalog/,
   );
 });
 

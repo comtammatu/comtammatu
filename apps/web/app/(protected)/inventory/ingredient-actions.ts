@@ -42,7 +42,7 @@ import {
 } from "@/_lib/spreadsheet";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
-/* ─── Ingredient catalog (CRUD via upsert_ingredient_catalog RPC) ─── */
+/* ─── Ingredient catalog (CRUD via save_ingredient_catalog RPC) ─── */
 
 const unitRowSchema = z.object({
   unit_id: z.coerce.number().int().positive({ error: "Đơn vị không hợp lệ" }),
@@ -199,7 +199,7 @@ function buildRpcUnits(units: IngredientInput["units"]) {
   }));
 }
 
-type SaveCatalogV2Args = {
+type SaveCatalogArgs = {
   p_ingredient_id: number | null;
   p_name: string;
   p_sku: string | null;
@@ -228,7 +228,7 @@ function rpcCatalogArgs(
     | "central_supply"
     | "central_kitchen"
     | null = null,
-): SaveCatalogV2Args {
+): SaveCatalogArgs {
   return {
     p_ingredient_id: ingredientId,
     p_name: data.name,
@@ -250,14 +250,14 @@ function rpcCatalogArgs(
 
 function saveIngredientCatalog(
   supabase: SupabaseClient<Database>,
-  args: SaveCatalogV2Args,
+  args: SaveCatalogArgs,
 ) {
   return (
     supabase.rpc as unknown as (
-      fn: "save_ingredient_catalog_v2",
-      rpcArgs: SaveCatalogV2Args,
+      fn: "save_ingredient_catalog",
+      rpcArgs: SaveCatalogArgs,
     ) => ReturnType<SupabaseClient<Database>["rpc"]>
-  )("save_ingredient_catalog_v2", args);
+  )("save_ingredient_catalog", args);
 }
 
 /* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
