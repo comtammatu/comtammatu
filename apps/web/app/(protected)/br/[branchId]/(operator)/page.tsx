@@ -29,6 +29,8 @@ import {
   BranchTodayStatusPending,
   BranchQueuePending,
 } from "./_components/home/branch-home-skeletons";
+import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-target-strip";
+import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
 
 const homeCopy = messages.operator.home;
 const stationDescriptions: Record<string, string> = {
@@ -120,8 +122,21 @@ export default async function OperatorHomePage({
       ]
     : [];
 
+  const showRevenueTargetStrip =
+    branchKind === "branch" &&
+    (claims.user_role === "owner" || claims.user_role === "branch_manager");
+  const revenueTargetRes = showRevenueTargetStrip
+    ? await fetchBranchRevenueTargetProgress(context.branchId)
+    : null;
+  const revenueTarget =
+    revenueTargetRes?.success === true ? revenueTargetRes.data : null;
+
   return (
     <BranchOperatorPage title={APP_COPY_VI.branchHome}>
+      {revenueTarget ? (
+        <BranchRevenueTargetStrip progress={revenueTarget} />
+      ) : null}
+
       {claims.user_role !== "owner" ? (
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />

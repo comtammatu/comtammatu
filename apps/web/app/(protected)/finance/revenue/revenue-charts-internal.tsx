@@ -18,10 +18,12 @@ import { messages } from "@lib/messages";
 import { ChartCard } from "../components/chart-card";
 
 const revCopy = messages.finance.revenue;
+const paceCopy = messages.finance.revenueTargets.progress;
 
 export interface TrendPoint {
   period: string;
   revenue: number;
+  pace?: number | null;
 }
 
 interface RevenueChartsBlockProps {
@@ -29,6 +31,7 @@ interface RevenueChartsBlockProps {
   resolvedStart: string;
   resolvedEnd: string;
   granularityLabel: string;
+  showPace?: boolean;
 }
 
 export function RevenueChartsBlock({
@@ -36,21 +39,37 @@ export function RevenueChartsBlock({
   resolvedStart,
   resolvedEnd,
   granularityLabel,
+  showPace = false,
 }: RevenueChartsBlockProps) {
+  const hasPace = showPace && trendData.some((point) => point.pace != null);
   return (
     <ChartCard
-      title={revCopy.trendChart.title}
-      description={revCopy.trendChart.description(
-        resolvedStart,
-        resolvedEnd,
-        granularityLabel,
-      )}
+      title={hasPace ? paceCopy.paceChartTitle : revCopy.trendChart.title}
+      description={
+        hasPace
+          ? paceCopy.paceChartDescription
+          : revCopy.trendChart.description(
+              resolvedStart,
+              resolvedEnd,
+              granularityLabel,
+            )
+      }
       config={
         {
           revenue: {
-            label: revCopy.trendChart.tooltipLabel,
+            label: hasPace
+              ? paceCopy.paceActual
+              : revCopy.trendChart.tooltipLabel,
             theme: { light: "var(--chart-1)", dark: "var(--chart-1)" },
           },
+          ...(hasPace
+            ? {
+                pace: {
+                  label: paceCopy.paceTarget,
+                  theme: { light: "var(--chart-2)", dark: "var(--chart-2)" },
+                },
+              }
+            : {}),
         } satisfies ChartConfig
       }
       chartClassName="aspect-[3/1]"
@@ -69,9 +88,9 @@ export function RevenueChartsBlock({
           tickFormatter={(v: number) => formatVND(v)}
         />
         <Tooltip
-          formatter={(value) => [
+          formatter={(value, name) => [
             formatVND(Number(value ?? 0)),
-            revCopy.trendChart.tooltipLabel,
+            name === "pace" ? paceCopy.paceTarget : paceCopy.paceActual,
           ]}
         />
         <Line
@@ -79,8 +98,18 @@ export function RevenueChartsBlock({
           dataKey="revenue"
           stroke="var(--color-revenue)"
           strokeWidth={2}
-          dot={{ r: 3 }}
+          dot={hasPace ? false : { r: 3 }}
         />
+        {hasPace ? (
+          <Line
+            type="monotone"
+            dataKey="pace"
+            stroke="var(--color-pace)"
+            strokeWidth={2}
+            strokeDasharray="4 4"
+            dot={false}
+          />
+        ) : null}
       </LineChart>
     </ChartCard>
   );

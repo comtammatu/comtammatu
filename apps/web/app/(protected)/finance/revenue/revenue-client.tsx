@@ -59,6 +59,7 @@ import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { MvStalenessBanner } from "../components/mv-staleness-banner";
 import { WorkQueueStrip } from "../components/work-queue-strip";
+import { BranchTargetCompetition } from "../components/branch-target-competition";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { messages } from "@lib/messages";
 import type {
@@ -70,6 +71,12 @@ import type {
   KpiBundle,
   RollupRow,
 } from "./_lib/finance-types-revenue";
+import type { BranchRevenueTargetProgressRow } from "../targets/actions";
+import {
+  daysInMonthFromStart,
+  monthStartFromIsoDate,
+  paceTargetAmount,
+} from "../_lib/revenue-target";
 
 const filterCopy = messages.finance.filterBar;
 const revCopy = messages.finance.revenue;
@@ -92,6 +99,8 @@ interface Props {
   resolvedStart: string;
   resolvedEnd: string;
   canRefreshFinanceViews: boolean;
+  targetRows: BranchRevenueTargetProgressRow[];
+  showTargetMonth: boolean;
 }
 
 // ─── Aggregation helpers ────────────────────────────────────────
@@ -182,6 +191,8 @@ export function RevenueClient({
   resolvedStart,
   resolvedEnd,
   canRefreshFinanceViews,
+  targetRows,
+  showTargetMonth,
 }: Props) {
   const periodRows = useMemo(() => aggregateByPeriod(rollupRows), [rollupRows]);
   const heatmapCells = useMemo(
@@ -233,15 +244,37 @@ export function RevenueClient({
   }
 
   // ─── Trend chart data (line) ───────────────────────────────
-  const trendData = periodRows.map((r) => ({
-    period: r.period_label,
-    revenue: Math.round(netRevenuePreVatFor(r)),
-  }));
+  const monthStart = monthStartFromIsoDate(resolvedStart);
+  const daysInMonth = daysInMonthFromStart(monthStart);
+  const paceTarget =
+    showTargetMonth && params.branch != null
+      ? (targetRows.find((row) => row.branchId === params.branch)
+          ?.targetAmount ?? null)
+      : showTargetMonth
+        ? targetRows
+            .filter((row) => row.targetAmount != null)
+            .reduce((sum, row) => sum + (row.targetAmount ?? 0), 0) || null
+        : null;
+  const showPace = paceTarget != null && params.gran === "day";
 
-  // ─── Sparkline data for hero KPI ───────────────────────────
-  const sparkline = trendData.map((p, i) => ({
+  let cumulative = 0;
+  const trendData = periodRows.map((r, index) => {
+    const dayRevenue = Math.round(netRevenuePreVatFor(r));
+    cumulative += dayRevenue;
+    const dayIndex = index + 1;
+    return {
+      period: r.period_label,
+      revenue: showPace ? cumulative : dayRevenue,
+      pace: showPace
+        ? Math.round(paceTargetAmount(paceTarget, dayIndex, daysInMonth))
+        : null,
+    };
+  });
+
+  // ─── Sparkline data for hero KPI (always daily, non-cumulative) ─
+  const sparkline = periodRows.map((r, i) => ({
     x: String(i),
-    y: p.revenue,
+    y: Math.round(netRevenuePreVatFor(r)),
   }));
 
   // ─── Filter signature for CSV export ───────────────────────
@@ -541,11 +574,15 @@ export function RevenueClient({
         defaultValue="overview"
       >
         <TabsContent value="overview" className="flex flex-col gap-4">
+          {showTargetMonth && targetRows.length > 1 ? (
+            <BranchTargetCompetition rows={targetRows} params={params} />
+          ) : null}
           <RevenueChartsBlock
             trendData={trendData}
             resolvedStart={resolvedStart}
             resolvedEnd={resolvedEnd}
             granularityLabel={granularityLabel}
+            showPace={showPace}
           />
 
           <AppSection

@@ -132,6 +132,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn, không lặp lại các thư mục đã có ở bottom nav.
 - **Quy chuẩn UX/UI:**
   - `Nay` chỉ hiển thị các hàng chờ có số lượng lớn hơn 0, sau đó là điểm vào bán hàng/bếp/đơn hàng và lối tắt quản lý. Không lặp lại thư mục `Đội`, `Kho` hoặc lệnh vào Branch Dashboard đã có ở header.
+  - Owner/`branch_manager` trên chi nhánh bán hàng (`branch_kind = 'branch'`) được xem strip KPI chỉ tiêu Doanh thu thuần MTD trên Branch home (`finance.revenue.monthly_target_progress`); không đặt strip trên Branch Dashboard, Owner `/`, hoặc role cashier/chef/staff. Thiếu chỉ tiêu hiện “Chưa đặt chỉ tiêu”, không hiện 0%.
   - `Ca` sở hữu ngày làm việc cá nhân. Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Các route duyệt và chi tiết vẫn giữ nguyên ACL riêng.
   - `Đội` mở trực tiếp ba tab `Theo dõi ca`, `Nhân sự`, `Phân công`. Tab theo dõi ưu tiên `Cần xử lý`, rồi `Đang làm`, rồi toàn bộ; không hiển thị bộ lọc có kết quả bằng 0.
   - `Nhân sự` giữ đủ danh sách nhưng bỏ chip lọc bằng 0. `Phân công` đưa nhân sự đã có mục kiểm kê lên trước, không ẩn người chưa được phân công.
@@ -265,7 +266,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
   6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, chi phí chưa ghi nhận hoặc chứng từ cần xử lý.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
+  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
   - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; chưa ghi nhận chi phí thì không tính Kết quả vận hành.
   - **KHÔNG hiển thị:** Card GTGT/VAT trong đợt này, nút tạo order, các bước chế biến món ăn, hoặc phân tích tài chính doanh nghiệp cổ phần không áp dụng cho mô hình HKD.

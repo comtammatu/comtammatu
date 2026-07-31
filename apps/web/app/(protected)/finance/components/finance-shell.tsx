@@ -15,6 +15,7 @@ export interface FinanceShellProps {
   branchId?: number | null;
   showInvoices: boolean;
   showSupplierPayables: boolean;
+  showRevenueTargets?: boolean;
 }
 
 export function FinanceShell({
@@ -24,6 +25,7 @@ export function FinanceShell({
   branchId: homeBranchId,
   showInvoices,
   showSupplierPayables,
+  showRevenueTargets = false,
 }: FinanceShellProps) {
   // Lift the realtime subscription up to the shell so every Finance
   // route shares one Supabase channel (Architect §3 risk #3 + Critic R5).
@@ -44,6 +46,7 @@ export function FinanceShell({
       tier2={resolveFinanceNav({
         showInvoices,
         showSupplierPayables,
+        showRevenueTargets,
       })}
     >
       {children}

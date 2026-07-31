@@ -5,6 +5,19 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Port branch revenue KPI from comtammatu
+
+State: doing
+Kind: feature
+Tier: T3
+Lane: finance/revenue-targets
+Exit: Branch home shows Doanh thu thuần MTD vs monthly target for Owner/BM; Owner can edit targets and reward tiers at `/finance/targets`; Finance landing and `/finance/revenue` show progress/competition/pace for a single calendar month; migrations are applied on a verified Preview Branch (Production only with owner delegation).
+Evidence: Focused finance-revenue-target tests, SQL regression test, repository gates (`typecheck`/`lint`/`build`), and Preview migration replay when delegated.
+
+- [x] Apply the four `branch_revenue_targets` migrations on verified Preview Branch `agipojuqtoyqohqoguqd` (`branch-revenue-kpi`); table + 6 RPCs present; Preview deleted after evidence.
+- [x] Owner-delegated Production apply on `iexwsuaqqenyjiskawoj`; `corepack pnpm db:types` regenerated `packages/database/src/types/database.types.ts` (+106 lines: table + RPCs).
+- [ ] Owner-smoke Branch home strip, `/finance/targets` upsert/delete, and `/finance/revenue` competition for a single calendar month.
+
 ## Restore fresh-install database ACL parity
 
 State: verify
@@ -26,6 +39,17 @@ Exit: A terminal stale session becomes anonymous without an error-level Vercel e
 Evidence: Focused middleware regression coverage, repository gates, T3 review, deployed stale-cookie smoke, and 24-hour Production runtime-log observation.
 
 - [ ] Deploy, run the stale-cookie smoke, and observe Production runtime logs for 24 hours.
+
+## Preserve receipt reprint evidence
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: pos/print-jobs
+Exit: A manual receipt reprint creates a new immutable print job linked to its predecessor, while service retries preserve existing job evidence.
+Evidence: Preview migration replay, focused receipt-print regression, repository gates, T3 review, and one owner-operated receipt reprint smoke.
+
+- [ ] Complete one owner-operated receipt reprint smoke after Preview migration replay.
 
 ## Make HĐĐT worker failures diagnosable
 

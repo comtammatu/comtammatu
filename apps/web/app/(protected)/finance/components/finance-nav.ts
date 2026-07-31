@@ -4,6 +4,7 @@ import {
   FileText as IconFileText,
   Landmark as IconLandmark,
   Receipt as IconReceipt,
+  Target as IconTarget,
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
@@ -17,9 +18,11 @@ const financeNav = messages.finance.nav;
 export function resolveFinanceNav({
   showInvoices,
   showSupplierPayables,
+  showRevenueTargets = false,
 }: {
   showInvoices: boolean;
   showSupplierPayables: boolean;
+  showRevenueTargets?: boolean;
 }): ShellNavGroup[] {
   const groups: ShellNavGroup[] = [
     {
@@ -51,6 +54,15 @@ export function resolveFinanceNav({
           label: financeNav.items.expenses,
           icon: IconReceipt,
         },
+        ...(showRevenueTargets
+          ? [
+              {
+                href: "/finance/targets",
+                label: financeNav.items.revenueTargets,
+                icon: IconTarget,
+              },
+            ]
+          : []),
       ],
     },
   ];

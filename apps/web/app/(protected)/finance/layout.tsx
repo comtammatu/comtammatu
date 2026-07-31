@@ -10,6 +10,7 @@ export default async function FinanceLayout({
   children: ReactNode;
 }) {
   const { session, claims } = await loadAuthState();
+  const isOwner = claims.user_role === "owner";
   const [showInvoices, showSupplierPayables] = await Promise.all([
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
@@ -27,6 +28,7 @@ export default async function FinanceLayout({
       branchId={claims.branch_id}
       showInvoices={showInvoices}
       showSupplierPayables={showSupplierPayables}
+      showRevenueTargets={isOwner}
     >
       {children}
     </FinanceShell>
