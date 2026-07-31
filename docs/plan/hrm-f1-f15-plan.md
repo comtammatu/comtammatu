@@ -283,16 +283,59 @@ RPC `seed_annual_leave_entitlement_year(p_year int) RETURNS jsonb`: idempotent b
 
 ---
 
+### Phase 9b — Tenant-level staff workflow (accountant + central) (PR #12)
+
+Điều tra bổ sung phát hiện: accountant (tenant-level, `branch_id = NULL`) và central roles (site-pinned) có workflow HRM đứt đoạn ở nhiều điểm. Owner chốt xử lý 4 vấn đề + câu hỏi định tuyến.
+
+**Bối cảnh (đã verify):**
+- **Accountant**: `branch_id = NULL` (by-design, `check_branch_required` raise nếu gán branch). ACL `/hr`, `/hr/payroll` = `["owner"]` → accountant không vào được. Login redirect → `/finance`. Hiện **KHÔNG có surface nhân viên nào** (không chấm công — by-design OK; nhưng cũng không xem payslip/lịch/phép của chính mình).
+- **Central roles**: central site (`Kho Tổng`, `Bếp Trung Tâm`) là record trong `branches` với `branch_kind = central_supply|central_kitchen` → là "branch" vận hành. Chấm công/schedule/leave **OK** ở central site. Bug: onboarding `/hr/staff` không tạo `employees` row.
+
+**9b.1 Payroll fixed-salary path (F-new, accountant):**
+- Vấn đề: `fetchPayrollPreview` (`payroll-actions.ts:272-302, 557-559`) load accountant vào kỳ lương, prorate theo `workingDays=0` (accountant không chấm công) → `proratedSalary=0` (`payroll-actions.ts:628-630`). Kỳ lương méo.
+- Sửa: thêm flag `is_salaried_fixed` (hoặc detect tenant-level role qua `profiles.position_id` → role `accountant`) → skip proration, dùng `gross_salary` nguyên tháng (`payableDays = standardDays`). Cập nhật `calculate.ts` branch "fixed-salary" hoặc filter ở `buildPayrollPreview`. Document: tenant-level salaried staff không prorate theo attendance (theo `labor-contracts.md` — staff văn phòng hưởng lương tháng).
+
+**9b.2 Tenant-level leave path (F-new, accountant):**
+- Vấn đề: `submitLeaveRequest` (`lib/staff-runtime/leave/actions.ts:21`) đòi `branchId: z.coerce.number().positive()` + RPC `submit_leave_request` (`baseline.sql:41449-41518`) đòi `p_branch_id` → accountant không xin nghỉ được.
+- Migration: RPC `submit_leave_request_tenant(p_start_date, p_end_date, p_leave_type, p_reason)` — cho roles `branch_id IS NULL`, resolve employee qua `profile_id = auth.uid()`, không đòi branch. Quota dùng cùng `annual_leave_entitlements`. Approval routing → owner (không có branch_manager).
+- Action `submitLeaveRequestTenant` + UI trong `/me/leave` (xem 9b.4).
+
+**9b.3 Align role_template D088 vs fixture (F-new):**
+- Vấn đề: prod template (`d088_b_full_ops_roles.sql:88-92`) cho accountant chỉ `['procurement:read']`; ACL `finance` cho phép `["owner","accountant"]` → accountant vào `/finance` nhưng thiếu quyền (`finance:view`, `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`). Central roles cũng mismatch (fixture thêm transfer/request keys).
+- Migration `align_accountant_central_role_templates.sql`: UPDATE `role_templates` cho accountant/central_supply_ops/central_kitchen_lead khớp ACL thực + `permissions.ts` catalog. Audit log. Quyết định: align theo **fixture** (đầy đủ) hay **ACL thực tế cần** — cần owner chọn trong implementation (em đề xuất align theo ACL thực tế được dùng bởi `/finance`/`/inventory`).
+
+**9b.4 Central onboarding consistency (F-new):**
+- Vấn đề: central roles onboard qua `/hr/staff` (`createStaff`) không tạo `employees` row → staff-runtime-context null → không chấm công/schedule/leave. Qua `/hr` (`createEmployeeAccount`) thì có.
+- Sửa: cùng hướng P3 — restrict `/hr/staff` chỉ tenant-level (accountant); central roles CHỈ tạo qua `/hr`. Hoặc: `createStaff` gọi `provision_employee_record` khi position là operational. Owner chốt hướng trong P9b (thống nhất với P3).
+
+**9b.5 Tenant-level self surface `/me/*` (accountant, F-new):**
+- Vấn đề: accountant không có nơi chấm công (OK by-design) NHƯNG cũng không xem được payslip/lịch phép/contract của chính mình. Câu hỏi owner: "Employee sẽ vào đâu để chấm công, lịch, xem ca làm, lương".
+- Trả lời thiết kế: tạo **`/me/*` surface tenant-level** (không branch-scoped):
+  - `/me/payslip` — payslip của chính user (đã có logic `lib/staff-runtime/payslip/`, route hiện `/br/[branchId]/...` — extract ra tenant variant).
+  - `/me/leave` — xin nghỉ + history (gọi `submit_leave_request_tenant` 9b.2).
+  - `/me/contract` — xem HĐLĐ của chính user (read-only).
+  - `/me/schedule` — **KHÔNG áp dụng** accountant (không có ca) → ẩn hoặc hiện "Không áp dụng (hưởng lương tháng)".
+  - Chấm công: **KHÔNG** — accountant by-design không chấm công (hưởng lương tháng). Surface này không có clock-in.
+- Route ACL: `module-acl.ts` thêm `moduleKey "me"` allowedRoles mọi role đã có employees row. Nav thêm vào top-bar cho non-branch roles.
+- Tests: accountant xem được payslip (fixed-salary 9b.1), leave tenant path, contract read-only, IDOR (accountant không xem được của người khác).
+
+**9b.6 Tests:** payroll fixed-salary (accountant = nguyên tháng), leave tenant (submit + owner approve), role_template align (accountant có đủ finance keys), central onboarding (qua /hr có employees row), `/me/*` IDOR.
+
+---
+
 ## 4. Thứ tự triển khai cuối
 
 ```
-Bước 0: ADR D0XX (duyệt trước — đảo D012 rostering clause + amend D026/D027 + contract/probation semantics)
+Bước 0: ADR (activate 0019 — đảo D012 rostering clause + amend D026/D027 + contract/probation semantics)
 P1 (blocker lương) → P3 (/hr/staff + orphan repair) → P2 (consumption, land trước P4)
 → P4a (code-first) → [deploy P4a] → P4b (destructive migration)
 → P6A (contract history + period-effective payroll) → P6B (terminate+probation+sequence)
 → P7 (detail + offboarding) → P6C (document) → P8 (dọn nợ)
+→ P9b (tenant-level staff workflow: accountant fixed-salary + tenant leave + role_template align + /me surface)
 → P5 (rostering optional overlay; mandatory = decision riêng sau)
 ```
+
+**P9b đặt sau P8** vì phụ thuộc: P1 (provision_employee_record cho central onboarding), P6A (contract cho `/me/contract`), P7 (offboarding reuse). P9b độc lập với P5 (rostering).
 
 ## 5. Rủi ro chính đã address
 
@@ -306,6 +349,9 @@ P1 (blocker lương) → P3 (/hr/staff + orphan repair) → P2 (consumption, lan
 - Contract DML hole → revoke anon/authenticated, RPC-only.
 - Mọi bảng/RPC mới → grants + RLS + revoke DML + tenant-safe + negative IDOR test + SQL test.
 - Mỗi phase DB → cập nhật generated types + fixtures + catalog + guards + route-matrix trong cùng PR.
+
+### Rev 3 (sau điều tra tenant-level roles)
+- **P9b mới** (§3): tenant-level staff workflow — accountant fixed-salary payroll, tenant-level leave, align role_template D088 vs fixture, central onboarding consistency, surface `/me/*` cho non-branch staff (payslip/leave/contract). Phát hiện từ điều tra: accountant hiện KHÔNG có surface nhân viên nào (không vào được /hr /hr/payroll ACL owner-only, branch_id NULL chặn route /br/*).
 
 ---
 
