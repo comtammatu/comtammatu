@@ -1,12 +1,12 @@
 import {
   addMoney,
+  calculateVatAmount,
   minorUnitsToCanonical,
   multiplyUnitPrice,
   parseMoneyToMinorUnits,
   subtractMoney,
 } from "@comtammatu/shared/money";
 
-export type SupplierInvoicePricingMode = "gross_total" | "unit_price";
 export type SupplierInvoiceVatMode = "auto" | "manual";
 export type SupplierInvoiceVatRate = 0 | 5 | 8 | 10;
 
@@ -16,83 +16,38 @@ function canonicalMoneyOrZero(value: string): string {
     : "0.00";
 }
 
-function parseQuantityToMilliUnits(value: string): bigint {
-  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(value)) {
-    throw new RangeError("Expected a positive quantity with at most 3 decimals");
-  }
-  const [whole = "0", fraction = ""] = value.split(".");
-  return BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, "0") || "0");
-}
-
-function roundHalfUpDivision(numerator: bigint, denominator: bigint): bigint {
-  if (numerator < 0n || denominator <= 0n) {
-    throw new RangeError("Expected a non-negative numerator and positive denominator");
-  }
-  const quotient = numerator / denominator;
-  const remainder = numerator % denominator;
-  return remainder * 2n >= denominator ? quotient + 1n : quotient;
-}
-
-export function calculateSupplierInvoiceGrossLineTotal(
+export function calculateSupplierInvoiceNetLineTotal(
   quantity: string,
   unitPrice: string,
   lineDiscount: string,
 ): string {
-  const gross = multiplyUnitPrice(quantity, canonicalMoneyOrZero(unitPrice));
-  const total = subtractMoney(gross, canonicalMoneyOrZero(lineDiscount));
+  const extended = multiplyUnitPrice(quantity, canonicalMoneyOrZero(unitPrice));
+  const total = subtractMoney(extended, canonicalMoneyOrZero(lineDiscount));
   return parseMoneyToMinorUnits(total) < 0n ? "0.00" : total;
 }
 
-export function deriveSupplierInvoiceGrossUnitPrice(
-  quantity: string,
-  grossLineTotal: string,
-  lineDiscount: string,
-): string {
-  const quantityMilliUnits = parseQuantityToMilliUnits(quantity);
-  if (quantityMilliUnits <= 0n) return "0.00";
-  const grossBeforeDiscount = addMoney([
-    canonicalMoneyOrZero(grossLineTotal),
-    canonicalMoneyOrZero(lineDiscount),
-  ]);
-  return minorUnitsToCanonical(
-    roundHalfUpDivision(
-      parseMoneyToMinorUnits(grossBeforeDiscount) * 1000n,
-      quantityMilliUnits,
-    ),
-  );
-}
-
-export function calculateSupplierInvoiceVatFromGross(
-  grossLineTotal: string,
+export function calculateSupplierInvoiceVatFromNet(
+  netLineTotal: string,
   vatRate: SupplierInvoiceVatRate,
 ): string {
-  return minorUnitsToCanonical(
-    roundHalfUpDivision(
-      parseMoneyToMinorUnits(canonicalMoneyOrZero(grossLineTotal)) *
-        BigInt(vatRate),
-      BigInt(100 + vatRate),
-    ),
-  );
+  return calculateVatAmount(canonicalMoneyOrZero(netLineTotal), vatRate);
 }
 
-export function calculateSupplierInvoiceNetLineTotal(
-  grossLineTotal: string,
+export function calculateSupplierInvoiceGrossLineTotal(
+  netLineTotal: string,
   vatAmount: string,
 ): string {
-  return subtractMoney(
-    canonicalMoneyOrZero(grossLineTotal),
-    canonicalMoneyOrZero(vatAmount),
-  );
+  return addMoney([canonicalMoneyOrZero(netLineTotal), canonicalMoneyOrZero(vatAmount)]);
 }
 
 export function resolveSupplierInvoiceVatAmount(
-  grossLineTotal: string,
+  netLineTotal: string,
   vatRate: SupplierInvoiceVatRate,
   mode: SupplierInvoiceVatMode,
   enteredVatAmount: string,
 ): string {
   if (mode === "manual") return canonicalMoneyOrZero(enteredVatAmount);
-  return calculateSupplierInvoiceVatFromGross(grossLineTotal, vatRate);
+  return calculateSupplierInvoiceVatFromNet(netLineTotal, vatRate);
 }
 
 export function summarizeSupplierInvoiceMoney(

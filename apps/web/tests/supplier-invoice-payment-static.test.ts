@@ -212,11 +212,11 @@ test("supplier invoice material lines follow the accounting entry order", () => 
     source.indexOf("function SupplierPaymentFields"),
   );
   const labels = [
-    "copy.pricingModeLabel",
     "copy.unitPriceLabel",
     "copy.lineDiscountLabel",
     "copy.taxRateLabel",
     "copy.vatAmountLabel",
+    "copy.grossLineTotalLabel",
   ];
 
   const positions = labels.map((label) => entryForm.indexOf(label));
@@ -227,7 +227,7 @@ test("supplier invoice material lines follow the accounting entry order", () => 
   );
   assert.match(
     entryForm,
-    /line\.pricingMode === "unit_price"[\s\S]*?copy\.unitPriceLabel[\s\S]*?: \([\s\S]*?copy\.grossLineTotalLabel/,
+    /copy\.unitPriceLabel[\s\S]*?copy\.lineDiscountLabel[\s\S]*?copy\.taxRateLabel[\s\S]*?copy\.vatAmountLabel[\s\S]*?copy\.grossLineTotalLabel/,
   );
 });
 
