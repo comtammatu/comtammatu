@@ -334,8 +334,8 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   cash_change: null,
   tables: { number: 2 },
   branches: {
-    name: "Chi nhánh Đất Đỏ",
-    address: "Ấp Phước Sơn, Xã Đất Đỏ",
+    name: "Chi nhánh Nguyễn Hữu Thọ",
+    address: "Đường Nguyễn Hữu Thọ, TP.HCM",
     phone: null,
   },
   order_items: [

@@ -539,6 +539,7 @@ export function TransferDetailClient({
                 documentId={transfer.id}
                 documentCode={transfer.code}
                 branchOptions={correctionBranches}
+                buttonSize={embedded ? "touch" : "default"}
                 itemOptions={transfer.items.map((item) => ({
                   ingredientId: item.ingredientId,
                   name: item.name,

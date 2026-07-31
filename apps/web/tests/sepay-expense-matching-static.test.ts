@@ -246,7 +246,10 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /missingBankWebhookPayments/);
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
-  assert.match(expenseClient, /group !== "materials" && group !== "transfer"/);
+  assert.match(
+    expenseClient,
+    /const EXPENSE_FORM_CATEGORIES = \[[\s\S]*"rent"[\s\S]*"salary"[\s\S]*"utilities"[\s\S]*"other"[\s\S]*\] as const/,
+  );
   assert.match(expenseClient, /getExpenseRowActions/);
   assert.match(expenseClient, /paymentState === "transfer_matched"/);
   assert.match(expenseClient, /<RowActionsMenu/);

@@ -18,7 +18,7 @@ test("manual-issue dialog reuses createTaxInvoice — no second money path", () 
   );
   assert.ok(
     !/status:\s*"issued"/.test(dialog) &&
-      !dialog.includes("from(\"tax_invoices\")"),
+      !dialog.includes('from("tax_invoices")'),
     "dialog must not write invoice rows itself — issuance stays server-side in createTaxInvoice",
   );
 });
@@ -50,10 +50,10 @@ test("manual-issue gates on the issuance predicate, not canManageInvoices", () =
   const page = read("apps/web/app/(protected)/finance/invoices/page.tsx");
 
   assert.ok(
-    /export async function createTaxInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.SETTINGS_TENANT/.test(
+    /export async function createTaxInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.FINANCE_VIEW/.test(
       actions,
     ) &&
-      /export async function canIssueManualInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.SETTINGS_TENANT/.test(
+      /export async function canIssueManualInvoice[\s\S]*?getAuthContextWithPermission\(\s*FINANCE_ROLES,\s*PERMISSION_KEYS\.FINANCE_VIEW/.test(
         actions,
       ),
     "canIssueManualInvoice must enforce the SAME predicate as createTaxInvoice",

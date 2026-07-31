@@ -50,8 +50,7 @@ export type TemplateCompositeType =
   | "shiftCloseReport";
 
 export type TemplateBlock = (
-  | PrintDocumentBlock
-  | { type: TemplateCompositeType }
+  PrintDocumentBlock | { type: TemplateCompositeType }
 ) &
   TemplateCondition & { [key: string]: unknown };
 
@@ -217,7 +216,7 @@ export const DEFAULT_TEMPLATE_CONTENT: Record<PrintKind, TemplateContent> = {
       },
       {
         type: "text",
-        text: "Người nhận đơn: {{cashier_name}}",
+        text: "Người order: {{cashier_name}}",
         when_field: "cashier_name",
         when_not_empty: true,
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { SlidersHorizontal as IconSliders } from "lucide-react";
@@ -66,7 +66,7 @@ type DocumentStockCorrectionDialogProps = {
   itemOptions: CorrectionItemOption[];
   buttonLabel?: string;
   buttonVariant?: "default" | "outline" | "secondary" | "ghost";
-  buttonSize?: "default" | "sm";
+  buttonSize?: ComponentProps<typeof Button>["size"];
 };
 
 function uniqueItems(items: CorrectionItemOption[]) {

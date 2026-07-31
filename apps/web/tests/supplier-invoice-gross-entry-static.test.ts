@@ -56,7 +56,7 @@ test("supplier invoice editor uses the document dialog without compressing line 
   );
 });
 
-test("supplier invoice line infers the pricing source from the edited field", () => {
+test("supplier invoice line uses an explicit pricing mode and derives the other value", () => {
   const client = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
@@ -65,10 +65,7 @@ test("supplier invoice line infers the pricing source from the edited field", ()
     client.indexOf("function SupplierPaymentFields"),
   );
 
-  assert.doesNotMatch(
-    lineEditor,
-    /<ToggleGroup[\s\S]*?value=\{line\.pricingMode\}/,
-  );
+  assert.match(lineEditor, /<Select\s+value=\{line\.pricingMode\}/);
   assert.doesNotMatch(
     lineEditor,
     /readOnly=\{line\.pricingMode === "(?:gross_total|unit_price)"\}/,
@@ -79,10 +76,10 @@ test("supplier invoice line infers the pricing source from the edited field", ()
   );
   assert.match(
     lineEditor,
-    /grossLineTotal: value,\s+pricingMode: "gross_total",\s+unitPrice: deriveSupplierInvoiceGrossUnitPrice/,
+    /grossLineTotal: value,\s+unitPrice: deriveSupplierInvoiceGrossUnitPrice/,
   );
   assert.match(
     lineEditor,
-    /xl:grid-cols-\[minmax\(8rem,1fr\)_minmax\(8rem,1fr\)_minmax\(7rem,0\.8fr\)_7rem_minmax\(9rem,1fr\)\]/,
+    /xl:grid-cols-\[minmax\(9rem,1fr\)_minmax\(9rem,1fr\)_7rem_minmax\(9rem,1fr\)\]/,
   );
 });

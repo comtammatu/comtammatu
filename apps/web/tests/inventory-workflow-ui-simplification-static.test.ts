@@ -453,7 +453,7 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     /search=\{\s*isCompactLayout \? \(\s*searchControl/,
   );
 
-  for (const source of [stock, ingredients, issues, stocktake, invoices]) {
+  for (const source of [stock, ingredients, issues, stocktake]) {
     assert.match(source, /inventoryListFilterSelectClassName/);
   }
   assert.match(grn, /className="w-44"/);
@@ -469,7 +469,7 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     transfers,
     /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
   );
-  assert.match(invoices, /size="lg"/);
+  assert.match(invoices, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
   assert.match(
     stocktake,
     /useFormControlSize\(embedded \? "touch" : "responsive"\)/,

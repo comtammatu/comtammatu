@@ -150,7 +150,10 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(cockpit, /select\("amount, category"\)/);
   assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
   assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
-  assert.match(expensesClient, /group !== "materials"/);
+  assert.match(
+    expensesClient,
+    /const EXPENSE_FORM_CATEGORIES = \[[\s\S]*"rent"[\s\S]*"salary"[\s\S]*"utilities"[\s\S]*"other"[\s\S]*\] as const/,
+  );
   assert.match(dataContract, /category thuộc nhóm `operating`/);
   assert.doesNotMatch(dataContract, /category='bank_deposit'/);
 });
@@ -232,7 +235,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   );
   assert.match(expenseActions, /orderIds\.add\(movement\.order_id\)/);
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
-  assert.match(financeMessages, /actualFoodCost: "Giá vốn đã ghi nhận"/);
+  assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế đã ghi nhận"/);
 });
 
 test("Finance gates gross profit and operating result on data coverage", () => {

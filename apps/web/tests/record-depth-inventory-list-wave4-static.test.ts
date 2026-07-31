@@ -120,7 +120,6 @@ test("Wave 4 row-open-single-path: Inventory LIST surfaces ban competing open pa
     ...D1_TASK_LISTS,
     ...C4_ZERO_ACTION_LISTS,
     ...OWNER_D1_VIEW_LISTS.map((s) => s.path),
-    FINANCE_INVOICE_LIST,
     "app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   ];
 
@@ -235,9 +234,15 @@ test("Wave 4 Branch D1 count views: Sheet dual-plane carve-out (same depth as Ow
   }
 });
 
-test("Wave 4 Finance invoice LIST: Sheet D1 view, no Drawer/Popover dual path", () => {
+test("Wave 4 Finance invoice LIST: Sheet D1 view with filter Popover", () => {
   const source = read(FINANCE_INVOICE_LIST);
-  assertNoCompetingRowOpenPath(source, "supplier-invoices");
+  assert.doesNotMatch(
+    source,
+    /from "@comtammatu\/ui\/components\/drawer"|<Drawer[\s>]/,
+  );
+  assert.doesNotMatch(source, /useLongPress|onOpenDrawer|setDrawerRow/);
+  assert.match(source, /const filterPopover = \(\s*<Popover>/);
+  assert.match(source, /filters=\{filterPopover\}/);
   assert.match(
     source,
     /from "@comtammatu\/ui\/components\/sheet"/,

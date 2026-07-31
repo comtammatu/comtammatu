@@ -23,7 +23,7 @@ test("purchase request dialog keeps its actions visible with many lines", () => 
   assert.match(frameSource, /sm:max-h-\[95dvh\]/);
   assert.match(
     frameSource,
-    /document && "min-h-0 overflow-y-auto overscroll-contain/,
+    /document &&\s*"min-h-0 overflow-y-auto overscroll-contain/,
   );
   assert.match(frameSource, /document && "border-t bg-popover/);
 });

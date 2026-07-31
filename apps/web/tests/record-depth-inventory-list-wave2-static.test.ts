@@ -60,7 +60,6 @@ test("Wave 2 Inventory LIST clients do not import Popover as a record view", () 
     "app/(protected)/inventory/production/production-runs-client.tsx",
     "app/(protected)/inventory/suppliers/suppliers-client.tsx",
     "app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",
-    financeClient,
   ];
 
   for (const path of inventoryClients) {
@@ -72,4 +71,8 @@ test("Wave 2 Inventory LIST clients do not import Popover as a record view", () 
     );
     assert.doesNotMatch(source, /<Popover[\s>]/, path);
   }
+
+  const financeSource = read(financeClient);
+  assert.match(financeSource, /const filterPopover = \(\s*<Popover>/);
+  assert.match(financeSource, /filters=\{filterPopover\}/);
 });

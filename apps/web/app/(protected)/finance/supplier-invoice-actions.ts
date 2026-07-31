@@ -700,7 +700,7 @@ export const recordSupplierPayment = withAction(
 
 export const allocateSupplierAdvance = withAction(
   {
-    roles: MODULE_ACL.finance.allowedRoles,
+    roles: ["owner"] as const,
     schema: supplierAdvanceSchema,
     permission: PERMISSION_KEYS.FINANCE_VIEW,
     forbiddenError: "Không có quyền phân bổ ứng trước NCC.",
@@ -860,7 +860,10 @@ export const attachSupplierInvoiceVatEvidence = withAction(
   {
     roles: MODULE_ACL.finance.allowedRoles,
     schema: attachVatEvidenceSchema,
-    anyPermission: [PERMISSION_KEYS.FINANCE_VIEW],
+    anyPermission: [
+      PERMISSION_KEYS.FINANCE_AP_PAY,
+      PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+    ],
     forbiddenError: "Không có quyền đính kèm HĐ GTGT.",
   },
   async (data, { supabase, claims }) => {

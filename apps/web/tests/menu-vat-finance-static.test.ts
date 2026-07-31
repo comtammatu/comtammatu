@@ -54,7 +54,7 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   assert.match(inventoryCopy, /invoiceLines: "Dòng hóa đơn"/);
   assert.match(invoiceClient, /lineDiscount/);
   assert.match(invoiceClient, /vatAmount/);
-  assert.match(invoiceClient, /grid gap-3 sm:grid-cols-2/);
+  assert.match(invoiceClient, /grid gap-3 md:grid-cols-2/);
   assert.doesNotMatch(invoiceClient, /className="contents"/);
   assert.match(invoiceActions, /save_supplier_invoice_draft/);
   assert.match(invoiceActions, /confirm_supplier_invoice/);

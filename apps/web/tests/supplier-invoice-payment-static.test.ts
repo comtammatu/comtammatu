@@ -153,10 +153,7 @@ test("supplier invoice payment action allows Finance roles but keeps advances Ow
   );
 
   assert.match(source, /recordSupplierPayment/);
-  assert.match(
-    source,
-    /recordSupplierPayment[\s\S]*?roles: ROLES/,
-  );
+  assert.match(source, /recordSupplierPayment[\s\S]*?roles: ROLES/);
   assert.match(
     source,
     /allocateSupplierAdvance[\s\S]*?roles: \["owner"\] as const/,
@@ -204,6 +201,49 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   assert.match(client, /uploadIsPrimary/);
   assert.match(client, /payIsPrimary/);
   assert.doesNotMatch(client, /className="contents"/);
+});
+
+test("supplier invoice material lines follow the accounting entry order", () => {
+  const source = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+  const entryForm = source.slice(
+    source.indexOf("function SupplierInvoiceCreateFields"),
+    source.indexOf("function SupplierPaymentFields"),
+  );
+  const labels = [
+    "copy.pricingModeLabel",
+    "copy.unitPriceLabel",
+    "copy.lineDiscountLabel",
+    "copy.taxRateLabel",
+    "copy.vatAmountLabel",
+  ];
+
+  const positions = labels.map((label) => entryForm.indexOf(label));
+  positions.forEach((position) => assert.ok(position >= 0));
+  assert.deepEqual(
+    positions,
+    [...positions].toSorted((left, right) => left - right),
+  );
+  assert.match(
+    entryForm,
+    /line\.pricingMode === "unit_price"[\s\S]*?copy\.unitPriceLabel[\s\S]*?: \([\s\S]*?copy\.grossLineTotalLabel/,
+  );
+});
+
+test("supplier invoice tax rate applies to every line and recalculates VAT", () => {
+  const source = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  );
+
+  assert.match(source, /invoiceVatRate:/);
+  assert.match(source, /copy\.invoiceTaxRateLabel/);
+  assert.match(
+    source,
+    /function applyInvoiceVatRate[\s\S]*?\.map\([\s\S]*?vatRate: rate[\s\S]*?vatMode: "auto"/,
+  );
+  assert.doesNotMatch(source, /copy\.recalculateVat/);
+  assert.match(source, /value=\{line\.vatAmount\}[\s\S]*?readOnly/);
 });
 
 test("supplier invoice client exposes payment only behind server permission", () => {

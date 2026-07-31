@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { addMoney } from "@comtammatu/shared/money";
 import {
+  expenseTaxableFromGross,
   expenseGrossFromBreakdown,
   expenseVatLineSchema,
   resolveExpenseVatAmount,
+  resolveExpenseVatAmountFromGross,
   toExpenseVatBreakdownPayload,
 } from "../app/(protected)/finance/_lib/expense-vat";
 
@@ -51,6 +53,13 @@ test("expense gross totals reconcile without number aggregation", () => {
     ]),
     "59401.38",
   );
+});
+
+test("expense gross-entry VAT converts back to the persisted taxable breakdown", () => {
+  const vatAmount = resolveExpenseVatAmountFromGross("59401.08", 8, "");
+  assert.equal(vatAmount, "4400.08");
+  assert.equal(expenseTaxableFromGross("59401.08", vatAmount), "55001.00");
+  assert.equal(resolveExpenseVatAmountFromGross("100.00", 0, ""), "0.00");
 });
 
 test("expense summary aggregation keeps thousands-of-billions exact", () => {

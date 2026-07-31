@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import {
   Pencil as IconPencil,
@@ -33,6 +33,10 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { RowActionsMenu } from "@/components/row-actions-menu";
+import {
+  filterAndSortItems,
+  type ItemFilterValues,
+} from "./item-table-filters";
 
 import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
 export interface ItemRow {
@@ -59,6 +63,20 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
   const [editItem, setEditItem] = useState<ItemRow | null>(null);
   const [detailItem, setDetailItem] = useState<ItemRow | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [searchValue, setSearchValue] = useState("");
+  const [filterValues, setFilterValues] = useState<ItemFilterValues>({
+    category: "all",
+    status: "all",
+    sort: "menu_order",
+  });
+  const visibleItems = useMemo(
+    () => filterAndSortItems(items, searchValue, filterValues),
+    [items, searchValue, filterValues],
+  );
+  const hasActiveFilter =
+    searchValue.trim() !== "" ||
+    filterValues.category !== "all" ||
+    filterValues.status !== "all";
 
   async function handleToggleActive(item: ItemRow) {
     if (item.is_active) {
@@ -205,10 +223,56 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     <>
       <DataTable
         columns={columns}
-        data={items}
+        data={visibleItems}
         pageSize={25}
         getRowKey={(item) => item.id}
-        emptyTitle="Chưa có món ăn nào"
+        searchable
+        searchPlaceholder={MENU_VI.itemSearchPlaceholder}
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        filters={[
+          {
+            key: "category",
+            label: FORM_VI.category,
+            placeholder: MENU_VI.allCategories,
+            options: [
+              { value: "all", label: MENU_VI.allCategories },
+              ...categories.map((category) => ({
+                value: category.id.toString(),
+                label: category.name,
+              })),
+            ],
+          },
+          {
+            key: "status",
+            label: FORM_VI.status,
+            placeholder: MENU_VI.allStatuses,
+            options: [
+              { value: "all", label: MENU_VI.allStatuses },
+              { value: "active", label: ACTIVE_STATE_LABELS_VI.active },
+              { value: "inactive", label: ACTIVE_STATE_LABELS_VI.inactive },
+            ],
+          },
+          {
+            key: "sort",
+            label: MENU_VI.sortBy,
+            placeholder: MENU_VI.menuOrder,
+            options: [
+              { value: "menu_order", label: MENU_VI.menuOrder },
+              { value: "name_asc", label: MENU_VI.nameAscending },
+              { value: "price_asc", label: MENU_VI.priceAscending },
+              { value: "price_desc", label: MENU_VI.priceDescending },
+            ],
+          },
+        ]}
+        filterValues={filterValues}
+        onFilterChange={(key, value) =>
+          setFilterValues((current) => ({ ...current, [key]: value }))
+        }
+        emptyTitle={
+          hasActiveFilter ? MENU_VI.noMatchingItems : "Chưa có món ăn nào"
+        }
+        emptyMode={hasActiveFilter ? "no-results" : "no-data"}
         emptyIcon={
           <IconToolsKitchen className="size-8 text-muted-foreground" />
         }

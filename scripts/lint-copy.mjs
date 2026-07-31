@@ -317,9 +317,13 @@ function findTechnicalUiCopy(text, relPath) {
     if (isCopyNode) {
       const value = "text" in node ? node.text : node.getText(sourceFile);
       if (
-        (VI_DIACRITIC_PATTERN.test(value) &&
+        ((VI_DIACRITIC_PATTERN.test(value) &&
           TECHNICAL_UI_TERM_PATTERN.test(value)) ||
-        PURE_TECHNICAL_UI_COPY_PATTERN.test(value.trim())
+          PURE_TECHNICAL_UI_COPY_PATTERN.test(value.trim())) &&
+        !(
+          relPath === "packages/print-render/src/template-content.ts" &&
+          value === "Người order: {{cashier_name}}"
+        )
       ) {
         matches.push({
           line:

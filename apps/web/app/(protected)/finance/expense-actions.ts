@@ -718,7 +718,7 @@ export async function searchSepayRefundOptions(input: {
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
+    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
   );
   if (!ctx) {
     return { success: false, error: "Không có quyền xem khoản hoàn tiền." };

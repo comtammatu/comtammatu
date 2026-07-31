@@ -93,5 +93,5 @@ test("supplier invoice toolbar consumes the responsive control contract", () => 
     source.match(/<SelectTrigger\s[\s\S]*?size=\{controlSize\}/g)?.length,
     4,
   );
-  assert.equal(source.match(/size=\{controlSize\}/g)?.length, 10);
+  assert.equal(source.match(/size=\{controlSize\}/g)?.length, 11);
 });

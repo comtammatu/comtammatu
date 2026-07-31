@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
   Banknote as IconBanknote,
@@ -60,14 +61,11 @@ import {
   MoneyVndField,
   PhotoUploadInput,
   SelectField,
-  TextField,
   TextareaField,
 } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import {
-  EXPENSE_CATEGORIES_BY_GROUP,
-  EXPENSE_CATEGORY_GROUPS,
   EXPENSE_PAYMENT_METHODS,
   classifyExpensePaymentState,
   expenseNeedsAction,
@@ -75,7 +73,12 @@ import {
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import type { FinanceParams } from "../_lib/finance-params";
-import { resolveExpenseVatAmount } from "../_lib/expense-vat";
+import {
+  EXPENSE_VAT_RATES,
+  expenseTaxableFromGross,
+  resolveExpenseVatAmountFromGross,
+  type ExpenseVatRate,
+} from "../_lib/expense-vat";
 import {
   EXPENSE_LIST_STATE_PARAM,
   type ExpenseListStateFilter,
@@ -89,13 +92,6 @@ import {
 
 const copy = messages.finance.expenses;
 const TENANT_LEVEL_BRANCH_VALUE = "__tenant__";
-
-const VAT_BUCKET_FIELDS = [
-  { rate: 0, taxableField: "vat0Taxable", vatField: null },
-  { rate: 5, taxableField: "vat5Taxable", vatField: "vat5Amount" },
-  { rate: 8, taxableField: "vat8Taxable", vatField: "vat8Amount" },
-  { rate: 10, taxableField: "vat10Taxable", vatField: "vat10Amount" },
-] as const;
 
 const optionalMoneySchema = z.string().refine(
   (value) => {
@@ -132,79 +128,301 @@ interface Props {
   tenantId: number;
 }
 
+const expenseFormLineSchema = z.object({
+  totalAmount: optionalMoneySchema.refine(
+    (value) => !!value && parseMoneyToMinorUnits(value) > 0n,
+    { error: FORM_VI.required },
+  ),
+  vatRate: z.enum(["0", "5", "8", "10"]),
+  vatAmount: optionalMoneySchema,
+});
+
 const expenseFormSchema = z
   .object({
     expenseDate: z.string().min(1, { error: "Chọn ngày phát sinh" }),
     branchId: z.string(),
-    category: z.string().min(1, { error: "Chọn khoản mục" }),
-    paymentMethod: z.string().min(1, { error: "Chọn phương thức" }),
-    vendorName: z.string().trim().max(200).optional(),
+    category: z.string().min(1, { error: "Chọn khoản chi" }),
+    paymentMethod: z.string().min(1, { error: "Chọn phương thức thanh toán" }),
     note: z.string().trim().min(5, FORM_VI.required).max(500),
     invoiceAttachmentUrl: z.string().optional(),
-    vat0Taxable: optionalMoneySchema,
-    vat5Taxable: optionalMoneySchema,
-    vat5Amount: optionalMoneySchema,
-    vat8Taxable: optionalMoneySchema,
-    vat8Amount: optionalMoneySchema,
-    vat10Taxable: optionalMoneySchema,
-    vat10Amount: optionalMoneySchema,
+    lines: z.array(expenseFormLineSchema).min(1).max(EXPENSE_VAT_RATES.length),
   })
-  .refine(
-    (data) =>
-      VAT_BUCKET_FIELDS.some(
-        (bucket) =>
-          !!data[bucket.taxableField] &&
-          parseMoneyToMinorUnits(data[bucket.taxableField]) > 0n,
-      ),
-    {
-      error: FORM_VI.required,
-      path: ["vat0Taxable"],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const rates = new Set<string>();
+    data.lines.forEach((line, index) => {
+      if (rates.has(line.vatRate)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Mỗi mức thuế suất chỉ được nhập một lần.",
+          path: ["lines", index, "vatRate"],
+        });
+      }
+      rates.add(line.vatRate);
+
+      if (!line.vatAmount) return;
+      const vatAmount = parseMoneyToMinorUnits(line.vatAmount);
+      if (vatAmount > parseMoneyToMinorUnits(line.totalAmount)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Thuế GTGT không được lớn hơn tổng tiền.",
+          path: ["lines", index, "vatAmount"],
+        });
+      }
+      if (line.vatRate === "0" && vatAmount !== 0n) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Thuế suất 0% phải có thuế GTGT bằng 0.",
+          path: ["lines", index, "vatAmount"],
+        });
+      }
+    });
+  });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 function buildExpenseVatBreakdown(values: ExpenseFormValues) {
-  return VAT_BUCKET_FIELDS.flatMap((bucket) => {
-    const rawTaxableAmount = values[bucket.taxableField];
-    if (
-      !rawTaxableAmount ||
-      parseMoneyToMinorUnits(rawTaxableAmount) <= 0n
-    ) {
+  return values.lines.flatMap((line) => {
+    if (!line.totalAmount || parseMoneyToMinorUnits(line.totalAmount) <= 0n) {
       return [];
     }
-    const taxableAmount = minorUnitsToCanonical(
-      parseMoneyToMinorUnits(rawTaxableAmount),
+    const grossAmount = minorUnitsToCanonical(
+      parseMoneyToMinorUnits(line.totalAmount),
+    );
+    const vatRate = Number(line.vatRate) as ExpenseVatRate;
+    const vatAmount = resolveExpenseVatAmountFromGross(
+      grossAmount,
+      vatRate,
+      line.vatAmount.trim(),
     );
 
-    const enteredVat =
-      bucket.vatField != null ? values[bucket.vatField].trim() : "";
-    const vatAmount = resolveExpenseVatAmount(
-      taxableAmount,
-      bucket.rate,
-      enteredVat,
-    );
-
-    return [{ vatRate: bucket.rate, taxableAmount, vatAmount }];
+    return [
+      {
+        vatRate,
+        taxableAmount: expenseTaxableFromGross(grossAmount, vatAmount),
+        vatAmount,
+      },
+    ];
   });
 }
 
-const EXPENSE_FORM_CATEGORY_GROUPS = EXPENSE_CATEGORY_GROUPS.filter(
-  (group) => group !== "materials" && group !== "transfer",
-);
+const EXPENSE_FORM_CATEGORIES = [
+  "rent",
+  "salary",
+  "utilities",
+  "other",
+] as const satisfies readonly ExpenseCategory[];
 
-const CATEGORY_GROUPS = EXPENSE_FORM_CATEGORY_GROUPS.map((group) => ({
-  label: copy.categoryGroupLabels[group],
-  options: EXPENSE_CATEGORIES_BY_GROUP[group].map((value) => ({
-    value,
-    label: copy.categoryLabels[value],
-  })),
+const CATEGORY_OPTIONS = EXPENSE_FORM_CATEGORIES.map((value) => ({
+  value,
+  label: copy.categoryLabels[value],
 }));
 
 const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
   value,
-  label: copy.paymentChoiceLabels[value],
+  label: copy.paymentMethodLabels[value],
 }));
+
+const VAT_RATE_OPTIONS = EXPENSE_VAT_RATES.map((rate) => ({
+  value: String(rate),
+  label: formatPercent(rate, 0),
+}));
+
+const EMPTY_EXPENSE_LINE: ExpenseFormValues["lines"][number] = {
+  totalAmount: "",
+  vatRate: "0",
+  vatAmount: "",
+};
+
+function ExpenseFormFields({
+  form,
+  branchOptions,
+  tenantId,
+  isTouchLayout,
+}: {
+  form: UseFormReturn<ExpenseFormValues>;
+  branchOptions: readonly { value: string; label: string }[];
+  tenantId: number;
+  isTouchLayout: boolean;
+}) {
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "lines",
+  });
+  const lines = form.watch("lines");
+  const vatBreakdown = buildExpenseVatBreakdown(form.getValues());
+  const subtotal = addMoney(vatBreakdown.map((line) => line.taxableAmount));
+  const vatAmount = addMoney(vatBreakdown.map((line) => line.vatAmount));
+  const totalAmount = addMoney(lines.map((line) => line.totalAmount || "0"));
+
+  return (
+    <>
+      <BusinessDateField
+        control={form.control}
+        name="expenseDate"
+        label={copy.form.date}
+        required
+      />
+      <SelectField
+        control={form.control}
+        name="branchId"
+        label={copy.form.branch}
+        options={branchOptions}
+        placeholder={copy.form.branchTenantLevel}
+      />
+      <SelectField
+        control={form.control}
+        name="category"
+        label={copy.form.category}
+        options={CATEGORY_OPTIONS}
+        placeholder={copy.form.categoryPlaceholder}
+        required
+      />
+      <TextareaField
+        control={form.control}
+        name="note"
+        label={copy.form.note}
+        placeholder={copy.form.notePlaceholder}
+        required
+      />
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">{copy.form.paymentSection}</p>
+        <SelectField
+          control={form.control}
+          name="paymentMethod"
+          label={copy.form.method}
+          options={METHOD_OPTIONS}
+          placeholder={copy.form.methodPlaceholder}
+          description={
+            copy.form.methodHints[
+              form.watch("paymentMethod") as ExpensePaymentMethod
+            ]
+          }
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-sm font-medium">{copy.form.vatSection}</p>
+          <p className="text-xs text-muted-foreground">
+            {copy.form.vatSectionHint}
+          </p>
+        </div>
+        {fields.map((field, index) => {
+          const selectedRate = lines[index]?.vatRate;
+          const rateOptions = VAT_RATE_OPTIONS.map((option) => ({
+            ...option,
+            disabled:
+              option.value !== selectedRate &&
+              lines.some((line) => line.vatRate === option.value),
+          }));
+          return (
+            <Item
+              key={field.id}
+              variant="outline"
+              className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)_auto]"
+            >
+              <MoneyVndField
+                control={form.control}
+                name={`lines.${index}.totalAmount`}
+                label={copy.form.lineTotal}
+                placeholder="0"
+                required
+              />
+              <SelectField
+                control={form.control}
+                name={`lines.${index}.vatRate`}
+                label={copy.form.lineVatRate}
+                options={rateOptions}
+                required
+              />
+              <MoneyVndField
+                control={form.control}
+                name={`lines.${index}.vatAmount`}
+                label={copy.form.lineVatAmount}
+                placeholder={copy.form.vatAutoPlaceholder}
+              />
+              {fields.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={isTouchLayout ? "touch" : "default"}
+                  className="self-end"
+                  onClick={() => remove(index)}
+                >
+                  <IconTrash data-icon="inline-start" />
+                  {copy.form.removeLine}
+                </Button>
+              ) : null}
+            </Item>
+          );
+        })}
+        <Button
+          type="button"
+          variant="outline"
+          size={isTouchLayout ? "touch" : "default"}
+          className="self-start"
+          disabled={fields.length >= EXPENSE_VAT_RATES.length}
+          onClick={() => {
+            const nextRate = EXPENSE_VAT_RATES.find(
+              (rate) => !lines.some((line) => line.vatRate === String(rate)),
+            );
+            append({
+              ...EMPTY_EXPENSE_LINE,
+              vatRate: String(
+                nextRate ?? 0,
+              ) as ExpenseFormValues["lines"][number]["vatRate"],
+            });
+          }}
+        >
+          <IconPlus data-icon="inline-start" />
+          {copy.form.addLine}
+        </Button>
+        <NoteCallout tone="muted">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">
+              {copy.form.subtotalLabel}
+            </span>
+            <span className="font-mono tabular-nums">
+              {formatAccountingVND(subtotal)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted-foreground">
+              {copy.form.vatTotalLabel}
+            </span>
+            <span className="font-mono tabular-nums">
+              {formatAccountingVND(vatAmount)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-medium">
+            <span>{copy.form.grossLabel}</span>
+            <span className="font-mono tabular-nums">
+              {formatAccountingVND(totalAmount)}
+            </span>
+          </div>
+        </NoteCallout>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">{copy.form.attachment}</p>
+        <p className="text-xs text-muted-foreground">
+          {copy.form.attachmentHint}
+        </p>
+        <PhotoUploadInput
+          tenantId={tenantId}
+          folder="expenses/pending"
+          value={form.watch("invoiceAttachmentUrl") || null}
+          onChange={(url) =>
+            form.setValue("invoiceAttachmentUrl", url ?? "", {
+              shouldDirty: true,
+            })
+          }
+          acceptTypes="image+pdf"
+          previewSize={isTouchLayout ? "touch" : "default"}
+        />
+      </div>
+    </>
+  );
+}
 
 function expenseDetail(row: ExpenseRow): string {
   return [
@@ -311,16 +529,9 @@ export function ExpensesClient({
       params.branch != null ? String(params.branch) : TENANT_LEVEL_BRANCH_VALUE,
     category: "",
     paymentMethod: "cash",
-    vendorName: "",
     note: "",
     invoiceAttachmentUrl: "",
-    vat0Taxable: "",
-    vat5Taxable: "",
-    vat5Amount: "",
-    vat8Taxable: "",
-    vat8Amount: "",
-    vat10Taxable: "",
-    vat10Amount: "",
+    lines: [EMPTY_EXPENSE_LINE],
   };
 
   async function onSubmit(values: ExpenseFormValues): Promise<ActionResult> {
@@ -337,7 +548,6 @@ export function ExpensesClient({
       category: values.category as ExpenseCategory,
       vatBreakdown,
       paymentMethod: values.paymentMethod as ExpensePaymentMethod,
-      vendorName: values.vendorName || undefined,
       note: values.note,
       invoiceAttachmentUrl: attachment || undefined,
     });
@@ -784,156 +994,14 @@ export function ExpensesClient({
           submitLabel={copy.form.submit}
           variant="document"
         >
-          {(form) => {
-            const formValues = form.watch();
-            const vatBreakdown = buildExpenseVatBreakdown(formValues);
-            const subtotal = addMoney(
-              vatBreakdown.map((line) => line.taxableAmount),
-            );
-            const vatAmount = addMoney(
-              vatBreakdown.map((line) => line.vatAmount),
-            );
-            const totalAmount = addMoney([subtotal, vatAmount]);
-
-            return (
-              <>
-                <BusinessDateField
-                  control={form.control}
-                  name="expenseDate"
-                  label={copy.form.date}
-                  required
-                />
-                <SelectField
-                  control={form.control}
-                  name="branchId"
-                  label={copy.form.branch}
-                  options={branchOptions}
-                  placeholder={copy.form.branchTenantLevel}
-                />
-                <SelectField
-                  control={form.control}
-                  name="category"
-                  label={copy.form.category}
-                  groups={CATEGORY_GROUPS}
-                  placeholder={copy.form.categoryPlaceholder}
-                  required
-                />
-                <SelectField
-                  control={form.control}
-                  name="paymentMethod"
-                  label={copy.form.method}
-                  options={METHOD_OPTIONS}
-                  placeholder={copy.form.methodPlaceholder}
-                  description={
-                    copy.form.methodHints[
-                      form.watch("paymentMethod") as ExpensePaymentMethod
-                    ]
-                  }
-                  required
-                />
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">{copy.form.vatSection}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {copy.form.vatSectionHint}
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {VAT_BUCKET_FIELDS.map((bucket) => {
-                      const rate = formatPercent(bucket.rate, 0);
-                      return (
-                        <div key={bucket.rate} className="contents">
-                          <MoneyVndField
-                            control={form.control}
-                            name={bucket.taxableField}
-                            label={copy.form.taxableAtRate(rate)}
-                            placeholder={copy.form.taxablePlaceholder}
-                          />
-                          {bucket.vatField != null ? (
-                            <MoneyVndField
-                              control={form.control}
-                              name={bucket.vatField}
-                              label={copy.form.vatAtRate(rate)}
-                              placeholder={copy.form.vatAutoPlaceholder}
-                            />
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <NoteCallout tone="muted">
-                    {vatBreakdown.map((line) => (
-                      <div
-                        key={line.vatRate}
-                        className="mb-2 flex items-center justify-between gap-3"
-                      >
-                        <span className="text-muted-foreground">
-                          {copy.form.vatBucketSummary(
-                            formatPercent(line.vatRate, 0),
-                            formatAccountingVND(line.taxableAmount),
-                          )}
-                        </span>
-                        <span className="font-mono tabular-nums">
-                          {formatAccountingVND(line.vatAmount)}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">
-                        {copy.form.subtotalLabel}
-                      </span>
-                      <span className="font-mono tabular-nums">
-                        {formatAccountingVND(subtotal)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">
-                        {copy.form.vatTotalLabel}
-                      </span>
-                      <span className="font-mono tabular-nums">
-                        {formatAccountingVND(vatAmount)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-medium">
-                      <span>{copy.form.grossLabel}</span>
-                      <span className="font-mono tabular-nums">
-                        {formatAccountingVND(totalAmount)}
-                      </span>
-                    </div>
-                  </NoteCallout>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-medium">{copy.form.attachment}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {copy.form.attachmentHint}
-                  </p>
-                  <PhotoUploadInput
-                    tenantId={tenantId}
-                    folder="expenses/pending"
-                    value={form.watch("invoiceAttachmentUrl") || null}
-                    onChange={(url) =>
-                      form.setValue("invoiceAttachmentUrl", url ?? "", {
-                        shouldDirty: true,
-                      })
-                    }
-                    acceptTypes="image+pdf"
-                    previewSize={isTouchLayout ? "touch" : "default"}
-                  />
-                </div>
-                <TextField
-                  control={form.control}
-                  name="vendorName"
-                  label={copy.form.vendor}
-                  placeholder={copy.form.vendorPlaceholder}
-                />
-                <TextareaField
-                  control={form.control}
-                  name="note"
-                  label={copy.form.note}
-                  placeholder={copy.form.notePlaceholder}
-                  required
-                />
-              </>
-            );
-          }}
+          {(form) => (
+            <ExpenseFormFields
+              form={form}
+              branchOptions={branchOptions}
+              tenantId={tenantId}
+              isTouchLayout={isTouchLayout}
+            />
+          )}
         </FormDialog>
       ) : null}
 
@@ -997,7 +1065,7 @@ export function ExpensesClient({
                   ),
                 },
                 {
-                  term: copy.form.vendor,
+                  term: copy.detail.vendor,
                   description:
                     selectedExpense.vendor_name?.trim() ||
                     copy.detail.emptyValue,

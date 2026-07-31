@@ -4,9 +4,11 @@ import {
   calculateVatAmount,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
+  subtractMoney,
 } from "@comtammatu/shared/money";
 
 export const EXPENSE_VAT_RATES = [0, 5, 8, 10] as const;
+export type ExpenseVatRate = (typeof EXPENSE_VAT_RATES)[number];
 
 const expenseMoneySchema = z
   .string()
@@ -34,17 +36,18 @@ export const expenseVatLineSchema = z.object({
 
 export function refineExpenseVatBreakdown(
   lines: Array<{ vatRate: number; vatAmount: string }>,
-  addIssue: (index: number, field: "vatRate" | "vatAmount", message: string) => void,
+  addIssue: (
+    index: number,
+    field: "vatRate" | "vatAmount",
+    message: string,
+  ) => void,
 ) {
   const rates = new Set<number>();
   for (const [index, line] of lines.entries()) {
     if (rates.has(line.vatRate)) {
       addIssue(index, "vatRate", "Mỗi mức thuế GTGT chỉ được nhập một lần.");
     }
-    if (
-      line.vatRate === 0 &&
-      parseMoneyToMinorUnits(line.vatAmount) !== 0n
-    ) {
+    if (line.vatRate === 0 && parseMoneyToMinorUnits(line.vatAmount) !== 0n) {
       addIssue(index, "vatAmount", "Mức thuế 0% phải có tiền thuế bằng 0.");
     }
     rates.add(line.vatRate);
@@ -75,10 +78,40 @@ export function expenseGrossFromBreakdown(
 
 export function resolveExpenseVatAmount(
   taxableAmount: string,
-  vatRate: (typeof EXPENSE_VAT_RATES)[number],
+  vatRate: ExpenseVatRate,
   enteredVatAmount: string,
 ): string {
   return enteredVatAmount
     ? minorUnitsToCanonical(parseMoneyToMinorUnits(enteredVatAmount))
     : calculateVatAmount(taxableAmount, vatRate);
+}
+
+function roundHalfUpDivision(numerator: bigint, denominator: bigint): bigint {
+  const quotient = numerator / denominator;
+  const remainder = numerator % denominator;
+  return remainder * 2n >= denominator ? quotient + 1n : quotient;
+}
+
+export function resolveExpenseVatAmountFromGross(
+  grossAmount: string,
+  vatRate: ExpenseVatRate,
+  enteredVatAmount: string,
+): string {
+  if (enteredVatAmount) {
+    return minorUnitsToCanonical(parseMoneyToMinorUnits(enteredVatAmount));
+  }
+
+  return minorUnitsToCanonical(
+    roundHalfUpDivision(
+      parseMoneyToMinorUnits(grossAmount) * BigInt(vatRate),
+      BigInt(100 + vatRate),
+    ),
+  );
+}
+
+export function expenseTaxableFromGross(
+  grossAmount: string,
+  vatAmount: string,
+): string {
+  return subtractMoney(grossAmount, vatAmount);
 }

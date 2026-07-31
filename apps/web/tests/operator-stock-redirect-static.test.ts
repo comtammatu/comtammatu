@@ -101,7 +101,7 @@ test("operator stock receive merges into the native transfer queue and keeps nat
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/(?:requests|receive)"/,
   );
 
-  // D067 §2: the receive detail route forks to a mobile-native receive
+  // The receive detail route forks to a mobile-native receive
   // client over the SHARED transfer loader — no Owner surface
   // TransferDetailPageContent embed (that stepper/summary chrome is exactly
   // what the native screen removes).
@@ -740,8 +740,12 @@ test("transfer receive requires inspection and keeps the atomic receive action",
   assert.equal(
     (detailClient.match(/size=\{embedded \? "touch" : "default"\}/g) ?? [])
       .length,
-    3,
+    2,
     "embedded transfer detail footer actions must be touch-sized",
+  );
+  assert.match(
+    detailClient,
+    /buttonSize=\{embedded \? "touch" : "default"\}/,
   );
   assert.match(detailClient, /className=\{embedded \? "h-12" : "h-9"\}/);
   assert.match(transferActions, /stock_transfer_receive/);
@@ -965,7 +969,7 @@ test("operator and central routes share the fulfillment hub while details stay c
   assert.match(transferDetailPage, /loadTransferDetailPageData/);
 });
 
-test("operator count assignments render branch-native inside the branch operator shell (D059 §4 slice 2)", () => {
+test("operator count assignments render branch-native inside the branch operator shell", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx",
   );

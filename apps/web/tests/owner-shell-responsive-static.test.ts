@@ -370,7 +370,7 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   const branches = read("apps/web/app/(protected)/branches/branch-table.tsx");
   assert.match(
     branches,
-    /grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4/,
+    /grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3/,
   );
   assert.match(branches, /grid grid-cols-2 gap-2 border-t pt-3/);
   assert.match(branches, /href=\{`\/br\/\$\{branch\.id\}\/settings\/tables`\}/);
