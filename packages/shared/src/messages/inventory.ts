@@ -229,8 +229,6 @@ export const INVENTORY_VI = {
     "Chọn thành phẩm, nhập số lượng thành phẩm của công thức, thêm nguyên liệu rồi lưu.",
   productionRecipeFinishedGoodLabel: "Thành phẩm *",
   productionRecipeOutputQuantityLabel: "Số lượng thành phẩm *",
-  productionRecipeOutputQuantityHint:
-    "Số lượng thành phẩm mà định mức nguyên liệu bên dưới tạo ra (theo đơn vị sản xuất của thành phẩm).",
   enterProductionRecipeOutputQuantity: "Nhập số lượng thành phẩm",
   productionRecipeOutputQuantityPositive: "Số lượng thành phẩm phải > 0",
   productionRecipeOutputQuantityMismatch:

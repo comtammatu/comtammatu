@@ -160,7 +160,7 @@ export function filterStockOnHandIngredients(
   if (filters.status === "in_stock") {
     result = result.filter((ingredient) => ingredient.status === "normal");
   } else if (filters.status === "low") {
-    result = result.filter(isStockReorderRisk);
+    result = result.filter((ingredient) => ingredient.status === "low");
   } else if (filters.status === "out") {
     result = result.filter((ingredient) => ingredient.status === "out");
   }

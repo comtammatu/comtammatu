@@ -46,11 +46,19 @@ test("inventory stock status and category filters have one control source", () =
   assert.doesNotMatch(toolbar, /actions=|reset=/);
 });
 
-test("inventory stock low filter matches the under-threshold predicate", () => {
+test("inventory stock status filters are mutually exclusive", () => {
   assert.match(stockModelSource, /export function isStockReorderRisk/);
   assert.match(
     stockModelSource,
-    /result = result\.filter\(isStockReorderRisk\);/,
+    /filters\.status === "low"\) \{\s*result = result\.filter\(\(ingredient\) => ingredient\.status === "low"\);/,
+  );
+  assert.match(
+    stockModelSource,
+    /filters\.status === "out"\) \{\s*result = result\.filter\(\(ingredient\) => ingredient\.status === "out"\);/,
+  );
+  assert.doesNotMatch(
+    stockModelSource,
+    /filters\.status === "low"\) \{\s*result = result\.filter\(isStockReorderRisk\);/,
   );
 });
 

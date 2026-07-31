@@ -53,7 +53,7 @@ test("stock list sorts out and low ingredients before normal stock", () => {
   );
 });
 
-test("stock filters combine search, category, and minimum-threshold risk", () => {
+test("stock filters combine search, category, and exclusive status buckets", () => {
   const rows = [
     makeIngredient({ id: 1, name: "Rice", category: "Dry" }),
     makeIngredient({
@@ -66,6 +66,14 @@ test("stock filters combine search, category, and minimum-threshold risk", () =>
       status: "low",
     }),
     makeIngredient({ id: 3, name: "No category", category: "" }),
+    makeIngredient({
+      id: 4,
+      name: "Fish oil",
+      sku: "FISH-02",
+      category: "Sauce",
+      qty: 0,
+      status: "out",
+    }),
   ];
 
   assert.deepEqual(
@@ -75,6 +83,20 @@ test("stock filters combine search, category, and minimum-threshold risk", () =>
       status: "low",
     }).map((row) => row.id),
     [2],
+  );
+  assert.deepEqual(
+    filterStockOnHandIngredients(rows, {
+      ...defaultFilters,
+      status: "low",
+    }).map((row) => row.id),
+    [2],
+  );
+  assert.deepEqual(
+    filterStockOnHandIngredients(rows, {
+      ...defaultFilters,
+      status: "out",
+    }).map((row) => row.id),
+    [4],
   );
   assert.deepEqual(
     filterStockOnHandIngredients(rows, {

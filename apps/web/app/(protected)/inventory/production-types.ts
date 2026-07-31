@@ -48,6 +48,7 @@ export type ProductionRecipeGroup = {
   finishedGoodId: number;
   finishedGoodName: string;
   outputQuantity: number;
+  outputUnitLabel: string;
   lines: ProductionRecipeRow[];
 };
 

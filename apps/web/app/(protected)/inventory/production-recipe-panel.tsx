@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
 import { z } from "zod";
 import {
   ArrowLeft as IconArrowLeft,
@@ -16,6 +21,15 @@ import { formatQuantity } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import {
+  Field,
+  FieldError,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -32,7 +46,11 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { ComboboxField, FormDialog, NumberField } from "@/components/form";
+import {
+  ComboboxField,
+  FormDialog,
+  FormattedNumberInput,
+} from "@/components/form";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import {
   IngredientLinesEditor,
@@ -230,6 +248,25 @@ function RecipeDialogFields({
     control: form.control,
     name: "lines",
   });
+  const selectedFinishedGoodId = useWatch({
+    control: form.control,
+    name: "finished_good_id",
+  });
+  const selectedFinishedGood = useMemo(
+    () =>
+      finishedGoodsOptions.find(
+        (good) => String(good.id) === selectedFinishedGoodId,
+      ) ?? null,
+    [finishedGoodsOptions, selectedFinishedGoodId],
+  );
+  const finishedGoodProductionUnit = getDefaultProductionUnit(
+    selectedFinishedGood ?? undefined,
+  );
+  const finishedGoodUnitLabel =
+    finishedGoodProductionUnit?.label ??
+    (selectedFinishedGoodId
+      ? INVENTORY_VI.productionUnitMissingHint
+      : null);
 
   function handleFinishedGoodCreated(good: FinishedGoodOption) {
     onFinishedGoodCreated(good);
@@ -308,15 +345,41 @@ function RecipeDialogFields({
             </p>
           ) : null}
         </div>
-        <NumberField
-          control={form.control}
-          name="output_quantity"
-          id="recipe-output-quantity"
-          label={INVENTORY_VI.productionRecipeOutputQuantityLabel}
-          description={INVENTORY_VI.productionRecipeOutputQuantityHint}
-          maxFractionDigits={3}
-          required
-        />
+        <Field
+          data-invalid={!!form.formState.errors.output_quantity}
+          className="gap-2"
+        >
+          <FieldLabel htmlFor="recipe-output-quantity">
+            {INVENTORY_VI.productionRecipeOutputQuantityLabel}
+          </FieldLabel>
+          <InputGroup>
+            <Controller
+              control={form.control}
+              name="output_quantity"
+              render={({ field }) => (
+                <FormattedNumberInput
+                  id="recipe-output-quantity"
+                  name={field.name}
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  maxFractionDigits={3}
+                  aria-invalid={!!form.formState.errors.output_quantity}
+                  className="h-full"
+                />
+              )}
+            />
+            <InputGroupAddon align="inline-end" className="min-w-14 justify-center font-medium">
+              {finishedGoodUnitLabel ?? "—"}
+            </InputGroupAddon>
+          </InputGroup>
+          {form.formState.errors.output_quantity ? (
+            <FieldError
+              errors={[form.formState.errors.output_quantity]}
+            />
+          ) : null}
+        </Field>
         <div className="flex flex-col gap-2 md:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col gap-1">
@@ -455,10 +518,17 @@ export function ProductionRecipePanel({
         continue;
       }
 
+      const finishedGood = finishedGoodsOptions.find(
+        (good) => good.id === recipe.finished_good_id,
+      );
       groups.set(recipe.finished_good_id, {
         finishedGoodId: recipe.finished_good_id,
         finishedGoodName: recipe.finished_good_name,
         outputQuantity: recipe.output_quantity,
+        outputUnitLabel:
+          getDefaultProductionUnit(finishedGood)?.label ??
+          finishedGood?.unit ??
+          "",
         lines: [recipe],
       });
     }
@@ -466,7 +536,7 @@ export function ProductionRecipePanel({
     return Array.from(groups.values()).sort((a, b) =>
       a.finishedGoodName.localeCompare(b.finishedGoodName, "vi"),
     );
-  }, [recipes]);
+  }, [finishedGoodsOptions, recipes]);
 
   const recipeLinesEditorIngredients = useMemo(
     () =>
@@ -777,7 +847,7 @@ export function ProductionRecipePanel({
             <AppSection
               key={group.finishedGoodId}
               title={group.finishedGoodName}
-              description={`${INVENTORY_VI.productionRecipeOutputQuantity} ${formatQuantity(group.outputQuantity)}`}
+              description={`${INVENTORY_VI.productionRecipeOutputQuantity}: ${formatQuantity(group.outputQuantity)}${group.outputUnitLabel ? ` ${group.outputUnitLabel}` : ""}`}
               badge={{
                 children: INVENTORY_VI.ingredientCountBadge(group.lines.length),
                 variant: badgeVariantFromTone("neutral"),
