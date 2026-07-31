@@ -145,12 +145,6 @@ function mapCatalogRpcError(
   code: string | undefined,
   message: string | undefined,
 ): string {
-  if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
-    return "Nguyên liệu đã có lịch sử tồn kho; đơn vị nhập, đơn vị xuất và quy đổi hiện hữu đã khóa.";
-  }
-  if (message?.includes("inventory_standard_unit_locked_by_stock_movements")) {
-    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn.";
-  }
   if (message?.includes("standard_unit_dimension_mismatch")) {
     return "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích).";
   }
@@ -361,36 +355,6 @@ export async function fetchIngredients(
   });
 
   return { success: true, data: rows };
-}
-
-export async function fetchIngredientUnitLock(
-  ingredientId: number,
-): Promise<ActionResult<{ locked: boolean }>> {
-  const parsedId = z.coerce.number().int().positive().safeParse(ingredientId);
-  if (!parsedId.success) {
-    return { success: false, error: "Mã nguyên liệu không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_CATALOG_ROLES,
-    CATALOG_MANAGE_PERMISSIONS,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { count, error } = await ctx.supabase
-    .from("stock_movements")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("ingredient_id", parsedId.data);
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không thể kiểm tra lịch sử đơn vị của nguyên liệu.",
-    };
-  }
-
-  return { success: true, data: { locked: (count ?? 0) > 0 } };
 }
 
 /* ─── Option fetchers for the dialog dropdowns ─── */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   useController,
   type Control,
@@ -11,7 +11,6 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldLegend,
   FieldLabel,
@@ -25,11 +24,7 @@ import {
   SelectField,
   TextField,
 } from "@/components/form";
-import {
-  createIngredient,
-  fetchIngredientUnitLock,
-  updateIngredient,
-} from "../ingredient-actions";
+import { createIngredient, updateIngredient } from "../ingredient-actions";
 import type {
   CategoryOption,
   IngredientRow,
@@ -112,7 +107,6 @@ const ingredientSchema = z
   });
 
 type IngredientFormValues = z.infer<typeof ingredientSchema>;
-type UnitLockState = "unlocked" | "locked" | "checking" | "unavailable";
 
 type CatalogUnitPayload = {
   unit_id: number;
@@ -284,10 +278,6 @@ export function IngredientDialog({
   onSaved,
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
-  const [unitLock, setUnitLock] = useState<UnitLockState>(
-    ingredient ? "checking" : "unlocked",
-  );
-  const unitsLocked = unitLock !== "unlocked";
 
   const defaultValues = useMemo(() => toFormValues(ingredient), [ingredient]);
   const categorySelectOptions = useMemo(
@@ -308,29 +298,6 @@ export function IngredientDialog({
       })),
     [unitOptions],
   );
-
-  useEffect(() => {
-    if (!open) return;
-    if (!ingredient) {
-      setUnitLock("unlocked");
-      return;
-    }
-
-    let cancelled = false;
-    setUnitLock("checking");
-    void fetchIngredientUnitLock(ingredient.id).then((result) => {
-      if (cancelled) return;
-      if (!result.success || !result.data) {
-        setUnitLock("unavailable");
-        return;
-      }
-      setUnitLock(result.data.locked ? "locked" : "unlocked");
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ingredient, open]);
 
   async function handleSubmit(values: IngredientFormValues) {
     const categoryId =
@@ -395,15 +362,6 @@ export function IngredientDialog({
     }
   }
 
-  const unitLockHint =
-    unitLock === "checking"
-      ? copy.units.lockChecking
-      : unitLock === "locked"
-        ? copy.units.standardLockedHint
-        : unitLock === "unavailable"
-          ? copy.units.lockUnavailable
-          : null;
-
   return (
     <FormDialog
       open={open}
@@ -445,8 +403,6 @@ export function IngredientDialog({
             sameUnit={sameUnit}
             inputUnitIsDifferent={inputUnitIsDifferent}
             productionEnabled={productionEnabled}
-            unitsLocked={unitsLocked}
-            unitLockHint={unitLockHint}
           />
         );
       }}
@@ -464,8 +420,6 @@ function IngredientDialogFields({
   sameUnit,
   inputUnitIsDifferent,
   productionEnabled,
-  unitsLocked,
-  unitLockHint,
 }: {
   form: UseFormReturn<IngredientFormValues>;
   categorySelectOptions: Array<{ value: string; label: string }>;
@@ -476,8 +430,6 @@ function IngredientDialogFields({
   sameUnit: boolean;
   inputUnitIsDifferent: boolean;
   productionEnabled: boolean;
-  unitsLocked: boolean;
-  unitLockHint: string | null;
 }) {
   const itemKind = form.watch("item_kind");
   const outputUnitId = form.watch("output_unit_id");
@@ -534,7 +486,6 @@ function IngredientDialogFields({
           label={copy.units.outputUnit}
           placeholder={copy.units.selectUnit}
           options={unitSelectOptions}
-          disabled={unitsLocked && !productionEnabled}
           required
         />
       </div>
@@ -592,7 +543,6 @@ function IngredientDialogFields({
                 label={copy.units.inputUnit}
                 placeholder={copy.units.selectUnit}
                 options={unitSelectOptions}
-                disabled={unitsLocked}
                 required
               />
               <ConversionFactorField
@@ -608,7 +558,6 @@ function IngredientDialogFields({
               variant="outline"
               size="touch"
               className="mt-4"
-              disabled={unitsLocked}
               onClick={() => {
                 form.setValue("input_unit_is_different", false);
                 form.setValue(
@@ -632,7 +581,6 @@ function IngredientDialogFields({
             variant="outline"
             size="touch"
             className="mt-4"
-            disabled={unitsLocked}
             onClick={() => form.setValue("input_unit_is_different", true)}
           >
             {copy.units.inputUnitDifferent}
@@ -647,7 +595,6 @@ function IngredientDialogFields({
                 label={copy.units.productionUnit}
                 placeholder={copy.units.selectUnit}
                 options={unitSelectOptions}
-                disabled={unitsLocked}
                 required
               />
               <ConversionFactorField
@@ -663,7 +610,6 @@ function IngredientDialogFields({
               variant="outline"
               size="touch"
               className="mt-4"
-              disabled={unitsLocked}
               onClick={() =>
                 form.setValue("production_enabled", false, {
                   shouldValidate: true,
@@ -679,7 +625,6 @@ function IngredientDialogFields({
             variant="outline"
             size="touch"
             className="mt-4"
-            disabled={unitsLocked}
             onClick={() =>
               form.setValue("production_enabled", true, {
                 shouldValidate: true,
@@ -690,10 +635,6 @@ function IngredientDialogFields({
           </Button>
         )}
       </FieldSet>
-
-      {unitLockHint ? (
-        <FieldDescription>{unitLockHint}</FieldDescription>
-      ) : null}
     </>
   );
 }

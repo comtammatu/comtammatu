@@ -96,7 +96,7 @@ test("A2 locks the new resolver to authenticated/service_role and keeps the RPC 
   );
 });
 
-test("A2 blocks unit ladder rewrites once ledger movements exist", () => {
+test("A2 historically locked unit ladders after movements; current catalog rebases instead", () => {
   const guardIndex = unitLadderLockMigration.indexOf(
     "inventory_unit_ladder_locked_by_stock_movements",
   );
@@ -106,61 +106,58 @@ test("A2 blocks unit ladder rewrites once ledger movements exist", () => {
 
   assert.ok(
     guardIndex > 0,
-    "the catalog upsert must expose a stable lock code",
+    "the archived Phase A2 upsert exposed a stable lock code",
   );
   assert.ok(
     replaceIndex > guardIndex,
-    "the lock must run before replacing ingredient_units",
-  );
-  assert.match(
-    unitLadderLockMigration,
-    /FROM public\.stock_movements sm\s+WHERE sm\.tenant_id = v_tenant\s+AND sm\.ingredient_id = v_id/,
-    "the guard must be driven by existing ledger movements",
-  );
-  assert.match(
-    unitLadderLockMigration,
-    /iu\.is_base\s+AND iu\.unit_id IS DISTINCT FROM v_base_unit_id/,
-    "base unit changes would reinterpret stock_levels quantities",
-  );
-  assert.match(
-    unitLadderLockMigration,
-    /public\.inv_catalog_unit_to_base\(v_base_unit_id, incoming\.e, p_units\)/,
-    "used entry units must keep the same derived base factor",
+    "the archived lock ran before replacing ingredient_units",
   );
 });
 
-test("ingredient actions surface locked unit ladders with operator-safe copy", () => {
+test("current catalog save rebases base quantities and keeps the editor unlocked", () => {
+  const rebaseMigration = readRepo(
+    "supabase/migrations/20260731220433_catalog_unit_rebase_allow_edit.sql",
+  );
+  assert.match(rebaseMigration, /current_quantity = current_quantity \* v_scale/);
+  assert.match(rebaseMigration, /avg_unit_cost = CASE/);
   assert.match(
-    ingredientActions,
+    rebaseMigration,
+    /UPDATE public\.inventory_valuation_accounts/,
+  );
+  assert.doesNotMatch(
+    rebaseMigration,
+    /inventory_standard_unit_locked_by_stock_movements/,
+  );
+  assert.doesNotMatch(
+    rebaseMigration,
     /inventory_unit_ladder_locked_by_stock_movements/,
   );
-  assert.match(
-    ingredientActions,
-    /Nguyên liệu đã có lịch sử tồn kho; đơn vị nhập, đơn vị xuất và quy đổi hiện hữu đã khóa\./,
-  );
-  assert.match(
-    ingredientActions,
-    /mapCatalogRpcError\(error\.code, error\.message\)/,
-  );
-});
-
-test("ingredient editor locks unit roles only after stock movements", () => {
-  assert.match(
+  assert.doesNotMatch(
     ingredientActions,
     /export async function fetchIngredientUnitLock/,
   );
-  assert.match(
-    ingredientActions,
-    /\.from\("stock_movements"\)[\s\S]*\.select\("id", \{ count: "exact", head: true \}\)/,
-  );
-  assert.match(ingredientDialog, /fetchIngredientUnitLock/);
-  assert.match(ingredientDialog, /disabled=\{unitsLocked\}/);
-  assert.doesNotMatch(ingredientDialog, /disabled=\{isEdit\}/);
+  assert.doesNotMatch(ingredientDialog, /fetchIngredientUnitLock/);
+  assert.doesNotMatch(ingredientDialog, /unitsLocked/);
   assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
   assert.match(
     ingredientDialog,
     /name="output_unit_id"[\s\S]*name="input_unit_id"/,
+  );
+});
+
+test("ingredient actions no longer surface movement-based unit locks", () => {
+  assert.doesNotMatch(
+    ingredientActions,
+    /inventory_unit_ladder_locked_by_stock_movements/,
+  );
+  assert.doesNotMatch(
+    ingredientActions,
+    /inventory_standard_unit_locked_by_stock_movements/,
+  );
+  assert.match(
+    ingredientActions,
+    /mapCatalogRpcError\(error\.code, error\.message\)/,
   );
 });
 

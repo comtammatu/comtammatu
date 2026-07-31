@@ -148,8 +148,5 @@ export const INGREDIENT_FORM_VI = {
     factorPositive: "Quy đổi phải lớn hơn 0",
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "tồn chuẩn",
-    lockChecking: "Đang kiểm tra lịch sử phiếu kho…",
-    standardLockedHint: "Đã có phiếu kho — không thể đổi đơn vị tồn chuẩn.",
-    lockUnavailable: "Không kiểm tra được lịch sử — tạm khóa đơn vị.",
   },
 } as const;

@@ -141,13 +141,14 @@ SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
 > và giá vốn BQ lưu theo **đơn vị tồn chuẩn**. PO/GRN dùng Nhập; yêu cầu hàng,
 > điều chuyển, xuất, tiêu hao, hao hụt và kiểm kê dùng Xuất; BOM/lệnh sản xuất
-> dùng Sản xuất. Mỗi dòng lưu snapshot đơn vị + factor; đổi quy cách chỉ áp dụng
-> cho giao dịch mới. Đơn vị tồn chuẩn khóa sau movement đầu tiên.
+> dùng Sản xuất. Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor.
+> Owner được thêm/đổi đơn vị và quy đổi bất kỳ lúc nào; khi đổi đơn vị tồn chuẩn,
+> RPC `save_ingredient_catalog` quy đổi tồn hiện tại, ngưỡng, WAC và số lượng
+> valuation hiện hành trong cùng transaction (tổng giá trị không đổi). Snapshot
+> lịch sử không bị viết lại.
 
-Sau khi nguyên liệu đã có `stock_movements`, hai đơn vị và hệ số quy đổi hiện hữu
-là lịch sử kế toán kho nên không được sửa hoặc xóa. RPC
-`upsert_ingredient_catalog` vẫn là authority cuối và từ chối thay đổi có thể
-diễn giải lại ledger cũ.
+Đổi ladder sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
+đơn vị vẫn đang được BOM/production recipe tham chiếu.
 
 ### 2.2 Database — bảng `ingredients`
 
