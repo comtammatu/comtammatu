@@ -29,9 +29,6 @@ const stockClientSource = readWeb(
 const productionDetailSource = readWeb(
   "app/(protected)/inventory/production/[id]/production-detail-client.tsx",
 );
-const dashboardClientSource = readWeb(
-  "app/(protected)/inventory/dashboard-client.tsx",
-);
 const issueDetailSource = readWeb(
   "app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
 );
@@ -124,21 +121,11 @@ test("inventory stock omits the retired kitchen transfer", () => {
   assert.doesNotMatch(stockClientSource, /stockCopy\.actions\.transferKitchen/);
 });
 
-test("inventory dashboard flow copy is dictionary-backed", () => {
-  const hardcodedDashboardCopy =
-    /"Phân công đếm tồn"|"Duyệt phiếu đếm tồn"|"Lệnh sản xuất"|"1\. Kiểm soát tồn"|"2\. Nhập\/Nhận\/Đối soát"|"3\. Điều phối\/Sản xuất"|"4\. Danh mục & thiết lập"|`\$\{pendingCountSlips\} phiếu đếm tồn chờ duyệt`/;
-
-  assert.doesNotMatch(dashboardClientSource, hardcodedDashboardCopy);
-  for (const key of [
-    "assignCountsAction",
-    "approveCountSlipsAction",
-    "productionCommandAction",
-    "controlFlowTitle",
-    "sourceFlowTitle",
-    "productionFlowTitle",
-    "catalogFlowTitle",
-    "countSlipsPendingTask",
-  ]) {
-    assert.match(inventoryMessagesSource, new RegExp(`${key}:`));
-  }
+test("inventory stock attention strip reuses dictionary-backed copy", () => {
+  assert.match(stockClientSource, /stockCopy\.attention\.title/);
+  assert.match(inventoryMessagesSource, /attention:\s*\{/);
+  assert.doesNotMatch(
+    stockClientSource,
+    /"Cần bổ sung"|"Phân công đếm tồn"|"Lệnh sản xuất"/,
+  );
 });

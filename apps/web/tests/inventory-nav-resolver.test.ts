@@ -42,6 +42,10 @@ const inventoryPageSource = readFileSync(
   "app/(protected)/inventory/page.tsx",
   "utf8",
 );
+const inventoryHomeSource = readFileSync(
+  "app/(protected)/inventory/_lib/inventory-home.ts",
+  "utf8",
+);
 
 test("accountant inventory nav contains only the GRN to PO workflow", () => {
   const visible = hrefs(
@@ -58,10 +62,9 @@ test("accountant inventory nav contains only the GRN to PO workflow", () => {
     "/inventory/grn",
     "/inventory/purchase-orders",
   ]);
-  assert.match(
-    inventoryPageSource,
-    /claims\.user_role === "accountant"\) redirect\("\/inventory\/grn"\)/,
-  );
+  assert.match(inventoryPageSource, /resolveInventoryHomePath/);
+  assert.match(inventoryHomeSource, /role === "accountant"/);
+  assert.match(inventoryHomeSource, /\/inventory\/grn/);
 });
 
 test("owner inventory nav keeps primary flow entry routes visible", () => {
@@ -229,7 +232,6 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
   assert.deepEqual(
     groups.map((group) => group.title),
     [
-      "0 · Nay",
       "1 · Kiểm soát tồn",
       "2 · Nhập hàng",
       "3 · Sản xuất",
@@ -239,7 +241,6 @@ test("inventory desktop workflow groups keep the canonical operator order", () =
   assert.deepEqual(
     groups.map((group) => group.items[0]?.href),
     [
-      "/inventory",
       "/inventory/stock",
       "/inventory/purchase-orders",
       "/inventory/production",

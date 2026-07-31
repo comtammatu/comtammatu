@@ -21,7 +21,6 @@ const VI_DICTIONARY = {
   // Sidebar navigation items
   // ------------------------------------------------------------------
   navigation: {
-    home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
@@ -41,7 +40,6 @@ const VI_DICTIONARY = {
   // Page headings by route path
   // ------------------------------------------------------------------
   routes: {
-    "/inventory": { long: "Tổng quan" },
     "/inventory/stock": { long: "Tồn kho" },
     "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },

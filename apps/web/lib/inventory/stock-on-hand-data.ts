@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   getInventoryValueVisibility,
   PERMISSION_KEYS,
@@ -107,7 +107,8 @@ export async function loadStockOnHandPageData({
   if (scope.outOfScope) notFound();
 
   const branchId = scope.selectedBranchId;
-  if (!branchId) redirect("/inventory");
+  // No active branch in scope — cannot land on stock (avoids /inventory ↔ stock loop).
+  if (!branchId) notFound();
 
   const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
   const stockReadClient = monetaryAccess.valuation

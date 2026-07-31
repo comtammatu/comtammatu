@@ -447,7 +447,7 @@ function renderActionGateTable(
     .flatMap((f) => {
       if (f.id === "inventory") {
         return [
-          `| inventory-home | \`/inventory\` (exact) | ${formatRoles(["inventory"], ["accountant"])} | ${formatKeys(["inventory"])} |`,
+          `| inventory-home | \`/inventory\` (exact, redirect-shim → \`/inventory/stock\` or \`/inventory/grn\`) | ${formatRoles(["inventory"])} | ${formatKeys(["inventory"])} |`,
           `| inventory-procurement | ${formatPrefixes(inventoryRoutePrefixes.procurement)} | ${formatRoles(["inventory"])} | ${formatKeys(["procurement"])} |`,
           `| inventory-operations | ${formatPrefixes(inventoryRoutePrefixes.operations)} | ${formatRoles(["inventory_operations"])} | ${formatKeys(["inventory", "procurement"])} |`,
         ];

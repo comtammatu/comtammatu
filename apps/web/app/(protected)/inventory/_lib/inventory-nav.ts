@@ -2,7 +2,6 @@ import {
   ArrowRightLeft as IconArrowRightLeft,
   CircleMinus as IconCircleMinus,
   FileText as IconFileText,
-  LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   PackagePlus as IconPackagePlus,
   ShoppingCart as IconShoppingCart,
@@ -93,28 +92,16 @@ export function resolveInventoryNav({
 
   const groups: ShellNavGroup[] = [
     {
-      title: "0 · Nay",
+      title: "1 · Kiểm soát tồn",
       items: [
         {
-          href: "/inventory",
-          label: "Nay",
-          icon: IconLayoutDashboard,
-          exact: true,
+          href: "/inventory/stock",
+          label: tNav("stock", "navigation"),
+          icon: IconPackage,
         },
       ],
     },
   ];
-
-  groups.push({
-    title: "1 · Kiểm soát tồn",
-    items: [
-      {
-        href: "/inventory/stock",
-        label: tNav("stock", "navigation"),
-        icon: IconPackage,
-      },
-    ],
-  });
 
   const inboundItems: ShellNavGroup["items"] = [];
   if (showProcurement && canShowPurchaseOrders(userRole)) {

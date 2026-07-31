@@ -83,7 +83,6 @@ test("central site templates can create, ship, and receive manual transfers", ()
 test("D091 procurement surfaces are permission-driven", () => {
   const files = [
     "apps/web/app/(protected)/layout.tsx",
-    "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
     "apps/web/lib/inventory/grn-source-data.ts",
     "apps/web/lib/inventory/grn-create-data.ts",
   ];
@@ -94,23 +93,21 @@ test("D091 procurement surfaces are permission-driven", () => {
       /canAccess\(claims\.user_role,\s*"branch_stock"\)/,
     );
   }
-  for (const file of files.slice(0, 2)) {
-    assert.match(
-      read(file),
-      /currentUserHasPermissionAny\(PERMISSION_KEYS\.PROCUREMENT_READ\)/,
-    );
-  }
+  assert.match(
+    read("apps/web/app/(protected)/layout.tsx"),
+    /currentUserHasPermissionAny\(PERMISSION_KEYS\.PROCUREMENT_READ\)/,
+  );
 });
 
-test("D091 dashboard keeps the selected central site kind", () => {
-  const dashboard = read(
-    "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts",
+test("D091 inventory L0 landing is a fixed redirect without site-kind override", () => {
+  const home = read(
+    "apps/web/app/(protected)/inventory/_lib/inventory-home.ts",
   );
-  assert.match(dashboard, /resolveSiteKind\(\{/);
-  assert.doesNotMatch(
-    dashboard,
-    /const siteKind:\s*DashboardSiteKind\s*=\s*"branch"/,
-  );
+  const page = read("apps/web/app/(protected)/inventory/page.tsx");
+  assert.match(home, /\/inventory\/stock/);
+  assert.match(home, /accountant/);
+  assert.match(page, /resolveInventoryHomePath/);
+  assert.doesNotMatch(page, /siteKind|DashboardClient/);
 });
 
 test("accountant reviews PO while invoice lines own purchase prices", () => {

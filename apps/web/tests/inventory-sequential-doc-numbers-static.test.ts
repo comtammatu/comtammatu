@@ -42,11 +42,7 @@ test("app create paths no longer mint opaque UUID document codes", () => {
   assert.doesNotMatch(transfer, /TRF-\$/);
 });
 
-test("stocktake UI uses persisted session_number; dashboard drops ST- prefix", () => {
-  const dashboard = readFileSync(
-    join(root, "apps/web/app/(protected)/inventory/_lib/dashboard-data.ts"),
-    "utf8",
-  );
+test("stocktake UI uses persisted session_number without synthetic ST- prefix", () => {
   const list = readFileSync(
     join(
       root,
@@ -54,10 +50,9 @@ test("stocktake UI uses persisted session_number; dashboard drops ST- prefix", (
     ),
     "utf8",
   );
-  assert.doesNotMatch(dashboard, /ST-\$/);
-  assert.match(dashboard, /session_number/);
   assert.match(list, /session_number/);
   assert.doesNotMatch(list, /KK-\$\{r\.id\}/);
+  assert.doesNotMatch(list, /ST-\$/);
 });
 
 test("new inventory and PO document codes include the VN business date", () => {

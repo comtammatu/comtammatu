@@ -89,14 +89,15 @@ Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). 
 `resolveInventoryNav` + `flattenInventoryDeepNav` gom điều hướng Kho theo các
 nhóm ổn định (UI sidebar vẫn flatMap một list ngắn):
 
-- `0 · Nay`
-- `1 · Kiểm soát tồn`: `Tồn kho`
+- `1 · Kiểm soát tồn`: `Tồn kho` (landing mặc định của `/inventory`)
 - `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, **Đơn mua hàng**, `Tiêu hao`, `Điều chuyển`
 - `3 · Sản xuất`
 - `4 · Danh mục & thiết lập`
 
 Các nguyên tắc đang được code phản ánh:
 
+- `/inventory` (exact) là `REDIRECT-SHIM`: `accountant` → `/inventory/grn`, còn lại →
+  `/inventory/stock` (giữ `branchId` nếu có). Không còn hub «Nay/Tổng quan».
 - Canonical giao dịch Owner: `/inventory/grn`, `/inventory/purchase-orders`,
   `/inventory/consumption`, `/inventory/transfers`. `/inventory/operations` đã
   rút (không còn shim).
@@ -175,7 +176,8 @@ Browser request
   trước khi route code chạy; layout/page đọc invariant, không dựng gate thứ hai.
 - **Mặc định RSC:** Các page là React Server Components. Chỉ phần tử tương tác (form, dropdown) dùng "use client".
 - **control_surface là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
-- **Inventory là surface độc lập:** `/inventory` là domain vận hành Inventory canonical.
+- **Inventory là surface độc lập:** `/inventory/*` là domain vận hành Inventory
+  canonical; exact `/inventory` redirect vào Tồn (hoặc GRN với kế toán).
 - **Staff runtime đã live:** profile, clock, attendance, schedule, leave request,
   và payslip nằm trong Branch. HR control_surface và `/hr/payroll/*` chỉ dành
   cho Owner.

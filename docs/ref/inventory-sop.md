@@ -43,7 +43,8 @@ Contract: [inventory.md](inventory.md) §2.1 — đơn vị nhập / xuất.
 1. QL CN tạo phiếu yêu cầu (draft) trên `/br/.../stock/requests`.
 2. Thêm dòng nguyên liệu: hệ thống copy `default_fulfill_site_kind`; thiếu
    mapping → không thêm được.
-3. Submit. Kho Tổng / Bếp TT thấy inbox dòng thuộc nguồn mình trên `/inventory`.
+3. Submit. Kho Tổng / Bếp TT thấy inbox dòng thuộc nguồn mình trên
+   `/inventory/transfers`.
 4. Bên nguồn fulfill → tạo DC → ship. Có thể 1 hoặc 2 DC / phiếu.
 5. QL CN nhận DC; tồn CN tăng theo cost snapshot nguồn.
 

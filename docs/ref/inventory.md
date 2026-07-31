@@ -434,12 +434,12 @@ Ngoài phạm vi v1:
 
 ### 9.1 Cảnh báo ngưỡng tồn
 
-> Hiển thị: card trên dashboard Tổng Quan (`/inventory`)
+> Hiển thị: strip cảnh báo trên `/inventory/stock` (top nguyên liệu chạm Min) + bộ lọc «Dưới ngưỡng»
 
 So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` (theo từng chi nhánh, chỉ `is_active = true`). UI, import/export và cài đặt chỉ công bố một trường **Tồn tối thiểu**; `reorder_point` và `max_stock_level` là cột tương thích cũ và được ghi `NULL` khi danh mục được cập nhật.
 
 - Card vàng khi tồn chạm hoặc thấp hơn `Min`, xanh khi đủ tồn.
-- Hiển thị top 5 nguyên liệu cần nhập + current/Min ratio + đơn vị.
+- Hiển thị top 5 nguyên liệu cần nhập + current/Min ratio + đơn vị trên strip Tồn kho.
 - Tính `suggested_order_qty = max(0, min_stock_level - current_quantity)`.
 - Branch scoping: `branch_manager` chỉ thấy chi nhánh mình.
 

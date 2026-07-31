@@ -69,10 +69,10 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 
 ### 4.3 Quản lý kho Tổng (`central_supply_ops`)
 
-- **Surface:** `/inventory` (site `central_supply`)
+- **Surface:** `/inventory/*` (site `central_supply`); L0 `/inventory` redirect → Tồn
 - **Làm:** Yêu cầu mua + GRN Kho Tổng; tồn/kiểm kê/hao hụt site; inbox dòng yêu cầu
   `central_supply`; fulfill → DC; ship/receive tại site
-- **Nav hiện:** Nay, Tồn, GRN, Yêu cầu (inbox), Điều chuyển, tiêu hao/hao hụt,
+- **Nav hiện:** Tồn, GRN, Yêu cầu (inbox), Điều chuyển, tiêu hao/hao hụt,
   NCC, Nguyên liệu (chỉ xem) — **không** PO, Sản xuất, Định mức món bán
 - **Không:** PO/giá; SX; CRUD danh mục nguyên liệu; branch stock UI
 

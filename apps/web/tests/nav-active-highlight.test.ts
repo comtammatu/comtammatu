@@ -50,7 +50,7 @@ test("Owner surface module switcher stays lit across its module", () => {
   assert.equal(isNavItemActive(adminModule, "/finance/revenue"), true);
 });
 
-test("finance deep-nav landing is wired exact, mirroring inventory", () => {
+test("finance deep-nav landing is wired exact; inventory has no hub landing", () => {
   const financeNav = read(
     "apps/web/app/(protected)/finance/components/finance-nav.ts",
   );
@@ -63,11 +63,12 @@ test("finance deep-nav landing is wired exact, mirroring inventory", () => {
     /href: "\/finance",[\s\S]*?exact: true,/,
     "finance deep-nav landing (/finance) must be exact to avoid sub-route bleed",
   );
-  assert.match(
+  assert.doesNotMatch(
     inventoryNav,
     /href: "\/inventory",[\s\S]*?exact: true,/,
-    "inventory landing remains the reference exact pattern",
+    "inventory no longer has an exact /inventory hub nav item",
   );
+  assert.doesNotMatch(inventoryNav, /0 · Nay/);
 });
 
 test("mobile Owner surface bottom nav reuses the shell nav model", () => {

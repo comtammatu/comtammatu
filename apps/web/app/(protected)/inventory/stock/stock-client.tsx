@@ -14,6 +14,7 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
   ChevronDown as IconChevronDown,
+  TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -35,6 +36,14 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { cn } from "@comtammatu/ui";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
@@ -45,6 +54,7 @@ import {
   getStockOnHandCategories,
   hasStockOnHandFilters,
   isPristineStockOnHand,
+  isStockReorderRisk,
   type StockActionPermissions,
   type StockFilter,
   type StockIngredient,
@@ -284,6 +294,11 @@ export function StockClient({
   // happened for this branch. Suppress the 87/87 "Hết hàng" alarm storm
   // (real signal is "no data yet", not "stock-out emergency").
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
+
+  const underThresholdItems = useMemo(
+    () => ingredients.filter(isStockReorderRisk).slice(0, 5),
+    [ingredients],
+  );
 
   if (coreDataLoadFailed) {
     return (
@@ -849,6 +864,42 @@ export function StockClient({
           </div>
         }
       />
+
+      {summary.underThresholdCount > 0 && !isFirstLoadEmpty ? (
+        <NoteCallout
+          tone="warning"
+          icon={<IconAlertTriangle className="size-4" />}
+          label={stockCopy.attention.title}
+        >
+          <p className="mb-2">
+            {stockCopy.attention.description(summary.underThresholdCount)}{" "}
+            {stockCopy.attention.listHint}
+          </p>
+          <ItemGroup className="gap-1">
+            {underThresholdItems.map((item) => (
+              <Item key={item.id} size="sm" className="bg-background/60">
+                <ItemContent>
+                  <ItemTitle>
+                    <Link
+                      href={stockDetailHref(item.id)}
+                      className="hover:underline"
+                    >
+                      {item.name}
+                    </Link>
+                  </ItemTitle>
+                  <ItemDescription>
+                    {messages.inventory.dashboard.reorderStatus(
+                      item.qty,
+                      item.unit,
+                      item.min,
+                    )}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            ))}
+          </ItemGroup>
+        </NoteCallout>
+      ) : null}
 
       {isCompactLayout ? (
         <>

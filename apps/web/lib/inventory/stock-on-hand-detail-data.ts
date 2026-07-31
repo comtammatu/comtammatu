@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
@@ -148,7 +148,7 @@ export async function loadStockIngredientDetailData({
   if (scope.outOfScope) notFound();
 
   const branchId = scope.selectedBranchId;
-  if (!branchId) redirect("/inventory");
+  if (!branchId) notFound();
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
   const canReadValuation = includeValuation && monetary.valuation;
   const readClient = canReadValuation

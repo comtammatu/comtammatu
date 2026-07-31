@@ -477,10 +477,12 @@ allowlist, not a precedent for stretching another archetype's definition:
 2. `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` — branch
    portal home; the same LANDING/DASHBOARD hybrid inside Branch runtime chrome.
    Classified **LANDING**.
-3. `apps/web/app/(protected)/inventory/page.tsx` — `KpiRow` + `LinkCardGrid`
-   overview hybrid. Classified **DASHBOARD**.
+3. `apps/web/app/(protected)/inventory/page.tsx` — `REDIRECT-SHIM` to
+   `/inventory/stock` (or `/inventory/grn` for accountant). Not a rendered
+   archetype.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
-   master-detail pair with responsive composition. Classified **LIST**.
+   master-detail pair with responsive composition; also hosts Min-stock alert
+   strip. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —
    detail half of the same pair. Classified **DETAIL**.
 6. `apps/web/app/(protected)/notifications/page.tsx` — feed list without

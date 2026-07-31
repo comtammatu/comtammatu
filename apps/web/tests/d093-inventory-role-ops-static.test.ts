@@ -14,8 +14,8 @@ const inventoryNav = readFileSync(
   "app/(protected)/inventory/_lib/inventory-nav.ts",
   "utf8",
 );
-const inventoryDashboard = readFileSync(
-  "app/(protected)/inventory/dashboard-client.tsx",
+const inventoryHome = readFileSync(
+  "app/(protected)/inventory/_lib/inventory-home.ts",
   "utf8",
 );
 const stockRequestInbox = readFileSync(
@@ -183,14 +183,12 @@ test("D093 inventory-nav includes one fulfillment hub", () => {
   assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 
-test("D093 central operators do not see owner-only dashboard actions or stock value", () => {
-  assert.match(
-    inventoryDashboard,
-    /role === "central_supply_ops" \|\| role === "central_kitchen_lead"/,
-  );
-  assert.match(inventoryDashboard, /isCentralOperator \? paths\.stockRequests/);
-  assert.match(inventoryDashboard, /\.\.\.\(!isCentralOperator/);
-  assert.match(inventoryDashboard, /\{!isCentralOperator \? \(/);
+test("D093 inventory L0 landing is a redirect shim without hub dashboard", () => {
+  assert.match(inventoryHome, /\/inventory\/stock/);
+  assert.match(inventoryHome, /accountant/);
+  assert.match(inventoryHome, /\/inventory\/grn/);
+  assert.doesNotMatch(inventoryNav, /0 · Nay/);
+  assert.doesNotMatch(inventoryNav, /href: "\/inventory",/);
 });
 
 test("D093 stock request inbox redirects and the hub scopes actor lines", () => {
