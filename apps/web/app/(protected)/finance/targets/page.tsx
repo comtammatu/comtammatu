@@ -1,8 +1,4 @@
-import Link from "next/link";
 import { AppPage, AppPageHeader } from "@/components/surface";
-import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { messages } from "@lib/messages";
 import {
   currentVnMonthStart,
@@ -47,7 +43,6 @@ export default async function FinanceRevenueTargetsPage({
       currentNetRevenue: progress?.netRevenue ?? null,
     };
   });
-  const monthInputValue = yearMonth.slice(0, 7);
 
   return (
     <AppPage width="wide" density="compact">
@@ -55,25 +50,6 @@ export default async function FinanceRevenueTargetsPage({
         title={copy.page.title}
         description={copy.page.description}
       />
-
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="revenue-target-month">{copy.monthLabel}</Label>
-          <Input
-            id="revenue-target-month"
-            type="month"
-            name="month"
-            defaultValue={monthInputValue}
-            className="w-auto font-mono"
-          />
-        </div>
-        <Button type="submit" variant="outline">
-          {copy.applyMonth}
-        </Button>
-        <Button render={<Link href="/finance/revenue" />} variant="ghost">
-          {messages.finance.nav.items.revenue}
-        </Button>
-      </form>
 
       {!result.success ? (
         <p className="text-sm text-destructive">{result.error}</p>
