@@ -114,14 +114,16 @@ export const INGREDIENT_FORM_VI = {
   units: {
     inputUnit: "Đơn vị nhập",
     outputUnit: "Đơn vị xuất",
-    conversion: "Quy đổi",
+    conversion: (fromUnit: string, _toUnit: string) => `1 ${fromUnit} =`,
     conversionAria: (inputUnit: string, outputUnit: string) =>
       `Số ${outputUnit} trong 1 ${inputUnit}`,
     conversionAriaFallback: "Số đơn vị xuất trong 1 đơn vị nhập",
     unitPending: "…",
     sameUnitFactorOne: "Cùng đơn vị thì quy đổi phải là 1",
-    unitsBriefHint: "Tồn và định mức theo đơn vị xuất (ml/g hoặc chai/lon).",
-    sectionLabel: "Đơn vị tồn và quy đổi",
+    productionEnabled: "Dùng trong sản xuất",
+    productionUnit: "Đơn vị sản xuất",
+    sectionLabel: "Quy cách & đơn vị",
+    standardUnit: (unit: string) => `Tồn kho sẽ ghi nhận theo: ${unit}`,
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",
     hint: "Đơn vị xuất theo mức bếp dùng, nhập theo cách NCC giao. Có phiếu kho thì khóa.",
@@ -144,7 +146,7 @@ export const INGREDIENT_FORM_VI = {
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "tồn chuẩn",
     lockChecking: "Đang kiểm tra lịch sử phiếu kho…",
-    lockedHint: "Đã có phiếu kho — không sửa đơn vị/quy đổi.",
+    standardLockedHint: "Đã có phiếu kho — không thể đổi đơn vị tồn chuẩn.",
     lockUnavailable: "Không kiểm tra được lịch sử — tạm khóa đơn vị.",
   },
 } as const;

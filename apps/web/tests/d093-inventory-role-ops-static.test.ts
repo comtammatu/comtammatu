@@ -135,8 +135,8 @@ test("ingredient catalog save is atomic and keeps direct table DML locked", () =
 
 test("all ingredient save actions use the atomic RPC without direct ingredient update", () => {
   assert.equal(
-    ingredientActions.match(/\.rpc\(\s*"save_ingredient_catalog"/g)?.length,
-    3,
+    ingredientActions.match(/saveIngredientCatalog\(/g)?.length,
+    4,
   );
   assert.doesNotMatch(
     ingredientActions,

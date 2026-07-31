@@ -1,14 +1,17 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
-  getDefaultIngredientUnit,
-  getIngredientUnitOptions,
+  getIngredientRoleUnit,
+  getIngredientRoleUnitOptions,
   type InventoryUnitOption,
 } from "@lib/inventory/unit-options";
 
 export type ProductionUnitOption = InventoryUnitOption;
 
 /** Minimal shape needed to derive unit options: any object carrying units[]. */
-type HasUnits = { units?: IngredientUnitRow[] };
+type HasUnits = {
+  units?: IngredientUnitRow[];
+  production_unit_id?: number | null;
+};
 
 /**
  * Selectable production units for an ingredient: every active ingredient_units
@@ -17,7 +20,7 @@ type HasUnits = { units?: IngredientUnitRow[] };
 export function getProductionUnitOptions(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption[] {
-  return getIngredientUnitOptions(ingredient);
+  return getIngredientRoleUnitOptions(ingredient, "production");
 }
 
 /**
@@ -27,5 +30,5 @@ export function getProductionUnitOptions(
 export function getDefaultProductionUnit(
   ingredient: HasUnits | undefined,
 ): ProductionUnitOption | null {
-  return getDefaultIngredientUnit(getProductionUnitOptions(ingredient));
+  return getIngredientRoleUnit(ingredient, "production");
 }

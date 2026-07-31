@@ -65,6 +65,19 @@ test("three-unit ladder omits zero remainder base parts", () => {
   assert.equal(base, "18750 ml");
 });
 
+test("three-unit stock keeps the warehouse-friendly pack breakdown primary", () => {
+  const units = [
+    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
+    unit({ unit_code: "chai", to_base_factor: 330 }),
+    unit({ unit_code: "thùng", to_base_factor: 7920 }),
+  ];
+
+  const { big, base } = formatStockUnits(10050, units, plain);
+
+  assert.equal(big, "1 thùng + 6 chai + 150 ml");
+  assert.equal(base, "10050 ml");
+});
+
 test("below one largest pack shows base only", () => {
   const units = [
     unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),

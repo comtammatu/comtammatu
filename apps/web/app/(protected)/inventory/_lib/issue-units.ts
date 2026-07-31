@@ -1,7 +1,6 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
-  getDefaultIngredientUnit,
-  getIngredientUnitOptions,
+  getIngredientRoleUnit,
   type InventoryUnitOptionWithFactor,
 } from "@lib/inventory/unit-options";
 
@@ -21,12 +20,19 @@ function snapNearIntegerQuantity(value: number): number {
  * Selectable issue units for an ingredient: every active ingredient_units row,
  * base unit first.
  */
-type IngredientWithUnits = { units?: IngredientUnitRow[] };
+type IngredientWithUnits = {
+  units?: IngredientUnitRow[];
+  issue_unit_id?: number | null;
+};
 
 export function getIssueUnitOptions(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption[] {
-  return getIngredientUnitOptions(ingredient, { includeToBaseFactor: true });
+  const unit = getIngredientRoleUnit(ingredient, "issue");
+  if (!unit) return [];
+  const factor = ingredient?.units?.find((row) => row.unit_id === unit.unitId)
+    ?.to_base_factor;
+  return [{ ...unit, toBaseFactor: factor ?? 1 }];
 }
 
 /**
@@ -36,7 +42,7 @@ export function getIssueUnitOptions(
 export function getDefaultIssueUnit(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption | null {
-  return getDefaultIngredientUnit(getIssueUnitOptions(ingredient));
+  return getIssueUnitOptions(ingredient)[0] ?? null;
 }
 
 function resolveToBaseFactor(issueUnit: IssueUnitFactor): number {

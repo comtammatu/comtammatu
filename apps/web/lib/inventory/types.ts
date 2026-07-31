@@ -29,6 +29,9 @@ export interface IngredientRow {
   reorder_point: number | null;
   storage_type: string | null;
   default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
+  production_unit_id?: number | null;
   is_active: boolean;
   updated_at: string | null;
   units?: IngredientUnitRow[];

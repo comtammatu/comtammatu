@@ -12,6 +12,11 @@ export interface InventoryUnitOptionWithFactor extends InventoryUnitOption {
 }
 
 type IngredientWithUnits = { units?: IngredientUnitRow[] };
+type IngredientWithUnitRoles = IngredientWithUnits & {
+  receipt_unit_id?: number | null;
+  issue_unit_id?: number | null;
+  production_unit_id?: number | null;
+};
 
 function activeUnits(ingredient: IngredientWithUnits | undefined) {
   return [...(ingredient?.units ?? [])]
@@ -60,4 +65,23 @@ export function getLargestIngredientUnit<T extends InventoryUnitOptionWithFactor
       best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
     null,
   );
+}
+
+export function getIngredientRoleUnit(
+  ingredient: IngredientWithUnitRoles | undefined,
+  role: "receipt" | "issue" | "production",
+): InventoryUnitOption | null {
+  const unitId = ingredient?.[`${role}_unit_id`];
+  if (unitId == null) return null;
+  return getIngredientUnitOptions(ingredient).find(
+    (unit) => unit.unitId === unitId,
+  ) ?? null;
+}
+
+export function getIngredientRoleUnitOptions(
+  ingredient: IngredientWithUnitRoles | undefined,
+  role: "receipt" | "issue" | "production",
+): InventoryUnitOption[] {
+  const unit = getIngredientRoleUnit(ingredient, role);
+  return unit ? [unit] : [];
 }

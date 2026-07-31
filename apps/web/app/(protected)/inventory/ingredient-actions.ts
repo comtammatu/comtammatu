@@ -73,6 +73,9 @@ const ingredientBaseSchema = z.object({
     .nullable()
     .optional(),
   units: z.array(unitRowSchema).min(1, { error: "Cần ít nhất 1 đơn vị" }),
+  receipt_unit_id: z.coerce.number().int().positive(),
+  issue_unit_id: z.coerce.number().int().positive(),
+  production_unit_id: z.coerce.number().int().positive().nullable().optional(),
 });
 
 function refineUnits(
@@ -105,12 +108,35 @@ function refineUnits(
   }
 }
 
+function refineUnitRoles(data: z.infer<typeof ingredientBaseSchema>, ctx: z.RefinementCtx) {
+  const unitById = new Map(data.units.map((unit) => [unit.unit_id, unit]));
+  const receipt = unitById.get(data.receipt_unit_id);
+  const issue = unitById.get(data.issue_unit_id);
+  const production = data.production_unit_id == null
+    ? null
+    : unitById.get(data.production_unit_id);
+  const standardUnitId = data.production_unit_id ?? data.issue_unit_id;
+
+  if (!receipt || !issue || (data.production_unit_id != null && !production)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Đơn vị nhập, xuất và sản xuất phải thuộc quy cách của nguyên liệu" });
+    return;
+  }
+  if (!unitById.get(standardUnitId)?.is_base) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Đơn vị tồn chuẩn phải là đơn vị xuất hoặc đơn vị sản xuất" });
+  }
+  if (receipt.to_base_factor < issue.to_base_factor || (production && issue.to_base_factor < production.to_base_factor)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Quy cách phải theo thứ tự Nhập ≥ Xuất ≥ Sản xuất" });
+  }
+}
+
 const ingredientCreateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
   refineUnits(data.units, ctx);
+  refineUnitRoles(data, ctx);
 });
 
 const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
   refineUnits(data.units, ctx);
+  refineUnitRoles(data, ctx);
 });
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
@@ -121,6 +147,12 @@ function mapCatalogRpcError(
 ): string {
   if (message?.includes("inventory_unit_ladder_locked_by_stock_movements")) {
     return "Nguyên liệu đã có lịch sử tồn kho; đơn vị nhập, đơn vị xuất và quy đổi hiện hữu đã khóa.";
+  }
+  if (message?.includes("inventory_standard_unit_locked_by_stock_movements")) {
+    return "Nguyên liệu đã có lịch sử tồn kho; không thể đổi đơn vị tồn chuẩn.";
+  }
+  if (message?.includes("standard_unit_dimension_mismatch")) {
+    return "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích).";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||
@@ -167,8 +199,23 @@ function buildRpcUnits(units: IngredientInput["units"]) {
   }));
 }
 
-type SaveCatalogArgs =
-  Database["public"]["Functions"]["save_ingredient_catalog"]["Args"];
+type SaveCatalogV2Args = {
+  p_ingredient_id: number | null;
+  p_name: string;
+  p_sku: string | null;
+  p_category_id: number | null;
+  p_item_kind: string;
+  p_storage_type: string;
+  p_min_stock_level: number;
+  p_max_stock_level: number | null;
+  p_reorder_point: number | null;
+  p_shelf_life_days: number | null;
+  p_units: ReturnType<typeof buildRpcUnits>;
+  p_default_fulfill_site_kind: "central_supply" | "central_kitchen" | null;
+  p_receipt_unit_id: number;
+  p_issue_unit_id: number;
+  p_production_unit_id: number | null;
+};
 
 // The RPC accepts NULL for the nullable params (p_ingredient_id, p_category_id,
 // thresholds, …) but the generated Args type marks them non-nullable. Cast the
@@ -181,21 +228,36 @@ function rpcCatalogArgs(
     | "central_supply"
     | "central_kitchen"
     | null = null,
-): SaveCatalogArgs {
+): SaveCatalogV2Args {
   return {
-    p_ingredient_id: ingredientId as never,
+    p_ingredient_id: ingredientId,
     p_name: data.name,
-    p_sku: (data.sku?.trim() ? data.sku.trim() : null) as never,
-    p_category_id: (data.category_id ?? null) as never,
+    p_sku: data.sku?.trim() || null,
+    p_category_id: data.category_id ?? null,
     p_item_kind: data.item_kind,
     p_storage_type: data.storage_type,
     p_min_stock_level: data.min_stock_level,
-    p_max_stock_level: (data.max_stock_level ?? null) as never,
-    p_reorder_point: (data.reorder_point ?? null) as never,
-    p_shelf_life_days: shelfLifeDays as never,
-    p_units: buildRpcUnits(data.units) as never,
-    p_default_fulfill_site_kind: defaultFulfillSiteKind as never,
+    p_max_stock_level: data.max_stock_level ?? null,
+    p_reorder_point: data.reorder_point ?? null,
+    p_shelf_life_days: shelfLifeDays,
+    p_units: buildRpcUnits(data.units),
+    p_default_fulfill_site_kind: defaultFulfillSiteKind,
+    p_receipt_unit_id: data.receipt_unit_id,
+    p_issue_unit_id: data.issue_unit_id,
+    p_production_unit_id: data.production_unit_id ?? null,
   };
+}
+
+function saveIngredientCatalog(
+  supabase: SupabaseClient<Database>,
+  args: SaveCatalogV2Args,
+) {
+  return (
+    supabase.rpc as unknown as (
+      fn: "save_ingredient_catalog_v2",
+      rpcArgs: SaveCatalogV2Args,
+    ) => ReturnType<SupabaseClient<Database>["rpc"]>
+  )("save_ingredient_catalog_v2", args);
 }
 
 /* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
@@ -218,7 +280,7 @@ const getIngredientsCached = cache(
         : supabase
             .from("ingredients")
             .select(
-              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, receipt_unit_id, issue_unit_id, production_unit_id, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
             )
     )
       .eq("tenant_id", tenantId);
@@ -374,8 +436,8 @@ export const createIngredient = withAction<
   async (data, { supabase }) => {
     const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
       data;
-    const { data: id, error } = await supabase.rpc(
-      "save_ingredient_catalog",
+    const { data: id, error } = await saveIngredientCatalog(
+      supabase,
       rpcCatalogArgs(null, catalogData, null, defaultFulfillSiteKind ?? null),
     );
 
@@ -452,8 +514,8 @@ export const quickCreateIngredient = withAction<
       }
     }
 
-    const { data: id, error } = await supabase.rpc(
-      "save_ingredient_catalog",
+    const { data: id, error } = await saveIngredientCatalog(
+      supabase,
       rpcCatalogArgs(null, {
         name: data.name,
         category_id: categoryId,
@@ -467,6 +529,9 @@ export const quickCreateIngredient = withAction<
             is_base: true,
           },
         ],
+        receipt_unit_id: unitId,
+        issue_unit_id: unitId,
+        production_unit_id: null,
       }),
     );
 
@@ -529,8 +594,8 @@ export async function updateIngredient(
   const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
     parsedInput.data;
 
-  const { error } = await supabase.rpc(
-    "save_ingredient_catalog",
+  const { error } = await saveIngredientCatalog(
+    supabase,
     rpcCatalogArgs(
       parsedId.data,
       catalogData,

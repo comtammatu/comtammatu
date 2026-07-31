@@ -18,6 +18,9 @@ const ingredientActionSource = readRepo(
 const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
 );
+const roleUnitMigration = readRepo(
+  "supabase/migrations/20260731172142_inventory_unit_roles_and_snapshots.sql",
+);
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
   for (const constraint of [
@@ -60,7 +63,7 @@ test("inventory unit conversion RPC privileges are explicit", () => {
 test("ingredient catalog updates preserve shelf life required by the RPC", () => {
   assert.match(
     ingredientActionSource,
-    /p_shelf_life_days:\s*shelfLifeDays as never/,
+    /p_shelf_life_days:\s*shelfLifeDays/,
   );
   assert.match(
     ingredientActionSource,
@@ -77,5 +80,15 @@ test("recipe line upsert stays behind the owner catalog role", () => {
   assert.doesNotMatch(
     recipeActionSource,
     /permission:\s*PERMISSION_KEYS\.INVENTORY_WRITE/,
+  );
+});
+
+test("role-unit migration snapshots historical document factors without weakening linked-line guards", () => {
+  assert.match(roleUnitMigration, /entry_to_base_factor numeric\(18,12\)/);
+  assert.match(roleUnitMigration, /entry_unit_code text/);
+  assert.match(roleUnitMigration, /standard_unit_dimension_mismatch/);
+  assert.match(
+    roleUnitMigration,
+    /to_jsonb\(NEW\) - 'entry_to_base_factor' - 'entry_unit_code'/,
   );
 });

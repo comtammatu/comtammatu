@@ -36,6 +36,7 @@ const ingredient: TransferIngredientOption = {
   name: "Gao",
   is_active: true,
   itemKind: "raw_material",
+  issue_unit_id: 2,
   units: [
     {
       id: 1001,
@@ -215,7 +216,7 @@ test("line payload rejects an empty transfer", () => {
   );
 });
 
-test("changing source or entry unit clamps the draft to available stock", () => {
+test("changing source clamps the configured issue unit to available stock", () => {
   assert.equal(
     clampTransferLineForSource({
       line: makeLine({ quantity: "3" }),
@@ -225,13 +226,13 @@ test("changing source or entry unit clamps the draft to available stock", () => 
     }).quantity,
     "2",
   );
-  assert.equal(
-    clampTransferLineForSource({
-      line: makeLine({ quantity: "11", unit: "kg", entryUnitId: "1" }),
+  assert.deepEqual(
+    buildTransferLinesPayload({
+      lines: [makeLine({ unit: "kg", entryUnitId: "1" })],
       ingredients: [ingredient],
       sourceStockByLocation: { 200: { 100: 10 } },
       sourceLocationId: 200,
-    }).quantity,
-    "10",
+    }),
+    { success: false, error: "invalid_line" },
   );
 });

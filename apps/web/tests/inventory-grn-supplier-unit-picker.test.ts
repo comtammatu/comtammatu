@@ -23,6 +23,7 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   // "Thùng" (case, non-base) alongside "Lon" (base) — mirrors a real
   // ingredient_units row shape (is_base false, 24x factor).
   const ingredient = {
+    receipt_unit_id: 200,
     units: [
       {
         id: 1,
@@ -48,14 +49,14 @@ test("GRN supplier line resolves a non-base purchase unit as the entry unit", ()
   };
 
   const options = getPurchaseUnitOptions(ingredient);
-  assert.equal(options.length, 2);
+  assert.equal(options.length, 1);
   assert.deepEqual(
     options.map((o) => o.code),
-    ["Lon", "Thùng"],
+    ["Thùng"],
   );
   assert.deepEqual(
     options.map((o) => o.label),
-    ["lon", "thùng"],
+    ["thùng"],
   );
 
   // Purchase defaults to the largest active unit so reference prices are useful
@@ -74,6 +75,7 @@ test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would
   // raises 23503 otherwise, which confirm_goods_receipt_note surfaces as
   // "Không thể xác nhận phiếu nhập." on the whole GRN.
   const ingredient = {
+    receipt_unit_id: 100,
     units: [
       {
         id: 1,
@@ -119,8 +121,9 @@ test("getPurchaseUnitOptions excludes an is_active=false unit (inv_to_base would
   assert.equal(defaultUnit?.unitId, 100);
 });
 
-test("getPurchaseUnitOptions includes every active ingredient unit", () => {
+test("getPurchaseUnitOptions only exposes the configured receipt unit", () => {
   const ingredient = {
+    receipt_unit_id: 200,
     units: [
       {
         id: 1,
@@ -148,11 +151,11 @@ test("getPurchaseUnitOptions includes every active ingredient unit", () => {
   const options = getPurchaseUnitOptions(ingredient);
   assert.deepEqual(
     options.map((o) => o.code),
-    ["kg", "bich"],
+    ["bich"],
   );
   assert.deepEqual(
     options.map((o) => o.label),
-    ["kg", "bịch"],
+    ["bịch"],
   );
 });
 
@@ -217,7 +220,7 @@ test("inventory unit display uses the catalog name, not the unit code", () => {
   assert.equal(getIngredientUnitDisplayName(units, 200, "bich"), "bịch");
 });
 
-test("inventory unit option helpers are not role-gated by allow flags", () => {
+test("inventory unit option helpers use the configured document role", () => {
   const sharedSource = readRepo("apps/web/lib/inventory/unit-options.ts");
   assert.match(sharedSource, /unit\.is_active && unit\.unit_code !== ""/);
 
@@ -228,7 +231,7 @@ test("inventory unit option helpers are not role-gated by allow flags", () => {
     "apps/web/app/(protected)/inventory/_lib/count-units.ts",
   ]) {
     const source = readRepo(path);
-    assert.match(source, /getIngredientUnitOptions/, path);
+    assert.match(source, /getIngredientRoleUnit/, path);
   }
 });
 

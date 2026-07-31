@@ -346,6 +346,7 @@ export function buildTransferLinesPayload({
       return { success: false, error: "invalid_line" };
     }
     const issueUnit = getTransferLineIssueUnit(line, ingredients);
+    if (!issueUnit) return { success: false, error: "invalid_line" };
     const maxEntryQuantity = getTransferLineMaxEntryQuantity({
       line,
       ingredients,

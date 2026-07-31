@@ -84,9 +84,10 @@ over older task notes, regressions, and memory.
   there is a proposal to apply in the next `db push`; it must belong to the
   current task/PR and its purpose must be named in the owner approval. Keep
   historical SQL only in `supabase/migration-archive/`.
-- Create an active file only with `corepack pnpm exec supabase migration new
-  <lower_snake_case_name>` from the repository root. The CLI supplies its
-  14-digit UTC version; never hand-pick a timestamp, backdate, rename, or
+- Create an active file only with `node scripts/supabase-migration-new.mjs
+  <lower_snake_case_name>` from the repository root. It delegates file creation
+  to the Supabase CLI, then normalizes only that new file to its generated
+  14-digit UTC+7 version. Never hand-pick a timestamp, backdate, rename, or
   reuse one. The name describes one business/schema purpose, uses lower snake
   case, and contains no environment, person, ticket, or implementation-status
   label. Before creating it, snapshot `git status --short --

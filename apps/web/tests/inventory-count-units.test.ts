@@ -19,7 +19,7 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   };
 }
 
-function ingredient(units: IngredientUnitRow[]): IngredientRow {
+function ingredient(units: IngredientUnitRow[], issueUnitId: number): IngredientRow {
   return {
     id: 1,
     name: "Test",
@@ -30,11 +30,12 @@ function ingredient(units: IngredientUnitRow[]): IngredientRow {
     storage_type: "ambient",
     min_stock_level: 0,
     is_active: true,
+    issue_unit_id: issueUnitId,
     units,
   } as IngredientRow;
 }
 
-test("pickDefaultCountUnit prefers the largest packaging unit", () => {
+test("pickDefaultCountUnit keeps the configured issue unit", () => {
   const options = [
     {
       unitId: 1,
@@ -52,7 +53,7 @@ test("pickDefaultCountUnit prefers the largest packaging unit", () => {
     },
   ];
 
-  assert.equal(pickDefaultCountUnit(options)?.unitId, 2);
+  assert.equal(pickDefaultCountUnit(options)?.unitId, 1);
 });
 
 test("getDefaultCountUnit falls back to base when only one unit exists", () => {
@@ -65,14 +66,14 @@ test("getDefaultCountUnit falls back to base when only one unit exists", () => {
         to_base_factor: 1,
         is_base: true,
       }),
-    ]),
+    ], 10),
   );
 
   assert.equal(selected?.unitId, 10);
   assert.equal(selected?.isBase, true);
 });
 
-test("getDefaultCountUnit selects purchase pack over output unit", () => {
+test("getDefaultCountUnit selects the configured output unit", () => {
   const selected = getDefaultCountUnit(
     ingredient([
       unit({
@@ -99,9 +100,9 @@ test("getDefaultCountUnit selects purchase pack over output unit", () => {
         is_base: false,
         sort_order: 2,
       }),
-    ]),
+    ], 2),
   );
 
-  assert.equal(selected?.unitId, 3);
-  assert.equal(selected?.code, "thùng");
+  assert.equal(selected?.unitId, 2);
+  assert.equal(selected?.code, "chai");
 });

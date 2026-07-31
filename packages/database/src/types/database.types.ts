@@ -1945,6 +1945,8 @@ export type Database = {
       grn_items: {
         Row: {
           cost_pending: boolean
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number | null
           grn_id: number
           id: number
@@ -1963,6 +1965,8 @@ export type Database = {
         }
         Insert: {
           cost_pending?: boolean
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number | null
           grn_id: number
           id?: never
@@ -1981,6 +1985,8 @@ export type Database = {
         }
         Update: {
           cost_pending?: boolean
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number | null
           grn_id?: number
           id?: never
@@ -2238,10 +2244,13 @@ export type Database = {
           default_fulfill_site_kind: string | null
           id: number
           is_active: boolean
+          issue_unit_id: number | null
           item_kind: string
           max_stock_level: number | null
           min_stock_level: number
           name: string
+          production_unit_id: number | null
+          receipt_unit_id: number | null
           reorder_point: number | null
           shelf_life_days: number | null
           sku: string | null
@@ -2257,10 +2266,13 @@ export type Database = {
           default_fulfill_site_kind?: string | null
           id?: never
           is_active?: boolean
+          issue_unit_id?: number | null
           item_kind?: string
           max_stock_level?: number | null
           min_stock_level?: number
           name: string
+          production_unit_id?: number | null
+          receipt_unit_id?: number | null
           reorder_point?: number | null
           shelf_life_days?: number | null
           sku?: string | null
@@ -2276,10 +2288,13 @@ export type Database = {
           default_fulfill_site_kind?: string | null
           id?: never
           is_active?: boolean
+          issue_unit_id?: number | null
           item_kind?: string
           max_stock_level?: number | null
           min_stock_level?: number
           name?: string
+          production_unit_id?: number | null
+          receipt_unit_id?: number | null
           reorder_point?: number | null
           shelf_life_days?: number | null
           sku?: string | null
@@ -2302,6 +2317,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ingredient_categories"
             referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "ingredients_issue_unit_fkey"
+            columns: ["issue_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_production_unit_fkey"
+            columns: ["production_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_receipt_unit_fkey"
+            columns: ["receipt_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "ingredients_tenant_id_fkey"
@@ -5823,6 +5859,8 @@ export type Database = {
       production_recipes: {
         Row: {
           created_at: string
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number
           finished_good_id: number
           id: number
@@ -5835,6 +5873,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id: number
           finished_good_id: number
           id?: never
@@ -5847,6 +5887,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number
           finished_good_id?: number
           id?: never
@@ -5902,6 +5944,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string | null
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number
           finished_good_id: number
           id: number
@@ -5923,6 +5967,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id: number
           finished_good_id: number
           id?: never
@@ -5944,6 +5990,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number
           finished_good_id?: number
           id?: never
@@ -6105,6 +6153,8 @@ export type Database = {
       }
       purchase_order_items: {
         Row: {
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number | null
           id: number
           ingredient_id: number
@@ -6116,6 +6166,8 @@ export type Database = {
           unit_price_est: number | null
         }
         Insert: {
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number | null
           id?: never
           ingredient_id: number
@@ -6127,6 +6179,8 @@ export type Database = {
           unit_price_est?: number | null
         }
         Update: {
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number | null
           id?: never
           ingredient_id?: number
@@ -7413,6 +7467,8 @@ export type Database = {
       stock_issue_items: {
         Row: {
           approval_required: boolean
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number
           id: number
           ingredient_id: number
@@ -7431,6 +7487,8 @@ export type Database = {
         }
         Insert: {
           approval_required?: boolean
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id: number
           id?: never
           ingredient_id: number
@@ -7449,6 +7507,8 @@ export type Database = {
         }
         Update: {
           approval_required?: boolean
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number
           id?: never
           ingredient_id?: number
@@ -7676,6 +7736,8 @@ export type Database = {
           created_at: string
           created_by: string
           entry_quantity: number | null
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number
           grn_id: number | null
           grn_item_id: number | null
@@ -7698,6 +7760,8 @@ export type Database = {
           created_at?: string
           created_by: string
           entry_quantity?: number | null
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id: number
           grn_id?: number | null
           grn_item_id?: number | null
@@ -7720,6 +7784,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           entry_quantity?: number | null
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number
           grn_id?: number | null
           grn_item_id?: number | null
@@ -7990,6 +8056,8 @@ export type Database = {
       }
       stock_transfer_items: {
         Row: {
+          entry_to_base_factor: number | null
+          entry_unit_code: string | null
           entry_unit_id: number
           id: number
           ingredient_id: number
@@ -8001,6 +8069,8 @@ export type Database = {
           unit_cost_at_ship: number | null
         }
         Insert: {
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id: number
           id?: never
           ingredient_id: number
@@ -8012,6 +8082,8 @@ export type Database = {
           unit_cost_at_ship?: number | null
         }
         Update: {
+          entry_to_base_factor?: number | null
+          entry_unit_code?: string | null
           entry_unit_id?: number
           id?: never
           ingredient_id?: number
@@ -12986,6 +13058,26 @@ export type Database = {
           p_max_stock_level: number
           p_min_stock_level: number
           p_name: string
+          p_reorder_point: number
+          p_shelf_life_days: number
+          p_sku: string
+          p_storage_type: string
+          p_units: Json
+        }
+        Returns: number
+      }
+      save_ingredient_catalog_v2: {
+        Args: {
+          p_category_id: number
+          p_default_fulfill_site_kind: string
+          p_ingredient_id: number
+          p_issue_unit_id: number
+          p_item_kind: string
+          p_max_stock_level: number
+          p_min_stock_level: number
+          p_name: string
+          p_production_unit_id?: number
+          p_receipt_unit_id: number
           p_reorder_point: number
           p_shelf_life_days: number
           p_sku: string

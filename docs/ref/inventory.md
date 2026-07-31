@@ -121,27 +121,28 @@ Các cột trên và generated database types là contract hiện hành.
 
 ### 2.1 Hệ đơn vị
 
-Đơn vị kho không còn nằm trên cột text của `ingredients`. Mỗi nguyên liệu chỉ có
-hai vai trò nghiệp vụ:
+Đơn vị kho không còn nằm trên cột text của `ingredients`. Mỗi nguyên liệu có ba
+vai trò, trong đó Nhập và Xuất là bắt buộc:
 
 - **Đơn vị nhập:** đơn vị dùng khi nhận/mua nguyên liệu.
 - **Đơn vị xuất:** đơn vị dùng để trừ tồn và nhập định mức món bán.
-- Quy đổi luôn đọc là `1 đơn vị nhập = N đơn vị xuất`. Hai vai trò có thể dùng
-  cùng một đơn vị; khi đó hệ số là `1`.
+- **Đơn vị sản xuất:** chỉ bật cho item dùng trong BOM/lệnh sản xuất.
+- Quy cách luôn theo `Nhập ≥ Xuất ≥ Sản xuất`; cùng đơn vị thì hệ số là `1`.
 
-`units` vẫn là registry dùng chung theo tenant. `ingredient_units.is_base` và
-`to_base_factor` là chi tiết tương thích kỹ thuật của ledger hiện hữu:
-`is_base = true` ánh xạ sang **Đơn vị xuất**; không hiển thị khái niệm “đơn vị
-gốc/tồn chuẩn” trên UI. Dữ liệu lịch sử có thể còn dòng quy đổi phụ để đọc chứng
-từ cũ, nhưng UI Ingredients chỉ trình bày hai vai trò trên.
+`units` vẫn là registry dùng chung theo tenant. `ingredients.receipt_unit_id`,
+`issue_unit_id`, `production_unit_id` là source of truth của vai trò; không có
+đơn vị thứ tư. `ingredient_units.is_base` là **Đơn vị xuất** khi không sản xuất,
+hoặc **Đơn vị sản xuất** khi có. UI gọi nó là “tồn kho sẽ ghi nhận theo”, không
+trộn với đơn vị người dùng đang nhập chứng từ.
 
 Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon khi dùng nguyên).
 SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
-> và giá vốn BQ lưu theo **Đơn vị xuất**. Chứng từ nhận hàng có thể ghi
-> `entry_unit_id` theo Đơn vị nhập; RPC/action phải quy đổi qua
-> `ingredient_units`, không tin unit text từ client.
+> và giá vốn BQ lưu theo **đơn vị tồn chuẩn**. PO/GRN dùng Nhập; yêu cầu hàng,
+> điều chuyển, xuất, tiêu hao, hao hụt và kiểm kê dùng Xuất; BOM/lệnh sản xuất
+> dùng Sản xuất. Mỗi dòng lưu snapshot đơn vị + factor; đổi quy cách chỉ áp dụng
+> cho giao dịch mới. Đơn vị tồn chuẩn khóa sau movement đầu tiên.
 
 Sau khi nguyên liệu đã có `stock_movements`, hai đơn vị và hệ số quy đổi hiện hữu
 là lịch sử kế toán kho nên không được sửa hoặc xóa. RPC

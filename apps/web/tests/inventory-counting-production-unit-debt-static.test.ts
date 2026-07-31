@@ -40,17 +40,17 @@ const productionNewClientSource = readWeb(
 test("inventory unit option helpers delegate to one shared implementation", () => {
   assert.match(unitOptionsSource, /function activeUnits/);
   assert.match(unitOptionsSource, /getIngredientUnitOptions/);
-  assert.match(unitOptionsSource, /getDefaultIngredientUnit/);
+  assert.match(unitOptionsSource, /getIngredientRoleUnit/);
   assert.match(unitOptionsSource, /getLargestIngredientUnit/);
 
   for (const source of [countUnitsSource, issueUnitsSource, productionUnitsSource]) {
     assert.match(source, /from "@lib\/inventory\/unit-options"/);
-    assert.match(source, /getIngredientUnitOptions/);
+    assert.match(source, /getIngredientRoleUnit/);
     assert.doesNotMatch(source, /\.filter\(\(u/);
     assert.doesNotMatch(source, /\.sort\(\(a, b\)/);
   }
   assert.match(purchaseUnitsSource, /from "\.\/unit-options"/);
-  assert.match(purchaseUnitsSource, /getIngredientUnitOptions/);
+  assert.match(purchaseUnitsSource, /getIngredientRoleUnit/);
   assert.doesNotMatch(purchaseUnitsSource, /\.filter\(\(u/);
   assert.doesNotMatch(purchaseUnitsSource, /\.sort\(\(a, b\)/);
   for (const source of [
@@ -58,13 +58,10 @@ test("inventory unit option helpers delegate to one shared implementation", () =
     issueUnitsSource,
     productionUnitsSource,
   ]) {
-    assert.match(source, /getDefaultIngredientUnit/);
+    assert.match(source, /getIngredientRoleUnit/);
   }
-  assert.match(countUnitsSource, /getLargestIngredientUnit/);
   assert.match(countUnitsSource, /pickDefaultCountUnit/);
-  assert.match(purchaseUnitsSource, /getLargestIngredientUnit/);
   assert.doesNotMatch(purchaseUnitsSource, /\.reduce</);
-  assert.match(issueUnitsSource, /includeToBaseFactor: true/);
 });
 
 test("stocktake wizard commits or rejects the active buffer before row navigation", () => {

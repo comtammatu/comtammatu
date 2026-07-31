@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useController,
   type Control,
@@ -12,8 +12,11 @@ import {
   Field,
   FieldDescription,
   FieldError,
+  FieldLegend,
   FieldLabel,
+  FieldSet,
 } from "@comtammatu/ui/components/field";
+import { Switch } from "@comtammatu/ui/components/switch";
 import {
   FormDialog,
   FormattedNumberInput,
@@ -61,6 +64,9 @@ const ingredientSchema = z
       .refine((value) => Number(value) > 0, {
         error: copy.units.factorPositive,
       }),
+    production_enabled: z.boolean().default(false),
+    production_unit_id: z.string().trim().optional(),
+    output_to_production_factor: z.string().trim().optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -72,6 +78,17 @@ const ingredientSchema = z
         path: ["input_to_output_factor"],
         message: copy.units.sameUnitFactorOne,
       });
+    }
+    if (data.production_enabled) {
+      if (!data.production_unit_id) {
+        ctx.addIssue({ code: "custom", path: ["production_unit_id"], message: copy.units.selectUnit });
+      }
+      if (!data.output_to_production_factor || Number(data.output_to_production_factor) <= 0) {
+        ctx.addIssue({ code: "custom", path: ["output_to_production_factor"], message: copy.units.factorPositive });
+      }
+      if (data.output_unit_id === data.production_unit_id && Number(data.output_to_production_factor) !== 1) {
+        ctx.addIssue({ code: "custom", path: ["output_to_production_factor"], message: copy.units.sameUnitFactorOne });
+      }
     }
   });
 
@@ -87,12 +104,13 @@ type CatalogUnitPayload = {
 };
 
 function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
-  const outputUnit = ingredient?.units?.find((unit) => unit.is_base);
-  const inputUnit =
-    ingredient?.units
-      ?.filter((unit) => unit.is_active && !unit.is_base)
-      .sort((left, right) => right.to_base_factor - left.to_base_factor)[0] ??
-    outputUnit;
+  const baseUnit = ingredient?.units?.find((unit) => unit.is_base);
+  const outputUnit = ingredient?.units?.find(
+    (unit) => unit.unit_id === ingredient.issue_unit_id,
+  ) ?? baseUnit;
+  const inputUnit = ingredient?.units?.find(
+    (unit) => unit.unit_id === ingredient.receipt_unit_id,
+  ) ?? outputUnit;
 
   return {
     name: ingredient?.name ?? "",
@@ -110,7 +128,15 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
       ingredient?.default_fulfill_site_kind ?? FULFILL_SITE_NONE,
     input_unit_id: String(inputUnit?.unit_id ?? ""),
     output_unit_id: String(outputUnit?.unit_id ?? ""),
-    input_to_output_factor: String(inputUnit?.to_base_factor ?? 1),
+    input_to_output_factor: String(
+      (inputUnit?.to_base_factor ?? 1) / (outputUnit?.to_base_factor ?? 1),
+    ),
+    production_enabled: ingredient?.production_unit_id != null,
+    production_unit_id: String(ingredient?.production_unit_id ?? ""),
+    output_to_production_factor:
+      ingredient?.production_unit_id != null
+        ? String((outputUnit?.to_base_factor ?? 1) / (baseUnit?.to_base_factor ?? 1))
+        : "1",
   };
 }
 
@@ -118,63 +144,58 @@ function buildUnitsFromForm(
   inputUnitId: number,
   outputUnitId: number,
   inputToOutputFactor: number,
+  productionUnitId: number | null,
+  outputToProductionFactor: number,
 ): CatalogUnitPayload[] {
-  return [
-    {
+  const baseUnitId = productionUnitId ?? outputUnitId;
+  const units = new Map<number, CatalogUnitPayload>();
+  units.set(baseUnitId, {
+    unit_id: baseUnitId,
+    to_base_factor: 1,
+    is_base: true,
+    anchor_unit_id: null,
+    anchor_factor: null,
+  });
+  if (outputUnitId !== baseUnitId) {
+    units.set(outputUnitId, {
       unit_id: outputUnitId,
-      to_base_factor: 1,
-      is_base: true,
-      anchor_unit_id: null,
-      anchor_factor: null,
-    },
-    ...(inputUnitId === outputUnitId
-      ? []
-      : [
-          {
-            unit_id: inputUnitId,
-            to_base_factor: inputToOutputFactor,
-            is_base: false,
-            anchor_unit_id: outputUnitId,
-            anchor_factor: inputToOutputFactor,
-          },
-        ]),
-  ];
-}
-
-function preserveExistingUnits(
-  units: NonNullable<IngredientRow["units"]>,
-): CatalogUnitPayload[] {
-  return units
-    .slice()
-    .sort((left, right) => left.sort_order - right.sort_order)
-    .map((unit) => ({
-      unit_id: unit.unit_id,
-      to_base_factor: unit.to_base_factor,
-      is_base: unit.is_base,
-      anchor_unit_id: unit.anchor_unit_id ?? null,
-      anchor_factor: unit.anchor_factor ?? null,
-    }));
+      to_base_factor: outputToProductionFactor,
+      is_base: false,
+      anchor_unit_id: baseUnitId,
+      anchor_factor: outputToProductionFactor,
+    });
+  }
+  if (inputUnitId !== outputUnitId && inputUnitId !== baseUnitId) {
+    units.set(inputUnitId, {
+      unit_id: inputUnitId,
+      to_base_factor: inputToOutputFactor * outputToProductionFactor,
+      is_base: false,
+      anchor_unit_id: outputUnitId,
+      anchor_factor: inputToOutputFactor,
+    });
+  }
+  return [...units.values()];
 }
 
 function ConversionFactorField({
   control,
-  inputUnitName,
-  outputUnitName,
+  name,
+  fromUnitName,
+  toUnitName,
   sameUnit,
-  disabled,
 }: {
   control: Control<IngredientFormValues>;
-  inputUnitName: string;
-  outputUnitName: string;
+  name: "input_to_output_factor" | "output_to_production_factor";
+  fromUnitName: string;
+  toUnitName: string;
   sameUnit: boolean;
-  disabled: boolean;
 }) {
   const { field, fieldState } = useController({
     control,
-    name: "input_to_output_factor",
+    name,
   });
   const hasError = !!fieldState.error;
-  const fieldId = "field-input_to_output_factor";
+  const fieldId = `field-${name}`;
   const errorId = hasError ? `${fieldId}-error` : undefined;
   const value =
     typeof field.value === "string"
@@ -183,36 +204,36 @@ function ConversionFactorField({
         ? String(field.value)
         : "";
   const ariaLabel =
-    inputUnitName !== copy.units.unitPending &&
-    outputUnitName !== copy.units.unitPending
-      ? copy.units.conversionAria(inputUnitName, outputUnitName)
+    fromUnitName !== copy.units.unitPending &&
+    toUnitName !== copy.units.unitPending
+      ? copy.units.conversionAria(fromUnitName, toUnitName)
       : copy.units.conversionAriaFallback;
 
   return (
     <Field data-invalid={hasError}>
       <FieldLabel htmlFor={fieldId}>
-        {copy.units.conversion}
+        {copy.units.conversion(fromUnitName, toUnitName)}
         {" *"}
       </FieldLabel>
       <div className="flex min-h-10 flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">1</span>
-        <span className="text-sm font-medium">{inputUnitName}</span>
+        <span className="text-sm font-medium">{fromUnitName}</span>
         <span className="text-sm text-muted-foreground">=</span>
         <FormattedNumberInput
           id={fieldId}
-          name="input_to_output_factor"
+          name={name}
           value={value}
           onValueChange={field.onChange}
           onBlur={field.onBlur}
           ref={field.ref}
           maxFractionDigits={6}
-          disabled={disabled || sameUnit}
+          disabled={sameUnit}
           aria-invalid={hasError}
           aria-describedby={errorId}
           aria-label={ariaLabel}
           className="w-28"
         />
-        <span className="text-sm font-medium">{outputUnitName}</span>
+        <span className="text-sm font-medium">{toUnitName}</span>
       </div>
       {fieldState.error ? (
         <FieldError id={errorId} errors={[fieldState.error]} />
@@ -242,8 +263,6 @@ export function IngredientDialog({
   const [unitLock, setUnitLock] = useState<UnitLockState>(
     ingredient ? "checking" : "unlocked",
   );
-  const unitLockRef = useRef(unitLock);
-  unitLockRef.current = unitLock;
   const unitsLocked = unitLock !== "unlocked";
 
   const defaultValues = useMemo(() => toFormValues(ingredient), [ingredient]);
@@ -297,14 +316,19 @@ export function IngredientDialog({
     const inputUnitId = Number(values.input_unit_id);
     const outputUnitId = Number(values.output_unit_id);
     const inputToOutputFactor = Number(values.input_to_output_factor);
-    const existingUnits = ingredient?.units;
-    const units =
-      isEdit &&
-      unitLockRef.current !== "unlocked" &&
-      existingUnits &&
-      existingUnits.length > 0
-        ? preserveExistingUnits(existingUnits)
-        : buildUnitsFromForm(inputUnitId, outputUnitId, inputToOutputFactor);
+    const productionUnitId = values.production_enabled
+      ? Number(values.production_unit_id)
+      : null;
+    const outputToProductionFactor = values.production_enabled
+      ? Number(values.output_to_production_factor)
+      : 1;
+    const units = buildUnitsFromForm(
+      inputUnitId,
+      outputUnitId,
+      inputToOutputFactor,
+      productionUnitId,
+      outputToProductionFactor,
+    );
     const storageType: "ambient" | "refrigerated" | "frozen" =
       ingredient?.storage_type === "refrigerated" ||
       ingredient?.storage_type === "frozen"
@@ -323,6 +347,9 @@ export function IngredientDialog({
           ? values.default_fulfill_site_kind
           : null,
       units,
+      receipt_unit_id: inputUnitId,
+      issue_unit_id: outputUnitId,
+      production_unit_id: productionUnitId,
     };
 
     try {
@@ -348,7 +375,7 @@ export function IngredientDialog({
     unitLock === "checking"
       ? copy.units.lockChecking
       : unitLock === "locked"
-        ? copy.units.lockedHint
+        ? copy.units.standardLockedHint
         : unitLock === "unavailable"
           ? copy.units.lockUnavailable
           : null;
@@ -369,6 +396,8 @@ export function IngredientDialog({
       {(form) => {
         const inputUnitId = form.watch("input_unit_id");
         const outputUnitId = form.watch("output_unit_id");
+        const productionEnabled = form.watch("production_enabled");
+        const productionUnitId = form.watch("production_unit_id");
         const sameUnit =
           inputUnitId.length > 0 && inputUnitId === outputUnitId;
         const inputUnitName =
@@ -376,6 +405,9 @@ export function IngredientDialog({
           copy.units.unitPending;
         const outputUnitName =
           unitOptions.find((unit) => String(unit.id) === outputUnitId)?.name ??
+          copy.units.unitPending;
+        const productionUnitName =
+          unitOptions.find((unit) => String(unit.id) === productionUnitId)?.name ??
           copy.units.unitPending;
 
         return (
@@ -385,7 +417,9 @@ export function IngredientDialog({
             unitSelectOptions={unitSelectOptions}
             inputUnitName={inputUnitName}
             outputUnitName={outputUnitName}
+            productionUnitName={productionUnitName}
             sameUnit={sameUnit}
+            productionEnabled={productionEnabled}
             unitsLocked={unitsLocked}
             unitLockHint={unitLockHint}
           />
@@ -401,7 +435,9 @@ function IngredientDialogFields({
   unitSelectOptions,
   inputUnitName,
   outputUnitName,
+  productionUnitName,
   sameUnit,
+  productionEnabled,
   unitsLocked,
   unitLockHint,
 }: {
@@ -410,15 +446,26 @@ function IngredientDialogFields({
   unitSelectOptions: Array<{ value: string; label: string }>;
   inputUnitName: string;
   outputUnitName: string;
+  productionUnitName: string;
   sameUnit: boolean;
+  productionEnabled: boolean;
   unitsLocked: boolean;
   unitLockHint: string | null;
 }) {
   useEffect(() => {
-    if (unitsLocked || !sameUnit) return;
+    if (!sameUnit) return;
     if (form.getValues("input_to_output_factor") === "1") return;
     form.setValue("input_to_output_factor", "1", { shouldValidate: true });
-  }, [form, sameUnit, unitsLocked]);
+  }, [form, sameUnit]);
+
+  const productionSameAsOutput =
+    form.watch("production_unit_id") === form.watch("output_unit_id");
+
+  useEffect(() => {
+    if (!productionEnabled || !productionSameAsOutput) return;
+    if (form.getValues("output_to_production_factor") === "1") return;
+    form.setValue("output_to_production_factor", "1", { shouldValidate: true });
+  }, [form, productionEnabled, productionSameAsOutput]);
 
   return (
     <>
@@ -465,44 +512,81 @@ function IngredientDialogFields({
             },
           ]}
         />
-        <SelectField
-          control={form.control}
-          name="input_unit_id"
-          label={copy.units.inputUnit}
-          placeholder={copy.units.selectUnit}
-          options={unitSelectOptions}
-          disabled={unitsLocked}
-          required
-        />
-        <SelectField
-          control={form.control}
-          name="output_unit_id"
-          label={copy.units.outputUnit}
-          placeholder={copy.units.selectUnit}
-          options={unitSelectOptions}
-          disabled={unitsLocked}
-          required
-        />
       </div>
 
-      {!unitsLocked ? (
-        <FieldDescription>{copy.units.unitsBriefHint}</FieldDescription>
-      ) : null}
-
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-        <ConversionFactorField
-          control={form.control}
-          inputUnitName={inputUnitName}
-          outputUnitName={outputUnitName}
-          sameUnit={sameUnit}
-          disabled={unitsLocked}
-        />
         <QuantityField
           control={form.control}
           name="min_stock_level"
           label={dialogCopy.minStockLabel}
         />
       </div>
+
+      <FieldSet>
+        <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
+        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+          <SelectField
+            control={form.control}
+            name="input_unit_id"
+            label={copy.units.inputUnit}
+            placeholder={copy.units.selectUnit}
+            options={unitSelectOptions}
+            required
+          />
+          <SelectField
+            control={form.control}
+            name="output_unit_id"
+            label={copy.units.outputUnit}
+            placeholder={copy.units.selectUnit}
+            options={unitSelectOptions}
+            disabled={unitsLocked && !productionEnabled}
+            required
+          />
+          <ConversionFactorField
+            control={form.control}
+            name="input_to_output_factor"
+            fromUnitName={inputUnitName}
+            toUnitName={outputUnitName}
+            sameUnit={sameUnit}
+          />
+        </div>
+        <Field className="mt-4" orientation="horizontal">
+          <FieldLabel htmlFor="production-enabled">{copy.units.productionEnabled}</FieldLabel>
+          <Switch
+            id="production-enabled"
+            checked={productionEnabled}
+            disabled={unitsLocked}
+            onCheckedChange={(checked) =>
+              form.setValue("production_enabled", checked, { shouldValidate: true })
+            }
+          />
+        </Field>
+        {productionEnabled ? (
+          <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            <SelectField
+              control={form.control}
+              name="production_unit_id"
+              label={copy.units.productionUnit}
+              placeholder={copy.units.selectUnit}
+              options={unitSelectOptions}
+              disabled={unitsLocked}
+              required
+            />
+            <ConversionFactorField
+              control={form.control}
+              name="output_to_production_factor"
+              fromUnitName={outputUnitName}
+              toUnitName={productionUnitName}
+              sameUnit={productionSameAsOutput}
+            />
+          </div>
+        ) : null}
+        <FieldDescription className="mt-4">
+          {copy.units.standardUnit(
+            productionEnabled ? productionUnitName : outputUnitName,
+          )}
+        </FieldDescription>
+      </FieldSet>
 
       {unitLockHint ? (
         <FieldDescription>{unitLockHint}</FieldDescription>

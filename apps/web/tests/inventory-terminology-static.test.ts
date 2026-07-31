@@ -21,7 +21,7 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.doesNotMatch(source, /theo WAC/);
 });
 
-test("ingredient unit dialog names only input and output roles", () => {
+test("ingredient unit dialog names input, output, and optional production roles", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
@@ -30,9 +30,9 @@ test("ingredient unit dialog names only input and output roles", () => {
   assert.match(source, /label=\{copy\.units\.inputUnit\}/);
   assert.match(source, /label=\{copy\.units\.outputUnit\}/);
   assert.match(source, /ConversionFactorField/);
-  assert.match(source, /\{copy\.units\.conversion\}/);
-  assert.match(source, /\{inputUnitName\}/);
-  assert.match(source, /\{outputUnitName\}/);
+  assert.match(source, /copy\.units\.productionEnabled/);
+  assert.match(source, /label=\{copy\.units\.productionUnit\}/);
+  assert.match(source, /copy\.units\.conversion\(fromUnitName, toUnitName\)/);
   assert.match(source, /text-muted-foreground">=<\/span>/);
   assert.doesNotMatch(source, /label=\{copy\.units\.colBase\}/);
   assert.doesNotMatch(source, /description=\{copy\.units\./);
@@ -40,7 +40,8 @@ test("ingredient unit dialog names only input and output roles", () => {
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
-  assert.match(messages, /conversion: "Quy đổi"/);
+  assert.match(messages, /productionEnabled: "Dùng trong sản xuất"/);
+  assert.match(messages, /standardUnit:/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);
 });
