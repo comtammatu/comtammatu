@@ -4,7 +4,7 @@
   "git": {
     "deploymentEnabled": {
       "**": false,
-      "codex/hkd-phuoc-hai": true
+      "phuoc-hai": true
     }
   },
   "regions": ["sin1"],
