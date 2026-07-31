@@ -206,7 +206,6 @@ export function MenuRecipeLineDialog({
                 bulkAdd
                 unitEditable
                 unitMode="all"
-                showYield={false}
               />
 
               {linesRootError && (

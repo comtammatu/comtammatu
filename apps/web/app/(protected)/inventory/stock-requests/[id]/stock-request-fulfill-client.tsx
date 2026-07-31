@@ -31,6 +31,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsOnline } from "@/components/pwa-runtime";
 import {
@@ -42,7 +47,6 @@ import {
   AppDetailFooter,
   AppPage,
   AppPageHeader,
-  AppSection,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
@@ -318,7 +322,7 @@ export function StockRequestFulfillClient({
     });
   }
 
-  function lineColumns(
+  function pendingLineColumns(
     group: StockRequestFulfillGroup,
   ): DataTableColumn<StockRequestFulfillLine>[] {
     const locationId = selectedLocationId(group, locationByGroup);
@@ -327,20 +331,19 @@ export function StockRequestFulfillClient({
         key: "select",
         header: copy.selectColumn,
         className: "w-14",
-        render: (line) =>
-          line.status === "pending" ? (
-            <Checkbox
-              size="touch"
-              checked={
-                selectedByGroup[group.fulfillSiteKind]?.has(line.id) ?? false
-              }
-              onCheckedChange={(value) =>
-                toggleLine(group.fulfillSiteKind, line.id, value === true)
-              }
-              disabled={isPending}
-              aria-label={copy.selectLineAria(line.ingredientName)}
-            />
-          ) : null,
+        render: (line) => (
+          <Checkbox
+            size="touch"
+            checked={
+              selectedByGroup[group.fulfillSiteKind]?.has(line.id) ?? false
+            }
+            onCheckedChange={(value) =>
+              toggleLine(group.fulfillSiteKind, line.id, value === true)
+            }
+            disabled={isPending}
+            aria-label={copy.selectLineAria(line.ingredientName)}
+          />
+        ),
       },
       {
         key: "ingredient",
@@ -353,14 +356,19 @@ export function StockRequestFulfillClient({
           );
           const focused = line.ingredientId === shortageFocusIngredientId;
           return (
-            <span
-              className={
-                focused || short
-                  ? "font-medium text-destructive"
-                  : "font-medium"
-              }
-            >
-              {line.ingredientName}
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span
+                className={
+                  focused || short
+                    ? "font-medium text-destructive"
+                    : "font-medium"
+                }
+              >
+                {line.ingredientName}
+              </span>
+              {short ? (
+                <Badge variant="destructive">{copy.shortageBadge}</Badge>
+              ) : null}
             </span>
           );
         },
@@ -376,9 +384,6 @@ export function StockRequestFulfillClient({
         header: copy.onHandColumn,
         className: "text-right font-mono tabular-nums",
         render: (line) => {
-          if (line.status !== "pending") {
-            return <span className="text-muted-foreground">—</span>;
-          }
           const onHand = lineOnHandInEntryUnit(
             line,
             locationId,
@@ -396,27 +401,47 @@ export function StockRequestFulfillClient({
           );
         },
       },
+    ];
+  }
+
+  function doneLineColumns(
+    showStatus: boolean,
+  ): DataTableColumn<StockRequestFulfillLine>[] {
+    const columns: DataTableColumn<StockRequestFulfillLine>[] = [
       {
-        key: "status",
-        header: copy.statusColumn,
-        className: "w-36",
-        render: (line) => {
-          const short = isFulfillLineShort(
-            line,
-            locationId,
-            group.stockByLocation,
-          );
-          if (line.status === "pending" && short) {
-            return <Badge variant="destructive">{copy.shortageBadge}</Badge>;
-          }
-          return (
-            <Badge variant="secondary">
-              {stockRequestCopy.statusLabel(line.status)}
-            </Badge>
-          );
-        },
+        key: "ingredient",
+        header: copy.ingredientColumn,
+        render: (line) => (
+          <span className="font-medium">{line.ingredientName}</span>
+        ),
+      },
+      {
+        key: "quantity",
+        header: copy.quantityColumn,
+        className: "text-right font-mono tabular-nums",
+        render: (line) => copy.lineQtyUnit(line.quantity, line.unitLabel),
       },
     ];
+    if (!showStatus) return columns;
+    columns.push({
+      key: "status",
+      header: copy.statusColumn,
+      className: "w-36",
+      render: (line) => (
+        <Badge variant="secondary">
+          {stockRequestCopy.statusLabel(line.status)}
+        </Badge>
+      ),
+    });
+    return columns;
+  }
+
+  const multiSource = groups.length > 1;
+
+  function fulfillLabel(group: StockRequestFulfillGroup): string {
+    return multiSource
+      ? copy.fulfillButton(siteKindLabel(group.fulfillSiteKind))
+      : copy.fulfillPrimary;
   }
 
   const content = (
@@ -452,45 +477,143 @@ export function StockRequestFulfillClient({
               </AlertDescription>
             </Alert>
           ) : null}
-          <div
-            className="flex flex-col gap-2"
-            aria-label={copy.sourceSelectorAria}
-          >
-            {groups.map((group) => {
-              const pendingLines = group.lines.filter(
-                (line) => line.status === "pending",
-              );
-              const isActive =
-                group.fulfillSiteKind === activeGroup?.fulfillSiteKind;
-              const locationId = selectedLocationId(group, locationByGroup);
-              return (
-                <AppSection
-                  key={group.fulfillSiteKind}
-                  title={
+
+          {multiSource ? (
+            <div
+              className="flex flex-wrap gap-2"
+              aria-label={copy.sourceSelectorAria}
+            >
+              {groups.map((group) => {
+                const pendingCount = group.lines.filter(
+                  (line) => line.status === "pending",
+                ).length;
+                const isActive =
+                  group.fulfillSiteKind === activeGroup?.fulfillSiteKind;
+                return (
+                  <Button
+                    key={group.fulfillSiteKind}
+                    type="button"
+                    variant={isActive ? "secondary" : "outline"}
+                    size="touch"
+                    aria-pressed={isActive}
+                    onClick={() => activateSource(group.fulfillSiteKind)}
+                  >
+                    {siteKindLabel(group.fulfillSiteKind)}
+                    <Badge variant="secondary" className="ml-2">
+                      {pendingCount}
+                    </Badge>
+                  </Button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {groups.map((group) => {
+            const pendingLines = group.lines.filter(
+              (line) => line.status === "pending",
+            );
+            const doneLines = group.lines.filter(
+              (line) => line.status !== "pending",
+            );
+            const doneStatuses = new Set(doneLines.map((line) => line.status));
+            const uniformDoneStatus =
+              doneStatuses.size === 1 ? [...doneStatuses][0]! : null;
+            const showDoneStatus = uniformDoneStatus == null;
+            const isActive =
+              group.fulfillSiteKind === activeGroup?.fulfillSiteKind;
+            if (multiSource && !isActive) return null;
+
+            const locationId = selectedLocationId(group, locationByGroup);
+            const sourceLabel = siteKindLabel(group.fulfillSiteKind);
+
+            return (
+              <div key={group.fulfillSiteKind} className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold">
+                    {copy.sourceTitle(sourceLabel)}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {copy.pendingOnlySummary(pendingLines.length)}
+                  </p>
+                </div>
+
+                {pendingLines.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {group.locations.length > 1 ? (
+                      <div className="flex flex-col gap-1.5">
+                        <Label
+                          htmlFor={`fulfill-location-${group.fulfillSiteKind}`}
+                        >
+                          {copy.exportLocation}
+                        </Label>
+                        <Select
+                          value={locationByGroup[group.fulfillSiteKind] ?? ""}
+                          onValueChange={(value) => {
+                            setActiveGroupKind(group.fulfillSiteKind);
+                            setShortageFocusIngredientId(null);
+                            setLocationByGroup((current) => ({
+                              ...current,
+                              [group.fulfillSiteKind]: value,
+                            }));
+                          }}
+                        >
+                          <SelectTrigger
+                            id={`fulfill-location-${group.fulfillSiteKind}`}
+                            size="touch"
+                            className="w-full"
+                          >
+                            <SelectValue
+                              placeholder={copy.chooseExportLocation}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {group.locations.map((location) => (
+                              <SelectItem
+                                key={location.id}
+                                value={String(location.id)}
+                                size="touch"
+                              >
+                                {location.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : group.locations.length === 1 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {copy.exportFrom(group.locations[0]!.label)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-destructive">
+                        {copy.noStockLocation}
+                      </p>
+                    )}
+
                     <Button
                       type="button"
-                      variant={isActive ? "secondary" : "ghost"}
+                      variant="outline"
                       size="touch"
-                      className="-mx-2 w-[calc(100%+1rem)] justify-between px-2 text-left"
-                      aria-pressed={isActive}
-                      onClick={() => activateSource(group.fulfillSiteKind)}
+                      disabled={isPending}
+                      onClick={() =>
+                        selectAllPending(
+                          group.fulfillSiteKind,
+                          pendingLines.map((line) => line.id),
+                        )
+                      }
                     >
-                      <span>
-                        {copy.sourceTitle(siteKindLabel(group.fulfillSiteKind))}
-                      </span>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {copy.sourcePendingSummary(
-                          pendingLines.length,
-                          group.lines.length,
-                        )}
-                      </span>
+                      {copy.selectAllPending}
                     </Button>
-                  }
-                  contentFlush
-                >
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {copy.noPendingLines}
+                  </p>
+                )}
+
+                {pendingLines.length > 0 ? (
                   <DataTable
-                    columns={lineColumns(group)}
-                    data={group.lines}
+                    columns={pendingLineColumns(group)}
+                    data={pendingLines}
                     getRowKey={(line) => line.id}
                     emptyTitle={copy.emptyLinesTitle}
                     emptyDescription={copy.emptyLinesDescription}
@@ -515,27 +638,25 @@ export function StockRequestFulfillClient({
                             focused || short ? "border-destructive" : undefined
                           }
                         >
-                          {line.status === "pending" ? (
-                            <Checkbox
-                              size="touch"
-                              checked={
-                                selectedByGroup[group.fulfillSiteKind]?.has(
-                                  line.id,
-                                ) ?? false
-                              }
-                              onCheckedChange={(value) =>
-                                toggleLine(
-                                  group.fulfillSiteKind,
-                                  line.id,
-                                  value === true,
-                                )
-                              }
-                              disabled={isPending}
-                              aria-label={copy.selectLineAria(
-                                line.ingredientName,
-                              )}
-                            />
-                          ) : null}
+                          <Checkbox
+                            size="touch"
+                            checked={
+                              selectedByGroup[group.fulfillSiteKind]?.has(
+                                line.id,
+                              ) ?? false
+                            }
+                            onCheckedChange={(value) =>
+                              toggleLine(
+                                group.fulfillSiteKind,
+                                line.id,
+                                value === true,
+                              )
+                            }
+                            disabled={isPending}
+                            aria-label={copy.selectLineAria(
+                              line.ingredientName,
+                            )}
+                          />
                           <ItemContent>
                             <ItemTitle
                               className={
@@ -546,107 +667,80 @@ export function StockRequestFulfillClient({
                             >
                               {line.ingredientName}
                             </ItemTitle>
-                            {line.status === "pending" ? (
-                              <ItemDescription>
-                                {copy.needVsOnHand(
-                                  line.quantity,
-                                  onHand,
-                                  line.unitLabel,
-                                )}
-                              </ItemDescription>
-                            ) : null}
+                            <ItemDescription>
+                              {copy.needVsOnHand(
+                                line.quantity,
+                                onHand,
+                                line.unitLabel,
+                              )}
+                            </ItemDescription>
                           </ItemContent>
                           <ItemActions className="flex shrink-0 flex-col items-end gap-1">
-                            <span className="font-mono text-sm tabular-nums">
-                              {copy.lineQtyUnit(line.quantity, line.unitLabel)}
-                            </span>
-                            {line.status === "pending" && short ? (
+                            {short ? (
                               <Badge variant="destructive">
                                 {copy.shortageBadge}
                               </Badge>
-                            ) : (
-                              <Badge variant="secondary">
-                                {stockRequestCopy.statusLabel(line.status)}
-                              </Badge>
-                            )}
+                            ) : null}
                           </ItemActions>
                         </Item>
                       );
                     }}
                   />
+                ) : null}
 
-                  {pendingLines.length > 0 ? (
-                    <div className="flex flex-col gap-2 p-3 pt-0 md:p-0 md:pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        disabled={isPending}
-                        onClick={() =>
-                          selectAllPending(
-                            group.fulfillSiteKind,
-                            pendingLines.map((line) => line.id),
-                          )
-                        }
-                      >
-                        {copy.selectAllPending}
-                      </Button>
-
-                      {group.locations.length > 1 ? (
-                        <div className="flex flex-col gap-1.5">
-                          <Label
-                            htmlFor={`fulfill-location-${group.fulfillSiteKind}`}
-                          >
-                            {copy.exportLocation}
-                          </Label>
-                          <Select
-                            value={locationByGroup[group.fulfillSiteKind] ?? ""}
-                            onValueChange={(value) => {
-                              setActiveGroupKind(group.fulfillSiteKind);
-                              setShortageFocusIngredientId(null);
-                              setLocationByGroup((current) => ({
-                                ...current,
-                                [group.fulfillSiteKind]: value,
-                              }));
-                            }}
-                          >
-                            <SelectTrigger
-                              id={`fulfill-location-${group.fulfillSiteKind}`}
-                              size="touch"
-                              className="w-full"
-                            >
-                              <SelectValue
-                                placeholder={copy.chooseExportLocation}
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {group.locations.map((location) => (
-                                <SelectItem
-                                  key={location.id}
-                                  value={String(location.id)}
-                                  size="touch"
-                                >
-                                  {location.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ) : group.locations.length === 1 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {copy.exportFrom(group.locations[0]!.label)}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-destructive">
-                          {copy.noStockLocation}
-                        </p>
+                {doneLines.length > 0 ? (
+                  <Collapsible>
+                    <CollapsibleTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start px-0"
+                        />
+                      }
+                    >
+                      {copy.doneLinesToggle(
+                        doneLines.length,
+                        uniformDoneStatus
+                          ? stockRequestCopy.statusLabel(uniformDoneStatus)
+                          : undefined,
                       )}
-                    </div>
-                  ) : null}
-                </AppSection>
-              );
-            })}
-          </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <DataTable
+                        columns={doneLineColumns(showDoneStatus)}
+                        data={doneLines}
+                        getRowKey={(line) => line.id}
+                        emptyTitle={copy.emptyLinesTitle}
+                        emptyDescription={copy.emptyLinesDescription}
+                        mobileCardRender={(line) => (
+                          <Item variant="outline" size="sm">
+                            <ItemContent>
+                              <ItemTitle>{line.ingredientName}</ItemTitle>
+                              <ItemDescription>
+                                {copy.lineQtyUnit(
+                                  line.quantity,
+                                  line.unitLabel,
+                                )}
+                              </ItemDescription>
+                            </ItemContent>
+                            {showDoneStatus ? (
+                              <ItemActions>
+                                <Badge variant="secondary">
+                                  {stockRequestCopy.statusLabel(line.status)}
+                                </Badge>
+                              </ItemActions>
+                            ) : null}
+                          </Item>
+                        )}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       )}
       {activeGroup &&
@@ -700,11 +794,7 @@ export function StockRequestFulfillClient({
                   }
                   onClick={() => handleFulfill(activeGroup)}
                 >
-                  {isPending
-                    ? copy.processing
-                    : copy.fulfillButton(
-                        siteKindLabel(activeGroup.fulfillSiteKind),
-                      )}
+                  {isPending ? copy.processing : fulfillLabel(activeGroup)}
                 </Button>
               }
             />
@@ -756,11 +846,7 @@ export function StockRequestFulfillClient({
                 }
                 onClick={() => handleFulfill(activeGroup)}
               >
-                {isPending
-                  ? copy.processing
-                  : copy.fulfillButton(
-                      siteKindLabel(activeGroup.fulfillSiteKind),
-                    )}
+                {isPending ? copy.processing : fulfillLabel(activeGroup)}
               </Button>
             }
           />

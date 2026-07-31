@@ -18,14 +18,26 @@ test("purchase request dialog keeps its actions visible with many lines", () => 
 
   assert.match(requestSource, /<AppDialog[\s\S]*variant="document"/);
   assert.match(frameSource, /variant\?: "default" \| "document"/);
-  assert.match(frameSource, /grid-rows-\[auto_minmax\(0,1fr\)_auto\]/);
+  assert.match(
+    frameSource,
+    /grid-cols-1 grid-rows-\[auto_minmax\(0,1fr\)_auto\]/,
+  );
   assert.match(frameSource, /sm:w-\[min\(1120px,96vw\)\]/);
   assert.match(frameSource, /sm:max-h-\[95dvh\]/);
   assert.match(
     frameSource,
-    /app-dialog-body flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain/,
+    /app-dialog-body col-span-full flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain/,
   );
+  assert.match(frameSource, /\[overflow-anchor:none\]/);
+  assert.match(frameSource, /initialFocus=\{/);
+  assert.match(frameSource, /bodyRef\.current\?\.scrollTo/);
   assert.match(frameSource, /data-app-dialog-footer-slot/);
+  assert.match(frameSource, /empty:hidden/);
+  assert.doesNotMatch(
+    frameSource,
+    /data-app-dialog-footer-slot className="contents"/,
+  );
   assert.match(frameSource, /border-t bg-popover/);
   assert.match(frameSource, /export function AppDialogFooter/);
+  assert.match(frameSource, /pl-4 pr-14/);
 });

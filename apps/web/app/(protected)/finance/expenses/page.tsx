@@ -40,7 +40,7 @@ export default async function ExpensesPage({
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
   ]);
 
   if (!branchesRes.success || !expensesRes.success) {

@@ -89,10 +89,11 @@ State: verify
 Kind: defect
 Tier: T3
 Lane: finance/procurement
-Exit: An Accountant with `finance:view` can edit or cancel an unmatched operating expense, and purchase-demand approval creates PO lines in each ingredient's receipt unit with an exact, three-decimal quantity conversion.
+Exit: An Accountant with `finance:expense_create` can edit/cancel an unmatched operating expense and confirm unpaid → cash|transfer; purchase-demand approval creates PO lines in each ingredient's receipt unit with an exact, three-decimal quantity conversion.
 Evidence: focused regression, migration lineage, repository gates, authorized Production apply, regenerated types, and authenticated Accountant smoke.
 
-- [ ] Run authenticated Accountant smoke: edit/cancel an unmatched operating expense and approve a purchase demand whose request and receipt units differ.
+- [ ] Smoke Accountant: edit/cancel unmatched operating expense and unpaid → TM/CK (`finance:expense_create` live on Production).
+- [ ] Run authenticated Accountant smoke: approve a purchase demand whose request and receipt units differ.
 
 ## Unify stock request and transfer fulfillment journey
 

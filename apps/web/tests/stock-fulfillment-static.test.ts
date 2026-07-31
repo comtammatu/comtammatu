@@ -65,8 +65,21 @@ test("stock request details stay canonical and expose the full timeline", () => 
   assert.match(detail, /AuditHistoryList/);
   assert.match(detail, /workFirst/);
   assert.match(detail, /copy\.tripsTitle/);
-  assert.match(detail, /Collapsible/);
   assert.match(detail, /copy\.detailsToggle/);
+  assert.match(detail, /Collapsible/);
+  assert.match(detail, /tripsSection/);
+  assert.match(detail, /transfersForSite/);
+  // Work-first: actions → visible trips → details collapsible (meta only).
+  assert.match(
+    detail,
+    /\{actions\}[\s\S]*\{tripsSection\}[\s\S]*<Collapsible>/,
+  );
+  assert.match(
+    detail,
+    /flex min-w-0 flex-wrap gap-x-3 gap-y-1">\s*<TransferLinks/,
+  );
+  assert.doesNotMatch(detail, /<ItemDescription[^>]*>\s*<TransferLinks/);
+  assert.doesNotMatch(detail, /detailsWithTripsToggle/);
   assert.doesNotMatch(branchDetail, /useSearchParams|redirect\(/);
 });
 
@@ -125,7 +138,14 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(fulfill, /copy\.onHandColumn|AlertTitle/);
   assert.match(fulfill, /isFulfillLineShort|shortageAlertTitle/);
   assert.match(fulfill, /toastInsufficientNamed|errorCode === "insufficient_stock"/);
+  assert.match(fulfill, /pendingLineColumns|doneLineColumns/);
+  assert.match(fulfill, /pendingLines\.length/);
+  assert.match(fulfill, /doneLinesToggle|noPendingLines/);
+  assert.match(fulfill, /uniformDoneStatus|showDoneStatus/);
+  assert.match(fulfill, /fulfillPrimary|fulfillLabel/);
+  assert.match(fulfill, /Collapsible/);
   assert.doesNotMatch(fulfill, /lineDescription|type="checkbox"/);
+  assert.doesNotMatch(fulfill, /data=\{group\.lines\}/);
   assert.match(detailLoader, /data\.branchId === claims\.branch_id/);
   assert.match(detailLoader, /item\.fulfillSiteKind === actorKind/);
   assert.match(detailLoader, /unitLabel: item\.unitLabel/);
@@ -154,6 +174,10 @@ test("fulfill copy shows quantity with unit, on-hand, and shortage alerts", () =
   assert.match(fulfillBlock, /needVsOnHand:/);
   assert.match(fulfillBlock, /shortageAlertTitle:/);
   assert.match(fulfillBlock, /toastInsufficientNamed:/);
+  assert.match(fulfillBlock, /doneLinesToggle:/);
+  assert.match(fulfillBlock, /fulfillPrimary:/);
+  assert.match(fulfillBlock, /noPendingLines:/);
+  assert.match(fulfillBlock, /pendingOnlySummary:/);
   assert.match(fulfillBlock, /formatQuantity\(quantity\)/);
   assert.doesNotMatch(fulfillBlock, /lineDescription:/);
   assert.doesNotMatch(fulfillBlock, /`SL \$\{quantity\}/);
@@ -195,6 +219,7 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(editor, /hint: copy\.sourceHint/);
   assert.doesNotMatch(fulfill, /role="tablist"/);
   assert.match(fulfill, /aria-pressed=\{isActive\}/);
+  assert.match(fulfill, /multiSource/);
   assert.match(fulfill, /AppDialogFooter/);
   assert.match(fulfill, /size="touch"/);
   assert.match(fulfill, /activateSource/);

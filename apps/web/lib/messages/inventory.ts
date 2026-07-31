@@ -344,11 +344,19 @@ export const inventory = {
       sourceTitle: (label: string) => `Nguồn: ${label}`,
       sourcePendingSummary: (pending: number, total: number) =>
         `${formatCount(pending)}/${formatCount(total)} dòng chờ xử lý`,
+      pendingOnlySummary: (pending: number) =>
+        `${formatCount(pending)} dòng chờ xử lý`,
+      doneLinesToggle: (count: number, statusLabel?: string) =>
+        statusLabel
+          ? `Đã xử lý · ${statusLabel} (${formatCount(count)})`
+          : `Đã xử lý (${formatCount(count)})`,
+      noPendingLines: "Không còn dòng chờ xử lý ở nguồn này.",
       selectAllPending: "Chọn tất cả chờ xử lý",
       exportLocation: "Vị trí xuất",
       chooseExportLocation: "Chọn vị trí xuất",
       exportFrom: (label: string) => `Xuất từ: ${label}`,
       noStockLocation: "Không có vị trí tồn kho cho nguồn này.",
+      fulfillPrimary: "Đáp ứng",
       fulfillButton: (label: string) => `Đáp ứng (${label})`,
       processing: "Đang xử lý…",
       headerDescription: (branchLabel: string, statusLabel: string) =>

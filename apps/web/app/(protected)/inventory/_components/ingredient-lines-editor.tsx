@@ -87,7 +87,6 @@ export interface IngredientLineRowValue {
   quantity: string;
   unitLabel: string;
   entry_unit_id?: string;
-  yield_factor: string;
   note?: string;
 }
 
@@ -98,7 +97,6 @@ const EMPTY_ROW: IngredientLineRowValue = {
   quantity: "",
   unitLabel: "",
   entry_unit_id: "",
-  yield_factor: "1",
   note: "",
 };
 
@@ -115,7 +113,6 @@ interface IngredientLinesEditorProps<T extends FieldValues> {
   unitMode?: IngredientLineUnitMode;
   /** true → render the bulk-add MultiSelectCombobox. */
   bulkAdd?: boolean;
-  showYield?: boolean;
 }
 
 export function IngredientLinesEditor<T extends FieldValues>({
@@ -128,7 +125,6 @@ export function IngredientLinesEditor<T extends FieldValues>({
   unitEditable = false,
   unitMode = "production",
   bulkAdd = false,
-  showYield = true,
 }: IngredientLinesEditorProps<T>) {
   const { fields, append, remove, replace } = useFieldArray<T, ArrayPath<T>>({
     control,
@@ -165,7 +161,6 @@ export function IngredientLinesEditor<T extends FieldValues>({
         quantity: "",
         unitLabel: defaultUnit?.label ?? "",
         entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
-        yield_factor: "1",
         note: "",
       };
     });
@@ -178,7 +173,6 @@ export function IngredientLinesEditor<T extends FieldValues>({
         quantity: row.quantity,
         unitLabel: row.unitLabel,
         entry_unit_id: row.entry_unit_id ?? "",
-        yield_factor: row.yield_factor,
         note: row.note ?? "",
       }));
     replace([...kept, ...newRows] as never);
@@ -246,12 +240,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
           <div className="col-span-3">{PRODUCT_VI.rawIngredient}</div>
           <div className="col-span-2">{FORM_VI.quantity}</div>
           <div className="col-span-2">{FORM_VI.unit}</div>
-          {showYield ? (
-            <div className="col-span-2">{INVENTORY_VI.yield}</div>
-          ) : null}
-          <div className={showYield ? "col-span-2" : "col-span-4"}>
-            {FORM_VI.notes}
-          </div>
+          <div className="col-span-4">{FORM_VI.notes}</div>
           <div />
         </div>
 
@@ -269,7 +258,6 @@ export function IngredientLinesEditor<T extends FieldValues>({
               canRemove={rows.length > 1}
               unitEditable={unitEditable}
               unitMode={unitMode}
-              showYield={showYield}
               onRemove={() => remove(index)}
               onIngredientChange={(value) =>
                 handleIngredientChange(index, value)
@@ -293,7 +281,6 @@ function IngredientLineRow<T extends FieldValues>({
   canRemove,
   unitEditable,
   unitMode,
-  showYield,
   onRemove,
   onIngredientChange,
 }: {
@@ -307,7 +294,6 @@ function IngredientLineRow<T extends FieldValues>({
   canRemove: boolean;
   unitEditable: boolean;
   unitMode: IngredientLineUnitMode;
-  showYield: boolean;
   onRemove: () => void;
   onIngredientChange: (value: string) => void;
 }) {
@@ -315,7 +301,6 @@ function IngredientLineRow<T extends FieldValues>({
   const quantityName = `${name}.${index}.quantity` as Path<T>;
   const unitLabelName = `${name}.${index}.unitLabel` as Path<T>;
   const entryUnitName = `${name}.${index}.entry_unit_id` as Path<T>;
-  const yieldName = `${name}.${index}.yield_factor` as Path<T>;
   const noteName = `${name}.${index}.note` as Path<T>;
 
   const selectedIngredientId = useWatch({ control, name: ingredientName }) as
@@ -469,36 +454,7 @@ function IngredientLineRow<T extends FieldValues>({
           )}
         </div>
 
-        {showYield ? (
-          <div className="min-w-0 md:col-span-2">
-            <Controller
-              control={control}
-              name={yieldName}
-              render={({ field }) => (
-                <FormattedNumberInput
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  onBlur={field.onBlur}
-                  ref={field.ref}
-                  name={field.name}
-                  maxFractionDigits={6}
-                  aria-invalid={!!rowError?.yield_factor}
-                  className={cn(
-                    "h-9",
-                    rowError?.yield_factor && "border-destructive",
-                  )}
-                />
-              )}
-            />
-          </div>
-        ) : null}
-
-        <div
-          className={cn(
-            "min-w-0",
-            showYield ? "md:col-span-2" : "md:col-span-4",
-          )}
-        >
+        <div className="min-w-0 md:col-span-4">
           <Controller
             control={control}
             name={noteName}
@@ -529,8 +485,7 @@ function IngredientLineRow<T extends FieldValues>({
           {rowError.ingredient_id?.message ??
             rowError.quantity?.message ??
             rowError.entry_unit_id?.message ??
-            rowError.unitLabel?.message ??
-            rowError.yield_factor?.message}
+            rowError.unitLabel?.message}
         </p>
       ) : null}
     </div>

@@ -160,7 +160,7 @@ export async function createExpense(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền ghi chi phí." };
 
@@ -260,7 +260,7 @@ export async function updateExpense(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
@@ -340,7 +340,7 @@ export async function transitionExpensePayment(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
 
@@ -377,7 +377,7 @@ export async function deleteExpense(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
+    PERMISSION_KEYS.FINANCE_EXPENSE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền xóa chi phí." };
 

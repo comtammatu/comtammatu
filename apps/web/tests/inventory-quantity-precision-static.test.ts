@@ -55,12 +55,12 @@ test("inventory quantity inputs allow three fraction digits", () => {
 });
 
 test("inventory factor inputs are not capped at two fraction digits", () => {
-  const recipeLinesEditor = read(
-    "app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+  const ingredientDialog = read(
+    "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
   assert.match(
-    recipeLinesEditor,
-    /const yieldName =[\s\S]*maxFractionDigits=\{6\}[\s\S]*aria-invalid=\{!!rowError\?\.yield_factor\}/,
+    ingredientDialog,
+    /maxFractionDigits=\{6\}/,
   );
 });
 

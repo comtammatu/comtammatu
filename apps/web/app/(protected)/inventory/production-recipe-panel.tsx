@@ -109,7 +109,6 @@ const recipeLineItemSchema = z.object({
     .refine((v) => Number(v) > 0, {
       error: INVENTORY_VI.productionRecipeProductionUnitRequired,
     }),
-  yield_factor: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -157,7 +156,6 @@ function emptyRecipeLine(): RecipeLineItemFormValues {
     quantity: "1",
     unitLabel: "",
     entry_unit_id: "",
-    yield_factor: "1",
     note: "",
   };
 }
@@ -171,7 +169,6 @@ function recipeToLineFormValue(
     unitLabel: recipe.unitLabel,
     entry_unit_id:
       recipe.entry_unit_id != null ? String(recipe.entry_unit_id) : "",
-    yield_factor: "1",
     note: recipe.note ?? "",
   };
 }
@@ -417,7 +414,6 @@ function RecipeDialogFields({
         errors={form.formState.errors}
         ingredients={recipeLinesEditorIngredients}
         unitEditable
-        showYield={false}
       />
 
       <QuickFinishedGoodDialog

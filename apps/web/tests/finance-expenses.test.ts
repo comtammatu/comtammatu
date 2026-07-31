@@ -344,6 +344,55 @@ test("expense list opens read-only detail from row click", () => {
   assert.match(messages, /detail:\s*\{[\s\S]*title:\s*"Chi tiết khoản chi"/);
 });
 
+test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
+  const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260801051906_expense_mutate_requires_expense_create.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    actions,
+    /export async function createExpense[\s\S]*?PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE/,
+  );
+  assert.match(
+    actions,
+    /export async function updateExpense[\s\S]*?PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE/,
+  );
+  assert.match(
+    actions,
+    /export async function transitionExpensePayment[\s\S]*?PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE/,
+  );
+  assert.match(
+    actions,
+    /export async function deleteExpense[\s\S]*?PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE/,
+  );
+  assert.match(
+    actions,
+    /export async function fetchExpenses[\s\S]*?PERMISSION_KEYS\.FINANCE_VIEW/,
+  );
+  assert.match(
+    page,
+    /currentUserHasPermissionAny\(PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE\)/,
+  );
+  assert.match(
+    migration,
+    /has_permission_any\('finance:expense_create'\)/,
+  );
+  assert.match(
+    migration,
+    /NEW\.payment_method = 'transfer'[\s\S]*NEW\.paid_at IS NOT NULL/,
+  );
+  assert.match(
+    migration,
+    /expense_payment_transition_evidence_authorization_not_found/,
+  );
+});
+
 test("expense list keeps the ledger compact and uses consistent operator terms", () => {
   const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
   const messages = readWeb("lib/messages/finance.ts");

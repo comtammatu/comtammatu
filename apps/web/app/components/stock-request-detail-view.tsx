@@ -47,6 +47,26 @@ const NEXT_ACTION_LABELS = {
   none: "Theo dõi",
 } as const;
 
+function transfersForSite(
+  data: StockRequestDetailData,
+  siteKind: "central_supply" | "central_kitchen",
+) {
+  const sourceItems = data.items.filter(
+    (item) => item.fulfillSiteKind === siteKind,
+  );
+  const linkedIds = new Set(
+    sourceItems.flatMap((item) =>
+      item.transferId == null ? [] : [item.transferId],
+    ),
+  );
+  return data.transfers.filter(
+    (transfer) =>
+      linkedIds.has(transfer.id) ||
+      (!data.items.some((item) => item.transferId === transfer.id) &&
+        transfer.fromBranchKind === siteKind),
+  );
+}
+
 function TransferLinks({
   data,
   mode,
@@ -58,20 +78,7 @@ function TransferLinks({
   onTransferOpen?: (transferId: number) => void;
   siteKind: "central_supply" | "central_kitchen";
 }) {
-  const sourceItems = data.items.filter(
-    (item) => item.fulfillSiteKind === siteKind,
-  );
-  const linkedIds = new Set(
-    sourceItems.flatMap((item) =>
-      item.transferId == null ? [] : [item.transferId],
-    ),
-  );
-  const transfers = data.transfers.filter(
-    (transfer) =>
-      linkedIds.has(transfer.id) ||
-      (!data.items.some((item) => item.transferId === transfer.id) &&
-        transfer.fromBranchKind === siteKind),
-  );
+  const transfers = transfersForSite(data, siteKind);
   if (transfers.length === 0) return null;
 
   return (
@@ -177,67 +184,50 @@ export function StockRequestDetailView({
   const sourceLabel = (siteKind: (typeof sourceKinds)[number]) =>
     siteKind === "central_supply" ? copy.centralSupply : copy.centralKitchen;
   const workFirst = Boolean(actions) && embedded && mode === "central";
-  const sourcesWithTrips = sourceKinds.filter((siteKind) => {
-    const sourceItems = data.items.filter(
-      (item) => item.fulfillSiteKind === siteKind,
-    );
-    const linkedIds = new Set(
-      sourceItems.flatMap((item) =>
-        item.transferId == null ? [] : [item.transferId],
-      ),
-    );
-    return data.transfers.some(
-      (transfer) =>
-        linkedIds.has(transfer.id) ||
-        (!data.items.some((item) => item.transferId === transfer.id) &&
-          transfer.fromBranchKind === siteKind),
-    );
-  });
+  const sourcesWithTrips = sourceKinds.filter(
+    (siteKind) => transfersForSite(data, siteKind).length > 0,
+  );
+  const tripCount = new Set(
+    sourcesWithTrips.flatMap((siteKind) =>
+      transfersForSite(data, siteKind).map((transfer) => transfer.id),
+    ),
+  ).size;
+
+  const tripsSection =
+    sourcesWithTrips.length > 0 ? (
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-sm font-semibold">{copy.tripsTitle}</h3>
+          <p className="text-xs text-muted-foreground">
+            {copy.transferCount(tripCount)}
+          </p>
+        </div>
+        <ItemGroup>
+          {sourcesWithTrips.map((siteKind) => (
+            <Item key={siteKind} variant="outline" size="sm">
+              <ItemContent>
+                <ItemTitle>{sourceLabel(siteKind)}</ItemTitle>
+                {/* Buttons must not live in ItemDescription (<p> + line-clamp). */}
+                <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+                  <TransferLinks
+                    data={data}
+                    mode={mode}
+                    onTransferOpen={onTransferOpen}
+                    siteKind={siteKind}
+                  />
+                </div>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
+      </div>
+    ) : null;
 
   const content = workFirst ? (
     <>
-      {sourcesWithTrips.length > 0 ? (
-        <AppSection title={copy.tripsTitle}>
-          <ItemGroup>
-            {sourcesWithTrips.map((siteKind) => {
-              const sourceItems = data.items.filter(
-                (item) => item.fulfillSiteKind === siteKind,
-              );
-              const linkedIds = new Set(
-                sourceItems.flatMap((item) =>
-                  item.transferId == null ? [] : [item.transferId],
-                ),
-              );
-              const transfers = data.transfers.filter(
-                (transfer) =>
-                  linkedIds.has(transfer.id) ||
-                  (!data.items.some((item) => item.transferId === transfer.id) &&
-                    transfer.fromBranchKind === siteKind),
-              );
-              return (
-                <Item key={siteKind} variant="outline" size="sm">
-                  <ItemContent>
-                    <ItemTitle>{sourceLabel(siteKind)}</ItemTitle>
-                    <ItemDescription className="flex flex-wrap gap-x-3 gap-y-1">
-                      <TransferLinks
-                        data={data}
-                        mode={mode}
-                        onTransferOpen={onTransferOpen}
-                        siteKind={siteKind}
-                      />
-                    </ItemDescription>
-                  </ItemContent>
-                  <Badge variant="secondary">
-                    {copy.transferCount(transfers.length)}
-                  </Badge>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        </AppSection>
-      ) : null}
-
       {actions}
+
+      {tripsSection}
 
       <Collapsible>
         <CollapsibleTrigger
@@ -317,17 +307,7 @@ export function StockRequestDetailView({
             const sourceItems = data.items.filter(
               (item) => item.fulfillSiteKind === siteKind,
             );
-            const linkedIds = new Set(
-              sourceItems.flatMap((item) =>
-                item.transferId == null ? [] : [item.transferId],
-              ),
-            );
-            const transfers = data.transfers.filter(
-              (transfer) =>
-                linkedIds.has(transfer.id) ||
-                (!data.items.some((item) => item.transferId === transfer.id) &&
-                  transfer.fromBranchKind === siteKind),
-            );
+            const transfers = transfersForSite(data, siteKind);
             const sourceJourney = getStockJourney({
               requestStatus: data.status,
               items: sourceItems,
@@ -345,12 +325,14 @@ export function StockRequestDetailView({
                   <ItemDescription>
                     {STOCK_JOURNEY_STAGE_LABELS[sourceJourney.stage]}
                   </ItemDescription>
-                  <TransferLinks
-                    data={data}
-                    mode={mode}
-                    onTransferOpen={onTransferOpen}
-                    siteKind={siteKind}
-                  />
+                  <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+                    <TransferLinks
+                      data={data}
+                      mode={mode}
+                      onTransferOpen={onTransferOpen}
+                      siteKind={siteKind}
+                    />
+                  </div>
                 </ItemContent>
                 <Badge variant="secondary">
                   {copy.transferCount(

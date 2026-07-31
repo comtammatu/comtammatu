@@ -23,7 +23,7 @@ test("menu recipe list hides menu items without lines and omits Yield", () => {
     page,
     /\.filter\(\(menuRecipe\) => menuRecipe\.items\.length > 0\)/,
   );
-  assert.match(dialog, /showYield=\{false\}/);
+  assert.doesNotMatch(dialog, /showYield/);
   assert.doesNotMatch(dialog, /INVENTORY_VI\.yieldHint/);
   assert.doesNotMatch(
     [

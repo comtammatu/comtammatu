@@ -120,10 +120,9 @@ test("production recipe upsert uses output_quantity and omits yield_factor", () 
   assert.match(panelSource, /InputGroupAddon/);
   assert.match(panelSource, /finishedGoodUnitLabel/);
   assert.match(panelSource, /getDefaultProductionUnit/);
-  assert.match(panelSource, /showYield=\{false\}/);
   assert.match(panelSource, /output_quantity: ""/);
   assert.doesNotMatch(panelSource, /productionRecipeOutputQuantityHint/);
-  assert.doesNotMatch(panelSource, /yieldFactor:/);
+  assert.doesNotMatch(panelSource, /yieldFactor:|yield_factor|showYield/);
 });
 
 test("production recipe ingredients accept raw_material only", () => {
