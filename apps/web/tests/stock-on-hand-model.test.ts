@@ -6,6 +6,7 @@ import {
   filterStockOnHandIngredients,
   hasStockOnHandFilters,
   isPristineStockOnHand,
+  needsInventoryValuationRestore,
   type StockIngredient,
   type StockOnHandFilters,
 } from "../lib/inventory/stock-on-hand-model";
@@ -19,7 +20,7 @@ function makeIngredient(patch: Partial<StockIngredient> = {}): StockIngredient {
     category: "Dry",
     itemKind: "raw_material",
     qty: 10,
-    monetary: { cost: 20, referenceCost: 15 },
+    monetary: { averageUnitCost: 20 },
     min: 2,
     max: 20,
     reorder: 4,
@@ -94,4 +95,21 @@ test("pristine stock and active filter state remain distinct", () => {
   );
   assert.equal(hasStockOnHandFilters(defaultFilters), false);
   assert.equal(hasStockOnHandFilters({ ...defaultFilters, status: "low" }), true);
+});
+
+test("valuation restore is offered only when every stocked ingredient lacks WAC", () => {
+  assert.equal(
+    needsInventoryValuationRestore([
+      makeIngredient({ id: 1, monetary: { averageUnitCost: 0 } }),
+      makeIngredient({ id: 2, monetary: { averageUnitCost: null } }),
+      makeIngredient({ id: 3, qty: 0, monetary: { averageUnitCost: 20 } }),
+    ]),
+    true,
+  );
+  assert.equal(
+    needsInventoryValuationRestore([
+      makeIngredient({ id: 1, monetary: { averageUnitCost: 20 } }),
+    ]),
+    false,
+  );
 });

@@ -61,12 +61,21 @@ test("stock on hand exposes only WAC and inventory value", () => {
   const stockClient = read(
     "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   );
+  const valueActions = read(
+    "apps/web/app/(protected)/inventory/inventory-value-actions.ts",
+  );
 
   assert.match(stockData, /averageUnitCost = stock\?\.avgUnitCost \?\? null/);
   assert.doesNotMatch(stockData, /referenceUnitCost/);
   assert.doesNotMatch(stockModel, /referenceUnitCost/);
   assert.doesNotMatch(stockClient, /reference-cost|referenceCostPerUnit/);
   assert.match(stockClient, /averageUnitCost == null \? null/);
+  assert.match(stockData, /valuationRestoreRequired:/);
+  assert.match(stockClient, /valuationRestoreRequired/);
+  assert.match(
+    valueActions,
+    /restoreInventoryValuationFromSupplierInvoices[\s\S]*prepare_inventory_valuation_cutover/,
+  );
 });
 
 test("GRN valuation derives price only from confirmed supplier invoices", () => {

@@ -1057,6 +1057,14 @@ export const inventory = {
       underThreshold: "Dưới ngưỡng",
       pending: "Chờ xử lý",
     },
+    valuationRestore: {
+      title: "Giá trị tồn kho chưa có giá vốn",
+      description: "Khôi phục từ các HĐ NCC đã xác nhận.",
+      action: "Khôi phục giá trị",
+      pending: "Đang khôi phục",
+      success: "Đã khôi phục giá trị tồn kho từ HĐ NCC đã xác nhận.",
+      failed: "Không thể khôi phục giá trị tồn kho.",
+    },
     empty: {
       search: "Không tìm thấy nguyên liệu phù hợp",
       noData: "Chưa có dữ liệu tồn kho",

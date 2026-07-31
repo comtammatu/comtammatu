@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -17,6 +18,10 @@ const inventoryPeriodValueSchema = z.object({
   startDate: z.string().date(),
   endDate: z.string().date(),
   branchId: z.number().int().positive().optional(),
+});
+
+const inventoryValuationRestoreSchema = z.object({
+  idempotencyKey: z.string().uuid(),
 });
 
 function computeLineValue(
@@ -39,6 +44,44 @@ async function isValuationActive(
     .eq("tenant_id", tenantId)
     .maybeSingle();
   return !error && data?.status === "active";
+}
+
+export async function restoreInventoryValuationFromSupplierInvoices(
+  input: { idempotencyKey: string },
+): Promise<ActionResult<void>> {
+  const parsed = inventoryValuationRestoreSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Không thể khôi phục giá trị tồn kho." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    SYSTEM_ROLES,
+    PERMISSION_KEYS.INVENTORY_VALUATION_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { error } = await ctx.supabase.rpc(
+    "prepare_inventory_valuation_cutover",
+    { p_idempotency_key: parsed.data.idempotencyKey },
+  );
+  if (error) {
+    console.error("[inventory:valuation-restore] RPC failed", error.code);
+    const message = error.message ?? "";
+    if (message.includes("inventory_valuation_bootstrap_missing_invoice_coverage")) {
+      return {
+        success: false,
+        error: "Còn tồn kho chưa có giá từ HĐ NCC đã xác nhận.",
+      };
+    }
+    return {
+      success: false,
+      error: "Không thể khôi phục giá trị tồn kho. Vui lòng thử lại.",
+    };
+  }
+
+  revalidatePath("/inventory");
+  revalidatePath("/inventory/stock");
+  return { success: true };
 }
 
 export async function fetchInventoryValueSystem(

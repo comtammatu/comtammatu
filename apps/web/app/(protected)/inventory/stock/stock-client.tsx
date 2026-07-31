@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
@@ -14,9 +14,17 @@ import {
   Trash as IconTrash,
   Truck as IconTruck,
   ChevronDown as IconChevronDown,
+  TriangleAlert as IconTriangleAlert,
 } from "lucide-react";
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Select,
   SelectContent,
@@ -71,6 +79,7 @@ import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-frame";
+import { restoreInventoryValuationFromSupplierInvoices } from "../inventory-value-actions";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -237,6 +246,7 @@ export function StockClient({
   branchValue,
   coreDataLoadFailed,
   totalValue,
+  valuationRestoreRequired,
   summary,
   permissions,
 }: {
@@ -245,6 +255,7 @@ export function StockClient({
   branchValue: number | null;
   coreDataLoadFailed: boolean;
   totalValue: number | null;
+  valuationRestoreRequired: boolean;
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
 }) {
@@ -263,6 +274,7 @@ export function StockClient({
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
+  const [isRestoringValuation, startValuationRestore] = useTransition();
 
   const { categories, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
@@ -816,6 +828,20 @@ export function StockClient({
     </AppEmptyState>
   );
 
+  function restoreValuation() {
+    startValuationRestore(async () => {
+      const result = await restoreInventoryValuationFromSupplierInvoices({
+        idempotencyKey: crypto.randomUUID(),
+      });
+      if (!result.success) {
+        toast.error(result.error ?? stockCopy.valuationRestore.failed);
+        return;
+      }
+      toast.success(stockCopy.valuationRestore.success);
+      router.refresh();
+    });
+  }
+
   const content = (
     <>
       <AppPageHeader
@@ -849,6 +875,28 @@ export function StockClient({
           </div>
         }
       />
+
+      {valuationRestoreRequired ? (
+        <Alert>
+          <IconTriangleAlert />
+          <AlertTitle>{stockCopy.valuationRestore.title}</AlertTitle>
+          <AlertDescription>
+            {stockCopy.valuationRestore.description}
+          </AlertDescription>
+          <AlertAction>
+            <Button
+              type="button"
+              size="sm"
+              onClick={restoreValuation}
+              disabled={isRestoringValuation}
+            >
+              {isRestoringValuation
+                ? stockCopy.valuationRestore.pending
+                : stockCopy.valuationRestore.action}
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : null}
 
       {isCompactLayout ? (
         <>

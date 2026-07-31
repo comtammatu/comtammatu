@@ -15,6 +15,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     permissions,
     summary,
     totalValue,
+    valuationRestoreRequired,
   } = await loadStockOnHandPageData({
     queryBranchId: params.branchId,
   });
@@ -26,6 +27,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       branchValue={branchValue}
       coreDataLoadFailed={coreDataLoadFailed}
       totalValue={totalValue}
+      valuationRestoreRequired={valuationRestoreRequired}
       summary={summary}
       permissions={permissions}
     />
