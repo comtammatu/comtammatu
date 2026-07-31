@@ -496,9 +496,6 @@ export function ExpensesClient({
   const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(
     null,
   );
-  const [transferInstruction, setTransferInstruction] = useState<string | null>(
-    null,
-  );
   const [isMutating, startMutation] = useTransition();
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
@@ -620,18 +617,10 @@ export function ExpensesClient({
     return result;
   }
 
-  function onCreateSuccess(result: ActionResult) {
-    if (editingExpense) {
-      toast.success(copy.form.editSuccess);
-      return;
-    }
-    const data = result.data as { transferContent?: string } | undefined;
-    if (data?.transferContent) {
-      setTransferInstruction(data.transferContent);
-      toast.success(copy.transferInstruction.created);
-    } else {
-      toast.success(copy.form.success);
-    }
+  function onCreateSuccess(_result: ActionResult) {
+    toast.success(
+      editingExpense ? copy.form.editSuccess : copy.form.success,
+    );
   }
 
   function onEdit(row: ExpenseRow) {
@@ -682,16 +671,10 @@ export function ExpensesClient({
         return;
       }
 
-      if (targetMethod === "transfer") {
-        const transferContent = result.data?.transferContent;
-        if (!transferContent) {
-          toast.error(copy.transferInstruction.createFailed);
-          return;
-        }
-        setTransferInstruction(transferContent);
-        toast.success(copy.transferInstruction.created);
-      } else if (targetMethod === "cash") {
+      if (targetMethod === "cash") {
         toast.success(copy.actions.cashSuccess);
+      } else if (targetMethod === "transfer") {
+        toast.success(copy.actions.transferSuccess);
       } else {
         toast.success(copy.actions.cancelTransferSuccess);
       }
@@ -707,6 +690,18 @@ export function ExpensesClient({
       cancelText: copy.actions.keepUnpaid,
     });
     if (ok) runPaymentTransition(row, "cash");
+  }
+
+  async function onPayTransfer(row: ExpenseRow) {
+    const ok = await confirm({
+      title: copy.actions.transferTitle,
+      description: copy.actions.transferConfirm(
+        formatAccountingVND(row.amount),
+      ),
+      confirmText: copy.actions.transferCta,
+      cancelText: copy.actions.keepUnpaid,
+    });
+    if (ok) runPaymentTransition(row, "transfer");
   }
 
   async function onCancelTransfer(row: ExpenseRow) {
@@ -741,9 +736,9 @@ export function ExpensesClient({
         },
         {
           key: "transfer",
-          label: copy.actions.createTransfer,
+          label: copy.actions.transfer,
           icon: <IconLandmark className="size-4" />,
-          onSelect: () => runPaymentTransition(row, "transfer"),
+          onSelect: () => void onPayTransfer(row),
           disabled: isMutating,
         },
         ...(canDeleteExpense(row)
@@ -769,7 +764,7 @@ export function ExpensesClient({
       ];
     }
 
-    if (row.transfer_content) {
+    if (paymentState === "transfer_needs_match" && row.transfer_content) {
       return [
         {
           key: "copy",
@@ -783,6 +778,17 @@ export function ExpensesClient({
           icon: <IconRotateCcw className="size-4" />,
           onSelect: () => void onCancelTransfer(row),
           disabled: isMutating,
+        },
+      ];
+    }
+
+    if (row.transfer_content) {
+      return [
+        {
+          key: "copy",
+          label: copy.transferInstruction.copy,
+          icon: <IconCopy className="size-4" />,
+          onSelect: () => void copyTransferContent(row.transfer_content!),
         },
       ];
     }
@@ -1174,43 +1180,6 @@ export function ExpensesClient({
               </div>
             ) : null}
           </>
-        ) : null}
-      </AppDialog>
-
-      <AppDialog
-        open={transferInstruction != null}
-        onOpenChange={(open) => {
-          if (!open) setTransferInstruction(null);
-        }}
-        title={copy.transferInstruction.title}
-        description={copy.transferInstruction.description}
-        footer={
-          <Button
-            variant="outline"
-            size="touch"
-            onClick={() => setTransferInstruction(null)}
-          >
-            {copy.transferInstruction.close}
-          </Button>
-        }
-      >
-        {transferInstruction ? (
-          <Item variant="muted" className="flex-col items-stretch gap-3 p-4">
-            <p className="text-sm font-medium text-muted-foreground">
-              {copy.transferInstruction.codeLabel}
-            </p>
-            <code className="block break-all font-mono text-lg font-semibold tabular-nums tracking-wide">
-              {transferInstruction}
-            </code>
-            <Button
-              size="touch"
-              className="w-full"
-              onClick={() => void copyTransferContent(transferInstruction)}
-            >
-              <IconCopy data-icon="inline-start" />
-              {copy.transferInstruction.copy}
-            </Button>
-          </Item>
         ) : null}
       </AppDialog>
     </>

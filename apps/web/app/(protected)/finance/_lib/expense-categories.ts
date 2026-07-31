@@ -73,6 +73,10 @@ export const EXPENSE_CATEGORIES_BY_GROUP: Record<
   ),
 };
 
+/**
+ * Capture / confirm values. `transfer` means paid by bank transfer (with
+ * `paid_at`), not a SePay transfer-content intent.
+ */
 export const EXPENSE_PAYMENT_METHODS = ["cash", "transfer", "unpaid"] as const;
 
 export type ExpensePaymentMethod = (typeof EXPENSE_PAYMENT_METHODS)[number];
@@ -80,6 +84,7 @@ export type ExpensePaymentMethod = (typeof EXPENSE_PAYMENT_METHODS)[number];
 export const EXPENSE_PAYMENT_STATES = [
   "unpaid",
   "cash_paid",
+  "transfer_paid",
   "transfer_matched",
   "transfer_needs_match",
 ] as const;
@@ -96,25 +101,35 @@ export function classifyExpensePaymentState(expense: {
   const hasBankEvidence =
     (expense.matchedEventIds?.length ?? 0) > 0 ||
     (expense.matchedBankTransactionIds?.length ?? 0) > 0;
-  if (expense.transfer_content) {
-    return hasBankEvidence ? "transfer_matched" : "transfer_needs_match";
+
+  if (hasBankEvidence) {
+    return "transfer_matched";
   }
 
-  if (expense.payment_method === "transfer") {
-    return hasBankEvidence ? "transfer_matched" : "transfer_needs_match";
+  // SePay transfer-content intents stay actionable until cleared or matched.
+  if (
+    expense.transfer_content &&
+    expense.payment_method === "unpaid" &&
+    expense.paid_at == null
+  ) {
+    return "transfer_needs_match";
   }
 
   if (expense.payment_method === "unpaid" || expense.paid_at == null) {
     return "unpaid";
   }
 
+  if (expense.payment_method === "transfer") {
+    return "transfer_paid";
+  }
+
   return "cash_paid";
 }
 
 /**
- * Rows the operator still owes work on: money not yet paid out, or a transfer
- * without bank evidence. Single source for the expenses KPI and list filter so
- * the count and the filtered rows can never disagree.
+ * Rows the operator still owes work on: money not yet paid out, or a
+ * transfer-content intent without bank evidence. Confirmed cash/transfer
+ * payments are done even before optional bank reconciliation.
  */
 export function expenseNeedsAction(expense: {
   payment_method: string;

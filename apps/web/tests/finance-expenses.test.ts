@@ -29,7 +29,7 @@ test("expense payment state separates paid, unpaid, and bank-matched transfer ro
       paid_at: null,
       matchedEventIds: [],
     }),
-    "transfer_needs_match",
+    "unpaid",
   );
   assert.equal(
     classifyExpensePaymentState({
@@ -62,7 +62,7 @@ test("expense payment state separates paid, unpaid, and bank-matched transfer ro
       paid_at: "2026-07-09T01:00:00.000Z",
       matchedEventIds: [],
     }),
-    "transfer_needs_match",
+    "transfer_paid",
   );
   assert.equal(
     classifyExpensePaymentState({
@@ -239,7 +239,7 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
       paid_at: "2026-07-09T01:00:00.000Z",
       matchedEventIds: [],
     }),
-    true,
+    false,
   );
   assert.equal(
     expenseNeedsAction({

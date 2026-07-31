@@ -282,15 +282,17 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     transferIntentMigration,
     /match_sepay_transaction_expenses\([\s\S]*UPDATE public\.webhook_events[\s\S]*processing_status = 'processed'/,
   );
-  assert.match(actions, /\.rpc\([\s\S]*"create_expense_transfer_intent"/);
+  assert.doesNotMatch(actions, /\.rpc\([\s\S]*"create_expense_transfer_intent"/);
   assert.match(actions, /\.rpc\([\s\S]*"transition_expense_payment"/);
   assert.match(actions, /\.rpc\("cancel_expense"/);
   assert.doesNotMatch(actions, /\.from\("expenses"\)[\s\S]*?\.delete\(\)/);
   assert.match(actions, /transfer_content/);
-  assert.match(
-    actions,
-    /targetMethod === "transfer" && !updated\.transfer_content[\s\S]*Không thể tạo nội dung chuyển khoản/,
-  );
+  assert.match(actions, /EXPENSE_PAYMENT_METHODS/);
+  assert.doesNotMatch(actions, /create_expense_transfer_intent/);
+  assert.match(expenseClient, /copy\.actions\.transfer/);
+  assert.match(expenseClient, /onPayTransfer\(row\)/);
+  assert.doesNotMatch(expenseClient, /copy\.actions\.createTransfer/);
+  assert.match(expenseClient, /runPaymentTransition\(row, "transfer"\)/);
   assert.match(
     expenseOptionsLoader,
     /payment_method\.eq\.unpaid,payment_method\.eq\.transfer,transfer_content\.not\.is\.null/,
@@ -298,14 +300,26 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   assert.match(expenseClient, /copy\.transferInstruction\.copy/);
   assert.match(expenseClient, /<AppDialog/);
   assert.match(expenseClient, /triggerSize="icon-touch"/);
-  assert.match(expenseClient, /font-mono text-lg font-semibold tabular-nums/);
+  assert.match(expenseClient, /font-mono text-base font-semibold tabular-nums/);
   assert.match(expenseClient, /row\.transfer_content == null/);
   assert.match(
     expenseClient,
     /return row\.transfer_content \? "transfer" : row\.payment_method/,
   );
-  assert.match(financeMessages, /Nội dung chuyển khoản/);
+  assert.match(financeMessages, /Nội dung CK:/);
   assert.match(databaseTypes, /create_expense_transfer_intent:/);
+  assert.match(
+    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    /WHEN p_target_method = 'transfer' THEN 'transfer'/,
+  );
+  assert.match(
+    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    /WHEN p_target_method IN \('cash', 'transfer'\) THEN now\(\)/,
+  );
+  assert.doesNotMatch(
+    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    /payment_content_expense_token/,
+  );
   assert.match(
     databaseTypes,
     /transition_expense_payment:\s*\{[\s\S]*?Args: \{ p_expense_id: number; p_target_method: string \}/,

@@ -51,11 +51,6 @@ export type {
 
 export interface CreateExpenseResult {
   id: number;
-  transferContent?: string;
-}
-
-export interface ExpensePaymentTransitionResult {
-  transferContent?: string;
 }
 
 export interface SepayRefundSearchCursor {
@@ -196,73 +191,40 @@ export async function createExpense(
     return { success: false, error: "Không có quyền cho chi nhánh này." };
   }
 
-  let expenseId: number;
-  let transferContent: string | undefined;
   const invoiceAttachmentUrl =
     parsed.data.invoiceAttachmentUrl &&
     parsed.data.invoiceAttachmentUrl.length > 0
       ? parsed.data.invoiceAttachmentUrl
       : null;
 
-  if (parsed.data.paymentMethod === "transfer") {
-    const { data, error } = await supabase.rpc(
-      "create_expense_transfer_intent",
-      {
-        // PostgreSQL accepts NULL here; generated RPC args cannot encode input nullability.
-        p_branch_id: branchId as number,
-        p_expense_date: parsed.data.expenseDate,
-        p_category: parsed.data.category,
-        p_vat_breakdown: vatBreakdown,
-        p_vendor_name: parsed.data.vendorName || undefined,
-        p_note: parsed.data.note || undefined,
-        p_invoice_attachment_url: invoiceAttachmentUrl || undefined,
-      },
-    );
-    const created = data?.[0];
+  const paidAt =
+    parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
+  const { data, error } = await supabase
+    .from("expenses")
+    .insert({
+      tenant_id: claims.tenant_id,
+      branch_id: branchId,
+      expense_date: parsed.data.expenseDate,
+      category: parsed.data.category,
+      amount: 0,
+      subtotal: 0,
+      vat_amount: 0,
+      vat_breakdown: vatBreakdown,
+      payment_method: parsed.data.paymentMethod,
+      paid_at: paidAt,
+      vendor_name: parsed.data.vendorName ?? null,
+      note: parsed.data.note ?? null,
+      invoice_attachment_url: invoiceAttachmentUrl,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
 
-    if (error || !created) {
-      console.error(
-        "[finance:expense-transfer-intent] failed to create intent",
-        error?.code,
-      );
-      return {
-        success: false,
-        error: "Không thể tạo nội dung chuyển khoản.",
-      };
-    }
-
-    expenseId = created.expense_id;
-    transferContent = created.transfer_content;
-  } else {
-    const paidAt =
-      parsed.data.paymentMethod === "unpaid" ? null : new Date().toISOString();
-    const { data, error } = await supabase
-      .from("expenses")
-      .insert({
-        tenant_id: claims.tenant_id,
-        branch_id: branchId,
-        expense_date: parsed.data.expenseDate,
-        category: parsed.data.category,
-        amount: 0,
-        subtotal: 0,
-        vat_amount: 0,
-        vat_breakdown: vatBreakdown,
-        payment_method: parsed.data.paymentMethod,
-        paid_at: paidAt,
-        vendor_name: parsed.data.vendorName ?? null,
-        note: parsed.data.note ?? null,
-        invoice_attachment_url: invoiceAttachmentUrl,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-
-    if (error || !data) {
-      return { success: false, error: "Không thể lưu chi phí." };
-    }
-
-    expenseId = data.id;
+  if (error || !data) {
+    return { success: false, error: "Không thể lưu chi phí." };
   }
+
+  const expenseId = data.id;
 
   await logAudit(supabase, {
     action: "create",
@@ -273,15 +235,15 @@ export async function createExpense(
       category: parsed.data.category,
       amount,
       vat_breakdown: vatBreakdown,
-      payment_method: transferContent ? "unpaid" : parsed.data.paymentMethod,
-      transfer_content: transferContent ?? null,
+      payment_method: parsed.data.paymentMethod,
+      transfer_content: null,
       invoice_attachment_url: invoiceAttachmentUrl,
     },
   });
 
   return {
     success: true,
-    data: { id: expenseId, ...(transferContent ? { transferContent } : {}) },
+    data: { id: expenseId },
   };
 }
 
@@ -370,7 +332,7 @@ function mapExpenseMutationError(
 
 export async function transitionExpensePayment(
   input: z.infer<typeof transitionExpensePaymentSchema>,
-): Promise<ActionResult<ExpensePaymentTransitionResult>> {
+): Promise<ActionResult> {
   const parsed = transitionExpensePaymentSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
@@ -402,21 +364,7 @@ export async function transitionExpensePayment(
     };
   }
 
-  if (parsed.data.targetMethod === "transfer" && !updated.transfer_content) {
-    return {
-      success: false,
-      error: "Không thể tạo nội dung chuyển khoản.",
-    };
-  }
-
-  return {
-    success: true,
-    data: {
-      ...(updated.transfer_content
-        ? { transferContent: updated.transfer_content }
-        : {}),
-    },
-  };
+  return { success: true };
 }
 
 export async function deleteExpense(

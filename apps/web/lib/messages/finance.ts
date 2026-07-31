@@ -364,10 +364,10 @@ export const finance = {
       paymentSection: "Ghi nhận thanh toán",
       method: "Phương thức thanh toán",
       methodPlaceholder: "Chọn phương thức",
-      methodEditHint: "Muốn đổi cách thanh toán, dùng thao tác tại khoản chi.",
+      methodEditHint: "Không đổi phương thức ở form sửa.",
       methodHints: {
         cash: "Ghi đã trả bằng tiền mặt.",
-        transfer: "Tạo nội dung CK; đánh dấu đã trả khi SePay khớp.",
+        transfer: "Ghi đã trả bằng chuyển khoản.",
         unpaid: "Ghi nhận công nợ · chưa trừ tiền mặt/NH.",
       },
       note: "Nội dung chi",
@@ -392,17 +392,10 @@ export const finance = {
       editSuccess: "Đã cập nhật khoản chi",
     },
     transferInstruction: {
-      title: "Nội dung chuyển khoản",
-      description:
-        "Chuyển đúng số tiền và dùng nguyên nội dung dưới đây. SePay tự khớp sau khi NH ghi nhận.",
-      codeLabel: "Nội dung cần nhập",
       detail: (content: string) => `Nội dung CK: ${content}`,
       copy: "Sao chép nội dung",
       copied: "Đã sao chép nội dung chuyển khoản",
       copyFailed: "Không thể sao chép. Hãy chọn và sao chép thủ công.",
-      close: "Để sau",
-      created: "Đã tạo nội dung chuyển khoản",
-      createFailed: "Không thể tạo nội dung chuyển khoản.",
     },
     actions: {
       cash: "Ghi nhận đã trả tiền mặt",
@@ -412,7 +405,12 @@ export const finance = {
       cashCta: "Đã trả tiền mặt",
       keepUnpaid: "Chưa",
       cashSuccess: "Đã ghi nhận trả tiền mặt",
-      createTransfer: "Tạo nội dung chuyển khoản",
+      transfer: "Ghi nhận đã chuyển khoản",
+      transferTitle: "Xác nhận đã chuyển khoản?",
+      transferConfirm: (amount: string) =>
+        `Ghi nhận đã trả ${amount} bằng chuyển khoản ngay bây giờ?`,
+      transferCta: "Đã chuyển khoản",
+      transferSuccess: "Đã ghi nhận chuyển khoản",
       cancelTransfer: "Bỏ nội dung chuyển khoản",
       cancelTransferTitle: "Bỏ nội dung chuyển khoản?",
       cancelTransferConfirm: (content: string) =>
