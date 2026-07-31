@@ -184,3 +184,37 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
   );
   assert.match(page, /purchase_group_key/);
 });
+
+test("demand progress converts PO receipt qty into demand entry units", () => {
+  const page = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  );
+  const helper = read(
+    "apps/web/lib/inventory/purchase-demand-progress.ts",
+  );
+  const migration = read(
+    "supabase/migrations/20260731212207_purchase_demand_coverage_base_units.sql",
+  );
+
+  assert.match(page, /purchaseDemandLineProgress/);
+  assert.match(page, /entry_to_base_factor/);
+  assert.match(
+    page,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey\(unit_id, to_base_factor, is_active\)/,
+  );
+  assert.match(helper, /entryToBaseFactor/);
+  assert.match(helper, /demandToBaseFactor/);
+  assert.match(migration, /purchase_request_item_ordered_base/);
+  assert.match(migration, /purchase_request_item_remaining_demand_qty/);
+  assert.match(
+    migration,
+    /coalesce\(coverage\.base_quantity, 0\)\s*>= demand_item\.quantity \* request_unit\.to_base_factor/,
+  );
+  assert.match(migration, /repair_demand_coverage_status/);
+  assert.match(
+    read(
+      "supabase/migrations/20260731212932_fix_purchase_demand_remaining_greatest_form.sql",
+    ),
+    /IF v_remaining < 0 THEN/,
+  );
+});

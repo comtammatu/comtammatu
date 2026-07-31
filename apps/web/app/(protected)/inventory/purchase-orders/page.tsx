@@ -12,6 +12,7 @@ import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
 import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
+import { purchaseDemandLineProgress } from "@lib/inventory/purchase-demand-progress";
 import { fetchIngredients } from "../ingredient-actions";
 import {
   PurchaseRequestsClient,
@@ -25,7 +26,7 @@ import {
 } from "./purchase-orders-client";
 
 const DEMAND_SELECT =
-  "id, request_number, branch_id, status, status_reason, needed_by, notes, created_at, updated_at, purchase_request_items(id, ingredient_id, quantity, entry_unit_id, notes, ingredients(name), units!purchase_request_items_entry_unit_id_fkey(code, name)), purchase_orders(id, po_number, display_id, status, supplier_id, purchase_order_items(purchase_request_item_id, quantity))";
+  "id, request_number, branch_id, status, status_reason, needed_by, notes, created_at, updated_at, purchase_request_items(id, ingredient_id, quantity, entry_unit_id, notes, ingredients(name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_active)), units!purchase_request_items_entry_unit_id_fkey(code, name)), purchase_orders(id, po_number, display_id, status, supplier_id, purchase_order_items(purchase_request_item_id, quantity, entry_to_base_factor))";
 const DEMAND_SELECT_WITH_ALLOCATIONS = `${DEMAND_SELECT}, purchase_request_allocations(purchase_request_item_id, supplier_id, quantity)`;
 const ORDER_SELECT =
   "id, po_number, display_id, status, ordered_at, expected_delivery_date, notes, status_reason, supplier_id, branch_id, purchase_group_key, purchase_group_code, group_sequence, purchase_order_items(id, ingredient_id, quantity, entry_unit_id, ingredients(name), units!purchase_order_items_entry_unit_id_fkey(code, name)), goods_received_notes!goods_received_notes_po_id_fkey(id, grn_number, status, received_date, grn_items(purchase_order_item_id, received_quantity, rejected_quantity))";
@@ -46,7 +47,24 @@ type DemandRecord = {
     quantity: number | string;
     entry_unit_id: number;
     notes: string | null;
-    ingredients: { name: string } | { name: string }[] | null;
+    ingredients:
+      | {
+          name: string;
+          ingredient_units?: Array<{
+            unit_id: number;
+            to_base_factor: number | string;
+            is_active: boolean;
+          }> | null;
+        }
+      | {
+          name: string;
+          ingredient_units?: Array<{
+            unit_id: number;
+            to_base_factor: number | string;
+            is_active: boolean;
+          }> | null;
+        }[]
+      | null;
     units:
       | { code: string; name: string | null }
       | { code: string; name: string | null }[]
@@ -66,6 +84,7 @@ type DemandRecord = {
     purchase_order_items: Array<{
       purchase_request_item_id: number | null;
       quantity: number | string;
+      entry_to_base_factor: number | string | null;
     }>;
   }>;
 };
@@ -249,27 +268,43 @@ export default async function PurchaseOrdersPage({
 
   const demandRecords = (demandResult.data ?? []) as unknown as DemandRecord[];
   const demandRows = demandRecords.map((request): PurchaseRequestRow => {
-    const orderedByItem = new Map<number, number>();
+    const orderedLinesByItem = new Map<
+      number,
+      Array<{ quantity: number; entryToBaseFactor: number }>
+    >();
     for (const po of request.purchase_orders ?? []) {
       if (po.status === "cancelled") continue;
       for (const line of po.purchase_order_items ?? []) {
         if (line.purchase_request_item_id == null) continue;
-        orderedByItem.set(
-          line.purchase_request_item_id,
-          (orderedByItem.get(line.purchase_request_item_id) ?? 0) +
-            Number(line.quantity),
-        );
+        const factor = Number(line.entry_to_base_factor);
+        const lines = orderedLinesByItem.get(line.purchase_request_item_id) ?? [];
+        lines.push({
+          quantity: Number(line.quantity),
+          entryToBaseFactor: Number.isFinite(factor) ? factor : 0,
+        });
+        orderedLinesByItem.set(line.purchase_request_item_id, lines);
       }
     }
     const items = (request.purchase_request_items ?? []).map((item) => {
-      const orderedQuantity = orderedByItem.get(item.id) ?? 0;
+      const ingredient = one(item.ingredients);
+      const demandFactor = Number(
+        (ingredient?.ingredient_units ?? []).find(
+          (unit) =>
+            unit.is_active && unit.unit_id === item.entry_unit_id,
+        )?.to_base_factor ?? 0,
+      );
+      const { orderedQuantity, remainingQuantity } = purchaseDemandLineProgress({
+        demandQuantity: Number(item.quantity),
+        demandToBaseFactor: Number.isFinite(demandFactor) ? demandFactor : 0,
+        orderedLines: orderedLinesByItem.get(item.id) ?? [],
+      });
       return {
         id: item.id,
         ingredientId: item.ingredient_id,
-        ingredientName: one(item.ingredients)?.name ?? "Nguyên liệu",
+        ingredientName: ingredient?.name ?? "Nguyên liệu",
         quantity: Number(item.quantity),
         orderedQuantity,
-        remainingQuantity: Math.max(Number(item.quantity) - orderedQuantity, 0),
+        remainingQuantity,
         entryUnitId: item.entry_unit_id,
         unitLabel:
           one(item.units)?.name ?? one(item.units)?.code ?? "Đơn vị",

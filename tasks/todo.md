@@ -5,6 +5,17 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Repair purchase-demand PO coverage across unit roles
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: procurement/units
+Exit: YCM progress and status compare PO coverage in base units so a demand in issue/export units that is fully ordered in receipt units shows complete (`ordered`, remaining 0) — including repair of `YCM-31072026-0010`.
+Evidence: SQL coverage regression, progress unit test, static contract, Production apply + status repair, repository gates.
+
+- [ ] Deploy web with demand progress mapping and smoke `YCM-31072026-0010` UI (`200/200 cuộn`).
+
 ## Repair accountant expenses and purchase-demand approval
 
 State: verify
