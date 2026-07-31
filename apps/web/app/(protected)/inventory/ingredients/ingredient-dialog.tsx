@@ -7,6 +7,7 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 import { z } from "zod";
+import { Plus as IconPlus } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -457,6 +458,8 @@ function IngredientDialogFields({
     form.setValue("output_to_production_factor", "1", { shouldValidate: true });
   }, [form, productionEnabled, productionSameAsOutput]);
 
+  const showUnitAddActions = !inputUnitIsDifferent || !productionEnabled;
+
   return (
     <>
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
@@ -488,25 +491,6 @@ function IngredientDialogFields({
           options={unitSelectOptions}
           required
         />
-      </div>
-
-      <Field orientation="horizontal">
-        <FieldLabel htmlFor="item-kind-finished-good">
-          {dialogCopy.finishedGoodLabel}
-        </FieldLabel>
-        <Switch
-          id="item-kind-finished-good"
-          checked={itemKind === "finished_good"}
-          onCheckedChange={(checked) =>
-            form.setValue(
-              "item_kind",
-              checked ? "finished_good" : "raw_material",
-            )
-          }
-        />
-      </Field>
-
-      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
         <QuantityField
           control={form.control}
           name="min_stock_level"
@@ -531,109 +515,129 @@ function IngredientDialogFields({
             },
           ]}
         />
+        <Field orientation="horizontal" className="sm:col-span-2">
+          <FieldLabel htmlFor="item-kind-finished-good">
+            {dialogCopy.finishedGoodLabel}
+          </FieldLabel>
+          <Switch
+            id="item-kind-finished-good"
+            checked={itemKind === "finished_good"}
+            onCheckedChange={(checked) =>
+              form.setValue(
+                "item_kind",
+                checked ? "finished_good" : "raw_material",
+              )
+            }
+          />
+        </Field>
       </div>
-      <FieldSet className="mt-4">
+
+      <FieldSet>
         <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
         {inputUnitIsDifferent ? (
-          <>
-            <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-              <SelectField
-                control={form.control}
-                name="input_unit_id"
-                label={copy.units.inputUnit}
-                placeholder={copy.units.selectUnit}
-                options={unitSelectOptions}
-                required
-              />
-              <ConversionFactorField
-                control={form.control}
-                name="input_to_output_factor"
-                fromUnitName={inputUnitName}
-                toUnitName={outputUnitName}
-                sameUnit={sameUnit}
-              />
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="mt-4"
-              onClick={() => {
-                form.setValue("input_unit_is_different", false);
-                form.setValue(
-                  "input_unit_id",
-                  form.getValues("output_unit_id"),
-                  {
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            <SelectField
+              control={form.control}
+              name="input_unit_id"
+              label={copy.units.inputUnit}
+              placeholder={copy.units.selectUnit}
+              options={unitSelectOptions}
+              required
+            />
+            <ConversionFactorField
+              control={form.control}
+              name="input_to_output_factor"
+              fromUnitName={inputUnitName}
+              toUnitName={outputUnitName}
+              sameUnit={sameUnit}
+            />
+            <div className="sm:col-span-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  form.setValue("input_unit_is_different", false);
+                  form.setValue(
+                    "input_unit_id",
+                    form.getValues("output_unit_id"),
+                    {
+                      shouldValidate: true,
+                    },
+                  );
+                  form.setValue("input_to_output_factor", "1", {
                     shouldValidate: true,
-                  },
-                );
-                form.setValue("input_to_output_factor", "1", {
-                  shouldValidate: true,
-                });
-              }}
-            >
-              {copy.units.removeInputUnit}
-            </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="mt-4"
-            onClick={() => form.setValue("input_unit_is_different", true)}
-          >
-            {copy.units.inputUnitDifferent}
-          </Button>
-        )}
-        {productionEnabled ? (
-          <>
-            <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-              <SelectField
-                control={form.control}
-                name="production_unit_id"
-                label={copy.units.productionUnit}
-                placeholder={copy.units.selectUnit}
-                options={unitSelectOptions}
-                required
-              />
-              <ConversionFactorField
-                control={form.control}
-                name="output_to_production_factor"
-                fromUnitName={outputUnitName}
-                toUnitName={productionUnitName}
-                sameUnit={productionSameAsOutput}
-              />
+                  });
+                }}
+              >
+                {copy.units.removeInputUnit}
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="mt-4"
-              onClick={() =>
-                form.setValue("production_enabled", false, {
-                  shouldValidate: true,
-                })
-              }
-            >
-              {copy.units.removeProductionUnit}
-            </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="mt-4"
-            onClick={() =>
-              form.setValue("production_enabled", true, {
-                shouldValidate: true,
-              })
-            }
-          >
-            {copy.units.productionEnabled}
-          </Button>
-        )}
+          </div>
+        ) : null}
+        {productionEnabled ? (
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            <SelectField
+              control={form.control}
+              name="production_unit_id"
+              label={copy.units.productionUnit}
+              placeholder={copy.units.selectUnit}
+              options={unitSelectOptions}
+              required
+            />
+            <ConversionFactorField
+              control={form.control}
+              name="output_to_production_factor"
+              fromUnitName={outputUnitName}
+              toUnitName={productionUnitName}
+              sameUnit={productionSameAsOutput}
+            />
+            <div className="sm:col-span-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  form.setValue("production_enabled", false, {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                {copy.units.removeProductionUnit}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {showUnitAddActions ? (
+          <div className="flex flex-wrap gap-2">
+            {!inputUnitIsDifferent ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => form.setValue("input_unit_is_different", true)}
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.units.inputUnitDifferent}
+              </Button>
+            ) : null}
+            {!productionEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  form.setValue("production_enabled", true, {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.units.productionEnabled}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </FieldSet>
     </>
   );

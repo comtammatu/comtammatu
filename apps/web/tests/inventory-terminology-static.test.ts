@@ -34,6 +34,10 @@ test("ingredient unit dialog reveals optional input and production roles on dema
   assert.match(source, /label=\{copy\.units\.productionUnit\}/);
   assert.match(source, /copy\.units\.conversion\(fromUnitName, toUnitName\)/);
   assert.match(source, /text-muted-foreground">=<\/span>/);
+  assert.match(source, /showUnitAddActions/);
+  assert.match(source, /flex flex-wrap gap-2/);
+  assert.match(source, /IconPlus data-icon="inline-start"/);
+  assert.doesNotMatch(source, /size="touch"/);
   assert.doesNotMatch(source, /label=\{copy\.units\.colBase\}/);
   assert.doesNotMatch(source, /description=\{copy\.units\./);
   assert.doesNotMatch(
