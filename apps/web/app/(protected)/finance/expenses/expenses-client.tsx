@@ -9,6 +9,7 @@ import {
   Copy as IconCopy,
   ExternalLink as IconExternalLink,
   Landmark as IconLandmark,
+  Pencil as IconPencil,
   Plus as IconPlus,
   RotateCcw as IconRotateCcw,
   Trash2 as IconTrash,
@@ -87,6 +88,7 @@ import {
   createExpense,
   deleteExpense,
   transitionExpensePayment,
+  updateExpense,
   type ExpenseRow,
 } from "../expense-actions";
 
@@ -238,11 +240,13 @@ function ExpenseFormFields({
   branchOptions,
   tenantId,
   isTouchLayout,
+  paymentMethodReadOnly = false,
 }: {
   form: UseFormReturn<ExpenseFormValues>;
   branchOptions: readonly { value: string; label: string }[];
   tenantId: number;
   isTouchLayout: boolean;
+  paymentMethodReadOnly?: boolean;
 }) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -286,19 +290,35 @@ function ExpenseFormFields({
       />
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium">{copy.form.paymentSection}</p>
-        <SelectField
-          control={form.control}
-          name="paymentMethod"
-          label={copy.form.method}
-          options={METHOD_OPTIONS}
-          placeholder={copy.form.methodPlaceholder}
-          description={
-            copy.form.methodHints[
-              form.watch("paymentMethod") as ExpensePaymentMethod
-            ]
-          }
-          required
-        />
+        {paymentMethodReadOnly ? (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">{copy.form.method}</p>
+            <p>
+              {
+                copy.paymentMethodLabels[
+                  form.watch("paymentMethod") as ExpensePaymentMethod
+                ]
+              }
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {copy.form.methodEditHint}
+            </p>
+          </div>
+        ) : (
+          <SelectField
+            control={form.control}
+            name="paymentMethod"
+            label={copy.form.method}
+            options={METHOD_OPTIONS}
+            placeholder={copy.form.methodPlaceholder}
+            description={
+              copy.form.methodHints[
+                form.watch("paymentMethod") as ExpensePaymentMethod
+              ]
+            }
+            required
+          />
+        )}
       </div>
       <div className="flex flex-col gap-3">
         <div>
@@ -468,6 +488,7 @@ export function ExpensesClient({
     [rows, showOnlyNeedsAction],
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
   const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(
     null,
   );
@@ -534,6 +555,34 @@ export function ExpensesClient({
     lines: [EMPTY_EXPENSE_LINE],
   };
 
+  const formDefaultValues: ExpenseFormValues = editingExpense
+    ? {
+        expenseDate: editingExpense.expense_date,
+        branchId:
+          editingExpense.branch_id == null
+            ? TENANT_LEVEL_BRANCH_VALUE
+            : String(editingExpense.branch_id),
+        category: editingExpense.category,
+        paymentMethod: expensePaymentMethod(
+          editingExpense,
+        ) as ExpensePaymentMethod,
+        note: editingExpense.note ?? "",
+        invoiceAttachmentUrl: editingExpense.invoice_attachment_url ?? "",
+        lines: editingExpense.vat_breakdown.map((line) => ({
+          totalAmount: addMoney([
+            String(line.taxableAmount),
+            String(line.vatAmount),
+          ]),
+          vatRate: String(
+            line.vatRate,
+          ) as ExpenseFormValues["lines"][number]["vatRate"],
+          vatAmount: minorUnitsToCanonical(
+            parseMoneyToMinorUnits(String(line.vatAmount)),
+          ),
+        })),
+      }
+    : defaultValues;
+
   async function onSubmit(values: ExpenseFormValues): Promise<ActionResult> {
     const branchId =
       !values.branchId || values.branchId === TENANT_LEVEL_BRANCH_VALUE
@@ -542,15 +591,25 @@ export function ExpensesClient({
     const vatBreakdown = buildExpenseVatBreakdown(values);
     const attachment = values.invoiceAttachmentUrl?.trim();
 
-    const result = await createExpense({
-      branchId,
-      expenseDate: values.expenseDate,
-      category: values.category as ExpenseCategory,
-      vatBreakdown,
-      paymentMethod: values.paymentMethod as ExpensePaymentMethod,
-      note: values.note,
-      invoiceAttachmentUrl: attachment || undefined,
-    });
+    const result = editingExpense
+      ? await updateExpense({
+          expenseId: editingExpense.id,
+          branchId,
+          expenseDate: values.expenseDate,
+          category: values.category as ExpenseCategory,
+          vatBreakdown,
+          note: values.note,
+          invoiceAttachmentUrl: attachment || undefined,
+        })
+      : await createExpense({
+          branchId,
+          expenseDate: values.expenseDate,
+          category: values.category as ExpenseCategory,
+          vatBreakdown,
+          paymentMethod: values.paymentMethod as ExpensePaymentMethod,
+          note: values.note,
+          invoiceAttachmentUrl: attachment || undefined,
+        });
     if (result.success) {
       router.refresh();
     }
@@ -558,6 +617,10 @@ export function ExpensesClient({
   }
 
   function onCreateSuccess(result: ActionResult) {
+    if (editingExpense) {
+      toast.success(copy.form.editSuccess);
+      return;
+    }
     const data = result.data as { transferContent?: string } | undefined;
     if (data?.transferContent) {
       setTransferInstruction(data.transferContent);
@@ -565,6 +628,11 @@ export function ExpensesClient({
     } else {
       toast.success(copy.form.success);
     }
+  }
+
+  function onEdit(row: ExpenseRow) {
+    setEditingExpense(row);
+    setDialogOpen(true);
   }
 
   async function copyTransferContent(content: string) {
@@ -677,13 +745,20 @@ export function ExpensesClient({
         ...(canDeleteExpense(row)
           ? [
               {
+                key: "edit",
+                label: copy.table.edit,
+                icon: <IconPencil className="size-4" />,
+                onSelect: () => onEdit(row),
+                disabled: isMutating,
+                separatorBefore: true,
+              } satisfies RowActionItem,
+              {
                 key: "delete",
                 label: copy.table.delete,
                 icon: <IconTrash className="size-4" />,
                 onSelect: () => void onDelete(row),
                 disabled: isMutating,
                 destructive: true,
-                separatorBefore: true,
               } satisfies RowActionItem,
             ]
           : []),
@@ -710,6 +785,13 @@ export function ExpensesClient({
 
     return canDeleteExpense(row)
       ? [
+          {
+            key: "edit",
+            label: copy.table.edit,
+            icon: <IconPencil className="size-4" />,
+            onSelect: () => onEdit(row),
+            disabled: isMutating,
+          } satisfies RowActionItem,
           {
             key: "delete",
             label: copy.table.delete,
@@ -985,13 +1067,17 @@ export function ExpensesClient({
       {canManageExpenses ? (
         <FormDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          title={copy.form.title}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEditingExpense(null);
+          }}
+          title={editingExpense ? copy.form.editTitle : copy.form.title}
           schema={expenseFormSchema}
-          defaultValues={defaultValues}
+          defaultValues={formDefaultValues}
+          entityKey={editingExpense?.id}
           onSubmit={onSubmit}
           onSuccess={onCreateSuccess}
-          submitLabel={copy.form.submit}
+          submitLabel={editingExpense ? copy.form.editSubmit : copy.form.submit}
           variant="document"
         >
           {(form) => (
@@ -1000,6 +1086,7 @@ export function ExpensesClient({
               branchOptions={branchOptions}
               tenantId={tenantId}
               isTouchLayout={isTouchLayout}
+              paymentMethodReadOnly={editingExpense != null}
             />
           )}
         </FormDialog>

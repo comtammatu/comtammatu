@@ -13554,6 +13554,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_operating_expense: {
+        Args: {
+          p_branch_id: number
+          p_category: string
+          p_expense_date: string
+          p_expense_id: number
+          p_invoice_attachment_url: string
+          p_note: string
+          p_vat_breakdown: Json
+        }
+        Returns: Json
+      }
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json

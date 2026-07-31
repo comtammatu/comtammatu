@@ -364,6 +364,7 @@ export const finance = {
       paymentSection: "Ghi nhận thanh toán",
       method: "Phương thức thanh toán",
       methodPlaceholder: "Chọn phương thức",
+      methodEditHint: "Muốn đổi cách thanh toán, dùng thao tác tại khoản chi.",
       methodHints: {
         cash: "Ghi đã trả bằng tiền mặt.",
         transfer: "Tạo nội dung CK; đánh dấu đã trả khi SePay khớp.",
@@ -386,6 +387,9 @@ export const finance = {
       attachmentHint: "Tùy chọn. PDF hoặc ảnh.",
       submit: "Lưu khoản chi",
       success: "Đã lưu khoản chi",
+      editTitle: "Sửa khoản chi",
+      editSubmit: "Lưu thay đổi",
+      editSuccess: "Đã cập nhật khoản chi",
     },
     transferInstruction: {
       title: "Nội dung chuyển khoản",
@@ -430,6 +434,7 @@ export const finance = {
       attachmentOpen: "Mở HĐ",
       detail: "Nội dung",
       actions: "Thao tác khoản chi",
+      edit: "Sửa",
       delete: "Xóa",
       deleteTitle: "Xóa khoản chi?",
       deleteConfirm: (amount: string) =>

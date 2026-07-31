@@ -300,6 +300,39 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
   assert.match(migration, /finance:expense_create/);
 });
 
+test("expense edit keeps payment evidence immutable and audits the locked RPC write", () => {
+  const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260731184719_update_operating_expense.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(actions, /const updateExpenseSchema = expenseInputSchema/);
+  assert.match(actions, /update_operating_expense/);
+  assert.match(
+    actions,
+    /canAccessBranch\(ctx\.supabase, ctx\.claims, branchId\)/,
+  );
+  assert.match(client, /key: "edit"/);
+  assert.match(client, /paymentMethodReadOnly=\{editingExpense != null\}/);
+  assert.match(migration, /CREATE FUNCTION public\.update_operating_expense/);
+  assert.match(migration, /FOR UPDATE/);
+  assert.match(migration, /app\.expense_update_id/);
+  assert.match(migration, /v_expense\.transfer_content IS NOT NULL/);
+  assert.match(migration, /bank_transaction_expense_matches/);
+  assert.match(migration, /PERFORM public\.log_audit/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.update_operating_expense/,
+  );
+});
+
 test("expense list opens read-only detail from row click", () => {
   const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
   const messages = readWeb("lib/messages/finance.ts");

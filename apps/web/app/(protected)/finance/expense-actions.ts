@@ -78,8 +78,7 @@ interface RefundSearchRow {
     { order_number: string | null } | { order_number: string | null }[] | null;
 }
 
-const createExpenseSchema = z
-  .object({
+const expenseInputSchema = z.object({
     branchId: z.coerce.number().int().positive().nullable().optional(),
     expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
     category: z.enum(EXPENSE_CATEGORY_VALUES),
@@ -101,7 +100,9 @@ const createExpenseSchema = z
           value == null || value.length === 0 || /^https?:\/\//i.test(value),
         { error: "Đường dẫn hóa đơn không hợp lệ" },
       ),
-  })
+});
+
+const createExpenseSchema = expenseInputSchema
   .superRefine((data, ctx) => {
     refineExpenseVatBreakdown(data.vatBreakdown, (index, field, message) => {
       ctx.addIssue({
@@ -111,6 +112,45 @@ const createExpenseSchema = z
       });
     });
   });
+
+const updateExpenseSchema = expenseInputSchema
+  .omit({ paymentMethod: true, vendorName: true })
+  .extend({ expenseId: z.coerce.number().int().positive() })
+  .superRefine((data, ctx) => {
+    refineExpenseVatBreakdown(data.vatBreakdown, (index, field, message) => {
+      ctx.addIssue({
+        code: "custom",
+        message,
+        path: ["vatBreakdown", index, field],
+      });
+    });
+  });
+
+type UpdateExpenseRpcClient = {
+  rpc: (
+    fn: "update_operating_expense",
+    args: {
+      p_expense_id: number;
+      p_branch_id: number | null;
+      p_expense_date: string;
+      p_category: string;
+      p_vat_breakdown: ReturnType<typeof toExpenseVatBreakdownPayload>;
+      p_note: string;
+      p_invoice_attachment_url: string | null;
+    },
+  ) => PromiseLike<{ error: { code?: string } | null }>;
+};
+
+function validateExpenseAmount(
+  vatBreakdown: z.infer<typeof createExpenseSchema>["vatBreakdown"],
+): string | null {
+  const amountMinorUnits = parseMoneyToMinorUnits(
+    expenseGrossFromBreakdown(vatBreakdown),
+  );
+  return amountMinorUnits <= 0n || amountMinorUnits > MAX_EXPENSE_MINOR_UNITS
+    ? "Số tiền không hợp lệ"
+    : null;
+}
 
 export async function createExpense(
   input: z.infer<typeof createExpenseSchema>,
@@ -133,13 +173,8 @@ export async function createExpense(
   const branchId = parsed.data.branchId ?? null;
   const vatBreakdown = toExpenseVatBreakdownPayload(parsed.data.vatBreakdown);
   const amount = expenseGrossFromBreakdown(parsed.data.vatBreakdown);
-  const amountMinorUnits = parseMoneyToMinorUnits(amount);
-  if (
-    amountMinorUnits <= 0n ||
-    amountMinorUnits > MAX_EXPENSE_MINOR_UNITS
-  ) {
-    return { success: false, error: "Số tiền không hợp lệ" };
-  }
+  const amountError = validateExpenseAmount(parsed.data.vatBreakdown);
+  if (amountError) return { success: false, error: amountError };
 
   if (
     parsed.data.category === "cogs_manual" ||
@@ -248,6 +283,60 @@ export async function createExpense(
     success: true,
     data: { id: expenseId, ...(transferContent ? { transferContent } : {}) },
   };
+}
+
+export async function updateExpense(
+  input: z.infer<typeof updateExpenseSchema>,
+): Promise<ActionResult> {
+  const parsed = updateExpenseSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền sửa chi phí." };
+
+  const branchId = parsed.data.branchId ?? null;
+  if (
+    branchId != null &&
+    !(await canAccessBranch(ctx.supabase, ctx.claims, branchId))
+  ) {
+    return { success: false, error: "Không có quyền cho chi nhánh này." };
+  }
+
+  const amountError = validateExpenseAmount(parsed.data.vatBreakdown);
+  if (amountError) return { success: false, error: amountError };
+
+  const { error } = await (
+    ctx.supabase as unknown as UpdateExpenseRpcClient
+  ).rpc("update_operating_expense", {
+    p_expense_id: parsed.data.expenseId,
+    p_branch_id: branchId,
+    p_expense_date: parsed.data.expenseDate,
+    p_category: parsed.data.category,
+    p_vat_breakdown: toExpenseVatBreakdownPayload(parsed.data.vatBreakdown),
+    p_note: parsed.data.note,
+    p_invoice_attachment_url: parsed.data.invoiceAttachmentUrl?.trim() || null,
+  });
+
+  if (error) {
+    console.error(
+      "[finance:expense-update] failed to update expense",
+      error.code,
+    );
+    return {
+      success: false,
+      error: mapExpenseMutationError(error.code, "Không thể sửa khoản chi."),
+    };
+  }
+
+  return { success: true };
 }
 
 const expenseMutationSchema = z.object({
