@@ -21,9 +21,10 @@ BEGIN
 
   IF v_definition IS NULL
     OR v_definition NOT LIKE '%gross_line_total%'
-    OR v_definition NOT LIKE '%pricing_mode%'
+    OR v_definition NOT LIKE '%unit_price%'
+    OR v_definition LIKE '%pricing_mode%'
     OR v_definition NOT LIKE '%supplier_invoice_line_invalid%' THEN
-    RAISE EXCEPTION 'supplier invoice gross VAT contract is missing';
+    RAISE EXCEPTION 'supplier invoice additive VAT contract is missing';
   END IF;
 
   BEGIN
@@ -34,8 +35,8 @@ BEGIN
 
     INSERT INTO public.tenants (name, slug, owner_user_id)
     VALUES (
-      '__gross_vat_' || v_owner::text,
-      '__gross_vat_' || v_owner::text,
+      '__net_vat_' || v_owner::text,
+      '__net_vat_' || v_owner::text,
       v_owner
     )
     RETURNING id INTO v_tenant;
@@ -67,16 +68,16 @@ BEGIN
     )
     VALUES (
       v_owner,
-      'gross-vat-' || v_owner::text || '@example.invalid',
+      'net-vat-' || v_owner::text || '@example.invalid',
       pg_catalog.jsonb_build_object(
         'tenant_id', v_tenant,
         'position_code', 'owner'
       ),
-      pg_catalog.jsonb_build_object('full_name', 'Gross VAT test owner')
+      pg_catalog.jsonb_build_object('full_name', 'Net VAT test owner')
     );
 
     INSERT INTO public.suppliers (tenant_id, name, is_active)
-    VALUES (v_tenant, '__gross_vat_supplier_' || v_owner::text, TRUE)
+    VALUES (v_tenant, '__net_vat_supplier_' || v_owner::text, TRUE)
     RETURNING id INTO v_supplier;
 
     PERFORM pg_catalog.set_config(
@@ -107,24 +108,23 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'supplier_id', v_supplier,
         'invoice_kind', 'service',
-        'invoice_number', '__GROSS-VAT-' || v_owner::text,
+        'invoice_number', '__NET-VAT-' || v_owner::text,
         'invoice_date', CURRENT_DATE,
         'due_date', CURRENT_DATE + 7,
         'document_discount_amount', '0.00',
         'subtotal', '555556.00',
         'vat_amount', '44444.00',
         'total_amount', '600000.00',
-        'matching_notes', 'Gross VAT runtime regression'
+        'matching_notes', 'Net VAT runtime regression'
       ),
       pg_catalog.jsonb_build_array(
         pg_catalog.jsonb_build_object(
-          'line_key', 'gross-vat-success',
+          'line_key', 'net-vat-success',
           'ingredient_id', NULL,
-          'description', 'Gross VAT success',
+          'description', 'Net VAT success',
           'quantity', '1.000',
           'unit_id', NULL,
-          'pricing_mode', 'gross_total',
-          'gross_unit_price', '600000.00',
+          'unit_price', '555556.00',
           'gross_line_total', '600000.00',
           'line_discount', '0.00',
           'vat_rate', 8,
@@ -154,21 +154,20 @@ BEGIN
     IF v_invoice.subtotal <> 555556.00
       OR v_invoice.vat_amount <> 44444.00
       OR v_invoice.total_amount <> 600000.00
-      OR v_line.pricing_mode <> 'gross_total'
-      OR v_line.gross_unit_price <> 600000.00
+      OR v_line.unit_price <> 555556.00
       OR v_line.gross_line_total <> 600000.00
       OR v_line.line_total <> 555556.00
       OR v_line.vat_amount <> 44444.00
       OR v_line.line_total + v_line.vat_amount
         <> v_line.gross_line_total THEN
       RAISE EXCEPTION
-        'supplier invoice gross VAT totals were not persisted exactly';
+        'supplier invoice additive VAT totals were not persisted exactly';
     END IF;
 
-    RAISE EXCEPTION '__rollback_gross_vat_fixture__';
+    RAISE EXCEPTION '__rollback_net_vat_fixture__';
   EXCEPTION
     WHEN OTHERS THEN
-      IF SQLERRM <> '__rollback_gross_vat_fixture__' THEN
+      IF SQLERRM <> '__rollback_net_vat_fixture__' THEN
         RAISE;
       END IF;
   END;
@@ -184,13 +183,12 @@ BEGIN
       ),
       pg_catalog.jsonb_build_array(
         pg_catalog.jsonb_build_object(
-          'line_key', 'gross-vat-regression',
+          'line_key', 'net-vat-regression',
           'ingredient_id', NULL,
-          'description', 'Gross VAT regression',
+          'description', 'Net VAT regression',
           'quantity', '1.000',
           'unit_id', NULL,
-          'pricing_mode', 'gross_total',
-          'gross_unit_price', '600000.00',
+          'unit_price', '555556.00',
           'gross_line_total', '600000.00',
           'line_discount', '0.00',
           'vat_rate', 8,

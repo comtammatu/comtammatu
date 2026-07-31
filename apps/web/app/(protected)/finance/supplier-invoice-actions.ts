@@ -30,7 +30,6 @@ import { mapSupplierInvoiceRow } from "./supplier-invoices/supplier-invoice-row"
 import {
   calculateSupplierInvoiceGrossLineTotal,
   calculateSupplierInvoiceNetLineTotal,
-  deriveSupplierInvoiceGrossUnitPrice,
   summarizeSupplierInvoiceMoney,
 } from "./_lib/supplier-invoice-money";
 
@@ -91,7 +90,6 @@ const invoiceSchema = z
           description: z.string().trim().min(1).max(300),
           quantity: invoiceQuantitySchema,
           unitId: z.coerce.number().int().positive().nullable(),
-          pricingMode: z.enum(["gross_total", "unit_price"]),
           unitPrice: invoiceMoneySchema,
           grossLineTotal: invoiceMoneySchema,
           lineDiscount: invoiceMoneySchema.default("0.00"),
@@ -143,39 +141,28 @@ const invoiceSchema = z
           });
         }
       }
-      const expectedGrossLineTotal =
-        line.pricingMode === "unit_price"
-          ? calculateSupplierInvoiceGrossLineTotal(
-              line.quantity,
-              line.unitPrice,
-              line.lineDiscount,
-            )
-          : line.grossLineTotal;
-      if (
-        line.pricingMode === "unit_price" &&
-        !moneyEquals(line.grossLineTotal, expectedGrossLineTotal)
-      ) {
+      const expectedNetLineTotal = calculateSupplierInvoiceNetLineTotal(
+        line.quantity,
+        line.unitPrice,
+        line.lineDiscount,
+      );
+      if (!moneyEquals(line.lineTotal, expectedNetLineTotal)) {
         ctx.addIssue({
           code: "custom",
-          message: "Tổng giá dòng không khớp số lượng và đơn giá.",
-          path: ["lines", index, "grossLineTotal"],
+          message: "Tiền trước thuế GTGT không khớp số lượng và đơn giá.",
+          path: ["lines", index, "lineTotal"],
         });
       }
       if (
-        line.pricingMode === "gross_total" &&
         !moneyEquals(
-          line.unitPrice,
-          deriveSupplierInvoiceGrossUnitPrice(
-            line.quantity,
-            line.grossLineTotal,
-            line.lineDiscount,
-          ),
+          line.grossLineTotal,
+          calculateSupplierInvoiceGrossLineTotal(line.lineTotal, line.vatAmount),
         )
       ) {
         ctx.addIssue({
           code: "custom",
-          message: "Đơn giá suy ra không khớp tổng giá dòng.",
-          path: ["lines", index, "unitPrice"],
+          message: "Tổng tiền dòng không khớp tiền trước thuế và tiền thuế.",
+          path: ["lines", index, "grossLineTotal"],
         });
       }
       if (
@@ -184,35 +171,15 @@ const invoiceSchema = z
       ) {
         ctx.addIssue({
           code: "custom",
-          message: "Tiền thuế GTGT không được lớn hơn tổng giá.",
+          message: "Tiền thuế GTGT không được lớn hơn tổng tiền.",
           path: ["lines", index, "vatAmount"],
         });
       }
       if (
-        !moneyEquals(
-          line.lineTotal,
-          calculateSupplierInvoiceNetLineTotal(
-            line.grossLineTotal,
-            line.vatAmount,
-          ),
-        )
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Tiền trước thuế GTGT không khớp tổng giá và tiền thuế.",
-          path: ["lines", index, "lineTotal"],
-        });
-      }
-      if (
-        line.pricingMode === "unit_price" &&
         parseMoneyToMinorUnits(line.lineDiscount) >
-          parseMoneyToMinorUnits(
-            calculateSupplierInvoiceGrossLineTotal(
-              line.quantity,
-              line.unitPrice,
-              "0.00",
-            ),
-          )
+        parseMoneyToMinorUnits(
+          calculateSupplierInvoiceGrossLineTotal(line.lineTotal, "0.00"),
+        )
       ) {
         ctx.addIssue({
           code: "custom",
@@ -384,8 +351,7 @@ export const createSupplierInvoice = withAction(
           description: line.description,
           quantity: line.quantity,
           unit_id: line.unitId,
-          pricing_mode: line.pricingMode,
-          gross_unit_price: line.unitPrice,
+          unit_price: line.unitPrice,
           gross_line_total: line.grossLineTotal,
           line_discount: line.lineDiscount,
           vat_rate: line.vatRate,
@@ -919,7 +885,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, document_status, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_lines ( id, ingredient_id, description, quantity, unit_id, pricing_mode, gross_unit_price, gross_line_total, line_discount_amount, vat_rate, vat_amount, line_total, ingredients ( name ), units ( name, code ), supplier_invoice_receipt_allocations ( grn_id, po_id, purchase_order_item_id, billed_quantity ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
+  return `id, document_status, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_lines ( id, ingredient_id, description, quantity, unit_id, gross_line_total, line_discount_amount, vat_rate, vat_amount, line_total, ingredients ( name ), units ( name, code ), supplier_invoice_receipt_allocations ( grn_id, po_id, purchase_order_item_id, billed_quantity ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

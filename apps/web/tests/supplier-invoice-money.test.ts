@@ -3,41 +3,47 @@ import test from "node:test";
 import {
   calculateSupplierInvoiceGrossLineTotal,
   calculateSupplierInvoiceNetLineTotal,
-  calculateSupplierInvoiceVatFromGross,
-  deriveSupplierInvoiceGrossUnitPrice,
+  calculateSupplierInvoiceVatFromNet,
   resolveSupplierInvoiceVatAmount,
   summarizeSupplierInvoiceMoney,
 } from "../app/(protected)/finance/_lib/supplier-invoice-money";
 
-test("supplier gross line total rounds quantity times VAT-inclusive unit price", () => {
+test("supplier net line total rounds quantity times NET unit price minus discount", () => {
   assert.equal(
-    calculateSupplierInvoiceGrossLineTotal("1.500", "12345.67", "0.00"),
+    calculateSupplierInvoiceNetLineTotal("2.000", "25000.00", "0.00"),
+    "50000.00",
+  );
+  assert.equal(
+    calculateSupplierInvoiceNetLineTotal("1.500", "12345.67", "0.00"),
     "18518.51",
   );
-});
-
-test("supplier VAT reverses from a VAT-inclusive gross line", () => {
   assert.equal(
-    calculateSupplierInvoiceVatFromGross("600000.00", 8),
-    "44444.44",
+    calculateSupplierInvoiceNetLineTotal("2.000", "25000.00", "500.00"),
+    "49500.00",
   );
 });
 
-test("manual supplier VAT keeps gross fixed and changes the pre-VAT amount", () => {
+test("supplier VAT adds forward from the net line total", () => {
+  assert.equal(calculateSupplierInvoiceVatFromNet("50000.00", 8), "4000.00");
+  assert.equal(calculateSupplierInvoiceVatFromNet("18518.51", 8), "1481.48");
+  assert.equal(calculateSupplierInvoiceVatFromNet("600000.00", 0), "0.00");
+});
+
+test("supplier gross line total equals net plus VAT", () => {
   assert.equal(
-    calculateSupplierInvoiceNetLineTotal("600000.00", "44444.00"),
-    "555556.00",
+    calculateSupplierInvoiceGrossLineTotal("50000.00", "4000.00"),
+    "54000.00",
   );
+});
+
+test("manual supplier VAT keeps the net total fixed and changes only the gross", () => {
   assert.equal(
     resolveSupplierInvoiceVatAmount("600000.00", 8, "manual", "44444.00"),
     "44444.00",
   );
-});
-
-test("gross-total mode derives a unit price without changing the source total", () => {
   assert.equal(
-    deriveSupplierInvoiceGrossUnitPrice("3.000", "100000.00", "0.00"),
-    "33333.33",
+    calculateSupplierInvoiceGrossLineTotal("600000.00", "44444.00"),
+    "644444.00",
   );
 });
 
@@ -55,42 +61,42 @@ test("supplier header totals cannot drift across many small lines", () => {
   });
 });
 
-test("document discount is subtracted from canonical line totals", () => {
+test("document discount is subtracted from canonical gross line totals", () => {
   assert.deepEqual(
     summarizeSupplierInvoiceMoney(
       [
         {
-          grossLineTotal: "20000.00",
-          netLineTotal: "18518.51",
-          vatAmount: "1481.49",
+          grossLineTotal: "21600.00",
+          netLineTotal: "20000.00",
+          vatAmount: "1600.00",
         },
       ],
       "0.01",
     ),
     {
-      subtotal: "18518.51",
-      vatAmount: "1481.49",
-      totalAmount: "19999.99",
+      subtotal: "20000.00",
+      vatAmount: "1600.00",
+      totalAmount: "21599.99",
     },
   );
 });
 
-test("supplier header never adds VAT twice", () => {
+test("supplier header never adds VAT twice when summarizing additive lines", () => {
   assert.deepEqual(
     summarizeSupplierInvoiceMoney(
       [
         {
-          grossLineTotal: "600000.00",
-          netLineTotal: "555556.00",
-          vatAmount: "44444.00",
+          grossLineTotal: "540000.00",
+          netLineTotal: "500000.00",
+          vatAmount: "40000.00",
         },
       ],
       "0.00",
     ),
     {
-      subtotal: "555556.00",
-      vatAmount: "44444.00",
-      totalAmount: "600000.00",
+      subtotal: "500000.00",
+      vatAmount: "40000.00",
+      totalAmount: "540000.00",
     },
   );
 });

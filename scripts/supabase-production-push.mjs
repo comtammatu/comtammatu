@@ -95,6 +95,7 @@ function main() {
     {
       cwd: process.cwd(),
       stdio: "inherit",
+      shell: process.platform === "win32",
       timeout: 600_000,
     },
   );

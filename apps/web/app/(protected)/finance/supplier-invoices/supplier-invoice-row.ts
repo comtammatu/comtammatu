@@ -42,7 +42,6 @@ export type SupplierInvoiceLineSummary = {
   quantity: number;
   unitId: number | null;
   unitLabel: string;
-  pricingMode: "gross_total" | "unit_price";
   unitPrice: number;
   grossLineTotal: number;
   lineDiscount: number;
@@ -271,11 +270,7 @@ export function mapSupplierInvoiceRow(
             unitLabel: isRecord(unit)
               ? String(unit.name ?? unit.code ?? "Đơn vị")
               : "Đơn vị",
-            pricingMode:
-              line.pricing_mode === "gross_total"
-                ? "gross_total"
-                : "unit_price",
-            unitPrice: Number(line.gross_unit_price ?? line.unit_price ?? 0),
+            unitPrice: Number(line.unit_price ?? 0),
             grossLineTotal: Number(
               line.gross_line_total ??
                 Number(line.line_total ?? 0) + Number(line.vat_amount ?? 0),
