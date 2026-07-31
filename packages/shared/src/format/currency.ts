@@ -62,7 +62,16 @@ function toCanonicalMoney(value: DecimalLike): string | null {
   try {
     return canonicalizeMoney(value);
   } catch {
-    return null;
+    const raw = typeof value === "number" ? String(value) : value;
+    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(raw);
+    if (!match) return null;
+
+    const [, sign, whole, fraction = ""] = match;
+    const minorUnits =
+      BigInt(whole ?? "0") * 100n +
+      BigInt(fraction.slice(0, 2).padEnd(2, "0")) +
+      (fraction[2] != null && fraction[2] >= "5" ? 1n : 0n);
+    return minorUnitsToCanonical(sign === "-" ? -minorUnits : minorUnits);
   }
 }
 

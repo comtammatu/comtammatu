@@ -15,6 +15,8 @@ test("vi-VN display formatters use dot grouping and comma fractions", () => {
   assert.equal(formatVND(45_000), "45.000đ");
   assert.equal(formatVND(1_234.5), "1.234,5đ");
   assert.equal(formatVND("1234.50"), "1.234,5đ");
+  assert.equal(formatVND(7_083.33333333), "7.083,33đ");
+  assert.equal(formatVND("16666.66666667"), "16.666,67đ");
   assert.equal(formatAccountingVND(1_234.5), "1.234,50đ");
   assert.equal(formatAccountingVND("invalid"), "0,00đ");
   assert.equal(formatVND(1e21), "1.000.000.000.000.000.000.000đ");
