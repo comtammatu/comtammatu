@@ -8,23 +8,23 @@ import {
   type StockRequestDetailData,
 } from "./stock-request-detail-data";
 import { getStockJourney } from "./stock-journey-model";
+import type {
+  StockRequestFulfillGroup,
+  StockRequestFulfillLine,
+} from "./stock-request-fulfillment-model";
+
+export type {
+  StockRequestFulfillGroup,
+  StockRequestFulfillLine,
+} from "./stock-request-fulfillment-model";
+export {
+  isFulfillLineShort,
+  lineOnHandInEntryUnit,
+  onHandInEntryUnit,
+} from "./stock-request-fulfillment-model";
 
 type AuthState = Awaited<ReturnType<typeof loadAuthState>>;
-type FulfillSiteKind = "central_supply" | "central_kitchen";
-
-export type StockRequestFulfillGroup = {
-  fulfillSiteKind: FulfillSiteKind;
-  fromBranchId: number;
-  locations: Array<{ id: number; label: string }>;
-  lines: Array<{
-    id: number;
-    ingredientName: string;
-    quantity: number;
-    unitLabel: string;
-    fulfillSiteKind: FulfillSiteKind;
-    status: string;
-  }>;
-};
+type FulfillSiteKind = StockRequestFulfillGroup["fulfillSiteKind"];
 
 export type StockRequestFulfillmentDetailData = {
   data: StockRequestDetailData;
@@ -90,6 +90,58 @@ async function loadLocations(
     }));
 }
 
+async function loadToBaseFactors(
+  supabase: AuthState["supabase"],
+  tenantId: number,
+  items: Array<{ ingredientId: number; entryUnitId: number }>,
+): Promise<Map<string, number>> {
+  const ingredientIds = [...new Set(items.map((item) => item.ingredientId))];
+  const unitIds = [...new Set(items.map((item) => item.entryUnitId))];
+  const factors = new Map<string, number>();
+  if (ingredientIds.length === 0 || unitIds.length === 0) return factors;
+
+  const { data } = await supabase
+    .from("ingredient_units")
+    .select("ingredient_id, unit_id, to_base_factor")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .in("ingredient_id", ingredientIds)
+    .in("unit_id", unitIds);
+
+  for (const row of data ?? []) {
+    const factor = Number(row.to_base_factor ?? 0);
+    if (!(factor > 0)) continue;
+    factors.set(`${row.ingredient_id}:${row.unit_id}`, factor);
+  }
+  return factors;
+}
+
+async function loadStockByLocation(
+  supabase: AuthState["supabase"],
+  tenantId: number,
+  locationIds: number[],
+  ingredientIds: number[],
+): Promise<Record<number, Record<number, number>>> {
+  const stockByLocation: Record<number, Record<number, number>> = {};
+  if (locationIds.length === 0 || ingredientIds.length === 0) {
+    return stockByLocation;
+  }
+
+  const { data } = await supabase
+    .from("stock_levels")
+    .select("location_id, ingredient_id, current_quantity")
+    .eq("tenant_id", tenantId)
+    .in("location_id", locationIds)
+    .in("ingredient_id", ingredientIds);
+
+  for (const row of data ?? []) {
+    const locationStock = stockByLocation[row.location_id] ?? {};
+    locationStock[row.ingredient_id] = Number(row.current_quantity ?? 0);
+    stockByLocation[row.location_id] = locationStock;
+  }
+  return stockByLocation;
+}
+
 export async function loadStockRequestFulfillmentDetail({
   supabase,
   claims,
@@ -143,36 +195,84 @@ export async function loadStockRequestFulfillmentDetail({
   const siteKinds = actorKind
     ? [actorKind]
     : (["central_supply", "central_kitchen"] as const);
-  const groups: StockRequestFulfillGroup[] = [];
-  for (const siteKind of siteKinds) {
-    const sourceBranchId = await loadSourceBranchId(
-      supabase,
-      claims.tenant_id,
-      siteKind,
-      claims.branch_id,
-      claims.user_role === "owner",
-    );
-    const lines = visibleData.items
-      .filter((item) => item.fulfillSiteKind === siteKind)
-      .map((item) => ({
-        id: item.id,
-        ingredientName: item.ingredientName,
-        quantity: item.quantity,
-        unitLabel: item.unitLabel,
-        fulfillSiteKind: item.fulfillSiteKind,
-        status: item.status,
-      }));
-    if (sourceBranchId == null || lines.length === 0) continue;
-    groups.push({
-      fulfillSiteKind: siteKind,
-      fromBranchId: sourceBranchId,
-      locations: await loadLocations(
+
+  const toBaseFactors = await loadToBaseFactors(
+    supabase,
+    claims.tenant_id,
+    visibleData.items.map((item) => ({
+      ingredientId: item.ingredientId,
+      entryUnitId: item.entryUnitId,
+    })),
+  );
+
+  const groupDrafts = await Promise.all(
+    siteKinds.map(async (siteKind) => {
+      const sourceBranchId = await loadSourceBranchId(
+        supabase,
+        claims.tenant_id,
+        siteKind,
+        claims.branch_id,
+        claims.user_role === "owner",
+      );
+      const siteItems = visibleData.items.filter(
+        (item) => item.fulfillSiteKind === siteKind,
+      );
+      if (sourceBranchId == null || siteItems.length === 0) return null;
+      const locations = await loadLocations(
         supabase,
         claims.tenant_id,
         sourceBranchId,
+      );
+      const lines: StockRequestFulfillLine[] = siteItems.map((item) => ({
+        id: item.id,
+        ingredientId: item.ingredientId,
+        ingredientName: item.ingredientName,
+        quantity: item.quantity,
+        unitLabel: item.unitLabel,
+        toBaseFactor:
+          toBaseFactors.get(`${item.ingredientId}:${item.entryUnitId}`) ?? 0,
+        fulfillSiteKind: item.fulfillSiteKind,
+        status: item.status,
+      }));
+      return {
+        fulfillSiteKind: siteKind,
+        fromBranchId: sourceBranchId,
+        locations,
+        lines,
+      };
+    }),
+  );
+
+  const locationIds = [
+    ...new Set(
+      groupDrafts.flatMap((group) =>
+        group == null ? [] : group.locations.map((location) => location.id),
       ),
-      lines,
-    });
+    ),
+  ];
+  const ingredientIds = [
+    ...new Set(
+      groupDrafts.flatMap((group) =>
+        group == null ? [] : group.lines.map((line) => line.ingredientId),
+      ),
+    ),
+  ];
+  const stockByLocationAll = await loadStockByLocation(
+    supabase,
+    claims.tenant_id,
+    locationIds,
+    ingredientIds,
+  );
+
+  const groups: StockRequestFulfillGroup[] = [];
+  for (const draft of groupDrafts) {
+    if (draft == null) continue;
+    const locationIdSet = new Set(draft.locations.map((location) => location.id));
+    const stockByLocation: Record<number, Record<number, number>> = {};
+    for (const locationId of locationIdSet) {
+      stockByLocation[locationId] = stockByLocationAll[locationId] ?? {};
+    }
+    groups.push({ ...draft, stockByLocation });
   }
 
   return { data: visibleData, groups, canClose: claims.user_role === "owner" };

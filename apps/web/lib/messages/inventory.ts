@@ -356,15 +356,31 @@ export const inventory = {
       selectLineAria: (name: string) => `Chọn ${name}`,
       selectColumn: "Chọn",
       ingredientColumn: "Nguyên liệu",
-      quantityColumn: "Số lượng",
+      quantityColumn: "Cần",
+      onHandColumn: "Tồn",
       statusColumn: "Trạng thái",
       emptyLinesTitle: "Không có dòng",
       emptyLinesDescription: "Nguồn này chưa có nguyên liệu trên phiếu.",
       lineQtyUnit: (quantity: number, unit: string) =>
         `${formatQuantity(quantity)} ${unit}`.trim(),
+      needVsOnHand: (need: number, onHand: number, unit: string) =>
+        `Cần ${formatQuantity(need)} ${unit} · Tồn ${formatQuantity(onHand)} ${unit}`.trim(),
+      shortageBadge: "Thiếu",
+      shortageAlertTitle: "Không đủ tồn để đáp ứng",
+      shortageAlertHint:
+        "Bỏ chọn dòng thiếu, đổi vị trí xuất, hoặc nhập thêm trước khi duyệt.",
+      shortageAlertLine: (
+        name: string,
+        need: number,
+        onHand: number,
+        unit: string,
+      ) =>
+        `${name}: cần ${formatQuantity(need)} ${unit}, tồn ${formatQuantity(onHand)} ${unit}`.trim(),
       toastSelectLine: "Chọn ít nhất một dòng chờ xử lý.",
       toastSelectLocation: "Chọn vị trí xuất hàng.",
       toastFulfillFailed: "Không đáp ứng được yêu cầu.",
+      toastInsufficientStock: "Tồn kho không đủ cho các dòng đã chọn.",
+      toastInsufficientNamed: (name: string) => `Không đủ tồn: ${name}`,
       toastTransferCreated: "Đã tạo phiếu điều chuyển.",
       rejectSelected: "Từ chối dòng đã chọn",
       closeRemaining: "Đóng phần còn lại",

@@ -9,6 +9,19 @@ import {
 } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
+const INSUFFICIENT_STOCK_RE = /insufficient_stock(?::|_)(\d+)/i;
+
+function parseInsufficientStockIngredientId(
+  message: string | undefined,
+): number | null {
+  const match = INSUFFICIENT_STOCK_RE.exec(message ?? "");
+  if (!match?.[1]) return null;
+  const ingredientId = Number(match[1]);
+  return Number.isInteger(ingredientId) && ingredientId > 0
+    ? ingredientId
+    : null;
+}
+
 function mapStockRequestRpcError(
   code: string | undefined,
   message?: string,
@@ -24,7 +37,7 @@ function mapStockRequestRpcError(
     return "Nguyên liệu hoặc đơn vị không còn hợp lệ.";
   }
   if (msg.includes("insufficient_stock")) {
-    return "Tồn kho không đủ cho toàn bộ các dòng đã chọn.";
+    return "Tồn kho không đủ cho các dòng đã chọn.";
   }
   if (msg.includes("reason_required")) {
     return "Vui lòng nhập lý do ít nhất 5 ký tự.";
@@ -237,6 +250,15 @@ export const fulfillStockRequestLines = withAction(
       },
     );
     if (error) {
+      const ingredientId = parseInsufficientStockIngredientId(error.message);
+      if (ingredientId != null) {
+        return {
+          success: false as const,
+          error: mapStockRequestRpcError(error.code, error.message),
+          errorCode: "insufficient_stock",
+          meta: { ingredientId },
+        };
+      }
       return {
         success: false as const,
         error: mapStockRequestRpcError(error.code, error.message),

@@ -122,10 +122,41 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(fulfill, /size="touch"/);
   assert.match(fulfill, /seedPendingSelection|pendingLineIds/);
   assert.match(fulfill, /copy\.lineQtyUnit/);
+  assert.match(fulfill, /copy\.onHandColumn|AlertTitle/);
+  assert.match(fulfill, /isFulfillLineShort|shortageAlertTitle/);
+  assert.match(fulfill, /toastInsufficientNamed|errorCode === "insufficient_stock"/);
   assert.doesNotMatch(fulfill, /lineDescription|type="checkbox"/);
   assert.match(detailLoader, /data\.branchId === claims\.branch_id/);
   assert.match(detailLoader, /item\.fulfillSiteKind === actorKind/);
   assert.match(detailLoader, /unitLabel: item\.unitLabel/);
+  assert.match(detailLoader, /stockByLocation|loadStockByLocation|stock_levels/);
+  assert.match(detailLoader, /toBaseFactor|ingredient_units/);
+});
+
+test("fulfill maps insufficient_stock ingredient id for UI feedback", () => {
+  const actions = read(
+    "apps/web/app/(protected)/inventory/stock-request-actions.ts",
+  );
+  assert.match(actions, /parseInsufficientStockIngredientId|insufficient_stock/);
+  assert.match(actions, /errorCode: "insufficient_stock"/);
+  assert.match(actions, /meta: \{ ingredientId \}/);
+});
+
+test("fulfill copy shows quantity with unit, on-hand, and shortage alerts", () => {
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
+  const fulfillBlock = inventoryMessages.slice(
+    inventoryMessages.indexOf("fulfill: {"),
+    inventoryMessages.indexOf("branch: {"),
+  );
+
+  assert.match(fulfillBlock, /lineQtyUnit:/);
+  assert.match(fulfillBlock, /onHandColumn:/);
+  assert.match(fulfillBlock, /needVsOnHand:/);
+  assert.match(fulfillBlock, /shortageAlertTitle:/);
+  assert.match(fulfillBlock, /toastInsufficientNamed:/);
+  assert.match(fulfillBlock, /formatQuantity\(quantity\)/);
+  assert.doesNotMatch(fulfillBlock, /lineDescription:/);
+  assert.doesNotMatch(fulfillBlock, /`SL \$\{quantity\}/);
 });
 
 test("embedded transfer dialog drops timeline and history chrome", () => {
@@ -170,19 +201,6 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(fulfill, /ItemActions/);
   assert.doesNotMatch(transfer, /IconPrinter/);
   assert.match(transfer, /AppDialogFooter/);
-});
-
-test("fulfill copy shows quantity with unit and drops SL status string", () => {
-  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
-  const fulfillBlock = inventoryMessages.slice(
-    inventoryMessages.indexOf("fulfill: {"),
-    inventoryMessages.indexOf("branch: {"),
-  );
-
-  assert.match(fulfillBlock, /lineQtyUnit:/);
-  assert.match(fulfillBlock, /formatQuantity\(quantity\)/);
-  assert.doesNotMatch(fulfillBlock, /lineDescription:/);
-  assert.doesNotMatch(fulfillBlock, /`SL \$\{quantity\}/);
 });
 
 test("central kitchen request route and database authority stay supply-only", () => {

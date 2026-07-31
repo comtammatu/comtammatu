@@ -7,6 +7,11 @@ import {
   getInventorySiteKindLabelVi,
   type SiteKind,
 } from "@comtammatu/shared/labels";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -16,6 +21,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -44,7 +50,12 @@ import {
   fulfillStockRequestLines,
   rejectStockRequestLines,
 } from "@/(protected)/inventory/stock-request-actions";
-import type { StockRequestFulfillGroup } from "@lib/inventory/stock-request-fulfillment-detail-data";
+import {
+  isFulfillLineShort,
+  lineOnHandInEntryUnit,
+  type StockRequestFulfillGroup,
+  type StockRequestFulfillLine,
+} from "@lib/inventory/stock-request-fulfillment-model";
 
 const stockRequestCopy = messages.inventory.stockRequests;
 const copy = stockRequestCopy.fulfill;
@@ -61,7 +72,6 @@ interface StockRequestFulfillClientProps {
 }
 
 type FulfillSiteKind = StockRequestFulfillGroup["fulfillSiteKind"];
-type FulfillLine = StockRequestFulfillGroup["lines"][number];
 
 function siteKindLabel(kind: SiteKind): string {
   return getInventorySiteKindLabelVi(kind);
@@ -81,6 +91,27 @@ function seedPendingSelection(
       group.fulfillSiteKind,
       new Set(pendingLineIds(group)),
     ]),
+  );
+}
+
+function selectedLocationId(
+  group: StockRequestFulfillGroup,
+  locationByGroup: Record<string, string>,
+): number | null {
+  const raw = Number(locationByGroup[group.fulfillSiteKind]);
+  return Number.isInteger(raw) && raw > 0 ? raw : null;
+}
+
+function selectedShortLines(
+  group: StockRequestFulfillGroup,
+  selectedIds: Set<number> | undefined,
+  locationId: number | null,
+): StockRequestFulfillLine[] {
+  return group.lines.filter(
+    (line) =>
+      line.status === "pending" &&
+      (selectedIds?.has(line.id) ?? false) &&
+      isFulfillLineShort(line, locationId, group.stockByLocation),
   );
 }
 
@@ -116,6 +147,9 @@ export function StockRequestFulfillClient({
     | null
   >(null);
   const [reason, setReason] = useState("");
+  const [shortageFocusIngredientId, setShortageFocusIngredientId] = useState<
+    number | null
+  >(null);
   const [activeGroupKind, setActiveGroupKind] = useState(
     () =>
       groups.find((group) =>
@@ -127,10 +161,21 @@ export function StockRequestFulfillClient({
   const activeGroup =
     groups.find((group) => group.fulfillSiteKind === activeGroupKind) ??
     groups[0];
+  const activeLocationId = activeGroup
+    ? selectedLocationId(activeGroup, locationByGroup)
+    : null;
+  const activeShortages = activeGroup
+    ? selectedShortLines(
+        activeGroup,
+        selectedByGroup[activeGroup.fulfillSiteKind],
+        activeLocationId,
+      )
+    : [];
 
   function activateSource(groupKind: FulfillSiteKind) {
     const group = groups.find((entry) => entry.fulfillSiteKind === groupKind);
     setActiveGroupKind(groupKind);
+    setShortageFocusIngredientId(null);
     if (!group) return;
     setSelectedByGroup((current) => ({
       ...current,
@@ -144,6 +189,7 @@ export function StockRequestFulfillClient({
     checked: boolean,
   ) {
     setActiveGroupKind(groupKind);
+    setShortageFocusIngredientId(null);
     setSelectedByGroup((current) => {
       const next = new Set(current[groupKind] ?? []);
       if (checked) next.add(lineId);
@@ -154,6 +200,7 @@ export function StockRequestFulfillClient({
 
   function selectAllPending(groupKind: FulfillSiteKind, lineIds: number[]) {
     setActiveGroupKind(groupKind);
+    setShortageFocusIngredientId(null);
     setSelectedByGroup((current) => ({
       ...current,
       [groupKind]: new Set(lineIds),
@@ -177,6 +224,23 @@ export function StockRequestFulfillClient({
       return;
     }
 
+    const shortBeforeSubmit = selectedShortLines(
+      group,
+      selectedByGroup[group.fulfillSiteKind],
+      fromLocationId,
+    );
+    if (shortBeforeSubmit.length > 0) {
+      const first = shortBeforeSubmit[0]!;
+      setShortageFocusIngredientId(first.ingredientId);
+      setActiveGroupKind(group.fulfillSiteKind);
+      toast.error(
+        shortBeforeSubmit.length === 1
+          ? copy.toastInsufficientNamed(first.ingredientName)
+          : copy.toastInsufficientStock,
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = await fulfillStockRequestLines({
         requestId,
@@ -186,14 +250,39 @@ export function StockRequestFulfillClient({
         itemIds: selected,
       });
 
-      if (!result.success || !result.data) {
-        toast.error(result.error ?? copy.toastFulfillFailed);
+      if (!result.success) {
+        const failedIngredientId =
+          result.errorCode === "insufficient_stock" &&
+          typeof result.meta?.ingredientId === "number"
+            ? result.meta.ingredientId
+            : null;
+        const failedLine =
+          failedIngredientId == null
+            ? null
+            : group.lines.find(
+                (line) => line.ingredientId === failedIngredientId,
+              );
+        if (failedIngredientId != null) {
+          setShortageFocusIngredientId(failedIngredientId);
+          setActiveGroupKind(group.fulfillSiteKind);
+        }
+        toast.error(
+          failedLine
+            ? copy.toastInsufficientNamed(failedLine.ingredientName)
+            : (result.error ?? copy.toastFulfillFailed),
+        );
         return;
       }
 
+      const transferId = result.data?.transferId;
+      if (transferId == null) {
+        toast.error(copy.toastFulfillFailed);
+        return;
+      }
+      setShortageFocusIngredientId(null);
       toast.success(copy.toastTransferCreated);
-      if (onTransferCreated) onTransferCreated(result.data.transferId);
-      else router.push(`/inventory/transfers/${result.data.transferId}`);
+      if (onTransferCreated) onTransferCreated(transferId);
+      else router.push(`/inventory/transfers/${transferId}`);
       router.refresh();
     });
   }
@@ -231,7 +320,8 @@ export function StockRequestFulfillClient({
 
   function lineColumns(
     group: StockRequestFulfillGroup,
-  ): DataTableColumn<FulfillLine>[] {
+  ): DataTableColumn<StockRequestFulfillLine>[] {
+    const locationId = selectedLocationId(group, locationByGroup);
     return [
       {
         key: "select",
@@ -255,9 +345,25 @@ export function StockRequestFulfillClient({
       {
         key: "ingredient",
         header: copy.ingredientColumn,
-        render: (line) => (
-          <span className="font-medium">{line.ingredientName}</span>
-        ),
+        render: (line) => {
+          const short = isFulfillLineShort(
+            line,
+            locationId,
+            group.stockByLocation,
+          );
+          const focused = line.ingredientId === shortageFocusIngredientId;
+          return (
+            <span
+              className={
+                focused || short
+                  ? "font-medium text-destructive"
+                  : "font-medium"
+              }
+            >
+              {line.ingredientName}
+            </span>
+          );
+        },
       },
       {
         key: "quantity",
@@ -266,14 +372,49 @@ export function StockRequestFulfillClient({
         render: (line) => copy.lineQtyUnit(line.quantity, line.unitLabel),
       },
       {
+        key: "onHand",
+        header: copy.onHandColumn,
+        className: "text-right font-mono tabular-nums",
+        render: (line) => {
+          if (line.status !== "pending") {
+            return <span className="text-muted-foreground">—</span>;
+          }
+          const onHand = lineOnHandInEntryUnit(
+            line,
+            locationId,
+            group.stockByLocation,
+          );
+          const short = isFulfillLineShort(
+            line,
+            locationId,
+            group.stockByLocation,
+          );
+          return (
+            <span className={short ? "text-destructive" : undefined}>
+              {copy.lineQtyUnit(onHand, line.unitLabel)}
+            </span>
+          );
+        },
+      },
+      {
         key: "status",
         header: copy.statusColumn,
         className: "w-36",
-        render: (line) => (
-          <Badge variant="secondary">
-            {stockRequestCopy.statusLabel(line.status)}
-          </Badge>
-        ),
+        render: (line) => {
+          const short = isFulfillLineShort(
+            line,
+            locationId,
+            group.stockByLocation,
+          );
+          if (line.status === "pending" && short) {
+            return <Badge variant="destructive">{copy.shortageBadge}</Badge>;
+          }
+          return (
+            <Badge variant="secondary">
+              {stockRequestCopy.statusLabel(line.status)}
+            </Badge>
+          );
+        },
       },
     ];
   }
@@ -284,6 +425,33 @@ export function StockRequestFulfillClient({
         <p className="text-sm text-muted-foreground">{copy.noLinesInScope}</p>
       ) : (
         <div className="flex flex-col gap-4">
+          {activeShortages.length > 0 ? (
+            <Alert variant="destructive">
+              <AlertTitle>{copy.shortageAlertTitle}</AlertTitle>
+              <AlertDescription>
+                <p>{copy.shortageAlertHint}</p>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {activeShortages.map((line) => {
+                    const onHand = lineOnHandInEntryUnit(
+                      line,
+                      activeLocationId,
+                      activeGroup!.stockByLocation,
+                    );
+                    return (
+                      <li key={line.id}>
+                        {copy.shortageAlertLine(
+                          line.ingredientName,
+                          line.quantity,
+                          onHand,
+                          line.unitLabel,
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <div
             className="flex flex-col gap-2"
             aria-label={copy.sourceSelectorAria}
@@ -294,6 +462,7 @@ export function StockRequestFulfillClient({
               );
               const isActive =
                 group.fulfillSiteKind === activeGroup?.fulfillSiteKind;
+              const locationId = selectedLocationId(group, locationByGroup);
               return (
                 <AppSection
                   key={group.fulfillSiteKind}
@@ -325,40 +494,85 @@ export function StockRequestFulfillClient({
                     getRowKey={(line) => line.id}
                     emptyTitle={copy.emptyLinesTitle}
                     emptyDescription={copy.emptyLinesDescription}
-                    mobileCardRender={(line) => (
-                      <Item variant="outline" size="sm">
-                        {line.status === "pending" ? (
-                          <Checkbox
-                            size="touch"
-                            checked={
-                              selectedByGroup[group.fulfillSiteKind]?.has(
-                                line.id,
-                              ) ?? false
-                            }
-                            onCheckedChange={(value) =>
-                              toggleLine(
-                                group.fulfillSiteKind,
-                                line.id,
-                                value === true,
-                              )
-                            }
-                            disabled={isPending}
-                            aria-label={copy.selectLineAria(line.ingredientName)}
-                          />
-                        ) : null}
-                        <ItemContent>
-                          <ItemTitle>{line.ingredientName}</ItemTitle>
-                        </ItemContent>
-                        <ItemActions className="flex shrink-0 flex-col items-end gap-1">
-                          <span className="font-mono text-sm tabular-nums">
-                            {copy.lineQtyUnit(line.quantity, line.unitLabel)}
-                          </span>
-                          <Badge variant="secondary">
-                            {stockRequestCopy.statusLabel(line.status)}
-                          </Badge>
-                        </ItemActions>
-                      </Item>
-                    )}
+                    mobileCardRender={(line) => {
+                      const short = isFulfillLineShort(
+                        line,
+                        locationId,
+                        group.stockByLocation,
+                      );
+                      const onHand = lineOnHandInEntryUnit(
+                        line,
+                        locationId,
+                        group.stockByLocation,
+                      );
+                      const focused =
+                        line.ingredientId === shortageFocusIngredientId;
+                      return (
+                        <Item
+                          variant="outline"
+                          size="sm"
+                          className={
+                            focused || short ? "border-destructive" : undefined
+                          }
+                        >
+                          {line.status === "pending" ? (
+                            <Checkbox
+                              size="touch"
+                              checked={
+                                selectedByGroup[group.fulfillSiteKind]?.has(
+                                  line.id,
+                                ) ?? false
+                              }
+                              onCheckedChange={(value) =>
+                                toggleLine(
+                                  group.fulfillSiteKind,
+                                  line.id,
+                                  value === true,
+                                )
+                              }
+                              disabled={isPending}
+                              aria-label={copy.selectLineAria(
+                                line.ingredientName,
+                              )}
+                            />
+                          ) : null}
+                          <ItemContent>
+                            <ItemTitle
+                              className={
+                                focused || short
+                                  ? "text-destructive"
+                                  : undefined
+                              }
+                            >
+                              {line.ingredientName}
+                            </ItemTitle>
+                            {line.status === "pending" ? (
+                              <ItemDescription>
+                                {copy.needVsOnHand(
+                                  line.quantity,
+                                  onHand,
+                                  line.unitLabel,
+                                )}
+                              </ItemDescription>
+                            ) : null}
+                          </ItemContent>
+                          <ItemActions className="flex shrink-0 flex-col items-end gap-1">
+                            <span className="font-mono text-sm tabular-nums">
+                              {copy.lineQtyUnit(line.quantity, line.unitLabel)}
+                            </span>
+                            {line.status === "pending" && short ? (
+                              <Badge variant="destructive">
+                                {copy.shortageBadge}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                {stockRequestCopy.statusLabel(line.status)}
+                              </Badge>
+                            )}
+                          </ItemActions>
+                        </Item>
+                      );
+                    }}
                   />
 
                   {pendingLines.length > 0 ? (
@@ -389,6 +603,7 @@ export function StockRequestFulfillClient({
                             value={locationByGroup[group.fulfillSiteKind] ?? ""}
                             onValueChange={(value) => {
                               setActiveGroupKind(group.fulfillSiteKind);
+                              setShortageFocusIngredientId(null);
                               setLocationByGroup((current) => ({
                                 ...current,
                                 [group.fulfillSiteKind]: value,
