@@ -40,8 +40,8 @@ test("ingredient unit dialog reveals optional input and production roles on dema
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
-  assert.match(messages, /inputUnitDifferent: "Nhập theo đơn vị khác"/);
-  assert.match(messages, /productionEnabled: "Có đơn vị sản xuất riêng"/);
+  assert.match(messages, /inputUnitDifferent: "Thêm đơn vị nhập"/);
+  assert.match(messages, /productionEnabled: "Thêm đơn vị sản xuất"/);
   assert.match(messages, /standardUnit:/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);

@@ -51,7 +51,8 @@ test("ingredient form keeps optional unit conversions out of the default flow", 
   assert.match(ingredientDialogSource, /name="output_unit_id"/);
   assert.match(ingredientDialogSource, /name="input_to_output_factor"/);
   assert.match(ingredientDialogSource, /input_unit_is_different/);
-  assert.match(ingredientDialogSource, /<Collapsible>/);
+  assert.match(ingredientDialogSource, /inputUnitIsDifferent \?/);
+  assert.match(ingredientDialogSource, /productionEnabled \?/);
   assert.match(ingredientDialogSource, /disabled=\{unitsLocked\}/);
   assert.doesNotMatch(
     ingredientDialogSource,

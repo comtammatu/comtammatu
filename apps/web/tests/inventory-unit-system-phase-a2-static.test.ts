@@ -160,7 +160,7 @@ test("ingredient editor locks unit roles only after stock movements", () => {
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
   assert.match(
     ingredientDialog,
-    /name="input_unit_id"[\s\S]*name="output_unit_id"/,
+    /name="output_unit_id"[\s\S]*name="input_unit_id"/,
   );
 });
 
