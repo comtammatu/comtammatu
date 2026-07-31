@@ -132,6 +132,17 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
     rebaseMigration,
     /inventory_unit_ladder_locked_by_stock_movements/,
   );
+  const rebaseJoinFix = readRepo(
+    "supabase/migrations/20260731222809_catalog_unit_rebase_fix_draft_factor_join.sql",
+  );
+  assert.doesNotMatch(
+    rebaseJoinFix,
+    /JOIN public\.ingredient_units AS unit_row\s+ON[\s\S]*item\.entry_unit_id/,
+  );
+  assert.match(
+    rebaseJoinFix,
+    /FROM public\.purchase_orders AS po,\s+public\.ingredient_units AS unit_row,\s+public\.units AS units/,
+  );
   assert.doesNotMatch(
     ingredientActions,
     /export async function fetchIngredientUnitLock/,
