@@ -63,17 +63,13 @@ only while the environment has no orders, records a one-cadence health grace for
 new job ids, and reloads the launcher configuration. Populated Production skips
 the re-registration path.
 
-## Existing environments
+## Existing environment
 
-- **Suspended retired target (`iexwsuaqqenyjiskawoj`)** keeps its applied migration history
-  after cutoff `baf3720f8`; it is not a repository type source and is not reset,
-  migrated, relinked, or reactivated.
-- **Greenfield target (`enloyfnuerqgaqderbwb`)** is the same-repo type source.
-  It runs the baseline plus active forwards. Current Auth, profile, position,
-  permission, and RLS objects remain the runtime contract. Existing candidate
-  Auth rows must not be treated as an empty environment.
-  Never copy retired target customer data, Auth rows, or provider secrets into this target.
-  Every migration apply still requires exact owner delegation.
+- **Production (`enloyfnuerqgaqderbwb`)** is the repository type source and
+  runs the baseline plus active forwards. Current Auth, profile, position,
+  permission and RLS objects remain the runtime contract. Existing Auth rows
+  must not be treated as an empty environment. Every migration apply still
+  requires exact owner delegation.
 - Native Supabase Branching provides the disposable migration-replay target and
   requires the guard to verify the Production parent. Do not substitute a local
   database.

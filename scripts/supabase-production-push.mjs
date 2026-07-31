@@ -3,10 +3,10 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
-const GREENFIELD_PROJECT_REF = "enloyfnuerqgaqderbwb";
+const PRODUCTION_PROJECT_REF = "enloyfnuerqgaqderbwb";
 const SESSION_POOLER_HOST = "aws-0-ap-southeast-1.pooler.supabase.com";
 const SESSION_POOLER_PORT = "5432";
-const EXPECTED_USERNAME = `postgres.${GREENFIELD_PROJECT_REF}`;
+const EXPECTED_USERNAME = `postgres.${PRODUCTION_PROJECT_REF}`;
 
 function validateDbUrl(value) {
   const url = new URL(value);
@@ -21,7 +21,7 @@ function validateDbUrl(value) {
     url.hash
   ) {
     throw new Error(
-      `SUPABASE_DB_URL must be the registered Greenfield Session Pooler URL for ${GREENFIELD_PROJECT_REF}`,
+      `SUPABASE_DB_URL must be the registered Production Session Pooler URL for ${PRODUCTION_PROJECT_REF}`,
     );
   }
   return url;
@@ -33,7 +33,7 @@ function selfTest() {
   );
   const rejected = [
     `postgresql://postgres.wrongprojectref0000:test-password@${SESSION_POOLER_HOST}:${SESSION_POOLER_PORT}/postgres`,
-    `postgresql://${EXPECTED_USERNAME}:test-password@db.${GREENFIELD_PROJECT_REF}.supabase.co:${SESSION_POOLER_PORT}/postgres`,
+    `postgresql://${EXPECTED_USERNAME}:test-password@db.${PRODUCTION_PROJECT_REF}.supabase.co:${SESSION_POOLER_PORT}/postgres`,
     `postgresql://${EXPECTED_USERNAME}:test-password@${SESSION_POOLER_HOST}:6543/postgres`,
     `postgresql://${EXPECTED_USERNAME}@${SESSION_POOLER_HOST}:${SESSION_POOLER_PORT}/postgres`,
     `postgresql://${EXPECTED_USERNAME}:test-password@${SESSION_POOLER_HOST}:${SESSION_POOLER_PORT}/postgres?host=example.com`,
@@ -48,7 +48,7 @@ function selfTest() {
       }
     }
   }
-  process.stdout.write("Greenfield push guard self-test passed.\n");
+  process.stdout.write("Production push guard self-test passed.\n");
 }
 
 function main() {
@@ -62,7 +62,7 @@ function main() {
     !["--dry-run", "--apply"].includes(args[0] ?? "")
   ) {
     throw new Error(
-      "Usage: node scripts/supabase-greenfield-push.mjs --dry-run|--apply",
+      "Usage: node scripts/supabase-production-push.mjs --dry-run|--apply",
     );
   }
 
@@ -77,7 +77,7 @@ function main() {
 
   const dryRun = args[0] === "--dry-run";
   process.stdout.write(
-    `${dryRun ? "Dry-running" : "Applying"} migrations to Greenfield ${GREENFIELD_PROJECT_REF} via Session Pooler.\n`,
+    `${dryRun ? "Dry-running" : "Applying"} migrations to Production ${PRODUCTION_PROJECT_REF} via Session Pooler.\n`,
   );
   const result = spawnSync(
     "corepack",

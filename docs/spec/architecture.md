@@ -237,7 +237,7 @@ copied here:
 | Utility           | —                                   | `/notifications`, `/access-denied`                                                              | Explicit utility/public contracts, not a product plane               |
 
 Branch Manager and Staff daily work stays under `/br/[branchId]/*`; the
-`control_surface` families remain L0-gated per ADR 0012 / D090.
+`control_surface` families remain L0-gated per ADR 0012.
 
 ## Infrastructure Strategy
 

@@ -11,7 +11,7 @@ const webRoot = path.resolve(import.meta.dirname, "..");
 const repositoryRoot = path.resolve(webRoot, "../..");
 
 test("branch code matches the migration contract", async () => {
-  for (const code of ["DD", "PH", "ABCD"]) {
+  for (const code of ["AB", "XYZ", "ABCD"]) {
     assert.equal(branchCodeSchema.safeParse(code).success, true);
   }
 
@@ -24,7 +24,7 @@ test("branch code matches the migration contract", async () => {
   const migration = await readFile(
     path.join(
       repositoryRoot,
-      "supabase/migration-archive/20260601740000_branch_code_order_number_suffix.sql",
+      "supabase/migrations/20260727120000_baseline.sql",
     ),
     "utf8",
   );

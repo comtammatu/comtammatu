@@ -1,12 +1,12 @@
-# Nghiên cứu HĐĐT Greenfield — CTCP Chén Sứ / Viettel S-invoice
+# Nghiên cứu HĐĐT CTCP Chén Sứ / Viettel S-invoice
 
 > Tài liệu bằng chứng hỗ trợ. Hợp đồng nghiệp vụ hiện hành vẫn thuộc
 > `docs/ref/einvoice-tax.md`; action đang làm thuộc `tasks/todo.md`.
 >
 > Ngày kiểm tra: 2026-07-27 (Asia/Ho_Chi_Minh).
 >
-> Phạm vi: Greenfield hiện tại của chính repo `comtammatu`; không có repo,
-> project thứ ba, dữ liệu nhập từ target đã nghỉ hoặc lớp tương thích. Chủ sở
+> Phạm vi: Production hiện tại của chính repo `comtammatu`; không có repo,
+> project thứ ba, dữ liệu nhập từ pháp nhân khác hoặc lớp tương thích. Chủ sở
 > hữu đã xác nhận cấu hình đăng ký `SINVOICE_TEMPLATE_CODE=1/001` và
 > `SINVOICE_INVOICE_SERIES=C26TCS`. Không kiểm tra hoặc ghi lại credential,
 > MST và dữ liệu đăng ký riêng tư khác.
@@ -19,12 +19,12 @@
 Luồng đích phải là một luồng duy nhất: hóa đơn GTGT mẫu `1/001`, ký hiệu
 `C26TCS`, mỗi dòng có thuế suất rõ ràng, tổng tiền được đối chiếu từ chính các
 dòng sau chiết khấu và mọi trạng thái chưa rõ từ Viettel đều dừng để đối soát.
-Không tạo snapshot `v2`, nhánh mô hình pháp nhân cũ hay lớp tương thích dữ liệu cũ. Trường
+Không tạo snapshot `v2`, nhánh pháp nhân khác hay lớp tương thích dữ liệu cũ. Trường
 `version: 1` hiện có được giữ như metadata cố định, không dùng để phân nhánh.
 
 Forward migration `20260727161500_invoice_profile_vat_snapshot.sql` và caller
 cutover đã xử lý các lỗi snapshot, fallback VAT, drift cấu hình và replacement.
-Migration đã được apply trực tiếp lên Greenfield `enloyfnuerqgaqderbwb`; ledger
+Migration đã được apply trực tiếp lên Production `enloyfnuerqgaqderbwb`; ledger
 Supabase ghi execution version `20260727104839` với name
 `20260727161500_invoice_profile_vat_snapshot`. Đây là rollout forward-only,
 không reset, rebaseline hoặc xóa Auth users hiện có. Profile hóa đơn vẫn ở
@@ -120,7 +120,7 @@ preflight và owner phê duyệt.
 
 3. **Mức VAT menu có default `0`.**
 
-   Migration thêm `menu_items.vat_rate NOT NULL DEFAULT 0`. Trong Greenfield,
+   Migration thêm `menu_items.vat_rate NOT NULL DEFAULT 0`. Trong Production,
    đây không phải fallback hợp lệ: `0%` chỉ được ghi khi món được phân loại rõ:
    `supabase/migrations/20260727121036_add_menu_vat_and_purchase_approval.sql:1-7`.
 
@@ -187,7 +187,7 @@ Các điểm đã phân xử:
 
 ### P0 — Evidence gate
 
-1. Migration ledger Greenfield đã được kiểm tra: baseline và các forward
+1. Migration ledger Production đã được kiểm tra: baseline và các forward
    migration đến `20260727150000` đã apply. Chỉ thêm forward migration mới;
    không sửa baseline đã pin hash.
 2. Forward migration phải giữ nguyên ACL, `SECURITY DEFINER`, `search_path` và
@@ -228,7 +228,7 @@ net + VAT                    == paid/order total
 Sau khi chuẩn hóa theo quy tắc làm tròn VND, lệch bất kỳ invariant nào thì dừng
 `blocked`, ghi mã lỗi ổn định và không gọi provider. Chỉ thay quy tắc này nếu
 tài liệu tài khoản Viettel xác nhận một quy tắc làm tròn khác. Không dùng
-heuristic gross/net: input Greenfield được khai báo rõ là giá bán gross đã gồm
+heuristic gross/net: input Production được khai báo rõ là giá bán gross đã gồm
 VAT.
 
 `tax_invoices.vat_rate` đơn lẻ không được làm nguồn sự thật cho mixed-rate.
@@ -275,17 +275,16 @@ truy vấn và đối soát.
 - Sau schema: regenerate types, chạy targeted tests rồi
   `typecheck`, `lint`, `build`, `test`; re-index CodeGraph.
 
-### P6 — Dọn framing mô hình pháp nhân cũ và tài liệu
+### P6 — Dọn framing pháp nhân khác và tài liệu
 
 1. Đổi product/legal framing còn active trong `AGENTS.md`, `README.md`,
-   `docs/plan/decisions.md` và E2E fixture sang CTCP Chén Sứ/Greenfield.
-2. Dọn ví dụ tên tài khoản mô hình pháp nhân cũ trong payment placeholder và QR/provider tests;
+   `docs/plan/decisions.md` và E2E fixture sang CTCP Chén Sứ/Production.
+2. Dọn ví dụ tên tài khoản pháp nhân khác trong payment placeholder và QR/provider tests;
    không suy tên chủ tài khoản thật nếu chưa có cấu hình được xác nhận.
 3. Sửa ví dụ VAT sai trong `docs/ref/glossary.md` và đồng bộ
    `docs/ref/third-party-integrations.md` với quy trình bàn giao kế toán hiện
    hành; không hardcode kỳ/tháng hoặc biểu mẫu chưa được kế toán xác nhận.
-4. Giữ exact ID cũ trong denylist với nhãn trung tính `retired target`.
-5. Giữ nguyên baseline và migration archive đã pin hash làm lineage evidence;
+4. Giữ nguyên baseline và migration archive đã pin hash làm lineage evidence;
    CI kiểm tra zero literal trên active source/docs nhưng loại trừ lịch sử SQL
    bất biến.
 
@@ -294,11 +293,11 @@ truy vấn và đối soát.
 - Hoàn tất local: typed invoice profile, VAT bắt buộc `0/5/8/10`, snapshot v1,
   template `1/...`, total gate trước POST, unknown-outcome reconcile, replacement
   queue và CI grep-zero.
-- Greenfield đã là target/type source của chính repo sau cutover. `1` Tenant,
-  `1` Branch, `4` profile và `4` Auth users là bootstrap/runtime hiện tại cần
-  giữ, không phải dữ liệu target cũ và không kích hoạt destructive rebaseline.
-- Chưa apply forward migration HĐĐT mới. Hồ sơ Tenant hiện vẫn cần hoàn thiện
-  legal name, MST, địa chỉ và đại diện trước khi kích hoạt invoice profile.
+- Production đã là target/type source của chính repo. Runtime hiện có `1`
+  Tenant CTCP, `3` site active (Kho Tổng, Bếp Trung Tâm, Nguyễn Hữu Thọ) và
+  `5` profile/Auth users.
+- Hồ sơ Tenant vẫn cần hoàn thiện các trường pháp lý còn thiếu trước khi kích
+  hoạt invoice profile.
 - Chưa kích hoạt profile `1/001` / `C26TCS`: activation phải fail cho đến khi
   owner hoàn thiện hồ sơ pháp nhân và MST khớp tài khoản Viettel.
 - Chưa smoke provider thật: cần owner phê duyệt và evidence tài khoản cụ thể.

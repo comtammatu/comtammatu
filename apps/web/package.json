@@ -23,7 +23,6 @@
     "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui",
     "guides:capture": "dotenv -e .env.test.local -- playwright test --project=guides",
     "guides:capture:list": "dotenv -e .env.test.local -- playwright test --project=guides --list",
-    "inventory:cleanup:dry-run": "dotenv -e ../../.env.local -e .env.local -- tsx scripts/inventory-prod-cleanup-plan.ts",
     "inventory:csv-reseed:dry-run": "dotenv -e ../../.env.local -e .env.local -- tsx scripts/inventory-csv-reseed.ts"
   },
   "dependencies": {

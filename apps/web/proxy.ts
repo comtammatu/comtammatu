@@ -230,7 +230,7 @@ export async function proxy(request: NextRequest) {
 
       if (needsBranchSurface) {
         // Stations (POS/KDS/runner) stay branch-kind "branch". Owner enters
-        // any ACTIVE site's non-station surfaces (D059 §3 context picker);
+        // any ACTIVE site's non-station surfaces;
         // every other role is already pinned to its own branch above.
         const requiredBranchKind = isStationRoute
           ? "branch"

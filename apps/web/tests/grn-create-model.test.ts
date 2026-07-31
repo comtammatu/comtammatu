@@ -12,7 +12,7 @@ const locations: GrnCreateProcurementLocationOption[] = [
     id: 10,
     name: "Kho sau",
     branchId: 1,
-    branchName: "Phước Hải",
+    branchName: "Nguyễn Hữu Thọ",
     branchKind: "branch",
     kind: "warehouse",
     isDefaultReceive: true,

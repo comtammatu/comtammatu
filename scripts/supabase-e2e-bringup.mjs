@@ -140,11 +140,11 @@ function main() {
 NEXT_PUBLIC_SUPABASE_URL=${apiUrl}
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}
 SUPABASE_SERVICE_ROLE_KEY=${service}
-E2E_CASHIER_EMAIL=cashier.datdo@comtammatu.vn
+E2E_CASHIER_EMAIL=cashier.nguyenhuutho@comtammatu.vn
 E2E_CASHIER_PASSWORD=Test1234!
-E2E_CHEF_EMAIL=chef.datdo@comtammatu.vn
+E2E_CHEF_EMAIL=chef.nguyenhuutho@comtammatu.vn
 E2E_CHEF_PASSWORD=Test1234!
-E2E_INVENTORY_MANAGER_EMAIL=manager.datdo@comtammatu.vn
+E2E_INVENTORY_MANAGER_EMAIL=manager.nguyenhuutho@comtammatu.vn
 E2E_INVENTORY_MANAGER_PASSWORD=Test1234!
 `;
   writeFileSync(resolve(REPO, "apps/web/.env.test.local"), testEnv);

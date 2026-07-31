@@ -1,23 +1,23 @@
-# Auth và Authorization mục tiêu cho Greenfield
+# Auth và Authorization mục tiêu
 
 > **TARGET ONLY — not current runtime.** Auth callers and ACL today are owned by
-> `docs/modules/auth.md` and `packages/shared/src/auth/*` until Greenfield
+> `docs/modules/auth.md` and `packages/shared/src/auth/*` until the authority
 > cutover. Product Dual Thesis (Hệ thống + Vận hành) for surfaces:
 > `docs/spec/architecture.md`.
 >
 > Trạng thái: kiến trúc mục tiêu đã được owner chấp nhận qua ADR 0015; chưa phải
 > contract của hệ thống đang chạy và chưa được triển khai.
 >
-> Quyết định liên quan: [ADR 0015](../plan/adr/0015-greenfield-authorization-model.md).
+> Quyết định liên quan: [ADR 0015](../plan/adr/0015-authorization-model.md).
 
 Tài liệu này sở hữu mô hình đích cho Auth, route ACL, RBAC, policy, RLS và RPC
 được triển khai trong repo `comtammatu` rồi chứng minh trên
-`matu-greenfield-company`. `docs/modules/auth.md` tiếp tục mô tả source hiện tại
-cho tới khi từng caller được chuyển qua Greenfield Authority.
+Production. `docs/modules/auth.md` tiếp tục mô tả source hiện tại
+cho tới khi từng caller được chuyển qua authority mới.
 
 ## 1. Quyết định ngắn
 
-Greenfield dùng một đường authority:
+Production dùng một đường authority:
 
 ```text
 Supabase Auth identity
@@ -56,7 +56,7 @@ từ HR position. Giả định đó không biểu diễn đúng:
 - quyền Company, Tenant và site tồn tại độc lập;
 - thu hồi quyền phải có hiệu lực mà không chờ refresh role trong JWT.
 
-Greenfield không copy hoặc vá nullable quanh authority của retired target:
+Authority mới không copy hoặc vá nullable quanh mô hình khác:
 
 - `profiles.tenant_id`, `profiles.branch_id` làm scope duy nhất;
 - `position_code → user_role`;
@@ -258,7 +258,7 @@ route admission, UX projection và gọi database authority.
 
 ## 7. Route ACL mục tiêu
 
-Current `MODULE_ACL` không được nhân đôi thành authority Greenfield song song.
+Current `MODULE_ACL` không được nhân đôi thành authority song song.
 Nó được thay tại cùng seam bằng một registry typed, tạm gọi `ROUTE_ACCESS`, không
 chứa `allowedRoles`. Bảng sau chỉ minh họa các route family; registry thật phải
 cover toàn bộ protected route:
@@ -331,7 +331,7 @@ artifacts không được sửa tay.
   `reapproval_required` và Auth identity tiếp tục không có authority.
 - Idempotency key luôn gắn với canonical request hash; reuse cùng key nhưng khác
   payload bị từ chối.
-- Invite/reset redirect dùng allowlist của đúng Greenfield domain. Login và
+- Invite/reset redirect dùng allowlist của đúng Production domain. Login và
   recovery error không tiết lộ email hoặc trạng thái membership.
 
 ### 8.2. JWT và revocation
@@ -483,7 +483,7 @@ printer config, claim/complete print job và heartbeat của site đó.
 - Mọi RPC derive site từ machine identity, không tin `siteId` do agent tự chọn.
 
 Schema và negative test của machine credential thuộc Print & Devices/G6. Phase
-Greenfield Authority chỉ khóa boundary “không `service_role`, một identity đúng
+Authority mới chỉ khóa boundary “không `service_role`, một identity đúng
 một site”; nó chưa nhận runtime gate cho feature chưa tồn tại.
 
 ## 13. Thứ tự triển khai

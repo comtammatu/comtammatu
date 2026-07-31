@@ -9,27 +9,19 @@ constraints; `docs/modules/database.md` and `docs/modules/auth.md` own architect
 Verify the ref before every Supabase MCP, CLI, or SQL call. This registry wins
 over older task notes, regressions, and memory.
 
-| Ref                    | What it is                                                                       | Agent rights                                                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `iexwsuaqqenyjiskawoj` | **PRODUCTION** — suspended retired target `matu-prod` (frozen since `baf3720f8`) | Table/view/catalog reads only. No write, migration apply, data repair, deploy relink, reactivation, or type generation. |
-| `enloyfnuerqgaqderbwb` | **GREENFIELD** — same-repo target `matu-greenfield-company`                      | Project/schema reads, delegated bootstrap migrations, and the repository type source.                                   |
+| Ref                    | What it is                                    | Agent rights                                                                      |
+| ---------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `enloyfnuerqgaqderbwb` | **PRODUCTION** — CTCP Chén Sứ / Cơm Tấm Má Tư | Project/schema reads, owner-delegated migrations, and the repository type source. |
 
 ### Vercel Deployment Registry
 
-| Project ID                         | Project                               | Required Supabase ref  | Deploy rights from this repo           |
-| ---------------------------------- | ------------------------------------- | ---------------------- | -------------------------------------- |
-| `prj_OGyJLaxEcceuckDoOUWth60FasXC` | `matu-greenfield-company`             | `enloyfnuerqgaqderbwb` | Sole allowed Production deploy target. |
-| `prj_yqb5ZzH4rP3aQgtdgZ58ViVk9MxG` | suspended retired target `comtammatu` | `iexwsuaqqenyjiskawoj` | Block every new deploy from this repo. |
+| Project ID                         | Project      | Required Supabase ref  | Deploy rights from this repo           |
+| ---------------------------------- | ------------ | ---------------------- | -------------------------------------- |
+| `prj_OGyJLaxEcceuckDoOUWth60FasXC` | `comtammatu` | `enloyfnuerqgaqderbwb` | Sole allowed Production deploy target. |
 
-- `matu-prod` is the suspended retired target database. The retired target stack stopped active
-  delivery at `baf3720f8`; it must not receive
-  schema, data-repair, project-admin, deploy-relink, or runtime reactivation
-  mutations without a separate owner decision.
-- The registered Greenfield project is the future database/runtime target for
-  this repository. It may replay the active baseline and forward migrations with
-  exact owner delegation, but must not receive retired target customer data, Auth rows,
-  provider secrets, or operational traffic before promotion.
-  `corepack pnpm db:types` requires the literal registered Greenfield
+- The registered Production project is the only database/runtime target for
+  this repository. `corepack pnpm db:types` requires the literal registered
+  Production
   `SUPABASE_PROJECT_ID` and rejects a missing or different ref. Type generation
   is read-only and does not grant schema-write authority.
 - Use an on-demand Preview Branch for isolated migration replay or disposable
@@ -40,7 +32,7 @@ over older task notes, regressions, and memory.
   `apps/web/.env.test.local` plus the GitHub runner's `GITHUB_ENV`; it never
   writes repository `.env.local` files.
   CLI creation additionally requires the literal parent binding
-  `--project-ref iexwsuaqqenyjiskawoj`; stored link state and any other parent
+  `--project-ref enloyfnuerqgaqderbwb`; stored link state and any other parent
   remain blocked.
   Preview MCP actions are trusted only when the guard finds that exact
   candidate in `supabase branches list` with the literal Production parent and
@@ -112,18 +104,18 @@ over older task notes, regressions, and memory.
   task-owned files exactly. Any extra, missing, historical, or unknown entry is
   a stop condition: do not use `--include-all`, do not move aside another
   writer's file, and do not apply a subset through a different tool.
-- For Greenfield, the only CLI apply path is `node
-  scripts/supabase-greenfield-push.mjs --dry-run`, followed by the same wrapper
+- For Production, the only CLI apply path is `node
+  scripts/supabase-production-push.mjs --dry-run`, followed by the same wrapper
   with `--apply` after exact owner delegation. It pins the registered Session
   Pooler target. Never invoke raw `supabase db push`, `supabase link`,
   `supabase db reset --linked`, or `supabase db pull` against a Cloud target.
 - Supabase MCP is for target verification and read-only evidence (`get_project`,
   `list_migrations`, `execute_sql` with read-only catalog/schema queries,
   advisors, and type inspection). Do not use MCP `apply_migration` for the
-  active Greenfield chain: it bypasses the wrapper's complete-batch dry-run and
+  active Production chain: it bypasses the wrapper's complete-batch dry-run and
   makes source/ledger reconciliation harder. A disposable verified Preview may
   use it only for an explicitly scoped rehearsal, never as a substitute for the
-  Greenfield apply path.
+  Production apply path.
 - Verify the target ref before every apply. Preview Branch creation requires the
   literal registered Production parent and per-action parent verification by the
   guard. `supabase/migration-lineage.json` validates the local baseline/install
@@ -136,11 +128,10 @@ over older task notes, regressions, and memory.
   explicit delegation for the exact operation in the current session. That
   delegation authorizes only the named apply; it does not make Production a
   default write target for later operations or sessions.
-- Greenfield bootstrap uses the committed active baseline plus forward migration
-  chain. Every apply requires the literal registered Greenfield ref and explicit
+- Production schema uses the committed active baseline plus forward migration
+  chain. Every apply requires the literal registered Production ref and explicit
   owner delegation in the current session. Stored-link state is never authority,
-  Greenfield is the repository type source, and bootstrap data must contain no
-  retired target customer data, Auth rows, or provider secrets.
+  and Production is the repository type source.
 - Delegation never authorizes changing or disabling repo guards. If the guarded
   runtime still blocks the operation, the owner applies outside it or provides a
   scoped approval path.
@@ -154,7 +145,7 @@ over older task notes, regressions, and memory.
 - Clean dirty data before adding a constraint that existing rows could violate.
 - Never use file-based `supabase db push` or branch replay against Production.
   File replay is allowed only against a verified Preview Branch or the literal
-  registered Greenfield target.
+  registered Production target.
   Production migration ledger versions may differ from file timestamps; use the
   owner-approved migration apply path.
 - After applying to the type-source schema, run `corepack pnpm db:types`, then

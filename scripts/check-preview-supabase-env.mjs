@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 
-const GREENFIELD_VERCEL_PROJECT_ID = "prj_OGyJLaxEcceuckDoOUWth60FasXC";
-const GREENFIELD_SUPABASE_REF = "enloyfnuerqgaqderbwb";
+const PRODUCTION_VERCEL_PROJECT_ID = "prj_OGyJLaxEcceuckDoOUWth60FasXC";
+const PRODUCTION_SUPABASE_REF = "enloyfnuerqgaqderbwb";
 const SUPABASE_ENV_NAMES = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
@@ -22,7 +22,7 @@ function validateProductionSupabaseUrl(value) {
   }
   if (
     url.protocol !== "https:" ||
-    url.hostname !== `${GREENFIELD_SUPABASE_REF}.supabase.co` ||
+    url.hostname !== `${PRODUCTION_SUPABASE_REF}.supabase.co` ||
     url.port ||
     url.username ||
     url.password ||
@@ -31,7 +31,7 @@ function validateProductionSupabaseUrl(value) {
     url.hash
   ) {
     throw new Error(
-      `Vercel Production must target Supabase ${GREENFIELD_SUPABASE_REF}`,
+      `Vercel Production must target Supabase ${PRODUCTION_SUPABASE_REF}`,
     );
   }
 }
@@ -55,23 +55,23 @@ export function validateVercelSupabaseEnv(env) {
   if (env.VERCEL_ENV !== "production") {
     return { status: "skipped", reason: "not a Vercel deployment build" };
   }
-  if (env.VERCEL_PROJECT_ID !== GREENFIELD_VERCEL_PROJECT_ID) {
+  if (env.VERCEL_PROJECT_ID !== PRODUCTION_VERCEL_PROJECT_ID) {
     throw new Error(
-      `Vercel Production requires project ${GREENFIELD_VERCEL_PROJECT_ID}`,
+      `Vercel Production requires project ${PRODUCTION_VERCEL_PROJECT_ID}`,
     );
   }
 
   validateProductionSupabaseUrl(env.NEXT_PUBLIC_SUPABASE_URL);
   const declaredRef = env.SUPABASE_PROJECT_ID?.trim();
-  if (declaredRef && declaredRef !== GREENFIELD_SUPABASE_REF) {
+  if (declaredRef && declaredRef !== PRODUCTION_SUPABASE_REF) {
     throw new Error(
-      `SUPABASE_PROJECT_ID must match Greenfield ${GREENFIELD_SUPABASE_REF}`,
+      `SUPABASE_PROJECT_ID must match Production ${PRODUCTION_SUPABASE_REF}`,
     );
   }
 
   return {
     status: "ok",
-    reason: "registered Greenfield Production target",
+    reason: "registered Production target",
   };
 }
 
@@ -80,8 +80,8 @@ function runSelfTest() {
   assert.equal(
     validateVercelSupabaseEnv({
       VERCEL_ENV: "production",
-      VERCEL_PROJECT_ID: GREENFIELD_VERCEL_PROJECT_ID,
-      NEXT_PUBLIC_SUPABASE_URL: `https://${GREENFIELD_SUPABASE_REF}.supabase.co`,
+      VERCEL_PROJECT_ID: PRODUCTION_VERCEL_PROJECT_ID,
+      NEXT_PUBLIC_SUPABASE_URL: `https://${PRODUCTION_SUPABASE_REF}.supabase.co`,
     }).status,
     "ok",
   );
@@ -101,7 +101,7 @@ function runSelfTest() {
     () =>
       validateVercelSupabaseEnv({
         VERCEL_ENV: "production",
-        NEXT_PUBLIC_SUPABASE_URL: `https://${GREENFIELD_SUPABASE_REF}.supabase.co`,
+        NEXT_PUBLIC_SUPABASE_URL: `https://${PRODUCTION_SUPABASE_REF}.supabase.co`,
       }),
     /requires project/,
   );
@@ -109,8 +109,8 @@ function runSelfTest() {
     () =>
       validateVercelSupabaseEnv({
         VERCEL_ENV: "production",
-        VERCEL_PROJECT_ID: "prj_yqb5ZzH4rP3aQgtdgZ58ViVk9MxG",
-        NEXT_PUBLIC_SUPABASE_URL: `https://${GREENFIELD_SUPABASE_REF}.supabase.co`,
+        VERCEL_PROJECT_ID: "prj_unregistered000000000000000000",
+        NEXT_PUBLIC_SUPABASE_URL: `https://${PRODUCTION_SUPABASE_REF}.supabase.co`,
       }),
     /requires project/,
   );
@@ -118,8 +118,8 @@ function runSelfTest() {
     () =>
       validateVercelSupabaseEnv({
         VERCEL_ENV: "production",
-        VERCEL_PROJECT_ID: GREENFIELD_VERCEL_PROJECT_ID,
-        NEXT_PUBLIC_SUPABASE_URL: "https://iexwsuaqqenyjiskawoj.supabase.co",
+        VERCEL_PROJECT_ID: PRODUCTION_VERCEL_PROJECT_ID,
+        NEXT_PUBLIC_SUPABASE_URL: "https://unregistered000000.supabase.co",
       }),
     /must target Supabase/,
   );
@@ -127,7 +127,7 @@ function runSelfTest() {
     () =>
       validateVercelSupabaseEnv({
         VERCEL_ENV: "production",
-        VERCEL_PROJECT_ID: GREENFIELD_VERCEL_PROJECT_ID,
+        VERCEL_PROJECT_ID: PRODUCTION_VERCEL_PROJECT_ID,
         NEXT_PUBLIC_SUPABASE_URL: "not-a-url",
       }),
     /valid NEXT_PUBLIC_SUPABASE_URL/,
@@ -136,11 +136,11 @@ function runSelfTest() {
     () =>
       validateVercelSupabaseEnv({
         VERCEL_ENV: "production",
-        VERCEL_PROJECT_ID: GREENFIELD_VERCEL_PROJECT_ID,
-        NEXT_PUBLIC_SUPABASE_URL: `https://${GREENFIELD_SUPABASE_REF}.supabase.co`,
-        SUPABASE_PROJECT_ID: "iexwsuaqqenyjiskawoj",
+        VERCEL_PROJECT_ID: PRODUCTION_VERCEL_PROJECT_ID,
+        NEXT_PUBLIC_SUPABASE_URL: `https://${PRODUCTION_SUPABASE_REF}.supabase.co`,
+        SUPABASE_PROJECT_ID: "unregistered000000",
       }),
-    /SUPABASE_PROJECT_ID must match Greenfield/,
+    /SUPABASE_PROJECT_ID must match Production/,
   );
 
   console.log("[vercel-supabase-env] self-test passed (9 cases)");

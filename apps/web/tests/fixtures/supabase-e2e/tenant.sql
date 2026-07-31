@@ -2,8 +2,8 @@
 -- The base dataset (tenant comtammatu, branches, positions, role_templates)
 -- historically lived in archived migrations below the consolidated baseline,
 -- which is schema-only. The CI QA-user fixture assumes this data already exists
--- (it looks up tenant slug 'comtammatu' and branches "Chi nhánh Đất Đỏ" /
--- "Chi nhánh Phước Hải"). This file recreates the minimal prerequisites,
+-- (it looks up tenant slug 'comtammatu' and the two CI branches below).
+-- This file recreates the minimal prerequisites,
 -- with values mirrored from prod (read-only) where applicable. Idempotent.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -78,8 +78,8 @@ INSERT INTO public.branches (tenant_id, name, address, code, branch_kind, is_act
 SELECT t.id, v.name, v.address, v.code, 'branch', true
 FROM public.tenants t
 CROSS JOIN (VALUES
-  ('Chi nhánh Đất Đỏ',   'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM', 'DD'),
-  ('Chi nhánh Phước Hải','Tổ 1 Hải Phúc, Xã Phước Hải, TP.HCM', 'PH')
+  ('Chi nhánh Nguyễn Hữu Thọ', 'Đường Nguyễn Hữu Thọ, TP.HCM', 'NHT'),
+  ('Chi nhánh QA', 'Dữ liệu kiểm thử CI', 'QA')
 ) AS v(name, address, code)
 WHERE t.slug = 'comtammatu'
   AND NOT EXISTS (

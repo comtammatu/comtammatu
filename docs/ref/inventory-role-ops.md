@@ -142,10 +142,10 @@ Giữ flow hiện hành: QL gán → NV đếm mù → QL duyệt; hao hụt có
 
 ## 8. Ghi chú triển khai
 
-- Migration đã apply Greenfield (`enloyfnuerqgaqderbwb`):
+- Migration đã apply Production (`enloyfnuerqgaqderbwb`):
   `20260729140000_d093_central_grn_branch_stock_request.sql` +
   `20260729140100_d093_sync_stock_request_staff_permissions.sql`.
-- Types: `corepack pnpm db:types` đã regenerate từ Greenfield.
+- Types: `corepack pnpm db:types` đã regenerate từ Production.
 - Catalog: Owner gán `default_fulfill_site_kind` trên form nguyên liệu trước
   khi CN thêm dòng yêu cầu (fail closed nếu thiếu).
 - Static tests D093 khóa allowlist (nav, redirect GRN/SX CN, notification URL).

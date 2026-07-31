@@ -400,7 +400,7 @@ function OwnerStockIngredientDetail({
                 },
                 {
                   term: stockCopy.table.minThreshold,
-                  description: formatQty(ingredient.min),
+                  description: `${formatQty(ingredient.min)} ${ingredient.unit}`,
                 },
                 {
                   term: detailCopy.storage,

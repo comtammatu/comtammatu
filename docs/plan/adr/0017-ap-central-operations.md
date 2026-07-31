@@ -1,8 +1,8 @@
 # ADR 0017 — AP and central operations
 
-**Status:** Accepted, amended by D098 on 2026-07-30
+**Status:** Accepted
 
-**Scope:** Greenfield roadmap in `comtammatu` after cutoff `baf3720f8`.
+**Scope:** Production roadmap for CTCP Chén Sứ in `comtammatu`.
 
 ## Context
 
@@ -54,13 +54,13 @@ and statutory accounting.
 ## Delivery boundary
 
 This ADR authorizes roadmap work in the existing `comtammatu` repository.
-Implementation reuses and replaces current module seams; it does not reactivate
-or mutate `matu-prod`. Greenfield work remains subject to this repository's
-review, Environment Registry, and owner gates.
+Implementation reuses and replaces current module seams. Production work
+remains subject to this repository's review, Environment Registry, and owner
+gates.
 
 ## Authority
 
-- `docs/plan/decisions.md` D082-D084
+- `docs/plan/decisions.md` D093, D099 and D101
 - `docs/plan/adr/0016-joint-stock-company-operating-model.md`
 - `docs/modules/finance.md`
 - `docs/ref/inventory.md`

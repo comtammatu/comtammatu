@@ -646,7 +646,7 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
   );
 });
 
-test("operator home renders the unified Cần duyệt queue before domain tile rows (V2, D059)", () => {
+test("operator home renders the unified Cần duyệt queue before domain tile rows", () => {
   const home = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );

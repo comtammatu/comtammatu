@@ -332,7 +332,7 @@ test("central_supply_ops nav shows PO, GRN and fulfillment while hiding recipes"
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("D098 central_kitchen_lead sees PO and production without catalog recipes", () => {
+test("central_kitchen_lead sees PO and production without catalog recipes", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_kitchen_lead",

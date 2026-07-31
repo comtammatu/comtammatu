@@ -13,7 +13,7 @@ test("E2E manager fixture matches the seeded manager account", () => {
   const packageManifest = read("package.json");
   const ci = read("../../.github/workflows/ci.yml");
   const authSetup = read("e2e/auth.setup.ts");
-  const email = "manager.datdo@comtammatu.vn";
+  const email = "manager.nguyenhuutho@comtammatu.vn";
 
   assert.match(seed, new RegExp(email));
   assert.match(bringup, new RegExp(`E2E_INVENTORY_MANAGER_EMAIL=${email}`));

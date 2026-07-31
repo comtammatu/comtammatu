@@ -1,4 +1,4 @@
-# ADR 0015 — Greenfield authorization model
+# ADR 0015 — Authorization model
 
 **Status:** Accepted
 
@@ -12,11 +12,11 @@ claims, and combines role route gates with live permission grants. It cannot
 represent Company-scoped office staff, multiple operational-site kinds, or
 multi-site assignments without preserving legacy assumptions.
 
-The Greenfield target needs one Company, one Tenant, and operational sites of
+The Production target needs one Company, one Tenant, and operational sites of
 kind `central_warehouse`, `central_kitchen`, or `branch`. Revocation and row
 isolation must not depend on a JWT role refresh.
 
-Greenfield is the database and authorization target for the existing
+Production is the database and authorization target for the existing
 `comtammatu` repository after cutoff `baf3720f8`. It is not a repository fork
 or parallel product.
 
@@ -27,7 +27,7 @@ control, so it cannot be a durable architecture name.
 
 - Keep Supabase Auth for identity and session management.
 - Replace authority behind the existing database, auth, route, and module seams
-  in this repository. Do not create a parallel app/package tree for Greenfield.
+  in this repository. Do not create a parallel app/package tree.
 - Use standard JWT identity/session claims only. Do not place roles,
   capabilities, Tenant memberships, or site assignments in JWTs, and do not add
   a custom access-token hook in V1.
@@ -76,7 +76,7 @@ control, so it cannot be a durable architecture name.
 
 ## Consequences
 
-- Greenfield cannot extract the current `profiles` scope columns,
+- Production cannot remove the current `profiles` scope columns,
   position-to-role mapper, `MODULE_ACL`, permission tables, Owner bypass, or
   custom JWT claim shape as target authority.
 - Route code, navigation, Server Actions, RLS, RPCs, Realtime, and Storage share
@@ -86,7 +86,7 @@ control, so it cannot be a durable architecture name.
   Performance optimizations require measurements and cannot weaken revocation.
 - Small exceptions use additional narrow or temporary role bindings. A direct
   capability grant model or delegation matrix requires a demonstrated use case.
-- The Greenfield Authority slice must be source-ready and candidate-proven
+- The authority slice must be source-ready and proven
   before Branch Workspace migration.
 - Existing runtime modules stay authoritative until their callers cross the new
   seam; remove legacy implementation only after the last caller moves.

@@ -39,7 +39,7 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
   },
-  // 2 years + includeSubDomains + preload makes app.comtammatu.com eligible
+  // 2 years + includeSubDomains + preload makes web.comtammatu.com eligible
   // for the Chrome/Firefox HSTS preload list — first-visit downgrade attacks
   // are blocked by the browser without ever talking to our origin.
   {

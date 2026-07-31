@@ -4,12 +4,9 @@
 
 ## Trạng thái hiện tại
 
-- mô hình pháp nhân cũ stack `comtammatu + matu-prod + app.comtammatu.com` đã tạm ngưng từ
-  commit `baf3720f8`; giữ làm historical/runtime evidence, không còn là active
-  delivery target.
-- Active delivery tiếp tục ngay trong repo `comtammatu`, hướng tới
-  `matu-greenfield-company + web.comtammatu.com`. Greenfield là database/runtime
-  target của cùng codebase, không phải repo hoặc sản phẩm song song.
+- `main` chỉ phục vụ CTCP Chén Sứ / Cơm Tấm Má Tư.
+- Production dùng Vercel project `comtammatu`, Supabase ref
+  `enloyfnuerqgaqderbwb` và domain `web.comtammatu.com`.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
 - Target architecture:
   [architecture/target-modules-tech-stack-project-structure.md](architecture/target-modules-tech-stack-project-structure.md)

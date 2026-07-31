@@ -245,7 +245,6 @@ function cleanText(value: string): string {
   return value
     .replace(/Bao bì\/Đồ dùng 1 l���n/g, "Bao bì/Đồ dùng 1 lần")
     .replace(/Gia vị\/B��t\/Nước mắm/g, "Gia vị/Bột/Nước mắm")
-    .replace(/Ph��ớc Hải/g, "Phước Hải")
     .replace(/\s+/g, " ")
     .trim();
 }

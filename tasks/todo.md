@@ -14,7 +14,7 @@ Lane: inventory/fulfillment
 Exit: One stock request renders as one fulfillment row and one Owner/Ops document dialog across Central Supply and Central Kitchen lanes; only manual transfers render independently; Central Kitchen can request Central Supply ingredients at its pinned site while Branch keeps its Page/fullscreen touch workflow.
 Evidence: pure projection and static UI tests, stock fulfillment rollback SQL test, repository gates, and authenticated Owner/Central Supply/Central Kitchen/Branch responsive smoke after the additive migration is applied to an authorized target.
 
-- [ ] Apply the migration to an owner-authorized Greenfield target, regenerate types, run the rollback SQL test, and complete authenticated responsive smoke at `390×844`, `768×1024`, and `1440×900`.
+- [ ] Apply the migration to owner-authorized Production, regenerate types, run the rollback SQL test, and complete authenticated responsive smoke at `390×844`, `768×1024`, and `1440×900`.
 
 ## Standardize vi-VN money and VAT precision
 
@@ -35,7 +35,7 @@ Kind: defect
 Tier: T3
 Lane: inventory/ledger
 Exit: GRN, issue, transfer, and production document corrections use one authenticated, idempotent RPC that validates source, scope, stock, and actor in the same transaction; runtime code cannot insert `stock_movements` directly; invoice, payment, VAT, and WAC facts remain unchanged.
-Evidence: CodeGraph flow from every document dialog to the mutation boundary, focused SQL and static regressions, repository gates, authorized Greenfield apply, and authenticated correction smoke.
+Evidence: CodeGraph flow from every document dialog to the mutation boundary, focused SQL and static regressions, repository gates, authorized Production apply, and authenticated correction smoke.
 
 - [ ] Replace `createInventoryDocumentCorrection` direct DML with the atomic RPC and add the smallest executable guard that rejects future runtime inserts into `stock_movements`.
 
@@ -59,7 +59,7 @@ Lane: finance/procurement-ap
 Exit: Goods invoices match all confirmed receipt allocations through one DB helper with a ±1 VND tolerance; service invoices require reasoned verification; Owner and Accountant record invoice-bound payments while only Owner allocates visible supplier advances; retry and later allocation never duplicate payment or money movement.
 Evidence: additive migration replay, focused DB tests, permission/static UI tests, repository gates, and authenticated Owner/Accountant responsive smoke after the migration is applied to an authorized target.
 
-- [ ] Run authenticated Owner/Accountant smoke when Greenfield has valid QA credentials.
+- [ ] Run authenticated Owner/Accountant smoke when Production has valid QA credentials.
 - [ ] Run the cleanup migration only after deployed callers no longer use direct DML or old payment/matching RPC signatures.
 
 ## Implement purchase demand allocation → PO → GRN → supplier invoice
@@ -71,7 +71,7 @@ Lane: inventory/procurement
 Exit: Warehouse submits purchase demand without supplier or price; Accountant allocates the exact quantity across active suppliers and atomically creates supplier-specific approved POs plus one GRN draft per PO; supplier invoice lines remain the only commercial purchase-price input; Owner/Accountant invoice payment and Owner-only advances remain idempotent.
 Evidence: additive migration replay, atomic RPC behavior tests, role/static workflow contracts, repository gates, and authenticated responsive smoke after the migration is applied to an authorized target.
 
-- [ ] Apply the additive migrations to the authorized Greenfield target, regenerate database types, and run authenticated Warehouse/Accountant/Owner smoke before cleanup.
+- [ ] Apply the additive migrations to authorized Production, regenerate database types, and run authenticated Warehouse/Accountant/Owner smoke before cleanup.
 
 ## Retire purchase request → PO compatibility
 
@@ -80,19 +80,19 @@ Kind: feature
 Tier: T3
 Lane: inventory/procurement-finance
 Exit: No new application caller, navigation item, or canonical route creates YCM; legacy RPCs/columns remain only through additive rollout and are removed after deployed-caller and data cleanup proof.
-Evidence: additive migration replayed from the current baseline and applied to Greenfield; 38 focused PO/GRN/Finance acceptance tests; URL-filtered unified GRN list; regenerated Greenfield database types; post-apply RLS, RPC grants, and advisor checks.
+Evidence: additive migration replayed from the current baseline and applied to Production; 38 focused PO/GRN/Finance acceptance tests; URL-filtered unified GRN list; regenerated Production database types; post-apply RLS, RPC grants, and advisor checks.
 
 - [ ] Run authenticated `390×844`, `768×1024`, and `1440×900` smoke after the migration is applied to the authorized target.
 - [ ] Smoke supplier invoice URL modes at `390×844` and `1440×900`: create from GRN, Back/Forward detail, view → pay/credit, filter retention, and permission-hidden create action.
 
-## Prove one money day on Greenfield
+## Prove one money day on Production
 
 State: blocked
 Kind: defect
 Tier: T3
 Lane: pos/operational-truth
-Exit: On Greenfield, one cash order and one VietQR order show the same completed-payment money and `paid_at` day on `/orders`, Branch POS session, and `/finance/revenue`; KDS/print quantities remain separately named when kitchen evidence is in scope.
-Evidence: Fund opening exists on Greenfield; Branch 3 sellable catalog and tables are still empty (`menu_items=0`), so no POS order can exist until seed + POS credential.
+Exit: On Production, one cash order and one VietQR order show the same completed-payment money and `paid_at` day on `/orders`, Branch POS session, and `/finance/revenue`; KDS/print quantities remain separately named when kitchen evidence is in scope.
+Evidence: Fund opening exists on Production; Branch 3 sellable catalog and tables are still empty (`menu_items=0`), so no POS order can exist until seed + POS credential.
 Blocker: Owner-only prerequisites — seed the Branch 3 (`Nguyễn Hữu Thọ`) sellable catalog plus tables, configure `payment_enable_vietqr`/`payment_vietqr_bank_code`/`payment_vietqr_account_no`/`payment_vietqr_account_name`/`payment_vietqr_code_prefix` and the deployed `SEPAY_WEBHOOK_SECRET`, and operate POS with an owner/cashier login the agent does not hold. Recheck after the catalog exists and a POS-capable credential is delegated.
 
 - [ ] Seed the Branch 3 sellable catalog and tables, then confirm `menu_items > 0` before attempting POS.
@@ -100,40 +100,28 @@ Blocker: Owner-only prerequisites — seed the Branch 3 (`Nguyễn Hữu Thọ`)
 - [ ] Capture `/orders`, POS session, and `/finance/revenue` for the same Vietnam `paid_at` day and confirm totals match.
 - [ ] If selling category `Khác`, map its kitchen printer before treating slip mismatch as a money bug.
 
-## Converge Inventory to D091
+## Verify the current Inventory topology
 
 State: blocked
-Kind: defect
+Kind: qa
 Tier: T3
 Lane: inventory/topology
-Exit: D091 is the only active Inventory authority; every active site has exactly one active warehouse enforced by DB; stock-location Bếp routing, redundant GRN QC, price-QC, and promoted PO-first paths are absent from active runtime/docs/tests; fresh replay, Greenfield catalog checks, repository gates, and authenticated Inventory smoke pass.
-Evidence: D091 is applied only to verified Greenfield `enloyfnuerqgaqderbwb`; fresh replay, final-catalog/behavior SQL, advisors, regenerated types, targeted and full tests, typecheck, package lint, and build pass. Branch 3 now has one warehouse, no active kitchen or legacy Inventory catalog remains, and `web.comtammatu.com` serves the new deployment with healthy DB/public route smoke at `390`, `768`, and `1280`.
-Blocker: Authenticated live smoke needs an authorized Greenfield Owner/Branch Manager credential. The local manager/cashier/chef E2E accounts target local Supabase and none exists among the eight Greenfield Auth users. Do not create users or impersonate a live identity without owner delegation. Aggregate `lint` also stops only on the three pre-existing UI-contract hits in the owner's retained `surface.tsx` and `stock-client.tsx` edits; every subsequent lint gate and all package ESLint tasks pass. Recheck when the owner delegates a Greenfield test credential and resolves or intentionally accepts those retained UI-contract edits.
+Exit: Every active site has exactly one active warehouse; GRN remains central-only, Branch receives transfer, and the authenticated Owner/Branch Inventory journeys pass at `390`, `768`, and `1280`.
+Evidence: Current migrations, database types, Inventory contract tests, Production catalog checks, repository gates, and authenticated responsive smoke.
+Blocker: Authenticated live smoke needs an owner-delegated Production Owner/Branch Manager credential. Do not create users or impersonate a live identity. Recheck when the owner delegates a Production test credential.
 
 - [ ] Run authenticated Owner/Branch Inventory smoke at `390`, `768`, and `1280`, then remove this outcome when every Exit item is evidenced.
 
-## Defer central production workspace cutover
-
-State: blocked
-Kind: feature
-Tier: T3
-Lane: inventory/central-ops
-Exit: Production runs only on `central_kitchen`; `/warehouse` and `/kitchen` workspaces exist after Phase 2 `operational_site` authority.
-Evidence: D091, ADR 0015/0017, architecture Phase 2/4 exit criteria.
-Blocker: Central procurement smoke proven on Greenfield; still depends on Greenfield authority cutover (Phase 2 / CTCP H2). Recheck when Phase 2 authority cutover lands on Greenfield.
-
-- [ ] After Phase 2 authority lands, implement Phase 4 workspaces and move production off branch sites.
-
-## Complete the CTCP authority and e-invoice cutover on current Greenfield
+## Complete the CTCP authority and e-invoice cutover on Production
 
 State: doing
 Kind: feature
 Tier: T3
 Lane: platform/security-finance
-Exit: The existing `comtammatu` deployment uses the current Greenfield project as its only target, legal identity and Viettel profile come from live Tenant data, VAT is explicit per sold line, and database authority no longer depends on HR positions or forged JWT scope.
-Evidence: Greenfield is live target for `web.comtammatu.com`. Invoice-profile/VAT snapshot applied and types regenerated. Runtime still uses position-derived JWT `user_role` / `MODULE_ACL`. Catalog/Viettel smoke and ADR 0015 negative matrix still open; authority cutover must preserve the D091 site model.
+Exit: The existing `comtammatu` deployment uses Production as its only target, legal identity and Viettel profile come from live Tenant data, VAT is explicit per sold line, and database authority no longer depends on HR positions or forged JWT scope.
+Evidence: Production is live target for `web.comtammatu.com`. Invoice-profile/VAT snapshot applied and types regenerated. Runtime still uses position-derived JWT `user_role` / `MODULE_ACL`. Catalog/Viettel smoke and ADR 0015 negative matrix remain open; authority cutover must preserve the current site model.
 
-- [ ] Re-plan and implement scoped authority caller/RLS cutover on Greenfield under D091 site model; preserve Tenant, Branch, profile, and Auth bootstrap rows.
+- [ ] Re-plan and implement scoped authority caller/RLS cutover on Production under the current site model; preserve Tenant, Branch, profile, and Auth bootstrap rows.
 - [ ] Complete catalog/RLS inspection, full repository gates, activate invoice profile after tenant legal/MST is complete, and the separately authorized Viettel smoke. Do not reset, rebaseline, create another project, or delete current identities.
 
 ## Restore fresh-install database ACL parity
@@ -202,7 +190,7 @@ Exit: Current SePay conflict behavior, expense transitions, supplier-payment ret
 Evidence: Required-key `record_supplier_payment` (idempotent same-key replay + conflict on differing args), AP cash separate from operating expense, and Cash/VietQR-only sales UI are locked in code/static tests; owner-operated Preview smoke/trace still required.
 
 - [ ] Rehearse current SePay completed-payment conflict behavior with the isolated two-session matrix.
-- [ ] Run authenticated phone/tablet Finance smoke for expense transitions and a partial plus same-key retry supplier payment on a payable Greenfield invoice.
+- [ ] Run authenticated phone/tablet Finance smoke for expense transitions and a partial plus same-key retry supplier payment on a payable Production invoice.
 - [ ] Capture the deployed browser trace for required-key `record_supplier_payment` and the Cash/VietQR sales UI with no MoMo affordance.
 
 ## Surface AP blockers on the Finance list surfaces
@@ -224,11 +212,10 @@ Tier: T3
 Lane: finance/payments
 Exit: Legacy `create_supplier_payment` and authenticated direct `payments` UPDATE are absent; owner-operated Preview schema/type/advisor gates pass; the separately owner-delegated Production apply and smoke are evidenced.
 Evidence: Deployed required-key proof from the preceding outcome, catalog and ACL checks, generated-type no-diff, repository gates, advisors, and explicit Production apply/smoke evidence.
-Blocker: Greenfield baseline still exposes legacy `create_supplier_payment` to `authenticated` and `GRANT … UPDATE ON public.payments TO authenticated`. Recheck when the owner authorizes dropping both on the live Greenfield target after required-key runtime proof.
+Blocker: Production baseline still exposes legacy `create_supplier_payment` to `authenticated` and `GRANT … UPDATE ON public.payments TO authenticated`. Recheck when the owner authorizes dropping both after required-key runtime proof.
 
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
-- [ ] Keep every `matu-prod` apply deferred while the retired target stack is suspended; run it only under an explicit owner decision for that stack.
 
 ## Align KDS history authorization with route access
 

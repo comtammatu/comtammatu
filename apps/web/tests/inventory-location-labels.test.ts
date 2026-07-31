@@ -17,11 +17,11 @@ test("inventory location labels separate the site from its warehouse", () => {
   );
   assert.equal(
     formatInventoryLocationLabelVi({
-      branchName: "Phước Hải",
+      branchName: "Nguyễn Hữu Thọ",
       siteKind: "branch",
       locationKind: "warehouse",
     }),
-    "Phước Hải · Kho",
+    "Nguyễn Hữu Thọ · Kho",
   );
 });
 
@@ -50,7 +50,7 @@ test("central sites retain canonical warehouse and production labels", () => {
   );
   assert.equal(normalizeInventoryLocationNameVi("Kho CN"), "Kho chi nhánh");
   assert.equal(
-    formatBranchSiteLabel({ name: "Phước Hải", branch_kind: "branch" }),
-    "Chi nhánh: Phước Hải",
+    formatBranchSiteLabel({ name: "Nguyễn Hữu Thọ", branch_kind: "branch" }),
+    "Chi nhánh: Nguyễn Hữu Thọ",
   );
 });

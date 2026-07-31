@@ -7,7 +7,7 @@
 // work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
 //
 // Behavior:
-// - Generates from the registered Greenfield type source only after an explicit matching project ref.
+// - Generates from the registered Production type source only after an explicit matching project ref.
 //   Typegen is read-only and never loads stored env or link state.
 // - Captures only stdout; CLI update notice on stderr is shown in console
 //   but never poisons the types file.
@@ -21,7 +21,7 @@ const TYPE_SOURCE_PROJECT_ID = "enloyfnuerqgaqderbwb";
 const requestedProjectId = process.env["SUPABASE_PROJECT_ID"]?.trim();
 if (requestedProjectId !== TYPE_SOURCE_PROJECT_ID) {
   console.error(
-    `gen-types: SUPABASE_PROJECT_ID must explicitly match Greenfield ${TYPE_SOURCE_PROJECT_ID}.`,
+    `gen-types: SUPABASE_PROJECT_ID must explicitly match Production ${TYPE_SOURCE_PROJECT_ID}.`,
   );
   process.exit(1);
 }

@@ -22,7 +22,7 @@ const readMigrationChain = () => {
     .join("\n");
 };
 
-test("procurement destinations include central_supply and central_kitchen", () => {
+test("Production procurement destinations include central_supply and central_kitchen", () => {
   const source = readWeb(
     "app/(protected)/inventory/_lib/procurement-branches.ts",
   );

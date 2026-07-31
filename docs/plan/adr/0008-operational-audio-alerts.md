@@ -1,6 +1,6 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09) · Amended (2026-07-10, D074 — voice engine is browser TTS; 2026-07-11, D079 — POS critical alerts; D080 — KDS quiet window; D081 — sequential beep and voice)
+**Status:** Accepted (2026-07-09) · Amended (2026-07-10: browser TTS; 2026-07-11: POS critical alerts, KDS quiet window, sequential beep and voice)
 **Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 
 ## Context
@@ -40,9 +40,9 @@ Constraints that matter in-store:
 
 6. **Copy is template-fixed.** No free-form LLM speech. A recorded brand voice pack ("Má Tư voice") may replace the TTS engine later without changing `kind`s.
 
-7. **KDS voice has a 15-second quiet window** (amended 2026-07-11, D080). Beeps remain immediate. Spoken KDS alerts inside the window are dropped rather than queued, so a rush cannot create delayed narration that no longer matches the board. User-triggered previews bypass the window and do not postpone the next live alert.
+7. **KDS voice has a 15-second quiet window.** Beeps remain immediate. Spoken KDS alerts inside the window are dropped rather than queued, so a rush cannot create delayed narration that no longer matches the board. User-triggered previews bypass the window and do not postpone the next live alert.
 
-8. **Beep and voice do not overlap** (amended 2026-07-11, D081). In `beep+voice`, finish the mapped beep, leave a short 120 ms gap, then start TTS at `volume = 1`. A newer alert replaces any voice still waiting to start. `voice`-only starts immediately.
+8. **Beep and voice do not overlap.** In `beep+voice`, finish the mapped beep, leave a short 120 ms gap, then start TTS at `volume = 1`. A newer alert replaces any voice still waiting to start. `voice`-only starts immediately.
 
 ## Alternatives Rejected
 
@@ -82,7 +82,7 @@ Constraints that matter in-store:
 | ----- | ----------------------------------------------------------------------------------------------- |
 | 1     | Catalog + mode prefs; KDS 3 kinds; `speechSynthesis` voice; wire beside current `playAppSignal` |
 | 2     | In-store tune (length, coalesce, volume); keep default `beep` unless owner flips                |
-| 3     | POS critical kinds only — shipped under D079                                                    |
+| 3     | POS critical kinds only                                                                           |
 | 4     | Optional recorded brand voice pack                                                              |
 
 Normative runtime contract: `docs/spec/operational-audio-alerts.md`.

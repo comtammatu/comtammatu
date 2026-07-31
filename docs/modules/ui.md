@@ -233,8 +233,8 @@ actor/job → archetype → UI block (recipe) → adapter/component → route
   `DocumentFormFrame`, `BranchOperatorPage`, shared components…).
 - Route gắn data, authority, copy và mutation thật.
 
-UI block không tạo thư mục `blocks/`, package mới hoặc component `*Block`
-(D086). Nó là recipe tra cứu có `archetypes`, `planes`, `need`, `use`,
+UI block không tạo thư mục `blocks/`, package mới hoặc component `*Block`.
+Nó là recipe tra cứu có `archetypes`, `planes`, `need`, `use`,
 `fallback`, `forbidden`, `exemplar`; validator chặn source, exemplar, plane hoặc
 archetype không còn hợp lệ. Chỉ thêm block recipe khi có ít nhất hai consumer
 thật, hoặc một critical workflow có exemplar được chấp thuận. Khi composition

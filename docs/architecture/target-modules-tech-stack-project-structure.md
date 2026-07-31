@@ -237,33 +237,18 @@ Source đích nằm trong chính repo `comtammatu`. Các phase thay implementati
 phía sau seam hiện hữu rồi chuyển caller; không nhân đôi route, module hoặc
 package để giữ hai codebase.
 
-### 5.2. Environment và Greenfield transition
+### 5.2. Environment
 
-| Stage                          | Contract                                                                                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| CI                             | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.                      |
-| Suspended mô hình pháp nhân cũ | `matu-prod + app.comtammatu.com` dừng active delivery từ `baf3720f8`; không nhận writer/deploy mới nếu chưa có owner rollback decision.    |
-| Production candidate           | `matu-greenfield-company` là target đã đăng ký của cùng repo, không phải DEV; exact ref và quyền nằm trong Environment Registry.           |
-| Greenfield Production          | Candidate chỉ thành Production trên `web.comtammatu.com` sau schema replay, RLS tests, backup/restore, provider/print smoke và owner gate. |
+| Stage       | Contract                                                                                                                      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| CI          | Supabase Local chỉ tồn tại trong GitHub Actions để replay from-empty, chạy SQL tests và E2E; không là runtime target.         |
+| Production  | Vercel `comtammatu`, Supabase ref đăng ký và `web.comtammatu.com` là runtime duy nhất của `main`.                            |
+| Preview     | Vercel Preview bị tắt; Supabase Preview Branch chỉ là tài nguyên throwaway được xác minh từ Production parent.              |
 
-Không có persistent DEV, không dual-write và không import operational data cũ.
-Chỉ seed reference data bắt buộc; Company, Tenant, site, tài khoản và master data
-được provision rõ ràng trên target. Vercel Preview tiếp tục fail closed cho tới
-khi có một candidate binding được guard xác minh.
-
-`db:types` chỉ đọc Greenfield candidate qua literal registered ref đã được guard
-đồng bộ; `matu-prod` không còn là type source. `app.comtammatu.com` không được
-relink thành Greenfield; target domain là `web.comtammatu.com`.
-
-Rollback bằng đổi Vercel/agent target chỉ hợp lệ trước giao dịch live đầu tiên.
-Sau mốc đó, khôi phục hoặc sửa tiến trên target; quay lại project cũ sẽ tạo
-split-brain về payment, HĐĐT và tồn kho. Quyết định mô hình pháp lý hiện hành
-cho Greenfield nằm trong
+Không có persistent DEV, không dual-write và không nhập dữ liệu từ pháp nhân
+khác. `db:types` chỉ đọc Production qua literal registered ref đã được guard
+đồng bộ. Quyết định mô hình pháp lý hiện hành nằm trong
 `docs/plan/adr/0016-joint-stock-company-operating-model.md`.
-
-Trước giao dịch live đầu tiên, Greenfield Candidate phải là writer duy nhất.
-Suspended mô hình pháp nhân cũ stack không được tái kích hoạt song song; rollback trước giao dịch
-live đầu tiên cần một owner decision riêng.
 
 ### 5.3. Configuration và secrets
 
@@ -499,7 +484,7 @@ snapshot metadata cần đối soát, không lưu secret.
 | Phase                              | Kết quả nhỏ nhất phải đạt                                                                                                                        | Bề mặt sở hữu                                                                                    | Exit evidence                                                                                                                                                                                                        |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1 — Branch Workspace               | `/br/:branchId` là control room duy nhất; dashboard được nhập vào workspace, settings landing bị loại bỏ nhưng deep settings còn nguyên          | operator home/dashboard/settings, route registry, ACL, navigation và route tests                 | không còn landing cạnh tranh; deep link và capability guard vẫn đúng; route matrix, typecheck, lint và build đạt                                                                                                     |
-| 2 — Greenfield authority           | Supabase mới có Company tối thiểu, Company workforce, Tenant, `operational_site`, membership, grant và assignment; không có migration dữ liệu cũ | migrations, RLS, RPC, auth claims, generated types và SQL tests                                  | chứng minh Văn phòng không cần Branch; worker site không đọc chéo site; target ref được xác minh trước khi apply                                                                                                     |
+| 2 — Authority cutover              | Company workforce, Tenant, `operational_site`, membership, grant và assignment dùng một authority duy nhất                                  | migrations, RLS, RPC, auth claims, generated types và SQL tests                                  | chứng minh Văn phòng không cần Branch; worker site không đọc chéo site; target ref được xác minh trước khi apply                                                                                                     |
 | 3 — Effective Configuration & HĐĐT | thay provider/env singleton bằng resolver `Tenant default → site override`; chỉ provision profile Doanh nghiệp Viettel; phát hành bất đồng bộ    | typed configuration, provider adapter, issue/replace/adjust jobs, line/profile snapshot và audit | test inherit/override/disabled; mixed-VAT gross-price reconcile; replacement/adjustment tái dùng snapshot; credential không tới client; một hóa đơn thật đi qua issue và reconcile; lỗi mạng không chặn hoàn tất đơn |
 | 4 — Kho Tổng và Bếp Trung Tâm      | hai workspace có scope, quyền và workflow riêng; không dùng shell hoặc kind của Branch                                                           | `/warehouse/:siteId/*`, `/kitchen/:siteId/*`, Supply Chain và Central Production                 | route/RLS chặn sai kind; tồn kho và sản xuất ghi qua RPC đúng authority                                                                                                                                              |
 | 5 — Workforce & Attendance         | Văn phòng chấm công theo Company policy; nhân sự vận hành chấm công theo assignment tới site                                                     | workforce, schedule, attendance, leave và payroll input                                          | test cả Company-scoped và site-scoped worker; không sinh Branch giả hoặc quyền ngầm từ phòng ban                                                                                                                     |
@@ -517,8 +502,7 @@ exit evidence của phase trước chưa đạt.
 - Kho Tổng và Bếp Trung Tâm không dùng route hoặc shell của Chi nhánh;
 - web và print-agent chia sẻ đúng rendering contract, không chia sẻ app code;
 - không có `service_role` trên máy tại site;
-- Greenfield Candidate là writer duy nhất của Greenfield trước giao dịch live
-  đầu tiên;
+- Production là writer duy nhất;
 - backup/restore và pre-live rollback được chứng minh trước promotion;
 - không có package mới nếu chưa có consumer chéo runtime;
 - task graph vẫn chạy qua `turbo run`;

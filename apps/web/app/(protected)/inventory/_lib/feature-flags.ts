@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * Inventory redesign feature flag keys (Tranche 1-3).
  * Must match seed rows in `branch_feature_flags` from
- * `20260425170000_s10_foundation_branch_feature_flags.sql`.
+ * The database baseline owns the persisted branch feature-flag contract.
  */
 export const INVENTORY_FEATURE_FLAGS = {
   S11_WASTE_TIER: "inv_s11_waste_tier",

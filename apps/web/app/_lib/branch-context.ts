@@ -104,7 +104,7 @@ export function selectBranchScope(
 
 /**
  * Branch home scope is tenant-wide for privileged roles, but every role only
- * operates active sites whose branch_kind is "branch" (D077).
+ * operates active sites whose branch_kind is "branch".
  */
 export function selectOperatorBranchScope(
   claims: JwtClaims,

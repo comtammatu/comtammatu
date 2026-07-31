@@ -2,7 +2,7 @@
 
 > Áp dụng: doanh nghiệp Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
 > Phạm vi: **Nhu cầu mua → phân bổ NCC → PO → GRN theo lần giao tại Kho Tổng /
-> Bếp TT (D096) + sản xuất + tiêu hao + stocktake + báo cáo vận hành**.
+> Bếp TT + sản xuất + tiêu hao + stocktake + báo cáo vận hành**.
 > `supplier_invoice`, payment evidence (file HĐ GTGT) và AP aging là Finance
 > handoff; không phải gate đóng ngày Inventory.
 
@@ -23,7 +23,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production recipe và menu recipe                                                                                                                                                                                                  | Không mở item master ERP nhiều lớp                                                                     |
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                    | Không mở lot-first ledger / batch accounting                                                           |
-| Mô hình site                    | `branches` là site table Greenfield; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
+| Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
 | Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Kế toán phân bổ đúng đủ số lượng cho một hay nhiều NCC đang cung cấp nguyên liệu, rồi một RPC tạo một PO/NCC và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                    | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                           | Không có target Kho↔Bếp trong cùng branch                                                              |
@@ -113,7 +113,7 @@ lịch sử (không rewrite). Đơn mua hàng dùng `next_po_display_id` và cù
 | Tiêu hao HRM      | `THB`  | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
 
 Prefix trong mã là identifier; câu UI vẫn dùng nhãn Việt (`phiếu nhập`, …).
-Canonical quyết định: `docs/plan/decisions.md` D087.
+Các cột trên và generated database types là contract hiện hành.
 
 ---
 
@@ -294,7 +294,7 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 6. Finance ghi nhận **Hóa đơn NCC** riêng, có thể đối chiếu nhiều GRN/PO cùng
    NCC; thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn.
 
-**Nguyên tắc D096:** `grn_items.po_applied_quantity` là phần thực nhận dùng
+**Nguyên tắc nhận hàng theo PO:** `grn_items.po_applied_quantity` là phần thực nhận dùng
 hoàn thành PO. Giá cuối cùng thuộc dòng Hóa đơn NCC đã xác nhận và được phân bổ
 vào GRN; PO không là nguồn giá. Kho không được nhận monetary payload từ server.
 

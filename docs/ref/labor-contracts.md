@@ -126,7 +126,7 @@ CREATE TABLE employees (
   bank_name               TEXT,
 
   -- Lương & BH
-  base_salary             NUMERIC(15,2),                            -- Lương gộp (payroll fallback đọc trực tiếp — D031)
+  base_salary             NUMERIC(15,2),                            -- Lương gộp; payroll fallback đọc trực tiếp
   insurance_base_salary   NUMERIC(15,2) NOT NULL DEFAULT 0,         -- Mức lương đóng BH (0 = BHXH off)
 
   -- Việc làm

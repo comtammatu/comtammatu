@@ -180,7 +180,7 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
   test(`resolveControlSurfaceCoreDeepNav returns no deep-nav group for the flat ${surface} module`, () => {
     // menu/orders/branches are flat single-page modules: their own primary
     // tab already links to the module, so no group duplicating that same
-    // leaf under itself is emitted (W2, D063).
+    // leaf under itself is emitted.
     const groups = resolveControlSurfaceCoreDeepNav("owner", surface);
     assert.deepEqual(
       groups,

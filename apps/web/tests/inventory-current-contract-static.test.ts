@@ -25,16 +25,15 @@ const retiredPermissionKeys = [
   "procurement:override_code_rotate",
 ];
 
-test("D096 is the current external purchasing authority", () => {
+test("D099 is the current external purchasing authority", () => {
   const decisions = read("docs/plan/decisions.md");
-  const current = decision(decisions, "D096");
+  const current = decision(decisions, "D099");
 
-  assert.match(current, /Yêu cầu mua/);
-  assert.match(current, /mỗi PO thuộc đúng một yêu cầu mua và một NCC/);
-  assert.match(current, /tối đa một\s+GRN nháp/);
-  assert.match(current, /đơn giá `0`/);
-  assert.match(current, /Trả hàng không tự giảm công nợ/);
-  assert.match(current, /Supersedes:[\s\S]*D091[\s\S]*D092/);
+  assert.match(current, /Nhu cầu mua/);
+  assert.match(current, /phân bổ/);
+  assert.match(current, /một PO\/NCC/);
+  assert.match(current, /một GRN nháp\/PO/);
+  assert.match(current, /Hóa đơn NCC/);
 });
 
 test("Inventory references expose one warehouse and physical rejection QC only", () => {
@@ -48,7 +47,7 @@ test("Inventory references expose one warehouse and physical rejection QC only",
   assert.match(sop, /lý do \+ ảnh là bắt buộc/);
   assert.match(sop, /Yêu cầu mua → PO theo NCC → GRN theo\s+ lần giao/);
   assert.match(inventory, /Chờ nhập hàng/);
-  assert.match(inventory, /receipt cost origin theo\s+giá vận hành tạm tính/);
+  assert.match(inventory, /giá thương mại chỉ đến từ Hóa đơn NCC/);
 
   for (const source of [inventory, sop, glossary]) {
     assert.doesNotMatch(source, /branch_kitchen|po_unit_price/);
@@ -185,10 +184,10 @@ test("D101 requires invoice valuation settlement instead of price history only",
   const decisions = read("docs/plan/decisions.md");
   const current = decision(decisions, "D101");
   const migration = read(
-    "supabase/migrations/20260730210000_inventory_valuation_subledger.sql",
+    "supabase/migrations/20260730155938_inventory_valuation_subledger.sql",
   );
 
-  assert.match(current, /moving WAC/);
+  assert.match(current, /moving WAC/i);
   assert.match(current, /Valuation subledger append-only/);
   assert.match(current, /không tăng số lượng lần hai/);
   assert.match(current, /legacy_purchase_price_variance/);

@@ -337,8 +337,7 @@
  * Update here only through the design-system contract.
  * ============================================================ */
 
-/* Override: Geist for headings + body, Geist Mono for data (D038 reverses
- * D032 — owner adopts the Má Tư Design System single-family roster). Geist is
+/* Geist for headings + body, Geist Mono for data. Geist is
  * loaded via the `geist` package (full Vietnamese glyph coverage, self-hosted,
  * offline) and exposes `--font-geist-sans` / `--font-geist-mono`. `font-mono`
  * (Geist Mono) stays mandatory for tabular use cases (price columns, IDs,

@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
 // command binds its literal database URL to a verified Preview Branch or the
-// registered Greenfield bootstrap target; psql
+// registered Production target; psql
 // writes against a protected or unverified connection; pg_restore toward a
 // protected or unverified target; HTTP writes plus non-catalog Production
 // reads; and
@@ -30,14 +30,12 @@ import { fileURLToPath } from "node:url";
 // shell string concatenation.
 
 const PROTECTED_REFS = {
-  iexwsuaqqenyjiskawoj: "RETIRED TARGET (matu-prod, frozen since baf3720f8)",
-  enloyfnuerqgaqderbwb:
-    "GREENFIELD TARGET (matu-greenfield-company, same repo)",
+  enloyfnuerqgaqderbwb: "PRODUCTION TARGET (CTCP Chén Sứ)",
 };
 
-const GREENFIELD_WRITE_REFS = new Set(["enloyfnuerqgaqderbwb"]);
+const REGISTERED_WRITE_REFS = new Set(["enloyfnuerqgaqderbwb"]);
 
-const APPROVED_PREVIEW_PARENT_REF = "iexwsuaqqenyjiskawoj";
+const APPROVED_PREVIEW_PARENT_REF = "enloyfnuerqgaqderbwb";
 
 const CODEX_CONFIG = new URL("../.codex/config.toml", import.meta.url);
 
@@ -54,7 +52,7 @@ const LIBPQ_UNVERIFIED_ENV = [
 function registeredReadableRef(ref) {
   return (
     ref === APPROVED_PREVIEW_PARENT_REF ||
-    GREENFIELD_WRITE_REFS.has(ref) ||
+    REGISTERED_WRITE_REFS.has(ref) ||
     trustedPreviewProject(ref) !== null
   );
 }
@@ -1529,10 +1527,9 @@ function block(reason) {
   console.error(
     [
       `[guard-prod-db] BLOCKED: ${reason}`,
-      "Environment Registry (docs/agent/rules/database.md): iexwsuaqqenyjiskawoj is the retired target matu-prod — guarded table/view/catalog reads only;",
-      "enloyfnuerqgaqderbwb is the same-repo Greenfield target — project/schema reads plus delegated bootstrap migration applies only;",
-      "matu-prod writes, project-admin actions, deploy relinks, and reactivation remain blocked",
-      "until a separate owner decision. Never disable this hook or its",
+      "Environment Registry (docs/agent/rules/database.md): enloyfnuerqgaqderbwb is the CTCP Chén Sứ Production target;",
+      "Production writes and migration applies require exact owner delegation.",
+      "Never disable this hook or its",
       "runtime wiring.",
     ].join("\n"),
   );
@@ -1592,8 +1589,17 @@ if (toolName === "Bash") {
 
   for (const segment of segments) {
     const detectedDatabaseClient = databaseClient(segment);
+    const segmentTokens = shellTokens(segment);
+    const cliCommandIndex = supabaseCommandIndex(segmentTokens);
+    const cliCommandName =
+      cliCommandIndex === -1
+        ? ""
+        : commandTokenBasename(segmentTokens[cliCommandIndex]);
     const cliArgs = supabaseCliArgs(segment);
     if (cliArgs) {
+      if (cliCommandName.startsWith("supabase@")) {
+        block("version-qualified Supabase CLI is not repository-pinned");
+      }
       const isReadOnly = readOnlySupabaseCli(cliArgs);
       const isUnboundSafe = unboundSafeSupabaseCli(cliArgs);
       const isDbPush = cliArgs[0] === "db" && cliArgs[1] === "push";
@@ -1618,8 +1624,7 @@ if (toolName === "Bash") {
         !hasCompetingCliTarget &&
         dbUrls.length === 1 &&
         readTargetRef !== null &&
-        readTargetRef !== APPROVED_PREVIEW_PARENT_REF &&
-        (GREENFIELD_WRITE_REFS.has(readTargetRef) ||
+        (REGISTERED_WRITE_REFS.has(readTargetRef) ||
           trustedPreviewProject(readTargetRef) !== null);
 
       if (isReadOnly) {
@@ -1646,7 +1651,7 @@ if (toolName === "Bash") {
       } else if (isDbPush) {
         if (!cliTargetsWritable) {
           block(
-            "Supabase db push without a verified Preview Branch or registered Greenfield target",
+            "Supabase db push without a verified Preview Branch or registered Production target",
           );
         }
       } else {
@@ -1802,7 +1807,8 @@ if (mcpMatch) {
     MCP_PROJECT_BOUND_ACTIONS.has(action) &&
     (!pinnedCodexProjectTool ||
       action === "create_branch" ||
-      action === "delete_branch")
+      action === "delete_branch" ||
+      (action !== "execute_sql" && !MCP_PROJECT_READ_ACTIONS.has(action)))
   ) {
     block(`${action} without an explicit project ref`);
   }
@@ -1811,14 +1817,14 @@ if (mcpMatch) {
   // Only a direct Codex repo server with a currently verified config may omit
   // project_id. Claude/plugin and connector-wrapped tools are org-scoped and
   // must always carry an explicit project ref.
-  const target = projectId === "" ? "iexwsuaqqenyjiskawoj" : projectId;
+  const target = projectId === "" ? "enloyfnuerqgaqderbwb" : projectId;
   const label = Object.hasOwn(PROTECTED_REFS, target)
     ? PROTECTED_REFS[target]
     : undefined;
-  const greenfield = GREENFIELD_WRITE_REFS.has(target);
+  const registeredWriteTarget = REGISTERED_WRITE_REFS.has(target);
   const preview = !label ? trustedPreviewProject(target) : null;
-  const approvedNonProd = greenfield || preview !== null;
-  if (!approvedNonProd && !label) {
+  const approvedTarget = registeredWriteTarget || preview !== null;
+  if (!approvedTarget && !label) {
     block(`${action} against unregistered Supabase ref ${target}`);
   }
 
@@ -1845,29 +1851,32 @@ if (mcpMatch) {
   }
 
   if (MCP_PROJECT_READ_ACTIONS.has(action)) {
-    if (approvedNonProd || MCP_PRODUCTION_READ_ACTIONS.has(action)) {
+    if (
+      preview !== null ||
+      (label && MCP_PRODUCTION_READ_ACTIONS.has(action))
+    ) {
       process.exit(0);
     }
     block(`${action} is outside the Production database catalog read allowlist`);
   }
 
-  if (greenfield) {
+  if (registeredWriteTarget) {
     if (action === "apply_migration") {
       process.exit(0);
     }
     if (action === "execute_sql") {
       if (!guardedReadOnlySql(executeQuery)) {
-        block("execute_sql write against the registered Greenfield target");
+        block("execute_sql write against the registered Production target");
       }
       const unsafeFunction = unsafeSqlFunction(executeQuery);
       if (unsafeFunction) {
         block(
-          `execute_sql calling non-whitelisted function ${unsafeFunction}() against the registered Greenfield target`,
+          `execute_sql calling non-whitelisted function ${unsafeFunction}() against the registered Production target`,
         );
       }
       process.exit(0);
     }
-    block(`${action} against the registered Greenfield target`);
+    block(`${action} against the registered Production target`);
   }
 
   if (preview !== null) {

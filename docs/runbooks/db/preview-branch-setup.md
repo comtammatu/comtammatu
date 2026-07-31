@@ -14,7 +14,7 @@ nới guard hay thay bằng Local Docker.
 
 ## Mô hình môi trường
 
-Production `iexwsuaqqenyjiskawoj` là database persistent duy nhất. Preview Branch
+Production `enloyfnuerqgaqderbwb` là database persistent duy nhất. Preview Branch
 là môi trường throwaway được tạo từ đúng parent này; không duy trì database
 non-production persistent riêng. `corepack pnpm lint:migration-lineage` kiểm tra active migration
 layout trước replay, nhưng không quyết định quyền tạo Preview.
@@ -47,7 +47,7 @@ xử lý lineage/runtime trước khi dùng branch làm evidence.
    đã xác minh, không dùng dữ liệu production, rồi xóa cả branch sau smoke.
 8. Chạy schema/RLS/RPC tests, smoke flow cần thiết và security advisors trên
    Preview đã được phép mutation.
-9. Sau khi migration được apply lên Greenfield type source theo quyền hiện hành,
+9. Sau khi migration được apply lên Production type source theo quyền hiện hành,
    chạy `corepack pnpm db:types` và review diff; Preview không phải type source
    của repository.
 10. Thu thập evidence: ref, migration versions, test result và cleanup result.

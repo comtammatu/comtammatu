@@ -152,7 +152,7 @@ export function OrdersClient({
   );
   const [isPending, startTransition] = useTransition();
   // xl:+ swaps the OrderDetailSheet slide-over for an inline master-detail
-  // right column (design decision D063 W4b) — same OrderDetailContent body,
+  // right column — same OrderDetailContent body,
   // two mount points.
   const isXlUp = useIsXlUp();
   const controlSize = useFormControlSize();

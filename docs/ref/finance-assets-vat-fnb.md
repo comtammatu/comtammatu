@@ -835,5 +835,5 @@ hoặc policy chưa hoàn chỉnh.
 
 Nguồn chi tiết và cách áp dụng trong repo tiếp tục được quản lý tại
 `legal-framework-2026.md`, `einvoice-tax.md`, `operational-data-contract.md`,
-`einvoice-tax-greenfield-evidence.md`, `business-context.md`, `inventory.md` và
+`einvoice-tax-ctcp-evidence.md`, `business-context.md`, `inventory.md` và
 `docs/modules/finance.md`.

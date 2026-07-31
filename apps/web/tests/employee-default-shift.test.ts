@@ -8,14 +8,13 @@ import {
   type BranchShiftWindow,
 } from "../lib/staff-runtime/_lib/default-shift";
 
-// Real prod shift schedules: Đất Đỏ (morning 05–13, evening 15–22, with a
-// 13–15 gap) and Phước Hải (morning 05–13, evening 13–21, contiguous).
-const DAT_DO: BranchShiftWindow[] = [
+// Representative schedules cover a split window and contiguous handoff.
+const SPLIT_SHIFT: BranchShiftWindow[] = [
   { id: 1, start_time: "05:00:00", end_time: "13:00:00" },
   { id: 2, start_time: "15:00:00", end_time: "22:00:00" },
 ];
 
-const PHUOC_HAI: BranchShiftWindow[] = [
+const CONTIGUOUS_SHIFT: BranchShiftWindow[] = [
   { id: 3, start_time: "05:00:00", end_time: "13:00:00" },
   { id: 4, start_time: "13:00:00", end_time: "21:00:00" },
 ];
@@ -26,48 +25,48 @@ function minutes(hhmm: string): number {
 }
 
 test("đang trong ca → chọn ca đang diễn ra", () => {
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("06:30")), 1);
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("18:00")), 2);
-  assert.equal(resolveDefaultShiftId(PHUOC_HAI, minutes("14:00")), 4);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("06:30")), 1);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("18:00")), 2);
+  assert.equal(resolveDefaultShiftId(CONTIGUOUS_SHIFT, minutes("14:00")), 4);
 });
 
 test("biên giờ chuyển ca liền nhau → ưu tiên ca bắt đầu sớm hơn khi cả hai đều khớp", () => {
   // 13:00 is both the morning end and the evening start (windows closed on both ends)
-  assert.equal(resolveDefaultShiftId(PHUOC_HAI, minutes("13:00")), 3);
+  assert.equal(resolveDefaultShiftId(CONTIGUOUS_SHIFT, minutes("13:00")), 3);
 });
 
 test("khoảng trống giữa hai ca → chọn ca gần khung giờ nhất", () => {
   // 13:30: 30' past the morning end < 90' before the evening start
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("13:30")), 1);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("13:30")), 1);
   // 14:30: 30' before the evening start < 90' past the morning end
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("14:30")), 2);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("14:30")), 2);
 });
 
 test("ca đã kết trong ngày không chặn ca tiếp theo", () => {
   assert.equal(
-    resolveDefaultShiftId(DAT_DO, minutes("13:30"), new Set([1])),
+    resolveDefaultShiftId(SPLIT_SHIFT, minutes("13:30"), new Set([1])),
     2,
   );
   assert.equal(
-    resolveDefaultShiftId(PHUOC_HAI, minutes("13:00"), new Set([3])),
+    resolveDefaultShiftId(CONTIGUOUS_SHIFT, minutes("13:00"), new Set([3])),
     4,
   );
 });
 
 test("khi mọi ca gần giờ hiện tại đã kết → giữ ca gần nhất", () => {
   assert.equal(
-    resolveDefaultShiftId(DAT_DO, minutes("22:30"), new Set([1, 2])),
+    resolveDefaultShiftId(SPLIT_SHIFT, minutes("22:30"), new Set([1, 2])),
     2,
   );
 });
 
 test("đến sớm trước ca sáng → chọn ca sáng", () => {
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("04:30")), 1);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("04:30")), 1);
 });
 
 test("khuya sau ca tối → chọn ca tối vừa kết thúc, không nhảy sang ca sáng hôm sau", () => {
   // 22:30: 30' past the evening end < 390' before tomorrow's morning start
-  assert.equal(resolveDefaultShiftId(DAT_DO, minutes("22:30")), 2);
+  assert.equal(resolveDefaultShiftId(SPLIT_SHIFT, minutes("22:30")), 2);
 });
 
 test("ca qua đêm → rạng sáng vẫn khớp ca bắt đầu tối hôm trước", () => {

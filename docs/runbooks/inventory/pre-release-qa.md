@@ -54,11 +54,11 @@ visual contract: `docs/spec/design-system.md` và
 ## 3b. Edge-case matrix (smoke bổ sung)
 
 Ưu tiên theo mức rủi ro dữ liệu. Ghi PASS/FAIL + ID chứng cứ bên cạnh mỗi ô.
-Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = chưa smoke.
+Cột "Kết quả" ghi lần smoke gần nhất trên Production; ô trống = chưa smoke.
 
 ### P0 — Confirm / mutation UX
 
-| Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
+| Case | Kỳ vọng | Kết quả (Production 2026-07-28) |
 | --- | --- | --- |
 | PO Duyệt mua → Cancel / Esc / overlay | Dialog đóng; PO vẫn `draft`; không toast success | PASS — PO-2026-0009 giữ `draft`, không toast |
 | PO Duyệt mua → Confirm | Dialog mở từ menu/sheet; status → `sent`; pending CTA disable trong lúc RPC | PASS — PO-2026-0009 → `sent`, đúng 1 audit `inventory.po.approved` |
@@ -67,7 +67,7 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 
 ### P0 — Permission / scope
 
-| Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
+| Case | Kỳ vọng | Kết quả (Production 2026-07-28) |
 | --- | --- | --- |
 | Actor thiếu `procurement:po_approve` | CTA ẩn/disabled; deep call fail closed, không raw SQL | PASS — PO-2026-0005 giữ `draft`; RPC trả `42501 forbidden`; tạo PO cũng bị chặn |
 | Sai branch khi tạo PO từ GRN | Reject; không tạo PO hoặc stock ở branch khác | |
@@ -76,18 +76,18 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 
 ### P1 — GRN / stock
 
-| Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
+| Case | Kỳ vọng | Kết quả (Production 2026-07-28) |
 | --- | --- | --- |
 | GRN → PO có giá/đã duyệt → confirm | PO → `received`; stock chỉ tăng phần `received_quantity - rejected_quantity` | |
 | Hàng từ chối thiếu lý do hoặc ảnh | Confirm fail closed; bổ sung đủ bằng chứng thì confirm được | |
 | Giá PO lệch lớn | Không chặn confirm nếu PO đã duyệt và QC vật lý hợp lệ | |
 | Double confirm cùng GRN | Không post movement lần 2 | PASS — GRN-4a6add8c: 1 movement, lệnh thua `22023` |
-| Entry unit ≠ base unit | Quy đổi đúng ladder; không cộng nhầm entry/base | Chưa smoke — seed Greenfield chỉ có ladder 1 bậc (kg) |
+| Entry unit ≠ base unit | Quy đổi đúng ladder; không cộng nhầm entry/base | Chưa smoke — seed Production chỉ có ladder 1 bậc (kg) |
 | Xóa GRN draft / hủy trước chốt | Không đụng `stock_levels` | |
 
 ### P1 — Production / consumption
 
-| Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
+| Case | Kỳ vọng | Kết quả (Production 2026-07-28) |
 | --- | --- | --- |
 | Start khi thiếu NVL | Fail rõ; không tạo FG ảo | PASS — run 2: `insufficient_stock_for_production`, 0 movement, DETAIL đủ `needed`/`on_hand` cho Sheet cứu hộ |
 | Complete hai lần cùng run | Không trừ NVL / cộng FG lần 2 | PASS — run 3 (re-confirm bị chặn) + run 4 (song song: 2 movement) |
@@ -96,7 +96,7 @@ Cột "Kết quả" ghi lần smoke gần nhất trên Greenfield; ô trống = 
 
 ### P1 — Stocktake / transfer
 
-| Case | Kỳ vọng | Kết quả (Greenfield 2026-07-28) |
+| Case | Kỳ vọng | Kết quả (Production 2026-07-28) |
 | --- | --- | --- |
 | Hai phiên stocktake in-progress cùng branch | Bị chặn theo contract | PASS — phiên 2 bị chặn ở unique constraint; chỉ 1 `in_progress` |
 | Complete stocktake retry | Chỉ một `count_adjustment` | PASS — session 1: 1 movement `-0.3`, retry trả `session_not_in_progress` |

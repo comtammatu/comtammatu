@@ -161,11 +161,11 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
-Generate database types from the registered Greenfield schema only after the
+Generate database types from the registered Production schema only after the
 migration is applied:
 
 ```bash
-SUPABASE_PROJECT_ID=REGISTERED_GREENFIELD_REF corepack pnpm db:types
+SUPABASE_PROJECT_ID=REGISTERED_PRODUCTION_REF corepack pnpm db:types
 ```
 
 Full setup: `docs/ref/setup.md`. Preview database setup:

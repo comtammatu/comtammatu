@@ -107,7 +107,7 @@ Screen context and user job
 ```
 
 `UI Block` is recipe metadata, not a `blocks/` component library and not an
-importable `*Block` component layer (D086). Add a block recipe only when at
+importable `*Block` component layer. Add a block recipe only when at
 least two real consumers share the composition, or when a named critical
 workflow needs one approved exemplar. When a composition becomes reusable code,
 promote it to a registered **Adapter** (app or domain) — for example
@@ -320,7 +320,7 @@ Rules:
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra font families.
-- Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions. The roster is Be Vietnam Pro (headings) + Geist (body) + Geist Mono (data). `Be Vietnam Pro` is approved as the heading face (per D039); other fonts on the legacy forbid-list remain forbidden.
+- Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions. The roster is Be Vietnam Pro (headings) + Geist (body) + Geist Mono (data). `Be Vietnam Pro` is the approved heading face; other fonts on the legacy forbid-list remain forbidden.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
@@ -587,7 +587,7 @@ Rules:
 - New code must not invent `Owner*` / `Ops*` / `Management*` as product-plane prefixes for chrome. L0 chrome wiring is `ControlSurfaceShell` only (Wave2).
 - Domain aliases (e.g. historic `InventoryListFrame`) must delegate 100% to a canonical adapter, stay registered, and prefer converging consumers onto `AppListFrame`.
 - Do not add a third parallel page-kit family beside `App*` and `BranchOperator*` / `Employee*` without an ADR.
-- UI block recipe ids stay kebab-case metadata; never ship importable `*Block` components (D086).
+- UI block recipe ids stay kebab-case metadata; never ship importable `*Block` components.
 
 ## Component Authority
 

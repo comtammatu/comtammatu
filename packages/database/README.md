@@ -3,7 +3,7 @@
 Supabase clients and generated types for the monorepo.
 
 - Browser / server / service / middleware clients
-- Generated `Database` types from the greenfield type-source schema
+- Generated `Database` types from the Production type-source schema
 
 ```bash
 corepack pnpm db:types   # regenerate after migration applied to type source

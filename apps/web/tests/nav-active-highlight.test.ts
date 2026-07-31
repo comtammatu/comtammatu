@@ -86,12 +86,12 @@ test("mobile Owner surface bottom nav reuses the shell nav model", () => {
   assert.match(
     bottomNav,
     /className="lg:hidden"/,
-    "management bottom nav spans phone + tablet portrait; only desktop (lg) shows the fixed sidebar (D090)",
+    "management bottom nav spans phone + tablet portrait; only desktop (lg) shows the fixed sidebar",
   );
   assert.match(
     appShell,
     /showBottomNav \? "pb-24 lg:pb-0"/,
-    "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint (D090)",
+    "AppShell bottom padding must reserve bottom-nav space through tablet portrait, matching the lg bottom-nav breakpoint",
   );
   assert.match(
     appShell,

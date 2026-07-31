@@ -19,7 +19,7 @@ const CODEX_CONFIG_PATH = ".codex/config.toml";
 const ADAPTER_PATHS = [".claude/settings.json", ".codex/hooks.json"];
 const TYPEGEN_PATH = "scripts/gen-types.mjs";
 const E2E_BRINGUP_PATH = "scripts/supabase-e2e-bringup.mjs";
-const GREENFIELD_PUSH_PATH = "scripts/supabase-greenfield-push.mjs";
+const PRODUCTION_PUSH_PATH = "scripts/supabase-production-push.mjs";
 const VERCEL_ENV_GUARD_PATH = "scripts/check-preview-supabase-env.mjs";
 
 const errors = [];
@@ -79,26 +79,28 @@ if (hookSource.includes("APPROVED_NON_PROD_REFS")) {
   fail(`${HOOK_PATH}: broad non-production allowlist must not return`);
 }
 
-const documentedGreenfieldRefs = [
+const documentedProductionRefs = [
   ...registrySection.matchAll(
-    /^\|\s*`([a-z0-9]{20})`\s*\|\s*\*\*GREENFIELD\*\*/gm,
+    /^\|\s*`([a-z0-9]{20})`\s*\|\s*\*\*PRODUCTION\*\*/gm,
   ),
 ].map((match) => match[1]);
-const greenfieldBlock = hookSource.match(
-  /const GREENFIELD_WRITE_REFS = new Set\(\[([\s\S]*?)\]\);/,
+const registeredWriteBlock = hookSource.match(
+  /const REGISTERED_WRITE_REFS = new Set\(\[([\s\S]*?)\]\);/,
 );
-const hookGreenfieldRefs = greenfieldBlock
-  ? [...greenfieldBlock[1].matchAll(/"([a-z0-9]{20})"/g)].map(
+const hookRegisteredWriteRefs = registeredWriteBlock
+  ? [...registeredWriteBlock[1].matchAll(/"([a-z0-9]{20})"/g)].map(
       (match) => match[1],
     )
   : [];
 if (
-  documentedGreenfieldRefs.length === 0 ||
-  documentedGreenfieldRefs.length !== hookGreenfieldRefs.length ||
-  documentedGreenfieldRefs.some((ref) => !hookGreenfieldRefs.includes(ref))
+  documentedProductionRefs.length !== 1 ||
+  documentedProductionRefs.length !== hookRegisteredWriteRefs.length ||
+  documentedProductionRefs.some(
+    (ref) => !hookRegisteredWriteRefs.includes(ref),
+  )
 ) {
   fail(
-    `${HOOK_PATH}: GREENFIELD_WRITE_REFS must exactly match Environment Registry GREENFIELD rows.`,
+    `${HOOK_PATH}: REGISTERED_WRITE_REFS must exactly match the Environment Registry Production row.`,
   );
 }
 
@@ -117,16 +119,16 @@ if (hookPreviewParentRef !== documentedProdRef) {
   );
 }
 const documentedVercelCandidate = registrySection.match(
-  /^\|\s*`(prj_[A-Za-z0-9]+)`\s*\|\s*`matu-greenfield-company`\s*\|\s*`([a-z0-9]{20})`\s*\|\s*Sole allowed Production deploy target\.\s*\|$/m,
+  /^\|\s*`(prj_[A-Za-z0-9]+)`\s*\|\s*`comtammatu`\s*\|\s*`([a-z0-9]{20})`\s*\|\s*Sole allowed Production deploy target\.\s*\|$/m,
 );
 const documentedVercelProjectId = documentedVercelCandidate?.[1];
 const documentedVercelSupabaseRef = documentedVercelCandidate?.[2];
 if (
   !documentedVercelProjectId ||
-  documentedVercelSupabaseRef !== documentedGreenfieldRefs[0]
+  documentedVercelSupabaseRef !== documentedProductionRefs[0]
 ) {
   fail(
-    `${REGISTRY_PATH}: Vercel candidate must bind one project ID to the registered Greenfield ref`,
+    `${REGISTRY_PATH}: Vercel Production must bind one project ID to the registered Production ref`,
   );
 }
 if (!fs.existsSync(path.join(REPO_ROOT, CODEX_CONFIG_PATH))) {
@@ -299,13 +301,13 @@ if (!fs.existsSync(typegenPath)) {
   const typegenSource = fs.readFileSync(typegenPath, "utf8");
   if (
     !typegenSource.includes(
-      `const TYPE_SOURCE_PROJECT_ID = "${documentedGreenfieldRefs[0]}";`,
+      `const TYPE_SOURCE_PROJECT_ID = "${documentedProductionRefs[0]}";`,
     ) ||
     typegenSource.includes(".env.local") ||
     !typegenSource.includes("requestedProjectId !== TYPE_SOURCE_PROJECT_ID")
   ) {
     fail(
-      `${TYPEGEN_PATH}: typegen must bind only to registered Greenfield without .env.local or stored-link fallback`,
+      `${TYPEGEN_PATH}: typegen must bind only to registered Production without .env.local or stored-link fallback`,
     );
   }
   const rejectedTarget = spawnSync("node", [typegenPath], {
@@ -314,7 +316,7 @@ if (!fs.existsSync(typegenPath)) {
     encoding: "utf8",
   });
   if (rejectedTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must reject any non-Greenfield type source`);
+    fail(`${TYPEGEN_PATH}: must reject any non-Production type source`);
   }
   const missingTarget = spawnSync("node", [typegenPath], {
     cwd: REPO_ROOT,
@@ -322,7 +324,7 @@ if (!fs.existsSync(typegenPath)) {
     encoding: "utf8",
   });
   if (missingTarget.status === 0) {
-    fail(`${TYPEGEN_PATH}: must require an explicit Greenfield type source`);
+    fail(`${TYPEGEN_PATH}: must require an explicit Production type source`);
   }
 }
 
@@ -351,30 +353,29 @@ if (!fs.existsSync(e2eBringupPath)) {
   }
 }
 
-const greenfieldPushPath = path.join(REPO_ROOT, GREENFIELD_PUSH_PATH);
-if (!fs.existsSync(greenfieldPushPath)) {
-  fail(`${GREENFIELD_PUSH_PATH} does not exist`);
+const productionPushPath = path.join(REPO_ROOT, PRODUCTION_PUSH_PATH);
+if (!fs.existsSync(productionPushPath)) {
+  fail(`${PRODUCTION_PUSH_PATH} does not exist`);
 } else {
-  const greenfieldPushSource = fs.readFileSync(greenfieldPushPath, "utf8");
+  const productionPushSource = fs.readFileSync(productionPushPath, "utf8");
   if (
-    !greenfieldPushSource.includes(
-      `const GREENFIELD_PROJECT_REF = "${documentedGreenfieldRefs[0]}";`,
+    !productionPushSource.includes(
+      `const PRODUCTION_PROJECT_REF = "${documentedProductionRefs[0]}";`,
     ) ||
-    !greenfieldPushSource.includes('env["SUPABASE_DB_URL"]') ||
-    !greenfieldPushSource.includes('"--db-url"') ||
-    !greenfieldPushSource.includes("url.href") ||
-    greenfieldPushSource.includes(documentedProdRef)
+    !productionPushSource.includes('env["SUPABASE_DB_URL"]') ||
+    !productionPushSource.includes('"--db-url"') ||
+    !productionPushSource.includes("url.href")
   ) {
     fail(
-      `${GREENFIELD_PUSH_PATH}: must bind the full secret URL only to the registered Greenfield ref`,
+      `${PRODUCTION_PUSH_PATH}: must bind the full secret URL only to the registered Production ref`,
     );
   }
-  const selfTest = spawnSync("node", [greenfieldPushPath, "--self-test"], {
+  const selfTest = spawnSync("node", [productionPushPath, "--self-test"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
   if (selfTest.status !== 0) {
-    fail(`${GREENFIELD_PUSH_PATH}: self-test failed`);
+    fail(`${PRODUCTION_PUSH_PATH}: self-test failed`);
   }
 }
 
@@ -385,10 +386,10 @@ if (!fs.existsSync(vercelEnvGuardPath)) {
   const vercelEnvGuardSource = fs.readFileSync(vercelEnvGuardPath, "utf8");
   if (
     !vercelEnvGuardSource.includes(
-      `const GREENFIELD_VERCEL_PROJECT_ID = "${documentedVercelProjectId}";`,
+      `const PRODUCTION_VERCEL_PROJECT_ID = "${documentedVercelProjectId}";`,
     ) ||
     !vercelEnvGuardSource.includes(
-      `const GREENFIELD_SUPABASE_REF = "${documentedVercelSupabaseRef}";`,
+      `const PRODUCTION_SUPABASE_REF = "${documentedVercelSupabaseRef}";`,
     )
   ) {
     fail(
@@ -407,8 +408,7 @@ if (!fs.existsSync(vercelEnvGuardPath)) {
 // 4. Behavior fixtures: replay canonical tool calls through the hook and
 // assert exit codes, so blocking cannot silently regress. Fixture strings
 // here are file contents — the runtime hooks only scan Bash command lines.
-const PROD = documentedProdRef ?? "iexwsuaqqenyjiskawoj";
-const GREENFIELD = documentedGreenfieldRefs[0] ?? "enloyfnuerqgaqderbwb";
+const PROD = documentedProdRef ?? "enloyfnuerqgaqderbwb";
 const UNREGISTERED_REF = "abcdefghijklmnopqrst";
 const TRUSTED_PREVIEW = "prvwabcdefghijklmnop";
 const WRONG_PARENT_PREVIEW = "wrngabcdefghijklmnop";
@@ -567,14 +567,14 @@ const FIXTURES = [
     ),
   ],
   [
-    "allow: supabase db push with explicit registered Greenfield URL",
+    "allow: supabase db push with explicit registered Production URL",
     0,
     bash(
-      `supabase db push --db-url postgres://u@db.${GREENFIELD}.supabase.co/postgres`,
+      `supabase db push --db-url postgres://u@db.${PROD}.supabase.co/postgres`,
     ),
   ],
   [
-    "block: session pooler cannot target Production",
+    "block: raw Session Pooler command cannot bypass the Production wrapper",
     2,
     bash(
       `supabase db push --db-url postgres://postgres.${PROD}@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`,
@@ -699,8 +699,8 @@ const FIXTURES = [
     bash(`echo ${UNREGISTERED_REF} && supabase db push`),
   ],
   [
-    "block: production db-url plus Preview comment",
-    2,
+    "allow: registered Production db-url is not changed by a comment",
+    0,
     bash(
       `supabase db push --db-url postgres://u@db.${PROD}.supabase.co/postgres # ${UNREGISTERED_REF}`,
     ),
@@ -1317,23 +1317,23 @@ const FIXTURES = [
     mcp("update_storage_config", { project_id: UNREGISTERED_REF, file_size_limit: 1 }),
   ],
   [
-    "block: mcp update_storage_config remains unsupported on Greenfield",
+    "block: mcp update_storage_config remains unsupported on Production",
     2,
-    mcp("update_storage_config", { project_id: GREENFIELD, file_size_limit: 1 }),
+    mcp("update_storage_config", { project_id: PROD, file_size_limit: 1 }),
   ],
   [
-    "block: mcp execute_sql write remains unsupported on Greenfield",
+    "block: mcp execute_sql write remains unsupported on Production",
     2,
     mcp("execute_sql", {
-      project_id: GREENFIELD,
+      project_id: PROD,
       query: "update orders set note = null",
     }),
   ],
   [
-    "allow: mcp execute_sql read vs registered Greenfield",
+    "allow: mcp execute_sql read vs registered Production",
     0,
     mcp("execute_sql", {
-      project_id: GREENFIELD,
+      project_id: PROD,
       query: "select count(*) from information_schema.tables",
     }),
   ],
@@ -1806,10 +1806,10 @@ const FIXTURES = [
     mcp("list_tables", { project_id: PROD, schemas: ["public"] }),
   ],
   [
-    "allow: connector MCP table read vs registered Greenfield",
+    "allow: connector MCP table read vs registered Production",
     0,
     mcpConnectorLive("list_tables", {
-      project_id: GREENFIELD,
+      project_id: PROD,
       schemas: ["public"],
     }),
   ],
@@ -2071,10 +2071,10 @@ const FIXTURES = [
     mcp("apply_migration", { project_id: TRUSTED_PREVIEW }),
   ],
   [
-    "allow: connector MCP migration vs registered Greenfield",
+    "allow: connector MCP migration vs registered Production",
     0,
     mcpConnectorLive("apply_migration", {
-      project_id: GREENFIELD,
+      project_id: PROD,
       name: "bootstrap_probe",
       query: "select 1",
     }),

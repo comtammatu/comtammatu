@@ -85,7 +85,7 @@ test("warehouse can edit an unallocated pending demand without reopening draft",
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
   const migration = read(
-    "supabase/migrations/20260730196000_allow_pending_demand_edit_before_allocation.sql",
+    "supabase/migrations/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );
 
   assert.match(

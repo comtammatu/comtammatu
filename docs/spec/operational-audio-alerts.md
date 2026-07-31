@@ -1,7 +1,7 @@
 # Operational Audio Alerts
 
 > Status: implemented contract | Updated: 2026-07-11 | Scope: device-local beep + voice alerts on open POS/KDS surfaces\
-> Decision: `docs/plan/adr/0008-operational-audio-alerts.md` (voice engine amended to browser TTS, D074)
+> Decision: `docs/plan/adr/0008-operational-audio-alerts.md`
 
 ## UI Scope Declaration
 

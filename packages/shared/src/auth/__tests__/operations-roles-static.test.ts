@@ -113,7 +113,7 @@ test("D091 dashboard keeps the selected central site kind", () => {
   );
 });
 
-test("D098 accountant reviews PO while invoice lines own purchase prices", () => {
+test("accountant reviews PO while invoice lines own purchase prices", () => {
   const action = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );

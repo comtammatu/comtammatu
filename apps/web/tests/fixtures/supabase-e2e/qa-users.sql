@@ -5,22 +5,22 @@
 -- Copied only into the isolated CI scratch project by scripts/supabase-e2e-bringup.mjs.
 --
 -- Điều kiện:
---   - Tenant slug `comtammatu`; seed tenant có "Chi nhánh Đất Đỏ",
---     "Chi nhánh Phước Hải" (migration 20260401000002_seed_tenant.sql).
+--   - Tenant slug `comtammatu`; seed tenant có "Chi nhánh Nguyễn Hữu Thọ"
+--     và "Chi nhánh QA".
 --
 -- Step 0: normalize seeded operating branch records without touching central sites.
 --
 -- Tài khoản QA được seed (password: Test1234!):
 --   • owner@comtammatu.vn              – owner (tenant-level)
 --   • keeper@comtammatu.vn       – owner (keeper, không bị xoá)
---   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
---   • cashier.datdo@comtammatu.vn      – cashier Đất Đỏ
---   • cashier.service.datdo@comtammatu.vn – cashier service Đất Đỏ
---   • chef.datdo@comtammatu.vn         – chef Đất Đỏ
---   • manager.phuochai@comtammatu.vn   – branch_manager Phước Hải
---   • cashier.phuochai@comtammatu.vn   – cashier Phước Hải
---   • cashier.service.phuochai@comtammatu.vn – cashier service Phước Hải
---   • chef.phuochai@comtammatu.vn      – chef Phước Hải
+--   • manager.nguyenhuutho@comtammatu.vn – branch_manager Nguyễn Hữu Thọ
+--   • cashier.nguyenhuutho@comtammatu.vn – cashier Nguyễn Hữu Thọ
+--   • cashier.service.nguyenhuutho@comtammatu.vn – cashier service Nguyễn Hữu Thọ
+--   • chef.nguyenhuutho@comtammatu.vn – chef Nguyễn Hữu Thọ
+--   • manager.qa@comtammatu.vn        – branch_manager QA
+--   • cashier.qa@comtammatu.vn        – cashier QA
+--   • cashier.service.qa@comtammatu.vn – cashier service QA
+--   • chef.qa@comtammatu.vn           – chef QA
 --
 -- Idempotent: DELETE user theo email (CASCADE profile + employees) rồi INSERT lại.
 --
@@ -46,7 +46,7 @@ BEGIN
   SET branch_kind = 'branch',
       updated_at = now()
   WHERE tenant_id = v_tenant
-    AND name IN ('Chi nhánh Đất Đỏ', 'Chi nhánh Phước Hải')
+    AND name IN ('Chi nhánh Nguyễn Hữu Thọ', 'Chi nhánh QA')
     AND branch_kind IS DISTINCT FROM 'branch';
 
   INSERT INTO public.branches (tenant_id, name, branch_kind, is_active)
@@ -79,14 +79,14 @@ DECLARE
   v_keeper UUID := 'a0000002-0000-4000-8000-000000000002'::uuid; -- keeper
   v_to_delete UUID[] := ARRAY[
     'a0000001-0000-4000-8000-000000000001'::uuid, -- owner
-    'a0000003-0000-4000-8000-000000000003'::uuid, -- manager.datdo
-    'a0000004-0000-4000-8000-000000000004'::uuid, -- cashier.datdo
-    'a0000005-0000-4000-8000-000000000005'::uuid, -- cashier.service.datdo
-    'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.datdo
-    'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.phuochai
-    'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.phuochai
-    'a000000d-0000-4000-8000-00000000000d'::uuid, -- cashier.service.phuochai
-    'a000000e-0000-4000-8000-00000000000e'::uuid  -- chef.phuochai
+    'a0000003-0000-4000-8000-000000000003'::uuid, -- manager.nguyenhuutho
+    'a0000004-0000-4000-8000-000000000004'::uuid, -- cashier.nguyenhuutho
+    'a0000005-0000-4000-8000-000000000005'::uuid, -- cashier.service.nguyenhuutho
+    'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.nguyenhuutho
+    'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.qa
+    'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.qa
+    'a000000d-0000-4000-8000-00000000000d'::uuid, -- cashier.service.qa
+    'a000000e-0000-4000-8000-00000000000e'::uuid  -- chef.qa
   ];
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
@@ -148,21 +148,21 @@ $$;
 DELETE FROM auth.users
 WHERE email IN (
   'owner@comtammatu.vn',
-  'manager.datdo@comtammatu.vn',
-  'cashier.datdo@comtammatu.vn',
-  'cashier.service.datdo@comtammatu.vn',
-  'chef.datdo@comtammatu.vn',
-  'cashier.phuochai@comtammatu.vn',
-  'manager.phuochai@comtammatu.vn',
-  'cashier.service.phuochai@comtammatu.vn',
-  'chef.phuochai@comtammatu.vn'
+  'manager.nguyenhuutho@comtammatu.vn',
+  'cashier.nguyenhuutho@comtammatu.vn',
+  'cashier.service.nguyenhuutho@comtammatu.vn',
+  'chef.nguyenhuutho@comtammatu.vn',
+  'cashier.qa@comtammatu.vn',
+  'manager.qa@comtammatu.vn',
+  'cashier.service.qa@comtammatu.vn',
+  'chef.qa@comtammatu.vn'
 );
 
 DO $$
 DECLARE
   v_tenant   BIGINT;
-  v_datdo    BIGINT;
-  v_phuochai BIGINT;
+  v_nguyen_huu_tho BIGINT;
+  v_qa              BIGINT;
   v_keeper   UUID := 'a0000002-0000-4000-8000-000000000002'::uuid;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
@@ -171,11 +171,11 @@ DECLARE
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
 
-  SELECT id INTO v_datdo FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Đất Đỏ' LIMIT 1;
-  SELECT id INTO v_phuochai FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Phước Hải' LIMIT 1;
+  SELECT id INTO v_nguyen_huu_tho FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Nguyễn Hữu Thọ' LIMIT 1;
+  SELECT id INTO v_qa FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh QA' LIMIT 1;
 
-  IF v_datdo IS NULL OR v_phuochai IS NULL THEN
-    RAISE EXCEPTION 'Thiếu Chi nhánh Đất Đỏ hoặc Chi nhánh Phước Hải.';
+  IF v_nguyen_huu_tho IS NULL OR v_qa IS NULL THEN
+    RAISE EXCEPTION 'Thiếu Chi nhánh Nguyễn Hữu Thọ hoặc Chi nhánh QA.';
   END IF;
 
   FOR r IN
@@ -185,21 +185,21 @@ BEGIN
       UNION ALL
       SELECT 'a0000002-0000-4000-8000-000000000002'::uuid, 'keeper@comtammatu.vn'::text, 'owner'::text, NULL::bigint, 'Owner (keeper)'::text, 'EMP-KEEPER'::text
       UNION ALL
-      SELECT 'a0000003-0000-4000-8000-000000000003'::uuid, 'manager.datdo@comtammatu.vn'::text, 'branch_manager'::text, v_datdo, 'QL Chi nhánh Đất Đỏ'::text, 'EMP-MGR-DD'::text
+      SELECT 'a0000003-0000-4000-8000-000000000003'::uuid, 'manager.nguyenhuutho@comtammatu.vn'::text, 'branch_manager'::text, v_nguyen_huu_tho, 'QL Chi nhánh Nguyễn Hữu Thọ'::text, 'EMP-MGR-NHT'::text
       UNION ALL
-      SELECT 'a0000004-0000-4000-8000-000000000004'::uuid, 'cashier.datdo@comtammatu.vn'::text, 'cashier'::text, v_datdo, 'Thu ngân Đất Đỏ'::text, 'EMP-CASH-DD'::text
+      SELECT 'a0000004-0000-4000-8000-000000000004'::uuid, 'cashier.nguyenhuutho@comtammatu.vn'::text, 'cashier'::text, v_nguyen_huu_tho, 'Thu ngân Nguyễn Hữu Thọ'::text, 'EMP-CASH-NHT'::text
       UNION ALL
-      SELECT 'a0000005-0000-4000-8000-000000000005'::uuid, 'cashier.service.datdo@comtammatu.vn'::text, 'cashier'::text, v_datdo, 'Thu ngân phục vụ Đất Đỏ'::text, 'EMP-CASH-SVC-DD'::text
+      SELECT 'a0000005-0000-4000-8000-000000000005'::uuid, 'cashier.service.nguyenhuutho@comtammatu.vn'::text, 'cashier'::text, v_nguyen_huu_tho, 'Thu ngân phục vụ Nguyễn Hữu Thọ'::text, 'EMP-CASH-SVC-NHT'::text
       UNION ALL
-      SELECT 'a0000006-0000-4000-8000-000000000006'::uuid, 'chef.datdo@comtammatu.vn'::text, 'chef'::text, v_datdo, 'Bếp Đất Đỏ'::text, 'EMP-CHEF-DD'::text
+      SELECT 'a0000006-0000-4000-8000-000000000006'::uuid, 'chef.nguyenhuutho@comtammatu.vn'::text, 'chef'::text, v_nguyen_huu_tho, 'Bếp Nguyễn Hữu Thọ'::text, 'EMP-CHEF-NHT'::text
       UNION ALL
-      SELECT 'a0000007-0000-4000-8000-000000000007'::uuid, 'cashier.phuochai@comtammatu.vn'::text, 'cashier'::text, v_phuochai, 'Thu ngân Phước Hải'::text, 'EMP-CASH-PH'::text
+      SELECT 'a0000007-0000-4000-8000-000000000007'::uuid, 'cashier.qa@comtammatu.vn'::text, 'cashier'::text, v_qa, 'Thu ngân QA'::text, 'EMP-CASH-QA'::text
       UNION ALL
-      SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.phuochai@comtammatu.vn'::text, 'branch_manager'::text, v_phuochai, 'QL Chi nhánh Phước Hải'::text, 'EMP-MGR-PH'::text
+      SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.qa@comtammatu.vn'::text, 'branch_manager'::text, v_qa, 'QL Chi nhánh QA'::text, 'EMP-MGR-QA'::text
       UNION ALL
-      SELECT 'a000000d-0000-4000-8000-00000000000d'::uuid, 'cashier.service.phuochai@comtammatu.vn'::text, 'cashier'::text, v_phuochai, 'Thu ngân phục vụ Phước Hải'::text, 'EMP-CASH-SVC-PH'::text
+      SELECT 'a000000d-0000-4000-8000-00000000000d'::uuid, 'cashier.service.qa@comtammatu.vn'::text, 'cashier'::text, v_qa, 'Thu ngân phục vụ QA'::text, 'EMP-CASH-SVC-QA'::text
       UNION ALL
-      SELECT 'a000000e-0000-4000-8000-00000000000e'::uuid, 'chef.phuochai@comtammatu.vn'::text, 'chef'::text, v_phuochai, 'Bếp Phước Hải'::text, 'EMP-CHEF-PH'::text
+      SELECT 'a000000e-0000-4000-8000-00000000000e'::uuid, 'chef.qa@comtammatu.vn'::text, 'chef'::text, v_qa, 'Bếp QA'::text, 'EMP-CHEF-QA'::text
     ) q
   LOOP
     v_crypt := extensions.crypt(v_pw, extensions.gen_salt('bf'));
@@ -335,7 +335,7 @@ BEGIN
 END;
 $$;
 
--- ─── QA fixture: a pending annual leave for cashier.datdo so preview branches can
+-- ─── QA fixture: a pending annual leave for the Nguyễn Hữu Thọ cashier so CI can
 -- exercise the HR leave approve/reject + notification flow. Guarded: a fixture
 -- failure raises a WARNING and never aborts the seed.
 DO $$
@@ -346,7 +346,7 @@ DECLARE
 BEGIN
   SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
   SELECT id INTO v_branch FROM public.branches
-    WHERE tenant_id = v_tenant AND name = 'Chi nhánh Đất Đỏ' LIMIT 1;
+    WHERE tenant_id = v_tenant AND name = 'Chi nhánh Nguyễn Hữu Thọ' LIMIT 1;
   SELECT e.id INTO v_emp FROM public.employees e
     WHERE e.tenant_id = v_tenant
       AND e.profile_id = 'a0000004-0000-4000-8000-000000000004'::uuid LIMIT 1;

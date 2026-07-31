@@ -7,7 +7,7 @@
 # disable repo guards. See docs/agent/rules/database.md Environment Registry.
 
 [mcp_servers.supabase]
-url = "https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=true&features=database,debugging,development,docs"
+url = "https://mcp.supabase.com/mcp?project_ref=enloyfnuerqgaqderbwb&read_only=true&features=database,debugging,development,docs"
 
 [mcp_servers.vercel]
 url = "https://mcp.vercel.com"

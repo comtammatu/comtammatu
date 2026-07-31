@@ -36,7 +36,7 @@ UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 ```
 
-`corepack pnpm db:types` chỉ đọc schema từ Greenfield đã đăng ký và bắt buộc
+`corepack pnpm db:types` chỉ đọc schema từ Production đã đăng ký và bắt buộc
 truyền đúng `SUPABASE_PROJECT_ID`:
 
 ```bash

@@ -1,5 +1,5 @@
-# Security policy for app.comtammatu.com (RFC 9116)
+# Security policy for web.comtammatu.com (RFC 9116)
 Contact: mailto:comtammatu@gmail.com
 Expires: 2027-05-09T00:00:00.000Z
 Preferred-Languages: vi, en
-Canonical: https://app.comtammatu.com/.well-known/security.txt
+Canonical: https://web.comtammatu.com/.well-known/security.txt

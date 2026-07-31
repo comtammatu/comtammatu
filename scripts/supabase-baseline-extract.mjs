@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 
-const EXPECTED_PROJECT_REF = "iexwsuaqqenyjiskawoj";
+const EXPECTED_PROJECT_REF = "enloyfnuerqgaqderbwb";
 const DEFAULT_SCHEMAS = ["public", "private"];
 const DEFAULT_TIMEOUT_MS = 300_000;
 
@@ -18,10 +18,10 @@ const DEFAULT_TIMEOUT_MS = 300_000;
 // --linked, which silently drops RLS-restricted tables), so the target may
 // differ from the currently-linked project. Only refs listed here are accepted.
 const KNOWN_TARGETS = {
-  iexwsuaqqenyjiskawoj: {
-    passwordEnv: "SUPABASE_PASSWORD_IEXW",
+  enloyfnuerqgaqderbwb: {
+    passwordEnv: "SUPABASE_PASSWORD_ENLOY",
     fallbackPasswordEnv: "SUPABASE_DB_PASSWORD",
-    explicitUrlEnv: "SUPABASE_DB_URL_IEXW",
+    explicitUrlEnv: "SUPABASE_DB_URL_ENLOY",
   },
 };
 

@@ -14,10 +14,23 @@ const forbidden = [
   new RegExp(`${"Hộ" + " kinh doanh"}`, "iu"),
   new RegExp(`${"HO" + " KINH DOANH"}`, "iu"),
   new RegExp(`${"thuế" + " khoán"}`, "iu"),
+  new RegExp(`${"Phước" + " Hải"}`, "iu"),
+  new RegExp(`${"phuoc" + "[_-]?hai"}`, "iu"),
+  new RegExp(`${"matu" + "-prod"}`, "iu"),
+  new RegExp(`${"matu" + "-" + "green" + "field-company"}`, "iu"),
+  new RegExp(`${"app" + "\\.comtammatu\\.com"}`, "iu"),
+  new RegExp(`\\b${"Green" + "field"}\\b`, "iu"),
 ];
 const immutableHistory = [
   "supabase/migration-archive/",
   "supabase/migrations/20260727120000_baseline.sql",
+  "supabase/migrations/20260727190000_central_procurement_and_vat_evidence.sql",
+  `supabase/migrations/20260727220000_compact_${"green" + "field"}_branch_id_gap.sql`,
+  `supabase/migrations/20260728170006_harden_${"green" + "field"}_advisor_findings.sql`,
+  "supabase/migrations/20260728170211_reenforce_advisor_harden_after_topology.sql",
+  "supabase/migrations/20260728174910_fk_covering_indexes_advisor_wave.sql",
+  "supabase/migrations/20260728180429_enforce_single_active_warehouse_per_site.sql",
+  "supabase/migrations/20260729150100_harden_branch_revenue_targets_grants.sql",
 ];
 const violations = [];
 
