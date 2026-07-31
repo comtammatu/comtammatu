@@ -320,7 +320,9 @@ test("expense edit keeps payment evidence immutable and audits the locked RPC wr
     /canAccessBranch\(ctx\.supabase, ctx\.claims, branchId\)/,
   );
   assert.match(client, /key: "edit"/);
-  assert.match(client, /paymentMethodReadOnly=\{editingExpense != null\}/);
+  assert.match(client, /canCorrectExpensePaymentMethod\(editingExpense\)/);
+  assert.match(client, /paymentMethodReadOnly=\{!canEditPaymentMethod\}/);
+  assert.match(client, /transitionExpensePayment\(\{/);
   assert.match(migration, /CREATE FUNCTION public\.update_operating_expense/);
   assert.match(migration, /FOR UPDATE/);
   assert.match(migration, /app\.expense_update_id/);
@@ -330,6 +332,39 @@ test("expense edit keeps payment evidence immutable and audits the locked RPC wr
   assert.match(
     migration,
     /REVOKE ALL ON FUNCTION public\.update_operating_expense/,
+  );
+});
+
+test("Owner/Accountant can correct unmatched paid expense payment methods", () => {
+  const categories = readWeb(
+    "app/(protected)/finance/_lib/expense-categories.ts",
+  );
+  const messages = readWeb("lib/messages/finance.ts");
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260801053526_correct_expense_payment_method.sql",
+    ),
+    "utf8",
+  );
+
+  assert.match(categories, /export function canCorrectExpensePaymentMethod/);
+  assert.match(
+    categories,
+    /classifyExpensePaymentState\(expense\) !== "transfer_needs_match"/,
+  );
+  assert.match(
+    messages,
+    /methodCorrectHint:[\s\S]*Chủ sở hữu\/Kế toán được sửa phương thức/,
+  );
+  assert.match(migration, /v_is_paid_correction/);
+  assert.match(
+    migration,
+    /OLD\.paid_at IS NOT NULL[\s\S]*OLD\.payment_method IN \('cash', 'transfer'\)/,
+  );
+  assert.match(
+    migration,
+    /WHEN v_expense\.paid_at IS NOT NULL THEN v_expense\.paid_at/,
   );
 });
 

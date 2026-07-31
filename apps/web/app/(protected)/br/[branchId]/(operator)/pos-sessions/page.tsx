@@ -161,7 +161,9 @@ export default async function BranchPosSessionsPage({
         selectedSessionId={selectedSessionId}
         orders={orders}
         report={report}
-        canCorrectPaymentMethod={claims.user_role === "owner"}
+        canCorrectPaymentMethod={
+          claims.user_role === "owner" || claims.user_role === "accountant"
+        }
       />
     </BranchOperatorPage>
   );

@@ -136,10 +136,10 @@ test("Finance separates period results, inventory, and current book funds", () =
   assert.match(financeMessages, /inventoryOpeningCompare: "so với tồn đầu kỳ"/);
 });
 
-test("Owner can correct a paid bill method from the canonical POS session route", () => {
+test("Owner and Accountant can correct a paid bill method from the canonical POS session route", () => {
   assert.match(
     posSessionsPage,
-    /canCorrectPaymentMethod=\{claims\.user_role === "owner"\}/,
+    /canCorrectPaymentMethod=\{\s*claims\.user_role === "owner" \|\| claims\.user_role === "accountant"\s*\}/,
   );
   assert.match(posSessionsClient, /correctPaymentMethod\(\{/);
   assert.match(posSessionsClient, /newMethod: targetMethod/);

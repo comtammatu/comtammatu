@@ -142,6 +142,28 @@ export function expenseNeedsAction(expense: {
   return state === "unpaid" || state === "transfer_needs_match";
 }
 
+/**
+ * Owner/Accountant may change payment method in the edit form when the row is
+ * an unmatched operating expense without an open transfer-content intent.
+ */
+export function canCorrectExpensePaymentMethod(expense: {
+  category: string;
+  payment_method: string;
+  paid_at: string | null;
+  transfer_content?: string | null;
+  matchedEventIds?: readonly number[];
+  matchedBankTransactionIds?: readonly number[];
+}): boolean {
+  if (!isOperatingExpenseCategory(expense.category)) return false;
+  if (
+    (expense.matchedEventIds?.length ?? 0) > 0 ||
+    (expense.matchedBankTransactionIds?.length ?? 0) > 0
+  ) {
+    return false;
+  }
+  return classifyExpensePaymentState(expense) !== "transfer_needs_match";
+}
+
 export function isExpenseVisibleForBankMatch(
   expense: {
     category: string;

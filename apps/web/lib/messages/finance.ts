@@ -364,7 +364,10 @@ export const finance = {
       paymentSection: "Ghi nhận thanh toán",
       method: "Phương thức thanh toán",
       methodPlaceholder: "Chọn phương thức",
-      methodEditHint: "Không đổi phương thức ở form sửa.",
+      methodEditHint:
+        "Đã khớp ngân hàng hoặc đang chờ nội dung CK — không đổi phương thức ở form này.",
+      methodCorrectHint:
+        "Chủ sở hữu/Kế toán được sửa phương thức khi khoản chi chưa khớp ngân hàng.",
       methodHints: {
         cash: "Ghi đã trả bằng tiền mặt.",
         transfer: "Ghi đã trả bằng chuyển khoản.",
@@ -418,6 +421,7 @@ export const finance = {
       cancelTransferCta: "Bỏ nội dung",
       keepTransfer: "Giữ nội dung",
       cancelTransferSuccess: "Đã bỏ nội dung và đưa khoản chi về Chưa trả",
+      methodCorrectSuccess: "Đã sửa phương thức thanh toán khoản chi",
       updateFailed: "Không thể cập nhật thanh toán khoản chi.",
     },
     table: {

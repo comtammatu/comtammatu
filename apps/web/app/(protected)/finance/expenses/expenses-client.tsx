@@ -68,6 +68,7 @@ import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
 import {
   EXPENSE_PAYMENT_METHODS,
+  canCorrectExpensePaymentMethod,
   classifyExpensePaymentState,
   expenseNeedsAction,
   type ExpenseCategory,
@@ -241,12 +242,14 @@ function ExpenseFormFields({
   tenantId,
   isTouchLayout,
   paymentMethodReadOnly = false,
+  editingPaymentMethod = false,
 }: {
   form: UseFormReturn<ExpenseFormValues>;
   branchOptions: readonly { value: string; label: string }[];
   tenantId: number;
   isTouchLayout: boolean;
   paymentMethodReadOnly?: boolean;
+  editingPaymentMethod?: boolean;
 }) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -306,9 +309,11 @@ function ExpenseFormFields({
               options={METHOD_OPTIONS}
               placeholder={copy.form.methodPlaceholder}
               description={
-                copy.form.methodHints[
-                  form.watch("paymentMethod") as ExpensePaymentMethod
-                ]
+                editingPaymentMethod
+                  ? copy.form.methodCorrectHint
+                  : copy.form.methodHints[
+                      form.watch("paymentMethod") as ExpensePaymentMethod
+                    ]
               }
               required
             />
@@ -591,29 +596,53 @@ export function ExpensesClient({
         : Number(values.branchId);
     const vatBreakdown = buildExpenseVatBreakdown(values);
     const attachment = values.invoiceAttachmentUrl?.trim();
+    const nextMethod = values.paymentMethod as ExpensePaymentMethod;
 
-    const result = editingExpense
-      ? await updateExpense({
-          expenseId: editingExpense.id,
-          branchId,
-          expenseDate: values.expenseDate,
-          category: values.category as ExpenseCategory,
-          vatBreakdown,
-          note: values.note,
-          invoiceAttachmentUrl: attachment || undefined,
-        })
-      : await createExpense({
-          branchId,
-          expenseDate: values.expenseDate,
-          category: values.category as ExpenseCategory,
-          vatBreakdown,
-          paymentMethod: values.paymentMethod as ExpensePaymentMethod,
-          note: values.note,
-          invoiceAttachmentUrl: attachment || undefined,
-        });
-    if (result.success) {
-      router.refresh();
+    if (!editingExpense) {
+      const result = await createExpense({
+        branchId,
+        expenseDate: values.expenseDate,
+        category: values.category as ExpenseCategory,
+        vatBreakdown,
+        paymentMethod: nextMethod,
+        note: values.note,
+        invoiceAttachmentUrl: attachment || undefined,
+      });
+      if (result.success) router.refresh();
+      return result;
     }
+
+    const result = await updateExpense({
+      expenseId: editingExpense.id,
+      branchId,
+      expenseDate: values.expenseDate,
+      category: values.category as ExpenseCategory,
+      vatBreakdown,
+      note: values.note,
+      invoiceAttachmentUrl: attachment || undefined,
+    });
+    if (!result.success) return result;
+
+    const previousMethod = expensePaymentMethod(
+      editingExpense,
+    ) as ExpensePaymentMethod;
+    if (
+      nextMethod !== previousMethod &&
+      canCorrectExpensePaymentMethod(editingExpense)
+    ) {
+      const transition = await transitionExpensePayment({
+        expenseId: editingExpense.id,
+        targetMethod: nextMethod,
+      });
+      if (!transition.success) {
+        return {
+          success: false,
+          error: transition.error ?? copy.actions.updateFailed,
+        };
+      }
+    }
+
+    router.refresh();
     return result;
   }
 
@@ -1030,15 +1059,23 @@ export function ExpensesClient({
           submitLabel={editingExpense ? copy.form.editSubmit : copy.form.submit}
           variant="document"
         >
-          {(form) => (
-            <ExpenseFormFields
-              form={form}
-              branchOptions={branchOptions}
-              tenantId={tenantId}
-              isTouchLayout={isTouchLayout}
-              paymentMethodReadOnly={editingExpense != null}
-            />
-          )}
+          {(form) => {
+            const canEditPaymentMethod =
+              editingExpense == null ||
+              canCorrectExpensePaymentMethod(editingExpense);
+            return (
+              <ExpenseFormFields
+                form={form}
+                branchOptions={branchOptions}
+                tenantId={tenantId}
+                isTouchLayout={isTouchLayout}
+                paymentMethodReadOnly={!canEditPaymentMethod}
+                editingPaymentMethod={
+                  editingExpense != null && canEditPaymentMethod
+                }
+              />
+            );
+          }}
         </FormDialog>
       ) : null}
 

@@ -95,6 +95,17 @@ Evidence: focused regression, migration lineage, repository gates, authorized Pr
 - [ ] Smoke Accountant: edit/cancel unmatched operating expense and unpaid → TM/CK (`finance:expense_create` live on Production).
 - [ ] Run authenticated Accountant smoke: approve a purchase demand whose request and receipt units differ.
 
+## Correct unmatched expense payment method for Owner/Accountant
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: finance/expenses
+Exit: Owner and Accountant with `finance:expense_create` can change an unmatched operating-expense payment method (`cash`/`transfer`/`unpaid`) in the expense edit form; matched, `bank_deposit`, and open transfer-content intents stay locked; POS session bill PTTT is also available to Accountant.
+Evidence: migration `20260801053526_correct_expense_payment_method.sql`, static finance-expense and cash-shift contract tests, repository gates, authorized Production apply, authenticated Owner/Accountant smoke on a cash-paid unmatched expense.
+
+- [ ] Smoke Owner/Accountant: edit a cash-paid unmatched expense → chuyển khoản, then back if needed.
+
 ## Unify stock request and transfer fulfillment journey
 
 State: verify

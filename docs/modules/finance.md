@@ -171,8 +171,14 @@ Any verified gain or loss that must change book funds is recorded separately
 through `create_finance_fund_adjustment` with its own reason and evidence.
 
 Payment-method correction belongs to Finance in the session bill drawer and HĐĐT
-queue. The atomic RPC updates `payments.method`, the `orders.payment_method`
-display mirror, and recomputes a closed session's expected cash and difference.
+queue (Owner and Accountant). The atomic RPC updates `payments.method`, the
+`orders.payment_method` display mirror, and recomputes a closed session's
+expected cash and difference.
+
+Unmatched operating-expense payment methods (`cash` / `transfer` / `unpaid`) may
+also be corrected by Owner or Accountant with `finance:expense_create` from the
+expense edit form via `transition_expense_payment`. Matched bank evidence,
+`bank_deposit`, and open transfer-content intents stay locked.
 Any prior variance resolution is cleared because the underlying classification
 changed. The audit log preserves the correction reason and prior values. A
 VietQR payment with canonical reconciliation or signed webhook evidence cannot
