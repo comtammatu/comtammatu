@@ -21,7 +21,7 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.doesNotMatch(source, /theo WAC/);
 });
 
-test("ingredient unit dialog names input, output, and optional production roles", () => {
+test("ingredient unit dialog reveals optional input and production roles on demand", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
@@ -40,7 +40,8 @@ test("ingredient unit dialog names input, output, and optional production roles"
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
-  assert.match(messages, /productionEnabled: "Dùng trong sản xuất"/);
+  assert.match(messages, /inputUnitDifferent: "Nhập theo đơn vị khác"/);
+  assert.match(messages, /productionEnabled: "Có đơn vị sản xuất riêng"/);
   assert.match(messages, /standardUnit:/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);

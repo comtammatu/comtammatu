@@ -8,6 +8,12 @@ import {
 } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
 import {
   Field,
   FieldDescription,
@@ -34,7 +40,6 @@ import type {
   IngredientRow,
   UnitOption,
 } from "@lib/inventory/types";
-import { ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "@lib/inventory/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -57,6 +62,7 @@ const ingredientSchema = z
       .optional(),
     input_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
     output_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
+    input_unit_is_different: z.boolean().default(false),
     input_to_output_factor: z
       .string()
       .trim()
@@ -128,6 +134,7 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
       ingredient?.default_fulfill_site_kind ?? FULFILL_SITE_NONE,
     input_unit_id: String(inputUnit?.unit_id ?? ""),
     output_unit_id: String(outputUnit?.unit_id ?? ""),
+    input_unit_is_different: inputUnit?.unit_id !== outputUnit?.unit_id,
     input_to_output_factor: String(
       (inputUnit?.to_base_factor ?? 1) / (outputUnit?.to_base_factor ?? 1),
     ),
@@ -396,6 +403,7 @@ export function IngredientDialog({
       {(form) => {
         const inputUnitId = form.watch("input_unit_id");
         const outputUnitId = form.watch("output_unit_id");
+        const inputUnitIsDifferent = form.watch("input_unit_is_different");
         const productionEnabled = form.watch("production_enabled");
         const productionUnitId = form.watch("production_unit_id");
         const sameUnit =
@@ -419,6 +427,7 @@ export function IngredientDialog({
             outputUnitName={outputUnitName}
             productionUnitName={productionUnitName}
             sameUnit={sameUnit}
+            inputUnitIsDifferent={inputUnitIsDifferent}
             productionEnabled={productionEnabled}
             unitsLocked={unitsLocked}
             unitLockHint={unitLockHint}
@@ -437,6 +446,7 @@ function IngredientDialogFields({
   outputUnitName,
   productionUnitName,
   sameUnit,
+  inputUnitIsDifferent,
   productionEnabled,
   unitsLocked,
   unitLockHint,
@@ -448,18 +458,30 @@ function IngredientDialogFields({
   outputUnitName: string;
   productionUnitName: string;
   sameUnit: boolean;
+  inputUnitIsDifferent: boolean;
   productionEnabled: boolean;
   unitsLocked: boolean;
   unitLockHint: string | null;
 }) {
+  const itemKind = form.watch("item_kind");
+  const outputUnitId = form.watch("output_unit_id");
   useEffect(() => {
     if (!sameUnit) return;
     if (form.getValues("input_to_output_factor") === "1") return;
     form.setValue("input_to_output_factor", "1", { shouldValidate: true });
   }, [form, sameUnit]);
 
+  useEffect(() => {
+    if (inputUnitIsDifferent) return;
+    if (form.getValues("input_unit_id") !== form.getValues("output_unit_id")) {
+      form.setValue("input_unit_id", form.getValues("output_unit_id"), {
+        shouldValidate: true,
+      });
+    }
+  }, [form, inputUnitIsDifferent, outputUnitId]);
+
   const productionSameAsOutput =
-    form.watch("production_unit_id") === form.watch("output_unit_id");
+    form.watch("production_unit_id") === outputUnitId;
 
   useEffect(() => {
     if (!productionEnabled || !productionSameAsOutput) return;
@@ -492,101 +514,141 @@ function IngredientDialogFields({
         />
         <SelectField
           control={form.control}
-          name="item_kind"
-          label={dialogCopy.itemKindLabel}
-          options={ITEM_KIND_OPTIONS}
-        />
-        <SelectField
-          control={form.control}
-          name="default_fulfill_site_kind"
-          label={dialogCopy.defaultFulfillSiteKindLabel}
-          options={[
-            { value: FULFILL_SITE_NONE, label: dialogCopy.defaultFulfillSiteKindNone },
-            {
-              value: "central_supply",
-              label: dialogCopy.defaultFulfillSiteKindCentralSupply,
-            },
-            {
-              value: "central_kitchen",
-              label: dialogCopy.defaultFulfillSiteKindCentralKitchen,
-            },
-          ]}
+          name="output_unit_id"
+          label={copy.units.outputUnit}
+          placeholder={copy.units.selectUnit}
+          options={unitSelectOptions}
+          disabled={unitsLocked && !productionEnabled}
+          required
         />
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-        <QuantityField
-          control={form.control}
-          name="min_stock_level"
-          label={dialogCopy.minStockLabel}
+      <Field orientation="horizontal">
+        <FieldLabel htmlFor="item-kind-finished-good">
+          {dialogCopy.finishedGoodLabel}
+        </FieldLabel>
+        <Switch
+          id="item-kind-finished-good"
+          checked={itemKind === "finished_good"}
+          onCheckedChange={(checked) =>
+            form.setValue("item_kind", checked ? "finished_good" : "raw_material")
+          }
         />
-      </div>
+      </Field>
 
-      <FieldSet>
-        <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
-        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-          <SelectField
-            control={form.control}
-            name="input_unit_id"
-            label={copy.units.inputUnit}
-            placeholder={copy.units.selectUnit}
-            options={unitSelectOptions}
-            required
-          />
-          <SelectField
-            control={form.control}
-            name="output_unit_id"
-            label={copy.units.outputUnit}
-            placeholder={copy.units.selectUnit}
-            options={unitSelectOptions}
-            disabled={unitsLocked && !productionEnabled}
-            required
-          />
-          <ConversionFactorField
-            control={form.control}
-            name="input_to_output_factor"
-            fromUnitName={inputUnitName}
-            toUnitName={outputUnitName}
-            sameUnit={sameUnit}
-          />
-        </div>
-        <Field className="mt-4" orientation="horizontal">
-          <FieldLabel htmlFor="production-enabled">{copy.units.productionEnabled}</FieldLabel>
-          <Switch
-            id="production-enabled"
-            checked={productionEnabled}
-            disabled={unitsLocked}
-            onCheckedChange={(checked) =>
-              form.setValue("production_enabled", checked, { shouldValidate: true })
-            }
-          />
-        </Field>
-        {productionEnabled ? (
-          <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+      <Collapsible>
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-auto"
+          render={<CollapsibleTrigger />}
+        >
+          {dialogCopy.advancedSettingsLabel}
+        </Button>
+        <CollapsibleContent className="pt-4">
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+            <QuantityField
+              control={form.control}
+              name="min_stock_level"
+              label={dialogCopy.minStockLabel}
+            />
             <SelectField
               control={form.control}
-              name="production_unit_id"
-              label={copy.units.productionUnit}
-              placeholder={copy.units.selectUnit}
-              options={unitSelectOptions}
-              disabled={unitsLocked}
-              required
-            />
-            <ConversionFactorField
-              control={form.control}
-              name="output_to_production_factor"
-              fromUnitName={outputUnitName}
-              toUnitName={productionUnitName}
-              sameUnit={productionSameAsOutput}
+              name="default_fulfill_site_kind"
+              label={dialogCopy.defaultFulfillSiteKindLabel}
+              options={[
+                { value: FULFILL_SITE_NONE, label: dialogCopy.defaultFulfillSiteKindNone },
+                {
+                  value: "central_supply",
+                  label: dialogCopy.defaultFulfillSiteKindCentralSupply,
+                },
+                {
+                  value: "central_kitchen",
+                  label: dialogCopy.defaultFulfillSiteKindCentralKitchen,
+                },
+              ]}
             />
           </div>
-        ) : null}
-        <FieldDescription className="mt-4">
-          {copy.units.standardUnit(
-            productionEnabled ? productionUnitName : outputUnitName,
-          )}
-        </FieldDescription>
-      </FieldSet>
+          <FieldSet className="mt-4">
+            <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
+            <Field className="mt-4" orientation="horizontal">
+              <FieldLabel htmlFor="input-unit-is-different">
+                {copy.units.inputUnitDifferent}
+              </FieldLabel>
+              <Switch
+                id="input-unit-is-different"
+                checked={inputUnitIsDifferent}
+                disabled={unitsLocked}
+                onCheckedChange={(checked) => {
+                  form.setValue("input_unit_is_different", checked);
+                  if (!checked) {
+                    form.setValue("input_unit_id", form.getValues("output_unit_id"), {
+                      shouldValidate: true,
+                    });
+                    form.setValue("input_to_output_factor", "1", {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+              />
+            </Field>
+            {inputUnitIsDifferent ? (
+              <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                <SelectField
+                  control={form.control}
+                  name="input_unit_id"
+                  label={copy.units.inputUnit}
+                  placeholder={copy.units.selectUnit}
+                  options={unitSelectOptions}
+                  disabled={unitsLocked}
+                  required
+                />
+                <ConversionFactorField
+                  control={form.control}
+                  name="input_to_output_factor"
+                  fromUnitName={inputUnitName}
+                  toUnitName={outputUnitName}
+                  sameUnit={sameUnit}
+                />
+              </div>
+            ) : null}
+            <Field className="mt-4" orientation="horizontal">
+              <FieldLabel htmlFor="production-enabled">
+                {copy.units.productionEnabled}
+              </FieldLabel>
+              <Switch
+                id="production-enabled"
+                checked={productionEnabled}
+                disabled={unitsLocked}
+                onCheckedChange={(checked) =>
+                  form.setValue("production_enabled", checked, { shouldValidate: true })
+                }
+              />
+            </Field>
+            {productionEnabled ? (
+              <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+                <SelectField
+                  control={form.control}
+                  name="production_unit_id"
+                  label={copy.units.productionUnit}
+                  placeholder={copy.units.selectUnit}
+                  options={unitSelectOptions}
+                  disabled={unitsLocked}
+                  required
+                />
+                <ConversionFactorField
+                  control={form.control}
+                  name="output_to_production_factor"
+                  fromUnitName={outputUnitName}
+                  toUnitName={productionUnitName}
+                  sameUnit={productionSameAsOutput}
+                />
+              </div>
+            ) : null}
+          </FieldSet>
+        </CollapsibleContent>
+      </Collapsible>
 
       {unitLockHint ? (
         <FieldDescription>{unitLockHint}</FieldDescription>

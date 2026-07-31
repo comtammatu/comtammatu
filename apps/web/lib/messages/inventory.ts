@@ -296,6 +296,8 @@ export const inventory = {
       skuLabel: "Mã hàng",
       referenceCostLabel: "Giá nhập tham chiếu (VND)",
       itemKindLabel: "Loại hàng",
+      finishedGoodLabel: "Là thành phẩm",
+      advancedSettingsLabel: "Thiết lập thêm",
       minStockLabel: "Tồn tối thiểu",
       maxStockLabel: "Tồn tối đa",
       reorderPointLabel: "Điểm đặt hàng",
