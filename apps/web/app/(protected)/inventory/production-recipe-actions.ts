@@ -43,7 +43,9 @@ const PRODUCTION_RECIPE_MANAGE_PERMISSIONS = [
 const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
-  entryUnitId: z.coerce.number().int().positive().nullable().optional(),
+  entryUnitId: z.coerce.number().int().positive({
+    error: "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
+  }),
   yieldFactor: z.coerce.number().positive().default(1),
   note: z.string().optional(),
 });
@@ -92,7 +94,7 @@ const importProductionRecipeRowSchema = z.object({
   finishedGoodId: z.number().int().positive(),
   ingredientId: z.number().int().positive(),
   quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
-  entryUnitId: z.number().int().positive().nullable(),
+  entryUnitId: z.number().int().positive(),
   yieldFactor: z.number().positive({ error: "Tỷ lệ thu hồi phải lớn hơn 0" }),
   note: z.string().trim().optional(),
 });
@@ -147,6 +149,9 @@ function mapProductionRecipeImportError(
   if (message?.includes("ingredient_not_found")) {
     return "Có nguyên liệu không còn hợp lệ.";
   }
+  if (message?.includes("inventory_unit_role_mismatch")) {
+    return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
+  }
   if (
     code === PG_ERR.INVALID_TEXT_REPRESENTATION ||
     code === PG_ERR.CHECK_VIOLATION
@@ -156,9 +161,38 @@ function mapProductionRecipeImportError(
   return "Không thể nhập công thức sản xuất.";
 }
 
+function mapProductionRecipeUpsertError(
+  code: string | undefined,
+  message: string | undefined,
+): string {
+  if (
+    code === PG_ERR.UNIQUE_VIOLATION ||
+    message?.includes("duplicate_ingredient")
+  ) {
+    return "Nguyên liệu bị trùng trong công thức.";
+  }
+  if (code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+    return "Không có quyền lưu công thức sản xuất.";
+  }
+  if (code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
+    return "Dữ liệu công thức chưa hợp lệ.";
+  }
+  if (message?.includes("finished_good_not_found")) {
+    return "Thành phẩm không còn hợp lệ.";
+  }
+  if (message?.includes("ingredient_not_found")) {
+    return "Có nguyên liệu không còn hợp lệ.";
+  }
+  if (message?.includes("inventory_unit_role_mismatch")) {
+    return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
+  }
+  return "Không thể lưu công thức sản xuất.";
+}
+
 type IngredientLookupRow = {
   id: number;
   name: string;
+  production_unit_id: number | null;
   ingredient_units?: { unit_id: number, is_base: boolean, is_active: boolean, sort_order: number, units: { code: string, name: string } | null }[];
   item_kind: string;
   is_active: boolean;
@@ -189,21 +223,24 @@ function normalizeUnitKey(value: string): string {
 function getDefaultImportEntryUnit(
   ingredient: IngredientLookupRow,
 ): IngredientLookupRow["units"][number] | null {
-  const activeUnits = ingredient.units
-    .filter((unit) => unit.is_active && unit.unit_code)
-    .sort((a, b) => {
-      if (a.is_base !== b.is_base) return a.is_base ? -1 : 1;
-      return a.sort_order - b.sort_order;
-    });
-  return activeUnits.find((unit) => unit.is_base) ?? activeUnits[0] ?? null;
+  if (ingredient.production_unit_id == null) return null;
+  return (
+    ingredient.units.find(
+      (unit) =>
+        unit.is_active && unit.unit_id === ingredient.production_unit_id,
+    ) ?? null
+  );
 }
 
 function resolveImportEntryUnit(
   ingredient: IngredientLookupRow,
   unitText: string,
 ): IngredientLookupRow["units"][number] | null {
+  const productionUnit = getDefaultImportEntryUnit(ingredient);
+  if (!productionUnit) return null;
+
   const needle = normalizeUnitKey(unitText);
-  if (!needle) return getDefaultImportEntryUnit(ingredient);
+  if (!needle) return productionUnit;
 
   const matches = ingredient.units.filter((unit) => {
     if (!unit.is_active) return false;
@@ -212,7 +249,9 @@ function resolveImportEntryUnit(
     );
   });
 
-  return matches.length === 1 ? (matches[0] ?? null) : null;
+  const match = matches.length === 1 ? (matches[0] ?? null) : null;
+  if (!match || match.unit_id !== productionUnit.unit_id) return null;
+  return match;
 }
 
 export interface ProductionRecipeRow {
@@ -563,7 +602,7 @@ export async function importProductionRecipes(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, item_kind, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "id, name, item_kind, is_active, production_unit_id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id);
 
@@ -612,7 +651,7 @@ export async function importProductionRecipes(
       lines: Array<{
         ingredientId: number;
         quantity: number;
-        entryUnitId: number | null;
+        entryUnitId: number;
         yieldFactor: number;
         note: string | null;
       }>;
@@ -751,7 +790,10 @@ export async function importProductionRecipes(
       issues.push({
         row: rowNumber,
         field: "Đơn vị",
-        message: "Đơn vị không thuộc nguyên liệu trong danh mục.",
+        message:
+          ingredient.production_unit_id == null
+            ? "Nguyên liệu chưa có đơn vị sản xuất trong danh mục."
+            : "Đơn vị phải khớp đơn vị sản xuất của nguyên liệu.",
       });
       return;
     }
@@ -864,7 +906,7 @@ export const upsertProductionRecipeLines = withAction(
     const lines = data.lines.map((line) => ({
       ingredient_id: line.ingredientId,
       quantity: line.quantity,
-      entry_unit_id: line.entryUnitId ?? null,
+      entry_unit_id: line.entryUnitId,
       note: line.note?.trim() ? line.note.trim() : null,
       yield_factor: line.yieldFactor,
     }));
@@ -877,32 +919,10 @@ export const upsertProductionRecipeLines = withAction(
     });
 
     if (error) {
-      const message = error.message ?? "";
-      if (
-        error.code === PG_ERR.UNIQUE_VIOLATION ||
-        message.includes("duplicate_ingredient")
-      ) {
-        return {
-          success: false,
-          error: "Nguyên liệu bị trùng trong công thức.",
-        };
-      }
-      if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-        return {
-          success: false,
-          error: "Không có quyền lưu công thức sản xuất.",
-        };
-      }
-      if (error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
-        return { success: false, error: "Dữ liệu công thức chưa hợp lệ." };
-      }
-      if (message.includes("finished_good_not_found")) {
-        return { success: false, error: "Thành phẩm không còn hợp lệ." };
-      }
-      if (message.includes("ingredient_not_found")) {
-        return { success: false, error: "Có nguyên liệu không còn hợp lệ." };
-      }
-      return { success: false, error: "Không thể lưu công thức sản xuất." };
+      return {
+        success: false,
+        error: mapProductionRecipeUpsertError(error.code, error.message),
+      };
     }
 
     revalidatePath("/inventory/production");

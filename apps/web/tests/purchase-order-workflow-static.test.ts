@@ -218,3 +218,27 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
     /IF v_remaining < 0 THEN/,
   );
 });
+
+test("purchase_order_items entry snapshot columns are granted to authenticated", () => {
+  const grantMigration = read(
+    "supabase/migrations/20260731233612_grant_inventory_entry_snapshot_columns.sql",
+  );
+  assert.match(
+    grantMigration,
+    /GRANT SELECT \(\s*entry_to_base_factor,\s*entry_unit_code\s*\) ON public\.purchase_order_items TO authenticated/,
+  );
+  for (const table of [
+    "grn_items",
+    "stock_transfer_items",
+    "stock_issue_items",
+    "stock_movements",
+  ]) {
+    assert.match(
+      grantMigration,
+      new RegExp(
+        `GRANT SELECT \\(\\s*entry_to_base_factor,\\s*entry_unit_code\\s*\\) ON public\\.${table} TO authenticated`,
+      ),
+      table,
+    );
+  }
+});

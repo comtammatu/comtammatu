@@ -231,6 +231,11 @@ export const INVENTORY_VI = {
   noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
   noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
   productionRecipeLinesLabel: "Dòng công thức",
+  productionUnitMissingHint: "Chưa có ĐV sản xuất",
+  productionRecipeProductionUnitRequired:
+    "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
+  productionRecipeUnitRoleMismatch:
+    "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.",
   ingredientCountBadge: (count: number) => `${formatCount(count)} nguyên liệu`,
   ingredientLineCountBadge: (count: number) =>
     `${formatCount(count)} dòng nguyên liệu`,

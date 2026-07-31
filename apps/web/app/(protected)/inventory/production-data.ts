@@ -54,6 +54,7 @@ type InventoryIngredientRow = {
   unit: string;
   item_kind: string;
   is_active: boolean | null;
+  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -255,6 +256,7 @@ export async function loadProductionSurfaceData({
       name: ingredient.name,
       unit: ingredient.unit,
       item_kind: ingredient.item_kind,
+      production_unit_id: ingredient.production_unit_id ?? null,
       units: ingredient.units,
     }));
 
@@ -264,6 +266,7 @@ export async function loadProductionSurfaceData({
       id: ingredient.id,
       name: ingredient.name,
       unit: ingredient.unit,
+      production_unit_id: ingredient.production_unit_id ?? null,
       units: ingredient.units,
     }));
 

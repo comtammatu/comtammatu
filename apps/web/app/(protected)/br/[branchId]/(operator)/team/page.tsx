@@ -82,7 +82,12 @@ export default async function TeamBoardPage({
       ? fetchTeamBoard({ branchId: context.branchId })
       : Promise.resolve({ success: false as const, error: "Không có quyền" }),
     canSeeApprovals
-      ? fetchBranchQueueCounts(supabase, claims, context.branchId)
+      ? fetchBranchQueueCounts(
+          supabase,
+          claims,
+          context.branchId,
+          context.branch.branch_kind,
+        )
       : Promise.resolve(null),
   ]);
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];

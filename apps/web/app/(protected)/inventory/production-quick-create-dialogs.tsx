@@ -55,7 +55,13 @@ function QuickCreateDialog<TCreated>({
   config: QuickCreateDialogConfig;
   unitOptions: UnitOption[];
   onCreated?: (value: TCreated) => void;
-  mapCreated: (input: { id: number; name: string; unit: string }) => TCreated;
+  mapCreated: (input: {
+    id: number;
+    name: string;
+    unit: string;
+    productionUnitId: number;
+    units: FinishedGoodOption["units"];
+  }) => TCreated;
 }) {
   const defaultValues: QuickCreateFormValues = {
     name: "",
@@ -84,9 +90,34 @@ function QuickCreateDialog<TCreated>({
       return { success: false, error: config.readIdError };
     }
 
-    const unitLabel =
-      unitOptions.find((unit) => unit.code === values.unit)?.name ?? values.unit;
-    onCreated?.(mapCreated({ id: createdId, name: values.name, unit: unitLabel }));
+    const selectedUnit = unitOptions.find((unit) => unit.code === values.unit);
+    if (selectedUnit == null) {
+      return { success: false, error: config.errorFallback };
+    }
+    const unitLabel = selectedUnit.name;
+    const productionUnitId = selectedUnit.id;
+    onCreated?.(
+      mapCreated({
+        id: createdId,
+        name: values.name,
+        unit: unitLabel,
+        productionUnitId,
+        units: [
+          {
+            id: 0,
+            unit_id: productionUnitId,
+            unit_code: selectedUnit.code,
+            unit_name: unitLabel,
+            to_base_factor: 1,
+            is_base: true,
+            anchor_unit_id: null,
+            anchor_factor: null,
+            is_active: true,
+            sort_order: 0,
+          },
+        ],
+      }),
+    );
     return result;
   }
 
@@ -201,7 +232,13 @@ export function QuickFinishedGoodDialog({
       config={FINISHED_GOOD_CONFIG}
       unitOptions={unitOptions}
       onCreated={onCreated}
-      mapCreated={({ id, name, unit }) => ({ id, name, unit })}
+      mapCreated={({ id, name, unit, productionUnitId, units }) => ({
+        id,
+        name,
+        unit,
+        production_unit_id: productionUnitId,
+        units,
+      })}
     />
   );
 }
@@ -226,7 +263,13 @@ export function QuickRawIngredientDialog({
       config={RAW_INGREDIENT_CONFIG}
       unitOptions={unitOptions}
       onCreated={onCreated}
-      mapCreated={({ id, name, unit }) => ({ id, name, unit })}
+      mapCreated={({ id, name, unit, productionUnitId, units }) => ({
+        id,
+        name,
+        unit,
+        production_unit_id: productionUnitId,
+        units,
+      })}
     />
   );
 }

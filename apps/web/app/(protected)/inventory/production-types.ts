@@ -24,6 +24,7 @@ export type IngredientOption = {
   name: string;
   unit: string;
   item_kind: string;
+  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -31,6 +32,7 @@ export type FinishedGoodOption = {
   id: number;
   name: string;
   unit: string;
+  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -38,6 +40,7 @@ export type RawIngredientOption = {
   id: number;
   name: string;
   unit: string;
+  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 

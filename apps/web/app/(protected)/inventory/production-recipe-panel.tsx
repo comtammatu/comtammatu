@@ -38,6 +38,7 @@ import {
   IngredientLinesEditor,
   type IngredientLineOption,
 } from "./_components/ingredient-lines-editor";
+import { getDefaultProductionUnit } from "./_lib/production-units";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -84,7 +85,12 @@ const recipeLineItemSchema = z.object({
     .min(1, { error: INVENTORY_VI.enterQuantity })
     .refine((v) => Number(v) > 0, { error: INVENTORY_VI.quantityPositive }),
   unitLabel: z.string().optional(),
-  entry_unit_id: z.string().optional(),
+  entry_unit_id: z
+    .string()
+    .min(1, { error: INVENTORY_VI.productionRecipeProductionUnitRequired })
+    .refine((v) => Number(v) > 0, {
+      error: INVENTORY_VI.productionRecipeProductionUnitRequired,
+    }),
   yield_factor: z
     .string()
     .min(1, { error: INVENTORY_VI.enterYield })
@@ -228,20 +234,21 @@ function RecipeDialogFields({
 
   function handleRawIngredientCreated(ingredient: RawIngredientOption) {
     onRawIngredientCreated(ingredient);
+    const defaultUnit = getDefaultProductionUnit(ingredient);
     const lines = form.getValues("lines");
     const targetIndex = lines.findIndex((line) => !line.ingredient_id);
+    const nextLine = {
+      ...emptyRecipeLine(),
+      ingredient_id: String(ingredient.id),
+      unitLabel: defaultUnit?.label ?? ingredient.unit,
+      entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
+    };
     if (targetIndex < 0) {
-      appendRecipeLine({
-        ...emptyRecipeLine(),
-        ingredient_id: String(ingredient.id),
-        unitLabel: ingredient.unit,
-      });
+      appendRecipeLine(nextLine);
     } else {
-      form.setValue(
-        `lines.${targetIndex}.ingredient_id`,
-        String(ingredient.id),
-      );
-      form.setValue(`lines.${targetIndex}.unitLabel`, ingredient.unit);
+      form.setValue(`lines.${targetIndex}.ingredient_id`, nextLine.ingredient_id);
+      form.setValue(`lines.${targetIndex}.unitLabel`, nextLine.unitLabel);
+      form.setValue(`lines.${targetIndex}.entry_unit_id`, nextLine.entry_unit_id);
     }
   }
 
@@ -380,6 +387,7 @@ export function ProductionRecipePanel({
           id: ingredient.id,
           name: ingredient.name,
           unit: ingredient.unit,
+          production_unit_id: ingredient.production_unit_id ?? null,
           units: ingredient.units,
         })),
     ),
@@ -414,6 +422,7 @@ export function ProductionRecipePanel({
             id: ingredient.id,
             name: ingredient.name,
             unit: ingredient.unit,
+            production_unit_id: ingredient.production_unit_id ?? null,
             units: ingredient.units,
           })),
       ),
@@ -449,6 +458,7 @@ export function ProductionRecipePanel({
         id: item.id,
         name: item.name,
         unitLabel: item.unit,
+        production_unit_id: item.production_unit_id ?? null,
         units: item.units,
       })),
     [rawIngredientsOptions],
@@ -518,7 +528,7 @@ export function ProductionRecipePanel({
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
-        entryUnitId: line.entry_unit_id ? Number(line.entry_unit_id) : null,
+        entryUnitId: Number(line.entry_unit_id),
         yieldFactor: Number(line.yield_factor),
         note: line.note?.trim() || undefined,
       })),

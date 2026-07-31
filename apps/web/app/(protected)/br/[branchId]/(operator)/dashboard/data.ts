@@ -208,12 +208,17 @@ export interface BranchQueueCounts {
  * permission (row must not render) and a number — 0 included — when the
  * role holds it (row always renders, per V2's "queue is the persistent
  * browse door" rule). One aggregate `Promise.all`, fail-soft per metric.
+ *
+ * Leave/checkout review RPCs only allow `branch_kind = 'branch'`; for
+ * central sites skip those RPCs and leave the fields null (no queue row).
  */
 export async function fetchBranchQueueCounts(
   supabase: ServerClient,
   claims: JwtClaims,
   branchId: number,
+  branchKind?: string | null,
 ): Promise<BranchQueueCounts> {
+  const isStoreBranch = branchKind === "branch";
   const [
     checkoutPermission,
     leavePermission,
@@ -221,14 +226,18 @@ export async function fetchBranchQueueCounts(
     wastePermission,
     transferPermission,
   ] = await Promise.all([
-    supabase.rpc("has_permission", {
-      p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
-    }),
-    supabase.rpc("has_permission", {
-      p_branch_id: branchId,
-      p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
-    }),
+    isStoreBranch
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+        })
+      : Promise.resolve({ data: false as boolean | null }),
+    isStoreBranch
+      ? supabase.rpc("has_permission", {
+          p_branch_id: branchId,
+          p_key: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+        })
+      : Promise.resolve({ data: false as boolean | null }),
     supabase.rpc("has_permission", {
       p_branch_id: branchId,
       p_key: PERMISSION_KEYS.INVENTORY_COUNT_APPROVE,

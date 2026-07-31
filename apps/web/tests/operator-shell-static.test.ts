@@ -229,6 +229,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   );
   assert.match(home, /mobileColumns=\{2\}/);
   assert.match(home, /<BranchQueueSection/);
+  assert.match(home, /branchKind=\{branchKind\}/);
   assert.doesNotMatch(home, /branch-dashboard/);
   assert.doesNotMatch(home, /showOverview/);
   assert.doesNotMatch(home, /operatorRuntimeActions/);

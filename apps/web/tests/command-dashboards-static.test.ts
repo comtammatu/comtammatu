@@ -300,6 +300,8 @@ test("branch runtime reads stay session-scoped with hierarchy-aware checkout pro
     data,
     /supabase\.rpc\("get_leave_review_queue", \{[\s\S]{0,120}?p_branch_id: branchId,[\s\S]{0,120}?p_include_rows: false/,
   );
+  assert.match(data, /isStoreBranch|branchKind === ["']branch["']/);
+  assert.match(data, /branchKind\?:/);
   assert.match(attendancePolicy, /ALTER POLICY "attendance_select"/i);
   assert.match(attendancePolicy, /auth_tenant_id"?\(\)/);
   assert.match(

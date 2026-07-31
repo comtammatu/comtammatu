@@ -131,14 +131,25 @@ function CompactQueueSection({ rows }: { rows: QueueRow[] }) {
   );
 }
 
-export async function BranchQueueSection({ branchId }: { branchId: number }) {
+export async function BranchQueueSection({
+  branchId,
+  branchKind,
+}: {
+  branchId: number;
+  branchKind: string | null;
+}) {
   const { supabase, claims } = await loadAuthState();
   const isFloorRole =
     claims.user_role === "cashier" || claims.user_role === "chef";
 
   if (isFloorRole) return null;
 
-  const queueCounts = await fetchBranchQueueCounts(supabase, claims, branchId);
+  const queueCounts = await fetchBranchQueueCounts(
+    supabase,
+    claims,
+    branchId,
+    branchKind,
+  );
 
   if (!queueCounts) return null;
 

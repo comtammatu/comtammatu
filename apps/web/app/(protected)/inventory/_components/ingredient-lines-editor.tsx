@@ -46,6 +46,7 @@ export interface IngredientLineOption {
   id: number;
   name: string;
   unitLabel: string;
+  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 }
 
@@ -161,7 +162,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
     setValue(
       entryUnitPath,
       (defaultUnit ? String(defaultUnit.unitId) : "") as never,
-      { shouldDirty: true },
+      { shouldDirty: true, shouldValidate: true },
     );
   }
 
@@ -173,7 +174,11 @@ export function IngredientLinesEditor<T extends FieldValues>({
             options={ingredients.map((ing) => ({
               value: String(ing.id),
               label: ing.name,
-              hint: getDefaultProductionUnit(ing)?.label ?? ing.unitLabel,
+              hint:
+                getDefaultProductionUnit(ing)?.label ??
+                (ing.production_unit_id == null
+                  ? INVENTORY_VI.productionUnitMissingHint
+                  : ing.unitLabel),
               alreadySelected: alreadySelectedIds.has(String(ing.id)),
             }))}
             onConfirm={handleBulkAdd}
@@ -298,7 +303,11 @@ function IngredientLineRow<T extends FieldValues>({
                 options={ingredients.map((ing) => ({
                   value: String(ing.id),
                   label: ing.name,
-                  hint: getDefaultProductionUnit(ing)?.label ?? ing.unitLabel,
+                  hint:
+                    getDefaultProductionUnit(ing)?.label ??
+                    (ing.production_unit_id == null
+                      ? INVENTORY_VI.productionUnitMissingHint
+                      : ing.unitLabel),
                 }))}
                 placeholder={INVENTORY_VI.selectIngredientPlaceholder}
                 searchPlaceholder={INVENTORY_VI.searchByName}
@@ -375,6 +384,14 @@ function IngredientLineRow<T extends FieldValues>({
                   </SelectContent>
                 </Select>
               )}
+            />
+          ) : unitEditable && selectedIngredient ? (
+            <Input
+              value={INVENTORY_VI.productionUnitMissingHint}
+              readOnly
+              aria-readonly="true"
+              aria-invalid="true"
+              className="h-9 border-destructive bg-muted/30"
             />
           ) : (
             <Controller

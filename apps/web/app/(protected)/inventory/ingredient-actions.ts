@@ -495,7 +495,7 @@ export const quickCreateIngredient = withAction<
         ],
         receipt_unit_id: unitId,
         issue_unit_id: unitId,
-        production_unit_id: null,
+        production_unit_id: unitId,
       }),
     );
 

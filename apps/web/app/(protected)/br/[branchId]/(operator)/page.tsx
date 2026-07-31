@@ -203,7 +203,10 @@ export default async function OperatorHomePage({
       ) : null}
 
       <Suspense fallback={<BranchQueuePending />}>
-        <BranchQueueSection branchId={context.branchId} />
+        <BranchQueueSection
+          branchId={context.branchId}
+          branchKind={branchKind}
+        />
       </Suspense>
 
       {phaseSections.map((section) => {

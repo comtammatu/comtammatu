@@ -5,6 +5,28 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Fix production recipe entry unit role pipe
+
+State: verify
+Kind: defect
+Tier: T2
+Lane: inventory/production
+Exit: Saving a production recipe for an ingredient that already has `production_unit_id` succeeds; ingredients without a production role show clear Vietnamese copy and fail closed before RPC; quick-create from production sets `production_unit_id`.
+Evidence: static test `production-recipe-source-static.test.ts`, typecheck/lint/build, authenticated Owner smoke on `/inventory/production`.
+
+- [ ] Smoke save recipe with a material that has `production_unit_id` and one that lacks it.
+
+## Grant inventory entry snapshot columns and skip HR queues on central sites
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: inventory/authz
+Exit: YCM list can select `purchase_order_items.entry_to_base_factor`; operator home on Kho Tổng / Bếp does not call leave/checkout review RPCs.
+Evidence: migration `20260731233612` applied to Production, static tests, Owner smoke YCM list + `/br/1` home.
+
+- [ ] Deploy web and smoke YCM list + `/br/1` home (no leave 403).
+
 ## Repair purchase-demand PO coverage across unit roles
 
 State: verify
