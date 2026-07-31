@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
-import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import {
   fetchSepayBankTransactions,
@@ -34,16 +35,14 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [authState, transactions, paymentWebhookSummary] = await Promise.all([
-    loadAuthState(),
+  const [canLinkPayments, transactions, paymentWebhookSummary] = await Promise.all([
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     fetchSepayBankTransactions(range),
     fetchSepayPaymentWebhookSummary(range),
   ]);
   const expenseOptions = await loadExpenseMatchOptions(
     transactions.flatMap((transaction) => transaction.expenseIds),
   );
-  const canLinkPayments = authState.claims.user_role === "owner";
-
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader

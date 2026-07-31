@@ -36,10 +36,7 @@ const rewardTierSchema = z
     reward_value: scaleTwoAmount(MAX_TARGET_AMOUNT),
   })
   .superRefine((tier, ctx) => {
-    if (
-      tier.reward_type === "revenue_percent" &&
-      tier.reward_value > 100
-    ) {
+    if (tier.reward_type === "revenue_percent" && tier.reward_value > 100) {
       ctx.addIssue({ code: "custom", message: "invalid_reward_value" });
     }
   });
@@ -119,7 +116,7 @@ export async function listBranchRevenueTargets(
   }
 
   const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
-  if (!ctx || ctx.claims.user_role !== "owner") {
+  if (!ctx) {
     return { success: false, error: targetCopy.errors.forbidden };
   }
 
@@ -183,7 +180,7 @@ export async function upsertBranchRevenueTargets(
   }
 
   const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
-  if (!ctx || ctx.claims.user_role !== "owner") {
+  if (!ctx) {
     return { success: false, error: targetCopy.errors.forbidden };
   }
 
@@ -238,7 +235,7 @@ export async function deleteBranchRevenueTarget(
   }
 
   const ctx = await getAuthContextWithPermission(FINANCE_ROLES, "finance:view");
-  if (!ctx || ctx.claims.user_role !== "owner") {
+  if (!ctx) {
     return { success: false, error: targetCopy.errors.forbidden };
   }
 

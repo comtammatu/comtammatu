@@ -51,10 +51,10 @@ export default async function FinanceSupplierInvoicesPage({
     hasInvoiceMatchPermission,
   ] = await Promise.all([
     loadAuthState(),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_AP_PAY),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE),
-    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
   ]);
   const canAttachVatEvidence =
     hasPayPermission || hasInvoiceCreatePermission;

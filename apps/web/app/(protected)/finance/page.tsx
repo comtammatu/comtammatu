@@ -7,6 +7,7 @@ import {
   formatCount,
   formatPercent,
 } from "@comtammatu/shared/format";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -48,7 +49,7 @@ import {
   fetchBranchRevenueTargetProgress,
   listBranchRevenueTargetProgress,
 } from "./targets/actions";
-import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
@@ -120,10 +121,10 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const [cockpit, cash, auth] = await Promise.all([
+  const [cockpit, cash, canManageTargets] = await Promise.all([
     fetchFinanceCockpit(params, resolved),
     fetchCashSummary(),
-    loadAuthState(),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
   ]);
   const showTargetProgress = isSingleCalendarMonth(resolved.start, resolved.end);
   const yearMonth = monthStartFromIsoDate(resolved.start);
@@ -162,7 +163,7 @@ export default async function FinancePage({
             />
           </div>
         );
-      } else if (auth.claims.user_role === "owner") {
+      } else if (canManageTargets) {
         targetHint = (
           <Link
             href="/finance/targets"

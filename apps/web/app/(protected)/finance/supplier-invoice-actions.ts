@@ -6,7 +6,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import {
   addMoney,
-  minorUnitsToCanonical,
   canonicalizeMoney,
   parseMoneyToMinorUnits,
   subtractMoney,
@@ -39,10 +38,12 @@ const ROLES = MODULE_ACL.finance.allowedRoles;
 
 /* ─── Supplier Invoices (3-way match: PO ↔ GRN ↔ Invoice) ─── */
 
-const invoiceMoneySchema = z.string().regex(
-  /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/,
-  "Số tiền phải có tối đa 2 chữ số thập phân.",
-);
+const invoiceMoneySchema = z
+  .string()
+  .regex(
+    /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/,
+    "Số tiền phải có tối đa 2 chữ số thập phân.",
+  );
 const positiveInvoiceMoneySchema = invoiceMoneySchema.refine(
   (value) => {
     try {
@@ -219,10 +220,7 @@ const invoiceSchema = z
           path: ["lines", index, "lineDiscount"],
         });
       }
-      if (
-        line.vatRate === 0 &&
-        parseMoneyToMinorUnits(line.vatAmount) !== 0n
-      ) {
+      if (line.vatRate === 0 && parseMoneyToMinorUnits(line.vatAmount) !== 0n) {
         ctx.addIssue({
           code: "custom",
           message: "Mức thuế 0% phải có tiền thuế bằng 0.",
@@ -342,18 +340,17 @@ export const createSupplierInvoice = withAction(
   {
     roles: ROLES,
     schema: invoiceSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
   },
   async (data, { supabase }) => {
-    const { subtotal, vatAmount, totalAmount } =
-      summarizeSupplierInvoiceMoney(
-        data.lines.map((line) => ({
-          grossLineTotal: line.grossLineTotal,
-          netLineTotal: line.lineTotal,
-          vatAmount: line.vatAmount,
-        })),
-        data.documentDiscountAmount,
-      );
+    const { subtotal, vatAmount, totalAmount } = summarizeSupplierInvoiceMoney(
+      data.lines.map((line) => ({
+        grossLineTotal: line.grossLineTotal,
+        netLineTotal: line.lineTotal,
+        vatAmount: line.vatAmount,
+      })),
+      data.documentDiscountAmount,
+    );
     if (
       parseMoneyToMinorUnits(subtotal) <= 0n ||
       parseMoneyToMinorUnits(data.documentDiscountAmount) >
@@ -480,7 +477,7 @@ export const createSupplierInvoice = withAction(
       if (error.message?.includes("supplier_invoice_total_mismatch")) {
         return {
           success: false,
-      error: "Tổng dòng, chiết khấu, thuế GTGT và tổng hóa đơn không khớp.",
+          error: "Tổng dòng, chiết khấu, thuế GTGT và tổng hóa đơn không khớp.",
         };
       }
       return { success: false, error: "Không thể tạo hóa đơn NCC." };
@@ -511,7 +508,7 @@ export const confirmSupplierInvoice = withAction(
   {
     roles: ROLES,
     schema: confirmSupplierInvoiceSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
   },
   async ({ invoiceId, idempotencyKey }, { supabase }) => {
     const { data, error } = await supabase.rpc(
@@ -552,13 +549,17 @@ export const confirmSupplierInvoice = withAction(
 export async function getSupplierInvoiceValuationSummary(
   invoiceId: number,
 ): Promise<ActionResult<SupplierInvoiceValuationSummary>> {
-  const parsedInvoiceId = z.coerce.number().int().positive().safeParse(invoiceId);
+  const parsedInvoiceId = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse(invoiceId);
   if (!parsedInvoiceId.success) {
     return { success: false, error: "Mã hóa đơn không hợp lệ." };
   }
   const ctx = await getAuthContextWithPermission(
     ROLES,
-    PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };
 
@@ -589,7 +590,7 @@ export const recordSupplierPayment = withAction(
   {
     roles: ROLES,
     schema: supplierPaymentSchema,
-    permission: PERMISSION_KEYS.FINANCE_AP_PAY,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
     forbiddenError: "Không có quyền thanh toán công nợ NCC.",
   },
   async (data, { supabase, claims }) => {
@@ -699,9 +700,9 @@ export const recordSupplierPayment = withAction(
 
 export const allocateSupplierAdvance = withAction(
   {
-    roles: ["owner"] as const,
+    roles: MODULE_ACL.finance.allowedRoles,
     schema: supplierAdvanceSchema,
-    permission: PERMISSION_KEYS.FINANCE_AP_PAY,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
     forbiddenError: "Không có quyền phân bổ ứng trước NCC.",
   },
   async (data, { supabase }) => {
@@ -768,7 +769,7 @@ export const createSupplierCreditAllocated = withAction(
   {
     roles: ROLES,
     schema: supplierCreditSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(
@@ -804,7 +805,7 @@ export const acceptSupplierInvoiceDiscrepancy = withAction(
   {
     roles: ROLES,
     schema: acceptDiscrepancySchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
   },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc(
@@ -828,7 +829,7 @@ export const verifyServiceSupplierInvoice = withAction(
   {
     roles: ROLES,
     schema: verifyServiceInvoiceSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
   },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc(
@@ -859,10 +860,7 @@ export const attachSupplierInvoiceVatEvidence = withAction(
   {
     roles: MODULE_ACL.finance.allowedRoles,
     schema: attachVatEvidenceSchema,
-    anyPermission: [
-      PERMISSION_KEYS.FINANCE_AP_PAY,
-      PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
-    ],
+    anyPermission: [PERMISSION_KEYS.FINANCE_VIEW],
     forbiddenError: "Không có quyền đính kèm HĐ GTGT.",
   },
   async (data, { supabase, claims }) => {
@@ -986,7 +984,7 @@ export async function fetchSupplierInvoicesPage(
 
   const ctx = await getAuthContextWithPermission(
     ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
@@ -1162,7 +1160,7 @@ export async function recomputeInvoiceMatching(
   if (!id.success) return { success: false, error: "Mã hóa đơn không hợp lệ" };
   const ctx = await getAuthContextWithPermission(
     ROLES,
-    PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;

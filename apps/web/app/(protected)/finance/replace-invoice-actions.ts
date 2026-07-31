@@ -1,11 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner"];
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 
 const replaceInvoiceSchema = z
@@ -36,7 +36,7 @@ export async function replaceTaxInvoice(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) {
     return { success: false, error: "Không có quyền thay thế hóa đơn." };

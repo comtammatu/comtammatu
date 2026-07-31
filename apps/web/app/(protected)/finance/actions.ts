@@ -84,7 +84,7 @@ export async function createTaxInvoice(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -193,7 +193,7 @@ export async function requeueTaxInvoiceIssueJob(
     return { success: false, error: "Yêu cầu phát hành HĐĐT không hợp lệ." };
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
 
@@ -227,7 +227,7 @@ export async function reconcileTaxInvoiceProviderIssued(
   }
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền đối soát HĐĐT." };
 
@@ -293,7 +293,7 @@ export async function resolveOrderForManualInvoice(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_WRITE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -393,16 +393,16 @@ export async function resolveOrderForManualInvoice(
 
 /**
  * Whether the current user can complete the manual-issue flow end-to-end — the
- * SAME Owner + orders:write predicate createTaxInvoice enforces. The
- * /finance/invoices "issue for a past order" button gates on
- * THIS, not on canManageInvoices (settings:tenant || orders:refund_approve):
+ * SAME Finance predicate createTaxInvoice enforces. The
+ * /finance/invoices "issue for a past order" button gates on THIS, not on
+ * an unrelated permission:
  * those axes differ, so gating on the wrong one shows the button to users the
  * action then rejects, or hides it from users who can legitimately issue.
  */
 export async function canIssueManualInvoice(): Promise<boolean> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   return ctx != null;
 }
@@ -436,7 +436,7 @@ export async function cancelTaxInvoice(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền hủy hóa đơn." };
 
@@ -1149,7 +1149,7 @@ export async function fetchTopItems(
 export async function refreshMaterializedViews(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 

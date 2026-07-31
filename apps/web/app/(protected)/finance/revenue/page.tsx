@@ -25,7 +25,7 @@ export default async function RevenueReportPage({
 
   const [bundle, canRefreshFinanceViews, targetProgressRes] = await Promise.all([
     loadRevenueBundle(params, resolved),
-    currentUserHasPermissionAny(PERMISSION_KEYS.SETTINGS_TENANT),
+    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
     showTargetMonth
       ? listBranchRevenueTargetProgress(yearMonth)
       : Promise.resolve(null),

@@ -219,7 +219,7 @@ export const finance = {
       vatInputHint:
         "Hóa đơn NCC + chi vận hành · chưa mặc định được khấu trừ.",
       vatOutput: "Đầu ra",
-      vatUnavailable: "Chưa đủ dữ liệu",
+      vatUnavailable: "Không tải được dữ liệu",
       cashOnHand: "Tiền mặt theo sổ",
       cashOnHandMissing: "Chưa nhập số dư đầu",
       bankOnHand: "Tiền trong ngân hàng",

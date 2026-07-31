@@ -1031,11 +1031,9 @@ export async function fetchFinanceCockpit(
   const { supabase, claims } = await loadAuthState();
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
   const canReadRequestedValuation =
-    monetary.valuation &&
     monetary.client != null &&
-    (params.branch == null
-      ? monetary.systemValuation
-      : await canAccessBranch(supabase, claims, params.branch));
+    (params.branch == null ||
+      (await canAccessBranch(supabase, claims, params.branch)));
   const monetaryClient = canReadRequestedValuation ? monetary.client : null;
 
   const [

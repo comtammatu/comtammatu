@@ -35,7 +35,7 @@ Below the period result, keep the tenant-wide current-funds row:
   Incoming amounts add and outgoing amounts subtract.
 
 These two balances do not follow the page's period or branch filter. Show
-`Chưa mở sổ` until the Owner has created one verified opening through
+`Chưa mở sổ` until Finance has created one verified opening through
 `initialize_finance_funds`. The opening is the first delta from zero at its
 verified boundary and cannot be edited or deleted. Corrections use
 `create_finance_fund_adjustment`; they never replace the opening.
@@ -170,27 +170,26 @@ An over-threshold difference is resolved from
 Any verified gain or loss that must change book funds is recorded separately
 through `create_finance_fund_adjustment` with its own reason and evidence.
 
-Payment-method correction is owner-only in the session bill drawer and HĐĐT
+Payment-method correction belongs to Finance in the session bill drawer and HĐĐT
 queue. The atomic RPC updates `payments.method`, the `orders.payment_method`
 display mirror, and recomputes a closed session's expected cash and difference.
 Any prior variance resolution is cleared because the underlying classification
 changed. The audit log preserves the correction reason and prior values. A
 VietQR payment with canonical reconciliation or signed webhook evidence cannot
-be changed to cash until the Owner explicitly removes that bank evidence from
+be changed to cash until Finance explicitly removes that bank evidence from
 the bank-reconciliation workflow; changing the payment method never rewrites a
 `bank_transactions` movement.
 
 ### Owner and Accountant Visibility
 
 **Product contract (D076/D091):** authenticated `accountant` is a first-class
-application role with `/finance` operational authority and an Inventory GRN/PO
-slice. Runtime MODULE_ACL admits `owner` and `accountant` to `/finance`; fund
-initialization and privileged fund adjustments remain Owner-only.
+application role with complete `/finance` operational authority and an Inventory
+GRN/PO slice. Runtime MODULE_ACL admits `owner` and `accountant` to `/finance`.
 
 | Actor          | System access                                                                                                                                                                                                                                                            | Must review or act on                                                                                                                                                                                                                                                                                                                                                                                     |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owner          | Tenant-wide `/finance`; oversight plus fund initialization / privileged exceptions                                                                                                                                                                                       | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants                                                                                                                                                                                                                      |
-| Accountant     | `/finance` view + approve + create operating expenses, supplier invoices, invoice matching, supplier invoice payment, bank (NH), payment-method correction (PTTT); no supplier advance allocation; Inventory GRN/PO view plus PO management; no stock/production/catalog/valuation surface | Review supplier documents, recompute matching, verify service invoices, resolve discrepancies, and record invoice-bound supplier payments                                                                                                                                                                                                                                                                  |
+| Owner          | Tenant-wide `/finance`; oversight and the same Finance operations as Accountant                                                                                                                                                                                          | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants                                                                                                                                                                                                                      |
+| Accountant     | Owns all `/finance` operations: funds, expenses, supplier invoices and advances, bank (NH), payment-method correction (PTTT), HĐĐT, revenue targets, and Finance reporting; Inventory GRN/PO view plus PO management; no stock/production/catalog surface | Review supplier documents, recompute matching, verify service invoices, resolve discrepancies, record and allocate supplier payments, reconcile bank evidence, and maintain Finance records                                                                                                                                                                                                                     |
 | Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility                                                                                                                                                                        | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD Doanh thu thuần vs monthly target progress for the assigned branch only on Branch home (`finance.revenue.monthly_target_progress`); cannot edit targets or open `/finance` |
 
 Operators must not silently map `office` or a retired position code to Finance. Period-close
@@ -223,7 +222,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
 | `/finance`                   | Four-card basic landing      | Show completed-payment revenue, sales after discount, inventory value, and operating expense |
 | `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                                        |
-| `/finance/targets`           | Monthly revenue target setup | Owner-only target and non-cumulative reward tiers; no automatic payroll allocation           |
+| `/finance/targets`           | Monthly revenue target setup | Finance-managed target and non-cumulative reward tiers; no automatic payroll allocation       |
 | `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
 | `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
 | `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |

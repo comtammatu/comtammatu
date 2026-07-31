@@ -142,8 +142,8 @@ import {
 } from "@comtammatu/shared/format";
 import {
   addMoney,
-  hasMaximumScale,
   canonicalizeMoney,
+  hasMaximumScale,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
 } from "@comtammatu/shared/money";
@@ -189,12 +189,7 @@ type GrnOption = {
 };
 
 type SupplierInvoiceMode =
-  | "view"
-  | "create"
-  | "edit"
-  | "pay"
-  | "credit"
-  | "advance";
+  "view" | "create" | "edit" | "pay" | "credit" | "advance";
 
 type SupplierInvoiceGroup = SupplierInvoiceAggregateGroup & {
   title: string;
@@ -290,12 +285,7 @@ const supplierInvoiceSchema = z
           lineDiscount: optionalMoneySchema,
           vatRate: z.preprocess(
             Number,
-            z.union([
-              z.literal(0),
-              z.literal(5),
-              z.literal(8),
-              z.literal(10),
-            ]),
+            z.union([z.literal(0), z.literal(5), z.literal(8), z.literal(10)]),
           ),
           vatAmount: optionalMoneySchema,
           vatMode: z.enum(["auto", "manual"]),
@@ -859,9 +849,7 @@ function SupplierInvoiceCreateFields({
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium">{copy.invoiceLines}</p>
         {invoiceLines.length === 0 ? (
-          <NoteCallout tone="muted">
-            {copy.chooseReceiptsForLines}
-          </NoteCallout>
+          <NoteCallout tone="muted">{copy.chooseReceiptsForLines}</NoteCallout>
         ) : (
           invoiceLines.map((line, index) => {
             const calculatedLine = calculatedLines[index] ?? {
@@ -925,36 +913,6 @@ function SupplierInvoiceCreateFields({
                     />
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
-                    {copy.grossLineTotalLabel}
-                    <MoneyVndInput
-                      controlSize="field"
-                      value={calculatedLine.grossLineTotal}
-                      onValueChange={(value) => {
-                        const grossLineTotal = canonicalMoney(value);
-                        patchInvoiceLine(index, {
-                          grossLineTotal: value,
-                          pricingMode: "gross_total",
-                          unitPrice: deriveSupplierInvoiceGrossUnitPrice(
-                            String(line.quantity),
-                            grossLineTotal,
-                            line.lineDiscount,
-                          ),
-                          ...(line.vatMode === "auto"
-                            ? {
-                                vatAmount: resolveSupplierInvoiceVatAmount(
-                                  grossLineTotal,
-                                  line.vatRate as SupplierInvoiceVatRate,
-                                  "auto",
-                                  "",
-                                ),
-                              }
-                            : {}),
-                        });
-                      }}
-                      aria-label={copy.grossLineTotalAria(line.description)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-medium">
                     {copy.lineDiscountLabel}
                     <MoneyVndInput
                       controlSize="field"
@@ -994,6 +952,36 @@ function SupplierInvoiceCreateFields({
                         });
                       }}
                       aria-label={copy.lineDiscountAria(line.description)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium">
+                    {copy.grossLineTotalLabel}
+                    <MoneyVndInput
+                      controlSize="field"
+                      value={calculatedLine.grossLineTotal}
+                      onValueChange={(value) => {
+                        const grossLineTotal = canonicalMoney(value);
+                        patchInvoiceLine(index, {
+                          grossLineTotal: value,
+                          pricingMode: "gross_total",
+                          unitPrice: deriveSupplierInvoiceGrossUnitPrice(
+                            String(line.quantity),
+                            grossLineTotal,
+                            line.lineDiscount,
+                          ),
+                          ...(line.vatMode === "auto"
+                            ? {
+                                vatAmount: resolveSupplierInvoiceVatAmount(
+                                  grossLineTotal,
+                                  line.vatRate as SupplierInvoiceVatRate,
+                                  "auto",
+                                  "",
+                                ),
+                              }
+                            : {}),
+                        });
+                      }}
+                      aria-label={copy.grossLineTotalAria(line.description)}
                     />
                   </label>
                   <label className="flex flex-col gap-2 text-sm font-medium">
@@ -1219,9 +1207,7 @@ function SupplierPaymentFields({
         required
       />
       <NoteCallout
-        tone={
-          parseMoneyToMinorUnits(advanceAmount) > 0n ? "warning" : "muted"
-        }
+        tone={parseMoneyToMinorUnits(advanceAmount) > 0n ? "warning" : "muted"}
       >
         <div className="flex flex-col gap-1 text-sm">
           <span>{copy.paymentTotalPreview(formatVND(amount))}</span>
@@ -1266,9 +1252,7 @@ function SupplierAdvanceFields({
 }) {
   const paymentId = Number(form.watch("paymentId") || 0);
   const selected = advances.find((advance) => advance.paymentId === paymentId);
-  const amount = parseMoneyToMinorUnits(
-    canonicalMoney(form.watch("amount")),
-  );
+  const amount = parseMoneyToMinorUnits(canonicalMoney(form.watch("amount")));
   const allocated = minorUnitsToCanonical(
     minimumMinorUnits([
       amount,
@@ -2043,10 +2027,7 @@ export function SupplierInvoicesClient({
       return { success: false, error: "Không tìm thấy hóa đơn NCC." };
     }
     const amount = canonicalMoney(values.amount);
-    const allocations = allocateSupplierMoney(
-      amount,
-      invoicesInSelectedGroup,
-    );
+    const allocations = allocateSupplierMoney(amount, invoicesInSelectedGroup);
     if (allocations.length === 0) {
       return { success: false, error: "Không còn công nợ để phân bổ." };
     }
@@ -2328,9 +2309,7 @@ export function SupplierInvoicesClient({
           </div>
           {viewMode === "supplier" ? (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">
-                {copy.paidAmount}
-              </span>
+              <span className="text-muted-foreground">{copy.paidAmount}</span>
               <span className="font-mono">
                 {messages.inventory.common.currencyCompact(
                   formatVND(group.paidAmount),
@@ -3249,15 +3228,11 @@ export function SupplierInvoicesClient({
                     />
                     <DetailFact
                       label={copy.valuation.supplierReturnVariance}
-                      value={formatVND(
-                        valuationSummary.supplierReturnVariance,
-                      )}
+                      value={formatVND(valuationSummary.supplierReturnVariance)}
                     />
                     <DetailFact
                       label={copy.valuation.currentPeriodVariance}
-                      value={formatVND(
-                        valuationSummary.currentPeriodVariance,
-                      )}
+                      value={formatVND(valuationSummary.currentPeriodVariance)}
                     />
                   </ItemGroup>
                 ) : null}

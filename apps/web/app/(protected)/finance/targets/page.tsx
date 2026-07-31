@@ -1,10 +1,8 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
   currentVnMonthStart,
@@ -23,11 +21,6 @@ export default async function FinanceRevenueTargetsPage({
 }: {
   searchParams?: Promise<{ month?: string | string[] }>;
 }) {
-  const auth = await loadAuthState();
-  if (auth.claims.user_role !== "owner") {
-    redirect("/finance");
-  }
-
   const raw = searchParams ? await searchParams : {};
   const monthParam = Array.isArray(raw.month) ? raw.month[0] : raw.month;
   const yearMonth =

@@ -1,15 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-/** Fund bootstrap / privileged ledger writes stay Owner-only. */
-const OWNER_FUND_ROLES = ["owner"] as const;
+const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
 const MONEY = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
@@ -73,7 +72,7 @@ function financeFundError(
   const message = error.message?.toLowerCase() ?? "";
 
   if (error.code === "42501" || message.includes("forbidden_owner_only")) {
-  return "Chỉ chủ sở hữu mới được ghi nhận số dư theo sổ.";
+    return "Không có quyền ghi nhận số dư theo sổ.";
   }
   if (message.includes("finance_fund_idempotency_conflict")) {
     return "Yêu cầu này đã được dùng với dữ liệu khác. Hãy đóng và mở lại biểu mẫu.";
@@ -113,7 +112,7 @@ export async function initializeFinanceFunds(
   }
 
   const ctx = await getAuthContextWithPermission(
-    OWNER_FUND_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };
@@ -147,7 +146,7 @@ export async function createFinanceFundAdjustment(
   }
 
   const ctx = await getAuthContextWithPermission(
-    OWNER_FUND_ROLES,
+    FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền." };

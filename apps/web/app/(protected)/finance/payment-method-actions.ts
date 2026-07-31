@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Payment-method correction — owner-level record fix.
+ * Payment-method correction — Finance record fix.
  *
  * Fixes a wrongly-recorded payment method (e.g. customer paid by transfer but
  * "cash" was tapped). Resolves the order's single completed payment and calls
@@ -42,13 +42,13 @@ export async function correctPaymentMethod(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền sửa phương thức." };
 
   const { supabase, claims } = ctx;
 
-  // Resolve the order's single completed payment (same scoping as refund).
+  // Resolve the order's single completed payment.
   const { data: payments, error: payErr } = await supabase
     .from("payments")
     .select("id, branch_id, method, status")

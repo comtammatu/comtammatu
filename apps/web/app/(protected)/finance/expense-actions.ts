@@ -6,7 +6,7 @@
  * Single-entry expense-ledger writes for the owner finance cockpit. The summed
  * total feeds `fetchOperatingExpenseSummary` (finance-cockpit) which supplies
  * the operating-expense KPI and operating result. NOT a general ledger (D020);
- * supplier costs stay in supplier_invoices. v1 owner-only (finance module gate).
+ * supplier costs stay in supplier_invoices.
  */
 
 import { z } from "zod";
