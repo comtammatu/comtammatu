@@ -33,16 +33,14 @@ export default async function SettingsPage() {
       width="wide"
     >
       {canManageTenantSettings ? (
-        <AppSection
-          title={copy.tenantSettingsTitle}
-          description={copy.tenantSettingsDescription}
-        >
-          <LinkCardGrid>
+        <AppSection title={copy.tenantSettingsTitle}>
+          <LinkCardGrid className="lg:grid-cols-2 xl:grid-cols-2">
             <AppLinkCard
               href="/settings/general"
               title={copy.generalTitle}
               description={copy.generalDescription}
               icon={<IconBuilding2 />}
+              ctaLabel={copy.openSettings}
             />
             <AppLinkCard
               href="/settings/payments"
@@ -50,23 +48,22 @@ export default async function SettingsPage() {
               description={copy.paymentsDescription}
               icon={<IconCreditCard />}
               tone="success"
+              ctaLabel={copy.openSettings}
             />
           </LinkCardGrid>
         </AppSection>
       ) : null}
 
       {canManagePrintSettings ? (
-        <AppSection
-          title={copy.printSettingsTitle}
-          description={copy.printSettingsDescription}
-        >
-          <LinkCardGrid>
+        <AppSection title={copy.printSettingsTitle}>
+          <LinkCardGrid className="lg:grid-cols-2 xl:grid-cols-2">
             <AppLinkCard
               href="/settings/printers"
               title={copy.printersTitle}
               description={copy.printersDescription}
               icon={<IconPrinter />}
               tone="info"
+              ctaLabel={copy.openSettings}
             />
           </LinkCardGrid>
         </AppSection>

@@ -1,6 +1,16 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AppPage, AppPageHeader, type AppPageProps } from "@/components/surface";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+} from "@comtammatu/ui/components/breadcrumb";
+import {
+  AppPage,
+  AppPageHeader,
+  type AppPageProps,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 
 interface SettingsPageFrameProps {
@@ -33,12 +43,15 @@ export function SettingsPageFrame({
         actions={actions}
         breadcrumb={
           showSettingsHomeLink ? (
-            <Link
-              href="/settings"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-            >
-              {messages.settings.pages.settingsHomeLink}
-            </Link>
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink render={<Link href="/settings" />}>
+                    {messages.settings.pages.settingsHomeLink}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           ) : undefined
         }
       />

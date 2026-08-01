@@ -26,6 +26,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemHeader,
   ItemTitle,
@@ -871,9 +872,7 @@ function BlockFields({
     default:
       return (
         <ItemContent>
-          <p className="text-sm text-muted-foreground">
-            {copy.systemBlockHint}
-          </p>
+          <ItemDescription>{copy.systemBlockHint}</ItemDescription>
         </ItemContent>
       );
   }

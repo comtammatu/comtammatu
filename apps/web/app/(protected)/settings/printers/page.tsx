@@ -30,13 +30,15 @@ export default async function PrintersPage() {
     <SettingsPageFrame
       title={copy.printersTitle}
       description={copy.printLandingDescription}
+      width="wide"
     >
-      <LinkCardGrid>
+      <LinkCardGrid className="xl:grid-cols-3">
         <AppLinkCard
           href="/branches"
           title={copy.printBranchConfigTitle}
           description={copy.printersDescription}
           icon={<IconPrinter />}
+          ctaLabel={copy.openSettings}
         />
         {isTenantLevel ? (
           <AppLinkCard
@@ -44,6 +46,7 @@ export default async function PrintersPage() {
             title={copy.printTemplatesTitle}
             description={copy.printTemplatesDescription}
             icon={<IconFileText />}
+            ctaLabel={copy.openSettings}
           />
         ) : null}
         <AppLinkCard
@@ -51,6 +54,7 @@ export default async function PrintersPage() {
           title={copy.printJobsTitle}
           description={copy.printJobsDescription}
           icon={<IconActivity />}
+          ctaLabel={copy.openSettings}
         />
       </LinkCardGrid>
     </SettingsPageFrame>

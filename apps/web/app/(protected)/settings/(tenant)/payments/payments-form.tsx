@@ -6,12 +6,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SettingsFormSection } from "@/components/settings-form-section";
 import { TextField } from "@/components/form";
+import { DescriptionList } from "@/components/surface";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Frame } from "@comtammatu/ui/components/frame";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import {
   Tabs,
@@ -119,6 +126,7 @@ export function PaymentsForm({
   const paymentCodePreview = normalizedCodePrefix
     ? `${normalizedCodePrefix} ${SAMPLE_PAYMENT_SUFFIX}`
     : null;
+  const codePrefixError = form.formState.errors.vietqr_code_prefix;
   const normalizedContentPrefix = normalizePaymentContentToken(
     form.watch("content_prefix"),
   );
@@ -191,169 +199,155 @@ export function PaymentsForm({
         </TabsList>
 
         <TabsContent value="connection" className="mt-0 flex flex-col gap-4">
-          <SettingsFormSection title={messages.settings.payments.sectionTitle}>
-            <Frame className="flex flex-col gap-3 p-4">
-              <Controller
+          <SettingsFormSection
+            title={messages.settings.payments.sectionTitle}
+            description={messages.settings.payments.vietqrDescription}
+          >
+            <Controller
+              control={form.control}
+              name="enable_vietqr"
+              render={({ field }) => (
+                <Field orientation="horizontal">
+                  <FieldContent>
+                    <FieldLabel htmlFor="enable-vietqr">
+                      {messages.settings.payments.vietqrLabel}
+                    </FieldLabel>
+                    <FieldDescription id="enable-vietqr-description">
+                      {field.value
+                        ? messages.settings.payments.vietqrEnabled
+                        : messages.settings.payments.vietqrDisabled}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Switch
+                    id="enable-vietqr"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    aria-describedby="enable-vietqr-description"
+                  />
+                </Field>
+              )}
+            />
+
+            <div className="grid items-start gap-3 sm:grid-cols-3">
+              <TextField
                 control={form.control}
-                name="enable_vietqr"
-                render={({ field }) => (
-                  <div className="flex flex-row items-start justify-between gap-2">
-                    <div className="flex flex-col gap-1">
-                      <Label htmlFor="enable-vietqr" className="text-base">
-                        {messages.settings.payments.vietqrLabel}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {messages.settings.payments.vietqrDescription}
-                      </p>
-                    </div>
-                    <Switch
-                      id="enable-vietqr"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="mt-1"
-                    />
-                  </div>
-                )}
+                name="vietqr_bank_code"
+                id="vietqr-bank-code"
+                label={messages.settings.payments.bankCode}
+                placeholder={messages.settings.payments.bankCodePlaceholder}
+                autoCapitalize="characters"
               />
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <TextField
-                  control={form.control}
-                  name="vietqr_bank_code"
-                  id="vietqr-bank-code"
-                  label={messages.settings.payments.bankCode}
-                  placeholder="TCB"
-                  autoCapitalize="characters"
-                />
-                <TextField
-                  control={form.control}
-                  name="vietqr_account_no"
-                  id="vietqr-account-no"
-                  label={messages.settings.payments.accountNo}
-                  autoCapitalize="characters"
-                  placeholder="19035xxxxxxxx"
-                />
-                <TextField
-                  control={form.control}
-                  name="vietqr_account_name"
-                  id="vietqr-account-name"
-                  label={messages.settings.payments.accountName}
-                  placeholder="CONG TY CO PHAN CHEN SU"
-                />
-              </div>
-              <p className="text-2xs text-muted-foreground">
-                {messages.settings.payments.bankHelp}
-              </p>
-
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="vietqr-code-prefix" className="text-xs">
-                  {messages.settings.payments.codePrefix}
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {messages.settings.payments.codePrefixIntro}
-                </p>
-                <Input
-                  id="vietqr-code-prefix"
-                  autoCapitalize="characters"
-                  placeholder="QAJZRU5550 MBBMS01382716 1"
-                  aria-describedby="vietqr-code-prefix-help vietqr-code-prefix-preview"
-                  {...form.register("vietqr_code_prefix")}
-                />
-                {form.formState.errors.vietqr_code_prefix && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.vietqr_code_prefix.message}
-                  </p>
-                )}
-                <p
-                  id="vietqr-code-prefix-help"
-                  className="text-2xs text-muted-foreground"
-                >
-                  {messages.settings.payments.codePrefixHelp}
-                </p>
-                <dl
-                  id="vietqr-code-prefix-preview"
-                  className="grid gap-2 text-xs sm:grid-cols-3"
-                >
-                  <div className="flex flex-col gap-1">
-                    <dt className="font-medium text-muted-foreground">
-                      {messages.settings.payments.codeModelOwnerLabel}
-                    </dt>
-                    <dd>
-                      <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                        {normalizedCodePrefix ||
-                          messages.settings.payments.codePreviewEmpty}
-                      </code>
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="font-medium text-muted-foreground">
-                      {messages.settings.payments.codeModelSuffixLabel}
-                    </dt>
-                    <dd>
-                      <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                        {SAMPLE_PAYMENT_SUFFIX}
-                      </code>
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <dt className="font-medium text-muted-foreground">
-                      {messages.settings.payments.codeModelFinalLabel}
-                    </dt>
-                    <dd>
-                      {paymentCodePreview ? (
-                        <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                          {paymentCodePreview}
-                        </code>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {messages.settings.payments.codePreviewEmpty}
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="text-2xs text-muted-foreground">
-                  {messages.settings.payments.codePreviewHelp}
-                </p>
-              </div>
-            </Frame>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <Label className="text-base">
-                  {messages.settings.payments.sepayLabel}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {messages.settings.payments.sepayDescription}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {messages.settings.payments.envStatus}{" "}
-                  {sepayEnvConfigured ? (
-                    <span className="text-success">
-                      {messages.settings.payments.envConfigured}
-                    </span>
-                  ) : (
-                    <span className="text-warning">
-                      {messages.settings.payments.envMissing}
-                    </span>
-                  )}
-                </p>
-                <code className="w-fit rounded-md bg-muted px-2 py-1 text-xs">
-                  {messages.settings.payments.sepayEndpoint}
-                </code>
-              </div>
+              <TextField
+                control={form.control}
+                name="vietqr_account_no"
+                id="vietqr-account-no"
+                label={messages.settings.payments.accountNo}
+                autoCapitalize="characters"
+                placeholder="19035xxxxxxxx"
+              />
+              <TextField
+                control={form.control}
+                name="vietqr_account_name"
+                id="vietqr-account-name"
+                label={messages.settings.payments.accountName}
+                placeholder="CONG TY CO PHAN CHEN SU"
+              />
             </div>
+
+            <Field>
+              <FieldLabel htmlFor="vietqr-code-prefix">
+                {messages.settings.payments.codePrefix}
+              </FieldLabel>
+              <Input
+                id="vietqr-code-prefix"
+                autoCapitalize="characters"
+                placeholder="QAJZRU5550 MBBMS01382716 1"
+                aria-invalid={Boolean(codePrefixError)}
+                aria-describedby={`vietqr-code-prefix-help${
+                  codePrefixError ? " vietqr-code-prefix-error" : ""
+                }`}
+                {...form.register("vietqr_code_prefix")}
+              />
+              {codePrefixError ? (
+                <FieldError
+                  id="vietqr-code-prefix-error"
+                  errors={[codePrefixError]}
+                />
+              ) : null}
+              <FieldDescription id="vietqr-code-prefix-help">
+                {messages.settings.payments.codePrefixHelp}
+              </FieldDescription>
+            </Field>
+            <DescriptionList
+              className="grid gap-3 sm:grid-cols-3"
+              items={[
+                {
+                  term: messages.settings.payments.codeModelOwnerLabel,
+                  description: (
+                    <code className="font-mono text-xs">
+                      {normalizedCodePrefix ||
+                        messages.settings.payments.codePreviewEmpty}
+                    </code>
+                  ),
+                },
+                {
+                  term: messages.settings.payments.codeModelSuffixLabel,
+                  description: (
+                    <code className="font-mono text-xs">
+                      {SAMPLE_PAYMENT_SUFFIX}
+                    </code>
+                  ),
+                },
+                {
+                  term: messages.settings.payments.codeModelFinalLabel,
+                  description: paymentCodePreview ? (
+                    <code className="font-mono text-xs">
+                      {paymentCodePreview}
+                    </code>
+                  ) : (
+                    messages.settings.payments.codePreviewEmpty
+                  ),
+                },
+              ]}
+            />
+          </SettingsFormSection>
+
+          <SettingsFormSection
+            title={messages.settings.payments.sepayLabel}
+            description={messages.settings.payments.sepayDescription}
+          >
+            <DescriptionList
+              className="grid gap-3 sm:grid-cols-2"
+              items={[
+                {
+                  term: messages.settings.payments.envStatus,
+                  description: (
+                    <Badge variant={sepayEnvConfigured ? "success" : "warning"}>
+                      {sepayEnvConfigured
+                        ? messages.settings.payments.envConfigured
+                        : messages.settings.payments.envMissing}
+                    </Badge>
+                  ),
+                },
+                {
+                  term: messages.settings.payments.sepayEndpointLabel,
+                  description: (
+                    <code className="font-mono text-xs">
+                      {messages.settings.payments.sepayEndpoint}
+                    </code>
+                  ),
+                },
+              ]}
+            />
           </SettingsFormSection>
         </TabsContent>
 
         <TabsContent value="edit" className="mt-0">
           <SettingsFormSection
             title={messages.settings.payments.contentSectionTitle}
+            description={messages.settings.payments.contentHelp}
           >
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                {messages.settings.payments.contentHelp}
-              </p>
               <NoteCallout
                 label={messages.settings.payments.contentCategoryRuleLabel}
               >
@@ -387,34 +381,27 @@ export function PaymentsForm({
                 />
               </div>
 
-              <dl className="grid gap-3 text-xs sm:grid-cols-2">
-                <div className="flex flex-col gap-1">
-                  <dt className="font-medium text-muted-foreground">
-                    {messages.settings.payments.contentExpensePreview}
-                  </dt>
-                  <dd>
-                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                      {contentPreview(normalizedExpenseToken, "123")}
-                    </code>
-                  </dd>
-                  <p className="text-2xs text-muted-foreground">
-                    {messages.settings.payments.contentExpenseHelp}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <dt className="font-medium text-muted-foreground">
-                    {messages.settings.payments.contentCashDepositPreview}
-                  </dt>
-                  <dd>
-                    <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-                      {contentPreview(normalizedCashDepositToken)}
-                    </code>
-                  </dd>
-                  <p className="text-2xs text-muted-foreground">
-                    {messages.settings.payments.contentCashDepositHelp}
-                  </p>
-                </div>
-              </dl>
+              <DescriptionList
+                className="grid gap-3 sm:grid-cols-2"
+                items={[
+                  {
+                    term: messages.settings.payments.contentExpensePreview,
+                    description: (
+                      <code className="font-mono text-xs">
+                        {contentPreview(normalizedExpenseToken, "123")}
+                      </code>
+                    ),
+                  },
+                  {
+                    term: messages.settings.payments.contentCashDepositPreview,
+                    description: (
+                      <code className="font-mono text-xs">
+                        {contentPreview(normalizedCashDepositToken)}
+                      </code>
+                    ),
+                  },
+                ]}
+              />
             </div>
           </SettingsFormSection>
         </TabsContent>

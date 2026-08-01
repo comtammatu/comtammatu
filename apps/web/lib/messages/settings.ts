@@ -44,12 +44,9 @@ export const settings = {
     settingsHomeDescription:
       "Chọn đúng nhóm thiết lập cho doanh nghiệp, thu tiền POS hoặc thiết bị in.",
     settingsHomeLink: "Tất cả cài đặt",
+    openSettings: "Mở cài đặt",
     tenantSettingsTitle: "Doanh nghiệp và thu tiền",
-    tenantSettingsDescription:
-      "Thiết lập dùng xuyên suốt POS, HĐĐT và đối soát giao dịch.",
     printSettingsTitle: "Thiết bị và in ấn",
-    printSettingsDescription:
-      "Quản lý máy in, mẫu phiếu và hàng đợi in theo từng điểm vận hành.",
     generalTitle: "Doanh nghiệp",
     generalDescription:
       "Tên pháp lý, mã số thuế, địa chỉ và người đại diện in trên hóa đơn.",
@@ -305,43 +302,38 @@ export const settings = {
     editTab: "Chỉnh sửa",
     vietqrLabel: "VietQR (chuyển khoản QR)",
     vietqrDescription: "Tài khoản nhận tiền POS dùng để tạo QR chuyển khoản.",
+    vietqrEnabled: "Đang hiển thị QR chuyển khoản trên POS.",
+    vietqrDisabled: "Đang tắt QR chuyển khoản trên POS.",
     bankCode: "Mã ngân hàng",
+    bankCodePlaceholder: "TCB hoặc 970407",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
     codePrefix: "Nội dung QR POS / MB Soundbox",
-    codePrefixIntro:
-      "POS ghép phần này với mã đối soát của từng đơn rồi đưa vào QR.",
     codePrefixHelp:
       "Hệ thống tự thêm 12 ký tự đối soát. Chỉ chữ, số và khoảng trắng.",
     codeModelOwnerLabel: "Chủ sở hữu lưu",
     codeModelSuffixLabel: "Hệ thống tự thêm",
     codeModelFinalLabel: "Nội dung QR POS",
     codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
-    codePreviewHelp:
-      "Nội dung khách chuyển khoản; SePay tự xác nhận bằng mã này.",
-    bankHelp: "Mã NH: TCB, VCB, BIDV, MB, ACB… hoặc Napas BIN (vd 970407).",
     sepayLabel: "SePay tự động xác nhận",
     sepayDescription:
       "SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
-    sepayEndpoint: "Địa chỉ nhận dữ liệu tự động: /api/webhooks/sepay",
-    envStatus: "Trạng thái env:",
-    envConfigured: "✓ Đã cấu hình",
+    sepayEndpointLabel: "Địa chỉ nhận dữ liệu",
+    sepayEndpoint: "/api/webhooks/sepay",
+    envStatus: "Trạng thái cấu hình",
+    envConfigured: "Đã cấu hình",
     envMissing: "Chưa đủ biến môi trường",
     contentSectionTitle: "Lệnh SePay vận hành (tùy chọn)",
     contentPrefix: "Tiền tố chung",
     contentExpenseToken: "Mã khớp phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
     contentHelp:
-      "Hai mã chỉ dùng cho giao dịch vận hành. Thu đơn POS dùng trực tiếp nội dung QR POS.",
+      "Mã vận hành không dùng cho thu đơn POS; nộp tiền mặt không tính là chi.",
     contentCategoryRuleLabel: "Danh mục chi nằm ở phiếu chi",
     contentCategoryRule:
       "Dùng mã phiếu chi trong lệnh; SePay không suy ra danh mục từ nội dung chuyển khoản.",
     contentExpensePreview: "1. Khớp phiếu chi",
     contentCashDepositPreview: "2. Nộp tiền mặt",
-    contentExpenseHelp:
-      "123 là mã phiếu chi, không dùng LUONG hoặc DIEN thay cho mã phiếu chi.",
-    contentCashDepositHelp:
-      "Nộp tiền mặt vào ngân hàng; không tính là chi vận hành.",
     saveSettings: "Lưu cài đặt",
   },
   pos: {

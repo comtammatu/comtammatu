@@ -6,12 +6,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
 import { SettingsFormSection } from "@/components/settings-form-section";
+import { DescriptionList } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { activateInvoiceProfile, updateTenantIdentity } from "./actions";
 
@@ -175,24 +178,43 @@ export function SettingsForm({ identity, invoiceProfile }: SettingsFormProps) {
         description={copy.invoiceProfileDescription}
       >
         {invoiceProfile ? (
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <p className="text-muted-foreground">{copy.templateCodeLabel}</p>
-              <p className="font-medium">{invoiceProfile.template_code}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">{copy.invoiceSeriesLabel}</p>
-              <p className="font-medium">{invoiceProfile.invoice_series}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-muted-foreground">{copy.profileStatusLabel}</p>
-              <p className="font-medium">
-                {invoiceProfile.status === "active"
-                  ? copy.profileStatusActive
-                  : copy.profileStatusDraft}
-              </p>
-            </div>
-          </div>
+          <DescriptionList
+            className="grid gap-3 sm:grid-cols-2"
+            items={[
+              {
+                term: copy.templateCodeLabel,
+                description: (
+                  <code className="font-mono">
+                    {invoiceProfile.template_code}
+                  </code>
+                ),
+              },
+              {
+                term: copy.invoiceSeriesLabel,
+                description: (
+                  <code className="font-mono">
+                    {invoiceProfile.invoice_series}
+                  </code>
+                ),
+              },
+              {
+                term: copy.profileStatusLabel,
+                description: (
+                  <Badge
+                    variant={
+                      invoiceProfile.status === "active"
+                        ? "success"
+                        : "secondary"
+                    }
+                  >
+                    {invoiceProfile.status === "active"
+                      ? copy.profileStatusActive
+                      : copy.profileStatusDraft}
+                  </Badge>
+                ),
+              },
+            ]}
+          />
         ) : (
           <p className="text-sm text-destructive" role="alert">
             {copy.invoiceProfileMissing}
@@ -201,13 +223,13 @@ export function SettingsForm({ identity, invoiceProfile }: SettingsFormProps) {
 
         {invoiceProfile?.status === "draft" && (
           <>
-            <p className="text-sm text-muted-foreground">
+            <NoteCallout tone={canActivate ? "muted" : "warning"}>
               {!identityComplete
                 ? copy.activationRequiresIdentity
                 : !identitySaved
                   ? copy.activationSaveFirst
                   : copy.activationReady}
-            </p>
+            </NoteCallout>
             {activationError && (
               <p className="text-sm text-destructive" role="alert">
                 {activationError}
