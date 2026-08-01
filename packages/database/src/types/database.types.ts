@@ -459,6 +459,9 @@ export type Database = {
           lng: number | null
           method: string | null
           note: string | null
+          scheduled_end_at: string | null
+          scheduled_start_at: string | null
+          shift_assignment_id: number | null
           shift_id: number
           status: string
           tenant_id: number
@@ -484,6 +487,9 @@ export type Database = {
           lng?: number | null
           method?: string | null
           note?: string | null
+          scheduled_end_at?: string | null
+          scheduled_start_at?: string | null
+          shift_assignment_id?: number | null
           shift_id: number
           status?: string
           tenant_id: number
@@ -509,6 +515,9 @@ export type Database = {
           lng?: number | null
           method?: string | null
           note?: string | null
+          scheduled_end_at?: string | null
+          scheduled_start_at?: string | null
+          shift_assignment_id?: number | null
           shift_id?: number
           status?: string
           tenant_id?: number
@@ -541,6 +550,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_shift_assignment_id_fkey"
+            columns: ["shift_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "shift_assignments"
             referencedColumns: ["id"]
           },
           {
@@ -7151,6 +7167,88 @@ export type Database = {
           },
         ]
       }
+      shift_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          branch_id: number | null
+          created_at: string
+          employee_id: number
+          id: number
+          shift_id: number
+          tenant_id: number
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          branch_id?: number | null
+          created_at?: string
+          employee_id: number
+          id?: never
+          shift_id: number
+          tenant_id: number
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          branch_id?: number | null
+          created_at?: string
+          employee_id?: number
+          id?: never
+          shift_id?: number
+          tenant_id?: number
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_checklist_consumption_default_items: {
         Row: {
           created_at: string
@@ -9140,7 +9238,6 @@ export type Database = {
           id: number
           invoice_date: string
           invoice_kind: string
-          invoice_number: string
           matching_difference_amount: number | null
           matching_expected_amount: number | null
           matching_notes: string | null
@@ -9181,7 +9278,6 @@ export type Database = {
           id?: never
           invoice_date: string
           invoice_kind?: string
-          invoice_number: string
           matching_difference_amount?: number | null
           matching_expected_amount?: number | null
           matching_notes?: string | null
@@ -9222,7 +9318,6 @@ export type Database = {
           id?: never
           invoice_date?: string
           invoice_kind?: string
-          invoice_number?: string
           matching_difference_amount?: number | null
           matching_expected_amount?: number | null
           matching_notes?: string | null
@@ -11082,6 +11177,15 @@ export type Database = {
         Args: { p_invoice_id: number; p_storage_path: string }
         Returns: undefined
       }
+      attendance_shift_workdays: {
+        Args: {
+          p_check_in: string
+          p_check_out: string
+          p_scheduled_end: string
+          p_scheduled_start: string
+        }
+        Returns: number
+      }
       auth_branch_id: { Args: never; Returns: number }
       auth_is_owner: { Args: { p_user: string }; Returns: boolean }
       auth_role: { Args: never; Returns: string }
@@ -11162,6 +11266,10 @@ export type Database = {
       cancel_purchase_request: {
         Args: { p_reason: string; p_request_id: number }
         Returns: Json
+      }
+      cancel_staff_user_provisioning: {
+        Args: { p_token: string }
+        Returns: undefined
       }
       cancel_stock_request:
         | { Args: { p_request_id: number }; Returns: Json }
@@ -11349,6 +11457,15 @@ export type Database = {
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
+      }
+      copy_shift_assignments_week: {
+        Args: {
+          p_branch_id: number
+          p_source_week_start: string
+          p_target_week_start: string
+          p_tenant_id: number
+        }
         Returns: Json
       }
       correct_payment_method: {
@@ -12636,6 +12753,18 @@ export type Database = {
         Args: { p_idempotency_key: string }
         Returns: Json
       }
+      prepare_staff_user_provisioning: {
+        Args: {
+          p_branch_id: number
+          p_email: string
+          p_full_name: string
+          p_position_code: string
+          p_provisioned_by: string
+          p_tenant_id: number
+          p_token: string
+        }
+        Returns: undefined
+      }
       prepare_tax_invoice_issue_job_as_system:
         | {
             Args: {
@@ -12792,6 +12921,15 @@ export type Database = {
       }
       reconcile_sepay_order_evidence_core: {
         Args: { p_event_id: number; p_payment_code: string }
+        Returns: Json
+      }
+      reconcile_shift_assignments_week: {
+        Args: {
+          p_assignments: Json
+          p_branch_id: number
+          p_tenant_id: number
+          p_week_start: string
+        }
         Returns: Json
       }
       reconcile_tax_invoice_provider_issued: {
