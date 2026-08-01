@@ -9,7 +9,8 @@ import { withAction } from "@/_lib/with-action";
 const adjustSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
-  quantityChange: z.coerce
+  entryUnitId: z.coerce.number().int().positive(),
+  entryQuantity: z.coerce
     .number()
     .refine(Number.isFinite, {
       error: "Số lượng điều chỉnh không hợp lệ.",
@@ -35,7 +36,8 @@ export const adjustStock = withAction(
     const { error } = await supabase.rpc("adjust_stock_exception", {
       p_branch_id: data.branchId,
       p_ingredient_id: data.ingredientId,
-      p_quantity_change: data.quantityChange,
+      p_entry_quantity: data.entryQuantity,
+      p_entry_unit_id: data.entryUnitId,
       p_reason: data.reason,
     });
 
@@ -69,7 +71,10 @@ export const adjustStock = withAction(
           error: "Chi nhánh chưa có kho mặc định. Vui lòng liên hệ quản trị.",
         };
       }
-      if (msg.includes("entry_unit_not_found")) {
+      if (
+        msg.includes("entry_unit_not_found") ||
+        msg.includes("inventory_unit_role_mismatch")
+      ) {
         return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
       }
       return { success: false, error: "Không thể điều chỉnh tồn kho." };

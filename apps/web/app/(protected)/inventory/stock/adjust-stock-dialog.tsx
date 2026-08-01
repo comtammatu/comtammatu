@@ -11,12 +11,11 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { FormDialog, NumberField, TextareaField } from "@/components/form";
-import { getIssueBaseQuantity } from "../_lib/issue-units";
-import { adjustStock } from "../stock-actions";
 import {
-  getDefaultIngredientUnit,
-  getIngredientUnitOptions,
-} from "@lib/inventory/unit-options";
+  getDefaultIssueUnit,
+  getIssueUnitOptions,
+} from "../_lib/issue-units";
+import { adjustStock } from "../stock-actions";
 import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
 const adjustStockSchema = z.object({
@@ -60,12 +59,8 @@ export function AdjustStockDialog({
   ingredient,
   onAdjusted,
 }: AdjustStockDialogProps) {
-  const unitOptions = getIngredientUnitOptions(ingredient, {
-    includeToBaseFactor: true,
-  });
-  const defaultUnit =
-    unitOptions.find((option) => option.unitId === ingredient.issue_unit_id) ??
-    getDefaultIngredientUnit(unitOptions);
+  const unitOptions = getIssueUnitOptions(ingredient);
+  const defaultUnit = getDefaultIssueUnit(ingredient);
   const defaultValues = {
     ...DEFAULT_VALUES,
     entryUnitId: defaultUnit ? String(defaultUnit.unitId) : "",
@@ -79,13 +74,11 @@ export function AdjustStockDialog({
     if (!selectedUnit) {
       return { success: false, error: INVENTORY_VI.unitRequired };
     }
-    const baseQuantityChange =
-      getIssueBaseQuantity(Math.abs(parsedQuantityChange), selectedUnit) *
-      Math.sign(parsedQuantityChange);
     const result = await adjustStock({
       branchId,
       ingredientId: ingredient.id,
-      quantityChange: baseQuantityChange,
+      entryQuantity: parsedQuantityChange,
+      entryUnitId: selectedUnit.unitId,
       reason: values.reason,
     });
     if (result.success) {

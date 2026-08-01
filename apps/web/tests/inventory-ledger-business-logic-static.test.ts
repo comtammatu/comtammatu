@@ -44,7 +44,7 @@ test("exception adjustment writes only through the guarded RPC and not direct le
   assert.match(adjustRpc, /'adjustment'/);
   assert.doesNotMatch(adjustRpc, /p_type|p_movement_type|count_adjustment/);
 
-  assert.match(action, /\.rpc\("adjust_stock_exception"/);
+  assert.match(action, /supabase\.rpc[\s\S]*?"adjust_stock_exception"/);
   assert.doesNotMatch(action, /\.from\("stock_movements"\)\s*\.insert/s);
   assert.doesNotMatch(action, /count_adjustment/);
 });

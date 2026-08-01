@@ -11046,15 +11046,26 @@ export type Database = {
         }
         Returns: Json
       }
-      adjust_stock_exception: {
-        Args: {
-          p_branch_id: number
-          p_ingredient_id: number
-          p_quantity_change: number
-          p_reason: string
-        }
-        Returns: Json
-      }
+      adjust_stock_exception:
+        | {
+            Args: {
+              p_branch_id: number
+              p_entry_quantity: number
+              p_entry_unit_id: number
+              p_ingredient_id: number
+              p_reason: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_ingredient_id: number
+              p_quantity_change: number
+              p_reason: string
+            }
+            Returns: Json
+          }
       aggregate_daily_b2c_invoice: {
         Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
         Returns: Json
