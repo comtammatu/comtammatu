@@ -327,9 +327,9 @@ export default async function FinancePage({
 
           <div className="grid min-w-0 gap-2 xl:contents">
             <span className={formulaOperatorClass}>
-              <span aria-hidden>−</span>
+              <span aria-hidden>+</span>
               <span className="sr-only">
-                {financeCopy.basic.operators.subtract}
+                {financeCopy.basic.operators.add}
               </span>
             </span>
             <KpiCard

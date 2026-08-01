@@ -204,6 +204,7 @@ export const finance = {
       inventory: "Tài sản hiện có",
     },
     operators: {
+      add: "cộng",
       subtract: "trừ",
       equals: "bằng",
     },
@@ -223,7 +224,7 @@ export const finance = {
       operatingResultBase: "Từ lợi nhuận gộp",
       operatingResult: "Kết quả vận hành",
       operatingResultHint:
-        "Lợi nhuận gộp − chi phí vận hành − biến động tồn kho",
+        "Lợi nhuận gộp − chi phí vận hành + biến động tồn kho",
       notCalculated: "Chưa tính",
       unavailable: "Chưa xác định",
       inventoryClosingValue: "Giá trị tồn kho cuối kỳ",

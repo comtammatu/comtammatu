@@ -261,7 +261,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Luồng thao tác (Workflow):**
   1. **Chọn kỳ báo cáo:** Lọc theo ngày hôm nay / Tuần này / Tháng này / Chọn khoảng ngày.
   2. **Chọn phạm vi:** Lọc theo toàn chuỗi hoặc một chi nhánh cụ thể.
-  3. **Xem kết quả:** Đọc năm card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành = Kết quả vận hành`.
+  3. **Xem kết quả:** Đọc sáu card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành + Biến động tồn kho = Kết quả vận hành`.
   4. **Xem số dư:** Đọc tiền mặt theo sổ và tiền trong ngân hàng; hai số này không đổi theo bộ lọc.
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
   6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, dữ liệu chi phí không khả dụng hoặc chứng từ cần xử lý.

@@ -36,7 +36,7 @@ export function calculateFinanceResult({
     grossMargin:
       netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0,
     operatingResult: operatingExpenseAvailable
-      ? grossProfit - operatingExpense - inventoryMovement
+      ? grossProfit - operatingExpense + inventoryMovement
       : null,
   };
 }

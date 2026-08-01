@@ -110,8 +110,20 @@ test("finance overview presents period results, current funds, and inventory in 
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
     5,
   );
-  assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 3);
+  assert.equal((page.match(/<span aria-hidden>−<\/span>/g) ?? []).length, 2);
+  assert.equal((page.match(/<span aria-hidden>\+<\/span>/g) ?? []).length, 1);
   assert.equal((page.match(/<span aria-hidden>=<\/span>/g) ?? []).length, 2);
+  const inventoryMovementLabel = page.indexOf(
+    "label={financeCopy.basic.kpis.inventoryMovement}",
+  );
+  const inventoryMovementBlock = page.slice(
+    page.lastIndexOf(
+      '<div className="grid min-w-0 gap-2 xl:contents">',
+      inventoryMovementLabel,
+    ),
+    inventoryMovementLabel,
+  );
+  assert.match(inventoryMovementBlock, /<span aria-hidden>\+<\/span>/);
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);

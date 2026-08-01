@@ -16,7 +16,7 @@ six cards:
   utilities, payroll, repairs, supplies, marketing, fees/tax, and other
   operating categories?
 - **Biến động tồn kho**: period-end inventory value minus period-opening value.
-- **Kết quả vận hành**: gross profit minus recorded operating expense minus
+- **Kết quả vận hành**: gross profit minus recorded operating expense plus
   inventory movement.
 
 Missing food-cost coverage makes both gross profit and operating result
@@ -129,11 +129,11 @@ period-result cards:
 
 5. **Inventory movement**
    - `Biến động tồn kho = Tồn cuối kỳ - Tồn đầu kỳ`.
-   - A positive movement is subtracted from operating result; a negative
-     movement increases it.
+   - A positive movement increases operating result; a negative movement
+     decreases it.
 
 6. **Operating result**
-   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành - (Tồn cuối kỳ - Tồn đầu kỳ)`.
+   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành + (Tồn cuối kỳ - Tồn đầu kỳ)`.
    - Do not call it net profit. Keep it unavailable when food cost is incomplete
      or operating expense data is unavailable.
 

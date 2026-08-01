@@ -15,7 +15,7 @@ test("finance result treats an available empty expense period as zero", () => {
     {
       grossProfit: 600_000,
       grossMargin: 60,
-      operatingResult: 300_000,
+      operatingResult: 400_000,
     },
   );
 
@@ -68,6 +68,6 @@ test("finance result treats an available empty expense period as zero", () => {
       costAvailable: true,
       operatingExpenseAvailable: true,
     }).operatingResult,
-    400_000,
+    300_000,
   );
 });
