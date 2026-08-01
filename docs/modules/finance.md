@@ -20,8 +20,8 @@ six cards:
   inventory movement.
 
 Missing food-cost coverage makes both gross profit and operating result
-unavailable. A period with no recorded operating expense keeps operating result
-unavailable instead of treating missing data as zero.
+unavailable. A successfully loaded period with no operating expense uses zero;
+only unavailable expense data keeps operating result unavailable.
 
 Below the period result, keep the tenant-wide current-funds row:
 
@@ -125,7 +125,7 @@ period-result cards:
      `supplies`, `marketing`, `fees_tax`, and `other`.
    - Exclude ingredient/material COGS, supplier invoice payments, and internal
      cash-to-bank deposits/transfers from the top-line operating expense number.
-   - If no operating expense has been recorded, display `Chưa ghi nhận`.
+   - If the loaded period has no operating expense, display `0đ`.
 
 5. **Inventory movement**
    - `Biến động tồn kho = Tồn cuối kỳ - Tồn đầu kỳ`.
@@ -135,7 +135,7 @@ period-result cards:
 6. **Operating result**
    - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành - (Tồn cuối kỳ - Tồn đầu kỳ)`.
    - Do not call it net profit. Keep it unavailable when food cost is incomplete
-     or operating expense has not been recorded.
+     or operating expense data is unavailable.
 
 After the formula, show the unfiltered current-funds section, the filtered
 period-end inventory value, then the attention queue. Desktop splits the six

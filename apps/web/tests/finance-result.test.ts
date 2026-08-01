@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { calculateFinanceResult } from "../app/(protected)/finance/_lib/finance-result";
 
-test("finance result only resolves when cost and operating expense data are available", () => {
+test("finance result treats an available empty expense period as zero", () => {
   assert.deepEqual(
     calculateFinanceResult({
       netRevenueBeforeVat: 1_000_000,
@@ -10,7 +10,7 @@ test("finance result only resolves when cost and operating expense data are avai
       operatingExpense: 250_000,
       inventoryMovement: 50_000,
       costAvailable: true,
-      operatingExpenseRecorded: true,
+      operatingExpenseAvailable: true,
     }),
     {
       grossProfit: 600_000,
@@ -26,7 +26,7 @@ test("finance result only resolves when cost and operating expense data are avai
       operatingExpense: 250_000,
       inventoryMovement: 0,
       costAvailable: false,
-      operatingExpenseRecorded: true,
+      operatingExpenseAvailable: true,
     }),
     {
       grossProfit: null,
@@ -42,7 +42,19 @@ test("finance result only resolves when cost and operating expense data are avai
       operatingExpense: 0,
       inventoryMovement: 0,
       costAvailable: true,
-      operatingExpenseRecorded: false,
+      operatingExpenseAvailable: true,
+    }).operatingResult,
+    600_000,
+  );
+
+  assert.equal(
+    calculateFinanceResult({
+      netRevenueBeforeVat: 1_000_000,
+      ingredientCost: 400_000,
+      operatingExpense: 0,
+      inventoryMovement: 0,
+      costAvailable: true,
+      operatingExpenseAvailable: false,
     }).operatingResult,
     null,
   );
@@ -54,7 +66,7 @@ test("finance result only resolves when cost and operating expense data are avai
       operatingExpense: 250_000,
       inventoryMovement: -50_000,
       costAvailable: true,
-      operatingExpenseRecorded: true,
+      operatingExpenseAvailable: true,
     }).operatingResult,
     400_000,
   );

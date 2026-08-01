@@ -313,13 +313,13 @@ export default async function FinancePage({
               density="compact"
               label={financeCopy.basic.kpis.operatingExpense}
               value={
-                cockpit.kpis.operatingExpenseRecorded
+                cockpit.kpis.operatingExpenseAvailable
                   ? formatVND(cockpit.kpis.operatingExpense)
-                  : financeCopy.basic.kpis.notRecorded
+                  : financeCopy.basic.kpis.unavailable
               }
               hint={financeCopy.basic.kpis.operatingExpenseHint}
               tone={
-                cockpit.kpis.operatingExpenseRecorded ? "neutral" : "warning"
+                cockpit.kpis.operatingExpenseAvailable ? "neutral" : "warning"
               }
               href="/finance/expenses"
             />

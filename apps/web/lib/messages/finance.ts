@@ -172,9 +172,10 @@ export const finance = {
       ) =>
         `${transactions} sao kê · ${transactionAmount}; ${payments} VietQR · ${paymentAmount}`,
       operatingExpenseLabel: "Chi phí vận hành",
-      operatingExpenseRecorded: "Đã ghi nhận chi phí vận hành trong kỳ",
-      operatingExpenseMissing:
-        "Chưa ghi nhận chi phí vận hành; không lấy tiền nhập hàng để đoán thay.",
+      operatingExpenseAvailable: "Đã xác định chi phí vận hành trong kỳ",
+      operatingExpenseUnavailableValue: "Chưa xác định",
+      operatingExpenseUnavailable:
+        "Chưa thể xác định chi phí vận hành; hãy tải lại trước khi đối soát.",
       missingCostLabel: "Thiếu giá vốn món",
       missingCostHint:
         "Có món bán ra nhưng chưa đủ giá vốn món để tính lợi nhuận gộp.",
@@ -224,7 +225,7 @@ export const finance = {
       operatingResultHint:
         "Lợi nhuận gộp − chi phí vận hành − biến động tồn kho",
       notCalculated: "Chưa tính",
-      notRecorded: "Chưa ghi nhận",
+      unavailable: "Chưa xác định",
       inventoryClosingValue: "Giá trị tồn kho cuối kỳ",
       inventoryValueHint: (opening: string) => `Đầu kỳ ${opening}`,
       inventoryOpeningCompare: "so với tồn đầu kỳ",

@@ -164,6 +164,7 @@ test("bank deposits stay out of operating expense totals", () => {
 
 test("expense period totals load every row and fail closed on missing evidence", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+  const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
   assert.match(
@@ -177,6 +178,9 @@ test("expense period totals load every row and fail closed on missing evidence",
   );
   assert.doesNotMatch(page, /expensesRes\.success \? \(expensesRes\.data/);
   assert.doesNotMatch(page, /fetchActualFoodCostTotal/);
+  assert.match(cockpit, /if \(error\) return \{ total: 0, available: false \}/);
+  assert.match(cockpit, /available: true/);
+  assert.doesNotMatch(cockpit, /available: operatingRows\.length > 0/);
 });
 
 test("expense list separates its KPI summary from the data table", () => {

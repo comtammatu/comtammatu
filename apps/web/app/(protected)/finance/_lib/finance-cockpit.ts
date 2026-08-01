@@ -65,7 +65,7 @@ interface ActualFoodCostSnapshot {
 
 interface OperatingExpenseSummary {
   total: number;
-  recorded: boolean;
+  available: boolean;
 }
 
 interface TopItemRow {
@@ -110,7 +110,7 @@ interface FinanceCockpitKpis {
   inventoryOpeningValue: number;
   inventoryMovement: number;
   operatingExpense: number;
-  operatingExpenseRecorded: boolean;
+  operatingExpenseAvailable: boolean;
   ingredientCost: number;
   grossProfit: number | null;
   grossMargin: number | null;
@@ -261,7 +261,7 @@ function buildKpis({
     operatingExpense: operatingExpense.total,
     inventoryMovement,
     costAvailable,
-    operatingExpenseRecorded: operatingExpense.recorded,
+    operatingExpenseAvailable: operatingExpense.available,
   });
 
   return {
@@ -272,7 +272,7 @@ function buildKpis({
     inventoryOpeningValue,
     inventoryMovement,
     operatingExpense: operatingExpense.total,
-    operatingExpenseRecorded: operatingExpense.recorded,
+    operatingExpenseAvailable: operatingExpense.available,
     ingredientCost,
     ...financeResult,
     costAvailable,
@@ -308,7 +308,7 @@ export async function fetchOperatingExpenseSummary({
   }
 
   const { data, error } = await query;
-  if (error) return { total: 0, recorded: false };
+  if (error) return { total: 0, available: false };
 
   const operatingRows = (data ?? []).filter((row) =>
     isOperatingExpenseCategory(row.category),
@@ -319,7 +319,7 @@ export async function fetchOperatingExpenseSummary({
       (sum, row) => sum + toNumber(row.amount),
       0,
     ),
-    recorded: operatingRows.length > 0,
+    available: true,
   };
 }
 
@@ -690,13 +690,15 @@ function buildExceptions({
     },
     {
       label: copy.exceptions.operatingExpenseLabel,
-      value: formatVND(kpis.operatingExpense),
+      value: kpis.operatingExpenseAvailable
+        ? formatVND(kpis.operatingExpense)
+        : copy.exceptions.operatingExpenseUnavailableValue,
       hint:
-        kpis.operatingExpenseRecorded
-          ? copy.exceptions.operatingExpenseRecorded
-          : copy.exceptions.operatingExpenseMissing,
+        kpis.operatingExpenseAvailable
+          ? copy.exceptions.operatingExpenseAvailable
+          : copy.exceptions.operatingExpenseUnavailable,
       href: "/finance/expenses",
-      tone: kpis.operatingExpenseRecorded ? "neutral" : "warning",
+      tone: kpis.operatingExpenseAvailable ? "neutral" : "warning",
     },
     {
       label: copy.exceptions.missingCostLabel,
@@ -840,7 +842,7 @@ export async function fetchFinanceCockpit(
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
         })
-      : Promise.resolve({ total: 0, recorded: false }),
+      : Promise.resolve({ total: 0, available: false }),
     fetchUnpaidSupplierInvoiceRisk({
       supabase,
       tenantId: claims.tenant_id,

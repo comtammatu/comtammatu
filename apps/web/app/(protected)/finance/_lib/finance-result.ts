@@ -4,7 +4,7 @@ export interface FinanceResultInput {
   operatingExpense: number;
   inventoryMovement: number;
   costAvailable: boolean;
-  operatingExpenseRecorded: boolean;
+  operatingExpenseAvailable: boolean;
 }
 
 export interface FinanceResult {
@@ -19,7 +19,7 @@ export function calculateFinanceResult({
   operatingExpense,
   inventoryMovement,
   costAvailable,
-  operatingExpenseRecorded,
+  operatingExpenseAvailable,
 }: FinanceResultInput): FinanceResult {
   if (!costAvailable) {
     return {
@@ -35,7 +35,7 @@ export function calculateFinanceResult({
     grossProfit,
     grossMargin:
       netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0,
-    operatingResult: operatingExpenseRecorded
+    operatingResult: operatingExpenseAvailable
       ? grossProfit - operatingExpense - inventoryMovement
       : null,
   };

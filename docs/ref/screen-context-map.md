@@ -264,11 +264,11 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   3. **Xem kết quả:** Đọc năm card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành = Kết quả vận hành`.
   4. **Xem số dư:** Đọc tiền mặt theo sổ và tiền trong ngân hàng; hai số này không đổi theo bộ lọc.
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
-  6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, chi phí chưa ghi nhận hoặc chứng từ cần xử lý.
+  6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, dữ liệu chi phí không khả dụng hoặc chứng từ cần xử lý.
 - **Thông tin hiển thị:**
   - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
-  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; chưa ghi nhận chi phí thì không tính Kết quả vận hành.
+  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; kỳ không có chi phí hiển thị `0đ`, chỉ lỗi tải dữ liệu chi phí mới không tính Kết quả vận hành.
   - **KHÔNG hiển thị:** Card GTGT/VAT trong đợt này, nút tạo order, các bước chế biến món ăn, hoặc phân tích tài chính doanh nghiệp cổ phần không áp dụng cho mô hình HKD.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
