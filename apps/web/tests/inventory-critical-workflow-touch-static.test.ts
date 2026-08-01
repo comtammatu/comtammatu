@@ -10,10 +10,14 @@ test("manual transfer remains a secondary Owner workflow", () => {
   const page = read(
     "apps/web/app/(protected)/inventory/transfers/new/page.tsx",
   );
+  const form = read(
+    "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
+  );
 
   assert.match(page, /loadTransferCreatePageData/);
   assert.match(page, /<CreateTransferForm/);
   assert.match(page, /href="\/inventory\/transfers"/);
+  assert.match(form, /<Combobox[\s\S]*?searchPlaceholder=/);
 });
 
 test("Owner waste create propagates touch density through route-local controls", () => {

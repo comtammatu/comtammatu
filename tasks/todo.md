@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Hard-require shift roster + hour-ratio công (ADR 0019)
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: hr/roster-payroll
+Exit: BM/Owner can assign one shift/person/day; clock-in fails without assignment and freezes scheduled window; payroll công = hour-ratio; `fixed_monthly` uses `payable_days` without double unpaid deduction; migration applied + types regenerated.
+Evidence: migration `20260801131049_hr_shift_assignments_roster_and_hour_ratio_cong.sql`; roster UI `/br/*/shift/roster` + `/hr/attendance?tab=roster`; clock/payroll app wiring; static tests; docs ADR 0019 / D026–D027 / payroll-pit / screen-map / auth.
+
+- [ ] Owner-delegate Production apply for exact migration batch (resolve unrelated pending migrations first); then `corepack pnpm db:types`.
+- [ ] Smoke: BM phân ca tuần → NV clock-in/kết ca → Owner payroll preview hour-ratio (vd. 08–16 in 12:00 → 0.5 công); unassigned clock-in blocked.
+
 ## Drop confirmed-dead purchase-request create/submit RPCs after demand cutover
 
 State: triage
@@ -27,6 +39,17 @@ Exit: `central_supply_ops` / `central_kitchen_lead` login → `/br/{pinnedSiteId
 Evidence: ACL/scope/proxy/home chrome; OPERATOR_TILE_ITEMS; restored GRN/production/purchase-requests/transfer pages; docs role-ops/screen-map/ui/matrix; static auth/scope/nav contracts; typecheck.
 
 - [ ] Authenticated CS/CK responsive smoke at `390×844`, `768×1024`, `1440×900`: home → GRN → fulfill → tồn; CK thêm SX + Yêu cầu Kho Tổng.
+
+## Central hub + Tồn stock-home touch redesign
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: inventory/operator-shell
+Exit: CN Kho lands `/stock/on-hand`; CS/CK primary jobs on Bottom-Nav; on-hand Sheet filter + MultiSelect + Thêm chức năng; kind-aware CTAs; hub secondary-only; docs/tests green.
+Evidence: bottom-nav/home/hub/on-hand/detail + model multi-category; screen-map/role-ops/ui.md; static tests (80) green; `REVIEW_TIER=T2` typecheck+lint+build green. Authenticated browser smoke still open.
+
+- [ ] Authenticated CN/CS/CK smoke `390×844` / `768×1024`: Kho→tồn; Sheet lọc; CTA đúng kind; Thêm chỉ job phụ.
 
 ## Unit role picker + stock display contract
 
@@ -131,14 +154,14 @@ Evidence: shared fixed-point and formatter tests, form/static contracts, expense
 
 ## Route document stock corrections through the inventory ledger RPC
 
-State: ready
+State: verify
 Kind: defect
 Tier: T3
 Lane: inventory/ledger
 Exit: GRN, issue, transfer, and production document corrections use one authenticated, idempotent RPC that validates source, scope, stock, and actor in the same transaction; runtime code cannot insert `stock_movements` directly; invoice, payment, VAT, and WAC facts remain unchanged.
-Evidence: CodeGraph flow from every document dialog to the mutation boundary, focused SQL and static regressions, repository gates, authorized Production apply, and authenticated correction smoke.
+Evidence: CodeGraph caller trace, focused SQL/static regressions, repository gates, Production migration apply, post-apply ledger/catalog verification, and regenerated database types are green. Runtime deploy and authenticated correction smoke remain open.
 
-- [ ] Replace `createInventoryDocumentCorrection` direct DML with the atomic RPC and add the smallest executable guard that rejects future runtime inserts into `stock_movements`.
+- [ ] Deploy the RPC-routed runtime, then run the authenticated correction smoke.
 
 ## Revalidate the HRM F1-F15 findings against current authority
 

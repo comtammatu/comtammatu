@@ -164,6 +164,7 @@ by direct URL or as a redirect target.
 | `branch_feedback` | `/br/*/feedback` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
+| `branch_shift_roster` | `/br/*/shift/roster` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
 | `notifications` | `/notifications` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
@@ -191,6 +192,7 @@ declared before their broader siblings.
 | `branch-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `branch_home` | yes |
 | `branch-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
 | `branch-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
+| `branch-shift-roster` | branch_operation | `/br/[branchId]/shift/roster` | `/br/[branchId]/shift/roster` | `branch_shift_roster` | yes |
 | `branch-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `branch_home` | yes |
 | `branch-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `branch_home` | yes |
 | `branch-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `branch_stock` | yes |
@@ -241,12 +243,13 @@ separate gates (route bucket here, permission key at the mutation site).
 | inventory-operations | `/inventory/consumption`, `/inventory/count-assignments`, `/inventory/count-slips`, `/inventory/ingredients`, `/inventory/issues`, `/inventory/menu-recipes`, `/inventory/production`, `/inventory/recipes`, `/inventory/reports`, `/inventory/settings`, `/inventory/stock`, `/inventory/stocktake`, `/inventory/stock-requests`, `/inventory/supplier-invoices`, `/inventory/suppliers`, `/inventory/transfers`, `/inventory/waste` | central_kitchen_lead/central_supply_ops/owner | `inventory:adjust_approve`, `inventory:count_approve`, `inventory:count_assign`, `inventory:production_confirm`, `inventory:production_create`, `inventory:read`, `inventory:request_cancel`, `inventory:request_create`, `inventory:request_fulfill`, `inventory:request_submit`, `inventory:stocktake_complete`, `inventory:stocktake_create`, `inventory:stocktake_recount`, `inventory:stocktake_unblind`, `inventory:transfer_create`, `inventory:transfer_receive`, `inventory:transfer_ship`, `inventory:units_master`, `inventory:valuation_read`, `inventory:waste_approve`, `inventory:waste_bypass_photo`, `inventory:write`, `inventory:writeoff`, `procurement:grn_amend`, `procurement:grn_confirm`, `procurement:grn_create`, `procurement:invoice_create`, `procurement:invoice_match`, `procurement:po_approve`, `procurement:po_create`, `procurement:price_list_read`, `procurement:price_list_write`, `procurement:read`, `procurement:request_manage`, `procurement:supplier_manage` |
 | finance | `/finance` | accountant/owner | `accounting:period_close`, `accounting:period_reopen`, `finance:ap_pay`, `finance:expense_approve`, `finance:expense_create`, `finance:payroll_approve`, `finance:payroll_calculate`, `finance:view` |
 | branches | `/branches` | owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
+| hr | `/hr` | owner | `hr:approve_checkout`, `hr:approve_leave_request`, `hr:assign_shift`, `hr:manage_employee`, `hr:request_leave`, `hr:view_employee`, `staff:assign_permission`, `staff:assign_position`, `staff:manage`, `staff:view` |
 | notifications | `/notifications` | accountant/branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | self | `/me` | accountant/branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-home | `/br/[branchId]` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-checkout-approvals | `/br/[branchId]/shift/checkout-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift-leave-approvals | `/br/[branchId]/shift/leave-approvals` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-shift-roster | `/br/[branchId]/shift/roster` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-shift | `/br/[branchId]/shift` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-profile | `/br/[branchId]/profile` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-stock | `/br/[branchId]/stock` | branch_manager/central_kitchen_lead/central_supply_ops/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

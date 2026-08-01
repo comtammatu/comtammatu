@@ -72,6 +72,46 @@ type PayrollSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
 >["supabase"];
 
+type PayrollAttendanceRecord = {
+  id: number;
+  employee_id: number;
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
+  shifts: { name: string; start_time: string; end_time: string } | null;
+};
+
+async function loadPayrollAttendanceRows(
+  supabase: PayrollSupabase,
+  input: {
+    tenantId: number;
+    employeeIds: number[];
+    startDate: string;
+    endDate: string;
+    branchId?: number | null;
+  },
+): Promise<{
+  data: PayrollAttendanceRecord[] | null;
+  error: { code?: string | null; message?: string | null } | null;
+}> {
+  let query = supabase
+    .from("attendance_records")
+    .select(
+      "id, employee_id, date, check_in, check_out, scheduled_start_at, scheduled_end_at, shifts ( name, start_time, end_time )",
+    )
+    .eq("tenant_id", input.tenantId)
+    .in("employee_id", input.employeeIds)
+    .gte("date", input.startDate)
+    .lte("date", input.endDate);
+  if (input.branchId != null) query = query.eq("branch_id", input.branchId);
+  return query as unknown as Promise<{
+    data: PayrollAttendanceRecord[] | null;
+    error: { code?: string | null; message?: string | null } | null;
+  }>;
+}
+
 interface PayrollContext {
   supabase: PayrollSupabase;
   claims: { tenant_id: number };
@@ -320,19 +360,14 @@ async function buildPayrollPreview(
       .in("employee_id", employeeIds)
       .lte("start_date", endDate)
       .or(`end_date.is.null,end_date.gte.${startDate}`),
-    (() => {
-      let query = supabase
-        .from("attendance_records")
-        .select(
-          "id, employee_id, date, check_in, check_out, shifts ( name, start_time, end_time )",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .in("employee_id", employeeIds)
-        .gte("date", startDate)
-        .lte("date", endDate);
-      if (input.branchId != null) query = query.eq("branch_id", input.branchId);
-      return query;
-    })(),
+    (() =>
+      loadPayrollAttendanceRows(supabase, {
+        tenantId: claims.tenant_id,
+        employeeIds,
+        startDate,
+        endDate,
+        branchId: input.branchId,
+      }))(),
     supabase
       .from("leave_requests")
       .select("employee_id, start_date, end_date, leave_type, status")
@@ -492,7 +527,10 @@ async function buildPayrollPreview(
     (attendanceResult.data ?? []).map((record) => ({
       employeeId: record.employee_id,
       date: record.date,
+      checkIn: record.check_in,
       checkOut: record.check_out,
+      scheduledStart: record.scheduled_start_at,
+      scheduledEnd: record.scheduled_end_at,
     })),
   );
   const workHoursByEmployee = new Map<number, number>();
@@ -632,18 +670,14 @@ async function buildPayrollPreview(
                   annualSplit.annualLeaveUsedDays,
               ),
             };
-      const payableDays =
-        payBasis === "fixed_monthly"
-          ? Math.max(0, standardDays - unpaidLeaveDays)
-          : calculatePayableDays({
-              workingDays: workdays,
-              paidLeaveDays,
-              standardDays,
-            });
-      const proratedSalary =
-        payBasis === "fixed_monthly"
-          ? monthlySalary
-          : Math.round((monthlySalary * payableDays) / standardDays);
+      const payableDays = calculatePayableDays({
+        workingDays: workdays,
+        paidLeaveDays,
+        standardDays,
+      });
+      const proratedSalary = Math.round(
+        (monthlySalary * payableDays) / standardDays,
+      );
       const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
       const adjustmentTotals = adjustments.reduce((total, adjustment) => {
         if (adjustment.kind === "bonus") total.bonus += adjustment.amount;
@@ -659,12 +693,7 @@ async function buildPayrollPreview(
           total.otherDeductions += adjustment.amount;
         return total;
       }, emptyAdjustmentTotals());
-      const fixedMonthlyUnpaidLeaveDeduction =
-        payBasis === "fixed_monthly"
-          ? Math.round((monthlySalary * unpaidLeaveDays) / standardDays)
-          : 0;
-      const otherDeductions =
-        adjustmentTotals.otherDeductions + fixedMonthlyUnpaidLeaveDeduction;
+      const otherDeductions = adjustmentTotals.otherDeductions;
       const grossTotal =
         proratedSalary +
         adjustmentTotals.taxableAllowances +

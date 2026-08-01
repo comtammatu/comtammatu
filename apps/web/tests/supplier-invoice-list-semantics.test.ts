@@ -37,7 +37,6 @@ function makeInvoice(
     supplierId: 1,
     grnId: id,
     poId: null,
-    code: `INV-${String(id).padStart(3, "0")}`,
     supplierName: "NCC A",
     grnCode: `GRN-${String(id).padStart(3, "0")}`,
     poCode: null,
@@ -103,18 +102,16 @@ test("supplier invoice URL filters parse canonical values and ignore invalid sta
 
 test("missing HĐ GTGT is a payable-only blocker surfaced on list and group", () => {
   const blocked = makeInvoice(1, {
-    code: "HD-NO-VAT",
     vatInvoiceAttachmentPath: null,
     amount: 200_000,
   });
   const settledWithoutFile = makeInvoice(2, {
-    code: "HD-CREDIT-SETTLED",
     vatInvoiceAttachmentPath: null,
     amount: 100_000,
     creditAppliedAmount: 100_000,
     paymentStatus: "paid",
   });
-  const ready = makeInvoice(3, { code: "HD-READY", amount: 50_000 });
+  const ready = makeInvoice(3, { amount: 50_000 });
 
   assert.equal(isSupplierInvoiceMissingVatEvidence(blocked), true);
   assert.equal(isSupplierInvoiceMissingVatEvidence(settledWithoutFile), false);
@@ -125,8 +122,8 @@ test("missing HĐ GTGT is a payable-only blocker surfaced on list and group", ()
       [blocked, settledWithoutFile, ready],
       { ...DEFAULT_FILTERS, vatEvidence: "missing" },
       "2026-07-09",
-    ).map((invoice) => invoice.code),
-    ["HD-NO-VAT"],
+    ).map((invoice) => invoice.id),
+    [1],
   );
 
   const [group] = groupSupplierInvoices(
@@ -139,18 +136,25 @@ test("missing HĐ GTGT is a payable-only blocker surfaced on list and group", ()
   assert.equal(group?.missingVatAmount, 200_000);
 });
 
-test("server-owned search finds an invoice beyond the first cursor page", () => {
+test("server-owned supplier search finds an invoice beyond the first cursor page", () => {
   const invoices = Array.from({ length: 60 }, (_, index) =>
     makeInvoice(index + 1),
   );
   invoices[59] = makeInvoice(60, {
-    code: "UNLOADED-MATCH",
     supplierName: "NCC Cuối danh sách",
   });
 
+  assert.deepEqual(
+    filterSupplierInvoices(invoices, {
+      ...DEFAULT_FILTERS,
+      query: "unloaded",
+    }),
+    [],
+  );
+
   const matches = filterSupplierInvoices(invoices, {
     ...DEFAULT_FILTERS,
-    query: "unloaded",
+    query: "cuối danh sách",
   });
 
   assert.deepEqual(
@@ -164,7 +168,6 @@ test("payment and overdue filters use effective payable truth", () => {
     id: 1,
     supplier_id: 1,
     grn_id: 1,
-    invoice_number: "CREDIT-PAID",
     invoice_date: "2026-07-01",
     due_date: "2026-07-02",
     total_amount: 100_000,
@@ -233,15 +236,13 @@ test("full-result group totals remain independent from cursor presentation", () 
   assert.doesNotMatch(action, /groupSupplierInvoices\(visibleRows/);
 });
 
-test("supplier invoice groups expose member codes for multi-invoice tracking", () => {
+test("supplier invoice groups keep deterministic member ordering", () => {
   const unpaid = makeInvoice(1, {
-    code: "HD-SMOKE-NEG-002",
     poId: 1,
     poCode: "PO-2026-0001",
     amount: 11_000,
   });
   const paid = makeInvoice(2, {
-    code: "HD-SMOKE-001",
     poId: 1,
     poCode: "PO-2026-0001",
     amount: 165_000,
@@ -252,10 +253,10 @@ test("supplier invoice groups expose member codes for multi-invoice tracking", (
   const [poGroup] = groupSupplierInvoices([paid, unpaid], "po", "2026-07-27");
   assert.equal(poGroup?.invoiceCount, 2);
   assert.deepEqual(
-    poGroup?.invoices.map((invoice) => invoice.code),
-    ["HD-SMOKE-NEG-002", "HD-SMOKE-001"],
+    poGroup?.invoices.map((invoice) => invoice.id),
+    [1, 2],
   );
-  assert.equal(poGroup?.primaryInvoice.code, "HD-SMOKE-NEG-002");
+  assert.equal(poGroup?.primaryInvoice.id, 1);
 });
 
 test("Finance Supplier Invoice route owns filter state; Inventory redirects", () => {

@@ -52,6 +52,7 @@ export type StockIngredientDetailPermissions = Pick<
   StockActionPermissions,
   | "canCreateStockRequest"
   | "canReceiveGrn"
+  | "canManagePurchaseRequest"
   | "canCreateTransfer"
   | "canCreateStocktake"
   | "canCreateIssue"
@@ -170,7 +171,7 @@ export function stockMovementReferenceHref({
       return `${branchStockBasePath}/grn/${movement.grnId}`;
     }
     if (movement.transferId != null) {
-      return `${branchStockBasePath}/transfer?transferId=${movement.transferId}&mode=view`;
+      return `${branchStockBasePath}/transfer/${movement.transferId}`;
     }
     if (movement.issueId != null) {
       return `${branchStockBasePath}/issues/${movement.issueId}`;

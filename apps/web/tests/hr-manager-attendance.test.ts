@@ -57,7 +57,12 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     attendancePageSource,
-    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    /storeBranches[\s\S]*branch_kind[\s\S]*=== ["']branch["']/,
+    "leave review must only offer store branches (RPC rejects central sites)",
+  );
+  assert.match(
+    attendancePageSource,
+    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable branches=\{storeBranches\} \/>/,
     "day-work and leave review should share their dedicated route",
   );
   assert.match(

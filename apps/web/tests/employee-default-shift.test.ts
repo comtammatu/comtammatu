@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   isShiftEndedForBusinessDate,
+  pickAssignedShiftInWindow,
   resolveCurrentShiftContext,
   resolveDefaultShiftId,
   resolveShiftBusinessDate,
@@ -155,4 +156,63 @@ test("giờ ca hỏng bị bỏ qua, ca hợp lệ vẫn được chọn", () =>
     { id: 7, start_time: "05:00:00", end_time: "13:00:00" },
   ];
   assert.equal(resolveDefaultShiftId(mixed, minutes("08:00")), 7);
+});
+
+test("assigned shift rejects yesterday day-shift backdate", () => {
+  const picked = pickAssignedShiftInWindow(
+    [
+      {
+        workDate: "2026-07-10",
+        shiftId: 1,
+        shiftName: "Ca sáng",
+        startTime: "08:00:00",
+        endTime: "16:00:00",
+      },
+    ],
+    "2026-07-11",
+    12 * 60,
+  );
+  assert.equal(picked, null);
+});
+
+test("assigned shift accepts today assignment outside window", () => {
+  const picked = pickAssignedShiftInWindow(
+    [
+      {
+        workDate: "2026-07-11",
+        shiftId: 2,
+        shiftName: "Ca sáng",
+        startTime: "08:00:00",
+        endTime: "16:00:00",
+      },
+    ],
+    "2026-07-11",
+    7 * 60,
+  );
+  assert.deepEqual(picked, {
+    shiftId: 2,
+    businessDate: "2026-07-11",
+    shiftName: "Ca sáng",
+  });
+});
+
+test("assigned shift accepts overnight yesterday in window", () => {
+  const picked = pickAssignedShiftInWindow(
+    [
+      {
+        workDate: "2026-07-10",
+        shiftId: 9,
+        shiftName: "Ca đêm",
+        startTime: "18:00:00",
+        endTime: "02:00:00",
+      },
+    ],
+    "2026-07-11",
+    60,
+  );
+  assert.deepEqual(picked, {
+    shiftId: 9,
+    businessDate: "2026-07-10",
+    shiftName: "Ca đêm",
+  });
 });

@@ -74,5 +74,5 @@ test("Wave 2 Inventory LIST clients do not import Popover as a record view", () 
 
   const financeSource = read(financeClient);
   assert.match(financeSource, /const filterPopover = \(\s*<Popover>/);
-  assert.match(financeSource, /filters=\{filterPopover\}/);
+  assert.match(financeSource, /filters=\{[\s\S]*\{filterPopover\}[\s\S]*\}/);
 });

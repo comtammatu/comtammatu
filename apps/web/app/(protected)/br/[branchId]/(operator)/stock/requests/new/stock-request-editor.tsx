@@ -23,6 +23,7 @@ import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import { saveStockRequest } from "@/(protected)/inventory/stock-request-actions";
 import { messages } from "@lib/messages";
+import { matchesSearch } from "@lib/search";
 
 const copy = messages.inventory.stockRequests.editor;
 
@@ -57,10 +58,7 @@ const emptyLine = (): DraftLine => ({
 const ingredientFilter = (
   option: { label: string; keywords?: string[] },
   query: string,
-) =>
-  [option.label, ...(option.keywords ?? [])].some((value) =>
-    value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi")),
-  );
+) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
 
 function fulfillSiteLabel(
   kind: StockRequestIngredientOption["fulfillSiteKind"],

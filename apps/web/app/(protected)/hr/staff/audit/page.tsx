@@ -14,6 +14,9 @@ import {
   AppSection,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
+import {
+  getStaffPermissionLabelVi,
+} from "@lib/messages/owner";
 import { PermissionAuditTable } from "./permission-audit-table";
 import {
   PermissionAuditFilters,
@@ -23,8 +26,8 @@ import {
 interface Props {
   searchParams: Promise<{
     action?: string;
-    target?: string; // user_id
-    since?: string; // YYYY-MM-DD
+    target?: string;
+    since?: string;
   }>;
 }
 
@@ -37,7 +40,6 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   const params = await searchParams;
   const supabase = await createClient();
 
-  // Fetch audit rows (RLS-filtered) — newest first, up to 200
   let query = supabase
     .from("permission_audit_log")
     .select(
@@ -59,21 +61,19 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     query = query.gte("at", getVNDayUtcRange(params.since).startIso);
   }
 
-  // Audit log + branches list have no dependency on each other; profile
-  // lookup needs the userIds from the audit rows, so it stays sequential.
-  // Running audit + branches in parallel saves one RTT off TTFB.
-  const [auditResult, branchesResult, permissionKeysResult] = await Promise.all([
-    query,
-    supabase
-      .from("branches")
-      .select("id, name")
-      .eq("branch_kind", "branch")
-      .order("name"),
-    supabase.from("permission_keys").select("key, description"),
-  ]);
+  const [auditResult, branchesResult, permissionKeysResult, templatesResult] =
+    await Promise.all([
+      query,
+      supabase
+        .from("branches")
+        .select("id, name")
+        .eq("branch_kind", "branch")
+        .order("name"),
+      supabase.from("permission_keys").select("key, description, module"),
+      supabase.from("role_templates").select("id, position_code"),
+    ]);
   const auditRows = auditResult.data ?? [];
 
-  // Look up actor + target names (bulk)
   const userIds = Array.from(
     new Set(
       auditRows.flatMap(
@@ -81,28 +81,67 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
       ),
     ),
   );
-  const { data: profiles } = userIds.length
-    ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
-    : { data: [] as { id: string; full_name: string }[] };
+  const positionCodes = Array.from(
+    new Set(
+      (templatesResult.data ?? [])
+        .map((template) => template.position_code)
+        .filter((code): code is string => Boolean(code)),
+    ),
+  );
+
+  const [{ data: profiles }, { data: positions }] = await Promise.all([
+    userIds.length
+      ? supabase.from("profiles").select("id, full_name").in("id", userIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+    positionCodes.length
+      ? supabase
+          .from("positions")
+          .select("code, label_vi")
+          .in("code", positionCodes)
+      : Promise.resolve({
+          data: [] as { code: string; label_vi: string | null }[],
+        }),
+  ]);
 
   const nameByUserId = new Map<string, string>(
     (profiles ?? []).map((p) => [p.id, p.full_name]),
   );
+  const positionLabelByCode = new Map(
+    (positions ?? []).map((position) => [
+      position.code,
+      position.label_vi ?? UNKNOWN_LABEL_VI,
+    ]),
+  );
+  const templateLabelById = new Map<number, string>();
+  for (const template of templatesResult.data ?? []) {
+    templateLabelById.set(
+      template.id,
+      template.position_code
+        ? (positionLabelByCode.get(template.position_code) ??
+          UNKNOWN_LABEL_VI)
+        : UNKNOWN_LABEL_VI,
+    );
+  }
 
   const branches = branchesResult.data;
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
   const copy = messages.owner.staffAudit;
-  const permissionLabelByKey = new Map(
+  const permissionCopy = messages.owner.staffPermissions;
+  const permissionMetaByKey = new Map(
     (permissionKeysResult.data ?? []).map((permission) => [
       permission.key,
-      permission.description || UNKNOWN_LABEL_VI,
+      {
+        label: getStaffPermissionLabelVi(
+          permission.key,
+          permission.description ?? "",
+        ),
+        module: permission.module,
+      },
     ]),
   );
 
-  // Target filter options derived from the visible rows. The active target is
-  // appended even when no row surfaces it, so the Select can echo its value.
   const targetOptionById = new Map<string, PermissionAuditTargetOption>();
   for (const r of auditRows) {
     const id = r.target_user_id ? String(r.target_user_id) : "";
@@ -130,6 +169,15 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
       typeof meta.valid_until === "string" ? meta.valid_until : null;
     const actorUserId = String(r.actor_user_id ?? "");
     const targetUserId = String(r.target_user_id ?? "");
+    const permissionMeta = permissionMetaByKey.get(r.permission_key);
+    const moduleKey = permissionMeta?.module ?? "";
+    const workGroup =
+      permissionCopy.permissionModuleLabels[moduleKey] ??
+      permissionCopy.otherWorkArea;
+    const templateLabel =
+      r.source_template_id != null
+        ? (templateLabelById.get(r.source_template_id) ?? null)
+        : null;
 
     return {
       id: r.id,
@@ -141,8 +189,9 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
       branchName:
         r.branch_id === null ? null : (branchNameById.get(r.branch_id) ?? null),
       permissionKey: r.permission_key,
-      permissionLabel:
-        permissionLabelByKey.get(r.permission_key) ?? UNKNOWN_LABEL_VI,
+      permissionLabel: permissionMeta?.label ?? UNKNOWN_LABEL_VI,
+      workGroup,
+      templateLabel,
       action: r.action,
       at: r.at,
       validUntil,
@@ -159,7 +208,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             variant="ghost"
             size="sm"
             className="-ml-3"
-            render={<Link href="/hr/staff" />}
+            render={<Link href="/hr?view=accounts" />}
           >
             <IconArrowLeft className="mr-1 size-4" />
             {copy.backToStaff}
@@ -182,7 +231,17 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           title={hasFilters ? copy.emptyFiltered : copy.empty}
           description={hasFilters ? copy.emptyFilteredHint : undefined}
           icon={<IconHistory />}
-        />
+        >
+          {hasFilters ? null : (
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href="/hr?view=accounts" />}
+            >
+              {copy.emptyAction}
+            </Button>
+          )}
+        </AppEmptyState>
       ) : (
         <AppSection
           title={copy.recentItems(auditDisplayRows.length)}

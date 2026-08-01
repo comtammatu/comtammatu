@@ -233,8 +233,8 @@ export function BranchConsumptionListClient({
         }}
         contentClassName="gap-3"
       >
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
-          <InputGroup className="min-h-12 w-full">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+          <InputGroup className="min-h-12 min-w-0 flex-1">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -258,7 +258,7 @@ export function BranchConsumptionListClient({
             >
               <SelectTrigger
                 size="touch"
-                className="w-full"
+                className="w-full sm:w-auto sm:min-w-48"
                 aria-label={FORM_VI.status}
               >
                 <SelectValue placeholder={FORM_VI.status} />
@@ -314,7 +314,7 @@ export function BranchConsumptionListClient({
               description={INVENTORY_VI.recordedEmptyDescription}
             />
           ) : (
-            <ItemGroup className="grid gap-2 md:grid-cols-2">
+            <ItemGroup className="grid gap-2 lg:grid-cols-2">
               {filteredRecorded.map((movement) => (
                 <Item
                   key={movement.id}
@@ -372,7 +372,7 @@ export function BranchConsumptionListClient({
             description={INVENTORY_VI.manualConsumptionEmptyDescription}
           />
         ) : (
-          <ItemGroup className="grid gap-2 md:grid-cols-2">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {filteredManual.map((issue) => (
               <Item
                 key={issue.id}

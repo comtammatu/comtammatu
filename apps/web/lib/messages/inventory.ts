@@ -513,6 +513,7 @@ export const inventory = {
         `${source} · ${count} nguyên liệu`,
       transferCount: (count: number) => `${count} chuyến`,
       ingredientCount: (count: number) => `${count} nguyên liệu`,
+      linkedTransferLabel: "DC liên kết",
       backToRequestAria: "Quay lại yêu cầu hàng",
       completed: "Đã hoàn tất",
       active: "Đang xử lý",
@@ -542,7 +543,8 @@ export const inventory = {
   },
   purchaseRequests: {
     title: "Nhu cầu mua",
-    description: "Kho ghi số lượng cần; Kế toán phân bổ đủ theo nhà cung cấp.",
+    description:
+      "Kho ghi số lượng cần; hệ thống tự chọn NCC duy nhất, Kế toán chỉ xử lý ngoại lệ.",
     createAction: "Tạo nhu cầu mua",
     createTitle: "Tạo nhu cầu mua",
     createSuccess: "Đã lưu nhu cầu mua.",
@@ -1066,6 +1068,10 @@ export const inventory = {
     },
     actions: {
       receiveGrn: "Yêu cầu hàng",
+      requestStock: "Yêu cầu hàng",
+      requestFromCentralSupply: "Yêu cầu Kho Tổng",
+      openGrn: "Nhập kho",
+      openPurchaseRequest: "Yêu cầu mua",
       transfer: "Điều chuyển",
       stocktake: "Kiểm kê đối chiếu",
       waste: "Hủy hỏng",
@@ -1076,15 +1082,30 @@ export const inventory = {
       issueStock: "Ghi tiêu hao",
       viewStockCard: "Xem thẻ kho",
       exception: "Ngoại lệ",
+      moreStockJobs: "Thêm chức năng kho",
+      applyFilters: "Áp dụng",
       adjustExceptionAria: (name: string) => `Điều chỉnh ngoại lệ ${name}`,
       viewDetailAria: (name: string) => `Xem chi tiết ${name}`,
       actionsDropdown: "Thao tác kho",
     },
     attention: {
       title: "Cần bổ sung",
+      titleCentralSupply: "Cần nhập / mua",
+      titleCentralKitchen: "Cần bổ sung",
       description: (count: number) =>
         `${formatCount(count)} nguyên liệu đã chạm ngưỡng tồn kho.`,
       listHint: "Mặt hàng cần xử lý được xếp đầu danh sách.",
+    },
+    filterSheet: {
+      title: "Bộ lọc tồn kho",
+      description: "Chọn trạng thái và danh mục cần xem.",
+      categoryMultiLabel: "Thêm danh mục",
+      categoryConfirm: (count: number) => `Thêm ${formatCount(count)} danh mục`,
+      selectedCategories: "Đã chọn",
+    },
+    moreJobsSheet: {
+      title: "Thêm chức năng kho",
+      description: "Mở việc kho phụ từ danh sách tồn.",
     },
     metrics: {
       selectedWarehouse: "Giá trị tồn kho · Kho đang xem",
@@ -1642,7 +1663,7 @@ export const inventory = {
       "Phiếu nhập đã chọn chưa liên kết đơn đặt hàng. Hãy xử lý phiếu tương thích trước.",
     acceptDiscrepancyFailed: "Không thể chấp nhận chênh lệch hóa đơn.",
     acceptDiscrepancySuccess: "Đã chấp nhận chênh lệch hóa đơn.",
-    searchPlaceholder: "Tìm số hóa đơn, NCC, đơn mua hoặc mã phiếu nhập",
+    searchPlaceholder: "Tìm NCC, đơn mua hoặc mã phiếu nhập",
     allSuppliers: "Tất cả nhà cung cấp",
     supplierPlaceholder: "Nhà cung cấp",
     supplierSearchPlaceholder: "Tìm nhà cung cấp...",
@@ -1668,14 +1689,8 @@ export const inventory = {
     supplierGroup: "Nhà cung cấp",
     poGroup: "Đơn mua / NCC",
     noLinkedPo: "Chưa liên kết đơn mua",
-    invoiceCountHeader: "Số hóa đơn",
     relatedInvoicesHeader: "Hóa đơn",
     invoiceGroupSummary: (count: number) => `${formatCount(count)} hóa đơn`,
-    invoiceCodesPreview: (codes: readonly string[]) => {
-      if (codes.length === 0) return "—";
-      if (codes.length <= 3) return codes.join(" · ");
-      return `${codes.slice(0, 2).join(" · ")} · +${formatCount(codes.length - 2)}`;
-    },
     overdueGroupSummary: (count: number) => `${formatCount(count)} quá hạn`,
     vatMissingGroupSummary: (count: number) =>
       `${formatCount(count)} thiếu HĐ GTGT`,
@@ -1693,7 +1708,7 @@ export const inventory = {
     remaining: "Còn lại",
     analyzing: "Đang xem phân tích",
     viewAnalysis: "Xem phân tích",
-    invoiceNumber: "Số hóa đơn",
+    invoiceDetailTitle: "Chi tiết hóa đơn NCC",
     supplier: "Nhà cung cấp",
     dateDue: "Ngày / hạn",
     duePrefix: (date: string) => `Hạn: ${date}`,
@@ -1765,6 +1780,7 @@ export const inventory = {
     paymentRetrySameIntent:
       "Chưa xác nhận được kết quả. Thử lại trên biểu mẫu này.",
     linkedGrn: "Phiếu nhập liên kết",
+    grnSelectionHint: "Có thể chọn nhiều phiếu nhập cùng nhà cung cấp.",
     linkedPo: "Đơn mua liên kết",
     notLinked: "Chưa liên kết",
     notAvailable: "Chưa có",
@@ -1820,7 +1836,6 @@ export const inventory = {
     grnNetAcceptedLabel: "Giá trị nhận trước thuế GTGT (gợi ý đối soát)",
     grnNetAcceptedUnavailable:
       "Không xem được giá trị phiếu nhập trên tài khoản này",
-    invoiceNumberPlaceholder: "Ví dụ: 0001234",
     documentSection: "Chứng từ",
     subtotalPlaceholder: "0",
     vat: "Thuế GTGT đầu vào theo hóa đơn",

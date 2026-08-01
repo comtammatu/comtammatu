@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
@@ -179,24 +180,42 @@ export async function createStaff(
 
   // Service role client for admin user creation
   const serviceClient = createServiceClient();
+  const provisioningToken = randomUUID();
+
+  const { error: prepareError } = await serviceClient.rpc(
+    "prepare_staff_user_provisioning" as never,
+    {
+      p_token: provisioningToken,
+      p_email: email,
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: effectiveBranchId ?? null,
+      p_position_code: position_code,
+      p_full_name: full_name,
+      p_provisioned_by: user.id,
+    } as never,
+  );
+
+  if (prepareError) {
+    return {
+      success: false,
+      error: "Không thể chuẩn bị tài khoản. Vui lòng thử lại.",
+    };
+  }
 
   const { data, error } = await serviceClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    app_metadata: {
-      tenant_id: claims.tenant_id,
-      branch_id: effectiveBranchId ?? null,
-      position_code,
-      full_name,
-      provisioned_by: user.id,
-    },
     user_metadata: {
       full_name,
+      provisioning_token: provisioningToken,
     },
   });
 
   if (error) {
+    await serviceClient.rpc("cancel_staff_user_provisioning" as never, {
+      p_token: provisioningToken,
+    } as never);
     if (
       error.message?.includes("already been registered") ||
       error.message?.includes("already exists")
@@ -209,6 +228,7 @@ export async function createStaff(
     };
   }
 
+  revalidateSurfacePath("/hr");
   revalidateSurfacePath("/hr/staff");
   return { success: true, data: { staffId: data.user?.id ?? null } };
 }
@@ -271,13 +291,12 @@ export async function updateStaff(
     return { success: false, error: mapRpcError(error.message) };
   }
 
+  revalidateSurfacePath("/hr");
   revalidateSurfacePath("/hr/staff");
   return { success: true };
 }
 
-const staffIdSchema = z
-  .string()
-  .uuid({ error: "Mã nhân viên không hợp lệ" });
+const staffIdSchema = z.string().uuid({ error: "Mã nhân viên không hợp lệ" });
 
 export async function toggleStaffActive(
   staffId: string,
@@ -302,6 +321,7 @@ export async function toggleStaffActive(
     return { success: false, error: mapRpcError(error.message) };
   }
 
+  revalidateSurfacePath("/hr");
   revalidateSurfacePath("/hr/staff");
   return { success: true };
 }

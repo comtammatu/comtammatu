@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import test from "node:test";
+
+import { resolveModuleFromPath } from "@comtammatu/shared/auth";
+
+const repoRoot = join(import.meta.dirname, "../../..");
+
+function read(relativePath: string): string {
+  return readFileSync(join(repoRoot, relativePath), "utf8");
+}
+
+test("shift roster resolves before generic branch shift module", () => {
+  assert.equal(
+    resolveModuleFromPath("/br/7/shift/roster"),
+    "branch_shift_roster",
+  );
+  assert.equal(
+    resolveModuleFromPath("/br/7/shift/roster/"),
+    "branch_shift_roster",
+  );
+  assert.equal(resolveModuleFromPath("/br/7/shift"), "branch_home");
+});
+
+test("branch roster route uses leave-approvals auth gating pattern", () => {
+  const page = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
+  );
+  const loader = read("apps/web/lib/hr/roster/load-branch-roster-data.ts");
+
+  assert.match(page, /loadBranchRosterData/);
+  assert.match(loader, /branch\.branch_kind !== "branch"/);
+  assert.match(loader, /PERMISSION_KEYS\.HR_ASSIGN_SHIFT/);
+});
+
+test("owner attendance exposes roster tab with shared week client", () => {
+  const page = read("apps/web/app/(protected)/hr/attendance/page.tsx");
+
+  assert.match(page, /tab === "roster"/);
+  assert.match(page, /attendanceTabs\.roster/);
+  assert.match(page, /RosterWeekClient/);
+  assert.match(page, /loadOwnerRosterPanelData/);
+});

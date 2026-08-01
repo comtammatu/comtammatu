@@ -155,5 +155,9 @@ test("expense primary and dialog actions use the touch contract", () => {
   );
 
   assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
-  assert.equal(source.match(/size="touch"/g)?.length, 2);
+  assert.ok(
+    (source.match(/size=\{isTouchLayout \? "touch" : "default"\}/g) ?? [])
+      .length >= 5,
+  );
+  assert.match(source, /size=\{actionSize\}/);
 });

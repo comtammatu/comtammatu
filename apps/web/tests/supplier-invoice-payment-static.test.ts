@@ -23,7 +23,6 @@ test("supplier invoice outstanding amount subtracts paid and credited value", ()
     supplierId: 1,
     grnId: 1,
     poId: null,
-    code: "NCC-001",
     supplierName: "NCC",
     grnCode: "GRN-001",
     poCode: null,
@@ -64,7 +63,6 @@ test("supplier invoice mapper keeps latest supplier payment for AP drilldown", (
   const row = mapSupplierInvoiceRow({
     id: 1,
     supplier_id: 2,
-    invoice_number: "NCC-001",
     subtotal: 92_593,
     vat_rate: 8,
     vat_amount: 7_407,
@@ -186,12 +184,12 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   assert.match(client, /pendingCreateVatFile/);
   assert.match(client, /uploadAndAttachVatEvidence/);
   assert.match(client, /copy\.invoiceLines/);
-  assert.match(client, /invoiceCountHeader/);
-  assert.match(client, /invoiceCodesPreview/);
+  assert.doesNotMatch(client, /invoiceCountHeader/);
+  assert.doesNotMatch(client, /invoiceCodesPreview/);
   assert.match(client, /RowActionsMenu/);
   assert.match(
     client,
-    /viewMode === "supplier" \? \([\s\S]*group\.invoiceCount[\s\S]*\) : \(/,
+    /viewMode === "po"[\s\S]*key: "invoiceCount"[\s\S]*relatedInvoicesHeader/,
   );
   assert.doesNotMatch(client, /key:\s*"aging"[\s\S]*header:\s*copy\.aging/);
   assert.doesNotMatch(client, /analyzingShort : copy\.groupDetailAction/);
@@ -201,6 +199,45 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   assert.match(client, /uploadIsPrimary/);
   assert.match(client, /payIsPrimary/);
   assert.doesNotMatch(client, /className="contents"/);
+});
+
+test("supplier invoice number is removed without weakening draft or valuation flows", () => {
+  const migration = readRoot(
+    "supabase/migrations/20260801130848_remove_supplier_invoice_number.sql",
+  );
+  const notificationStart = migration.indexOf(
+    "CREATE OR REPLACE FUNCTION private.notify_supplier_invoice_valuation_variance",
+  );
+  const compatibilityStart = migration.indexOf(
+    "CREATE OR REPLACE FUNCTION public.create_supplier_invoice_with_vat_breakdown",
+  );
+  const dropStart = migration.indexOf(
+    "ALTER TABLE public.supplier_invoices",
+  );
+
+  assert.ok(notificationStart > 0);
+  assert.ok(compatibilityStart > notificationStart);
+  assert.ok(dropStart > compatibilityStart);
+  assert.doesNotMatch(
+    migration.slice(0, notificationStart),
+    /invoice_number/,
+  );
+  assert.doesNotMatch(
+    migration.slice(notificationStart, compatibilityStart),
+    /invoice_number/,
+  );
+  assert.doesNotMatch(
+    migration.slice(
+      migration.indexOf("AS $$", compatibilityStart),
+      dropStart,
+    ),
+    /invoice_number/,
+  );
+  assert.match(
+    migration.slice(dropStart),
+    /DROP COLUMN invoice_number;/,
+  );
+  assert.doesNotMatch(migration, /DROP COLUMN invoice_number CASCADE/);
 });
 
 test("supplier invoice material lines follow the accounting entry order", () => {
@@ -615,10 +652,18 @@ test("supplier invoice form supports goods, services, multiple GRNs and line VAT
   assert.match(client, /vatAmount/);
   assert.match(client, /selectedGrnKeys/);
   assert.match(client, /selectedGrns/);
+  assert.match(client, /grnSelectionHint/);
+  assert.match(
+    client,
+    /current\?\.supplierId === option\.supplierId[\s\S]*option\.optionKey/,
+  );
+  assert.match(client, /existing\.allocations\.push\(allocation\)/);
   assert.match(client, /allocations/);
   assert.match(client, /invoiceKind/);
   assert.match(client, /serviceInvoiceHint/);
   assert.match(client, /documentDiscount/);
+  assert.doesNotMatch(client, /name="invoiceNumber"/);
+  assert.doesNotMatch(client, /values\.invoiceNumber/);
   assert.match(client, /grnNetAcceptedLabel/);
   assert.match(client, /netAcceptedAmount/);
   assert.doesNotMatch(client, /name="matchingNotes"/);
@@ -640,6 +685,20 @@ test("supplier invoice form supports goods, services, multiple GRNs and line VAT
   assert.match(messages, /goods: "Hàng hóa"/);
   assert.match(messages, /service: "Dịch vụ"/);
   assert.match(messages, /chooseGrnPrimary:/);
+  assert.match(
+    messages,
+    /grnSelectionHint: "Có thể chọn nhiều phiếu nhập cùng nhà cung cấp\."/,
+  );
+  assert.doesNotMatch(messages, /invoiceCountHeader/);
+  assert.doesNotMatch(messages, /invoiceNumberPlaceholder/);
+});
+
+test("supplier invoice action no longer reads the removed number column", () => {
+  const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
+
+  assert.doesNotMatch(action, /invoiceNumber:\s*z\.string/);
+  assert.doesNotMatch(action, /select\("invoice_number"\)/);
+  assert.doesNotMatch(action, /invoice_kind, invoice_number, invoice_date/);
 });
 
 test("supplier invoice payment exposes visible append-only advance allocation", () => {

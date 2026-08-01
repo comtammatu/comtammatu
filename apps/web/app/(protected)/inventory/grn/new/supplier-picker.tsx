@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { matchesSearch } from "@lib/search";
+import { matchesSearch, normalizeSearch } from "@lib/search";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
@@ -58,7 +58,7 @@ export function SupplierPicker({
   const hasExactMatch = React.useMemo(
     () =>
       suppliers.some(
-        (s) => s.name.trim().toLowerCase() === needle.toLowerCase(),
+        (s) => normalizeSearch(s.name) === normalizeSearch(needle),
       ),
     [suppliers, needle],
   );

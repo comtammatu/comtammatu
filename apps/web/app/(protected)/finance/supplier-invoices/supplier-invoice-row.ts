@@ -5,7 +5,6 @@ export type SupplierInvoiceRow = {
   supplierId: number;
   grnId: number | null;
   poId: number | null;
-  code: string;
   supplierName: string;
   grnCode: string | null;
   poCode: string | null;
@@ -200,28 +199,45 @@ export function mapSupplierInvoiceRow(
       return dateDiff !== 0 ? dateDiff : right.id - left.id;
     });
 
+  // A single invoice can allocate several invoice lines to the same
+  // (grn_id, po_id) pair — the table's unique key also covers line/item ids.
+  // The receipt list is display-only (one card per linked GRN), so collapse
+  // duplicate allocations to avoid duplicate React keys downstream.
   const allocatedReceipts = Array.isArray(
     row.supplier_invoice_receipt_allocations,
   )
-    ? row.supplier_invoice_receipt_allocations.flatMap((allocation) => {
-        if (!isRecord(allocation)) return [];
-        const receipt = allocation.goods_received_notes;
-        const resolved = Array.isArray(receipt) ? receipt[0] : receipt;
-        const purchaseOrder = allocation.purchase_orders;
-        const resolvedPurchaseOrder = Array.isArray(purchaseOrder)
-          ? purchaseOrder[0]
-          : purchaseOrder;
-        if (!isRecord(resolved) || !isRecord(resolvedPurchaseOrder)) return [];
-        return [
-          {
-            grnId: Number(allocation.grn_id ?? resolved.id ?? 0),
-            grnCode: String(resolved.grn_number ?? "—"),
-            grnStatus: String(resolved.status ?? ""),
-            poId: Number(allocation.po_id ?? resolvedPurchaseOrder.id ?? 0),
-            poCode: String(resolvedPurchaseOrder.po_number ?? "—"),
-          },
-        ];
-      })
+    ? [
+        ...row.supplier_invoice_receipt_allocations
+          .flatMap((allocation) => {
+            if (!isRecord(allocation)) return [];
+            const receipt = allocation.goods_received_notes;
+            const resolved = Array.isArray(receipt) ? receipt[0] : receipt;
+            const purchaseOrder = allocation.purchase_orders;
+            const resolvedPurchaseOrder = Array.isArray(purchaseOrder)
+              ? purchaseOrder[0]
+              : purchaseOrder;
+            if (!isRecord(resolved) || !isRecord(resolvedPurchaseOrder))
+              return [];
+            return [
+              {
+                grnId: Number(allocation.grn_id ?? resolved.id ?? 0),
+                grnCode: String(resolved.grn_number ?? "—"),
+                grnStatus: String(resolved.status ?? ""),
+                poId: Number(allocation.po_id ?? resolvedPurchaseOrder.id ?? 0),
+                poCode: String(resolvedPurchaseOrder.po_number ?? "—"),
+              },
+            ];
+          })
+          .reduce<Map<string, SupplierInvoiceReceiptSummary>>(
+            (byReceipt, receipt) => {
+              const key = `${receipt.grnId}:${receipt.poId}`;
+              if (!byReceipt.has(key)) byReceipt.set(key, receipt);
+              return byReceipt;
+            },
+            new Map(),
+          )
+          .values(),
+      ]
     : [];
   const allocatedReceiptCodes = allocatedReceipts
     .map((receipt) => receipt.grnCode)
@@ -296,7 +312,6 @@ export function mapSupplierInvoiceRow(
     supplierId: Number(row.supplier_id ?? 0),
     grnId,
     poId,
-    code: (row.invoice_number as string) ?? "",
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "\u2014",
     grnCode:

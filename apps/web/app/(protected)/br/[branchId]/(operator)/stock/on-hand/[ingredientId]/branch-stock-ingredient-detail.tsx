@@ -2,14 +2,23 @@ import Link from "next/link";
 import {
   ArrowLeft as IconArrowLeft,
   ClipboardList as IconClipboardList,
+  MoreHorizontal as IconMore,
   PackageCheck as IconPackageCheck,
   Receipt as IconReceipt,
+  ShoppingCart as IconPurchase,
   Trash as IconTrash,
   Truck as IconTruck,
 } from "lucide-react";
+import type { BranchKind } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
   ItemActions,
@@ -21,7 +30,6 @@ import {
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
-  BranchOperatorActionSection,
   BranchOperatorControlBar,
   BranchOperatorDetailList,
   BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
@@ -76,14 +84,75 @@ function QuantityValue({
   );
 }
 
+type PrimaryAction = {
+  key: string;
+  href: string;
+  label: string;
+  icon: typeof IconTruck;
+};
+
+function resolvePrimaryActions({
+  stockBasePath,
+  branchKind,
+  permissions,
+}: {
+  stockBasePath: string;
+  branchKind: BranchKind;
+  permissions: StockIngredientDetailData["permissions"];
+}): PrimaryAction[] {
+  if (branchKind === "central_supply") {
+    const actions: PrimaryAction[] = [];
+    if (permissions.canReceiveGrn) {
+      actions.push({
+        key: "grn",
+        href: `${stockBasePath}/grn`,
+        label: stockCopy.actions.openGrn,
+        icon: IconTruck,
+      });
+    }
+    if (permissions.canManagePurchaseRequest) {
+      actions.push({
+        key: "ycm",
+        href: `${stockBasePath}/purchase-requests`,
+        label: stockCopy.actions.openPurchaseRequest,
+        icon: IconPurchase,
+      });
+    }
+    return actions;
+  }
+  if (branchKind === "central_kitchen") {
+    if (!permissions.canCreateStockRequest) return [];
+    return [
+      {
+        key: "request-cs",
+        href: `${stockBasePath}/requests/new`,
+        label: stockCopy.actions.requestFromCentralSupply,
+        icon: IconReceipt,
+      },
+    ];
+  }
+  if (!permissions.canCreateStockRequest) return [];
+  return [
+    {
+      key: "request",
+      href: `${stockBasePath}/requests/new`,
+      label: stockCopy.actions.requestStock,
+      icon: IconReceipt,
+    },
+  ];
+}
+
 export function BranchStockIngredientDetail({
   data,
   stockBasePath,
+  branchKind,
 }: {
   data: StockIngredientDetailData;
   stockBasePath: string;
+  branchKind: BranchKind;
 }) {
   const { ingredient } = data;
+  const onHandHref = `${stockBasePath}/on-hand`;
 
   if (data.coreDataLoadFailed) {
     return (
@@ -97,10 +166,7 @@ export function BranchStockIngredientDetail({
             variant="ghost"
             size="icon-touch"
             render={
-              <Link
-                href={`${stockBasePath}/on-hand`}
-                aria-label={detailCopy.backToStock}
-              />
+              <Link href={onHandHref} aria-label={detailCopy.backToStock} />
             }
           >
             <IconArrowLeft />
@@ -119,6 +185,11 @@ export function BranchStockIngredientDetail({
 
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const atRisk = data.status === "low" || data.status === "out";
+  const primaryActions = resolvePrimaryActions({
+    stockBasePath,
+    branchKind,
+    permissions: data.permissions,
+  });
   const secondaryActions = [
     ...(data.permissions.canCreateTransfer
       ? [
@@ -134,7 +205,7 @@ export function BranchStockIngredientDetail({
       ? [
           {
             key: "stocktake",
-            href: `${stockBasePath}/count`,
+            href: `${stockBasePath}/stocktake`,
             icon: IconClipboardList,
             title: stockCopy.actions.stocktake,
           },
@@ -177,7 +248,7 @@ export function BranchStockIngredientDetail({
             variant="ghost"
             size="icon-touch"
             render={
-              <Link href={stockBasePath} aria-label={detailCopy.backToStock} />
+              <Link href={onHandHref} aria-label={detailCopy.backToStock} />
             }
           >
             <IconArrowLeft />
@@ -189,6 +260,36 @@ export function BranchStockIngredientDetail({
             </p>
           </div>
           <StatusBadge domain="inventory" value={data.status} size="sm" />
+          {secondaryActions.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-touch"
+                    aria-label={stockCopy.actions.actionsDropdown}
+                  >
+                    <IconMore />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-56">
+                {secondaryActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={action.key}
+                      size="touch"
+                      render={<Link href={action.href} />}
+                    >
+                      <Icon />
+                      {action.title}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </BranchOperatorControlBar>
 
         <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
@@ -201,17 +302,6 @@ export function BranchStockIngredientDetail({
                 children: statusBadge.label,
                 variant: statusBadge.variant,
               }}
-              action={
-                data.permissions.canCreateStockRequest ? (
-                  <Button
-                    size="touch"
-                    render={<Link href={`${stockBasePath}/requests/new`} />}
-                  >
-                    <IconReceipt data-icon="inline-start" />
-                    {stockCopy.actions.receiveGoods}
-                  </Button>
-                ) : null
-              }
               size="sm"
             >
               <div className="flex items-end justify-between gap-3">
@@ -380,27 +470,75 @@ export function BranchStockIngredientDetail({
               />
             </BranchOperatorPanel>
 
-            <BranchOperatorActionSection
-              title={detailCopy.operationTitle}
-              links={secondaryActions}
-              columns={2}
-              mobileColumns={1}
-              size="sm"
-            />
+            {secondaryActions.length > 0 ? (
+              <div className="hidden sm:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="touch"
+                        className="w-full"
+                        aria-label={stockCopy.actions.actionsDropdown}
+                      >
+                        <IconMore />
+                        {stockCopy.actions.actionsDropdown}
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="w-56">
+                    {secondaryActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={action.key}
+                          size="touch"
+                          render={<Link href={action.href} />}
+                        >
+                          <Icon />
+                          {action.title}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <AppDetailFooter
           sticky
           trailing={
-            <Button
-              size="touch-lg"
-              variant="outline"
-              render={<Link href={stockBasePath} />}
+            <div
+              className={
+                primaryActions.length > 1
+                  ? "grid w-full grid-cols-2 gap-2"
+                  : "flex w-full gap-2"
+              }
             >
-              <IconArrowLeft data-icon="inline-start" />
-              {ACTIONS_VI.back}
-            </Button>
+              <Button
+                size="touch-lg"
+                variant="outline"
+                render={<Link href={onHandHref} />}
+              >
+                <IconArrowLeft data-icon="inline-start" />
+                {ACTIONS_VI.back}
+              </Button>
+              {primaryActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Button
+                    key={action.key}
+                    size="touch-lg"
+                    render={<Link href={action.href} />}
+                  >
+                    <Icon data-icon="inline-start" />
+                    {action.label}
+                  </Button>
+                );
+              })}
+            </div>
           }
         />
       </div>

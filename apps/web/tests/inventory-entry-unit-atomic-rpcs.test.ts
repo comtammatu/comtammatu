@@ -317,14 +317,14 @@ test.skip("direct table writes derive persisted unit text from the entry unit ca
   }
 });
 
-test("menu recipe editor fixes entry unit to the ingredient output unit", () => {
+test("menu recipe editor allows an explicit catalog entry unit", () => {
   const editor = section(
     "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
     "<IngredientLinesEditor",
     "/>",
   );
 
-  assert.doesNotMatch(editor, /\bunitEditable\b/);
+  assert.match(editor, /\bunitEditable\b/);
 });
 
 test("menu and production recipe DTOs expose unitLabel", () => {

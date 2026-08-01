@@ -30,6 +30,8 @@ export interface PermissionAuditDisplayRow {
   branchName: string | null;
   permissionKey: string;
   permissionLabel: string;
+  workGroup: string;
+  templateLabel: string | null;
   action: string;
   at: string;
   validUntil: string | null;
@@ -71,9 +73,7 @@ export function PermissionAuditTable({
       key: "actor",
       header: copy.actor,
       className: "text-sm",
-      render: (row) => (
-        <UserLabel name={row.actorName} />
-      ),
+      render: (row) => <UserLabel name={row.actorName} />,
     },
     {
       key: "target",
@@ -92,8 +92,20 @@ export function PermissionAuditTable({
       key: "permission",
       header: copy.permission,
       render: (row) => (
-        <span>{row.permissionLabel}</span>
+        <div className="flex flex-col gap-1">
+          <span>{row.permissionLabel}</span>
+          <span className="text-xs text-muted-foreground">{row.workGroup}</span>
+        </div>
       ),
+    },
+    {
+      key: "template",
+      header: copy.template,
+      className: "text-sm text-muted-foreground",
+      render: (row) =>
+        row.action === "apply_template"
+          ? (row.templateLabel ?? UNKNOWN_LABEL_VI)
+          : "—",
     },
     {
       key: "branch",
@@ -130,8 +142,7 @@ export function PermissionAuditTable({
           </ItemHeader>
           <ItemContent>
             <ItemDescription>
-              {copy.actor}:{" "}
-              <UserLabel name={row.actorName} />
+              {copy.actor}: <UserLabel name={row.actorName} />
             </ItemDescription>
             <ItemDescription>
               {copy.target}:{" "}
@@ -143,6 +154,14 @@ export function PermissionAuditTable({
               </Link>
             </ItemDescription>
             <ItemDescription>{row.permissionLabel}</ItemDescription>
+            <ItemDescription>
+              {copy.workGroup}: {row.workGroup}
+            </ItemDescription>
+            {row.action === "apply_template" ? (
+              <ItemDescription>
+                {copy.template}: {row.templateLabel ?? UNKNOWN_LABEL_VI}
+              </ItemDescription>
+            ) : null}
             <ItemDescription>
               {BRANCH_VI.long}:{" "}
               {row.branchId === null

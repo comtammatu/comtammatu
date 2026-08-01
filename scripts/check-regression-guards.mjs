@@ -97,6 +97,15 @@ const GUARDS = [
     reason:
       "calculatePayableDays caps completed workdays + paid annual leave at standard_days, preventing overpay when attendance exceeds the standard period",
   },
+  {
+    rule: "INVENTORY-LEDGER-RPC-ONLY",
+    expect: "absent",
+    pattern:
+      /\.from\(\s*["']stock_movements["']\s*\)\s*\.(?:insert|upsert|update|delete)\s*\(/,
+    paths: ["apps/web/app", "apps/web/lib"],
+    reason:
+      "runtime stock movement writes must use an atomic inventory ledger RPC",
+  },
 ];
 
 /** Balanced-brace scan: forbid await confirm( inside startTransition(…). */

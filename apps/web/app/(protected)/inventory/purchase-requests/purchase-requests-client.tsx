@@ -66,8 +66,10 @@ import {
   savePurchaseDemandAllocations,
 } from "../purchase-order-actions";
 import {
+  buildAutomaticPurchaseDemandAllocations,
   buildPurchaseOrderDrafts,
   findUnassignedPurchaseRequestItemIds,
+  type PurchaseDemandAllocation,
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
@@ -77,10 +79,7 @@ const copy = messages.inventory.purchaseRequests;
 const comboFilter = (
   option: { label: string; keywords?: string[] },
   query: string,
-) =>
-  [option.label, ...(option.keywords ?? [])].some((value) =>
-    value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi")),
-  );
+) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
 
 export type PurchaseRequestItemRow = {
   id: number;
@@ -481,6 +480,52 @@ export function PurchaseRequestsClient({
     return totals;
   }
 
+  function approveDemand(
+    row: PurchaseRequestRow,
+    allocations: PurchaseDemandAllocation[],
+    idempotencyKey: string,
+  ) {
+    setPendingId(row.id);
+    startTransition(async () => {
+      try {
+        const result = await reviewPurchaseDemand({
+          demandId: row.id,
+          action: "approve",
+          allocations,
+          idempotencyKey,
+        });
+        if (!result.success) {
+          toast.error(result.error ?? copy.allocationFailed);
+          return;
+        }
+        const purchaseOrders = result.data?.purchaseOrders ?? [];
+        toast.success(copy.approveSuccess(purchaseOrders.map((po) => po.code)));
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", "orders");
+        params.delete("demandId");
+        if (purchaseOrders[0]) params.set("poId", String(purchaseOrders[0].id));
+        else params.delete("poId");
+        params.set("mode", "view");
+        router.replace(`${pathname}?${params}`, { scroll: false });
+        router.refresh();
+      } finally {
+        setPendingId(null);
+      }
+    });
+  }
+
+  function handleSupplierDecision(row: PurchaseRequestRow) {
+    const allocations = buildAutomaticPurchaseDemandAllocations(
+      row.items,
+      suppliers,
+    );
+    if (allocations == null) {
+      openAllocation(row);
+      return;
+    }
+    approveDemand(row, allocations, crypto.randomUUID());
+  }
+
   function saveAllocations(approve: boolean) {
     if (!selected) return;
     const allocations = normalizedAllocations();
@@ -498,53 +543,24 @@ export function PurchaseRequestsClient({
       return;
     }
 
+    if (approve) {
+      approveDemand(selected, allocations, allocationIdempotencyKey);
+      return;
+    }
+
     startTransition(async () => {
-      const result = approve
-        ? await reviewPurchaseDemand({
-            demandId: selected.id,
-            action: "approve",
-            allocations,
-            idempotencyKey: allocationIdempotencyKey,
-          })
-        : await savePurchaseDemandAllocations({
-            demandId: selected.id,
-            allocations,
-            idempotencyKey: allocationIdempotencyKey,
-          });
+      const result = await savePurchaseDemandAllocations({
+        demandId: selected.id,
+        allocations,
+        idempotencyKey: allocationIdempotencyKey,
+      });
       if (!result.success) {
         toast.error(result.error ?? copy.allocationFailed);
         return;
       }
-      if (!approve) {
-        toast.success(copy.allocationSaved);
-        setAllocationBaseline(allocationSnapshot());
-        setAllocationIdempotencyKey(crypto.randomUUID());
-        router.refresh();
-        return;
-      }
-      const purchaseOrders =
-        "data" in result
-          ? ((
-              result.data as
-                | {
-                    purchaseOrders?: Array<{
-                      id: number;
-                      code: string;
-                      supplierId: number;
-                      status: string;
-                    }>;
-                  }
-                | undefined
-            )?.purchaseOrders ?? [])
-          : [];
-      toast.success(copy.approveSuccess(purchaseOrders.map((po) => po.code)));
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "orders");
-      params.delete("demandId");
-      if (purchaseOrders[0]) params.set("poId", String(purchaseOrders[0].id));
-      else params.delete("poId");
-      params.set("mode", "view");
-      router.replace(`${pathname}?${params}`, { scroll: false });
+      toast.success(copy.allocationSaved);
+      setAllocationBaseline(allocationSnapshot());
+      setAllocationIdempotencyKey(crypto.randomUUID());
       router.refresh();
     });
   }
@@ -625,8 +641,12 @@ export function PurchaseRequestsClient({
     ) {
       actions.push({
         key: "allocate",
-        label: copy.allocateAction,
-        onSelect: () => openAllocation(row),
+        label:
+          buildAutomaticPurchaseDemandAllocations(row.items, suppliers) == null
+            ? copy.allocateAction
+            : copy.approveAllocationAction,
+        disabled: isPending || pendingId === row.id,
+        onSelect: () => handleSupplierDecision(row),
       });
     }
     if (row.status === "partially_ordered" && canAllocate) {
@@ -1108,8 +1128,17 @@ export function PurchaseRequestsClient({
               (selected.status === "submitted" ||
                 selected.status === "pending_allocation" ||
                 selected.status === "partially_ordered") ? (
-                <Button type="button" onClick={() => openAllocation(selected)}>
-                  {copy.allocateAction}
+                <Button
+                  type="button"
+                  disabled={isPending || pendingId === selected.id}
+                  onClick={() => handleSupplierDecision(selected)}
+                >
+                  {buildAutomaticPurchaseDemandAllocations(
+                    selected.items,
+                    suppliers,
+                  ) == null
+                    ? copy.allocateAction
+                    : copy.approveAllocationAction}
                 </Button>
               ) : null}
             </>

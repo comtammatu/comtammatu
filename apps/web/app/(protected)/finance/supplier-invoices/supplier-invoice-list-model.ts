@@ -62,7 +62,7 @@ export type SupplierInvoiceGroup = {
   missingVatAmount: number;
   nextDueDate: string | null;
   primaryInvoice: SupplierInvoiceRow;
-  /** All invoices in the group, outstanding-first then code. */
+  /** All invoices in the group, outstanding-first then newest. */
   invoices: SupplierInvoiceRow[];
 };
 
@@ -75,7 +75,7 @@ function compareGroupInvoices(
   if (rightOutstanding !== leftOutstanding) {
     return rightOutstanding - leftOutstanding;
   }
-  return left.code.localeCompare(right.code, "vi");
+  return right.id - left.id;
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -228,7 +228,7 @@ export function filterSupplierInvoices(
     }
 
     return matchesSearch(
-      [invoice.code, invoice.supplierName, invoice.poCode, invoice.grnCode],
+      [invoice.supplierName, invoice.poCode, invoice.grnCode],
       filters.query,
     );
   });

@@ -34,6 +34,7 @@ export type ModuleKey =
   | "branch_feedback"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
+  | "branch_shift_roster"
   | "notifications";
 
 interface ModuleAcl {
@@ -202,6 +203,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/shift/leave-approvals",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("employee_leave_approvals"),
+  },
+  branch_shift_roster: {
+    path: "/br/*/shift/roster",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_shift_roster"),
   },
   notifications: {
     path: "/notifications",

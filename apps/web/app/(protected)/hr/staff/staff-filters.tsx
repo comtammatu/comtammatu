@@ -47,9 +47,10 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
   }, [query]);
 
   function replaceParams(params: URLSearchParams) {
+    params.set("view", "accounts");
     const next = params.toString();
     startTransition(() => {
-      router.replace(next ? `/hr/staff?${next}` : "/hr/staff", {
+      router.replace(next ? `/hr?${next}` : "/hr?view=accounts", {
         scroll: false,
       });
     });
@@ -57,6 +58,7 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
+    params.set("view", "accounts");
     if (key !== "q") {
       if (search.trim()) params.set("q", search.trim());
       else params.delete("q");
@@ -172,7 +174,9 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
             size={controlSize}
             onClick={() => {
               setSearch("");
-              replaceParams(new URLSearchParams());
+              const params = new URLSearchParams();
+              params.set("view", "accounts");
+              replaceParams(params);
             }}
             disabled={isPending}
           >

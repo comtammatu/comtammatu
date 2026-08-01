@@ -207,7 +207,7 @@ test("Branch stays touch-native while Owner surface uses a management table and 
 
   assert.match(
     branchClientSource,
-    /<ItemGroup className="grid gap-2 md:grid-cols-2">/,
+    /<ItemGroup className="grid gap-2 lg:grid-cols-2">/,
     "Branch count assignment rows should keep a touch grid instead of a desktop table",
   );
   assert.match(

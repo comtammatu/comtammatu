@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useFieldArray, type UseFormReturn } from "react-hook-form";
+import { useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import {
   Banknote as IconBanknote,
   Copy as IconCopy,
-  ExternalLink as IconExternalLink,
   Landmark as IconLandmark,
   Pencil as IconPencil,
   Plus as IconPlus,
@@ -29,6 +28,7 @@ import {
 } from "@comtammatu/shared/money";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { EXPENSE_PAYMENT_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -42,6 +42,7 @@ import {
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
@@ -50,7 +51,7 @@ import {
 } from "@/components/row-actions-menu";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppSection, DescriptionList, KpiRow } from "@/components/surface";
+import { AppSection, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -73,6 +74,7 @@ import {
   expenseNeedsAction,
   type ExpenseCategory,
   type ExpensePaymentMethod,
+  type ExpensePaymentState,
 } from "../_lib/expense-categories";
 import type { FinanceParams } from "../_lib/finance-params";
 import {
@@ -242,14 +244,20 @@ function ExpenseFormFields({
   tenantId,
   isTouchLayout,
   paymentMethodReadOnly = false,
-  editingPaymentMethod = false,
+  readOnly = false,
+  transferContent = null,
+  paymentState = null,
+  onCopyTransferContent,
 }: {
   form: UseFormReturn<ExpenseFormValues>;
   branchOptions: readonly { value: string; label: string }[];
   tenantId: number;
   isTouchLayout: boolean;
   paymentMethodReadOnly?: boolean;
-  editingPaymentMethod?: boolean;
+  readOnly?: boolean;
+  transferContent?: string | null;
+  paymentState?: ExpensePaymentState | null;
+  onCopyTransferContent?: (content: string) => void;
 }) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -260,15 +268,20 @@ function ExpenseFormFields({
   const subtotal = addMoney(vatBreakdown.map((line) => line.taxableAmount));
   const vatAmount = addMoney(vatBreakdown.map((line) => line.vatAmount));
   const totalAmount = addMoney(lines.map((line) => line.totalAmount || "0"));
+  const showPaymentMethodAsText = readOnly || paymentMethodReadOnly;
 
   return (
     <>
+      {paymentState ? (
+        <StatusBadge domain="expense-payment" value={paymentState} />
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2">
         <BusinessDateField
           control={form.control}
           name="expenseDate"
           label={copy.form.date}
           required
+          disabled={readOnly}
         />
         <SelectField
           control={form.control}
@@ -276,6 +289,7 @@ function ExpenseFormFields({
           label={copy.form.branch}
           options={branchOptions}
           placeholder={copy.form.branchTenantLevel}
+          disabled={readOnly}
         />
         <SelectField
           control={form.control}
@@ -284,41 +298,29 @@ function ExpenseFormFields({
           options={CATEGORY_OPTIONS}
           placeholder={copy.form.categoryPlaceholder}
           required
+          disabled={readOnly}
         />
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">{copy.form.paymentSection}</p>
-          {paymentMethodReadOnly ? (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">{copy.form.method}</p>
-              <p>
-                {
-                  copy.paymentMethodLabels[
-                    form.watch("paymentMethod") as ExpensePaymentMethod
-                  ]
-                }
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {copy.form.methodEditHint}
-              </p>
-            </div>
-          ) : (
-            <SelectField
-              control={form.control}
-              name="paymentMethod"
-              label={copy.form.method}
-              options={METHOD_OPTIONS}
-              placeholder={copy.form.methodPlaceholder}
-              description={
-                editingPaymentMethod
-                  ? copy.form.methodCorrectHint
-                  : copy.form.methodHints[
-                      form.watch("paymentMethod") as ExpensePaymentMethod
-                    ]
+        {showPaymentMethodAsText ? (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">{copy.form.paymentSection}</p>
+            <p>
+              {
+                copy.paymentMethodLabels[
+                  form.watch("paymentMethod") as ExpensePaymentMethod
+                ]
               }
-              required
-            />
-          )}
-        </div>
+            </p>
+          </div>
+        ) : (
+          <SelectField
+            control={form.control}
+            name="paymentMethod"
+            label={copy.form.paymentSection}
+            options={METHOD_OPTIONS}
+            placeholder={copy.form.methodPlaceholder}
+            required
+          />
+        )}
         <div className="md:col-span-2">
           <TextareaField
             control={form.control}
@@ -326,6 +328,7 @@ function ExpenseFormFields({
             label={copy.form.note}
             placeholder={copy.form.notePlaceholder}
             required
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -356,6 +359,7 @@ function ExpenseFormFields({
                 label={copy.form.lineTotal}
                 placeholder="0"
                 required
+                disabled={readOnly}
               />
               <SelectField
                 control={form.control}
@@ -363,14 +367,16 @@ function ExpenseFormFields({
                 label={copy.form.lineVatRate}
                 options={rateOptions}
                 required
+                disabled={readOnly}
               />
               <MoneyVndField
                 control={form.control}
                 name={`lines.${index}.vatAmount`}
                 label={copy.form.lineVatAmount}
                 placeholder={copy.form.vatAutoPlaceholder}
+                disabled={readOnly}
               />
-              {fields.length > 1 ? (
+              {!readOnly && fields.length > 1 ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -385,27 +391,29 @@ function ExpenseFormFields({
             </Item>
           );
         })}
-        <Button
-          type="button"
-          variant="outline"
-          size={isTouchLayout ? "touch" : "default"}
-          className="self-start"
-          disabled={fields.length >= EXPENSE_VAT_RATES.length}
-          onClick={() => {
-            const nextRate = EXPENSE_VAT_RATES.find(
-              (rate) => !lines.some((line) => line.vatRate === String(rate)),
-            );
-            append({
-              ...EMPTY_EXPENSE_LINE,
-              vatRate: String(
-                nextRate ?? 0,
-              ) as ExpenseFormValues["lines"][number]["vatRate"],
-            });
-          }}
-        >
-          <IconPlus data-icon="inline-start" />
-          {copy.form.addLine}
-        </Button>
+        {!readOnly ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={isTouchLayout ? "touch" : "default"}
+            className="self-start"
+            disabled={fields.length >= EXPENSE_VAT_RATES.length}
+            onClick={() => {
+              const nextRate = EXPENSE_VAT_RATES.find(
+                (rate) => !lines.some((line) => line.vatRate === String(rate)),
+              );
+              append({
+                ...EMPTY_EXPENSE_LINE,
+                vatRate: String(
+                  nextRate ?? 0,
+                ) as ExpenseFormValues["lines"][number]["vatRate"],
+              });
+            }}
+          >
+            <IconPlus data-icon="inline-start" />
+            {copy.form.addLine}
+          </Button>
+        ) : null}
         <NoteCallout tone="muted">
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">
@@ -447,9 +455,123 @@ function ExpenseFormFields({
           }
           acceptTypes="image+pdf"
           previewSize={isTouchLayout ? "touch" : "default"}
+          disabled={readOnly}
         />
       </div>
+      {transferContent ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">{copy.form.transferContent}</p>
+          <Item variant="muted" className="flex-col items-stretch gap-3 p-4">
+            <code className="block break-all font-mono text-base font-semibold tabular-nums tracking-wide">
+              {transferContent}
+            </code>
+            {onCopyTransferContent ? (
+              <Button
+                size={isTouchLayout ? "touch" : "default"}
+                variant="outline"
+                className="w-full"
+                onClick={() => onCopyTransferContent(transferContent)}
+              >
+                <IconCopy data-icon="inline-start" />
+                {copy.transferInstruction.copy}
+              </Button>
+            ) : null}
+          </Item>
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function expenseToFormValues(expense: ExpenseRow): ExpenseFormValues {
+  return {
+    expenseDate: expense.expense_date,
+    branchId:
+      expense.branch_id == null
+        ? TENANT_LEVEL_BRANCH_VALUE
+        : String(expense.branch_id),
+    category: expense.category,
+    paymentMethod: expensePaymentMethod(expense) as ExpensePaymentMethod,
+    note: expense.note ?? "",
+    invoiceAttachmentUrl: expense.invoice_attachment_url ?? "",
+    lines:
+      expense.vat_breakdown.length > 0
+        ? expense.vat_breakdown.map((line) => ({
+            totalAmount: addMoney([
+              String(line.taxableAmount),
+              String(line.vatAmount),
+            ]),
+            vatRate: String(
+              line.vatRate,
+            ) as ExpenseFormValues["lines"][number]["vatRate"],
+            vatAmount: minorUnitsToCanonical(
+              parseMoneyToMinorUnits(String(line.vatAmount)),
+            ),
+          }))
+        : [EMPTY_EXPENSE_LINE],
+  };
+}
+
+function ExpenseViewDialog({
+  expense,
+  branchOptions,
+  tenantId,
+  isTouchLayout,
+  onClose,
+  onCopyTransferContent,
+}: {
+  expense: ExpenseRow | null;
+  branchOptions: readonly { value: string; label: string }[];
+  tenantId: number;
+  isTouchLayout: boolean;
+  onClose: () => void;
+  onCopyTransferContent: (content: string) => void;
+}) {
+  const form = useForm<ExpenseFormValues>({
+    defaultValues: expense ? expenseToFormValues(expense) : undefined,
+  });
+
+  useEffect(() => {
+    if (expense) form.reset(expenseToFormValues(expense));
+  }, [expense, form]);
+
+  return (
+    <AppDialog
+      open={expense != null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={copy.form.viewTitle}
+      description={
+        expense
+          ? `${formatVNBusinessDate(expense.expense_date)} · ${
+              EXPENSE_PAYMENT_STATE_LABELS_VI[
+                classifyExpensePaymentState(expense)
+              ]
+            }`
+          : undefined
+      }
+      variant="document"
+      footer={
+        <Button type="button" variant="outline" onClick={onClose}>
+          {ACTIONS_VI.close}
+        </Button>
+      }
+    >
+      {expense ? (
+        <ExpenseFormFields
+          form={form}
+          branchOptions={branchOptions}
+          tenantId={tenantId}
+          isTouchLayout={isTouchLayout}
+          readOnly
+          paymentMethodReadOnly
+          transferContent={expense.transfer_content}
+          paymentState={classifyExpensePaymentState(expense)}
+          onCopyTransferContent={onCopyTransferContent}
+        />
+      ) : null}
+    </AppDialog>
   );
 }
 
@@ -498,9 +620,7 @@ export function ExpensesClient({
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
-  const [selectedExpenseId, setSelectedExpenseId] = useState<number | null>(
-    null,
-  );
+  const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
   const [isMutating, startMutation] = useTransition();
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
@@ -509,17 +629,19 @@ export function ExpensesClient({
       ? (branchNames.get(branchId) ?? `#${branchId}`)
       : copy.tenantLevel;
 
-  const selectedExpense =
-    selectedExpenseId == null
-      ? null
-      : (rows.find((row) => row.id === selectedExpenseId) ?? null);
-
-  function openDetail(row: ExpenseRow) {
-    setSelectedExpenseId(row.id);
+  function openExpenseDocument(row: ExpenseRow) {
+    if (canManageExpenses) {
+      setEditingExpense(row);
+      setDialogOpen(true);
+      return;
+    }
+    setViewingExpense(row);
   }
 
-  function closeDetail() {
-    setSelectedExpenseId(null);
+  function closeExpenseDocument() {
+    setDialogOpen(false);
+    setEditingExpense(null);
+    setViewingExpense(null);
   }
 
   function toggleNeedsActionFilter() {
@@ -562,32 +684,12 @@ export function ExpensesClient({
   };
 
   const formDefaultValues: ExpenseFormValues = editingExpense
-    ? {
-        expenseDate: editingExpense.expense_date,
-        branchId:
-          editingExpense.branch_id == null
-            ? TENANT_LEVEL_BRANCH_VALUE
-            : String(editingExpense.branch_id),
-        category: editingExpense.category,
-        paymentMethod: expensePaymentMethod(
-          editingExpense,
-        ) as ExpensePaymentMethod,
-        note: editingExpense.note ?? "",
-        invoiceAttachmentUrl: editingExpense.invoice_attachment_url ?? "",
-        lines: editingExpense.vat_breakdown.map((line) => ({
-          totalAmount: addMoney([
-            String(line.taxableAmount),
-            String(line.vatAmount),
-          ]),
-          vatRate: String(
-            line.vatRate,
-          ) as ExpenseFormValues["lines"][number]["vatRate"],
-          vatAmount: minorUnitsToCanonical(
-            parseMoneyToMinorUnits(String(line.vatAmount)),
-          ),
-        })),
-      }
+    ? expenseToFormValues(editingExpense)
     : defaultValues;
+
+  const editingPaymentState = editingExpense
+    ? classifyExpensePaymentState(editingExpense)
+    : null;
 
   async function onSubmit(values: ExpenseFormValues): Promise<ActionResult> {
     const branchId =
@@ -653,6 +755,7 @@ export function ExpensesClient({
   }
 
   function onEdit(row: ExpenseRow) {
+    setViewingExpense(null);
     setEditingExpense(row);
     setDialogOpen(true);
   }
@@ -707,6 +810,7 @@ export function ExpensesClient({
       } else {
         toast.success(copy.actions.cancelTransferSuccess);
       }
+      closeExpenseDocument();
       router.refresh();
     });
   }
@@ -953,7 +1057,10 @@ export function ExpensesClient({
             {canManageExpenses ? (
               <Button
                 size={isTouchLayout ? "touch" : "default"}
-                onClick={() => setDialogOpen(true)}
+                onClick={() => {
+                  setEditingExpense(null);
+                  setDialogOpen(true);
+                }}
               >
                 <IconPlus data-icon="inline-start" />
                 {copy.add}
@@ -969,12 +1076,14 @@ export function ExpensesClient({
           data={visibleRows}
           pageSize={50}
           getRowKey={(row) => row.id}
-          onRowClick={openDetail}
+          onRowClick={openExpenseDocument}
           getRowAriaLabel={(row) =>
-            copy.detail.viewAria(categoryLabel(row.category))
+            copy.form.openAria(categoryLabel(row.category))
           }
           getRowDataState={(row) =>
-            row.id === selectedExpenseId ? "selected" : undefined
+            row.id === editingExpense?.id || row.id === viewingExpense?.id
+              ? "selected"
+              : undefined
           }
           emptyMode="no-data"
           emptyTitle={
@@ -993,13 +1102,13 @@ export function ExpensesClient({
                 variant="outline"
                 role="button"
                 tabIndex={0}
-                aria-label={copy.detail.viewAria(categoryLabel(row.category))}
+                aria-label={copy.form.openAria(categoryLabel(row.category))}
                 className="cursor-pointer"
-                onClick={() => openDetail(row)}
+                onClick={() => openExpenseDocument(row)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    openDetail(row);
+                    openExpenseDocument(row);
                   }
                 }}
               >
@@ -1051,13 +1160,109 @@ export function ExpensesClient({
             if (!open) setEditingExpense(null);
           }}
           title={editingExpense ? copy.form.editTitle : copy.form.title}
+          description={
+            editingExpense && editingPaymentState
+              ? EXPENSE_PAYMENT_STATE_LABELS_VI[editingPaymentState]
+              : undefined
+          }
           schema={expenseFormSchema}
           defaultValues={formDefaultValues}
-          entityKey={editingExpense?.id}
+          entityKey={editingExpense?.id ?? "create"}
           onSubmit={onSubmit}
           onSuccess={onCreateSuccess}
           submitLabel={editingExpense ? copy.form.editSubmit : copy.form.submit}
           variant="document"
+          renderFooter={
+            editingExpense &&
+            (editingPaymentState === "unpaid" ||
+              editingPaymentState === "transfer_needs_match")
+              ? ({
+                  formId,
+                  isPending,
+                  requestClose,
+                  submitLabel,
+                  actionSize,
+                  cancelLabel,
+                }) => (
+                  <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size={actionSize}
+                      onClick={requestClose}
+                      disabled={isPending || isMutating}
+                    >
+                      {cancelLabel}
+                    </Button>
+                    {editingPaymentState === "unpaid" ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size={actionSize}
+                          disabled={isPending || isMutating}
+                          onClick={() => void onPayCash(editingExpense)}
+                        >
+                          {isMutating ? <Spinner /> : null}
+                          <IconBanknote data-icon="inline-start" />
+                          {copy.actions.cash}
+                        </Button>
+                        <Button
+                          type="button"
+                          size={actionSize}
+                          disabled={isPending || isMutating}
+                          onClick={() => void onPayTransfer(editingExpense)}
+                        >
+                          {isMutating ? <Spinner /> : null}
+                          <IconLandmark data-icon="inline-start" />
+                          {copy.actions.transfer}
+                        </Button>
+                      </>
+                    ) : null}
+                    {editingPaymentState === "transfer_needs_match" &&
+                    editingExpense.transfer_content ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size={actionSize}
+                          disabled={isPending || isMutating}
+                          onClick={() =>
+                            void copyTransferContent(
+                              editingExpense.transfer_content!,
+                            )
+                          }
+                        >
+                          <IconCopy data-icon="inline-start" />
+                          {copy.transferInstruction.copy}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size={actionSize}
+                          disabled={isPending || isMutating}
+                          onClick={() => void onCancelTransfer(editingExpense)}
+                        >
+                          {isMutating ? <Spinner /> : null}
+                          <IconRotateCcw data-icon="inline-start" />
+                          {copy.actions.cancelTransfer}
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      type="submit"
+                      form={formId}
+                      variant="outline"
+                      size={actionSize}
+                      disabled={isPending || isMutating}
+                    >
+                      {isPending ? <Spinner /> : null}
+                      {submitLabel}
+                    </Button>
+                  </div>
+                )
+              : undefined
+          }
         >
           {(form) => {
             const canEditPaymentMethod =
@@ -1070,8 +1275,10 @@ export function ExpensesClient({
                 tenantId={tenantId}
                 isTouchLayout={isTouchLayout}
                 paymentMethodReadOnly={!canEditPaymentMethod}
-                editingPaymentMethod={
-                  editingExpense != null && canEditPaymentMethod
+                transferContent={editingExpense?.transfer_content}
+                paymentState={editingPaymentState}
+                onCopyTransferContent={(content) =>
+                  void copyTransferContent(content)
                 }
               />
             );
@@ -1079,146 +1286,16 @@ export function ExpensesClient({
         </FormDialog>
       ) : null}
 
-      <AppDialog
-        open={selectedExpense != null}
-        onOpenChange={(open) => {
-          if (!open) closeDetail();
-        }}
-        title={
-          selectedExpense ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span>{categoryLabel(selectedExpense.category)}</span>
-              <StatusBadge
-                domain="expense-payment"
-                value={classifyExpensePaymentState(selectedExpense)}
-              />
-            </div>
-          ) : (
-            copy.detail.title
-          )
-        }
-        description={
-          selectedExpense
-            ? `${formatVNBusinessDate(selectedExpense.expense_date)} · ${branchLabel(selectedExpense.branch_id)} · ${methodLabel(selectedExpense)}`
-            : undefined
-        }
-        variant="document"
-        footer={
-          <Button type="button" variant="outline" onClick={closeDetail}>
-            {ACTIONS_VI.close}
-          </Button>
-        }
-      >
-        {selectedExpense ? (
-          <>
-            <DescriptionList
-              className="sm:grid sm:grid-cols-2 sm:gap-4"
-              items={[
-                {
-                  term: copy.table.amount,
-                  description: (
-                    <span className="font-mono tabular-nums font-semibold">
-                      {formatAccountingVND(selectedExpense.amount)}
-                    </span>
-                  ),
-                },
-                {
-                  term: copy.detail.subtotal,
-                  description: (
-                    <span className="font-mono tabular-nums">
-                      {formatAccountingVND(selectedExpense.subtotal)}
-                    </span>
-                  ),
-                },
-                {
-                  term: copy.table.vat,
-                  description: (
-                    <span className="font-mono tabular-nums">
-                      {formatAccountingVND(selectedExpense.vat_amount)}
-                    </span>
-                  ),
-                },
-                {
-                  term: copy.detail.vendor,
-                  description:
-                    selectedExpense.vendor_name?.trim() ||
-                    copy.detail.emptyValue,
-                },
-                {
-                  term: copy.form.note,
-                  description:
-                    selectedExpense.note?.trim() || copy.detail.emptyValue,
-                },
-                {
-                  term: copy.table.attachment,
-                  description: selectedExpense.invoice_attachment_url ? (
-                    <a
-                      href={selectedExpense.invoice_attachment_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
-                    >
-                      <IconExternalLink className="size-3.5" aria-hidden />
-                      {copy.table.attachmentOpen}
-                    </a>
-                  ) : (
-                    copy.detail.attachmentMissing
-                  ),
-                },
-              ]}
-            />
-
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">{copy.detail.vatBreakdown}</p>
-              <NoteCallout tone="muted">
-                {selectedExpense.vat_breakdown.map((line) => (
-                  <div
-                    key={line.vatRate}
-                    className="mb-2 flex items-center justify-between gap-3 last:mb-0"
-                  >
-                    <span className="text-muted-foreground">
-                      {copy.detail.vatLine(
-                        formatPercent(line.vatRate, 0),
-                        formatAccountingVND(line.taxableAmount),
-                        formatAccountingVND(line.vatAmount),
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </NoteCallout>
-            </div>
-
-            {selectedExpense.transfer_content ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  {copy.detail.transferContent}
-                </p>
-                <Item
-                  variant="muted"
-                  className="flex-col items-stretch gap-3 p-4"
-                >
-                  <code className="block break-all font-mono text-base font-semibold tabular-nums tracking-wide">
-                    {selectedExpense.transfer_content}
-                  </code>
-                  <Button
-                    size={isTouchLayout ? "touch" : "default"}
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      void copyTransferContent(
-                        selectedExpense.transfer_content!,
-                      )
-                    }
-                  >
-                    <IconCopy data-icon="inline-start" />
-                    {copy.transferInstruction.copy}
-                  </Button>
-                </Item>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-      </AppDialog>
+      {!canManageExpenses ? (
+        <ExpenseViewDialog
+          expense={viewingExpense}
+          branchOptions={branchOptions}
+          tenantId={tenantId}
+          isTouchLayout={isTouchLayout}
+          onClose={() => setViewingExpense(null)}
+          onCopyTransferContent={(content) => void copyTransferContent(content)}
+        />
+      ) : null}
     </>
   );
 }

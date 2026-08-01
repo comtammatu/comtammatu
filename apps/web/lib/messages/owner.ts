@@ -53,9 +53,8 @@ export const owner = {
     branchDescription: "Bắt buộc cho vai trò vận hành tại chi nhánh.",
   },
   staffPage: {
-    title: "Tài khoản & quyền",
-    description:
-      "Tài khoản, chức vụ và quyền theo chi nhánh. Hồ sơ và lương ở mục Nhân sự.",
+    title: "Tài khoản",
+    description: "Đăng nhập và phân quyền hệ thống. Hồ sơ, HĐ và lương ở tab Hồ sơ.",
     createAccount: "Tạo tài khoản",
     hrLink: "Nhân sự",
     moreActions: "Thao tác khác",
@@ -68,15 +67,22 @@ export const owner = {
     actionPermissions: "Quyền",
     actionDeactivate: "Vô hiệu hóa",
     actionActivate: "Kích hoạt",
+    permissionStatus: {
+      none: "Chưa áp mẫu",
+      template: "Đã áp mẫu",
+      exception: "Có ngoại lệ",
+      mixed: "Mẫu + ngoại lệ",
+    },
   },
   staffAudit: {
-    backToStaff: "Quay lại danh sách nhân viên",
+    backToStaff: "Quay lại danh sách tài khoản",
     linkLabel: "Nhật ký quyền hạn",
     title: "Nhật ký quyền hạn",
     description:
       "Mọi thao tác gán, thu hồi và áp dụng mẫu quyền. Không sửa được.",
     recentItems: (count: number) => `${formatCount(count)} mục gần nhất`,
-    empty: "Không có thay đổi nào.",
+    empty: "Chưa có thay đổi phân quyền.",
+    emptyAction: "Mở Tài khoản",
     time: "Thời gian",
     action: "Hành động",
     actionLabels: {
@@ -87,6 +93,8 @@ export const owner = {
     actor: "Người thao tác",
     target: "Đối tượng",
     permission: "Quyền",
+    workGroup: "Nhóm việc",
+    template: "Mẫu",
     expires: "Hạn",
     tenantWide: "toàn quán",
     forever: "vĩnh viễn",
@@ -166,6 +174,7 @@ export const owner = {
     } as Record<string, string>,
     permissionLabels: {
       "dashboard:view": "Xem tổng quan vận hành",
+      "hr:assign_shift": "Phân ca làm việc theo tuần",
       "inventory:adjust_approve": "Duyệt điều chỉnh tồn kho",
       "inventory:grn_express_extend": "Gia hạn thời gian nhập kho nhanh",
       "inventory:item_review_override_set":

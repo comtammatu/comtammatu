@@ -41,6 +41,7 @@ const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
   "/br/[branchId]/shift": `/br/${BRANCH_ID}/shift/clock`,
   "/br/[branchId]/shift/checkout-approvals": `/br/${BRANCH_ID}/shift/checkout-approvals`,
   "/br/[branchId]/shift/leave-approvals": `/br/${BRANCH_ID}/shift/leave-approvals`,
+  "/br/[branchId]/shift/roster": `/br/${BRANCH_ID}/shift/roster`,
   "/br/[branchId]/profile": `/br/${BRANCH_ID}/profile/edit`,
   "/br/[branchId]/stock": `/br/${BRANCH_ID}/stock/waste`,
   "/br/[branchId]/menu-limits": `/br/${BRANCH_ID}/menu-limits`,

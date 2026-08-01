@@ -60,14 +60,13 @@ test("recipe display cost quantity keeps unitless lines unchanged", () => {
   );
 });
 
-test("menu recipes use the ingredient output unit for quantity and writes", () => {
-  assert.match(recipesPageSource, /qty: outputQuantity/);
-  assert.match(recipesPageSource, /entryUnitId: outputUnitId/);
-  assert.doesNotMatch(recipeDialogSource, /\bunitEditable\b/);
-  assert.match(recipeActionsSource, /\.eq\("is_base", true\)/);
+test("menu recipes preserve entry units and convert quantities for cost", () => {
+  assert.match(recipesPageSource, /const baseQuantity = getMenuRecipeLineBaseQuantity/);
+  assert.match(recipesPageSource, /qty,[\s\S]*entryUnitId,/);
+  assert.match(recipeDialogSource, /\bunitEditable\b/);
   assert.match(
     recipeActionsSource,
-    /entry_unit_id: outputUnitByIngredient\.get\(line\.ingredientId\)/,
+    /entry_unit_id: line\.entryUnitId \?\? null/,
   );
 });
 

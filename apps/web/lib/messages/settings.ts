@@ -538,6 +538,9 @@ export const settings = {
     centralKitchenNavReceive: "Nhập",
     centralKitchenNavDispatch: "Giao nhận",
     centralNavReceive: "Nhập",
+    /** Branch bottom-nav label — lands on on-hand. */
+    branchNavStock: "Kho",
+    /** Kho Tổng bottom-nav middle tab. */
     centralNavStock: "Tồn",
     centralNavStocktake: "Kiểm",
     centralNavProduction: "Sản xuất",

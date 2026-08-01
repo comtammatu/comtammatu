@@ -52,6 +52,7 @@ import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
+import { matchesSearch } from "@lib/search";
 import { AttendanceCalendar } from "../attendance-calendar";
 import {
   removePayrollAdjustment,
@@ -243,25 +244,24 @@ export function PayrollListClient({
   const hasPreflightBlockers = preview.preflight.blockers.length > 0;
 
   const rows = useMemo(() => {
-    const normalized = search.trim().toLocaleLowerCase("vi-VN");
+    const normalized = search.trim();
     return preview.entries.filter((entry) => {
       const matchesStatus =
         salaryStatus === ALL_SALARY_STATUSES ||
         (salaryStatus === CALCULABLE_SALARY_STATUS && canCalculate(entry)) ||
         (salaryStatus === MISSING_SALARY_STATUS && !canCalculate(entry));
-      const matchesSearch =
+      const matchesQuery =
         !normalized ||
-        [
-          entry.employeeName,
-          entry.employeeCode,
-          entry.branchName,
-          entry.positionLabel,
-        ]
-          .filter(Boolean)
-          .some((value) =>
-            value!.toLocaleLowerCase("vi-VN").includes(normalized),
-          );
-      return matchesStatus && matchesSearch;
+        matchesSearch(
+          [
+            entry.employeeName,
+            entry.employeeCode,
+            entry.branchName,
+            entry.positionLabel,
+          ],
+          normalized,
+        );
+      return matchesStatus && matchesQuery;
     });
   }, [preview.entries, salaryStatus, search]);
 
@@ -458,7 +458,7 @@ export function PayrollListClient({
 
   function openPreflightBlocker(blocker: PayrollPreflightBlocker) {
     if (blocker.kind === "missing_salary") {
-      replaceFilters({ salaryStatus: MISSING_SALARY_STATUS });
+      router.push("/hr?view=profile&salary=missing");
       return;
     }
     if (blocker.kind === "pending_leave") {
@@ -696,49 +696,41 @@ export function PayrollListClient({
         }
       />
 
-      {!isLocked ? (
+      {!isLocked && hasPreflightBlockers ? (
         <AppSection
-          tone={hasPreflightBlockers ? "warning" : "default"}
+          tone="warning"
           title={copy.preflight.title}
-          description={
-            hasPreflightBlockers
-              ? copy.preflight.blockedDescription
-              : copy.preflight.readyDescription
-          }
+          description={copy.preflight.blockedDescription}
           badge={{
-            children: hasPreflightBlockers
-              ? copy.preflight.blockedBadge
-              : copy.preflight.readyBadge,
-            variant: hasPreflightBlockers ? "warning" : "success",
+            children: copy.preflight.blockedBadge,
+            variant: "warning",
           }}
         >
-          {hasPreflightBlockers ? (
-            <div className="flex flex-col gap-2">
-              {preview.preflight.blockers.map((blocker) => {
-                const content = preflightBlockerContent(blocker);
-                return (
-                  <Item
-                    key={`${blocker.kind}:${blocker.branchId ?? "none"}`}
-                    variant="outline"
-                  >
-                    <ItemContent>
-                      <ItemTitle>{content.title}</ItemTitle>
-                      <ItemDescription>{content.description}</ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openPreflightBlocker(blocker)}
-                      >
-                        {content.action}
-                      </Button>
-                    </ItemActions>
-                  </Item>
-                );
-              })}
-            </div>
-          ) : null}
+          <div className="flex flex-col gap-2">
+            {preview.preflight.blockers.map((blocker) => {
+              const content = preflightBlockerContent(blocker);
+              return (
+                <Item
+                  key={`${blocker.kind}:${blocker.branchId ?? "none"}`}
+                  variant="outline"
+                >
+                  <ItemContent>
+                    <ItemTitle>{content.title}</ItemTitle>
+                    <ItemDescription>{content.description}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openPreflightBlocker(blocker)}
+                    >
+                      {content.action}
+                    </Button>
+                  </ItemActions>
+                </Item>
+              );
+            })}
+          </div>
         </AppSection>
       ) : null}
 

@@ -121,8 +121,7 @@ test("inventory stock omits the retired kitchen transfer", () => {
   assert.doesNotMatch(stockClientSource, /stockCopy\.actions\.transferKitchen/);
 });
 
-test("inventory stock attention strip reuses dictionary-backed copy", () => {
-  assert.match(stockClientSource, /stockCopy\.attention\.title/);
+test("inventory stock copy stays dictionary-backed", () => {
   assert.match(inventoryMessagesSource, /attention:\s*\{/);
   assert.doesNotMatch(
     stockClientSource,

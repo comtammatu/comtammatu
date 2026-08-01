@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: doanh nghiệp Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
-> Phạm vi: **Nhu cầu mua → phân bổ NCC → PO → GRN theo lần giao tại Kho Tổng /
+> Phạm vi: **Nhu cầu mua → xác định NCC → PO → GRN theo lần giao tại Kho Tổng /
 > Bếp TT + sản xuất + tiêu hao + stocktake + báo cáo vận hành**.
 > `supplier_invoice`, payment evidence (file HĐ GTGT) và AP aging là Finance
 > handoff; không phải gate đóng ngày Inventory.
@@ -24,7 +24,7 @@ kho không map được vào contract hiện có, cập nhật contract trước
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                    | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Kế toán phân bổ đúng đủ số lượng cho một hay nhiều NCC đang cung cấp nguyên liệu, rồi một RPC tạo một PO/NCC và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một PO/NCC. Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; dòng chưa có NCC bị chặn để bổ sung mapping. Một RPC tạo PO và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
 | QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                    | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                           | Không có target Kho↔Bếp trong cùng branch                                                              |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                 | Không mở payment proposal engine trong Inventory                                                       |
@@ -288,8 +288,12 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
    cung cấp trong `supplier_items`.
 2. Kho Tổng hoặc Bếp Trung Tâm tạo **Yêu cầu mua**. Đây là nhu cầu mua ngoài;
    **Yêu cầu hàng** vẫn chỉ dùng cho cấp hàng nội bộ về chi nhánh.
-3. Kế toán hoặc Owner tạo một hay nhiều **PO** từ Yêu cầu mua. Mỗi PO thuộc đúng
-   một Yêu cầu mua và một NCC; PO chỉ xác nhận nhu cầu, NCC, số lượng và đơn vị.
+3. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, Kế toán hoặc Owner dùng
+   **Duyệt & tạo đơn mua** để hệ thống tự lấy toàn bộ số lượng còn lại và gom
+   thành một PO/NCC. Chỉ khi nguyên liệu có nhiều NCC, Kế toán mới chọn hoặc
+   chia số lượng; nguyên liệu chưa có NCC phải được bổ sung mapping trước. Mỗi
+   PO thuộc đúng một Yêu cầu mua và một NCC; PO chỉ xác nhận nhu cầu, NCC, số
+   lượng và đơn vị.
 4. Khi PO chuyển sang `sent`, hệ thống tạo ngay đúng một GRN nháp
    **Chờ nhập hàng**, sao chép các dòng còn thiếu và khóa nháp thứ hai của cùng
    PO. Người nhận hàng làm việc trực tiếp từ danh sách GRN, không cần quay lại

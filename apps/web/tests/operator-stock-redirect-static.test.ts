@@ -198,7 +198,8 @@ test("operator stock landing is a branch-native landing, not the Owner surface s
   assert.match(source, /BranchOperatorPage/);
   assert.match(source, /BranchOperatorActionSection/);
   assert.match(source, /resolveOperatorTiles/);
-  assert.match(source, /STOCK_TAB_SUFFIXES/);
+  assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
+  assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
   assert.match(source, /AppPageTabs/);
   assert.match(source, /paramKey="group"/);
   assert.match(
@@ -206,10 +207,7 @@ test("operator stock landing is a branch-native landing, not the Owner surface s
     /tile\.href === stockRoot\s*\?\s*`\$\{stockRoot\}\/on-hand`/,
   );
   assert.match(source, /mobileColumns=\{2\}/);
-  assert.match(
-    source,
-    /stockTabOnhand[\s\S]*stockTabCount[\s\S]*stockTabWaste[\s\S]*stockTabCatalog/,
-  );
+  assert.match(source, /stockTabOnhand/);
   assert.doesNotMatch(source, /operatorStockPrimaryDescription/);
   assert.doesNotMatch(source, /StockPageContent/);
   assert.doesNotMatch(source, /embedded/);
@@ -235,6 +233,9 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(routeSource, /routeBranchId: branchId/);
   assert.match(routeSource, /includeValuation: false/);
   assert.match(routeSource, /BranchStockOnHandClient/);
+  assert.match(routeSource, /branchKind=\{branchKind\}/);
+  assert.match(routeSource, /permissions=\{data\.permissions\}/);
+  assert.match(routeSource, /secondaryJobs=/);
   assert.doesNotMatch(routeSource, /<BranchStockOnHandClient \{\.\.\.data\}/);
   assert.doesNotMatch(
     routeSource,
@@ -251,6 +252,10 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /StockRiskBadge/);
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /isStockReorderRisk/);
+  assert.match(branchClientSource, /MultiSelectCombobox/);
+  assert.match(branchClientSource, /ToggleGroup/);
+  assert.match(branchClientSource, /SheetContent[\s\S]*side="bottom"/);
+  assert.match(branchClientSource, /moreStockJobs/);
   assert.match(
     branchClientSource,
     /aria-label=\{stockCopy\.filters\.searchPlaceholder\}/,
@@ -260,17 +265,11 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /border-b border-border/);
   assert.doesNotMatch(branchClientSource, /<ItemGroup/);
   assert.match(branchClientSource, /size="touch"/);
-  assert.match(
-    routeSource,
-    /canCreateStockRequest=\{data\.permissions\.canCreateStockRequest\}/,
-  );
-  assert.match(branchClientSource, /canCreateStockRequest: boolean/);
-  assert.match(branchClientSource, /stockCopy\.attention\.title/);
+  assert.match(branchClientSource, /StockActionPermissions/);
+  assert.match(branchClientSource, /attentionTitle/);
+  assert.match(branchClientSource, /resolveAttentionCtas/);
   assert.doesNotMatch(branchClientSource, /md:grid md:grid-cols-3/);
-  assert.match(
-    branchClientSource,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/requests\/new`\}/,
-  );
+  assert.match(branchClientSource, /requests\/new/);
   assert.doesNotMatch(
     branchClientSource,
     /DataTable|AppPage|StockPageContent|StockClient|embedded|overflow-x-auto|QuickStockIssueDialog|QuickInternalTransferDialog|AdjustStockDialog/,
@@ -336,12 +335,14 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.doesNotMatch(detailRouteSource, /redirect\(`\/inventory\/stock/);
   assert.match(branchDetailSource, /BranchOperatorPage/);
   assert.match(branchDetailSource, /BranchOperatorPanel/);
-  assert.match(branchDetailSource, /BranchOperatorActionSection/);
+  assert.match(branchDetailSource, /DropdownMenu/);
+  assert.match(branchDetailSource, /resolvePrimaryActions/);
   assert.match(branchDetailSource, /ItemGroup/);
   assert.match(branchDetailSource, /AppDetailFooter/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/on-hand/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/requests\/new/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/transfer/);
-  assert.match(branchDetailSource, /\$\{stockBasePath\}\/count/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/stocktake/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/issues/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
@@ -411,10 +412,8 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     /canReceiveStock = actionPermissions\.canReceiveGrn/,
   );
   assert.match(stockDataSource, /PERMISSION_KEYS\.INVENTORY_TRANSFER_RECEIVE/);
-  assert.match(
-    branchClientSource,
-    /href=\{`\/br\/\$\{branchId\}\/stock\/requests\/new`\}/,
-  );
+  assert.match(branchClientSource, /\$\{base\}\/requests\/new/);
+  assert.match(branchClientSource, /canCreateStockRequest/);
 });
 
 test("Owner surface stock workbench keeps manager action affordances after the plane split", () => {

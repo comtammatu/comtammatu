@@ -231,6 +231,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
+    id: "branch-shift-roster",
+    label: MODULE_ACL.branch_shift_roster.label,
+    surface: "branch_operation",
+    entryPath: "/br/[branchId]/shift/roster",
+    matchPrefixes: ["/br/[branchId]/shift/roster"],
+    moduleKeys: ["branch_shift_roster"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
     id: "branch-shift",
     label: APP_COPY_VI.employeePortal,
     surface: "branch_operation",

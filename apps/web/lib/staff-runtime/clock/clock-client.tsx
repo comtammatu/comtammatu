@@ -353,10 +353,10 @@ export function ClockClient({
 
   useEffect(() => {
     if (autoStartCameraRef.current) return;
-    if (state.status !== "not_started") return;
+    if (state.status !== "not_started" || state.shiftUnassigned) return;
     autoStartCameraRef.current = true;
     void startCamera();
-  }, [startCamera, state.status]);
+  }, [startCamera, state.shiftUnassigned, state.status]);
 
   const capturePhoto = useCallback(async () => {
     const video = videoRef.current;
@@ -535,6 +535,16 @@ export function ClockClient({
       <AppEmptyState
         title={clockCopy.missingBranchTitle}
         description={clockCopy.missingBranchDescription}
+        icon={<IconCircleX />}
+      />
+    );
+  }
+
+  if (state.status === "not_started" && state.shiftUnassigned) {
+    return (
+      <AppEmptyState
+        title={messages.employee.home.statusNotStarted}
+        description={messages.employee.home.descriptionShiftUnassigned}
         icon={<IconCircleX />}
       />
     );

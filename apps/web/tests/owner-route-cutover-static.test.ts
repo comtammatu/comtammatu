@@ -33,7 +33,7 @@ test("Branch home keeps management branch-local and exposes one Owner entry", ()
     1,
     "Branch home must expose exactly one Owner surface route",
   );
-  assert.match(landing, /ownerLinks = claims\.user_role === "owner"/);
+  assert.match(landing, /ownerLinks =\s*claims\.user_role === "owner"/);
   assert.match(landing, /key: "owner-home"/);
   for (const moduleKey of [
     "menu",

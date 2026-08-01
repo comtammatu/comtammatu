@@ -74,15 +74,18 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
   control_surface `/inventory/*`.
 - **Làm:** Yêu cầu mua + GRN Kho Tổng; tồn/kiểm kê/hao hụt site; inbox dòng yêu cầu
   `central_supply`; fulfill → DC; ship/receive tại site
-- **Nav hiện (hub + bottom nav):** Nhập (GRN), Tồn, Giao nhận, Yêu cầu mua,
-  Kiểm kê, Hao hụt, Tiêu hao, Danh mục (chỉ xem) — **không** PO, Sản xuất,
-  Định mức món bán
+- **Nav hiện:** Bottom-Nav `Hôm nay` · `Nhập` · `Tồn` · `Giao nhận` · `Thêm`.
+  Home tiles: Nhập · Tồn · Giao nhận · Yêu cầu mua. Kiểm kê / hao / tiêu /
+  catalog chỉ trong Thêm hoặc Sheet “Thêm chức năng kho” trên Tồn — **không**
+  PO, Sản xuất, Định mức món bán
 - **Không:** PO/giá; SX; CRUD danh mục nguyên liệu; station POS/KDS/Runner
 
 ### 4.4 Bếp trưởng Bếp TT (`central_kitchen_lead`)
 
 - Như Kho Tổng tại `/br/{pinnedSiteId}` (`central_kitchen`) **+ Production**
   và **ProductionRecipe** (tab trong `/br/.../stock/production`)
+- Bottom-Nav: `Bếp` · `Nhập` · `Sản xuất` · `Giao nhận` · `Thêm` (Tồn qua Thêm)
+- Home tiles: Nhập · Sản xuất · Giao nhận · Yêu cầu mua
 - Có thể **Yêu cầu Kho Tổng** cho nguyên liệu nguồn `central_supply`
 - Inbox dòng `central_kitchen`; fulfill → DC
 - Nguyên liệu: chỉ xem (Owner CRUD + `default_fulfill_site_kind`)
@@ -90,8 +93,8 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 
 ### 4.5 Quản lý chi nhánh (`branch_manager`)
 
-- **Surface:** `/br/{id}/stock`
-- **Tile hiện:** Tồn kho · Yêu cầu hàng · Tiêu hao · Kiểm kê · Hao hụt ·
+- **Surface:** tab Kho land `/br/{id}/stock/on-hand`; hub `/stock` là secondary
+- **Từ Tồn / Sheet chức năng:** Yêu cầu hàng · Tiêu hao · Kiểm kê · Hao hụt ·
   Giao đếm · Danh mục · nhận DC
 - **Không hiện:** GRN, Sản xuất, PO, giá mua, WAC
 - **Playbook yêu cầu:** tạo phiếu → thêm dòng (nguồn auto từ catalog) → gửi →

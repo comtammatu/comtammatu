@@ -8,25 +8,28 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
-test("Branch transfer creation has no route or navigation entry", () => {
-  for (const path of [
+test("Branch transfer creation stays central-site only", () => {
+  const createRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
-  ]) {
-    assert.equal(exists(path), false, path);
-  }
+  );
+  assert.equal(
+    exists(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
+    ),
+    false,
+  );
+  assert.match(createRoute, /branch_kind !== "central_supply"/);
+  assert.match(createRoute, /branch_kind !== "central_kitchen"/);
+  assert.match(createRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
 
   const branchList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx",
   );
   const operatorNav = read("packages/shared/src/auth/nav-config.ts");
-  for (const source of [branchList, operatorNav]) {
-    assert.doesNotMatch(source, /stock\/transfer\/new/);
-  }
-  assert.doesNotMatch(
-    branchList,
-    /BranchOperatorActionSection|fetchBranchesForTransfer/,
-  );
+  assert.match(branchList, /canCreateManualTransfer =\s*isCentralKind/);
+  assert.match(branchList, /stock\/transfer\/new/);
+  assert.doesNotMatch(operatorNav, /stock\/transfer\/new/);
+  assert.doesNotMatch(branchList, /BranchOperatorActionSection|fetchBranchesForTransfer/);
 
   for (const source of [
     read("apps/web/lib/inventory/transfer-create-model.ts"),

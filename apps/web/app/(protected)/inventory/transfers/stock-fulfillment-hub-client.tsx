@@ -52,6 +52,14 @@ function rowTitle(row: StockFulfillmentRow): string {
     : `${row.fromSite.name} → ${row.toSite.name}`;
 }
 
+function linkedTransferNumbers(row: StockFulfillmentRow): string[] {
+  return row.kind === "request"
+    ? row.sources.flatMap((source) =>
+        source.transfers.map((transfer) => transfer.documentNumber),
+      )
+    : [];
+}
+
 function progressLines(row: StockFulfillmentRow): string[] {
   if (row.kind === "manual_transfer") {
     if (row.status === "draft") return ["Chuẩn bị hàng"];
@@ -119,9 +127,11 @@ export function StockFulfillmentHubClient({
       ? rawWork
       : "all";
   const state: StateFilter =
-    rawState === "completed" || rawState === "cancelled" || rawState === "all"
+    rawState === "active" ||
+    rawState === "completed" ||
+    rawState === "cancelled"
       ? rawState
-      : "active";
+      : "all";
   const search = searchParams.get("q") ?? "";
   const currentPage = Math.max(Number(searchParams.get("page")) || 1, 1);
 
@@ -172,20 +182,45 @@ export function StockFulfillmentHubClient({
   const columns: DataTableColumn<StockFulfillmentRow>[] = [
     {
       key: "journey",
-      header: "Giao nhận",
-      render: (row) => (
-        <div className="min-w-0">
-          <div className="font-medium">{rowTitle(row)}</div>
-          <div className="text-sm text-muted-foreground">
-            <span className="font-mono tabular-nums">{row.documentNumber}</span>
-            {" · "}
-            {copy.ingredientCount(row.lineCount)}
-            {row.kind === "request" && row.sources.length > 1
-              ? ` · ${row.sources.length} nguồn`
-              : ""}
+      header: "Phiếu",
+      render: (row) => {
+        const linkedTransfers = linkedTransferNumbers(row);
+        return (
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                {row.kind === "request" ? "YCH" : "DC"}
+              </Badge>
+              <span className="font-mono font-medium tabular-nums">
+                {row.documentNumber}
+              </span>
+              <Badge
+                variant={
+                  row.lifecycle === "cancelled"
+                    ? "destructive"
+                    : row.lifecycle === "completed"
+                      ? "success"
+                      : "warning"
+                }
+              >
+                {LIFECYCLE_LABELS[row.lifecycle]}
+              </Badge>
+            </div>
+            <div className="font-medium">{rowTitle(row)}</div>
+            <div className="text-sm text-muted-foreground">
+              {copy.ingredientCount(row.lineCount)}
+              {row.kind === "request" && row.sources.length > 1
+                ? ` · ${row.sources.length} nguồn`
+                : ""}
+            </div>
+            {linkedTransfers.length > 0 ? (
+              <div className="text-sm text-muted-foreground">
+                {copy.linkedTransferLabel}: {linkedTransfers.join(", ")}
+              </div>
+            ) : null}
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: "progress",
@@ -283,17 +318,15 @@ export function StockFulfillmentHubClient({
               label: "Trạng thái",
               placeholder: "Trạng thái",
               options: [
+                { value: "all", label: "Tất cả" },
                 { value: "active", label: "Đang xử lý" },
                 { value: "completed", label: "Hoàn tất" },
                 { value: "cancelled", label: "Đã hủy" },
-                { value: "all", label: "Tất cả" },
               ],
             },
           ]}
           filterValues={{ work, state }}
-          onFilterChange={(key, value) =>
-            replaceParam(key, value, key === "state" ? "active" : "all")
-          }
+          onFilterChange={(key, value) => replaceParam(key, value, "all")}
           pageSize={50}
           currentPage={currentPage}
           onPageChange={(page) =>
@@ -321,6 +354,7 @@ export function StockFulfillmentHubClient({
               : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
           }
           mobileCardRender={(row) => {
+            const linkedTransfers = linkedTransferNumbers(row);
             const href = rowHref(
               row,
               mode,
@@ -335,14 +369,26 @@ export function StockFulfillmentHubClient({
                 render={<Link href={href} scroll={false} />}
               >
                 <ItemContent>
-                  <ItemTitle className="line-clamp-none">
-                    {rowTitle(row)}
+                  <ItemTitle className="flex flex-wrap items-center gap-2 line-clamp-none">
+                    <Badge variant="outline">
+                      {row.kind === "request" ? "YCH" : "DC"}
+                    </Badge>
+                    <span className="font-mono tabular-nums">
+                      {row.documentNumber}
+                    </span>
                   </ItemTitle>
+                  <ItemDescription className="line-clamp-none">
+                    {rowTitle(row)}
+                  </ItemDescription>
                   <ItemDescription className="line-clamp-none">
                     {progressLines(row).join(" · ")}
                   </ItemDescription>
-                  <ItemDescription className="flex items-center gap-2 font-mono tabular-nums">
-                    {row.documentNumber}
+                  {linkedTransfers.length > 0 ? (
+                    <ItemDescription className="line-clamp-none font-mono tabular-nums">
+                      {copy.linkedTransferLabel}: {linkedTransfers.join(", ")}
+                    </ItemDescription>
+                  ) : null}
+                  <ItemDescription className="flex items-center gap-2">
                     <Badge
                       variant={
                         row.lifecycle === "cancelled"
@@ -370,6 +416,9 @@ export function StockFulfillmentHubClient({
         }}
         title={dialogTitle}
         description={dialogDescription}
+        bodyClassName={
+          selectedTransfer ? "lg:overflow-hidden" : undefined
+        }
       >
         {selectedTransfer ? (
           <TransferDetailClient

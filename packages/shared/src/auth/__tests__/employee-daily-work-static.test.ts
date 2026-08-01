@@ -234,8 +234,8 @@ test("HRM consumption history stays available but no longer gates Employee check
   const issueDetailSrc = read(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
-  const documentCorrectionSrc = read(
-    "apps/web/app/(protected)/inventory/document-correction-actions.ts",
+  const documentCorrectionMigrationSrc = read(
+    "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql",
   );
   const hrSetupClientSrc = read(
     "apps/web/app/(protected)/hr/setup/setup-client.tsx",
@@ -333,8 +333,12 @@ test("HRM consumption history stays available but no longer gates Employee check
       // Copy moved to the message catalog (i18n sweep) — the source label is
       // resolved via the hrmConsumptionSource key.
       issueDetailSrc.includes("hrmConsumptionSource") &&
-      documentCorrectionSrc.includes("readHrmConsumptionTrace") &&
-      documentCorrectionSrc.includes("issue.source_ref"),
+      documentCorrectionMigrationSrc.includes(
+        "v_issue.source_ref ->> 'source' = 'attendance_consumption_report'",
+      ) &&
+      documentCorrectionMigrationSrc.includes(
+        "v_issue.source_ref ->> 'source_label'",
+      ),
     "Inventory issue detail and correction flow must preserve HRM consumption trace",
   );
   assert.ok(

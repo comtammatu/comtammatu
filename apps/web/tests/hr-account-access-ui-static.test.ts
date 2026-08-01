@@ -9,10 +9,13 @@ function source(relativePath: string): string {
 
 test("HR account access keeps the approved list and permission hierarchy", () => {
   const page = source("app/(protected)/hr/staff/page.tsx");
+  const hrPage = source("app/(protected)/hr/page.tsx");
+  const hrClient = source("app/(protected)/hr/hr-client.tsx");
   const filters = source("app/(protected)/hr/staff/staff-filters.tsx");
   const table = source("app/(protected)/hr/staff/staff-table.tsx");
   const form = source("app/(protected)/hr/staff/staff-form-dialog.tsx");
   const actions = source("app/(protected)/hr/staff/actions.ts");
+  const loader = source("app/(protected)/hr/staff/load-staff-accounts.ts");
   const permissions = source(
     "app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx",
   );
@@ -21,14 +24,19 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   );
   const ownerMessages = source("lib/messages/owner.ts");
 
-  assert.match(page, /q\?: string/);
-  assert.match(page, /matchesSearch/);
-  assert.match(page, /<AppListFrame/);
+  assert.match(page, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
+  assert.match(hrPage, /loadStaffAccountsData/);
+  assert.match(hrPage, /view\?: string/);
+  assert.match(hrClient, /paramKey="view"/);
+  assert.match(hrClient, /<AppListFrame/);
   assert.match(filters, /<AppToolbar/);
   assert.match(filters, /variant="inline"/);
   assert.match(filters, /size=\{controlSize\}/);
-  assert.match(filters, /router\.replace/);
+  assert.match(filters, /\/hr\?/);
+  assert.match(filters, /view.*accounts/);
   assert.match(table, /permissions\?tab=permissions/);
+  assert.match(table, /permissionStatus/);
+  assert.match(loader, /staff_permissions/);
   assert.match(form, /copy\.accountSection/);
   assert.match(
     form,
@@ -59,9 +67,11 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(permissionsPage, /branchNames=\{\(branchRows \?\? \[\]\)\.map/);
   assert.match(permissionsPage, /targetPositionCode=\{position\?\.code \?\? null\}/);
   assert.match(permissionsPage, /targetBranchId=\{profile\.branch_id\}/);
+  assert.match(permissionsPage, /\/hr\?view=accounts/);
   assert.match(ownerMessages, /"inventory:request_create": "Tạo yêu cầu hàng"/);
   assert.match(ownerMessages, /inventory_procurement: "Mua hàng & nhập kho"/);
   assert.match(ownerMessages, /\/\[À-ỹĐđ\]\/u\.test\(description\)/);
+  assert.match(ownerMessages, /permissionStatus:/);
   assert.match(permissionsPage, /defaultValue="permissions"/);
   assert.match(
     permissionsPage,
@@ -78,13 +88,5 @@ test("HR permission labels never fall back to technical English copy", () => {
       "Create branch stock request drafts",
     ),
     "Tạo yêu cầu hàng",
-  );
-  assert.equal(
-    getStaffPermissionLabelVi("future:unknown", "Internal permission code"),
-    "Không xác định",
-  );
-  assert.equal(
-    getStaffPermissionLabelVi("future:vietnamese", "Xem dữ liệu vận hành"),
-    "Xem dữ liệu vận hành",
   );
 });

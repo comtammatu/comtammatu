@@ -25,9 +25,13 @@ interface OperatorStockLink {
 
 const stockTab = messages.inventory.dashboard;
 
-type StockGroupId = "onhand" | "count" | "waste" | "catalog";
+type BranchStockGroupId = "onhand" | "count" | "waste" | "catalog";
+type CentralStockGroupId = "lookup" | "buy_count" | "waste";
 
-const STOCK_TAB_SUFFIXES: Record<StockGroupId, readonly string[]> = {
+const BRANCH_STOCK_TAB_SUFFIXES: Record<
+  BranchStockGroupId,
+  readonly string[]
+> = {
   onhand: [
     "/stock/on-hand",
     "/stock/requests",
@@ -37,6 +41,39 @@ const STOCK_TAB_SUFFIXES: Record<StockGroupId, readonly string[]> = {
   count: ["/stock/stocktake", "/stock/count-assignments", "/stock/count-slips"],
   waste: ["/stock/waste", "/stock/consumption"],
   catalog: ["/stock/catalog"],
+};
+
+const CENTRAL_STOCK_TAB_SUFFIXES: Record<
+  CentralStockGroupId,
+  readonly string[]
+> = {
+  lookup: ["/stock/on-hand", "/stock/catalog"],
+  buy_count: [
+    "/stock/purchase-requests",
+    "/stock/stocktake",
+    "/stock/count-assignments",
+    "/stock/count-slips",
+  ],
+  waste: ["/stock/waste", "/stock/consumption"],
+};
+
+/** Jobs already on central Bottom-Nav — exclude from Thêm hub. */
+const CENTRAL_BOTTOM_NAV_SUFFIXES: Partial<
+  Record<BranchKind, readonly string[]>
+> = {
+  central_supply: [
+    "/stock/grn",
+    "/stock/transfer",
+    "/stock/requests",
+    "/stock/receive",
+  ],
+  central_kitchen: [
+    "/stock/grn",
+    "/stock/production",
+    "/stock/transfer",
+    "/stock/requests",
+    "/stock/receive",
+  ],
 };
 
 function toOperatorStockLink(
@@ -64,6 +101,10 @@ function pickStockLinks(
   );
 }
 
+function isCentralKind(branchKind: BranchKind): boolean {
+  return branchKind === "central_supply" || branchKind === "central_kitchen";
+}
+
 export default async function OperatorStockPage({
   params,
 }: {
@@ -85,14 +126,81 @@ export default async function OperatorStockPage({
     context.branchId,
     branchKind,
   ).find((group) => group.id === "stock");
-  const links =
+  const allLinks =
     stockGroup?.tiles.map((tile) => toOperatorStockLink(tile, stockRoot)) ?? [];
 
-  const groupedLinks: Record<StockGroupId, OperatorStockLink[]> = {
-    onhand: pickStockLinks(links, STOCK_TAB_SUFFIXES.onhand),
-    count: pickStockLinks(links, STOCK_TAB_SUFFIXES.count),
-    waste: pickStockLinks(links, STOCK_TAB_SUFFIXES.waste),
-    catalog: pickStockLinks(links, STOCK_TAB_SUFFIXES.catalog),
+  const excludeSuffixes = CENTRAL_BOTTOM_NAV_SUFFIXES[branchKind] ?? [];
+  const links = isCentralKind(branchKind)
+    ? allLinks.filter(
+        (link) =>
+          !excludeSuffixes.some((suffix) => link.href.endsWith(suffix)),
+      )
+    : allLinks;
+
+  if (isCentralKind(branchKind)) {
+    const groupedLinks: Record<CentralStockGroupId, OperatorStockLink[]> = {
+      lookup: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.lookup),
+      buy_count: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.buy_count),
+      waste: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.waste),
+    };
+    const usedKeys = new Set(
+      Object.values(groupedLinks)
+        .flat()
+        .map((link) => link.key),
+    );
+    const fallbackLinks = links.filter((link) => !usedKeys.has(link.key));
+    if (fallbackLinks.length > 0) {
+      groupedLinks.lookup = [...groupedLinks.lookup, ...fallbackLinks];
+    }
+
+    const tabs = (
+      [
+        { id: "lookup" as const, label: stockTab.stockTabOnhand },
+        { id: "buy_count" as const, label: stockTab.stockTabCount },
+        { id: "waste" as const, label: stockTab.stockTabWaste },
+      ] as const
+    ).filter((tab) => groupedLinks[tab.id].length > 0);
+
+    return (
+      <BranchOperatorPage
+        title={stockGroup?.title ?? messages.inventory.shell.moduleName}
+        description={messages.inventory.dashboard.mainFlowsOperatorDescription}
+        hideHeaderOnMobile
+      >
+        {links.length > 0 && tabs.length > 0 ? (
+          <AppPageTabs
+            paramKey="group"
+            defaultValue={tabs[0]?.id}
+            ariaLabel={stockTab.stockTabsAriaLabel}
+            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+          >
+            {tabs.map((tab) => (
+              <TabsContent key={tab.id} value={tab.id}>
+                <BranchOperatorActionSection
+                  links={groupedLinks[tab.id]}
+                  columns={2}
+                  mobileColumns={2}
+                  wideColumns
+                />
+              </TabsContent>
+            ))}
+          </AppPageTabs>
+        ) : (
+          <AppEmptyState
+            compact
+            title={messages.inventory.dashboard.noUrgentTasks}
+            symbol="riceGrain"
+          />
+        )}
+      </BranchOperatorPage>
+    );
+  }
+
+  const groupedLinks: Record<BranchStockGroupId, OperatorStockLink[]> = {
+    onhand: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.onhand),
+    count: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.count),
+    waste: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.waste),
+    catalog: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.catalog),
   };
   const usedKeys = new Set(
     Object.values(groupedLinks)
@@ -103,14 +211,13 @@ export default async function OperatorStockPage({
   if (fallbackLinks.length > 0) {
     groupedLinks.onhand = [...groupedLinks.onhand, ...fallbackLinks];
   }
-  const hasLinks = links.length > 0;
 
   const tabs = (
     [
-      { id: "onhand", label: stockTab.stockTabOnhand },
-      { id: "count", label: stockTab.stockTabCount },
-      { id: "waste", label: stockTab.stockTabWaste },
-      { id: "catalog", label: stockTab.stockTabCatalog },
+      { id: "onhand" as const, label: stockTab.stockTabOnhand },
+      { id: "count" as const, label: stockTab.stockTabCount },
+      { id: "waste" as const, label: stockTab.stockTabWaste },
+      { id: "catalog" as const, label: stockTab.stockTabCatalog },
     ] as const
   ).filter((tab) => groupedLinks[tab.id].length > 0);
 
@@ -120,7 +227,7 @@ export default async function OperatorStockPage({
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
       hideHeaderOnMobile
     >
-      {hasLinks && tabs.length > 0 ? (
+      {links.length > 0 && tabs.length > 0 ? (
         <AppPageTabs
           paramKey="group"
           defaultValue={tabs[0]?.id}

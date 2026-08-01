@@ -41,6 +41,8 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
     "LIST",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx":
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":
@@ -145,10 +147,10 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/hr/payroll/[periodId]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/hr/payroll/page.tsx": "LIST",
-  "apps/web/app/(protected)/hr/setup/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/setup/page.tsx": "SETTINGS-PANEL",
   "apps/web/app/(protected)/hr/staff/[id]/permissions/page.tsx": "DETAIL",
   "apps/web/app/(protected)/hr/staff/audit/page.tsx": "LIST",
-  "apps/web/app/(protected)/hr/staff/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/staff/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/consumption/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
@@ -463,6 +465,11 @@ const PAGE_DISPOSITION_OVERRIDES = {
       evidence: "implemented-static",
       final: false,
     },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": {
     status: "tune",
     evidence: "implemented-static",

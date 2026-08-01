@@ -41,6 +41,7 @@ import {
   grnSourceSupplierHref,
   type GrnSourceSupplier,
 } from "@lib/inventory/grn-source-model";
+import { normalizeSearch } from "@lib/search";
 
 type BranchGrnSourcePickerClientProps = Pick<
   GrnSourcePageData,
@@ -108,8 +109,7 @@ export function BranchGrnSourcePickerClient({
     () =>
       suppliers.some(
         (supplier) =>
-          supplier.name.trim().toLocaleLowerCase("vi") ===
-          normalizedQuery.toLocaleLowerCase("vi"),
+          normalizeSearch(supplier.name) === normalizeSearch(normalizedQuery),
       ),
     [suppliers, normalizedQuery],
   );
@@ -171,7 +171,7 @@ export function BranchGrnSourcePickerClient({
           icon={IconTruck}
           contentClassName="gap-3"
         >
-          <InputGroup className="h-12">
+          <InputGroup className="min-h-12">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>

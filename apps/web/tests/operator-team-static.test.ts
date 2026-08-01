@@ -107,7 +107,7 @@ test("operator team board exposes a real status filter", () => {
   assert.match(teamBoardSource, /function TeamBoardMobileGroups/);
   assert.match(teamBoardSource, /<TeamBoardMobileGroups/);
   assert.match(teamBoardSource, /showShiftName=\{false\}/);
-  assert.match(teamBoardSource, /grid gap-1\.5 md:grid-cols-2/);
+  assert.match(teamBoardSource, /grid gap-1\.5 lg:grid-cols-2/);
   assert.match(
     teamBoardSource,
     /mode=\{filter === "all" \? "no-data" : "no-results"\}/,
@@ -286,7 +286,8 @@ test("operator team members use a roster grid with real profile fields", () => {
     /\.filter\(\s*\(chip\) => chip\.value === "all" \|\| chip\.count > 0,?\s*\)/,
   );
   assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
-  assert.match(teamMembersSource, /typeof value === "string"/);
+  assert.match(teamMembersSource, /import \{ matchesSearch \} from "@lib\/search"/);
+  assert.match(teamMembersSource, /function memberMatchesQuery/);
   assert.doesNotMatch(teamMembersSource, /DataTable/);
   assert.doesNotMatch(teamMembersSource, /SelectTrigger/);
   assert.doesNotMatch(teamMembersSource, /AppToolbar/);

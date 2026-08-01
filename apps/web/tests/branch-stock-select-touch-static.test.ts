@@ -11,7 +11,6 @@ const stockSelectOwners = [
   "app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/branch-grn-create-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/branch-stock-issue-detail-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
-  "app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",
   "app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
   "app/(protected)/inventory/waste/waste-operational-form.tsx",
   "lib/staff-runtime/count/count-client.tsx",

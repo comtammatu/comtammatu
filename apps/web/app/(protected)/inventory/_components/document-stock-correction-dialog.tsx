@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ComponentProps } from "react";
+import { useMemo, useRef, useState, type ComponentProps } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { SlidersHorizontal as IconSliders } from "lucide-react";
@@ -90,6 +90,7 @@ export function DocumentStockCorrectionDialog({
 }: DocumentStockCorrectionDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const idempotencyKey = useRef<string | null>(null);
   const items = useMemo(() => uniqueItems(itemOptions), [itemOptions]);
   const defaultValues = useMemo<DocumentCorrectionValues>(
     () => ({
@@ -119,6 +120,7 @@ export function DocumentStockCorrectionDialog({
   );
 
   async function handleSubmit(values: DocumentCorrectionValues) {
+    idempotencyKey.current ??= crypto.randomUUID();
     const result = await createInventoryDocumentCorrection({
       documentType,
       documentId,
@@ -126,15 +128,22 @@ export function DocumentStockCorrectionDialog({
       ingredientId: Number(values.ingredientId),
       quantityChange: Number(values.quantityChange),
       reason: values.reason.trim(),
+      idempotencyKey: idempotencyKey.current,
     });
 
     if (result.success) {
+      idempotencyKey.current = null;
       router.refresh();
     }
     return result;
   }
 
   const disabled = branchOptions.length === 0 || items.length === 0;
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) idempotencyKey.current = null;
+  }
 
   return (
     <>
@@ -151,7 +160,7 @@ export function DocumentStockCorrectionDialog({
 
       <FormDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         title={`Điều chỉnh tồn — ${documentCode}`}
         schema={documentCorrectionSchema}
         defaultValues={defaultValues}

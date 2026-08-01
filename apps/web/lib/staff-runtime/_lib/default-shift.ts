@@ -24,6 +24,65 @@ export interface ShiftAttendanceRecord {
   check_out: string | null;
 }
 
+export interface ShiftAssignmentCandidate {
+  workDate: string;
+  shiftId: number;
+  shiftName: string | null;
+  startTime: string;
+  endTime: string;
+}
+
+export function pickAssignedShiftInWindow(
+  assignments: readonly ShiftAssignmentCandidate[],
+  calendarDate: string,
+  nowMinutes: number,
+): { shiftId: number; businessDate: string; shiftName: string | null } | null {
+  if (assignments.length === 0) return null;
+
+  const previousDate = addVNDateDays(calendarDate, -1);
+  const ranked = assignments
+    .map((assignment) => {
+      const startMin = parseClockTimeToMinutes(assignment.startTime);
+      const endMin = parseClockTimeToMinutes(assignment.endTime);
+      if (startMin === null || endMin === null) {
+        return { assignment, priority: 2 };
+      }
+
+      const isDayShift = endMin > startMin;
+      const inWindowToday =
+        assignment.workDate === calendarDate &&
+        (isDayShift
+          ? nowMinutes >= startMin && nowMinutes < endMin
+          : nowMinutes >= startMin || nowMinutes < endMin);
+      const overnightYesterday =
+        assignment.workDate === previousDate &&
+        !isDayShift &&
+        nowMinutes < endMin;
+
+      let priority = 2;
+      if (inWindowToday) priority = 0;
+      else if (overnightYesterday) priority = 1;
+
+      return { assignment, priority };
+    })
+    .sort((left, right) => {
+      if (left.priority !== right.priority) return left.priority - right.priority;
+      return right.assignment.workDate.localeCompare(left.assignment.workDate);
+    });
+
+  const best = ranked[0];
+  // Accept in-window today/overnight yesterday, or today's assignment outside
+  // the clock window (early/late). Never backdate onto yesterday's day shift.
+  if (!best || (best.priority > 1 && best.assignment.workDate !== calendarDate)) {
+    return null;
+  }
+  return {
+    shiftId: best.assignment.shiftId,
+    businessDate: best.assignment.workDate,
+    shiftName: best.assignment.shiftName,
+  };
+}
+
 export function resolveShiftBusinessDate(
   shift: BranchShiftWindow,
   nowMinutes: number = getVNMinutesOfDay(),

@@ -89,19 +89,24 @@ void-after-paid đã được contract cho phép. Canonical: `docs/modules/finan
 ## D026: HR theo Người, Ngày công, Lương
 
 **Net effect:** HR đọc nguồn vận hành hiện tại; payroll entry là snapshot khi
-chốt. Kế toán dùng `pay_basis` có hiệu lực theo hợp đồng:
-`fixed_monthly` không prorate lương cơ bản theo attendance, phép hưởng lương
-không giảm lương, phép không hưởng lương tạo khoản khấu trừ tường minh. Không
-suy `pay_basis` từ JWT role. HR chốt nghĩa vụ lương, Finance ghi nhận thanh
-toán. Canonical: `docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`.
+chốt. `pay_basis` lấy từ HĐLĐ có hiệu lực, không suy từ JWT role. Cả
+`attendance_prorated` và `fixed_monthly` dùng `working_days` từ công ca
+(D027/ADR 0019). `fixed_monthly`:
+`payable_days = min(standard_days, working_days + paid_leave_days)` — không
+khấu trừ thêm nghỉ không lương trùng phần đã thiếu trong `working_days`;
+adjustment tay vẫn được. Phép hưởng lương cộng vào `paid_leave_days`. HR chốt
+nghĩa vụ lương, Finance ghi nhận thanh toán. Canonical:
+`docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`, ADR 0019.
 
 ## D027: Chấm công theo ca
 
-**Net effect:** Đơn vị attendance là ca; shift là cấu hình chung; mỗi lượt vào/ra
-và việc trong ca thuộc một shift record. Mọi non-Owner đều có self-service:
-floor/central lưu site được gán, Kế toán lưu `branch_id = NULL`; Owner không
-punch. Checkout floor do Branch Manager duyệt, central/Kế toán vào queue Owner.
-Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0012.
+**Net effect:** Đơn vị attendance là ca đã gán (`shift_assignments`); mỗi lượt
+vào/kết ca thuộc một attendance với khung ca đã freeze lúc clock-in. Công =
+tỷ lệ giờ `(check_in→check_out) ∩ khung freeze` / độ dài khung, tối đa 1.0/ca
+(không còn hằng 0.5). Chưa kết ca → 0 công. Mọi non-Owner self-service;
+floor/central theo site gán, Kế toán `branch_id = NULL`; Owner không punch.
+Checkout floor do BM duyệt, central/Kế toán vào queue Owner. Canonical:
+`docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
 
 ## D028: Kết quả vận hành và kiểm soát nguyên liệu
 
@@ -247,12 +252,14 @@ temperature, price-QC hoặc manual quality status. Canonical:
 stock request và nhận transfer; Branch không production hoặc GRN. Canonical:
 `docs/ref/inventory-role-ops.md`, `docs/ref/inventory.md`.
 
-## D099: Nhu cầu mua và phân bổ NCC
+## D099: Nhu cầu mua và xác định NCC
 
-**Net effect:** Kho lập Nhu cầu mua không NCC/giá; Kế toán phân bổ đúng đủ cho
-một hoặc nhiều NCC. Một RPC tạo một PO/NCC và một GRN nháp/PO. PO/GRN không là
-nguồn giá thương mại; Hóa đơn NCC là price authority. Canonical:
-`docs/ref/inventory.md`, ADR 0017.
+**Net effect:** Kho lập Nhu cầu mua không NCC/giá. Nếu mỗi nguyên liệu còn thiếu
+chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một
+PO/NCC; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC. Dòng chưa có NCC
+bị chặn để bổ sung mapping. Một RPC tạo PO và GRN nháp/PO. PO/GRN không là nguồn
+giá thương mại; Hóa đơn NCC là price authority. Canonical: `docs/ref/inventory.md`,
+ADR 0017.
 
 ## D101: Inventory valuation settlement
 

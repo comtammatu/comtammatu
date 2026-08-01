@@ -6,6 +6,8 @@ import { test } from "node:test";
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const lockMigration =
   "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql";
+const documentCorrectionMigration =
+  "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql";
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");
@@ -62,6 +64,48 @@ test("stock_movements browser direct insert is closed while RPC writers remain c
     migration,
     /GRANT EXECUTE ON FUNCTION public\.adjust_stock_exception\(bigint, bigint, numeric, text\) TO authenticated/,
   );
+});
+
+test("document corrections use one authenticated idempotent ledger RPC", () => {
+  const migration = read(documentCorrectionMigration);
+  const action = read(
+    "apps/web/app/(protected)/inventory/document-correction-actions.ts",
+  );
+  const dialog = read(
+    "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx",
+  );
+
+  assert.match(
+    migration,
+    /CREATE FUNCTION public\.create_inventory_document_correction\(/,
+  );
+  assert.match(migration, /SECURITY DEFINER[\s\S]*SET search_path TO ''/);
+  assert.match(migration, /v_actor uuid := auth\.uid\(\)/);
+  assert.match(migration, /v_tenant bigint := public\.auth_tenant_id\(\)/);
+  assert.match(migration, /p_document_type = 'grn'[\s\S]*FOR UPDATE/);
+  assert.match(migration, /p_document_type = 'issue'[\s\S]*FOR UPDATE/);
+  assert.match(migration, /p_document_type = 'transfer'[\s\S]*FOR UPDATE/);
+  assert.match(
+    migration,
+    /p_document_type = 'production_run'[\s\S]*FOR UPDATE/,
+  );
+  assert.match(migration, /public\.has_permission\(p_branch_id, 'inventory:write'\)/);
+  assert.match(migration, /correction_idempotency_key/);
+  assert.match(migration, /ingredient_unit\.unit_id = ingredient\.issue_unit_id/);
+  assert.match(migration, /ON CONFLICT[\s\S]*DO NOTHING/);
+  assert.match(migration, /FROM public\.stock_levels[\s\S]*FOR UPDATE/);
+  assert.match(migration, /insufficient_stock/);
+  assert.match(migration, /INSERT INTO public\.stock_movements/);
+  assert.doesNotMatch(migration, /supplier_invoices|payments|vat_amount/);
+
+  assert.match(action, /\.rpc\(\s*"create_inventory_document_correction"/);
+  assert.doesNotMatch(action, /\.from\("stock_movements"\)\s*\.insert/s);
+  assert.doesNotMatch(
+    action,
+    /loadGrnSource|loadIssueSource|loadTransferSource|loadProductionSource/,
+  );
+  assert.match(dialog, /crypto\.randomUUID\(\)/);
+  assert.match(dialog, /idempotencyKey/);
 });
 
 test("stocktake remains the only UI path to count_adjustment completion", () => {

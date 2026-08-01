@@ -155,13 +155,20 @@ snapshot đó. UI sau chốt dùng nhãn **Thực lĩnh đã chốt**; trước 
 **Dự kiến thực lĩnh**. Chốt lại chỉ được phép khi snapshot còn ở trạng thái có
 thể sửa theo state machine; không được thay đổi snapshot đã giao cho Finance.
 
-Với `pay_basis = fixed_monthly`, attendance là hồ sơ tuân thủ/vận hành nhưng
-chênh lệch attendance thông thường không prorate lương cơ bản. Phép hưởng lương
-đã duyệt không giảm lương. Phép không hưởng lương đã duyệt phải tạo khoản khấu
-trừ tường minh trong nguồn adjustment/snapshot hiện hành. Vắng chưa được duyệt
-phải được xử lý qua thẩm quyền điều chỉnh attendance/payroll trước khi chốt,
-không tự đổi thành proration. Quy tắc này hiện áp dụng cho HĐLĐ Kế toán đã cấu
-hình `fixed_monthly`, nhưng thuộc tính HĐLĐ chứ không thuộc role.
+Công mỗi ca đã kết (có `check_out` / kết ca) lấy từ khung ca đã freeze trên
+attendance lúc clock-in (ADR 0019 / D027):
+
+`công = min(1.0, round_1dp(|(check_in, check_out) ∩ scheduled_window| / scheduled_len))`.
+
+Chưa kết ca → không cộng công. Cả `attendance_prorated` và `fixed_monthly` dùng
+`working_days = Σ công`. Ngày trả lương cơ bản:
+
+`payable_days = min(standard_days, working_days + paid_leave_days)`
+`base = monthly_salary × payable_days / standard_days`.
+
+Không khấu trừ thêm nghỉ không lương trùng phần đã thiếu trong `working_days`.
+Adjustment tay (`payroll_adjustments`) vẫn giữ. `pay_basis` là thuộc tính HĐLĐ,
+không suy từ JWT role.
 
 Trước khi gọi snapshot, `/hr/payroll` chạy preflight chỉ đọc. Snapshot bị chặn
 khi còn nhân viên thiếu mức lương, ca đã quá giờ nhưng chưa có giờ ra, hoặc yêu

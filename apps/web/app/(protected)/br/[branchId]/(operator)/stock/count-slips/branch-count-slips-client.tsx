@@ -242,7 +242,7 @@ export function BranchCountSlipsClient({
             description={INVENTORY_VI.countSlipEmptyDescription}
           />
         ) : (
-          <ItemGroup className="grid gap-2 md:grid-cols-2">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {visibleRows.map((row) => (
               <Item
                 key={row.id}

@@ -92,6 +92,7 @@ export default async function TeamBoardPage({
   ]);
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
   const basePath = `/br/${context.branchId}`;
+  const isStoreBranch = context.branch.branch_kind === "branch";
 
   const content = (
     <TeamWorkspaceTabs
@@ -106,7 +107,7 @@ export default async function TeamBoardPage({
             countSlipsHref={`${basePath}/stock/count-slips`}
             checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
             leaveApprovalsHref={
-              canApproveLeave
+              canApproveLeave && isStoreBranch
                 ? `${basePath}/shift/leave-approvals`
                 : undefined
             }

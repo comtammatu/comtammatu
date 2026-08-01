@@ -135,6 +135,21 @@ test("monthly quota resets each month while annual quota carries through the yea
   );
 });
 
+test("completed workdays use hour-ratio when scheduled window is present", () => {
+  const workdays = buildCompletedWorkdays([
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T12:00:00+07:00",
+      checkOut: "2026-06-10T16:00:00+07:00",
+      scheduledStart: "2026-06-10T08:00:00+07:00",
+      scheduledEnd: "2026-06-10T16:00:00+07:00",
+    },
+  ]);
+
+  assert.equal(workdays.get(1), 0.5);
+});
+
 test("open attendance shifts do not count as workdays", () => {
   const workdays = buildCompletedWorkdays([
     { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T04:00:00Z" },

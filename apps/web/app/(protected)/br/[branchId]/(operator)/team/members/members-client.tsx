@@ -35,6 +35,7 @@ import { Item, ItemContent } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
+import { matchesSearch } from "@lib/search";
 import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
 
 export type TeamMemberTodayStatus =
@@ -131,14 +132,13 @@ function matchesFilter(
   }
 }
 
-function matchesSearch(member: TeamMemberRow, query: string): boolean {
-  const normalizedQuery = query.trim().toLocaleLowerCase("vi");
+function memberMatchesQuery(member: TeamMemberRow, query: string): boolean {
+  const normalizedQuery = query.trim();
   if (!normalizedQuery) return true;
 
-  return [member.name, member.code, member.phone, member.positionLabel].some(
-    (value) =>
-      typeof value === "string" &&
-      value.toLocaleLowerCase("vi").includes(normalizedQuery),
+  return matchesSearch(
+    [member.name, member.code ?? "", member.phone ?? "", member.positionLabel ?? ""],
+    normalizedQuery,
   );
 }
 
@@ -297,7 +297,7 @@ export function MembersClient({
     () =>
       employees.filter(
         (member) =>
-          matchesSearch(member, searchQuery) &&
+          memberMatchesQuery(member, searchQuery) &&
           matchesFilter(member, statusFilter),
       ),
     [employees, searchQuery, statusFilter],

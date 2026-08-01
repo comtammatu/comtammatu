@@ -108,7 +108,6 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'supplier_id', v_supplier,
         'invoice_kind', 'service',
-        'invoice_number', '__NET-VAT-' || v_owner::text,
         'invoice_date', CURRENT_DATE,
         'due_date', CURRENT_DATE + 7,
         'document_discount_amount', '0.00',

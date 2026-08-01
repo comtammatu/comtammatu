@@ -67,6 +67,7 @@ type WorkdayCopy = {
   statusNoBranch: string;
   descriptionCheckoutPending: string;
   descriptionNotRequired: string;
+  descriptionShiftUnassigned: string;
   checkInShort: string;
   checkOutShort: string;
   clockIn: string;
@@ -329,6 +330,9 @@ function getWorkTitle(state: TodayWorkState, copy: WorkdayCopy): string {
   if (status === "missing_profile") return copy.statusNoProfile;
   if (status === "missing_branch") return copy.statusNoBranch;
   if (status === "not_required") return copy.statusNotRequired;
+  if (status === "not_started" && state.shiftUnassigned) {
+    return copy.descriptionShiftUnassigned;
+  }
   if (status === "not_started") return copy.statusNotStarted;
   if (status === "working") return copy.statusWorking;
   if (status === "checkout_pending") return copy.statusCheckoutPending;
@@ -617,6 +621,16 @@ export async function StaffWorkdayPageContent({
       >
         <IconClock data-icon="inline-start" />
         {copy.viewSchedule}
+      </Button>
+    ) : state.status === "not_started" && state.shiftUnassigned ? (
+      <Button
+        variant="outline"
+        size="touch-lg"
+        className={primaryActionClassName}
+        disabled
+      >
+        <IconClock data-icon="inline-start" />
+        {copy.clockIn}
       </Button>
     ) : state.status === "not_started" ? (
       <Button

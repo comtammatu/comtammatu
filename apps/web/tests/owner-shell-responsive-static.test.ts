@@ -170,7 +170,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
     ],
     [
       "apps/web/app/(protected)/hr/staff/staff-filters.tsx",
-      "rendered only inside AppListFrame toolbar on staff/page.tsx",
+      "rendered only inside AppListFrame toolbar on hr-client accounts tab",
     ],
     [
       "apps/web/app/(protected)/finance/components/filter-bar.tsx",
@@ -225,10 +225,10 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
     );
   }
 
-  // Keep staff-filters pinned to the framed slot (double-sticky would stack wrong).
-  const staffPage = read("apps/web/app/(protected)/hr/staff/page.tsx");
+  // Keep staff-filters pinned to the framed slot on the People accounts tab.
+  const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
   assert.match(
-    staffPage,
+    hrClient,
     /<AppListFrame[\s\S]*?toolbar=\{\s*<Suspense>\s*<StaffFilters/,
   );
   assert.doesNotMatch(

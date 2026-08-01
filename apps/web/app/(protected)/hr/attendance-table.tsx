@@ -149,6 +149,8 @@ interface AttendanceTableProps {
   initialCalendarScope?: CalendarScope;
   /** Preserve Owner IA tab (`today` / `timesheet`) across filter replaces. */
   urlTab?: string;
+  /** Today tab: clock-only, hide month/view chrome. */
+  todayMode?: boolean;
 }
 
 export function AttendanceTable({
@@ -160,6 +162,7 @@ export function AttendanceTable({
   initialEmployeeId = null,
   initialCalendarScope = "all",
   urlTab,
+  todayMode = false,
 }: AttendanceTableProps) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -397,34 +400,36 @@ export function AttendanceTable({
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={selectedMonth}
-                onValueChange={(value) =>
-                  loadData(
-                    selectedBranch,
-                    value,
-                    view,
-                    null,
-                    view === "calendar" ? selectedEmployeeId : null,
-                  )
-                }
-              >
-                <SelectTrigger
-                  size={controlSize}
-                  className="w-full sm:w-40"
-                  aria-label="Tháng chấm công"
+              {todayMode ? null : (
+                <Select
+                  value={selectedMonth}
+                  onValueChange={(value) =>
+                    loadData(
+                      selectedBranch,
+                      value,
+                      view,
+                      null,
+                      view === "calendar" ? selectedEmployeeId : null,
+                    )
+                  }
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month} value={month}>
-                      {month}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {view === "calendar" ? (
+                  <SelectTrigger
+                    size={controlSize}
+                    className="w-full sm:w-40"
+                    aria-label="Tháng chấm công"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {!todayMode && view === "calendar" ? (
                 <>
                   <Combobox
                     value={selectedEmployeeId?.toString() ?? "all"}
@@ -483,37 +488,41 @@ export function AttendanceTable({
           }
           actions={
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-              <ToggleGroup
-                type="single"
-                value={view}
-                onValueChange={(value) => {
-                  if (
-                    value === "clock" ||
-                    value === "summary" ||
-                    value === "calendar"
-                  ) {
-                    selectView(value);
-                  }
-                }}
-                aria-label={attendanceCopy.viewSwitcher}
-              >
-                <ToggleGroupItem value="summary" size="sm">
-                  {attendanceCopy.summaryView}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="calendar" size="sm">
-                  {attendanceCopy.calendarView}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="clock" size="sm">
-                  {attendanceCopy.clockView}
-                </ToggleGroupItem>
-              </ToggleGroup>
+              {todayMode ? null : (
+                <ToggleGroup
+                  type="single"
+                  value={view}
+                  onValueChange={(value) => {
+                    if (
+                      value === "clock" ||
+                      value === "summary" ||
+                      value === "calendar"
+                    ) {
+                      selectView(value);
+                    }
+                  }}
+                  aria-label={attendanceCopy.viewSwitcher}
+                >
+                  <ToggleGroupItem value="summary" size="sm">
+                    {attendanceCopy.summaryView}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="calendar" size="sm">
+                    {attendanceCopy.calendarView}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="clock" size="sm">
+                    {attendanceCopy.clockView}
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              )}
               {isPending ? <Spinner /> : null}
             </div>
           }
         />
-        <p className="text-sm text-muted-foreground">
-          {attendanceCopy.workdayRule}
-        </p>
+        {todayMode ? null : (
+          <p className="text-sm text-muted-foreground">
+            {attendanceCopy.workdayRule}
+          </p>
+        )}
       </div>
 
       {view === "summary" ? (
@@ -533,6 +542,8 @@ export function AttendanceTable({
           <DetailView
             branchId={selectedBranch}
             data={records}
+            compact={todayMode}
+            todayColumns={todayMode}
             onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
           />
         </AppSection>
@@ -725,11 +736,13 @@ function DetailView({
   branchId,
   data,
   compact = false,
+  todayColumns = false,
   onMutated,
 }: {
   branchId: number;
   data: AttendanceRecord[];
   compact?: boolean;
+  todayColumns?: boolean;
   onMutated: () => void;
 }) {
   const isTouchLayout = useIsMobile(1024);
@@ -886,79 +899,126 @@ function DetailView({
     );
   }
 
-  const columns: DataTableColumn<AttendanceRecord>[] = [
-    {
-      key: "date",
-      header: FORM_VI.date,
-      className: "font-mono text-sm",
-      render: (record) => formatVNBusinessDate(record.date),
-    },
-    {
-      key: "employee",
-      header: STAFF_VI.long,
-      render: (record) => record.employees?.profiles?.full_name ?? "—",
-    },
-    {
-      key: "shift",
-      header: attendanceCopy.shift,
-      className: "text-sm text-muted-foreground",
-      render: (record) => record.shifts?.name ?? "—",
-    },
-    {
-      key: "template",
-      header: "Mẫu",
-      className: "text-sm",
-      render: (record) =>
-        record.shift_checklist_templates?.name ?? (
-          <span className="text-muted-foreground">Chưa gán</span>
-        ),
-    },
-    {
-      key: "checklist",
-      header: "Việc trong ca",
-      render: (record) => (
-        <ChecklistProgressButton
-          record={record}
-          onOpen={() => setChecklistRecord(record)}
-        />
-      ),
-    },
-    {
-      key: "check_in",
-      header: attendanceCopy.checkIn,
-      className: "font-mono text-sm",
-      render: (record) =>
-        record.check_in ? formatVNTime(record.check_in) : "—",
-    },
-    {
-      key: "check_out",
-      header: attendanceCopy.checkOut,
-      className: "font-mono text-sm",
-      render: (record) =>
-        record.check_out ? formatVNTime(record.check_out) : "—",
-    },
-    {
-      key: "state",
-      header: attendanceCopy.recordState,
-      render: recordStateBadge,
-    },
-    {
-      key: "photo",
-      header: attendanceCopy.photo,
-      render: (record) => photoAction(record),
-    },
-    {
-      key: "note",
-      header: FORM_VI.notes,
-      className: "max-w-48 truncate text-sm text-muted-foreground",
-      render: (record) => record.note ?? "",
-    },
-    {
-      key: "actions",
-      header: "Thao tác",
-      render: (record) => forceCloseAction(record),
-    },
-  ];
+  const columns: DataTableColumn<AttendanceRecord>[] = todayColumns
+    ? [
+        {
+          key: "employee",
+          header: STAFF_VI.long,
+          render: (record) => record.employees?.profiles?.full_name ?? "—",
+        },
+        {
+          key: "shift",
+          header: attendanceCopy.shift,
+          className: "text-sm text-muted-foreground",
+          render: (record) => record.shifts?.name ?? "—",
+        },
+        {
+          key: "check_in",
+          header: attendanceCopy.checkIn,
+          className: "font-mono text-sm",
+          render: (record) =>
+            record.check_in ? formatVNTime(record.check_in) : "—",
+        },
+        {
+          key: "check_out",
+          header: attendanceCopy.checkOut,
+          className: "font-mono text-sm",
+          render: (record) =>
+            record.check_out ? formatVNTime(record.check_out) : "—",
+        },
+        {
+          key: "state",
+          header: attendanceCopy.recordState,
+          render: recordStateBadge,
+        },
+        {
+          key: "actions",
+          header: "Thao tác",
+          render: (record) => (
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              <ChecklistProgressButton
+                record={record}
+                onOpen={() => setChecklistRecord(record)}
+              />
+              {photoAction(record)}
+              {forceCloseAction(record)}
+            </div>
+          ),
+        },
+      ]
+    : [
+        {
+          key: "date",
+          header: FORM_VI.date,
+          className: "font-mono text-sm",
+          render: (record) => formatVNBusinessDate(record.date),
+        },
+        {
+          key: "employee",
+          header: STAFF_VI.long,
+          render: (record) => record.employees?.profiles?.full_name ?? "—",
+        },
+        {
+          key: "shift",
+          header: attendanceCopy.shift,
+          className: "text-sm text-muted-foreground",
+          render: (record) => record.shifts?.name ?? "—",
+        },
+        {
+          key: "template",
+          header: "Mẫu",
+          className: "text-sm",
+          render: (record) =>
+            record.shift_checklist_templates?.name ?? (
+              <span className="text-muted-foreground">Chưa gán</span>
+            ),
+        },
+        {
+          key: "checklist",
+          header: "Việc trong ca",
+          render: (record) => (
+            <ChecklistProgressButton
+              record={record}
+              onOpen={() => setChecklistRecord(record)}
+            />
+          ),
+        },
+        {
+          key: "check_in",
+          header: attendanceCopy.checkIn,
+          className: "font-mono text-sm",
+          render: (record) =>
+            record.check_in ? formatVNTime(record.check_in) : "—",
+        },
+        {
+          key: "check_out",
+          header: attendanceCopy.checkOut,
+          className: "font-mono text-sm",
+          render: (record) =>
+            record.check_out ? formatVNTime(record.check_out) : "—",
+        },
+        {
+          key: "state",
+          header: attendanceCopy.recordState,
+          render: recordStateBadge,
+        },
+        {
+          key: "photo",
+          header: attendanceCopy.photo,
+          render: (record) => photoAction(record),
+        },
+        {
+          key: "note",
+          header: FORM_VI.notes,
+          className: "max-w-48 truncate text-sm text-muted-foreground",
+          render: (record) => record.note ?? "",
+        },
+        {
+          key: "actions",
+          header: "Thao tác",
+          render: (record) => forceCloseAction(record),
+        },
+      ];
 
   return (
     <>

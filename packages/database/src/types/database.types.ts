@@ -7739,6 +7739,7 @@ export type Database = {
       stock_movements: {
         Row: {
           branch_id: number
+          correction_idempotency_key: string | null
           created_at: string
           created_by: string
           entry_quantity: number | null
@@ -7763,6 +7764,7 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          correction_idempotency_key?: string | null
           created_at?: string
           created_by: string
           entry_quantity?: number | null
@@ -7787,6 +7789,7 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          correction_idempotency_key?: string | null
           created_at?: string
           created_by?: string
           entry_quantity?: number | null
@@ -11402,6 +11405,18 @@ export type Database = {
         Returns: Json
       }
       create_grn_from_approved_po: { Args: { p_po_id: number }; Returns: Json }
+      create_inventory_document_correction: {
+        Args: {
+          p_branch_id: number
+          p_document_id: number
+          p_document_type: string
+          p_idempotency_key: string
+          p_ingredient_id: number
+          p_quantity_change: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       create_order: {
         Args: {
           p_branch_id: number

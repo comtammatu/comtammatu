@@ -23,6 +23,8 @@ export async function loadBranchLeaveApprovalData(
   const { supabase, claims } = await loadAuthState();
   const branch = await resolveBranchContext(supabase, claims, routeBranchId);
   if (!branch || branch.branchId !== routeBranchId) notFound();
+  // Leave review is store-only; central sites have no leave queue.
+  if (branch.branch.branch_kind !== "branch") notFound();
 
   const canApproveRole = LEAVE_APPROVER_ROLES.includes(claims.user_role);
   const canApprove =

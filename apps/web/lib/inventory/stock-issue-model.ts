@@ -1,3 +1,4 @@
+import { matchesSearch } from "@lib/search";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
 export type BranchInternalIssueType = "writeoff" | "other";
@@ -89,14 +90,15 @@ export function filterBranchStockIssues(
     status: BranchStockIssueStatusFilter;
   },
 ) {
-  const normalizedQuery = query.trim().toLocaleLowerCase("vi");
+  const normalizedQuery = query.trim();
 
   return issues.filter((issue) => {
     if (status !== "all" && issue.status !== status) return false;
     if (!normalizedQuery) return true;
 
-    return [issue.code, issue.type, issue.notes ?? ""].some((value) =>
-      value.toLocaleLowerCase("vi").includes(normalizedQuery),
+    return matchesSearch(
+      [issue.code, issue.type, issue.notes ?? ""],
+      normalizedQuery,
     );
   });
 }

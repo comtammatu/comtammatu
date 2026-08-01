@@ -23,6 +23,34 @@ type RequestItem = {
   remainingQuantity: number;
 };
 
+export type PurchaseDemandAllocation = {
+  requestItemId: number;
+  supplierId: number;
+  quantity: number;
+};
+
+export function buildAutomaticPurchaseDemandAllocations(
+  items: readonly RequestItem[],
+  suppliers: readonly PurchaseOrderSupplier[],
+): PurchaseDemandAllocation[] | null {
+  const allocations: PurchaseDemandAllocation[] = [];
+
+  for (const item of items) {
+    if (item.remainingQuantity <= 0) continue;
+    const matches = suppliers.filter((supplier) =>
+      supplier.ingredientIds.includes(item.ingredientId),
+    );
+    if (matches.length !== 1) return null;
+    allocations.push({
+      requestItemId: item.id,
+      supplierId: matches[0]!.id,
+      quantity: item.remainingQuantity,
+    });
+  }
+
+  return allocations.length > 0 ? allocations : null;
+}
+
 export function findUnassignedPurchaseRequestItemIds(
   items: readonly RequestItem[],
   suppliers: readonly PurchaseOrderSupplier[],

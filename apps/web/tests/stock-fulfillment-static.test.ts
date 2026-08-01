@@ -30,6 +30,11 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   ]) {
     assert.match(centralHub, new RegExp(label));
   }
+  assert.match(centralHub, /rawState === "active"[\s\S]*: "all"/);
+  assert.match(centralHub, /header: "Phiếu"/);
+  assert.match(centralHub, /row\.kind === "request" \? "YCH" : "DC"/);
+  assert.match(centralHub, /copy\.linkedTransferLabel/);
+  assert.match(inventoryMessages, /linkedTransferLabel: "DC liên kết"/);
   assert.doesNotMatch(centralHub, /AppPageTabs|TabsContent/);
   assert.match(centralHub, /state.*"all"/s);
   assert.match(branchHub, /copy\.requestAction/);
@@ -193,6 +198,26 @@ test("embedded transfer dialog drops timeline and history chrome", () => {
     transfer,
     /const embeddedLayout = \([\s\S]*historySectionTitle/,
   );
+});
+
+test("embedded transfer dialog scrolls the line list without moving the summary panel", () => {
+  const transfer = read(
+    "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx",
+  );
+  const hub = read(
+    "apps/web/app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
+  );
+
+  assert.match(transfer, /embedded && "lg:h-full lg:min-h-0"/);
+  assert.match(
+    transfer,
+    /embedded && "min-h-0 lg:overflow-y-auto lg:overscroll-contain"/,
+  );
+  assert.match(
+    transfer,
+    /embedded \? "shrink-0 lg:self-start" : "lg:sticky lg:top-4"/,
+  );
+  assert.match(hub, /selectedTransfer \? "lg:overflow-hidden"/);
 });
 
 test("branch confirm_receive navigates into native receive workspace", () => {

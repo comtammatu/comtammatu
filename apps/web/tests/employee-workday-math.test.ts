@@ -2,7 +2,46 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { countOverlapDays } from "../lib/staff-runtime/_lib/workday-math";
+import {
+  countOverlapDays,
+  countShiftWorkdaysFromOverlap,
+} from "../lib/staff-runtime/_lib/workday-math";
+
+test("hour-ratio công counts overlap inside scheduled VN shift window", () => {
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: "2026-06-10T12:00:00+07:00",
+      checkOut: "2026-06-10T16:00:00+07:00",
+      scheduledStart: "2026-06-10T08:00:00+07:00",
+      scheduledEnd: "2026-06-10T16:00:00+07:00",
+    }),
+    0.5,
+  );
+});
+
+test("hour-ratio công caps at 1.0 for full shift overlap", () => {
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: "2026-06-10T07:30:00+07:00",
+      checkOut: "2026-06-10T16:30:00+07:00",
+      scheduledStart: "2026-06-10T08:00:00+07:00",
+      scheduledEnd: "2026-06-10T16:00:00+07:00",
+    }),
+    1,
+  );
+});
+
+test("hour-ratio công returns 0 when scheduled window is invalid", () => {
+  assert.equal(
+    countShiftWorkdaysFromOverlap({
+      checkIn: "2026-06-10T08:00:00+07:00",
+      checkOut: "2026-06-10T16:00:00+07:00",
+      scheduledStart: "2026-06-10T16:00:00+07:00",
+      scheduledEnd: "2026-06-10T08:00:00+07:00",
+    }),
+    0,
+  );
+});
 
 test("employee leave overlap is counted inside a calendar year", () => {
   assert.equal(

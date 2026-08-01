@@ -1,3 +1,5 @@
+import { matchesSearch } from "@lib/search";
+
 export type ItemFilterValues = {
   category: string;
   status: string;
@@ -18,14 +20,13 @@ export function filterAndSortItems<T extends MenuItemForTableFilters>(
   searchValue: string,
   filters: ItemFilterValues,
 ): T[] {
-  const query = searchValue.trim().toLocaleLowerCase("vi");
+  const query = searchValue.trim();
 
   return items
     .filter(
       (item) =>
         (!query ||
-          item.name.toLocaleLowerCase("vi").includes(query) ||
-          item.category_name.toLocaleLowerCase("vi").includes(query)) &&
+          matchesSearch([item.name, item.category_name], query)) &&
         (filters.category === "all" ||
           item.category_id === Number(filters.category)) &&
         (filters.status === "all" ||

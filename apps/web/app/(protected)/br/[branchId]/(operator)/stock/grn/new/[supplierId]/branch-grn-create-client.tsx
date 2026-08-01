@@ -213,7 +213,7 @@ export function BranchGrnCreateClient({
             description={GRN_CREATE_COPY.searchPlaceholder}
             contentClassName="gap-3"
           >
-            <InputGroup className="h-12">
+            <InputGroup className="min-h-12">
               <InputGroupAddon>
                 <IconSearch />
               </InputGroupAddon>

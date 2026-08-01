@@ -276,7 +276,8 @@ export function StockClient({
   );
 
   const filters = {
-    category: activeCategory,
+    categories:
+      activeCategory === STOCK_ALL_CATEGORY_VALUE ? [] : [activeCategory],
     query: searchQuery,
     status: stockFilter,
   } as const;
@@ -958,9 +959,7 @@ export function StockClient({
             if (!open) setAdjustTarget(null);
           }}
           branchId={branchId}
-          ingredientId={adjustTarget.id}
-          ingredientName={adjustTarget.name}
-          unit={adjustTarget.unit}
+          ingredient={adjustTarget}
           onAdjusted={() => {
             setAdjustTarget(null);
             router.refresh();

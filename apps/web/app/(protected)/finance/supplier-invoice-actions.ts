@@ -77,7 +77,6 @@ const invoiceSchema = z
     invoiceId: z.coerce.number().int().positive().nullable().optional(),
     invoiceKind: z.enum(["goods", "service"]).default("goods"),
     supplierId: z.coerce.number().int().positive(),
-    invoiceNumber: z.string().min(1),
     invoiceDate: z.string(),
     matchingNotes: z.string().optional(),
     dueDate: z.string().optional().nullable(),
@@ -340,7 +339,7 @@ export const createSupplierInvoice = withAction(
         p_invoice: {
           supplier_id: data.supplierId,
           invoice_kind: data.invoiceKind,
-          invoice_number: data.invoiceNumber,
+          invoice_number: data.idempotencyKey,
           invoice_date: data.invoiceDate,
           due_date: data.dueDate ?? null,
           document_discount_amount: data.documentDiscountAmount,
@@ -378,7 +377,7 @@ export const createSupplierInvoice = withAction(
       if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return {
           success: false,
-          error: "Số hóa đơn đã tồn tại cho NCC này.",
+          error: "Không thể lưu chứng từ NCC do xung đột dữ liệu.",
         };
       }
       if (error.code === "42501") {
@@ -889,7 +888,7 @@ const supplierInvoiceSelect = (branchId?: number) => {
     branchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
-  return `id, document_status, invoice_kind, invoice_number, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_lines ( id, ingredient_id, description, quantity, unit_id, unit_price, gross_line_total, line_discount_amount, vat_rate, vat_amount, line_total, ingredients ( name ), units ( name, code ), supplier_invoice_receipt_allocations ( grn_id, po_id, purchase_order_item_id, billed_quantity ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
+  return `id, document_status, invoice_kind, invoice_date, subtotal, vat_rate, vat_amount, vat_breakdown, vat_invoice_attachment_path, total_amount, matching_status, matching_notes, matching_expected_amount, matching_received_amount, matching_difference_amount, matching_reason_code, service_verified_at, service_verification_reason, document_discount_amount, supplier_id, grn_id, po_id, due_date, payment_status, paid_amount, credit_applied_amount, paid_at, suppliers ( id, name ), purchase_orders ( id, po_number ), supplier_payments ( id, amount, payment_method, payment_date, reference_note ), supplier_payment_allocations ( supplier_payments ( id, amount, payment_method, payment_date, reference_note ) ), supplier_invoice_lines ( id, ingredient_id, description, quantity, unit_id, unit_price, gross_line_total, line_discount_amount, vat_rate, vat_amount, line_total, ingredients ( name ), units ( name, code ), supplier_invoice_receipt_allocations ( grn_id, po_id, purchase_order_item_id, billed_quantity ) ), supplier_invoice_receipt_allocations ( grn_id, po_id, goods_received_notes ( id, grn_number, status ), purchase_orders ( id, po_number ) ), ${grnSelect}`;
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;

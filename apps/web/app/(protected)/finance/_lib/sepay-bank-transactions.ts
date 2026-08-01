@@ -75,14 +75,12 @@ interface SupplierPaymentRow {
   webhook_event_id: number | null;
   supplier_invoices?:
     | {
-        invoice_number?: string | null;
         suppliers?:
           | { name?: string | null }
           | { name?: string | null }[]
           | null;
       }
     | {
-        invoice_number?: string | null;
         suppliers?:
           | { name?: string | null }
           | { name?: string | null }[]
@@ -422,7 +420,7 @@ async function fetchSupplierPaymentMatches(
       const query = supabase
         .from("supplier_payments")
         .select(
-          "id, supplier_invoice_id, amount, payment_date, reference_note, webhook_event_id, supplier_invoices ( invoice_number, suppliers ( name ) )",
+          "id, supplier_invoice_id, amount, payment_date, reference_note, webhook_event_id, supplier_invoices ( suppliers ( name ) )",
         )
         .eq("tenant_id", tenantId)
         .eq("payment_method", "bank_transfer");
@@ -460,7 +458,6 @@ async function fetchSupplierPaymentMatches(
       paymentDate: row.payment_date,
       referenceNote: row.reference_note,
       webhookEventId: row.webhook_event_id,
-      invoiceNumber: invoice?.invoice_number ?? null,
       supplierName: supplier?.name ?? null,
     };
   });

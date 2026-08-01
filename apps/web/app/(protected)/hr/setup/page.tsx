@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -17,7 +18,21 @@ const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   tasksByPosition: {},
 };
 
-export default async function HrSetupPage() {
+type SetupTab = "leave" | "shifts" | "tasks";
+
+function resolveSetupTab(value: string | undefined): SetupTab {
+  if (value === "shifts" || value === "tasks" || value === "leave") {
+    return value;
+  }
+  return "leave";
+}
+
+export default async function HrSetupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const params = await searchParams;
   const [shiftsResult, positionTasksResult, leavePolicyResult] =
     await Promise.all([
       fetchShifts(),
@@ -43,11 +58,16 @@ export default async function HrSetupPage() {
           </Button>
         }
       />
-      <HrSetupClient
-        initialShifts={shifts}
-        positionTasksData={positionTasksData}
-        leavePolicy={leavePolicyResult.success ? leavePolicyResult.data : null}
-      />
+      <Suspense>
+        <HrSetupClient
+          initialShifts={shifts}
+          positionTasksData={positionTasksData}
+          leavePolicy={
+            leavePolicyResult.success ? leavePolicyResult.data : null
+          }
+          initialTab={resolveSetupTab(params.tab)}
+        />
+      </Suspense>
     </AppPage>
   );
 }

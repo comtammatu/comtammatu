@@ -186,13 +186,18 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   assert.match(hrClient, /<EmployeeTable[\s\S]*canManage/);
   assert.doesNotMatch(
     hrClient,
-    /AppPageTabs|AttendanceTable|ShiftsTable|PositionTasksClient/,
+    /AttendanceTable|ShiftsTable|PositionTasksClient/,
     "the employee landing must not preload unrelated HR data",
   );
   assert.match(
     attendancePage,
-    /<AttendanceTable[\s\S]*?branches=\{branches\}[\s\S]*?\/>[\s\S]*<LeaveRequestsTable branches=\{branches\} \/>/,
+    /<AttendanceTable[\s\S]*?branches=\{branches\}/,
   );
+  assert.match(
+    attendancePage,
+    /<LeaveRequestsTable branches=\{storeBranches\} \/>/,
+  );
+  assert.match(attendancePage, /<RosterWeekClient/);
   assert.match(
     setupPage,
     /<HrSetupClient[\s\S]*initialShifts=\{shifts\}[\s\S]*positionTasksData=\{positionTasksData\}/,

@@ -1,13 +1,20 @@
-import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import { Suspense } from "react";
+import { canAccess, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchEmployees } from "./actions";
 import { fetchHrAttentionSummary } from "./hr-attention";
 import { HrClient } from "./hr-client";
+import { loadStaffAccountsData } from "./staff/load-staff-accounts";
 import type { BranchOption, EmployeeRow } from "./_types";
 
 type HrSearchParams = {
   salary?: string;
+  view?: string;
+  position?: string;
+  branch?: string;
+  status?: string;
+  q?: string;
 };
 
 export default async function HrPage({
@@ -17,7 +24,11 @@ export default async function HrPage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const [employeesResult, branchesResult, positionsResult, attention] =
+  const canManageAccounts = canAccess(claims.user_role, "staff");
+  const initialView =
+    params.view === "accounts" && canManageAccounts ? "accounts" : "profile";
+
+  const [employeesResult, branchesResult, positionsResult, attention, staffData] =
     await Promise.all([
       fetchEmployees(),
       supabase
@@ -33,6 +44,14 @@ export default async function HrPage({
         .eq("is_active", true)
         .order("label_vi"),
       fetchHrAttentionSummary(supabase, claims.tenant_id),
+      canManageAccounts
+        ? loadStaffAccountsData(supabase, {
+            position: params.position,
+            branch: params.branch,
+            status: params.status,
+            q: params.q,
+          })
+        : Promise.resolve(null),
     ]);
 
   const employees = employeesResult.success
@@ -56,12 +75,20 @@ export default async function HrPage({
         : "all";
 
   return (
-    <HrClient
-      employees={employees}
-      branches={branches}
-      positionOptions={positionOptions}
-      attention={attention}
-      initialSalaryFilter={initialSalaryFilter}
-    />
+    <Suspense>
+      <HrClient
+        employees={employees}
+        branches={branches}
+        positionOptions={positionOptions}
+        attention={attention}
+        initialSalaryFilter={initialSalaryFilter}
+        initialView={initialView}
+        canManageAccounts={canManageAccounts}
+        staff={staffData?.staff}
+        staffBranches={staffData?.branches}
+        staffPositionOptions={staffData?.positionOptions}
+        staffHasActiveFilters={staffData?.hasActiveFilters}
+      />
+    </Suspense>
   );
 }

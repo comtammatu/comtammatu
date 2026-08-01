@@ -10,6 +10,7 @@ import {
   CircleCheck as IconCircleCheck,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
@@ -302,9 +303,27 @@ export function TransferDetailClient({
   ];
 
   const pageLayout = (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="order-2 flex flex-col gap-4 lg:order-1">
+    <div
+      className={cn(
+        "flex flex-col gap-4",
+        // Document dialog: fill body height on desktop so only the line list scrolls.
+        embedded && "lg:h-full lg:min-h-0",
+      )}
+    >
+      <div
+        className={cn(
+          "grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]",
+          embedded
+            ? "min-h-0 flex-1 overflow-hidden lg:items-stretch"
+            : "lg:items-start",
+        )}
+      >
+        <div
+          className={cn(
+            "order-2 flex flex-col gap-4 lg:order-1",
+            embedded && "min-h-0 lg:overflow-y-auto lg:overscroll-contain",
+          )}
+        >
           <AppSection
             className="overflow-hidden"
             title={tTerm("ingredientsList")}
@@ -452,7 +471,12 @@ export function TransferDetailClient({
         </div>
 
         {/* Right Column: Metadata Overview + Timeline Stepper + Transport Note */}
-        <div className="order-1 flex flex-col gap-4 lg:order-2">
+        <div
+          className={cn(
+            "order-1 flex flex-col gap-4 lg:order-2",
+            embedded ? "shrink-0 lg:self-start" : "lg:sticky lg:top-4",
+          )}
+        >
           <AppSection title={transferDetailTitle}>
             <DescriptionList
               className="grid gap-3"

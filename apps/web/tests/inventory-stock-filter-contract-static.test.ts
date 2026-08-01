@@ -65,15 +65,11 @@ test("inventory stock status filters are mutually exclusive", () => {
 test("branch stock facets share one model and stay touch-native", () => {
   assert.match(branchStockClientSource, /filterStockOnHandIngredients/);
   assert.match(branchStockClientSource, /getStockOnHandCategories/);
-  assert.match(branchStockClientSource, /value=\{category\}/);
-  assert.match(branchStockClientSource, /onValueChange=\{setCategory\}/);
-  assert.match(branchStockClientSource, /value=\{status\}/);
+  assert.match(branchStockClientSource, /MultiSelectCombobox/);
+  assert.match(branchStockClientSource, /ToggleGroup/);
+  assert.match(branchStockClientSource, /SheetContent[\s\S]*side="bottom"/);
+  assert.match(branchStockClientSource, /normalizeStockOnHandCategories/);
   assert.doesNotMatch(branchStockClientSource, /value=\{location\}/);
-  assert.equal(
-    (branchStockClientSource.match(/<SelectTrigger size="touch"/g) ?? [])
-      .length,
-    2,
-  );
   assert.doesNotMatch(branchStockClientSource, /StockMobileGrid|DataTable/);
   assert.doesNotMatch(branchStockClientSource, /overflow-x-auto/);
 });

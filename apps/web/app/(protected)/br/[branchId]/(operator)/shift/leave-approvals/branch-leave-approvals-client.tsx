@@ -308,7 +308,7 @@ export function BranchLeaveApprovalsClient({
             }
           />
         ) : (
-          <ItemGroup className="grid gap-2 md:grid-cols-2">
+          <ItemGroup className="grid gap-2 lg:grid-cols-2">
             {visibleRows.map((request) => {
               const days = countInclusiveDays(
                 request.start_date,

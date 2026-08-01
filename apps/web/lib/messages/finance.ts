@@ -356,23 +356,15 @@ export const finance = {
     },
     form: {
       title: "Thêm khoản chi",
+      viewTitle: "Khoản chi",
+      openAria: (category: string) => `Mở khoản chi ${category}`,
       date: "Ngày phát sinh",
       branch: "Nơi chi",
       branchTenantLevel: "Công ty",
       category: "Khoản chi",
       categoryPlaceholder: "Chọn khoản chi",
       paymentSection: "Ghi nhận thanh toán",
-      method: "Phương thức thanh toán",
       methodPlaceholder: "Chọn phương thức",
-      methodEditHint:
-        "Đã khớp ngân hàng hoặc đang chờ nội dung CK — không đổi phương thức ở form này.",
-      methodCorrectHint:
-        "Chủ sở hữu/Kế toán được sửa phương thức khi khoản chi chưa khớp ngân hàng.",
-      methodHints: {
-        cash: "Ghi đã trả bằng tiền mặt.",
-        transfer: "Ghi đã trả bằng chuyển khoản.",
-        unpaid: "Ghi nhận công nợ · chưa trừ tiền mặt/NH.",
-      },
       note: "Nội dung chi",
       notePlaceholder: "Nhập mục đích hoặc nội dung khoản chi",
       vatSection: "Chi tiết số tiền",
@@ -388,6 +380,7 @@ export const finance = {
       grossLabel: "Tổng tiền",
       attachment: "Hóa đơn GTGT (Đính kèm)",
       attachmentHint: "Tùy chọn. PDF hoặc ảnh.",
+      transferContent: "Nội dung chuyển khoản",
       submit: "Lưu khoản chi",
       success: "Đã lưu khoản chi",
       editTitle: "Sửa khoản chi",
@@ -420,7 +413,7 @@ export const finance = {
         `Bỏ nội dung ${content} khỏi khớp SePay? Không hủy giao dịch NH — chỉ tiếp tục nếu chưa chuyển tiền.`,
       cancelTransferCta: "Bỏ nội dung",
       keepTransfer: "Giữ nội dung",
-      cancelTransferSuccess: "Đã bỏ nội dung và đưa khoản chi về Chưa trả",
+      cancelTransferSuccess: "Đã bỏ nội dung và đưa khoản chi về Ghi nợ",
       methodCorrectSuccess: "Đã sửa phương thức thanh toán khoản chi",
       updateFailed: "Không thể cập nhật thanh toán khoản chi.",
     },
@@ -445,18 +438,6 @@ export const finance = {
       deleteCancel: "Không",
       deleteSuccess: "Đã xóa khoản chi",
       deleteFailed: "Không thể xóa khoản chi",
-    },
-    detail: {
-      title: "Chi tiết khoản chi",
-      viewAria: (category: string) => `Xem chi tiết ${category}`,
-      vendor: "Bên nhận tiền",
-      subtotal: "Trước thuế",
-      vatBreakdown: "GTGT theo bậc",
-      vatLine: (rate: string, taxable: string, vat: string) =>
-        `${rate} · trước thuế ${taxable} · GTGT ${vat}`,
-      attachmentMissing: "Không có hóa đơn đính kèm",
-      transferContent: "Nội dung chuyển khoản",
-      emptyValue: "—",
     },
     categoryGroupLabels: {
       operating: "Chi phí vận hành",
@@ -730,9 +711,9 @@ export const finance = {
     matchedCashDeposit: "Nộp tiền mặt vào tài khoản",
     internalCashMovement: "Luân chuyển nội bộ",
     matchedExpense: (id: number | string) => `Chi phí vận hành #${id}`,
-    openSupplierInvoice: (invoice: string) => `Mở hóa đơn ${invoice}`,
-    matchedSupplierPaymentDetail: (supplier: string, invoice: string) =>
-      `${supplier} · ${invoice}`,
+    openSupplierInvoice: "Mở hóa đơn NCC",
+    matchedSupplierPaymentDetail: (supplier: string, amount: string) =>
+      `${supplier} · ${amount}`,
     matchedRefund: (order: string) => `Hoàn tiền ${order}`,
     refundMatchTitle: "Gắn khoản hoàn tiền",
     refundMatchHint:

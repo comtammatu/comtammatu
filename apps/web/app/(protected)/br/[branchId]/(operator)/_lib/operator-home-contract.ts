@@ -7,23 +7,20 @@ import type {
  * Curated home job tiles for central sites. Deeper jobs live under the stock
  * hub / More destinations. No recipes tree — production L0 tab owns recipes.
  */
+/** Central home job tiles only — deeper jobs live under Thêm / on-hand Sheet. */
 export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
   Record<BranchKind, readonly string[]>
 > = {
   central_supply: [
     "/stock/grn",
-    "/stock",
+    "/stock/on-hand",
     "/stock/transfer",
-    "/stock/stocktake",
     "/stock/purchase-requests",
-    "/stock/catalog",
   ],
   central_kitchen: [
     "/stock/grn",
     "/stock/production",
     "/stock/transfer",
-    "/stock",
-    "/stock/stocktake",
     "/stock/purchase-requests",
   ],
 } as const satisfies Partial<Record<BranchKind, readonly string[]>>;

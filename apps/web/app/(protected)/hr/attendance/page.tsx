@@ -1,14 +1,16 @@
 import Link from "next/link";
-import { ClipboardCheck as IconClipboardCheck } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
+import { Button } from "@comtammatu/ui/components/button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { AppEmptyState, AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { AttendanceTable } from "../attendance-table";
 import { LeaveRequestsTable } from "../leave-requests-table";
 import type { BranchOption } from "../_types";
+import { loadOwnerRosterPanelData } from "@lib/hr/roster/load-owner-roster-data";
+import { RosterWeekClient } from "@lib/hr/roster/roster-week-client";
 
 type AttendanceSearchParams = {
   branch?: string;
@@ -18,9 +20,10 @@ type AttendanceSearchParams = {
   month?: string;
   tab?: string;
   view?: string;
+  week?: string;
 };
 
-type AttendanceTab = "today" | "approvals" | "timesheet" | "schedule";
+type AttendanceTab = "today" | "approvals" | "timesheet" | "roster";
 
 function resolveMonth(value: string | undefined) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value ?? "")
@@ -52,14 +55,9 @@ function resolveTab(
   value: string | undefined,
   pendingApprovals: number,
 ): AttendanceTab {
-  if (value === "leave") return "approvals";
+  if (value === "leave" || value === "schedule") return "approvals";
   if (value === "attendance") return "timesheet";
-  if (
-    value === "today" ||
-    value === "approvals" ||
-    value === "timesheet" ||
-    value === "schedule"
-  ) {
+  if (value === "today" || value === "approvals" || value === "timesheet" || value === "roster") {
     return value;
   }
   return pendingApprovals > 0 ? "approvals" : "today";
@@ -93,6 +91,9 @@ export default async function HrAttendancePage({
       .is("check_out", null),
   ]);
   const branches = (data ?? []) as BranchOption[];
+  const storeBranches = branches.filter(
+    (branch) => (branch.branch_kind ?? "branch") === "branch",
+  );
   const pendingApprovals =
     (leaveCountResult.count ?? 0) + (checkoutCountResult.count ?? 0);
   const month = resolveMonth(params.month);
@@ -110,6 +111,14 @@ export default async function HrAttendancePage({
       : "summary";
   const copy = messages.hr.client;
   const tab = resolveTab(params.tab, pendingApprovals);
+  const rosterPanel =
+    tab === "roster"
+      ? await loadOwnerRosterPanelData(
+          branches,
+          params.branch,
+          params.week,
+        )
+      : null;
 
   return (
     <AppPage width="xwide">
@@ -131,7 +140,7 @@ export default async function HrAttendancePage({
             count: pendingApprovals > 0 ? pendingApprovals : undefined,
           },
           { value: "timesheet", label: copy.attendanceTabs.timesheet },
-          { value: "schedule", label: copy.attendanceTabs.schedule },
+          { value: "roster", label: copy.attendanceTabs.roster },
         ]}
         defaultValue={tab}
         ariaLabel={copy.attendanceTabs.ariaLabel}
@@ -146,22 +155,24 @@ export default async function HrAttendancePage({
             initialEmployeeId={null}
             initialCalendarScope="all"
             urlTab="today"
+            todayMode
           />
         </TabsContent>
         <TabsContent value="approvals">
-          <AppSection
-            title={copy.checkoutApprovalsAction}
-            description={copy.checkoutApprovalsHint}
-          >
-            <Button
-              size="touch"
-              render={<Link href="/hr/attendance/checkout-approvals" />}
+          <div className="flex flex-col gap-4">
+            <AppSection
+              title={copy.checkoutApprovalsAction}
+              description={copy.checkoutApprovalsHint}
+              contentFlush
             >
-              <IconClipboardCheck data-icon="inline-start" />
-              {copy.checkoutApprovalsAction}
-            </Button>
-          </AppSection>
-          <LeaveRequestsTable branches={branches} />
+              <StaffCheckoutApprovalsPageContent
+                routeBranchId={null}
+                ownerHomeHref="/hr/attendance?tab=approvals"
+                embedded
+              />
+            </AppSection>
+            <LeaveRequestsTable branches={storeBranches} />
+          </div>
         </TabsContent>
         <TabsContent value="timesheet">
           <AttendanceTable
@@ -185,19 +196,18 @@ export default async function HrAttendancePage({
             urlTab="timesheet"
           />
         </TabsContent>
-        <TabsContent value="schedule">
-          <AppEmptyState
-            title={copy.schedulePlaceholderTitle}
-            description={copy.schedulePlaceholderDescription}
-          >
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href="/hr/setup" />}
-            >
-              {copy.schedulePlaceholderAction}
-            </Button>
-          </AppEmptyState>
+        <TabsContent value="roster">
+          {rosterPanel ? (
+            <RosterWeekClient
+              branchId={rosterPanel.branchId}
+              siteOptions={rosterPanel.siteOptions}
+              weekStart={rosterPanel.weekStart}
+              data={rosterPanel.roster}
+              canAssign={rosterPanel.canAssign}
+              loadFailed={rosterPanel.loadFailed}
+              urlTab="roster"
+            />
+          ) : null}
         </TabsContent>
       </AppPageTabs>
     </AppPage>

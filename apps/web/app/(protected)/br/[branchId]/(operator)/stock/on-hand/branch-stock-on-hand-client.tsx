@@ -4,13 +4,19 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDown as IconChevronDown,
   ChevronRight as IconChevronRight,
+  ClipboardList as IconClipboardList,
+  LayoutGrid as IconMoreJobs,
   ListFilter as IconFilter,
+  Package as IconPackage,
   RotateCcw as IconReset,
   Search as IconSearch,
+  ShoppingCart as IconPurchase,
+  Trash as IconTrash,
   Truck as IconTruck,
+  X as IconX,
 } from "lucide-react";
+import type { BranchKind } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
@@ -29,14 +35,20 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
+import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
 import { ITEM_KIND_LABELS } from "@/(protected)/inventory/_lib/constants";
@@ -45,25 +57,33 @@ import {
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
-  STOCK_ALL_CATEGORY_VALUE,
   STOCK_NO_CATEGORY_VALUE,
   filterStockOnHandIngredients,
   getStockOnHandCategories,
   hasStockOnHandFilters,
   isPristineStockOnHand,
   isStockReorderRisk,
+  normalizeStockOnHandCategories,
+  type StockActionPermissions,
   type StockFilter,
   type StockIngredient,
 } from "@lib/inventory/stock-on-hand-model";
 import { messages } from "@lib/messages";
 
 const stockCopy = messages.inventory.stock;
-const stockFilterOptions: { value: StockFilter; label: string }[] = [
-  { value: "all", label: stockCopy.filters.allStatuses },
-  { value: "in_stock", label: stockCopy.filters.inStock },
-  { value: "low", label: stockCopy.filters.low },
-  { value: "out", label: stockCopy.filters.out },
-];
+
+export type StockSecondaryJob = {
+  key: string;
+  href: string;
+  title: string;
+};
+
+type AttentionCta = {
+  key: string;
+  href: string;
+  label: string;
+  icon: typeof IconTruck;
+};
 
 function StockQuantity({ item }: { item: StockIngredient }) {
   const { big, base } = formatStockUnits(item.qty, item.units, formatQty, {
@@ -138,51 +158,183 @@ function StockTouchRow({
   );
 }
 
+function attentionTitle(branchKind: BranchKind): string {
+  if (branchKind === "central_supply") {
+    return stockCopy.attention.titleCentralSupply;
+  }
+  if (branchKind === "central_kitchen") {
+    return stockCopy.attention.titleCentralKitchen;
+  }
+  return stockCopy.attention.title;
+}
+
+function resolveAttentionCtas({
+  branchId,
+  branchKind,
+  permissions,
+}: {
+  branchId: number;
+  branchKind: BranchKind;
+  permissions: StockActionPermissions;
+}): AttentionCta[] {
+  const base = `/br/${branchId}/stock`;
+  if (branchKind === "central_supply") {
+    const ctas: AttentionCta[] = [];
+    if (permissions.canReceiveGrn) {
+      ctas.push({
+        key: "grn",
+        href: `${base}/grn`,
+        label: stockCopy.actions.openGrn,
+        icon: IconTruck,
+      });
+    }
+    if (permissions.canManagePurchaseRequest) {
+      ctas.push({
+        key: "ycm",
+        href: `${base}/purchase-requests`,
+        label: stockCopy.actions.openPurchaseRequest,
+        icon: IconPurchase,
+      });
+    }
+    return ctas;
+  }
+  if (branchKind === "central_kitchen") {
+    if (!permissions.canCreateStockRequest) return [];
+    return [
+      {
+        key: "request-cs",
+        href: `${base}/requests/new`,
+        label: stockCopy.actions.requestFromCentralSupply,
+        icon: IconTruck,
+      },
+    ];
+  }
+  if (!permissions.canCreateStockRequest) return [];
+  return [
+    {
+      key: "request",
+      href: `${base}/requests/new`,
+      label: stockCopy.actions.requestStock,
+      icon: IconTruck,
+    },
+  ];
+}
+
+function secondaryJobIcon(key: string) {
+  if (key.includes("waste") || key.includes("issue")) return IconTrash;
+  if (key.includes("stocktake") || key.includes("count")) {
+    return IconClipboardList;
+  }
+  if (key.includes("purchase") || key.includes("grn")) return IconPurchase;
+  if (key.includes("request") || key.includes("receive") || key.includes("transfer")) {
+    return IconTruck;
+  }
+  return IconPackage;
+}
+
+function categoryLabel(value: string): string {
+  if (value === STOCK_NO_CATEGORY_VALUE) return stockCopy.filters.noCategory;
+  return value;
+}
+
 interface BranchStockOnHandClientProps {
   branchId: number;
-  canCreateStockRequest: boolean;
+  branchKind: BranchKind;
+  permissions: StockActionPermissions;
   coreDataLoadFailed: boolean;
   ingredients: StockIngredient[];
   underThresholdCount: number;
+  secondaryJobs: StockSecondaryJob[];
 }
 
 export function BranchStockOnHandClient({
   branchId,
-  canCreateStockRequest,
+  branchKind,
+  permissions,
   coreDataLoadFailed,
   ingredients,
   underThresholdCount,
+  secondaryJobs,
 }: BranchStockOnHandClientProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(STOCK_ALL_CATEGORY_VALUE);
+  const [categories, setCategories] = useState<string[]>([]);
   const [status, setStatus] = useState<StockFilter>("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [moreJobsOpen, setMoreJobsOpen] = useState(false);
+  const [draftCategories, setDraftCategories] = useState<string[]>([]);
+  const [draftStatus, setDraftStatus] = useState<StockFilter>("all");
 
-  const { categories, hasUncategorized } = useMemo(
+  const { categories: categoryOptions, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
     [ingredients],
   );
-  const filters = { category, query, status };
+  const filters = { categories, query, status };
   const filtered = useMemo(
     () => filterStockOnHandIngredients(ingredients, filters),
-    [ingredients, category, query, status],
+    [ingredients, categories, query, status],
   );
   const filtersActive = hasStockOnHandFilters(filters);
-  const facetCount = [
-    category !== STOCK_ALL_CATEGORY_VALUE,
-    status !== "all",
-  ].filter(Boolean).length;
+  const facetCount =
+    (status !== "all" ? 1 : 0) +
+    normalizeStockOnHandCategories(categories).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
-  const showReceiveAction =
-    canCreateStockRequest && !coreDataLoadFailed && underThresholdCount === 0;
+  const attentionCtas = resolveAttentionCtas({
+    branchId,
+    branchKind,
+    permissions,
+  });
+  const showIdleCta =
+    attentionCtas.length > 0 &&
+    !coreDataLoadFailed &&
+    underThresholdCount === 0;
+
+  const multiSelectOptions = useMemo(() => {
+    const selected = new Set(normalizeStockOnHandCategories(draftCategories));
+    const options = categoryOptions.map((item) => ({
+      value: item,
+      label: item,
+      alreadySelected: selected.has(item),
+    }));
+    if (hasUncategorized) {
+      options.push({
+        value: STOCK_NO_CATEGORY_VALUE,
+        label: stockCopy.filters.noCategory,
+        alreadySelected: selected.has(STOCK_NO_CATEGORY_VALUE),
+      });
+    }
+    return options;
+  }, [categoryOptions, draftCategories, hasUncategorized]);
+
+  function openFilterSheet() {
+    setDraftCategories(categories);
+    setDraftStatus(status);
+    setFilterOpen(true);
+  }
+
+  function applyFilters() {
+    setCategories(normalizeStockOnHandCategories(draftCategories));
+    setStatus(draftStatus);
+    setFilterOpen(false);
+  }
 
   function resetFilters() {
     setQuery("");
-    setCategory(STOCK_ALL_CATEGORY_VALUE);
+    setCategories([]);
     setStatus("all");
-    setFiltersOpen(false);
+    setDraftCategories([]);
+    setDraftStatus("all");
+    setFilterOpen(false);
   }
+
+  function removeCategory(value: string) {
+    setDraftCategories((current) =>
+      current.filter((item) => item !== value),
+    );
+  }
+
+  const toolbarStatus =
+    status === "in_stock" ? "all" : (status as "all" | "low" | "out");
 
   return (
     <BranchOperatorPage
@@ -192,29 +344,41 @@ export function BranchStockOnHandClient({
     >
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
         <BranchOperatorPanel
-          title={stockCopy.attention.title}
+          title={attentionTitle(branchKind)}
           description={stockCopy.attention.description(underThresholdCount)}
           tone="warning"
           badge={{
             children: underThresholdCount,
             variant: "warning",
           }}
-          action={
-            canCreateStockRequest ? (
-              <Button
-                size="touch"
-                render={<Link href={`/br/${branchId}/stock/requests/new`} />}
-              >
-                <IconTruck />
-                {stockCopy.actions.receiveGrn}
-              </Button>
-            ) : undefined
-          }
           size="sm"
         >
           <p className="text-sm leading-6 text-muted-foreground">
             {stockCopy.attention.listHint}
           </p>
+          {attentionCtas.length > 0 ? (
+            <div
+              className={cn(
+                "mt-2 grid gap-2",
+                attentionCtas.length > 1 ? "grid-cols-2" : "grid-cols-1",
+              )}
+            >
+              {attentionCtas.map((cta) => {
+                const Icon = cta.icon;
+                return (
+                  <Button
+                    key={cta.key}
+                    size="touch"
+                    className="w-full"
+                    render={<Link href={cta.href} />}
+                  >
+                    <Icon />
+                    {cta.label}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : null}
         </BranchOperatorPanel>
       ) : null}
 
@@ -229,13 +393,16 @@ export function BranchStockOnHandClient({
           variant: "secondary",
         }}
         action={
-          showReceiveAction ? (
+          showIdleCta && attentionCtas[0] ? (
             <Button
               size="touch"
-              render={<Link href={`/br/${branchId}/stock/requests/new`} />}
+              render={<Link href={attentionCtas[0].href} />}
             >
-              <IconTruck />
-              {stockCopy.actions.receiveGrn}
+              {(() => {
+                const Icon = attentionCtas[0].icon;
+                return <Icon />;
+              })()}
+              {attentionCtas[0].label}
             </Button>
           ) : undefined
         }
@@ -247,6 +414,7 @@ export function BranchStockOnHandClient({
             mode="error"
             title={stockCopy.loadFailed}
             description={stockCopy.loadFailedDescription}
+            symbol="riceGrain"
           >
             <Button type="button" size="touch" onClick={() => router.refresh()}>
               {ACTIONS_VI.retry}
@@ -259,13 +427,16 @@ export function BranchStockOnHandClient({
             description={stockCopy.empty.firstLoadHint}
             symbol="riceGrain"
           >
-            {canCreateStockRequest ? (
+            {attentionCtas[0] ? (
               <Button
                 size="touch"
-                render={<Link href={`/br/${branchId}/stock/requests/new`} />}
+                render={<Link href={attentionCtas[0].href} />}
               >
-                <IconTruck />
-                {stockCopy.actions.receiveGrn}
+                {(() => {
+                  const Icon = attentionCtas[0].icon;
+                  return <Icon />;
+                })()}
+                {attentionCtas[0].label}
               </Button>
             ) : null}
           </AppEmptyState>
@@ -286,86 +457,60 @@ export function BranchStockOnHandClient({
                   />
                 </InputGroup>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="w-full justify-between sm:w-auto sm:min-w-36"
-                  aria-controls="branch-stock-on-hand-filters"
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen((open) => !open)}
-                >
-                  <span className="inline-flex items-center gap-2">
-                    <IconFilter />
-                    {ACTIONS_VI.filter}
-                    {facetCount > 0 ? (
-                      <Badge variant="secondary">{facetCount}</Badge>
-                    ) : null}
-                  </span>
-                  <IconChevronDown
-                    className={cn(
-                      "transition-transform duration-150",
-                      filtersOpen && "rotate-180",
-                    )}
-                  />
-                </Button>
+                <div className="flex min-w-0 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    className="min-w-0 flex-1 justify-between sm:w-auto sm:min-w-32"
+                    onClick={openFilterSheet}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <IconFilter />
+                      {ACTIONS_VI.filter}
+                      {facetCount > 0 ? (
+                        <Badge variant="secondary">{facetCount}</Badge>
+                      ) : null}
+                    </span>
+                  </Button>
+                  {secondaryJobs.length > 0 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="shrink-0"
+                      aria-label={stockCopy.actions.moreStockJobs}
+                      onClick={() => setMoreJobsOpen(true)}
+                    >
+                      <IconMoreJobs />
+                    </Button>
+                  ) : null}
+                </div>
               </div>
 
-              <Item
-                id="branch-stock-on-hand-filters"
-                variant="muted"
-                size="sm"
-                className={cn(
-                  "w-full gap-2",
-                  filtersOpen ? "grid" : "hidden",
-                  "sm:grid-cols-2",
-                )}
+              <ToggleGroup
+                type="single"
+                value={toolbarStatus}
+                onValueChange={(next) => {
+                  if (next === "all" || next === "low" || next === "out") {
+                    setStatus(next);
+                  }
+                }}
+                variant="outline"
+                size="touch"
+                className="grid w-full grid-cols-3"
+                aria-label={stockCopy.filters.statusPlaceholder}
               >
-                <Select
-                  value={status}
-                  onValueChange={(value) => setStatus(value as StockFilter)}
-                >
-                  <SelectTrigger size="touch" className="w-full">
-                    <SelectValue
-                      placeholder={stockCopy.filters.statusPlaceholder}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stockFilterOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size="touch"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger size="touch" className="w-full">
-                    <SelectValue
-                      placeholder={stockCopy.filters.categoryPlaceholder}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={STOCK_ALL_CATEGORY_VALUE} size="touch">
-                      {stockCopy.filters.allCategories}
-                    </SelectItem>
-                    {categories.map((item) => (
-                      <SelectItem key={item} value={item} size="touch">
-                        {item}
-                      </SelectItem>
-                    ))}
-                    {hasUncategorized ? (
-                      <SelectItem value={STOCK_NO_CATEGORY_VALUE} size="touch">
-                        {stockCopy.filters.noCategory}
-                      </SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-              </Item>
+                <ToggleGroupItem value="all">
+                  {stockCopy.filters.all}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="low">
+                  {stockCopy.filters.low}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="out">
+                  {stockCopy.filters.out}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
 
             {filtersActive ? (
@@ -424,6 +569,132 @@ export function BranchStockOnHandClient({
           </>
         )}
       </BranchOperatorPanel>
+
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>{stockCopy.filterSheet.title}</SheetTitle>
+            <SheetDescription>
+              {stockCopy.filterSheet.description}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
+            <ToggleGroup
+              type="single"
+              value={draftStatus === "in_stock" ? "all" : draftStatus}
+              onValueChange={(next) => {
+                if (next === "all" || next === "low" || next === "out") {
+                  setDraftStatus(next);
+                }
+              }}
+              variant="outline"
+              size="touch"
+              className="grid w-full grid-cols-3"
+              aria-label={stockCopy.filters.statusPlaceholder}
+            >
+              <ToggleGroupItem value="all">
+                {stockCopy.filters.all}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="low">
+                {stockCopy.filters.low}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="out">
+                {stockCopy.filters.out}
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <MultiSelectCombobox
+                options={multiSelectOptions}
+                onConfirm={(selected) => {
+                  setDraftCategories((current) =>
+                    normalizeStockOnHandCategories([...current, ...selected]),
+                  );
+                }}
+                triggerLabel={stockCopy.filterSheet.categoryMultiLabel}
+                confirmLabel={stockCopy.filterSheet.categoryConfirm}
+                searchPlaceholder={stockCopy.filters.categoryPlaceholder}
+                triggerClassName="min-h-12 w-full"
+              />
+            </div>
+
+            {normalizeStockOnHandCategories(draftCategories).length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {stockCopy.filterSheet.selectedCategories}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {normalizeStockOnHandCategories(draftCategories).map(
+                    (value) => (
+                      <Badge
+                        key={value}
+                        variant="secondary"
+                        className="gap-2 pr-1"
+                      >
+                        {categoryLabel(value)}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`${ACTIONS_VI.remove} ${categoryLabel(value)}`}
+                          onClick={() => removeCategory(value)}
+                        >
+                          <IconX />
+                        </Button>
+                      </Badge>
+                    ),
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <SheetFooter className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => {
+                setDraftCategories([]);
+                setDraftStatus("all");
+              }}
+            >
+              <IconReset />
+              {ACTIONS_VI.clearFilters}
+            </Button>
+            <Button type="button" size="touch" onClick={applyFilters}>
+              {stockCopy.actions.applyFilters}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={moreJobsOpen} onOpenChange={setMoreJobsOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>{stockCopy.moreJobsSheet.title}</SheetTitle>
+            <SheetDescription>
+              {stockCopy.moreJobsSheet.description}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-2 px-3 py-3 sm:px-4">
+            {secondaryJobs.map((job) => {
+              const Icon = secondaryJobIcon(job.key);
+              return (
+                <Button
+                  key={job.key}
+                  size="touch-lg"
+                  variant="outline"
+                  className="w-full whitespace-normal"
+                  render={<Link href={job.href} />}
+                >
+                  <Icon data-icon="inline-start" />
+                  {job.title}
+                </Button>
+              );
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
     </BranchOperatorPage>
   );
 }

@@ -1,3 +1,5 @@
+import { matchesSearch } from "@lib/search";
+
 export type GrnListStatusFilter =
   | "draft"
   | "confirmed"
@@ -196,11 +198,12 @@ export function filterGrnDraftRows<T extends GrnDraftRow>(
   rows: T[],
   query: string,
 ): T[] {
-  const needle = query.trim().toLocaleLowerCase("vi");
+  const needle = query.trim();
   if (!needle) return rows;
   return rows.filter((row) =>
-    [row.grnNumber, row.supplierName, row.branchName, row.poCode ?? ""].some(
-      (value) => value.toLocaleLowerCase("vi").includes(needle),
+    matchesSearch(
+      [row.grnNumber, row.supplierName, row.branchName, row.poCode ?? ""],
+      needle,
     ),
   );
 }
@@ -216,4 +219,3 @@ export function newGrnSupplierHref(
   });
   return `${basePath}/new?${params.toString()}`;
 }
-import { matchesSearch } from "@lib/search";

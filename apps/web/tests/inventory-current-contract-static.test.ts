@@ -30,9 +30,11 @@ test("D099 is the current external purchasing authority", () => {
   const current = decision(decisions, "D099");
 
   assert.match(current, /Nhu cầu mua/);
-  assert.match(current, /phân bổ/);
-  assert.match(current, /một PO\/NCC/);
-  assert.match(current, /một GRN nháp\/PO/);
+  assert.match(current, /chỉ có một NCC active/);
+  assert.match(current, /chỉ chọn hoặc chia số lượng khi có nhiều NCC/);
+  assert.match(current, /bị chặn để bổ sung mapping/);
+  assert.match(current, /PO\/NCC/);
+  assert.match(current, /GRN nháp\/PO/);
   assert.match(current, /Hóa đơn NCC/);
 });
 

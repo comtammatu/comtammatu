@@ -45,6 +45,7 @@ import {
 } from "./employee-form-dialog";
 
 import { messages } from "@lib/messages";
+import { matchesSearch } from "@lib/search";
 
 interface EmployeeTableProps {
   employees: EmployeeRow[];
@@ -82,7 +83,7 @@ export function EmployeeTable({
   const [contractTypeFilter, setContractTypeFilter] =
     useState(ALL_FILTER_VALUE);
   const filteredEmployees = useMemo(() => {
-    const normalized = search.trim().toLocaleLowerCase("vi-VN");
+    const normalized = search.trim();
     return employees.filter((employee) => {
       const branchId = employee.profiles?.branch_id;
       const positionCode = employee.profiles?.positions?.code;
@@ -105,25 +106,24 @@ export function EmployeeTable({
       const matchesContractType =
         contractTypeFilter === ALL_FILTER_VALUE ||
         (employee.contract_type ?? "none") === contractTypeFilter;
-      const matchesSearch =
+      const matchesQuery =
         !normalized ||
-        [
-          employee.profiles?.full_name,
-          employee.employee_code,
-          employee.profiles?.branches?.name,
-          employee.profiles?.positions?.label_vi,
-        ]
-          .filter(Boolean)
-          .some((value) =>
-            value!.toLocaleLowerCase("vi-VN").includes(normalized),
-          );
+        matchesSearch(
+          [
+            employee.profiles?.full_name,
+            employee.employee_code,
+            employee.profiles?.branches?.name,
+            employee.profiles?.positions?.label_vi,
+          ],
+          normalized,
+        );
       return (
         (showInactive || employee.is_active) &&
         matchesBranch &&
         matchesPosition &&
         matchesSalary &&
         matchesContractType &&
-        matchesSearch
+        matchesQuery
       );
     });
   }, [

@@ -62,6 +62,8 @@ interface CheckoutApprovalsPageContentProps {
   focusAttendanceId?: number;
   hideHeaderOnMobile?: boolean;
   plane?: CheckoutApprovalsPlane;
+  /** Render queue without Employee/Branch page chrome (Owner attendance tab). */
+  embedded?: boolean;
 }
 
 type CheckoutApprovalsPlane = "employee" | "branch";
@@ -72,6 +74,7 @@ export async function StaffCheckoutApprovalsPageContent({
   focusAttendanceId,
   hideHeaderOnMobile,
   plane = "employee",
+  embedded = false,
 }: CheckoutApprovalsPageContentProps) {
   const PageShell = plane === "branch" ? BranchOperatorPage : EmployeePage;
   const Panel = plane === "branch" ? BranchOperatorPanel : EmployeePanel;
@@ -85,6 +88,15 @@ export async function StaffCheckoutApprovalsPageContent({
   );
 
   if (!canUseApprovalRoute) {
+    if (embedded) {
+      return (
+        <AppEmptyState
+          title="Không có quyền duyệt kết ca"
+          description="Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu kết ca."
+          icon={<IconShieldAlert />}
+        />
+      );
+    }
     return (
       <PageShell
         title={copy.checkoutApprovalsTitle}
@@ -177,6 +189,31 @@ export async function StaffCheckoutApprovalsPageContent({
     };
   });
 
+  const queue = (
+    <CheckoutApprovalsClient
+      items={items}
+      canApprove={canApprove === true}
+      focusAttendanceId={focusAttendanceId}
+    />
+  );
+
+  if (embedded) {
+    return (
+      <Panel
+        icon={IconClipboardCheck}
+        title="Yêu cầu đang chờ"
+        description="Duyệt xong thì giờ ra được ghi theo lúc nhân viên gửi yêu cầu."
+        tone={items.length > 0 ? "warning" : "success"}
+        badge={{
+          children: `${formatCount(items.length)} chờ duyệt`,
+          variant: items.length > 0 ? "warning" : "success",
+        }}
+      >
+        {queue}
+      </Panel>
+    );
+  }
+
   return (
     <PageShell
       title={copy.checkoutApprovalsTitle}
@@ -197,11 +234,7 @@ export async function StaffCheckoutApprovalsPageContent({
       }
     >
       {plane === "branch" ? (
-        <CheckoutApprovalsClient
-          items={items}
-          canApprove={canApprove === true}
-          focusAttendanceId={focusAttendanceId}
-        />
+        queue
       ) : (
         <Panel
           icon={IconClipboardCheck}
@@ -213,11 +246,7 @@ export async function StaffCheckoutApprovalsPageContent({
             variant: items.length > 0 ? "warning" : "success",
           }}
         >
-          <CheckoutApprovalsClient
-            items={items}
-            canApprove={canApprove === true}
-            focusAttendanceId={focusAttendanceId}
-          />
+          {queue}
         </Panel>
       )}
     </PageShell>

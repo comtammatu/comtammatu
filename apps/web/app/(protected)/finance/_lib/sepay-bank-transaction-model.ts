@@ -37,7 +37,6 @@ export interface SepaySupplierPaymentMatch {
   referenceNote: string | null;
   webhookEventId: number | null;
   bankTransactionId?: number | null;
-  invoiceNumber: string | null;
   supplierName: string | null;
 }
 

@@ -438,7 +438,7 @@ function TeamBoardMobileGroups({
               {copy.shiftGroupCount(group.rows.length)}
             </span>
           </div>
-          <div className="grid gap-1.5 md:grid-cols-2">
+          <div className="grid gap-1.5 lg:grid-cols-2">
             {group.rows.map((row) => (
               <MobileTeamCard
                 key={row.key}

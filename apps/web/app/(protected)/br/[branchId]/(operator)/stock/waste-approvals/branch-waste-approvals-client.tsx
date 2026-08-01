@@ -289,23 +289,24 @@ export function BranchWasteApprovalsClient({
               description="Không còn phiếu hao hụt cần xử lý tại chi nhánh này."
             />
           ) : (
-            <ItemGroup className="gap-2" role="list">
+            <div role="list" className="flex flex-col">
               {rows.map((row) => {
                 const highestTier = getHighestTier(row);
                 return (
-                  <div key={row.issueId} role="listitem">
-                    <Item
-                      variant="outline"
-                      className="min-h-20 touch-manipulation"
-                      render={
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => setSelectedIssueId(row.issueId)}
-                          disabled={isSubmitting}
-                        />
-                      }
-                    >
+                  <Item
+                    key={row.issueId}
+                    role="listitem"
+                    variant="default"
+                    className="min-h-20 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
+                    render={
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => setSelectedIssueId(row.issueId)}
+                        disabled={isSubmitting}
+                      />
+                    }
+                  >
                       <ItemContent className="min-w-0 gap-1">
                         <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
                           {row.issueNumber}
@@ -331,10 +332,9 @@ export function BranchWasteApprovalsClient({
                         />
                       </ItemActions>
                     </Item>
-                  </div>
                 );
               })}
-            </ItemGroup>
+            </div>
           )}
         </BranchOperatorPanel>
 

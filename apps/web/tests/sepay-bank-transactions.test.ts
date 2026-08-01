@@ -107,7 +107,6 @@ function supplierPayment(
     paymentDate: "2026-07-01T02:05:00.000Z",
     referenceNote,
     webhookEventId,
-    invoiceNumber: `INV-${id}`,
     supplierName: "NCC Rau",
   };
 }
@@ -841,7 +840,7 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
   assert.match(
     cell,
-    /openSupplierInvoice\([\s\S]*match\.invoiceNumber \?\? `#\$\{match\.invoiceId\}`/,
+    /\{copy\.openSupplierInvoice\}/,
   );
   assert.match(
     cell,

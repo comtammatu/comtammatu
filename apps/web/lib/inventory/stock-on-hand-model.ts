@@ -49,6 +49,7 @@ export type StockActionPermissions = {
   canCreateStockRequest: boolean;
   /** L0 / central GRN receive CTA (D093 — not branch). */
   canReceiveGrn: boolean;
+  canManagePurchaseRequest: boolean;
   canReceiveTransfer: boolean;
   canCreateIssue: boolean;
   canCreateTransfer: boolean;
@@ -68,7 +69,8 @@ export interface StockOnHandPageData {
 }
 
 export interface StockOnHandFilters {
-  category: string;
+  /** Empty or only ALL sentinel → no category facet. Multiple values OR-match. */
+  categories: string[];
   query: string;
   status: StockFilter;
 }
@@ -123,10 +125,24 @@ export function getStockOnHandCategories(ingredients: StockIngredient[]) {
   };
 }
 
+export function normalizeStockOnHandCategories(
+  categories: readonly string[],
+): string[] {
+  const unique = [
+    ...new Set(
+      categories.filter(
+        (value) => value !== STOCK_ALL_CATEGORY_VALUE && value.length > 0,
+      ),
+    ),
+  ];
+  unique.sort((left, right) => left.localeCompare(right, "vi"));
+  return unique;
+}
+
 export function hasStockOnHandFilters(filters: StockOnHandFilters): boolean {
   return (
     filters.query.trim() !== "" ||
-    filters.category !== STOCK_ALL_CATEGORY_VALUE ||
+    normalizeStockOnHandCategories(filters.categories).length > 0 ||
     filters.status !== "all"
   );
 }
@@ -148,13 +164,17 @@ export function filterStockOnHandIngredients(
   filters: StockOnHandFilters,
 ): StockIngredient[] {
   let result = [...ingredients];
+  const categories = normalizeStockOnHandCategories(filters.categories);
 
-  if (filters.category === STOCK_NO_CATEGORY_VALUE) {
-    result = result.filter((ingredient) => !ingredient.category);
-  } else if (filters.category !== STOCK_ALL_CATEGORY_VALUE) {
-    result = result.filter(
-      (ingredient) => ingredient.category === filters.category,
+  if (categories.length > 0) {
+    const includeUncategorized = categories.includes(STOCK_NO_CATEGORY_VALUE);
+    const named = new Set(
+      categories.filter((value) => value !== STOCK_NO_CATEGORY_VALUE),
     );
+    result = result.filter((ingredient) => {
+      if (!ingredient.category) return includeUncategorized;
+      return named.has(ingredient.category);
+    });
   }
 
   if (filters.status === "in_stock") {

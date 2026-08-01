@@ -63,7 +63,12 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.doesNotMatch(bottomNav, /icon: User\b/);
   assert.doesNotMatch(bottomNav, /"\/notifications"/);
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
-  assert.match(settingsMessages, /centralNavStock: "Kho"/);
+  assert.match(settingsMessages, /branchNavStock: "Kho"/);
+  assert.match(settingsMessages, /centralNavStock: "Tồn"/);
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/stock\/on-hand`[\s\S]*branchCopy\.branchNavStock/,
+  );
   assert.match(
     layout,
     /const canUseShiftTab =\s*claims\.user_role !== "owner"/,
@@ -219,10 +224,30 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /getBranchPrimaryHomeGroup/);
   assert.doesNotMatch(home, /BranchOperatorControlBar/);
   assert.match(home, /href: "\/"/);
-  assert.doesNotMatch(homeContract, /"\/team"|"\/stock(?:\/|")/);
+  // Manager phase suffixes stay free of /team; central home may list /stock/*.
+  assert.doesNotMatch(
+    homeContract,
+    /BRANCH_MANAGER_HOME_PHASE_SUFFIXES[\s\S]*?"\/team"/,
+  );
   for (const suffix of ["/pos", "/kds", "/runner", "/menu-limits"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
   }
+  for (const suffix of [
+    "/stock/grn",
+    "/stock/on-hand",
+    "/stock/transfer",
+    "/stock/purchase-requests",
+  ]) {
+    assert.ok(
+      homeContract.includes(`"${suffix}"`),
+      `central home should include ${suffix}`,
+    );
+  }
+  assert.doesNotMatch(
+    homeContract,
+    /"\/stock"\s*,/,
+    "central home must not land on stock hub",
+  );
   assert.match(
     home,
     /key: `\$\{group\.id\}-\$\{tile\.moduleKey\}-\$\{tile\.href\}`/,
@@ -445,7 +470,7 @@ test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
   );
   assert.match(
     page,
-    /const workState = isFloorRole \? await getTodayWorkState\(\) : null/,
+    /const workState = isFloorRole && !isCentral \? await getTodayWorkState\(\) : null/,
   );
   assert.doesNotMatch(page, /tiles: \[\]/);
 });
@@ -711,41 +736,12 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(profile, /EmployeeHomePageContent/);
   assert.doesNotMatch(profile, /attendance_records/);
   assert.doesNotMatch(profile, /bank_account/);
-  assert.match(profile, /<EmployeePanel tone="info" size="sm">/);
-  assert.match(profile, /<div className="grid gap-4">/);
-  assert.match(profile, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-  assert.match(profile, /group\/avatar-upload/);
-  assert.match(profile, /relative row-span-2 size-28 shrink-0/);
-  assert.match(profile, /sm:size-32/);
-  assert.match(profile, /<Avatar className="size-full min-h-full min-w-full">/);
-  assert.doesNotMatch(profile, /<Avatar\s+size="lg"/);
+  assert.match(profile, /<BranchOperatorPanel tone="info">/);
+  assert.match(profile, /flex flex-col items-center gap-3 text-center sm:flex-row/);
+  assert.match(profile, /<Avatar className="size-full">/);
   assert.match(profile, /AvatarFallback className="text-3xl font-semibold"/);
-  assert.match(profile, /absolute inset-0 z-10/);
-  assert.match(profile, /pointer-events-none absolute inset-0 z-10/);
-  assert.match(
-    profile,
-    /bg-foreground\/50 p-0 text-background opacity-0 transition-opacity/,
-  );
-  assert.match(profile, /has-data-\[icon=inline-start\]:pl-0/);
-  assert.match(profile, /has-data-\[icon=inline-end\]:pr-0/);
-  assert.match(profileActions, /has-data-\[icon=inline-start\]:pl-0/);
-  assert.match(profileActions, /has-data-\[icon=inline-end\]:pr-0/);
-  assert.match(profile, /group-hover\/avatar-upload:pointer-events-auto/);
-  assert.match(profile, /group-hover\/avatar-upload:opacity-100/);
-  assert.match(
-    profile,
-    /group-focus-within\/avatar-upload:pointer-events-auto/,
-  );
-  assert.match(profile, /group-focus-within\/avatar-upload:opacity-100/);
-  assert.doesNotMatch(
-    profile,
-    /bg-foreground\/45 p-0 text-background opacity-100/,
-  );
-  assert.doesNotMatch(profile, /top-1\/2 left-1\/2/);
-  assert.doesNotMatch(profile, /-translate-x-1\/2/);
   assert.match(profile, /copy\.employeeCode/);
-  assert.match(profile, /border-t border-border\/60/);
-  assert.match(profile, /grid-cols-\[minmax\(0,1fr\)_minmax\(0,1fr\)\]/);
+  assert.match(profile, /<BranchOperatorDetailList[\s\S]*columns=\{2\}/);
   assert.match(profile, /IconBirthDate/);
   assert.match(profile, /formatBirthDate\(birthDate\)/);
   assert.match(profile, /copy\.birthDate/);
@@ -775,14 +771,9 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.match(profileActions, /ssr: false/);
   assert.match(profile, /buttonSize="touch"/);
   assert.match(profile, /buttonVariant="default"/);
-  assert.match(profile, /buttonSize="sm"/);
   assert.match(profile, /buttonVariant="outline"/);
-  assert.match(profile, /buttonVariant="ghost"/);
   assert.match(profile, /triggerLabel=\{copy\.editProfileShort\}/);
   assert.match(profileActions, /buttonVariant\?: ProfileButtonVariant/);
-  assert.doesNotMatch(profile, /flex-col items-center gap-2/);
-  assert.doesNotMatch(profile, /className="w-fit text-muted-foreground"/);
-  assert.doesNotMatch(profile, /className="w-full min-w-0"/);
   assert.doesNotMatch(profile, /grid grid-cols-2 gap-2/);
   assert.doesNotMatch(profile, /sm:min-w-40/);
   assert.doesNotMatch(profile, /grid gap-2 text-sm sm:grid-cols-2/);
@@ -796,7 +787,7 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.match(profile, /birthDate: birthDate \?\? ""/);
   assert.match(profile, /BranchOperatorDetailList/);
   assert.match(profile, /label: copy\.birthDate/);
-  assert.match(profile, /columns=\{3\}/);
+  assert.match(profile, /columns=\{2\}/);
 });
 
 test("employee profile self-service update uses the scoped profile RPC", () => {

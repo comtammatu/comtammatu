@@ -43,8 +43,11 @@ test("operator stock hub groups tiles into URL-synced tabs instead of a long til
   );
   assert.match(source, /AppPageTabs/);
   assert.match(source, /paramKey="group"/);
-  assert.match(source, /stockTabOnhand[\s\S]*stockTabCount[\s\S]*stockTabWaste[\s\S]*stockTabCatalog/);
-  assert.match(source, /STOCK_TAB_SUFFIXES/);
+  assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
+  assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
+  assert.match(source, /CENTRAL_BOTTOM_NAV_SUFFIXES/);
+  assert.match(source, /stockTabOnhand/);
+  assert.match(source, /mobileColumns=\{2\}/);
   assert.doesNotMatch(source, /STOCK_PRIMARY_SUFFIXES/);
   assert.doesNotMatch(source, /STOCK_SECONDARY_SUFFIXES/);
 });
@@ -61,8 +64,11 @@ test("operator home surfaces manager shift phases (open/run/close)", () => {
   assert.match(page, /getBranchManagerHomePhaseGroups/);
   assert.match(page, /phaseSections/);
   assert.match(page, /phaseOpenTitle[\s\S]*phaseRunTitle[\s\S]*phaseCloseTitle/);
-  // Phase config keeps the route-boundary guard satisfied: no literal /team or /stock* in the contract.
-  assert.doesNotMatch(contract, /"\/team"|"\/stock(?:\/|")/);
+  // Manager phase config must not include /team; central home may list /stock/*.
+  assert.doesNotMatch(
+    contract,
+    /BRANCH_MANAGER_HOME_PHASE_SUFFIXES[\s\S]*?"\/team"/,
+  );
 });
 
 test("operator a11y: realtime regions announce, panels use headings, locked tiles explain why", () => {
@@ -233,5 +239,87 @@ test("POS self-order ref is synced in the render body, not a one-frame-stale eff
   assert.doesNotMatch(
     source,
     /useEffect\(\(\) => \{\s*refreshSelfOrderPosStateRef\.current = refreshSelfOrderPosState;/,
+  );
+});
+
+// Stock LIST touch contract: lists stay single-column until the lg(1024px)
+// landscape breakpoint so cards never go narrow on a portrait tablet (768px),
+// and filter toolbars stack on phone instead of forcing a cramped two-column
+// grid. See docs/ref/screen-context-map.md §2.5 on-hand exemplar.
+const STOCK_LIST_CLIENTS = [
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/branch-count-assignments-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
+];
+
+// Branch Ops (team/shift) card queues share the same lg(1024px) breakpoint
+// contract as stock LISTs — portrait tablets must stay single-column.
+const BRANCH_OPS_CARD_CLIENTS = [
+  "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
+];
+
+test("stock LIST card grids switch to two columns only at the lg landscape breakpoint", () => {
+  for (const file of STOCK_LIST_CLIENTS) {
+    const source = read(file);
+    // A two-column card grid must not cut over at md(768px) — that crushes
+    // cards on a portrait tablet. lg(1024px) landscape is the contract.
+    assert.doesNotMatch(
+      source,
+      /(?:^|[^l])md:grid-cols-2/,
+      `${file}: card list must not switch to two columns before the lg breakpoint`,
+    );
+  }
+});
+
+test("branch ops (team/shift) card queues switch to two columns only at the lg breakpoint", () => {
+  for (const file of BRANCH_OPS_CARD_CLIENTS) {
+    const source = read(file);
+    assert.doesNotMatch(
+      source,
+      /(?:^|[^l])md:grid-cols-2/,
+      `${file}: card queue must not switch to two columns before the lg breakpoint`,
+    );
+  }
+});
+
+test("stock LIST filter toolbars stack on phone via flex-col sm:flex-row, not a cramped fixed grid", () => {
+  for (const file of [
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/branch-stock-issues-list-client.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/stocktake/branch-stocktake-list-client.tsx",
+  ]) {
+    const source = read(file);
+    assert.match(
+      source,
+      /flex min-w-0 flex-col gap-2 sm:flex-row/,
+      `${file}: filter toolbar must stack with flex-col sm:flex-row`,
+    );
+    // No fixed-width two-column grid forcing the search box narrow on tablet.
+    assert.doesNotMatch(
+      source,
+      /grid(?:\s+\S+)*\s+sm:grid-cols-\[minmax\(0,1fr\)_(?:11|12)rem\]|grid(?:\s+\S+)*\s+lg:grid-cols-\[minmax\(0,1fr\)_(?:11|12)rem\]/,
+      `${file}: filter toolbar must not use a fixed two-column search+select grid`,
+    );
+  }
+});
+
+test("stock detail screens use the shared BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME, not a hand-rolled md: grid", () => {
+  const source = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/issues/[id]/branch-stock-issue-detail-client.tsx",
+  );
+  assert.match(
+    source,
+    /BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME/,
+    "issues detail must use the shared detail grid constant",
+  );
+  assert.doesNotMatch(
+    source,
+    /md:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(17rem,0\.65fr\)\]/,
+    "issues detail must not hand-roll the detail grid at the md breakpoint",
   );
 });

@@ -50,21 +50,25 @@ function centralNavItems(
     exact: false,
     matchPrefixes: [`${base}/stock/requests`, `${base}/stock/receive`],
   };
+  const morePrefixes = [
+    `${base}/stock/stocktake`,
+    `${base}/stock/waste`,
+    `${base}/stock/consumption`,
+    `${base}/stock/catalog`,
+    `${base}/stock/purchase-requests`,
+    `${base}/stock/count`,
+    `${base}/stock/issues`,
+  ];
+  // Kho Tổng keeps Tồn on its own tab — do not dual-highlight Thêm on /on-hand.
+  if (branchKind === "central_kitchen") {
+    morePrefixes.unshift(`${base}/stock/on-hand`);
+  }
   const more = {
     href: `${base}/stock`,
     label: branchCopy.centralNavMore,
     icon: MoreHorizontal,
     exact: true,
-    matchPrefixes: [
-      `${base}/stock/on-hand`,
-      `${base}/stock/stocktake`,
-      `${base}/stock/waste`,
-      `${base}/stock/consumption`,
-      `${base}/stock/catalog`,
-      `${base}/stock/purchase-requests`,
-      `${base}/stock/count`,
-      `${base}/stock/issues`,
-    ],
+    matchPrefixes: morePrefixes,
   };
 
   if (branchKind === "central_supply") {
@@ -143,8 +147,8 @@ export function OperatorBottomNav({
                   matchPrefixes: [`/br/${branchId}/team`],
                 },
                 {
-                  href: `/br/${branchId}/stock`,
-                  label: branchCopy.centralNavStock,
+                  href: `/br/${branchId}/stock/on-hand`,
+                  label: branchCopy.branchNavStock,
                   icon: Package,
                   exact: false,
                   matchPrefixes: [`/br/${branchId}/stock`],

@@ -48,6 +48,8 @@ export const operator = {
     statusNoBranch: "Thiếu chi nhánh",
     descriptionCheckoutPending: "Yêu cầu kết ca đã gửi, chờ quản lý duyệt.",
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
+    descriptionShiftUnassigned:
+      "Chưa được phân ca hôm nay. Liên hệ quản lý để được xếp ca.",
     checkInShort: "Vào",
     checkOutShort: "Ra",
     clockIn: "Chấm công vào",

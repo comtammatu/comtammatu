@@ -129,10 +129,15 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     "`/br/${branchId}`",
     "`/br/${branchId}/shift`",
     "`/br/${branchId}/team`",
-    "`/br/${branchId}/stock`",
+    "`/br/${branchId}/stock/on-hand`",
   ]) {
     assert.ok(bottomNav.includes(expected), `expected bottom nav ${expected}`);
   }
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/stock\/on-hand`[\s\S]*?matchPrefixes: \[`\/br\/\$\{branchId\}\/stock`\]/,
+    "Kho tab lands on-hand but stays active for /stock/*",
+  );
 
   assert.match(
     bottomNav,

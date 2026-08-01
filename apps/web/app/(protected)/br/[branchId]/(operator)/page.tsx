@@ -52,7 +52,6 @@ const CENTRAL_KITCHEN_HOME_LABELS = [
     label: branchCopy.centralKitchenProductionJob,
   },
   { suffix: "/stock/transfer", label: branchCopy.centralKitchenDispatchJob },
-  { suffix: "/stock", label: branchCopy.centralKitchenStockJob },
   {
     suffix: "/stock/purchase-requests",
     label: branchCopy.centralPurchaseRequestsJob,
@@ -60,12 +59,9 @@ const CENTRAL_KITCHEN_HOME_LABELS = [
 ] as const;
 
 function getCentralKitchenHomeLabel(href: string, fallback: string): string {
-  const exactStock = href.endsWith("/stock");
-  if (exactStock) return branchCopy.centralKitchenStockJob;
   return (
-    CENTRAL_KITCHEN_HOME_LABELS.find(
-      ({ suffix }) => suffix !== "/stock" && href.endsWith(suffix),
-    )?.label ?? fallback
+    CENTRAL_KITCHEN_HOME_LABELS.find(({ suffix }) => href.endsWith(suffix))
+      ?.label ?? fallback
   );
 }
 
@@ -124,24 +120,12 @@ export default async function OperatorHomePage({
           const stockTiles = rawGroups
             .flatMap((group) => (group.id === "stock" ? group.tiles : []))
             .filter((tile) =>
-              centralSuffixes.some((suffix) =>
-                suffix === "/stock"
-                  ? tile.href.endsWith("/stock")
-                  : tile.href.endsWith(suffix),
-              ),
+              centralSuffixes.some((suffix) => tile.href.endsWith(suffix)),
             )
             .sort(
               (a, b) =>
-                centralSuffixes.findIndex((s) =>
-                  s === "/stock"
-                    ? a.href.endsWith("/stock")
-                    : a.href.endsWith(s),
-                ) -
-                centralSuffixes.findIndex((s) =>
-                  s === "/stock"
-                    ? b.href.endsWith("/stock")
-                    : b.href.endsWith(s),
-                ),
+                centralSuffixes.findIndex((s) => a.href.endsWith(s)) -
+                centralSuffixes.findIndex((s) => b.href.endsWith(s)),
             );
           return stockTiles.length > 0
             ? [

@@ -30,7 +30,7 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
   );
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /size="touch"/);
-  assert.match(client, /md:grid-cols-2/);
+  assert.match(client, /lg:grid-cols-2/);
   assert.doesNotMatch(
     client,
     /DataTable|Drawer|buildBranchCountHref|openCountScreen/,
@@ -68,7 +68,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
   assert.match(client, /approveCountSlip/);
   assert.match(client, /requestCountRecount/);
-  assert.match(client, /md:grid-cols-2/);
+  assert.match(client, /lg:grid-cols-2/);
   assert.doesNotMatch(
     client,
     /DataTable|DocumentFormFrame|BranchOperatorPanel|embedded/,

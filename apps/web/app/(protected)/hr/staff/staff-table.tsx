@@ -36,6 +36,12 @@ export interface BranchOption {
   branch_kind?: string | null;
 }
 
+export type PermissionGrantStatus =
+  | "none"
+  | "template"
+  | "exception"
+  | "mixed";
+
 export interface StaffRow {
   id: string;
   full_name: string;
@@ -46,6 +52,7 @@ export interface StaffRow {
   branch_id: number | null;
   branch_name: string | null;
   is_active: boolean | null;
+  permissionStatus?: PermissionGrantStatus;
 }
 
 export interface PositionOption {
@@ -194,17 +201,27 @@ export function StaffTable({
     {
       key: "permissions",
       header: staffCopy.actionPermissions,
-      render: (member) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          render={
-            <Link href={`/hr/staff/${member.id}/permissions?tab=permissions`} />
-          }
-        >
-          {staffCopy.actionPermissions}
-        </Button>
-      ),
+      render: (member) => {
+        const status = member.permissionStatus ?? "none";
+        return (
+          <Link
+            href={`/hr/staff/${member.id}/permissions?tab=permissions`}
+            className="inline-flex flex-col gap-1 hover:underline"
+          >
+            <Badge
+              variant={
+                status === "none"
+                  ? "outline"
+                  : status === "exception" || status === "mixed"
+                    ? "warning"
+                    : "secondary"
+              }
+            >
+              {staffCopy.permissionStatus[status]}
+            </Badge>
+          </Link>
+        );
+      },
     },
     {
       key: "actions",
@@ -280,7 +297,7 @@ export function StaffTable({
                 }
               >
                 <IconKey data-icon="inline-start" />
-                {staffCopy.actionPermissions}
+                {staffCopy.permissionStatus[member.permissionStatus ?? "none"]}
               </Button>
               <StaffActionsMenu
                 member={member}

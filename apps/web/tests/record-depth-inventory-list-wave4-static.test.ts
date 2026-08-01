@@ -242,7 +242,7 @@ test("Wave 4 Finance invoice LIST: Sheet D1 view with filter Popover", () => {
   );
   assert.doesNotMatch(source, /useLongPress|onOpenDrawer|setDrawerRow/);
   assert.match(source, /const filterPopover = \(\s*<Popover>/);
-  assert.match(source, /filters=\{filterPopover\}/);
+  assert.match(source, /filters=\{[\s\S]*\{filterPopover\}[\s\S]*\}/);
   assert.match(
     source,
     /from "@comtammatu\/ui\/components\/sheet"/,

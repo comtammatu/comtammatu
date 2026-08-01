@@ -267,7 +267,6 @@ const supplierInvoiceSchema = z
     invoiceKind: z.enum(["goods", "service"]),
     grnId: z.string(),
     supplierId: z.string().min(1, { error: FORM_VI.required }),
-    invoiceNumber: z.string().trim().min(1, { error: FORM_VI.required }),
     invoiceDate: z.string().min(1, { error: FORM_VI.required }),
     invoiceVatRate: z.preprocess(
       Number,
@@ -395,7 +394,6 @@ function createSupplierInvoiceDefaultValues(
     invoiceKind: "goods",
     grnId: preselectGrnOptionKey ?? "none",
     supplierId: "",
-    invoiceNumber: "",
     invoiceDate: getVNDateString(),
     invoiceVatRate: 8,
     documentDiscount: "",
@@ -423,7 +421,6 @@ function editSupplierInvoiceDefaultValues(
     invoiceKind: invoice.invoiceKind,
     grnId: selectedGrnKeys.length > 0 ? selectedGrnKeys.join(",") : "none",
     supplierId: String(invoice.supplierId),
-    invoiceNumber: invoice.code,
     invoiceDate: invoice.invoiceDate ?? getVNDateString(),
     invoiceVatRate: (invoice.invoiceLines[0]?.vatRate ??
       8) as SupplierInvoiceVatRate,
@@ -772,6 +769,9 @@ function SupplierInvoiceCreateFields({
             {invoiceKind === "goods" ? (
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium">{copy.linkedGrn}</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.grnSelectionHint}
+                </p>
                 <div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
                   {grns.map((option) => {
                     const isSelected = selectedGrnKeys.includes(
@@ -847,13 +847,6 @@ function SupplierInvoiceCreateFields({
             )}
           </div>
           <div className="flex min-w-0 flex-col gap-3">
-            <TextField
-              control={form.control}
-              name="invoiceNumber"
-              label={copy.invoiceNumber}
-              placeholder={copy.invoiceNumberPlaceholder}
-              required
-            />
             <BusinessDateField
               control={form.control}
               name="invoiceDate"
@@ -1843,7 +1836,6 @@ export function SupplierInvoicesClient({
         invoiceMode === "edit" ? (selectedInvoice?.id ?? undefined) : undefined,
       invoiceKind: values.invoiceKind,
       supplierId: resolvedSupplierId,
-      invoiceNumber: values.invoiceNumber.trim(),
       invoiceDate: values.invoiceDate,
       documentDiscountAmount: canonicalMoney(values.documentDiscount),
       idempotencyKey: invoiceSaveIntentKeyRef.current,
@@ -2224,19 +2216,9 @@ export function SupplierInvoicesClient({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-sm font-semibold">{group.title}</p>
-            <p className="truncate text-sm text-muted-foreground">
-              {group.subtitle}
-            </p>
-            {viewMode !== "supplier" && group.invoices.length > 0 ? (
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {copy.invoiceCodesPreview(
-                  group.invoices.map((invoice) => invoice.code),
-                )}
-              </p>
-            ) : null}
-            {viewMode === "supplier" ? (
-              <p className="font-mono text-xs text-muted-foreground tabular-nums">
-                {copy.invoiceCountHeader}: {group.invoiceCount}
+            {viewMode === "po" ? (
+              <p className="truncate text-sm text-muted-foreground">
+                {group.subtitle}
               </p>
             ) : null}
           </div>
@@ -2329,11 +2311,11 @@ export function SupplierInvoicesClient({
       render: (group) => (
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-foreground">{group.title}</p>
-          <p className="text-xs text-muted-foreground">
-            {viewMode === "po"
-              ? `${copy.supplier}: ${group.supplierName}`
-              : group.subtitle}
-          </p>
+          {viewMode === "po" ? (
+            <p className="text-xs text-muted-foreground">
+              {copy.supplier}: {group.supplierName}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-1">
             {group.overdueCount > 0 ? (
               <Badge
@@ -2355,33 +2337,22 @@ export function SupplierInvoicesClient({
         </div>
       ),
     },
-    {
-      key: "invoiceCount",
-      header:
-        viewMode === "supplier"
-          ? copy.invoiceCountHeader
-          : copy.relatedInvoicesHeader,
-      className: viewMode === "supplier" ? "min-w-20 text-right" : "min-w-40",
-      render: (group) =>
-        viewMode === "supplier" ? (
-          <span className="font-mono text-sm tabular-nums">
-            {group.invoiceCount}
-          </span>
-        ) : (
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-sm text-muted-foreground">
-              {copy.invoiceGroupSummary(group.invoiceCount)}
-            </span>
-            {group.invoices.length > 0 ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">
-                {copy.invoiceCodesPreview(
-                  group.invoices.map((invoice) => invoice.code),
-                )}
-              </span>
-            ) : null}
-          </div>
-        ),
-    },
+    ...(viewMode === "po"
+      ? [
+          {
+            key: "invoiceCount",
+            header: copy.relatedInvoicesHeader,
+            className: "min-w-40",
+            render: (group: SupplierInvoiceGroup) => (
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm text-muted-foreground">
+                  {copy.invoiceGroupSummary(group.invoiceCount)}
+                </span>
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       key: "total",
       header: copy.totalInvoice,
@@ -2672,17 +2643,11 @@ export function SupplierInvoicesClient({
       : null;
 
   const detailTitle =
-    selectedInvoice != null ? selectedInvoice.code : copy.noInvoiceSelected;
+    selectedInvoice != null ? copy.invoiceDetailTitle : copy.noInvoiceSelected;
 
   const detailSubtitle =
     selectedInvoice != null
-      ? [
-          selectedInvoice.supplierName,
-          selectedAgingLabel,
-          selectedGroup != null && selectedGroup.invoiceCount > 1
-            ? copy.invoiceGroupSummary(selectedGroup.invoiceCount)
-            : null,
-        ]
+      ? [selectedInvoice.supplierName, selectedAgingLabel]
           .filter(Boolean)
           .join(" · ")
       : null;
@@ -2826,7 +2791,8 @@ export function SupplierInvoicesClient({
                           value={String(invoice.id)}
                           size={controlSize === "touch" ? "touch" : "default"}
                         >
-                          <span className="font-mono">{invoice.code}</span>
+                          {formatDate(invoice.invoiceDate)}
+                          {invoice.grnCode ? ` · ${invoice.grnCode}` : ""}
                           {" · "}
                           {messages.inventory.common.currencyCompact(
                             formatVND(

@@ -305,8 +305,8 @@ export function BranchStockIssuesListClient({
           size="sm"
           contentClassName="gap-3"
         >
-          <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_12rem]">
-            <InputGroup className="min-w-0">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+            <InputGroup className="min-h-12 min-w-0 flex-1">
               <InputGroupAddon>
                 <IconSearch />
               </InputGroupAddon>
@@ -329,7 +329,7 @@ export function BranchStockIssuesListClient({
               <SelectTrigger
                 aria-label={INVENTORY_VI.allStatusesOption}
                 size="touch"
-                className="w-full"
+                className="w-full sm:w-auto sm:min-w-48"
               >
                 <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
               </SelectTrigger>

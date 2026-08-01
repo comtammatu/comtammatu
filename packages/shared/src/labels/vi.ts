@@ -30,6 +30,7 @@ export type ModuleLabelKey =
   | "branch_feedback"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
+  | "branch_shift_roster"
   | "notifications";
 
 type SiteLike = {
@@ -62,6 +63,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_feedback: "Phản hồi chi nhánh",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
+  branch_shift_roster: "Phân ca",
   notifications: "Thông báo",
 };
 

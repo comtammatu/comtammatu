@@ -115,13 +115,13 @@ test("HR per-position editor exposes the consumption task kind", () => {
   );
   assert.match(
     positionTasksActionsSource,
-    /\.from\("profiles"\)[\s\S]*\.select\("position_id"\)/,
-    "HR position-task editor should keep the position list scoped to active staff positions",
+    /\.from\("positions"\)[\s\S]*\.eq\("is_active", true\)/,
+    "HR position-task editor should load active assignable positions",
   );
   assert.match(
     positionTasksActionsSource,
-    /activeProfilePositionIds\.has\(position\.id\)[\s\S]*taskPositionIds\.has\(position\.id\)/,
-    "HR position-task editor should keep positions that have staff or existing tasks",
+    /staffRoleFromPositionCode\(position\.code\)[\s\S]*bucket === "unassigned" \|\| bucket === "owner"/,
+    "HR position-task editor should exclude non-assignable and Owner positions",
   );
   assert.match(
     positionTasksActionsSource,

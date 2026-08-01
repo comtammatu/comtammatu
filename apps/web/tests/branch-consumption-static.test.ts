@@ -49,7 +49,7 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.match(listClient, /value="recorded"/);
   assert.match(listClient, /value="manual"/);
   assert.match(listClient, /<SheetContent[\s\S]*side="bottom"/);
-  assert.match(listClient, /md:grid-cols-2/);
+  assert.match(listClient, /lg:grid-cols-2/);
   assert.doesNotMatch(listClient, /DataTable|DocumentFormFrame|AppToolbar/);
   assert.match(detailClient, /listBasePath/);
   assert.match(detailClient, /size="icon-touch"/);

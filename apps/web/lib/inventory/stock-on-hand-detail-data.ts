@@ -166,6 +166,7 @@ export async function loadStockIngredientDetailData({
     ingredientResult,
     canCreateStockRequest,
     canReceiveGrn,
+    canManagePurchaseRequest,
     canCreateTransfer,
     canCreateStocktake,
     canCreateIssue,
@@ -184,6 +185,10 @@ export async function loadStockIngredientDetailData({
       .maybeSingle(),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
+    ),
     currentUserHasPermission(
       branchId,
       PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
@@ -347,6 +352,7 @@ export async function loadStockIngredientDetailData({
     permissions: {
       canCreateStockRequest,
       canReceiveGrn,
+      canManagePurchaseRequest,
       canCreateTransfer,
       canCreateStocktake,
       canCreateIssue,

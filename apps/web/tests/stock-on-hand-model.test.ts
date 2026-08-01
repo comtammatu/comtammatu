@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  STOCK_ALL_CATEGORY_VALUE,
   STOCK_NO_CATEGORY_VALUE,
   filterStockOnHandIngredients,
   hasStockOnHandFilters,
@@ -32,7 +31,7 @@ function makeIngredient(patch: Partial<StockIngredient> = {}): StockIngredient {
 }
 
 const defaultFilters: StockOnHandFilters = {
-  category: STOCK_ALL_CATEGORY_VALUE,
+  categories: [],
   query: "",
   status: "all",
 };
@@ -101,9 +100,16 @@ test("stock filters combine search, category, and exclusive status buckets", () 
   assert.deepEqual(
     filterStockOnHandIngredients(rows, {
       ...defaultFilters,
-      category: STOCK_NO_CATEGORY_VALUE,
+      categories: [STOCK_NO_CATEGORY_VALUE],
     }).map((row) => row.id),
     [3],
+  );
+  assert.deepEqual(
+    filterStockOnHandIngredients(rows, {
+      ...defaultFilters,
+      categories: ["Dry", "Sauce"],
+    }).map((row) => row.id),
+    [4, 2, 1],
   );
 });
 
@@ -116,4 +122,8 @@ test("pristine stock and active filter state remain distinct", () => {
   );
   assert.equal(hasStockOnHandFilters(defaultFilters), false);
   assert.equal(hasStockOnHandFilters({ ...defaultFilters, status: "low" }), true);
+  assert.equal(
+    hasStockOnHandFilters({ ...defaultFilters, categories: ["Dry"] }),
+    true,
+  );
 });

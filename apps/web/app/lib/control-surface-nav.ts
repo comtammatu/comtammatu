@@ -3,13 +3,11 @@ import {
   Briefcase as IconBriefcase,
   Building2 as IconBuilding2,
   ClipboardList as IconClipboardList,
-  Key as IconKey,
   LayoutDashboard as IconLayoutDashboard,
   MessageSquareHeart as IconMessageSquareHeart,
   Package as IconPackage,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
-  ScrollText as IconScrollText,
   Settings as IconSettings,
   Users as IconUsers,
   Utensils as IconUtensils,
@@ -121,13 +119,9 @@ function resolveControlSurfaceSettingsNav(role: StaffRole): ShellNavGroup[] {
   ];
 }
 
-// People deep nav for the HR module. The "Nhân sự" landing + payroll come
-// from MODULE_ACL; the account-administration group (roster + audit) is gated by
-// the distinct `staff` ACL key (owner-only) so the role/permission surface keeps
-// its own boundary even though it now lives under /hr.
+// People deep nav for the HR module. Account admin lives under `/hr?view=accounts`
+// (staff ACL), not as a second deep-nav group.
 function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
-  const groups: ShellNavGroup[] = [];
-
   const peopleItems: ShellNavItem[] = [
     {
       href: MODULE_ACL.hr.path,
@@ -152,27 +146,7 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
     label: messages.hr.client.tabs.setup,
     icon: IconSettings,
   });
-  groups.push({ title: APP_COPY_VI.hrWorkspace, items: peopleItems });
-
-  if (canAccess(role, "staff")) {
-    groups.push({
-      title: APP_COPY_VI.staffLabel,
-      items: [
-        {
-          href: MODULE_ACL.staff.path,
-          label: APP_COPY_VI.staffLabel,
-          icon: IconKey,
-        },
-        {
-          href: `${MODULE_ACL.staff.path}/audit`,
-          label: APP_COPY_VI.staffAuditLabel,
-          icon: IconScrollText,
-        },
-      ],
-    });
-  }
-
-  return groups;
+  return [{ title: APP_COPY_VI.hrWorkspace, items: peopleItems }];
 }
 
 // Core-module deep nav (settings/hr). Flat modules emit no sub-nav — the

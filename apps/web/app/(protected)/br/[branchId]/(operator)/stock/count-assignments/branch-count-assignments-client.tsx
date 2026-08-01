@@ -273,7 +273,7 @@ export function BranchCountAssignmentsClient({
           description={INVENTORY_VI.countAssignNoEmployeesDescription}
         />
       ) : (
-        <ItemGroup className="grid gap-2 md:grid-cols-2">
+        <ItemGroup className="grid gap-2 lg:grid-cols-2">
           {orderedEmployees.map((employee) => {
             const selectedIds = selectionByEmployee[String(employee.id)] ?? [];
             return (
@@ -392,7 +392,7 @@ export function BranchCountAssignmentsClient({
             </p>
           </SheetHeader>
           <div className="px-4 pb-3">
-            <InputGroup className="h-12">
+            <InputGroup className="min-h-12">
               <InputGroupAddon>
                 <IconSearch />
               </InputGroupAddon>

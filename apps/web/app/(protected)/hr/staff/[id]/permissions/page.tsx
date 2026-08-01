@@ -133,7 +133,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
             variant="ghost"
             size="sm"
             className="-ml-3"
-            render={<Link href="/hr/staff" />}
+            render={<Link href="/hr?view=accounts" />}
           >
             <IconArrowLeft className="mr-1 size-4" />
             {messages.owner.staffPermissions.backToList}

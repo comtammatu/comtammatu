@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import type { BranchKind } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-data";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import { BranchStockIngredientDetail } from "./branch-stock-ingredient-detail";
@@ -21,6 +24,10 @@ export default async function OperatorStockIngredientDetailPage({
     notFound();
   }
 
+  const { supabase, claims } = await loadAuthState();
+  const context = await resolveBranchContext(supabase, claims, branchId);
+  if (!context) notFound();
+
   const stockBasePath = `/br/${branchId}/stock`;
   const data = await loadStockIngredientDetailData({
     ingredientId,
@@ -30,6 +37,10 @@ export default async function OperatorStockIngredientDetailPage({
   });
 
   return (
-    <BranchStockIngredientDetail data={data} stockBasePath={stockBasePath} />
+    <BranchStockIngredientDetail
+      data={data}
+      stockBasePath={stockBasePath}
+      branchKind={context.branch.branch_kind as BranchKind}
+    />
   );
 }

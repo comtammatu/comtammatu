@@ -91,22 +91,37 @@ test("Finance landing shows recorded input and issued output VAT totals", () => 
 test("HR long screens preserve hierarchy and LIST viewport width", () => {
   const attendance = read("apps/web/app/(protected)/hr/attendance/page.tsx");
   const setup = read("apps/web/app/(protected)/hr/setup/setup-client.tsx");
+  const hrClient = read("apps/web/app/(protected)/hr/hr-client.tsx");
   const staff = read("apps/web/app/(protected)/hr/staff/page.tsx");
   const audit = read("apps/web/app/(protected)/hr/staff/audit/page.tsx");
   const permissions = read(
     "apps/web/app/(protected)/hr/staff/[id]/permissions/page.tsx",
   );
+  const nav = read("apps/web/app/lib/control-surface-nav.ts");
 
   assert.match(attendance, /<AppPageTabs/);
   assert.match(attendance, /<TabsContent value="today">/);
   assert.match(attendance, /<TabsContent value="approvals">/);
   assert.match(attendance, /<TabsContent value="timesheet">/);
-  assert.match(attendance, /<TabsContent value="schedule">/);
-  assert.doesNotMatch(setup, /<div className="flex flex-col gap-4">/);
-  assert.match(staff, /<AppPage width="xwide">/);
+  assert.doesNotMatch(attendance, /<TabsContent value="schedule">/);
+  assert.match(attendance, /embedded/);
+  assert.match(setup, /<AppPageTabs/);
+  assert.match(setup, /value: "leave"/);
+  assert.match(setup, /value: "shifts"/);
+  assert.match(setup, /value: "tasks"/);
+  assert.doesNotMatch(setup, /templatesPlaceholder/);
+  assert.doesNotMatch(setup, /rosterPlaceholder/);
+  assert.match(hrClient, /paramKey="view"/);
+  assert.match(hrClient, /value: "profile"/);
+  assert.match(hrClient, /value: "accounts"/);
+  assert.match(staff, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
+  assert.match(audit, /getStaffPermissionLabelVi/);
+  assert.match(audit, /\/hr\?view=accounts/);
   assert.match(audit, /<AppPage width="xwide">/);
   assert.doesNotMatch(permissions, /tabs=\{/);
   assert.ok(
     permissions.indexOf("<AppPageHeader") < permissions.indexOf("<AppPageTabs"),
   );
+  assert.doesNotMatch(nav, /staffAuditLabel/);
+  assert.doesNotMatch(nav, /MODULE_ACL\.staff\.path/);
 });

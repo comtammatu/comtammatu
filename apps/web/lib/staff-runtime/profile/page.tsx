@@ -130,29 +130,20 @@ export async function StaffProfilePageContent({
         hideHeaderOnMobile
       >
         <BranchOperatorPanel tone="info">
-          <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
-              <div className="grid justify-items-start gap-2">
-                <div className="relative size-24 shrink-0 overflow-hidden rounded-full sm:size-28">
-                  <Avatar className="size-full min-h-full min-w-full">
-                    {avatarUrl ? (
-                      <AvatarImage src={avatarUrl} alt={displayName} />
-                    ) : null}
-                    <AvatarFallback className="text-3xl font-semibold">
-                      {getInitials(displayName)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-
-                <ProfileAvatarAction
-                  branchId={effectiveBranchId}
-                  buttonSize="sm"
-                  buttonVariant="outline"
-                  className="w-full sm:w-28"
-                />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:gap-4 sm:text-left">
+              <div className="relative size-24 shrink-0 overflow-hidden rounded-full sm:size-28">
+                <Avatar className="size-full">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                  ) : null}
+                  <AvatarFallback className="text-3xl font-semibold">
+                    {getInitials(displayName)}
+                  </AvatarFallback>
+                </Avatar>
               </div>
 
-              <div className="grid min-w-0 gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <div className="min-w-0">
                   <p className="break-words text-lg font-semibold leading-6">
                     {displayName}
@@ -164,20 +155,28 @@ export async function StaffProfilePageContent({
                     {copy.employeeCode}: {employeeCode}
                   </p>
                 </div>
-
-                <ProfileEditAction
-                  branchId={effectiveBranchId}
-                  buttonSize="touch"
-                  buttonVariant="default"
-                  className="w-full sm:w-fit"
-                  triggerLabel={copy.editProfileShort}
-                  defaultValues={profileEditDefaults}
-                />
               </div>
             </div>
 
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <ProfileAvatarAction
+                branchId={effectiveBranchId}
+                buttonSize="touch"
+                buttonVariant="outline"
+                className="w-full sm:w-auto"
+              />
+              <ProfileEditAction
+                branchId={effectiveBranchId}
+                buttonSize="touch"
+                buttonVariant="default"
+                className="w-full sm:w-auto"
+                triggerLabel={copy.editProfileShort}
+                defaultValues={profileEditDefaults}
+              />
+            </div>
+
             <BranchOperatorDetailList
-              columns={3}
+              columns={2}
               rows={[
                 {
                   label: copy.phone,

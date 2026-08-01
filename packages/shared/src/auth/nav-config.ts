@@ -169,6 +169,14 @@ export const OPERATOR_TILE_ITEMS = [
     label: "Đội hôm nay",
   },
   {
+    moduleKey: "branch_shift_roster",
+    icon: "CalendarRange",
+    group: "my_shift",
+    hrefTemplate: "/br/{branchId}/shift/roster",
+    label: "Phân ca",
+    kinds: ["branch"],
+  },
+  {
     moduleKey: "employee_checkout_approvals",
     icon: "ClipboardCheck",
     group: "approvals",

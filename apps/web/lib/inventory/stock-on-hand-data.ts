@@ -142,6 +142,7 @@ export async function loadStockOnHandPageData({
     stockResult,
     canCreateStockRequest,
     canReceiveGrn,
+    canManagePurchaseRequest,
     canReceiveTransfer,
     canCreateTransfer,
     canCreateStocktake,
@@ -158,6 +159,10 @@ export async function loadStockOnHandPageData({
       : Promise.resolve({ data: [], error: null }),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_REQUEST_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
+    ),
     currentUserHasPermission(
       branchId,
       PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
@@ -359,6 +364,7 @@ export async function loadStockOnHandPageData({
   const permissions: StockActionPermissions = {
     canCreateStockRequest,
     canReceiveGrn,
+    canManagePurchaseRequest,
     canReceiveTransfer,
     canCreateIssue: canAdjustException,
     canCreateTransfer,

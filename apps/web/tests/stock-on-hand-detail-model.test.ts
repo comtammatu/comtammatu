@@ -52,7 +52,7 @@ test("ingredient detail movement links stay in the selected Branch stock plane",
       branchId: 3,
       branchStockBasePath: stockBasePath,
     }),
-    "/br/3/stock/transfer?transferId=12&mode=view",
+    "/br/3/stock/transfer/12",
   );
   assert.equal(
     stockMovementReferenceHref({

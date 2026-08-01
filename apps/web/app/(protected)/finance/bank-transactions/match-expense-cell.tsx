@@ -240,15 +240,13 @@ export function MatchExpenseCell({
             className="w-fit text-success font-normal"
             render={<Link href={supplierInvoiceHref(match.invoiceId)} />}
           >
-            {copy.openSupplierInvoice(
-              match.invoiceNumber ?? `#${match.invoiceId}`,
-            )}
+            {copy.openSupplierInvoice}
           </Button>
         ))}
         <span className="truncate text-xs text-muted-foreground">
           {copy.matchedSupplierPaymentDetail(
             supplierPaymentMatches[0]?.supplierName ?? "—",
-            supplierPaymentMatches[0]?.invoiceNumber ?? "—",
+            formatVND(supplierPaymentMatches[0]?.amount ?? 0),
           )}
         </span>
         <Button
@@ -512,7 +510,7 @@ export function MatchExpenseCell({
                 <span className="truncate text-xs text-muted-foreground">
                   {copy.matchedSupplierPaymentDetail(
                     supplierPaymentMatches[0]?.supplierName ?? "—",
-                    supplierPaymentMatches[0]?.invoiceNumber ?? "—",
+                    formatVND(supplierPaymentMatches[0]?.amount ?? 0),
                   )}
                 </span>
                 <Button

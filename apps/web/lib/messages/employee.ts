@@ -69,6 +69,8 @@ export const employee = {
     descriptionNotRequired: "Tài khoản này không có ca cần chấm công hôm nay.",
     descriptionDone: "Chấm công hôm nay đã đủ giờ vào và giờ ra.",
     descriptionNotStarted: "Chụp ảnh để chấm công vào ca.",
+    descriptionShiftUnassigned:
+      "Chưa được phân ca hôm nay. Liên hệ quản lý để được xếp ca.",
     descriptionNoProfile:
       "Tài khoản chưa được liên kết hồ sơ nhân viên hoặc chi nhánh.",
     descriptionNoBranch: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
@@ -98,7 +100,7 @@ export const employee = {
     today: "Nay",
     date: "Ngày",
     timeRange: "Khung giờ",
-    noTodayShift: "Ca gắn tự động khi chấm công.",
+    noTodayShift: "Chưa có phân ca cho hôm nay.",
     workProgress: "Tiến độ",
     notYet: "Chưa bắt đầu",
     nextActionTitle: "Bước tiếp theo",
@@ -245,7 +247,8 @@ export const employee = {
     calendarView: "Lịch",
     clockView: "Vào / ra",
     viewSwitcher: "Góc xem chấm công",
-    workdayRule: "Mỗi ca đã kết = 0,5 công",
+    workdayRule:
+      "Công = tỷ lệ giờ làm thực tế trong khung ca đã phân (tối đa 1,0 công/ca)",
     loadHint: "Chưa có dữ liệu chấm công cho chi nhánh và tháng đã chọn.",
     summaryEmptyTitle: "Chưa có ngày công",
     summaryEmptyDescription:

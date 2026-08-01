@@ -317,7 +317,6 @@ BEGIN
   INSERT INTO public.supplier_invoices (
     tenant_id,
     supplier_id,
-    invoice_number,
     invoice_date,
     subtotal,
     vat_rate,
@@ -331,7 +330,6 @@ BEGIN
   ) VALUES (
     v_tenant_id,
     v_supplier,
-    'FUND-' || gen_random_uuid()::text,
     v_before,
     129,
     0,
@@ -385,7 +383,6 @@ BEGIN
   INSERT INTO public.supplier_invoices (
     tenant_id,
     supplier_id,
-    invoice_number,
     invoice_date,
     subtotal,
     vat_rate,
@@ -399,7 +396,6 @@ BEGIN
   ) VALUES (
     v_tenant_id,
     v_supplier,
-    'FUND-BANK-' || gen_random_uuid()::text,
     v_after,
     25,
     0,

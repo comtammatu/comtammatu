@@ -190,9 +190,8 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
   });
 }
 
-test("resolveControlSurfaceCoreDeepNav surfaces People + account groups for Owner HR", () => {
-  // Owner sees both the People landing group and the owner-only account
-  // administration group (staff roster + audit) folded under /hr (D048).
+test("resolveControlSurfaceCoreDeepNav surfaces People hubs only for Owner HR", () => {
+  // Accounts live under `/hr?view=accounts` — not a second deep-nav group.
   const ownerGroups = resolveControlSurfaceCoreDeepNav("owner", "hr");
   const ownerHrefs = hrefList(flattenGroups(ownerGroups));
   assert.ok(
@@ -200,12 +199,22 @@ test("resolveControlSurfaceCoreDeepNav surfaces People + account groups for Owne
     "HR deep nav must include the People landing",
   );
   assert.ok(
-    ownerHrefs.includes(MODULE_ACL.staff.path),
-    "owner HR deep nav must include the staff roster",
+    ownerHrefs.includes("/hr/attendance"),
+    "HR deep nav must include attendance",
   );
   assert.ok(
+    ownerHrefs.includes("/hr/setup"),
+    "HR deep nav must include setup",
+  );
+  assert.equal(
+    ownerHrefs.includes(MODULE_ACL.staff.path),
+    false,
+    "staff list must not appear as a deep-nav item",
+  );
+  assert.equal(
     ownerHrefs.includes(`${MODULE_ACL.staff.path}/audit`),
-    "owner HR deep nav must include the permission audit",
+    false,
+    "permission audit must not appear as a deep-nav item",
   );
 
   assert.deepEqual(

@@ -6,6 +6,8 @@ import { AppDetailFooter } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
+import { loadStockRequestFulfillmentDetail } from "@lib/inventory/stock-request-fulfillment-detail-data";
+import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
@@ -16,10 +18,18 @@ const copy = messages.inventory.stockRequests.journey;
 
 export default async function OperatorStockTransferPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{
+    requestId?: string | string[];
+    transferId?: string | string[];
+  }>;
 }) {
-  const { branchId: rawBranchId } = await params;
+  const [{ branchId: rawBranchId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
@@ -41,15 +51,29 @@ export default async function OperatorStockTransferPage({
         ? "central_supply"
         : undefined;
 
-  const rows = await loadStockFulfillmentRows({
-    supabase,
-    tenantId: claims.tenant_id,
-    mode,
-    branchId,
-    fulfillSiteKind,
-    scopeSiteKind,
-    seeAllSources: claims.user_role === "owner",
-  });
+  const requestId = Number(
+    Array.isArray(query.requestId) ? query.requestId[0] : query.requestId,
+  );
+  const transferId = Number(
+    Array.isArray(query.transferId) ? query.transferId[0] : query.transferId,
+  );
+  const [rows, selectedRequest, selectedTransfer] = await Promise.all([
+    loadStockFulfillmentRows({
+      supabase,
+      tenantId: claims.tenant_id,
+      mode,
+      branchId,
+      fulfillSiteKind,
+      scopeSiteKind,
+      seeAllSources: claims.user_role === "owner",
+    }),
+    mode === "central" && Number.isInteger(requestId) && requestId > 0
+      ? loadStockRequestFulfillmentDetail({ supabase, claims, requestId })
+      : Promise.resolve(null),
+    mode === "central" && Number.isInteger(transferId) && transferId > 0
+      ? loadTransferDetailPageData({ transferId, routeBranchId: branchId })
+      : Promise.resolve(null),
+  ]);
 
   const canRequestCentralSupply =
     kind === "central_kitchen" &&
@@ -102,6 +126,8 @@ export default async function OperatorStockTransferPage({
         rows={rows}
         mode={mode}
         branchId={branchId}
+        selectedRequest={selectedRequest}
+        selectedTransfer={selectedTransfer}
       />
       {createAction ? (
         <AppDetailFooter sticky className="sm:hidden" trailing={createAction} />

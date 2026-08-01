@@ -50,6 +50,7 @@ import {
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
+import { matchesSearch } from "@lib/search";
 import { discardGrnDraft } from "../grn-actions";
 import {
   hasGrnListFilters,
@@ -69,10 +70,7 @@ const grnCopy = messages.inventory.grn;
 const comboFilter = (
   option: { label: string; keywords?: string[] },
   query: string,
-) =>
-  [option.label, ...(option.keywords ?? [])].some((value) =>
-    value.toLocaleLowerCase("vi").includes(query.toLocaleLowerCase("vi")),
-  );
+) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
 
 export type { GrnListRow } from "@lib/inventory/grn-list-model";
 

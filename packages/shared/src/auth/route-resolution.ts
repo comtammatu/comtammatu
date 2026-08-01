@@ -123,6 +123,9 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/shift\/leave-approvals(?:\/|$)/.test(pathname)) {
     return "employee_leave_approvals";
   }
+  if (/^\/br\/\d+\/shift\/roster(?:\/|$)/.test(pathname)) {
+    return "branch_shift_roster";
+  }
   if (/^\/br\/\d+\/shift(?:\/|$)/.test(pathname)) return "branch_home";
   if (/^\/br\/\d+\/profile(?:\/|$)/.test(pathname)) return "branch_home";
   if (/^\/br\/\d+\/stock\/count(?:\/|$)/.test(pathname)) return "branch_home";

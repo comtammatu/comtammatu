@@ -6,7 +6,11 @@ import {
   Plus as IconPlus,
   Trash as IconTrash,
 } from "lucide-react";
-import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  INVENTORY_VI,
+} from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import {
@@ -24,6 +28,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { Combobox } from "@/components/form/combobox";
 import { FormField } from "@/components/form/form-field";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import {
@@ -176,36 +181,22 @@ export function CreateTransferForm({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="flex min-w-0 flex-1 items-end gap-2">
             <div className="min-w-0 flex-1">
-              <Select
+              <Combobox
                 value={controller.pickerIngredientId}
                 onValueChange={controller.setPickerIngredientId}
-              >
-                <SelectTrigger
-                  id="owner-transfer-ingredient"
-                  size={controlSize}
-                  className="w-full"
-                  aria-label={copy.createNative.ingredientLabel}
-                >
-                  <SelectValue placeholder={copy.chooseIngredient} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {controller.activeIngredients.map((ingredient) => (
-                      <SelectItem
-                        key={ingredient.id}
-                        value={String(ingredient.id)}
-                        size={optionSize}
-                        label={`${ingredient.name} ${getTransferWarehouseUnit(
-                          ingredient,
-                        )} ${ingredient.id}`}
-                      >
-                        {ingredient.name} (
-                        {getTransferWarehouseUnit(ingredient)})
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                options={controller.activeIngredients.map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: `${ingredient.name} (${getTransferWarehouseUnit(
+                    ingredient,
+                  )})`,
+                }))}
+                id="owner-transfer-ingredient"
+                size={controlSize}
+                className="w-full"
+                placeholder={copy.chooseIngredient}
+                searchPlaceholder={INVENTORY_VI.searchByName}
+                aria-label={copy.createNative.ingredientLabel}
+              />
             </div>
             <Button
               type="button"

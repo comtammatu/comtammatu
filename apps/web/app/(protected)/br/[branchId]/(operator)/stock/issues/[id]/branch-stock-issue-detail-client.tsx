@@ -54,6 +54,7 @@ import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import {
+  BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME,
   BranchOperatorControlBar,
   BranchOperatorDetailList,
   BranchOperatorInlineState,
@@ -262,7 +263,7 @@ function BranchStockIssueLineSheet({
                 <FieldLabel htmlFor="branch-stock-issue-quantity">
                   {issuesCopy.quantityLabel}
                 </FieldLabel>
-                <InputGroup className="h-12">
+                <InputGroup className="min-h-12">
                   <FormattedNumberInput
                     id="branch-stock-issue-quantity"
                     maxFractionDigits={3}
@@ -522,7 +523,7 @@ export function BranchStockIssueDetailClient({
           <StatusBadge domain="inventory" value={issue.status} size="sm" />
         </BranchOperatorControlBar>
 
-        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] md:items-start">
+        <div className={BRANCH_OPERATOR_DETAIL_GRID_CLASSNAME}>
           <BranchOperatorPanel
             title={issuesCopy.linesTab}
             description={

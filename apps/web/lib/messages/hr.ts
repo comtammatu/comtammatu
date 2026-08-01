@@ -58,64 +58,52 @@ export const hr = {
       payroll: "Lương",
       setup: "Quy tắc",
     },
+    peopleTabs: {
+      profile: "Hồ sơ",
+      accounts: "Tài khoản",
+      ariaLabel: "Tab hồ sơ và tài khoản nhân sự",
+    },
     attendanceTabs: {
       today: "Hôm nay",
       approvals: "Duyệt",
       timesheet: "Bảng công",
-      schedule: "Lịch ca",
+      roster: "Phân ca",
       ariaLabel: "Tab thời gian nhân sự",
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
     attendanceDescription:
-      "Theo dõi vào/ra ca, hàng đợi duyệt, bảng công và lịch ca.",
-    schedulePlaceholderTitle: "Chưa mở phân ca tuần",
-    schedulePlaceholderDescription:
-      "Khi phân ca sẵn sàng, Chủ sở hữu gán ca theo tuần tại đây hoặc trong Quy tắc.",
-    schedulePlaceholderAction: "Mở Quy tắc",
+      "Theo dõi vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
     checkoutApprovalsAction: "Duyệt kết ca",
     checkoutApprovalsHint:
       "Kết ca của Kế toán và địa điểm trung tâm chờ Chủ sở hữu duyệt.",
-    setupTitle: "Thiết lập ca làm và việc trong ca",
-    setupDescription:
-      "Chính sách phép, khung ca, mẫu việc, việc theo vị trí và phân ca tuần.",
+    setupTitle: "Quy tắc nhân sự",
+    setupDescription: "Chọn mục cần chỉnh.",
+    setupTabs: {
+      leave: "Phép",
+      shifts: "Ca",
+      tasks: "Việc trong ca",
+      ariaLabel: "Tab quy tắc nhân sự",
+    },
     setupSteps: {
       leavePolicy: {
-        title: "1. Ngày công & phép",
+        title: "Ngày công & phép",
         description:
           "Thiết lập ngày công chuẩn và phép tháng dùng chung cho toàn bộ nhân viên.",
         hint: "Chính sách",
       },
       shifts: {
-        title: "2. Ca làm",
+        title: "Ca làm",
         description:
           "Tạo khung ca để việc trong ca và bảng công bám đúng thời điểm.",
         hint: "Khung ca",
       },
-      templates: {
-        title: "3. Mẫu việc",
-        description:
-          "Thư viện mẫu việc; áp dụng sẽ sao chép sang việc theo vị trí để tuỳ chỉnh.",
-        hint: "Mẫu",
-      },
       positionTasks: {
-        title: "4. Việc theo vị trí",
+        title: "Việc theo vị trí",
         description:
-          "Chỉnh danh sách việc nhân viên nhận khi chấm công vào (sau khi áp mẫu).",
+          "Chỉnh danh sách việc nhân viên nhận khi chấm công vào.",
         hint: "Theo vị trí",
       },
-      roster: {
-        title: "5. Phân ca tuần",
-        description:
-          "Gán nhân viên vào ca theo tuần tại từng địa điểm. Không gán thì vẫn chấm theo khung giờ ca.",
-        hint: "Phân ca",
-      },
     },
-    templatesPlaceholderTitle: "Chưa có thư viện mẫu việc",
-    templatesPlaceholderDescription:
-      "Sắp có: tạo mẫu tên, rồi áp dụng để sao chép việc vào từng vị trí.",
-    rosterPlaceholderTitle: "Chưa mở phân ca tuần",
-    rosterPlaceholderDescription:
-      "Sắp có: lưới tuần theo địa điểm để gán hoặc hủy ca đã gán.",
     onboardSteps: {
       profile: {
         title: "Bước 1 · Hồ sơ",
@@ -461,5 +449,30 @@ export const hr = {
           `Công ${formatDecimal(working, 1)} · ${formatDecimal(workHours, 1)} giờ · nghỉ phép ${formatDecimal(leaveDays, 1)}`,
       },
     },
+  },
+  roster: {
+    title: "Phân ca theo tuần",
+    description:
+      "Gán ca làm cho từng nhân viên theo ngày. Nhân viên chỉ chấm công khi đã được phân ca.",
+    officeSiteLabel: "Văn phòng",
+    siteFilterLabel: "Địa điểm",
+    weekLabel: "Tuần",
+    previousWeek: "Tuần trước",
+    nextWeek: "Tuần sau",
+    copyPreviousWeek: "Sao chép tuần trước",
+    save: "Lưu phân ca",
+    saveSuccess: "Đã lưu phân ca tuần này.",
+    copySuccess: "Đã sao chép phân ca từ tuần trước.",
+    loadEmployeesFailed: "Không thể tải danh sách nhân viên.",
+    loadShiftsFailed: "Không thể tải danh sách ca.",
+    loadAssignmentsFailed: "Không thể tải phân ca tuần này.",
+    saveFailed: "Không thể lưu phân ca.",
+    copyFailed: "Không thể sao chép phân ca.",
+    unnamedEmployee: "Nhân viên",
+    emptyShift: "—",
+    emptyEmployeesTitle: "Chưa có nhân viên",
+    emptyEmployeesDescription:
+      "Không có nhân viên đang hoạt động tại địa điểm này.",
+    columnEmployee: "Nhân viên",
   },
 } as const;

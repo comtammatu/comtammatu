@@ -48,7 +48,6 @@ function supplierPayment(): SepaySupplierPaymentMatch {
     paymentDate: "2026-07-01T02:05:00.000Z",
     referenceNote: "FT-SUP-101",
     webhookEventId: null,
-    invoiceNumber: "INV-301",
     supplierName: "NCC Rau",
   };
 }

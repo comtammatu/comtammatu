@@ -19,6 +19,7 @@ import {
   type SheetDef,
 } from "@/_lib/spreadsheet";
 import { messages } from "@lib/messages";
+import { normalizeSearch } from "@lib/search";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import {
   idSchema,
@@ -231,7 +232,7 @@ type IngredientLookupQueryRow = Omit<IngredientLookupRow, "units"> & {
 };
 
 function normalizeUnitKey(value: string): string {
-  return value.trim().toLocaleLowerCase("vi-VN");
+  return normalizeSearch(value).trim();
 }
 
 function getDefaultImportEntryUnit(

@@ -339,19 +339,19 @@ trực tiếp vocabulary Employee ở các route Branch:
 
 Branch stock workflow áp dụng cùng ranh giới này:
 
-- `/br/[branchId]/stock` là landing việc kho trong ca, không wrapper control_surface
-  `StockPageContent`.
+- `/br/[branchId]/stock/on-hand` là **stock home** (tab Kho/Tồn land đây):
+  Branch-native touch `LIST` dùng shared `loadStockOnHandPageData` + filter
+  model (`categories[]`, status). Presentation: `Item` separator rows, `ToggleGroup`
+  trạng thái, bottom `Sheet` lọc (`MultiSelectCombobox`), Sheet “Thêm chức năng
+  kho” grid 2 cột. Không `DataTable`/WAC/KPI ở mọi viewport; mở detail qua
+  `/on-hand/[ingredientId]`.
+- `/br/[branchId]/stock` là hub **Thêm** (secondary tabs), không còn land mặc
+  định của tab Kho. Central hub loại job đã có trên Bottom-Nav.
 - list workflow native như `/br/[branchId]/stock/transfer` dùng archetype `LIST`
   với `BranchOperatorPage`/`BranchOperatorPanel`, action rows full-width trên
   mobile, và route-scoped href `/br/[branchId]/stock/*`.
-- `/br/[branchId]/stock/on-hand` là Branch-native touch `LIST`: dùng shared
-  `loadStockOnHandPageData` + pure filter model nhưng giữ `ItemGroup`/full-row
-  touch presentation ở phone, tablet portrait và tablet landscape. Route này
-  không đổi sang `DataTable` tại `1024px`, không hiển thị WAC/giá trị tồn/KPI,
-  và mở thẻ kho qua `/br/[branchId]/stock/on-hand/[ingredientId]`.
-- On-hand Branch là lookup surface, không lặp cụm mutation của Landing trên đầu
-  danh sách. Nhận/điều chuyển/kiểm kê/hủy hỏng vẫn mở từ stock Landing; action theo
-  nguyên liệu nằm trong thẻ kho chi tiết theo permission hiện có.
+- Attention/CTA on-hand theo `branch_kind` (CN/CK yêu cầu hàng; CS nhập/YCM).
+  Job phụ mở từ Sheet trên list hoặc detail `DropdownMenu`, không bắt qua hub.
 - `/br/[branchId]/stock/on-hand/[ingredientId]` là Branch-native touch `DETAIL`:
   dùng shared `loadStockIngredientDetailData` và pure movement/status model,
   nhưng tải `includeValuation: false` cho Branch. Thứ tự là tồn hiện tại/trạng
@@ -449,10 +449,12 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome control_surface.
 - `/inventory/purchase-orders` là workspace **Mua hàng** duy nhất, gồm tab
-  `Nhu cầu mua` và `Đơn mua`. Kho tạo nhu cầu không NCC/giá; Kế toán phân bổ
-  đủ số lượng cho các NCC rồi duyệt một lần để tạo PO và GRN nháp. Nhu cầu,
-  PO và GRN mở bằng URL-addressable `AppDialog variant="document"`; route
-  `/inventory/purchase-requests` chỉ redirect tương thích.
+  `Nhu cầu mua` và `Đơn mua`. Kho tạo nhu cầu không NCC/giá. Khi mỗi nguyên liệu
+  còn thiếu chỉ có một NCC active, action `Duyệt & tạo đơn mua` tự lấy toàn bộ
+  số lượng còn lại; dialog phân bổ chỉ mở cho ca nhiều NCC hoặc thiếu mapping.
+  Một lần duyệt tạo PO và GRN nháp. Nhu cầu, PO và GRN mở bằng URL-addressable
+  `AppDialog variant="document"`; route `/inventory/purchase-requests` chỉ
+  redirect tương thích.
 - `/inventory/transfers` là workspace **Giao nhận hàng** duy nhất. Một YCH là
   một dòng; DC có `stock_request_id` nằm trong lane nguồn của YCH và không tạo
   dòng riêng, còn DC thủ công vẫn là một dòng. Không dùng tabs hàng đợi; dùng

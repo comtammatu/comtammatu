@@ -109,8 +109,8 @@ test("Staff checkout request stays single tap while manager direct checkout conf
 test("checkout request and reject stay on the current branch shift contract", () => {
   assert.match(
     employeeClockActionSource,
-    /async function resolveCurrentShiftForEmployee[\s\S]*resolveCurrentShiftContext/,
-    "Checkout should reuse the same current-shift resolver as clock-in",
+    /async function resolveAssignedShiftForEmployee[\s\S]*\.from\("shift_assignments" as never\)/,
+    "Checkout should reuse the assigned-shift resolver used by clock-in",
   );
   assert.match(
     employeeClockActionSource,

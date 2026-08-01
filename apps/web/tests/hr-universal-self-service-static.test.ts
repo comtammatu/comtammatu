@@ -29,15 +29,15 @@ test("universal self-service keeps Owner denied and uses guarded HR RPCs", () =>
   );
 });
 
-test("fixed-monthly payroll is contract-based and deducts unpaid leave explicitly", () => {
+test("payroll is contract-based without double unpaid deduction", () => {
   const payroll = read("apps/web/app/(protected)/hr/payroll-actions.ts");
   const migration = read(
     "supabase/migrations/20260801030457_hr_universal_self_service.sql",
   );
 
   assert.ok(payroll.includes('contract?.pay_basis ?? "attendance_prorated"'));
-  assert.ok(payroll.includes('payBasis === "fixed_monthly"'));
-  assert.ok(payroll.includes("fixedMonthlyUnpaidLeaveDeduction"));
+  assert.ok(payroll.includes("calculatePayableDays"));
+  assert.doesNotMatch(payroll, /fixedMonthlyUnpaidLeaveDeduction/);
   assert.match(
     migration,
     /employment_contracts[\s\S]*pay_basis[\s\S]*fixed_monthly/,

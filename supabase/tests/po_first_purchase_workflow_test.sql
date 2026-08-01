@@ -458,7 +458,6 @@ BEGIN
         WHERE po.id = v_po_id
       ),
       'invoice_kind', 'goods',
-      'invoice_number', '__POF-INV-' || pg_catalog.gen_random_uuid()::text,
       'invoice_date', CURRENT_DATE,
       'due_date', CURRENT_DATE + 7,
       'document_discount_amount', 0,

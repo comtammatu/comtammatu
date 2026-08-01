@@ -321,8 +321,11 @@ test("expense edit keeps payment evidence immutable and audits the locked RPC wr
   );
   assert.match(client, /key: "edit"/);
   assert.match(client, /canCorrectExpensePaymentMethod\(editingExpense\)/);
-  assert.match(client, /paymentMethodReadOnly=\{!canEditPaymentMethod\}/);
+  assert.match(client, /paymentMethodReadOnly=\{/);
   assert.match(client, /transitionExpensePayment\(\{/);
+  assert.match(client, /label=\{copy\.form\.paymentSection\}/);
+  assert.doesNotMatch(client, /methodCorrectHint/);
+  assert.doesNotMatch(client, /methodEditHint/);
   assert.match(migration, /CREATE FUNCTION public\.update_operating_expense/);
   assert.match(migration, /FOR UPDATE/);
   assert.match(migration, /app\.expense_update_id/);
@@ -353,10 +356,9 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
     categories,
     /classifyExpensePaymentState\(expense\) !== "transfer_needs_match"/,
   );
-  assert.match(
-    messages,
-    /methodCorrectHint:[\s\S]*Chủ sở hữu\/Kế toán được sửa phương thức/,
-  );
+  assert.match(messages, /paymentSection: "Ghi nhận thanh toán"/);
+  assert.doesNotMatch(messages, /methodCorrectHint/);
+  assert.doesNotMatch(messages, /methodEditHint/);
   assert.match(migration, /v_is_paid_correction/);
   assert.match(
     migration,
@@ -368,15 +370,25 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
   );
 });
 
-test("expense list opens read-only detail from row click", () => {
+test("expense list opens form-shaped document from row click", () => {
   const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
   const messages = readWeb("lib/messages/finance.ts");
 
-  assert.match(client, /onRowClick=\{openDetail\}/);
-  assert.match(client, /copy\.detail\.viewAria/);
-  assert.match(client, /copy\.detail\.vatBreakdown/);
-  assert.match(client, /selectedExpense\.vat_breakdown\.map/);
-  assert.match(messages, /detail:\s*\{[\s\S]*title:\s*"Chi tiết khoản chi"/);
+  assert.match(client, /onRowClick=\{openExpenseDocument\}/);
+  assert.match(client, /copy\.form\.openAria/);
+  assert.match(client, /function ExpenseViewDialog/);
+  assert.match(client, /expenseToFormValues/);
+  assert.match(client, /editingPaymentState === "unpaid"/);
+  assert.match(client, /onPayCash\(editingExpense\)/);
+  assert.match(client, /onPayTransfer\(editingExpense\)/);
+  assert.doesNotMatch(client, /selectedExpenseId/);
+  assert.doesNotMatch(
+    messages,
+    /detail:\s*\{[\s\S]*title:\s*"Chi tiết khoản chi"/,
+  );
+  assert.match(messages, /viewTitle:\s*"Khoản chi"/);
+  assert.match(messages, /openAria:/);
+  assert.match(messages, /transferContent:\s*"Nội dung chuyển khoản"/);
 });
 
 test("expense mutate gates Owner/Accountant on finance:expense_create", () => {

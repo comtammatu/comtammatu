@@ -12,7 +12,7 @@ import {
   getVNMinutesOfDay,
 } from "@comtammatu/shared/time";
 import { getAuthContext } from "@/_lib/auth";
-import { resolveCurrentShiftContext } from "../_lib/default-shift";
+import { pickAssignedShiftInWindow } from "../_lib/default-shift";
 import { getEmployeeContext } from "../_lib/staff-runtime-context";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
@@ -60,41 +60,72 @@ type StaffRuntimeContext = NonNullable<
 >;
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
-async function resolveCurrentShiftForEmployee(
+type ShiftAssignmentQueryRow = {
+  work_date: string;
+  shift_id: number;
+  shifts: {
+    name: string | null;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+  };
+};
+
+async function resolveAssignedShiftForEmployee(
   service: ServiceClient,
   ctx: StaffRuntimeContext,
   calendarDate: string,
   nowMinutes: number,
 ): Promise<{ shiftId: number; businessDate: string } | null> {
   const previousDate = addVNDateDays(calendarDate, -1);
-  let shiftsQuery = service
-    .from("shifts")
-    .select("id, start_time, end_time")
+  let assignmentsQuery = service
+    .from("shift_assignments" as never)
+    .select(
+      `
+        work_date,
+        shift_id,
+        shifts!inner (
+          name,
+          start_time,
+          end_time,
+          is_active
+        )
+      `,
+    )
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("is_active", true);
-  shiftsQuery =
+    .eq("employee_id", ctx.employeeId)
+    .in("work_date", [calendarDate, previousDate]);
+
+  assignmentsQuery =
     ctx.branchId == null
-      ? shiftsQuery.is("branch_id", null)
-      : shiftsQuery.or(`branch_id.is.null,branch_id.eq.${ctx.branchId}`);
+      ? assignmentsQuery.is("branch_id", null)
+      : assignmentsQuery.eq("branch_id", ctx.branchId);
 
-  const [{ data: branchShifts }, { data: attendanceRecords }] =
-    await Promise.all([
-      shiftsQuery,
-      service
-        .from("attendance_records")
-        .select("date, shift_id, check_out")
-        .eq("employee_id", ctx.employeeId)
-        .eq("tenant_id", ctx.claims.tenant_id)
-        .gte("date", previousDate)
-        .lte("date", calendarDate),
-    ]);
+  const { data: assignmentRows } = (await assignmentsQuery) as {
+    data: ShiftAssignmentQueryRow[] | null;
+  };
+  const assignments = (assignmentRows ?? [])
+    .map((row) => {
+      const shift = row.shifts;
+      if (!shift.is_active || !shift.start_time || !shift.end_time) return null;
+      return {
+        workDate: row.work_date,
+        shiftId: row.shift_id,
+        shiftName: shift.name ?? null,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  return resolveCurrentShiftContext(
-    branchShifts ?? [],
-    attendanceRecords ?? [],
-    nowMinutes,
+  const picked = pickAssignedShiftInWindow(
+    assignments,
     calendarDate,
+    nowMinutes,
   );
+  return picked
+    ? { shiftId: picked.shiftId, businessDate: picked.businessDate }
+    : null;
 }
 
 function revalidateEmployeeWorkPaths(branchId?: number | null) {
@@ -154,6 +185,12 @@ function reuseExistingClockIn(
 }
 
 function mapClockInError(message: string | undefined): string {
+  if (message?.includes("shift_assignment_required")) {
+    return "Chưa được phân ca. Liên hệ quản lý.";
+  }
+  if (message?.includes("shift_assignment_mismatch")) {
+    return "Ca làm không khớp phân ca. Liên hệ quản lý.";
+  }
   if (message?.includes("duplicate_clock_in")) {
     return "Bạn đã chấm công vào ca này rồi.";
   }
@@ -233,7 +270,7 @@ export async function clockInWithPhoto(
 
   // Attendance is keyed per shift; completed shifts today should not block the
   // next shift's clock-in.
-  const shiftContext = await resolveCurrentShiftForEmployee(
+  const shiftContext = await resolveAssignedShiftForEmployee(
     service,
     ctx,
     calendarDate,
@@ -243,7 +280,7 @@ export async function clockInWithPhoto(
   if (!shiftContext) {
     return {
       success: false,
-      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
+      error: "Chưa được phân ca. Liên hệ quản lý.",
     };
   }
   const { shiftId, businessDate } = shiftContext;
@@ -371,20 +408,6 @@ export async function requestCheckoutApproval(
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
   const service = createServiceClient();
-  const now = new Date();
-  const calendarDate = getTodayVN(now);
-  const currentShift = await resolveCurrentShiftForEmployee(
-    service,
-    ctx,
-    calendarDate,
-    getVNMinutesOfDay(now),
-  );
-  if (!currentShift) {
-    return {
-      success: false,
-      error: "Chi nhánh chưa khai ca làm. Liên hệ quản lý.",
-    };
-  }
 
   const { data: record } = await service
     .from("attendance_records")
@@ -392,8 +415,6 @@ export async function requestCheckoutApproval(
     .eq("id", parsed.data.attendanceId)
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("date", currentShift.businessDate)
-    .eq("shift_id", currentShift.shiftId)
     .is("check_out", null)
     .maybeSingle();
 
@@ -484,7 +505,7 @@ export async function clockOutManagerShift(
 
   const now = new Date();
   const service = createServiceClient();
-  const currentShift = await resolveCurrentShiftForEmployee(
+  const currentShift = await resolveAssignedShiftForEmployee(
     service,
     ctx,
     getTodayVN(now),

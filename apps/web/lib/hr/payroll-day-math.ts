@@ -1,4 +1,7 @@
-import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import {
+  countCompletedShiftWorkdays,
+  countShiftWorkdaysFromOverlap,
+} from "@lib/staff-runtime/_lib/workday-math";
 
 export interface LeaveRange {
   employeeId: number;
@@ -10,7 +13,10 @@ export interface LeaveRange {
 export interface AttendanceShift {
   employeeId: number;
   date: string;
+  checkIn?: string | null;
   checkOut: string | null;
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
 }
 
 function clampThroughMonth(month: number): number {
@@ -66,25 +72,25 @@ export function countOverlapDays(
 export function buildCompletedWorkdays(
   attendance: readonly AttendanceShift[],
 ): Map<number, number> {
-  const shiftsByEmpDay = new Map<number, Map<string, number>>();
+  const workdays = new Map<number, number>();
 
   for (const rec of attendance) {
     if (!rec.checkOut) continue;
 
-    let days = shiftsByEmpDay.get(rec.employeeId);
-    if (!days) {
-      days = new Map();
-      shiftsByEmpDay.set(rec.employeeId, days);
-    }
-    days.set(rec.date, (days.get(rec.date) ?? 0) + 1);
-  }
+    const shiftWorkdays =
+      rec.checkIn && rec.scheduledStart && rec.scheduledEnd
+        ? countShiftWorkdaysFromOverlap({
+            checkIn: rec.checkIn,
+            checkOut: rec.checkOut,
+            scheduledStart: rec.scheduledStart,
+            scheduledEnd: rec.scheduledEnd,
+          })
+        : countCompletedShiftWorkdays(1);
 
-  const workdays = new Map<number, number>();
-  for (const [employeeId, days] of shiftsByEmpDay) {
-    let total = 0;
-    for (const count of days.values())
-      total += countCompletedShiftWorkdays(count);
-    workdays.set(employeeId, total);
+    workdays.set(
+      rec.employeeId,
+      (workdays.get(rec.employeeId) ?? 0) + shiftWorkdays,
+    );
   }
 
   return workdays;

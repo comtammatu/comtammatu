@@ -304,88 +304,60 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
     );
   }
 
-  const pendingColumns: DataTableColumn<LeaveRequestRow>[] = [
-    {
-      key: "dateRange",
-      header: copy.table.dateRange,
-      render: renderDateRange,
-    },
-    {
-      key: "employee",
-      header: copy.table.employee,
-      render: getEmployeeName,
-    },
-    {
-      key: "type",
-      header: copy.table.type,
-      render: (request) => copy.types[request.leave_type],
-    },
-    {
-      key: "monthlyQuota",
-      header: copy.table.monthlyQuota,
-      className: "text-sm text-muted-foreground",
-      render: renderMonthlyBalance,
-    },
-    {
-      key: "annualQuota",
-      header: copy.table.annualQuota,
-      className: "text-sm text-muted-foreground",
-      render: renderAnnualBalance,
-    },
-    {
-      key: "reason",
-      header: copy.table.reason,
-      className: "max-w-xs truncate text-sm text-muted-foreground",
-      render: (request) => request.reason ?? "—",
-    },
-    {
-      key: "actions",
-      header: copy.table.actions,
-      className: "w-32 text-right",
-      render: (request) => renderPendingActions(request),
-    },
-  ];
+  function leaveColumns(
+    mode: "pending" | "history",
+  ): DataTableColumn<LeaveRequestRow>[] {
+    return [
+      {
+        key: "dateRange",
+        header: copy.table.dateRange,
+        render: renderDateRange,
+      },
+      {
+        key: "employee",
+        header: copy.table.employee,
+        render: getEmployeeName,
+      },
+      {
+        key: "type",
+        header: copy.table.type,
+        render: (request) => copy.types[request.leave_type],
+      },
+      {
+        key: "monthlyQuota",
+        header: copy.table.monthlyQuota,
+        className: "text-sm text-muted-foreground",
+        render: renderMonthlyBalance,
+      },
+      {
+        key: "annualQuota",
+        header: copy.table.annualQuota,
+        className: "text-sm text-muted-foreground",
+        render: renderAnnualBalance,
+      },
+      {
+        key: "reason",
+        header: copy.table.reason,
+        className: "max-w-xs truncate text-sm text-muted-foreground",
+        render: (request) => request.reason ?? "—",
+      },
+      mode === "pending"
+        ? {
+            key: "actions",
+            header: copy.table.actions,
+            className: "w-32 text-right",
+            render: (request) => renderPendingActions(request),
+          }
+        : {
+            key: "status",
+            header: copy.table.status,
+            render: renderHistoryStatus,
+          },
+    ];
+  }
 
-  const historyColumns: DataTableColumn<LeaveRequestRow>[] = [
-    {
-      key: "dateRange",
-      header: copy.table.dateRange,
-      render: renderDateRange,
-    },
-    {
-      key: "employee",
-      header: copy.table.employee,
-      render: getEmployeeName,
-    },
-    {
-      key: "type",
-      header: copy.table.type,
-      render: (request) => copy.types[request.leave_type],
-    },
-    {
-      key: "monthlyQuota",
-      header: copy.table.monthlyQuota,
-      className: "text-sm text-muted-foreground",
-      render: renderMonthlyBalance,
-    },
-    {
-      key: "annualQuota",
-      header: copy.table.annualQuota,
-      className: "text-sm text-muted-foreground",
-      render: renderAnnualBalance,
-    },
-    {
-      key: "reason",
-      header: copy.table.reason,
-      className: "max-w-xs truncate text-sm text-muted-foreground",
-      render: (request) => request.reason ?? "—",
-    },
-    {
-      key: "status",
-      header: copy.table.status,
-      render: renderHistoryStatus,
-    },
-  ];
+  const pendingColumns = leaveColumns("pending");
+  const historyColumns = leaveColumns("history");
 
   if (branches.length === 0) {
     return (
