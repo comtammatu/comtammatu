@@ -69,7 +69,9 @@ commits the terminal request state and reserves the invoice as `signing` before
 the external Viettel HTTP call. No database lock is held across that call.
 
 The buyer table and its RPCs are service-role only. The public route receives a
-192-bit token; only its SHA-256 digest is stored.
+192-bit token; only its SHA-256 digest is stored. The open-page header displays
+the immutable order total returned by that token-scoped RPC; it never derives
+or recomputes invoice money in the browser.
 
 ## Delivery sequence
 
@@ -90,11 +92,11 @@ The buyer table and its RPCs are service-role only. The public route receives a
 - Context: `docs/ref/screen-context-map.md` § 2.10; actor: paid customer; job:
   add verified business details and the mandatory delivery email before the
   two-hour deadline.
-- Journey: scan receipt QR → enter and look up MST → verify read-only business
+- Journey: scan receipt QR → enter MST and trigger automatic lookup on blur → verify read-only business
   name/address → enter email → confirm once → terminal success. Recovery is a
   bounded lookup retry before the deadline; submitted, expired, and closed
   requests are read-only.
-- Information order: order/deadline context, MST lookup, verified business
+- Information order: order and total context, deadline, MST lookup, verified business
   identity, email, primary confirmation. Exclude payment actions, POS or
   Self-Order state, provider internals, and post-close editing.
 - Pattern: `PUBLIC-WORKFLOW`; exemplar: `apps/web/app/q/[token]/page.tsx`;

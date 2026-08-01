@@ -8,6 +8,9 @@ const readRepo = (path: string) => readFileSync(join(root, path), "utf8");
 const migration = readRepo(
   "supabase/migrations/20260725160907_add_customer_invoice_qr_flow.sql",
 );
+const buyerHeaderMigration = readRepo(
+  "supabase/migrations/20260801120500_expose_invoice_total_to_buyer_page.sql",
+);
 const worker = readRepo("apps/web/lib/tax-invoice-issue-worker.ts");
 
 test("customer invoice QR keeps buyer writes private and before issuance claim", () => {
@@ -179,7 +182,12 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   );
   assert.match(form, /result && !result\.ok && result\.terminal/);
   assert.match(page, /expiresAt=\{request\.expiresAt\}/);
+  assert.match(page, /formatVND\(request\.totalAmount\)/);
   assert.match(page, /export const dynamic = "force-dynamic"/);
+  assert.match(buyerServer, /totalAmount: z\.coerce\.number\(\)/);
+  assert.match(buyerHeaderMigration, /'totalAmount', v_order\.total_amount/);
+  assert.doesNotMatch(form, /invoiceBuyer\.lookupAction/);
+  assert.match(form, /onBlur=\{\(\) => void handleLookup\(\)\}/);
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
   assert.match(
     migration,

@@ -300,6 +300,11 @@ export const finance = {
       revenuePercentHint:
         "Tỷ lệ trên Doanh thu thuần của chi nhánh trong tháng.",
       maxReached: "Tối đa 10 mốc thưởng.",
+      trackingTitle: "Các mốc KPI",
+      milestone: (threshold: string) => `Mốc ${threshold}`,
+      reward: (value: string) => `Thưởng ${value}`,
+      achieved: "Đã đạt",
+      pending: "Chưa đạt",
     },
     editor: {
       addTitle: (branch: string) => `Thêm chỉ tiêu · ${branch}`,

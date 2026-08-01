@@ -159,7 +159,7 @@ export function InvoiceBuyerForm({
           <FieldLabel htmlFor="invoice-buyer-tax-code">
             {invoiceBuyer.taxCodeLabel}
           </FieldLabel>
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className="grid gap-2">
             <Input
               id="invoice-buyer-tax-code"
               controlSize="touch"
@@ -178,18 +178,6 @@ export function InvoiceBuyerForm({
               onChange={(event) => handleTaxCodeChange(event.target.value)}
               onBlur={() => void handleLookup()}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending || lookupStatus === "loading"}
-              onClick={() => void handleLookup()}
-            >
-              {lookupStatus === "loading" ? (
-                <Spinner data-icon="inline-start" />
-              ) : null}
-              {invoiceBuyer.lookupAction}
-            </Button>
           </div>
           {taxCodeInvalid ? (
             <FieldError>{invoiceBuyer.taxCodeInvalid}</FieldError>

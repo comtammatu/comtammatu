@@ -73,6 +73,18 @@ export function clampProgressValue(
   return Math.max(0, Math.min(100, progressPct));
 }
 
+export function isRevenueRewardTierAchieved(
+  progressPct: number | null | undefined,
+  thresholdPct: number,
+): boolean {
+  return (
+    progressPct != null &&
+    Number.isFinite(progressPct) &&
+    Number.isFinite(thresholdPct) &&
+    progressPct >= thresholdPct
+  );
+}
+
 export function previewTargetProgress(
   currentNetRevenue: number | null,
   targetAmount: number | null,

@@ -8,6 +8,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
+  currentVnMonthStart,
   monthStartFromIsoDate,
   normalizeRevenueRewardTiers,
   type RevenueRewardTier,
@@ -92,6 +93,7 @@ export type BranchRevenueTargetProgress = {
   targetAmount: number | null;
   progressPct: number | null;
   gapAmount: number | null;
+  rewardTiers: RevenueRewardTier[];
 };
 
 function toNumber(value: number | string | null | undefined): number {
@@ -105,6 +107,18 @@ function toNullableNumber(
   if (value == null) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseRewardTiers(value: unknown): RevenueRewardTier[] | null {
+  const parsed = rewardTiersSchema.safeParse(value);
+  if (!parsed.success) return null;
+  return normalizeRevenueRewardTiers(
+    parsed.data.map((tier) => ({
+      thresholdPct: tier.threshold_pct,
+      rewardType: tier.reward_type,
+      rewardValue: tier.reward_value,
+    })),
+  );
 }
 
 export async function listBranchRevenueTargets(
@@ -139,17 +153,7 @@ export async function listBranchRevenueTargets(
 
   const rewardsByBranch = new Map<number, RevenueRewardTier[]>();
   for (const row of rewardResult.data ?? []) {
-    const parsedTiers = rewardTiersSchema.safeParse(row.reward_tiers);
-    if (!parsedTiers.success) {
-      return { success: false, error: targetCopy.errors.loadFailed };
-    }
-    const normalized = normalizeRevenueRewardTiers(
-      parsedTiers.data.map((tier) => ({
-        thresholdPct: tier.threshold_pct,
-        rewardType: tier.reward_type,
-        rewardValue: tier.reward_value,
-      })),
-    );
+    const normalized = parseRewardTiers(row.reward_tiers);
     if (!normalized) {
       return { success: false, error: targetCopy.errors.loadFailed };
     }
@@ -340,22 +344,36 @@ export async function fetchBranchRevenueTargetProgress(
     return { success: false, error: targetCopy.errors.forbidden };
   }
 
-  const { data, error } = await ctx.supabase.rpc(
-    "get_branch_revenue_target_progress",
-    {
+  const effectiveMonth = month ?? currentVnMonthStart();
+  const [progressResult, rewardResult] = await Promise.all([
+    ctx.supabase.rpc("get_branch_revenue_target_progress", {
       p_branch_id: branchParsed.data,
-      ...(month ? { p_year_month: month } : {}),
-    },
-  );
+      p_year_month: effectiveMonth,
+    }),
+    ctx.supabase.rpc("list_branch_revenue_target_reward_tiers", {
+      p_year_month: effectiveMonth,
+    }),
+  ]);
 
-  if (error) {
-    console.error("[finance:targets:branch-progress] RPC failed", error.code);
+  if (progressResult.error || rewardResult.error) {
+    console.error(
+      "[finance:targets:branch-progress] RPC failed",
+      progressResult.error?.code ?? rewardResult.error?.code,
+    );
     return { success: false, error: targetCopy.errors.loadFailed };
   }
 
-  const row = data?.[0];
+  const row = progressResult.data?.[0];
   if (!row) {
     return { success: true, data: null };
+  }
+
+  const rewardRow = rewardResult.data?.find(
+    (item) => toNumber(item.branch_id) === branchParsed.data,
+  );
+  const rewardTiers = parseRewardTiers(rewardRow?.reward_tiers ?? []);
+  if (!rewardTiers) {
+    return { success: false, error: targetCopy.errors.loadFailed };
   }
 
   return {
@@ -367,6 +385,7 @@ export async function fetchBranchRevenueTargetProgress(
       targetAmount: toNullableNumber(row.target_amount),
       progressPct: toNullableNumber(row.progress_pct),
       gapAmount: toNullableNumber(row.gap_amount),
+      rewardTiers,
     },
   };
 }

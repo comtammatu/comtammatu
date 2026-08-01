@@ -207,7 +207,10 @@ test("Finance stays owner-only until Accountant authority is explicitly decided"
     /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(roleTypes)?.[1];
   assert.ok(staffRoles);
   assert.doesNotMatch(staffRoles, /accountant|office/);
-  assert.match(financeModuleDoc, /Accountant \| No authenticated Finance role/);
+  assert.match(
+    financeModuleDoc,
+    /Accountant\s+\|\s+No authenticated Finance role/,
+  );
   assert.match(financeModuleDoc, /must not silently map `office`/);
   assert.match(financeModuleDoc, /period-close authority/);
 });

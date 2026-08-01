@@ -2,6 +2,7 @@ export const invoiceBuyer = {
   title: "Nhận HĐĐT",
   order: (branchName: string, orderNumber: string) =>
     `${branchName} · Đơn ${orderNumber}`,
+  total: (amount: string) => `Tổng tiền · ${amount}`,
   submittedTitle: "Đã nhận thông tin",
   submittedDescription: "HĐĐT đang được xử lý theo thông tin bạn đã gửi.",
   expiredTitle: "Mã QR đã hết hạn",
@@ -20,7 +21,6 @@ export const invoiceBuyer = {
   sectionDescription: (expiresAt: string) =>
     `Nhập mã số thuế; tên đơn vị và địa chỉ sẽ được tự động điền. Xác nhận trước ${expiresAt}.`,
   taxCodeLabel: "Mã số thuế",
-  lookupAction: "Tra cứu",
   taxCodeInvalid: "Mã số thuế gồm 10 số hoặc 10 số-3 số.",
   buyerNameLabel: "Họ tên / Tên đơn vị",
   autoFilledPlaceholder: "Tự động điền sau khi tra cứu",

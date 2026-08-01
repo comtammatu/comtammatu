@@ -94,10 +94,11 @@ BEGIN
   )
   INTO v_definition;
 
-  IF v_definition NOT LIKE '%auth_is_owner%'
-    OR v_definition LIKE '%branch_manager%'
+  IF v_definition NOT LIKE '%v_is_owner%'
+    OR v_definition NOT LIKE '%v_role = ''branch_manager''%'
+    OR v_definition NOT LIKE '%targets.branch_id = v_branch%'
   THEN
-    RAISE EXCEPTION 'reward tier list must stay owner-only';
+    RAISE EXCEPTION 'reward tier list must stay owner-wide and BM assigned-branch only';
   END IF;
 
   IF NOT EXISTS (

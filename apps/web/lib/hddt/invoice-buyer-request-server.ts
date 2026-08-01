@@ -8,6 +8,7 @@ const snapshotSchema = z.object({
   state: z.enum(["open", "submitted", "expired", "closed"]),
   orderNumber: z.string().min(1).max(100),
   branchName: z.string().min(1).max(200),
+  totalAmount: z.coerce.number().finite().nonnegative(),
   expiresAt: z.string().datetime({ offset: true }),
 });
 

@@ -7,16 +7,26 @@
 
 ## Port branch revenue KPI from comtammatu
 
-State: doing
+State: verify
 Kind: feature
 Tier: T3
 Lane: finance/revenue-targets
-Exit: Branch home shows Doanh thu thuần MTD vs monthly target for Owner/BM; Owner can edit targets and reward tiers at `/finance/targets`; Finance landing and `/finance/revenue` show progress/competition/pace for a single calendar month; migrations are applied on a verified Preview Branch (Production only with owner delegation).
+Exit: Branch home shows Doanh thu thuần MTD vs monthly target and every configured reward-tier milestone for Owner/BM; Owner can edit targets and reward tiers at `/finance/targets`; Finance landing and `/finance/revenue` show progress/competition/pace for a single calendar month; migrations are applied on a verified Preview Branch (Production only with owner delegation).
 Evidence: Focused finance-revenue-target tests, SQL regression test, repository gates (`typecheck`/`lint`/`build`), and Preview migration replay when delegated.
 
-- [x] Apply the four `branch_revenue_targets` migrations on verified Preview Branch `agipojuqtoyqohqoguqd` (`branch-revenue-kpi`); table + 6 RPCs present; Preview deleted after evidence.
-- [x] Owner-delegated Production apply on `iexwsuaqqenyjiskawoj`; `corepack pnpm db:types` regenerated `packages/database/src/types/database.types.ts` (+106 lines: table + RPCs).
+- [ ] Replay `20260801120400_allow_branch_manager_reward_tier_read.sql` on a verified Preview, then apply to Production only with explicit owner delegation and regenerate types.
 - [ ] Owner-smoke Branch home strip, `/finance/targets` upsert/delete, and `/finance/revenue` competition for a single calendar month.
+
+## Show invoice total on the HĐĐT buyer page
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: hddt/customer-buyer
+Exit: The open `/q/invoice/[token]` header shows the token-scoped immutable order total, the redundant `Tra cứu` button is absent, and MST auto-lookup on blur remains usable; the follow-up migration is replayed on a verified Preview and applied to Production only with owner delegation.
+Evidence: Focused invoice-buyer regression, repository gates, Preview migration replay, and public phone/desktop browser smoke for open and terminal tokens.
+
+- [ ] Replay `20260801120500_expose_invoice_total_to_buyer_page.sql` on a verified Preview, then apply to Production only with explicit owner delegation and smoke the public page.
 
 ## Restore fresh-install database ACL parity
 

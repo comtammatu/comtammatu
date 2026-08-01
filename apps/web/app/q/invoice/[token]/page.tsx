@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { formatVND } from "@comtammatu/shared/format";
 import { BrandMascot } from "@/components/brand";
 import { AppPage } from "@/components/surface";
 import {
@@ -98,6 +99,9 @@ export default async function InvoiceBuyerPage({
           <ItemDescription>
             {invoiceBuyer.order(request.branchName, request.orderNumber)}
           </ItemDescription>
+          <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
+            {invoiceBuyer.total(formatVND(request.totalAmount))}
+          </p>
         </ItemContent>
       </Item>
       <InvoiceBuyerForm token={token} expiresAt={request.expiresAt} />
