@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { calculateFinanceResult } from "../app/(protected)/finance/_lib/finance-result";
 
-test("finance result treats an available empty expense period as zero", () => {
+test("finance result keeps gross profit and operating result independent", () => {
   assert.deepEqual(
     calculateFinanceResult({
       netRevenueBeforeVat: 1_000_000,
@@ -15,7 +15,7 @@ test("finance result treats an available empty expense period as zero", () => {
     {
       grossProfit: 600_000,
       grossMargin: 60,
-      operatingResult: 400_000,
+      operatingResult: 800_000,
     },
   );
 
@@ -31,7 +31,7 @@ test("finance result treats an available empty expense period as zero", () => {
     {
       grossProfit: null,
       grossMargin: null,
-      operatingResult: null,
+      operatingResult: 750_000,
     },
   );
 
@@ -44,7 +44,7 @@ test("finance result treats an available empty expense period as zero", () => {
       costAvailable: true,
       operatingExpenseAvailable: true,
     }).operatingResult,
-    600_000,
+    1_000_000,
   );
 
   assert.equal(
@@ -68,6 +68,6 @@ test("finance result treats an available empty expense period as zero", () => {
       costAvailable: true,
       operatingExpenseAvailable: true,
     }).operatingResult,
-    300_000,
+    700_000,
   );
 });

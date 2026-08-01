@@ -257,22 +257,22 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Cung cấp công thức kết quả vận hành rõ ràng cho HKD theo kỳ, đồng thời tách số dư hiện có và giá trị tồn kho.
-- **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món và chi phí vận hành; mở báo cáo chuyên biệt khi cần đối chiếu.
+- **Mục tiêu Người dùng (Goal):** Nhìn một màn để đọc riêng lợi nhuận gộp và kết quả vận hành theo hai công thức; mở báo cáo chuyên biệt khi cần đối chiếu.
 - **Luồng thao tác (Workflow):**
   1. **Chọn kỳ báo cáo:** Lọc theo ngày hôm nay / Tuần này / Tháng này / Chọn khoảng ngày.
   2. **Chọn phạm vi:** Lọc theo toàn chuỗi hoặc một chi nhánh cụ thể.
-  3. **Xem kết quả:** Đọc sáu card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành + Biến động tồn kho = Kết quả vận hành`.
+  3. **Xem kết quả:** Đọc hai dòng `Lợi nhuận gộp = Doanh thu thuần − Giá vốn món` và `Kết quả vận hành = Doanh thu thuần − Chi phí vận hành + Biến động tồn kho`.
   4. **Xem số dư:** Đọc tiền mặt theo sổ và tiền trong ngân hàng; hai số này không đổi theo bộ lọc.
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
   6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, dữ liệu chi phí không khả dụng hoặc chứng từ cần xử lý.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
+  - **Nên hiển thị:** Sáu KPI kết quả theo kỳ trong hai dòng công thức hoàn chỉnh, lặp lại Doanh thu thuần ở dòng Kết quả vận hành; số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
-  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; kỳ không có chi phí hiển thị `0đ`, chỉ lỗi tải dữ liệu chi phí mới không tính Kết quả vận hành.
+  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì chỉ không tính Lợi nhuận gộp; kỳ không có chi phí hiển thị `0đ`, chỉ lỗi tải dữ liệu chi phí mới không tính Kết quả vận hành.
   - **KHÔNG hiển thị:** Card GTGT/VAT trong đợt này, nút tạo order, các bước chế biến món ăn, hoặc phân tích tài chính doanh nghiệp cổ phần không áp dụng cho mô hình HKD.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
-  - Desktop hiển thị năm card kết quả trên một hàng, có dấu `−` và `=` nối công thức; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
+  - Desktop hiển thị hai dòng công thức hoàn chỉnh bằng `KpiCard`, có dấu `−`, `+` và `=`; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
   - Tất cả các biểu đồ tài chính chỉ được phép sử dụng bảng màu quy chuẩn từ `chart-1` đến `chart-5` trong token của hệ thống để đảm bảo tính đồng bộ thị giác.
 
 ---

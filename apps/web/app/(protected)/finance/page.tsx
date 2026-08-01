@@ -294,14 +294,25 @@ export default async function FinancePage({
           </div>
         </KpiRow>
 
-        <div className="mt-2 flex min-h-6 items-center text-sm font-medium text-muted-foreground xl:justify-end">
-          {financeCopy.basic.kpis.operatingResultBase}
-        </div>
-
         <KpiRow
           density="compact"
-          className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
+          className="mt-2 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
         >
+          <div className="min-w-0 md:grid md:gap-2 xl:contents">
+            <span
+              className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
+              aria-hidden
+            />
+            <KpiCard
+              density="compact"
+              label={financeCopy.basic.kpis.netRevenue}
+              value={formatVND(cockpit.kpis.netRevenueBeforeVat)}
+              hint={targetHint}
+              tone="primary"
+              href={netRevenueHref}
+            />
+          </div>
+
           <div className="grid min-w-0 gap-2 xl:contents">
             <span className={formulaOperatorClass}>
               <span aria-hidden>−</span>

@@ -21,11 +21,15 @@ export function calculateFinanceResult({
   costAvailable,
   operatingExpenseAvailable,
 }: FinanceResultInput): FinanceResult {
+  const operatingResult = operatingExpenseAvailable
+    ? netRevenueBeforeVat - operatingExpense + inventoryMovement
+    : null;
+
   if (!costAvailable) {
     return {
       grossProfit: null,
       grossMargin: null,
-      operatingResult: null,
+      operatingResult,
     };
   }
 
@@ -35,8 +39,6 @@ export function calculateFinanceResult({
     grossProfit,
     grossMargin:
       netRevenueBeforeVat > 0 ? (grossProfit / netRevenueBeforeVat) * 100 : 0,
-    operatingResult: operatingExpenseAvailable
-      ? grossProfit - operatingExpense + inventoryMovement
-      : null,
+    operatingResult,
   };
 }

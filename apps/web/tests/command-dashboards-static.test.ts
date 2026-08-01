@@ -107,6 +107,11 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /operatingResult: "Kết quả vận hành"/);
   assert.match(copy, /inventory: "Tài sản hiện có"/);
   assert.equal(
+    (page.match(/label=\{financeCopy\.basic\.kpis\.netRevenue\}/g) ?? [])
+      .length,
+    2,
+  );
+  assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
     5,
   );

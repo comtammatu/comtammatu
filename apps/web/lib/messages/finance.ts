@@ -221,10 +221,9 @@ export const finance = {
       operatingExpenseHint: "Không gồm giá vốn, nhập hàng và công nợ NCC",
       inventoryMovement: "Biến động tồn kho",
       inventoryMovementHint: "Cuối kỳ − đầu kỳ",
-      operatingResultBase: "Từ lợi nhuận gộp",
       operatingResult: "Kết quả vận hành",
       operatingResultHint:
-        "Lợi nhuận gộp − chi phí vận hành + biến động tồn kho",
+        "Doanh thu thuần − chi phí vận hành + biến động tồn kho",
       notCalculated: "Chưa tính",
       unavailable: "Chưa xác định",
       inventoryClosingValue: "Giá trị tồn kho cuối kỳ",

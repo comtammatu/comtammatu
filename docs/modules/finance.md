@@ -5,8 +5,8 @@
 Finance serves HKD operating finance only.
 
 Finance Basic is the default Finance experience when `/finance` opens as
-`Tổng quan tài chính`. The first section shows one period-result formula across
-six cards:
+`Tổng quan tài chính`. The first section shows two period-result formulas
+across six unique KPIs; `Doanh thu thuần` appears in both formula rows:
 
 - **Doanh thu thuần**: paid-order merchandise value after discount and before
   VAT.
@@ -16,12 +16,12 @@ six cards:
   utilities, payroll, repairs, supplies, marketing, fees/tax, and other
   operating categories?
 - **Biến động tồn kho**: period-end inventory value minus period-opening value.
-- **Kết quả vận hành**: gross profit minus recorded operating expense plus
+- **Kết quả vận hành**: net revenue minus recorded operating expense plus
   inventory movement.
 
-Missing food-cost coverage makes both gross profit and operating result
-unavailable. A successfully loaded period with no operating expense uses zero;
-only unavailable expense data keeps operating result unavailable.
+Missing food-cost coverage makes gross profit unavailable without blocking
+operating result. A successfully loaded period with no operating expense uses
+zero; only unavailable expense data keeps operating result unavailable.
 
 Below the period result, keep the tenant-wide current-funds row:
 
@@ -112,7 +112,7 @@ period-result cards:
 2. **Food cost**
    - Use recorded sale-consumption movements for paid orders.
    - If food-cost coverage is incomplete, display missing-data state and do not
-     calculate the following derived cards.
+     calculate gross profit or gross margin.
 
 3. **Gross profit**
    - `Lợi nhuận gộp = Doanh thu thuần - Giá vốn món`.
@@ -133,14 +133,14 @@ period-result cards:
      decreases it.
 
 6. **Operating result**
-   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành + (Tồn cuối kỳ - Tồn đầu kỳ)`.
-   - Do not call it net profit. Keep it unavailable when food cost is incomplete
-     or operating expense data is unavailable.
+   - `Kết quả vận hành = Doanh thu thuần - Chi phí vận hành + (Tồn cuối kỳ - Tồn đầu kỳ)`.
+   - Do not call it net profit. Keep it unavailable only when operating expense
+     data is unavailable.
 
 After the formula, show the unfiltered current-funds section, the filtered
-period-end inventory value, then the attention queue. Desktop splits the six
-formula cards into two three-card rows; tablet uses two columns, and mobile uses
-one.
+period-end inventory value, then the attention queue. Desktop shows two complete
+formula rows and repeats net revenue in the second row; tablet uses two columns,
+and mobile uses one.
 
 Supporting workflows remain available but are not the first screen:
 
