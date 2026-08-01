@@ -1,9 +1,9 @@
 /**
  * Application authorization roles, ordered by privilege level.
  *
- * Owner surface routes are primarily owner-only; D076 includes temporary L0
- * adapters (`accountant`, `central_supply_ops`, `central_kitchen_lead`) until
- * ADR 0015 Authority. Branch-native routes use dedicated ModuleKeys
+ * Control-surface route buckets are coarse candidates; live role bindings and
+ * database capabilities decide final authority. D076 includes L0 adapters
+ * (`accountant`, `central_supply_ops`, `central_kitchen_lead`). Branch-native routes use dedicated ModuleKeys
  * (`branch_stock`, `branch_orders`, …) plus the permission namespace for
  * action grants — they do not share Owner `inventory` / `orders` ModuleKeys.
  * `BranchKind` enum values remain for historical inventory rows and for
@@ -11,6 +11,7 @@
  */
 export const STAFF_ROLES = [
   "owner",
+  "self_service",
   "accountant",
   "central_supply_ops",
   "central_kitchen_lead",
@@ -28,6 +29,7 @@ export const BRANCH_ROLES: readonly StaffRole[] = ["cashier", "chef"] as const;
 /** Roles that do not require branch scope (temporary until ADR 0015). */
 export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
   "owner",
+  "self_service",
   "accountant",
 ] as const;
 
@@ -81,6 +83,7 @@ export function canManageTenantStrategySettings(role: StaffRole): boolean {
  */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
+  self_service: "Nhân viên",
   accountant: "Kế toán",
   central_supply_ops: "Quản lý kho Tổng",
   central_kitchen_lead: "Bếp trưởng Bếp TT",
@@ -121,6 +124,7 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
   {
     owner: null,
     accountant: null,
+    hr_manager: null,
     central_supply_ops: "central_supply",
     central_kitchen_lead: "central_kitchen",
     branch_manager: "branch",
@@ -169,7 +173,9 @@ export interface JwtClaims {
   user_role: StaffRole;
   /**
    * Canonical HR position code (source of truth). `user_role` is derived from
-   * it via the role-bridge mapper (`staffRoleFromPositionCode` / the SQL twin).
+   * it through the legacy role bridge. `self_service` is the sole compatibility
+   * projection for an active live company binding whose position has no legacy
+   * application role.
    */
   position_code: string;
 }

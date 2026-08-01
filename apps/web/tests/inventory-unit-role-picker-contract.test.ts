@@ -116,8 +116,12 @@ test("menu recipe save accepts any active ladder unit and stock migration allows
   const menuDialog = readRepo(
     "apps/web/app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
   );
-  assert.match(menuDialog, /unitMode="all"/);
+  assert.doesNotMatch(menuDialog, /unitMode=/);
   assert.match(menuDialog, /unitEditable/);
+  const lineEditor = readRepo(
+    "apps/web/app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+  );
+  assert.match(lineEditor, /getIngredientUnitOptions\(ingredient\)/);
 
   const migration = readRepo(
     "supabase/migrations/20260801001600_inventory_entry_unit_receipt_or_issue.sql",

@@ -46,7 +46,7 @@ test("production recipe import action uses one bulk RPC and sanitized error hand
     "export const upsertProductionRecipeLines",
   );
 
-  assert.match(body, /\.rpc\(\s*"bulk_import_production_recipes"/);
+  assert.match(body, /\.rpc\(\s*"bulk_import_production_recipe_specs"/);
   assert.doesNotMatch(body, /upsert_production_recipe_lines/);
   assert.doesNotMatch(body, /error:\s*rpcError\.message/);
   assert.match(

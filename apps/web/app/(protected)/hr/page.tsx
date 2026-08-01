@@ -1,7 +1,10 @@
 import { Suspense } from "react";
-import { canAccess, staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  staffRoleFromPositionCode,
+} from "@comtammatu/shared/auth";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
-import { loadAuthState } from "@/_lib/auth";
+import { loadAuthState, probePermission } from "@/_lib/auth";
 import { fetchEmployees } from "./actions";
 import { fetchHrAttentionSummary } from "./hr-attention";
 import { HrClient } from "./hr-client";
@@ -24,35 +27,49 @@ export default async function HrPage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const canManageAccounts = canAccess(claims.user_role, "staff");
+  const canManageAccounts = await probePermission(
+    { supabase, claims },
+    PERMISSION_KEYS.AUTH_BINDING_READ,
+  );
   const initialView =
     params.view === "accounts" && canManageAccounts ? "accounts" : "profile";
 
-  const [employeesResult, branchesResult, positionsResult, attention, staffData] =
-    await Promise.all([
-      fetchEmployees(),
-      supabase
-        .from("branches")
-        .select("id, name, branch_kind")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .order("name"),
-      supabase
-        .from("positions")
-        .select("code, label_vi")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .order("label_vi"),
-      fetchHrAttentionSummary(supabase, claims.tenant_id),
-      canManageAccounts
-        ? loadStaffAccountsData(supabase, {
-            position: params.position,
-            branch: params.branch,
-            status: params.status,
-            q: params.q,
-          })
-        : Promise.resolve(null),
-    ]);
+  const [
+    branchesResult,
+    employeesResult,
+    positionsResult,
+    attention,
+    staffData,
+  ] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id, name, branch_kind")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("name"),
+    initialView === "profile"
+      ? fetchEmployees(params.branch)
+      : Promise.resolve({ success: true as const, data: [] }),
+    initialView === "profile"
+      ? supabase
+          .from("positions")
+          .select("code, label_vi")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_active", true)
+          .order("label_vi")
+      : Promise.resolve({ data: [] }),
+    initialView === "profile"
+      ? fetchHrAttentionSummary(supabase, claims.tenant_id)
+      : Promise.resolve({ pendingApprovals: 0, missingContractOrSalary: 0 }),
+    initialView === "accounts" && canManageAccounts
+      ? loadStaffAccountsData(supabase, {
+          position: params.position,
+          branch: params.branch,
+          status: params.status,
+          q: params.q,
+        })
+      : Promise.resolve(null),
+  ]);
 
   const employees = employeesResult.success
     ? ((employeesResult.data as EmployeeRow[]) ?? [])
@@ -60,7 +77,7 @@ export default async function HrPage({
   const branches = (branchesResult.data ?? []) as BranchOption[];
   const positionOptions = (positionsResult.data ?? []).flatMap((position) => {
     const role = staffRoleFromPositionCode(position.code);
-    if (role === "owner" || role === "unassigned") {
+    if (role === "owner" || position.code === "archived_staff") {
       return [];
     }
     return [
@@ -88,6 +105,7 @@ export default async function HrPage({
         staffBranches={staffData?.branches}
         staffPositionOptions={staffData?.positionOptions}
         staffHasActiveFilters={staffData?.hasActiveFilters}
+        initialScope={params.branch}
       />
     </Suspense>
   );

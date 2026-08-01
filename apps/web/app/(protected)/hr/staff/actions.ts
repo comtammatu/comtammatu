@@ -40,6 +40,11 @@ const updateStaffSchema = z.object({
 /** Roles allowed to manage staff (aligned with proxy staff module ACL). */
 const MANAGER_ROLES = MODULE_ACL.staff.allowedRoles;
 
+const PROVISION_PERMISSIONS = [
+  PERMISSION_KEYS.STAFF_PROVISION,
+  PERMISSION_KEYS.STAFF_ASSIGN_POSITION,
+] as const;
+
 const POSITION_ASSIGN_PERMISSIONS = [
   PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
   PERMISSION_KEYS.STAFF_ASSIGN_POSITION,
@@ -49,19 +54,25 @@ type StaffActionClient = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermissions>>
 >["supabase"];
 
-function validateStaffAssignment(actorRole: string): string | null {
-  if (actorRole === "owner") return null;
-  return "Không có quyền quản lý nhân viên";
-}
-
 async function validatePositionSite(
   supabase: StaffActionClient,
   tenantId: number,
   positionCode: string,
   branchId: number | undefined,
 ): Promise<string | null> {
+  const { data: position } = await supabase
+    .from("positions")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("code", positionCode)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (!position) return "Chức vụ không hợp lệ";
+
   const requiredBranchKind = requiredBranchKindForPositionCode(positionCode);
-  if (requiredBranchKind === "unassigned") return "Chức vụ không hợp lệ";
+  if (requiredBranchKind === "unassigned") {
+    return branchId ? "Chức vụ toàn công ty không thuộc địa điểm" : null;
+  }
   if (requiredBranchKind !== null && !branchId) {
     return "Chức vụ vận hành phải thuộc một địa điểm";
   }
@@ -153,14 +164,14 @@ export async function createStaff(
 
   const { email, password, full_name, position_code, branch_id } = parsed.data;
   const role = staffRoleFromPositionCode(position_code);
-  if (role === "unassigned" || role === "owner") {
+  if (role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
   const effectiveBranchId = branch_id;
 
   const ctx = await getAuthContextWithPermissions(
     MANAGER_ROLES,
-    POSITION_ASSIGN_PERMISSIONS,
+    PROVISION_PERMISSIONS,
     effectiveBranchId ?? null,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -174,9 +185,6 @@ export async function createStaff(
     effectiveBranchId,
   );
   if (siteError) return { success: false, error: siteError };
-
-  const assignmentError = validateStaffAssignment(claims.user_role);
-  if (assignmentError) return { success: false, error: assignmentError };
 
   // Service role client for admin user creation
   const serviceClient = createServiceClient();
@@ -213,9 +221,12 @@ export async function createStaff(
   });
 
   if (error) {
-    await serviceClient.rpc("cancel_staff_user_provisioning" as never, {
-      p_token: provisioningToken,
-    } as never);
+    await serviceClient.rpc(
+      "cancel_staff_user_provisioning" as never,
+      {
+        p_token: provisioningToken,
+      } as never,
+    );
     if (
       error.message?.includes("already been registered") ||
       error.message?.includes("already exists")
@@ -225,6 +236,18 @@ export async function createStaff(
     return {
       success: false,
       error: "Không thể tạo tài khoản. Vui lòng thử lại.",
+    };
+  }
+
+  const { error: metadataError } =
+    await serviceClient.auth.admin.updateUserById(data.user.id, {
+      user_metadata: { full_name, provisioning_token: null },
+    });
+  if (metadataError) {
+    await serviceClient.auth.admin.deleteUser(data.user.id);
+    return {
+      success: false,
+      error: "Không thể hoàn tất tài khoản. Vui lòng thử lại.",
     };
   }
 
@@ -254,7 +277,7 @@ export async function updateStaff(
 
   const { id, full_name, phone, position_code, branch_id } = parsed.data;
   const role = staffRoleFromPositionCode(position_code);
-  if (role === "unassigned" || role === "owner") {
+  if (role === "owner") {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
   const effectiveBranchId = branch_id;
@@ -275,9 +298,6 @@ export async function updateStaff(
     effectiveBranchId,
   );
   if (siteError) return { success: false, error: siteError };
-
-  const assignmentError = validateStaffAssignment(claims.user_role);
-  if (assignmentError) return { success: false, error: assignmentError };
 
   const { error } = await supabase.rpc("update_staff_profile", {
     p_target_id: id,
@@ -307,7 +327,7 @@ export async function toggleStaffActive(
 
   const ctx = await getAuthContextWithPermission(
     MANAGER_ROLES,
-    PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+    PERMISSION_KEYS.STAFF_PROVISION,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 

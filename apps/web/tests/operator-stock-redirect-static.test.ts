@@ -1040,7 +1040,7 @@ test("operator count assignments render branch-native inside the branch operator
   );
 });
 
-test("D093 branch production routes keep branch redirect; central restores operator clients", () => {
+test("branch production routes redirect to the canonical production surface", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
   );
@@ -1050,48 +1050,14 @@ test("D093 branch production routes keep branch redirect; central restores opera
   const detailRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
   );
-  const ownerPage = read(
-    "apps/web/app/(protected)/inventory/production/page.tsx",
-  );
-  const dataSource = read(
-    "apps/web/app/(protected)/inventory/production-data.ts",
-  );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
-  assert.match(route, /params: Promise<\{ branchId: string \}>/);
-  assert.match(route, /branch_kind === "branch"/);
-  assert.match(route, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.match(route, /ProductionOperatorClient/);
-
-  assert.match(newRoute, /branch_kind === "branch"/);
-  assert.match(newRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.match(newRoute, /BranchProductionNewClient/);
-
-  assert.match(detailRoute, /branch_kind === "branch"/);
-  assert.match(detailRoute, /redirect\(`\/br\/\$\{branchId\}\/stock`\)/);
-  assert.match(detailRoute, /BranchProductionDetailClient|fetchProductionRunById/);
-
-  assert.match(ownerPage, /export async function ProductionPageContent/);
-  assert.match(ownerPage, /routeBranchId\?: number/);
-  assert.match(ownerPage, /embedded\?: boolean/);
-  assert.match(ownerPage, /embedded=\{embedded\}/);
-
-  assert.match(
-    dataSource,
-    /hasCurrentProductionBranchAccess[\s\S]*routeBranchId\?: number,/,
-  );
-  assert.match(
-    dataSource,
-    /const branchId = routeBranchId \?\? claims\.branch_id;/,
-  );
-  assert.match(
-    dataSource,
-    /hasCurrentProductionBranchAccess\(supabase, claims, routeBranchId\)/,
-  );
+  assert.match(route, /redirect\(`\/inventory\/production\?branchId=/);
+  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branchId=/);
+  assert.match(detailRoute, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
 
   assert.match(
     navConfig,
-    /hrefTemplate: "\/br\/\{branchId\}\/stock\/production"[\s\S]*kinds: \["central_kitchen"\]/,
+    /hrefTemplate: "\/inventory\/production"[\s\S]*kinds: \["central_kitchen"\]/,
   );
-  assert.doesNotMatch(navConfig, /hrefTemplate: "\/inventory\/production"/);
 });

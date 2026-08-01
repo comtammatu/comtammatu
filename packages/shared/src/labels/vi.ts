@@ -31,6 +31,7 @@ export type ModuleLabelKey =
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "branch_shift_roster"
+  | "branch_shift_attendance"
   | "notifications";
 
 type SiteLike = {
@@ -57,13 +58,14 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_settings: "Thiết lập chi nhánh",
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
-  branch_team: "Đội hôm nay",
+  branch_team: "Nhân sự chi nhánh",
   branch_stock: "Kho chi nhánh",
   branch_orders: "Đơn hàng chi nhánh",
   branch_feedback: "Phản hồi chi nhánh",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
   branch_shift_roster: "Phân ca",
+  branch_shift_attendance: "Bảng chấm công",
   notifications: "Thông báo",
 };
 

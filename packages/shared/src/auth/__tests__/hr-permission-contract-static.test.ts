@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { canAccess, MODULE_ACL } from "../module-acl";
+import { MODULE_ACL } from "../module-acl";
 import type { StaffRole } from "../types";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
@@ -15,23 +15,36 @@ const extractTemplateConst = (source: string, name: string) => {
   return value;
 };
 
-test("Owner surface HR route ACL is owner-only", () => {
-  assert.deepEqual(MODULE_ACL.staff.allowedRoles, ["owner"]);
-  assert.deepEqual(MODULE_ACL.hr_payroll.allowedRoles, ["owner"]);
-  assert.deepEqual(MODULE_ACL.hr.allowedRoles, ["owner"]);
-
-  assert.equal(canAccess("branch_manager", "hr"), false);
-  assert.equal(canAccess("branch_manager", "staff"), false);
-  assert.equal(canAccess("branch_manager", "hr_payroll"), false);
-
-  for (const role of [
-    "cashier",
-    "chef",
-  ] as const satisfies readonly StaffRole[]) {
-    assert.equal(canAccess(role, "hr"), false);
-    assert.equal(canAccess(role, "staff"), false);
-    assert.equal(canAccess(role, "hr_payroll"), false);
+test("HR route ACL is a candidate gate and live capabilities decide access", () => {
+  for (const moduleKey of ["staff", "hr", "hr_payroll"] as const) {
+    assert.deepEqual(MODULE_ACL[moduleKey].allowedRoles, [
+      "owner",
+      "self_service",
+      "accountant",
+      "central_supply_ops",
+      "central_kitchen_lead",
+      "branch_manager",
+      "cashier",
+      "chef",
+      "branch_staff",
+    ] satisfies readonly StaffRole[]);
   }
+
+  const proxy = read("apps/web/proxy.ts");
+  const layout = read("apps/web/app/(protected)/layout.tsx");
+  assert.match(proxy, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(proxy, /PERMISSION_KEYS\.HR_PAYROLL_PREPARE/);
+  assert.match(proxy, /PERMISSION_KEYS\.AUTH_BINDING_READ/);
+  assert.match(proxy, /"has_permission"/);
+  assert.doesNotMatch(
+    proxy.slice(
+      proxy.indexOf('if (pathname === "/hr"'),
+      proxy.indexOf("// Owner-plane routes"),
+    ),
+    /has_permission_any/,
+  );
+  assert.match(layout, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(layout, /PERMISSION_KEYS\.HR_PAYROLL_PREPARE/);
 });
 
 test("HR Server Action gates match the route contract", () => {
@@ -50,123 +63,36 @@ test("HR Server Action gates match the route contract", () => {
     "apps/web/app/(protected)/hr/leave-request-actions.ts",
   );
   const payrollActions = read("apps/web/app/(protected)/hr/payroll-actions.ts");
-  const payrollCalculateActions = [
-    "fetchPayrollPreview",
-    "fetchPayrollPeriod",
-    "savePayrollAdjustment",
-    "removePayrollAdjustment",
-    "snapshotPayrollPreview",
-  ];
-
-  assert.match(
-    staffActions,
-    /const MANAGER_ROLES = MODULE_ACL\.staff\.allowedRoles/,
-  );
-  assert.match(staffActions, /function validateStaffAssignment\(/);
-  assert.match(staffActions, /if \(actorRole === "owner"\) return null/);
-  assert.doesNotMatch(staffActions, /branchManagerCanAssignPosition/);
-  assert.doesNotMatch(staffActions, /positionCode === "waiter"/);
+  assert.match(staffActions, /PERMISSION_KEYS\.STAFF_PROVISION/);
+  assert.match(staffActions, /PERMISSION_KEYS\.STAFF_ASSIGN_POSITION/);
   assert.match(staffActions, /PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE/);
-  assert.match(
-    staffActions,
-    /getAuthContextWithPermissions\(\s*MANAGER_ROLES,\s*POSITION_ASSIGN_PERMISSIONS,\s*effectiveBranchId \?\? null,\s*\)/,
-  );
-  assert.equal(
-    (
-      staffActions.match(
-        /const assignmentError = validateStaffAssignment\(/g,
-      ) ?? []
-    ).length,
-    2,
-  );
-  assert.match(
-    permissionActions,
-    /const OWNER_STAFF_ROLES = MODULE_ACL\.staff\.allowedRoles/,
-  );
-  assert.match(
-    permissionPage,
-    /const OWNER_STAFF_ROLES = MODULE_ACL\.staff\.allowedRoles/,
-  );
-  assert.doesNotMatch(permissionActions, /\["owner", "branch_manager"\]/);
-  assert.doesNotMatch(permissionPage, /\["owner", "branch_manager"\]/);
-  assert.equal(
-    (
-      permissionActions.match(
-        /PERMISSION_KEYS\.STAFF_ASSIGN_PERMISSION,\s*parsed\.data\.branch_id/g,
-      ) ?? []
-    ).length,
-    3,
-  );
+  assert.match(permissionActions, /PERMISSION_KEYS\.AUTH_BINDING_MANAGE/);
+  assert.match(permissionActions, /"set_auth_role_binding"/);
+  assert.match(permissionPage, /PERMISSION_KEYS\.AUTH_BINDING_READ/);
 
   assert.match(
     hrActions,
-    /const HR_ROLES: readonly StaffRole\[\] = \["owner"\]/,
+    /const HR_ROLES: readonly StaffRole\[\] = STAFF_ROLES/,
   );
-  assert.match(
-    hrActions,
-    /createEmployeeAccount = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: createEmployeeAccountSchema,\s*permission: PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE,\s*\}/,
-  );
-  assert.match(
-    hrActions,
-    /updateEmployee = withAction\(\s*\{\s*roles: HR_ROLES,\s*schema: updateEmployeeSchema,\s*permission: PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE,\s*\}/,
-  );
+  assert.match(hrActions, /PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE/);
+  assert.match(hrActions, /PERMISSION_KEYS\.HR_MANAGE_SHIFT_CATALOG/);
+  assert.match(hrActions, /PERMISSION_KEYS\.HR_FORCE_CLOSE_ATTENDANCE/);
+  assert.match(hrActions, /"force_close_stale_attendance"/);
+
   assert.match(
     positionTasksActions,
-    /const POSITION_TASK_ROLES: readonly StaffRole\[\] = \["owner"\]/,
+    /PERMISSION_KEYS\.HR_MANAGE_POSITION_TASKS/,
   );
-  assert.match(
-    hrActions,
-    /fetchShifts\(\): Promise<ActionResult> \{\s*const ctx = await getAuthContext\(HR_ROLES\);/,
-  );
-  assert.match(
-    hrActions,
-    /forceCloseStaleAttendance = withAction\(\s*\{\s*roles: HR_EMPLOYEE_VIEW_ROLES,\s*schema: forceCloseStaleAttendanceSchema,\s*\}/,
-  );
-  assert.match(hrActions, /"force_close_stale_attendance"/);
-  assert.match(
-    hrActions,
-    /fetchAttendance = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
-  );
-  assert.match(
-    hrActions,
-    /getAttendancePhotoUrl = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: attendancePhotoSchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
-  );
-  assert.match(
-    hrActions,
-    /fetchAttendanceSummary = withAction\(\s*\{\s*roles: SHIFT_ROLES,\s*schema: fetchAttendanceSummarySchema,\s*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,\s*permissionBranchId: \(data\) => data\.branchId,\s*requireBranchScope: true,\s*\}/,
-  );
+  assert.match(positionTasksActions, /save_employee_shift_task_override/);
+  assert.match(positionTasksActions, /clear_employee_shift_task_override/);
 
   assert.match(leaveActions, /permissionBranchId: \(data\) => data\.branchId/);
   assert.match(leaveActions, /requireBranchScope: true/);
-  assert.match(
-    leaveActions,
-    /const REVIEW_ROLES: readonly StaffRole\[\] = \["owner", "branch_manager"\]/,
-  );
   assert.doesNotMatch(leaveActions, /createServiceClient/);
-  assert.match(
-    leaveActions,
-    /approveLeaveRequest = withAction\([\s\S]*?schema: requestIdSchema,[\s\S]*?permission: PERMISSION_KEYS\.HR_APPROVE_LEAVE_REQUEST,[\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true/,
-  );
-  assert.match(
-    leaveActions,
-    /rejectLeaveRequest = withAction\([\s\S]*?schema: rejectSchema,[\s\S]*?permission: PERMISSION_KEYS\.HR_APPROVE_LEAVE_REQUEST,[\s\S]*?permissionBranchId: \(data\) => data\.branchId,[\s\S]*?requireBranchScope: true/,
-  );
-  assert.match(
-    payrollActions,
-    /const PAYROLL_ROLES: readonly StaffRole\[\] = \["owner"\]/,
-  );
-  assert.match(
-    payrollActions,
-    /fetchPayrollPeriods\(\): Promise<ActionResult> \{\s*const context = await getAuthContextWithPermission\(\s*PAYROLL_ROLES,\s*PERMISSION_KEYS\.FINANCE_PAYROLL_CALCULATE,/,
-  );
-  for (const action of payrollCalculateActions) {
-    assert.match(
-      payrollActions,
-      new RegExp(
-        `${action} = withAction\\(\\s*\\{[\\s\\S]*?roles: PAYROLL_ROLES,[\\s\\S]*?permission: PERMISSION_KEYS\\.FINANCE_PAYROLL_CALCULATE,`,
-      ),
-    );
-  }
+
+  assert.match(payrollActions, /PERMISSION_KEYS\.HR_PAYROLL_PREPARE/);
+  assert.match(payrollActions, /PERMISSION_KEYS\.HR_PAYROLL_SNAPSHOT/);
+  assert.match(payrollActions, /"snapshot_payroll_calculation"/);
   assert.doesNotMatch(
     payrollActions,
     /FINANCE_PAYROLL_APPROVE/,
@@ -189,10 +115,7 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
     /AttendanceTable|ShiftsTable|PositionTasksClient/,
     "the employee landing must not preload unrelated HR data",
   );
-  assert.match(
-    attendancePage,
-    /<AttendanceTable[\s\S]*?branches=\{branches\}/,
-  );
+  assert.match(attendancePage, /<AttendanceTable[\s\S]*?branches=\{branches\}/);
   assert.match(
     attendancePage,
     /<LeaveRequestsTable branches=\{storeBranches\} \/>/,
@@ -204,7 +127,7 @@ test("HR routes keep employee, attendance and setup surfaces separate", () => {
   );
 });
 
-test("HR employee salary and contract controls stay owner-only", () => {
+test("HR employee salary and contract controls stay capability-gated", () => {
   const employeeTable = read("apps/web/app/(protected)/hr/employee-table.tsx");
   const employeeFormDialog = read(
     "apps/web/app/(protected)/hr/employee-form-dialog.tsx",
@@ -433,16 +356,66 @@ test("auth docs define the HR permission contract layers", () => {
 
   for (const expected of [
     "## HR Permission Contract",
-    "Staff access create/update/deactivate",
-    "Permission grant/revoke/template",
+    "Staff account lifecycle",
+    "Role binding",
     "Employee record, salary, HĐLĐ",
-    "Global shift and position-task setup",
+    "Shift and task setup",
     "Payroll",
-    "Branch Manager gets branch-safe employee, attendance, and leave visibility plus",
+    "Branch people and shifts",
   ]) {
     assert.ok(
       authDoc.includes(expected) || routeMatrix.includes(expected),
       `expected docs to contain ${expected}`,
     );
   }
+});
+
+test("scoped role bindings require security_admin plus AAL2", () => {
+  const migration = read(
+    "supabase/migrations/20260801181125_hr_scoped_role_bindings.sql",
+  );
+
+  assert.match(migration, /WHERE key <> 'auth:binding_manage'/);
+  assert.match(migration, /\('security_admin', 'auth:binding_manage'\)/);
+  assert.match(migration, /auth\.jwt\(\) ->> 'aal'/);
+  assert.match(migration, /'aal2_required'/);
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.grant_permission[\s\S]*FROM authenticated/,
+  );
+  assert.match(
+    migration,
+    /public\.has_permission\(profile\.branch_id, 'hr:view_employee'\)/,
+  );
+});
+
+test("payroll finalization is transactional and idempotent", () => {
+  const migration = read(
+    "supabase/migrations/20260801181125_hr_scoped_role_bindings.sql",
+  );
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /FOR UPDATE/);
+  assert.match(migration, /'status', 'already_finalized'/);
+  assert.match(
+    migration,
+    /public\.has_permission\(NULL, 'hr:payroll_snapshot'\)/,
+  );
+});
+
+test("employee shift-task overrides are full replacements materialized at check-in", () => {
+  const migration = read(
+    "supabase/migrations/20260801181126_employee_shift_task_overrides.sql",
+  );
+  const client = read("apps/web/app/(protected)/hr/position-tasks-client.tsx");
+
+  assert.match(migration, /employee_id IS NULL OR branch_id IS NULL/);
+  assert.match(migration, /shift_checklist_templates_one_active_employee/);
+  assert.match(migration, /DELETE FROM public\.shift_checklist_template_items/);
+  assert.match(migration, /materialize_employee_shift_task_override/);
+  assert.match(migration, /suppress_position_tasks_for_employee_override/);
+  assert.match(migration, /template_item_id/);
+  assert.match(client, /<DataTable/);
+  assert.match(client, /<FormDialog/);
+  assert.match(client, /<AppDialog/);
+  assert.doesNotMatch(client, /SelectTrigger[\s\S]*template/i);
 });

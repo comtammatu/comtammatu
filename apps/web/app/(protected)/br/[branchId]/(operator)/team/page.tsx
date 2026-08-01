@@ -16,10 +16,7 @@ import {
 } from "./team-workspace-tabs";
 
 const copy = messages.operator.teamBoard;
-const validTabs = new Set<TeamWorkspaceTabValue>([
-  "board",
-  "members",
-]);
+const validTabs = new Set<TeamWorkspaceTabValue>(["board", "members"]);
 
 export default async function TeamBoardPage({
   params,
@@ -76,9 +73,10 @@ export default async function TeamBoardPage({
       ),
     ]);
   const canSeeApprovals =
-    canApproveCheckout || canApproveCount || canApproveLeave;
+    activeTab === "board" &&
+    (canApproveCheckout || canApproveCount || canApproveLeave);
   const [result, queueCounts] = await Promise.all([
-    canViewTeam
+    activeTab === "board" && canViewTeam
       ? fetchTeamBoard({ branchId: context.branchId })
       : Promise.resolve({ success: false as const, error: "Không có quyền" }),
     canSeeApprovals
@@ -98,7 +96,7 @@ export default async function TeamBoardPage({
     <TeamWorkspaceTabs
       initialValue={activeTab}
       board={
-        !canViewTeam ? (
+        activeTab !== "board" ? null : !canViewTeam ? (
           <AppEmptyState mode="no-access" />
         ) : result.success ? (
           <TeamBoardClient
@@ -119,7 +117,8 @@ export default async function TeamBoardPage({
                 ? {
                     checkoutPending: queueCounts.pendingCheckouts ?? undefined,
                     leavePending: queueCounts.pendingLeaveRequests ?? undefined,
-                    countSlipsPending: queueCounts.pendingCountSlips ?? undefined,
+                    countSlipsPending:
+                      queueCounts.pendingCountSlips ?? undefined,
                   }
                 : undefined
             }
@@ -129,7 +128,7 @@ export default async function TeamBoardPage({
         )
       }
       members={
-        canViewTeam ? (
+        activeTab !== "members" ? null : canViewTeam ? (
           <TeamMembersContent branchId={context.branchId} />
         ) : (
           <AppEmptyState mode="no-access" />
@@ -139,7 +138,7 @@ export default async function TeamBoardPage({
   );
 
   return (
-    <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
+    <BranchOperatorPage title={copy.title} description={context.branch.name}>
       {content}
     </BranchOperatorPage>
   );

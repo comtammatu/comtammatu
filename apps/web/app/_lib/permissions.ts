@@ -36,15 +36,8 @@ export const currentUserHasPermission = cache(
   ): Promise<boolean> {
     const supabase = await createClient();
 
-    if (branchId === null) {
-      const { data, error } = await supabase.rpc("has_permission_any", {
-        p_key: key,
-      });
-      return !error && data === true;
-    }
-
     const { data, error } = await supabase.rpc("has_permission", {
-      p_branch_id: branchId,
+      p_branch_id: branchId as number,
       p_key: key,
     });
     return !error && data === true;
@@ -53,7 +46,7 @@ export const currentUserHasPermission = cache(
 
 /**
  * Check if current user has a permission in any branch or tenant scope.
- * Mirrors the RLS helper `public.has_permission_any`, including owner bypass.
+ * Mirrors the RLS helper `public.has_permission_any`.
  *
  * Wrapped in React `cache()` so repeated single-key probes in one render
  * dedupe (e.g. inventory layout asks `procurement:read`, page asks again).
@@ -73,8 +66,7 @@ export const currentUserHasPermissionAny = cache(
 /**
  * Returns true if the user has ANY of the given permission keys (tenant-wide
  * or branch-scoped). Fires all RPCs in parallel — single network RTT — and
- * ORs the results. Each individual RPC still runs the owner bypass
- * server-side short-circuit.
+ * ORs the results. Each individual RPC remains fail-closed server-side.
  *
  * Empty `keys` returns `false` (matches sequential semantics). Errors in
  * underlying RPCs map to `false` per `currentUserHasPermissionAny`, so the

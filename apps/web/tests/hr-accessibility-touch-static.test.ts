@@ -8,7 +8,7 @@ function read(relativePath: string) {
 }
 
 const permissionsSource = read(
-  "app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx",
+  "app/(protected)/hr/staff/[id]/permissions/role-bindings-client.tsx",
 );
 const auditFiltersSource = read(
   "app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
@@ -19,11 +19,11 @@ const attendanceSource = read("app/(protected)/hr/attendance-table.tsx");
 test("HR permission and audit selects expose persistent accessible names", () => {
   assert.match(
     permissionsSource,
-    /<SelectField[\s\S]*?name="scope"[\s\S]*?label=\{copy\.scope\}/,
+    /<SelectField[\s\S]*?name="roleCode"[\s\S]*?label="Vai trò hệ thống"/,
   );
   assert.match(
     permissionsSource,
-    /<SelectField[\s\S]*?name="permissionKey"[\s\S]*?label=\{copy\.permission\}/,
+    /<SelectField[\s\S]*?name="branchId"[\s\S]*?label="Chi nhánh"/,
   );
   assert.match(auditFiltersSource, /const filterIdPrefix = useId\(\)/);
   assert.match(auditFiltersSource, /htmlFor=\{actionFilterId\}/);
@@ -59,7 +59,7 @@ test("attendance mobile actions and force-close footer use named touch variants"
   assert.match(attendanceSource, /const isTouchLayout = useIsMobile\(1024\)/);
   assert.equal(
     attendanceSource.match(/size=\{touch \? "touch" : "sm"\}/g)?.length,
-    3,
+    4,
   );
   assert.match(attendanceSource, /photoAction\(record, true\)/);
   assert.match(attendanceSource, /forceCloseAction\(record, true\)/);

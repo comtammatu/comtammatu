@@ -2,8 +2,8 @@ import { STAFF_ROLES, type StaffRole } from "./types";
 import { getModuleLabelVi } from "../labels";
 
 /**
- * Module ACL — SINGLE source of truth for route access control.
- * Used by middleware (proxy.ts) and sidebar navigation.
+ * Fast route candidate gate used by middleware and navigation.
+ * Capability checks and database policies remain authoritative.
  */
 
 export type ModuleKey =
@@ -35,6 +35,7 @@ export type ModuleKey =
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
   | "branch_shift_roster"
+  | "branch_shift_attendance"
   | "notifications";
 
 interface ModuleAcl {
@@ -82,17 +83,17 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   staff: {
     path: "/hr/staff",
-    allowedRoles: ["owner"],
+    allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("staff"),
   },
   hr: {
     path: "/hr",
-    allowedRoles: ["owner"],
+    allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("hr"),
   },
   hr_payroll: {
     path: "/hr/payroll",
-    allowedRoles: ["owner"],
+    allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("hr_payroll"),
   },
   me: {
@@ -208,6 +209,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/shift/roster",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_shift_roster"),
+  },
+  branch_shift_attendance: {
+    path: "/br/*/shift/attendance",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_shift_attendance"),
   },
   notifications: {
     path: "/notifications",

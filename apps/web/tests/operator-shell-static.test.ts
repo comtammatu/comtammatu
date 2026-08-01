@@ -265,42 +265,18 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.doesNotMatch(home, /NoteCallout/);
 });
 
-test("operator shift route renders the Branch workday plane", () => {
+test("operator shift route keeps personal work in the Branch plane", () => {
   const shift = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
   const leave = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx",
   );
-  const workday = read("apps/web/lib/staff-runtime/page.tsx");
-  const countClient = read("apps/web/lib/staff-runtime/count/count-client.tsx");
-  const leaveSurface = read("apps/web/lib/staff-runtime/leave/page.tsx");
-  const leaveClient = read("apps/web/lib/staff-runtime/leave/leave-client.tsx");
-  const operatorCopy = read("apps/web/lib/messages/operator.ts");
-
-  assert.match(shift, /StaffWorkdayPageContent/);
-  assert.match(shift, /plane="branch"/);
-  assert.match(shift, /copy=\{messages\.operator\.shift\}/);
-  assert.match(shift, /tasksCopy=\{messages\.operator\.shiftTasks\}/);
-  assert.doesNotMatch(shift, /EmployeeHomePageContent/);
-  assert.doesNotMatch(shift, /messages\.employee\.home/);
-  assert.match(workday, /BranchOperatorPage as BranchOperatorPageShell/);
-  assert.match(workday, /plane === "branch"/);
-  assert.match(workday, /StaffCountPanelContent/);
-  assert.match(workday, /plane=\{plane\}/);
-  assert.match(countClient, /BranchOperatorPanel/);
-  assert.match(countClient, /BRANCH_COUNT_PRIMITIVES/);
-  assert.match(countClient, /plane === "branch"/);
-  assert.match(leave, /EmployeeLeavePageContent/);
-  assert.match(leave, /plane="branch"/);
-  assert.match(leaveSurface, /BranchOperatorPage/);
-  assert.match(leaveSurface, /plane === "branch"/);
-  assert.match(leaveClient, /BranchOperatorPanel/);
-  assert.match(leaveClient, /BranchOperatorActionBar/);
-  assert.match(leaveClient, /BranchOperatorStatusStrip/);
-  assert.match(leaveClient, /plane === "branch"/);
-  assert.match(operatorCopy, /shift: \{/);
-  assert.match(operatorCopy, /shiftTasks: \{/);
+  assert.match(shift, /redirect\(`\/br\/\$\{branchId\}\/team`\)/);
+  assert.match(shift, /workflowLayout="stepper"/);
+  assert.doesNotMatch(shift, /manager-dashboard|redirect\("\/me/);
+  assert.match(leave, /routeBranchId=\{branchId\}/);
+  assert.doesNotMatch(leave, /redirect\("\/me/);
 });
 
 test("operator stock count route renders the Branch count plane", () => {
@@ -326,11 +302,8 @@ test("branch home owns branch workflow entry tiles", () => {
   assert.match(navConfig, /approvals: "Duyệt"/);
   assert.match(navConfig, /sales_kitchen: "Bán hàng"/);
   assert.match(navConfig, /stock: "Kho hàng"/);
-  assert.match(
-    operatorTiles,
-    /hrefTemplate: "\/br\/\{branchId\}\/shift\/clock"/,
-  );
-  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/shift"/);
+  assert.match(operatorTiles, /hrefTemplate: "\/me\/clock"/);
+  assert.match(operatorTiles, /hrefTemplate: "\/me"/);
   assert.doesNotMatch(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/tasks"/,
@@ -725,8 +698,7 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(home, /md:w-72 lg:w-80 xl:w-96/);
   assert.match(employeeHome, /workflowLayout === "stepper"/);
   assert.match(employeeHome, /lg:grid-cols-5/);
-  assert.match(operatorProfile, /StaffProfilePageContent/);
-  assert.match(operatorProfile, /plane="branch"/);
+  assert.match(operatorProfile, /StaffProfilePageContent plane="branch"/);
   assert.doesNotMatch(operatorProfile, /PERSONAL_LINKS/);
   assert.doesNotMatch(operatorProfile, /permissions/);
   assert.doesNotMatch(operatorProfile, /showWorkspaceLinks/);
@@ -737,7 +709,10 @@ test("operator today shift and profile screens use responsive branch layout", ()
   assert.doesNotMatch(profile, /attendance_records/);
   assert.doesNotMatch(profile, /bank_account/);
   assert.match(profile, /<BranchOperatorPanel tone="info">/);
-  assert.match(profile, /flex flex-col items-center gap-3 text-center sm:flex-row/);
+  assert.match(
+    profile,
+    /flex flex-col items-center gap-3 text-center sm:flex-row/,
+  );
   assert.match(profile, /<Avatar className="size-full">/);
   assert.match(profile, /AvatarFallback className="text-3xl font-semibold"/);
   assert.match(profile, /copy\.employeeCode/);

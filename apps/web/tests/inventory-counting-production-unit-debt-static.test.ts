@@ -15,9 +15,6 @@ const issueUnitsSource = readWeb("app/(protected)/inventory/_lib/issue-units.ts"
 const purchaseUnitsSource = readWeb(
   "lib/inventory/purchase-units.ts",
 );
-const productionUnitsSource = readWeb(
-  "app/(protected)/inventory/_lib/production-units.ts",
-);
 const stocktakeWizardSource = readWeb(
   "app/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard.tsx",
 );
@@ -43,7 +40,7 @@ test("inventory unit option helpers delegate to one shared implementation", () =
   assert.match(unitOptionsSource, /getIngredientRoleUnit/);
   assert.match(unitOptionsSource, /getLargestIngredientUnit/);
 
-  for (const source of [countUnitsSource, issueUnitsSource, productionUnitsSource]) {
+  for (const source of [countUnitsSource, issueUnitsSource]) {
     assert.match(source, /from "@lib\/inventory\/unit-options"/);
     assert.match(source, /getIngredientRoleUnit/);
     assert.doesNotMatch(source, /\.filter\(\(u/);
@@ -56,7 +53,6 @@ test("inventory unit option helpers delegate to one shared implementation", () =
   for (const source of [
     countUnitsSource,
     issueUnitsSource,
-    productionUnitsSource,
   ]) {
     assert.match(source, /getIngredientRoleUnit/);
   }
@@ -98,21 +94,9 @@ test("classic stocktake count inputs keep stable keys across saved refreshes", (
   assert.doesNotMatch(stocktakeDetailSource, /stocktake-mobile-\$\{line\.id\}-/);
 });
 
-test("production create client consumes server-action recipe usage values", () => {
-  assert.match(productionRunActionsSource, /default_usage_per_fg: number/);
-  assert.match(productionRunActionsSource, /default_usage_per_fg:/);
-  assert.match(
-    productionRunActionsSource,
-    /Number\(ingredient\.recipe_quantity\) \/ outputQuantity/,
-  );
-  assert.match(productionNewClientSource, /ing\.default_usage_per_fg/);
-  assert.doesNotMatch(
-    productionNewClientSource,
-    /ing\.recipe_quantity\) \/ ing\.output_quantity/,
-  );
-  assert.doesNotMatch(
-    productionNewClientSource,
-    /ing\.recipe_quantity \/ ing\.output_quantity/,
-  );
-  assert.doesNotMatch(productionNewClientSource, /ing\.yield_factor/);
+test("production create uses recipe output ratio without actual usage inputs", () => {
+  assert.match(productionRunActionsSource, /recipe_quantity: number/);
+  assert.match(productionNewClientSource, /planned \/ selectedRecipe\.outputQuantity/);
+  assert.match(productionNewClientSource, /batchRatio \* ingredient\.recipe_quantity/);
+  assert.doesNotMatch(productionNewClientSource, /actualIngredients|actual_quantity/);
 });

@@ -3,6 +3,7 @@ import { PERMISSION_KEYS, canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
+  currentUserHasPermission,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
 import { ControlSurfaceShell } from "@/components/control-surface-shell";
@@ -46,6 +47,8 @@ export default async function ProtectedLayout({
     hasProductionBranchAccess,
     showInvoices,
     showSupplierPayables,
+    canOpenHr,
+    canOpenHrPayroll,
   ] = await Promise.all([
     canOpenInventory
       ? resolveInventoryBranchScope(supabase, claims, null)
@@ -90,6 +93,8 @@ export default async function ProtectedLayout({
       : canOpenFinance
         ? currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
         : denied,
+    currentUserHasPermission(null, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
+    currentUserHasPermission(null, PERMISSION_KEYS.HR_PAYROLL_PREPARE),
   ]);
 
   const isCentralCatalogViewer =
@@ -122,6 +127,7 @@ export default async function ProtectedLayout({
         showSupplierPayables,
         showRevenueTargets: isOwner,
       }}
+      hr={{ canOpen: canOpenHr, canOpenPayroll: canOpenHrPayroll }}
     >
       {children}
     </ControlSurfaceShell>

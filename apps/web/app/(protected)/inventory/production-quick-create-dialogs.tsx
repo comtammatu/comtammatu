@@ -59,7 +59,6 @@ function QuickCreateDialog<TCreated>({
     id: number;
     name: string;
     unit: string;
-    productionUnitId: number;
     units: FinishedGoodOption["units"];
   }) => TCreated;
 }) {
@@ -95,17 +94,16 @@ function QuickCreateDialog<TCreated>({
       return { success: false, error: config.errorFallback };
     }
     const unitLabel = selectedUnit.name;
-    const productionUnitId = selectedUnit.id;
+    const unitId = selectedUnit.id;
     onCreated?.(
       mapCreated({
         id: createdId,
         name: values.name,
         unit: unitLabel,
-        productionUnitId,
         units: [
           {
             id: 0,
-            unit_id: productionUnitId,
+            unit_id: unitId,
             unit_code: selectedUnit.code,
             unit_name: unitLabel,
             to_base_factor: 1,
@@ -232,11 +230,10 @@ export function QuickFinishedGoodDialog({
       config={FINISHED_GOOD_CONFIG}
       unitOptions={unitOptions}
       onCreated={onCreated}
-      mapCreated={({ id, name, unit, productionUnitId, units }) => ({
+      mapCreated={({ id, name, unit, units }) => ({
         id,
         name,
         unit,
-        production_unit_id: productionUnitId,
         units,
       })}
     />
@@ -263,11 +260,10 @@ export function QuickRawIngredientDialog({
       config={RAW_INGREDIENT_CONFIG}
       unitOptions={unitOptions}
       onCreated={onCreated}
-      mapCreated={({ id, name, unit, productionUnitId, units }) => ({
+      mapCreated={({ id, name, unit, units }) => ({
         id,
         name,
         unit,
-        production_unit_id: productionUnitId,
         units,
       })}
     />

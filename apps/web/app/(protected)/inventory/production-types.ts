@@ -24,7 +24,6 @@ export type IngredientOption = {
   name: string;
   unit: string;
   item_kind: string;
-  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -32,15 +31,18 @@ export type FinishedGoodOption = {
   id: number;
   name: string;
   unit: string;
-  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
+  recipeSpecId?: number;
+  recipeStatus?: "needs_review" | "active" | "inactive";
+  outputQuantity?: number;
+  outputUnitId?: number;
+  outputUnitLabel?: string;
 };
 
 export type RawIngredientOption = {
   id: number;
   name: string;
   unit: string;
-  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -49,6 +51,9 @@ export type ProductionRecipeGroup = {
   finishedGoodName: string;
   outputQuantity: number;
   outputUnitLabel: string;
+  outputUnitId: number | null;
+  recipeSpecId: number;
+  status: "needs_review" | "active" | "inactive";
   lines: ProductionRecipeRow[];
 };
 

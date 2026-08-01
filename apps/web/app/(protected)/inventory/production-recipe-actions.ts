@@ -46,7 +46,7 @@ const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   entryUnitId: z.coerce.number().int().positive({
-    error: "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
+    error: "Chọn đơn vị cho nguyên liệu.",
   }),
   note: z.string().optional(),
 });
@@ -57,6 +57,9 @@ const productionRecipeLinesSchema = z
     oldFinishedGoodId: z.coerce.number().int().positive().optional().nullable(),
     outputQuantity: z.coerce.number().positive({
       error: "Số lượng thành phẩm phải lớn hơn 0",
+    }),
+    outputUnitId: z.coerce.number().int().positive({
+      error: "Chọn đơn vị thành phẩm.",
     }),
     lines: z.array(productionRecipeLineUpsertSchema).min(1, {
       error: "Cần ít nhất một nguyên liệu trong công thức.",
@@ -80,6 +83,7 @@ type ProductionRecipeSheetRow = {
   finished_good_id: number | "";
   finished_good_name: string;
   output_quantity: number | "";
+  output_unit: string;
   ingredient_id: number | "";
   ingredient_name: string;
   quantity: number | "";
@@ -102,6 +106,7 @@ const importProductionRecipeRowSchema = z.object({
   outputQuantity: z.number().positive({
     error: "Số lượng thành phẩm phải lớn hơn 0",
   }),
+  outputUnitId: z.number().int().positive(),
   note: z.string().trim().optional(),
 });
 
@@ -155,8 +160,11 @@ function mapProductionRecipeImportError(
   if (message?.includes("ingredient_not_found")) {
     return "Có nguyên liệu không còn hợp lệ.";
   }
-  if (message?.includes("inventory_unit_role_mismatch")) {
-    return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
+  if (
+    message?.includes("ingredient_unit_invalid") ||
+    message?.includes("output_unit_invalid")
+  ) {
+    return "Đơn vị phải là quy cách đang dùng của đúng nguyên liệu.";
   }
   if (
     message?.includes("output_quantity_invalid") ||
@@ -195,8 +203,11 @@ function mapProductionRecipeUpsertError(
   if (message?.includes("ingredient_not_found")) {
     return "Có nguyên liệu không còn hợp lệ.";
   }
-  if (message?.includes("inventory_unit_role_mismatch")) {
-    return "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.";
+  if (message?.includes("ingredient_unit_invalid")) {
+    return "Đơn vị nguyên liệu không còn hợp lệ.";
+  }
+  if (message?.includes("output_unit_invalid")) {
+    return "Đơn vị thành phẩm không còn hợp lệ.";
   }
   if (message?.includes("output_quantity_invalid")) {
     return "Số lượng thành phẩm phải lớn hơn 0.";
@@ -207,7 +218,6 @@ function mapProductionRecipeUpsertError(
 type IngredientLookupRow = {
   id: number;
   name: string;
-  production_unit_id: number | null;
   ingredient_units?: { unit_id: number, is_base: boolean, is_active: boolean, sort_order: number, units: { code: string, name: string } | null }[];
   item_kind: string;
   is_active: boolean;
@@ -235,27 +245,13 @@ function normalizeUnitKey(value: string): string {
   return normalizeSearch(value).trim();
 }
 
-function getDefaultImportEntryUnit(
-  ingredient: IngredientLookupRow,
-): IngredientLookupRow["units"][number] | null {
-  if (ingredient.production_unit_id == null) return null;
-  return (
-    ingredient.units.find(
-      (unit) =>
-        unit.is_active && unit.unit_id === ingredient.production_unit_id,
-    ) ?? null
-  );
-}
-
 function resolveImportEntryUnit(
   ingredient: IngredientLookupRow,
   unitText: string,
 ): IngredientLookupRow["units"][number] | null {
-  const productionUnit = getDefaultImportEntryUnit(ingredient);
-  if (!productionUnit) return null;
-
   const needle = normalizeUnitKey(unitText);
-  if (!needle) return productionUnit;
+  const activeUnits = ingredient.units.filter((unit) => unit.is_active);
+  if (!needle) return activeUnits.length === 1 ? (activeUnits[0] ?? null) : null;
 
   const matches = ingredient.units.filter((unit) => {
     if (!unit.is_active) return false;
@@ -264,13 +260,12 @@ function resolveImportEntryUnit(
     );
   });
 
-  const match = matches.length === 1 ? (matches[0] ?? null) : null;
-  if (!match || match.unit_id !== productionUnit.unit_id) return null;
-  return match;
+  return matches.length === 1 ? (matches[0] ?? null) : null;
 }
 
 export interface ProductionRecipeRow {
   id: number;
+  recipe_spec_id: number;
   finished_good_id: number;
   finished_good_name: string;
   ingredient_id: number;
@@ -279,11 +274,15 @@ export interface ProductionRecipeRow {
   unitLabel: string;
   entry_unit_id: number | null;
   output_quantity: number;
+  output_unit_id: number | null;
+  output_unit_label: string;
+  status: "needs_review" | "active" | "inactive";
   note: string | null;
 }
 
 type ProductionRecipeQueryRow = {
   id: number;
+  recipe_spec_id: number;
   finished_good_id: number;
   ingredient_id: number;
   quantity: number | string;
@@ -300,6 +299,13 @@ type ProductionRecipeQueryRow = {
       is_active: boolean;
       units: { code: string | null; name: string | null } | null;
     }> | null;
+  } | null;
+  spec: {
+    id: number;
+    output_quantity: number | string;
+    output_unit_id: number | null;
+    status: "needs_review" | "active" | "inactive";
+    units: { name: string | null; code: string | null } | null;
   } | null;
 };
 
@@ -349,12 +355,20 @@ export async function fetchProductionRecipes(): Promise<
     .select(
       `
       id,
+      recipe_spec_id,
       finished_good_id,
       ingredient_id,
       quantity,
       entry_unit_id,
       output_quantity,
       note,
+      spec:production_recipe_specs!production_recipes_recipe_spec_fkey (
+        id,
+        output_quantity,
+        output_unit_id,
+        status,
+        units!production_recipe_specs_output_unit_id_fkey ( name, code )
+      ),
       finished_good:ingredients!production_recipes_finished_good_id_fkey ( id, name ),
       ingredient:ingredients!production_recipes_ingredient_id_fkey (
         id,
@@ -409,6 +423,7 @@ export async function fetchProductionRecipes(): Promise<
           "Đơn vị";
         return {
           id: row.id,
+          recipe_spec_id: row.recipe_spec_id,
           finished_good_id: row.finished_good_id,
           finished_good_name: finishedGood?.name ?? "Thành phẩm",
           ingredient_id: row.ingredient_id,
@@ -416,7 +431,13 @@ export async function fetchProductionRecipes(): Promise<
           quantity: Number(row.quantity),
           unitLabel,
           entry_unit_id: row.entry_unit_id ?? null,
-          output_quantity: Number(row.output_quantity),
+          output_quantity: Number(row.spec?.output_quantity ?? row.output_quantity),
+          output_unit_id: row.spec?.output_unit_id ?? null,
+          output_unit_label:
+            row.spec?.units?.name?.trim() ||
+            row.spec?.units?.code?.trim() ||
+            "Chưa chọn đơn vị",
+          status: row.spec?.status ?? "needs_review",
           note: row.note ?? null,
         };
       }) ?? [],
@@ -437,6 +458,7 @@ function buildProductionRecipeSheets(
           key: "output_quantity",
           width: 16,
         },
+        { header: "Đơn vị thành phẩm", key: "output_unit", width: 18 },
         { header: "Mã nguyên liệu", key: "ingredient_id", width: 14 },
         { header: "Nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Số lượng", key: "quantity", width: 14 },
@@ -455,6 +477,7 @@ function productionRecipeToSheetRow(
     finished_good_id: recipe.finished_good_id,
     finished_good_name: recipe.finished_good_name,
     output_quantity: recipe.output_quantity,
+    output_unit: recipe.output_unit_label,
     ingredient_id: recipe.ingredient_id,
     ingredient_name: recipe.ingredient_name,
     quantity: recipe.quantity,
@@ -526,6 +549,7 @@ export async function downloadProductionRecipeTemplate(): Promise<
       finished_good_id: "",
       finished_good_name: "Sườn ướp sẵn (ví dụ)",
       output_quantity: 10,
+      output_unit: "phần",
       ingredient_id: "",
       ingredient_name: "Sườn cốt lết sống (ví dụ)",
       quantity: 12,
@@ -621,7 +645,7 @@ export async function importProductionRecipes(
   const { data, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, item_kind, is_active, production_unit_id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+      "id, name, item_kind, is_active, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
     )
     .eq("tenant_id", claims.tenant_id);
 
@@ -665,6 +689,7 @@ export async function importProductionRecipes(
     number,
     {
       outputQuantity: number;
+      outputUnitId: number;
       lines: Array<{
         ingredientId: number;
         quantity: number;
@@ -795,6 +820,22 @@ export async function importProductionRecipes(
       return;
     }
 
+    const outputUnitRaw = readCell(
+      raw,
+      "Đơn vị thành phẩm",
+      "output_unit",
+    );
+    const outputUnit = resolveImportEntryUnit(finishedGood, outputUnitRaw);
+    if (!outputUnit) {
+      issues.push({
+        row: rowNumber,
+        field: "Đơn vị thành phẩm",
+        message:
+          "Đơn vị thành phẩm bị thiếu hoặc mơ hồ. Hãy nhập đúng tên/mã quy cách.",
+      });
+      return;
+    }
+
     const unitRaw = readCell(raw, "Đơn vị", "unit");
     const entryUnit = resolveImportEntryUnit(ingredient, unitRaw);
     if (!entryUnit) {
@@ -802,9 +843,7 @@ export async function importProductionRecipes(
         row: rowNumber,
         field: "Đơn vị",
         message:
-          ingredient.production_unit_id == null
-            ? "Nguyên liệu chưa có đơn vị sản xuất trong danh mục."
-            : "Đơn vị phải khớp đơn vị sản xuất của nguyên liệu.",
+          "Đơn vị nguyên liệu bị thiếu hoặc mơ hồ. Hãy nhập đúng tên/mã quy cách.",
       });
       return;
     }
@@ -815,6 +854,7 @@ export async function importProductionRecipes(
       quantity,
       entryUnitId: entryUnit.unit_id,
       outputQuantity,
+      outputUnitId: outputUnit.unit_id,
       note: readCell(raw, "Ghi chú", "note") || undefined,
     });
 
@@ -829,6 +869,7 @@ export async function importProductionRecipes(
 
     const group = groups.get(parsedRow.data.finishedGoodId) ?? {
       outputQuantity: parsedRow.data.outputQuantity,
+      outputUnitId: parsedRow.data.outputUnitId,
       lines: [] as Array<{
         ingredientId: number;
         quantity: number;
@@ -841,6 +882,14 @@ export async function importProductionRecipes(
         row: rowNumber,
         field: "Số lượng thành phẩm",
         message: INVENTORY_VI.productionRecipeOutputQuantityMismatch,
+      });
+      return;
+    }
+    if (group.outputUnitId !== parsedRow.data.outputUnitId) {
+      issues.push({
+        row: rowNumber,
+        field: "Đơn vị thành phẩm",
+        message: "Các dòng cùng công thức phải dùng một đơn vị thành phẩm.",
       });
       return;
     }
@@ -867,15 +916,16 @@ export async function importProductionRecipes(
 
   const sb = supabase as unknown as RpcClient;
   const { data: rpcData, error: rpcError } = await sb.rpc(
-    "bulk_import_production_recipes",
+    "bulk_import_production_recipe_specs",
     {
       p_groups: [...groups].map(([finishedGoodId, group]) => ({
         finished_good_id: finishedGoodId,
         output_quantity: group.outputQuantity,
+        output_unit_id: group.outputUnitId,
         lines: group.lines.map((line) => ({
-          ingredient_id: line.ingredientId,
+          ingredientId: line.ingredientId,
           quantity: line.quantity,
-          entry_unit_id: line.entryUnitId,
+          entryUnitId: line.entryUnitId,
           note: line.note,
         })),
       })),
@@ -928,18 +978,18 @@ export const upsertProductionRecipeLines = withAction(
     }
 
     const lines = data.lines.map((line) => ({
-      ingredient_id: line.ingredientId,
+      ingredientId: line.ingredientId,
       quantity: line.quantity,
-      entry_unit_id: line.entryUnitId,
+      entryUnitId: line.entryUnitId,
       note: line.note?.trim() ? line.note.trim() : null,
     }));
 
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("upsert_production_recipe_lines", {
       p_finished_good_id: data.finishedGoodId,
-      p_lines: lines,
       p_output_quantity: data.outputQuantity,
-      p_old_finished_good_id: data.oldFinishedGoodId ?? null,
+      p_output_unit_id: data.outputUnitId,
+      p_lines: lines,
     });
 
     if (error) {
@@ -953,39 +1003,6 @@ export const upsertProductionRecipeLines = withAction(
     return { success: true };
   },
 );
-
-export async function deleteProductionRecipe(
-  recipeId: number,
-): Promise<ActionResult> {
-  const parsed = idSchema.safeParse(recipeId);
-  if (!parsed.success)
-    return { success: false, error: "Mã công thức không hợp lệ" };
-
-  const ctx = await getAuthContextWithAnyPermission(
-    PRODUCTION_RECIPE_MANAGER_ROLES,
-    PRODUCTION_RECIPE_MANAGE_PERMISSIONS,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-  {
-    const access = await requireProductionAccess(supabase, claims);
-    if (!access.ok) {
-      return { success: false, error: access.error };
-    }
-  }
-  const { error } = await supabase
-    .from("production_recipes")
-    .delete()
-    .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể xóa công thức." };
-  }
-
-  return { success: true };
-}
 
 export async function deleteProductionRecipeGroup(
   finishedGoodId: number,
@@ -1008,15 +1025,27 @@ export async function deleteProductionRecipeGroup(
     }
   }
 
-  const { error } = await supabase
+  const { data: recipe, error: recipeError } = await supabase
     .from("production_recipes")
-    .delete()
+    .select("recipe_spec_id")
     .eq("tenant_id", claims.tenant_id)
-    .eq("finished_good_id", parsed.data);
+    .eq("finished_good_id", parsed.data)
+    .limit(1)
+    .maybeSingle();
 
-  if (error) {
+  if (recipeError || !recipe) {
     return { success: false, error: "Không thể xóa công thức cũ." };
   }
 
+  const sb = supabase as unknown as RpcClient;
+  const { error } = await sb.rpc("set_production_recipe_status", {
+    p_recipe_spec_id: Number(
+      (recipe as unknown as { recipe_spec_id: number }).recipe_spec_id,
+    ),
+    p_status: "inactive",
+  });
+  if (error) return { success: false, error: "Không thể ngừng công thức." };
+
+  revalidatePath("/inventory/production");
   return { success: true };
 }

@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 const CLIENT_SOURCE = readFileSync(
   new URL(
-    "../app/(protected)/hr/staff/[id]/permissions/permissions-client.tsx",
+    "../app/(protected)/hr/staff/[id]/permissions/role-bindings-client.tsx",
     import.meta.url,
   ),
   "utf8",
@@ -18,19 +18,18 @@ const ACTION_SOURCE = readFileSync(
   "utf8",
 );
 
-test("staff permission UI can submit tenant-wide grants", () => {
-  assert.match(CLIENT_SOURCE, /TENANT_SCOPE_VALUE = "__tenant__"/);
-  assert.match(CLIENT_SOURCE, /branchIdFromValue/);
+test("role binding UI derives scope from the selected role", () => {
+  assert.match(CLIENT_SOURCE, /allowedScope === "branch"/);
   assert.match(
     CLIENT_SOURCE,
-    /\{ value: TENANT_SCOPE_VALUE, label: copy\.tenantWide \}/,
+    /role\.allowedScope === "branch" \? Number\(values\.branchId\) : null/,
   );
-  assert.match(CLIENT_SOURCE, /branch_id: branchIdFromValue\(values\.scope\)/);
-  assert.match(CLIENT_SOURCE, /branch_id: targetBranchId/);
+  assert.match(CLIENT_SOURCE, /name="branchId"/);
+  assert.match(CLIENT_SOURCE, /name="roleCode"/);
 });
 
-test("staff permission actions do not reject null branch before RPC scope checks", () => {
-  assert.doesNotMatch(ACTION_SOURCE, /parsed\.data\.branch_id === null/);
-  assert.match(ACTION_SOURCE, /permission_scope_requires_branch/);
-  assert.match(ACTION_SOURCE, /permission_scope_requires_tenant/);
+test("role binding writes require the security capability and RPC", () => {
+  assert.match(ACTION_SOURCE, /PERMISSION_KEYS\.AUTH_BINDING_MANAGE/);
+  assert.match(ACTION_SOURCE, /"set_auth_role_binding"/);
+  assert.doesNotMatch(ACTION_SOURCE, /grant_permission|revoke_permission/);
 });

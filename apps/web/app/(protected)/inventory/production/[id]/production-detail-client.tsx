@@ -1,481 +1,253 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight as IconArrowRight } from "lucide-react";
-import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import { AppDetailFooter, AppSection, DescriptionList } from "@/components/surface";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
-  startProductionRun,
-  confirmProductionRun,
+  AppDetailFooter,
+  AppSection,
+  DescriptionList,
+} from "@/components/surface";
+import { formatDateTime, formatQty } from "@lib/inventory/format";
+import {
   cancelProductionRun,
-} from "../../production-run-actions";
-import type {
-  ProductionRunRow,
-  ProductionRecipeIngredient,
+  completeProductionRun,
+  startProductionRun,
+  type ProductionRunRow,
 } from "../../production-run-actions";
 import type { ProductionShortageRow } from "../../production-types";
-import { formatVNDate } from "@comtammatu/shared/time";
-import { formatDecimalInputValue } from "@comtammatu/shared/format";
-import { formatQty } from "@lib/inventory/format";
-import {
-  productionQuantityFromBase,
-  productionQuantityToBase,
-} from "../../_lib/production-unit-conversion";
 
-interface ProductionDetailClientProps {
-  run: ProductionRunRow;
-  recipeContext: {
-    ingredients: ProductionRecipeIngredient[];
-    maxProductionQuantity: number | null;
-  } | null;
-  recipeContextError: string | null;
-  embedded?: boolean;
-}
-
-export function ProductionDetailClient({
-  run,
-  recipeContext,
-  recipeContextError,
-  embedded = false,
-}: ProductionDetailClientProps) {
+export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
   const router = useRouter();
-  const isTouchLayout = useIsMobile(1024);
   const [isPending, startTransition] = useTransition();
-  const [actualQuantity, setActualQuantity] = useState<string>(
-    run.actual_quantity?.toString() || "",
+  const [actualOutput, setActualOutput] = useState(
+    run.actual_quantity == null ? String(run.planned_quantity) : String(run.actual_quantity),
   );
-  const maxProductionQuantity = productionQuantityFromBase(
-    recipeContext?.maxProductionQuantity ?? Number.NaN,
-    run.entry_unit_to_base_factor,
-  );
-  const maxProductionRaw =
-    maxProductionQuantity != null
-      ? formatDecimalInputValue(maxProductionQuantity, 3)
-      : null;
-  const plannedOutputBaseQuantity = productionQuantityToBase(
-    run.planned_quantity,
-    run.entry_unit_to_base_factor,
+  const [actualIngredients, setActualIngredients] = useState<
+    Record<number, string>
+  >(() =>
+    Object.fromEntries(
+      run.lines.map((line) => [
+        line.ingredient_id,
+        String(line.actual_quantity ?? line.planned_quantity),
+      ]),
+    ),
   );
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [ingredientUsages, setIngredientUsages] = useState<
-    Record<number, string>
-  >(() => {
-    const usages: Record<number, string> = {};
-    if (recipeContext?.ingredients) {
-      const overrides = Array.isArray(run.ingredients_override)
-        ? run.ingredients_override
-        : [];
-      const overrideMap = new Map();
-      overrides.forEach((o) => {
-        if (o.ingredient_id != null && o.actual_quantity != null) {
-          overrideMap.set(o.ingredient_id, o.actual_quantity);
-        }
-      });
+  const actualRows = useMemo(
+    () =>
+      run.lines.map((line) => ({
+        ingredientId: line.ingredient_id,
+        actualQuantity: Number(actualIngredients[line.ingredient_id]),
+      })),
+    [actualIngredients, run.lines],
+  );
 
-      for (const ing of recipeContext.ingredients) {
-        if (overrideMap.has(ing.ingredient_id)) {
-          usages[ing.ingredient_id] = overrideMap
-            .get(ing.ingredient_id)
-            .toString();
-        } else {
-          const defaultQty =
-            plannedOutputBaseQuantity == null
-              ? null
-              : plannedOutputBaseQuantity * ing.default_usage_per_fg;
-          usages[ing.ingredient_id] =
-            defaultQty == null ? "" : formatDecimalInputValue(defaultQty, 3);
-        }
-      }
+  function refreshAfter(result: { success: boolean; error?: string }) {
+    if (!result.success) {
+      setActionError(result.error ?? "Thao tác không thành công.");
+      return false;
     }
-    return usages;
-  });
+    setActionError(null);
+    router.refresh();
+    return true;
+  }
 
-  const handleIngredientChange = (id: number, val: string) => {
-    setIngredientUsages((prev) => ({ ...prev, [id]: val }));
-  };
-
-  const handleStart = () => {
+  function handleStart() {
     startTransition(async () => {
-      setActionError(null);
-      const res = await startProductionRun(run.id);
-      if (res.success) {
-        setShortages([]);
-        toast.success("Đã bắt đầu lệnh sản xuất");
-        router.refresh();
-      } else {
-        const message = res.error || "Có lỗi xảy ra";
-        setActionError(message);
-        toast.error(message);
-      }
+      const result = await startProductionRun({ id: run.id, branchId: run.branch_id });
+      if (refreshAfter(result)) toast.success("Đã bắt đầu sản xuất.");
     });
-  };
+  }
 
-  const handleConfirm = () => {
-    startTransition(async () => {
-      setActionError(null);
-      const parsedActual = actualQuantity.trim()
-        ? Number.parseFloat(actualQuantity)
-        : undefined;
-      const actual =
-        parsedActual != null && !Number.isNaN(parsedActual)
-          ? parsedActual
-          : undefined;
-
-      const actualIngredients = [];
-      if (recipeContext?.ingredients) {
-        for (const ing of recipeContext.ingredients) {
-          const val = ingredientUsages[ing.ingredient_id] ?? "";
-          if (val.trim()) {
-            const num = Number.parseFloat(val);
-            if (!Number.isNaN(num)) {
-              actualIngredients.push({
-                ingredient_id: ing.ingredient_id,
-                actual_quantity: num,
-              });
-            }
-          }
-        }
-      }
-
-      const res = await confirmProductionRun({
-        id: run.id,
-        actualQuantity: actual,
-        actualIngredients:
-          actualIngredients.length > 0 ? actualIngredients : undefined,
-      });
-
-      if (res.success) {
-        setShortages([]);
-        setActionError(null);
-        toast.success("Đã xác nhận lệnh sản xuất");
-        router.refresh();
-      } else {
-        const nextShortages = Array.isArray(res.data)
-          ? (res.data as ProductionShortageRow[])
-          : [];
-        setShortages(nextShortages);
-        if (nextShortages.length > 0) {
-          setActionError(null);
-          toast.error("Thiếu nguyên liệu trong kho để sản xuất.");
-        } else {
-          const message = res.error || "Có lỗi xảy ra";
-          setActionError(message);
-          toast.error(message);
-        }
-      }
-    });
-  };
-
-  const handleCancel = async () => {
-    const shouldCancel = await confirm({
-      title: "Hủy lệnh sản xuất?",
+  async function handleCancel() {
+    const accepted = await confirm({
+      title: "Hủy Lệnh sản xuất?",
       description:
-        "Lệnh sẽ chuyển sang trạng thái đã hủy và không thể tiếp tục sản xuất.",
+        "Lệnh sẽ chỉ đọc sau khi hủy. Nếu có vật tư hỏng, hãy ghi nhận bằng Hao hụt.",
       confirmText: "Hủy lệnh",
+      cancelText: "Quay lại",
       variant: "destructive",
     });
-    if (!shouldCancel) return;
-
+    if (!accepted) return;
     startTransition(async () => {
-      setActionError(null);
-      const res = await cancelProductionRun(run.id);
-      if (res.success) {
-        setShortages([]);
-        toast.success("Đã hủy lệnh sản xuất");
-        router.refresh();
-      } else {
-        const message = res.error || "Có lỗi xảy ra";
-        setActionError(message);
-        toast.error(message);
+      const result = await cancelProductionRun({
+        id: run.id,
+        branchId: run.branch_id,
+      });
+      if (refreshAfter(result)) toast.success("Đã hủy Lệnh sản xuất.");
+    });
+  }
+
+  function handleComplete() {
+    const output = Number(actualOutput);
+    if (
+      !Number.isFinite(output) ||
+      output <= 0 ||
+      actualRows.some(
+        (line) => !Number.isFinite(line.actualQuantity) || line.actualQuantity < 0,
+      ) ||
+      actualRows.every((line) => line.actualQuantity === 0)
+    ) {
+      setActionError(
+        "Sản lượng phải lớn hơn 0 và tổng nguyên liệu thực tế không được bằng 0.",
+      );
+      return;
+    }
+    setShortages([]);
+    startTransition(async () => {
+      const result = await completeProductionRun({
+        id: run.id,
+        branchId: run.branch_id,
+        actualQuantity: output,
+        actualIngredients: actualRows,
+      });
+      if (!result.success) {
+        setActionError(result.error ?? "Không thể hoàn thành Lệnh sản xuất.");
+        setShortages(
+          result.errorCode === "PRODUCTION_SHORTAGE" && Array.isArray(result.data)
+            ? (result.data as ProductionShortageRow[])
+            : [],
+        );
+        return;
       }
-    });
-  };
-
-  const unit = run.entry_unit_name || "";
-  const canEdit = run.status === "draft" || run.status === "in_progress";
-  const canConfirm =
-    canEdit &&
-    recipeContext != null &&
-    recipeContextError == null &&
-    run.entry_unit_to_base_factor != null;
-  const actionSize = embedded || isTouchLayout ? "touch" : "default";
-  const ingredients = recipeContext?.ingredients ?? [];
-  const branchSummary: ReactNode =
-    run.branch_id === run.target_branch_id ? (
-      run.branch_name
-    ) : (
-      <span className="inline-flex flex-wrap items-center gap-2">
-        <span>Sản xuất: {run.branch_name}</span>
-        <IconArrowRight className="size-4 text-muted-foreground" />
-        <span>Nhận: {run.target_branch_name}</span>
-      </span>
-    );
-  const summaryItems: Array<{
-    term: string;
-    description: ReactNode;
-  }> = [
-    {
-      term: "Chi nhánh",
-      description: branchSummary,
-    },
-    { term: "Ngày tạo", description: formatVNDate(run.created_at) },
-    { term: "Thành phẩm", description: run.finished_good_name },
-    {
-      term: "Số lượng dự kiến",
-      description: `${formatQty(run.planned_quantity)} ${unit}`,
-    },
-  ];
-
-  if (run.notes) {
-    summaryItems.push({
-      term: "Ghi chú",
-      description: run.notes,
+      toast.success("Đã hoàn thành và nhập thành phẩm tại Bếp Trung Tâm.");
+      router.refresh();
     });
   }
-
-  function renderIngredientUsageInput(ingredient: ProductionRecipeIngredient) {
-    const maxQty = formatDecimalInputValue(ingredient.max_ingredient_qty, 3);
-    return (
-      <div className="flex min-w-0 items-center justify-end gap-2">
-        <QuantityInput
-          aria-label={`Sử dụng thực tế ${ingredient.ingredient_name}`}
-          min="0"
-          maxFractionDigits={3}
-          max={maxQty}
-          value={ingredientUsages[ingredient.ingredient_id] ?? ""}
-          onValueChange={(value) =>
-            handleIngredientChange(ingredient.ingredient_id, value)
-          }
-          disabled={isPending}
-          className="min-w-0 text-right"
-        />
-        <span className="w-12 shrink-0 text-xs text-muted-foreground">
-          {ingredient.unit_name}
-        </span>
-      </div>
-    );
-  }
-
-  const ingredientColumns: DataTableColumn<ProductionRecipeIngredient>[] = [
-    {
-      key: "ingredient",
-      header: "Nguyên liệu",
-      render: (ingredient) => (
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-medium">
-            {ingredient.ingredient_name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Đơn vị: {ingredient.unit_name}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "max",
-      header: "Tồn tối đa",
-      className: "text-right",
-      render: (ingredient) => (
-        <span className="font-mono tabular-nums">
-          {formatQty(ingredient.max_ingredient_qty)}
-        </span>
-      ),
-    },
-    {
-      key: "actual",
-      header: "Sử dụng thực tế",
-      className: "text-right",
-      render: (ingredient) => renderIngredientUsageInput(ingredient),
-    },
-  ];
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      <AppSection title="Tổng quan lệnh">
+    <div className="flex flex-col gap-4">
+      <AppSection
+        title="Thông tin lệnh"
+        description={`${run.finished_good_name} · ${formatQty(run.planned_quantity)} ${run.entry_unit_name ?? ""}`.trim()}
+      >
         <DescriptionList
           className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
           descriptionClassName="font-medium"
-          items={summaryItems}
+          items={[
+            { term: "Bếp", description: run.branch_name },
+            {
+              term: "Sản lượng chuẩn",
+              description: `${formatQty(run.recipe_output_quantity ?? 0)} ${run.entry_unit_name ?? ""}`.trim(),
+            },
+            {
+              term: "Bắt đầu",
+              description: run.started_at
+                ? formatDateTime(run.started_at)
+                : "—",
+            },
+            {
+              term: "Hoàn thành",
+              description: run.completed_at
+                ? formatDateTime(run.completed_at)
+                : "—",
+            },
+          ]}
         />
       </AppSection>
 
-      {canEdit ? (
+      <AppSection
+        title="Định mức đã chốt theo lệnh"
+        description="Lệnh giữ nguyên định mức này dù công thức được sửa sau đó."
+      >
+        <div className="divide-y border">
+          {run.lines.map((line) => (
+            <div
+              key={line.ingredient_id}
+              className="grid items-center gap-2 px-3 py-2 text-sm sm:grid-cols-[1fr_auto_auto]"
+            >
+              <span className="font-medium">{line.ingredient_name}</span>
+              <span className="text-muted-foreground">
+                Kế hoạch {formatQty(line.planned_quantity)} {line.entry_unit_name}
+              </span>
+              {run.status === "in_progress" ? (
+                <div className="flex w-40 items-center gap-2">
+                  <QuantityInput
+                    value={actualIngredients[line.ingredient_id] ?? ""}
+                    onValueChange={(value) =>
+                      setActualIngredients((current) => ({
+                        ...current,
+                        [line.ingredient_id]: value,
+                      }))
+                    }
+                    min="0"
+                    maxFractionDigits={3}
+                  />
+                  <span className="text-xs text-muted-foreground">{line.entry_unit_name}</span>
+                </div>
+              ) : (
+                <span>{line.actual_quantity == null ? "—" : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </AppSection>
+
+      {run.status === "in_progress" ? (
         <AppSection
           title="Sản lượng thực tế"
-          description="Nhập số lượng hoàn tất nếu khác số lượng dự kiến."
+          description="Nhập số thành phẩm đã đạt. Mẻ không có sản lượng phải hủy."
         >
-          <div className="grid gap-2 sm:max-w-md">
-            <div className="flex items-center gap-2">
-              <QuantityInput
-                aria-label="Số lượng thực tế"
-                min="0"
-                maxFractionDigits={3}
-                max={maxProductionRaw ?? undefined}
-                value={actualQuantity}
-                onValueChange={setActualQuantity}
-                disabled={isPending}
-              />
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {unit}
-              </span>
-            </div>
-            {maxProductionRaw && (
-              <div className="text-sm text-muted-foreground">
-                Tối đa có thể sản xuất:{" "}
-                <span className="font-medium text-foreground">
-                  {formatQty(maxProductionQuantity ?? 0)} {unit}
-                </span>
-              </div>
-            )}
+          <div className="flex max-w-sm items-center gap-2">
+            <QuantityInput
+              aria-label="Số lượng thực tế"
+              value={actualOutput}
+              onValueChange={setActualOutput}
+              min="0"
+              maxFractionDigits={3}
+            />
+            <span className="text-sm text-muted-foreground">{run.entry_unit_name}</span>
           </div>
         </AppSection>
       ) : null}
 
-      {canEdit && ingredients.length > 0 ? (
-        <AppSection
-          title="Nguyên liệu sử dụng"
-          description="Điều chỉnh lượng nguyên liệu thực tế trước khi hoàn tất lệnh."
-          contentFlush
-        >
-          <DataTable
-            data={ingredients}
-            columns={ingredientColumns}
-            getRowKey={(ingredient) => ingredient.ingredient_id}
-            mobileCardRender={(ingredient) => (
-              <Item variant="outline">
-                <ItemContent>
-                  <ItemTitle>{ingredient.ingredient_name}</ItemTitle>
-                  <ItemDescription>
-                    Tồn tối đa {formatQty(ingredient.max_ingredient_qty)}{" "}
-                    {ingredient.unit_name}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemContent className="basis-full">
-                  {renderIngredientUsageInput(ingredient)}
-                </ItemContent>
-              </Item>
-            )}
-          />
-        </AppSection>
-      ) : null}
-
-      {canEdit && !canConfirm ? (
-        <Alert variant="destructive">
-          <AlertTitle>Chưa thể hoàn thành lệnh sản xuất</AlertTitle>
-          <AlertDescription>
-            {recipeContextError ??
-              "Không thể kiểm tra đơn vị thành phẩm hoặc định mức nguyên liệu."}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {actionError ? (
-        <Alert variant="destructive">
-          <AlertTitle>Thao tác không thành công</AlertTitle>
-          <AlertDescription>{actionError}</AlertDescription>
-        </Alert>
+        <Alert variant="destructive"><AlertTitle>Thao tác không thành công</AlertTitle><AlertDescription>{actionError}</AlertDescription></Alert>
       ) : null}
-
-      {shortages.length > 0 ? (
+      {shortages.length ? (
         <Alert variant="destructive">
-          <AlertTitle>Thiếu nguyên liệu trong kho để sản xuất</AlertTitle>
+          <AlertTitle>Không đủ tồn nguyên liệu</AlertTitle>
           <AlertDescription>
-            <div className="mt-2 flex flex-col gap-1">
-              {shortages.map((row) => (
-                <div
-                  key={row.ingredient_id}
-                  className="flex flex-col gap-1 text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="font-medium text-foreground">
-                    {row.ingredient_name}
-                  </span>
-                  <span>
-                    Cần{" "}
-                    <span className="font-mono">{formatQty(row.needed)}</span>{" "}
-                    {row.unit}, còn{" "}
-                    <span className="font-mono">{formatQty(row.on_hand)}</span>{" "}
-                    {row.unit}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {shortages.map((row) => (
+              <div key={row.ingredient_id}>{row.ingredient_name}: cần {formatQty(row.needed)} {row.unit}, còn {formatQty(row.on_hand)} {row.unit}</div>
+            ))}
           </AlertDescription>
         </Alert>
       ) : null}
 
       {run.status === "completed" ? (
-        <AppSection title="Kết quả hoàn tất">
-          <DescriptionList
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-            descriptionClassName="font-medium"
-            items={[
-              {
-                term: "Số lượng thực tế",
-                description: `${formatQty(run.actual_quantity ?? 0)} ${unit}`,
-              },
-            ]}
-          />
+        <AppSection
+          title="Thành phẩm đã ở Bếp Trung Tâm"
+          description="Nếu cần giao về chi nhánh, tạo chứng từ Điều chuyển riêng."
+          action={<Button render={<Link href={`/inventory/transfers/new?branchId=${run.branch_id}`} />}>Tạo Điều chuyển</Button>}
+        >
+          <div />
         </AppSection>
       ) : null}
 
-      {canEdit ? (
+      {run.status === "cancelled" && run.cancel_reason ? (
+        <AppSection title="Lý do hủy"><p className="text-sm">{run.cancel_reason}</p></AppSection>
+      ) : null}
+
+      {run.status === "draft" || run.status === "in_progress" ? (
         <AppDetailFooter
-          sticky={embedded}
-          leading={
-            <Button
-              type="button"
-              onClick={handleCancel}
-              disabled={isPending}
-              variant="destructive"
-              size={actionSize}
-            >
-              Hủy lệnh
-            </Button>
-          }
           trailing={
             <>
+              <Button variant="outline" onClick={handleCancel} disabled={isPending}>Hủy</Button>
               {run.status === "draft" ? (
-                <Button
-                  type="button"
-                  onClick={handleStart}
-                  disabled={isPending || !canConfirm}
-                  size={actionSize}
-                >
-                  Bắt đầu sản xuất
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                onClick={handleConfirm}
-                disabled={isPending || !canConfirm}
-                variant={run.status === "draft" ? "secondary" : "default"}
-                size={actionSize}
-              >
-                Hoàn thành
-              </Button>
+                <Button onClick={handleStart} disabled={isPending}>Bắt đầu sản xuất</Button>
+              ) : (
+                <Button onClick={handleComplete} disabled={isPending}>Hoàn thành</Button>
+              )}
             </>
           }
         />

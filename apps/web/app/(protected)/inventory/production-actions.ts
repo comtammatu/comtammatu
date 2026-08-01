@@ -9,7 +9,6 @@ export {
   downloadProductionRecipeTemplate,
   importProductionRecipes,
   upsertProductionRecipeLines,
-  deleteProductionRecipe,
   deleteProductionRecipeGroup,
 } from "./production-recipe-actions";
 export type {
@@ -20,7 +19,7 @@ export type {
 export {
   fetchProductionRuns,
   createProductionRun,
-  confirmProductionRun,
+  completeProductionRun,
   cancelProductionRun,
   startProductionRun,
 } from "./production-run-actions";

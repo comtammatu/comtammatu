@@ -217,7 +217,7 @@ posting; không cho tồn âm, race ở posting fail-soft và được stocktake
 
 ## D069: Typography và night mode
 
-**Net effect:** Be Vietnam Pro cho heading, Geist cho body, Geist Mono cho data.
+**Net effect:** Geist cho heading và body, Geist Mono cho data.
 Night mode dùng warm-dark cookie contract và không ảnh hưởng print. Canonical:
 `docs/spec/design-system.md`.
 
@@ -269,3 +269,16 @@ snapshot. `legacy_purchase_price_variance` chỉ ghi phần variance mở đầu
 thể suy đoán lineage. Canonical:
 `docs/ref/inventory.md`, ADR 0017,
 `supabase/migrations/20260730155938_inventory_valuation_subledger.sql`.
+
+## D102: Vai trò đơn vị kho độc lập
+
+**Net effect:** `Nhập`, `Xuất` và `Sản xuất` là ba vai trò độc lập, không còn
+quan hệ `Nhập ≥ Xuất ≥ Sản xuất`. Mỗi nguyên liệu có tối đa ba đơn vị khác nhau
+và đúng một tồn chuẩn thuộc ít nhất một vai trò; tạo mới mặc định theo Đơn vị
+xuất, sửa dữ liệu cũ giữ nguyên tồn chuẩn. Mọi đơn vị quy đổi trực tiếp về tồn
+chuẩn; đơn vị chuẩn cùng `dimension` lấy `standard_factor`, bao bì dùng hệ số
+nhập tay. Không đổi schema hoặc chữ ký `save_ingredient_catalog`; snapshot lịch
+sử giữ nguyên, master/draft đang mở nhận factor mới. Migration phát hành trước
+UI và chỉ apply Production khi owner ủy quyền rõ; sau khi có dữ liệu mới không
+khôi phục guard thứ tự cũ, rollback database phải là forward migration.
+Canonical: `docs/ref/inventory.md`.

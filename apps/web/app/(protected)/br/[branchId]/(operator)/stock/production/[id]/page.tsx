@@ -1,63 +1,12 @@
-import { notFound, redirect } from "next/navigation";
-import {
-  fetchProductionRecipeContext,
-  fetchProductionRunById,
-} from "@/(protected)/inventory/production-run-actions";
-import { resolveBranchContext } from "@/_lib/branch-context";
-import { loadAuthState } from "@/_lib/auth";
-import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
-import { BranchProductionDetailClient } from "./branch-production-detail-client";
+import { redirect } from "next/navigation";
 
-interface PageProps {
-  params: Promise<{ branchId: string; id: string }>;
-}
-
-export default async function OperatorProductionDetailPage({
+export default async function BranchProductionDetailRedirect({
   params,
-}: PageProps) {
-  const { branchId: rawBranchId, id: rawId } = await params;
-  const branchId = parseOperatorBranchId(rawBranchId);
-  const runId = Number(rawId);
-  if (
-    branchId == null ||
-    !Number.isInteger(runId) ||
-    runId <= 0
-  ) {
-    notFound();
-  }
-
-  const { supabase, claims } = await loadAuthState();
-  const branchContext = await resolveBranchContext(supabase, claims, branchId);
-  if (!branchContext) notFound();
-  if (branchContext.branch.branch_kind === "branch") {
-    redirect(`/br/${branchId}/stock`);
-  }
-
-  const res = await fetchProductionRunById(runId);
-  if (!res.success || !res.data) notFound();
-
-  const run = res.data;
-  if (run.branch_id !== branchId && run.target_branch_id !== branchId) {
-    notFound();
-  }
-
-  const recipeRes = await fetchProductionRecipeContext(
-    run.finished_good_id,
-    run.branch_id,
-    run.source_location_id ?? undefined,
-  );
-  const recipeContext =
-    recipeRes.success && recipeRes.data ? recipeRes.data : null;
-  const recipeContextError = recipeRes.success
-    ? null
-    : (recipeRes.error ?? "Không thể kiểm tra định mức và tồn kho.");
-
-  return (
-    <BranchProductionDetailClient
-      run={run}
-      recipeContext={recipeContext}
-      recipeContextError={recipeContextError}
-      basePath={`/br/${branchId}/stock/production`}
-    />
+}: {
+  params: Promise<{ branchId: string; id: string }>;
+}) {
+  const { branchId, id } = await params;
+  redirect(
+    `/inventory/production/${encodeURIComponent(id)}?branchId=${encodeURIComponent(branchId)}`,
   );
 }

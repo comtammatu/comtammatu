@@ -21,7 +21,7 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.doesNotMatch(source, /theo WAC/);
 });
 
-test("ingredient unit dialog reveals optional input and production roles on demand", () => {
+test("ingredient unit dialog models independent roles around one explicit base", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
@@ -29,26 +29,44 @@ test("ingredient unit dialog reveals optional input and production roles on dema
 
   assert.match(source, /label=\{copy\.units\.inputUnit\}/);
   assert.match(source, /label=\{copy\.units\.outputUnit\}/);
-  assert.match(source, /ConversionFactorField/);
-  assert.match(source, /copy\.units\.productionEnabled/);
-  assert.match(source, /label=\{copy\.units\.productionUnit\}/);
-  assert.match(source, /copy\.units\.conversion\(fromUnitName, toUnitName\)/);
-  assert.match(source, /text-muted-foreground">=<\/span>/);
-  assert.match(source, /showUnitAddActions/);
-  assert.match(source, /flex flex-wrap gap-2/);
-  assert.match(source, /IconPlus data-icon="inline-start"/);
+  assert.match(source, /name: "base_unit_id"/);
+  assert.match(source, /UnitFactorField/);
+  assert.match(source, /<RadioGroup/);
+  assert.match(source, /<ItemGroup/);
+  assert.match(source, /<InputGroup/);
+  assert.match(source, /buildCatalogUnits/);
+  assert.match(source, /rebaseUnitFactors/);
+  assert.doesNotMatch(source, /copy\.units\.productionNone/);
+  assert.doesNotMatch(source, /label=\{copy\.units\.productionUnit\}/);
+  assert.doesNotMatch(messages, /productionNone|productionUnit/);
+  assert.match(source, /copy\.units\.conversionSection\(/);
+  assert.doesNotMatch(source, /disabled=\{isBase \|\| automatic\}/);
   assert.doesNotMatch(source, /size="touch"/);
-  assert.doesNotMatch(source, /label=\{copy\.units\.colBase\}/);
-  assert.doesNotMatch(source, /description=\{copy\.units\./);
+  assert.doesNotMatch(
+    source,
+    /input_to_output_factor|output_to_production_factor|input_unit_is_different/,
+  );
   assert.doesNotMatch(
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
-  assert.match(messages, /inputUnitDifferent: "Thêm đơn vị nhập"/);
-  assert.match(messages, /productionEnabled: "Thêm đơn vị sản xuất"/);
-  assert.match(messages, /standardUnit:/);
+  assert.match(messages, /baseUnit: "Đơn vị tồn chuẩn"/);
+  assert.match(messages, /Đơn vị nhập và xuất là các vai trò độc lập/);
+  assert.doesNotMatch(messages, /Nhập ≥ Xuất ≥ Sản xuất/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);
+});
+
+test("owner and branch catalog consumers share the same ingredient dialog", () => {
+  const owner = readWorkspaceFile(
+    "app/(protected)/inventory/ingredients/ingredients-client.tsx",
+  );
+  const branch = readWorkspaceFile(
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/ingredients/catalog-ingredients-client.tsx",
+  );
+
+  assert.match(owner, /<IngredientDialog/);
+  assert.match(branch, /<IngredientDialog/);
 });
 
 test("GRN entry copy keeps unit conversion and omits purchase-price helpers", () => {

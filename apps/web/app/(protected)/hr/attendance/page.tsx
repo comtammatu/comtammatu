@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
-import { loadAuthState } from "@/_lib/auth";
+import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { AttendanceTable } from "../attendance-table";
@@ -11,6 +12,7 @@ import { LeaveRequestsTable } from "../leave-requests-table";
 import type { BranchOption } from "../_types";
 import { loadOwnerRosterPanelData } from "@lib/hr/roster/load-owner-roster-data";
 import { RosterWeekClient } from "@lib/hr/roster/roster-week-client";
+import { HrScopeSelector } from "../hr-scope-selector";
 
 type AttendanceSearchParams = {
   branch?: string;
@@ -57,7 +59,12 @@ function resolveTab(
 ): AttendanceTab {
   if (value === "leave" || value === "schedule") return "approvals";
   if (value === "attendance") return "timesheet";
-  if (value === "today" || value === "approvals" || value === "timesheet" || value === "roster") {
+  if (
+    value === "today" ||
+    value === "approvals" ||
+    value === "timesheet" ||
+    value === "roster"
+  ) {
     return value;
   }
   return pendingApprovals > 0 ? "approvals" : "today";
@@ -70,7 +77,13 @@ export default async function HrAttendancePage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const [{ data }, leaveCountResult, checkoutCountResult] = await Promise.all([
+  const [
+    { data },
+    leaveCountResult,
+    checkoutCountResult,
+    canForceClose,
+    canCorrect,
+  ] = await Promise.all([
     supabase
       .from("branches")
       .select("id, name, branch_kind")
@@ -89,6 +102,16 @@ export default async function HrAttendancePage({
       .not("checkout_requested_at", "is", null)
       .is("checkout_approved_at", null)
       .is("check_out", null),
+    probePermission(
+      { supabase, claims },
+      PERMISSION_KEYS.HR_FORCE_CLOSE_ATTENDANCE,
+      null,
+    ),
+    probePermission(
+      { supabase, claims },
+      PERMISSION_KEYS.HR_CORRECT_ATTENDANCE,
+      null,
+    ),
   ]);
   const branches = (data ?? []) as BranchOption[];
   const storeBranches = branches.filter(
@@ -105,6 +128,12 @@ export default async function HrAttendancePage({
   )
     ? requestedBranchId
     : branches[0]?.id;
+  const initialBranchScope =
+    params.branch === "all" || params.branch === "office"
+      ? params.branch
+      : initialBranchId != null
+        ? String(initialBranchId)
+        : "all";
   const initialView =
     params.view === "calendar" || params.view === "clock"
       ? params.view
@@ -113,11 +142,7 @@ export default async function HrAttendancePage({
   const tab = resolveTab(params.tab, pendingApprovals);
   const rosterPanel =
     tab === "roster"
-      ? await loadOwnerRosterPanelData(
-          branches,
-          params.branch,
-          params.week,
-        )
+      ? await loadOwnerRosterPanelData(branches, params.branch, params.week)
       : null;
 
   return (
@@ -126,9 +151,12 @@ export default async function HrAttendancePage({
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
         actions={
-          <Button variant="outline" size="touch" render={<Link href="/hr" />}>
-            {messages.hr.payroll.backToHr}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <HrScopeSelector branches={branches} value={params.branch} />
+            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+              {messages.hr.payroll.backToHr}
+            </Button>
+          </div>
         }
       />
       <AppPageTabs
@@ -145,70 +173,86 @@ export default async function HrAttendancePage({
         defaultValue={tab}
         ariaLabel={copy.attendanceTabs.ariaLabel}
       >
-        <TabsContent value="today">
-          <AttendanceTable
-            branches={branches}
-            initialBranchId={initialBranchId}
-            initialMonth={todayMonth}
-            initialView="clock"
-            initialDay={today}
-            initialEmployeeId={null}
-            initialCalendarScope="all"
-            urlTab="today"
-            todayMode
-          />
-        </TabsContent>
-        <TabsContent value="approvals">
-          <div className="flex flex-col gap-4">
-            <AppSection
-              title={copy.checkoutApprovalsAction}
-              description={copy.checkoutApprovalsHint}
-              contentFlush
-            >
-              <StaffCheckoutApprovalsPageContent
-                routeBranchId={null}
-                ownerHomeHref="/hr/attendance?tab=approvals"
-                embedded
-              />
-            </AppSection>
-            <LeaveRequestsTable branches={storeBranches} />
-          </div>
-        </TabsContent>
-        <TabsContent value="timesheet">
-          <AttendanceTable
-            branches={branches}
-            initialBranchId={initialBranchId}
-            initialMonth={month}
-            initialView={initialView}
-            initialDay={
-              initialView === "calendar" ? resolveDay(params.day, month) : null
-            }
-            initialEmployeeId={
-              initialView === "calendar"
-                ? resolveEmployeeId(params.employee)
-                : null
-            }
-            initialCalendarScope={
-              initialView === "calendar"
-                ? resolveCalendarScope(params.filter)
-                : "all"
-            }
-            urlTab="timesheet"
-          />
-        </TabsContent>
-        <TabsContent value="roster">
-          {rosterPanel ? (
-            <RosterWeekClient
-              branchId={rosterPanel.branchId}
-              siteOptions={rosterPanel.siteOptions}
-              weekStart={rosterPanel.weekStart}
-              data={rosterPanel.roster}
-              canAssign={rosterPanel.canAssign}
-              loadFailed={rosterPanel.loadFailed}
-              urlTab="roster"
+        {tab === "today" ? (
+          <TabsContent value="today">
+            <AttendanceTable
+              branches={branches}
+              initialBranchId={initialBranchId}
+              initialBranchScope={initialBranchScope}
+              initialMonth={todayMonth}
+              initialView="clock"
+              initialDay={today}
+              initialEmployeeId={null}
+              initialCalendarScope="all"
+              urlTab="today"
+              todayMode
+              canForceClose={canForceClose}
+              canCorrect={canCorrect}
             />
-          ) : null}
-        </TabsContent>
+          </TabsContent>
+        ) : null}
+        {tab === "approvals" ? (
+          <TabsContent value="approvals">
+            <div className="flex flex-col gap-4">
+              <AppSection
+                title={copy.checkoutApprovalsAction}
+                description={copy.checkoutApprovalsHint}
+                contentFlush
+              >
+                <StaffCheckoutApprovalsPageContent
+                  routeBranchId={null}
+                  ownerHomeHref="/hr/attendance?tab=approvals"
+                  embedded
+                />
+              </AppSection>
+              <LeaveRequestsTable branches={storeBranches} />
+            </div>
+          </TabsContent>
+        ) : null}
+        {tab === "timesheet" ? (
+          <TabsContent value="timesheet">
+            <AttendanceTable
+              branches={branches}
+              initialBranchId={initialBranchId}
+              initialBranchScope={initialBranchScope}
+              initialMonth={month}
+              initialView={initialView}
+              initialDay={
+                initialView === "calendar"
+                  ? resolveDay(params.day, month)
+                  : null
+              }
+              initialEmployeeId={
+                initialView === "calendar"
+                  ? resolveEmployeeId(params.employee)
+                  : null
+              }
+              initialCalendarScope={
+                initialView === "calendar"
+                  ? resolveCalendarScope(params.filter)
+                  : "all"
+              }
+              urlTab="timesheet"
+              canForceClose={canForceClose}
+              canCorrect={canCorrect}
+            />
+          </TabsContent>
+        ) : null}
+        {tab === "roster" ? (
+          <TabsContent value="roster">
+            {rosterPanel ? (
+              <RosterWeekClient
+                branchId={rosterPanel.branchId}
+                siteOptions={rosterPanel.siteOptions}
+                weekStart={rosterPanel.weekStart}
+                data={rosterPanel.roster}
+                canAssign={rosterPanel.canAssign}
+                loadFailed={rosterPanel.loadFailed}
+                urlTab="roster"
+              />
+            ) : null}
+          </TabsContent>
+        ) : null}
       </AppPageTabs>
     </AppPage>
   );

@@ -211,7 +211,15 @@ test("embedded transfer dialog scrolls the line list without moving the summary 
   assert.match(transfer, /embedded && "lg:h-full lg:min-h-0"/);
   assert.match(
     transfer,
-    /embedded && "min-h-0 lg:overflow-y-auto lg:overscroll-contain"/,
+    /import \{ ScrollArea \} from "@comtammatu\/ui\/components\/scroll-area"/,
+  );
+  assert.match(
+    transfer,
+    /<ScrollArea className="lg:h-full">\{lineTable\}<\/ScrollArea>/,
+  );
+  assert.match(
+    transfer,
+    /embedded && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"/,
   );
   assert.match(
     transfer,

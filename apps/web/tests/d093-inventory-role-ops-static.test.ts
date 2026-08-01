@@ -94,7 +94,7 @@ test("D093 migration and permission keys register stock request surface", () => 
   assert.match(migration, /inventory:request_create/);
   assert.match(migration, /grn_central_site_only/);
   assert.match(permissions, /INVENTORY_REQUEST_CREATE/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 94/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 107/);
 });
 
 test("D093 default_fulfill_site_kind is granted to authenticated after column lockdown", () => {
@@ -142,10 +142,7 @@ test("ingredient catalog uses one atomic role-aware RPC", () => {
 });
 
 test("all ingredient save actions use the atomic RPC without direct ingredient update", () => {
-  assert.equal(
-    ingredientActions.match(/saveIngredientCatalog\(/g)?.length,
-    4,
-  );
+  assert.equal(ingredientActions.match(/saveIngredientCatalog\(/g)?.length, 4);
   assert.doesNotMatch(
     ingredientActions,
     /\.from\("ingredients"\)[\s\S]{0,200}\.update\(/,

@@ -16,23 +16,25 @@ device context instead of the role/scope contract.
 - There are three authenticated presentation planes: **Owner**, **Branch**, and
   **Self**. They share domain records and authorization boundaries; Self is not
   a second HR administration surface.
-- Owner enters `/`. Owner-only module families are `/settings`, `/menu`,
-  `/orders`, `/inventory`, `/finance`, `/branches`, and `/hr`.
+- Owner enters `/`. Company control module families include `/settings`,
+  `/menu`, `/orders`, `/inventory`, `/finance`, `/branches`, and `/hr`;
+  admission is decided by explicit scoped capabilities rather than a business
+  title.
 - Every branch-pinned role enters `/br/[branchId]`, using the branch claim from
   the JWT. Missing or mismatched scope fails closed.
-- Branchless non-Owner staff use `/me/*` for personal attendance, workday tasks,
-  schedule/leave, profile, and payslip. Branch-pinned staff remain canonical at
-  `/br/[branchId]/shift/*` and `/br/[branchId]/profile`.
+- Every non-Owner employee uses `/me/*` for personal attendance, workday tasks,
+  schedule/leave, profile, and payslip. Legacy personal routes under
+  `/br/[branchId]/shift/*` and `/br/[branchId]/profile/*` redirect to `/me/*`.
 - Owner is explicitly denied the Self plane: no `/me`, no punch, no self-service
   leave, and no discovery or redirect into that route family.
-- There is no picker root, route alias, compatibility redirect, or device-based
-  destination field.
+- There is no picker root or device-based destination field. Personal Branch
+  aliases remain redirects for one compatibility cycle.
 - `module-acl.ts` owns route admission. Shared capability keys such as
   `inventory` and `orders` may protect Branch-native routes but never grant the
   corresponding Owner route family.
-- Branch HR is a read-only projection of personal information, attendance, and
-  leave state. Staff CRUD, payroll calculation, HĐLĐ, BHXH, accounts, and
-  permissions are Owner-only. Branch Managers retain same-branch floor
+- Branch HR is a branch-safe projection of employee and attendance state.
+  Staff CRUD, payroll, HĐLĐ, BHXH, accounts, and permissions stay on `/hr/*`.
+  Branch Managers retain same-branch floor
   checkout/leave approval; Owner handles central-site and branchless queues.
 - Owner and Branch have distinct shells projected from `nav-config.ts`; neither
   shell embeds or advertises the other role's navigation.
@@ -66,8 +68,9 @@ verification.
 ## Verification
 
 - Owner fresh login and `/login?returnTo=/` resolve to `/`.
-- Branch roles fresh-login to the claimed `/br/{branchId}` and cannot preserve
-  an Owner `returnTo`.
+- Branch Managers fresh-login to the claimed `/br/{branchId}`; other employees
+  land on their canonical personal or operational surface and cannot preserve
+  a company-control `returnTo` without the required capability.
 - Route map, ACL, navigation, proxy, Server Actions, SQL permissions, generated
   route matrix, and source terminology agree.
 - Owner-authenticated desktop and 390px browser smoke are required before this

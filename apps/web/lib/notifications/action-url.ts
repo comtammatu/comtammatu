@@ -18,6 +18,21 @@ function rewriteRetiredBranchGrnPath(url: string): string {
   return `/br/${match[1]}/stock/transfer`;
 }
 
+function rewriteHrPath(
+  claims: JwtClaims,
+  target: NotificationActionTarget,
+  url: string,
+): string {
+  if (
+    claims.user_role === "branch_manager" &&
+    target.kind === "hr.leave_requested" &&
+    target.targetBranchId === claims.branch_id
+  ) {
+    return `/br/${claims.branch_id}/shift/leave-approvals`;
+  }
+  return url;
+}
+
 /** Keep notification links inside the authenticated user's product plane. */
 export function resolveNotificationActionUrl(
   claims: JwtClaims,
@@ -26,7 +41,11 @@ export function resolveNotificationActionUrl(
   const safeActionUrl = getSafeInternalReturnTo(target.actionUrl);
   if (!safeActionUrl) return null;
 
-  const actionUrl = rewriteRetiredBranchGrnPath(safeActionUrl);
+  const actionUrl = rewriteHrPath(
+    claims,
+    target,
+    rewriteRetiredBranchGrnPath(safeActionUrl),
+  );
 
   if (
     claims.user_role !== "owner" &&

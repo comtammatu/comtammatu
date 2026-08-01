@@ -1,4 +1,4 @@
-import type { StaffRole } from "./types";
+import { requiredOperatorBranchKindForRole, type StaffRole } from "./types";
 import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
   resolveControlSurfaceDiscoveryGroups,
@@ -40,6 +40,13 @@ export function resolveRoleHomeLink(
     };
   }
 
+  if (role === "self_service") {
+    return {
+      label: MODULE_ACL.me.label,
+      href: MODULE_ACL.me.path,
+    };
+  }
+
   if (role === "accountant" && canAccess(role, "finance")) {
     return {
       label: MODULE_ACL.finance.label,
@@ -47,10 +54,21 @@ export function resolveRoleHomeLink(
     };
   }
 
-  if (branchId != null && branchId > 0 && canAccess(role, "branch_home")) {
+  if (
+    branchId != null &&
+    requiredOperatorBranchKindForRole(role) === "branch" &&
+    canAccess(role, "branch_home")
+  ) {
     return {
       label: APP_COPY_VI.branchHome,
       href: `/br/${branchId}`,
+    };
+  }
+
+  if (branchId != null && canAccess(role, "inventory")) {
+    return {
+      label: MODULE_ACL.inventory.label,
+      href: MODULE_ACL.inventory.path,
     };
   }
 

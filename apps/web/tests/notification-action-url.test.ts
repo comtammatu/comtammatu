@@ -163,7 +163,7 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       entityId: 5,
       targetBranchId: 3,
     }),
-    null,
+    "/br/3/shift/leave-approvals",
   );
 });
 

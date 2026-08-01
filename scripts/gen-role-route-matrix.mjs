@@ -99,9 +99,14 @@ function parseModuleAcl(source, staffRoles) {
     const entryBody = body.slice(start, i - 1);
     const pathMatch = entryBody.match(/path:\s*"([^"]+)"/);
     const rolesMatch = entryBody.match(/allowedRoles:\s*(\[[\s\S]*?\]|\w+)/);
+    const excludedRoleMatch = entryBody.match(
+      /allowedRoles:\s*STAFF_ROLES\.filter\([\s\S]*?role !== "([a-z_]+)"/,
+    );
     if (!pathMatch) continue;
     let roles = [];
-    if (rolesMatch) {
+    if (excludedRoleMatch) {
+      roles = staffRoles.filter((role) => role !== excludedRoleMatch[1]);
+    } else if (rolesMatch) {
       if (rolesMatch[1].startsWith("[")) {
         roles = [...rolesMatch[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
       } else {
@@ -332,6 +337,16 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     }
 
     // Mirror packages/shared/src/auth/login-destination.ts (D076/D091).
+    if (role === "self_service") {
+      rows.push({
+        role,
+        desktop: "/me",
+        phone: "/me",
+        note: "Active company binding grants personal self-service only; live module bindings may expose additional control-surface workspaces.",
+      });
+      continue;
+    }
+
     if (role === "accountant") {
       rows.push({
         role,
@@ -345,9 +360,9 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     if (role === "central_supply_ops" || role === "central_kitchen_lead") {
       rows.push({
         role,
-        desktop: "/br/{branchId} (central site operator hub)",
-        phone: "/br/{branchId} (central site operator hub)",
-        note: "Pinned central site roles land on the operator hub for their JWT branch_id; Owner/Accountant keep control_surface /inventory oversight.",
+        desktop: "/inventory",
+        phone: "/inventory",
+        note: "Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me.",
       });
       continue;
     }

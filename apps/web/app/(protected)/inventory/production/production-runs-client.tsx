@@ -5,11 +5,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight as IconArrowRight,
   ListChecks as IconListChecks,
   Plus as IconPlus,
 } from "lucide-react";
-import { formatCount } from "@comtammatu/shared/format";
+import { formatCount, formatQuantity } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -71,7 +70,6 @@ export function ProductionRunsClient({
           row.production_number,
           row.finished_good_name,
           row.branch_name,
-          row.target_branch_name,
           row.notes,
         ],
         query,
@@ -104,13 +102,7 @@ export function ProductionRunsClient({
       {
         key: "branch",
         header: BRANCH_VI.long,
-        render: (row) => (
-          <ProductionRoute
-            from={row.branch_name}
-            to={row.target_branch_name}
-            sameBranch={row.branch_id === row.target_branch_id}
-          />
-        ),
+        render: (row) => row.branch_name,
       },
       {
         key: "finished_good",
@@ -120,9 +112,10 @@ export function ProductionRunsClient({
       {
         key: "planned_quantity",
         header: FORM_VI.quantity,
+        className: "font-mono",
         render: (row) => {
           const unit = row.entry_unit_name || "";
-          return `${row.planned_quantity} ${unit}`;
+          return `${formatQuantity(row.planned_quantity)} ${unit}`;
         },
       },
       {
@@ -142,7 +135,7 @@ export function ProductionRunsClient({
       pageSize={50}
       getRowKey={(row) => row.id.toString()}
       searchable
-      searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh..."
+      searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh…"
       searchValue={search}
       onSearchChange={setSearch}
       actions={
@@ -226,26 +219,6 @@ function statusLabel(status: string) {
   return STATUS_LABELS[status] ?? getStatusBadgeMeta("inventory", status).label;
 }
 
-function ProductionRoute({
-  from,
-  to,
-  sameBranch,
-}: {
-  from: string;
-  to: string;
-  sameBranch: boolean;
-}) {
-  if (sameBranch) return <span>{from}</span>;
-
-  return (
-    <span className="flex min-w-0 items-center gap-1">
-      <span className="truncate">{from}</span>
-      <IconArrowRight className="size-3 shrink-0 text-muted-foreground" />
-      <span className="truncate">{to}</span>
-    </span>
-  );
-}
-
 function ProductionRunCard({
   row,
   href,
@@ -270,15 +243,10 @@ function ProductionRunCard({
         </div>
         <p className="truncate text-sm font-medium">{row.finished_good_name}</p>
         <p className="text-xs text-muted-foreground">
-          {formatVNDate(row.created_at)} · {row.planned_quantity} {unit}
+          {formatVNDate(row.created_at)} · {formatQuantity(row.planned_quantity)}{" "}
+          {unit}
         </p>
-        <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-          <ProductionRoute
-            from={row.branch_name}
-            to={row.target_branch_name}
-            sameBranch={row.branch_id === row.target_branch_id}
-          />
-        </p>
+        <p className="truncate text-xs text-muted-foreground">{row.branch_name}</p>
       </div>
     </InteractiveCard>
   );

@@ -24,6 +24,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
+import { useIsOnline } from "@/components/pwa-runtime";
 import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionGrid,
@@ -119,12 +120,7 @@ const BRANCH_CLOCK_PRIMITIVES: ClockPlanePrimitives = {
 };
 
 type PhotoState =
-  | "idle"
-  | "ready"
-  | "processing"
-  | "submitting"
-  | "success"
-  | "error";
+  "idle" | "ready" | "processing" | "submitting" | "success" | "error";
 type CameraState = "idle" | "starting" | "ready" | "capturing" | "error";
 type CheckoutState = "idle" | "submitting" | "success" | "error";
 
@@ -273,6 +269,7 @@ export function ClockClient({
   const { ActionGrid, DetailList, Frame, InlineState, Panel } =
     plane === "branch" ? BRANCH_CLOCK_PRIMITIVES : EMPLOYEE_CLOCK_PRIMITIVES;
   const router = useRouter();
+  const isOnline = useIsOnline();
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
   const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
@@ -429,6 +426,10 @@ export function ClockClient({
   );
 
   const submitClockIn = useCallback(() => {
+    if (!isOnline) {
+      setError(clockCopy.offline);
+      return;
+    }
     if (!photo) {
       setError(clockCopy.photoRequired);
       return;
@@ -445,7 +446,7 @@ export function ClockClient({
         stopCamera();
         setPhotoState("success");
         if (navigator.vibrate) navigator.vibrate(150);
-        router.push(
+        router.replace(
           result.data?.nextPath === "home" ? routes.home : routes.tasks,
         );
         router.refresh();
@@ -454,9 +455,13 @@ export function ClockClient({
         setError(result.error ?? "Chấm công vào thất bại.");
       }
     });
-  }, [photo, router, routes.home, routes.tasks, stopCamera]);
+  }, [isOnline, photo, router, routes.home, routes.tasks, stopCamera]);
 
   const submitCheckout = useCallback(async () => {
+    if (!isOnline) {
+      setError(clockCopy.offline);
+      return;
+    }
     const checkInValue = formatTime(state.attendance?.checkIn ?? null);
     const attendanceId = state.attendance?.id;
     if (!attendanceId) {
@@ -485,7 +490,7 @@ export function ClockClient({
       if (result.success) {
         setCheckoutState("success");
         if (navigator.vibrate) navigator.vibrate(150);
-        router.push(routes.home);
+        router.replace(routes.home);
         router.refresh();
       } else {
         setCheckoutState("error");
@@ -493,6 +498,7 @@ export function ClockClient({
       }
     });
   }, [
+    isOnline,
     managerAttendanceOnly,
     router,
     routes.home,
@@ -501,6 +507,10 @@ export function ClockClient({
   ]);
 
   const cancelCheckout = useCallback(() => {
+    if (!isOnline) {
+      setError(clockCopy.offline);
+      return;
+    }
     const attendanceId = state.attendance?.id;
     if (!attendanceId) {
       setCheckoutState("error");
@@ -514,14 +524,14 @@ export function ClockClient({
       const result = await cancelCheckoutRequest({ attendanceId });
       if (result.success) {
         if (navigator.vibrate) navigator.vibrate(80);
-        router.push(routes.home);
+        router.replace(routes.home);
         router.refresh();
       } else {
         setCheckoutState("error");
         setError(result.error ?? "Không thể rút yêu cầu kết ca.");
       }
     });
-  }, [router, routes.home, state.attendance?.id]);
+  }, [isOnline, router, routes.home, state.attendance?.id]);
 
   const cameraActive =
     cameraState === "starting" ||
@@ -529,6 +539,7 @@ export function ClockClient({
     cameraState === "capturing";
   const photoBusy =
     isPending || photoState === "processing" || photoState === "submitting";
+  const visibleError = !isOnline ? clockCopy.offline : error;
 
   if (state.status === "missing_branch") {
     return (
@@ -641,12 +652,12 @@ export function ClockClient({
             },
           ]}
         />
-        {error ? <ErrorAlert message={error} /> : null}
+        {visibleError ? <ErrorAlert message={visibleError} /> : null}
         <Button
           variant="outline"
           size="touch"
           className="w-full sm:w-fit"
-          disabled={checkoutState === "submitting"}
+          disabled={!isOnline || checkoutState === "submitting"}
           onClick={cancelCheckout}
         >
           {checkoutState === "submitting"
@@ -727,13 +738,13 @@ export function ClockClient({
       >
         <DetailList rows={detailRows} />
 
-        {error ? <ErrorAlert message={error} /> : null}
+        {visibleError ? <ErrorAlert message={visibleError} /> : null}
 
         <Button
           size="touch"
           className="w-full sm:w-fit"
           onClick={submitCheckout}
-          disabled={isPending || checkoutState === "submitting"}
+          disabled={!isOnline || isPending || checkoutState === "submitting"}
         >
           {checkoutState === "submitting" || isPending ? (
             <Spinner data-icon="inline-start" />
@@ -827,7 +838,7 @@ export function ClockClient({
         />
       ) : null}
 
-      {error ? <ErrorAlert message={error} /> : null}
+      {visibleError ? <ErrorAlert message={visibleError} /> : null}
 
       <input
         ref={photoInputRef}
@@ -849,7 +860,7 @@ export function ClockClient({
             type="button"
             size="touch"
             onClick={capturePhoto}
-            disabled={isPending || cameraState === "capturing"}
+            disabled={photoBusy || cameraState === "capturing"}
           >
             {cameraState === "capturing" ? (
               <Spinner data-icon="inline-start" />
@@ -862,7 +873,7 @@ export function ClockClient({
             type="button"
             variant="outline"
             size="touch"
-            disabled={cameraState === "capturing"}
+            disabled={photoBusy || cameraState === "capturing"}
             onClick={() => {
               stopCamera();
               setCameraState("idle");
@@ -910,7 +921,7 @@ export function ClockClient({
             size="touch"
             className="sm:col-span-2"
             onClick={submitClockIn}
-            disabled={photoBusy}
+            disabled={photoBusy || !isOnline}
           >
             {photoState === "submitting" || isPending ? (
               <Spinner data-icon="inline-start" />

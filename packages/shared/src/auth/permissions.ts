@@ -9,6 +9,9 @@
  */
 
 export const PERMISSION_KEYS = {
+  // personal self-service
+  SELF_ACCESS: "self:access",
+
   // dashboard
   DASHBOARD_VIEW: "dashboard:view",
 
@@ -83,14 +86,28 @@ export const PERMISSION_KEYS = {
   STAFF_MANAGE: "staff:manage",
   STAFF_ASSIGN_PERMISSION: "staff:assign_permission",
   STAFF_ASSIGN_POSITION: "staff:assign_position",
+  STAFF_PROVISION: "staff:provision",
 
   // hr
   HR_VIEW_EMPLOYEE: "hr:view_employee",
+  HR_VIEW_SENSITIVE_EMPLOYEE: "hr:view_sensitive_employee",
   HR_MANAGE_EMPLOYEE: "hr:manage_employee",
   HR_APPROVE_CHECKOUT: "hr:approve_checkout",
   HR_REQUEST_LEAVE: "hr:request_leave",
   HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request",
   HR_ASSIGN_SHIFT: "hr:assign_shift",
+  HR_FORCE_CLOSE_ATTENDANCE: "hr:force_close_attendance",
+  HR_CORRECT_ATTENDANCE: "hr:correct_attendance",
+  HR_MANAGE_LEAVE_POLICY: "hr:manage_leave_policy",
+  HR_MANAGE_SHIFT_CATALOG: "hr:manage_shift_catalog",
+  HR_MANAGE_POSITION_TASKS: "hr:manage_position_tasks",
+  HR_PAYROLL_PREPARE: "hr:payroll_prepare",
+  HR_PAYROLL_SNAPSHOT: "hr:payroll_snapshot",
+
+  // auth
+  AUTH_BINDING_READ: "auth:binding_read",
+  AUTH_BINDING_MANAGE: "auth:binding_manage",
+  AUTH_AUDIT_READ: "auth:audit_read",
 
   // finance
   FINANCE_VIEW: "finance:view",
@@ -147,7 +164,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 94;
+export const PERMISSION_KEY_COUNT = 107;
 
 /**
  * Pure function: check if a permission set contains a given key.

@@ -31,8 +31,7 @@ export const employee = {
     installButtonAria: "Cài ứng dụng nhân viên lên thiết bị",
     dismissLabel: "Tạm ẩn lời nhắc cài đặt",
     iosDialogTitle: "Cài ứng dụng nhân viên trên iPhone/iPad",
-    iosDialogDescription:
-      "iOS cần thêm ứng dụng từ menu Chia sẻ của Safari.",
+    iosDialogDescription: "iOS cần thêm ứng dụng từ menu Chia sẻ của Safari.",
     iosSteps: [
       "Mở Má Tư NV bằng Safari.",
       "Bấm nút Chia sẻ của trình duyệt.",
@@ -116,11 +115,12 @@ export const employee = {
     workflowManagerCheckoutStep: "Ra ca",
     workflowCheckoutDescription: "Gửi kết ca khi việc bắt buộc đã xong.",
     viewSchedule: "Xem lịch ca",
-    scheduleTitle: "Lịch ca",
+    scheduleTitle: "Lịch làm",
     scheduleDescription: "Ca làm và ngày công",
     scheduleLongDescription: "Ca làm theo tháng.",
-    leaveTitle: "Nghỉ phép",
+    leaveTitle: "Xin nghỉ",
     leaveDescription: "Gửi yêu cầu nghỉ",
+    payslipTitle: "Phiếu lương",
     payslipLongDescription:
       "Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên.",
     profileTitle: "Hồ sơ",
@@ -235,6 +235,7 @@ export const employee = {
     uploadUnreadable: "Không thể đọc ảnh đã chọn. Chọn ảnh khác.",
     uploadTooLargeAfterResize: "Ảnh vẫn quá lớn sau khi nén. Chọn ảnh khác.",
     clockInButton: "Chấm công vào",
+    offline: "Mất kết nối. Chưa ghi nhận chấm công.",
     cameraOpening: "Đang mở camera",
     cameraNotOpen: "Sẵn sàng chụp ảnh",
   },
@@ -519,7 +520,6 @@ export const employee = {
       "Tài khoản này không có quyền áp dụng toàn quán.",
     branchPermsTitle: "Quyền theo chi nhánh",
     branchPermsEmptyTitle: "Không có quyền theo chi nhánh",
-    branchPermsEmptyDescription:
-      "Không có quyền riêng cho chi nhánh hiện tại.",
+    branchPermsEmptyDescription: "Không có quyền riêng cho chi nhánh hiện tại.",
   },
 } as const;

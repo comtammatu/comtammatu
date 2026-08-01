@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  ChevronRight as IconChevronRight,
+  ClipboardList as IconClipboardList,
   Plus as IconPlus,
   Trash2 as IconTrash,
   X as IconX,
@@ -9,34 +11,35 @@ import {
 import {
   Controller,
   useFieldArray,
-  useForm,
   type Control,
+  type UseFormReturn,
 } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Switch } from "@comtammatu/ui/components/switch";
 import { Label } from "@comtammatu/ui/components/label";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { FieldLabel } from "@comtammatu/ui/components/field";
+import { Switch } from "@comtammatu/ui/components/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
-  TextField,
+  FormDialog,
+  AppDialog,
+  MultiSelectCombobox,
   SelectField,
   TextareaField,
-  MultiSelectCombobox,
+  TextField,
 } from "@/components/form";
+import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  clearEmployeeShiftTaskOverride,
   fetchPositionTasksData,
+  saveEmployeeShiftTaskOverride,
   savePositionTasks,
   type PositionTasksData,
 } from "./position-tasks-actions";
@@ -47,8 +50,8 @@ import {
   type PositionOption,
   type PositionTaskIngredientOption,
   type PositionTaskRow,
+  type ShiftTaskTemplateSummary,
 } from "./position-task-types";
-import { messages } from "@lib/messages";
 
 const copy = messages.hr.client.positionTasks;
 
@@ -62,10 +65,14 @@ const taskRowSchema = z.object({
   ingredientIds: z.array(z.number().int().positive()),
 });
 
-const formSchema = z.object({ tasks: z.array(taskRowSchema).max(40) });
+const formSchema = z.object({
+  employeeId: z.string().optional(),
+  tasks: z.array(taskRowSchema).max(40),
+});
 
 type FormValues = z.infer<typeof formSchema>;
 type TaskRowValues = z.infer<typeof taskRowSchema>;
+type PositionTasksForm = UseFormReturn<FormValues, unknown, FormValues>;
 
 const EMPTY_TASK: TaskRowValues = {
   title: "",
@@ -77,8 +84,9 @@ const EMPTY_TASK: TaskRowValues = {
   ingredientIds: [],
 };
 
-function toFormValues(tasks: PositionTaskRow[]): FormValues {
+function toFormValues(tasks: PositionTaskRow[], employeeId = ""): FormValues {
   return {
+    employeeId,
     tasks: tasks.map((task) => ({
       title: task.title,
       kind: task.kind,
@@ -100,11 +108,10 @@ function IngredientPicker({
   index: number;
   ingredients: PositionTaskIngredientOption[];
 }) {
-  const ingredientById = useMemo(() => {
-    const map = new Map<number, PositionTaskIngredientOption>();
-    for (const ingredient of ingredients) map.set(ingredient.id, ingredient);
-    return map;
-  }, [ingredients]);
+  const ingredientById = useMemo(
+    () => new Map(ingredients.map((ingredient) => [ingredient.id, ingredient])),
+    [ingredients],
+  );
 
   return (
     <Controller
@@ -137,10 +144,12 @@ function IngredientPicker({
                         aria-label={copy.removeIngredient}
                         className="-mr-1 ml-0.5 size-5"
                         onClick={() =>
-                          field.onChange(selected.filter((x) => x !== id))
+                          field.onChange(
+                            selected.filter((value) => value !== id),
+                          )
                         }
                       >
-                        <IconX className="size-3" />
+                        <IconX />
                       </Button>
                     </Badge>
                   );
@@ -157,7 +166,10 @@ function IngredientPicker({
               onConfirm={(values) =>
                 field.onChange(
                   Array.from(
-                    new Set([...selected, ...values.map((v) => Number(v))]),
+                    new Set([
+                      ...selected,
+                      ...values.map((value) => Number(value)),
+                    ]),
                   ),
                 )
               }
@@ -196,7 +208,6 @@ function TaskRow({
           id={`task-title-${index}`}
           placeholder={copy.titlePlaceholder}
         />
-
         <SelectField
           control={control}
           name={`tasks.${index}.kind`}
@@ -207,7 +218,6 @@ function TaskRow({
             label: copy.kindLabels[kind],
           }))}
         />
-
         <SelectField
           control={control}
           name={`tasks.${index}.applicability`}
@@ -218,7 +228,6 @@ function TaskRow({
             label: copy.applicabilityLabels[value],
           }))}
         />
-
         <SelectField
           control={control}
           name={`tasks.${index}.phase`}
@@ -229,7 +238,6 @@ function TaskRow({
             label: copy.phaseLabels[value],
           }))}
         />
-
         <Button
           type="button"
           variant="ghost"
@@ -241,7 +249,6 @@ function TaskRow({
           <IconTrash />
         </Button>
       </div>
-
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <TextareaField
           control={control}
@@ -271,7 +278,6 @@ function TaskRow({
           )}
         />
       </div>
-
       {watchedKind === "consumption_report" ? (
         <IngredientPicker
           control={control}
@@ -283,132 +289,600 @@ function TaskRow({
   );
 }
 
-interface PositionTasksClientProps {
-  initialData: PositionTasksData;
-}
-
-export function PositionTasksClient({ initialData }: PositionTasksClientProps) {
-  const [data, setData] = useState(initialData);
-  const [positionId, setPositionId] = useState<number | null>(
-    initialData.positions[0]?.id ?? null,
-  );
-  const [isPending, startTransition] = useTransition();
-
-  const form = useForm<FormValues, unknown, FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { tasks: [] },
-  });
-  const { fields, append, remove, replace } = useFieldArray({
+function PositionTaskFields({
+  form,
+  ingredients,
+}: {
+  form: PositionTasksForm;
+  ingredients: PositionTaskIngredientOption[];
+}) {
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "tasks",
   });
   const watchedTasks = form.watch("tasks");
 
-  useEffect(() => {
-    if (positionId == null) {
-      replace([]);
-      return;
-    }
-    replace(toFormValues(data.tasksByPosition[positionId] ?? []).tasks);
-  }, [positionId, data, replace]);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">{copy.taskListLabel}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => append(EMPTY_TASK)}
+        >
+          <IconPlus data-icon="inline-start" />
+          {copy.addTask}
+        </Button>
+      </div>
+      {fields.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{copy.empty}</p>
+      ) : (
+        fields.map((row, index) => (
+          <TaskRow
+            key={row.id}
+            control={form.control}
+            index={index}
+            ingredients={ingredients}
+            watchedKind={watchedTasks[index]?.kind ?? "standard"}
+            onRemove={() => remove(index)}
+          />
+        ))
+      )}
+    </div>
+  );
+}
 
-  function onValid(values: FormValues) {
-    if (positionId == null) return;
-    startTransition(async () => {
-      const result = await savePositionTasks({
-        positionId,
-        tasks: values.tasks.map((task) => ({
-          title: task.title.trim(),
-          kind: task.kind,
-          applicability: task.applicability,
-          phase: task.phase,
-          isRequired: task.isRequired,
-          doneDefinition: task.doneDefinition.trim(),
-          ingredientIds:
-            task.kind === "consumption_report" ? task.ingredientIds : [],
-        })),
+function AssigneeSummary({ position }: { position: PositionOption }) {
+  const visible = position.assignees.slice(0, 2);
+  const remaining = position.assignees.length - visible.length;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-medium">{position.label}</span>
+      <span className="text-muted-foreground">
+        {visible.length > 0
+          ? `${visible.map((assignee) => assignee.name).join(", ")}${
+              remaining > 0 ? ` +${remaining}` : ""
+            }`
+          : copy.noAssignees}
+      </span>
+    </div>
+  );
+}
+
+type TemplateRow = ShiftTaskTemplateSummary & { key: string };
+
+function EmployeeOverrideFields({
+  form,
+  data,
+}: {
+  form: PositionTasksForm;
+  data: PositionTasksData;
+}) {
+  const employeeId = form.watch("employeeId");
+  const previousEmployeeId = useRef(employeeId);
+
+  useEffect(() => {
+    if (!employeeId || employeeId === previousEmployeeId.current) return;
+    previousEmployeeId.current = employeeId;
+    const employee = data.employees.find(
+      (candidate) => candidate.id === Number(employeeId),
+    );
+    form.setValue(
+      "tasks",
+      employee?.positionId == null
+        ? []
+        : toFormValues(data.tasksByPosition[employee.positionId] ?? []).tasks,
+    );
+  }, [data.employees, data.tasksByPosition, employeeId, form]);
+
+  const overriddenIds = new Set(
+    data.employeeTemplates.map((template) => template.employeeId),
+  );
+  return (
+    <>
+      <SelectField
+        control={form.control}
+        name="employeeId"
+        label={copy.employeeLabel}
+        placeholder={copy.employeePlaceholder}
+        options={data.employees
+          .filter((employee) => !overriddenIds.has(employee.id))
+          .map((employee) => ({
+            value: String(employee.id),
+            label: employee.name,
+            hint: [employee.positionLabel, employee.branchName]
+              .filter(Boolean)
+              .join(" · "),
+          }))}
+        required
+      />
+      <PositionTaskFields form={form} ingredients={data.ingredients} />
+    </>
+  );
+}
+
+interface PositionTasksClientProps {
+  initialData: PositionTasksData;
+  initialBranchFilter?: string;
+}
+
+export function PositionTasksClient({
+  initialData,
+  initialBranchFilter,
+}: PositionTasksClientProps) {
+  const [data, setData] = useState(initialData);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    type: "",
+    branch:
+      initialBranchFilter === "office" || Number(initialBranchFilter) > 0
+        ? initialBranchFilter!
+        : "",
+    status: "",
+  });
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [clearingRow, setClearingRow] = useState<TemplateRow | null>(null);
+  const [isClearing, startClearing] = useTransition();
+  const employeeById = new Map(
+    data.employees.map((employee) => [employee.id, employee]),
+  );
+  const rows: TemplateRow[] = [
+    ...data.positions.map((position) => ({
+      kind: "position" as const,
+      key: `position:${position.id}`,
+      positionId: position.id,
+      assignees: position.assignees,
+    })),
+    ...data.employeeTemplates.flatMap((template): TemplateRow[] => {
+      const employee = employeeById.get(template.employeeId);
+      return employee
+        ? [
+            {
+              kind: "employee",
+              key: `employee:${employee.id}`,
+              templateId: template.templateId,
+              employee,
+            },
+          ]
+        : [];
+    }),
+  ];
+  const editingRow = rows.find((row) => row.key === editingKey) ?? null;
+  const editingPosition =
+    editingRow?.kind === "position"
+      ? (data.positions.find(
+          (position) => position.id === editingRow.positionId,
+        ) ?? null)
+      : null;
+  const editingEmployee =
+    editingRow?.kind === "employee" ? editingRow.employee : null;
+  const editingTasks = editingPosition
+    ? (data.tasksByPosition[editingPosition.id] ?? [])
+    : editingEmployee
+      ? (data.employeeTemplates.find(
+          (template) => template.employeeId === editingEmployee.id,
+        )?.tasks ?? [])
+      : [];
+  const defaultValues = useMemo(
+    () => toFormValues(editingTasks),
+    [editingTasks],
+  );
+  const visibleRows = rows.filter((row) => {
+    const position =
+      row.kind === "position"
+        ? data.positions.find((item) => item.id === row.positionId)
+        : null;
+    const tasks =
+      row.kind === "position"
+        ? (data.tasksByPosition[row.positionId] ?? [])
+        : (data.employeeTemplates.find(
+            (template) => template.templateId === row.templateId,
+          )?.tasks ?? []);
+    const employees = row.kind === "position" ? row.assignees : [row.employee];
+    const configured = row.kind === "employee" || tasks.length > 0;
+    return (
+      (!filters.type || filters.type === row.kind) &&
+      (!filters.branch ||
+        row.kind === "position" ||
+        String(row.employee.branchId ?? "office") === filters.branch) &&
+      (!filters.status ||
+        (filters.status === "configured" ? configured : !configured)) &&
+      matchesSearch(
+        [
+          position?.label,
+          ...employees.map((employee) => employee.name),
+          ...tasks.map((task) => task.title),
+        ],
+        search,
+      )
+    );
+  });
+
+  async function refreshData() {
+    const refreshed = await fetchPositionTasksData();
+    if (refreshed.success && refreshed.data) setData(refreshed.data);
+  }
+
+  async function handleSubmit(values: FormValues) {
+    if (!editingRow) return { success: false, error: copy.emptyPosition };
+    const tasks = values.tasks.map((task) => ({
+      title: task.title.trim(),
+      kind: task.kind,
+      applicability: task.applicability,
+      phase: task.phase,
+      isRequired: task.isRequired,
+      doneDefinition: task.doneDefinition.trim(),
+      ingredientIds:
+        task.kind === "consumption_report" ? task.ingredientIds : [],
+    }));
+    const result =
+      editingRow.kind === "position"
+        ? await savePositionTasks({ positionId: editingRow.positionId, tasks })
+        : await saveEmployeeShiftTaskOverride({
+            employeeId: editingRow.employee.id,
+            tasks,
+          });
+    if (!result.success) return result;
+    await refreshData();
+    return result;
+  }
+
+  async function handleCreate(values: FormValues) {
+    const employeeId = Number(values.employeeId);
+    if (!Number.isInteger(employeeId) || employeeId <= 0) {
+      return { success: false, error: copy.employeePlaceholder };
+    }
+    const result = await saveEmployeeShiftTaskOverride({
+      employeeId,
+      tasks: values.tasks.map((task) => ({
+        ...task,
+        title: task.title.trim(),
+        doneDefinition: task.doneDefinition.trim(),
+        ingredientIds:
+          task.kind === "consumption_report" ? task.ingredientIds : [],
+      })),
+    });
+    if (result.success) await refreshData();
+    return result;
+  }
+
+  function handleClear() {
+    if (clearingRow?.kind !== "employee") return;
+    startClearing(async () => {
+      const result = await clearEmployeeShiftTaskOverride({
+        employeeId: clearingRow.employee.id,
       });
       if (!result.success) {
         toast.error(result.error ?? copy.saveFailed);
         return;
       }
-      toast.success(copy.saved);
-      const refreshed = await fetchPositionTasksData();
-      if (refreshed.success && refreshed.data) setData(refreshed.data);
+      setClearingRow(null);
+      await refreshData();
+      toast.success(copy.clearEmployeeTemplateSuccess);
     });
   }
 
-  const positionOptions: PositionOption[] = data.positions;
+  const columns: DataTableColumn<TemplateRow>[] = [
+    {
+      key: "name",
+      header: copy.templateHeader,
+      render: (row) => {
+        const name =
+          row.kind === "position"
+            ? data.positions.find((position) => position.id === row.positionId)
+                ?.label
+            : row.employee.name;
+        return (
+          <span className="font-medium">{copy.templateName(name ?? "—")}</span>
+        );
+      },
+    },
+    {
+      key: "type",
+      header: copy.templateTypeHeader,
+      render: (row) => (
+        <Badge variant="secondary">
+          {row.kind === "position"
+            ? copy.positionTemplate
+            : copy.employeeTemplate}
+        </Badge>
+      ),
+    },
+    {
+      key: "tasks",
+      header: copy.taskCountHeader,
+      render: (row) =>
+        copy.taskSummary(
+          row.kind === "position"
+            ? (data.tasksByPosition[row.positionId]?.length ?? 0)
+            : (data.employeeTemplates.find(
+                (template) => template.templateId === row.templateId,
+              )?.tasks.length ?? 0),
+        ),
+    },
+    {
+      key: "assignees",
+      header: copy.assigneesHeader,
+      render: (row) =>
+        row.kind === "position" ? (
+          <AssigneeSummary
+            position={data.positions.find(
+              (position) => position.id === row.positionId,
+            )!}
+          />
+        ) : (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">{row.employee.name}</span>
+            <span className="text-muted-foreground">
+              {[row.employee.positionLabel, row.employee.branchName]
+                .filter(Boolean)
+                .join(" · ") || copy.noAssignees}
+            </span>
+          </div>
+        ),
+    },
+    {
+      key: "status",
+      header: copy.statusHeader,
+      render: (row) => {
+        const configured =
+          row.kind === "employee" ||
+          (data.tasksByPosition[row.positionId]?.length ?? 0) > 0;
+        return (
+          <Badge variant={configured ? "success" : "outline"}>
+            {configured ? copy.configured : copy.notConfigured}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">{copy.editTemplate}</span>,
+      className: "w-24",
+      render: (row) => (
+        <div className="flex justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              setEditingKey(row.key);
+            }}
+          >
+            {copy.editTemplate}
+          </Button>
+          {row.kind === "employee" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy.clearEmployeeTemplate}
+              onClick={(event) => {
+                event.stopPropagation();
+                setClearingRow(row);
+              }}
+            >
+              <IconTrash />
+            </Button>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
+
+  const availableEmployees = data.employees.filter(
+    (employee) =>
+      !data.employeeTemplates.some(
+        (template) => template.employeeId === employee.id,
+      ),
+  );
+  const firstEmployee = availableEmployees[0];
+  const createDefaultValues = toFormValues(
+    firstEmployee?.positionId == null
+      ? []
+      : (data.tasksByPosition[firstEmployee.positionId] ?? []),
+    firstEmployee ? String(firstEmployee.id) : "",
+  );
 
   return (
-    <form
-      onSubmit={form.handleSubmit(onValid)}
-      noValidate
-      className="flex flex-col gap-4"
-    >
-      <div className="flex flex-col gap-2 sm:max-w-sm">
-        <FieldLabel htmlFor="position-task-position">
-          {copy.positionLabel}
-        </FieldLabel>
-        <Select
-          value={positionId?.toString() ?? ""}
-          onValueChange={(value) => setPositionId(Number(value))}
-        >
-          <SelectTrigger id="position-task-position" className="!h-10 w-full">
-            <SelectValue placeholder={copy.positionPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {positionOptions.map((position) => (
-              <SelectItem key={position.id} value={position.id.toString()}>
-                {position.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <>
+      <p className="text-sm text-muted-foreground">
+        {copy.templatesSummary(rows.length)}
+      </p>
+      <DataTable
+        columns={columns}
+        data={visibleRows}
+        getRowKey={(row) => row.key}
+        searchable
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={copy.searchPlaceholder}
+        filters={[
+          {
+            key: "type",
+            placeholder: copy.allTemplateTypes,
+            options: [
+              { value: "position", label: copy.positionTemplate },
+              { value: "employee", label: copy.employeeTemplate },
+            ],
+          },
+          {
+            key: "branch",
+            placeholder: copy.allBranchesFilter,
+            options: [
+              { value: "office", label: messages.hr.client.scope.office },
+              ...Array.from(
+                new Map(
+                  data.employees
+                    .filter((employee) => employee.branchId != null)
+                    .map((employee) => [
+                      String(employee.branchId),
+                      employee.branchName ?? `Chi nhánh ${employee.branchId}`,
+                    ]),
+                ),
+                ([value, label]) => ({ value, label }),
+              ),
+            ],
+          },
+          {
+            key: "status",
+            placeholder: copy.allTemplateStatuses,
+            options: [
+              { value: "configured", label: copy.configured },
+              { value: "not-configured", label: copy.notConfigured },
+            ],
+          },
+        ]}
+        filterValues={filters}
+        onFilterChange={(key, value) =>
+          setFilters((current) => ({ ...current, [key]: value }))
+        }
+        actions={
+          <Button
+            type="button"
+            size="touch"
+            disabled={availableEmployees.length === 0}
+            onClick={() => setCreateOpen(true)}
+          >
+            <IconPlus data-icon="inline-start" />
+            {copy.createEmployeeTemplate}
+          </Button>
+        }
+        emptyMode={rows.length === 0 ? "no-data" : "no-results"}
+        emptyTitle={
+          rows.length === 0 ? copy.emptyTemplatesTitle : copy.noResultsTitle
+        }
+        emptyDescription={copy.emptyTemplatesDescription}
+        emptyIcon={<IconClipboardList />}
+        onRowClick={(row) => setEditingKey(row.key)}
+        getRowAriaLabel={() => copy.editTemplate}
+        mobileCardRender={(row) => {
+          const position =
+            row.kind === "position"
+              ? data.positions.find((item) => item.id === row.positionId)
+              : null;
+          const name =
+            position?.label ??
+            (row.kind === "employee" ? row.employee.name : "—");
+          const taskCount =
+            row.kind === "position"
+              ? (data.tasksByPosition[row.positionId]?.length ?? 0)
+              : (data.employeeTemplates.find(
+                  (template) => template.templateId === row.templateId,
+                )?.tasks.length ?? 0);
+          const assigneeCount =
+            row.kind === "position" ? row.assignees.length : 1;
+          return (
+            <InteractiveCard
+              render={
+                <button type="button" aria-label={copy.openTemplate(name)} />
+              }
+              minHeight="mobile"
+              onClick={() => setEditingKey(row.key)}
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-2 text-left">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{copy.templateName(name)}</span>
+                  <Badge variant="secondary">
+                    {row.kind === "position"
+                      ? copy.positionTemplate
+                      : copy.employeeTemplate}
+                  </Badge>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {copy.taskSummary(taskCount)} ·{" "}
+                  {copy.assigneeSummary(assigneeCount)}
+                </span>
+              </div>
+              <IconChevronRight className="size-4 shrink-0" aria-hidden />
+            </InteractiveCard>
+          );
+        }}
+      />
 
-      {positionId == null ? (
-        <p className="text-sm text-muted-foreground">{copy.emptyPosition}</p>
-      ) : (
-        <>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">{copy.taskListLabel}</p>
+      <FormDialog
+        open={editingRow != null}
+        onOpenChange={(open) => {
+          if (!open) setEditingKey(null);
+        }}
+        title={
+          editingRow
+            ? copy.templateName(
+                editingPosition?.label ?? editingEmployee?.name ?? "—",
+              )
+            : copy.title
+        }
+        description={
+          editingPosition
+            ? copy.templateDescription(
+                editingPosition.label,
+                editingPosition.assignees.length,
+              )
+            : editingEmployee
+              ? `${copy.employeeTemplate} · ${editingEmployee.positionLabel ?? copy.noAssignees}`
+              : undefined
+        }
+        schema={formSchema}
+        defaultValues={defaultValues}
+        entityKey={editingRow?.key}
+        onSubmit={handleSubmit}
+        successMessage={copy.saved}
+        submitLabel={copy.save}
+        contentClassName="sm:max-w-4xl"
+      >
+        {(form) => (
+          <PositionTaskFields form={form} ingredients={data.ingredients} />
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title={copy.createEmployeeTemplate}
+        description={copy.createEmployeeTemplateDescription}
+        schema={formSchema}
+        defaultValues={createDefaultValues}
+        entityKey={firstEmployee?.id}
+        onSubmit={handleCreate}
+        successMessage={copy.saved}
+        submitLabel={copy.createEmployeeTemplate}
+        contentClassName="sm:max-w-4xl"
+      >
+        {(form) => <EmployeeOverrideFields form={form} data={data} />}
+      </FormDialog>
+
+      <AppDialog
+        open={clearingRow != null}
+        onOpenChange={(open) => {
+          if (!open) setClearingRow(null);
+        }}
+        title={copy.clearEmployeeTemplateTitle}
+        description={copy.clearEmployeeTemplateDescription}
+        footer={
+          <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              onClick={() => append(EMPTY_TASK)}
+              onClick={() => setClearingRow(null)}
             >
-              <IconPlus data-icon="inline-start" />
-              {copy.addTask}
+              {copy.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isClearing}
+              onClick={handleClear}
+            >
+              {copy.clearEmployeeTemplate}
             </Button>
           </div>
-
-          {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{copy.empty}</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {fields.map((row, index) => (
-                <TaskRow
-                  key={row.id}
-                  control={form.control}
-                  index={index}
-                  ingredients={data.ingredients}
-                  watchedKind={watchedTasks[index]?.kind ?? "standard"}
-                  onRemove={() => remove(index)}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? <Spinner data-icon="inline-start" /> : null}
-              {copy.save}
-            </Button>
-          </div>
-        </>
-      )}
-    </form>
+        }
+      />
+    </>
   );
 }

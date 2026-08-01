@@ -286,23 +286,21 @@ Stitch output đổi, runtime và docs không tự động thay đổi.
 
 Cấu hình Google Stitch MCP Server được khai báo tại `.mcp.json` / `.codex/config.toml` thông qua `@_davideast/stitch-mcp` (`npx -y @_davideast/stitch-mcp proxy`).
 
-
 ## Branch Operator Landing
 
-Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh, Kho Tổng
-(`central_supply`), và Bếp Trung Tâm (`central_kitchen`) ở `/br/[branchId]`.
-Nó dùng Branch operator adapter, không wrapper control_surface và không gọi
-trực tiếp vocabulary Employee ở các route Branch:
+Branch home là surface mobile-first cho nhân viên và quản lý chi nhánh tại
+`/br/[branchId]`. Nó dùng Branch operator adapter, không wrapper
+control_surface và không gọi trực tiếp vocabulary Employee ở các route Branch:
 
 - Branch và control_surface là hai mặt phẳng presentation khác nhau. Operator
-  plane giữ mobile/tablet touch-first tại `/br/[branchId]/*` cho mọi site kind
-  được phép theo role; control_surface giữ desktop management workspace
+  plane giữ mobile/tablet touch-first tại `/br/[branchId]/*` cho cửa hàng;
+  control_surface giữ management workspace
   responsive tại `/`, `/inventory`, `/finance`, `/hr`, `/menu`, `/orders`, và
-  `/branches` (Owner/Accountant). Mã dùng chung dưới `br/_shared/settings` chỉ
+  `/branches`. Mã dùng chung dưới `br/_shared/settings` chỉ
   là source directory, không phải route.
-- `central_supply_ops` / `central_kitchen_lead` land trên `/br/{pinnedSiteId}`
-  với bottom nav và job tiles theo kind; GRN/SX chỉ mở trên kind trung tâm
-  (CN giữ redirect D093).
+- `central_supply_ops` / `central_kitchen_lead` land trên `/inventory`; Control
+  Surface khóa site theo JWT `branch_id`. Công việc cá nhân và chấm công nằm ở
+  `/me`, không cần đi qua Branch operator IA.
 - data loader, Server Action, RPC và permission check có thể dùng chung giữa
   hai plane; presentation không được dùng chung nếu control_surface component tạo cảm
   giác desktop thu nhỏ trong Branch. Khi cần tách, Branch route dùng native
@@ -516,6 +514,15 @@ của tab đang active. Trên mobile/tablet portrait `<lg` (`useIsMobile(1024)`)
 bottom-nav ưu tiên `tier2` và chỉ có một tab "Mô-đun" mở drawer sidebar đầy đủ.
 Từ desktop `≥lg`, bottom-nav ẩn và `control_surface` dùng một sidebar cố định.
 
+`/me/*` là personal peer route trong cùng Control Surface shell, không thuộc
+Inventory và không được thêm vào `tier1`/`tier2`. Điểm vào là `Trang cá nhân`
+trong Avatar Footer; mobile drawer dùng cùng account menu. Với nhân viên Văn
+phòng không có work-module item, `/me` là landing: desktop giữ Brand, Thông báo
+và Avatar Footer nhưng không hiện module bị khóa; mobile không render bottom-nav
+`Mô-đun` rỗng và dùng Avatar header làm account-menu trigger. Nội dung tiếp tục
+dùng registered `Employee*` adapters; không tạo shell hoặc personal dashboard
+riêng.
+
 Scroll model (inset panel): `SidebarProvider` khóa viewport (`h-svh overflow-hidden`);
 `SidebarInset` giữ khung card cố định (`overflow-hidden`, desktop `max-h` bù
 margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
@@ -637,8 +644,9 @@ Inventory IA bám ba luồng hiện hành:
    chỉ xác nhận GRN làm phát sinh tồn/WAC.
 2. `Kiểm soát tồn` — đúng một warehouse cho mỗi site active, kiểm kê, hao
    hụt/điều chỉnh và báo cáo.
-3. `Sản xuất/tiêu hao` — workflow/RPC đang có tại branch, sale-consumption và
-   write-off có nguồn rõ.
+3. `Sản xuất/tiêu hao` — một surface `/inventory/production` tại Bếp TT;
+   công thức sở hữu đơn vị, lệnh giữ snapshot và Điều chuyển phân phối là chứng
+   từ riêng; sale-consumption và write-off có nguồn rõ.
 
 Kế toán duyệt PO trước khi Kho nhận hàng. Không đưa supplier return, lot/expiry,
 production order hoặc same-branch Kho↔Bếp transfer vào daily IA.
@@ -653,8 +661,8 @@ at the first match.
 1. **Destructive / irreversible, no input?** → `confirm()`. With a required
    reason → `ReasonConfirmDialog` / AlertDialog family.
 2. **Is this a task (it ends) or a view (it is a place)?**
-   - *Task* → not addressable. Continue at 3.
-   - *View* → addressable. Continue at 4.
+   - _Task_ → not addressable. Continue at 3.
+   - _View_ → addressable. Continue at 4.
 3. **Task frame:** structured fields → `FormDialog`. Single bounded decision,
    no form → `AppDialog`. Touch plane, one-at-a-time entry → bottom `Sheet` /
    `Drawer`. Raw `Dialog` requires an approved exception.

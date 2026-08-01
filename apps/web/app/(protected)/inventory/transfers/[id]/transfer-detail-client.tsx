@@ -15,6 +15,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { FormattedNumberInput } from "@/components/form/formatted-number-input";
 import { useIsOnline } from "@/components/pwa-runtime";
 import {
@@ -302,6 +303,116 @@ export function TransferDetailClient({
     },
   ];
 
+  const lineTable = (
+    <DataTable
+      columns={lineColumns}
+      data={transfer.items}
+      getRowKey={(item) => item.sku || item.name}
+      emptyTitle={copy.emptyTransferItemsTitle}
+      emptyDescription={copy.emptyTransferItemsDescription}
+      mobileCardRender={(item) => (
+        <TransferLineMobileCard
+          item={item}
+          isReceiveMode={isReceiveMode}
+          embedded={embedded}
+          receiveValue={receiveQty[item.ingredientId] ?? ""}
+          onReceiveValueChange={(value) =>
+            setReceiveQty((prev) => ({
+              ...prev,
+              [item.ingredientId]: value,
+            }))
+          }
+        />
+      )}
+      mobileFooter={
+        transfer.monetary ? (
+          <Item
+            variant="outline"
+            className="flex-col items-stretch gap-2 p-3 text-sm"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">
+                {copy.totalValue}
+              </span>
+              <span className="font-mono font-semibold tabular-nums text-primary">
+                {messages.inventory.common.currencyCompact(
+                  formatVND(transfer.monetary.total),
+                )}
+              </span>
+            </div>
+          </Item>
+        ) : null
+      }
+      desktopFooterRows={
+        transfer.monetary
+          ? [
+              {
+                key: "ingredient-value",
+                className: "border-border",
+                cells: [
+                  {
+                    key: "label",
+                    colSpan: 4,
+                    className: "text-right text-sm text-muted-foreground",
+                    content: copy.ingredientValue,
+                  },
+                  {
+                    key: "value",
+                    className: "text-right font-mono tabular-nums",
+                    content: messages.inventory.common.currencyCompact(
+                      formatVND(transfer.monetary.subtotal),
+                    ),
+                  },
+                  { key: "actions", content: null },
+                ],
+              },
+              {
+                key: "shipping-fee",
+                className: "border-border",
+                cells: [
+                  {
+                    key: "label",
+                    colSpan: 4,
+                    className: "text-right text-sm text-muted-foreground",
+                    content: copy.shippingFee,
+                  },
+                  {
+                    key: "value",
+                    className: "text-right font-mono tabular-nums",
+                    content: messages.inventory.common.currencyCompact(
+                      formatVND(transfer.monetary.shipping),
+                    ),
+                  },
+                  { key: "actions", content: null },
+                ],
+              },
+              {
+                key: "total-value",
+                className: "border-border",
+                cells: [
+                  {
+                    key: "label",
+                    colSpan: 4,
+                    className: "text-right text-sm font-bold",
+                    content: copy.totalValue,
+                  },
+                  {
+                    key: "value",
+                    className:
+                      "text-right font-mono font-bold tabular-nums text-primary",
+                    content: messages.inventory.common.currencyCompact(
+                      formatVND(transfer.monetary.total),
+                    ),
+                  },
+                  { key: "actions", content: null },
+                ],
+              },
+            ]
+          : undefined
+      }
+    />
+  );
+
   const pageLayout = (
     <div
       className={cn(
@@ -318,131 +429,31 @@ export function TransferDetailClient({
             : "lg:items-start",
         )}
       >
-        <div
-          className={cn(
-            "order-2 flex flex-col gap-4 lg:order-1",
-            embedded && "min-h-0 lg:overflow-y-auto lg:overscroll-contain",
-          )}
-        >
-          <AppSection
-            className="overflow-hidden"
-            title={tTerm("ingredientsList")}
+          <div
+            className={cn(
+              "order-2 flex flex-col gap-4 lg:order-1",
+              embedded && "min-h-0 lg:overflow-hidden",
+            )}
+          >
+            <AppSection
+              className={cn(
+                "overflow-hidden",
+                embedded && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
+              )}
+              title={tTerm("ingredientsList")}
             headerHint={
               isReceiveMode
                 ? copy.receiveInstructions
                 : copy.receivedReadonlyHint
-            }
-            contentFlush
-          >
-            <DataTable
-              columns={lineColumns}
-              data={transfer.items}
-              getRowKey={(item) => item.sku || item.name}
-              emptyTitle={copy.emptyTransferItemsTitle}
-              emptyDescription={copy.emptyTransferItemsDescription}
-              mobileCardRender={(item) => (
-                <TransferLineMobileCard
-                  item={item}
-                  isReceiveMode={isReceiveMode}
-                  embedded={embedded}
-                  receiveValue={receiveQty[item.ingredientId] ?? ""}
-                  onReceiveValueChange={(value) =>
-                    setReceiveQty((prev) => ({
-                      ...prev,
-                      [item.ingredientId]: value,
-                    }))
-                  }
-                />
+              }
+              contentFlush
+              contentClassName={cn(embedded && "lg:min-h-0 lg:flex-1")}
+            >
+              {embedded ? (
+                <ScrollArea className="lg:h-full">{lineTable}</ScrollArea>
+              ) : (
+                lineTable
               )}
-              mobileFooter={
-                transfer.monetary ? (
-                  <Item
-                    variant="outline"
-                    className="flex-col items-stretch gap-2 p-3 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground">
-                        {copy.totalValue}
-                      </span>
-                      <span className="font-mono font-semibold tabular-nums text-primary">
-                        {messages.inventory.common.currencyCompact(
-                          formatVND(transfer.monetary.total),
-                        )}
-                      </span>
-                    </div>
-                  </Item>
-                ) : null
-              }
-              desktopFooterRows={
-                transfer.monetary
-                  ? [
-                      {
-                        key: "ingredient-value",
-                        className: "border-border",
-                        cells: [
-                          {
-                            key: "label",
-                            colSpan: 4,
-                            className:
-                              "text-right text-sm text-muted-foreground",
-                            content: copy.ingredientValue,
-                          },
-                          {
-                            key: "value",
-                            className: "text-right font-mono tabular-nums",
-                            content: messages.inventory.common.currencyCompact(
-                              formatVND(transfer.monetary.subtotal),
-                            ),
-                          },
-                          { key: "actions", content: null },
-                        ],
-                      },
-                      {
-                        key: "shipping-fee",
-                        className: "border-border",
-                        cells: [
-                          {
-                            key: "label",
-                            colSpan: 4,
-                            className:
-                              "text-right text-sm text-muted-foreground",
-                            content: copy.shippingFee,
-                          },
-                          {
-                            key: "value",
-                            className: "text-right font-mono tabular-nums",
-                            content: messages.inventory.common.currencyCompact(
-                              formatVND(transfer.monetary.shipping),
-                            ),
-                          },
-                          { key: "actions", content: null },
-                        ],
-                      },
-                      {
-                        key: "total-value",
-                        className: "border-border",
-                        cells: [
-                          {
-                            key: "label",
-                            colSpan: 4,
-                            className: "text-right text-sm font-bold",
-                            content: copy.totalValue,
-                          },
-                          {
-                            key: "value",
-                            className:
-                              "text-right font-mono font-bold tabular-nums text-primary",
-                            content: messages.inventory.common.currencyCompact(
-                              formatVND(transfer.monetary.total),
-                            ),
-                          },
-                          { key: "actions", content: null },
-                        ],
-                      },
-                    ]
-                  : undefined
-              }
-            />
           </AppSection>
 
           {isReceiveMode && hasShort ? (

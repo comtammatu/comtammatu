@@ -5,6 +5,7 @@ import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
 import { PayrollListClient } from "./payroll-list-client";
+import { HrScopeSelector } from "../hr-scope-selector";
 
 type SearchParams = {
   month?: string;
@@ -57,10 +58,11 @@ export default async function PayrollPage({
   const params = await searchParams;
   const { month, year } = parseMonth(params.month);
   const branchId = parseBranchId(params.branch);
+  const officeOnly = params.branch === "office";
   const standardDays = parseStandardDays(params.standardDays);
   const copy = messages.hr.payroll;
   const [previewResult, branchesResult] = await Promise.all([
-    fetchPayrollPreview({ month, year, standardDays, branchId }),
+    fetchPayrollPreview({ month, year, standardDays, branchId, officeOnly }),
     fetchPayrollBranches(),
   ]);
 
@@ -70,9 +72,17 @@ export default async function PayrollPage({
         title={copy.live.title}
         description={copy.live.description}
         actions={
-          <Button variant="outline" size="touch" render={<Link href="/hr" />}>
-            {copy.backToHr}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <HrScopeSelector
+              branches={
+                branchesResult.success ? (branchesResult.data ?? []) : []
+              }
+              value={params.branch}
+            />
+            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+              {copy.backToHr}
+            </Button>
+          </div>
         }
       />
       {previewResult.success && previewResult.data ? (
@@ -81,6 +91,7 @@ export default async function PayrollPage({
           branches={branchesResult.success ? (branchesResult.data ?? []) : []}
           query={params.q ?? ""}
           selectedBranchId={branchId}
+          officeOnly={officeOnly}
           selectedSalaryStatus={params.salaryStatus}
           calendarTarget={parseCalendarTarget(params.calendar)}
         />

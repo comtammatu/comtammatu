@@ -126,33 +126,69 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   hơn nhóm Nền tảng nhưng giữ cùng thứ tự thông tin.
   Chỉ Owner được vào mọi route top-level của control_surface.
 
-### 2.4A. Trung tâm vận hành Chi nhánh / Kho Tổng / Bếp TT — `/br/[branchId]`
+### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
 - **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace **hai tab** (`Theo dõi ca`, `Nhân sự`). Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
-- **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`), Quản lý kho Tổng (`central_supply_ops`), Bếp trưởng Bếp TT (`central_kitchen_lead`), Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab/kind.
+- **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`) và Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
 - **Quy chuẩn UX/UI:**
   - Bottom nav **chi nhánh** (`branch_kind=branch`): `Hôm nay` · `Ca` · `Đội` · `Kho` · `Phản hồi`. Tab **Kho** land mặc định `/stock/on-hand` (danh sách tồn); `matchPrefixes` vẫn cover `/stock/*`. `Điều hành` và `Thiết lập` nằm trong overflow header.
-  - Bottom nav **Kho Tổng**: `Hôm nay` · `Nhập` · `Tồn` · `Giao nhận` · `Thêm` (hub phụ). Tab **Tồn** = `/stock/on-hand`; Thêm **không** dual-highlight khi đang ở on-hand.
-  - Bottom nav **Bếp TT**: `Bếp` · `Nhập` · `Sản xuất` · `Giao nhận` · `Thêm` (Tồn nằm trong Thêm).
   - Hub CN: hàng chờ > 0 rồi điểm vào bán hàng/bếp; queue **không** GRN/SX (D093).
-  - Hub trung tâm: job tiles chính theo kind (Nhập / Tồn hoặc SX / Giao nhận / YCM); kiểm kê·catalog chỉ trong Thêm; không POS/KDS/Runner.
   - **Exception hẹp (manager-like CN):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` … Cashier/chef/staff không thấy strip. Hub trung tâm không hiện strip doanh thu.
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
   - `Đội` mở hai tab `Theo dõi ca` và `Nhân sự` (CN).
 
 ---
 
+### 2.4B. Công việc cá nhân — `/me/*`
+
+- **Archetype:** `EMBED-WRAPPER` mỏng vào shared staff-runtime; nội dung là cổng
+  ngày làm việc cá nhân, không phải dashboard hay mô-đun L0.
+- **Đối tượng sử dụng chính:** Kế toán, Kho Tổng, Bếp Trung Tâm và nhân viên
+  Văn phòng công ty không có Branch assignment. Nhân viên cửa hàng tiếp tục dùng
+  `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`; Owner không dùng `/me`.
+- **Mục tiêu Nghiệp vụ (Why?):** Cho mọi nhân viên ngoài Branch một nơi thống
+  nhất để chấm công, theo dõi lịch, xin nghỉ, xem hồ sơ và phiếu lương mà không
+  phải cấp quyền giả vào Tài chính, Kho hoặc Nhân sự.
+- **Mục tiêu Người dùng (Goal):** Mở đúng việc cá nhân trong một đến hai thao tác,
+  hoàn thành chấm công an toàn trên điện thoại và quay lại đúng trạng thái ngày
+  làm việc.
+- **Luồng thao tác:**
+  1. Nhân sự có mô-đun đăng nhập vào mô-đun mặc định; mở Avatar Footer →
+     `Trang cá nhân` → `/me`.
+  2. Nhân sự Văn phòng không có mô-đun đăng nhập thẳng `/me`.
+  3. `/me` hiển thị trạng thái hôm nay và đúng một CTA thích ứng:
+     `Chấm công vào` → `Làm nhiệm vụ` → `Kết ca`.
+  4. `Lịch làm`, `Xin nghỉ`, `Hồ sơ` và `Phiếu lương` giữ route actor-only dưới
+     `/me/*`.
+- **Thông tin hiển thị:** Ca hôm nay, giờ vào/ra, tiến độ việc trong ca, lịch của
+  chính nhân viên, trạng thái phép và dữ liệu hồ sơ/phiếu lương của chính actor.
+- **KHÔNG hiển thị:** Chọn nhân viên, chọn Branch/site, danh sách đội, hàng duyệt,
+  quyền tài khoản, dữ liệu HR nhạy cảm của người khác hoặc module không được cấp.
+- **Quy chuẩn UX/UI:**
+  - `/me` là route ngang cấp với `/inventory`, `/finance` và `/hr`, nhưng không là
+    tab mô-đun; điểm vào nằm trong Avatar Footer.
+  - Dùng Control Surface shell. Desktop giữ Sidebar/Avatar Footer; mobile dùng
+    drawer khi có mô-đun. Khi không có mô-đun, không render bottom-nav `Mô-đun`
+    rỗng; Avatar trên header mở cùng account menu.
+  - Nội dung dùng adapter `Employee*`, cột hẹp và task-led. Không dựng dashboard,
+    KPI, hero, shell hoặc theme riêng.
+  - Một CTA chính trong viewport đầu; touch target tối thiểu 44px; trạng thái
+    loading, offline, camera bị từ chối, submitting, success và recoverable error
+    có copy và đường phục hồi rõ ràng.
+
+---
+
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
-- **Planes (ADR 0012 / 0018):** Owner/Accountant `/inventory/*` (control_surface)
-  và operator stock `/br/[branchId]/stock/*` (CN + Kho Tổng + Bếp TT) là hai
-  plane tách chrome/IA. Owner filter site mọi `branch_kind` trên L0; operator
-  hub pin theo kind/role.
+- **Planes (ADR 0012 / 0018):** Owner/Accountant/Kho Tổng/Bếp TT dùng
+  `/inventory/*` (control_surface); operator stock của chi nhánh dùng
+  `/br/[branchId]/stock/*`. Central roles bị khóa site theo JWT `branch_id` và
+  dùng `/me/*` cho công việc cá nhân/chấm công.
 - **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/issues`, `/inventory/issues/[id]`, và `/inventory/supplier-invoices` là `REDIRECT-SHIM` (invoices → `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Detail GRN, consumption và issue Branch thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
-- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`) và
-  Kế toán; `/br/[branchId]/stock` dành cho `branch_manager`, `central_supply_ops`,
-  `central_kitchen_lead` — plane touch, action bị permission + site kind giới hạn.
+- **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`),
+  Kế toán, `central_supply_ops` và `central_kitchen_lead`; `/br/[branchId]/stock`
+  dành cho `branch_manager` — plane touch, action bị permission giới hạn.
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Kiểm soát chính xác số lượng nguyên liệu tồn kho thực tế, tính toán giá vốn hàng bán (WAC), giảm thiểu hao hụt/thất thoát nguyên liệu và tối ưu hóa chi phí mua hàng.
 - **Mục tiêu Người dùng (Goal):** Nhìn tồn để quyết định đúng việc cần làm, nhập kho nhanh và tạo lệnh sản xuất không sai lệch.
@@ -163,7 +199,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
     PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
   - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
     tạo từ PO, kiểm nhận vật lý, lưu nháp rồi xác nhận để cập nhật tồn và WAC.
-  - **Sản xuất:** Chọn thành phẩm và sản lượng -> Kiểm tra định mức/nguyên liệu khả dụng -> Tạo lệnh -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành lệnh.
+  - **Sản xuất:** Chọn công thức đang dùng và sản lượng -> tạo lệnh snapshot tại Bếp TT -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
     không có same-branch Kho↔Bếp. Quyền tạo/giao/nhận tiếp tục theo role matrix.

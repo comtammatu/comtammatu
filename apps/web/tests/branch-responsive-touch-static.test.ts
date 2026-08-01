@@ -38,9 +38,15 @@ test("operator loading states reuse the layout AppPage instead of nesting page s
       `app/(protected)/br/[branchId]/(operator)/${relativePath}`,
     );
 
-    assert.match(source, /<PageSkeleton bare \/>/, relativePath);
+    assert.match(source, /<PageSkeleton bare(?: [^>]*)? \/>/, relativePath);
     assert.doesNotMatch(source, /<PageSkeleton \/>/, relativePath);
   }
+
+  const shiftLoading = read(
+    "app/(protected)/br/[branchId]/(operator)/shift/loading.tsx",
+  );
+  assert.match(shiftLoading, /toolbar=\{false\}/);
+  assert.match(shiftLoading, /blocks=\{2\}/);
 });
 
 test("operational overlays keep all exposed controls touch-sized", () => {

@@ -106,7 +106,7 @@ test("post-login redirect call sites no longer resolve a central-site home branc
   }
 });
 
-test("branch shift route keeps floor-staff daily work visible", () => {
+test("branch shift route separates Branch management from personal work", () => {
   const shiftPage = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx",
   );
@@ -116,12 +116,8 @@ test("branch shift route keeps floor-staff daily work visible", () => {
     shiftPage,
     /authState\.claims\.user_role === "owner"[\s\S]*redirect\(`\/br\/\$\{branchId\}\/team`\)/,
   );
-  assert.match(shiftPage, /authState\.claims\.user_role === "branch_manager"/);
-  assert.match(
-    shiftPage,
-    /mode=\{isBranchManager \? "manager-dashboard" : "full"\}/,
-  );
-  assert.doesNotMatch(shiftPage, /mode="manager-dashboard"/);
+  assert.match(shiftPage, /workflowLayout="stepper"/);
+  assert.doesNotMatch(shiftPage, /redirect\("\/me"\)/);
 });
 
 test("branch orders route owns operator UI instead of wrapping Owner surface orders", () => {

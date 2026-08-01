@@ -159,14 +159,18 @@ test("resolveOperatorTiles -> branch kind keeps GRN/production off the stock hub
 });
 
 test("resolveOperatorTiles -> central kinds expose GRN and fulfill tiles", () => {
-  const supply = resolveOperatorTiles("central_supply_ops", 20, "central_supply");
+  const supply = resolveOperatorTiles(
+    "central_supply_ops",
+    20,
+    "central_supply",
+  );
   const supplyStock = supply.find((group) => group.id === "stock");
   assert.equal(
     supplyStock?.tiles.some((tile) => tile.href === "/br/20/stock/grn"),
     true,
   );
   assert.equal(
-    supplyStock?.tiles.some((tile) => tile.href === "/br/20/stock/production"),
+    supplyStock?.tiles.some((tile) => tile.href === "/inventory/production"),
     false,
   );
   assert.equal(
@@ -185,7 +189,7 @@ test("resolveOperatorTiles -> central kinds expose GRN and fulfill tiles", () =>
     true,
   );
   assert.equal(
-    kitchenStock?.tiles.some((tile) => tile.href === "/br/10/stock/production"),
+    kitchenStock?.tiles.some((tile) => tile.href === "/inventory/production"),
     true,
   );
 });

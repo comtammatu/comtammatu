@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -26,7 +30,7 @@ import { calculateAttendanceWorkHours } from "./attendance-summary";
 
 export type { PayrollPreflightBlocker } from "@lib/hr/payroll-preflight";
 
-const PAYROLL_ROLES: readonly StaffRole[] = ["owner"];
+const PAYROLL_ROLES: readonly StaffRole[] = STAFF_ROLES;
 const payrollActionCopy = messages.hr.payroll.server;
 
 const payrollMonthSchema = z.object({
@@ -34,6 +38,7 @@ const payrollMonthSchema = z.object({
   year: z.coerce.number().int().min(2020),
   standardDays: z.coerce.number().positive().max(31).optional(),
   branchId: z.coerce.number().int().positive().nullable().optional(),
+  officeOnly: z.boolean().optional(),
 });
 
 const periodIdSchema = z.object({
@@ -91,6 +96,7 @@ async function loadPayrollAttendanceRows(
     startDate: string;
     endDate: string;
     branchId?: number | null;
+    officeOnly?: boolean;
   },
 ): Promise<{
   data: PayrollAttendanceRecord[] | null;
@@ -106,6 +112,7 @@ async function loadPayrollAttendanceRows(
     .gte("date", input.startDate)
     .lte("date", input.endDate);
   if (input.branchId != null) query = query.eq("branch_id", input.branchId);
+  else if (input.officeOnly) query = query.is("branch_id", null);
   return query as unknown as Promise<{
     data: PayrollAttendanceRecord[] | null;
     error: { code?: string | null; message?: string | null } | null;
@@ -328,6 +335,8 @@ async function buildPayrollPreview(
 
   if (input.branchId != null) {
     employeesQuery = employeesQuery.eq("profiles.branch_id", input.branchId);
+  } else if (input.officeOnly) {
+    employeesQuery = employeesQuery.is("profiles.branch_id", null);
   }
 
   const { data: employees, error: employeesError } = await employeesQuery;
@@ -367,6 +376,7 @@ async function buildPayrollPreview(
         startDate,
         endDate,
         branchId: input.branchId,
+        officeOnly: input.officeOnly,
       }))(),
     supabase
       .from("leave_requests")
@@ -827,6 +837,7 @@ async function buildPayrollPreview(
       calendar,
       canSnapshot:
         input.branchId == null &&
+        !input.officeOnly &&
         entries.length > 0 &&
         preflight.blockers.length === 0 &&
         !snapshotLocked,
@@ -838,7 +849,7 @@ export const fetchPayrollPreview = withAction(
   {
     roles: PAYROLL_ROLES,
     schema: payrollMonthSchema,
-    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    permission: PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   },
   async (data, context) => buildPayrollPreview(data, context),
 );
@@ -847,7 +858,7 @@ export const savePayrollAdjustment = withAction(
   {
     roles: PAYROLL_ROLES,
     schema: payrollAdjustmentSchema,
-    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    permission: PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   },
   async (data, { supabase }) => {
     const { data: adjustmentId, error } = await supabase.rpc(
@@ -885,7 +896,7 @@ export const removePayrollAdjustment = withAction(
   {
     roles: PAYROLL_ROLES,
     schema: deletePayrollAdjustmentSchema,
-    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    permission: PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("delete_payroll_adjustment", {
@@ -914,10 +925,10 @@ export const snapshotPayrollPreview = withAction(
   {
     roles: PAYROLL_ROLES,
     schema: payrollMonthSchema,
-    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    permission: PERMISSION_KEYS.HR_PAYROLL_SNAPSHOT,
   },
   async (data, context) => {
-    if (data.branchId != null) {
+    if (data.branchId != null || data.officeOnly) {
       return {
         success: false,
         error: messages.hr.payroll.live.snapshotAllBranchesRequired,
@@ -1023,7 +1034,7 @@ export async function fetchPayrollBranches(): Promise<
 > {
   const context = await getAuthContextWithPermission(
     PAYROLL_ROLES,
-    PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   );
   if (!context) return { success: false, error: payrollActionCopy.forbidden };
 
@@ -1046,7 +1057,7 @@ export async function fetchPayrollBranches(): Promise<
 export async function fetchPayrollPeriods(): Promise<ActionResult> {
   const context = await getAuthContextWithPermission(
     PAYROLL_ROLES,
-    PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   );
   if (!context) return { success: false, error: payrollActionCopy.forbidden };
 
@@ -1073,7 +1084,7 @@ export const fetchPayrollPeriod = withAction(
   {
     roles: PAYROLL_ROLES,
     schema: periodIdSchema,
-    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+    permission: PERMISSION_KEYS.HR_PAYROLL_PREPARE,
   },
   async (data, { supabase, claims }) => {
     const { data: period, error } = await supabase

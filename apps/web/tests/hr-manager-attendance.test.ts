@@ -44,7 +44,7 @@ const leaveRequestsTableSource = readFileSync(
   "utf8",
 );
 
-test("HR attendance is a dedicated owner surface for clock in and clock out", () => {
+test("Company HR attendance is a dedicated clock and approval surface", () => {
   assert.doesNotMatch(
     hrPageSource,
     /AttendanceTable|LeaveRequestsTable|AppPageTabs/,
@@ -67,13 +67,13 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     hrMessagesSource,
-    /ownerTitle:\s*"Hồ sơ nhân sự"/,
-    "Owner HR landing should name the employee-record surface precisely",
+    /ownerTitle:\s*"Hồ sơ nhân viên"/,
+    "Company HR landing should name the employee-record surface precisely",
   );
   assert.match(
     hrMessagesSource,
-    /attendance:\s*"Thời gian"/,
-    "HR attendance hub should use Thời gian wording",
+    /attendance:\s*"Chấm công & ca làm"/,
+    "HR attendance hub should name its job precisely",
   );
   assert.match(
     attendanceTableSource,
@@ -112,12 +112,12 @@ test("HR attendance is a dedicated owner surface for clock in and clock out", ()
   );
   assert.match(
     attendanceTableSource,
-    /getAttendancePhotoUrl\(\{\s*attendanceId: record\.id,\s*branchId,\s*\}\)/,
+    /getAttendancePhotoUrl\(\{\s*attendanceId: record\.id,\s*branchId: recordBranchId,\s*\}\)/,
     "Attendance table should request a branch-scoped signed URL per attendance row",
   );
   assert.match(
     attendanceTableSource,
-    /forceCloseStaleAttendance\(\{\s*attendanceId: closingRecord\.id,\s*branchId,\s*note,\s*\}\)/,
+    /forceCloseStaleAttendance\(\{\s*attendanceId: closingRecord\.id,\s*branchId: recordBranchId,\s*note,\s*\}\)/,
     "Attendance stale-close mutation should stay scoped to the selected branch",
   );
   assert.match(
@@ -231,15 +231,15 @@ test("attendance and leave approval data stay in their respective tabs", () => {
 test("individual calendar reads only branch-scoped attendance and leave state", () => {
   assert.match(
     attendanceTableSource,
-    /fetchAttendanceCalendar\(\{ branchId, month \}\)[\s\S]*<Combobox[\s\S]*attendanceCopy\.calendarEmployeeLabel/,
+    /fetchAttendanceCalendar\(scopeInput\)[\s\S]*<Combobox[\s\S]*attendanceCopy\.calendarEmployeeLabel/,
   );
   assert.match(
     hrActionsSource,
-    /export const fetchAttendanceCalendar = withAction\([\s\S]*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,[\s\S]*requireBranchScope: true/,
+    /export const fetchAttendanceCalendar = withAction\([\s\S]*permission: PERMISSION_KEYS\.HR_VIEW_EMPLOYEE,[\s\S]*permissionBranchId: \(data\) => data\.branchId \?\? null/,
   );
   assert.match(
     hrActionsSource,
-    /\.from\("leave_requests"\)[\s\S]*\.eq\("branch_id", data\.branchId\)[\s\S]*\.in\("status", \["pending", "approved"\]\)/,
+    /\.from\("leave_requests"\)[\s\S]*\.in\("status", \["pending", "approved"\]\)[\s\S]*leavesQuery = leavesQuery\.eq\("branch_id", data\.branchId\)/,
   );
   assert.match(
     attendanceCalendarSource,
@@ -340,7 +340,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<DetailView\s+branchId=\{selectedBranch\}[\s\S]*compact[\s\S]*function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
+    /<DetailView[\s\S]*data=\{selectedDayRecords\}[\s\S]*compact[\s\S]*function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
     "the calendar detail should keep responsive cards inside the desktop review panel",
   );
   assert.match(
@@ -368,7 +368,7 @@ test("branch manager attendance and leave reviews remain branch-scoped", () => {
   );
   assert.match(
     hrActionsSource,
-    /await attendanceClient\s*\.from\("attendance_records"\)[\s\S]*employees \(/,
+    /let query = attendanceClient\s*\.from\("attendance_records"\)[\s\S]*employees \(/,
     "Attendance reads embed employees through the branch-gated service client",
   );
   assert.match(

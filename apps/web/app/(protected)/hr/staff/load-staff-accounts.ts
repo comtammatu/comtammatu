@@ -65,8 +65,16 @@ export async function loadStaffAccountsData(
     .order("full_name")
     .limit(500);
 
-  if (params.branch) {
-    query = query.eq("branch_id", Number(params.branch));
+  if (params.branch === "office") {
+    query = query.is("branch_id", null);
+  } else if (params.branch && params.branch !== "all") {
+    const requestedBranchId = Number(params.branch);
+    if (
+      Number.isSafeInteger(requestedBranchId) &&
+      (branches ?? []).some((branch) => branch.id === requestedBranchId)
+    ) {
+      query = query.eq("branch_id", requestedBranchId);
+    }
   }
   if (params.status === "active") {
     query = query.eq("is_active", true);
@@ -97,11 +105,7 @@ export async function loadStaffAccountsData(
   const branchOptions = (branches ?? []) as BranchOption[];
   const positionOptions = (positions ?? []).flatMap((position) => {
     const bucket = staffRoleFromPositionCode(position.code);
-    if (
-      bucket === "unassigned" ||
-      bucket === "owner" ||
-      position.code === "archived_staff"
-    ) {
+    if (bucket === "owner" || position.code === "archived_staff") {
       return [];
     }
     return [
@@ -139,11 +143,19 @@ export async function loadStaffAccountsData(
   }
 
   if (staffIds.length > 0) {
-    const { data: grants } = await supabase
-      .from("staff_permissions")
-      .select("user_id, source_template")
-      .in("user_id", staffIds)
-      .limit(5000);
+    const [{ data: grants }, { data: bindings }] = await Promise.all([
+      supabase
+        .from("staff_permissions")
+        .select("user_id, source_template")
+        .in("user_id", staffIds)
+        .limit(5000),
+      supabase
+        .from("auth_role_bindings")
+        .select("user_id")
+        .in("user_id", staffIds)
+        .is("valid_until", null)
+        .limit(5000),
+    ]);
 
     const grantsByUser = new Map<
       string,
@@ -157,8 +169,10 @@ export async function loadStaffAccountsData(
       grantsByUser.set(userId, list);
     }
     for (const [userId, userGrants] of grantsByUser) {
-      permissionStatusByUserId[userId] =
-        permissionStatusFromGrants(userGrants);
+      permissionStatusByUserId[userId] = permissionStatusFromGrants(userGrants);
+    }
+    for (const binding of (bindings ?? []) as Array<{ user_id: string }>) {
+      permissionStatusByUserId[binding.user_id] = "template";
     }
   }
 

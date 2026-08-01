@@ -534,18 +534,11 @@ allowlist, not a precedent for stretching another archetype's definition:
     detail retains WAC/value, dense desktop controls, and its own presentation.
     Classified **DETAIL** (Branch touch variant).
 16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
-    — Branch production work queue. It uses the Branch operator shell,
-    status strip, full-row run links, and one create action. It never switches
-    to an control_surface table/card mosaic at tablet widths.
-    Classified **LANDING** (Branch touch variant).
+    — Compatibility redirect shim to `/inventory/production?branchId=...`.
+    Production has one canonical control surface and only accepts Bếp TT scope.
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
-    and `/stock/production/[id]/page.tsx` — Branch-native production create and
-    detail workflows. They share loaders, unit models, recipe-context reads, and
-    Server Actions with control_surface while owning their `BranchOperator*` presentation,
-    touch ingredient rows, tablet-landscape two-panel layout, and sticky actions.
-    Production output remains at the branch's own inventory location.
-    Classified **DOC-WORKFLOW** and **DETAIL** respectively; neither imports the
-    control_surface `ProductionNewClient`, `ProductionDetailClient`, or `DataTable`.
+    and `/stock/production/[id]/page.tsx` — Compatibility redirect shims to the
+    canonical create/detail routes; detail keeps the run ID and both keep URL scope.
 18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
     — Branch-runtime waste entry. It preserves the scoped location, tier,
     evidence, rolling-meter, and submit authority but owns a compact touch
@@ -575,6 +568,10 @@ allowlist, not a precedent for stretching another archetype's definition:
     — fixed-branch leave review queue with status tabs, full-row touch items,
     and approve/reject in a bottom sheet. control_surface retains its desktop HR table.
     Classified **LIST** (Branch review variant).
+23. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx`
+    — fixed-branch attendance list using the shared attendance table, without a
+    cross-branch selector. It exposes audited stale-shift closing only when the
+    Branch capability is present. Classified **LIST** (Branch review variant).
 
 ## 5. Agent Lookup Flow
 

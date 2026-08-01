@@ -74,6 +74,8 @@ export const inventory = {
     productionRecipeTitle: "Cấu hình công thức",
     productionRecipeLoadFailed: "Không thể tải công thức sản xuất",
     productionRecipeLoading: "Đang tải định mức nguyên liệu...",
+    productionRunLoadFailed: "Không thể tải Lệnh sản xuất.",
+    productionStockLoadFailed: "Không thể tải tồn nguyên liệu.",
     productionRecipeDescription:
       "Chuẩn bị thành phẩm, nguyên liệu rồi lưu công thức.",
     productionRecipeSteps: [

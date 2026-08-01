@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { Be_Vietnam_Pro } from "next/font/google";
 import { cookies } from "next/headers";
 
 import Script from "next/script";
@@ -23,12 +22,6 @@ import {
   MATU_THEME_COOKIE_NAME,
   resolveMatuThemeMode,
 } from "./_lib/theme-tokens";
-const beVietnamPro = Be_Vietnam_Pro({
-  subsets: ["vietnamese", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-be-vietnam-pro",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
@@ -84,7 +77,6 @@ export default async function RootLayout({
       className={cn(
         GeistSans.variable,
         GeistMono.variable,
-        beVietnamPro.variable,
         initialThemeClass,
         "font-sans",
       )}

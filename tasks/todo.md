@@ -17,6 +17,22 @@ Evidence: migration `20260801131049_hr_shift_assignments_roster_and_hour_ratio_c
 - [ ] Owner-delegate Production apply for exact migration batch (resolve unrelated pending migrations first); then `corepack pnpm db:types`.
 - [ ] Smoke: BM phân ca tuần → NV clock-in/kết ca → Owner payroll preview hour-ratio (vd. 08–16 in 12:00 → 0.5 công); unassigned clock-in blocked.
 
+## Clarify Branch-mobile and Company personal self-service
+
+State: doing
+Kind: feature
+Tier: T3
+Lane: platform/navigation-ia
+Exit: Store-assigned employees keep actor-scoped clock, tasks, schedule/leave, profile, and payslip under canonical `/br/{branchId}/*` mobile routes; Accountant, central-site, and active company-office employees use `/me/*` inside Control Surface chrome through Avatar Footer `Trang cá nhân`; a zero-module office employee lands on `/me` without gaining a work-module capability; Owner remains denied and required site scope still fails closed.
+Evidence: ADR 0012/0022; `docs/ref/screen-context-map.md`; `docs/modules/ui.md`; `docs/spec/role-route-matrix.md`; active/inactive membership plus zero/one/many-module default-landing and route/scope tests; authenticated Office/Accountant/Central desktop+mobile smoke; authenticated Branch Manager/floor-role mobile smoke at `375×812` and `390×844`.
+
+- [ ] Characterize Branch personal navigation and lock `/br/{branchId}/shift/*` plus `/profile/*` as regression-protected canonical routes; do not add redirects to `/me`.
+- [ ] Render `/me/*` inside Control Surface chrome for Accountant, central-site, and eligible company-office employees; add Avatar Footer `Trang cá nhân` without advertising `/me` as a tier-one Sidebar module.
+- [ ] Implement the approved ADR 0022 Markdown frames on existing shells/adapters: adaptive first-viewport action, explicit schedule/leave shortcuts, one-tap profile, zero-module `/me` landing, stable ≤5-item Branch bottom navigation, safe-area, Back/Forward, loading/offline/error states, and ≥44px touch targets.
+- [ ] Route active zero-module company-office employees to `/me` through the shared auth/default-landing contract without granting Finance, Inventory, HR, or Tenant capabilities; inactive membership remains denied.
+- [ ] Keep Owner denied, wrong-branch and missing required `branch_id` fail closed, and central roles pinned to their assigned Inventory site.
+- [ ] Synchronize ADR 0022 and owning UI docs with runtime, then pass targeted tests, repository gates, and authenticated mobile-first browser smoke before closing the outcome.
+
 ## Drop confirmed-dead purchase-request create/submit RPCs after demand cutover
 
 State: triage
@@ -28,28 +44,6 @@ Evidence: 2026-08-01 inventory — both RPCs have zero JS `.rpc()` callers and n
 
 - [ ] Reconfirm zero callers against Production catalogs (`pg_proc`, `pg_depend`, `pg_stat_user_functions.calls`) before writing a DROP migration.
 - [ ] Drop only after the purchase-demand cutover Exit is proven and owner delegates Production apply; keep rollback bodies per `RPC-ROLLBACK-MUST-INCLUDE-BODY`.
-
-## Revive Central Operator Hub for Kho Tổng / Bếp TT
-
-State: verify
-Kind: feature
-Tier: T3
-Lane: inventory/operator-shell
-Exit: `central_supply_ops` / `central_kitchen_lead` login → `/br/{pinnedSiteId}` touch hub (bottom nav + job tiles); GRN/SX/YCM/fulfillment on central kinds; CN keeps D093 redirects; Owner/Accountant keep `/inventory`.
-Evidence: ACL/scope/proxy/home chrome; OPERATOR_TILE_ITEMS; restored GRN/production/purchase-requests/transfer pages; docs role-ops/screen-map/ui/matrix; static auth/scope/nav contracts; typecheck.
-
-- [ ] Authenticated CS/CK responsive smoke at `390×844`, `768×1024`, `1440×900`: home → GRN → fulfill → tồn; CK thêm SX + Yêu cầu Kho Tổng.
-
-## Central hub + Tồn stock-home touch redesign
-
-State: verify
-Kind: feature
-Tier: T2
-Lane: inventory/operator-shell
-Exit: CN Kho lands `/stock/on-hand`; CS/CK primary jobs on Bottom-Nav; on-hand Sheet filter + MultiSelect + Thêm chức năng; kind-aware CTAs; hub secondary-only; docs/tests green.
-Evidence: bottom-nav/home/hub/on-hand/detail + model multi-category; screen-map/role-ops/ui.md; static tests (80) green; `REVIEW_TIER=T2` typecheck+lint+build green. Authenticated browser smoke still open.
-
-- [ ] Authenticated CN/CS/CK smoke `390×844` / `768×1024`: Kho→tồn; Sheet lọc; CTA đúng kind; Thêm chỉ job phụ.
 
 ## Unit role picker + stock display contract
 

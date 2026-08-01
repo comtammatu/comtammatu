@@ -37,6 +37,8 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
     "EMBED-WRAPPER",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
@@ -202,12 +204,12 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/menu/page.tsx": "LIST",
   "apps/web/app/(protected)/notifications/page.tsx": "LIST",
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
-  "apps/web/app/(self)/me/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(self)/me/clock/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(self)/me/schedule/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(self)/me/schedule/leave/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(self)/me/profile/page.tsx": "EMBED-WRAPPER",
-  "apps/web/app/(self)/me/payslip/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/clock/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/schedule/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/schedule/leave/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/profile/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/payslip/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(public)/(auth)/login/page.tsx": "GATE/AUTH",
   "apps/web/app/(public)/access-denied/page.tsx": "GATE/AUTH",
   "apps/web/app/offline/page.tsx": "GATE/AUTH",
@@ -460,6 +462,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
+    {
+      status: "tune",
+      evidence: "implemented-static",
+      final: false,
+    },
+  "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
     {
       status: "tune",
       evidence: "implemented-static",

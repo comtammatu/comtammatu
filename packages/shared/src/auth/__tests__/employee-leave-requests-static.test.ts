@@ -105,7 +105,7 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   for (const expected of [
     'HR_REQUEST_LEAVE: "hr:request_leave"',
     'HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request"',
-    "PERMISSION_KEY_COUNT = 94",
+    "PERMISSION_KEY_COUNT = 107",
   ]) {
     assert.ok(permissions.includes(expected), `expected ${expected}`);
   }
@@ -118,8 +118,8 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   const seededKeys = [...catalogValues.matchAll(/\('([^']+)' *,/g)].map(
     (match) => match[1],
   );
-  assert.equal(seededKeys.length, 94);
-  assert.equal(new Set(seededKeys).size, 94);
+  assert.equal(seededKeys.length, 107);
+  assert.equal(new Set(seededKeys).size, 107);
 
   for (const expected of [
     "leave_requests: {",
@@ -133,11 +133,12 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   }
 });
 
-test("Branch staff runtime exposes leave request self-service from Schedule", () => {
+test("Canonical self-service exposes leave requests from /me/schedule", () => {
   const schedule = read("apps/web/lib/staff-runtime/schedule/page.tsx");
-  const scheduleRoute = read(
+  const legacyScheduleRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/page.tsx",
   );
+  const scheduleRoute = read("apps/web/app/(protected)/me/schedule/page.tsx");
   const scheduleActions = read(
     "apps/web/lib/staff-runtime/schedule/actions.ts",
   );
@@ -149,8 +150,9 @@ test("Branch staff runtime exposes leave request self-service from Schedule", ()
   for (const expected of ["fetchMySchedule(monthStart)"]) {
     assert.ok(schedule.includes(expected), `expected schedule ${expected}`);
   }
+  assert.match(scheduleRoute, /leaveHref="\/me\/schedule\/leave"/);
   assert.match(
-    scheduleRoute,
+    legacyScheduleRoute,
     /leaveHref=\{`\/br\/\$\{branchId\}\/shift\/schedule\/leave`\}/,
   );
 

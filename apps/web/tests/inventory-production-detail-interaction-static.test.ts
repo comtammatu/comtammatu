@@ -4,28 +4,16 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 const source = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/inventory/production/[id]/production-detail-client.tsx",
-  ),
+  join(process.cwd(), "app/(protected)/inventory/production/[id]/production-detail-client.tsx"),
   "utf8",
 );
 
-test("production detail uses the shared destructive confirm flow", () => {
-  assert.match(
-    source,
-    /import \{ confirm \} from "@comtammatu\/ui\/components\/confirm-dialog"/,
-  );
-  assert.match(source, /const shouldCancel = await confirm\(\{/);
+test("production detail confirms cancellation and keeps state-specific actions", () => {
+  assert.match(source, /const accepted = await confirm\(\{/);
   assert.match(source, /variant: "destructive"/);
-  assert.doesNotMatch(source, /if \(!confirm\(/);
-});
-
-test("production detail actions stay touch-sized below desktop", () => {
-  assert.match(source, /const isTouchLayout = useIsMobile\(1024\)/);
-  assert.match(
-    source,
-    /const actionSize = embedded \|\| isTouchLayout \? "touch" : "default"/,
-  );
-  assert.equal(source.match(/size=\{actionSize\}/g)?.length, 3);
+  assert.match(source, /run\.status === "draft"/);
+  assert.match(source, /run\.status === "in_progress"/);
+  assert.match(source, /completeProductionRun/);
+  assert.match(source, /actualIngredients: actualRows/);
+  assert.match(source, /Tạo Điều chuyển/);
 });

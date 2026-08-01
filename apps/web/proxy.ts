@@ -7,6 +7,7 @@ import {
   extractClaimsFromAccessToken,
   isOwnerRoutePath,
   isPublicAppPath,
+  PERMISSION_KEYS,
   requiredOperatorBranchKindForRole,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
@@ -185,6 +186,25 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
+  if (
+    claims.user_role === "self_service" ||
+    pathname === "/me" ||
+    pathname.startsWith("/me/")
+  ) {
+    const { data: canOpenSelfService, error: selfServiceGateError } =
+      await supabase.rpc("has_permission", {
+        p_branch_id: null as unknown as number,
+        p_key: PERMISSION_KEYS.SELF_ACCESS,
+      });
+    if (selfServiceGateError || canOpenSelfService !== true) {
+      return redirectToAccessDenied(
+        request,
+        response,
+        "insufficient-permission",
+      );
+    }
+  }
+
   if (pathname === "/me" || pathname.startsWith("/me/")) {
     const canonicalPath = canonicalizeSelfServicePath(
       claims,
@@ -198,6 +218,22 @@ export async function proxy(request: NextRequest) {
         new URL(canonicalPath, request.nextUrl.origin),
         response,
       );
+    }
+  }
+
+  if (pathname === "/hr" || pathname.startsWith("/hr/")) {
+    const requiredCapability = pathname.startsWith("/hr/payroll")
+      ? PERMISSION_KEYS.HR_PAYROLL_PREPARE
+      : pathname.includes("/permissions") ||
+          pathname.startsWith("/hr/staff/audit")
+        ? PERMISSION_KEYS.AUTH_BINDING_READ
+        : PERMISSION_KEYS.HR_VIEW_EMPLOYEE;
+    const { data: canOpenHr, error: hrGateError } = await supabase.rpc(
+      "has_permission",
+      { p_branch_id: null as unknown as number, p_key: requiredCapability },
+    );
+    if (hrGateError || canOpenHr !== true) {
+      return redirectToDefaultLanding(request, response, claims);
     }
   }
 

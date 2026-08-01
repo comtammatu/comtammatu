@@ -72,10 +72,12 @@ const ingredientBaseSchema = z.object({
     .enum(["central_supply", "central_kitchen"])
     .nullable()
     .optional(),
-  units: z.array(unitRowSchema).min(1, { error: "Cần ít nhất 1 đơn vị" }),
+  units: z
+    .array(unitRowSchema)
+    .min(1, { error: "Cần ít nhất 1 đơn vị" })
+    .max(3, { error: "Mỗi nguyên liệu có tối đa 3 đơn vị" }),
   receipt_unit_id: z.coerce.number().int().positive(),
   issue_unit_id: z.coerce.number().int().positive(),
-  production_unit_id: z.coerce.number().int().positive().nullable().optional(),
 });
 
 function refineUnits(
@@ -108,24 +110,32 @@ function refineUnits(
   }
 }
 
-function refineUnitRoles(data: z.infer<typeof ingredientBaseSchema>, ctx: z.RefinementCtx) {
+function refineUnitRoles(
+  data: z.infer<typeof ingredientBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
   const unitById = new Map(data.units.map((unit) => [unit.unit_id, unit]));
   const receipt = unitById.get(data.receipt_unit_id);
   const issue = unitById.get(data.issue_unit_id);
-  const production = data.production_unit_id == null
-    ? null
-    : unitById.get(data.production_unit_id);
-  const standardUnitId = data.production_unit_id ?? data.issue_unit_id;
-
-  if (!receipt || !issue || (data.production_unit_id != null && !production)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Đơn vị nhập, xuất và sản xuất phải thuộc quy cách của nguyên liệu" });
+  if (!receipt || !issue) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["units"],
+      message:
+        "Đơn vị nhập và xuất phải thuộc quy cách của nguyên liệu",
+    });
     return;
   }
-  if (!unitById.get(standardUnitId)?.is_base) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Đơn vị tồn chuẩn phải là đơn vị xuất hoặc đơn vị sản xuất" });
-  }
-  if (receipt.to_base_factor < issue.to_base_factor || (production && issue.to_base_factor < production.to_base_factor)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["units"], message: "Quy cách phải theo thứ tự Nhập ≥ Xuất ≥ Sản xuất" });
+  const baseUnitId = data.units.find((unit) => unit.is_base)?.unit_id;
+  if (
+    baseUnitId == null ||
+    ![data.receipt_unit_id, data.issue_unit_id].includes(baseUnitId)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["units"],
+      message: "Đơn vị tồn chuẩn phải thuộc ít nhất một vai trò",
+    });
   }
 }
 
@@ -238,7 +248,7 @@ function rpcCatalogArgs(
     p_default_fulfill_site_kind: defaultFulfillSiteKind,
     p_receipt_unit_id: data.receipt_unit_id,
     p_issue_unit_id: data.issue_unit_id,
-    p_production_unit_id: data.production_unit_id ?? null,
+    p_production_unit_id: null,
   };
 }
 
@@ -274,7 +284,7 @@ const getIngredientsCached = cache(
         : supabase
             .from("ingredients")
             .select(
-              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, receipt_unit_id, issue_unit_id, production_unit_id, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, receipt_unit_id, issue_unit_id, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
             )
     )
       .eq("tenant_id", tenantId);
@@ -495,7 +505,6 @@ export const quickCreateIngredient = withAction<
         ],
         receipt_unit_id: unitId,
         issue_unit_id: unitId,
-        production_unit_id: unitId,
       }),
     );
 

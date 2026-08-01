@@ -8,8 +8,8 @@ import {
 export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
-    ownerTitle: "Hồ sơ nhân sự",
-    branchManagerTitle: "Ngày công",
+    ownerTitle: "Hồ sơ nhân viên",
+    branchManagerTitle: "Nhân sự chi nhánh",
     ownerDescription:
       "Quản lý hồ sơ nhân viên, HĐLĐ và lương; phân quyền truy cập được tách riêng.",
     branchManagerDescription:
@@ -52,56 +52,64 @@ export const hr = {
     fetchAttendanceSummaryFailed: "Không thể tải tổng hợp chấm công.",
   },
   client: {
+    scope: {
+      label: "Phạm vi:",
+      ariaLabel: "Phạm vi nhân sự",
+      all: "Toàn công ty",
+      office: "Văn phòng công ty",
+    },
     tabs: {
-      employees: "Người",
-      attendance: "Thời gian",
-      payroll: "Lương",
-      setup: "Quy tắc",
+      employees: "Hồ sơ nhân viên",
+      attendance: "Chấm công & ca làm",
+      payroll: "Bảng lương",
+      setup: "Thiết lập nhân sự",
     },
     peopleTabs: {
-      profile: "Hồ sơ",
-      accounts: "Tài khoản",
+      profile: "Hồ sơ nhân viên",
+      accounts: "Tài khoản & phân quyền",
       ariaLabel: "Tab hồ sơ và tài khoản nhân sự",
     },
     attendanceTabs: {
       today: "Hôm nay",
-      approvals: "Duyệt",
+      approvals: "Cần duyệt",
       timesheet: "Bảng công",
       roster: "Phân ca",
-      ariaLabel: "Tab thời gian nhân sự",
+      ariaLabel: "Tab chấm công và ca làm",
     },
     attendanceTitle: "Chấm công và ngày công theo ca",
+    branchAttendanceTitle: "Bảng chấm công",
     attendanceDescription:
       "Theo dõi vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
     checkoutApprovalsAction: "Duyệt kết ca",
     checkoutApprovalsHint:
       "Kết ca của Kế toán và địa điểm trung tâm chờ Chủ sở hữu duyệt.",
-    setupTitle: "Quy tắc nhân sự",
-    setupDescription: "Chọn mục cần chỉnh.",
+    setupTitle: "Thiết lập nhân sự",
+    setupDescription:
+      "Quản lý chính sách ngày công, khung ca và việc trong ca dùng chung toàn công ty.",
     setupTabs: {
-      leave: "Phép",
-      shifts: "Ca",
+      leave: "Ngày công & nghỉ phép",
+      shifts: "Khung ca làm",
       tasks: "Việc trong ca",
-      ariaLabel: "Tab quy tắc nhân sự",
+      ariaLabel: "Tab thiết lập nhân sự",
     },
     setupSteps: {
       leavePolicy: {
-        title: "Ngày công & phép",
+        title: "Ngày công & nghỉ phép",
         description:
           "Thiết lập ngày công chuẩn và phép tháng dùng chung cho toàn bộ nhân viên.",
         hint: "Chính sách",
       },
       shifts: {
-        title: "Ca làm",
+        title: "Khung ca làm",
         description:
           "Tạo khung ca để việc trong ca và bảng công bám đúng thời điểm.",
         hint: "Khung ca",
       },
       positionTasks: {
-        title: "Việc theo vị trí",
+        title: "Việc trong ca",
         description:
-          "Chỉnh danh sách việc nhân viên nhận khi chấm công vào.",
-        hint: "Theo vị trí",
+          "Quản lý mẫu theo chức danh và mẫu riêng thay thế cho từng nhân viên.",
+        hint: "Mẫu việc",
       },
     },
     onboardSteps: {
@@ -161,6 +169,45 @@ export const hr = {
       positionLabel: "Chọn vị trí",
       positionPlaceholder: "Chọn vị trí",
       emptyPosition: "Chọn vị trí để cấu hình việc trong ca.",
+      templateHeader: "Mẫu việc",
+      templateTypeHeader: "Loại mẫu",
+      taskCountHeader: "Việc trong ca",
+      assigneesHeader: "Gán cho",
+      statusHeader: "Trạng thái",
+      positionTemplate: "Theo chức danh",
+      employeeTemplate: "Riêng nhân viên",
+      createEmployeeTemplate: "Tạo mẫu riêng",
+      createEmployeeTemplateDescription:
+        "Mẫu mới sao chép toàn bộ việc theo chức danh hiện tại và thay thế hoàn toàn khi nhân viên chấm công.",
+      employeeLabel: "Nhân viên",
+      employeePlaceholder: "Chọn nhân viên",
+      allTemplateTypes: "Tất cả loại mẫu",
+      allBranchesFilter: "Tất cả chi nhánh",
+      allTemplateStatuses: "Tất cả trạng thái",
+      active: "Đang áp dụng",
+      clearEmployeeTemplate: "Xóa mẫu riêng",
+      clearEmployeeTemplateTitle: "Xóa mẫu riêng?",
+      clearEmployeeTemplateDescription:
+        "Nhân viên sẽ quay lại nhận toàn bộ việc theo mẫu chức danh hiện tại.",
+      clearEmployeeTemplateSuccess: "Đã xóa mẫu riêng",
+      editTemplate: "Chỉnh sửa mẫu",
+      cancel: "Hủy",
+      configured: "Đã cấu hình",
+      notConfigured: "Chưa cấu hình",
+      noAssignees: "Chưa có nhân sự",
+      searchPlaceholder: "Tìm mẫu, vị trí, nhân sự hoặc việc",
+      templateName: (position: string) => `Mẫu ${position}`,
+      taskSummary: (count: number) => `${formatCount(count)} việc`,
+      assigneeSummary: (count: number) => `${formatCount(count)} nhân sự`,
+      templatesSummary: (count: number) =>
+        `${formatCount(count)} mẫu đang quản lý · chọn một dòng để chỉnh sửa`,
+      templateDescription: (position: string, count: number) =>
+        `Áp dụng cho vị trí ${position} và ${formatCount(count)} nhân sự đang được gán.`,
+      openTemplate: (position: string) => `Mở mẫu ${position}`,
+      emptyTemplatesTitle: "Chưa có vị trí để cấu hình",
+      emptyTemplatesDescription:
+        "Tạo vị trí nhân sự trước khi thiết lập việc trong ca.",
+      noResultsTitle: "Không tìm thấy mẫu phù hợp",
       taskListLabel: "Việc cần làm",
       addTask: "Thêm việc",
       removeTask: "Xóa việc",
@@ -338,6 +385,7 @@ export const hr = {
       month: "Tháng lương",
       branch: "Chi nhánh",
       allBranches: "Tất cả chi nhánh",
+      office: "Văn phòng công ty",
       standardDays: "Ngày công chuẩn",
       search: "Tìm nhân viên",
       calendar: "Lịch",

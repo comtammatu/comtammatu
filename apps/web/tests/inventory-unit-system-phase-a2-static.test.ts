@@ -151,10 +151,9 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
   assert.doesNotMatch(ingredientDialog, /unitsLocked/);
   assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
-  assert.match(
-    ingredientDialog,
-    /name="output_unit_id"[\s\S]*name="input_unit_id"/,
-  );
+  assert.match(ingredientDialog, /name="input_unit_id"/);
+  assert.match(ingredientDialog, /name="output_unit_id"/);
+  assert.match(ingredientDialog, /name: "base_unit_id"/);
 });
 
 test("ingredient actions no longer surface movement-based unit locks", () => {

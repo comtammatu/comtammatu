@@ -93,7 +93,7 @@ test("standalone employee route stays out of active nav and route contracts", ()
   assert.doesNotMatch(scope, /\/employee(?:\/|"|')/);
 });
 
-test("Branch wrappers pass profile fallbacks into shared shift content", () => {
+test("personal Branch routes keep their Branch adapters", () => {
   const clock = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
   );
@@ -110,7 +110,10 @@ test("Branch wrappers pass profile fallbacks into shared shift content", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/profile/payslip/page.tsx",
   );
 
-  for (const source of [clock, schedule, leave, count, payslip]) {
-    assert.match(source, /\/br\/\$\{branchId\}\/profile/);
-  }
+  assert.match(clock, /<StaffClockPageContent/);
+  assert.match(clock, /tasks: `\/br\/\$\{branchId\}\/shift`/);
+  assert.match(schedule, /<StaffSchedulePageContent/);
+  assert.match(leave, /<EmployeeLeavePageContent/);
+  assert.match(payslip, /<StaffPayslipPageContent/);
+  assert.match(count, /profileHref=\{`\/br\/\$\{branchId\}\/profile`\}/);
 });

@@ -18,7 +18,11 @@ test("operator queue views are URL-synced via searchParams, not local useState v
       /useState<QueueView>\("pending"\)|useState<ConsumptionView>\("recorded"\)/,
       `${file}: queue view must not be local useState`,
     );
-    assert.match(source, /useSearchParams\(\)/, `${file}: must read view from searchParams`);
+    assert.match(
+      source,
+      /useSearchParams\(\)/,
+      `${file}: must read view from searchParams`,
+    );
     assert.match(
       source,
       /router\.replace\(q \? `\$\{pathname\}\?\$\{q\}` : pathname/,
@@ -63,7 +67,10 @@ test("operator home surfaces manager shift phases (open/run/close)", () => {
   assert.match(contract, /BranchManagerHomePhase/);
   assert.match(page, /getBranchManagerHomePhaseGroups/);
   assert.match(page, /phaseSections/);
-  assert.match(page, /phaseOpenTitle[\s\S]*phaseRunTitle[\s\S]*phaseCloseTitle/);
+  assert.match(
+    page,
+    /phaseOpenTitle[\s\S]*phaseRunTitle[\s\S]*phaseCloseTitle/,
+  );
   // Manager phase config must not include /team; central home may list /stock/*.
   assert.doesNotMatch(
     contract,
@@ -151,17 +158,14 @@ test("POS self-order uses a realtime channel plus the 5s poll as a safety net", 
   assert.match(source, /5_000/);
 });
 
-test("floor clock-in returns cashier/chef to branch home (unlocked tiles)", () => {
+test("floor clock-in stays in the Branch personal flow", () => {
   const clockPage = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx",
   );
   const actions = read("apps/web/lib/staff-runtime/clock/actions.ts");
-  // Branch home is where POS/KDS tiles unlock after clock-in.
-  assert.match(clockPage, /home: `\/br\/\$\{branchId\}`/);
-  // The universal RPC clock-in path returns floor roles to branch home.
-  const rpcBlock = actions.slice(
-    actions.indexOf("self_service_clock_in"),
-  );
+  assert.match(clockPage, /<StaffClockPageContent/);
+  assert.match(clockPage, /tasks: `\/br\/\$\{branchId\}\/shift`/);
+  const rpcBlock = actions.slice(actions.indexOf("self_service_clock_in"));
   assert.match(rpcBlock, /nextPath: "home"/);
 });
 
@@ -170,7 +174,9 @@ test("KDS streams the station shell immediately and fetches the ticket snapshot 
   const realtime = read(
     "apps/web/app/(protected)/br/[branchId]/kds/_hooks/use-kds-realtime.ts",
   );
-  const board = read("apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx");
+  const board = read(
+    "apps/web/app/(protected)/br/[branchId]/kds/kds-board.tsx",
+  );
   // Page renders the board with an empty seed; stations/permissions resolve fast.
   assert.match(page, /initialTickets=\{\[\]\}/);
   assert.match(page, /seeded=\{false\}/);
@@ -213,7 +219,10 @@ test("KDS comprehensive board memoizes item rows with a per-row isMutating flag"
   // Item/orphan rows are memoized so they skip the 15s board-tick re-render
   // (the tick only needs to update the card background age color).
   assert.match(source, /const CompactItemRow = memo\(function CompactItemRow/);
-  assert.match(source, /const CompactOrphanRow = memo\(function CompactOrphanRow/);
+  assert.match(
+    source,
+    /const CompactOrphanRow = memo\(function CompactOrphanRow/,
+  );
   // Each memoized row takes a per-row boolean, not the recreated
   // pendingTicketIds Set (which would defeat memo on every mutation).
   const itemRowBlock = source.slice(
@@ -223,7 +232,10 @@ test("KDS comprehensive board memoizes item rows with a per-row isMutating flag"
   assert.match(itemRowBlock, /isMutating: boolean;/);
   assert.doesNotMatch(itemRowBlock, /pendingTicketIds/);
   // HeatmapCard still holds the Set but computes the flag for each row.
-  assert.match(source, /isMutating=\{ticket \? pendingTicketIds\.has\(ticket\.id\) : false\}/);
+  assert.match(
+    source,
+    /isMutating=\{ticket \? pendingTicketIds\.has\(ticket\.id\) : false\}/,
+  );
 });
 
 test("POS self-order ref is synced in the render body, not a one-frame-stale effect", () => {

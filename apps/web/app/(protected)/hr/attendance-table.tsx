@@ -5,7 +5,12 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Image as IconImage, ListChecks as IconListChecks } from "lucide-react";
+import {
+  Image as IconImage,
+  ListChecks as IconListChecks,
+  Pencil,
+} from "lucide-react";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -40,12 +45,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import {
-  BRANCH_VI,
-  ERRORS_VI,
-  FORM_VI,
-  STAFF_VI,
-} from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { formatQuantity } from "@comtammatu/shared/format";
 import {
   getVNDateString,
@@ -63,6 +63,7 @@ import {
   fetchAttendanceSummary,
   getAttendancePhotoUrl,
   forceCloseStaleAttendance,
+  correctAttendanceRecord,
   type AttendanceCalendarEmployee,
   type AttendanceCalendarLeave,
 } from "./actions";
@@ -72,7 +73,12 @@ import type { BranchOption } from "./_types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
-import { AppDialog } from "@/components/form/form-dialog";
+import {
+  AppDialog,
+  FormDialog,
+  TextareaField,
+  TextField,
+} from "@/components/form";
 import { Combobox } from "@/components/form/combobox";
 import {
   DataTable,
@@ -89,6 +95,7 @@ const scheduleCopy = messages.employee.schedule;
 
 interface AttendanceRecord {
   id: number;
+  branch_id: number | null;
   date: string;
   check_in: string | null;
   check_out: string | null;
@@ -139,9 +146,35 @@ interface AttendanceSummaryRow {
 type AttendanceView = "clock" | "summary" | "calendar";
 type CalendarScope = "all" | "attention";
 
+const localDateTimeSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Nhập ngày giờ hợp lệ.");
+const attendanceCorrectionSchema = z
+  .object({
+    checkIn: localDateTimeSchema,
+    checkOut: z.union([localDateTimeSchema, z.literal("")]),
+    reason: z.string().trim().min(5, "Lý do phải có ít nhất 5 ký tự."),
+  })
+  .refine(
+    (values) =>
+      values.checkOut === "" ||
+      Date.parse(values.checkOut) > Date.parse(values.checkIn),
+    { path: ["checkOut"], message: "Giờ ra phải sau giờ vào." },
+  );
+type AttendanceCorrectionValues = z.infer<typeof attendanceCorrectionSchema>;
+
+function toLocalDateTime(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 interface AttendanceTableProps {
   branches: BranchOption[];
   initialBranchId?: number;
+  initialBranchScope?: string;
   initialMonth?: string;
   initialView?: AttendanceView;
   initialDay?: string | null;
@@ -151,11 +184,15 @@ interface AttendanceTableProps {
   urlTab?: string;
   /** Today tab: clock-only, hide month/view chrome. */
   todayMode?: boolean;
+  routePath?: string;
+  canForceClose?: boolean;
+  canCorrect?: boolean;
 }
 
 export function AttendanceTable({
   branches,
   initialBranchId,
+  initialBranchScope,
   initialMonth = getVNMonthString(),
   initialView = "summary",
   initialDay = null,
@@ -163,6 +200,9 @@ export function AttendanceTable({
   initialCalendarScope = "all",
   urlTab,
   todayMode = false,
+  routePath = "/hr/attendance",
+  canForceClose = false,
+  canCorrect = false,
 }: AttendanceTableProps) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -175,8 +215,8 @@ export function AttendanceTable({
   const [calendarLeaves, setCalendarLeaves] = useState<
     AttendanceCalendarLeave[]
   >([]);
-  const [selectedBranch, setSelectedBranch] = useState<number>(
-    initialBranchId ?? branches[0]?.id ?? 0,
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    initialBranchScope ?? String(initialBranchId ?? branches[0]?.id ?? "all"),
   );
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [view, setView] = useState<AttendanceView>(initialView);
@@ -195,7 +235,7 @@ export function AttendanceTable({
   // setView + loadData in the same tick, so reading `view` from the
   // closure would fetch the PREVIOUS mode and render an empty table.
   function loadData(
-    branchId: number,
+    branchId: string,
     month: string,
     nextView: AttendanceView = view,
     nextDay: string | null = null,
@@ -222,14 +262,23 @@ export function AttendanceTable({
     if (nextView === "calendar" && nextCalendarScope === "attention") {
       params.set("filter", "attention");
     }
-    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
     startTransition(async () => {
+      const numericBranchId = Number(branchId);
+      const scopeInput = {
+        branchId:
+          Number.isSafeInteger(numericBranchId) && numericBranchId > 0
+            ? numericBranchId
+            : null,
+        officeOnly: branchId === "office",
+        month,
+      };
       const viewResult =
         nextView === "summary"
-          ? await fetchAttendanceSummary({ branchId, month })
+          ? await fetchAttendanceSummary(scopeInput)
           : nextView === "calendar"
-            ? await fetchAttendanceCalendar({ branchId, month })
-            : await fetchAttendance({ branchId, month });
+            ? await fetchAttendanceCalendar(scopeInput)
+            : await fetchAttendance(scopeInput);
 
       if (viewResult.success) {
         if (nextView === "summary") {
@@ -379,27 +428,6 @@ export function AttendanceTable({
           className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
           filters={
             <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-              <Select
-                value={selectedBranch.toString()}
-                onValueChange={(value) =>
-                  loadData(Number(value), selectedMonth, view)
-                }
-              >
-                <SelectTrigger
-                  size={controlSize}
-                  className="w-full sm:w-48"
-                  aria-label={BRANCH_VI.select}
-                >
-                  <SelectValue placeholder={BRANCH_VI.select} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               {todayMode ? null : (
                 <Select
                   value={selectedMonth}
@@ -540,10 +568,14 @@ export function AttendanceTable({
           contentScroll
         >
           <DetailView
-            branchId={selectedBranch}
+            branchId={
+              Number(selectedBranch) > 0 ? Number(selectedBranch) : null
+            }
             data={records}
             compact={todayMode}
             todayColumns={todayMode}
+            canForceClose={canForceClose}
+            canCorrect={canCorrect}
             onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
           />
         </AppSection>
@@ -626,9 +658,15 @@ export function AttendanceTable({
                         ) : null}
                       </Frame>
                       <DetailView
-                        branchId={selectedBranch}
+                        branchId={
+                          Number(selectedBranch) > 0
+                            ? Number(selectedBranch)
+                            : null
+                        }
                         data={selectedDayRecords}
                         compact
+                        canForceClose={canForceClose}
+                        canCorrect={canCorrect}
                         onMutated={() =>
                           loadData(
                             selectedBranch,
@@ -737,12 +775,16 @@ function DetailView({
   data,
   compact = false,
   todayColumns = false,
+  canForceClose,
+  canCorrect,
   onMutated,
 }: {
-  branchId: number;
+  branchId: number | null;
   data: AttendanceRecord[];
   compact?: boolean;
   todayColumns?: boolean;
+  canForceClose: boolean;
+  canCorrect: boolean;
   onMutated: () => void;
 }) {
   const isTouchLayout = useIsMobile(1024);
@@ -762,17 +804,24 @@ function DetailView({
     null,
   );
   const [isClosing, startCloseTransition] = useTransition();
+  const [correctingRecord, setCorrectingRecord] =
+    useState<AttendanceRecord | null>(null);
 
   const todayStr = getVNDateString();
 
   function openPhoto(record: AttendanceRecord) {
     if (!record.check_in_photo_path) return;
+    const recordBranchId = record.branch_id ?? branchId;
+    if (recordBranchId == null) {
+      toast.error(attendanceCopy.photoLoadError);
+      return;
+    }
 
     setPendingPhotoId(record.id);
     startPhotoTransition(async () => {
       const result = await getAttendancePhotoUrl({
         attendanceId: record.id,
-        branchId,
+        branchId: recordBranchId,
       });
       setPendingPhotoId(null);
 
@@ -793,6 +842,8 @@ function DetailView({
   function handleForceClose(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!closingRecord) return;
+    const recordBranchId = closingRecord.branch_id ?? branchId;
+    if (recordBranchId == null) return;
 
     const formData = new FormData(e.currentTarget);
     const note = formData.get("note") as string;
@@ -800,7 +851,7 @@ function DetailView({
     startCloseTransition(async () => {
       const result = await forceCloseStaleAttendance({
         attendanceId: closingRecord.id,
-        branchId,
+        branchId: recordBranchId,
         note,
       });
 
@@ -816,7 +867,11 @@ function DetailView({
   }
 
   function canForceCloseRecord(record: AttendanceRecord): boolean {
-    return isStaleOpenAttendanceRecord(record, todayStr);
+    return (
+      canForceClose &&
+      (record.branch_id ?? branchId) != null &&
+      isStaleOpenAttendanceRecord(record, todayStr)
+    );
   }
 
   function recordStateBadge(record: AttendanceRecord) {
@@ -889,6 +944,22 @@ function DetailView({
     );
   }
 
+  function correctionAction(record: AttendanceRecord, touch = false) {
+    if (!canCorrect || !record.check_in) return null;
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size={touch ? "touch" : "sm"}
+        className={touch ? "w-full" : undefined}
+        onClick={() => setCorrectingRecord(record)}
+      >
+        <Pencil data-icon="inline-start" />
+        Hiệu chỉnh
+      </Button>
+    );
+  }
+
   if (data.length === 0) {
     return (
       <AppEmptyState
@@ -941,6 +1012,7 @@ function DetailView({
                 onOpen={() => setChecklistRecord(record)}
               />
               {photoAction(record)}
+              {correctionAction(record)}
               {forceCloseAction(record)}
             </div>
           ),
@@ -1016,7 +1088,12 @@ function DetailView({
         {
           key: "actions",
           header: "Thao tác",
-          render: (record) => forceCloseAction(record),
+          render: (record) => (
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {correctionAction(record)}
+              {forceCloseAction(record)}
+            </div>
+          ),
         },
       ];
 
@@ -1061,6 +1138,7 @@ function DetailView({
             <ItemActions className="basis-full">
               <div className="flex w-full flex-col items-stretch gap-2">
                 {photoAction(record, true)}
+                {correctionAction(record, true)}
                 {forceCloseAction(record, true)}
               </div>
             </ItemActions>
@@ -1092,6 +1170,66 @@ function DetailView({
           />
         ) : null}
       </AppDialog>
+
+      {correctingRecord ? (
+        <FormDialog<AttendanceCorrectionValues>
+          key={correctingRecord.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setCorrectingRecord(null);
+          }}
+          title="Hiệu chỉnh giờ chấm công"
+          description={`${correctingRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(correctingRecord.date)}`}
+          schema={attendanceCorrectionSchema}
+          defaultValues={{
+            checkIn: toLocalDateTime(correctingRecord.check_in),
+            checkOut: toLocalDateTime(correctingRecord.check_out),
+            reason: "",
+          }}
+          onSubmit={async (values) => {
+            const result = await correctAttendanceRecord({
+              attendanceId: correctingRecord.id,
+              checkIn: new Date(values.checkIn).toISOString(),
+              checkOut: values.checkOut
+                ? new Date(values.checkOut).toISOString()
+                : null,
+              reason: values.reason,
+            });
+            if (result.success) {
+              setCorrectingRecord(null);
+              onMutated();
+            }
+            return result;
+          }}
+          submitLabel="Lưu hiệu chỉnh"
+          successMessage="Đã hiệu chỉnh giờ chấm công."
+        >
+          {(form) => (
+            <>
+              <TextField
+                control={form.control}
+                name="checkIn"
+                type="datetime-local"
+                label="Giờ vào"
+                required
+              />
+              <TextField
+                control={form.control}
+                name="checkOut"
+                type="datetime-local"
+                label="Giờ ra"
+              />
+              <TextareaField
+                control={form.control}
+                name="reason"
+                label="Lý do hiệu chỉnh"
+                maxLength={500}
+                required
+              />
+            </>
+          )}
+        </FormDialog>
+      ) : null}
 
       <AppDialog
         open={checklistRecord !== null}

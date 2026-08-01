@@ -29,6 +29,13 @@ test("D076 operational roles are canonical and have Vietnamese labels", () => {
   }
 });
 
+test("company self-service is not inferred from an HR title", () => {
+  assert.ok(STAFF_ROLES.includes("self_service"));
+  assert.equal(ROLE_LABEL_VI.self_service, "Nhân viên");
+  assert.equal(staffRoleFromPositionCode("hr_manager"), "unassigned");
+  assert.equal(staffRoleFromPositionCode("office_admin"), "unassigned");
+});
+
 test("D076 position mapping pins central operators to their site kind", () => {
   assert.equal(staffRoleFromPositionCode("accountant"), "accountant");
   assert.equal(
@@ -50,11 +57,11 @@ test("D076 position mapping pins central operators to their site kind", () => {
   );
 });
 
-test("D076 module ACL admits only the assigned operational surfaces", () => {
+test("D076 operational surfaces remain assigned while HR uses a candidate gate", () => {
   assert.equal(canAccess("accountant", "finance"), true);
   assert.equal(canAccess("accountant", "inventory"), true);
-  assert.equal(canAccess("accountant", "hr"), false);
-  assert.equal(canAccess("accountant", "staff"), false);
+  assert.equal(canAccess("accountant", "hr"), true);
+  assert.equal(canAccess("accountant", "staff"), true);
   assert.equal(canAccess("central_supply_ops", "inventory"), true);
   assert.equal(canAccess("central_supply_ops", "finance"), false);
   assert.equal(canAccess("central_kitchen_lead", "inventory"), true);

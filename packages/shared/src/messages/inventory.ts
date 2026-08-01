@@ -19,7 +19,7 @@ export const INVENTORY_VI = {
   productionNumber: "Số lệnh",
   productionBranch: "Bếp sản xuất",
   selectFinishedGood: "Chọn thành phẩm",
-  searchFinishedGood: "Tìm thành phẩm...",
+  searchFinishedGood: "Tìm thành phẩm…",
   unitAbbrev: "ĐVT",
   removeRow: "Xóa dòng",
   addRow: "Thêm dòng",
@@ -32,7 +32,7 @@ export const INVENTORY_VI = {
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
   productionOrdersCardDescription:
-    "Lập và xác nhận lệnh sản xuất để trừ nguyên liệu, nhập thành phẩm.",
+    "Theo dõi lệnh từ nháp, bắt đầu sản xuất đến khi nhập thành phẩm tại Bếp Trung Tâm.",
   productionOrdersMetricLabel: "lệnh",
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${formatCount(count)} lệnh nháp`,
@@ -46,8 +46,8 @@ export const INVENTORY_VI = {
   productionCatalogMetricLabel: "danh mục",
   productionOpenCatalog: "Mở danh mục",
   selectIngredient: "Chọn nguyên liệu",
-  selectIngredientPlaceholder: "Chọn nguyên liệu...",
-  searchByName: "Tìm theo tên...",
+  selectIngredientPlaceholder: "Chọn nguyên liệu…",
+  searchByName: "Tìm theo tên…",
   menuRecipeMenuItemLabel: "Món bán *",
   selectMenuItemPlaceholder: "Chọn món bán...",
   allMenuItemsHaveMenuRecipe: "Tất cả món bán đã có định mức.",
@@ -226,8 +226,8 @@ export const INVENTORY_VI = {
   productionRecipeMinLines: "Cần ít nhất một nguyên liệu trong công thức.",
   productionRecipeDuplicateIngredient: "Nguyên liệu bị trùng trong công thức.",
   productionRecipeDialogIntro:
-    "Chọn thành phẩm, nhập số lượng thành phẩm của công thức, thêm nguyên liệu rồi lưu.",
-  productionRecipeFinishedGoodLabel: "Thành phẩm *",
+    "Khai báo một mẻ chuẩn. Mỗi dòng nguyên liệu phải có số lượng, đơn vị đang dùng và không được trùng.",
+  productionRecipeFinishedGoodLabel: "Thành phẩm",
   productionRecipeOutputQuantityLabel: "Số lượng thành phẩm *",
   enterProductionRecipeOutputQuantity: "Nhập số lượng thành phẩm",
   productionRecipeOutputQuantityPositive: "Số lượng thành phẩm phải > 0",
@@ -236,28 +236,44 @@ export const INVENTORY_VI = {
   productionRecipeOutputQuantity: "Số lượng thành phẩm",
   noFinishedGoodInCatalog: "Chưa có thành phẩm trong danh mục.",
   noRawIngredientInCatalog: "Chưa có nguyên liệu đầu vào trong danh mục.",
-  productionRecipeLinesLabel: "Dòng công thức",
+  productionRecipeLinesLabel: "Nguyên liệu định mức",
+  productionRecipeOutputUnitLabel: "Đơn vị thành phẩm",
+  productionRecipeOutputUnitMissingDescription:
+    "Thành phẩm chưa có quy cách đang dùng. Hãy bổ sung trong danh mục trước khi lưu.",
+  searchUnit: "Tìm đơn vị…",
   productionUnitMissingHint: "Chưa thiết lập",
   productionRecipeProductionUnitRequired:
-    "Nguyên liệu phải có đơn vị sản xuất trong danh mục.",
+    "Chọn đơn vị đang dùng của nguyên liệu.",
   productionRecipeUnitRoleMismatch:
-    "Đơn vị dòng công thức phải khớp đơn vị sản xuất của nguyên liệu.",
+    "Đơn vị phải là quy cách đang dùng của đúng nguyên liệu.",
   ingredientCountBadge: (count: number) => `${formatCount(count)} nguyên liệu`,
   ingredientLineCountBadge: (count: number) =>
     `${formatCount(count)} dòng nguyên liệu`,
   finishedGoodsWithRecipeBadge: (count: number) =>
     `${formatCount(count)} thành phẩm có công thức`,
+  productionRecipeNeedsReviewBadge: (count: number) =>
+    `${formatCount(count)} công thức cần duyệt`,
+  productionRecipeListCount: (shown: number, total: number) =>
+    `${formatCount(shown)} / ${formatCount(total)} công thức`,
+  productionRecipeSearchPlaceholder: "Tìm thành phẩm hoặc nguyên liệu…",
+  productionRecipeAllStatuses: "Tất cả trạng thái",
+  productionRecipeNeedsReviewStatus: "Cần duyệt",
+  productionRecipeActiveStatus: "Đang dùng",
+  productionRecipeInactiveStatus: "Ngừng dùng",
+  productionRecipeNoResultsTitle: "Không tìm thấy công thức phù hợp",
+  productionRecipeNoResultsDescription:
+    "Đổi từ khóa hoặc trạng thái để xem lại danh sách công thức.",
   productionRecipeSaveFailed: "Không thể lưu công thức sản xuất",
   productionRecipeSavedToast: (count: number) =>
     `Đã lưu ${formatCount(count)} nguyên liệu trong công thức`,
   productionRecipeDeleteFailed: "Không thể xóa công thức",
   productionRecipeDeleted: "Đã xóa công thức",
-  productionRecipeGroupDeleteTitle: "Xóa toàn bộ công thức?",
+  productionRecipeGroupDeleteTitle: "Ngừng dùng công thức?",
   productionRecipeGroupDeleteDescription: (count: number, name: string) =>
-    `Thao tác này sẽ xóa toàn bộ ${formatCount(count)} dòng công thức của "${name}".`,
-  productionRecipeGroupDeleteConfirm: "Xóa toàn bộ công thức",
-  productionRecipeGroupDeleteFailed: "Không thể xóa công thức cũ",
-  productionRecipeGroupDeleted: "Đã xóa toàn bộ công thức cũ của thành phẩm",
+    `Công thức "${name}" và ${formatCount(count)} dòng nguyên liệu sẽ không còn dùng để tạo lệnh mới.`,
+  productionRecipeGroupDeleteConfirm: "Ngừng dùng công thức",
+  productionRecipeGroupDeleteFailed: "Không thể ngừng dùng công thức",
+  productionRecipeGroupDeleted: "Đã ngừng dùng công thức",
   productionRecipeUpdateAria: (name: string) => `Cập nhật công thức ${name}`,
   productionRecipeUpdate: "Cập nhật công thức",
   productionRecipeDeleteLineAria: (name: string) =>

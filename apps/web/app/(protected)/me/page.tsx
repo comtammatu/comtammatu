@@ -11,6 +11,8 @@ export default async function SelfServicePage() {
         clock: "/me/clock",
         tasks: "/me",
         schedule: "/me/schedule",
+        leave: "/me/schedule/leave",
+        payslip: "/me/payslip",
         profile: "/me/profile",
         checkoutApprovals: "/me",
         count: "/me",
@@ -19,6 +21,7 @@ export default async function SelfServicePage() {
       enableBranchOpsRefresh={false}
       showNotificationControl={false}
       mode="full"
+      workflowLayout="stepper"
       plane="employee"
       copy={messages.operator.shift}
       tasksCopy={messages.operator.shiftTasks}

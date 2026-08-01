@@ -20,6 +20,7 @@ import {
   type PositionOption,
   type StaffRow,
 } from "./staff/staff-table";
+import { HrScopeSelector } from "./hr-scope-selector";
 
 type PeopleView = "profile" | "accounts";
 
@@ -35,6 +36,7 @@ interface HrClientProps {
   staffBranches?: BranchOption[];
   staffPositionOptions?: PositionOption[];
   staffHasActiveFilters?: boolean;
+  initialScope?: string;
 }
 
 export function HrClient({
@@ -49,6 +51,7 @@ export function HrClient({
   staffBranches = [],
   staffPositionOptions = [],
   staffHasActiveFilters = false,
+  initialScope,
 }: HrClientProps) {
   const [addOpen, setAddOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -80,20 +83,23 @@ export function HrClient({
             : workspaceCopy.ownerDescription
         }
         actions={
-          view === "accounts" && canManageAccounts ? (
-            <div className="flex flex-wrap gap-2">
-              <AddStaffButton
-                branches={staffBranches}
-                positionOptions={staffPositionOptions}
-              />
-              <StaffHeaderOverflow />
-            </div>
-          ) : (
-            <Button size="touch" onClick={() => setAddOpen(true)}>
-              <IconUserPlus data-icon="inline-start" />
-              {copy.addEmployee}
-            </Button>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <HrScopeSelector branches={branches} value={initialScope} />
+            {view === "accounts" && canManageAccounts ? (
+              <>
+                <AddStaffButton
+                  branches={staffBranches}
+                  positionOptions={staffPositionOptions}
+                />
+                <StaffHeaderOverflow />
+              </>
+            ) : (
+              <Button size="touch" onClick={() => setAddOpen(true)}>
+                <IconUserPlus data-icon="inline-start" />
+                {copy.addEmployee}
+              </Button>
+            )}
+          </div>
         }
       />
       <AppPageTabs
@@ -102,17 +108,19 @@ export function HrClient({
         paramKey="view"
         ariaLabel={copy.peopleTabs.ariaLabel}
       >
-        <TabsContent value="profile">
-          <HrAttentionStrip summary={attention} />
-          <EmployeeTable
-            employees={employees}
-            branches={branches}
-            positionOptions={positionOptions}
-            canManage
-            initialSalaryFilter={initialSalaryFilter}
-          />
-        </TabsContent>
-        {canManageAccounts ? (
+        {view === "profile" ? (
+          <TabsContent value="profile">
+            <HrAttentionStrip summary={attention} />
+            <EmployeeTable
+              employees={employees}
+              branches={branches}
+              positionOptions={positionOptions}
+              canManage
+              initialSalaryFilter={initialSalaryFilter}
+            />
+          </TabsContent>
+        ) : null}
+        {view === "accounts" && canManageAccounts ? (
           <TabsContent value="accounts">
             <AppListFrame
               contentScroll

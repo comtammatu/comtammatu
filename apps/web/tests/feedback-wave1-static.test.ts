@@ -51,12 +51,9 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
 
   assert.match(permissions, /FEEDBACK_VIEW: "feedback:view"/);
   assert.match(permissions, /FEEDBACK_MANAGE_QR: "feedback:manage_qr"/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 94/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 107/);
 
-  assert.match(
-    migration,
-    /\('feedback:view'[\s\S]*?'branch'[\s\S]*?true\)/,
-  );
+  assert.match(migration, /\('feedback:view'[\s\S]*?'branch'[\s\S]*?true\)/);
   assert.match(
     migration,
     /\('feedback:manage_qr'[\s\S]*?'branch'[\s\S]*?true\)/,
@@ -76,10 +73,7 @@ test("Wave 1 schema keeps composite ownership and no phone/photo/AI restore", ()
 
   assert.match(migration, /feedback_qr_codes_branch_tenant_fkey/);
   assert.match(migration, /feedback_qr_codes_table_scope_fkey/);
-  assert.match(
-    migration,
-    /UNIQUE \(qr_code_id, client_submission_id\)/,
-  );
+  assert.match(migration, /UNIQUE \(qr_code_id, client_submission_id\)/);
   assert.doesNotMatch(migration, /view_phone|guest_phone|phone_number/);
   assert.doesNotMatch(migration, /is_suspect|telegram|openai|photo_url/);
   assert.doesNotMatch(migration, /feedback_settings/);
@@ -156,9 +150,7 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.match(inbox, /BRANCH_VI/);
   assert.doesNotMatch(inbox, /max-w-xs/);
 
-  const qr = readWeb(
-    "app/(protected)/feedback/_components/qr-management.tsx",
-  );
+  const qr = readWeb("app/(protected)/feedback/_components/qr-management.tsx");
   assert.match(qr, /<AppListFrame/);
   assert.match(qr, /RowActionsMenu/);
   assert.match(qr, /DataTable/);

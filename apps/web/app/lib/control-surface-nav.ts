@@ -157,12 +157,8 @@ export function resolveControlSurfaceCoreDeepNav(
   module: ControlSurfaceCoreModuleId,
   _branchId?: number | null,
 ): ShellNavGroup[] {
-  if (role !== "owner") {
-    return [];
-  }
-
   if (module === "settings") {
-    return resolveControlSurfaceSettingsNav(role);
+    return role === "owner" ? resolveControlSurfaceSettingsNav(role) : [];
   }
 
   if (module === "hr") {

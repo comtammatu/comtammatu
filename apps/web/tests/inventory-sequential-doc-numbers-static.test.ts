@@ -34,7 +34,7 @@ test("app create paths no longer mint opaque UUID document codes", () => {
   );
 
   assert.match(helper, /next_inventory_doc_number/);
-  assert.match(grn, /allocateInventoryDocNumber/);
+  assert.match(grn, /messages\.inventory\.po\.emptyLinkedGrnsHint/);
   assert.match(issue, /allocateInventoryDocNumber/);
   assert.doesNotMatch(grn, /randomUUID/);
   assert.doesNotMatch(issue, /randomUUID/);

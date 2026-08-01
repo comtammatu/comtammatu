@@ -7,6 +7,7 @@ import {
 } from "./route-resolution";
 import {
   STAFF_ROLES,
+  requiredOperatorBranchKindForRole,
   staffRoleFromPositionCode,
   type JwtClaims,
   type StaffRole,
@@ -20,6 +21,10 @@ function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
   const role = appMetadata.user_role;
   const positionCode = appMetadata.position_code;
   const branchId = appMetadata.branch_id;
+  const mappedRole =
+    typeof positionCode === "string"
+      ? staffRoleFromPositionCode(positionCode)
+      : "unassigned";
 
   if (
     typeof tenantId !== "number" ||
@@ -28,7 +33,10 @@ function extractClaims(appMetadata: Record<string, unknown>): JwtClaims | null {
     typeof role !== "string" ||
     !STAFF_ROLES.includes(role as StaffRole) ||
     typeof positionCode !== "string" ||
-    staffRoleFromPositionCode(positionCode) !== role ||
+    positionCode.length === 0 ||
+    (role === "self_service"
+      ? mappedRole !== "unassigned"
+      : mappedRole !== role) ||
     (branchId !== null &&
       (typeof branchId !== "number" ||
         !Number.isSafeInteger(branchId) ||
@@ -148,14 +156,17 @@ export function canonicalizeSelfServicePath(
   path: string,
 ): string | null {
   const targetUrl = new URL(path, "http://localhost");
-  if (
-    targetUrl.pathname !== "/me" &&
-    !targetUrl.pathname.startsWith("/me/")
-  ) {
+  if (targetUrl.pathname !== "/me" && !targetUrl.pathname.startsWith("/me/")) {
     return path;
   }
   if (claims.user_role === "owner") return null;
-  if (claims.branch_id == null) return path;
+  if (
+    claims.branch_id == null ||
+    requiredOperatorBranchKindForRole(claims.user_role) !== "branch" ||
+    !canAccess(claims.user_role, "branch_home")
+  ) {
+    return path;
+  }
 
   const mapping = SELF_SERVICE_BRANCH_PATHS.find(
     ([source]) =>

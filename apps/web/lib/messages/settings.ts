@@ -328,10 +328,10 @@ export const settings = {
     contentExpenseToken: "Mã khớp phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
     contentHelp:
-      "Mã vận hành không dùng cho thu đơn POS; nộp tiền mặt không tính là chi.",
+      "Thu đơn POS dùng trực tiếp nội dung QR POS; mã vận hành chỉ dùng cho phiếu chi và nộp tiền mặt.",
     contentCategoryRuleLabel: "Danh mục chi nằm ở phiếu chi",
     contentCategoryRule:
-      "Dùng mã phiếu chi trong lệnh; SePay không suy ra danh mục từ nội dung chuyển khoản.",
+      "Dùng mã phiếu chi trong lệnh; SePay không suy ra danh mục từ nội dung chuyển khoản. Không dùng LUONG hoặc DIEN thay cho mã phiếu chi.",
     contentExpensePreview: "1. Khớp phiếu chi",
     contentCashDepositPreview: "2. Nộp tiền mặt",
     saveSettings: "Lưu cài đặt",

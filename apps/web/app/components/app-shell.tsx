@@ -7,6 +7,7 @@ import {
   Bell as IconBell,
   ChevronsUpDown as IconChevronsUpDown,
   LogOut as IconLogout,
+  UserRound as IconUserRound,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -46,7 +47,7 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 import { useNotificationBadges } from "@/_hooks/use-notification-badges";
-import { AppShellPaddingBoundary } from "@/components/surface";
+import { AppPageHeader, AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
 import { ControlSurfaceBottomNav } from "@/components/control-surface-bottom-nav";
 import { ThemeMenuItem } from "@/components/theme-toggle";
@@ -61,11 +62,100 @@ export interface AppShellProps {
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
   sidebarHeaderAccessory?: ReactNode;
+  personalHref?: string;
+  mobileHeaderTitle?: string;
   /**
    * Mobile-only control_surface bottom navbar (same nav model as the sidebar +
    * drawer trigger). Default true for control_surface shells.
    */
   bottomNav?: boolean;
+}
+
+function AccountMenu({
+  user,
+  isTouchLayout,
+  personalHref,
+  variant,
+}: {
+  user: { name: string };
+  isTouchLayout: boolean;
+  personalHref?: string;
+  variant: "sidebar" | "mobile";
+}) {
+  const copy = messages.common;
+  const isMobile = variant === "mobile";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant={isMobile ? "outline" : "ghost"}
+            size={isMobile ? "icon-touch" : "touch"}
+            aria-label={isMobile ? copy.personalPage : undefined}
+            className={
+              isMobile
+                ? "shrink-0 rounded-full p-0"
+                : "w-full justify-start gap-2 rounded-xl bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }
+          />
+        }
+      >
+        <Avatar>
+          <AvatarFallback className="bg-primary font-semibold text-primary-foreground">
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+        {isMobile ? null : (
+          <>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+              {user.name}
+            </span>
+            <IconChevronsUpDown className="ml-auto text-sidebar-foreground/60" />
+          </>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side={isMobile ? "bottom" : "top"}
+        align={isMobile ? "end" : "start"}
+        sideOffset={8}
+        className="rounded-xl p-1.5"
+      >
+        <DropdownMenuGroup>
+          {personalHref ? (
+            <DropdownMenuItem
+              className={cn("text-sm", isTouchLayout ? "min-h-12" : "min-h-10")}
+              render={<Link href={personalHref} />}
+            >
+              <IconUserRound />
+              {copy.personalPage}
+            </DropdownMenuItem>
+          ) : null}
+          <ThemeMenuItem
+            className={isTouchLayout ? "min-h-12 text-sm" : "min-h-10 text-sm"}
+          />
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <form action="/api/auth/signout" method="post">
+            <DropdownMenuItem
+              nativeButton
+              variant="destructive"
+              className={cn(
+                "w-full text-sm",
+                isTouchLayout ? "min-h-12" : "min-h-10",
+              )}
+              render={<Button type="submit" variant="ghost" />}
+            >
+              <IconLogout />
+              {copy.signOut}
+            </DropdownMenuItem>
+          </form>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function getSidebarSubNavGroups(
@@ -104,6 +194,8 @@ export function AppShell({
   tier1,
   tier2,
   sidebarHeaderAccessory,
+  personalHref,
+  mobileHeaderTitle,
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -137,7 +229,7 @@ export function AppShell({
     () => findActivePrimaryNavItem(tier1WithBadges, pathname),
     [pathname, tier1WithBadges],
   );
-  const showBottomNav = bottomNav;
+  const showBottomNav = bottomNav && tier1WithBadges.length > 0;
   const notificationsHref = `/notifications?returnTo=${encodeURIComponent(pathname)}`;
 
   return (
@@ -280,59 +372,12 @@ export function AppShell({
             </span>
             <UnreadBadge count={notificationSummary.unreadCount} />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  className="w-full justify-start gap-2 rounded-xl bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                />
-              }
-            >
-              <Avatar>
-                <AvatarFallback className="bg-primary font-semibold text-primary-foreground">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {user.name}
-              </span>
-              <IconChevronsUpDown className="ml-auto text-sidebar-foreground/60" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="top"
-              align="start"
-              sideOffset={8}
-              className="rounded-xl p-1.5"
-            >
-              <DropdownMenuGroup>
-                <ThemeMenuItem
-                  className={
-                    isTouchLayout ? "min-h-12 text-sm" : "min-h-10 text-sm"
-                  }
-                />
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <form action="/api/auth/signout" method="post">
-                  <DropdownMenuItem
-                    nativeButton
-                    variant="destructive"
-                    className={cn(
-                      "w-full text-sm",
-                      isTouchLayout ? "min-h-12" : "min-h-10",
-                    )}
-                    render={<Button type="submit" variant="ghost" />}
-                  >
-                    <IconLogout />
-                    {copy.signOut}
-                  </DropdownMenuItem>
-                </form>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AccountMenu
+            user={user}
+            isTouchLayout={isTouchLayout}
+            personalHref={personalHref}
+            variant="sidebar"
+          />
         </SidebarFooter>
       </Sidebar>
 
@@ -342,6 +387,22 @@ export function AppShell({
         data-control-surface=""
         className="chrome-safe-pt min-h-0 overflow-hidden lg:max-h-[calc(100svh-1rem)] lg:ring-1 lg:ring-sidebar-border/50"
       >
+        {mobileHeaderTitle ? (
+          <div className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 bg-background px-3 lg:hidden">
+            <AppPageHeader
+              title={mobileHeaderTitle}
+              compactOnMobile
+              className="min-w-0 flex-1"
+              titleClassName="truncate text-lg"
+            />
+            <AccountMenu
+              user={user}
+              isTouchLayout={isTouchLayout}
+              personalHref={personalHref}
+              variant="mobile"
+            />
+          </div>
+        ) : null}
         <div
           data-owner-shell-scroll=""
           className={cn(

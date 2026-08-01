@@ -178,7 +178,7 @@ test("production create redirects to the created run detail", () => {
   assert.match(action, /production_run_id/);
   assert.match(
     client,
-    /router\.push\(`\$\{basePath\}\/\$\{res\.data\.productionRunId\}`\)/,
+    /router\.push\(`\$\{basePath\}\/\$\{result\.data\.productionRunId\}`\)/,
   );
   assert.doesNotMatch(client, /router\.push\(basePath\);/);
 });

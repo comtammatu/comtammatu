@@ -190,7 +190,7 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
   });
 }
 
-test("resolveControlSurfaceCoreDeepNav surfaces People hubs only for Owner HR", () => {
+test("resolveControlSurfaceCoreDeepNav exposes HR candidates for the live capability gate", () => {
   // Accounts live under `/hr?view=accounts` — not a second deep-nav group.
   const ownerGroups = resolveControlSurfaceCoreDeepNav("owner", "hr");
   const ownerHrefs = hrefList(flattenGroups(ownerGroups));
@@ -217,9 +217,12 @@ test("resolveControlSurfaceCoreDeepNav surfaces People hubs only for Owner HR", 
     "permission audit must not appear as a deep-nav item",
   );
 
-  assert.deepEqual(
-    resolveControlSurfaceCoreDeepNav("branch_manager", "hr"),
-    [],
-    "branch_manager must not receive Owner surface deep navigation",
+  assert.ok(
+    hrefList(
+      flattenGroups(
+        resolveControlSurfaceCoreDeepNav("branch_manager", "hr"),
+      ),
+    ).includes(MODULE_ACL.hr.path),
+    "the shell filters this candidate with the live Tenant HR capability",
   );
 });

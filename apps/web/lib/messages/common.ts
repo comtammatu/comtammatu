@@ -3,6 +3,7 @@ import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 export const common = {
   brandName: "Cơm Tấm Má Tư",
   brandShortName: "Má Tư",
+  personalPage: "Trang cá nhân",
   signOut: ACTIONS_VI.signOut,
   skipNavigation: "Bỏ qua điều hướng",
   themeToggleToLight: "Chế độ ngày",

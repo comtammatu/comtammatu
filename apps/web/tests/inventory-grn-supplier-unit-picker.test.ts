@@ -242,13 +242,16 @@ test("inventory unit option helpers use configured document roles", () => {
     /getRoleUnitOptionsWithFactor\(ingredient, \["issue", "receipt"\]\)/,
   );
 
-  for (const path of [
-    "apps/web/app/(protected)/inventory/_lib/production-units.ts",
+  const count = readRepo(
     "apps/web/app/(protected)/inventory/_lib/count-units.ts",
-  ]) {
-    const source = readRepo(path);
-    assert.match(source, /getIngredientRoleUnit/, path);
-  }
+  );
+  assert.match(count, /getIngredientRoleUnit/);
+
+  const productionLines = readRepo(
+    "apps/web/app/(protected)/inventory/_components/ingredient-lines-editor.tsx",
+  );
+  assert.match(productionLines, /getIngredientUnitOptions\(ingredient\)/);
+  assert.doesNotMatch(productionLines, /production[_A-Z]|productionUnit/);
 });
 
 test("ingredients list does not render raw base-unit reference cost", () => {

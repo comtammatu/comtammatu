@@ -14,7 +14,6 @@ import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   canAccessProductionSurface,
   canManageProductionRecipes,
-  isProductionBranchKind,
   isProductionBranchScopedRole,
   type ProductionOperatorRole,
 } from "./_lib/production-roles";
@@ -54,7 +53,6 @@ type InventoryIngredientRow = {
   unit: string;
   item_kind: string;
   is_active: boolean | null;
-  production_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -129,8 +127,7 @@ export async function hasCurrentProductionBranchAccess(
     .eq("id", branchId)
     .maybeSingle();
 
-  // Production runs at the central kitchen or at an operating branch.
-  return !error && isProductionBranchKind(data?.branch_kind);
+  return !error && data?.branch_kind === "central_kitchen";
 }
 
 export async function loadProductionSurfaceData({
@@ -222,20 +219,15 @@ export async function loadProductionSurfaceData({
   const branchById = new Map(branches.map((branch) => [branch.id, branch]));
   // Production site choices must remain production-compatible locations only.
   const productionBranchesList: BranchOption[] = branches
-    .filter((branch) => isProductionBranchKind(branch.branch_kind))
+    .filter((branch) => branch.branch_kind === "central_kitchen")
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
       branchKind: branch.branch_kind,
     }));
-  const allTargetBranches: BranchOption[] = branches.map((branch) => ({
-    id: branch.id,
-    name: branch.name,
-    branchKind: branch.branch_kind,
-  }));
   const scopedBranchId = claims.branch_id ?? routeBranchId;
   let productionBranches: BranchOption[] = productionBranchesList;
-  let targetBranches: BranchOption[] = allTargetBranches;
+  let targetBranches: BranchOption[] = productionBranchesList;
   if (isProductionBranchScopedRole(role) && scopedBranchId != null) {
     productionBranches = productionBranches.filter(
       (branch) => branch.id === scopedBranchId,
@@ -256,19 +248,31 @@ export async function loadProductionSurfaceData({
       name: ingredient.name,
       unit: ingredient.unit,
       item_kind: ingredient.item_kind,
-      production_unit_id: ingredient.production_unit_id ?? null,
       units: ingredient.units,
     }));
 
+  const recipeByFinishedGood = new Map(
+    (recipesRes.success ? (recipesRes.data ?? []) : []).map((recipe) => [
+      recipe.finished_good_id,
+      recipe,
+    ]),
+  );
   const finishedGoods: FinishedGoodOption[] = ingredients
     .filter((ingredient) => ingredient.item_kind === "finished_good")
-    .map((ingredient) => ({
-      id: ingredient.id,
-      name: ingredient.name,
-      unit: ingredient.unit,
-      production_unit_id: ingredient.production_unit_id ?? null,
-      units: ingredient.units,
-    }));
+    .map((ingredient) => {
+      const recipe = recipeByFinishedGood.get(ingredient.id);
+      return {
+        id: ingredient.id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+        units: ingredient.units,
+        recipeSpecId: recipe?.recipe_spec_id,
+        recipeStatus: recipe?.status,
+        outputQuantity: recipe?.output_quantity,
+        outputUnitId: recipe?.output_unit_id ?? undefined,
+        outputUnitLabel: recipe?.output_unit_label,
+      };
+    });
 
   const locations: InventoryLocationOption[] = (
     (locationsRes.data ?? []) as InventoryLocationPreviewRow[]

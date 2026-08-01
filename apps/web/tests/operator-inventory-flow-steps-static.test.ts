@@ -52,37 +52,16 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.match(branchGrnList, /BranchOperatorPanel/);
   assert.match(branchGrnList, /ItemGroup/);
 
-  const branchProduction = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/production-operator-client.tsx",
-  );
-  assert.doesNotMatch(branchProduction, /OperatorFlowSteps/);
-  assert.match(branchProduction, /BranchOperatorStatusStrip/);
-  assert.match(branchProduction, /title="Việc cần làm"/);
-  assert.match(
-    branchProduction,
-    /const workQueue = \[\.\.\.inProgress, \.\.\.drafts\]/,
-  );
-
-  const branchProductionNew = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/branch-production-new-client.tsx",
-  );
-  assert.match(
-    branchProductionNew,
-    /const hasSourceLocationChoice = sourceLocations\.length > 1/,
-  );
-  assert.match(
-    branchProductionNew,
-    /const hasTargetLocationChoice = targetLocations\.length > 1/,
-  );
-  assert.match(branchProductionNew, /\{hasLocationChoices \? \(/);
-  assert.doesNotMatch(branchProductionNew, /BranchOperatorStatusStrip/);
-  assert.match(branchProductionNew, /NumberPadSheet/);
-  assert.doesNotMatch(branchProductionNew, /QuantityInput/);
-  assert.match(branchProductionNew, /const canRecordProductionRun/);
-  assert.match(branchProductionNew, /await recordProductionRun/);
-  assert.doesNotMatch(branchProductionNew, /await createProductionRun/);
-  assert.doesNotMatch(branchProductionNew, /await confirmProductionRun/);
-  assert.doesNotMatch(branchProductionNew, /createdRunId/);
+  for (const path of [
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
+  ]) {
+    const branchProductionRedirect = read(path);
+    assert.match(branchProductionRedirect, /redirect\(/);
+    assert.match(branchProductionRedirect, /\/inventory\/production/);
+    assert.doesNotMatch(branchProductionRedirect, /OperatorFlowSteps|NumberPadSheet/);
+  }
 });
 
 test("transfer receive keeps the phone first viewport on line receiving", () => {

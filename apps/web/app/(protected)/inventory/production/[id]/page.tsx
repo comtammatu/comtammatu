@@ -2,7 +2,6 @@
 import { notFound } from "next/navigation";
 import {
   fetchProductionRunById,
-  fetchProductionRecipeContext,
 } from "../../production-run-actions";
 import { ProductionDetailClient } from "./production-detail-client";
 import {
@@ -28,17 +27,6 @@ export default async function ProductionDetailPage({
 
   const run = res.data;
   const statusBadge = getStatusBadgeMeta("inventory", run.status);
-  const recipeRes = await fetchProductionRecipeContext(
-    run.finished_good_id,
-    run.branch_id,
-    run.source_location_id ?? undefined,
-  );
-  const recipeContext =
-    recipeRes.success && recipeRes.data ? recipeRes.data : null;
-  const recipeContextError = recipeRes.success
-    ? null
-    : (recipeRes.error ?? "Không thể kiểm tra định mức và tồn kho.");
-
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
@@ -53,11 +41,7 @@ export default async function ProductionDetailPage({
           </AppBackLink>
         }
       />
-      <ProductionDetailClient
-        run={run}
-        recipeContext={recipeContext}
-        recipeContextError={recipeContextError}
-      />
+      <ProductionDetailClient run={run} />
     </AppPage>
   );
 }

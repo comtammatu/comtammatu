@@ -426,7 +426,7 @@ export function EmployeeFormDialog({
 
               <FormGroupBlock
                 title="Định danh và thanh toán"
-                description="Thông tin nhạy cảm chỉ chủ sở hữu được nhập và xem."
+                description="Chỉ người có quyền quản lý hồ sơ nhạy cảm được nhập và xem."
               >
                 <TextField
                   control={form.control}

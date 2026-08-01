@@ -771,7 +771,11 @@ const checks = [
     ],
     pattern:
       /["'`]\/(?:finance|inventory|menu|orders|branches|hr|settings)(?:\/|["'`?#])/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx": 1,
+    },
   },
   {
     id: "owner-page-header-no-module-eyebrow",
@@ -1649,10 +1653,7 @@ function resolveFamilyPath(route) {
   return best;
 }
 
-const protectedPages = [
-  ...walkFiles("apps/web/app/(protected)", [".tsx"]),
-  ...walkFiles("apps/web/app/(self)", [".tsx"]),
-]
+const protectedPages = [...walkFiles("apps/web/app/(protected)", [".tsx"])]
   .map(toPosix)
   .filter((file) => file.endsWith("/page.tsx"));
 const routeManifestPages = protectedPages;

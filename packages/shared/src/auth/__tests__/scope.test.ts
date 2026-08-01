@@ -12,6 +12,7 @@ import { buildAccessDeniedPath } from "../blocked-state";
 import type { JwtClaims, StaffRole } from "../types";
 import { canAccess, MODULE_ACL } from "../module-acl";
 import {
+  resolveControlSurfaceDiscoveryGroups,
   resolveDiscoveredAppGroups,
   resolveDiscoveredApps,
 } from "../app-discovery";
@@ -39,7 +40,12 @@ function makeClaims(
     tenant_id: tenantId,
     branch_id: branchId,
     user_role: role,
-    position_code: role === "branch_staff" ? "cleaner" : role,
+    position_code:
+      role === "branch_staff"
+        ? "cleaner"
+        : role === "self_service"
+          ? "office_admin"
+          : role,
   };
 }
 
@@ -58,6 +64,23 @@ test("extractClaimsFromAccessToken accepts only canonical, consistent claims", (
       branch_id: 3,
       user_role: "branch_manager",
       position_code: "branch_manager",
+    },
+  );
+
+  assert.deepEqual(
+    extractClaimsFromAccessToken(
+      tokenWithAppMetadata({
+        tenant_id: 1,
+        branch_id: null,
+        user_role: "self_service",
+        position_code: "office_admin",
+      }),
+    ),
+    {
+      tenant_id: 1,
+      branch_id: null,
+      user_role: "self_service",
+      position_code: "office_admin",
     },
   );
 
@@ -80,6 +103,12 @@ test("extractClaimsFromAccessToken accepts only canonical, consistent claims", (
       branch_id: 3,
       user_role: "cashier",
       position_code: "chef",
+    },
+    {
+      tenant_id: 1,
+      branch_id: null,
+      user_role: "self_service",
+      position_code: "cashier",
     },
     {
       tenant_id: 0,
@@ -126,6 +155,10 @@ test("getDefaultRedirect → owner enters the L0 root", () => {
   assert.equal(getDefaultRedirect(makeClaims("owner")), "/");
 });
 
+test("getDefaultRedirect → zero-module company member enters /me", () => {
+  assert.equal(getDefaultRedirect(makeClaims("self_service")), "/me");
+});
+
 test("getDefaultRedirect → branch_manager lands on work entry", () => {
   assert.equal(getDefaultRedirect(makeClaims("branch_manager", 3)), "/br/3");
   assert.equal(
@@ -152,18 +185,21 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     label: "Tổng quan",
     href: "/",
   });
+  assert.deepEqual(resolveRoleHomeLink("self_service"), {
+    label: "Công việc của tôi",
+    href: "/me",
+  });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
     label: "Hôm nay",
     href: "/access-denied?reason=branch-scope-mismatch",
   });
 
-  // Operator-plane roles with a branch in scope go home to the branch home.
-  for (const role of [
-    "branch_manager",
-    "cashier",
-    "chef",
-    "branch_staff",
-  ] as const) {
+  assert.deepEqual(resolveRoleHomeLink("branch_manager", 3), {
+    label: "Hôm nay",
+    href: "/br/3",
+  });
+
+  for (const role of ["cashier", "chef", "branch_staff"] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
       label: "Hôm nay",
       href: "/br/3",
@@ -177,13 +213,10 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     });
   }
 
-  for (const role of [
-    "central_supply_ops",
-    "central_kitchen_lead",
-  ] as const) {
+  for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
-      label: "Hôm nay",
-      href: "/br/3",
+      label: "Kho hàng",
+      href: "/inventory",
     });
   }
 });
@@ -202,6 +235,10 @@ test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   assert.equal(resolveRouteFamilyContract("/settings/tables")?.id, "settings");
   assert.equal(resolveRouteFamilyContract("/")?.surface, "owner");
   assert.equal(resolveRouteFamilyContract("/me/clock")?.surface, "self");
+  assert.equal(
+    resolveRouteFamilyContract("/me/clock")?.primaryNav,
+    "owner-sidebar",
+  );
   assert.equal(
     resolveRouteFamilyContract("/inventory/grn/123")?.surface,
     "owner",
@@ -325,7 +362,7 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
   );
 });
 
-test("self-service excludes Owner and canonicalizes site-pinned roles", () => {
+test("self-service excludes Owner and canonicalizes Branch staff", () => {
   for (const path of [
     "/me",
     "/me/clock",
@@ -346,9 +383,26 @@ test("self-service excludes Owner and canonicalizes site-pinned roles", () => {
     resolvePostLoginRedirect(makeClaims("accountant"), "/me/clock?from=home"),
     "/me/clock?from=home",
   );
+  for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims(role, 8), "/me/clock?from=inventory"),
+      "/me/clock?from=inventory",
+    );
+  }
   assert.equal(
-    canonicalizeSelfServicePath(makeClaims("chef", 9), "/me/profile/payslip"),
-    "/br/9/profile/payslip",
+    canonicalizeSelfServicePath(
+      makeClaims("chef", 9),
+      "/me/profile/payslip?year=2026#latest",
+    ),
+    "/br/9/profile/payslip?year=2026#latest",
+  );
+  assert.equal(
+    canonicalizeSelfServicePath(makeClaims("chef", 9), "/me"),
+    "/br/9/shift",
+  );
+  assert.equal(
+    canonicalizeSelfServicePath(makeClaims("chef", 9), "/me/clock"),
+    "/br/9/shift/clock",
   );
   assert.equal(
     canonicalizeSelfServicePath(makeClaims("owner"), "/me/clock"),
@@ -356,7 +410,7 @@ test("self-service excludes Owner and canonicalizes site-pinned roles", () => {
   );
 });
 
-test("resolvePostLoginRedirect → non-owner Owner surface families fall back", () => {
+test("resolvePostLoginRedirect → non-owner management surfaces use role fallback", () => {
   for (const role of ["branch_manager", "cashier"] as const) {
     for (const returnTo of [
       "/",
@@ -365,7 +419,6 @@ test("resolvePostLoginRedirect → non-owner Owner surface families fall back", 
       "/inventory/stock",
       "/finance/revenue",
       "/branches",
-      "/hr",
     ]) {
       assert.equal(
         resolvePostLoginRedirect(makeClaims(role, 3), returnTo),
@@ -374,6 +427,11 @@ test("resolvePostLoginRedirect → non-owner Owner surface families fall back", 
       );
     }
   }
+
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
+    "/hr",
+  );
 });
 
 test("resolvePostLoginRedirect → cashier keeps Branch-native orders", () => {
@@ -509,14 +567,14 @@ test("resolvePostLoginRedirect → explicit Owner oversight resolves cross-branc
   }
 });
 
-test("resolvePostLoginRedirect → branch_manager cannot enter Owner surface HR", () => {
+test("resolvePostLoginRedirect → HR stays a candidate for the live proxy gate", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
-    "/br/3",
+    "/hr",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr/payroll"),
-    "/br/3",
+    "/hr/payroll",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/hr/payroll"),
@@ -677,7 +735,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner can access L0 control modules", () => {
-  const ownerModules = ["owner", "staff", "settings"] as const;
+  const ownerModules = ["owner", "settings"] as const;
   for (const moduleKey of ownerModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     for (const role of ["branch_manager", "cashier", "chef"] as const) {
@@ -751,9 +809,9 @@ test("canAccess → Owner may explicitly oversee POS/KDS/Runner; floor roles sta
   }
 });
 
-test("canAccess → Owner surface HR and payroll are owner-only", () => {
-  assert.equal(canAccess("branch_manager", "hr"), false);
-  assert.equal(canAccess("branch_manager", "hr_payroll"), false);
+test("canAccess → HR modules are candidates for a live capability gate", () => {
+  assert.equal(canAccess("branch_manager", "hr"), true);
+  assert.equal(canAccess("branch_manager", "hr_payroll"), true);
   assert.equal(canAccess("owner", "hr_payroll"), true);
 });
 
@@ -890,6 +948,12 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     resolveDiscoveredApps("accountant").some(
       (app) => app.moduleKey === "me" && app.href === "/me",
     ),
+  );
+
+  assert.deepEqual(resolveControlSurfaceDiscoveryGroups("self_service"), []);
+  assert.deepEqual(
+    resolveDiscoveredApps("self_service").map((app) => app.moduleKey),
+    ["me"],
   );
 });
 

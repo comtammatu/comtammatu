@@ -42,8 +42,9 @@ test("central kitchen lead is admitted and pinned to its production site", () =>
 test("branch-scoped production targets are wired to the actor site", () => {
   assert.match(
     productionDataSource,
-    /targetBranches = targetBranches\.filter\(\s*\(branch\) => branch\.id === scopedBranchId,/,
+    /productionBranches = productionBranches\.filter\(\s*\(branch\) => branch\.id === scopedBranchId,/,
   );
+  assert.match(productionDataSource, /branch\.branch_kind === "central_kitchen"/);
 });
 
 test("central supply operator cannot open production", () => {

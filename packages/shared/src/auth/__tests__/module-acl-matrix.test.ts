@@ -4,11 +4,8 @@ import assert from "node:assert/strict";
 import { canAccess, MODULE_ACL, type ModuleKey } from "../module-acl";
 import type { StaffRole } from "../types";
 
-// Locks the MODULE_ACL access matrix per role. MODULE_ACL is the single source
-// of truth for route access (middleware + sidebar); this snapshot pins exactly
-// which modules each role can reach so the tier split cannot silently change
-// who sees what. Driven through `canAccess` so the test exercises the real
-// membership check, not a re-read of the table.
+// Locks the fast route-candidate matrix. Live capability checks and database
+// policies remain the final authority for HR and other sensitive operations.
 
 const ALL_MODULE_KEYS = Object.keys(MODULE_ACL) as ModuleKey[];
 
@@ -25,6 +22,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_pos_sessions",
     "branch_settings",
     "branch_shift_roster",
+    "branch_shift_attendance",
     "branch_stock",
     "branch_team",
     "branch_orders",
@@ -47,6 +45,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "settings",
     "staff",
   ],
+  self_service: ["hr", "hr_payroll", "me", "notifications", "staff"],
   branch_manager: [
     "branch_dashboard",
     "branch_feedback",
@@ -54,37 +53,81 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_pos_sessions",
     "branch_settings",
     "branch_shift_roster",
+    "branch_shift_attendance",
     "branch_stock",
     "branch_team",
     "branch_orders",
     "employee_checkout_approvals",
     "employee_leave_approvals",
+    "hr",
+    "hr_payroll",
     "kds",
     "me",
     "notifications",
     "branch_home",
     "pos",
     "runner",
+    "staff",
   ],
-  cashier: ["branch_orders", "me", "notifications", "branch_home", "pos", "runner"],
-  chef: ["kds", "me", "notifications", "branch_home", "runner"],
-  branch_staff: ["me", "notifications", "branch_home"],
-  accountant: ["finance", "inventory", "me", "notifications"],
+  cashier: [
+    "branch_orders",
+    "hr",
+    "hr_payroll",
+    "me",
+    "notifications",
+    "branch_home",
+    "pos",
+    "runner",
+    "staff",
+  ],
+  chef: [
+    "hr",
+    "hr_payroll",
+    "kds",
+    "me",
+    "notifications",
+    "branch_home",
+    "runner",
+    "staff",
+  ],
+  branch_staff: [
+    "hr",
+    "hr_payroll",
+    "me",
+    "notifications",
+    "branch_home",
+    "staff",
+  ],
+  accountant: [
+    "finance",
+    "hr",
+    "hr_payroll",
+    "inventory",
+    "me",
+    "notifications",
+    "staff",
+  ],
   central_supply_ops: [
     "branch_home",
     "branch_stock",
+    "hr",
+    "hr_payroll",
     "inventory",
     "inventory_operations",
     "me",
     "notifications",
+    "staff",
   ],
   central_kitchen_lead: [
     "branch_home",
     "branch_stock",
+    "hr",
+    "hr_payroll",
     "inventory",
     "inventory_operations",
     "me",
     "notifications",
+    "staff",
   ],
 };
 

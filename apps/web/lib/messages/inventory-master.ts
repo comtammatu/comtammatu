@@ -10,8 +10,7 @@ export const UNITS_VI = {
   showInactive: "Hiện đơn vị đã ngừng dùng",
   standard: {
     title: "Đơn vị chuẩn",
-    description:
-      "Đơn vị đo hệ thống. Hệ số quy đổi cố định, không sửa được.",
+    description: "Đơn vị đo hệ thống. Hệ số quy đổi cố định, không sửa được.",
     mass: "Khối lượng",
     volume: "Thể tích",
     factor: (unit: string) => `1 = ${unit}`,
@@ -114,29 +113,34 @@ export const INGREDIENT_FORM_VI = {
   units: {
     inputUnit: "Đơn vị nhập",
     outputUnit: "Đơn vị xuất",
-    conversion: (fromUnit: string, _toUnit: string) => `1 ${fromUnit} =`,
-    conversionAria: (inputUnit: string, outputUnit: string) =>
-      `Số ${outputUnit} trong 1 ${inputUnit}`,
-    conversionAriaFallback: "Số đơn vị xuất trong 1 đơn vị nhập",
+    baseUnit: "Đơn vị tồn chuẩn",
+    baseUnitDescription:
+      "Tồn kho lưu theo đơn vị này; phải là một trong các vai trò đã chọn.",
+    conversionAria: (fromUnit: string, toUnit: string) =>
+      `Số ${toUnit} trong 1 ${fromUnit}`,
     unitPending: "…",
-    sameUnitFactorOne: "Cùng đơn vị thì quy đổi phải là 1",
-    inputUnitDifferent: "Thêm đơn vị nhập",
-    removeInputUnit: "Bỏ đơn vị nhập",
-    productionEnabled: "Thêm đơn vị sản xuất",
-    removeProductionUnit: "Bỏ đơn vị sản xuất",
-    productionUnit: "Đơn vị sản xuất",
-    sectionLabel: "Đơn vị & quy đổi",
-    standardUnit: (unit: string) => `Tồn kho sẽ ghi nhận theo: ${unit}`,
+    roleSectionLabel: "Vai trò đơn vị",
+    conversionSection: (baseUnit: string) => `Quy đổi về ${baseUnit}`,
+    inputRole: "Nhập",
+    outputRole: "Xuất",
+    selectBase: "Chọn đơn vị tồn chuẩn",
+    baseMustBeRole: "Đơn vị tồn chuẩn phải thuộc ít nhất một vai trò",
+    chooseBaseBeforeRoleChange:
+      "Hãy chọn đơn vị tồn chuẩn khác trước khi đổi vai trò này",
+    invalidBaseFactor:
+      "Chưa thể đổi tồn chuẩn vì đơn vị mới chưa có hệ số hợp lệ",
+    dimensionMismatch:
+      "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích)",
     add: "Thêm đơn vị",
     empty: "Chưa có đơn vị nào.",
-    hint: "Đơn vị xuất theo mức bếp dùng, nhập theo cách NCC giao. Có phiếu kho thì khóa.",
+    hint: "Đơn vị nhập và xuất là các vai trò độc lập. Mỗi đơn vị quy đổi trực tiếp về tồn chuẩn.",
     colUnit: "Đơn vị",
     colFactor: "Quy đổi về tồn chuẩn",
     colAnchor: "Quy đổi theo",
     colBase: "Tồn chuẩn",
     selectUnit: "Chọn đơn vị",
     anchorPlaceholder: "Chọn đơn vị",
-    autoStandard: "Tự động (đơn vị chuẩn)",
+    autoStandard: "Tự động",
     previewPrefix: (unit: string) => `1 ${unit} =`,
     previewValue: (factor: string, base: string) => `${factor} ${base}`,
     previewCanonical: (unit: string, factor: string, base: string) =>
@@ -147,6 +151,6 @@ export const INGREDIENT_FORM_VI = {
     baseFactorOne: "Đơn vị tồn chuẩn phải có hệ số = 1",
     factorPositive: "Quy đổi phải lớn hơn 0",
     distinctUnits: "Đơn vị không được trùng nhau",
-    baseTag: "tồn chuẩn",
+    baseTag: "Tồn chuẩn",
   },
 } as const;

@@ -622,6 +622,173 @@ export type Database = {
           },
         ]
       }
+      auth_access_role_capabilities: {
+        Row: {
+          permission_key: string
+          role_code: string
+        }
+        Insert: {
+          permission_key: string
+          role_code: string
+        }
+        Update: {
+          permission_key?: string
+          role_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_access_role_capabilities_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_keys"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "auth_access_role_capabilities_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "auth_access_roles"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      auth_access_roles: {
+        Row: {
+          allowed_scope: string
+          code: string
+          label_vi: string
+        }
+        Insert: {
+          allowed_scope: string
+          code: string
+          label_vi: string
+        }
+        Update: {
+          allowed_scope?: string
+          code?: string
+          label_vi?: string
+        }
+        Relationships: []
+      }
+      auth_role_binding_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          at: string
+          branch_id: number | null
+          id: number
+          role_code: string
+          scope_type: string
+          target_user_id: string
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          at?: string
+          branch_id?: number | null
+          id?: never
+          role_code: string
+          scope_type: string
+          target_user_id: string
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          at?: string
+          branch_id?: number | null
+          id?: never
+          role_code?: string
+          scope_type?: string
+          target_user_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_role_binding_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auth_role_bindings: {
+        Row: {
+          branch_id: number | null
+          granted_at: string
+          granted_by: string | null
+          id: number
+          role_code: string
+          scope_type: string
+          tenant_id: number
+          user_id: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          branch_id?: number | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          role_code: string
+          scope_type: string
+          tenant_id: number
+          user_id: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          branch_id?: number | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          role_code?: string
+          scope_type?: string
+          tenant_id?: number
+          user_id?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_role_bindings_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "auth_role_bindings_branch_tenant_fkey"
+            columns: ["branch_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "auth_role_bindings_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "auth_access_roles"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "auth_role_bindings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auth_role_bindings_user_tenant_fkey"
+            columns: ["user_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
       bank_transaction_expense_matches: {
         Row: {
           created_at: string
@@ -5878,6 +6045,84 @@ export type Database = {
           },
         ]
       }
+      production_recipe_specs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          finished_good_id: number
+          id: number
+          output_quantity: number
+          output_to_base_factor: number | null
+          output_unit_code: string | null
+          output_unit_id: number | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          finished_good_id: number
+          id?: never
+          output_quantity: number
+          output_to_base_factor?: number | null
+          output_unit_code?: string | null
+          output_unit_id?: number | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          finished_good_id?: number
+          id?: never
+          output_quantity?: number
+          output_to_base_factor?: number | null
+          output_unit_code?: string | null
+          output_unit_id?: number | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_recipe_specs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_recipe_specs_finished_good_id_fkey"
+            columns: ["finished_good_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_recipe_specs_output_unit_id_fkey"
+            columns: ["output_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_recipe_specs_output_unit_tenant_fkey"
+            columns: ["output_unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "production_recipe_specs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_recipes: {
         Row: {
           created_at: string
@@ -5890,6 +6135,7 @@ export type Database = {
           note: string | null
           output_quantity: number
           quantity: number
+          recipe_spec_id: number
           tenant_id: number
           updated_at: string
         }
@@ -5904,6 +6150,7 @@ export type Database = {
           note?: string | null
           output_quantity: number
           quantity: number
+          recipe_spec_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -5918,6 +6165,7 @@ export type Database = {
           note?: string | null
           output_quantity?: number
           quantity?: number
+          recipe_spec_id?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -5951,7 +6199,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_recipes_recipe_spec_fkey"
+            columns: ["recipe_spec_id"]
+            isOneToOne: false
+            referencedRelation: "production_recipe_specs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "production_recipes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_run_lines: {
+        Row: {
+          actual_quantity: number | null
+          created_at: string
+          entry_to_base_factor: number
+          entry_unit_code: string
+          entry_unit_id: number
+          id: number
+          ingredient_id: number
+          planned_quantity: number
+          production_run_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          actual_quantity?: number | null
+          created_at?: string
+          entry_to_base_factor: number
+          entry_unit_code: string
+          entry_unit_id: number
+          id?: never
+          ingredient_id: number
+          planned_quantity: number
+          production_run_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          actual_quantity?: number | null
+          created_at?: string
+          entry_to_base_factor?: number
+          entry_unit_code?: string
+          entry_unit_id?: number
+          id?: never
+          ingredient_id?: number
+          planned_quantity?: number
+          production_run_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_run_lines_entry_unit_id_fkey"
+            columns: ["entry_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_run_lines_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_run_lines_ingredient_unit_fkey"
+            columns: ["ingredient_id", "entry_unit_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "ingredient_units"
+            referencedColumns: ["ingredient_id", "unit_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "production_run_lines_production_run_id_fkey"
+            columns: ["production_run_id"]
+            isOneToOne: false
+            referencedRelation: "production_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_run_lines_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5963,6 +6296,7 @@ export type Database = {
         Row: {
           actual_quantity: number | null
           branch_id: number
+          cancel_reason: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -5975,6 +6309,8 @@ export type Database = {
           notes: string | null
           planned_quantity: number
           production_number: string
+          recipe_output_quantity: number | null
+          recipe_spec_id: number | null
           source_location_id: number
           started_at: string | null
           status: string
@@ -5986,6 +6322,7 @@ export type Database = {
         Insert: {
           actual_quantity?: number | null
           branch_id: number
+          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -5998,6 +6335,8 @@ export type Database = {
           notes?: string | null
           planned_quantity: number
           production_number: string
+          recipe_output_quantity?: number | null
+          recipe_spec_id?: number | null
           source_location_id: number
           started_at?: string | null
           status?: string
@@ -6009,6 +6348,7 @@ export type Database = {
         Update: {
           actual_quantity?: number | null
           branch_id?: number
+          cancel_reason?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -6021,6 +6361,8 @@ export type Database = {
           notes?: string | null
           planned_quantity?: number
           production_number?: string
+          recipe_output_quantity?: number | null
+          recipe_spec_id?: number | null
           source_location_id?: number
           started_at?: string | null
           status?: string
@@ -6063,6 +6405,13 @@ export type Database = {
             columns: ["finished_good_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_runs_recipe_spec_id_fkey"
+            columns: ["recipe_spec_id"]
+            isOneToOne: false
+            referencedRelation: "production_recipe_specs"
             referencedColumns: ["id"]
           },
           {
@@ -7381,6 +7730,7 @@ export type Database = {
         Row: {
           branch_id: number | null
           created_at: string
+          employee_id: number | null
           id: number
           is_active: boolean
           name: string
@@ -7390,6 +7740,7 @@ export type Database = {
         Insert: {
           branch_id?: number | null
           created_at?: string
+          employee_id?: number | null
           id?: never
           is_active?: boolean
           name?: string
@@ -7399,6 +7750,7 @@ export type Database = {
         Update: {
           branch_id?: number | null
           created_at?: string
+          employee_id?: number | null
           id?: never
           is_active?: boolean
           name?: string
@@ -7419,6 +7771,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_templates_employee_tenant_fkey"
+            columns: ["employee_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "tenant_id"]
           },
           {
             foreignKeyName: "shift_checklist_templates_tenant_id_fkey"
@@ -11245,6 +11604,10 @@ export type Database = {
         Returns: number
       }
       bulk_import_ingredients: { Args: { p_rows: Json }; Returns: Json }
+      bulk_import_production_recipe_specs: {
+        Args: { p_groups: Json }
+        Returns: Json
+      }
       bulk_import_production_recipes: {
         Args: { p_groups: Json }
         Returns: Json
@@ -11269,7 +11632,12 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
+      cancel_production_run:
+        | { Args: { p_run_id: number }; Returns: Json }
+        | {
+            Args: { p_branch_id: number; p_reason?: string; p_run_id: number }
+            Returns: Json
+          }
       cancel_purchase_order: {
         Args: { p_po_id: number; p_reason: string }
         Returns: Json
@@ -11333,6 +11701,10 @@ export type Database = {
         Args: { p_branch_id: number; p_menu_item_id: number }
         Returns: Json
       }
+      clear_employee_shift_task_override: {
+        Args: { p_employee_id: number }
+        Returns: boolean
+      }
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       clear_order_item_discount: {
         Args: { p_order_item_id: number; p_reason: string }
@@ -11393,6 +11765,15 @@ export type Database = {
       complete_print_job: {
         Args: { p_error?: string; p_job_id: number; p_success: boolean }
         Returns: undefined
+      }
+      complete_production_run: {
+        Args: {
+          p_actual_ingredients: Json
+          p_actual_quantity: number
+          p_branch_id: number
+          p_run_id: number
+        }
+        Returns: Json
       }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
       compute_branch_daily_waste_caps: { Args: never; Returns: number }
@@ -11476,6 +11857,15 @@ export type Database = {
           p_source_week_start: string
           p_target_week_start: string
           p_tenant_id: number
+        }
+        Returns: Json
+      }
+      correct_attendance_record: {
+        Args: {
+          p_attendance_id: number
+          p_check_in: string
+          p_check_out: string
+          p_reason: string
         }
         Returns: Json
       }
@@ -11574,18 +11964,30 @@ export type Database = {
         }
         Returns: Json
       }
-      create_production_run: {
-        Args: {
-          p_branch_id: number
-          p_entry_unit_id: number
-          p_finished_good_id: number
-          p_ingredients_override?: Json
-          p_notes?: string
-          p_planned_quantity: number
-          p_target_branch_id?: number
-        }
-        Returns: Json
-      }
+      create_production_run:
+        | {
+            Args: {
+              p_branch_id: number
+              p_entry_unit_id: number
+              p_finished_good_id: number
+              p_ingredients_override?: Json
+              p_notes?: string
+              p_planned_quantity: number
+              p_target_branch_id?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_notes?: string
+              p_planned_quantity: number
+              p_recipe_spec_id: number
+              p_source_location_id?: number
+              p_target_location_id?: number
+            }
+            Returns: Json
+          }
       create_production_run_with_locations: {
         Args: {
           p_branch_id: number
@@ -13204,6 +13606,10 @@ export type Database = {
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       run_inventory_valuation_reconciliation: { Args: never; Returns: Json }
+      save_employee_shift_task_override: {
+        Args: { p_employee_id: number; p_tasks: Json }
+        Returns: number
+      }
       save_goods_receipt_note: {
         Args: {
           p_grn_id: number
@@ -13490,6 +13896,15 @@ export type Database = {
         Returns: undefined
       }
       send_purchase_order: { Args: { p_po_id: number }; Returns: Json }
+      set_auth_role_binding: {
+        Args: {
+          p_active?: boolean
+          p_branch_id?: number
+          p_role_code: string
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
@@ -13529,6 +13944,10 @@ export type Database = {
         Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
         Returns: Json
       }
+      set_production_recipe_status: {
+        Args: { p_recipe_spec_id: number; p_status: string }
+        Returns: Json
+      }
       set_supplier_item_preferred: {
         Args: { p_is_preferred: boolean; p_item_id: number }
         Returns: Json
@@ -13550,7 +13969,9 @@ export type Database = {
         }
         Returns: Json
       }
-      start_production_run: { Args: { p_run_id: number }; Returns: Json }
+      start_production_run:
+        | { Args: { p_run_id: number }; Returns: Json }
+        | { Args: { p_branch_id: number; p_run_id: number }; Returns: Json }
       start_stocktake: {
         Args: {
           p_auditor_id?: string
@@ -13822,15 +14243,25 @@ export type Database = {
         }
         Returns: number
       }
-      upsert_production_recipe_lines: {
-        Args: {
-          p_finished_good_id: number
-          p_lines: Json
-          p_old_finished_good_id?: number
-          p_output_quantity: number
-        }
-        Returns: Json
-      }
+      upsert_production_recipe_lines:
+        | {
+            Args: {
+              p_finished_good_id: number
+              p_lines: Json
+              p_old_finished_good_id?: number
+              p_output_quantity: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_finished_good_id: number
+              p_lines: Json
+              p_output_quantity: number
+              p_output_unit_id: number
+            }
+            Returns: Json
+          }
       upsert_recipe_lines: {
         Args: {
           p_lines: Json

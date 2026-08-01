@@ -11,7 +11,12 @@ function claims(
     tenant_id: 1,
     branch_id: branchId,
     user_role: role,
-    position_code: role === "branch_staff" ? "cleaner" : role,
+    position_code:
+      role === "branch_staff"
+        ? "cleaner"
+        : role === "self_service"
+          ? "office_admin"
+          : role,
   };
 }
 
@@ -20,7 +25,7 @@ test("Owner lands at the tenant root", () => {
   assert.equal(getDefaultRedirect(claims("owner", 2)), "/");
 });
 
-test("branch-pinned roles land at their branch root", () => {
+test("branch roles land on their Branch surface", () => {
   assert.equal(getDefaultRedirect(claims("branch_manager", 2)), "/br/2");
   assert.equal(getDefaultRedirect(claims("cashier", 3)), "/br/3");
   assert.equal(getDefaultRedirect(claims("chef", 4)), "/br/4");
@@ -31,15 +36,28 @@ test("D076 accountant lands at finance", () => {
   assert.equal(getDefaultRedirect(claims("accountant", null)), "/finance");
 });
 
-test("D076 central site roles land at operator branch home", () => {
+test("zero-module company member lands on personal self-service", () => {
+  assert.equal(getDefaultRedirect(claims("self_service", null)), "/me");
+});
+
+test("central site roles land at inventory control surface", () => {
   assert.equal(
     getDefaultRedirect(claims("central_supply_ops", 15)),
-    "/br/15",
+    "/inventory",
   );
   assert.equal(
     getDefaultRedirect(claims("central_kitchen_lead", 16)),
-    "/br/16",
+    "/inventory",
   );
+});
+
+test("central site roles without branch scope fail closed", () => {
+  for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
+    assert.equal(
+      getDefaultRedirect(claims(role, null)),
+      "/access-denied?reason=branch-scope-mismatch",
+    );
+  }
 });
 
 test("branch roles without branch scope fail closed", () => {

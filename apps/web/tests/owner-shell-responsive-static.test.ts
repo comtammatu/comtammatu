@@ -21,7 +21,10 @@ test("Owner bottom nav fits one module action and four destinations", () => {
 test("Owner mobile shell keeps the module drawer available on the root landing", () => {
   const source = read("apps/web/app/components/app-shell.tsx");
 
-  assert.match(source, /const showBottomNav = bottomNav;/);
+  assert.match(
+    source,
+    /const showBottomNav = bottomNav && tier1WithBadges\.length > 0;/,
+  );
   assert.doesNotMatch(source, /pathname !== "\/"/);
   assert.match(
     source,

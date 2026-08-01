@@ -11,11 +11,16 @@ import {
 import type { ShiftRow } from "../_types";
 import { HrSetupClient } from "./setup-client";
 import { fetchHrLeavePolicy } from "./leave-policy-actions";
+import { loadAuthState } from "@/_lib/auth";
+import { HrScopeSelector } from "../hr-scope-selector";
+import type { BranchOption } from "../_types";
 
 const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   positions: [],
   ingredients: [],
   tasksByPosition: {},
+  employees: [],
+  employeeTemplates: [],
 };
 
 type SetupTab = "leave" | "shifts" | "tasks";
@@ -30,14 +35,31 @@ function resolveSetupTab(value: string | undefined): SetupTab {
 export default async function HrSetupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; branch?: string }>;
 }) {
   const params = await searchParams;
-  const [shiftsResult, positionTasksResult, leavePolicyResult] =
+  const { supabase, claims } = await loadAuthState();
+  const tab = resolveSetupTab(params.tab);
+  const [branchesResult, shiftsResult, positionTasksResult, leavePolicyResult] =
     await Promise.all([
-      fetchShifts(),
-      fetchPositionTasksData(),
-      fetchHrLeavePolicy(),
+      supabase
+        .from("branches")
+        .select("id, name, branch_kind")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .order("name"),
+      tab === "shifts"
+        ? fetchShifts()
+        : Promise.resolve({ success: true as const, data: [] }),
+      tab === "tasks"
+        ? fetchPositionTasksData()
+        : Promise.resolve({
+            success: true as const,
+            data: EMPTY_POSITION_TASKS_DATA,
+          }),
+      tab === "leave"
+        ? fetchHrLeavePolicy()
+        : Promise.resolve({ success: true as const, data: null }),
     ]);
   const shifts = shiftsResult.success
     ? ((shiftsResult.data as ShiftRow[]) ?? [])
@@ -46,6 +68,7 @@ export default async function HrSetupPage({
     (positionTasksResult.success ? positionTasksResult.data : null) ??
     EMPTY_POSITION_TASKS_DATA;
   const copy = messages.hr.client;
+  const branches = (branchesResult.data ?? []) as BranchOption[];
 
   return (
     <AppPage width="xwide">
@@ -53,9 +76,12 @@ export default async function HrSetupPage({
         title={copy.tabs.setup}
         description={copy.setupDescription}
         actions={
-          <Button variant="outline" size="touch" render={<Link href="/hr" />}>
-            {messages.hr.payroll.backToHr}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <HrScopeSelector branches={branches} value={params.branch} />
+            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+              {messages.hr.payroll.backToHr}
+            </Button>
+          </div>
         }
       />
       <Suspense>
@@ -65,7 +91,8 @@ export default async function HrSetupPage({
           leavePolicy={
             leavePolicyResult.success ? leavePolicyResult.data : null
           }
-          initialTab={resolveSetupTab(params.tab)}
+          initialTab={tab}
+          initialBranchFilter={params.branch}
         />
       </Suspense>
     </AppPage>

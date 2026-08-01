@@ -17,17 +17,18 @@ import {
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 import { messages } from "@lib/messages";
-import { getAuthContext, probePermission } from "@/_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithPermission,
+  probePermission,
+} from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
 import { calculateAttendanceWorkHours } from "./attendance-summary";
 
-const HR_ROLES: readonly StaffRole[] = ["owner"];
-const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
-const SHIFT_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const HR_ROLES: readonly StaffRole[] = STAFF_ROLES;
+const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = STAFF_ROLES;
+const SHIFT_ROLES: readonly StaffRole[] = STAFF_ROLES;
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const CONTRACT_TYPES = ["probation", "fixed_term", "indefinite"] as const;
@@ -220,7 +221,9 @@ const EMPLOYEE_SELECT_BRANCH_MANAGER = `
       )
     `;
 
-export async function fetchEmployees(): Promise<ActionResult> {
+export async function fetchEmployees(
+  branchScope?: string,
+): Promise<ActionResult> {
   const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
   if (!baseCtx) return { success: false, error: "Không có quyền" };
 
@@ -269,6 +272,19 @@ export async function fetchEmployees(): Promise<ActionResult> {
       return { success: true, data: [] };
     }
     query = query.eq("profiles.branch_id", branchManagerBranchId);
+  } else if (branchScope === "office") {
+    query = query.is("profiles.branch_id", null);
+  } else {
+    const requestedBranchId = Number(branchScope);
+    if (Number.isSafeInteger(requestedBranchId) && requestedBranchId > 0) {
+      const { data: branch } = await baseCtx.supabase
+        .from("branches")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("id", requestedBranchId)
+        .maybeSingle();
+      if (branch) query = query.eq("profiles.branch_id", branch.id);
+    }
   }
 
   const { data, error } = await query;
@@ -294,24 +310,45 @@ export const createEmployeeAccount = withAction(
   },
   async (data, { claims, supabase, user }) => {
     const role = staffRoleFromPositionCode(data.positionCode);
-    if (role === "unassigned" || role === "owner") {
+    if (role === "owner") {
       return {
         success: false,
         error: "Chức vụ không hợp lệ.",
       };
     }
-    if (!(STAFF_ROLES as readonly string[]).includes(role)) {
+    if (
+      role !== "unassigned" &&
+      !(STAFF_ROLES as readonly string[]).includes(role)
+    ) {
       return { success: false, error: "Vai trò không hợp lệ." };
     }
     const effectiveBranchId = data.branchId;
 
+    const { data: position } = await supabase
+      .from("positions")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("code", data.positionCode)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!position) {
+      return { success: false, error: "Chức vụ không hợp lệ." };
+    }
+
     const requiredBranchKind = requiredBranchKindForPositionCode(
       data.positionCode,
     );
-    if (requiredBranchKind === "unassigned") {
-      return { success: false, error: "Chức vụ không hợp lệ." };
+    if (requiredBranchKind === "unassigned" && effectiveBranchId) {
+      return {
+        success: false,
+        error: "Chức vụ toàn công ty không thuộc địa điểm.",
+      };
     }
-    if (requiredBranchKind !== null && !effectiveBranchId) {
+    if (
+      requiredBranchKind !== null &&
+      requiredBranchKind !== "unassigned" &&
+      !effectiveBranchId
+    ) {
       return {
         success: false,
         error: "Chức vụ vận hành phải thuộc một địa điểm.",
@@ -426,7 +463,7 @@ export const createEmployeeAccount = withAction(
         start_date: data.startDate ?? null,
         contract_type: data.contractType ?? null,
         dependents_count: data.dependentsCount,
-        // owner-only PII (action gated by HR_ROLES=['owner'])
+        // Sensitive employee fields are protected by the dedicated HR capability.
         base_salary: data.baseSalary ?? null,
         insurance_base_salary: data.insuranceBaseSalary ?? 0,
         id_number: data.idNumber ?? null,
@@ -521,8 +558,8 @@ function mapRpcError(msg: string): string {
   return "Không thể cập nhật. Vui lòng thử lại.";
 }
 
-// Edit an existing employee's profile + employment record. Owner-only
-// (HR_ROLES): base_salary/id_number/bank_account are owner PII.
+// Edit an existing employee's profile + employment record.
+// Sensitive fields require the tenant-scoped HR management capability.
 // Partial update: only provided fields are written.
 export const updateEmployee = withAction(
   {
@@ -780,7 +817,10 @@ function revalidateHrPaths() {
 // Service client read/write, gated by role at the action layer — RLS is
 // branch-scoped and would not match null-branch rows.
 export async function fetchShifts(): Promise<ActionResult> {
-  const ctx = await getAuthContext(HR_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    HR_ROLES,
+    PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { data, error } = await createServiceClient()
@@ -799,7 +839,11 @@ export async function fetchShifts(): Promise<ActionResult> {
 }
 
 export const createShift = withAction(
-  { roles: HR_ROLES, schema: shiftSchema },
+  {
+    roles: HR_ROLES,
+    schema: shiftSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
+  },
   async (data, { claims }) => {
     const { data: result, error } = await createServiceClient()
       .from("shifts")
@@ -827,7 +871,11 @@ export const createShift = withAction(
 );
 
 export const updateShift = withAction(
-  { roles: HR_ROLES, schema: updateShiftSchema },
+  {
+    roles: HR_ROLES,
+    schema: updateShiftSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
+  },
   async (data, { claims }) => {
     const { data: result, error } = await createServiceClient()
       .from("shifts")
@@ -857,7 +905,11 @@ export const updateShift = withAction(
 );
 
 export const deactivateShift = withAction(
-  { roles: HR_ROLES, schema: deactivateShiftSchema },
+  {
+    roles: HR_ROLES,
+    schema: deactivateShiftSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
+  },
   async (data, { claims }) => {
     const { data: result, error } = await createServiceClient()
       .from("shifts")
@@ -889,7 +941,11 @@ export const deactivateShift = withAction(
 // Explicit open/close flags (D050): the clock-in RPC reads these to decide
 // which opening/closing position tasks to snapshot. Owner-only, global shift.
 export const setShiftBoundaries = withAction(
-  { roles: HR_ROLES, schema: setShiftBoundariesSchema },
+  {
+    roles: HR_ROLES,
+    schema: setShiftBoundariesSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
+  },
   async (data, { claims }) => {
     const { data: result, error } = await createServiceClient()
       .from("shifts")
@@ -922,7 +978,8 @@ export const setShiftBoundaries = withAction(
 /* ─── Attendance ─── */
 
 const fetchAttendanceSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().nullable().optional(),
+  officeOnly: z.boolean().optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });
 
@@ -949,13 +1006,12 @@ export const fetchAttendance = withAction(
     roles: SHIFT_ROLES,
     schema: fetchAttendanceSchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
+    permissionBranchId: (data) => data.branchId ?? null,
   },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
+      (data.branchId == null || claims.branch_id !== data.branchId)
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
@@ -967,11 +1023,11 @@ export const fetchAttendance = withAction(
     const attendanceClient =
       claims.user_role === "branch_manager" ? createServiceClient() : supabase;
 
-    const { data: result, error } = await attendanceClient
+    let query = attendanceClient
       .from("attendance_records")
       .select(
         `
-      id, date, check_in, check_out, status, note, check_in_photo_path,
+      id, branch_id, date, check_in, check_out, status, note, check_in_photo_path,
       checklist_template_id,
       employee_id,
       employees (
@@ -985,12 +1041,14 @@ export const fetchAttendance = withAction(
       )
     `,
       )
-      .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", startDate)
       .lte("date", endDate!)
       .order("date")
       .order("employee_id");
+    if (data.branchId != null) query = query.eq("branch_id", data.branchId);
+    else if (data.officeOnly) query = query.is("branch_id", null);
+    const { data: result, error } = await query;
 
     if (error) {
       console.error(
@@ -1009,13 +1067,12 @@ export const fetchAttendanceCalendar = withAction(
     roles: SHIFT_ROLES,
     schema: fetchAttendanceSchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
+    permissionBranchId: (data) => data.branchId ?? null,
   },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
+      (data.branchId == null || claims.branch_id !== data.branchId)
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
@@ -1026,13 +1083,11 @@ export const fetchAttendanceCalendar = withAction(
     const calendarClient =
       claims.user_role === "branch_manager" ? createServiceClient() : supabase;
 
-    const [attendanceResult, employeesResult, leavesResult] = await Promise.all(
-      [
-        calendarClient
-          .from("attendance_records")
-          .select(
-            `
-        id, date, check_in, check_out, status, note, check_in_photo_path,
+    let attendanceQuery = calendarClient
+      .from("attendance_records")
+      .select(
+        `
+        id, branch_id, date, check_in, check_out, status, note, check_in_photo_path,
         checklist_template_id,
         employee_id,
         employees (
@@ -1045,29 +1100,36 @@ export const fetchAttendanceCalendar = withAction(
           id, title, phase, done_definition, is_required, is_done, sort_order
         )
       `,
-          )
-          .eq("branch_id", data.branchId)
-          .eq("tenant_id", claims.tenant_id)
-          .gte("date", startDate)
-          .lte("date", endDate!)
-          .order("date")
-          .order("employee_id"),
-        calendarClient
-          .from("employees")
-          .select("id, employee_code, profiles!inner ( full_name, branch_id )")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("profiles.branch_id", data.branchId)
-          .order("employee_code"),
-        calendarClient
-          .from("leave_requests")
-          .select("employee_id, start_date, end_date, status")
-          .eq("branch_id", data.branchId)
-          .eq("tenant_id", claims.tenant_id)
-          .in("status", ["pending", "approved"])
-          .lte("start_date", endDate!)
-          .gte("end_date", startDate)
-          .order("start_date"),
-      ],
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", startDate)
+      .lte("date", endDate!)
+      .order("date")
+      .order("employee_id");
+    let employeesQuery = calendarClient
+      .from("employees")
+      .select("id, employee_code, profiles!inner ( full_name, branch_id )")
+      .eq("tenant_id", claims.tenant_id)
+      .order("employee_code");
+    let leavesQuery = calendarClient
+      .from("leave_requests")
+      .select("employee_id, start_date, end_date, status")
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["pending", "approved"])
+      .lte("start_date", endDate!)
+      .gte("end_date", startDate)
+      .order("start_date");
+    if (data.branchId != null) {
+      attendanceQuery = attendanceQuery.eq("branch_id", data.branchId);
+      employeesQuery = employeesQuery.eq("profiles.branch_id", data.branchId);
+      leavesQuery = leavesQuery.eq("branch_id", data.branchId);
+    } else if (data.officeOnly) {
+      attendanceQuery = attendanceQuery.is("branch_id", null);
+      employeesQuery = employeesQuery.is("profiles.branch_id", null);
+      leavesQuery = leavesQuery.is("branch_id", null);
+    }
+    const [attendanceResult, employeesResult, leavesResult] = await Promise.all(
+      [attendanceQuery, employeesQuery, leavesQuery],
     );
 
     if (attendanceResult.error || employeesResult.error || leavesResult.error) {
@@ -1211,6 +1273,8 @@ export const forceCloseStaleAttendance = withAction(
   {
     roles: HR_EMPLOYEE_VIEW_ROLES,
     schema: forceCloseStaleAttendanceSchema,
+    permission: PERMISSION_KEYS.HR_FORCE_CLOSE_ATTENDANCE,
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
     if (
@@ -1259,10 +1323,50 @@ export const forceCloseStaleAttendance = withAction(
   },
 );
 
+const correctAttendanceSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  checkIn: z.string().datetime({ offset: true }),
+  checkOut: z.string().datetime({ offset: true }).nullable(),
+  reason: z.string().trim().min(5).max(500),
+});
+
+export const correctAttendanceRecord = withAction(
+  {
+    roles: HR_ROLES,
+    schema: correctAttendanceSchema,
+    permission: PERMISSION_KEYS.HR_CORRECT_ATTENDANCE,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("correct_attendance_record", {
+      p_attendance_id: data.attendanceId,
+      p_check_in: data.checkIn,
+      p_check_out: data.checkOut as string,
+      p_reason: data.reason,
+    });
+    if (error) {
+      const message = error.message.toLowerCase();
+      return {
+        success: false,
+        error:
+          error.code === "42501" || message.includes("forbidden")
+            ? "Không có quyền hiệu chỉnh bảng công."
+            : message.includes("time_invalid")
+              ? "Giờ ra phải sau giờ vào."
+              : message.includes("not_found")
+                ? "Không tìm thấy bản ghi chấm công."
+                : "Không thể hiệu chỉnh bảng công. Vui lòng thử lại.",
+      };
+    }
+    revalidatePath("/hr/attendance");
+    return { success: true };
+  },
+);
+
 /* ─── Attendance Summary ─── */
 
 const fetchAttendanceSummarySchema = z.object({
-  branchId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().nullable().optional(),
+  officeOnly: z.boolean().optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });
 
@@ -1271,13 +1375,12 @@ export const fetchAttendanceSummary = withAction(
     roles: SHIFT_ROLES,
     schema: fetchAttendanceSummarySchema,
     permission: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
+    permissionBranchId: (data) => data.branchId ?? null,
   },
   async (data, { supabase, claims }) => {
     if (
       claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
+      (data.branchId == null || claims.branch_id !== data.branchId)
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
@@ -1289,7 +1392,7 @@ export const fetchAttendanceSummary = withAction(
     const attendanceClient =
       claims.user_role === "branch_manager" ? createServiceClient() : supabase;
 
-    const { data: result, error } = await attendanceClient
+    let query = attendanceClient
       .from("attendance_records")
       .select(
         `
@@ -1300,10 +1403,12 @@ export const fetchAttendanceSummary = withAction(
       )
     `,
       )
-      .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", startDate)
       .lte("date", endDate!);
+    if (data.branchId != null) query = query.eq("branch_id", data.branchId);
+    else if (data.officeOnly) query = query.is("branch_id", null);
+    const { data: result, error } = await query;
 
     if (error) {
       console.error(

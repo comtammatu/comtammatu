@@ -119,6 +119,7 @@ VALUES
   ('crm:read','crm','Xem dữ liệu khách hàng','either'),
   ('crm:write','crm','Sửa dữ liệu khách hàng','either'),
   ('dashboard:view','dashboard','Xem dashboard tổng quan','either'),
+  ('self:access','me','Access personal work, schedule, leave, payslip, and profile surfaces','tenant'),
   ('finance:ap_pay','finance','Thanh toán công nợ NCC','tenant'),
   ('finance:expense_approve','finance','Duyệt chi phí','tenant'),
   ('finance:expense_create','finance','Tạo chi phí','either'),
@@ -128,9 +129,17 @@ VALUES
   ('hr:approve_checkout','hr','Duyệt kết ca nhân viên theo chi nhánh','branch'),
   ('hr:approve_leave_request','hr','Duyệt yêu cầu nghỉ phép theo chi nhánh','branch'),
   ('hr:assign_shift','hr','Phân ca làm việc theo tuần cho nhân viên tại chi nhánh hoặc Văn phòng','either'),
+  ('hr:correct_attendance','hr','Correct attendance through an audited RPC','tenant'),
+  ('hr:force_close_attendance','hr','Close stale attendance with an audited reason','either'),
+  ('hr:manage_leave_policy','hr','Manage tenant leave and workday policy','tenant'),
   ('hr:manage_employee','hr','Sửa hồ sơ nhân sự','tenant'),
+  ('hr:manage_position_tasks','hr','Manage position and employee shift task templates','tenant'),
+  ('hr:manage_shift_catalog','hr','Manage the tenant shift catalog','tenant'),
+  ('hr:payroll_prepare','hr','Prepare payroll previews and adjustments','tenant'),
+  ('hr:payroll_snapshot','hr','Finalize one immutable payroll snapshot per period','tenant'),
   ('hr:request_leave','hr','Gửi yêu cầu nghỉ phép','branch'),
   ('hr:view_employee','hr','Xem hồ sơ nhân sự','tenant'),
+  ('hr:view_sensitive_employee','hr','View employee identity, contract, bank, and salary data','tenant'),
   ('inventory:adjust_approve','inventory','Approve stock adjustments (reason correction / shrink).','branch'),
   ('inventory:count_approve','inventory','Duyệt phiếu đếm tồn và điều chỉnh kho','branch'),
   ('inventory:count_assign','inventory','Phân công nhân viên đếm tồn nguyên liệu','branch'),
@@ -201,12 +210,16 @@ VALUES
   ('staff:assign_permission','staff','Gán/thu hồi quyền cho user','tenant'),
   ('staff:assign_position','staff','Gán chức vụ HR','tenant'),
   ('staff:manage','staff','CRUD nhân viên / ca / lịch','either'),
+  ('staff:provision','staff','Create, lock, and restore staff accounts','tenant'),
   ('staff:view','staff','Xem danh sách nhân viên','either'),
   ('supplier_return:confirm','inventory_procurement','Xác nhận/gửi phiếu trả hàng NCC','branch'),
   ('supplier_return:create','inventory_procurement','Tạo phiếu trả hàng nhà cung cấp','branch'),
   ('supplier_return:read','inventory_procurement','Xem phiếu trả hàng nhà cung cấp','either'),
   ('feedback:view','feedback','Xem phản hồi khách hàng','branch'),
-  ('feedback:manage_qr','feedback','Tạo/xoay/vô hiệu hoá mã QR phản hồi','branch')
+  ('feedback:manage_qr','feedback','Tạo/xoay/vô hiệu hoá mã QR phản hồi','branch'),
+  ('auth:audit_read','auth','Read authorization audit history','tenant'),
+  ('auth:binding_manage','auth','Grant and revoke access role bindings','tenant'),
+  ('auth:binding_read','auth','Read access role bindings','tenant')
 ON CONFLICT (key) DO NOTHING;
 
 UPDATE public.permission_keys
@@ -215,8 +228,16 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'hr:approve_checkout',
   'hr:approve_leave_request',
   'hr:assign_shift',
+  'hr:correct_attendance',
+  'hr:force_close_attendance',
+  'hr:manage_leave_policy',
+  'hr:manage_position_tasks',
+  'hr:manage_shift_catalog',
+  'hr:payroll_prepare',
+  'hr:payroll_snapshot',
   'hr:request_leave',
   'hr:view_employee',
+  'hr:view_sensitive_employee',
   'inventory:adjust_approve',
   'inventory:count_approve',
   'inventory:count_assign',
@@ -268,6 +289,7 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'reports:export',
   'reports:view_branch',
   'settings:branch',
+  'staff:provision',
   'staff:view',
   'supplier_return:confirm',
   'supplier_return:create',
@@ -277,7 +299,9 @@ SET is_delegable_to_staff = key = ANY (ARRAY[
   'finance:view',
   'finance:expense_create',
   'finance:expense_approve',
-  'finance:ap_pay'
+  'finance:ap_pay',
+  'auth:audit_read',
+  'auth:binding_read'
 ]::text[]);
 
 -- 5) Role templates (mirrored from prod permission_keys; one per position_code).

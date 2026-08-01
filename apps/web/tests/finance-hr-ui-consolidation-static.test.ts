@@ -103,7 +103,7 @@ test("HR long screens preserve hierarchy and LIST viewport width", () => {
   assert.match(attendance, /<TabsContent value="today">/);
   assert.match(attendance, /<TabsContent value="approvals">/);
   assert.match(attendance, /<TabsContent value="timesheet">/);
-  assert.doesNotMatch(attendance, /<TabsContent value="schedule">/);
+  assert.match(attendance, /<TabsContent value="roster">/);
   assert.match(attendance, /embedded/);
   assert.match(setup, /<AppPageTabs/);
   assert.match(setup, /value: "leave"/);
@@ -120,7 +120,8 @@ test("HR long screens preserve hierarchy and LIST viewport width", () => {
   assert.match(audit, /<AppPage width="xwide">/);
   assert.doesNotMatch(permissions, /tabs=\{/);
   assert.ok(
-    permissions.indexOf("<AppPageHeader") < permissions.indexOf("<AppPageTabs"),
+    permissions.indexOf("<AppPageHeader") <
+      permissions.indexOf("<RoleBindingsClient"),
   );
   assert.doesNotMatch(nav, /staffAuditLabel/);
   assert.doesNotMatch(nav, /MODULE_ACL\.staff\.path/);

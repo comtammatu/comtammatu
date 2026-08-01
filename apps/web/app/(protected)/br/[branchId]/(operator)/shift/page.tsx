@@ -10,10 +10,7 @@ export default async function OperatorShiftPage({
 }) {
   const { branchId } = await params;
   const authState = await loadAuthState();
-  if (authState.claims.user_role === "owner") {
-    redirect(`/br/${branchId}/team`);
-  }
-  const isBranchManager = authState.claims.user_role === "branch_manager";
+  if (authState.claims.user_role === "owner") redirect(`/br/${branchId}/team`);
 
   return (
     <StaffWorkdayPageContent
@@ -22,6 +19,8 @@ export default async function OperatorShiftPage({
         clock: `/br/${branchId}/shift/clock`,
         tasks: `/br/${branchId}/shift`,
         schedule: `/br/${branchId}/shift/schedule`,
+        leave: `/br/${branchId}/shift/schedule/leave`,
+        payslip: `/br/${branchId}/profile/payslip`,
         profile: `/br/${branchId}/profile`,
         checkoutApprovals: `/br/${branchId}/shift/checkout-approvals`,
         count: `/br/${branchId}/stock/count`,
@@ -30,7 +29,7 @@ export default async function OperatorShiftPage({
       }}
       enableBranchOpsRefresh={false}
       showNotificationControl={false}
-      mode={isBranchManager ? "manager-dashboard" : "full"}
+      workflowLayout="stepper"
       plane="branch"
       copy={messages.operator.shift}
       tasksCopy={messages.operator.shiftTasks}

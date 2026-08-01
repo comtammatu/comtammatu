@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { messages } from "@lib/messages";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -9,12 +13,12 @@ import { withAction } from "@/_lib/with-action";
 import { fetchTenantHrLeavePolicy } from "@lib/hr/leave-policy-data";
 import { hrLeavePolicySchema } from "@lib/hr/leave-policy-model";
 
-const SETUP_ROLES: readonly StaffRole[] = ["owner"];
+const SETUP_ROLES: readonly StaffRole[] = STAFF_ROLES;
 
 export async function fetchHrLeavePolicy() {
   const context = await getAuthContextWithPermission(
     SETUP_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.HR_MANAGE_LEAVE_POLICY,
   );
   if (!context)
     return {
@@ -38,7 +42,7 @@ export const saveHrLeavePolicy = withAction(
   {
     roles: SETUP_ROLES,
     schema: hrLeavePolicySchema,
-    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+    permission: PERMISSION_KEYS.HR_MANAGE_LEAVE_POLICY,
   },
   async (data, { supabase, claims }) => {
     const { error } = await supabase.from("system_settings").upsert(

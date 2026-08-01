@@ -13,22 +13,16 @@ export default async function ProductionNewPage({
 
   const {
     productionBranches,
-    targetBranches,
     locations,
     finishedGoods,
-    recipes,
   } = await loadProductionSurfaceData({ routeBranchId });
-  const recipeFinishedGoodIds = new Set(
-    recipes.map((recipe) => recipe.finished_good_id),
-  );
-  const finishedGoodsWithRecipes = finishedGoods.filter((good) =>
-    recipeFinishedGoodIds.has(good.id),
+  const finishedGoodsWithRecipes = finishedGoods.filter(
+    (good) => good.recipeStatus === "active" && good.recipeSpecId != null,
   );
 
   return (
     <ProductionNewClient
       branches={productionBranches}
-      targetBranches={targetBranches}
       locations={locations}
       finishedGoods={finishedGoodsWithRecipes}
       initialBranchId={routeBranchId}

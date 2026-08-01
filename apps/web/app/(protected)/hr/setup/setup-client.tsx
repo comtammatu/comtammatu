@@ -16,6 +16,7 @@ interface Props {
   positionTasksData: PositionTasksData;
   leavePolicy: HrLeavePolicy | null;
   initialTab?: "leave" | "shifts" | "tasks";
+  initialBranchFilter?: string;
 }
 
 export function HrSetupClient({
@@ -23,6 +24,7 @@ export function HrSetupClient({
   positionTasksData,
   leavePolicy,
   initialTab = "leave",
+  initialBranchFilter,
 }: Props) {
   const [shifts, setShifts] = useState(initialShifts);
   const copy = messages.hr.client;
@@ -37,55 +39,64 @@ export function HrSetupClient({
       defaultValue={initialTab}
       ariaLabel={copy.setupTabs.ariaLabel}
     >
-      <TabsContent value="leave">
-        <AppSection
-          title={copy.setupSteps.leavePolicy.title}
-          description={copy.setupSteps.leavePolicy.description}
-          headerHint={copy.setupSteps.leavePolicy.hint}
-        >
-          {leavePolicy ? (
-            <LeavePolicyForm policy={leavePolicy} />
-          ) : (
-            <p className="text-sm text-destructive" role="alert">
-              {copy.leavePolicy.loadFailed}
-            </p>
-          )}
-        </AppSection>
-      </TabsContent>
-      <TabsContent value="shifts">
-        <AppSection
-          title={copy.setupSteps.shifts.title}
-          description={copy.setupSteps.shifts.description}
-          headerHint={copy.setupSteps.shifts.hint}
-          contentFlush
-          contentScroll
-        >
-          <ShiftsTable
-            shifts={shifts}
-            isPending={false}
-            canManage
-            onShiftSaved={(shift) =>
-              setShifts((current) => {
-                const hasShift = current.some((item) => item.id === shift.id);
-                return hasShift
-                  ? current.map((item) =>
-                      item.id === shift.id ? { ...item, ...shift } : item,
-                    )
-                  : [...current, shift];
-              })
-            }
-          />
-        </AppSection>
-      </TabsContent>
-      <TabsContent value="tasks">
-        <AppSection
-          title={copy.setupSteps.positionTasks.title}
-          description={copy.setupSteps.positionTasks.description}
-          headerHint={copy.setupSteps.positionTasks.hint}
-        >
-          <PositionTasksClient initialData={positionTasksData} />
-        </AppSection>
-      </TabsContent>
+      {initialTab === "leave" ? (
+        <TabsContent value="leave">
+          <AppSection
+            title={copy.setupSteps.leavePolicy.title}
+            description={copy.setupSteps.leavePolicy.description}
+            headerHint={copy.setupSteps.leavePolicy.hint}
+          >
+            {leavePolicy ? (
+              <LeavePolicyForm policy={leavePolicy} />
+            ) : (
+              <p className="text-sm text-destructive" role="alert">
+                {copy.leavePolicy.loadFailed}
+              </p>
+            )}
+          </AppSection>
+        </TabsContent>
+      ) : null}
+      {initialTab === "shifts" ? (
+        <TabsContent value="shifts">
+          <AppSection
+            title={copy.setupSteps.shifts.title}
+            description={copy.setupSteps.shifts.description}
+            headerHint={copy.setupSteps.shifts.hint}
+            contentFlush
+            contentScroll
+          >
+            <ShiftsTable
+              shifts={shifts}
+              isPending={false}
+              canManage
+              onShiftSaved={(shift) =>
+                setShifts((current) => {
+                  const hasShift = current.some((item) => item.id === shift.id);
+                  return hasShift
+                    ? current.map((item) =>
+                        item.id === shift.id ? { ...item, ...shift } : item,
+                      )
+                    : [...current, shift];
+                })
+              }
+            />
+          </AppSection>
+        </TabsContent>
+      ) : null}
+      {initialTab === "tasks" ? (
+        <TabsContent value="tasks">
+          <AppSection
+            title={copy.setupSteps.positionTasks.title}
+            description={copy.setupSteps.positionTasks.description}
+            headerHint={copy.setupSteps.positionTasks.hint}
+          >
+            <PositionTasksClient
+              initialData={positionTasksData}
+              initialBranchFilter={initialBranchFilter}
+            />
+          </AppSection>
+        </TabsContent>
+      ) : null}
     </AppPageTabs>
   );
 }

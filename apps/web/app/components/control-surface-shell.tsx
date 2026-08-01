@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { canAccess, MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
 import { InventoryBranchFilter } from "@/(protected)/inventory/_components/inventory-branch-filter";
 import { withInventoryBranchNavScope } from "@/(protected)/inventory/_lib/inventory-nav";
@@ -29,18 +29,20 @@ type BaseProps = {
     defaultBranchId: number | null;
   };
   finance: FinanceNavFlags;
+  hr: { canOpen: boolean; canOpenPayroll: boolean };
 };
 
 export type ControlSurfaceShellProps = BaseProps;
 
-type ActiveControlSurfaceModule = ControlSurfaceModuleId | "notifications";
+type ActiveControlSurfaceModule =
+  ControlSurfaceModuleId | "notifications" | "me";
 
 function resolveActiveModule(
   pathname: string | null,
 ): ActiveControlSurfaceModule | null {
   if (pathname === "/") return "owner";
   const segment = pathname?.split("/")[1];
-  if (segment === "notifications") return segment;
+  if (segment === "notifications" || segment === "me") return segment;
   return (
     CONTROL_SURFACE_MODULE_IDS.find((moduleId) => moduleId === segment) ?? null
   );
@@ -68,14 +70,17 @@ function FinanceRealtimeBridge() {
  * Persistent control_surface chrome for every protected management route.
  */
 export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
-  const { user, role, homeBranchId, children, inventory, finance } = props;
+  const { user, role, homeBranchId, children, inventory, finance, hr } = props;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeModule = resolveActiveModule(pathname);
 
   const tier1 = useMemo(
-    () => resolveControlSurfacePrimaryTabs(role, homeBranchId),
-    [role, homeBranchId],
+    () =>
+      resolveControlSurfacePrimaryTabs(role, homeBranchId).filter(
+        (item) => item.href !== "/hr" || hr.canOpen,
+      ),
+    [role, homeBranchId, hr.canOpen],
   );
 
   const inventoryBranchKey = searchParams.get("branchId");
@@ -110,11 +115,23 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       return resolveControlSurfaceDeepNav(role, "finance", { finance });
     }
 
-    if (!activeModule || activeModule === "notifications") return [];
+    if (
+      !activeModule ||
+      activeModule === "notifications" ||
+      activeModule === "me"
+    ) {
+      return [];
+    }
 
-    return resolveControlSurfaceDeepNav(role, activeModule, {
+    const resolved = resolveControlSurfaceDeepNav(role, activeModule, {
       branchId: homeBranchId,
     });
+    return activeModule === "hr" && !hr.canOpenPayroll
+      ? resolved.map((group) => ({
+          ...group,
+          items: group.items.filter((item) => item.href !== "/hr/payroll"),
+        }))
+      : resolved;
   }, [
     finance,
     homeBranchId,
@@ -122,6 +139,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     inventoryCurrentBranchId,
     activeModule,
     role,
+    hr.canOpenPayroll,
   ]);
 
   const sidebarHeaderAccessory =
@@ -142,6 +160,10 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       tier1={tier1}
       tier2={tier2}
       sidebarHeaderAccessory={sidebarHeaderAccessory}
+      personalHref={canAccess(role, "me") ? MODULE_ACL.me.path : undefined}
+      mobileHeaderTitle={
+        activeModule === "me" ? MODULE_ACL.me.label : undefined
+      }
     >
       {activeModule === "finance" ? <FinanceRealtimeBridge /> : null}
       {children}

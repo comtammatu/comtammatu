@@ -51,6 +51,12 @@ Contract: [inventory.md](inventory.md) §2.1 — đơn vị nhập / xuất.
 ## 4. Sản xuất và tiêu hao
 
 - Sản xuất chỉ tại Bếp TT (và Owner). **Không** production tại chi nhánh (D093).
+- Owner duyệt từng công thức: sản lượng chuẩn, đơn vị thành phẩm và đơn vị của
+  từng nguyên liệu. Công thức `Cần duyệt`/`Ngừng dùng` không được tạo lệnh.
+- Tạo lệnh chỉ nhập sản lượng kế hoạch và vị trí cùng Bếp TT. Bắt đầu lệnh rồi
+  mới nhập sản lượng/nguyên liệu thực tế để hoàn thành.
+- Mẻ không có sản lượng: hủy lệnh, sau đó ghi vật tư hỏng qua Hao hụt.
+- Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh dùng Điều chuyển riêng.
 - Tiêu hao / hao hụt theo contract hiện hành tại site được cấp.
 
 ## 5. Kiểm kê

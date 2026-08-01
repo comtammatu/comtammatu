@@ -12,10 +12,10 @@ import {
 import { z } from "zod";
 import {
   ArrowLeft as IconArrowLeft,
+  Ban as IconBan,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Plus as IconPlus,
-  Trash as IconTrash,
 } from "lucide-react";
 import { formatQuantity } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -37,7 +37,6 @@ import {
   ItemDescription,
   ItemFooter,
   ItemHeader,
-  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -47,19 +46,22 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
+import {
   ComboboxField,
   FormDialog,
   FormattedNumberInput,
 } from "@/components/form";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import { AppListFrame } from "@/components/surface";
 import {
   IngredientLinesEditor,
   type IngredientLineOption,
 } from "./_components/ingredient-lines-editor";
-import { getDefaultProductionUnit } from "./_lib/production-units";
 import {
   deleteProductionRecipeGroup,
-  deleteProductionRecipe,
   upsertProductionRecipeLines,
 } from "./production-actions";
 import {
@@ -82,6 +84,7 @@ import type {
 } from "./production-types";
 import type { UnitOption } from "@lib/inventory/types";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { matchesSearch } from "@lib/search";
 
 /* ─── Schema ─── */
 
@@ -127,6 +130,12 @@ const recipeFormSchema = z
       .min(1, { error: INVENTORY_VI.enterProductionRecipeOutputQuantity })
       .refine((v) => Number(v) > 0, {
         error: INVENTORY_VI.productionRecipeOutputQuantityPositive,
+      }),
+    output_unit_id: z
+      .string()
+      .min(1, { error: "Chọn đơn vị thành phẩm." })
+      .refine((v) => Number(v) > 0, {
+        error: "Đơn vị thành phẩm không hợp lệ.",
       }),
     lines: z.array(recipeLineItemSchema).min(1, {
       error: INVENTORY_VI.productionRecipeMinLines,
@@ -180,7 +189,9 @@ function toRecipeFormValues(
   if (group) {
     return {
       finished_good_id: String(group.finishedGoodId),
-      output_quantity: String(group.lines[0]?.output_quantity ?? ""),
+      output_quantity: String(group.outputQuantity),
+      output_unit_id:
+        group.outputUnitId != null ? String(group.outputUnitId) : "",
       lines:
         group.lines.length > 0
           ? group.lines.map(recipeToLineFormValue)
@@ -191,6 +202,7 @@ function toRecipeFormValues(
   return {
     finished_good_id: defaultFinishedGoodId ?? "",
     output_quantity: "",
+    output_unit_id: "",
     lines: [emptyRecipeLine()],
   };
 }
@@ -256,31 +268,48 @@ function RecipeDialogFields({
       ) ?? null,
     [finishedGoodsOptions, selectedFinishedGoodId],
   );
-  const finishedGoodProductionUnit = getDefaultProductionUnit(
-    selectedFinishedGood ?? undefined,
+  const outputUnitId = useWatch({
+    control: form.control,
+    name: "output_unit_id",
+  });
+  const outputUnitOptions = useMemo(
+    () =>
+      (selectedFinishedGood?.units ?? [])
+        .filter((unit) => unit.is_active)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((unit) => ({
+          value: String(unit.unit_id),
+          label: unit.unit_name?.trim() || unit.unit_code,
+        })),
+    [selectedFinishedGood],
   );
   const finishedGoodUnitLabel =
-    finishedGoodProductionUnit?.label ??
-    (selectedFinishedGoodId
-      ? INVENTORY_VI.productionUnitMissingHint
-      : null);
+    outputUnitOptions.find((unit) => unit.value === outputUnitId)?.label ?? null;
 
   function handleFinishedGoodCreated(good: FinishedGoodOption) {
     onFinishedGoodCreated(good);
     form.setValue("finished_good_id", String(good.id));
+    const defaultUnit = (good.units ?? []).find((unit) => unit.is_base && unit.is_active)
+      ?? (good.units ?? []).find((unit) => unit.is_active);
+    form.setValue(
+      "output_unit_id",
+      defaultUnit ? String(defaultUnit.unit_id) : "",
+    );
     replaceRecipeLines([emptyRecipeLine()]);
   }
 
   function handleRawIngredientCreated(ingredient: RawIngredientOption) {
     onRawIngredientCreated(ingredient);
-    const defaultUnit = getDefaultProductionUnit(ingredient);
+    const defaultUnit = (ingredient.units ?? []).find(
+      (unit) => unit.is_base && unit.is_active,
+    ) ?? (ingredient.units ?? []).find((unit) => unit.is_active);
     const lines = form.getValues("lines");
     const targetIndex = lines.findIndex((line) => !line.ingredient_id);
     const nextLine = {
       ...emptyRecipeLine(),
       ingredient_id: String(ingredient.id),
-      unitLabel: defaultUnit?.label ?? "",
-      entry_unit_id: defaultUnit ? String(defaultUnit.unitId) : "",
+      unitLabel: defaultUnit?.unit_name?.trim() || defaultUnit?.unit_code || "",
+      entry_unit_id: defaultUnit ? String(defaultUnit.unit_id) : "",
     };
     if (targetIndex < 0) {
       appendRecipeLine(nextLine);
@@ -310,7 +339,7 @@ function RecipeDialogFields({
         {INVENTORY_VI.productionRecipeDialogIntro}
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="flex flex-col gap-2">
           <ComboboxField
             control={form.control}
@@ -320,6 +349,7 @@ function RecipeDialogFields({
             options={availableFinishedGoodOptions}
             placeholder={INVENTORY_VI.selectFinishedGood}
             searchPlaceholder={INVENTORY_VI.searchFinishedGood}
+            disabled={finishedGoodLocked}
             required
           />
           {!finishedGoodLocked && canManageCatalog ? (
@@ -377,6 +407,21 @@ function RecipeDialogFields({
             />
           ) : null}
         </Field>
+        <ComboboxField
+          control={form.control}
+          name="output_unit_id"
+          id="recipe-output-unit"
+          label={INVENTORY_VI.productionRecipeOutputUnitLabel}
+          options={outputUnitOptions}
+          placeholder={INVENTORY_VI.selectUnit}
+          searchPlaceholder={INVENTORY_VI.searchUnit}
+          description={
+            selectedFinishedGood && outputUnitOptions.length === 0
+              ? INVENTORY_VI.productionRecipeOutputUnitMissingDescription
+              : undefined
+          }
+          required
+        />
         <div className="flex flex-col gap-2 md:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col gap-1">
@@ -414,6 +459,7 @@ function RecipeDialogFields({
         errors={form.formState.errors}
         ingredients={recipeLinesEditorIngredients}
         unitEditable
+        bulkAdd
       />
 
       <QuickFinishedGoodDialog
@@ -457,13 +503,14 @@ export function ProductionRecipePanel({
           id: ingredient.id,
           name: ingredient.name,
           unit: ingredient.unit,
-          production_unit_id: ingredient.production_unit_id ?? null,
           units: ingredient.units,
         })),
     ),
   );
 
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("_all");
   const [pendingFinishedGoodId, setPendingFinishedGoodId] = useState<
     string | undefined
   >(undefined);
@@ -488,7 +535,6 @@ export function ProductionRecipePanel({
             id: ingredient.id,
             name: ingredient.name,
             unit: ingredient.unit,
-            production_unit_id: ingredient.production_unit_id ?? null,
             units: ingredient.units,
           })),
       ),
@@ -506,23 +552,28 @@ export function ProductionRecipePanel({
         continue;
       }
 
-      const finishedGood = finishedGoodsOptions.find(
-        (good) => good.id === recipe.finished_good_id,
-      );
       groups.set(recipe.finished_good_id, {
         finishedGoodId: recipe.finished_good_id,
         finishedGoodName: recipe.finished_good_name,
         outputQuantity: recipe.output_quantity,
-        outputUnitLabel:
-          getDefaultProductionUnit(finishedGood)?.label ??
-          finishedGood?.unit ??
-          "",
+        outputUnitLabel: recipe.output_unit_label,
+        outputUnitId: recipe.output_unit_id,
+        recipeSpecId: recipe.recipe_spec_id,
+        status: recipe.status,
         lines: [recipe],
       });
     }
 
-    return Array.from(groups.values()).sort((a, b) =>
-      a.finishedGoodName.localeCompare(b.finishedGoodName, "vi"),
+    const priority: Record<ProductionRecipeGroup["status"], number> = {
+      needs_review: 0,
+      active: 1,
+      inactive: 2,
+    };
+
+    return Array.from(groups.values()).sort(
+      (a, b) =>
+        priority[a.status] - priority[b.status] ||
+        a.finishedGoodName.localeCompare(b.finishedGoodName, "vi"),
     );
   }, [finishedGoodsOptions, recipes]);
 
@@ -532,11 +583,29 @@ export function ProductionRecipePanel({
         id: item.id,
         name: item.name,
         unitLabel: item.unit,
-        production_unit_id: item.production_unit_id ?? null,
         units: item.units,
       })),
     [rawIngredientsOptions],
   );
+
+  const filteredRecipes = useMemo(() => {
+    const query = search.trim();
+    return groupedRecipes.filter((group) => {
+      if (statusFilter !== "_all" && group.status !== statusFilter) return false;
+      if (!query) return true;
+      return matchesSearch(
+        [
+          group.finishedGoodName,
+          ...group.lines.flatMap((line) => [line.ingredient_name, line.note]),
+        ],
+        query,
+      );
+    });
+  }, [groupedRecipes, search, statusFilter]);
+
+  const needsReviewCount = groupedRecipes.filter(
+    (group) => group.status === "needs_review",
+  ).length;
 
   const finishedGoodLocked = pendingFinishedGoodId != null;
   const operatorFlow = messages.inventory.operatorFlow;
@@ -600,6 +669,7 @@ export function ProductionRecipePanel({
         ? Number(pendingFinishedGoodId)
         : undefined,
       outputQuantity: Number(values.output_quantity),
+      outputUnitId: Number(values.output_unit_id),
       lines: values.lines.map((line) => ({
         ingredientId: Number(line.ingredient_id),
         quantity: Number(line.quantity),
@@ -619,18 +689,6 @@ export function ProductionRecipePanel({
     router.refresh();
   }
 
-  function handleRecipeDelete(recipeId: number) {
-    startTransition(async () => {
-      const result = await deleteProductionRecipe(recipeId);
-      if (!result.success) {
-        toast.error(result.error ?? INVENTORY_VI.productionRecipeDeleteFailed);
-        return;
-      }
-      toast.success(INVENTORY_VI.productionRecipeDeleted);
-      router.refresh();
-    });
-  }
-
   async function handleRecipeGroupDelete(group: ProductionRecipeGroup) {
     const ok = await confirm({
       title: INVENTORY_VI.productionRecipeGroupDeleteTitle,
@@ -640,7 +698,7 @@ export function ProductionRecipePanel({
       ),
       confirmText: INVENTORY_VI.productionRecipeGroupDeleteConfirm,
       cancelText: ACTIONS_VI.cancel,
-      variant: "destructive",
+      variant: "default",
     });
 
     if (!ok) return;
@@ -658,73 +716,101 @@ export function ProductionRecipePanel({
     });
   }
 
-  function handleEditClick(recipe: ProductionRecipeRow) {
-    openRecipeDialog(recipe.finished_good_id);
+  function recipeRowActions(group: ProductionRecipeGroup): RowActionItem[] {
+    if (!canManageRecipes) return [];
+    return [
+      {
+        key: "edit",
+        label: INVENTORY_VI.productionRecipeUpdate,
+        icon: <IconPencil />,
+        onSelect: () => openRecipeDialog(group.finishedGoodId),
+      },
+      ...(group.status !== "inactive"
+        ? [
+            {
+              key: "deactivate",
+              label: INVENTORY_VI.productionRecipeGroupDeleteConfirm,
+              icon: <IconBan />,
+              onSelect: () => void handleRecipeGroupDelete(group),
+              separatorBefore: true,
+            } satisfies RowActionItem,
+          ]
+        : []),
+    ];
   }
 
-  const recipeLineColumns: DataTableColumn<ProductionRecipeRow>[] = [
+  const recipeColumns: DataTableColumn<ProductionRecipeGroup>[] = [
     {
-      key: "ingredient",
-      header: PRODUCT_VI.rawIngredient,
-      render: (recipe) => (
-        <div>
-          <div className="font-medium">{recipe.ingredient_name}</div>
+      key: "finished_good",
+      header: PRODUCT_VI.finishedGood,
+      render: (group) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium">{group.finishedGoodName}</div>
           <div className="text-xs text-muted-foreground">
-            {recipe.unitLabel}
+            {INVENTORY_VI.ingredientLineCountBadge(group.lines.length)}
           </div>
         </div>
       ),
     },
     {
-      key: "quantity",
-      header: FORM_VI.quantity,
-      render: (recipe) => (
-        <span>
-          {formatQuantity(recipe.quantity)} {recipe.unitLabel}
+      key: "output",
+      header: INVENTORY_VI.productionRecipeOutputQuantity,
+      className: "font-mono",
+      render: (group) => (
+        <span className="whitespace-nowrap">
+          {formatQuantity(group.outputQuantity)} {group.outputUnitLabel || "—"}
         </span>
       ),
     },
     {
-      key: "note",
-      header: FORM_VI.notes,
-      className: "text-muted-foreground",
-      render: (recipe) => recipe.note ?? "—",
+      key: "ingredients",
+      header: INVENTORY_VI.productionRecipeLinesLabel,
+      className: "min-w-72",
+      render: (group) => (
+        <div className="flex flex-col gap-1">
+          {group.lines.map((line) => (
+            <div key={line.id} className="flex min-w-0 justify-between gap-3">
+              <span className="min-w-0 truncate text-muted-foreground">
+                {line.ingredient_name}
+              </span>
+              <span className="shrink-0 whitespace-nowrap font-mono">
+                {formatQuantity(line.quantity)} {line.unitLabel}
+              </span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (group) => (
+        <Badge variant={recipeStatusBadgeVariant(group.status)}>
+          {recipeStatusLabel(group.status)}
+        </Badge>
+      ),
     },
     ...(canManageRecipes
       ? [
           {
             key: "actions",
             header: "",
-            className: "text-right",
-            render: (recipe) => (
-              <div className="flex items-center justify-end gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEditClick(recipe)}
-                  aria-label={INVENTORY_VI.productionRecipeUpdateAria(
-                    recipe.finished_good_name,
+            className: "w-14 text-right",
+            render: (group) => (
+              <div
+                className="flex justify-end"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <RowActionsMenu
+                  items={recipeRowActions(group)}
+                  label={INVENTORY_VI.productionRecipeUpdateAria(
+                    group.finishedGoodName,
                   )}
-                  title={INVENTORY_VI.productionRecipeUpdate}
-                >
-                  <IconPencil />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRecipeDelete(recipe.id)}
-                  aria-label={INVENTORY_VI.productionRecipeDeleteLineAria(
-                    recipe.ingredient_name,
-                  )}
-                  title={INVENTORY_VI.productionRecipeDeleteLine}
-                >
-                  <IconTrash />
-                </Button>
+                  triggerSize="icon-sm"
+                />
               </div>
             ),
-          } satisfies DataTableColumn<ProductionRecipeRow>,
+          } satisfies DataTableColumn<ProductionRecipeGroup>,
         ]
       : []),
   ];
@@ -753,12 +839,23 @@ export function ProductionRecipePanel({
         />
       ) : null}
 
-      <AppSection
+      <AppListFrame
         title={INVENTORY_VI.productionRecipesTab}
+        description={INVENTORY_VI.productionRecipesCardDescription}
         icon={<IconClipboardList />}
+        badge={{
+          children:
+            needsReviewCount > 0
+              ? INVENTORY_VI.productionRecipeNeedsReviewBadge(needsReviewCount)
+              : INVENTORY_VI.finishedGoodsWithRecipeBadge(groupedRecipes.length),
+          variant:
+            needsReviewCount > 0
+              ? badgeVariantFromTone("warning")
+              : badgeVariantFromTone("success"),
+        }}
         action={
           canManageRecipes ? (
-            <>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <ProductionRecipeImportExportMenu
                 onImported={() => router.refresh()}
               />
@@ -772,19 +869,91 @@ export function ProductionRecipePanel({
                 <IconPlus data-icon="inline-start" />
                 {INVENTORY_VI.productionRecipeCreate}
               </Button>
-            </>
+            </div>
           ) : null
         }
       >
-        <div className="flex flex-wrap gap-2">
-          <Badge variant={badgeVariantFromTone("neutral")}>
-            {INVENTORY_VI.finishedGoodsWithRecipeBadge(groupedRecipes.length)}
-          </Badge>
-          <Badge variant={badgeVariantFromTone("neutral")}>
-            {INVENTORY_VI.ingredientLineCountBadge(recipes.length)}
-          </Badge>
-        </div>
-      </AppSection>
+        <DataTable
+          columns={recipeColumns}
+          data={filteredRecipes}
+          pageSize={25}
+          getRowKey={(group) => group.recipeSpecId}
+          searchable
+          searchPlaceholder={INVENTORY_VI.productionRecipeSearchPlaceholder}
+          searchValue={search}
+          onSearchChange={setSearch}
+          filters={[
+            {
+              key: "status",
+              label: FORM_VI.status,
+              placeholder: FORM_VI.status,
+              options: [
+                {
+                  value: "_all",
+                  label: INVENTORY_VI.productionRecipeAllStatuses,
+                },
+                ...(["needs_review", "active", "inactive"] as const).map(
+                  (status) => ({ value: status, label: recipeStatusLabel(status) }),
+                ),
+              ],
+            },
+          ]}
+          filterValues={{ status: statusFilter }}
+          onFilterChange={(_key, value) => setStatusFilter(value)}
+          actions={
+            <Badge variant="secondary">
+              {INVENTORY_VI.productionRecipeListCount(
+                filteredRecipes.length,
+                groupedRecipes.length,
+              )}
+            </Badge>
+          }
+          emptyTitle={
+            search || statusFilter !== "_all"
+              ? INVENTORY_VI.productionRecipeNoResultsTitle
+              : INVENTORY_VI.productionRecipeEmptyTitle
+          }
+          emptyDescription={
+            search || statusFilter !== "_all"
+              ? INVENTORY_VI.productionRecipeNoResultsDescription
+              : INVENTORY_VI.productionRecipeEmptyDescription
+          }
+          emptyMode={
+            search || statusFilter !== "_all" ? "no-results" : "no-data"
+          }
+          emptyIcon={<IconClipboardList className="size-5" />}
+          onRowClick={
+            canManageRecipes
+              ? (group) => openRecipeDialog(group.finishedGoodId)
+              : undefined
+          }
+          renderRowContextMenu={
+            canManageRecipes
+              ? (group) => (
+                  <RowActionsContextMenuItems
+                    items={recipeRowActions(group)}
+                  />
+                )
+              : undefined
+          }
+          getRowAriaLabel={(group) =>
+            canManageRecipes
+              ? INVENTORY_VI.productionRecipeUpdateAria(group.finishedGoodName)
+              : undefined
+          }
+          mobileCardRender={(group) => (
+            <RecipeGroupCard
+              group={group}
+              actions={recipeRowActions(group)}
+              onOpen={
+                canManageRecipes
+                  ? () => openRecipeDialog(group.finishedGoodId)
+                  : undefined
+              }
+            />
+          )}
+        />
+      </AppListFrame>
 
       <FormDialog
         open={recipeDialogOpen}
@@ -821,194 +990,80 @@ export function ProductionRecipePanel({
           />
         )}
       </FormDialog>
-
-      {groupedRecipes.length === 0 ? (
-        <AppEmptyState
-          mode="no-data"
-          title={INVENTORY_VI.productionRecipeEmptyTitle}
-          description={INVENTORY_VI.productionRecipeEmptyDescription}
-          icon={<IconClipboardList className="size-5" />}
-        />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {groupedRecipes.map((group) => (
-            <AppSection
-              key={group.finishedGoodId}
-              title={group.finishedGoodName}
-              description={`${INVENTORY_VI.productionRecipeOutputQuantity}: ${formatQuantity(group.outputQuantity)}${group.outputUnitLabel ? ` ${group.outputUnitLabel}` : ""}`}
-              badge={{
-                children: INVENTORY_VI.ingredientCountBadge(group.lines.length),
-                variant: badgeVariantFromTone("neutral"),
-              }}
-              action={
-                canManageRecipes ? (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size={embedded ? "icon-touch" : "sm"}
-                      onClick={() => openRecipeDialog(group.finishedGoodId)}
-                      aria-label={INVENTORY_VI.productionRecipeUpdate}
-                      title={INVENTORY_VI.productionRecipeUpdate}
-                    >
-                      <IconPencil
-                        className={embedded ? "size-4" : undefined}
-                        data-icon={embedded ? undefined : "inline-start"}
-                      />
-                      {!embedded && INVENTORY_VI.productionRecipeUpdate}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size={embedded ? "icon-touch" : "sm"}
-                      onClick={() => handleRecipeGroupDelete(group)}
-                      aria-label={
-                        INVENTORY_VI.productionRecipeGroupDeleteConfirm
-                      }
-                      title={INVENTORY_VI.productionRecipeGroupDeleteConfirm}
-                    >
-                      <IconTrash
-                        className={embedded ? "size-4" : undefined}
-                        data-icon={embedded ? undefined : "inline-start"}
-                      />
-                      {!embedded &&
-                        INVENTORY_VI.productionRecipeGroupDeleteConfirm}
-                    </Button>
-                  </div>
-                ) : null
-              }
-              contentFlush
-            >
-              {embedded ? (
-                <ItemGroup className="gap-2 border-t pt-2">
-                  {group.lines.map((recipe) => (
-                    <RecipeLineItemCard
-                      key={recipe.id}
-                      recipe={recipe}
-                      canManageRecipes={canManageRecipes}
-                      embedded={embedded}
-                      onEdit={handleEditClick}
-                      onDelete={handleRecipeDelete}
-                    />
-                  ))}
-                </ItemGroup>
-              ) : (
-                <DataTable
-                  columns={recipeLineColumns}
-                  data={group.lines}
-                  getRowKey={(recipe) => recipe.id}
-                  mobileCardRender={(recipe) => (
-                    <RecipeLineItemCard
-                      recipe={recipe}
-                      canManageRecipes={canManageRecipes}
-                      embedded={embedded}
-                      onEdit={handleEditClick}
-                      onDelete={handleRecipeDelete}
-                    />
-                  )}
-                />
-              )}
-            </AppSection>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
 
-function RecipeLineItemCard({
-  recipe,
-  canManageRecipes,
-  embedded,
-  onEdit,
-  onDelete,
+function recipeStatusLabel(status: ProductionRecipeGroup["status"]): string {
+  return {
+    needs_review: INVENTORY_VI.productionRecipeNeedsReviewStatus,
+    active: INVENTORY_VI.productionRecipeActiveStatus,
+    inactive: INVENTORY_VI.productionRecipeInactiveStatus,
+  }[status];
+}
+
+function recipeStatusBadgeVariant(status: ProductionRecipeGroup["status"]) {
+  if (status === "active") return badgeVariantFromTone("success");
+  if (status === "needs_review") return badgeVariantFromTone("warning");
+  return badgeVariantFromTone("neutral");
+}
+
+function RecipeGroupCard({
+  group,
+  actions,
+  onOpen,
 }: {
-  recipe: ProductionRecipeRow;
-  canManageRecipes: boolean;
-  embedded: boolean;
-  onEdit: (recipe: ProductionRecipeRow) => void;
-  onDelete: (recipeId: number) => void;
+  group: ProductionRecipeGroup;
+  actions: RowActionItem[];
+  onOpen?: () => void;
 }) {
-  if (embedded) {
-    return (
-      <Item variant="outline" size="sm">
-        <ItemContent className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium">
-              {recipe.ingredient_name}
-            </span>
-            <Badge
-              variant={badgeVariantFromTone("neutral")}
-              className="shrink-0 font-mono text-xs"
-            >
-              {formatQuantity(recipe.quantity)} {recipe.unitLabel}
-            </Badge>
-          </div>
-          <ItemDescription className="truncate text-xs">
-            {recipe.note || "—"}
-          </ItemDescription>
-        </ItemContent>
-        {canManageRecipes ? (
-          <ItemActions className="shrink-0 gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-touch"
-              onClick={() => onEdit(recipe)}
-              aria-label={ACTIONS_VI.update}
-            >
-              <IconPencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-touch"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => onDelete(recipe.id)}
-              aria-label={ACTIONS_VI.delete}
-            >
-              <IconTrash className="size-4" />
-            </Button>
-          </ItemActions>
-        ) : null}
-      </Item>
-    );
-  }
+  const overflowActions = actions.filter((action) => action.key !== "edit");
 
   return (
     <Item variant="outline">
       <ItemHeader>
-        <ItemTitle>{recipe.ingredient_name}</ItemTitle>
-        <Badge variant={badgeVariantFromTone("neutral")}>
-          {formatQuantity(recipe.quantity)} {recipe.unitLabel}
+        <ItemTitle>{group.finishedGoodName}</ItemTitle>
+        <Badge variant={recipeStatusBadgeVariant(group.status)}>
+          {recipeStatusLabel(group.status)}
         </Badge>
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {recipe.note ?? INVENTORY_VI.noNote}
+          {INVENTORY_VI.productionRecipeOutputQuantity}: {formatQuantity(group.outputQuantity)}{" "}
+          {group.outputUnitLabel || "—"} ·{" "}
+          {INVENTORY_VI.ingredientLineCountBadge(group.lines.length)}
         </ItemDescription>
+        <div className="mt-2 flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm">
+          {group.lines.map((line) => (
+            <div key={line.id} className="flex min-w-0 justify-between gap-3">
+              <span className="min-w-0 truncate text-muted-foreground">
+                {line.ingredient_name}
+              </span>
+              <span className="shrink-0 whitespace-nowrap font-mono">
+                {formatQuantity(line.quantity)} {line.unitLabel}
+              </span>
+            </div>
+          ))}
+        </div>
       </ItemContent>
-      {canManageRecipes ? (
+      {onOpen || overflowActions.length > 0 ? (
         <ItemFooter>
-          <ItemActions>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(recipe)}
-            >
-              <IconPencil data-icon="inline-start" />
-              {ACTIONS_VI.update}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(recipe.id)}
-            >
-              <IconTrash data-icon="inline-start" />
-              {ACTIONS_VI.delete}
-            </Button>
+          <ItemActions className="w-full justify-end">
+            {onOpen ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onOpen}>
+                <IconPencil data-icon="inline-start" />
+                {ACTIONS_VI.update}
+              </Button>
+            ) : null}
+            {overflowActions.length > 0 ? (
+              <RowActionsMenu
+                items={overflowActions}
+                label={INVENTORY_VI.productionRecipeUpdateAria(
+                  group.finishedGoodName,
+                )}
+                triggerSize="icon-touch"
+              />
+            ) : null}
           </ItemActions>
         </ItemFooter>
       ) : null}

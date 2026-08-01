@@ -43,7 +43,7 @@ test("Branch stock pages with an inline mobile title opt into the responsive hea
   });
 
   assert.ok(
-    composedPages.length >= 17,
+    composedPages.length >= 14,
     "expected all direct stock compositions",
   );
   for (const path of composedPages) {

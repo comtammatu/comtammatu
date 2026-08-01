@@ -21,6 +21,9 @@ const recipeActionSource = readRepo(
 const roleUnitMigration = readRepo(
   "supabase/migrations/20260731172142_inventory_unit_roles_and_snapshots.sql",
 );
+const independentRoleMigration = readRepo(
+  "supabase/migrations/20260801151413_independent_inventory_unit_roles.sql",
+);
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
   for (const constraint of [
@@ -61,10 +64,7 @@ test("inventory unit conversion RPC privileges are explicit", () => {
 });
 
 test("ingredient catalog updates preserve shelf life required by the RPC", () => {
-  assert.match(
-    ingredientActionSource,
-    /p_shelf_life_days:\s*shelfLifeDays/,
-  );
+  assert.match(ingredientActionSource, /p_shelf_life_days:\s*shelfLifeDays/);
   assert.match(
     ingredientActionSource,
     /\.select\("shelf_life_days, default_fulfill_site_kind"\)[\s\S]*\.eq\("tenant_id", claims\.tenant_id\)[\s\S]*rpcCatalogArgs\([\s\S]*existing\.shelf_life_days/,
@@ -90,5 +90,44 @@ test("role-unit migration snapshots historical document factors without weakenin
   assert.match(
     roleUnitMigration,
     /to_jsonb\(NEW\) - 'entry_to_base_factor' - 'entry_unit_code'/,
+  );
+});
+
+test("catalog role factors are independent while base membership and dimensions stay guarded", () => {
+  assert.match(
+    independentRoleMigration,
+    /CREATE OR REPLACE FUNCTION public\.save_ingredient_catalog\(/,
+  );
+  assert.match(independentRoleMigration, /SECURITY DEFINER/);
+  assert.match(independentRoleMigration, /SET search_path TO ''/);
+  assert.match(
+    independentRoleMigration,
+    /v_base_unit_id IS DISTINCT FROM p_receipt_unit_id[\s\S]*v_base_unit_id IS DISTINCT FROM p_issue_unit_id[\s\S]*v_base_unit_id IS DISTINCT FROM p_production_unit_id/,
+  );
+  assert.match(independentRoleMigration, /standard_unit_dimension_mismatch/);
+  assert.match(independentRoleMigration, /inventory_unit_roles_invalid/);
+  assert.doesNotMatch(
+    independentRoleMigration,
+    /inventory_unit_role_order_invalid/,
+  );
+  assert.doesNotMatch(
+    independentRoleMigration,
+    /v_receipt_factor < v_issue_factor|v_issue_factor < v_production_factor/,
+  );
+  assert.doesNotMatch(
+    ingredientActionSource,
+    /Nhập ≥ Xuất ≥ Sản xuất|receipt\.to_base_factor < issue\.to_base_factor/,
+  );
+  assert.match(
+    ingredientActionSource,
+    /Đơn vị tồn chuẩn phải thuộc ít nhất một vai trò/,
+  );
+  assert.match(
+    independentRoleMigration,
+    /REVOKE ALL ON FUNCTION public\.save_ingredient_catalog\([\s\S]*FROM PUBLIC, anon/,
+  );
+  assert.match(
+    independentRoleMigration,
+    /GRANT EXECUTE ON FUNCTION public\.save_ingredient_catalog\([\s\S]*TO authenticated, service_role/,
   );
 });

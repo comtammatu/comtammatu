@@ -79,6 +79,8 @@ function resolveBlockedLink(
 export function resolveControlSurfaceDiscoveryGroups(
   role: StaffRole,
 ): DiscoveredAppGroup[] {
+  if (role === "self_service") return [];
+
   // Filter by the role-route ACL so accountant / central roles see their
   // allowed L0 slices without requiring the owner home ModuleKey.
   // AppDiscoverySurface "owner" remains the technical RouteSurface alias.
@@ -86,7 +88,12 @@ export function resolveControlSurfaceDiscoveryGroups(
     title: group.title,
     surface: "owner" as const,
     items: group.items
-      .filter((item) => canAccess(role, item.moduleKey))
+      .filter(
+        (item) =>
+          canAccess(role, item.moduleKey) &&
+          (role === "owner" ||
+            !["hr", "hr_payroll", "staff"].includes(item.moduleKey)),
+      )
       .map((item) =>
         resolveAvailableLink(item, "owner", MODULE_ACL[item.moduleKey].path),
       ),
@@ -172,17 +179,14 @@ export function resolveBranchOperationDiscoveryGroup(
 
 export function resolveSelfServiceDiscoveryGroup(
   role: StaffRole,
-  branchId?: number | null,
+  _branchId?: number | null,
 ): DiscoveredAppGroup | null {
-  if (branchId != null) return null;
   const items = SELF_SERVICE_ITEMS.filter((item) =>
     canAccess(role, item.moduleKey),
   ).map((item) =>
     resolveAvailableLink(item, "self", MODULE_ACL[item.moduleKey].path),
   );
-  return items.length > 0
-    ? { title: "Cá nhân", surface: "self", items }
-    : null;
+  return items.length > 0 ? { title: "Cá nhân", surface: "self", items } : null;
 }
 
 export function resolveDiscoveredAppGroups(

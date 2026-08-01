@@ -15,6 +15,11 @@ const OWNER_ROUTE_PREFIXES = [
   "/orders",
 ];
 const ROUTE_LITERAL_END = "(?:$|[/?#\"'`}])";
+const CANONICAL_PRODUCTION_REDIRECTS = new Set([
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
+]);
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -239,6 +244,7 @@ test("Branch operator routes do not link, redirect, or revalidate Owner surface 
   ]) {
     if (!existsSync(resolve(repoRoot, dir))) continue;
     for (const file of listSourceFiles(dir)) {
+      if (CANONICAL_PRODUCTION_REDIRECTS.has(file)) continue;
       const source = read(file);
       for (const prefix of OWNER_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;
@@ -592,6 +598,7 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
     "apps/web/app/(protected)/br/_shared/settings",
   ]) {
     for (const file of listSourceFiles(dir)) {
+      if (CANONICAL_PRODUCTION_REDIRECTS.has(file)) continue;
       const source = read(file);
       for (const prefix of OWNER_ROUTE_PREFIXES) {
         const route = `${escapeRegExp(prefix)}${ROUTE_LITERAL_END}`;

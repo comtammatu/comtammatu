@@ -54,7 +54,7 @@ test("GRN drafts are looked up in the selected receiving branch", () => {
   assert.doesNotMatch(loadBody, /\.eq\("supplier_id"/);
 });
 
-test("GRN free draft uniqueness includes the receiving branch", () => {
+test("GRN creation starts from the canonical PO-linked queue", () => {
   const createStart = grnActions.indexOf("export const createGrnDraft");
   assert.ok(createStart >= 0, "createGrnDraft not found");
   const createBody = grnActions.slice(
@@ -62,11 +62,8 @@ test("GRN free draft uniqueness includes the receiving branch", () => {
     grnActions.indexOf("/* ─── loadActiveGrnDraft", createStart),
   );
 
-  assert.match(createBody, /\.eq\("branch_id", targetBranchId\)/);
-  assert.match(createBody, /\.is\("po_id", null\)/);
-  assert.match(createBody, /po_id: null/);
-  assert.match(createBody, /supplier_id: null/);
-  assert.doesNotMatch(createBody, /supplierId: z\.coerce/);
+  assert.match(createBody, /messages\.inventory\.po\.emptyLinkedGrnsHint/);
+  assert.doesNotMatch(createBody, /\.from\("goods_received_notes"\)/);
 });
 
 test("GRN free drafts and PO-linked drafts do not share the same unique slot", () => {

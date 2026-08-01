@@ -105,6 +105,7 @@ interface Props {
   branches: BranchOption[];
   query: string;
   selectedBranchId: number | null;
+  officeOnly: boolean;
   selectedSalaryStatus: string | undefined;
   calendarTarget: "all" | number | null;
 }
@@ -209,6 +210,7 @@ export function PayrollListClient({
   branches,
   query,
   selectedBranchId,
+  officeOnly,
   selectedSalaryStatus,
   calendarTarget,
 }: Props) {
@@ -332,6 +334,7 @@ export function PayrollListClient({
   function replaceFilters(nextValues: {
     month?: string;
     branchId?: number | null;
+    branchScope?: string;
     salaryStatus?: SalaryStatusFilter;
     standardDays?: string;
     calendarTarget?: "all" | number | null;
@@ -345,11 +348,14 @@ export function PayrollListClient({
       "standardDays",
       nextValues.standardDays ?? String(preview.standardDays),
     );
-    const branchId =
-      nextValues.branchId === undefined
-        ? selectedBranchId
-        : nextValues.branchId;
-    if (branchId != null) params.set("branch", String(branchId));
+    const branchScope =
+      nextValues.branchScope ??
+      (officeOnly
+        ? "office"
+        : selectedBranchId != null
+          ? String(selectedBranchId)
+          : "all");
+    params.set("branch", branchScope);
     const nextQuery = search;
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
     const nextSalaryStatus = nextValues.salaryStatus ?? salaryStatus;
@@ -438,6 +444,7 @@ export function PayrollListClient({
         year: preview.year,
         standardDays: preview.standardDays,
         branchId: selectedBranchId,
+        officeOnly,
       });
       if (result.success) {
         router.refresh();
@@ -614,13 +621,15 @@ export function PayrollListClient({
             />
             <Select
               value={
-                selectedBranchId != null
-                  ? String(selectedBranchId)
-                  : ALL_BRANCHES
+                officeOnly
+                  ? "office"
+                  : selectedBranchId != null
+                    ? String(selectedBranchId)
+                    : ALL_BRANCHES
               }
               onValueChange={(value) =>
                 replaceFilters({
-                  branchId: value === ALL_BRANCHES ? null : Number(value),
+                  branchScope: value,
                 })
               }
             >
@@ -633,6 +642,7 @@ export function PayrollListClient({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_BRANCHES}>{copy.allBranches}</SelectItem>
+                <SelectItem value="office">{copy.office}</SelectItem>
                 {branches.map((branch) => (
                   <SelectItem key={branch.id} value={String(branch.id)}>
                     {branch.name}
@@ -739,7 +749,7 @@ export function PayrollListClient({
         description={
           isLocked
             ? copy.snapshotDescription
-            : selectedBranchId != null
+            : selectedBranchId != null || officeOnly
               ? copy.snapshotAllBranchesRequired
               : preview.canSnapshot
                 ? copy.description

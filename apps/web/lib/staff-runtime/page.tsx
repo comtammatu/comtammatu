@@ -2,15 +2,22 @@
 import type { ElementType, ReactNode } from "react";
 import Link from "next/link";
 import {
+  CalendarDays as IconCalendar,
+  CalendarX2 as IconLeave,
   Camera as IconCamera,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
+  ReceiptText as IconPayslip,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { PERMISSION_KEYS, canSubscribeBranchOpsTopic, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  canSubscribeBranchOpsTopic,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { formatPercent } from "@comtammatu/shared/format";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
@@ -29,6 +36,7 @@ import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
 import {
+  EmployeeActionSection,
   EmployeeControlBar,
   EmployeeInlineState,
   EmployeePanel,
@@ -36,6 +44,7 @@ import {
   EmployeeStatusStrip,
 } from "./components/staff-runtime-page";
 import {
+  BranchOperatorActionSection,
   BranchOperatorControlBar,
   BranchOperatorInlineState,
   BranchOperatorPanel,
@@ -165,12 +174,25 @@ type WorkdayStatusStripComponent = (props: {
   className?: string;
 }) => ReactNode;
 
+type WorkdayActionSectionComponent = (props: {
+  links: Array<{
+    key: string;
+    href: string;
+    icon?: ElementType;
+    title: string;
+  }>;
+  columns?: 1 | 2;
+  mobileColumns?: 1 | 2;
+  size?: "default" | "sm";
+}) => ReactNode;
+
 type WorkdayRenderPrimitives = {
   PageShell: WorkdayPageComponent;
   Panel: WorkdayPanelComponent;
   InlineState: WorkdayInlineStateComponent;
   ControlBar: WorkdayControlBarComponent;
   StatusStrip: WorkdayStatusStripComponent;
+  ActionSection: WorkdayActionSectionComponent;
 };
 
 type WorkdayPlane = "employee" | "branch";
@@ -181,6 +203,7 @@ const EMPLOYEE_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
   InlineState: EmployeeInlineState,
   ControlBar: EmployeeControlBar,
   StatusStrip: EmployeeStatusStrip,
+  ActionSection: EmployeeActionSection,
 };
 
 const BRANCH_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
@@ -189,6 +212,7 @@ const BRANCH_WORKDAY_PRIMITIVES: WorkdayRenderPrimitives = {
   InlineState: BranchOperatorInlineState,
   ControlBar: BranchOperatorControlBar,
   StatusStrip: BranchOperatorStatusStrip,
+  ActionSection: BranchOperatorActionSection,
 };
 
 const employeeWorkdayCopy: WorkdayCopy = messages.employee.home;
@@ -212,6 +236,8 @@ export type EmployeeHomeRoutes = {
   clock: string;
   tasks: string;
   schedule: string;
+  leave: string;
+  payslip: string;
   profile: string;
   checkoutApprovals: string;
   count: string;
@@ -366,7 +392,14 @@ export async function StaffWorkdayPageContent({
     plane === "branch"
       ? BRANCH_WORKDAY_PRIMITIVES
       : EMPLOYEE_WORKDAY_PRIMITIVES;
-  const { PageShell, Panel, InlineState, ControlBar, StatusStrip } = primitives;
+  const {
+    PageShell,
+    Panel,
+    InlineState,
+    ControlBar,
+    StatusStrip,
+    ActionSection,
+  } = primitives;
   const { supabase, claims, session } = authState ?? (await loadAuthState());
   const state = await getTodayWorkState();
 
@@ -1019,6 +1052,33 @@ export async function StaffWorkdayPageContent({
       InlineState={InlineState}
     />
   );
+  const personalShortcutsSection = (
+    <ActionSection
+      links={[
+        {
+          key: "schedule",
+          href: routes.schedule,
+          icon: IconCalendar,
+          title: messages.employee.home.scheduleTitle,
+        },
+        {
+          key: "leave",
+          href: routes.leave,
+          icon: IconLeave,
+          title: messages.employee.home.leaveTitle,
+        },
+        {
+          key: "payslip",
+          href: routes.payslip,
+          icon: IconPayslip,
+          title: messages.employee.home.payslipTitle,
+        },
+      ]}
+      columns={1}
+      mobileColumns={1}
+      size="sm"
+    />
+  );
 
   const pageContent =
     mode === "manager-dashboard" ? (
@@ -1034,6 +1094,7 @@ export async function StaffWorkdayPageContent({
         <div className="lg:sticky lg:top-3 lg:col-span-2">{todayCard}</div>
         <div className="lg:col-span-3 lg:col-start-3 lg:row-span-4 lg:row-start-1 flex flex-col gap-3">
           {workflowSection}
+          {personalShortcutsSection}
           {isBranchManager ? managerActionPanel : null}
         </div>
         {staleOpenShiftSection ? (
@@ -1052,8 +1113,10 @@ export async function StaffWorkdayPageContent({
         {shiftsTodaySection}
         {staleOpenShiftSection}
         {checkoutApprovalsSection}
-        {isBranchManager ? managerActionPanel : checklistSection}
+        {isBranchManager ? null : checklistSection}
         {countPanel}
+        {personalShortcutsSection}
+        {isBranchManager ? managerActionPanel : null}
         {notificationSection}
       </div>
     );

@@ -114,19 +114,34 @@ test("HR per-position editor exposes the consumption task kind", () => {
     "HR position-task editor should reveal ingredients for consumption rows",
   );
   assert.match(
+    positionTasksClientSource,
+    /<DataTable[\s\S]*<FormDialog/,
+    "HR position-task setup should stay list-first and edit one position template in the shared form dialog",
+  );
+  assert.doesNotMatch(
+    positionTasksClientSource,
+    /position-task-position/,
+    "HR position-task setup should not hide templates behind a position dropdown",
+  );
+  assert.match(
+    positionTasksActionsSource,
+    /\.from\("employees"\)[\s\S]*profiles!inner\(full_name, position_id, branch_id/,
+    "HR position-task list should expose the active staff assigned to each position",
+  );
+  assert.match(
     positionTasksActionsSource,
     /\.from\("positions"\)[\s\S]*\.eq\("is_active", true\)/,
     "HR position-task editor should load active assignable positions",
   );
   assert.match(
     positionTasksActionsSource,
-    /staffRoleFromPositionCode\(position\.code\)[\s\S]*bucket === "unassigned" \|\| bucket === "owner"/,
-    "HR position-task editor should exclude non-assignable and Owner positions",
+    /staffRoleFromPositionCode\(position\.code\)[\s\S]*bucket === "owner" \|\| position\.code === "archived_staff"/,
+    "HR position-task editor should exclude Owner and archived positions",
   );
-  assert.match(
+  assert.doesNotMatch(
     positionTasksActionsSource,
-    /bucket === "unassigned" \|\|[\s\S]*bucket === "owner"/,
-    "HR position-task editor should exclude owner and unmapped positions",
+    /bucket === "unassigned"/,
+    "HR position-task editor should keep zero-module company positions assignable",
   );
   assert.doesNotMatch(positionTasksActionsSource, /position\.code === "waiter"/);
 });

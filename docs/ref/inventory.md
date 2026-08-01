@@ -18,19 +18,19 @@ kho không map được vào contract hiện có, cập nhật contract trước
 
 ## Current Contract
 
-| Nội dung                        | Current contract                                                                                                                                                                                                                                                                | Boundary                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production recipe và menu recipe                                                                                                                                                                                                  | Không mở item master ERP nhiều lớp                                                                     |
-| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                         | Không chuyển sang FIFO engine                                                                          |
-| Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                    | Không mở lot-first ledger / batch accounting                                                           |
-| Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
-| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một PO/NCC. Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; dòng chưa có NCC bị chặn để bổ sung mapping. Một RPC tạo PO và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                   |
-| QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                    | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
-| Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                           | Không có target Kho↔Bếp trong cùng branch                                                              |
-| HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                 | Không mở payment proposal engine trong Inventory                                                       |
-| Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                              | Không mở multi-level BOM                                                                               |
-| Thành phẩm + production landing | `item_kind`, `production_recipes`, `production_runs`; branch dùng warehouse duy nhất, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                                           | Không thực hiện central-production cutover trong lát D091                                              |
-| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                                                                               | Không mở claim/insurance workflow                                                                      |
+| Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Boundary                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production recipe và menu recipe                                                                                                                                                                                                                                                                                                                                                                                                        | Không mở item master ERP nhiều lớp                                                                     |
+| Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                                                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
+| Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                                                                                                                                                                          | Không mở lot-first ledger / batch accounting                                                           |
+| Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                                                                                                                                                                                                      | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
+| Nhu cầu mua / PO / GRN / NCC    | Kho trung tâm lập `purchase_request` chỉ gồm nguyên liệu, số lượng, đơn vị và ngày cần. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một PO/NCC. Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; dòng chưa có NCC bị chặn để bổ sung mapping. Một RPC tạo PO và một GRN nháp/PO. PO/GRN không chứa giá nhập từ Kho; giá thương mại chỉ đến từ Hóa đơn NCC. Một PO có nhiều GRN đã chốt nhưng tối đa một nháp hoạt động. | Không có promotion engine, duyệt nhiều cấp, OCR hoặc price-QC tại GRN                                  |
+| QC nhận hàng                    | Kho nhập `received_quantity` và `rejected_quantity`; số đạt = thực nhận − từ chối. Có hàng từ chối thì bắt buộc lý do + ảnh. Trạng thái chỉ là giá trị hiển thị được suy ra.                                                                                                                                                                                                                                                                                                          | Không lưu status, tolerance, lot/HSD/nhiệt độ, price variance hoặc auto-approval                       |
+| Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                                                                                                                                                                                                                 | Không có target Kho↔Bếp trong cùng branch                                                              |
+| HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                                                                                                                                                                       | Không mở payment proposal engine trong Inventory                                                       |
+| Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                                                                                                                                                                                                                                    | Không mở multi-level BOM                                                                               |
+| Thành phẩm + production landing | `item_kind`, `production_recipes`, `production_runs`; branch dùng warehouse duy nhất, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                                                                                                                                                                                                                                                 | Không thực hiện central-production cutover trong lát D091                                              |
+| Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                                                                                                                                                                                                                                                                                     | Không mở claim/insurance workflow                                                                      |
 
 ## Scope Boundary
 
@@ -121,20 +121,27 @@ Các cột trên và generated database types là contract hiện hành.
 
 ### 2.1 Hệ đơn vị
 
-Đơn vị kho không còn nằm trên cột text của `ingredients`. Mỗi nguyên liệu có ba
-vai trò, trong đó Nhập và Xuất là bắt buộc:
+Đơn vị kho không còn nằm trên cột text của `ingredients`. Danh mục có hai vai
+trò bắt buộc:
 
 - **Đơn vị nhập:** đơn vị dùng khi nhận/mua nguyên liệu.
 - **Đơn vị xuất:** đơn vị mặc định khi trừ tồn / UI tồn kho; định mức món bán
-  có thể chọn mọi đơn vị ladder.
-- **Đơn vị sản xuất:** chỉ bật cho item dùng trong BOM/lệnh sản xuất.
-- Quy cách luôn theo `Nhập ≥ Xuất ≥ Sản xuất`; cùng đơn vị thì hệ số là `1`.
+  có thể chọn mọi đơn vị thuộc quy cách.
+- Hai vai trò độc lập, không hàm ý thứ tự độ lớn. Một đơn vị có thể đảm nhiệm
+  cả hai vai trò.
 
 `units` vẫn là registry dùng chung theo tenant. `ingredients.receipt_unit_id`,
-`issue_unit_id`, `production_unit_id` là source of truth của vai trò; không có
-đơn vị thứ tư. `ingredient_units.is_base` là **Đơn vị xuất** khi không sản xuất,
-hoặc **Đơn vị sản xuất** khi có. UI gọi nó là “tồn kho sẽ ghi nhận theo”, không
-trộn với đơn vị người dùng đang nhập chứng từ.
+`issue_unit_id` là source of truth của vai trò. Đúng một dòng
+`ingredient_units.is_base` là **Đơn vị tồn chuẩn** và phải thuộc ít nhất một
+trong hai vai trò. Khi tạo mới, UI mặc định chọn Đơn vị
+xuất làm tồn chuẩn; khi sửa, giữ nguyên tồn chuẩn hiện có cho đến khi người dùng
+chủ động đổi.
+
+Mọi đơn vị quy đổi theo mô hình hình sao về tồn chuẩn. Tồn chuẩn có hệ số `1`.
+Hai đơn vị chuẩn cùng `dimension` lấy tỷ lệ từ `units.standard_factor` và không
+cho sửa tay. Bao bì/quy cách riêng khai báo trực tiếp `1 đơn vị = X đơn vị tồn
+chuẩn`; không tạo chuỗi quy đổi nhiều tầng. Khi đổi tồn chuẩn, RPC quy đổi lại
+hệ số, số lượng và đơn giá để giữ nguyên lượng vật lý và tổng giá trị tồn.
 
 Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon khi dùng nguyên).
 SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
@@ -145,10 +152,11 @@ SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 > khác nhau). Cho phép chọn `entry_unit_id` trên chứng từ:
 >
 > - PO: chỉ Nhập
-> - GRN: Nhập hoặc Xuất (không Sản xuất)
-> - Điều chuyển / xuất / tiêu hao / hao hụt: Xuất hoặc Nhập (không Sản xuất)
-> - Định mức món bán: mọi đơn vị active trên ladder
-> - BOM / lệnh sản xuất: chỉ Sản xuất
+> - GRN: Nhập hoặc Xuất
+> - Điều chuyển / xuất / tiêu hao / hao hụt: Xuất hoặc Nhập
+> - Định mức món bán: mọi đơn vị active thuộc quy cách
+> - Công thức sản xuất: mọi đơn vị active thuộc quy cách của đúng item
+> - Lệnh sản xuất: dùng snapshot đơn vị từ công thức, không chọn lại
 >
 > Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor. Owner được thêm/đổi
 > đơn vị và quy đổi bất kỳ lúc nào; khi đổi đơn vị tồn chuẩn, RPC
@@ -156,7 +164,7 @@ SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
 > valuation hiện hành trong cùng transaction (tổng giá trị không đổi). Snapshot
 > lịch sử không bị viết lại.
 
-Đổi ladder sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
+Đổi vai trò hoặc quy đổi sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
 đơn vị vẫn đang được BOM/production recipe tham chiếu.
 
 ### 2.2 Database — bảng `ingredients`
@@ -209,25 +217,29 @@ CREATE TABLE recipes (
 
 Sản xuất dùng bộ bảng riêng:
 
-- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `entry_unit_id` và `output_quantity` (số lượng thành phẩm mà định mức tạo ra; denormalize trên mọi dòng cùng thành phẩm).
-- `production_runs`: mẻ sản xuất tại site; state machine
+- `production_recipe_specs`: header duy nhất theo tenant/thành phẩm, lưu sản lượng chuẩn, đơn vị thành phẩm và trạng thái `needs_review | active | inactive`.
+- `production_recipes`: các dòng nguyên liệu, mỗi dòng chọn một quy cách active và tham chiếu header bằng `recipe_spec_id`.
+- `production_runs`: lệnh sản xuất tại Bếp TT, snapshot header; state machine
   `draft -> in_progress -> completed` (hoặc `cancelled`).
+- `production_run_lines`: snapshot toàn bộ dòng nguyên liệu tại thời điểm tạo lệnh.
 
 Workflow sản xuất chuẩn (RPC family gọi từ `apps/web/app/(protected)/inventory/production-run-actions.ts`):
 
-1. Site nhận nguyên liệu qua GRN vào warehouse đang hoạt động; không tạo
+1. Bếp TT nhận nguyên liệu qua GRN vào warehouse đang hoạt động; không tạo
    transfer giả để cấp nguyên liệu cho production.
-2. Tạo mẻ bằng `create_production_run_with_locations` (trạng thái `draft`); `start_production_run` chuyển sang `in_progress`.
-3. `confirm_production_run` kiểm tra:
+2. `create_production_run` chỉ nhận recipe `active`, sản lượng kế hoạch và location cùng Bếp TT, rồi tạo `draft` cùng snapshot dòng nguyên liệu.
+3. `start_production_run` là transition duy nhất từ `draft` sang `in_progress`.
+4. `complete_production_run` kiểm tra:
    - caller là production operator (`is_inventory_production_operator()`) và có `inventory:production_confirm` trên đúng `branch_id`,
-   - item đầu ra phải có `item_kind = finished_good`,
-   - có đủ `production_recipes`,
-   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ `entry_unit_id` về base unit; cho phép chốt actual quantity/actual ingredients lệch so với plan.
-4. RPC ghi atomically:
+   - lệnh đang `in_progress`, sản lượng thực tế `> 0`, đúng đủ tập nguyên liệu snapshot,
+   - source/target location thuộc cùng Bếp TT,
+   - tồn kho đủ sau khi quy đổi số thực tế về đơn vị tồn chuẩn.
+5. RPC ghi atomically:
    - `production_consumption` cho nguyên liệu đầu vào,
    - `production_output` cho thành phẩm đầu ra,
    - cập nhật `stock_levels`,
    - chốt `production_runs.status = completed`.
+6. Thành phẩm tiếp tục ở Bếp TT. Giao về chi nhánh phải qua chứng từ Điều chuyển riêng.
 
 Quy tắc kế hoạch so với thực tế:
 
@@ -237,7 +249,7 @@ Quy tắc kế hoạch so với thực tế:
   vốn đơn vị đầu ra; không được dùng để tự co giãn tiêu hao đã ghi nhận.
 - Người vận hành có thể chốt nguyên liệu và số lượng thực dùng khác kế hoạch.
   Hao hụt làm tăng giá vốn thành phẩm và không tự sinh một dòng phế phẩm.
-- `confirm_production_run` phải kiểm tra tồn kho sau khi áp dụng bộ nguyên liệu
+- `complete_production_run` phải kiểm tra tồn kho sau khi áp dụng bộ nguyên liệu
   thực tế rồi ghi consumption, output, stock level và trạng thái trong cùng một
   giao dịch.
 
@@ -245,12 +257,13 @@ Quy tắc kế hoạch so với thực tế:
 
 > Boundary: đây là current Inventory control; không kéo theo multi-level BOM hay costing engine mới.
 
-- `production_recipes.output_quantity` là số lượng thành phẩm mà BOM dòng nguyên liệu tạo ra (theo đơn vị sản xuất của thành phẩm).
+- `production_recipe_specs.output_quantity` là số lượng thành phẩm chuẩn theo `output_unit_id` của công thức.
 - Bắt buộc `> 0`; form tạo mới không prefills giá trị mặc định.
 - Khi lập / chốt mẻ, nhu cầu nguyên liệu scale theo:
 
 ```
-raw_need = planned_output × (ingredient.quantity / output_quantity)
+batch_ratio = planned_output / recipe_output_quantity
+planned_raw = batch_ratio × recipe_raw_quantity
 ```
 
 - Menu `recipes.yield_factor` (định mức món bán) là domain riêng; không dùng cho production BOM.

@@ -128,26 +128,20 @@ export const operator = {
     close: "Đóng",
   },
   teamBoard: {
-    title: "Đội chi nhánh",
-    description: "Theo dõi ca, nhân sự và phân công trong ngày.",
+    title: "Nhân sự chi nhánh",
+    description: "Theo dõi ca hôm nay và nhân viên của chi nhánh.",
     tabsAriaLabel: "Mục đội chi nhánh",
     tabs: {
       board: {
-        label: "Theo dõi ca",
+        label: "Theo dõi ca hôm nay",
         title: "Từng ca hôm nay",
         description:
           "Mỗi dòng là một lượt ca; bấm dòng cần xử lý để mở duyệt ca hoặc kiểm kê.",
       },
       members: {
-        label: "Nhân sự",
+        label: "Nhân viên chi nhánh",
         title: "Danh sách nhân viên",
         description: "Thông tin liên hệ và trạng thái vận hành hôm nay.",
-      },
-      assignments: {
-        label: "Phân công",
-        title: "Giao đếm tồn",
-        description:
-          "Giao mặt hàng cần kiểm kê cho từng nhân viên và mở nhanh màn duyệt phiếu đếm.",
       },
     },
     approvalsStripTitle: "Cần duyệt",

@@ -264,7 +264,7 @@ Brand Má Tư Design System runtime mapping:
 - `ring` / chart accent: vang gao.
 - `success`: xanh la diu.
 - `muted-foreground` / supporting tone: nau go or xam am depending on theme.
-- Heading font: Be Vietnam Pro (identity display face).
+- Heading font: Geist.
 - Body font: Geist.
 - Mono font: Geist Mono for tabular operational data.
 - Night mode: warm-dark "gạo cháy" palette (see Theme runtime); auto 18:00–06:00 local or via `matu-theme` cookie override.
@@ -302,7 +302,7 @@ Any bordered / rounded `div` carrying a `bg-(warning|destructive|success|info)/N
 
 Runtime typography source:
 
-- `apps/web/app/layout.tsx` loads `GeistSans` and `GeistMono` through the `geist` package (next/font/local under the hood; full Vietnamese glyph coverage, self-hosted, offline) and `Be Vietnam Pro` through `next/font/google` (subset `vietnamese` + `latin`, self-hosted by Next.js). Be Vietnam Pro serves headings/titles; Geist serves body/content (two-family roster).
+- `apps/web/app/layout.tsx` loads `GeistSans` and `GeistMono` through the `geist` package (next/font/local under the hood; full Vietnamese glyph coverage, self-hosted, offline). Geist serves headings and body/content; Geist Mono serves operational data.
 - `packages/ui/src/styles/globals.css` maps those font variables into Tailwind utilities.
 
 Required utility mapping:
@@ -310,17 +310,17 @@ Required utility mapping:
 | Purpose           | Utility / variable                | Font           |
 | ----------------- | --------------------------------- | -------------- |
 | body/content text | `font-sans` / `--font-sans`       | Geist          |
-| headings/titles   | `font-heading` / `--font-heading` | Be Vietnam Pro |
+| headings/titles   | `font-heading` / `--font-heading` | Geist          |
 | operational data  | `font-mono` / `--font-mono`       | Geist Mono     |
 
 Rules:
 
-- The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`; `next/font/google` exposes `--font-be-vietnam-pro`. `globals.css` binds `--font-sans` to `--font-geist-sans`, `--font-heading` to `--font-be-vietnam-pro`, and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
+- The `geist` package exposes `--font-geist-sans` / `--font-geist-mono`. `globals.css` binds both `--font-sans` and `--font-heading` to `--font-geist-sans`, and `--font-mono` to `--font-geist-mono`. App code consumes only `font-sans` / `font-heading` / `font-mono`.
 - Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a Má Tư DS shared component already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra font families.
-- Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions. The roster is Be Vietnam Pro (headings) + Geist (body) + Geist Mono (data). `Be Vietnam Pro` is the approved heading face; other fonts on the legacy forbid-list remain forbidden.
+- Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only stacks, custom font variables, or per-surface typography exceptions. The complete roster is Geist for headings/body and Geist Mono for data.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
