@@ -110,7 +110,7 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 
 1. Kho Tổng / Bếp TT tạo Yêu cầu mua.
 2. Kế toán/Owner tạo một hoặc nhiều PO theo NCC, nhập giá, duyệt.
-3. Khi giao hàng, tạo GRN **Chờ nhập hàng** từ PO; kho nhập thực nhận/từ chối.
+3. Khi PO được gửi, hệ thống tự tạo GRN **Chờ nhập hàng**; kho nhập thực nhận/từ chối.
 4. Kho confirm GRN; phần dư ngoài đơn nhập giá `0`.
 5. Finance nhập HĐ/AP và phân bổ thanh toán/giảm công nợ.
 

@@ -468,7 +468,7 @@ test("Owner surface stock workbench keeps manager action affordances after the p
   );
 });
 
-test("branch GRN routes keep branch redirect; central restores operator clients", () => {
+test("branch GRN routes keep branch redirect; direct central creation is retired", () => {
   const grnRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   );
@@ -496,12 +496,27 @@ test("branch GRN routes keep branch redirect; central restores operator clients"
     grnNewRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
+  assert.match(
+    grnNewRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
+  );
+  assert.doesNotMatch(
+    grnNewRoute,
+    /BranchGrnSourcePickerClient|loadGrnSourcePageData/,
+  );
   assert.match(grnCreateRoute, /branch_kind === "branch"/);
   assert.match(
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(grnCreateRoute, /BranchGrnCreateClient|loadGrnCreatePageData/);
+  assert.match(
+    grnCreateRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
+  );
+  assert.doesNotMatch(
+    grnCreateRoute,
+    /BranchGrnCreateClient|loadGrnCreatePageData/,
+  );
 });
 
 test("operator stock branch-native extensions keep issue and report actions in the branch shell", () => {
@@ -683,7 +698,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.doesNotMatch(reportsClient, /supplierInvoicesHref|embedded/);
 });
 
-test("GRN create routes keep branch redirect; central restores operator create flow", () => {
+test("GRN create routes redirect into the current purchase workflow", () => {
   const grnNewRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx",
   );
@@ -701,6 +716,10 @@ test("GRN create routes keep branch redirect; central restores operator create f
   );
   assert.match(
     grnNewRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
+  );
+  assert.doesNotMatch(
+    grnNewRoute,
     /BranchGrnSourcePickerClient|loadGrnSourcePageData/,
   );
 
@@ -709,7 +728,14 @@ test("GRN create routes keep branch redirect; central restores operator create f
     grnCreateRoute,
     /redirect\(`\/br\/\$\{branchId\}\/stock\/requests\/new`\)/,
   );
-  assert.match(grnCreateRoute, /loadGrnCreatePageData|BranchGrnCreateClient/);
+  assert.match(
+    grnCreateRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/purchase-requests`\)/,
+  );
+  assert.doesNotMatch(
+    grnCreateRoute,
+    /loadGrnCreatePageData|BranchGrnCreateClient/,
+  );
 
   assert.match(grnNewPage, /redirect\("\/inventory\/grn"\)/);
 });

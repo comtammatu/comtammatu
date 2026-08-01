@@ -322,10 +322,10 @@ export function BranchGrnListClient({
         <Button
           size="touch"
           className="w-full"
-          render={<Link href={`/br/${branchId}/stock/grn/new`} />}
+          render={<Link href={`/br/${branchId}/stock/purchase-requests`} />}
         >
           <IconPlus className="size-4" />
-          {INVENTORY_VI.receivingEyebrow}
+          {grnCopy.purchaseRequestFilter}
         </Button>
       ) : null}
 

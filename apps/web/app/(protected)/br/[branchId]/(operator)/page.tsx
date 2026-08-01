@@ -274,7 +274,7 @@ export default async function OperatorHomePage({
             <Link
               href={
                 isCentralSupply
-                  ? `${basePath}/stock/grn/new`
+                  ? `${basePath}/stock/grn`
                   : `${basePath}/stock/production`
               }
             />

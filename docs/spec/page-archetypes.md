@@ -513,20 +513,12 @@ allowlist, not a precedent for stretching another archetype's definition:
     control_surface table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); control_surface retains the management `DataTable` LIST.
 12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
-    — Branch-runtime GRN source selection. It shares the source loader and
-    pure supplier model with control_surface, but presents suppliers as full-row touch
-    actions and canonicalizes supplier selection into the Branch route.
-    Branch receiving starts the GRN draft; Owner/Kế toán creates and approves
-    the linked PO from that draft before confirmation.
-    Classified **LIST** (Branch touch source variant); the
-    document-line form remains a separate workflow stage.
+    — Redirect shim. A normal branch continues to Yêu cầu hàng; Kho Tổng and
+    Bếp Trung Tâm continue to Yêu cầu mua. GRN drafts are created only from a
+    sent PO and appear in the GRN queue.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
-    — Branch-runtime GRN receipt entry. It shares the create loader, draft
-    controller, line-editor primitive, and mutation authority with control_surface, but
-    owns a fixed-branch touch workflow with progressive line editing and a
-    sticky action footer. Classified **DOC-WORKFLOW** (Branch touch variant);
-    it never imports the control_surface page/client, `DocumentFormFrame`, desktop edit
-    panel, or cross-branch picker.
+    — Compatibility redirect shim with the same destination rules as the
+    parent `/new` route. It never renders a receipt-entry form.
 14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
     — Branch-runtime GRN review and receipt. It shares the detail loader,
     model, action hooks, and mutations with control_surface, but owns draft line review

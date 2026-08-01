@@ -11,11 +11,9 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
-import { resolveSoleGrnWarehouseLocation } from "@lib/inventory/grn-create-model";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
-import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
@@ -669,122 +667,10 @@ export const createGrnDraft = withAction(
     schema: grnCreateSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   },
-  async (data, { supabase, claims, user }) => {
-    const targetBranchId = data.branchId;
-
-    // Branch-scoped roles must match their assigned procurement branch.
-    if (!canAccessProcurementBranch(claims, targetBranchId)) {
-      return {
-        success: false,
-        error: "Bạn chỉ được tạo phiếu nhập cho kho của mình.",
-      };
-    }
-
-    const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
-    if (!branches.some((branch) => branch.id === targetBranchId)) {
-      return {
-        success: false,
-        error: "Chi nhánh không hợp lệ.",
-      };
-    }
-
-    let targetLocationId: number;
-    if (
-      isBranchScopedProcurementRole(claims.user_role) ||
-      data.locationId == null
-    ) {
-      const { data: locations, error: locationError } = await supabase
-        .from("inventory_locations")
-        .select("id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", targetBranchId)
-        .eq("is_active", true)
-        .eq("location_kind", "warehouse")
-        .order("sort_order", { ascending: true, nullsFirst: false })
-        .order("id", { ascending: true })
-        .limit(2);
-      if (locationError) {
-        return {
-          success: false,
-          error: messages.inventory.grn.warehouseLoadFailed,
-        };
-      }
-      const resolution = resolveSoleGrnWarehouseLocation(locations ?? []);
-      if (resolution.status === "missing") {
-        return {
-          success: false,
-          error: messages.inventory.grn.warehouseMissing,
-        };
-      }
-      if (resolution.status === "ambiguous") {
-        return {
-          success: false,
-          error: messages.inventory.grn.warehouseAmbiguous,
-        };
-      }
-      targetLocationId = resolution.locationId;
-    } else {
-      const { data: location, error: locationError } = await supabase
-        .from("inventory_locations")
-        .select("id")
-        .eq("id", data.locationId)
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", targetBranchId)
-        .eq("is_active", true)
-        .eq("location_kind", "warehouse")
-        .maybeSingle();
-      if (locationError || !location) {
-        return { success: false, error: "Nơi nhập hàng không hợp lệ." };
-      }
-      targetLocationId = location.id;
-    }
-
-    const allocated = await allocateInventoryDocNumber(
-      supabase,
-      claims.tenant_id,
-      "grn",
-    );
-    if (!allocated.ok) {
-      return { success: false, error: messages.inventory.grn.createFailed };
-    }
-    const grnNumber = allocated.code;
-    const { data: row, error } = await supabase
-      .from("goods_received_notes")
-      .insert({
-        tenant_id: claims.tenant_id,
-        branch_id: targetBranchId,
-        location_id: targetLocationId,
-        supplier_id: null,
-        po_id: null,
-        grn_number: grnNumber,
-        status: "draft",
-        notes: data.notes ?? null,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-    if (error) {
-      // Concurrent create on the same user+branch free draft: return existing.
-      if (error.code === "23505") {
-        const { data: existing } = await supabase
-          .from("goods_received_notes")
-          .select("id")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("created_by", user.id)
-          .eq("branch_id", targetBranchId)
-          .eq("status", "draft")
-          .is("po_id", null)
-          .order("updated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (existing?.id) {
-          return { success: true, data: { id: existing.id } };
-        }
-      }
-      return { success: false, error: "Không thể tạo phiếu nhập." };
-    }
-    return { success: true, data: row };
-  },
+  async () => ({
+    success: false,
+    error: messages.inventory.po.emptyLinkedGrnsHint,
+  }),
 );
 
 /* ─── loadActiveGrnDraft (Sprint 6 #3) ─── */
