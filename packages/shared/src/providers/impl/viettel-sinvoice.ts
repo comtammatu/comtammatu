@@ -596,13 +596,19 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     // the wrong legally-mandated text (NĐ 254/2026) on the invoice.
     const buyerName = buyerNotGetInvoice
       ? BUYER_NOT_GET_INVOICE_NAME
-      : (request.buyerName ?? "");
+      : request.buyerTaxCode
+        ? ""
+        : (request.buyerName ?? "");
+    const buyerLegalName =
+      !buyerNotGetInvoice && request.buyerTaxCode
+        ? (request.buyerName ?? null)
+        : null;
 
     const body = {
       generalInvoiceInfo,
       buyerInfo: {
         buyerName,
-        buyerLegalName: buyerNotGetInvoice ? null : buyerName || null,
+        buyerLegalName,
         buyerTaxCode: request.buyerTaxCode ?? null,
         buyerAddressLine: request.buyerAddress ?? null,
         buyerPhoneNumber: null,

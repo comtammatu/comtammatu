@@ -209,6 +209,6 @@ Go criteria for fleet rollout:
 - Agent source: [apps/print-agent/README.md](../../../apps/print-agent/README.md)
 - Install script: [apps/print-agent/scripts/install-service.ps1](../../../apps/print-agent/scripts/install-service.ps1)
 - Owner monitor: `/settings/printers/jobs`
-- DB schema: `supabase/migrations/20260717151345_baseline.sql` (print_jobs,
+- DB schema: `supabase/migrations/20260720035548_baseline.sql` (print_jobs,
   printer_agents, v_print_agent_fleet, enqueue/completion RPCs) +
-  `supabase/migrations/20260717151346_fold_managed_surfaces.sql`
+  `supabase/migrations/20260720035549_fold_managed_surfaces.sql`

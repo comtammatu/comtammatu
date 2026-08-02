@@ -12,7 +12,7 @@ the Production ledger nor controls Preview access.
 
 ## Why this exists
 
-`supabase/migrations/20260717151345_baseline.sql` is a point-in-time `pg_dump` of
+`supabase/migrations/20260720035548_baseline.sql` is a point-in-time `pg_dump` of
 prod (`public` + `private`). Over time the forward chain accumulates and stops
 replaying cleanly on top of the snapshot — the **squash-vs-history** class:
 

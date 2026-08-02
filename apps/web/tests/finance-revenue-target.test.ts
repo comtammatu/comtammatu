@@ -44,6 +44,7 @@ describe("revenue-target helpers", () => {
 
   it("loads and renders every assigned-branch reward tier", () => {
     const actions = readWeb("app/(protected)/finance/targets/actions.ts");
+    const home = readWeb("app/(protected)/br/[branchId]/(operator)/page.tsx");
     const strip = readWeb(
       "app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx",
     );
@@ -54,6 +55,17 @@ describe("revenue-target helpers", () => {
     assert.match(actions, /list_branch_revenue_target_reward_tiers/);
     assert.match(actions, /rewardTiers,/);
     assert.match(strip, /progress\.rewardTiers\.map/);
+    assert.match(strip, /BranchOperatorPanel/);
+    assert.doesNotMatch(strip, /KpiCard|KpiRow/);
+    assert.match(
+      strip,
+      /const hasProgress = hasTarget && progress\.progressPct != null/,
+    );
+    assert.match(strip, /\{hasProgress \? \(/);
+    assert.ok(
+      home.indexOf("<BranchQueueSection") <
+        home.indexOf("<BranchRevenueTargetStrip"),
+    );
     assert.match(migration, /targets\.branch_id = v_branch/);
     assert.match(migration, /v_role = 'branch_manager'/);
   });

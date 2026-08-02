@@ -118,7 +118,7 @@ UPDATE tenants t
 
 ## References
 
-- `supabase/migrations/20260717151345_baseline.sql` — current schema baseline with `tenants.owner_user_id`
+- `supabase/migrations/20260720035548_baseline.sql` — current schema baseline with `tenants.owner_user_id`
 - `supabase/migration-archive/20260601500000_h3b_tenants_owner_user_id.sql` — implementation history
 - `supabase/migration-archive/20260601100000_auth_v3_h3a_position_id_required.sql` — H3a (closes silent-demote at source)
 - `supabase/migration-archive/20260423040000_auth_v2_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)

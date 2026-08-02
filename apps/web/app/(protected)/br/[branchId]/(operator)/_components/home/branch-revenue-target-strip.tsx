@@ -10,8 +10,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
-import { KpiCard } from "@/components/kpi/kpi-card";
-import { KpiRow } from "@/components/surface";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import {
@@ -30,65 +28,58 @@ export function BranchRevenueTargetStrip({
 }) {
   const tone = targetProgressTone(progress.progressPct);
   const hasTarget = progress.targetAmount != null && progress.targetAmount > 0;
+  const hasProgress = hasTarget && progress.progressPct != null;
   const progressValue = clampProgressValue(progress.progressPct);
+  const progressLabel =
+    progress.progressPct == null
+      ? hasTarget
+        ? progressCopy.unavailable
+        : progressCopy.noTarget
+      : formatPercent(progress.progressPct);
 
   return (
-    <div className="grid gap-3">
-      <KpiRow density="compact" className="grid-cols-1 sm:grid-cols-2">
-        <KpiCard
-          density="compact"
-          label={progressCopy.revenueLabel}
-          value={formatVND(progress.netRevenueMtd)}
-          hint={progressCopy.mtdHint}
-          tone="primary"
-        />
-        <KpiCard
-          density="compact"
-          label={progressCopy.targetLabel}
-          value={
-            hasTarget
-              ? formatVND(progress.targetAmount ?? 0)
-              : progressCopy.noTarget
-          }
-          tone={hasTarget ? tone : "neutral"}
-          hint={
-            hasTarget ? (
-              <div className="flex w-full flex-col gap-1.5">
-                <Progress
-                  value={progressValue}
-                  tone={
-                    tone === "neutral"
-                      ? "default"
-                      : (tone as "success" | "warning" | "destructive")
-                  }
-                  className="h-1.5 rounded-full"
-                />
-                <span>
-                  {progress.progressPct != null
-                    ? formatPercent(progress.progressPct)
-                    : null}
-                  {progress.gapAmount != null && progress.gapAmount > 0
-                    ? ` · ${progressCopy.remaining(formatVND(progress.gapAmount))}`
-                    : progress.progressPct != null &&
-                        progress.progressPct >= 100
-                      ? ` · ${progressCopy.achieved}`
-                      : null}
-                </span>
-              </div>
-            ) : (
-              progressCopy.noTarget
-            )
-          }
-        />
-      </KpiRow>
+    <BranchOperatorPanel
+      title={messages.finance.revenueTargets.rewardTiers.trackingTitle}
+      description={messages.finance.revenueTargets.rewardTiers.description}
+      icon={Trophy}
+      size="sm"
+      tone={tone === "neutral" ? "default" : tone}
+      badge={{
+        children: progressLabel,
+        variant: tone === "neutral" ? "outline" : tone,
+      }}
+    >
+      <div className="grid gap-3">
+        <Item variant="outline" size="sm">
+          <ItemContent>
+            <ItemTitle>
+              {progressCopy.revenueLabel} · {formatVND(progress.netRevenueMtd)}
+            </ItemTitle>
+            <ItemDescription>
+              {hasTarget
+                ? `${progressCopy.targetLabel}: ${formatVND(progress.targetAmount ?? 0)}`
+                : progressCopy.noTarget}
+              {progress.gapAmount != null && progress.gapAmount > 0
+                ? ` · ${progressCopy.remaining(formatVND(progress.gapAmount))}`
+                : progress.progressPct != null && progress.progressPct >= 100
+                  ? ` · ${progressCopy.achieved}`
+                  : null}
+            </ItemDescription>
+            {hasProgress ? (
+              <Progress
+                value={progressValue}
+                tone={
+                  tone === "neutral"
+                    ? "default"
+                    : (tone as "success" | "warning" | "destructive")
+                }
+                aria-label={progressCopy.netRevenueProgressHint(progressLabel)}
+                className="mt-1 h-1.5 rounded-full"
+              />
+            ) : null}
+          </ItemContent>
+        </Item>
 
-      <BranchOperatorPanel
-        title={messages.finance.revenueTargets.rewardTiers.trackingTitle}
-        description={messages.finance.revenueTargets.rewardTiers.description}
-        icon={Trophy}
-        size="sm"
-        badge={{ children: String(progress.rewardTiers.length) }}
-      >
         {progress.rewardTiers.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {messages.finance.revenueTargets.rewardTiers.empty}
@@ -135,7 +126,7 @@ export function BranchRevenueTargetStrip({
             })}
           </ItemGroup>
         )}
-      </BranchOperatorPanel>
-    </div>
+      </div>
+    </BranchOperatorPanel>
   );
 }

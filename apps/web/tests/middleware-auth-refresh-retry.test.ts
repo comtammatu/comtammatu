@@ -109,19 +109,22 @@ test("middleware adds at most one auth refresh attempt per request", async (t) =
   assert.equal(calls, 3);
 });
 
-test("middleware clears terminal sessions without error-level logs", async (t) => {
+test("middleware clears terminal sessions without /user retries or error-level logs", async (t) => {
   for (const errorCode of terminalSessionCodes) {
     await t.test(errorCode, async (t) => {
       mockSupabaseEnv(t);
       const errorLog = t.mock.method(console, "error", () => undefined);
-      const fetcher: typeof fetch = async () =>
-        new Response(
+      const requests: string[] = [];
+      const fetcher: typeof fetch = async (input) => {
+        requests.push(input instanceof Request ? input.url : String(input));
+        return new Response(
           JSON.stringify({
             error_code: errorCode,
             msg: "Session is terminal",
           }),
           { status: 400, headers: { "content-type": "application/json" } },
         );
+      };
       t.mock.method(globalThis, "fetch", fetcher);
 
       const { response, session } = await updateSession(expiredAuthRequest());
@@ -130,6 +133,7 @@ test("middleware clears terminal sessions without error-level logs", async (t) =
       assert.equal(response.cookies.get(authCookieName)?.value, "");
       assert.equal(response.cookies.get(authCookieName)?.maxAge, 0);
       assert.equal(errorLog.mock.calls.length, 0);
+      assert.deepEqual(requests, [refreshUrl]);
     });
   }
 });

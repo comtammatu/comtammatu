@@ -133,10 +133,6 @@ export default async function OperatorHomePage({
 
   return (
     <BranchOperatorPage title={APP_COPY_VI.branchHome}>
-      {revenueTarget ? (
-        <BranchRevenueTargetStrip progress={revenueTarget} />
-      ) : null}
-
       {claims.user_role !== "owner" ? (
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />
@@ -146,6 +142,10 @@ export default async function OperatorHomePage({
       <Suspense fallback={<BranchQueuePending />}>
         <BranchQueueSection branchId={context.branchId} />
       </Suspense>
+
+      {revenueTarget ? (
+        <BranchRevenueTargetStrip progress={revenueTarget} />
+      ) : null}
 
       {groups.map((group) => {
         const stationTiles = group.tiles.filter(

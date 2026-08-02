@@ -597,7 +597,7 @@ test("createInvoice: no invoiceNo stays signing", async () => {
   }
 });
 
-test("createInvoice: sends buyer email for named buyer invoices", async () => {
+test("createInvoice: sends company name as legal name for tax-registered buyer", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{
     input: Parameters<typeof fetch>[0];
@@ -643,11 +643,15 @@ test("createInvoice: sends buyer email for named buyer invoices", async () => {
 
     const body = JSON.parse(String(createCall.init.body)) as {
       buyerInfo: {
+        buyerName?: string;
+        buyerLegalName?: string | null;
         buyerEmail?: string | null;
         buyerNotGetInvoice?: string;
       };
     };
 
+    assert.equal(body.buyerInfo.buyerName, "");
+    assert.equal(body.buyerInfo.buyerLegalName, "Cong ty Phuc Khang");
     assert.equal(body.buyerInfo.buyerEmail, "xuannt83@gmail.com");
     assert.equal(body.buyerInfo.buyerNotGetInvoice, "0");
   } finally {

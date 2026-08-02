@@ -128,7 +128,6 @@ test("post Phase C migrations do not reference dropped ingredient unit fields", 
   const migrationDir = `${root}supabase/migrations`;
   const files = readdirSync(migrationDir)
     .filter((file) => /^\d+_.*\.sql$/.test(file))
-    .filter((file) => file !== "20260717151345_baseline.sql")
     .filter(
       (file) => file > "20260707002300_inventory_unit_system_phase_c.sql",
     );
