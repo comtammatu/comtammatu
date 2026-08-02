@@ -22,12 +22,17 @@ import {
   PermissionAuditFilters,
   type PermissionAuditTargetOption,
 } from "./permission-audit-filters";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 interface Props {
   searchParams: Promise<{
     action?: string;
     target?: string;
     since?: string;
+    branch?: string;
   }>;
 }
 
@@ -38,6 +43,7 @@ interface Props {
  */
 export default async function PermissionAuditPage({ searchParams }: Props) {
   const params = await searchParams;
+  const branchScope = resolveHrBranchScope(params.branch);
   const supabase = await createClient();
 
   let query = supabase
@@ -208,7 +214,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             variant="ghost"
             size="sm"
             className="-ml-3"
-            render={<Link href="/hr?view=accounts" />}
+            render={
+              <Link
+                href={withHrBranchScope(
+                  "/hr?view=accounts",
+                  branchScope,
+                )}
+              />
+            }
           >
             <IconArrowLeft className="mr-1 size-4" />
             {copy.backToStaff}
@@ -223,6 +236,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           since: params.since ?? null,
         }}
         targetOptions={targetOptions}
+        branchScope={branchScope}
       />
 
       {auditDisplayRows.length === 0 ? (
@@ -236,7 +250,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             <Button
               variant="outline"
               size="touch"
-              render={<Link href="/hr?view=accounts" />}
+              render={
+                <Link
+                  href={withHrBranchScope(
+                    "/hr?view=accounts",
+                    branchScope,
+                  )}
+                />
+              }
             >
               {copy.emptyAction}
             </Button>

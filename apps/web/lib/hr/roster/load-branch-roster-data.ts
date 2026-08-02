@@ -31,8 +31,7 @@ export async function loadBranchRosterData(
   const canAssignRole = ROSTER_ROLES.includes(claims.user_role);
   const canAssign =
     canAssignRole &&
-    (claims.user_role === "owner" ||
-      claims.branch_id === routeBranchId) &&
+    (claims.user_role === "owner" || claims.branch_id === routeBranchId) &&
     (await probePermission(
       { supabase, claims },
       PERMISSION_KEYS.HR_ASSIGN_SHIFT,
@@ -46,7 +45,12 @@ export async function loadBranchRosterData(
       branchName: branch.branch.name,
       canAssign: false,
       weekStart,
-      roster: { employees: [], shifts: [], assignments: [] },
+      roster: {
+        employees: [],
+        shifts: [],
+        assignments: [],
+        weeklySchedules: [],
+      },
       loadFailed: false,
     };
   }
@@ -72,7 +76,12 @@ export async function loadBranchRosterData(
       branchName: branch.branch.name,
       canAssign: true,
       weekStart,
-      roster: { employees: [], shifts: [], assignments: [] },
+      roster: {
+        employees: [],
+        shifts: [],
+        assignments: [],
+        weeklySchedules: [],
+      },
       loadFailed: true,
     };
   }

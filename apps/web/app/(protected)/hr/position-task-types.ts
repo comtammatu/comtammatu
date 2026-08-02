@@ -2,11 +2,7 @@ export const POSITION_TASK_KINDS = ["standard", "consumption_report"] as const;
 
 export type PositionTaskKind = (typeof POSITION_TASK_KINDS)[number];
 
-export const POSITION_TASK_APPLICABILITY = [
-  "every_shift",
-  "opening",
-  "closing",
-] as const;
+export const POSITION_TASK_APPLICABILITY = ["every_shift"] as const;
 
 export type PositionTaskApplicability =
   (typeof POSITION_TASK_APPLICABILITY)[number];

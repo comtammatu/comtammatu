@@ -14,6 +14,7 @@ import { fetchHrLeavePolicy } from "./leave-policy-actions";
 import { loadAuthState } from "@/_lib/auth";
 import { HrScopeSelector } from "../hr-scope-selector";
 import type { BranchOption } from "../_types";
+import { resolveHrBranchScope, withHrBranchScope } from "@/lib/hr-scope";
 
 const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   positions: [],
@@ -59,7 +60,11 @@ export default async function HrSetupPage({
           }),
       tab === "leave"
         ? fetchHrLeavePolicy()
-        : Promise.resolve({ success: true as const, data: null }),
+        : Promise.resolve({
+            success: true as const,
+            data: null,
+            isPersisted: false,
+          }),
     ]);
   const shifts = shiftsResult.success
     ? ((shiftsResult.data as ShiftRow[]) ?? [])
@@ -69,6 +74,7 @@ export default async function HrSetupPage({
     EMPTY_POSITION_TASKS_DATA;
   const copy = messages.hr.client;
   const branches = (branchesResult.data ?? []) as BranchOption[];
+  const branchScope = resolveHrBranchScope(params.branch, branches);
 
   return (
     <AppPage width="xwide">
@@ -77,8 +83,12 @@ export default async function HrSetupPage({
         description={copy.setupDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={params.branch} />
-            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+            <HrScopeSelector branches={branches} value={branchScope} />
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            >
               {messages.hr.payroll.backToHr}
             </Button>
           </div>
@@ -91,8 +101,11 @@ export default async function HrSetupPage({
           leavePolicy={
             leavePolicyResult.success ? leavePolicyResult.data : null
           }
+          leavePolicyPersisted={
+            leavePolicyResult.success && leavePolicyResult.isPersisted
+          }
           initialTab={tab}
-          initialBranchFilter={params.branch}
+          initialBranchFilter={branchScope}
         />
       </Suspense>
     </AppPage>

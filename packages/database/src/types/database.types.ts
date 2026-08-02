@@ -1536,6 +1536,128 @@ export type Database = {
           },
         ]
       }
+      employee_weekly_schedules: {
+        Row: {
+          created_at: string
+          effective_from: string
+          employee_id: number
+          friday_shift_id: number | null
+          id: number
+          monday_shift_id: number | null
+          saturday_shift_id: number | null
+          sunday_shift_id: number | null
+          tenant_id: number
+          thursday_shift_id: number | null
+          tuesday_shift_id: number | null
+          updated_at: string
+          updated_by: string | null
+          wednesday_shift_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          employee_id: number
+          friday_shift_id?: number | null
+          id?: never
+          monday_shift_id?: number | null
+          saturday_shift_id?: number | null
+          sunday_shift_id?: number | null
+          tenant_id: number
+          thursday_shift_id?: number | null
+          tuesday_shift_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          wednesday_shift_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          employee_id?: number
+          friday_shift_id?: number | null
+          id?: never
+          monday_shift_id?: number | null
+          saturday_shift_id?: number | null
+          sunday_shift_id?: number | null
+          tenant_id?: number
+          thursday_shift_id?: number | null
+          tuesday_shift_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          wednesday_shift_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_weekly_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_friday_shift_id_fkey"
+            columns: ["friday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_monday_shift_id_fkey"
+            columns: ["monday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_saturday_shift_id_fkey"
+            columns: ["saturday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_sunday_shift_id_fkey"
+            columns: ["sunday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_thursday_shift_id_fkey"
+            columns: ["thursday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_tuesday_shift_id_fkey"
+            columns: ["tuesday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_weekly_schedules_wednesday_shift_id_fkey"
+            columns: ["wednesday_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           bank_account: string | null
@@ -7524,7 +7646,8 @@ export type Database = {
           created_at: string
           employee_id: number
           id: number
-          shift_id: number
+          shift_id: number | null
+          source: string
           tenant_id: number
           updated_at: string
           work_date: string
@@ -7536,7 +7659,8 @@ export type Database = {
           created_at?: string
           employee_id: number
           id?: never
-          shift_id: number
+          shift_id?: number | null
+          source?: string
           tenant_id: number
           updated_at?: string
           work_date: string
@@ -7548,7 +7672,8 @@ export type Database = {
           created_at?: string
           employee_id?: number
           id?: never
-          shift_id?: number
+          shift_id?: number | null
+          source?: string
           tenant_id?: number
           updated_at?: string
           work_date?: string
@@ -13097,6 +13222,7 @@ export type Database = {
         Args: { p_event_id: number }
         Returns: Json
       }
+      materialize_employee_weekly_schedules: { Args: never; Returns: number }
       materialize_print_document: {
         Args: {
           p_content: Json
@@ -13612,6 +13738,10 @@ export type Database = {
       save_employee_shift_task_override: {
         Args: { p_employee_id: number; p_tasks: Json }
         Returns: number
+      }
+      save_employee_weekly_schedule: {
+        Args: { p_days: Json; p_effective_from: string; p_employee_id: number }
+        Returns: Json
       }
       save_goods_receipt_note: {
         Args: {

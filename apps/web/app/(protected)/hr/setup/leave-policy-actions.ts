@@ -31,7 +31,11 @@ export async function fetchHrLeavePolicy() {
     tenantId: context.claims.tenant_id,
   });
   return result.success
-    ? { success: true as const, data: result.data }
+    ? {
+        success: true as const,
+        data: result.data,
+        isPersisted: result.isPersisted,
+      }
     : {
         success: false as const,
         error: messages.hr.client.leavePolicy.loadFailed,

@@ -232,10 +232,7 @@ export async function fetchPositionTasksData(): Promise<
       title: row.title,
       kind:
         row.kind === "consumption_report" ? "consumption_report" : "standard",
-      applicability:
-        row.applicability === "opening" || row.applicability === "closing"
-          ? row.applicability
-          : "every_shift",
+      applicability: "every_shift",
       phase: row.phase === "end_of_shift" ? "end_of_shift" : "start_of_shift",
       isRequired: row.is_required,
       doneDefinition: row.done_definition,
@@ -313,10 +310,7 @@ export async function fetchPositionTasksData(): Promise<
           item.task_kind === "consumption_report"
             ? "consumption_report"
             : "standard",
-        applicability:
-          item.scope === "opening" || item.scope === "closing"
-            ? item.scope
-            : "every_shift",
+        applicability: "every_shift",
         phase:
           item.phase === "end_of_shift" ? "end_of_shift" : "start_of_shift",
         isRequired: item.is_required,

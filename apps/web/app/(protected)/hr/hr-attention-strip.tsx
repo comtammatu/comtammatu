@@ -16,11 +16,17 @@ import {
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type { HrAttentionSummary } from "./hr-attention";
+import {
+  type HrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 export function HrAttentionStrip({
   summary,
+  branchScope,
 }: {
   summary: HrAttentionSummary;
+  branchScope: HrBranchScope;
 }) {
   const copy = messages.hr.attention;
   const hasWork =
@@ -45,7 +51,12 @@ export function HrAttentionStrip({
                 <Button
                   size="touch"
                   render={
-                    <Link href="/hr/attendance?tab=approvals" />
+                    <Link
+                      href={withHrBranchScope(
+                        "/hr/attendance?tab=approvals",
+                        branchScope,
+                      )}
+                    />
                   }
                 >
                   {copy.approvalsAction}
@@ -66,7 +77,14 @@ export function HrAttentionStrip({
                 <Button
                   variant="outline"
                   size="touch"
-                  render={<Link href="/hr?salary=missing" />}
+                  render={
+                    <Link
+                      href={withHrBranchScope(
+                        "/hr?salary=missing",
+                        branchScope,
+                      )}
+                    />
+                  }
                 >
                   <IconAlertTriangle data-icon="inline-start" />
                   {copy.missingContractAction}

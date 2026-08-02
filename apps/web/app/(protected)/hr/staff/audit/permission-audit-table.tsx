@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -17,6 +18,10 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
@@ -53,6 +58,7 @@ export function PermissionAuditTable({
   rows: PermissionAuditDisplayRow[];
 }) {
   const copy = messages.owner.staffAudit;
+  const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const columns: DataTableColumn<PermissionAuditDisplayRow>[] = [
     {
       key: "time",
@@ -81,7 +87,10 @@ export function PermissionAuditTable({
       className: "text-sm",
       render: (row) => (
         <Link
-          href={`/hr/staff/${row.targetUserId}/permissions`}
+          href={withHrBranchScope(
+            `/hr/staff/${row.targetUserId}/permissions`,
+            branchScope,
+          )}
           className="hover:underline"
         >
           <UserLabel name={row.targetName} />
@@ -147,7 +156,10 @@ export function PermissionAuditTable({
             <ItemDescription>
               {copy.target}:{" "}
               <Link
-                href={`/hr/staff/${row.targetUserId}/permissions`}
+                href={withHrBranchScope(
+                  `/hr/staff/${row.targetUserId}/permissions`,
+                  branchScope,
+                )}
                 className="hover:underline"
               >
                 <UserLabel name={row.targetName} />

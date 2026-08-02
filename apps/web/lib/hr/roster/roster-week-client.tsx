@@ -11,6 +11,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
+  Repeat2 as IconRepeat,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
 import { addVNDateDays } from "@comtammatu/shared/time";
@@ -38,6 +39,7 @@ import {
   getVNWeekDates,
   getVNWeekStartMonday,
 } from "./week";
+import { WeeklyScheduleDialog } from "./weekly-schedule-dialog";
 
 const copy = messages.hr.roster;
 const EMPTY_SHIFT_VALUE = "__empty__";
@@ -47,7 +49,9 @@ export type RosterSiteOption = {
   label: string;
 };
 
-function buildAssignmentMap(assignments: RosterAssignment[]): Map<string, number> {
+function buildAssignmentMap(
+  assignments: RosterAssignment[],
+): Map<string, number> {
   const map = new Map<string, number>();
   for (const assignment of assignments) {
     map.set(
@@ -87,6 +91,9 @@ export function RosterWeekClient({
     buildAssignmentMap(data.assignments),
   );
   const [dirty, setDirty] = useState(false);
+  const [scheduleEmployeeId, setScheduleEmployeeId] = useState<number | null>(
+    null,
+  );
 
   const weekDates = useMemo(() => getVNWeekDates(weekStart), [weekStart]);
 
@@ -190,6 +197,26 @@ export function RosterWeekClient({
     });
   }
 
+  const scheduleEmployee =
+    data.employees.find(
+      (employee) => employee.employeeId === scheduleEmployeeId,
+    ) ?? null;
+  const selectedSchedule =
+    data.weeklySchedules.find(
+      (schedule) => schedule.employeeId === scheduleEmployeeId,
+    ) ?? null;
+
+  function scheduleLabel(employeeId: number) {
+    const schedule = data.weeklySchedules.find(
+      (item) => item.employeeId === employeeId,
+    );
+    if (!schedule) return copy.schedule;
+    return copy.scheduleDays(
+      Object.values(schedule.shiftsByDay).filter((shiftId) => shiftId != null)
+        .length,
+    );
+  }
+
   if (!canAssign) {
     return <AppEmptyState mode="no-access" />;
   }
@@ -216,7 +243,9 @@ export function RosterWeekClient({
               {siteOptions.map((site) => (
                 <SelectItem
                   key={site.branchId ?? "office"}
-                  value={site.branchId == null ? "office" : String(site.branchId)}
+                  value={
+                    site.branchId == null ? "office" : String(site.branchId)
+                  }
                 >
                   {site.label}
                 </SelectItem>
@@ -237,7 +266,9 @@ export function RosterWeekClient({
             <IconChevronLeft className="size-4" />
           </Button>
           <div className="min-w-0 text-center text-sm font-medium">
-            <div className="text-muted-foreground text-xs">{copy.weekLabel}</div>
+            <div className="text-muted-foreground text-xs">
+              {copy.weekLabel}
+            </div>
             <div>{formatRosterWeekRange(weekStart)}</div>
           </div>
           <Button
@@ -314,6 +345,19 @@ export function RosterWeekClient({
                           .filter(Boolean)
                           .join(" · ") || "—"}
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 -ml-2 h-7 px-2 text-xs"
+                        onClick={() =>
+                          setScheduleEmployeeId(employee.employeeId)
+                        }
+                        disabled={isPending || data.shifts.length === 0}
+                      >
+                        <IconRepeat className="size-3.5" />
+                        {scheduleLabel(employee.employeeId)}
+                      </Button>
                     </td>
                     {weekDates.map((date) => {
                       const key = rosterAssignmentKey(
@@ -369,6 +413,16 @@ export function RosterWeekClient({
           {STATES_VI.loading}
         </div>
       ) : null}
+
+      <WeeklyScheduleDialog
+        open={scheduleEmployeeId != null}
+        onOpenChange={(open) => !open && setScheduleEmployeeId(null)}
+        branchId={branchId}
+        employee={scheduleEmployee}
+        shifts={data.shifts}
+        schedule={selectedSchedule}
+        onSaved={refreshRoster}
+      />
     </div>
   );
 }

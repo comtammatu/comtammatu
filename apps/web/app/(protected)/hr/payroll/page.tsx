@@ -6,6 +6,11 @@ import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
 import { PayrollListClient } from "./payroll-list-client";
 import { HrScopeSelector } from "../hr-scope-selector";
+import {
+  getHrScopeBranchId,
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 type SearchParams = {
   month?: string;
@@ -39,11 +44,6 @@ function parseStandardDays(value: string | undefined): number | undefined {
   return Number.isFinite(days) && days > 0 && days <= 31 ? days : undefined;
 }
 
-function parseBranchId(value: string | undefined): number | null {
-  const branchId = Number(value);
-  return Number.isInteger(branchId) && branchId > 0 ? branchId : null;
-}
-
 function parseCalendarTarget(value: string | undefined): "all" | number | null {
   if (value === "all") return "all";
   const employeeId = Number(value);
@@ -57,14 +57,20 @@ export default async function PayrollPage({
 }) {
   const params = await searchParams;
   const { month, year } = parseMonth(params.month);
-  const branchId = parseBranchId(params.branch);
-  const officeOnly = params.branch === "office";
   const standardDays = parseStandardDays(params.standardDays);
   const copy = messages.hr.payroll;
-  const [previewResult, branchesResult] = await Promise.all([
-    fetchPayrollPreview({ month, year, standardDays, branchId, officeOnly }),
-    fetchPayrollBranches(),
-  ]);
+  const branchesResult = await fetchPayrollBranches();
+  const branches = branchesResult.success ? (branchesResult.data ?? []) : [];
+  const branchScope = resolveHrBranchScope(params.branch, branches);
+  const branchId = getHrScopeBranchId(branchScope);
+  const officeOnly = branchScope === "office";
+  const previewResult = await fetchPayrollPreview({
+    month,
+    year,
+    standardDays,
+    branchId,
+    officeOnly,
+  });
 
   return (
     <AppPage width="xwide">
@@ -74,12 +80,14 @@ export default async function PayrollPage({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <HrScopeSelector
-              branches={
-                branchesResult.success ? (branchesResult.data ?? []) : []
-              }
-              value={params.branch}
+              branches={branches}
+              value={branchScope}
             />
-            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            >
               {copy.backToHr}
             </Button>
           </div>
@@ -88,7 +96,6 @@ export default async function PayrollPage({
       {previewResult.success && previewResult.data ? (
         <PayrollListClient
           preview={previewResult.data}
-          branches={branchesResult.success ? (branchesResult.data ?? []) : []}
           query={params.q ?? ""}
           selectedBranchId={branchId}
           officeOnly={officeOnly}
@@ -104,7 +111,9 @@ export default async function PayrollPage({
           <Button
             variant="outline"
             size="sm"
-            render={<Link href="/hr/payroll" />}
+            render={
+              <Link href={withHrBranchScope("/hr/payroll", branchScope)} />
+            }
           >
             {copy.live.retry}
           </Button>

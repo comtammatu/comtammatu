@@ -3,6 +3,7 @@ export type RosterEmployee = {
   fullName: string;
   employeeCode: string | null;
   positionLabel: string | null;
+  startDate: string | null;
 };
 
 export type RosterShift = {
@@ -18,12 +19,34 @@ export type RosterAssignment = {
   shiftId: number;
 };
 
+export const ROSTER_WEEKDAY_KEYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+export type RosterWeekdayKey = (typeof ROSTER_WEEKDAY_KEYS)[number];
+
+export type EmployeeWeeklySchedule = {
+  employeeId: number;
+  effectiveFrom: string;
+  shiftsByDay: Record<RosterWeekdayKey, number | null>;
+};
+
 export type RosterWeekData = {
   employees: RosterEmployee[];
   shifts: RosterShift[];
   assignments: RosterAssignment[];
+  weeklySchedules: EmployeeWeeklySchedule[];
 };
 
-export function rosterAssignmentKey(employeeId: number, workDate: string): string {
+export function rosterAssignmentKey(
+  employeeId: number,
+  workDate: string,
+): string {
   return `${employeeId}:${workDate}`;
 }

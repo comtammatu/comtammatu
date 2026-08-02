@@ -69,6 +69,24 @@ export const hr = {
       accounts: "Tài khoản & phân quyền",
       ariaLabel: "Tab hồ sơ và tài khoản nhân sự",
     },
+    quickConfig: {
+      todayShift: "Ca hôm nay",
+      shiftTasks: "Việc trong ca",
+      noPosition: "Chưa gán chức vụ",
+      office: "Văn phòng công ty",
+      noShift: "Chưa phân ca",
+      usePositionTasksTitle: "Dùng lại mẫu việc theo chức vụ?",
+      usePositionTasksDescription:
+        "Mẫu riêng sẽ ngừng áp dụng. Nhân viên sẽ nhận lại toàn bộ việc trong ca của chức vụ hiện tại.",
+      usePositionTasks: "Dùng mẫu chức vụ",
+      employeeTemplateShort: "Mẫu riêng",
+      positionTemplateShort: "Theo chức vụ",
+      updateFailed: "Không thể cập nhật nhân viên.",
+      positionUpdated: "Đã cập nhật chức vụ",
+      branchUpdated: "Đã cập nhật chi nhánh",
+      shiftUpdated: "Đã cập nhật ca hôm nay",
+      positionTasksRestored: "Đã dùng lại mẫu việc theo chức vụ",
+    },
     attendanceTabs: {
       today: "Hôm nay",
       approvals: "Cần duyệt",
@@ -101,8 +119,7 @@ export const hr = {
       },
       shifts: {
         title: "Khung ca làm",
-        description:
-          "Tạo khung ca để việc trong ca và bảng công bám đúng thời điểm.",
+        description: "Tạo khung giờ dùng chung để phân ca và tính giờ công.",
         hint: "Khung ca",
       },
       positionTasks: {
@@ -143,19 +160,13 @@ export const hr = {
       monthlyLeaveDaysDescription:
         "Mỗi tháng, số ngày nghỉ có lương được phân bổ trước từ hạn mức này.",
       allocationHint: "Ví dụ: nghỉ 3 ngày = 2 phép tháng + 1 phép năm.",
+      usingDefaults: "Đang dùng mặc định — chưa lưu",
+      persisted: "Đã lưu thành chính sách",
       save: "Lưu chính sách",
       saved: "Đã lưu ngày công và phép tháng.",
       saveFailed: "Không thể lưu ngày công và phép tháng.",
       loadFailed: "Không thể tải ngày công và phép tháng.",
       invalid: "Kiểm tra lại ngày công và phép tháng.",
-    },
-    shiftBoundaries: {
-      opening: "Ca mở",
-      closing: "Ca đóng",
-      openingAria: "Đánh dấu ca mở",
-      closingAria: "Đánh dấu ca đóng",
-      saved: "Đã cập nhật ca mở/đóng",
-      saveFailed: "Không thể cập nhật ca mở/đóng",
     },
     shiftsLoadFailed: "Không thể tải ca làm việc",
     shiftsLoading: "Đang tải...",
@@ -214,7 +225,6 @@ export const hr = {
       titleLabel: "Việc",
       titlePlaceholder: "Tên việc cần làm",
       kindLabel: "Loại việc",
-      applicabilityLabel: "Áp dụng",
       phaseLabel: "Thời điểm",
       requiredLabel: "Bắt buộc",
       doneDefinitionLabel: "Tiêu chí xong",
@@ -241,14 +251,9 @@ export const hr = {
         standard: "Việc thường",
         consumption_report: "Tiêu hao bếp trong ngày",
       },
-      applicabilityLabels: {
-        every_shift: "Mỗi ca",
-        opening: "Ca mở",
-        closing: "Ca đóng",
-      },
       phaseLabels: {
-        start_of_shift: "Đầu ca",
-        end_of_shift: "Cuối ca",
+        start_of_shift: "Khi bắt đầu ca",
+        end_of_shift: "Trước khi kết ca",
       },
       errors: {
         position_not_found: "Không tìm thấy vị trí.",
@@ -504,6 +509,9 @@ export const hr = {
       "Gán ca làm cho từng nhân viên theo ngày. Nhân viên chỉ chấm công khi đã được phân ca.",
     officeSiteLabel: "Văn phòng",
     siteFilterLabel: "Địa điểm",
+    scopeRequiredTitle: "Chọn một địa điểm để phân ca",
+    scopeRequiredDescription:
+      "Phân ca là thao tác theo địa điểm. Chọn Văn phòng công ty hoặc một chi nhánh ở bộ lọc Phạm vi.",
     weekLabel: "Tuần",
     previousWeek: "Tuần trước",
     nextWeek: "Tuần sau",
@@ -514,6 +522,7 @@ export const hr = {
     loadEmployeesFailed: "Không thể tải danh sách nhân viên.",
     loadShiftsFailed: "Không thể tải danh sách ca.",
     loadAssignmentsFailed: "Không thể tải phân ca tuần này.",
+    loadSchedulesFailed: "Không thể tải lịch làm cố định.",
     saveFailed: "Không thể lưu phân ca.",
     copyFailed: "Không thể sao chép phân ca.",
     unnamedEmployee: "Nhân viên",
@@ -522,5 +531,36 @@ export const hr = {
     emptyEmployeesDescription:
       "Không có nhân viên đang hoạt động tại địa điểm này.",
     columnEmployee: "Nhân viên",
+    schedule: "Lịch cố định",
+    scheduleDays: (count: number) =>
+      `Lịch cố định · ${formatCount(count)} ngày`,
+    scheduleTitle: (name: string) => `Lịch làm cố định · ${name}`,
+    scheduleDescription:
+      "Chọn ca lặp theo thứ. Phân ca riêng từng ngày vẫn được ưu tiên như ngoại lệ.",
+    effectiveFrom: "Áp dụng từ ngày",
+    employeeStartDate: (date: string) =>
+      `Ngày bắt đầu làm trong hồ sơ: ${date}.`,
+    missingEmployeeStartDate:
+      "Hồ sơ chưa có ngày bắt đầu; ngày áp dụng này sẽ là mốc sinh lịch.",
+    presetShift: "Ca dùng để chọn nhanh",
+    selectShift: "Chọn ca",
+    mondayToFriday: "Thứ 2–Thứ 6",
+    mondayToSaturday: "Thứ 2–Thứ 7",
+    allWeek: "Cả tuần",
+    dayOff: "Nghỉ",
+    saveSchedule: "Lưu lịch cố định",
+    saveScheduleSuccess: "Đã lưu lịch làm cố định.",
+    saveScheduleFailed: "Không thể lưu lịch làm cố định.",
+    clearSchedule: "Xóa lịch cố định",
+    clearScheduleTitle: "Xóa lịch làm cố định?",
+    clearScheduleDescription: (name: string) =>
+      `${name} sẽ chỉ còn các ngày đã phân ca riêng.`,
+    clearScheduleSuccess: "Đã xóa lịch làm cố định.",
+    cancel: "Hủy",
+    invalidEffectiveDate: "Ngày áp dụng không hợp lệ.",
+    selectAtLeastOneDay: "Chọn ít nhất một ngày làm trong tuần.",
+    scheduleBeforeEmployeeStart:
+      "Ngày áp dụng không được trước ngày bắt đầu làm trong hồ sơ.",
+    employeeNotFound: "Không tìm thấy nhân viên trong địa điểm này.",
   },
 } as const;

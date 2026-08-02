@@ -52,3 +52,15 @@ export interface ShiftRow {
   is_opening: boolean;
   is_closing: boolean;
 }
+
+export interface EmployeeShiftOption {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+}
+
+export interface EmployeeTodayShiftAssignment {
+  employee_id: number;
+  shift_id: number;
+}

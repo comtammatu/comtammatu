@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { BRANCH_VI, HR_VI } from "@comtammatu/shared/messages";
+import { HR_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -21,14 +21,13 @@ import { Search as IconSearch } from "lucide-react";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
-import type { BranchOption, PositionOption } from "./staff-table";
+import type { PositionOption } from "./staff-table";
 
 interface StaffFiltersProps {
-  branches: BranchOption[];
   positionOptions: PositionOption[];
 }
 
-export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
+export function StaffFilters({ positionOptions }: StaffFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
@@ -38,7 +37,6 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
   const hasActiveFilters = Boolean(
     query ||
     searchParams.get("position") ||
-    searchParams.get("branch") ||
     searchParams.get("status"),
   );
 
@@ -122,28 +120,6 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
           </Select>
 
           <Select
-            value={searchParams.get("branch") ?? "all"}
-            onValueChange={(v) => updateFilter("branch", v)}
-            disabled={isPending}
-          >
-            <SelectTrigger
-              size={controlSize}
-              className="w-45"
-              aria-label={BRANCH_VI.selectAll}
-            >
-              <SelectValue placeholder={BRANCH_VI.selectAll} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={b.id.toString()}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
             value={searchParams.get("status") ?? "all"}
             onValueChange={(v) => updateFilter("status", v)}
             disabled={isPending}
@@ -174,8 +150,11 @@ export function StaffFilters({ branches, positionOptions }: StaffFiltersProps) {
             size={controlSize}
             onClick={() => {
               setSearch("");
-              const params = new URLSearchParams();
+              const params = new URLSearchParams(searchParams.toString());
               params.set("view", "accounts");
+              params.delete("q");
+              params.delete("position");
+              params.delete("status");
               replaceParams(params);
             }}
             disabled={isPending}

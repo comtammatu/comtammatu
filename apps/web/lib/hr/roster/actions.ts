@@ -2,8 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
-import { addVNDateDays } from "@comtammatu/shared/time";
+import {
+  PERMISSION_KEYS,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
+import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { z } from "zod";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
@@ -13,18 +17,16 @@ import type {
   RosterShift,
   RosterWeekData,
 } from "./roster-model";
-import { getVNWeekDates } from "./week";
+import { ROSTER_WEEKDAY_KEYS } from "./roster-model";
+import { getVNWeekDates, getVNWeekStartMonday } from "./week";
 
-const ROSTER_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
+const ROSTER_ROLES: readonly StaffRole[] = STAFF_ROLES;
 
 const isoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ");
 
-const branchIdSchema = z.union([
-  z.coerce.number().int().positive(),
-  z.null(),
-]);
+const branchIdSchema = z.union([z.coerce.number().int().positive(), z.null()]);
 
 const assignmentSchema = z.object({
   employeeId: z.coerce.number().int().positive(),
@@ -47,8 +49,31 @@ const copyWeekSchema = z.object({
   targetWeekStart: isoDateSchema,
 });
 
-const SHIFT_SELECT =
-  "id, name, start_time, end_time, is_active";
+const setTodayAssignmentSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  branchId: branchIdSchema,
+  shiftId: z.coerce.number().int().positive().nullable(),
+});
+
+const weeklyScheduleSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  branchId: branchIdSchema,
+  effectiveFrom: isoDateSchema,
+  days: z
+    .array(
+      z.object({
+        weekday: z.coerce.number().int().min(1).max(7),
+        shiftId: z.coerce.number().int().positive(),
+      }),
+    )
+    .max(7)
+    .refine(
+      (days) => new Set(days.map((day) => day.weekday)).size === days.length,
+      "Ngày làm bị trùng",
+    ),
+});
+
+const SHIFT_SELECT = "id, name, start_time, end_time, is_active";
 
 function assertBranchManagerScope(
   claims: { user_role: StaffRole; branch_id: number | null },
@@ -91,7 +116,7 @@ async function loadRosterWeekData(
     .from("employees")
     .select(
       `
-        id, employee_code, is_active,
+        id, employee_code, start_date, is_active,
         profiles!inner (
           full_name, branch_id,
           positions ( label_vi )
@@ -114,19 +139,28 @@ async function loadRosterWeekData(
     .gte("work_date", weekStart)
     .lte("work_date", weekEnd);
 
-  const [employeesResult, shiftsResult, assignmentsResult] = await Promise.all([
-    employeesQuery,
-    readClient
-      .from("shifts")
-      .select(SHIFT_SELECT)
-      .eq("tenant_id", tenantId)
-      .is("branch_id", null)
-      .eq("is_active", true)
-      .order("start_time"),
-    branchId == null
-      ? assignmentsQuery.is("branch_id", null)
-      : assignmentsQuery.eq("branch_id", branchId),
-  ]);
+  const schedulesQuery = readClient
+    .from("employee_weekly_schedules" as never)
+    .select(
+      "employee_id, effective_from, monday_shift_id, tuesday_shift_id, wednesday_shift_id, thursday_shift_id, friday_shift_id, saturday_shift_id, sunday_shift_id",
+    )
+    .eq("tenant_id", tenantId);
+
+  const [employeesResult, shiftsResult, assignmentsResult, schedulesResult] =
+    await Promise.all([
+      employeesQuery,
+      readClient
+        .from("shifts")
+        .select(SHIFT_SELECT)
+        .eq("tenant_id", tenantId)
+        .is("branch_id", null)
+        .eq("is_active", true)
+        .order("start_time"),
+      branchId == null
+        ? assignmentsQuery.is("branch_id", null)
+        : assignmentsQuery.eq("branch_id", branchId),
+      schedulesQuery,
+    ]);
 
   if (employeesResult.error) {
     console.error(
@@ -149,10 +183,19 @@ async function loadRosterWeekData(
     );
     return { error: messages.hr.roster.loadAssignmentsFailed };
   }
+  if (schedulesResult.error) {
+    console.error(
+      "[hr/roster/actions:fetchRosterWeek] schedules error:",
+      schedulesResult.error,
+    );
+    return { error: messages.hr.roster.loadSchedulesFailed };
+  }
 
   const employees: RosterEmployee[] = (employeesResult.data ?? []).flatMap(
     (row) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      const profile = Array.isArray(row.profiles)
+        ? row.profiles[0]
+        : row.profiles;
       if (!profile) return [];
       const position = Array.isArray(profile.positions)
         ? profile.positions[0]
@@ -163,6 +206,7 @@ async function loadRosterWeekData(
           fullName: profile.full_name ?? messages.hr.roster.unnamedEmployee,
           employeeCode: row.employee_code,
           positionLabel: position?.label_vi ?? null,
+          startDate: row.start_date,
         },
       ];
     },
@@ -174,9 +218,10 @@ async function loadRosterWeekData(
       const record = row as {
         employee_id: number;
         work_date: string;
-        shift_id: number;
+        shift_id: number | null;
       };
-      if (!weekDateSet.has(record.work_date)) return [];
+      if (!weekDateSet.has(record.work_date) || record.shift_id == null)
+        return [];
       return [
         {
           employeeId: record.employee_id,
@@ -195,6 +240,27 @@ async function loadRosterWeekData(
     employees,
     shifts: (shiftsResult.data ?? []).map(mapShiftRow),
     assignments,
+    weeklySchedules: (schedulesResult.data ?? []).flatMap((row) => {
+      const schedule = row as Record<string, number | string | null>;
+      const employeeId = Number(schedule.employee_id);
+      if (!employees.some((employee) => employee.employeeId === employeeId)) {
+        return [];
+      }
+      return [
+        {
+          employeeId,
+          effectiveFrom: String(schedule.effective_from),
+          shiftsByDay: Object.fromEntries(
+            ROSTER_WEEKDAY_KEYS.map((day) => [
+              day,
+              schedule[`${day}_shift_id`] == null
+                ? null
+                : Number(schedule[`${day}_shift_id`]),
+            ]),
+          ) as RosterWeekData["weeklySchedules"][number]["shiftsByDay"],
+        },
+      ];
+    }),
   };
 }
 
@@ -269,6 +335,146 @@ export const reconcileShiftAssignmentsWeek = withAction(
   },
 );
 
+export const setEmployeeTodayShiftAssignment = withAction(
+  {
+    roles: ROSTER_ROLES,
+    schema: setTodayAssignmentSchema,
+    permission: PERMISSION_KEYS.HR_ASSIGN_SHIFT,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const scopeError = assertBranchManagerScope(claims, data.branchId);
+    if (scopeError) return { success: false, error: scopeError };
+
+    const today = getVNDateString();
+    const weekStart = getVNWeekStartMonday(today);
+    const service = createServiceClient();
+    const [{ data: employee }, { data: attendance }] = await Promise.all([
+      service
+        .from("employees")
+        .select("id, profiles!inner(branch_id)")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("id", data.employeeId)
+        .maybeSingle(),
+      service
+        .from("attendance_records")
+        .select("id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("employee_id", data.employeeId)
+        .eq("date", today)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    if (!employee || employee.profiles?.branch_id !== data.branchId) {
+      return { success: false, error: messages.common.forbidden };
+    }
+    if (attendance) {
+      return {
+        success: false,
+        error: "Không thể đổi ca sau khi nhân viên đã chấm công hôm nay.",
+      };
+    }
+
+    const current = await loadRosterWeekData(
+      claims.tenant_id,
+      data.branchId,
+      weekStart,
+    );
+    if ("error" in current) {
+      return { success: false, error: current.error };
+    }
+    if (
+      data.shiftId != null &&
+      !current.shifts.some((shift) => shift.id === data.shiftId)
+    ) {
+      return { success: false, error: "Khung ca không hợp lệ." };
+    }
+
+    const assignments = current.assignments.filter(
+      (assignment) =>
+        assignment.employeeId !== data.employeeId ||
+        assignment.workDate !== today,
+    );
+    if (data.shiftId != null) {
+      assignments.push({
+        employeeId: data.employeeId,
+        workDate: today,
+        shiftId: data.shiftId,
+      });
+    }
+
+    const { error } = await supabase.rpc(
+      "reconcile_shift_assignments_week" as never,
+      {
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: data.branchId,
+        p_week_start: weekStart,
+        p_assignments: assignments.map((assignment) => ({
+          employee_id: assignment.employeeId,
+          work_date: assignment.workDate,
+          shift_id: assignment.shiftId,
+        })),
+      } as never,
+    );
+    if (error) {
+      console.error(
+        "[hr/roster/actions:setEmployeeTodayShiftAssignment] RPC error:",
+        error,
+      );
+      return { success: false, error: messages.hr.roster.saveFailed };
+    }
+
+    revalidateRosterPaths(data.branchId);
+    revalidatePath("/hr");
+    return { success: true, data: null };
+  },
+);
+
+export const saveEmployeeWeeklySchedule = withAction(
+  {
+    roles: ROSTER_ROLES,
+    schema: weeklyScheduleSchema,
+    permission: PERMISSION_KEYS.HR_ASSIGN_SHIFT,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const scopeError = assertBranchManagerScope(claims, data.branchId);
+    if (scopeError) return { success: false, error: scopeError };
+
+    const { error } = await supabase.rpc(
+      "save_employee_weekly_schedule" as never,
+      {
+        p_employee_id: data.employeeId,
+        p_effective_from: data.effectiveFrom,
+        p_days: data.days.map((day) => ({
+          weekday: day.weekday,
+          shift_id: day.shiftId,
+        })),
+      } as never,
+    );
+    if (error) {
+      console.error(
+        "[hr/roster/actions:saveEmployeeWeeklySchedule] RPC error:",
+        error,
+      );
+      const knownError = error.message.includes(
+        "schedule_before_employee_start",
+      )
+        ? messages.hr.roster.scheduleBeforeEmployeeStart
+        : error.message.includes("employee_not_found")
+          ? messages.hr.roster.employeeNotFound
+          : messages.hr.roster.saveScheduleFailed;
+      return { success: false, error: knownError };
+    }
+
+    revalidateRosterPaths(data.branchId);
+    revalidatePath("/hr");
+    return { success: true, data: null };
+  },
+);
+
 export const copyRosterWeek = withAction(
   {
     roles: ROSTER_ROLES,
@@ -308,7 +514,7 @@ export async function loadRosterWeekForPage(
 ): Promise<RosterWeekData> {
   const payload = await loadRosterWeekData(tenantId, branchId, weekStart);
   if ("error" in payload) {
-    return { employees: [], shifts: [], assignments: [] };
+    return { employees: [], shifts: [], assignments: [], weeklySchedules: [] };
   }
   return payload;
 }

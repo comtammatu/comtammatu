@@ -348,7 +348,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Nên hiển thị:** Cột chế độ lương tiếng Việt; khấu trừ nghỉ không lương; link hồ sơ thiếu → `/hr?view=profile&salary=missing`; link công → `/hr/attendance?tab=timesheet`.
 - **KHÔNG hiển thị:** Chấm công giúp NV; đổi quyền; raw technical keys; section preflight “sẵn sàng” khi không blocker.
 
-### 2.8c. Quy tắc — `/hr/setup`
+### 2.8c. Thiết lập nhân sự — `/hr/setup`
 
 - **Archetype:** `SETTINGS-PANEL` + tab URL (`tab=leave|shifts|tasks`).
 - **Đối tượng:** `owner`.
@@ -356,8 +356,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Mục tiêu Người dùng:** Chọn đúng mục cần chỉnh; không cuộn qua checklist nhiều section.
 - **Luồng thao tác:**
   1. Tab **Phép** — ngày công chuẩn & phép tháng.
-  2. Tab **Ca** — khung ca mở/đóng.
-  3. Tab **Việc trong ca** — việc theo vị trí (`position_shift_tasks`).
+  2. Tab **Khung ca làm** — tên ca, giờ bắt đầu và giờ kết thúc.
+  3. Tab **Việc trong ca** — việc theo chức danh hoặc mẫu riêng nhân viên (`position_shift_tasks`).
 - **Nên hiển thị:** Preview việc NV sẽ thấy; cảnh báo tắt ca đang được gán.
 - **KHÔNG hiển thị:** Stack nhiều section; phân ca tuần (đã chuyển `/hr/attendance?tab=roster` và `/br/*/shift/roster`); bảng lương.
 

@@ -25,11 +25,11 @@ test("employee list hides suspended staff until explicitly shown", () => {
   assert.match(source, /<AppToolbar[\s\S]*filters=\{/);
   assert.doesNotMatch(source.slice(source.indexOf("<DataTable")), /\bfilters=/);
   assert.match(source, /setShowInactive\(\(current\) => !current\)/);
-  assert.match(source, /const \[branchFilter, setBranchFilter\]/);
+  assert.doesNotMatch(source, /branchFilter|setBranchFilter/);
   assert.match(source, /const \[positionFilter, setPositionFilter\]/);
   assert.match(source, /const \[salaryFilter, setSalaryFilter\]/);
   assert.match(source, /const \[contractTypeFilter, setContractTypeFilter\]/);
-  assert.match(source, /matchesBranch/);
+  assert.doesNotMatch(source, /matchesBranch/);
   assert.match(source, /matchesPosition/);
   assert.match(source, /matchesSalary/);
   assert.match(source, /matchesContractType/);

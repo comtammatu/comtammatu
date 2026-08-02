@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Field,
   FieldDescription,
@@ -26,9 +27,16 @@ function toFormValues(policy: HrLeavePolicy): HrLeavePolicyValues {
   };
 }
 
-export function LeavePolicyForm({ policy }: { policy: HrLeavePolicy }) {
+export function LeavePolicyForm({
+  policy,
+  initiallyPersisted,
+}: {
+  policy: HrLeavePolicy;
+  initiallyPersisted: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const [values, setValues] = useState(() => toFormValues(policy));
+  const [isPersisted, setIsPersisted] = useState(initiallyPersisted);
   const copy = messages.hr.client.leavePolicy;
 
   function updateValue(key: keyof HrLeavePolicy, value: string) {
@@ -50,6 +58,7 @@ export function LeavePolicyForm({ policy }: { policy: HrLeavePolicy }) {
         return;
       }
       setValues(toFormValues(parsed.data));
+      setIsPersisted(true);
       toast.success(copy.saved);
     });
   }
@@ -88,7 +97,12 @@ export function LeavePolicyForm({ policy }: { policy: HrLeavePolicy }) {
           </FieldDescription>
         </Field>
       </div>
-      <p className="text-sm text-muted-foreground">{copy.allocationHint}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={isPersisted ? "success" : "warning"}>
+          {isPersisted ? copy.persisted : copy.usingDefaults}
+        </Badge>
+        <p className="text-sm text-muted-foreground">{copy.allocationHint}</p>
+      </div>
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending ? <Spinner className="mr-2" /> : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   Key as IconKey,
@@ -30,6 +31,10 @@ import {
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 export interface BranchOption {
   id: number;
   name: string;
@@ -135,6 +140,7 @@ export function StaffTable({
   positionOptions,
   hasActiveFilters,
 }: StaffTableProps) {
+  const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
   const staffCopy = messages.owner.staffPage;
@@ -165,7 +171,10 @@ export function StaffTable({
       header: STAFF_VI.long,
       render: (member) => (
         <Link
-          href={`/hr/staff/${member.id}/permissions`}
+          href={withHrBranchScope(
+            `/hr/staff/${member.id}/permissions`,
+            branchScope,
+          )}
           className="font-medium hover:underline"
         >
           {member.full_name}
@@ -205,7 +214,10 @@ export function StaffTable({
         const status = member.permissionStatus ?? "none";
         return (
           <Link
-            href={`/hr/staff/${member.id}/permissions?tab=permissions`}
+            href={withHrBranchScope(
+              `/hr/staff/${member.id}/permissions?tab=permissions`,
+              branchScope,
+            )}
             className="inline-flex flex-col gap-1 hover:underline"
           >
             <Badge
@@ -262,7 +274,10 @@ export function StaffTable({
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
                   <Link
-                    href={`/hr/staff/${member.id}/permissions`}
+                    href={withHrBranchScope(
+                      `/hr/staff/${member.id}/permissions`,
+                      branchScope,
+                    )}
                     className="font-medium hover:underline"
                   >
                     {member.full_name}
@@ -292,7 +307,10 @@ export function StaffTable({
                 size="touch"
                 render={
                   <Link
-                    href={`/hr/staff/${member.id}/permissions?tab=permissions`}
+                    href={withHrBranchScope(
+                      `/hr/staff/${member.id}/permissions?tab=permissions`,
+                      branchScope,
+                    )}
                   />
                 }
               >

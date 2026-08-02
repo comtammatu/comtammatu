@@ -64,12 +64,15 @@ import {
   type PayrollPreview,
   type PayrollPreviewEntry,
 } from "../payroll-actions";
+import {
+  type HrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 const payrollCopy = messages.hr.payroll;
 const copy = payrollCopy.live;
 const attendanceCopy = messages.employee.hrAttendance;
 const scheduleCopy = messages.employee.schedule;
-const ALL_BRANCHES = "all";
 const ALL_SALARY_STATUSES = "all";
 const CALCULABLE_SALARY_STATUS = "calculable";
 const MISSING_SALARY_STATUS = "missing";
@@ -98,11 +101,8 @@ const adjustmentSchema = z.object({
 
 type AdjustmentFormValues = z.infer<typeof adjustmentSchema>;
 
-type BranchOption = { id: number; name: string };
-
 interface Props {
   preview: PayrollPreview;
-  branches: BranchOption[];
   query: string;
   selectedBranchId: number | null;
   officeOnly: boolean;
@@ -207,7 +207,6 @@ function preflightBlockerContent(blocker: PayrollPreflightBlocker): {
 
 export function PayrollListClient({
   preview,
-  branches,
   query,
   selectedBranchId,
   officeOnly,
@@ -225,6 +224,11 @@ export function PayrollListClient({
   const [editingAdjustment, setEditingAdjustment] =
     useState<PayrollAdjustment | null>(null);
   const [isSnapshotting, startSnapshot] = useTransition();
+  const branchScope: HrBranchScope = officeOnly
+    ? "office"
+    : selectedBranchId != null
+      ? `${selectedBranchId}`
+      : "all";
 
   useEffect(() => setSearch(query), [query]);
   useEffect(
@@ -333,8 +337,6 @@ export function PayrollListClient({
 
   function replaceFilters(nextValues: {
     month?: string;
-    branchId?: number | null;
-    branchScope?: string;
     salaryStatus?: SalaryStatusFilter;
     standardDays?: string;
     calendarTarget?: "all" | number | null;
@@ -348,13 +350,6 @@ export function PayrollListClient({
       "standardDays",
       nextValues.standardDays ?? String(preview.standardDays),
     );
-    const branchScope =
-      nextValues.branchScope ??
-      (officeOnly
-        ? "office"
-        : selectedBranchId != null
-          ? String(selectedBranchId)
-          : "all");
     params.set("branch", branchScope);
     const nextQuery = search;
     if (nextQuery.trim()) params.set("q", nextQuery.trim());
@@ -465,11 +460,15 @@ export function PayrollListClient({
 
   function openPreflightBlocker(blocker: PayrollPreflightBlocker) {
     if (blocker.kind === "missing_salary") {
-      router.push("/hr?view=profile&salary=missing");
+      router.push(
+        withHrBranchScope("/hr?view=profile&salary=missing", branchScope),
+      );
       return;
     }
     if (blocker.kind === "pending_leave") {
-      router.push("/hr/attendance?tab=approvals");
+      router.push(
+        withHrBranchScope("/hr/attendance?tab=approvals", branchScope),
+      );
       return;
     }
 
@@ -481,6 +480,8 @@ export function PayrollListClient({
     });
     if (blocker.branchId != null) {
       params.set("branch", String(blocker.branchId));
+    } else {
+      params.set("branch", branchScope);
     }
     router.push(`/hr/attendance?${params.toString()}`);
   }
@@ -580,7 +581,7 @@ export function PayrollListClient({
             size="sm"
             onClick={(event) => {
               event.stopPropagation();
-              router.push("/hr");
+              router.push(withHrBranchScope("/hr", branchScope));
             }}
           >
             {copy.missingSalaryAction}
@@ -619,37 +620,6 @@ export function PayrollListClient({
               aria-label={copy.month}
               className="w-full sm:w-36"
             />
-            <Select
-              value={
-                officeOnly
-                  ? "office"
-                  : selectedBranchId != null
-                    ? String(selectedBranchId)
-                    : ALL_BRANCHES
-              }
-              onValueChange={(value) =>
-                replaceFilters({
-                  branchScope: value,
-                })
-              }
-            >
-              <SelectTrigger
-                size={controlSize}
-                className="w-full sm:w-44"
-                aria-label={copy.branch}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_BRANCHES}>{copy.allBranches}</SelectItem>
-                <SelectItem value="office">{copy.office}</SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select
               value={salaryStatus}
               onValueChange={(value) =>
@@ -843,7 +813,9 @@ export function PayrollListClient({
                     <Button
                       variant="ghost"
                       size="touch"
-                      onClick={() => router.push("/hr")}
+                      onClick={() =>
+                        router.push(withHrBranchScope("/hr", branchScope))
+                      }
                     >
                       {copy.missingSalaryAction}
                     </Button>

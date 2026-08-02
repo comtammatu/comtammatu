@@ -10,6 +10,7 @@ interface UrlTabsProps extends Omit<TabsProps, "value" | "onValueChange"> {
   paramKey?: string;
   defaultValue: string;
   validValues: readonly string[];
+  queryKeysByValue?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -21,6 +22,7 @@ export function UrlTabs({
   paramKey = "tab",
   defaultValue,
   validValues,
+  queryKeysByValue,
   children,
   ...props
 }: UrlTabsProps) {
@@ -39,12 +41,26 @@ export function UrlTabs({
       const params = new URLSearchParams(searchParams.toString());
       if (next === defaultValue) params.delete(paramKey);
       else params.set(paramKey, next);
+      const ownedKeys = queryKeysByValue?.[next];
+      if (ownedKeys) {
+        const allowed = new Set([paramKey, ...ownedKeys]);
+        for (const key of [...params.keys()]) {
+          if (!allowed.has(key)) params.delete(key);
+        }
+      }
       const q = params.toString();
       startTransition(() => {
         router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
       });
     },
-    [pathname, router, searchParams, paramKey, defaultValue],
+    [
+      pathname,
+      router,
+      searchParams,
+      paramKey,
+      defaultValue,
+      queryKeysByValue,
+    ],
   );
 
   return (

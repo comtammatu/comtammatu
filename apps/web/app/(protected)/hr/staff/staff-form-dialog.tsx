@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
@@ -16,6 +16,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import { createStaff, updateStaff } from "./actions";
 import type { BranchOption, PositionOption, StaffRow } from "./staff-table";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 const NO_BRANCH = "";
 
@@ -78,6 +82,7 @@ export function StaffFormDialog({
 }: StaffFormDialogProps) {
   const isEdit = !!staff;
   const router = useRouter();
+  const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const schema = useMemo(() => staffSchemaForMode(isEdit), [isEdit]);
   const defaultValues = useMemo(() => toFormValues(staff), [staff]);
   const copy = messages.owner.staffForm;
@@ -125,7 +130,12 @@ export function StaffFormDialog({
           ?.staffId;
         if (!isEdit && staffId) {
           toast.success(copy.createContinuePermissions);
-          router.push(`/hr/staff/${staffId}/permissions?tab=permissions`);
+          router.push(
+            withHrBranchScope(
+              `/hr/staff/${staffId}/permissions?tab=permissions`,
+              branchScope,
+            ),
+          );
           return;
         }
         toast.success(isEdit ? copy.editSuccess : copy.createSuccess);

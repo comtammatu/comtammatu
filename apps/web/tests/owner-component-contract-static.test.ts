@@ -411,6 +411,11 @@ test("UI component audit command stays wired for route-family drill-down", () =>
   ]) {
     assert.match(auditScript, new RegExp(marker));
   }
+  assert.ok(
+    auditScript.includes(
+      '["self-service", (file) => file.includes("/(protected)/me/")]',
+    ),
+  );
   assert.match(auditScript, /ADAPTER_IMPLEMENTATIONS\.has\(file\.file\)/);
   assert.match(
     auditScript,

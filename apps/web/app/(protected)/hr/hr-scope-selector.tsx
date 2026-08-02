@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Building2 as IconBuilding } from "lucide-react";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import type { BranchOption } from "./_types";
 import { messages } from "@lib/messages";
+import { resolveHrBranchScope } from "@/lib/hr-scope";
 
 type Props = {
   branches: BranchOption[];
@@ -21,14 +23,16 @@ export function HrScopeSelector({ branches, value }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const numericValue = Number(value);
-  const current =
-    value === "office" || value === "all"
-      ? value
-      : branches.some((branch) => branch.id === numericValue)
-        ? String(numericValue)
-        : "all";
+  const current = resolveHrBranchScope(value, branches);
   const copy = messages.hr.client.scope;
+
+  useEffect(() => {
+    const requested = searchParams.get("branch");
+    if (requested == null || requested === current) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("branch", current);
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }, [current, pathname, router, searchParams]);
 
   return (
     <div className="flex min-w-56 items-center gap-2">
@@ -42,6 +46,7 @@ export function HrScopeSelector({ branches, value }: Props) {
           next.set("branch", nextValue);
           next.delete("employee");
           next.delete("day");
+          next.delete("calendar");
           router.replace(`${pathname}?${next.toString()}`, { scroll: false });
         }}
       >

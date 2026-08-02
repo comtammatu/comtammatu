@@ -25,6 +25,7 @@ import {
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
 import { calculateAttendanceWorkHours } from "./attendance-summary";
+import { getHrScopeBranchId, resolveHrBranchScope } from "@/lib/hr-scope";
 
 const HR_ROLES: readonly StaffRole[] = STAFF_ROLES;
 const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = STAFF_ROLES;
@@ -272,18 +273,20 @@ export async function fetchEmployees(
       return { success: true, data: [] };
     }
     query = query.eq("profiles.branch_id", branchManagerBranchId);
-  } else if (branchScope === "office") {
-    query = query.is("profiles.branch_id", null);
   } else {
-    const requestedBranchId = Number(branchScope);
-    if (Number.isSafeInteger(requestedBranchId) && requestedBranchId > 0) {
+    const normalizedScope = resolveHrBranchScope(branchScope);
+    const requestedBranchId = getHrScopeBranchId(normalizedScope);
+    if (normalizedScope === "office") {
+      query = query.is("profiles.branch_id", null);
+    } else if (requestedBranchId != null) {
       const { data: branch } = await baseCtx.supabase
         .from("branches")
         .select("id")
         .eq("tenant_id", claims.tenant_id)
         .eq("id", requestedBranchId)
         .maybeSingle();
-      if (branch) query = query.eq("profiles.branch_id", branch.id);
+      if (!branch) return { success: true, data: [] };
+      query = query.eq("profiles.branch_id", branch.id);
     }
   }
 
@@ -799,12 +802,6 @@ const deactivateShiftSchema = z.object({
   shiftId: z.coerce.number().int().positive(),
 });
 
-const setShiftBoundariesSchema = z.object({
-  shiftId: z.coerce.number().int().positive(),
-  isOpening: z.boolean(),
-  isClosing: z.boolean(),
-});
-
 const SHIFT_SELECT =
   "id, name, start_time, end_time, is_active, is_opening, is_closing";
 
@@ -930,44 +927,14 @@ export const deactivateShift = withAction(
           error,
         );
       }
-      return { success: false, error: "Không thể ngưng dùng ca." };
-    }
-
-    revalidateHrPaths();
-    return { success: true, data: result };
-  },
-);
-
-// Explicit open/close flags (D050): the clock-in RPC reads these to decide
-// which opening/closing position tasks to snapshot. Owner-only, global shift.
-export const setShiftBoundaries = withAction(
-  {
-    roles: HR_ROLES,
-    schema: setShiftBoundariesSchema,
-    permission: PERMISSION_KEYS.HR_MANAGE_SHIFT_CATALOG,
-  },
-  async (data, { claims }) => {
-    const { data: result, error } = await createServiceClient()
-      .from("shifts")
-      .update({
-        is_opening: data.isOpening,
-        is_closing: data.isClosing,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.shiftId)
-      .eq("tenant_id", claims.tenant_id)
-      .is("branch_id", null)
-      .select(SHIFT_SELECT)
-      .maybeSingle();
-
-    if (error || !result) {
-      if (error) {
-        console.error(
-          "[hr/actions:setShiftBoundaries] Update shift boundaries error:",
-          error,
-        );
+      if (error?.message.includes("shift_used_by_weekly_schedule")) {
+        return {
+          success: false,
+          error:
+            "Ca đang được dùng trong lịch cố định. Hãy đổi lịch trước khi ngưng dùng ca.",
+        };
       }
-      return { success: false, error: "Không thể cập nhật ca mở/đóng." };
+      return { success: false, error: "Không thể ngưng dùng ca." };
     }
 
     revalidateHrPaths();

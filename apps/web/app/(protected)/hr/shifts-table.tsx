@@ -10,11 +10,9 @@ import {
   PowerOff as IconPowerOff,
 } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-
-import { Switch } from "@comtammatu/ui/components/switch";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Drawer,
   DrawerContent,
@@ -24,7 +22,7 @@ import {
 } from "@comtammatu/ui/components/drawer";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { ShiftFormDialog } from "./shift-form-dialog";
-import { deactivateShift, setShiftBoundaries } from "./actions";
+import { deactivateShift } from "./actions";
 import type { ShiftRow } from "./_types";
 import {
   DataTable,
@@ -35,8 +33,12 @@ import { useLongPress } from "@lib/hooks/use-long-press";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import {
+  formatShiftDuration,
+  getShiftDurationMinutes,
+  isUnusualShiftDuration,
+} from "@lib/hr/shift-duration";
 
-const boundaryCopy = messages.hr.client.shiftBoundaries;
 const shiftsCopy = messages.hr.client;
 
 interface ShiftsTableProps {
@@ -79,6 +81,16 @@ function MobileShiftCard({
         <p className="text-xs text-muted-foreground font-mono">
           {shift.start_time} – {shift.end_time}
         </p>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {formatShiftDuration(shift.start_time, shift.end_time)}
+          </span>
+          {isUnusualShiftDuration(
+            getShiftDurationMinutes(shift.start_time, shift.end_time),
+          ) ? (
+            <Badge variant="warning">Kiểm tra giờ</Badge>
+          ) : null}
+        </div>
       </div>
     </InteractiveCard>
   );
@@ -123,59 +135,6 @@ export function ShiftsTable({
       is_active: false,
     });
     setDrawerShift(null);
-  }
-
-  async function handleBoundaryChange(
-    shift: ShiftRow,
-    patch: { isOpening?: boolean; isClosing?: boolean },
-  ) {
-    const next: ShiftRow = {
-      ...shift,
-      is_opening: patch.isOpening ?? shift.is_opening,
-      is_closing: patch.isClosing ?? shift.is_closing,
-    };
-    onShiftSaved(next);
-    if (drawerShift?.id === shift.id) setDrawerShift(next);
-    const result = await setShiftBoundaries({
-      shiftId: shift.id,
-      isOpening: next.is_opening,
-      isClosing: next.is_closing,
-    });
-    if (!result.success) {
-      onShiftSaved(shift);
-      if (drawerShift?.id === shift.id) setDrawerShift(shift);
-      toast.error(result.error ?? boundaryCopy.saveFailed);
-      return;
-    }
-    toast.success(boundaryCopy.saved);
-  }
-
-  function renderBoundaryToggle(
-    shift: ShiftRow,
-    field: "opening" | "closing",
-  ) {
-    const checked = field === "opening" ? shift.is_opening : shift.is_closing;
-    const switchId = `boundary-${shift.id}-${field}`;
-    return (
-      <Switch
-        id={switchId}
-        checked={checked}
-        disabled={!canManage || isDeactivating}
-        aria-label={
-          field === "opening"
-            ? boundaryCopy.openingAria
-            : boundaryCopy.closingAria
-        }
-        onCheckedChange={(value) =>
-          void handleBoundaryChange(
-            shift,
-            field === "opening"
-              ? { isOpening: value === true }
-              : { isClosing: value === true },
-          )
-        }
-      />
-    );
   }
 
   function renderShiftActions(shift: ShiftRow) {
@@ -226,14 +185,22 @@ export function ShiftsTable({
       render: (shift) => shift.end_time,
     },
     {
-      key: "is_opening",
-      header: boundaryCopy.opening,
-      render: (shift) => renderBoundaryToggle(shift, "opening"),
-    },
-    {
-      key: "is_closing",
-      header: boundaryCopy.closing,
-      render: (shift) => renderBoundaryToggle(shift, "closing"),
+      key: "duration",
+      header: "Thời lượng",
+      render: (shift) => {
+        const duration = getShiftDurationMinutes(
+          shift.start_time,
+          shift.end_time,
+        );
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{formatShiftDuration(shift.start_time, shift.end_time)}</span>
+            {isUnusualShiftDuration(duration) ? (
+              <Badge variant="warning">Kiểm tra giờ</Badge>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -288,14 +255,21 @@ export function ShiftsTable({
         )}
       />
 
-      <Drawer open={!!drawerShift} onOpenChange={(open) => !open && setDrawerShift(null)}>
+      <Drawer
+        open={!!drawerShift}
+        onOpenChange={(open) => !open && setDrawerShift(null)}
+      >
         <DrawerContent>
           {drawerShift && (
             <>
               <DrawerHeader>
                 <DrawerTitle>{drawerShift.name}</DrawerTitle>
                 <DrawerDescription>
-                  {drawerShift.start_time} – {drawerShift.end_time}
+                  {drawerShift.start_time} – {drawerShift.end_time} ·{" "}
+                  {formatShiftDuration(
+                    drawerShift.start_time,
+                    drawerShift.end_time,
+                  )}
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex flex-col gap-4 p-4">
@@ -304,22 +278,6 @@ export function ShiftsTable({
                   value={drawerShift.is_active ? "active" : "inactive"}
                   className="w-fit"
                 />
-
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={`boundary-${drawerShift.id}-opening`} className="text-sm font-normal">
-                      {boundaryCopy.opening}
-                    </Label>
-                    {renderBoundaryToggle(drawerShift, "opening")}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor={`boundary-${drawerShift.id}-closing`} className="text-sm font-normal">
-                      {boundaryCopy.closing}
-                    </Label>
-                    {renderBoundaryToggle(drawerShift, "closing")}
-                  </div>
-                </div>
-
                 {canManage && (
                   <div className="flex gap-2">
                     <Button

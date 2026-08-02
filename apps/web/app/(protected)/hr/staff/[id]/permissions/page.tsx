@@ -12,15 +12,22 @@ import {
   type AccessRole,
   type RoleBinding,
 } from "./role-bindings-client";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 const STAFF_ROLES = MODULE_ACL.staff.allowedRoles;
 
 export default async function StaffPermissionsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branch?: string }>;
 }) {
   const { id } = await params;
+  const branchScope = resolveHrBranchScope((await searchParams).branch);
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.AUTH_BINDING_READ,
@@ -98,7 +105,14 @@ export default async function StaffPermissionsPage({
             variant="ghost"
             size="sm"
             className="-ml-3"
-            render={<Link href="/hr?view=accounts" />}
+            render={
+              <Link
+                href={withHrBranchScope(
+                  "/hr?view=accounts",
+                  branchScope,
+                )}
+              />
+            }
           >
             <ArrowLeft className="mr-1 size-4" />
             Về danh sách tài khoản

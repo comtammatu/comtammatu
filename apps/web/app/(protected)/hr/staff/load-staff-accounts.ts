@@ -7,6 +7,10 @@ import type {
   PermissionGrantStatus,
   StaffRow,
 } from "./staff-table";
+import {
+  getHrScopeBranchId,
+  resolveHrBranchScope,
+} from "@/lib/hr-scope";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -65,16 +69,12 @@ export async function loadStaffAccountsData(
     .order("full_name")
     .limit(500);
 
-  if (params.branch === "office") {
+  const branchScope = resolveHrBranchScope(params.branch, branches ?? []);
+  const branchId = getHrScopeBranchId(branchScope);
+  if (branchScope === "office") {
     query = query.is("branch_id", null);
-  } else if (params.branch && params.branch !== "all") {
-    const requestedBranchId = Number(params.branch);
-    if (
-      Number.isSafeInteger(requestedBranchId) &&
-      (branches ?? []).some((branch) => branch.id === requestedBranchId)
-    ) {
-      query = query.eq("branch_id", requestedBranchId);
-    }
+  } else if (branchId != null) {
+    query = query.eq("branch_id", branchId);
   }
   if (params.status === "active") {
     query = query.eq("is_active", true);
@@ -187,7 +187,7 @@ export async function loadStaffAccountsData(
     positionOptions,
     permissionStatusByUserId,
     hasActiveFilters: Boolean(
-      params.q || params.position || params.branch || params.status,
+      params.q || params.position || params.status,
     ),
   };
 }

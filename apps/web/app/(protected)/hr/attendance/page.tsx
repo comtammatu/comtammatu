@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
@@ -13,6 +19,11 @@ import type { BranchOption } from "../_types";
 import { loadOwnerRosterPanelData } from "@lib/hr/roster/load-owner-roster-data";
 import { RosterWeekClient } from "@lib/hr/roster/roster-week-client";
 import { HrScopeSelector } from "../hr-scope-selector";
+import {
+  getHrScopeBranchId,
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 type AttendanceSearchParams = {
   branch?: string;
@@ -53,10 +64,7 @@ function resolveCalendarScope(value: string | undefined) {
   return value === "attention" ? "attention" : "all";
 }
 
-function resolveTab(
-  value: string | undefined,
-  pendingApprovals: number,
-): AttendanceTab {
+function resolveTab(value: string | undefined): AttendanceTab {
   if (value === "leave" || value === "schedule") return "approvals";
   if (value === "attendance") return "timesheet";
   if (
@@ -67,7 +75,7 @@ function resolveTab(
   ) {
     return value;
   }
-  return pendingApprovals > 0 ? "approvals" : "today";
+  return "today";
 }
 
 export default async function HrAttendancePage({
@@ -77,31 +85,13 @@ export default async function HrAttendancePage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const [
-    { data },
-    leaveCountResult,
-    checkoutCountResult,
-    canForceClose,
-    canCorrect,
-  ] = await Promise.all([
+  const [{ data }, canForceClose, canCorrect] = await Promise.all([
     supabase
       .from("branches")
       .select("id, name, branch_kind")
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name"),
-    supabase
-      .from("leave_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("status", "pending"),
-    supabase
-      .from("attendance_records")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .not("checkout_requested_at", "is", null)
-      .is("checkout_approved_at", null)
-      .is("check_out", null),
     probePermission(
       { supabase, claims },
       PERMISSION_KEYS.HR_FORCE_CLOSE_ATTENDANCE,
@@ -114,35 +104,65 @@ export default async function HrAttendancePage({
     ),
   ]);
   const branches = (data ?? []) as BranchOption[];
+  const branchScope = resolveHrBranchScope(params.branch, branches);
+  const branchId = getHrScopeBranchId(branchScope);
+  const legacyTab =
+    params.tab === "attendance"
+      ? "timesheet"
+      : params.tab === "leave" || params.tab === "schedule"
+        ? "approvals"
+        : null;
+  if (legacyTab) {
+    const next = new URLSearchParams({ branch: branchScope, tab: legacyTab });
+    if (legacyTab === "timesheet") {
+      for (const key of ["month", "view", "day", "employee", "filter"] as const) {
+        if (params[key]) next.set(key, params[key]);
+      }
+    }
+    redirect(`/hr/attendance?${next.toString()}`);
+  }
   const storeBranches = branches.filter(
     (branch) => (branch.branch_kind ?? "branch") === "branch",
   );
+  const canLoadCheckoutApprovals =
+    branchScope === "all" || branchId != null;
+  let leaveCountQuery = supabase
+    .from("leave_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "pending");
+  let checkoutCountQuery = supabase
+    .from("attendance_records")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .not("checkout_requested_at", "is", null)
+    .is("checkout_approved_at", null)
+    .is("check_out", null);
+  if (branchId != null) {
+    leaveCountQuery = leaveCountQuery.eq("branch_id", branchId);
+    checkoutCountQuery = checkoutCountQuery.eq("branch_id", branchId);
+  } else if (branchScope === "office") {
+    leaveCountQuery = leaveCountQuery.is("branch_id", null);
+    checkoutCountQuery = checkoutCountQuery.is("branch_id", null);
+  }
+  const [leaveCountResult, checkoutCountResult] = await Promise.all([
+    leaveCountQuery,
+    checkoutCountQuery,
+  ]);
   const pendingApprovals =
     (leaveCountResult.count ?? 0) + (checkoutCountResult.count ?? 0);
   const month = resolveMonth(params.month);
   const today = getVNDateString();
   const todayMonth = today.slice(0, 7);
-  const requestedBranchId = Number(params.branch);
-  const initialBranchId = branches.some(
-    (branch) => branch.id === requestedBranchId,
-  )
-    ? requestedBranchId
-    : branches[0]?.id;
-  const initialBranchScope =
-    params.branch === "all" || params.branch === "office"
-      ? params.branch
-      : initialBranchId != null
-        ? String(initialBranchId)
-        : "all";
   const initialView =
     params.view === "calendar" || params.view === "clock"
       ? params.view
       : "summary";
   const copy = messages.hr.client;
-  const tab = resolveTab(params.tab, pendingApprovals);
+  const tab = resolveTab(params.tab);
   const rosterPanel =
-    tab === "roster"
-      ? await loadOwnerRosterPanelData(branches, params.branch, params.week)
+    tab === "roster" && branchScope !== "all"
+      ? await loadOwnerRosterPanelData(branches, branchScope, params.week)
       : null;
 
   return (
@@ -152,8 +172,12 @@ export default async function HrAttendancePage({
         description={copy.attendanceDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={params.branch} />
-            <Button variant="outline" size="touch" render={<Link href="/hr" />}>
+            <HrScopeSelector branches={branches} value={branchScope} />
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            >
               {messages.hr.payroll.backToHr}
             </Button>
           </div>
@@ -170,15 +194,29 @@ export default async function HrAttendancePage({
           { value: "timesheet", label: copy.attendanceTabs.timesheet },
           { value: "roster", label: copy.attendanceTabs.roster },
         ]}
-        defaultValue={tab}
+        defaultValue="today"
         ariaLabel={copy.attendanceTabs.ariaLabel}
+        queryKeysByValue={{
+          today: ["branch"],
+          approvals: ["branch", "panel", "leave-view"],
+          timesheet: [
+            "branch",
+            "month",
+            "view",
+            "day",
+            "employee",
+            "filter",
+          ],
+          roster: ["branch", "week"],
+        }}
       >
         {tab === "today" ? (
           <TabsContent value="today">
             <AttendanceTable
+              key={branchScope}
               branches={branches}
-              initialBranchId={initialBranchId}
-              initialBranchScope={initialBranchScope}
+              initialBranchId={branchId ?? undefined}
+              initialBranchScope={branchScope}
               initialMonth={todayMonth}
               initialView="clock"
               initialDay={today}
@@ -199,22 +237,33 @@ export default async function HrAttendancePage({
                 description={copy.checkoutApprovalsHint}
                 contentFlush
               >
-                <StaffCheckoutApprovalsPageContent
-                  routeBranchId={null}
-                  ownerHomeHref="/hr/attendance?tab=approvals"
-                  embedded
-                />
+                {canLoadCheckoutApprovals ? (
+                  <StaffCheckoutApprovalsPageContent
+                    routeBranchId={branchId}
+                    ownerHomeHref={withHrBranchScope(
+                      "/hr/attendance?tab=approvals",
+                      branchScope,
+                    )}
+                    embedded
+                  />
+                ) : (
+                  <AppEmptyState mode="no-data" />
+                )}
               </AppSection>
-              <LeaveRequestsTable branches={storeBranches} />
+              <LeaveRequestsTable
+                branches={storeBranches}
+                branchScope={branchScope}
+              />
             </div>
           </TabsContent>
         ) : null}
         {tab === "timesheet" ? (
           <TabsContent value="timesheet">
             <AttendanceTable
+              key={branchScope}
               branches={branches}
-              initialBranchId={initialBranchId}
-              initialBranchScope={initialBranchScope}
+              initialBranchId={branchId ?? undefined}
+              initialBranchScope={branchScope}
               initialMonth={month}
               initialView={initialView}
               initialDay={
@@ -240,10 +289,15 @@ export default async function HrAttendancePage({
         ) : null}
         {tab === "roster" ? (
           <TabsContent value="roster">
-            {rosterPanel ? (
+            {branchScope === "all" ? (
+              <AppEmptyState
+                mode="no-results"
+                title={messages.hr.roster.scopeRequiredTitle}
+                description={messages.hr.roster.scopeRequiredDescription}
+              />
+            ) : rosterPanel ? (
               <RosterWeekClient
                 branchId={rosterPanel.branchId}
-                siteOptions={rosterPanel.siteOptions}
                 weekStart={rosterPanel.weekStart}
                 data={rosterPanel.roster}
                 canAssign={rosterPanel.canAssign}

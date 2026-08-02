@@ -13,7 +13,8 @@ const HR_LEAVE_POLICY_SETTING_KEYS = [
 ] as const;
 
 export type HrLeavePolicyResult =
-  { success: true; data: HrLeavePolicy } | { success: false };
+  | { success: true; data: HrLeavePolicy; isPersisted: boolean }
+  | { success: false };
 
 export async function fetchTenantHrLeavePolicy(input: {
   supabase: TenantSupabase;
@@ -39,6 +40,12 @@ export async function fetchTenantHrLeavePolicy(input: {
   });
 
   return policy.success
-    ? { success: true, data: policy.data }
+    ? {
+        success: true,
+        data: policy.data,
+        isPersisted: HR_LEAVE_POLICY_SETTING_KEYS.every((key) =>
+          values.has(key),
+        ),
+      }
     : { success: false };
 }

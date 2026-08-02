@@ -4,9 +4,15 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { FormDialog, TextField } from "@/components/form";
 import { createShift, updateShift } from "./actions";
 import type { ShiftRow } from "./_types";
+import {
+  formatShiftDuration,
+  getShiftDurationMinutes,
+  isUnusualShiftDuration,
+} from "@lib/hr/shift-duration";
 
 const shiftSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên ca không được trống" }),
@@ -80,36 +86,53 @@ export function ShiftFormDialog({
       submitLabel={shift ? "Lưu ca" : "Tạo ca"}
       contentClassName="sm:max-w-md"
     >
-      {(form) => (
-        <>
-          <TextField
-            control={form.control}
-            name="name"
-            label="Tên ca"
-            placeholder="Ca sáng, Ca chiều, Ca tối..."
-            required
-          />
+      {(form) => {
+        const startTime = form.watch("start_time");
+        const endTime = form.watch("end_time");
+        const duration = getShiftDurationMinutes(startTime, endTime);
+        return (
+          <>
+            <TextField
+              control={form.control}
+              name="name"
+              label="Tên ca"
+              placeholder="Ca sáng, Ca chiều, Ca tối..."
+              required
+            />
 
-          <div className="grid grid-cols-2 gap-3">
-            <TextField
-              control={form.control}
-              name="start_time"
-              label="Giờ bắt đầu"
-              type="time"
-              placeholder="06:00"
-              required
-            />
-            <TextField
-              control={form.control}
-              name="end_time"
-              label="Giờ kết thúc"
-              type="time"
-              placeholder="21:00"
-              required
-            />
-          </div>
-        </>
-      )}
+            <div className="grid grid-cols-2 gap-3">
+              <TextField
+                control={form.control}
+                name="start_time"
+                label="Giờ bắt đầu"
+                type="time"
+                placeholder="06:00"
+                required
+              />
+              <TextField
+                control={form.control}
+                name="end_time"
+                label="Giờ kết thúc"
+                type="time"
+                placeholder="21:00"
+                required
+              />
+            </div>
+            {duration != null ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span>
+                  Thời lượng: {formatShiftDuration(startTime, endTime)}
+                </span>
+                {isUnusualShiftDuration(duration) ? (
+                  <Badge variant="warning">
+                    Khung giờ dưới 2 giờ hoặc trên 12 giờ — kiểm tra lại
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        );
+      }}
     </FormDialog>
   );
 }

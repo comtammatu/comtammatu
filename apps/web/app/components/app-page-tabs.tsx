@@ -25,6 +25,7 @@ export type AppPageTabsProps = {
   ariaLabel?: string;
   /** Stick the tab list at the top of the Owner shell scrollport. */
   stickyList?: boolean;
+  queryKeysByValue?: Readonly<Record<string, readonly string[]>>;
 };
 
 export function AppPageTabs({
@@ -35,6 +36,7 @@ export function AppPageTabs({
   className,
   ariaLabel,
   stickyList = false,
+  queryKeysByValue,
 }: AppPageTabsProps) {
   const initial = items.some((item) => item.value === defaultValue)
     ? defaultValue
@@ -64,6 +66,7 @@ export function AppPageTabs({
       paramKey={paramKey}
       defaultValue={initial}
       validValues={items.map((item) => item.value)}
+      queryKeysByValue={queryKeysByValue}
       className={className}
     >
       {stickyList ? (

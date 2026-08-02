@@ -67,7 +67,10 @@ test("missing salary is a blocking data state, not a zero-value calculation", ()
   assert.match(client, /function canCalculate/);
   assert.match(client, /function moneyCell/);
   assert.match(client, /copy\.table\.missingSalary/);
-  assert.match(client, /router\.push\("\/hr\?view=profile&salary=missing"\)/);
+  assert.match(
+    client,
+    /withHrBranchScope\("\/hr\?view=profile&salary=missing", branchScope\)/,
+  );
 });
 
 test("payroll filters keep the selected salary state in the URL", () => {

@@ -89,6 +89,7 @@ import {
   CHECKLIST_PHASES,
   type ChecklistPhase,
 } from "./checklist-types";
+import { resolveHrBranchScope } from "@/lib/hr-scope";
 
 const attendanceCopy = messages.employee.hrAttendance;
 const scheduleCopy = messages.employee.schedule;
@@ -215,8 +216,9 @@ export function AttendanceTable({
   const [calendarLeaves, setCalendarLeaves] = useState<
     AttendanceCalendarLeave[]
   >([]);
-  const [selectedBranch, setSelectedBranch] = useState<string>(
-    initialBranchScope ?? String(initialBranchId ?? branches[0]?.id ?? "all"),
+  const selectedBranch = resolveHrBranchScope(
+    initialBranchScope ?? String(initialBranchId ?? "all"),
+    branches,
   );
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [view, setView] = useState<AttendanceView>(initialView);
@@ -242,7 +244,6 @@ export function AttendanceTable({
     nextEmployeeId: number | null = null,
     nextCalendarScope: CalendarScope = calendarScope,
   ) {
-    setSelectedBranch(branchId);
     setSelectedMonth(month);
     setSelectedDay(nextDay);
     setSelectedEmployeeId(nextEmployeeId);
@@ -330,7 +331,7 @@ export function AttendanceTable({
     if (calendarScope === "attention") {
       params.set("filter", "attention");
     }
-    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
   }
 
   function selectCalendarEmployee(employeeId: number | null) {
@@ -346,7 +347,7 @@ export function AttendanceTable({
     if (calendarScope === "attention") {
       params.set("filter", "attention");
     }
-    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
   }
 
   function selectCalendarScope(scope: CalendarScope) {
@@ -364,7 +365,7 @@ export function AttendanceTable({
     if (scope === "attention") {
       params.set("filter", "attention");
     }
-    router.replace(`/hr/attendance?${params.toString()}`, { scroll: false });
+    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
   }
 
   // Initial load on mount — the tab used to open blank with a hint

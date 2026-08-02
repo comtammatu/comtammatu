@@ -14,6 +14,7 @@ import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
 const REPO_ROOT = process.cwd();
 const DEFAULT_LIMIT = 60;
 const ROUTE_FAMILIES = [
+  ["self-service", (file) => file.includes("/(protected)/me/")],
   [
     "owner",
     (file) =>

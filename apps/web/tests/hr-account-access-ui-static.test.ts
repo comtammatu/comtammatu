@@ -40,7 +40,7 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(form, /copy\.accountSection/);
   assert.match(
     form,
-    /router\.push\(`\/hr\/staff\/\$\{staffId\}\/permissions\?tab=permissions`\)/,
+    /withHrBranchScope\([\s\S]*`\/hr\/staff\/\$\{staffId\}\/permissions\?tab=permissions`,[\s\S]*branchScope/,
   );
   assert.match(actions, /data:\s*\{ staffId: data\.user\?\.id \?\? null \}/);
 

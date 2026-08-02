@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  getHrScopeBranchId,
+  type HrBranchScope,
+} from "@/lib/hr-scope";
 
 export type HrAttentionSummary = {
   pendingApprovals: number;
@@ -13,36 +17,51 @@ export type HrAttentionSummary = {
 export async function fetchHrAttentionSummary(
   supabase: SupabaseClient,
   tenantId: number,
+  branchScope: HrBranchScope,
 ): Promise<HrAttentionSummary> {
-  const [leaveResult, checkoutResult, employeesResult] = await Promise.all([
-    supabase
-      .from("leave_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("status", "pending"),
-    supabase
-      .from("attendance_records")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .not("checkout_requested_at", "is", null)
-      .is("checkout_approved_at", null)
-      .is("check_out", null),
-    supabase
-      .from("employees")
-      .select(
-        `
+  let leaveQuery = supabase
+    .from("leave_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .eq("status", "pending");
+  let checkoutQuery = supabase
+    .from("attendance_records")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .not("checkout_requested_at", "is", null)
+    .is("checkout_approved_at", null)
+    .is("check_out", null);
+  let employeesQuery = supabase
+    .from("employees")
+    .select(
+      `
         id,
         base_salary,
         is_active,
+        profiles!inner ( branch_id ),
         employment_contracts (
           id,
           status,
           gross_salary
         )
       `,
-      )
-      .eq("tenant_id", tenantId)
-      .eq("is_active", true),
+    )
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true);
+  const branchId = getHrScopeBranchId(branchScope);
+  if (branchId != null) {
+    leaveQuery = leaveQuery.eq("branch_id", branchId);
+    checkoutQuery = checkoutQuery.eq("branch_id", branchId);
+    employeesQuery = employeesQuery.eq("profiles.branch_id", branchId);
+  } else if (branchScope === "office") {
+    leaveQuery = leaveQuery.is("branch_id", null);
+    checkoutQuery = checkoutQuery.is("branch_id", null);
+    employeesQuery = employeesQuery.is("profiles.branch_id", null);
+  }
+  const [leaveResult, checkoutResult, employeesResult] = await Promise.all([
+    leaveQuery,
+    checkoutQuery,
+    employeesQuery,
   ]);
 
   const pendingLeave = leaveResult.count ?? 0;

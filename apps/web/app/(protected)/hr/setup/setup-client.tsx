@@ -15,6 +15,7 @@ interface Props {
   initialShifts: ShiftRow[];
   positionTasksData: PositionTasksData;
   leavePolicy: HrLeavePolicy | null;
+  leavePolicyPersisted: boolean;
   initialTab?: "leave" | "shifts" | "tasks";
   initialBranchFilter?: string;
 }
@@ -23,6 +24,7 @@ export function HrSetupClient({
   initialShifts,
   positionTasksData,
   leavePolicy,
+  leavePolicyPersisted,
   initialTab = "leave",
   initialBranchFilter,
 }: Props) {
@@ -36,8 +38,13 @@ export function HrSetupClient({
         { value: "shifts", label: copy.setupTabs.shifts },
         { value: "tasks", label: copy.setupTabs.tasks },
       ]}
-      defaultValue={initialTab}
+      defaultValue="leave"
       ariaLabel={copy.setupTabs.ariaLabel}
+      queryKeysByValue={{
+        leave: ["branch"],
+        shifts: ["branch"],
+        tasks: ["branch"],
+      }}
     >
       {initialTab === "leave" ? (
         <TabsContent value="leave">
@@ -47,7 +54,10 @@ export function HrSetupClient({
             headerHint={copy.setupSteps.leavePolicy.hint}
           >
             {leavePolicy ? (
-              <LeavePolicyForm policy={leavePolicy} />
+              <LeavePolicyForm
+                policy={leavePolicy}
+                initiallyPersisted={leavePolicyPersisted}
+              />
             ) : (
               <p className="text-sm text-destructive" role="alert">
                 {copy.leavePolicy.loadFailed}

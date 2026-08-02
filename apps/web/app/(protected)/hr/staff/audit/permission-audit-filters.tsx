@@ -16,6 +16,7 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
+import type { HrBranchScope } from "@/lib/hr-scope";
 
 export interface PermissionAuditTargetOption {
   id: string;
@@ -37,9 +38,11 @@ const ACTION_VALUES = ["grant", "revoke", "apply_template"] as const;
 export function PermissionAuditFilters({
   value,
   targetOptions,
+  branchScope,
 }: {
   value: PermissionAuditFilterValue;
   targetOptions: PermissionAuditTargetOption[];
+  branchScope: HrBranchScope;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,6 +65,7 @@ export function PermissionAuditFilters({
   function pushParams(next: Partial<PermissionAuditFilterValue>) {
     const merged: PermissionAuditFilterValue = { ...value, ...next };
     const usp = new URLSearchParams();
+    usp.set("branch", branchScope);
     if (merged.action) usp.set("action", merged.action);
     if (merged.target) usp.set("target", merged.target);
     if (merged.since) usp.set("since", merged.since);

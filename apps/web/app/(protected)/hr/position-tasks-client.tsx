@@ -44,7 +44,6 @@ import {
   type PositionTasksData,
 } from "./position-tasks-actions";
 import {
-  POSITION_TASK_APPLICABILITY,
   POSITION_TASK_KINDS,
   POSITION_TASK_PHASES,
   type PositionOption,
@@ -52,13 +51,14 @@ import {
   type PositionTaskRow,
   type ShiftTaskTemplateSummary,
 } from "./position-task-types";
+import { matchesHrBranchScope, resolveHrBranchScope } from "@/lib/hr-scope";
 
 const copy = messages.hr.client.positionTasks;
 
 const taskRowSchema = z.object({
   title: z.string().trim().min(1, { error: copy.needTitle }).max(120),
   kind: z.enum(POSITION_TASK_KINDS),
-  applicability: z.enum(POSITION_TASK_APPLICABILITY),
+  applicability: z.literal("every_shift"),
   phase: z.enum(POSITION_TASK_PHASES),
   isRequired: z.boolean(),
   doneDefinition: z.string().max(240),
@@ -90,7 +90,7 @@ function toFormValues(tasks: PositionTaskRow[], employeeId = ""): FormValues {
     tasks: tasks.map((task) => ({
       title: task.title,
       kind: task.kind,
-      applicability: task.applicability,
+      applicability: "every_shift",
       phase: task.phase,
       isRequired: task.isRequired,
       doneDefinition: task.doneDefinition,
@@ -200,7 +200,7 @@ function TaskRow({
 }) {
   return (
     <Frame className="flex flex-col gap-3 p-3">
-      <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_150px_auto]">
+      <div className="grid gap-3 lg:grid-cols-[1fr_170px_150px_auto]">
         <TextField
           control={control}
           name={`tasks.${index}.title`}
@@ -216,16 +216,6 @@ function TaskRow({
           options={POSITION_TASK_KINDS.map((kind) => ({
             value: kind,
             label: copy.kindLabels[kind],
-          }))}
-        />
-        <SelectField
-          control={control}
-          name={`tasks.${index}.applicability`}
-          label={copy.applicabilityLabel}
-          id={`task-applicability-${index}`}
-          options={POSITION_TASK_APPLICABILITY.map((value) => ({
-            value,
-            label: copy.applicabilityLabels[value],
           }))}
         />
         <SelectField
@@ -354,6 +344,72 @@ function AssigneeSummary({ position }: { position: PositionOption }) {
 
 type TemplateRow = ShiftTaskTemplateSummary & { key: string };
 
+export function EmployeeTaskOverrideDialog({
+  employeeId,
+  open,
+  onOpenChange,
+  data,
+  onSaved,
+}: {
+  employeeId: number | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  data: PositionTasksData;
+  onSaved?: () => void;
+}) {
+  const employee =
+    data.employees.find((item) => item.id === employeeId) ?? null;
+  const template =
+    data.employeeTemplates.find((item) => item.employeeId === employeeId) ??
+    null;
+  const inheritedTasks =
+    employee?.positionId == null
+      ? []
+      : (data.tasksByPosition[employee.positionId] ?? []);
+  const defaultValues = useMemo(
+    () => toFormValues(template?.tasks ?? inheritedTasks),
+    [inheritedTasks, template?.tasks],
+  );
+
+  async function handleSubmit(values: FormValues) {
+    if (!employee) return { success: false, error: copy.employeePlaceholder };
+    const result = await saveEmployeeShiftTaskOverride({
+      employeeId: employee.id,
+      tasks: values.tasks.map((task) => ({
+        ...task,
+        title: task.title.trim(),
+        doneDefinition: task.doneDefinition.trim(),
+        ingredientIds:
+          task.kind === "consumption_report" ? task.ingredientIds : [],
+      })),
+    });
+    if (result.success) onSaved?.();
+    return result;
+  }
+
+  return (
+    <FormDialog
+      open={open && employee != null}
+      onOpenChange={onOpenChange}
+      title={
+        employee ? copy.templateName(employee.name) : copy.employeeTemplate
+      }
+      description={`${template ? copy.employeeTemplate : copy.positionTemplate} · ${employee?.positionLabel ?? copy.noAssignees}`}
+      schema={formSchema}
+      defaultValues={defaultValues}
+      entityKey={`${employeeId ?? "none"}:${template?.templateId ?? "inherited"}`}
+      onSubmit={handleSubmit}
+      successMessage={copy.saved}
+      submitLabel={template ? copy.save : copy.createEmployeeTemplate}
+      contentClassName="sm:max-w-4xl"
+    >
+      {(form) => (
+        <PositionTaskFields form={form} ingredients={data.ingredients} />
+      )}
+    </FormDialog>
+  );
+}
+
 function EmployeeOverrideFields({
   form,
   data,
@@ -417,21 +473,27 @@ export function PositionTasksClient({
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
     type: "",
-    branch:
-      initialBranchFilter === "office" || Number(initialBranchFilter) > 0
-        ? initialBranchFilter!
-        : "",
     status: "",
   });
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [clearingRow, setClearingRow] = useState<TemplateRow | null>(null);
   const [isClearing, startClearing] = useTransition();
+  const branchScope = resolveHrBranchScope(initialBranchFilter);
+  const scopedEmployees = data.employees.filter((employee) =>
+    matchesHrBranchScope(employee.branchId, branchScope),
+  );
+  const scopedPositions = data.positions.map((position) => ({
+    ...position,
+    assignees: position.assignees.filter((employee) =>
+      matchesHrBranchScope(employee.branchId, branchScope),
+    ),
+  }));
   const employeeById = new Map(
-    data.employees.map((employee) => [employee.id, employee]),
+    scopedEmployees.map((employee) => [employee.id, employee]),
   );
   const rows: TemplateRow[] = [
-    ...data.positions.map((position) => ({
+    ...scopedPositions.map((position) => ({
       kind: "position" as const,
       key: `position:${position.id}`,
       positionId: position.id,
@@ -454,7 +516,7 @@ export function PositionTasksClient({
   const editingRow = rows.find((row) => row.key === editingKey) ?? null;
   const editingPosition =
     editingRow?.kind === "position"
-      ? (data.positions.find(
+      ? (scopedPositions.find(
           (position) => position.id === editingRow.positionId,
         ) ?? null)
       : null;
@@ -474,7 +536,7 @@ export function PositionTasksClient({
   const visibleRows = rows.filter((row) => {
     const position =
       row.kind === "position"
-        ? data.positions.find((item) => item.id === row.positionId)
+        ? scopedPositions.find((item) => item.id === row.positionId)
         : null;
     const tasks =
       row.kind === "position"
@@ -486,9 +548,6 @@ export function PositionTasksClient({
     const configured = row.kind === "employee" || tasks.length > 0;
     return (
       (!filters.type || filters.type === row.kind) &&
-      (!filters.branch ||
-        row.kind === "position" ||
-        String(row.employee.branchId ?? "office") === filters.branch) &&
       (!filters.status ||
         (filters.status === "configured" ? configured : !configured)) &&
       matchesSearch(
@@ -573,7 +632,7 @@ export function PositionTasksClient({
       render: (row) => {
         const name =
           row.kind === "position"
-            ? data.positions.find((position) => position.id === row.positionId)
+            ? scopedPositions.find((position) => position.id === row.positionId)
                 ?.label
             : row.employee.name;
         return (
@@ -610,7 +669,7 @@ export function PositionTasksClient({
       render: (row) =>
         row.kind === "position" ? (
           <AssigneeSummary
-            position={data.positions.find(
+            position={scopedPositions.find(
               (position) => position.id === row.positionId,
             )!}
           />
@@ -675,7 +734,7 @@ export function PositionTasksClient({
     },
   ];
 
-  const availableEmployees = data.employees.filter(
+  const availableEmployees = scopedEmployees.filter(
     (employee) =>
       !data.employeeTemplates.some(
         (template) => template.employeeId === employee.id,
@@ -709,24 +768,6 @@ export function PositionTasksClient({
             options: [
               { value: "position", label: copy.positionTemplate },
               { value: "employee", label: copy.employeeTemplate },
-            ],
-          },
-          {
-            key: "branch",
-            placeholder: copy.allBranchesFilter,
-            options: [
-              { value: "office", label: messages.hr.client.scope.office },
-              ...Array.from(
-                new Map(
-                  data.employees
-                    .filter((employee) => employee.branchId != null)
-                    .map((employee) => [
-                      String(employee.branchId),
-                      employee.branchName ?? `Chi nhánh ${employee.branchId}`,
-                    ]),
-                ),
-                ([value, label]) => ({ value, label }),
-              ),
             ],
           },
           {
@@ -764,7 +805,7 @@ export function PositionTasksClient({
         mobileCardRender={(row) => {
           const position =
             row.kind === "position"
-              ? data.positions.find((item) => item.id === row.positionId)
+              ? scopedPositions.find((item) => item.id === row.positionId)
               : null;
           const name =
             position?.label ??
@@ -853,7 +894,16 @@ export function PositionTasksClient({
         submitLabel={copy.createEmployeeTemplate}
         contentClassName="sm:max-w-4xl"
       >
-        {(form) => <EmployeeOverrideFields form={form} data={data} />}
+        {(form) => (
+          <EmployeeOverrideFields
+            form={form}
+            data={{
+              ...data,
+              employees: scopedEmployees,
+              positions: scopedPositions,
+            }}
+          />
+        )}
       </FormDialog>
 
       <AppDialog

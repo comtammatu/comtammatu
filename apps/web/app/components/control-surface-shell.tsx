@@ -17,6 +17,10 @@ import {
   type FinanceNavFlags,
   type InventoryNavFlags,
 } from "@/lib/control-surface-nav";
+import {
+  resolveHrBranchScope,
+  withHrBranchScope,
+} from "@/lib/hr-scope";
 
 type BaseProps = {
   user: { name: string };
@@ -74,13 +78,18 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeModule = resolveActiveModule(pathname);
+  const hrBranchScope = resolveHrBranchScope(searchParams.get("branch"));
 
   const tier1 = useMemo(
     () =>
       resolveControlSurfacePrimaryTabs(role, homeBranchId).filter(
         (item) => item.href !== "/hr" || hr.canOpen,
+      ).map((item) =>
+        activeModule === "hr" && item.href === "/hr"
+          ? { ...item, href: withHrBranchScope(item.href, hrBranchScope) }
+          : item,
       ),
-    [role, homeBranchId, hr.canOpen],
+    [activeModule, role, homeBranchId, hr.canOpen, hrBranchScope],
   );
 
   const inventoryBranchKey = searchParams.get("branchId");
@@ -126,12 +135,19 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     const resolved = resolveControlSurfaceDeepNav(role, activeModule, {
       branchId: homeBranchId,
     });
-    return activeModule === "hr" && !hr.canOpenPayroll
-      ? resolved.map((group) => ({
-          ...group,
-          items: group.items.filter((item) => item.href !== "/hr/payroll"),
-        }))
-      : resolved;
+    if (activeModule !== "hr") return resolved;
+
+    return resolved.map((group) => ({
+      ...group,
+      items: group.items
+        .filter(
+          (item) => hr.canOpenPayroll || item.href !== "/hr/payroll",
+        )
+        .map((item) => ({
+          ...item,
+          href: withHrBranchScope(item.href, hrBranchScope),
+        })),
+    }));
   }, [
     finance,
     homeBranchId,
@@ -140,6 +156,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     activeModule,
     role,
     hr.canOpenPayroll,
+    hrBranchScope,
   ]);
 
   const sidebarHeaderAccessory =

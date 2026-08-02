@@ -11,7 +11,13 @@ import { EmployeeFormDialog } from "./employee-form-dialog";
 import { EmployeeTable } from "./employee-table";
 import { HrAttentionStrip } from "./hr-attention-strip";
 import type { HrAttentionSummary } from "./hr-attention";
-import type { BranchOption, EmployeeRow } from "./_types";
+import type {
+  BranchOption,
+  EmployeeRow,
+  EmployeeShiftOption,
+  EmployeeTodayShiftAssignment,
+} from "./_types";
+import type { PositionTasksData } from "./position-tasks-actions";
 import { AddStaffButton } from "./staff/add-staff-button";
 import { StaffHeaderOverflow } from "./staff/staff-header-actions";
 import { StaffFilters } from "./staff/staff-filters";
@@ -21,6 +27,7 @@ import {
   type StaffRow,
 } from "./staff/staff-table";
 import { HrScopeSelector } from "./hr-scope-selector";
+import { resolveHrBranchScope, type HrBranchScope } from "@/lib/hr-scope";
 
 type PeopleView = "profile" | "accounts";
 
@@ -32,11 +39,17 @@ interface HrClientProps {
   initialSalaryFilter?: "all" | "missing" | "recorded";
   initialView?: PeopleView;
   canManageAccounts?: boolean;
+  canManageEmployees?: boolean;
+  canAssignShift?: boolean;
+  canManageTasks?: boolean;
+  shifts?: EmployeeShiftOption[];
+  todayAssignments?: EmployeeTodayShiftAssignment[];
+  positionTasksData?: PositionTasksData | null;
   staff?: StaffRow[];
   staffBranches?: BranchOption[];
   staffPositionOptions?: PositionOption[];
   staffHasActiveFilters?: boolean;
-  initialScope?: string;
+  initialScope?: HrBranchScope;
 }
 
 export function HrClient({
@@ -47,6 +60,12 @@ export function HrClient({
   initialSalaryFilter = "all",
   initialView = "profile",
   canManageAccounts = false,
+  canManageEmployees = false,
+  canAssignShift = false,
+  canManageTasks = false,
+  shifts = [],
+  todayAssignments = [],
+  positionTasksData = null,
   staff = [],
   staffBranches = [],
   staffPositionOptions = [],
@@ -58,6 +77,7 @@ export function HrClient({
   const copy = messages.hr.client;
   const workspaceCopy = messages.hr.workspace;
   const staffCopy = messages.owner.staffPage;
+  const branchScope = resolveHrBranchScope(initialScope, branches);
   const requestedView = searchParams.get("view");
   const view: PeopleView =
     canManageAccounts &&
@@ -84,7 +104,7 @@ export function HrClient({
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={initialScope} />
+            <HrScopeSelector branches={branches} value={branchScope} />
             {view === "accounts" && canManageAccounts ? (
               <>
                 <AddStaffButton
@@ -93,12 +113,12 @@ export function HrClient({
                 />
                 <StaffHeaderOverflow />
               </>
-            ) : (
+            ) : canManageEmployees ? (
               <Button size="touch" onClick={() => setAddOpen(true)}>
                 <IconUserPlus data-icon="inline-start" />
                 {copy.addEmployee}
               </Button>
-            )}
+            ) : null}
           </div>
         }
       />
@@ -107,15 +127,24 @@ export function HrClient({
         defaultValue="profile"
         paramKey="view"
         ariaLabel={copy.peopleTabs.ariaLabel}
+        queryKeysByValue={{
+          profile: ["q", "branch", "position", "contract", "salary", "status"],
+          accounts: ["q", "branch", "position", "status"],
+        }}
       >
         {view === "profile" ? (
           <TabsContent value="profile">
-            <HrAttentionStrip summary={attention} />
+            <HrAttentionStrip summary={attention} branchScope={branchScope} />
             <EmployeeTable
               employees={employees}
               branches={branches}
               positionOptions={positionOptions}
-              canManage
+              canManage={canManageEmployees}
+              canAssignShift={canAssignShift}
+              canManageTasks={canManageTasks}
+              shifts={shifts}
+              todayAssignments={todayAssignments}
+              positionTasksData={positionTasksData}
               initialSalaryFilter={initialSalaryFilter}
             />
           </TabsContent>
@@ -126,10 +155,7 @@ export function HrClient({
               contentScroll
               toolbar={
                 <Suspense>
-                  <StaffFilters
-                    branches={staffBranches}
-                    positionOptions={staffPositionOptions}
-                  />
+                  <StaffFilters positionOptions={staffPositionOptions} />
                 </Suspense>
               }
             >
@@ -143,12 +169,14 @@ export function HrClient({
           </TabsContent>
         ) : null}
       </AppPageTabs>
-      <EmployeeFormDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        branches={branches}
-        positionOptions={positionOptions}
-      />
+      {canManageEmployees ? (
+        <EmployeeFormDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          branches={branches}
+          positionOptions={positionOptions}
+        />
+      ) : null}
     </AppPage>
   );
 }

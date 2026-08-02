@@ -19,7 +19,7 @@ import {
   getVNMonthSequenceBack,
   getVNMonthString,
 } from "@comtammatu/shared/time";
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
@@ -59,9 +59,14 @@ import {
   rejectLeaveRequest,
 } from "./leave-request-actions";
 import type { BranchOption } from "./_types";
+import {
+  getHrScopeBranchId,
+  type HrBranchScope,
+} from "@/lib/hr-scope";
 
 interface LeaveRequestsTableProps {
   branches: BranchOption[];
+  branchScope: HrBranchScope;
 }
 
 const copy = messages.hr.leave;
@@ -81,40 +86,67 @@ function getEmployeeName(request: LeaveRequestRow): string {
   return getLeaveRequestEmployeeName(request, copy.fallbackEmployee);
 }
 
-export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
+export function LeaveRequestsTable({
+  branches,
+  branchScope,
+}: LeaveRequestsTableProps) {
   const controlSize = useFormControlSize();
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
-    branches[0]?.id ?? null,
-  );
   const [approvedMonth, setApprovedMonth] = useState(getVNMonthString);
   const [isPending, startTransition] = useTransition();
   const [rejectTarget, setRejectTarget] = useState<LeaveRequestRow | null>(
     null,
   );
 
-  const load = useCallback((branchId: number) => {
+  const branchIds = useMemo(() => {
+    if (branchScope === "all") return branches.map((branch) => branch.id);
+    const branchId = getHrScopeBranchId(branchScope);
+    return branchId != null && branches.some((branch) => branch.id === branchId)
+      ? [branchId]
+      : [];
+  }, [branches, branchScope]);
+  const eventBranchId = branchIds.length === 1 ? branchIds[0]! : null;
+
+  const load = useCallback(() => {
+    if (branchIds.length === 0) {
+      setRequests([]);
+      return;
+    }
     startTransition(async () => {
-      const result = await fetchLeaveRequests({ branchId });
-      if (result.success) {
-        setRequests((result.data as LeaveRequestRow[]) ?? []);
-      } else {
-        toast.error(result.error ?? copy.loadFailed);
+      const results = await Promise.all(
+        branchIds.map((branchId) => fetchLeaveRequests({ branchId })),
+      );
+      const failed = results.find((result) => !result.success);
+      if (failed && !failed.success) {
+        toast.error(failed.error ?? copy.loadFailed);
+        return;
       }
+      const byId = new Map<number, LeaveRequestRow>();
+      for (const result of results) {
+        if (!result.success) continue;
+        for (const request of (result.data as LeaveRequestRow[]) ?? []) {
+          byId.set(request.id, request);
+        }
+      }
+      setRequests(
+        [...byId.values()].sort((a, b) =>
+          b.created_at.localeCompare(a.created_at),
+        ),
+      );
     });
-  }, []);
+  }, [branchIds]);
 
   useEffect(() => {
-    if (selectedBranchId !== null) load(selectedBranchId);
-  }, [selectedBranchId, load]);
+    load();
+  }, [load]);
 
   const reloadSelectedBranch = useCallback(() => {
-    if (selectedBranchId !== null) load(selectedBranchId);
-  }, [selectedBranchId, load]);
+    load();
+  }, [load]);
 
   useBranchOpsEvents({
-    branchId: selectedBranchId,
-    enabled: selectedBranchId !== null,
+    branchId: eventBranchId,
+    enabled: eventBranchId !== null,
     onEvent: reloadSelectedBranch,
   });
 
@@ -153,7 +185,7 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
         return;
       }
       toast.success("Đã duyệt yêu cầu nghỉ");
-      if (selectedBranchId !== null) load(selectedBranchId);
+      load();
     });
   }
 
@@ -376,27 +408,6 @@ export function LeaveRequestsTable({ branches }: LeaveRequestsTableProps) {
         toolbar={
           <AppToolbar
             variant="inline"
-            filters={
-              <Select
-                value={selectedBranchId?.toString() ?? ""}
-                onValueChange={(value) => setSelectedBranchId(Number(value))}
-              >
-                <SelectTrigger
-                  size={controlSize}
-                  className="w-full sm:w-48"
-                  aria-label={BRANCH_VI.select}
-                >
-                  <SelectValue placeholder={BRANCH_VI.select} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            }
             actions={
               <>
                 <span className="text-sm text-muted-foreground">
