@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -50,4 +50,32 @@ test("zero-module company positions remain selectable without a role template", 
   assert.match(employeeActions, /requiredBranchKind !== "unassigned"/);
   assert.doesNotMatch(employeePage, /role === "unassigned"/);
   assert.doesNotMatch(accountLoader, /bucket === "unassigned"/);
+});
+
+test("assigned company staff can clock in only through live self-service scope", () => {
+  const todayWorkState = read(
+    "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
+  );
+  const migrationName = readdirSync(resolve(root, "supabase/migrations")).find(
+    (name) => name.endsWith("_allow_company_self_service_clock_in.sql"),
+  );
+
+  assert.ok(migrationName, "missing company self-service clock-in migration");
+  const migration = read(`supabase/migrations/${migrationName}`);
+
+  assert.match(todayWorkState, /Boolean\(assignedShift\)/);
+  assert.match(todayWorkState, /claims\.user_role !== "self_service"/);
+  assert.match(migration, /v_is_company_self_service boolean/);
+  assert.match(migration, /binding\.role_code = 'self_service_member'/);
+  assert.match(migration, /binding\.valid_from <= v_now/);
+  assert.match(
+    migration,
+    /binding\.valid_until IS NULL OR binding\.valid_until > v_now/,
+  );
+  assert.match(migration, /IF v_is_company_self_service THEN/);
+  assert.match(
+    migration,
+    /sa\.branch_id IS NOT DISTINCT FROM v_assigned_branch_id/,
+  );
+  assert.match(migration, /RAISE EXCEPTION 'shift_assignment_required'/);
 });

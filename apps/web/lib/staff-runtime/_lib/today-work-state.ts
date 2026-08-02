@@ -38,7 +38,7 @@ export interface TodayChecklistItem {
 interface TodayAttendance {
   id: number;
   date: string;
-  branchId: number;
+  branchId: number | null;
   branchName: string | null;
   checkIn: string | null;
   checkOut: string | null;
@@ -490,6 +490,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const requiredRemaining = Math.max(requiredTotal - requiredDone, 0);
   const attendanceRequired =
     Boolean(attendance) ||
+    Boolean(assignedShift) ||
     isDefaultAttendanceRole(claims.user_role) ||
     managerAttendanceOnly;
 
@@ -501,7 +502,8 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   } else if (
     !attendance &&
     !ctx.branchId &&
-    claims.user_role !== "accountant"
+    claims.user_role !== "accountant" &&
+    claims.user_role !== "self_service"
   ) {
     status = "missing_branch";
   } else if (!attendance?.checkIn) {

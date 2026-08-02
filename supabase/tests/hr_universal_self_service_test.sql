@@ -4,6 +4,7 @@ BEGIN;
 DO $$
 DECLARE
   v_contract_fn text;
+  v_clock_in_fn text;
   v_submit_leave_fn text;
 BEGIN
   IF (
@@ -63,6 +64,16 @@ BEGIN
   IF v_contract_fn ILIKE '%staff_role_from_position_code%'
      OR v_contract_fn ILIKE '%accountant%' THEN
     RAISE EXCEPTION 'TEST FAILED: contract pay_basis must not infer from role';
+  END IF;
+
+  SELECT pg_get_functiondef(
+    'public.self_service_clock_in(bigint,bigint,date,text)'::regprocedure
+  )
+  INTO v_clock_in_fn;
+  IF position('self_service_member' IN v_clock_in_fn) = 0
+     OR position('v_is_company_self_service' IN v_clock_in_fn) = 0
+     OR position('shift_assignment_required' IN v_clock_in_fn) = 0 THEN
+    RAISE EXCEPTION 'TEST FAILED: company clock-in must require live self-service scope and an assigned shift';
   END IF;
 
   SELECT pg_get_functiondef(
