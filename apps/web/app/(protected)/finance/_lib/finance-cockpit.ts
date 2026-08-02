@@ -381,7 +381,7 @@ async function fetchFinanceVatSummary({
 
   let expenseQuery = supabase
     .from("expenses")
-    .select("vat_amount")
+    .select("vat_amount, category")
     .eq("tenant_id", tenantId)
     .gte("expense_date", startDate)
     .lte("expense_date", endDate);
@@ -433,7 +433,11 @@ async function fetchFinanceVatSummary({
         ? null
         : addMoney([
             sumVat(supplierInvoices.data as unknown[] | null),
-            sumVat(expenses.data as unknown[] | null),
+            sumVat(
+              (expenses.data ?? []).filter((row) =>
+                isOperatingExpenseCategory(row.category),
+              ),
+            ),
           ]),
     outputIssued: outputInvoices.error
       ? null
