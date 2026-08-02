@@ -28,6 +28,7 @@
 | UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shared components, surfaces   | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
+| Feedback       | [feedback.md](modules/feedback.md)             | Operator feedback capture and review boundary           | Medium                      |
 
 ## Documentation Index
 

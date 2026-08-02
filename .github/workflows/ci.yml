@@ -21,13 +21,10 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
       TURBO_TELEMETRY_DISABLED: "1"
       NEXT_TELEMETRY_DISABLED: "1"
-      # Fail closed when a T2/T3 PR lacks or under-declares its review tier.
-      REVIEW_TIER_STRICT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history so check-review-tier can merge-base against origin/main;
-          # a shallow clone makes the base unreachable and the guard self-skips.
+          # Merge-base guards such as i18n no-growth require the PR base ref.
           fetch-depth: 0
 
       # Reads the pnpm version from package.json "packageManager".

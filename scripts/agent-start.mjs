@@ -6,14 +6,16 @@ const INDEX_LOCK_FAILURE = /Could not acquire file lock/i;
 const INDEX_FILE_FAILURE =
   /files? could not be (?:read|parsed)|files? with errors/i;
 
-function run(command, args) {
+function run(command, args, print = true) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
-  process.stdout.write(result.stdout ?? "");
-  process.stderr.write(result.stderr ?? "");
+  if (print) {
+    process.stdout.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+  }
   if (result.error) throw result.error;
   return result;
 }
@@ -25,7 +27,16 @@ function runSelfTest() {
     errorPaths("apps/web/page.tsx: Failed to read file: ENOENT\n"),
     ["apps/web/page.tsx"],
   );
-  console.log("[agent-start] self-test passed (3 cases)");
+  assert.equal(
+    statusNeedsRefresh('{"initialized":true,"pendingChanges":{"added":0,"modified":0,"removed":0},"worktreeMismatch":null,"index":{"reindexRecommended":false}}'),
+    false,
+  );
+  assert.equal(
+    statusNeedsRefresh('{"initialized":true,"pendingChanges":{"added":0,"modified":1,"removed":0},"worktreeMismatch":null,"index":{"reindexRecommended":false}}'),
+    true,
+  );
+  assert.equal(statusNeedsRefresh("not-json"), true);
+  console.log("[agent-start] self-test passed (6 cases)");
 }
 
 function errorPaths(log) {
@@ -33,6 +44,23 @@ function errorPaths(log) {
     .split("\n")
     .map((line) => line.match(/^(.+?): (?:Failed|Error)\b/)?.[1])
     .filter(Boolean);
+}
+
+function statusNeedsRefresh(output) {
+  try {
+    const status = JSON.parse(output);
+    const pending = status.pendingChanges ?? {};
+    return (
+      status.initialized !== true ||
+      status.worktreeMismatch !== null ||
+      status.index?.reindexRecommended === true ||
+      ["added", "modified", "removed"].some(
+        (key) => Number(pending[key] ?? 0) > 0,
+      )
+    );
+  } catch {
+    return true;
+  }
 }
 
 function main() {
@@ -43,6 +71,15 @@ function main() {
     console.log(
       "[agent-start] CodeGraph skipped: .codegraph is not initialized; indexing is an owner decision.",
     );
+    return;
+  }
+
+  const initialStatus = run("codegraph", ["status", "-j"], false);
+  if (
+    initialStatus.status === 0 &&
+    !statusNeedsRefresh(initialStatus.stdout ?? "")
+  ) {
+    console.log("[agent-start] CodeGraph is current; refresh skipped.");
     return;
   }
 

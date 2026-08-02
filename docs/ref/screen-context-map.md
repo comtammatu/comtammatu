@@ -388,8 +388,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Cung cấp công thức kết quả vận hành rõ ràng theo kỳ, đồng thời tách số dư hiện có và giá trị tồn kho.
 - **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món và chi phí vận hành; mở báo cáo chuyên biệt khi cần đối chiếu.
 - **Luồng thao tác (Workflow):**
-  1. **Chọn kỳ báo cáo:** Lọc theo ngày hôm nay / Tuần này / Tháng này / Chọn khoảng ngày.
-  2. **Chọn phạm vi:** Lọc theo toàn chuỗi hoặc một chi nhánh cụ thể.
+  1. **Chọn kỳ báo cáo:** Chọn `Nay`, `Hôm qua`, `Tuần`, `Tháng`, `Quý` hoặc `Năm`. Khi chọn kỳ lịch, chọn tiếp đúng tuần/tháng/quý/năm cần xem; kỳ hiện tại tính đến hôm nay, kỳ quá khứ lấy trọn kỳ.
+  2. **Chọn phạm vi:** Chọn `Tất cả`, `Công ty`, `Toàn bộ Chi nhánh` hoặc `Chi nhánh`; khi chọn `Chi nhánh`, chọn tiếp một chi nhánh cụ thể. `Công ty` lấy bản ghi không gắn chi nhánh; `Toàn bộ Chi nhánh` loại các bản ghi cấp công ty; `Tất cả` cộng cả hai phạm vi.
   3. **Xem kết quả:** Đọc năm card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành = Kết quả vận hành`.
   4. **Xem số dư:** Đọc tiền mặt theo sổ và tiền trong ngân hàng; hai số này không đổi theo bộ lọc.
   5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.

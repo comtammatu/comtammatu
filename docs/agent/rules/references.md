@@ -54,20 +54,20 @@ is unguarded; use only read-only/plan/ask/sandbox review until it is registered.
 Keep secrets, tokens, caches, generated sessions, worktrees, and local state
 untracked.
 
-## Intentional Mirror
+## Entrypoint Boundary
 
-Only the `MIRROR:constraints` block is duplicated between `AGENTS.md` and
-`engineering.md`; `corepack pnpm lint:rules-mirror` enforces equality. The root
-command and architecture summary lives in `AGENTS.md`; full architecture
-authority remains in the System Sources above.
+`AGENTS.md` owns startup, communication, and hard constraints.
+`engineering.md` owns import boundaries and Git conventions; it points to the
+entrypoint instead of copying policy. Full architecture authority remains in the
+System Sources above.
 
 ## Planning And Knowledge
 
 - Active work: `tasks/todo.md`
-- Decisions/parked options: `docs/plan/adr/`; legacy index:
+- Architecture decisions and parked options: `docs/plan/adr/`; compatibility index:
   `docs/plan/decisions.md`
 - Regressions: `tasks/regressions.md`
-- Retrospectives: `tasks/lessons.md`
+- Prose-only learning staging: `tasks/lessons.md`
 - Runbooks: `docs/runbooks/README.md`
 - Business/domain index: `docs/ref/README.md`
 - Vocabulary: `docs/ref/glossary.md`

@@ -231,5 +231,5 @@ const ruleCount = new Set([
   "CONFIRM-OUTSIDE-STARTTRANSITION",
 ]).size;
 console.log(
-  `Regression guards: ${GUARDS.length} pattern guards + 1 structural guard over ${ruleCount} rules in sync.`,
+  `Regression guards: ${GUARDS.length} pattern guards + 1 structural guard over ${ruleCount} rules; checks passed.`,
 );

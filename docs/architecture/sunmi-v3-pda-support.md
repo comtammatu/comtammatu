@@ -2,7 +2,7 @@
 
 ## Trạng thái và thiết bị mục tiêu
 
-Thiết bị mục tiêu đã được Owner xác nhận là **SUNMI V3**. Trước khi mua hoặc viết tích hợp, vẫn phải xác nhận model trên tem máy, cấu hình RAM/ROM, GMS, NFC, scanner, phiên bản SUNMI OS và firmware máy in của đúng SKU.
+Thiết bị mục tiêu đã được Owner xác nhận là **SUNMI V3 có máy in tích hợp, NFC, đầu quét chuyên dụng và GMS**. Trước khi mua hoặc viết tích hợp, vẫn phải xác nhận model trên tem máy, factory configuration/BOM, RAM/ROM, bốn option, phiên bản SUNMI OS và firmware máy in của đúng SKU.
 
 Bằng chứng phần cứng, SDK và các biến thể SKU được tổng hợp riêng tại [Nghiên cứu thiết bị SUNMI V3](./sunmi-v3-device-research.md).
 
@@ -28,6 +28,7 @@ Nếu thử nghiệm trên máy thật không chứng minh được in im lặng
 - Ghép một PDA với một đăng ký POS và một máy in tích hợp logic tại cùng tenant/chi nhánh.
 - In `receipt`, `provisional_bill` và `shift_close_report` bằng máy in tích hợp.
 - Kiểm tra responsive/touch, bàn phím mềm, safe area, font tiếng Việt, giấy 58 mm và vòng đời PWA.
+- Nghiệm thu scanner ở chế độ KeyEvent và xác minh NFC/GMS trên cùng máy; chưa mở luồng scanner hoặc SoftPOS trong MVP.
 - Theo dõi trạng thái lệnh in, hủy ghép, đổi máy và fallback về LAN.
 
 ### Ngoài phạm vi
@@ -45,6 +46,7 @@ Nếu thử nghiệm trên máy thật không chứng minh được in im lặng
 - PWA hiện chỉ cache tài nguyên tĩnh; điều hướng bảo vệ, Server Action, Supabase và mọi write đều `NetworkOnly`. Vì vậy MVP không hứa bán offline.
 - `pos_terminals.device_id` đã tồn tại nhưng hiện không phải bằng chứng ghép thiết bị và không được dùng làm quyền truy cập.
 - `print_jobs` là hàng đợi bền vững; `@comtammatu/print-render` là nguồn chuẩn để tạo tài liệu/ESC/POS.
+- Renderer hiện cố định 576 dots/48 ký tự cho giấy 80 mm và luôn thêm lệnh partial cut; không thể gửi nguyên output này sang máy in 58 mm/dao xé của V3.
 - Print agent hiện chỉ nhận `connection_type = 'lan'` và gửi raw TCP tới máy in chi nhánh. Đường này phải tiếp tục hoạt động không đổi.
 - Một ca POS là ca dùng chung ở cấp chi nhánh; hỗ trợ PDA không biến ca thành ca riêng theo thiết bị.
 
@@ -62,6 +64,7 @@ print_jobs + tài liệu chuẩn từ @comtammatu/print-render
         ├── printer=lan ─────────► branch print-agent ─► máy in LAN
         │
         └── printer=sunmi_builtin
+                    │ 58mm/manual-tear render profile
                     │ claim bởi đúng PDA đã ghép
                     ▼
               SUNMI Web Print SDK
@@ -110,7 +113,7 @@ Không tạo một hệ thống hàng đợi thứ hai trong PDA. Server vẫn t
 3. Chạy demo Web Print SDK chính thức; thử text tiếng Việt, QR, bitmap/logo, cắt/xé giấy, 58 mm, 30 lệnh liên tiếp và khởi động lại thiết bị.
 4. Xác minh SDK/package được phép phân phối, có version cố định và có thể bundle cùng ứng dụng; không tải runtime từ CDN bên thứ ba.
 5. Ghi chính xác ý nghĩa callback khi thành công, hết giấy, mở nắp, quá nhiệt, mất dịch vụ và rớt mạng.
-6. Chứng minh raw ESC/POS từ `@comtammatu/print-render` có thể được gửi qua SDK mà không tạo một renderer SUNMI thứ hai.
+6. Đọc `QueryApi`/`getInfo()` để khóa printable dots/cutter/paper, rồi chứng minh bytes của một profile `58mm/manual-tear` có thể gửi qua SDK. Không dùng profile 80 mm hiện tại và không tạo renderer nghiệp vụ thứ hai.
 
 **Cổng dừng:** chỉ sang Đợt 1 khi máy thật in im lặng, font/QR đạt chuẩn và có tín hiệu đủ để phân biệt “đã in vật lý” với “đã gửi lệnh”. Nếu không đạt, lập quyết định riêng giữa plugin có hộp thoại, Android bridge nhỏ hoặc giữ máy in LAN; không tiếp tục schema/runtime theo giả định.
 
@@ -132,7 +135,7 @@ Không tạo một hệ thống hàng đợi thứ hai trong PDA. Server vẫn t
 **Thời lượng:** 5–8 ngày.
 
 1. Thêm RPC claim hẹp cho `sunmi_builtin`, có lease và khóa row; chỉ trả một job dành cho binding hiện tại.
-2. Render tài liệu trên server bằng `@comtammatu/print-render`, áp giới hạn kích thước và trả bytes/attempt token cho client đã xác minh.
+2. Render tài liệu trên server bằng `@comtammatu/print-render`: giữ profile 80 mm hiện tại làm mặc định và thêm đúng một profile `58mm/manual-tear` đã hiệu chuẩn cho V3; áp giới hạn kích thước và trả bytes/attempt token cho client đã xác minh.
 3. Tạo module SUNMI nhỏ, chỉ được load trong POS khi có binding + máy in active và capability probe thành công; module gọi Web Print SDK, không chứa logic đơn hàng.
 4. Hoàn tất/fail job qua RPC với attempt token; lưu mã lỗi chuẩn hóa như `service_unavailable`, `paper_out`, `cover_open`, `overheated`, `result_unknown`.
 5. Sửa print agent để lọc `connection_type = 'lan'` trước claim/dispatch, không được claim rồi đánh fail job SUNMI.
@@ -181,6 +184,7 @@ Chỉ mở đợt này khi pilot tạo nhu cầu đo được:
 - Unit/static tests cho capability detection, chuẩn hóa lỗi, lựa chọn route in và mapping UI state.
 - SQL tests cho pairing, cross-tenant/branch denial, claim concurrency, lease expiry, attempt replay, revoke và transition bất hợp lệ.
 - Contract test chứng minh print agent LAN bỏ qua job SUNMI và job LAN không đổi behavior.
+- Golden/regression test cho receipt, phiếu tạm tính và đóng ca ở profile 58 mm; output 80 mm hiện hữu phải giữ nguyên.
 - Regression cho create order/payment idempotency, reprint append-only và PWA NetworkOnly.
 - UI static/interaction tests tại 360 px cho action dock, modal, focus/keyboard và touch target.
 
@@ -196,7 +200,6 @@ Chỉ mở đợt này khi pilot tạo nhu cầu đo được:
 Các lát cắt schema/RPC/pairing/print evidence là T3; UI thuần responsive là T2 nhưng phải đi cùng cổng T3 của feature. Trước khi kết luận hoàn tất:
 
 ```bash
-REVIEW_TIER=T3 corepack pnpm lint:review-tier
 corepack pnpm typecheck
 corepack pnpm lint
 corepack pnpm build
@@ -222,7 +225,7 @@ Nếu có máy đúng SKU ngay từ đầu, phần kỹ thuật cốt lõi cần
 
 Phụ thuộc phải khóa trước Đợt 1:
 
-1. Chốt model code và cấu hình cụ thể của SUNMI V3 trên tem máy hoặc báo giá.
+1. Chốt `SUNMI V3`, model `T5F1A`, factory/supplier configuration code và BOM chứng minh printer + NFC + dedicated scanner + GMS trên cùng máy.
 2. Có ít nhất một máy thật, giấy thật và quyền truy cập SDK/service chính thức.
 3. Nhà cung cấp xác nhận version, license/phân phối và chính sách update WebView/SUNMI OS.
 4. Owner chấp nhận MVP chỉ dùng Wi-Fi cửa hàng, cash/VietQR hiện tại, không offline, không SoftPOS và không scanner.
@@ -239,7 +242,7 @@ Thiết bị không tạo thêm scope nghiệp vụ: tenant, branch, ca, đơn h
 
 ### Senior Dev
 
-Tái sử dụng PWA, `print_jobs`, renderer và route máy in hiện tại. Phần mới tối thiểu là binding có thể thu hồi, connection type, RPC claim/complete và một module SDK cục bộ. Không đưa service key vào PDA, không dựng queue hay renderer thứ hai, không viết native wrapper trước khi spike chứng minh Web SDK thiếu năng lực bắt buộc.
+Tái sử dụng PWA, `print_jobs`, `PrintDocument`, template và route máy in hiện tại. Phần mới tối thiểu là một profile 58 mm trong renderer hiện có, binding có thể thu hồi, connection type, RPC claim/complete và một module SDK cục bộ. Không đưa service key vào PDA, không dựng queue hoặc renderer nghiệp vụ thứ hai, không viết native wrapper trước khi spike chứng minh Web SDK thiếu năng lực bắt buộc.
 
 ### QA / Vận hành
 
@@ -253,8 +256,11 @@ Tiến hành theo mô hình **PWA + SUNMI Web Print SDK + durable `print_jobs`**
 
 - [SUNMI V3 Family](https://www.sunmi.com/en/v3-family/)
 - [SUNMI V3 datasheet, model T5F1A](https://cdn.sunmi.com/public/generalfile/mgt_import/d855cb35f4274e58bae93ea15394dbf6.pdf)
+- [Google Play supported devices](https://storage.googleapis.com/play_public/supported_devices.html)
+- [Google Play certification guidance](https://support.google.com/googleplay/answer/1727131?hl=en)
 - [SUNMI Developer Center](https://developer.sunmi.com/en-US/)
 - [SUNMI Web Print SDK demo](https://h5.sunmi.com/printer-sdk/demo.html)
+- [SUNMI scanner engine guide](https://developer.sunmi.com/docs/en-US/cdixeghjk491/xfareghjk568)
 - [SUNMI built-in printer documentation](https://docs.sunmi.com/en-US/cdixeghjk491/xdideghjk524)
 - [Android WebView security guidance](https://developer.android.com/develop/ui/views/layout/webapps/webview)
 - [Chrome Web NFC scope](https://developer.chrome.com/docs/capabilities/nfc)

@@ -5,6 +5,9 @@
 > ref, module docs và rules được trỏ trong từng entry mới là authority. Quyết
 > định đã supersede bị xóa; Git giữ lịch sử.
 
+Không tạo mã `Dxxx` mới cho task hoặc ghi chú triển khai. Thay đổi kiến trúc mới
+dùng ADR; khi không còn inbound reference, entry tương thích được xóa.
+
 ## D002: Tenant → Branch
 
 **Net effect:** Phân cấp runtime là `Tenant (L0) → Branch (L1)`, không có Brand

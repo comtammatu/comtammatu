@@ -7,10 +7,13 @@
 - `main` chỉ phục vụ CTCP Chén Sứ / Cơm Tấm Má Tư.
 - Production dùng Vercel project `comtammatu`, Supabase ref
   `enloyfnuerqgaqderbwb` và domain `web.comtammatu.com`.
+- Current architecture: [spec/architecture.md](spec/architecture.md)
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
-- Target architecture:
-  [architecture/target-modules-tech-stack-project-structure.md](architecture/target-modules-tech-stack-project-structure.md)
-- Superseded docs are not retained in this repo. Current contracts must live in `tasks/todo.md`, `docs/plan/adr/`, module docs, specs, runbooks, or canonical references.
+- `plan/decisions.md` only preserves meanings for referenced `Dxxx` labels.
+  ADR status decides whether a direction is Accepted, Proposed, or Parked; ADRs
+  are decision records, not the active tracker.
+- Superseded plans and snapshots are deleted after their live contract or action
+  is promoted to the owning spec, ref, module, runbook, or task.
 
 ## Đọc theo nhu cầu
 
@@ -25,7 +28,7 @@
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
-- Active planning: `tasks/todo.md`, `docs/plan/decisions.md`,
+- Active work: `tasks/todo.md`; decision records: `docs/plan/decisions.md` and
   `docs/plan/adr/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
   (gồm inventory, POS/KDS, finance, và `runbooks/db/*`)
@@ -48,6 +51,6 @@
 - `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
 - `spec/design-system.md`: Má Tư visual contract; primitive behavior,
   workflow composition và regression proof có owner riêng trong authority map
-- `plan/`: active decisions and ADRs
+- `plan/`: compatibility decisions and ADR records; not a rollout archive
 - `runbooks/`: operational verification (gồm `db/` cho Preview branch và re-baseline)
 - `worklog/`: policy only; use PR/task notes for transient implementation artifacts

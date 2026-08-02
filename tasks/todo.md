@@ -275,17 +275,17 @@ Evidence: Focused worker regression coverage, repository gates, T3 review, contr
 
 - [ ] Prove the failure log shape on Preview and observe one Production cron cadence read-only.
 
-## Converge the Má Tư Design System and roll it into every route family
+## Finish authenticated Design System rollout proof
 
 State: doing
 Kind: feature
 Tier: T3
 Lane: ui/design-system
-Exit: The P0-P7 program has one verified foundation, every page is classified keep/tune/rebuild and processed by route family, and accessibility/PWA/runtime evidence is reconciled without changing business authority.
-Evidence: `docs/plan/design-system-rollout.md`, C0/C1/C2 external review reconciliation, UI debt and archetype audits, focused and full repository gates, authenticated viewport matrix, axe, assistive-technology, and production-like PWA proof.
+Exit: Every protected route family has a current keep/tune/rebuild disposition, and the named viewport, accessibility, assistive-technology, and PWA runtime evidence passes without changing business authority.
+Evidence: `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`, UI debt and archetype audits, focused and full repository gates, authenticated viewport matrix, axe, assistive-technology, and production-like PWA proof.
 
 - [ ] Complete authenticated Branch/Owner viewport and axe runs, VoiceOver/TalkBack critical-path proof, and real install/update/standalone PWA proof on a registered target.
-- [ ] Run the P0-3 authenticated sweep for `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]`, `/inventory/consumption`, and `/inventory/stock` at `390`, `768`, and `1280`, then record each disposition in `PAGE_DISPOSITION_OVERRIDES` (`scripts/page-archetypes.mjs`).
+- [ ] Run the authenticated sweep for `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]`, `/inventory/consumption`, and `/inventory/stock` at `390`, `768`, and `1280`, then record each disposition in `PAGE_DISPOSITION_OVERRIDES` (`scripts/page-archetypes.mjs`).
 
 ## Densify the Branch on-hand list
 

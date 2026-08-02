@@ -18,12 +18,14 @@ repo hoặc dựng runtime sản phẩm song song.
 - [../ref/business-context.md](../ref/business-context.md) — business boundary và phạm vi sản phẩm
 - [../ref/inventory.md](../ref/inventory.md) — semantics chuẩn cho procurement, production, stock, và transfer
 
-## Tài liệu định hướng chưa kích hoạt
+## Định hướng có điều kiện
 
-- [target-modules-tech-stack-project-structure.md](target-modules-tech-stack-project-structure.md)
-  là tập đề xuất tương lai, không phải SSOT và không được dùng để suy ra route,
-  package hoặc runtime hiện hành. Mỗi đề xuất chỉ có hiệu lực sau khi được chốt
-  bằng decision/ADR có điều kiện kích hoạt.
+- [target-authorization.md](target-authorization.md) mô tả đích cutover quyền
+  truy cập đã được ADR 0015 chấp thuận; runtime hiện tại vẫn phải đọc
+  `docs/modules/auth.md` và source ACL/RLS.
+- [sunmi-v3-pda-support.md](sunmi-v3-pda-support.md) và
+  [sunmi-v3-device-research.md](sunmi-v3-device-research.md) là đề xuất pilot có
+  cổng dừng theo đúng SKU và bằng chứng máy thật; chưa phải runtime contract.
 
 ## Mục tiêu của thư mục này
 
@@ -33,8 +35,8 @@ repo hoặc dựng runtime sản phẩm song song.
 ## Boundary
 
 - `docs/spec/architecture.md`: current runtime/package/module contract
-- `docs/architecture/*`: index, cross-cutting decision narrative và đề xuất
-  chưa kích hoạt; không lặp lại current contract
+- `docs/architecture/*`: landing và narrative cross-cutting có điều kiện; không
+  lặp lại current contract hoặc lưu implementation plan đã hoàn tất
 - `docs/ref/glossary.md`: source of truth cho current-state vocabulary và naming
   policy
 - `docs/ref/*`: business rules và semantics chi tiết theo domain

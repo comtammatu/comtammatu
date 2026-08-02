@@ -51,7 +51,7 @@ evidence under its original effective context.
 
 ## Authority
 
-- `docs/architecture/target-modules-tech-stack-project-structure.md`
+- `docs/spec/architecture.md`
 - `docs/ref/legal-framework-2026.md`
 - `docs/ref/einvoice-tax.md`
 - `docs/modules/finance.md`

@@ -4,8 +4,9 @@ Top-level `tasks/` is intentionally small:
 
 - `todo.md` — active tracker for current operating and owner-gated work.
 - `regressions.md` — active named failure rules loaded before implementation.
-- `lessons.md` — durable retrospective lessons after corrections.
+- `lessons.md` — prose-only learning waiting to be promoted or deleted.
 
 Do not add historical QA reports, one-off audits, or dated task packs here.
-Promote durable lessons to `lessons.md`, durable failure guards to
-`regressions.md`, and active work to `todo.md`; otherwise remove the note.
+Stage prose-only learning in `lessons.md`, deterministic failures in
+`regressions.md`, and active work in `todo.md`. Promote stable facts to their
+owner and delete the staging copy; otherwise remove the note.
