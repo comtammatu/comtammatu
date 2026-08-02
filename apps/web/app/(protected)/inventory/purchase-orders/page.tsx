@@ -2,11 +2,7 @@ import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
-import {
-  AppEmptyState,
-  AppPage,
-  AppPageHeader,
-} from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
@@ -172,9 +168,7 @@ export default async function PurchaseOrdersPage({
   let demandQuery = supabase
     .from("purchase_requests" as never)
     .select(
-      (canAllocate
-        ? DEMAND_SELECT_WITH_ALLOCATIONS
-        : DEMAND_SELECT) as never,
+      (canAllocate ? DEMAND_SELECT_WITH_ALLOCATIONS : DEMAND_SELECT) as never,
     )
     .eq("tenant_id" as never, claims.tenant_id)
     .order("updated_at" as never, { ascending: false })
@@ -193,28 +187,22 @@ export default async function PurchaseOrdersPage({
     poQuery = poQuery.eq("branch_id", scope.selectedBranchId);
   }
 
-  const [
-    demandResult,
-    poResult,
-    supplierResult,
-    supplierItemResult,
-  ] = await Promise.all([
-    demandQuery,
-    poQuery,
-    canAllocate
-      ? supabase
-          .from("suppliers")
-          .select("id, name")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("is_active", true)
-          .order("name")
-      : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("supplier_items")
-      .select("supplier_id, ingredient_id, is_preferred")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true),
-  ]);
+  const [demandResult, poResult, supplierResult, supplierItemResult] =
+    await Promise.all([
+      demandQuery,
+      poQuery,
+      supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .order("name"),
+      supabase
+        .from("supplier_items")
+        .select("supplier_id, ingredient_id, is_preferred")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true),
+    ]);
 
   if (
     demandResult.error ||
@@ -239,25 +227,31 @@ export default async function PurchaseOrdersPage({
     id: branch.id,
     name: branch.name,
   }));
-  const branchNames = new Map(branches.map((branch) => [branch.id, branch.name]));
+  const branchNames = new Map(
+    branches.map((branch) => [branch.id, branch.name]),
+  );
   const supplierNames = new Map(
     (supplierResult.data ?? []).map((supplier) => [supplier.id, supplier.name]),
   );
-  const supplierMappings = supplierItemResult.data ?? [];
+  const activeSupplierIds = new Set(
+    (supplierResult.data ?? []).map((supplier) => supplier.id),
+  );
+  const supplierMappings = (supplierItemResult.data ?? []).filter((item) =>
+    activeSupplierIds.has(item.supplier_id),
+  );
   const mappedIngredientIds = [
     ...new Set(supplierMappings.map((item) => item.ingredient_id)),
   ];
-  const supplierIngredientIds = Object.groupBy(
-    supplierMappings,
-    (item) => String(item.supplier_id),
+  const supplierIngredientIds = Object.groupBy(supplierMappings, (item) =>
+    String(item.supplier_id),
   );
   const suppliers: PurchaseOrderSupplier[] = canAllocate
     ? (supplierResult.data ?? []).map((supplier) => ({
         id: supplier.id,
         name: supplier.name,
-        ingredientIds: (
-          supplierIngredientIds[String(supplier.id)] ?? []
-        ).map((item) => item.ingredient_id),
+        ingredientIds: (supplierIngredientIds[String(supplier.id)] ?? []).map(
+          (item) => item.ingredient_id,
+        ),
         preferredIngredientIds: (
           supplierIngredientIds[String(supplier.id)] ?? []
         )
@@ -277,7 +271,8 @@ export default async function PurchaseOrdersPage({
       for (const line of po.purchase_order_items ?? []) {
         if (line.purchase_request_item_id == null) continue;
         const factor = Number(line.entry_to_base_factor);
-        const lines = orderedLinesByItem.get(line.purchase_request_item_id) ?? [];
+        const lines =
+          orderedLinesByItem.get(line.purchase_request_item_id) ?? [];
         lines.push({
           quantity: Number(line.quantity),
           entryToBaseFactor: Number.isFinite(factor) ? factor : 0,
@@ -289,15 +284,16 @@ export default async function PurchaseOrdersPage({
       const ingredient = one(item.ingredients);
       const demandFactor = Number(
         (ingredient?.ingredient_units ?? []).find(
-          (unit) =>
-            unit.is_active && unit.unit_id === item.entry_unit_id,
+          (unit) => unit.is_active && unit.unit_id === item.entry_unit_id,
         )?.to_base_factor ?? 0,
       );
-      const { orderedQuantity, remainingQuantity } = purchaseDemandLineProgress({
-        demandQuantity: Number(item.quantity),
-        demandToBaseFactor: Number.isFinite(demandFactor) ? demandFactor : 0,
-        orderedLines: orderedLinesByItem.get(item.id) ?? [],
-      });
+      const { orderedQuantity, remainingQuantity } = purchaseDemandLineProgress(
+        {
+          demandQuantity: Number(item.quantity),
+          demandToBaseFactor: Number.isFinite(demandFactor) ? demandFactor : 0,
+          orderedLines: orderedLinesByItem.get(item.id) ?? [],
+        },
+      );
       return {
         id: item.id,
         ingredientId: item.ingredient_id,
@@ -306,8 +302,7 @@ export default async function PurchaseOrdersPage({
         orderedQuantity,
         remainingQuantity,
         entryUnitId: item.entry_unit_id,
-        unitLabel:
-          one(item.units)?.name ?? one(item.units)?.code ?? "Đơn vị",
+        unitLabel: one(item.units)?.name ?? one(item.units)?.code ?? "Đơn vị",
         notes: item.notes,
       };
     });
@@ -389,8 +384,7 @@ export default async function PurchaseOrdersPage({
         quantity: Number(line.quantity),
         receivedQuantity: receivedByLine.get(line.id) ?? 0,
         entryUnitId: line.entry_unit_id,
-        unitLabel:
-          one(line.units)?.name ?? one(line.units)?.code ?? "Đơn vị",
+        unitLabel: one(line.units)?.name ?? one(line.units)?.code ?? "Đơn vị",
       })),
       linkedGrns,
       activeDraftGrnId:

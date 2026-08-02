@@ -16,9 +16,7 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
   const migration =
-    read(
-      "supabase/migrations/20260730140000_po_first_purchase_workflow.sql",
-    ) +
+    read("supabase/migrations/20260730140000_po_first_purchase_workflow.sql") +
     read(
       "supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql",
     );
@@ -44,7 +42,10 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   assert.doesNotMatch(actions, /createPurchaseOrderFromGrn/);
   assert.match(demandClient, /copy\.submitAction/);
   assert.match(demandClient, /copy\.approveAllocationAction/);
-  assert.match(inventoryMessages, /approveAllocationAction: "Duyệt & tạo đơn mua"/);
+  assert.match(
+    inventoryMessages,
+    /approveAllocationAction: "Duyệt & tạo đơn mua"/,
+  );
   assert.match(demandClient, /variant="document"/);
   assert.match(migration, /save_purchase_demand/);
   assert.match(migration, /review_purchase_demand/);
@@ -77,6 +78,41 @@ test("demand review keeps approve, return, and reject in one action", () => {
   assert.match(actions, /review_purchase_demand/);
 });
 
+test("warehouse cannot submit demand lines without an active supplier", () => {
+  const client = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  );
+  const page = read(
+    "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
+  );
+  const migration = read(
+    "supabase/migrations/20260802162827_block_purchase_demand_without_supplier.sql",
+  );
+  const saveStart = client.indexOf("function saveRequest");
+  const saveBlock = client.slice(
+    saveStart,
+    client.indexOf("function openAllocation"),
+  );
+
+  assert.ok(saveStart >= 0, "saveRequest must exist");
+  assert.match(saveBlock, /submit &&/);
+  assert.match(saveBlock, /mappedIngredientIds\.includes/);
+  assert.match(saveBlock, /copy\.missingSupplierMappings/);
+  assert.ok(
+    saveBlock.indexOf("mappedIngredientIds.includes") <
+      saveBlock.indexOf("startTransition"),
+    "missing suppliers must block before the Server Action starts",
+  );
+  assert.match(page, /const activeSupplierIds = new Set/);
+  assert.match(
+    page,
+    /supplierMappings = \(supplierItemResult\.data \?\? \[\]\)\.filter/,
+  );
+  assert.match(migration, /supplier_item_mapping_required/);
+  assert.match(migration, /supplier_item\.is_active/);
+  assert.match(migration, /supplier\.is_active/);
+});
+
 test("warehouse can edit an unallocated pending demand without reopening draft", () => {
   const client = read(
     "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
@@ -97,27 +133,15 @@ test("warehouse can edit an unallocated pending demand without reopening draft",
     /\(row\.status === "draft" \|\| row\.status === "changes_requested"\)[\s\S]*key: "cancel"/,
   );
   assert.match(client, /editingPendingDemand/);
-  assert.match(
-    client,
-    /editingPendingDemand[\s\S]*ACTIONS_VI\.saveChanges/,
-  );
+  assert.match(client, /editingPendingDemand[\s\S]*ACTIONS_VI\.saveChanges/);
   assert.match(actions, /purchase_demand_allocation_started/);
   assert.match(
     migration,
     /status NOT IN \([\s\S]*?'draft',[\s\S]*?'submitted',[\s\S]*?'pending_allocation'[\s\S]*?\)/,
   );
-  assert.match(
-    migration,
-    /purchase_demand_allocation_started/,
-  );
-  assert.match(
-    migration,
-    /WHEN v_was_pending THEN v_demand\.submitted_by/,
-  );
-  assert.match(
-    migration,
-    /WHEN v_was_pending THEN v_demand\.submitted_at/,
-  );
+  assert.match(migration, /purchase_demand_allocation_started/);
+  assert.match(migration, /WHEN v_was_pending THEN v_demand\.submitted_by/);
+  assert.match(migration, /WHEN v_was_pending THEN v_demand\.submitted_at/);
   assert.match(
     migration,
     /REVOKE ALL ON FUNCTION public\.save_purchase_request\([\s\S]*FROM PUBLIC, anon, authenticated/,
@@ -158,9 +182,15 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
 
-  assert.match(client, /onRowClick=\{\(row\) => updateUrl\(row\.id, "view"\)\}/);
+  assert.match(
+    client,
+    /onRowClick=\{\(row\) => updateUrl\(row\.id, "view"\)\}/,
+  );
   assert.match(client, /key:\s*"view"/);
-  assert.match(client, /<span className="font-mono font-medium">\{row\.code\}<\/span>/);
+  assert.match(
+    client,
+    /<span className="font-mono font-medium">\{row\.code\}<\/span>/,
+  );
   assert.match(client, /params\.set\("poId", String\(poId\)\)/);
   assert.match(client, /params\.set\("mode", nextMode\)/);
   assert.match(client, /<AppDialog/);
@@ -189,9 +219,7 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
   const page = read(
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
-  const helper = read(
-    "apps/web/lib/inventory/purchase-demand-progress.ts",
-  );
+  const helper = read("apps/web/lib/inventory/purchase-demand-progress.ts");
   const migration = read(
     "supabase/migrations/20260731212207_purchase_demand_coverage_base_units.sql",
   );

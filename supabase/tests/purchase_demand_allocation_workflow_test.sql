@@ -9,6 +9,7 @@ DECLARE
   v_owner uuid;
   v_unit bigint;
   v_ingredient bigint;
+  v_unmapped_ingredient bigint;
   v_supplier_a bigint;
   v_supplier_b bigint;
   v_demand_id bigint;
@@ -106,6 +107,36 @@ BEGIN
   )
   VALUES (v_tenant, v_ingredient, v_unit, 1, TRUE, TRUE);
 
+  INSERT INTO public.ingredients (
+    tenant_id,
+    name,
+    sku,
+    unit_cost,
+    item_kind,
+    default_fulfill_site_kind,
+    is_active
+  )
+  VALUES (
+    v_tenant,
+    '__demand_unmapped_' || pg_catalog.gen_random_uuid()::text,
+    '__DEMAND-UNMAPPED-' || pg_catalog.gen_random_uuid()::text,
+    0,
+    'raw_material',
+    'central_supply',
+    TRUE
+  )
+  RETURNING id INTO v_unmapped_ingredient;
+
+  INSERT INTO public.ingredient_units (
+    tenant_id,
+    ingredient_id,
+    unit_id,
+    to_base_factor,
+    is_base,
+    is_active
+  )
+  VALUES (v_tenant, v_unmapped_ingredient, v_unit, 1, TRUE, TRUE);
+
   INSERT INTO public.suppliers (tenant_id, name, is_active)
   VALUES
     (
@@ -165,6 +196,33 @@ BEGIN
     )::text,
     TRUE
   );
+
+  v_failed := FALSE;
+  BEGIN
+    PERFORM public.save_purchase_demand(
+      NULL,
+      v_branch,
+      CURRENT_DATE + 1,
+      'Demand must not submit without an active supplier',
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'ingredient_id', v_unmapped_ingredient,
+          'quantity', 1,
+          'entry_unit_id', v_unit,
+          'notes', ''
+        )
+      ),
+      TRUE,
+      pg_catalog.gen_random_uuid()
+    );
+  EXCEPTION
+    WHEN check_violation THEN
+      v_failed := SQLERRM LIKE '%supplier_item_mapping_required%';
+  END;
+  IF NOT v_failed THEN
+    RAISE EXCEPTION
+      'PURCHASE DEMAND: missing active supplier did not block submission';
+  END IF;
 
   v_result := public.save_purchase_demand(
     NULL,

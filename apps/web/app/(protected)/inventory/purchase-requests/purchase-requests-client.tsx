@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -192,9 +198,7 @@ export function PurchaseRequestsClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(
-    () => searchParams.get("needsQ") ?? "",
-  );
+  const [search, setSearch] = useState(() => searchParams.get("needsQ") ?? "");
   const [branchId, setBranchId] = useState(String(branches[0]?.id ?? ""));
   const [neededBy, setNeededBy] = useState(() => getVNDateString());
   const [requestLines, setRequestLines] = useState<RequestDraftLine[]>([
@@ -206,8 +210,8 @@ export function PurchaseRequestsClient({
   const [requestIdempotencyKey, setRequestIdempotencyKey] = useState(() =>
     crypto.randomUUID(),
   );
-  const [allocationIdempotencyKey, setAllocationIdempotencyKey] = useState(
-    () => crypto.randomUUID(),
+  const [allocationIdempotencyKey, setAllocationIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
   );
   const [requestBaseline, setRequestBaseline] = useState("");
   const [allocationBaseline, setAllocationBaseline] = useState("");
@@ -219,10 +223,7 @@ export function PurchaseRequestsClient({
   const mode = searchParams.get("mode");
   const statusFilter = searchParams.get("needsStatus") ?? "all";
   const siteFilter = searchParams.get("needsSite") ?? "all";
-  const currentPage = Math.max(
-    Number(searchParams.get("needsPage")) || 1,
-    1,
-  );
+  const currentPage = Math.max(Number(searchParams.get("needsPage")) || 1, 1);
   const demandId = Number(searchParams.get("demandId"));
   const selectedId =
     Number.isInteger(demandId) && demandId > 0 ? demandId : null;
@@ -232,11 +233,9 @@ export function PurchaseRequestsClient({
       : (rows.find((row) => row.id === selectedId) ?? null);
   const editingPendingDemand =
     mode === "edit" && selected?.status === "pending_allocation";
-  const createOpen =
-    mode === "create" || (mode === "edit" && selected != null);
+  const createOpen = mode === "create" || (mode === "edit" && selected != null);
   const allocateOpen = mode === "allocate" && selected != null;
-  const recordMode =
-    mode === "view" || mode === "edit" || mode === "allocate";
+  const recordMode = mode === "view" || mode === "edit" || mode === "allocate";
   const filtered = useMemo(
     () =>
       rows.filter(
@@ -309,9 +308,7 @@ export function PurchaseRequestsClient({
     setBranchId(nextBranchId);
     setNeededBy(nextNeededBy);
     setRequestLines(nextLines);
-    setRequestBaseline(
-      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
-    );
+    setRequestBaseline(JSON.stringify([nextBranchId, nextNeededBy, nextLines]));
   }, [mode, selected]);
 
   useEffect(() => {
@@ -384,6 +381,14 @@ export function PurchaseRequestsClient({
       quantity: Number(line.quantity),
       entryUnitId: Number(line.entryUnitId),
     }));
+    const missingSupplierNames = lines.flatMap((line) =>
+      line.ingredientId > 0 && !mappedIngredientIds.includes(line.ingredientId)
+        ? [
+            ingredients.find((item) => item.id === line.ingredientId)?.name ??
+              copy.ingredient,
+          ]
+        : [],
+    );
     if (
       !Number(branchId) ||
       lines.some(
@@ -397,6 +402,10 @@ export function PurchaseRequestsClient({
       toast.error(copy.createFailed);
       return;
     }
+    if (submit && missingSupplierNames.length > 0) {
+      toast.error(copy.missingSupplierMappings(missingSupplierNames));
+      return;
+    }
     startTransition(async () => {
       const result = await savePurchaseDemand({
         demandId: mode === "edit" ? selected?.id : null,
@@ -404,8 +413,7 @@ export function PurchaseRequestsClient({
         neededBy: neededBy || null,
         lines,
         submit,
-        idempotencyKey:
-          mode === "create" ? requestIdempotencyKey : undefined,
+        idempotencyKey: mode === "create" ? requestIdempotencyKey : undefined,
       });
       if (!result.success || !result.data) {
         toast.error(result.error ?? copy.createFailed);
@@ -667,7 +675,11 @@ export function PurchaseRequestsClient({
         <span className="font-mono font-medium">{row.code}</span>
       ),
     },
-    { key: "branch", header: copy.branchColumn, render: (row) => row.branchName },
+    {
+      key: "branch",
+      header: copy.branchColumn,
+      render: (row) => row.branchName,
+    },
     {
       key: "status",
       header: copy.statusColumn,
@@ -877,8 +889,7 @@ export function PurchaseRequestsClient({
     missingSupplierItems.length === 0 &&
     selected.items.every(
       (item) =>
-        Math.abs((totals.get(item.id) ?? 0) - item.remainingQuantity) <=
-        0.0005,
+        Math.abs((totals.get(item.id) ?? 0) - item.remainingQuantity) <= 0.0005,
     );
   const canReviewSelected =
     canAllocate &&
@@ -941,8 +952,7 @@ export function PurchaseRequestsClient({
           </>
         }
       >
-        {selected?.status === "changes_requested" &&
-        selected.statusReason ? (
+        {selected?.status === "changes_requested" && selected.statusReason ? (
           <Item variant="muted" size="sm">
             <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
             {selected.statusReason}
@@ -1257,8 +1267,7 @@ export function PurchaseRequestsClient({
                 variant="destructive"
                 disabled={isPending}
                 onClick={() =>
-                  selected &&
-                  setReasonAction({ kind: "reject", row: selected })
+                  selected && setReasonAction({ kind: "reject", row: selected })
                 }
               >
                 {copy.rejectAction}
@@ -1289,9 +1298,7 @@ export function PurchaseRequestsClient({
             className="items-start flex-col sm:flex-row"
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <p className="font-medium">
-                {copy.missingSupplierMappingsTitle}
-              </p>
+              <p className="font-medium">{copy.missingSupplierMappingsTitle}</p>
               <p className="text-sm text-muted-foreground">
                 {missingSupplierItems
                   .map((item) => item.ingredientName)
@@ -1320,11 +1327,7 @@ export function PurchaseRequestsClient({
             const allocated = totals.get(item.id) ?? 0;
             const remaining = item.remainingQuantity - allocated;
             return (
-              <Item
-                key={item.id}
-                variant="outline"
-                className="items-stretch"
-              >
+              <Item key={item.id} variant="outline" className="items-stretch">
                 <ItemHeader>
                   <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
                   <Badge
@@ -1354,11 +1357,9 @@ export function PurchaseRequestsClient({
                             controlSize="field"
                             value={line.quantity}
                             onValueChange={(value) =>
-                              patchAllocation(
-                                draft.supplierId,
-                                line.key,
-                                { quantity: value },
-                              )
+                              patchAllocation(draft.supplierId, line.key, {
+                                quantity: value,
+                              })
                             }
                             maxFractionDigits={3}
                             placeholder={copy.quantity}

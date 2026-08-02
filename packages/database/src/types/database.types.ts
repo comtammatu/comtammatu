@@ -13860,6 +13860,17 @@ export type Database = {
         Args: { p_category_ids: number[]; p_station_id: number }
         Returns: undefined
       }
+      save_stock_issue_line: {
+        Args: {
+          p_entry_unit_id: number
+          p_ingredient_id: number
+          p_issue_id: number
+          p_photo_urls?: string[]
+          p_quantity: number
+          p_reason?: string
+        }
+        Returns: Json
+      }
       save_stock_request: {
         Args: {
           p_branch_id: number
