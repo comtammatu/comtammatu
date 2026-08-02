@@ -214,6 +214,7 @@ const EXPENSE_FORM_CATEGORIES = [
   "rent",
   "salary",
   "utilities",
+  "hospitality",
   "other",
 ] as const satisfies readonly ExpenseCategory[];
 

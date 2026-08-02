@@ -17,6 +17,7 @@ export const EXPENSE_CATEGORY_VALUES = [
   "repair",
   "marketing",
   "fees_tax",
+  "hospitality",
   "bank_deposit",
   "other",
 ] as const;
@@ -49,6 +50,7 @@ export const EXPENSE_CATEGORY_GROUP: Record<
   supplies: "operating",
   marketing: "operating",
   fees_tax: "operating",
+  hospitality: "operating",
   other: "operating",
   cogs_manual: "materials",
   bank_deposit: "transfer",

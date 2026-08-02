@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
+  EXPENSE_CATEGORY_VALUES,
   classifyExpensePaymentState,
   expenseNeedsAction,
   isExpenseVisibleForBankMatch,
@@ -160,8 +161,34 @@ test("bank matching shows only canonical candidates and the current evidence", (
 
 test("bank deposits stay out of operating expense totals", () => {
   assert.equal(isOperatingExpenseCategory("rent"), true);
+  assert.equal(isOperatingExpenseCategory("hospitality"), true);
   assert.equal(isOperatingExpenseCategory("bank_deposit"), false);
   assert.equal(isOperatingExpenseCategory("cogs_manual"), false);
+});
+
+test("hospitality is selectable and accepted across expense boundaries", () => {
+  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const messages = readWeb("lib/messages/finance.ts");
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260802135333_add_hospitality_expense_category.sql",
+    ),
+    "utf8",
+  );
+
+  assert.equal(EXPENSE_CATEGORY_VALUES.includes("hospitality"), true);
+  assert.match(client, /EXPENSE_FORM_CATEGORIES[\s\S]*"hospitality"/);
+  assert.match(messages, /hospitality: "Tiếp khách"/);
+  assert.match(
+    migration,
+    /ADD CONSTRAINT expenses_category_check[\s\S]*'hospitality'/,
+  );
+  assert.match(
+    migration,
+    /create_expense_transfer_intent\(bigint,date,text,jsonb,text,text,text\)/,
+  );
+  assert.match(migration, /hospitality_expense_category_boundary_not_found/);
 });
 
 test("expense period totals load every row and fail closed on missing evidence", () => {

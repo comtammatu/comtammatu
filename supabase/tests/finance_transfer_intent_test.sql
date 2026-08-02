@@ -1265,6 +1265,97 @@ BEGIN
 END;
 $$;
 
+SET LOCAL ROLE authenticated;
+
+DO $$
+DECLARE
+  v_owner uuid := current_setting('test.transfer_intent_owner')::uuid;
+  v_tenant_id bigint := current_setting('test.transfer_intent_tenant')::bigint;
+  v_branch_id bigint := current_setting('test.transfer_intent_branch')::bigint;
+  v_expense_id bigint;
+  v_cash_before numeric;
+  v_cash_after numeric;
+  v_business_date date := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+BEGIN
+  SELECT (public.get_operating_cash_movement_for_period(
+    v_business_date,
+    v_business_date,
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_cash_before;
+
+  INSERT INTO public.expenses (
+    tenant_id,
+    branch_id,
+    expense_date,
+    category,
+    amount,
+    payment_method,
+    paid_at,
+    created_by
+  ) VALUES (
+    v_tenant_id,
+    v_branch_id,
+    v_business_date,
+    'hospitality',
+    12345,
+    'cash',
+    now(),
+    v_owner
+  )
+  RETURNING id INTO v_expense_id;
+
+  SELECT (public.get_operating_cash_movement_for_period(
+    v_business_date,
+    v_business_date,
+    v_branch_id
+  )->>'cash_expenses')::numeric
+  INTO v_cash_after;
+
+  IF v_cash_after - v_cash_before <> 12345 THEN
+    RAISE EXCEPTION 'hospitality_expense_cash_movement_invalid';
+  END IF;
+
+  PERFORM public.update_operating_expense(
+    v_expense_id,
+    v_branch_id,
+    v_business_date,
+    'hospitality',
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0,
+      'taxable_amount', 12345,
+      'vat_amount', 0
+    )),
+    'Hospitality test',
+    NULL
+  );
+
+  PERFORM *
+  FROM public.transition_expense_payment(v_expense_id, 'unpaid');
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.expenses expense
+    WHERE expense.id = v_expense_id
+      AND expense.category = 'hospitality'
+      AND expense.payment_method = 'unpaid'
+      AND expense.paid_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'hospitality_expense_mutation_invalid';
+  END IF;
+
+  PERFORM public.cancel_expense(v_expense_id);
+
+  IF EXISTS (
+    SELECT 1 FROM public.expenses expense WHERE expense.id = v_expense_id
+  ) THEN
+    RAISE EXCEPTION 'hospitality_expense_cancel_invalid';
+  END IF;
+END;
+$$;
+
+RESET ROLE;
+
 SET CONSTRAINTS ALL IMMEDIATE;
 
 SELECT 'finance_transfer_intent_test: ok' AS result;

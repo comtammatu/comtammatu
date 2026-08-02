@@ -454,6 +454,7 @@ export const finance = {
       repair: "Sửa chữa / bảo trì",
       marketing: "Marketing / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
+      hospitality: "Tiếp khách",
       bank_deposit: "Nộp tiền mặt vào NH",
       other: "Khác",
     },
