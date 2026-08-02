@@ -359,22 +359,34 @@ export const upsertStockIssueLine = withAction(
       return { success: false, error: "Số lượng vượt tồn hiện tại." };
     }
 
-    // confirm_stock_issue rewrites this from WAC again at commit time.
-    const { error } = await supabase.from("stock_issue_items").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        issue_id: d.issueId,
-        ingredient_id: d.ingredientId,
-        quantity: d.quantity,
-        entry_unit_id: resolvedUnit.unitId,
-        unit_cost: 0,
-        reason: d.reason ?? null,
-        ...(d.photoUrls === undefined ? {} : { photo_urls: d.photoUrls }),
-      },
-      { onConflict: "issue_id,ingredient_id,tenant_id" },
-    );
+    const { error } = await supabase.rpc("save_stock_issue_line" as never, {
+      p_issue_id: d.issueId,
+      p_ingredient_id: d.ingredientId,
+      p_quantity: d.quantity,
+      p_entry_unit_id: resolvedUnit.unitId,
+      p_reason: d.reason ?? null,
+      ...(d.photoUrls === undefined ? {} : { p_photo_urls: d.photoUrls }),
+    } as never);
 
     if (error) {
+      if (error.code === "42501") {
+        return { success: false, error: "Không có quyền sửa phiếu này." };
+      }
+      if (error.code === "23503") {
+        return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
+      }
+      if (
+        error.code === "22023" &&
+        error.message.includes("insufficient_stock")
+      ) {
+        return { success: false, error: "Số lượng vượt tồn hiện tại." };
+      }
+      if (error.code === "22023" || error.code === "P0002") {
+        return {
+          success: false,
+          error: "Phiếu đã thay đổi. Tải lại trang rồi thử lại.",
+        };
+      }
       return { success: false, error: "Không thể lưu dòng phiếu xuất." };
     }
     revalidateStockIssueSurfaces({

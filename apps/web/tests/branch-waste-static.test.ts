@@ -63,5 +63,8 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
     /routeBranchId|embedded|successHref|cancelHref/,
   );
   assert.doesNotMatch(officeClient, /embedded|successHref/);
-  assert.match(officeClient, /cancelHref="\/inventory\/waste"/);
+  assert.match(
+    officeClient,
+    /cancelHref=\{`\/inventory\/consumption\?branchId=\$\{context\.branch\.id\}`\}/,
+  );
 });

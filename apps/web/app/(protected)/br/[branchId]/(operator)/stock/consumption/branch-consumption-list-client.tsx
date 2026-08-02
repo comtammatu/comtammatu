@@ -101,6 +101,7 @@ export function BranchConsumptionListClient({
   branchId,
   branchName,
   canManage,
+  showRecorded,
   manualIssues,
   manualIssuesLoadFailed,
   recorded,
@@ -109,6 +110,7 @@ export function BranchConsumptionListClient({
   branchId: number;
   branchName: string;
   canManage: boolean;
+  showRecorded: boolean;
   manualIssues: BranchStockIssue[];
   manualIssuesLoadFailed: boolean;
   recorded: BranchRecordedConsumption[];
@@ -120,7 +122,7 @@ export function BranchConsumptionListClient({
   const searchParams = useSearchParams();
   const requestedView = searchParams.get("view");
   const view: ConsumptionView =
-    requestedView === "manual" ? "manual" : "recorded";
+    showRecorded && requestedView !== "manual" ? "recorded" : "manual";
   const setView = useCallback(
     (next: ConsumptionView) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -192,10 +194,15 @@ export function BranchConsumptionListClient({
           setStatus("all");
         }}
       >
-        <TabsList size="touch" className="grid w-full grid-cols-2">
-          <TabsTrigger value="recorded">
-            {INVENTORY_VI.recordedConsumptionTitle}
-          </TabsTrigger>
+        <TabsList
+          size="touch"
+          className={showRecorded ? "grid w-full grid-cols-2" : "grid w-full"}
+        >
+          {showRecorded ? (
+            <TabsTrigger value="recorded">
+              {INVENTORY_VI.recordedConsumptionTitle}
+            </TabsTrigger>
+          ) : null}
           <TabsTrigger value="manual">
             {INVENTORY_VI.manualConsumptionSlipsTitle}
           </TabsTrigger>

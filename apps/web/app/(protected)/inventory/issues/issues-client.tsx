@@ -159,6 +159,7 @@ function buildListHref(listBasePath: string, params: URLSearchParams): string {
 export function IssuesClient({
   issues,
   recordedConsumptions,
+  showRecordedConsumptions = true,
   canViewMonetary,
   branches,
   defaultBranchId,
@@ -175,6 +176,7 @@ export function IssuesClient({
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
+  showRecordedConsumptions?: boolean;
   canViewMonetary: boolean;
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
@@ -232,8 +234,13 @@ export function IssuesClient({
   const openIssueDetail = (item: IssueRow) => {
     router.push(issueDetailHref(item));
   };
-  const allowedCreateIssueTypes = ISSUE_TYPES.filter((option) =>
-    allowedIssueTypes.includes(option.value),
+  const allowedCreateIssueTypes = ISSUE_TYPES.filter(
+    (option) =>
+      allowedIssueTypes.includes(option.value) &&
+      option.value !== "writeoff" &&
+      (!allowedIssueTypes.includes("consumption") ||
+        allowedIssueTypes.length === 1 ||
+        option.value === "consumption"),
   );
   const allowedTypeFilterOptions = TYPE_FILTER_OPTIONS.filter(
     (option) =>
@@ -243,7 +250,8 @@ export function IssuesClient({
     allowedIssueTypes.length === 1 && allowedIssueTypes[0] === "consumption";
   const isCombinedConsumptionScope =
     allowedIssueTypes.length > 1 && allowedIssueTypes.includes("consumption");
-  const showsRecordedConsumption = allowedIssueTypes.includes("consumption");
+  const showsRecordedConsumption =
+    showRecordedConsumptions && allowedIssueTypes.includes("consumption");
   const issueListTitle = isCombinedConsumptionScope
     ? INVENTORY_VI.combinedConsumptionSlipsTitle
     : isConsumptionScope
@@ -493,6 +501,17 @@ export function IssuesClient({
         <IconPlus className="size-4" />
         {createIssueActionLabel}
       </Button>
+      {isCombinedConsumptionScope && defaultBranchId ? (
+        <Button
+          render={
+            <Link href={`/inventory/waste/new?branchId=${defaultBranchId}`} />
+          }
+          variant="outline"
+          size={embedded ? controlSize : "lg"}
+        >
+          {INVENTORY_VI.createWasteTitle}
+        </Button>
+      ) : null}
       {showExportAction ? (
         <Button
           type="button"

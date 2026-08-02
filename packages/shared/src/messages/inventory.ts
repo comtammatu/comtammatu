@@ -371,7 +371,7 @@ export const INVENTORY_VI = {
   scopeLabel: "Phạm vi",
   recordedEmptyTitle: "Chưa có tiêu hao đã ghi nhận",
   recordedEmptyDescription:
-    "Tiêu hao từ POS, phiếu thủ công và nguồn khác sẽ hiện ở đây.",
+    "Chỉ gồm các lần trừ tồn tự động từ đơn POS tại chi nhánh bán hàng.",
   manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công",
   manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công",
   manualConsumptionCreateDescription:
@@ -380,12 +380,12 @@ export const INVENTORY_VI = {
   manualConsumptionEmptyDescription:
     "Chỉ theo dõi chứng từ nhập tay; dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
   combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt",
-  combinedConsumptionCreateAction: "Tạo phiếu tiêu hao / hao hụt",
+  combinedConsumptionCreateAction: "Tạo phiếu vận hành",
   combinedConsumptionCreateDescription:
-    "Ghi tiêu hao vận hành, hao hụt hoặc xuất khác theo đúng chi nhánh.",
+    "Ghi nguyên liệu dùng cho vận hành ngoài đơn POS.",
   combinedConsumptionEmptyTitle: "Chưa có phiếu vận hành hoặc hao hụt",
   combinedConsumptionEmptyDescription:
-    "Tạo phiếu khi cần ghi tiêu hao ngoài POS, hao hụt hoặc xuất khác.",
+    "Tạo phiếu vận hành hoặc ghi nhận hao hụt bằng luồng chuyên biệt.",
   issueSlipsTitle: "Phiếu xuất kho khác",
   issueCreateAction: "Tạo phiếu xuất kho khác",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",

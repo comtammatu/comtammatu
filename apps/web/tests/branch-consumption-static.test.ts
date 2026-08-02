@@ -25,6 +25,9 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   const ownerDetail = read(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
+  const ownerList = read(
+    "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
+  );
   const nav = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(listRoute, /loadBranchConsumptionListData/);
@@ -41,6 +44,9 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
 
   assert.match(data, /import "server-only"/);
   assert.match(data, /order_id, issue_id/);
+  assert.match(data, /branch\?\.branch_kind === "branch"/);
+  assert.match(data, /\.not\("order_id", "is", null\)/);
+  assert.match(listClient, /showRecorded && requestedView !== "manual"/);
   assert.match(data, /stock_issues!stock_movements_issue_id_fkey/);
   assert.match(data, /\.limit\(100\)/);
   assert.match(issueData, /expectedType/);
@@ -57,15 +63,40 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.match(detailClient, /showConsumptionPhoto/);
   assert.match(ownerDetail, /PhotoUploadInput/);
   assert.match(ownerDetail, /showConsumptionPhoto/);
+  assert.match(ownerDetail, /initialLine\?: IssueLine \| null/);
+  assert.match(ownerDetail, /IconPencil/);
+  assert.match(ownerDetail, /onEdit=\{handleEditLine\}/);
+  assert.match(ownerList, /\/inventory\/waste\/new\?branchId=/);
+  assert.match(ownerList, /option\.value === "consumption"/);
+  assert.match(ownerList, /option\.value !== "writeoff"/);
   assert.match(issueData, /photo_urls/);
   assert.match(issueActions, /photoUrls: z\.array\(z\.string\(\)\.url\(\)\)\.max\(1\)\.optional\(\)/);
   assert.match(issueActions, /photo_urls: d\.photoUrls/);
+  assert.match(issueActions, /\.rpc\("save_stock_issue_line" as never/);
+  assert.doesNotMatch(
+    issueActions,
+    /\.from\("stock_issue_items"\)\.upsert/,
+  );
   assert.match(nav, /\/br\/\{branchId\}\/stock\/consumption/);
 });
 
-test("recorded consumption copy no longer claims every source is POS", () => {
+test("recorded consumption is POS-only and hidden for central sites", () => {
   const copy = read("packages/shared/src/messages/inventory.ts");
+  const page = read(
+    "apps/web/app/(protected)/inventory/issues/issues-page-content.tsx",
+  );
+  const client = read(
+    "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
+  );
+
   assert.match(copy, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
-  assert.match(copy, /POS, phiếu thủ công và nguồn khác/);
-  assert.doesNotMatch(copy, /recordedConsumptionTitle: "Tiêu hao POS/);
+  assert.match(copy, /Chỉ gồm các lần trừ tồn tự động từ đơn POS/);
+  assert.match(page, /branch_kind === "branch"/);
+  assert.match(page, /\.not\("order_id", "is", null\)/);
+  assert.match(page, /showRecordedConsumptions=\{showRecordedConsumptions\}/);
+  assert.match(client, /showRecordedConsumptions = true/);
+  assert.match(
+    client,
+    /showsRecordedConsumption =\s*showRecordedConsumptions &&/,
+  );
 });

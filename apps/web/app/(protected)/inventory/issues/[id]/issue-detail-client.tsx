@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   CircleCheck as IconCircleCheck,
   CirclePlus as IconCirclePlus,
+  Pencil as IconPencil,
   Trash as IconTrash,
   X as IconX,
 } from "lucide-react";
@@ -123,6 +124,7 @@ type IssueLine = {
 
 type AddIssueLineDialogProps = {
   ingredients: IssueIngredientRow[];
+  initialLine?: IssueLine | null;
   isOpen: boolean;
   issueId: number;
   tenantId: number;
@@ -216,6 +218,7 @@ export function IssueDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingLine, setEditingLine] = useState<IssueLine | null>(null);
   const isTouchLayout = useIsMobile(1024);
   const isDraft = issue.status === "draft";
   const surface = getIssueSurface(
@@ -272,6 +275,11 @@ export function IssueDetailClient({
       toast.success(ISSUES_VI.deleteLineOk);
       await reload();
     });
+  }
+
+  function handleEditLine(line: IssueLine) {
+    setEditingLine(line);
+    setAddDialogOpen(true);
   }
 
   async function handleConfirmIssue() {
@@ -382,17 +390,29 @@ export function IssueDetailClient({
       className: "text-center",
       render: (line) =>
         isDraft ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteLine(line.id)}
-            disabled={isPending}
-            className="text-muted-foreground hover:text-destructive"
-            aria-label={ISSUES_VI.deleteLineAction}
-          >
-            <IconTrash className="size-4" />
-          </Button>
+          <div className="flex justify-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEditLine(line)}
+              disabled={isPending}
+              aria-label={ISSUES_VI.editLineAction}
+            >
+              <IconPencil className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteLine(line.id)}
+              disabled={isPending}
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={ISSUES_VI.deleteLineAction}
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          </div>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         ),
@@ -414,7 +434,10 @@ export function IssueDetailClient({
             action={
               isDraft ? (
                 <Button
-                  onClick={() => setAddDialogOpen(true)}
+                  onClick={() => {
+                    setEditingLine(null);
+                    setAddDialogOpen(true);
+                  }}
                   size={isTouchLayout ? "touch" : "default"}
                   className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
                 >
@@ -474,6 +497,7 @@ export function IssueDetailClient({
                     isPending={isPending}
                     amount={lineAmount(item)}
                     canViewMonetary={canViewMonetary}
+                    onEdit={handleEditLine}
                     onDelete={handleDeleteLine}
                   />
                 )}
@@ -649,12 +673,16 @@ export function IssueDetailClient({
       {tabs}
       <AddIssueLineDialog
         ingredients={ingredients}
+        initialLine={editingLine}
         isOpen={addDialogOpen}
         issueId={issueId}
         canViewMonetary={canViewMonetary}
         tenantId={tenantId}
         showConsumptionPhoto={issue.issue_type === "consumption"}
-        onOpenChange={setAddDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open);
+          if (!open) setEditingLine(null);
+        }}
         onSaved={reload}
       />
     </AppPage>
@@ -663,6 +691,7 @@ export function IssueDetailClient({
 
 function AddIssueLineDialog({
   ingredients,
+  initialLine,
   isOpen,
   issueId,
   canViewMonetary,
@@ -673,13 +702,15 @@ function AddIssueLineDialog({
 }: AddIssueLineDialogProps) {
   const defaultValues = useMemo<AddIssueLineFormValues>(
     () => ({
-      ingredientId: "",
-      quantity: "",
-      entryUnitId: "",
-      reason: "",
-      photoUrls: [],
+      ingredientId: initialLine ? String(initialLine.ingredient_id) : "",
+      quantity: initialLine ? String(initialLine.quantity) : "",
+      entryUnitId: initialLine?.entry_unit_id
+        ? String(initialLine.entry_unit_id)
+        : "",
+      reason: initialLine?.reason ?? "",
+      photoUrls: initialLine?.photo_urls ?? [],
     }),
-    [],
+    [initialLine],
   );
 
   async function handleSubmit(values: AddIssueLineFormValues) {
@@ -707,10 +738,10 @@ function AddIssueLineDialog({
     <FormDialog
       open={isOpen}
       onOpenChange={onOpenChange}
-      title={ISSUES_VI.addLineTitle}
+      title={initialLine ? ISSUES_VI.editLineTitle : ISSUES_VI.addLineTitle}
       schema={addIssueLineSchema}
       defaultValues={defaultValues}
-      entityKey={`issue-line-${issueId}`}
+      entityKey={`issue-line-${issueId}-${initialLine?.id ?? "new"}`}
       onSubmit={handleSubmit}
       successMessage={ISSUES_VI.saveLineOk}
       submitLabel={ISSUES_VI.saveLineAction}
@@ -751,6 +782,7 @@ function AddIssueLineDialog({
             <Field data-invalid={!!ingredientError}>
               <FieldLabel>{ISSUES_VI.ingredientLabel}</FieldLabel>
               <Combobox
+                disabled={initialLine != null}
                 value={form.watch("ingredientId")}
                 onValueChange={(value) => {
                   form.setValue("ingredientId", value, {
@@ -974,6 +1006,7 @@ function IssueLineMobileCard({
   isPending,
   amount,
   canViewMonetary,
+  onEdit,
   onDelete,
 }: {
   item: IssueLine;
@@ -981,6 +1014,7 @@ function IssueLineMobileCard({
   isPending: boolean;
   amount: number;
   canViewMonetary: boolean;
+  onEdit: (line: IssueLine) => void;
   onDelete: (lineId: number) => void;
 }) {
   return (
@@ -994,6 +1028,16 @@ function IssueLineMobileCard({
         </div>
         {isDraft ? (
           <ItemActions>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(item)}
+              disabled={isPending}
+              aria-label={ISSUES_VI.editLineAction}
+            >
+              <IconPencil className="size-4" />
+            </Button>
             <Button
               type="button"
               variant="ghost"

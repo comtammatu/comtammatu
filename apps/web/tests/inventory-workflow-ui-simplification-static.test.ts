@@ -127,8 +127,9 @@ test("consumption list combines POS ledger rows with operational and waste slips
   );
   assert.match(
     messages,
-    /combinedConsumptionCreateAction: "Tạo phiếu tiêu hao \/ hao hụt"/,
+    /combinedConsumptionCreateAction: "Tạo phiếu vận hành"/,
   );
+  assert.match(issues, /\/inventory\/waste\/new\?branchId=/);
 });
 
 test("recorded consumption toolbar keeps one baseline and separate slots", () => {

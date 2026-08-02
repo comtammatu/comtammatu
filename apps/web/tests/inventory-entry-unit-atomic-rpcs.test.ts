@@ -168,6 +168,27 @@ test("latest menu recipe upsert RPC does not write dropped unit text", () => {
   assert.doesNotMatch(body, /\bunit\s*=\s*EXCLUDED\.unit\b/);
 });
 
+test("stock issue draft lines save through a least-privilege RPC", () => {
+  const { sql } = latestMigrationDefining("save_stock_issue_line");
+  const action = read(
+    "apps/web/app/(protected)/inventory/issue-actions.ts",
+  );
+
+  assert.match(sql, /SECURITY DEFINER/);
+  assert.match(sql, /SET search_path TO ''/);
+  assert.match(sql, /public\.has_permission\([\s\S]*'inventory:write'/);
+  assert.match(sql, /v_issue\.created_by IS DISTINCT FROM v_uid/);
+  assert.match(sql, /v_issue\.status <> 'draft'/);
+  assert.match(sql, /public\.inv_to_base_for_tenant\(/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public\.save_stock_issue_line/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.save_stock_issue_line/);
+  assert.match(action, /\.rpc\("save_stock_issue_line" as never/);
+  assert.doesNotMatch(
+    action,
+    /\.from\("stock_issue_items"\)\.upsert/,
+  );
+});
+
 test.skip("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
     "supabase/migration-archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",

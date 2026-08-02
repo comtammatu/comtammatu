@@ -110,7 +110,7 @@ const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
     issueTypes: ["writeoff", "other"],
     showRecordedConsumptions: false,
     allowedIssueTypes: ["writeoff", "other"],
-    defaultIssueType: "writeoff",
+    defaultIssueType: "other",
   },
 };
 
@@ -144,6 +144,15 @@ export async function IssuesPageContent({
   });
   if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
+  const operationalBranchIds = scope.allowedBranches
+    .filter((branch) => branch.branch_kind === "branch")
+    .map((branch) => branch.id);
+  const requestedRecordedBranchId = branchFilter ?? claims.branch_id ?? null;
+  const showRecordedConsumptions =
+    scopeConfig.showRecordedConsumptions &&
+    operationalBranchIds.length > 0 &&
+    (requestedRecordedBranchId == null ||
+      operationalBranchIds.includes(requestedRecordedBranchId));
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
   const movementReadClient = monetary.valuation
     ? (monetary.client ?? supabase)
@@ -152,36 +161,37 @@ export async function IssuesPageContent({
   // Internal-issue scope hides the sale_consumption ledger entirely; skip the
   // query so the client renders no recordedConsumptions section. Other scopes
   // fetch it in parallel with the stock-issue list.
-  let recordedConsumptionQuery = scopeConfig.showRecordedConsumptions
+  let recordedConsumptionQuery = showRecordedConsumptions
     ? (
         monetary.valuation
           ? movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
               )
           : movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
               )
       )
         .eq("tenant_id", claims.tenant_id)
         .eq("type", "consumption")
         .eq("movement_subtype", "sale_consumption")
+        .not("order_id", "is", null)
         .order("created_at", { ascending: false })
     : null;
 
   if (recordedConsumptionQuery) {
-    if (branchFilter != null) {
+    if (requestedRecordedBranchId != null) {
       recordedConsumptionQuery = recordedConsumptionQuery.eq(
         "branch_id",
-        branchFilter,
+        requestedRecordedBranchId,
       );
-    } else if (claims.branch_id) {
-      recordedConsumptionQuery = recordedConsumptionQuery.eq(
+    } else {
+      recordedConsumptionQuery = recordedConsumptionQuery.in(
         "branch_id",
-        claims.branch_id,
+        operationalBranchIds,
       );
     }
     if (startDate) {
@@ -283,10 +293,11 @@ export async function IssuesPageContent({
     <IssuesClient
       issues={issues}
       recordedConsumptions={recordedConsumptions}
+      showRecordedConsumptions={showRecordedConsumptions}
       canViewMonetary={monetary.valuation}
       branches={branches}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
-      recordedBranchId={branchFilter ?? claims.branch_id ?? null}
+      recordedBranchId={requestedRecordedBranchId}
       recordedEndDate={endDate ?? ""}
       recordedIsLimited={!hasRecordedDateFilter}
       recordedStartDate={startDate ?? ""}

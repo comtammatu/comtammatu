@@ -55,6 +55,7 @@ export type BranchConsumptionListData = {
   branchId: number;
   branchName: string;
   canManage: boolean;
+  showRecorded: boolean;
   manualIssues: BranchStockIssue[];
   manualIssuesLoadFailed: boolean;
   recorded: BranchRecordedConsumption[];
@@ -145,22 +146,27 @@ export async function loadBranchConsumptionListData(
   const branch = scope.allowedBranches.find(
     (item) => item.id === routeBranchId,
   );
+  const showRecorded = branch?.branch_kind === "branch";
+  const recordedQuery = showRecorded
+    ? supabase
+        .from("stock_movements")
+        .select(
+          "id, order_id, issue_id, quantity_change, created_at, reason, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), stock_issues!stock_movements_issue_id_fkey ( issue_number, source_type, source_ref )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", routeBranchId)
+        .eq("type", "consumption")
+        .eq("movement_subtype", "sale_consumption")
+        .not("order_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(100)
+    : null;
   const [issuesResult, recordedResult, canManage] = await Promise.all([
     fetchStockIssues({
       branchId: routeBranchId,
       issueTypes: ["consumption"],
     }),
-    supabase
-      .from("stock_movements")
-      .select(
-        "id, order_id, issue_id, quantity_change, created_at, reason, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), stock_issues!stock_movements_issue_id_fkey ( issue_number, source_type, source_ref )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", routeBranchId)
-      .eq("type", "consumption")
-      .eq("movement_subtype", "sale_consumption")
-      .order("created_at", { ascending: false })
-      .limit(100),
+    recordedQuery,
     currentUserHasPermission(routeBranchId, PERMISSION_KEYS.INVENTORY_WRITE),
   ]);
   const manualRows = issuesResult.success
@@ -169,7 +175,7 @@ export async function loadBranchConsumptionListData(
   const manualIssues = manualRows
     .map(mapManualIssue)
     .filter((issue): issue is BranchStockIssue => issue !== null);
-  const recordedRows = (recordedResult.data ??
+  const recordedRows = (recordedResult?.data ??
     []) as unknown as RecordedConsumptionRow[];
 
   return {
@@ -178,9 +184,10 @@ export async function loadBranchConsumptionListData(
       ? getBranchSiteDisplayName(branch)
       : `CN #${routeBranchId}`,
     canManage,
+    showRecorded,
     manualIssues,
     manualIssuesLoadFailed: !issuesResult.success,
     recorded: recordedRows.map(mapRecordedConsumption),
-    recordedLoadFailed: recordedResult.error != null,
+    recordedLoadFailed: recordedResult?.error != null,
   };
 }
