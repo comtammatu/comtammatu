@@ -22,7 +22,10 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HÄÄ
     cockpit,
     /\.in\("document_status", \["confirmed", "adjusted"\]\)/,
   );
-  assert.match(cockpit, /\.from\("expenses"\)\s*\.select\("vat_amount, category"\)/);
+  assert.match(
+    cockpit,
+    /\.from\("expenses"\)\s*\.select\("vat_amount, category"\)/,
+  );
   assert.match(
     cockpit,
     /sumVat\(\s*\(expenses\.data \?\? \[\]\)\.filter\(\(row\) =>\s*isOperatingExpenseCategory\(row\.category\)/,
@@ -30,6 +33,10 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HÄÄ
   assert.match(
     cockpit,
     /\.from\("tax_invoices"\)[\s\S]*?\.eq\("status", "issued"\)/,
+  );
+  assert.match(
+    cockpit,
+    /location === "branches"[\s\S]*?outputInvoiceQuery = outputInvoiceQuery\.not\("branch_id", "is", null\)/,
   );
   assert.match(
     readWeb("lib/messages/finance.ts"),

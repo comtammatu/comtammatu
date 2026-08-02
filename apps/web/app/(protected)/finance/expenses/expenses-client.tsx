@@ -750,9 +750,7 @@ export function ExpensesClient({
   }
 
   function onCreateSuccess(_result: ActionResult) {
-    toast.success(
-      editingExpense ? copy.form.editSuccess : copy.form.success,
-    );
+    toast.success(editingExpense ? copy.form.editSuccess : copy.form.success);
   }
 
   function onEdit(row: ExpenseRow) {
@@ -1015,9 +1013,8 @@ export function ExpensesClient({
         params={params}
         branches={branches}
         basePath="/finance/expenses"
+        locationFilter
         hide={["compare", "granularity"]}
-        branchLabel={copy.form.branch}
-        branchPlaceholder={copy.form.branchTenantLevel}
       />
 
       <KpiRow density="compact">

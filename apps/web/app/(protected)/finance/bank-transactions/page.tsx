@@ -27,6 +27,7 @@ export default async function BankTransactionsPage({
   const sp = await searchParams;
   const params: FinanceParams = {
     ...parseFinanceParams(sp),
+    location: "all",
     branch: null,
     gran: "day",
     compare: "prev_month",
@@ -35,11 +36,12 @@ export default async function BankTransactionsPage({
   };
   const resolved = resolveFinanceRange(params);
   const range = { start: resolved.start, end: resolved.end };
-  const [canLinkPayments, transactions, paymentWebhookSummary] = await Promise.all([
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
-    fetchSepayBankTransactions(range),
-    fetchSepayPaymentWebhookSummary(range),
-  ]);
+  const [canLinkPayments, transactions, paymentWebhookSummary] =
+    await Promise.all([
+      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
+      fetchSepayBankTransactions(range),
+      fetchSepayPaymentWebhookSummary(range),
+    ]);
   const expenseOptions = await loadExpenseMatchOptions(
     transactions.flatMap((transaction) => transaction.expenseIds),
   );

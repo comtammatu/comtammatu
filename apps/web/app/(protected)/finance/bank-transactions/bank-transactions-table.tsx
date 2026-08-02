@@ -795,8 +795,7 @@ export function BankTransactionsTable({
         params={params}
         branches={[]}
         basePath="/finance/bank-transactions"
-        hide={["branch", "granularity", "compare", "payment"]}
-        compact
+        hide={["branch", "granularity", "compare"]}
         trailing={
           <>
             <span className="text-xs font-medium text-muted-foreground">

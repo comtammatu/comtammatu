@@ -3,7 +3,7 @@ import { getVNDateParts } from "@comtammatu/shared/time";
 
 // ─── URL param schema — single source of truth ──────────────────
 //
-// Per Architect §1: 8 params govern the entire Finance surface. Defaults
+// URL params govern the entire Finance surface. Defaults
 // are stripped from the URL (omit semantics) — we serialize only what
 // differs from default so links stay readable and bookmarks decay
 // gracefully when a future default changes.
@@ -24,6 +24,30 @@ export const FINANCE_RANGES = [
   "custom",
 ] as const;
 export type FinanceRange = (typeof FINANCE_RANGES)[number];
+
+export const FINANCE_OVERVIEW_PERIODS = [
+  "today",
+  "yesterday",
+  "week",
+  "month",
+  "quarter",
+  "year",
+] as const;
+export type FinanceOverviewPeriod = (typeof FINANCE_OVERVIEW_PERIODS)[number];
+export type FinanceCalendarPeriod = Exclude<
+  FinanceOverviewPeriod,
+  "today" | "yesterday"
+>;
+
+export const FINANCE_LOCATIONS = [
+  "all",
+  "company",
+  "branches",
+  "branch",
+] as const;
+export type FinanceLocation = (typeof FINANCE_LOCATIONS)[number];
+
+const FINANCE_CALENDAR_PERIODS = ["week", "month", "quarter", "year"] as const;
 
 const FINANCE_GRANULARITIES = ["day", "week", "month"] as const;
 export type FinanceGranularity = (typeof FINANCE_GRANULARITIES)[number];
@@ -52,6 +76,7 @@ const branchSchema = z
   });
 
 const FINANCE_DEFAULTS = {
+  location: "all" as FinanceLocation,
   range: "mtd" as FinanceRange,
   granularity: "day" as FinanceGranularity,
   compare: "prev_month" as FinanceCompareMode,
@@ -59,8 +84,10 @@ const FINANCE_DEFAULTS = {
 } as const;
 
 const financeParamsSchema = z.object({
+  location: z.enum(FINANCE_LOCATIONS).default(FINANCE_DEFAULTS.location),
   branch: branchSchema,
   range: z.enum(FINANCE_RANGES).default(FINANCE_DEFAULTS.range),
+  period: z.enum(FINANCE_CALENDAR_PERIODS).optional(),
   from: isoDate.optional(),
   to: isoDate.optional(),
   gran: z.enum(FINANCE_GRANULARITIES).default(FINANCE_DEFAULTS.granularity),
@@ -75,8 +102,10 @@ const financeParamsSchema = z.object({
 export type FinanceParamsInput = Record<string, string | string[] | undefined>;
 
 export interface FinanceParams {
+  location: FinanceLocation;
   branch: number | null;
   range: FinanceRange;
+  period: FinanceCalendarPeriod | null;
   from: string | null;
   to: string | null;
   gran: FinanceGranularity;
@@ -94,8 +123,10 @@ function pickFirst(value: string | string[] | undefined): string | undefined {
 // when the URL is mangled or empty. Falls back to defaults; never throws.
 export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
   const flat = {
+    location: pickFirst(input.location),
     branch: pickFirst(input.branch),
     range: pickFirst(input.range),
+    period: pickFirst(input.period),
     from: pickFirst(input.from),
     to: pickFirst(input.to),
     gran: pickFirst(input.gran),
@@ -106,8 +137,10 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
   const parsed = financeParamsSchema.safeParse(flat);
   if (!parsed.success) {
     return {
+      location: FINANCE_DEFAULTS.location,
       branch: null,
       range: FINANCE_DEFAULTS.range,
+      period: null,
       from: null,
       to: null,
       gran: FINANCE_DEFAULTS.granularity,
@@ -116,9 +149,17 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
       cashier: null,
     };
   }
+  const branch = parsed.data.branch;
   return {
-    branch: parsed.data.branch,
+    location:
+      branch != null
+        ? "branch"
+        : parsed.data.location === "branch"
+          ? FINANCE_DEFAULTS.location
+          : parsed.data.location,
+    branch,
     range: parsed.data.range,
+    period: parsed.data.period ?? null,
     from: parsed.data.from ?? null,
     to: parsed.data.to ?? null,
     gran: parsed.data.gran,
@@ -133,11 +174,17 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
 // at the semantic level even if the literal string differs.
 export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
   const usp = new URLSearchParams();
-  if (p.branch != null) usp.set("branch", String(p.branch));
+  if (p.location !== FINANCE_DEFAULTS.location && p.location !== "branch") {
+    usp.set("location", p.location);
+  }
+  if (p.location === "branch" && p.branch != null) {
+    usp.set("branch", String(p.branch));
+  }
   if (p.range !== FINANCE_DEFAULTS.range) usp.set("range", p.range);
   if (p.range === "custom") {
     if (p.from) usp.set("from", p.from);
     if (p.to) usp.set("to", p.to);
+    if (p.period) usp.set("period", p.period);
   }
   if (p.gran !== FINANCE_DEFAULTS.granularity) usp.set("gran", p.gran);
   if (p.compare !== FINANCE_DEFAULTS.compare) usp.set("compare", p.compare);
@@ -190,6 +237,102 @@ function firstOfQuarter(parts: { y: number; m: number; d: number }) {
 export interface DateRange {
   start: string;
   end: string;
+}
+
+function isoWeekSelection(parts: { y: number; m: number; d: number }): string {
+  const date = new Date(Date.UTC(parts.y, parts.m - 1, parts.d));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const isoYear = date.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil(
+    ((date.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000) + 1) / 7,
+  );
+  return `${isoYear}-W${String(week).padStart(2, "0")}`;
+}
+
+function isoWeekStart(
+  selection: string,
+): { y: number; m: number; d: number } | null {
+  const match = /^(\d{4})-W(\d{2})$/.exec(selection);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  if (year < 1000 || week < 1 || week > 53) return null;
+
+  const januaryFourth = new Date(Date.UTC(year, 0, 4));
+  const januaryFourthDay = januaryFourth.getUTCDay() || 7;
+  const monday = new Date(Date.UTC(year, 0, 5 - januaryFourthDay));
+  monday.setUTCDate(monday.getUTCDate() + (week - 1) * 7);
+  const start = {
+    y: monday.getUTCFullYear(),
+    m: monday.getUTCMonth() + 1,
+    d: monday.getUTCDate(),
+  };
+  return isoWeekSelection(start) === selection ? start : null;
+}
+
+export function getFinanceCalendarPeriodSelection(
+  period: FinanceCalendarPeriod,
+  range: DateRange,
+): string {
+  const start = parseIsoToParts(range.start);
+  if (!start) return "";
+  if (period === "week") return isoWeekSelection(start);
+  if (period === "month")
+    return `${start.y}-${String(start.m).padStart(2, "0")}`;
+  if (period === "quarter") {
+    return `${start.y}-Q${Math.floor((start.m - 1) / 3) + 1}`;
+  }
+  return String(start.y);
+}
+
+export function resolveFinanceCalendarPeriod(
+  period: FinanceCalendarPeriod,
+  selection: string,
+  now: Date = new Date(),
+): DateRange | null {
+  const today = vnDateParts(now);
+  const todayStr = fmtVN(today);
+  let start: { y: number; m: number; d: number } | null = null;
+  let end: { y: number; m: number; d: number } | null = null;
+
+  if (period === "week") {
+    start = isoWeekStart(selection);
+    end = start ? addDays(start, 6) : null;
+  } else if (period === "month") {
+    const match = /^(\d{4})-(\d{2})$/.exec(selection);
+    const year = Number(match?.[1]);
+    const month = Number(match?.[2]);
+    if (match && year >= 1000 && month >= 1 && month <= 12) {
+      start = { y: year, m: month, d: 1 };
+      end = lastOfMonth(start);
+    }
+  } else if (period === "quarter") {
+    const match = /^(\d{4})-Q([1-4])$/.exec(selection);
+    const year = Number(match?.[1]);
+    const quarter = Number(match?.[2]);
+    if (match && year >= 1000) {
+      start = { y: year, m: (quarter - 1) * 3 + 1, d: 1 };
+      end = lastOfMonth({ y: year, m: quarter * 3, d: 1 });
+    }
+  } else {
+    const match = /^(\d{4})$/.exec(selection);
+    const year = Number(match?.[1]);
+    if (match && year >= 1000 && year <= 9999) {
+      start = { y: year, m: 1, d: 1 };
+      end = { y: year, m: 12, d: 31 };
+    }
+  }
+
+  if (!start || !end) return null;
+  const startStr = fmtVN(start);
+  if (startStr > todayStr) return null;
+  const endStr = fmtVN(end);
+  return {
+    start: startStr,
+    end: endStr > todayStr ? todayStr : endStr,
+  };
 }
 
 // Caller passes the "now" anchor so server + client can stay in sync.

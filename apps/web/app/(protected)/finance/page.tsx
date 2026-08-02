@@ -26,11 +26,7 @@ import {
 } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { FilterBar } from "./components/filter-bar";
-import {
-  parseFinanceParams,
-  resolveFinanceRange,
-  type FinanceRange,
-} from "./_lib/finance-params";
+import { parseFinanceParams, resolveFinanceRange } from "./_lib/finance-params";
 import {
   fetchFinanceCockpit,
   type FinanceException,
@@ -53,12 +49,6 @@ import { currentUserHasPermissionAny } from "@/_lib/permissions";
 
 const financeCopy = messages.finance;
 const powerLiteCopy = financeCopy.powerLite;
-const OPERATING_RANGES: readonly FinanceRange[] = [
-  "today",
-  "yesterday",
-  "7d",
-  "mtd",
-];
 const formulaOperatorClass =
   "flex min-h-6 items-center justify-center font-heading text-lg font-semibold text-muted-foreground xl:min-h-0 xl:self-center";
 
@@ -126,12 +116,17 @@ export default async function FinancePage({
     fetchCashSummary(),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
   ]);
-  const showTargetProgress = isSingleCalendarMonth(resolved.start, resolved.end);
+  const showTargetProgress = isSingleCalendarMonth(
+    resolved.start,
+    resolved.end,
+  );
   const yearMonth = monthStartFromIsoDate(resolved.start);
   const targetProgressRes = showTargetProgress
-    ? params.branch != null
-      ? await fetchBranchRevenueTargetProgress(params.branch, yearMonth)
-      : await listBranchRevenueTargetProgress(yearMonth)
+    ? params.location === "company"
+      ? null
+      : params.branch != null
+        ? await fetchBranchRevenueTargetProgress(params.branch, yearMonth)
+        : await listBranchRevenueTargetProgress(yearMonth)
     : null;
 
   let targetHint: ReactNode = financeCopy.basic.kpis.netRevenueHint;
@@ -220,9 +215,8 @@ export default async function FinancePage({
         params={params}
         branches={cockpit.branches}
         basePath="/finance"
-        ranges={OPERATING_RANGES}
+        locationFilter
         hide={["granularity", "compare"]}
-        compact
       />
 
       <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>

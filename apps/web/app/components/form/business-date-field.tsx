@@ -60,7 +60,10 @@ function businessDateToDate(value?: string | null) {
 export interface BusinessDatePickerProps {
   value: string;
   onValueChange: (value: string) => void;
+  displayValue?: React.ReactNode;
   placeholder?: string;
+  max?: string;
+  captionLayout?: React.ComponentProps<typeof Calendar>["captionLayout"];
   disabled?: boolean;
   className?: string;
   id?: string;
@@ -72,7 +75,10 @@ export interface BusinessDatePickerProps {
 export function BusinessDatePicker({
   value,
   onValueChange,
+  displayValue,
   placeholder = "Chọn ngày",
+  max,
+  captionLayout,
   disabled,
   className,
   id,
@@ -82,6 +88,7 @@ export function BusinessDatePicker({
 }: BusinessDatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedDate = businessDateToDate(value);
+  const maxDate = businessDateToDate(max);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -103,7 +110,9 @@ export function BusinessDatePicker({
             )}
           >
             <IconCalendarEvent data-icon="inline-start" />
-            {value ? formatVNBusinessDate(value) : placeholder}
+            {value
+              ? (displayValue ?? formatVNBusinessDate(value))
+              : placeholder}
           </Button>
         }
       />
@@ -111,12 +120,15 @@ export function BusinessDatePicker({
         <Calendar
           mode="single"
           locale={vi}
+          captionLayout={captionLayout}
+          defaultMonth={selectedDate}
+          endMonth={maxDate}
           selected={selectedDate}
           onSelect={(date) => {
             onValueChange(date ? dateToBusinessDate(date) : "");
             setOpen(false);
           }}
-          disabled={disabled}
+          disabled={disabled ? true : maxDate ? { after: maxDate } : undefined}
         />
       </PopoverContent>
     </Popover>

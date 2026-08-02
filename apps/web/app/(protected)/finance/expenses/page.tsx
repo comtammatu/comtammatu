@@ -36,6 +36,7 @@ export default async function ExpensesPage({
   const [branchesRes, expensesRes, canManageExpenses] = await Promise.all([
     fetchAccessibleBranches(),
     fetchExpenses({
+      location: params.location,
       startDate: resolved.start,
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
@@ -68,11 +69,17 @@ export default async function ExpensesPage({
   const summary = rows.reduce(
     (acc, row) => {
       if (isOperatingExpenseCategory(row.category)) {
-        acc.operatingTotal = addMoney([acc.operatingTotal, String(row.subtotal)]);
+        acc.operatingTotal = addMoney([
+          acc.operatingTotal,
+          String(row.subtotal),
+        ]);
         acc.operatingCount += 1;
       }
       if (expenseNeedsAction(row)) {
-        acc.needsActionTotal = addMoney([acc.needsActionTotal, String(row.amount)]);
+        acc.needsActionTotal = addMoney([
+          acc.needsActionTotal,
+          String(row.amount),
+        ]);
         acc.needsActionCount += 1;
       }
       return acc;

@@ -511,7 +511,6 @@ export function RevenueClient({
         params={params}
         branches={branches}
         basePath="/finance/revenue"
-        hide={["payment"]}
       />
 
       <MvStalenessBanner

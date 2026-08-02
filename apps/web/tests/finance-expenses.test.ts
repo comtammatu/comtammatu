@@ -167,7 +167,9 @@ test("bank deposits stay out of operating expense totals", () => {
 });
 
 test("hospitality is selectable and accepted across expense boundaries", () => {
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const messages = readWeb("lib/messages/finance.ts");
   const migration = readFileSync(
     resolve(
@@ -228,7 +230,9 @@ test("expenses page settles session before parallel finance getAuthContext loade
 });
 
 test("expense list separates its KPI summary from the data table", () => {
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
   const successPage = page.slice(page.indexOf("const todayBusinessDate"));
 
@@ -248,19 +252,41 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
   // bank_deposit / cogs_manual) would not match the amount above it.
   assert.match(
     page,
-    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[acc\.operatingTotal, String\(row\.subtotal\)\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
+    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[[\s\S]*?String\(row\.subtotal\),?[\s\S]*?\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
   );
   assert.match(cockpit, /\.select\("subtotal, category"\)/);
   assert.match(cockpit, /String\(row\.subtotal\)/);
   assert.match(
     page,
-    /if \(expenseNeedsAction\(row\)\) \{[\s\S]*?acc\.needsActionTotal = addMoney\(\[acc\.needsActionTotal, String\(row\.amount\)\]\)/,
+    /if \(expenseNeedsAction\(row\)\) \{[\s\S]*?acc\.needsActionTotal = addMoney\(\[[\s\S]*?String\(row\.amount\),?[\s\S]*?\]\)/,
   );
   assert.doesNotMatch(page, /formatCount\(rows\.length\)/);
 });
 
+test("expense location filter keeps company and branch scopes distinct", () => {
+  const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
+  const actions = readWeb("app/(protected)/finance/expense-actions.ts");
+
+  assert.match(page, /fetchExpenses\(\{[\s\S]*?location: params\.location/);
+  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
+  assert.match(actions, /fetchExpensesSchema\.safeParse\(params\)/);
+  assert.match(
+    actions,
+    /parsed\.data\.location === "company"[\s\S]*?query = query\.is\("branch_id", null\)/,
+  );
+  assert.match(
+    actions,
+    /parsed\.data\.location === "branches"[\s\S]*?query = query\.not\("branch_id", "is", null\)/,
+  );
+});
+
 test("expense triage filter shares one needs-action definition with its KPI", () => {
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
   assert.equal(
@@ -307,7 +333,9 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
 
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
@@ -405,7 +433,9 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
 });
 
 test("expense list opens form-shaped document from row click", () => {
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const messages = readWeb("lib/messages/finance.ts");
 
   assert.match(client, /onRowClick=\{openExpenseDocument\}/);
@@ -460,10 +490,7 @@ test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
     page,
     /currentUserHasPermissionAny\(PERMISSION_KEYS\.FINANCE_EXPENSE_CREATE\)/,
   );
-  assert.match(
-    migration,
-    /has_permission_any\('finance:expense_create'\)/,
-  );
+  assert.match(migration, /has_permission_any\('finance:expense_create'\)/);
   assert.match(
     migration,
     /NEW\.payment_method = 'transfer'[\s\S]*NEW\.paid_at IS NOT NULL/,
@@ -475,7 +502,9 @@ test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
 });
 
 test("expense list keeps the ledger compact and uses consistent operator terms", () => {
-  const client = readWeb("app/(protected)/finance/expenses/expenses-client.tsx");
+  const client = readWeb(
+    "app/(protected)/finance/expenses/expenses-client.tsx",
+  );
   const messages = readWeb("lib/messages/finance.ts");
   const columns = client.slice(
     client.indexOf("const columns: DataTableColumn<ExpenseRow>[] = ["),
@@ -488,5 +517,5 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   assert.match(messages, /branchTenantLevel: "Công ty"/);
   assert.match(client, /className="grid gap-4 md:grid-cols-2"/);
   assert.match(client, /className="md:col-span-2"/);
-  assert.match(client, /branchLabel=\{copy\.form\.branch\}/);
+  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
 });

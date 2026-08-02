@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Field,
   FieldDescription,
@@ -26,6 +25,7 @@ import {
 } from "@comtammatu/shared/format";
 import {
   AppDialog,
+  BusinessDatePicker,
   FormattedNumberInput,
   MoneyVndInput,
 } from "@/components/form";
@@ -130,8 +130,10 @@ export function RevenueTargetsClient({
   const [editingBranchId, setEditingBranchId] = useState<number | null>(null);
   const editingRow =
     rows.find((row) => row.branchId === editingBranchId) ?? null;
-  const monthInputValue = yearMonth.slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(yearMonth);
   const hasUnconfigured = rows.some((row) => row.targetAmount == null);
+
+  useEffect(() => setSelectedMonth(yearMonth), [yearMonth]);
 
   function openEditor(branchId: number) {
     setEditingBranchId(branchId);
@@ -333,10 +335,7 @@ export function RevenueTargetsClient({
           const preview =
             row.targetAmount == null
               ? null
-              : previewTargetProgress(
-                  row.currentNetRevenue,
-                  row.targetAmount,
-                );
+              : previewTargetProgress(row.currentNetRevenue, row.targetAmount);
           return (
             <div>
               <span className="font-mono tabular-nums">
@@ -391,14 +390,24 @@ export function RevenueTargetsClient({
       <AppToolbar
         variant="inline"
         filters={
-          <Input
-            id="revenue-target-month"
-            type="month"
-            name="month"
-            defaultValue={monthInputValue}
-            aria-label={copy.monthLabel}
-            className="w-auto font-mono"
-          />
+          <>
+            <BusinessDatePicker
+              id="revenue-target-month"
+              value={selectedMonth}
+              displayValue={`Tháng ${Number(selectedMonth.slice(5, 7))}/${selectedMonth.slice(0, 4)}`}
+              aria-label={copy.monthLabel}
+              captionLayout="dropdown"
+              className="w-full sm:w-48"
+              onValueChange={(value) =>
+                value && setSelectedMonth(`${value.slice(0, 7)}-01`)
+              }
+            />
+            <input
+              type="hidden"
+              name="month"
+              value={selectedMonth.slice(0, 7)}
+            />
+          </>
         }
         actions={
           <>

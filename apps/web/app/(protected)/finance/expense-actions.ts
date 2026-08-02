@@ -30,6 +30,7 @@ import {
   EXPENSE_CATEGORY_VALUES,
   EXPENSE_PAYMENT_METHODS,
 } from "./_lib/expense-categories";
+import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
 import {
   expenseGrossFromBreakdown,
   expenseVatLineSchema,
@@ -42,6 +43,14 @@ const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_EXPENSE_MINOR_UNITS = 999_999_999_999_999n;
+const fetchExpensesSchema = z
+  .object({
+    location: z.enum(FINANCE_LOCATIONS),
+    branchId: z.number().int().positive().nullable().optional(),
+    startDate: z.string().regex(BUSINESS_DATE),
+    endDate: z.string().regex(BUSINESS_DATE),
+  })
+  .refine((value) => value.startDate <= value.endDate);
 
 export type {
   ExpenseMatchOption,
@@ -74,39 +83,38 @@ interface RefundSearchRow {
 }
 
 const expenseInputSchema = z.object({
-    branchId: z.coerce.number().int().positive().nullable().optional(),
-    expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
-    category: z.enum(EXPENSE_CATEGORY_VALUES),
-    vatBreakdown: z.array(expenseVatLineSchema).min(1).max(4),
-    paymentMethod: z.enum(EXPENSE_PAYMENT_METHODS),
-    vendorName: z.string().trim().max(200).optional(),
-    note: z
-      .string()
-      .trim()
-      .min(5, "Nội dung chi phải có ít nhất 5 ký tự")
-      .max(500),
-    invoiceAttachmentUrl: z
-      .string()
-      .trim()
-      .max(2048)
-      .optional()
-      .refine(
-        (value) =>
-          value == null || value.length === 0 || /^https?:\/\//i.test(value),
-        { error: "Đường dẫn hóa đơn không hợp lệ" },
-      ),
+  branchId: z.coerce.number().int().positive().nullable().optional(),
+  expenseDate: z.string().regex(BUSINESS_DATE, "Ngày không hợp lệ"),
+  category: z.enum(EXPENSE_CATEGORY_VALUES),
+  vatBreakdown: z.array(expenseVatLineSchema).min(1).max(4),
+  paymentMethod: z.enum(EXPENSE_PAYMENT_METHODS),
+  vendorName: z.string().trim().max(200).optional(),
+  note: z
+    .string()
+    .trim()
+    .min(5, "Nội dung chi phải có ít nhất 5 ký tự")
+    .max(500),
+  invoiceAttachmentUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .optional()
+    .refine(
+      (value) =>
+        value == null || value.length === 0 || /^https?:\/\//i.test(value),
+      { error: "Đường dẫn hóa đơn không hợp lệ" },
+    ),
 });
 
-const createExpenseSchema = expenseInputSchema
-  .superRefine((data, ctx) => {
-    refineExpenseVatBreakdown(data.vatBreakdown, (index, field, message) => {
-      ctx.addIssue({
-        code: "custom",
-        message,
-        path: ["vatBreakdown", index, field],
-      });
+const createExpenseSchema = expenseInputSchema.superRefine((data, ctx) => {
+  refineExpenseVatBreakdown(data.vatBreakdown, (index, field, message) => {
+    ctx.addIssue({
+      code: "custom",
+      message,
+      path: ["vatBreakdown", index, field],
     });
   });
+});
 
 const updateExpenseSchema = expenseInputSchema
   .omit({ paymentMethod: true, vendorName: true })
@@ -400,10 +408,16 @@ export async function deleteExpense(
 }
 
 export async function fetchExpenses(params: {
+  location: FinanceLocation;
   branchId?: number | null;
   startDate: string;
   endDate: string;
 }): Promise<ActionResult<ExpenseRow[]>> {
+  const parsed = fetchExpensesSchema.safeParse(params);
+  if (!parsed.success) {
+    return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
+  }
+
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
@@ -424,14 +438,21 @@ export async function fetchExpenses(params: {
       )
       .eq("tenant_id", claims.tenant_id)
       .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
-      .gte("expense_date", params.startDate)
-      .lte("expense_date", params.endDate)
+      .gte("expense_date", parsed.data.startDate)
+      .lte("expense_date", parsed.data.endDate)
       .order("expense_date", { ascending: false })
       .order("id", { ascending: false })
       .range(offset, offset + pageSize - 1);
 
-    if (params.branchId != null) {
-      query = query.eq("branch_id", params.branchId);
+    if (parsed.data.location === "company") {
+      query = query.is("branch_id", null);
+    } else if (parsed.data.location === "branches") {
+      query = query.not("branch_id", "is", null);
+    } else if (
+      parsed.data.location === "branch" &&
+      parsed.data.branchId != null
+    ) {
+      query = query.eq("branch_id", parsed.data.branchId);
     }
 
     const { data, error } = await query;
@@ -565,8 +586,7 @@ export async function fetchActualFoodCostSummary(params: {
     const total = (data ?? []).reduce((sum, row) => {
       if (row.order_id != null) orderIds.add(row.order_id);
       return (
-        sum +
-        Math.abs(Number(row.quantity_change)) * Number(row.unit_cost ?? 0)
+        sum + Math.abs(Number(row.quantity_change)) * Number(row.unit_cost ?? 0)
       );
     }, 0);
     return { success: true, data: { total, orderCount: orderIds.size } };
@@ -620,9 +640,7 @@ export async function fetchActualFoodCostSummary(params: {
   let scopedRepriceTotal = repriceTotal;
   if (params.branchId != null && (repriceResult.data?.length ?? 0) > 0) {
     const originIds = [
-      ...new Set(
-        (repriceResult.data ?? []).map((row) => row.source_origin_id),
-      ),
+      ...new Set((repriceResult.data ?? []).map((row) => row.source_origin_id)),
     ];
     const { data: lineageRows, error: lineageError } = await monetary.client
       .from("inventory_value_allocations")
@@ -663,8 +681,7 @@ export async function fetchActualFoodCostSummary(params: {
       if (!quantity || quantity.total <= 0) return sum;
       return (
         sum +
-        (Number(row.allocated_value) * quantity.selectedBranch) /
-          quantity.total
+        (Number(row.allocated_value) * quantity.selectedBranch) / quantity.total
       );
     }, 0);
   }

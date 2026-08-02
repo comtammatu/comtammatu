@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { type ReactNode, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -15,35 +9,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
-import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
-import { AppToolbar } from "@/components/surface";
+import { BusinessDatePicker } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
+import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
-  FINANCE_RANGES,
+  FINANCE_OVERVIEW_PERIODS,
+  type FinanceCalendarPeriod,
   type FinanceCompareMode,
   type FinanceGranularity,
+  type FinanceOverviewPeriod,
   type FinanceParams,
-  type FinancePayment,
-  type FinanceRange,
+  getFinanceCalendarPeriodSelection,
   getPresetRange,
+  resolveFinanceCalendarPeriod,
   serializeFinanceParams,
 } from "../_lib/finance-params";
-
-// FilterBar = single source of truth for the URL state. Preset chips
-// push immediately (one click = filter applied); custom date inputs
-// require an explicit Apply because the keystroke stream would
-// otherwise spam router.replace.
-//
-// The bar reads + writes URL params via serializeFinanceParams. Server
-// Component sees the new URL on next render and re-fetches; Client
-// state stays in sync via the params prop (parent passes the parsed
-// FinanceParams down).
 
 interface AccessibleBranch {
   id: number;
@@ -53,37 +36,44 @@ interface AccessibleBranch {
 interface FilterBarProps {
   params: FinanceParams;
   branches: AccessibleBranch[];
-  /** Pathname to push (e.g. "/finance/revenue", "/finance/food-cost") */
   basePath: string;
-  /** Optional route-specific preset subset. Defaults to the full Finance set. */
-  ranges?: ReadonlyArray<FinanceRange>;
-  /** Hide controls that don't apply to a given route. Default: all visible. */
+  locationFilter?: boolean;
   hide?: ReadonlyArray<FilterBarControl>;
   trailing?: ReactNode;
-  compact?: boolean;
   className?: string;
   branchLabel?: string;
   branchPlaceholder?: string;
   allBranchesLabel?: string;
 }
 
-type FilterBarControl =
-  "branch" | "range" | "granularity" | "compare" | "payment";
+type FilterBarControl = "branch" | "range" | "granularity" | "compare";
 
 const ALL_BRANCHES_VALUE = "all";
-
 const filterCopy = messages.finance.filterBar;
 
-const RANGE_LABEL: Record<FinanceRange, string> = {
+const PERIOD_LABEL: Record<FinanceOverviewPeriod, string> = {
   today: filterCopy.rangeToday,
   yesterday: filterCopy.rangeYesterday,
-  "7d": filterCopy.range7d,
-  "30d": filterCopy.range30d,
-  mtd: filterCopy.rangeMtd,
-  last_month: filterCopy.rangeLastMonth,
-  qtd: filterCopy.rangeQtd,
-  ytd: filterCopy.rangeYtd,
-  custom: filterCopy.rangeCustom,
+  week: filterCopy.rangeWeek,
+  month: filterCopy.rangeMonth,
+  quarter: filterCopy.rangeQuarter,
+  year: filterCopy.rangeYear,
+};
+
+const PERIOD_PICKER_LABEL: Record<FinanceCalendarPeriod, string> = {
+  week: filterCopy.pickWeek,
+  month: filterCopy.pickMonth,
+  quarter: filterCopy.pickQuarter,
+  year: filterCopy.pickYear,
+};
+
+const LOCATION_SCOPE_ORDER = ["all", "company", "branches"] as const;
+type FinanceLocationScope = (typeof LOCATION_SCOPE_ORDER)[number];
+
+const LOCATION_LABEL: Record<FinanceLocationScope, string> = {
+  all: filterCopy.locationAll,
+  company: filterCopy.locationCompany,
+  branches: filterCopy.locationAllBranches,
 };
 
 const COMPARE_LABEL: Record<FinanceCompareMode, string> = {
@@ -94,26 +84,30 @@ const COMPARE_LABEL: Record<FinanceCompareMode, string> = {
   prev_year: filterCopy.comparePrevYear,
 };
 
-const PAYMENT_LABEL: Record<FinancePayment, string> = {
-  all: filterCopy.paymentAll,
-  cash: filterCopy.paymentCash,
-  vietqr: filterCopy.paymentVietqr,
-};
-
 const GRANULARITY_LABEL: Record<FinanceGranularity, string> = {
   day: filterCopy.granularityDay,
   week: filterCopy.granularityWeek,
   month: filterCopy.granularityMonth,
 };
 
+function resolveSelectedPeriod(params: FinanceParams): FinanceOverviewPeriod {
+  if (params.range === "today" || params.range === "yesterday") {
+    return params.range;
+  }
+  if (params.range === "custom" && params.period) return params.period;
+  if (params.range === "7d") return "week";
+  if (params.range === "qtd") return "quarter";
+  if (params.range === "ytd") return "year";
+  return "month";
+}
+
 export function FilterBar({
   params,
   branches,
   basePath,
-  ranges = FINANCE_RANGES,
+  locationFilter = false,
   hide = [],
   trailing,
-  compact = false,
   className,
   branchLabel = filterCopy.branch,
   branchPlaceholder = filterCopy.branchPlaceholder,
@@ -122,360 +116,268 @@ export function FilterBar({
   const router = useRouter();
   const controlSize = useFormControlSize();
   const optionSize = controlSize === "touch" ? "touch" : "default";
-  const filterActionSize = controlSize;
   const [isPending, startTransition] = useTransition();
-
-  // Local draft for custom date range — only pushed on Apply click. All
-  // other controls push immediately on change.
-  const presetRange = useMemo(
-    () =>
-      getPresetRange(params.range, new Date(), {
-        from: params.from,
-        to: params.to,
-      }),
-    [params.range, params.from, params.to],
-  );
-  const [draftFrom, setDraftFrom] = useState(presetRange.start);
-  const [draftTo, setDraftTo] = useState(presetRange.end);
-
-  useEffect(() => {
-    setDraftFrom(presetRange.start);
-    setDraftTo(presetRange.end);
-  }, [presetRange.start, presetRange.end]);
+  const selectedPeriod = resolveSelectedPeriod(params);
+  const calendarPeriod: FinanceCalendarPeriod | null =
+    selectedPeriod === "today" || selectedPeriod === "yesterday"
+      ? null
+      : selectedPeriod;
+  const resolvedRange = getPresetRange(params.range, new Date(), {
+    from: params.from,
+    to: params.to,
+  });
+  const periodSelection = calendarPeriod
+    ? getFinanceCalendarPeriodSelection(calendarPeriod, resolvedRange)
+    : "";
+  const today = getPresetRange("today");
 
   function pushParams(next: Partial<FinanceParams>) {
-    const merged: FinanceParams = { ...params, ...next };
-    const usp = serializeFinanceParams(merged);
-    const qs = usp.toString();
+    const search = serializeFinanceParams({ ...params, ...next }).toString();
     startTransition(() => {
-      router.replace(qs ? `${basePath}?${qs}` : basePath, { scroll: false });
+      router.replace(search ? `${basePath}?${search}` : basePath, {
+        scroll: false,
+      });
     });
   }
 
   function handleBranchChange(value: string) {
     const branch = value === ALL_BRANCHES_VALUE ? null : Number(value);
-    pushParams({ branch });
+    if (branch != null && !branches.some((item) => item.id === branch)) return;
+    pushParams({ location: branch == null ? "all" : "branch", branch });
   }
 
-  function handleRangeChange(next: FinanceRange) {
-    if (next === "custom") {
-      // Seed the custom inputs with whatever range was last shown so
-      // the user picks up where they were.
-      pushParams({
-        range: "custom",
-        from: draftFrom,
-        to: draftTo,
-      });
-    } else {
-      pushParams({ range: next, from: null, to: null });
+  function handleLocationChange(value: string) {
+    if (value.startsWith("branch:")) {
+      const branch = Number(value.slice("branch:".length));
+      if (!branches.some((item) => item.id === branch)) return;
+      pushParams({ location: "branch", branch });
+      return;
+    }
+    if (LOCATION_SCOPE_ORDER.some((location) => location === value)) {
+      pushParams({ location: value as FinanceLocationScope, branch: null });
     }
   }
 
-  function handleApplyCustom() {
-    if (draftFrom > draftTo) {
-      // Swap so users who type backward dates still get a valid range.
-      pushParams({ range: "custom", from: draftTo, to: draftFrom });
-    } else {
-      pushParams({ range: "custom", from: draftFrom, to: draftTo });
+  function handlePeriodChange(period: FinanceOverviewPeriod) {
+    if (period === "today" || period === "yesterday") {
+      pushParams({ range: period, period: null, from: null, to: null });
+      return;
     }
+    const selection = getFinanceCalendarPeriodSelection(period, today);
+    const range = resolveFinanceCalendarPeriod(period, selection);
+    if (!range) return;
+    pushParams({
+      range: "custom",
+      period,
+      from: range.start,
+      to: range.end,
+    });
   }
 
+  function handleCalendarDateChange(value: string) {
+    if (!calendarPeriod || !value) return;
+    const selection = getFinanceCalendarPeriodSelection(calendarPeriod, {
+      start: value,
+      end: value,
+    });
+    const range = resolveFinanceCalendarPeriod(calendarPeriod, selection);
+    if (!range) return;
+    pushParams({
+      range: "custom",
+      period: calendarPeriod,
+      from: range.start,
+      to: range.end,
+    });
+  }
+
+  const locationValue =
+    params.location === "branch" && params.branch != null
+      ? `branch:${String(params.branch)}`
+      : params.location;
   const branchValue =
     params.branch == null ? ALL_BRANCHES_VALUE : String(params.branch);
   const showBranch = !hide.includes("branch");
   const showRange = !hide.includes("range");
   const showGranularity = !hide.includes("granularity");
   const showCompare = !hide.includes("compare");
-  const showPayment = !hide.includes("payment");
-  const rangeSummary = (
-    <>
-      {filterCopy.rangeSummary}{" "}
-      <span className="font-medium tabular-nums text-foreground">
-        {formatVNBusinessDate(presetRange.start)} →{" "}
-        {formatVNBusinessDate(presetRange.end)}
-      </span>
-      {showCompare && params.compare !== "none" ? (
-        <span> · {COMPARE_LABEL[params.compare]}</span>
-      ) : null}
-      {showPayment && params.payment !== "all" ? (
-        <span> · {PAYMENT_LABEL[params.payment]}</span>
-      ) : null}
-    </>
-  );
-
-  if (compact && params.range !== "custom") {
-    return (
-      <AppToolbar
-        className={cn(
-          "flex-col items-stretch gap-2 sm:flex-row sm:items-center",
-          className,
-        )}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {showBranch && (
-            <Select
-              value={branchValue}
-              onValueChange={handleBranchChange}
-              disabled={isPending}
-            >
-              <SelectTrigger
-                aria-label={branchLabel}
-                size={controlSize}
-                className="w-full sm:w-48"
-              >
-                <SelectValue placeholder={branchPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  value={ALL_BRANCHES_VALUE}
-                  size={optionSize}
-                >
-                  {allBranchesLabel}
-                </SelectItem>
-                {branches.map((b) => (
-                  <SelectItem
-                    key={b.id}
-                    value={String(b.id)}
-                    size={optionSize}
-                  >
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {showRange && (
-            <Select
-              value={params.range}
-              onValueChange={(v) => handleRangeChange(v as FinanceRange)}
-              disabled={isPending}
-            >
-              <SelectTrigger
-                aria-label={filterCopy.range}
-                size={controlSize}
-                className="w-full sm:w-40"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ranges.map((range) => (
-                  <SelectItem
-                    key={range}
-                    value={range}
-                    size={optionSize}
-                  >
-                    {RANGE_LABEL[range]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {trailing}
-        </div>
-        <p className="text-xs text-muted-foreground sm:ml-auto">
-          {rangeSummary}
-        </p>
-      </AppToolbar>
-    );
-  }
+  const periodDisplay = calendarPeriod
+    ? calendarPeriod === "week"
+      ? `Tuần ${periodSelection.slice(-2)}/${periodSelection.slice(0, 4)} · ${formatVNBusinessDate(resolvedRange.start)}–${formatVNBusinessDate(resolvedRange.end)}`
+      : calendarPeriod === "month"
+        ? `Tháng ${Number(periodSelection.slice(5, 7))}/${periodSelection.slice(0, 4)}`
+        : calendarPeriod === "quarter"
+          ? `Quý ${periodSelection.slice(-1)}/${periodSelection.slice(0, 4)}`
+          : `Năm ${periodSelection}`
+    : undefined;
 
   return (
-    <AppToolbar className={cn("flex-col items-stretch", className)}>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {showBranch && (
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{branchLabel}</Label>
-            <Select
-              value={branchValue}
-              onValueChange={handleBranchChange}
-              disabled={isPending}
+    <AppToolbar
+      className={cn(
+        "flex-col items-stretch gap-2 lg:flex-row lg:flex-nowrap lg:items-center",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+        {showBranch && locationFilter ? (
+          <Select
+            value={locationValue}
+            onValueChange={handleLocationChange}
+            disabled={isPending}
+          >
+            <SelectTrigger
+              aria-label={filterCopy.location}
+              size={controlSize}
+              className="w-full sm:w-56"
             >
-              <SelectTrigger size={controlSize}>
-                <SelectValue placeholder={branchPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCATION_SCOPE_ORDER.map((location) => (
+                <SelectItem key={location} value={location} size={optionSize}>
+                  {LOCATION_LABEL[location]}
+                </SelectItem>
+              ))}
+              {branches.map((branch) => (
                 <SelectItem
-                  value={ALL_BRANCHES_VALUE}
+                  key={branch.id}
+                  value={`branch:${String(branch.id)}`}
                   size={optionSize}
                 >
-                  {allBranchesLabel}
+                  {branch.name}
                 </SelectItem>
-                {branches.map((b) => (
+              ))}
+            </SelectContent>
+          </Select>
+        ) : showBranch ? (
+          <Select
+            value={branchValue}
+            onValueChange={handleBranchChange}
+            disabled={isPending}
+          >
+            <SelectTrigger
+              aria-label={branchLabel}
+              size={controlSize}
+              className="w-full sm:w-44"
+            >
+              <SelectValue placeholder={branchPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_BRANCHES_VALUE} size={optionSize}>
+                {allBranchesLabel}
+              </SelectItem>
+              {branches.map((branch) => (
+                <SelectItem
+                  key={branch.id}
+                  value={String(branch.id)}
+                  size={optionSize}
+                >
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+
+        {showRange ? (
+          <Select
+            value={selectedPeriod}
+            onValueChange={(value) =>
+              handlePeriodChange(value as FinanceOverviewPeriod)
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger
+              aria-label={filterCopy.range}
+              size={controlSize}
+              className="w-full sm:w-32"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FINANCE_OVERVIEW_PERIODS.map((period) => (
+                <SelectItem key={period} value={period} size={optionSize}>
+                  {PERIOD_LABEL[period]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+
+        {showRange && calendarPeriod ? (
+          <BusinessDatePicker
+            id="finance-period-picker"
+            aria-label={PERIOD_PICKER_LABEL[calendarPeriod]}
+            value={resolvedRange.start}
+            displayValue={periodDisplay}
+            placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
+            max={today.start}
+            captionLayout="dropdown"
+            disabled={isPending}
+            className="w-full sm:w-64"
+            onValueChange={handleCalendarDateChange}
+          />
+        ) : null}
+
+        {showGranularity ? (
+          <Select
+            value={params.gran}
+            onValueChange={(value) =>
+              pushParams({ gran: value as FinanceGranularity })
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger
+              aria-label={filterCopy.granularity}
+              size={controlSize}
+              className="w-full sm:w-36"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(GRANULARITY_LABEL) as FinanceGranularity[]).map(
+                (granularity) => (
                   <SelectItem
-                    key={b.id}
-                    value={String(b.id)}
+                    key={granularity}
+                    value={granularity}
                     size={optionSize}
                   >
-                    {b.name}
+                    {GRANULARITY_LABEL[granularity]}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+                ),
+              )}
+            </SelectContent>
+          </Select>
+        ) : null}
 
-        {showRange && (
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{filterCopy.range}</Label>
-            <Select
-              value={params.range}
-              onValueChange={(v) => handleRangeChange(v as FinanceRange)}
-              disabled={isPending}
+        {showCompare ? (
+          <Select
+            value={params.compare}
+            onValueChange={(value) =>
+              pushParams({ compare: value as FinanceCompareMode })
+            }
+            disabled={isPending}
+          >
+            <SelectTrigger
+              aria-label={filterCopy.compare}
+              size={controlSize}
+              className="w-full sm:w-44"
             >
-              <SelectTrigger size={controlSize}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ranges.map((range) => (
-                  <SelectItem
-                    key={range}
-                    value={range}
-                    size={optionSize}
-                  >
-                    {RANGE_LABEL[range]}
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(COMPARE_LABEL) as FinanceCompareMode[]).map(
+                (mode) => (
+                  <SelectItem key={mode} value={mode} size={optionSize}>
+                    {COMPARE_LABEL[mode]}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+                ),
+              )}
+            </SelectContent>
+          </Select>
+        ) : null}
 
-        {showGranularity && (
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{filterCopy.granularity}</Label>
-            <Tabs
-              value={params.gran}
-              onValueChange={(v) =>
-                pushParams({ gran: v as FinanceGranularity })
-              }
-            >
-              <TabsList
-                size="touch"
-                className={cn("w-full", isPending && "opacity-60")}
-              >
-                <TabsTrigger value="day" className="flex-1">
-                  {GRANULARITY_LABEL.day}
-                </TabsTrigger>
-                <TabsTrigger value="week" className="flex-1">
-                  {GRANULARITY_LABEL.week}
-                </TabsTrigger>
-                <TabsTrigger value="month" className="flex-1">
-                  {GRANULARITY_LABEL.month}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
-
-        {showCompare && (
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{filterCopy.compare}</Label>
-            <Select
-              value={params.compare}
-              onValueChange={(v) =>
-                pushParams({ compare: v as FinanceCompareMode })
-              }
-              disabled={isPending}
-            >
-              <SelectTrigger size={controlSize}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(COMPARE_LABEL) as FinanceCompareMode[]).map(
-                  (mode) => (
-                    <SelectItem
-                      key={mode}
-                      value={mode}
-                      size={optionSize}
-                    >
-                      {COMPARE_LABEL[mode]}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {showPayment && (
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{filterCopy.payment}</Label>
-            <Select
-              value={params.payment}
-              onValueChange={(v) =>
-                pushParams({ payment: v as FinancePayment })
-              }
-              disabled={isPending}
-            >
-              <SelectTrigger size={controlSize}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PAYMENT_LABEL) as FinancePayment[]).map((p) => (
-                  <SelectItem
-                    key={p}
-                    value={p}
-                    size={optionSize}
-                  >
-                    {PAYMENT_LABEL[p]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {trailing}
       </div>
-      {trailing ? (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          {trailing}
-        </div>
-      ) : null}
-
-      {showRange && params.range === "custom" ? (
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <div className="grid gap-1.5">
-            <Label htmlFor="finance-from" className="text-xs">
-              {filterCopy.fromDate}
-            </Label>
-            <Input
-              id="finance-from"
-              type="date"
-              value={draftFrom}
-              controlSize={controlSize}
-              onChange={(e) => setDraftFrom(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="finance-to" className="text-xs">
-              {filterCopy.toDate}
-            </Label>
-            <Input
-              id="finance-to"
-              type="date"
-              value={draftTo}
-              controlSize={controlSize}
-              onChange={(e) => setDraftTo(e.target.value)}
-            />
-          </div>
-          <div className="flex items-end">
-            <Button
-              size={filterActionSize}
-              onClick={handleApplyCustom}
-              disabled={
-                isPending ||
-                (draftFrom === presetRange.start && draftTo === presetRange.end)
-              }
-            >
-              {filterCopy.apply}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      <p className="border-t pt-3 text-xs text-muted-foreground">
-        {rangeSummary}
-      </p>
     </AppToolbar>
   );
 }
