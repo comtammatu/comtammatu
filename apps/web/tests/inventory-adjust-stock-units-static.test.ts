@@ -34,7 +34,11 @@ test("stock adjustments preserve the selected issue or receipt unit through the 
   assert.match(dialog, /<Select/);
   assert.match(dialog, /entryQuantity: parsedQuantityChange/);
   assert.match(action, /entryUnitId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/);
-  assert.match(action, /entryQuantity: z\.coerce/);
+  assert.match(action, /entryQuantity: inventoryNonzeroQuantitySchema/);
+  assert.match(
+    action,
+    /import \{ inventoryNonzeroQuantitySchema \} from "\.\/_lib\/inventory-quantity-schema"/,
+  );
   assert.match(action, /p_entry_unit_id: data\.entryUnitId/);
   assert.match(action, /p_entry_quantity: data\.entryQuantity/);
   assert.doesNotMatch(action, /p_quantity_change: data\.quantityChange/);

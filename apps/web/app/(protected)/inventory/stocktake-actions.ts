@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -167,7 +168,7 @@ const submitCountSchema = z.object({
     .array(
       z.object({
         ingredient_id: z.coerce.number().int().positive(),
-        counted_quantity: z.coerce.number().min(0),
+        counted_quantity: inventoryNonnegativeQuantitySchema,
         // Unit the physical count was entered in. submit_count_round converts
         // it to the ingredient base via inv_to_base(). null => already base.
         entry_unit_id: z.coerce.number().int().positive().nullable().optional(),

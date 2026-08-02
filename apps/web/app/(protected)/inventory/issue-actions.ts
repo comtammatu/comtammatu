@@ -17,6 +17,7 @@ import {
   getEmbeddedUnitDisplayName,
 } from "./_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -54,7 +55,7 @@ const issueCreateSchema = z.object({
 const issueLineSchema = z.object({
   issueId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   // Missing value resolves to the ingredient base entry unit.
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   reason: z.string().trim().optional().nullable(),

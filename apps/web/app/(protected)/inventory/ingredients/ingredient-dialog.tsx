@@ -725,7 +725,7 @@ function UnitFactorField({
                 onValueChange={field.onChange}
                 onBlur={field.onBlur}
                 ref={field.ref}
-                maxFractionDigits={6}
+                maxFractionDigits={12}
                 aria-invalid={Boolean(fieldState.error)}
                 aria-describedby={errorId}
                 aria-label={copy.units.conversionAria(

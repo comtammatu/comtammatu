@@ -180,7 +180,7 @@ export function ReportsClient({
                       </span>
                       <span
                         className={cn(
-                          "font-bold",
+                          "font-semibold",
                           isOverdue ? "text-destructive" : "text-foreground",
                         )}
                       >
@@ -237,7 +237,7 @@ export function ReportsClient({
                       <IconPackage className="size-5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-foreground">
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {item.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -248,7 +248,7 @@ export function ReportsClient({
                   <div className="shrink-0 text-right">
                     <p
                       className={cn(
-                        "text-sm font-bold",
+                        "text-sm font-semibold",
                         isUp ? "text-destructive" : "text-success",
                       )}
                     >

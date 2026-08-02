@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
+import { inventoryNonzeroQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 /* ─── adjustStock ─── */
 
@@ -10,14 +11,7 @@ const adjustSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   entryUnitId: z.coerce.number().int().positive(),
-  entryQuantity: z.coerce
-    .number()
-    .refine(Number.isFinite, {
-      error: "Số lượng điều chỉnh không hợp lệ.",
-    })
-    .refine((value) => value !== 0, {
-      error: "Số lượng điều chỉnh không được bằng 0.",
-    }),
+  entryQuantity: inventoryNonzeroQuantitySchema,
   reason: z.string().trim().min(5, {
     error: "Nhập lý do điều chỉnh tối thiểu 5 ký tự.",
   }),

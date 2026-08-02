@@ -28,6 +28,9 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "hr.leave_requested": "/hr/attendance",
   "inventory.expiry_soon": "/inventory/stock",
   "inventory.stock_low": "/inventory/stock",
+  "inventory.stocktake_completed": "/inventory/stocktake",
+  "inventory.stocktake_conflict": "/inventory/stocktake",
+  "inventory.waste.weekly_report": "/inventory/waste/approvals",
   "inventory.stock_request_submitted": "/inventory/transfers",
   "pos.shift_variance": "/finance",
   "procurement.purchase_request_submitted": "/inventory/purchase-orders",
@@ -36,6 +39,7 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "workflow.po_approved": "/inventory/purchase-orders",
   "workflow.po_sent": "/inventory/purchase-orders",
   "workflow.transfer_in_transit": "/inventory/transfers",
+  "workflow.stocktake_submitted": "/inventory/stocktake",
 };
 
 // Only the match-relevant fields are read here, so the parameter is the

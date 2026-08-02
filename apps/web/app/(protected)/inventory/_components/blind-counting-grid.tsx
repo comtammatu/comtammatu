@@ -32,7 +32,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { FormattedNumberInput } from "@/components/form";
+import { QuantityInput } from "@/components/form";
 import { AppDetailFooter } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { AbcClassChip } from "./abc-class-chip";
@@ -69,7 +69,7 @@ interface BlindCountingGridProps {
  *
  * Each row = 1 ingredient. Shows:
  *   - Ingredient name + ABC class chip
- *   - Qty input (FormattedNumberInput, vi-VN grouping)
+ *   - Qty input (QuantityInput, vi-VN grouping)
  *   - Follow-up badge when the server returned is_final=false AND
  *     this row was touched in a prior round
  *   - Final-tick when is_final
@@ -152,7 +152,7 @@ export function BlindCountingGrid({
       className: "text-right",
       render: (line) => (
         <div className="flex flex-col items-end gap-1">
-          <FormattedNumberInput
+          <QuantityInput
             value={
               counts[line.ingredientId]?.qty == null
                 ? ""
@@ -303,7 +303,7 @@ function CountLineItem({
           onChange={onUnitChange}
           className="h-9 w-28"
         />
-        <FormattedNumberInput
+        <QuantityInput
           value={value === null ? "" : String(value)}
           disabled={readOnly}
           maxFractionDigits={3}

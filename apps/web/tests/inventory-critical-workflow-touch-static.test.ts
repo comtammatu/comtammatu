@@ -30,7 +30,7 @@ test("Owner waste create propagates touch density through route-local controls",
 
   assert.match(form, /<SelectTrigger size="touch">/);
   assert.match(form, /<Combobox[\s\S]*?size="touch"/);
-  assert.match(form, /<FormattedNumberInput[\s\S]*?className="h-12"/);
+  assert.match(form, /<QuantityInput[\s\S]*?className="h-12"/);
   assert.match(form, /previewSize="touch"/);
   assert.match(form, /size="touch-lg"/);
   assert.match(reasons, /size=\{size === "touch" \? "touch" : "default"\}/);

@@ -82,7 +82,14 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       role: "branch_manager",
       actionUrl: "/br/3/stock/stocktake/21",
       entityId: 21,
-      kind: "workflow.stocktake_submitted",
+      kind: "inventory.stocktake_completed",
+      expected: "/br/3/stock/stocktake/21",
+    },
+    {
+      role: "branch_manager",
+      actionUrl: "/br/3/stock/stocktake/21",
+      entityId: 21,
+      kind: "inventory.stocktake_conflict",
       expected: "/br/3/stock/stocktake/21",
     },
     {

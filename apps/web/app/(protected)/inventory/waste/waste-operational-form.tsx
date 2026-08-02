@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Combobox, FormattedNumberInput } from "@/components/form";
+import { Combobox, QuantityInput } from "@/components/form";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import { WastePhotoUpload } from "@/(protected)/inventory/_components/waste-photo-upload";
 import { WasteReasonDropdown } from "@/(protected)/inventory/_components/waste-reason-dropdown";
@@ -268,7 +268,7 @@ export function WasteOperationalForm({
                       ? copy.stockHint(formatQty(maxEntryQuantity), unit.label)
                       : ""}
                   </FieldLabel>
-                  <FormattedNumberInput
+                  <QuantityInput
                     value={line.quantity}
                     maxFractionDigits={3}
                     className="h-12"

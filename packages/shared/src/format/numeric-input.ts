@@ -33,10 +33,6 @@ function isGroupedInteger(value: string, separator: "." | ",") {
   return new RegExp(`^\\d{1,3}(?:${escapedSeparator}\\d{3})+$`).test(value);
 }
 
-function isIncompleteGroupedInteger(value: string) {
-  return /^\d{1,3}(?:\.\d{3})*\.\d{0,2}$/.test(value);
-}
-
 function invalid(display: string): NumericInputParseResult {
   return { state: "invalid", display };
 }
@@ -95,10 +91,6 @@ function parseIntegerInput(
     });
   }
 
-  if (isIncompleteGroupedInteger(unsigned)) {
-    return incomplete(`${sign}${unsigned}`);
-  }
-
   return invalid(`${sign}${unsigned}`);
 }
 
@@ -137,36 +129,49 @@ function parseDecimalInput(
     return createValidResult({ sign, whole: unsigned });
   }
 
-  if (dotCount > 0 && commaCount > 0) {
-    const lastDot = unsigned.lastIndexOf(".");
-    const lastComma = unsigned.lastIndexOf(",");
-    const decimalSeparator = lastDot > lastComma ? "." : ",";
-    const groupingSeparator = decimalSeparator === "." ? "," : ".";
-    const decimalIndex = Math.max(lastDot, lastComma);
-    const groupedWhole = unsigned.slice(0, decimalIndex);
-    const fraction = unsigned.slice(decimalIndex + 1);
-
-    if (!isGroupedInteger(groupedWhole, groupingSeparator)) {
-      return invalid(`${sign}${unsigned}`);
+  if (
+    acceptUnambiguousDotDecimal &&
+    dotCount === 1 &&
+    commaCount > 0 &&
+    unsigned.lastIndexOf(".") > unsigned.lastIndexOf(",")
+  ) {
+    const [groupedWhole = "", fraction = ""] = unsigned.split(".");
+    if (isGroupedInteger(groupedWhole, ",") && /^\d*$/.test(fraction)) {
+      return parseFraction({
+        sign,
+        whole: groupedWhole.replaceAll(",", ""),
+        fraction,
+        maxFractionDigits,
+      });
     }
-
-    return parseFraction({
-      sign,
-      whole: groupedWhole.replaceAll(groupingSeparator, ""),
-      fraction,
-      maxFractionDigits,
-    });
+    return invalid(`${sign}${unsigned}`);
   }
 
   if (commaCount === 1) {
     const [rawWhole = "", fraction = ""] = unsigned.split(",");
     const whole = rawWhole || "0";
+    const normalizedWhole = whole.includes(".")
+      ? isGroupedInteger(whole, ".")
+        ? whole.replaceAll(".", "")
+        : null
+      : /^\d+$/.test(whole)
+        ? whole
+        : null;
 
-    if (!/^\d+$/.test(whole) || !/^\d*$/.test(fraction)) {
+    if (normalizedWhole == null || !/^\d*$/.test(fraction)) {
       return invalid(`${sign}${unsigned}`);
     }
 
-    return parseFraction({ sign, whole, fraction, maxFractionDigits });
+    return parseFraction({
+      sign,
+      whole: normalizedWhole,
+      fraction,
+      maxFractionDigits,
+    });
+  }
+
+  if (commaCount > 1 || (dotCount > 0 && commaCount > 0)) {
+    return invalid(`${sign}${unsigned}`);
   }
 
   if (dotCount > 0 && isGroupedInteger(unsigned, ".")) {
@@ -181,10 +186,6 @@ function parseDecimalInput(
     if (/^\d+$/.test(whole) && /^\d*$/.test(fraction)) {
       return parseFraction({ sign, whole, fraction, maxFractionDigits });
     }
-  }
-
-  if (dotCount > 0 && isIncompleteGroupedInteger(unsigned)) {
-    return incomplete(`${sign}${unsigned}`);
   }
 
   return invalid(`${sign}${unsigned}`);

@@ -22,15 +22,8 @@ type FormattedNumberInputProps = Omit<
   ) => void;
   allowNegative?: boolean;
   maxFractionDigits?: number;
+  invalidMessage?: string;
 };
-
-export function normalizeTypedDecimalPointAlias(value: string) {
-  if (value.includes(",")) return value;
-  const index = value.lastIndexOf(".");
-  return index < 0
-    ? value
-    : `${value.slice(0, index)},${value.slice(index + 1)}`;
-}
 
 function formatDisplayValue(raw: string, maxFractionDigits: number) {
   if (!raw || raw === "-") {
@@ -52,6 +45,7 @@ export const FormattedNumberInput = React.forwardRef<
     onValueBlur,
     allowNegative = false,
     maxFractionDigits = 2,
+    invalidMessage = "Nhập số theo định dạng vi-VN, dùng dấu phẩy cho phần thập phân.",
     inputMode,
     onBlur,
     onFocus,
@@ -60,6 +54,8 @@ export const FormattedNumberInput = React.forwardRef<
   },
   ref,
 ) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
   const [isFocused, setIsFocused] = React.useState(false);
   const [draft, setDraft] = React.useState<NumericInputParseResult | null>(
     null,
@@ -76,14 +72,16 @@ export const FormattedNumberInput = React.forwardRef<
   const rawValue = isControlled ? (value ?? "") : innerValue;
   const draftInvalid =
     draft?.state === "invalid" || draft?.state === "incomplete";
-  const displayValue = isFocused
-    ? (draft?.display ?? formatNumericInputDraft(rawValue))
-    : formatDisplayValue(rawValue, maxFractionDigits);
+  const displayValue = draftInvalid
+    ? draft.display
+    : isFocused
+      ? (draft?.display ?? formatNumericInputDraft(rawValue))
+      : formatDisplayValue(rawValue, maxFractionDigits);
 
   return (
     <Input
       {...props}
-      ref={ref}
+      ref={inputRef}
       type="text"
       autoComplete="off"
       spellCheck={false}
@@ -91,16 +89,16 @@ export const FormattedNumberInput = React.forwardRef<
       value={displayValue}
       aria-invalid={draftInvalid ? true : ariaInvalid}
       onChange={(event) => {
-        const nativeEvent = event.nativeEvent as InputEvent;
-        const inputValue =
-          maxFractionDigits > 0 && nativeEvent.data === "."
-            ? normalizeTypedDecimalPointAlias(event.target.value)
-            : event.target.value;
-        const nextDraft = parseVietnameseNumericInput(inputValue, {
+        const nextDraft = parseVietnameseNumericInput(event.target.value, {
           allowNegative,
           maxFractionDigits,
         });
         setDraft(nextDraft);
+        event.currentTarget.setCustomValidity(
+          nextDraft.state === "invalid" || nextDraft.state === "incomplete"
+            ? invalidMessage
+            : "",
+        );
 
         if (nextDraft.state === "valid" || nextDraft.state === "empty") {
           if (!isControlled) {
@@ -111,22 +109,30 @@ export const FormattedNumberInput = React.forwardRef<
       }}
       onFocus={(event) => {
         setIsFocused(true);
-        setDraft(
-          parseVietnameseNumericInput(formatNumericInputDraft(rawValue), {
-            allowNegative,
-            maxFractionDigits,
-          }),
+        setDraft((current) =>
+          current?.state === "invalid" || current?.state === "incomplete"
+            ? current
+            : parseVietnameseNumericInput(formatNumericInputDraft(rawValue), {
+                allowNegative,
+                maxFractionDigits,
+              }),
         );
         onFocus?.(event);
       }}
       onBlur={(event) => {
         setIsFocused(false);
-        const blurValue =
-          draft?.state === "valid" || draft?.state === "empty"
-            ? draft.canonical
-            : rawValue;
-        setDraft(null);
-        onValueBlur?.(blurValue, event);
+        if (draft?.state === "invalid" || draft?.state === "incomplete") {
+          event.currentTarget.setCustomValidity(invalidMessage);
+          event.currentTarget.reportValidity();
+        } else {
+          const blurValue =
+            draft?.state === "valid" || draft?.state === "empty"
+              ? draft.canonical
+              : rawValue;
+          event.currentTarget.setCustomValidity("");
+          setDraft(null);
+          onValueBlur?.(blurValue, event);
+        }
         onBlur?.(event);
       }}
     />

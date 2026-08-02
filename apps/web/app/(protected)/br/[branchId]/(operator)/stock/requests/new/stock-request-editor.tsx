@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormattedNumberInput } from "@/components/form";
+import { QuantityInput } from "@/components/form";
 import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import { saveStockRequest } from "@/(protected)/inventory/stock-request-actions";
@@ -226,7 +226,7 @@ export function StockRequestEditor({
                   </Badge>
                 ) : null}
                 <div className="grid grid-cols-[minmax(0,1fr)_7rem_auto] gap-2">
-                  <FormattedNumberInput
+                  <QuantityInput
                     value={line.quantity}
                     onValueChange={(quantity) =>
                       patchLine(line.key, { quantity })

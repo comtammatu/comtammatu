@@ -11,7 +11,7 @@ import {
   Trash as IconTrash,
   TriangleAlert as IconTriangleAlert,
 } from "lucide-react";
-import { FormattedNumberInput, PhotoUploadInput } from "@/components/form";
+import { PhotoUploadInput, QuantityInput } from "@/components/form";
 import {
   GRN_DETAIL_COPY as grnCopy,
   acceptedGrnQuantity,
@@ -64,7 +64,7 @@ export function LineRow({
       {showHeader ? (
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate font-bold">{line.name}</p>
+            <p className="truncate font-semibold">{line.name}</p>
             {!isDraft ? (
               <>
                 <p className="text-xs text-muted-foreground">
@@ -136,7 +136,7 @@ export function LineRow({
             label={grnCopy.line.acceptedLabel(line.unit)}
             showLabel={showHeader}
           >
-            <FormattedNumberInput
+            <QuantityInput
               id={`received-${idx}`}
               value={
                 line.actual > 0 || line.dirty ? String(acceptedQuantity) : ""
@@ -162,7 +162,7 @@ export function LineRow({
                 id={`rejected-${idx}`}
                 label={grnCopy.line.rejectedLabel(line.unit)}
               >
-                <FormattedNumberInput
+                <QuantityInput
                   id={`rejected-${idx}`}
                   value={String(line.rejected)}
                   onValueChange={(value) => {

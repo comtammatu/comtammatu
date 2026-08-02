@@ -256,7 +256,7 @@ export function StocktakeCountWizard({
         <div className="text-sm font-medium">
           {activeLine?.ingredientName ?? "—"}
         </div>
-        <div className="font-mono text-3xl font-bold tabular-nums">
+        <div className="font-mono text-3xl font-semibold tabular-nums">
           {activeBuffer.length > 0 ? activeBuffer : "0"}
           <span className="ml-1 text-sm font-normal text-muted-foreground">
             {activeLine != null

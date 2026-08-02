@@ -16,7 +16,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { FormattedNumberInput } from "@/components/form/formatted-number-input";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { useIsOnline } from "@/components/pwa-runtime";
 import {
   DataTable,
@@ -282,7 +282,7 @@ export function TransferDetailClient({
       className: "text-right w-28 md:w-32",
       render: (item) =>
         isReceiveMode ? (
-          <FormattedNumberInput
+          <QuantityInput
             value={receiveQty[item.ingredientId] ?? ""}
             onValueChange={(value) =>
               setReceiveQty((prev) => ({
@@ -393,13 +393,13 @@ export function TransferDetailClient({
                   {
                     key: "label",
                     colSpan: 4,
-                    className: "text-right text-sm font-bold",
+                    className: "text-right text-sm font-semibold",
                     content: copy.totalValue,
                   },
                   {
                     key: "value",
                     className:
-                      "text-right font-mono font-bold tabular-nums text-primary",
+                      "text-right font-mono font-semibold tabular-nums text-primary",
                     content: messages.inventory.common.currencyCompact(
                       formatVND(transfer.monetary.total),
                     ),
@@ -498,7 +498,7 @@ export function TransferDetailClient({
                       {
                         term: copy.totalValue,
                         description: (
-                          <span className="text-primary font-bold">
+                          <span className="text-primary font-semibold">
                             {messages.inventory.common.currencyCompact(
                               formatVND(transfer.monetary.total),
                             )}
@@ -601,7 +601,7 @@ export function TransferDetailClient({
                     !noteOk)
                 }
                 size="touch"
-                className="px-4 font-bold"
+                className="px-4 font-semibold"
                 onClick={handlePrimaryAction}
               >
                 <IconCircleCheck className="size-5" />
@@ -654,7 +654,7 @@ export function TransferDetailClient({
                 (isReceiveMode && actionConfig?.kind === "receive" && !noteOk)
               }
               size="default"
-              className="px-4 font-bold"
+              className="px-4 font-semibold"
               onClick={handlePrimaryAction}
             >
               <IconCircleCheck className="size-5" />
@@ -788,7 +788,7 @@ function TransferLineMobileCard({
     <Item variant="outline" className="flex-col items-stretch gap-4 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-bold">{item.name}</p>
+          <p className="font-semibold">{item.name}</p>
           <p className="text-xs text-muted-foreground">{item.sku}</p>
         </div>
         <Badge variant="secondary">{item.unit}</Badge>
@@ -801,7 +801,7 @@ function TransferLineMobileCard({
         <div>
           <p className="text-muted-foreground">{copy.receivedQty}</p>
           {isReceiveMode ? (
-            <FormattedNumberInput
+            <QuantityInput
               value={receiveValue}
               onValueChange={onReceiveValueChange}
               maxFractionDigits={3}

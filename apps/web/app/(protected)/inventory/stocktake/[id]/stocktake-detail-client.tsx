@@ -37,7 +37,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { FormattedNumberInput } from "@/components/form/formatted-number-input";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,
@@ -295,7 +295,7 @@ export function StocktakeDetailClient({
                 className={cn(
                   "tabular-nums",
                   varianceCount > 0
-                    ? "text-warning font-bold"
+                    ? "text-warning font-semibold"
                     : "text-muted-foreground",
                 )}
               >
@@ -523,7 +523,7 @@ function CountingPhase({
       key: "counted",
       header: stocktakeDetailCopy.countedQtyPlaceholder,
       render: (line) => (
-        <FormattedNumberInput
+        <QuantityInput
           key={`stocktake-desktop-${line.id}`}
           defaultValue={
             line.counted_quantity != null ? String(line.counted_quantity) : ""
@@ -578,7 +578,7 @@ function CountingPhase({
               {line.ingredients?.unit ?? inventoryCommon.noValue}
             </p>
             <div className="flex items-center gap-2">
-              <FormattedNumberInput
+              <QuantityInput
                 key={`stocktake-mobile-${line.id}`}
                 defaultValue={
                   line.counted_quantity != null
@@ -780,7 +780,7 @@ function ResultsPhase({
                   ) : (
                     <span
                       className={cn(
-                        "font-mono text-sm font-bold tabular-nums",
+                        "font-mono text-sm font-semibold tabular-nums",
                         varianceColor,
                       )}
                     >

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { formatConversionFactorDisplay } from "../app/(protected)/inventory/_lib/unit-conversion-input";
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -65,9 +64,4 @@ test("operational copy formats fractional quantities and workday balances", () =
   assert.match(employeeMessageSource, /formatDecimal\(payable, 1\)/);
   assert.match(hrMessageSource, /formatDecimal\(remaining, 1\)/);
   assert.match(payslipSource, /formatDecimal\(Number\(entry\.working_days\), 1\)/);
-});
-
-test("unit-conversion previews stay Vietnamese while storage remains canonical", () => {
-  assert.equal(formatConversionFactorDisplay(1.5), "1,5");
-  assert.equal(formatConversionFactorDisplay(1_234.5), "1.234,5");
 });

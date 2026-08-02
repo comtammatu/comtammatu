@@ -5,6 +5,7 @@ import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
+import { inventoryNonzeroQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const correctionDocumentTypes = [
   "grn",
@@ -18,9 +19,7 @@ const correctionSchema = z.object({
   documentId: z.coerce.number().int().positive(),
   branchId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
-  quantityChange: z.coerce.number().refine((value) => value !== 0, {
-    error: "Số lượng điều chỉnh không được bằng 0.",
-  }),
+  quantityChange: inventoryNonzeroQuantitySchema,
   reason: z
     .string()
     .trim()

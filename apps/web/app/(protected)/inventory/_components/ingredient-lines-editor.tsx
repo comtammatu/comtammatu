@@ -28,7 +28,7 @@ import {
 import {
   Combobox,
   MultiSelectCombobox,
-  FormattedNumberInput,
+  QuantityInput,
 } from "@/components/form";
 import {
   getDefaultIngredientUnit,
@@ -332,7 +332,7 @@ function IngredientLineRow<T extends FieldValues>({
             control={control}
             name={quantityName}
             render={({ field }) => (
-              <FormattedNumberInput
+              <QuantityInput
                 placeholder={INVENTORY_VI.quantityExamplePlaceholder}
                 value={field.value ?? ""}
                 onValueChange={field.onChange}

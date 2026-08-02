@@ -8941,6 +8941,7 @@ export type Database = {
           started_at: string
           status: string
           tenant_id: number
+          updated_at: string
           variance_threshold_pct: number
           variance_threshold_pct_class_a: number
           variance_threshold_vnd: number
@@ -8968,6 +8969,7 @@ export type Database = {
           started_at?: string
           status?: string
           tenant_id: number
+          updated_at?: string
           variance_threshold_pct?: number
           variance_threshold_pct_class_a?: number
           variance_threshold_vnd?: number
@@ -8995,6 +8997,7 @@ export type Database = {
           started_at?: string
           status?: string
           tenant_id?: number
+          updated_at?: string
           variance_threshold_pct?: number
           variance_threshold_pct_class_a?: number
           variance_threshold_vnd?: number
@@ -13759,13 +13762,7 @@ export type Database = {
         }
         Returns: Json
       }
-      scan_inventory_alerts: {
-        Args: never
-        Returns: {
-          expiry_count: number
-          low_stock_count: number
-        }[]
-      }
+      scan_inventory_alerts: { Args: never; Returns: number }
       self_order_accept_request: {
         Args: { p_request_id: number; p_target_order_id?: number }
         Returns: Json

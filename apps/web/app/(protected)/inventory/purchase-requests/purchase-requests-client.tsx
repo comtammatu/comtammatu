@@ -38,7 +38,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AppDialog,
   BusinessDatePicker,
-  FormattedNumberInput,
+  QuantityInput,
 } from "@/components/form";
 import {
   DataTable,
@@ -1005,7 +1005,7 @@ export function PurchaseRequestsClient({
                     </span>
                   ) : null}
                 </div>
-                <FormattedNumberInput
+                <QuantityInput
                   controlSize="field"
                   value={line.quantity}
                   onValueChange={(value) =>
@@ -1350,7 +1350,7 @@ export function PurchaseRequestsClient({
                           className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]"
                         >
                           <span className="text-sm">{draft.supplierName}</span>
-                          <FormattedNumberInput
+                          <QuantityInput
                             controlSize="field"
                             value={line.quantity}
                             onValueChange={(value) =>

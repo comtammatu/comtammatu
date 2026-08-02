@@ -465,7 +465,7 @@ export function GrnCreateClient({
                   />
                 }
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-bold uppercase text-muted-foreground">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-2xs font-semibold uppercase text-muted-foreground">
                   {(ingredient.sku ?? ingredient.name).slice(0, 2)}
                 </span>
                 <div className="min-w-0 flex-1">

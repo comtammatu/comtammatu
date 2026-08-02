@@ -84,7 +84,7 @@ export function SimpleBarChart({
           <span
             className={
               isLast(dataIndex)
-                ? "mt-2 text-xs font-bold text-muted-foreground opacity-100"
+                ? "mt-2 text-xs font-semibold text-muted-foreground opacity-100"
                 : "mt-2 text-xs text-muted-foreground opacity-50"
             }
           >

@@ -15,6 +15,10 @@ import {
   requireProductionAccess,
 } from "./_lib/production-shared";
 import type { ProductionShortageRow } from "./production-types";
+import {
+  inventoryNonnegativeQuantitySchema,
+  inventoryPositiveQuantitySchema,
+} from "./_lib/inventory-quantity-schema";
 
 const PRODUCTION_ORDER_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -24,13 +28,13 @@ const productionCopy = messages.inventory.operatorFlow;
 
 const actualIngredientSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
-  actualQuantity: z.coerce.number().finite().nonnegative(),
+  actualQuantity: inventoryNonnegativeQuantitySchema,
 });
 
 const createProductionRunSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   recipeSpecId: z.coerce.number().int().positive(),
-  plannedQuantity: z.coerce.number().finite().positive(),
+  plannedQuantity: inventoryPositiveQuantitySchema,
   sourceLocationId: z.coerce.number().int().positive().optional(),
   targetLocationId: z.coerce.number().int().positive().optional(),
   notes: z.string().trim().max(500).optional(),
@@ -40,7 +44,7 @@ const completeProductionRunSchema = z
   .object({
     id: z.coerce.number().int().positive(),
     branchId: z.coerce.number().int().positive(),
-    actualQuantity: z.coerce.number().finite().positive(),
+    actualQuantity: inventoryPositiveQuantitySchema,
     actualIngredients: z.array(actualIngredientSchema).min(1),
   })
   .superRefine((value, ctx) => {

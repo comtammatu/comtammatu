@@ -30,7 +30,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Combobox } from "@/components/form/combobox";
 import { FormField } from "@/components/form/form-field";
-import { FormattedNumberInput } from "@/components/form/formatted-number-input";
+import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
   AppEmptyState,
   AppSection,
@@ -251,7 +251,7 @@ export function CreateTransferForm({
                       size={controlSize}
                       className="col-span-2 w-full sm:w-40"
                     >
-                      <FormattedNumberInput
+                      <QuantityInput
                         className="h-full"
                         placeholder={messages.inventory.common.quantityShort}
                         aria-label={copy.createNative.quantityLabel}

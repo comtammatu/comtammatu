@@ -5,10 +5,11 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
+import { inventoryNonnegativeQuantitySchema } from "../../_lib/inventory-quantity-schema";
 
 const thresholdItem = z.object({
   id: z.coerce.number().int().positive(),
-  min_stock_level: z.coerce.number().min(0),
+  min_stock_level: inventoryNonnegativeQuantitySchema,
 });
 
 const bulkUpdateThresholdsSchema = z.object({

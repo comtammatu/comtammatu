@@ -47,7 +47,7 @@ export const QuantityInput = React.forwardRef<
     <FormattedNumberInput
       {...props}
       ref={ref}
-      className={cn("text-right tabular-nums", className)}
+      className={cn("text-right font-mono tabular-nums", className)}
       inputMode={maxFractionDigits > 0 ? "decimal" : "numeric"}
       maxFractionDigits={maxFractionDigits}
     />
@@ -103,7 +103,14 @@ export type QuantityFieldProps<TFieldValues extends FieldValues> = Omit<
 
 export function QuantityField<TFieldValues extends FieldValues>({
   maxFractionDigits = 3,
+  className,
   ...props
 }: QuantityFieldProps<TFieldValues>) {
-  return <NumberField {...props} maxFractionDigits={maxFractionDigits} />;
+  return (
+    <NumberField
+      {...props}
+      className={cn("text-right font-mono tabular-nums", className)}
+      maxFractionDigits={maxFractionDigits}
+    />
+  );
 }

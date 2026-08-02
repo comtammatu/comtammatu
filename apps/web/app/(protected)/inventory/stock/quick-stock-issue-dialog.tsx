@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import {
-  FormattedNumberInput,
+  QuantityInput,
   FormDialog,
   TextareaField,
 } from "@/components/form";
@@ -236,7 +236,7 @@ export function QuickStockIssueDialog({
                   {FORM_VI.quantity} *
                 </FieldLabel>
                 <InputGroup className="h-10">
-                  <FormattedNumberInput
+                  <QuantityInput
                     id="quick-issue-quantity"
                     maxFractionDigits={3}
                     value={form.watch("quantity")}

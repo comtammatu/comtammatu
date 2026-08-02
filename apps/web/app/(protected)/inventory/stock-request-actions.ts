@@ -8,6 +8,7 @@ import {
   STOCK_REQUEST_ROLES,
 } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const INSUFFICIENT_STOCK_RE = /insufficient_stock(?::|_)(\d+)/i;
 
@@ -60,7 +61,7 @@ type RpcJson = {
 const stockRequestLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   entryUnitId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   notes: z.string().trim().max(500).optional(),
 });
 

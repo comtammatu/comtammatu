@@ -13,6 +13,7 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 /* ─── Menu recipes (branch WAC + menu-item ingredient consumption) ─── */
 
@@ -26,7 +27,7 @@ const optionalBranchIdSchema = z.coerce
 
 const menuRecipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),
   note: z.string().optional().nullable(),
 });

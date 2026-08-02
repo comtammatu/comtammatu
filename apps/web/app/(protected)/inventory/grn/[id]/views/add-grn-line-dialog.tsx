@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus } from "lucide-react";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { AppDialog, Combobox, FormattedNumberInput } from "@/components/form";
+import { AppDialog, Combobox, QuantityInput } from "@/components/form";
 import { upsertGrnLine } from "../../../grn-actions";
 import {
   getDefaultPurchaseUnit,
@@ -258,7 +258,7 @@ export function AddGrnLineDialog({
             <Label htmlFor="grn-line-qty">
               {grnCopy.addDialog.quantityLabel}
             </Label>
-            <FormattedNumberInput
+            <QuantityInput
               id="grn-line-qty"
               value={quantity}
               onValueChange={setQuantity}

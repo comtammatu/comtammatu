@@ -161,7 +161,7 @@ export function SupplierPicker({
               className="h-auto"
               render={<Link href={supplierHref(supplier.id)} />}
             >
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold uppercase text-muted-foreground">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold uppercase text-muted-foreground">
                 {initials}
               </span>
               <div className="min-w-0 flex-1">

@@ -37,7 +37,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import {
   Combobox,
-  FormattedNumberInput,
+  QuantityInput,
   FormDialog,
   TextareaField,
 } from "@/components/form";
@@ -489,7 +489,7 @@ export function IssueDetailClient({
                   <span className="text-muted-foreground">
                     {ISSUES_VI.totalLinesColon}
                   </span>
-                  <span className="font-bold">
+                  <span className="font-semibold">
                     {String(lines.length).padStart(2, "0")}
                   </span>
                 </div>
@@ -499,10 +499,10 @@ export function IssueDetailClient({
                       <span className="text-muted-foreground">
                         {ISSUES_VI.goodsSubtotalColon}
                       </span>
-                      <span className="font-bold">{formatVND(totalAmount)}</span>
+                      <span className="font-semibold">{formatVND(totalAmount)}</span>
                     </div>
                     <div className="flex items-end justify-between border-t border-border pt-3">
-                      <span className="text-sm font-bold">
+                      <span className="text-sm font-semibold">
                         {ISSUES_VI.grandTotalCaps}
                       </span>
                       <div className="text-right">
@@ -546,7 +546,7 @@ export function IssueDetailClient({
                 ...(canViewMonetary ? [{
                   term: ISSUES_VI.totalValue,
                   description: (
-                    <span className="text-primary font-bold">
+                    <span className="text-primary font-semibold">
                       {messages.inventory.common.currency(
                         formatVND(totalAmount),
                       )}
@@ -800,7 +800,7 @@ function AddIssueLineDialog({
                   {ISSUES_VI.quantityLabel} *
                 </FieldLabel>
                 <InputGroup className="h-10">
-                  <FormattedNumberInput
+                  <QuantityInput
                     id="issue-line-quantity"
                     maxFractionDigits={3}
                     value={quantityValue}

@@ -17,11 +17,11 @@ test("transfer detail lazy-loads stock correction dialog", () => {
   assert.match(source, /import dynamic from "next\/dynamic"/);
   assert.match(
     source,
-    /import \{ FormattedNumberInput \} from "@\/components\/form\/formatted-number-input"/,
+    /import \{ QuantityInput \} from "@\/components\/form\/domain-number-inputs"/,
   );
   assert.doesNotMatch(
     source,
-    /import \{ FormattedNumberInput \} from "@\/components\/form"/,
+    /import \{ QuantityInput \} from "@\/components\/form"/,
   );
   assert.match(
     source,

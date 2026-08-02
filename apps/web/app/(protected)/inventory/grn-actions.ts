@@ -16,6 +16,7 @@ import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const ROLES = PROCUREMENT_ROLES;
 const grnLoadFailedError = messages.inventory.grn.loadFailed;
@@ -893,6 +894,10 @@ export const updateDraftGrnReceivingSite = withAction(
 /* ─── upsertGrnLine ─── */
 
 const GRN_NUMERIC_15_3_MAX = 999_999_999_999.999;
+const grnQuantitySchema = inventoryNonnegativeQuantitySchema.refine(
+  (value) => value <= GRN_NUMERIC_15_3_MAX,
+  "Số lượng vượt giới hạn hệ thống.",
+);
 
 const grnLineSchema = z
   .object({
@@ -901,14 +906,10 @@ const grnLineSchema = z
     ingredientId: z.coerce.number().int().positive(),
     supplierId: z.coerce.number().int().positive(),
     // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
-    receivedQuantity: z.coerce.number().min(0).max(GRN_NUMERIC_15_3_MAX),
+    receivedQuantity: grnQuantitySchema,
     // Purchase-role unit the qty was entered in. NULL = already base.
     entryUnitId: z.coerce.number().int().positive().nullable().optional(),
-    rejectedQuantity: z.coerce
-      .number()
-      .min(0)
-      .max(GRN_NUMERIC_15_3_MAX)
-      .optional(),
+    rejectedQuantity: grnQuantitySchema.optional(),
     rejectionReason: z.string().trim().max(500).optional().nullable(),
     rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
   })
@@ -1075,15 +1076,8 @@ const saveGoodsReceiptNoteSchema = z.object({
       z
         .object({
           lineId: z.coerce.number().int().positive(),
-          receivedQuantity: z.coerce
-            .number()
-            .min(0)
-            .max(GRN_NUMERIC_15_3_MAX),
-          rejectedQuantity: z.coerce
-            .number()
-            .min(0)
-            .max(GRN_NUMERIC_15_3_MAX)
-            .default(0),
+          receivedQuantity: grnQuantitySchema,
+          rejectedQuantity: grnQuantitySchema.default(0),
           rejectionReason: z.string().trim().max(500).nullable().optional(),
           rejectedPhotoUrl: z.string().trim().url().nullable().optional(),
         })
@@ -1265,22 +1259,8 @@ const amendGrnLineSchema = z
   .object({
     grnId: z.coerce.number().int().positive(),
     lineId: z.coerce.number().int().positive(),
-    receivedQuantity: z.coerce
-      .number()
-      .min(0, {
-        error: "Số lượng phải >= 0",
-      })
-      .max(GRN_NUMERIC_15_3_MAX, {
-        error: "Số lượng vượt giới hạn hệ thống.",
-      }),
-    rejectedQuantity: z.coerce
-      .number()
-      .min(0)
-      .max(GRN_NUMERIC_15_3_MAX, {
-        error: "Số lượng từ chối vượt giới hạn hệ thống.",
-      })
-      .optional()
-      .nullable(),
+    receivedQuantity: grnQuantitySchema,
+    rejectedQuantity: grnQuantitySchema.optional().nullable(),
     rejectionReason: z
       .string()
       .trim()

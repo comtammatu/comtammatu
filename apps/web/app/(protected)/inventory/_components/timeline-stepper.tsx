@@ -27,7 +27,7 @@ export function TimelineStepper({
             <div className="flex flex-col items-center shrink-0">
               <div
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-full text-xs font-bold ring-1 ring-border/60 transition-colors",
+                  "flex size-10 items-center justify-center rounded-full text-xs font-semibold ring-1 ring-border/60 transition-colors",
                   step.completed
                     ? "bg-success text-white"
                     : step.active
@@ -57,7 +57,7 @@ export function TimelineStepper({
               <p
                 className={cn(
                   "text-sm font-semibold text-muted-foreground leading-normal break-words",
-                  (step.active || step.completed) && "font-bold text-foreground",
+                  (step.active || step.completed) && "font-semibold text-foreground",
                 )}
               >
                 {step.label}
@@ -79,7 +79,7 @@ export function TimelineStepper({
           <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
-                "flex size-10 items-center justify-center rounded-full text-xs font-bold ring-1 ring-border/60 transition-colors",
+                "flex size-10 items-center justify-center rounded-full text-xs font-semibold ring-1 ring-border/60 transition-colors",
                 step.completed
                   ? "bg-success text-white"
                   : step.active
@@ -96,7 +96,7 @@ export function TimelineStepper({
             <p
               className={cn(
                 "max-w-20 text-center text-xs font-medium text-muted-foreground",
-                (step.active || step.completed) && "font-bold text-foreground",
+                (step.active || step.completed) && "font-semibold text-foreground",
               )}
             >
               {step.label}
@@ -118,4 +118,3 @@ export function TimelineStepper({
     </div>
   );
 }
-

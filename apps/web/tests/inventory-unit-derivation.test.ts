@@ -6,11 +6,6 @@ import {
   type DerivationRow,
   type DerivationUnitInfo,
 } from "../app/(protected)/inventory/_lib/unit-derivation";
-import {
-  displayAnchorFactor,
-  preferredConversionInputDirection,
-  toStoredAnchorFactor,
-} from "../app/(protected)/inventory/_lib/unit-conversion-input";
 
 const KG = 1;
 const G = 2;
@@ -302,31 +297,4 @@ test("standard secondary on a packaging base succeeds if it has a valid anchor",
   const rows = rowsMap([mlRow, chaiRow]);
   const mlToBase = deriveToBaseFactor(CHAI, mlRow, units, rows);
   assert.equal(mlToBase, 1 / 250);
-});
-
-test("conversion input accepts anchor-to-unit entry while storing canonical unit-to-anchor", () => {
-  const direction = "anchor_to_unit";
-  const stored = toStoredAnchorFactor("52", direction);
-
-  assert.equal(Number(stored), 1 / 52);
-  assert.equal(displayAnchorFactor(stored, direction), "52");
-});
-
-test("conversion input hides reciprocal rounding drift from stored database factors", () => {
-  assert.equal(displayAnchorFactor("0.019230769", "anchor_to_unit"), "52");
-});
-
-test("conversion input can keep canonical unit-to-anchor entry", () => {
-  const direction = "unit_to_anchor";
-
-  assert.equal(toStoredAnchorFactor("52", direction), "52");
-  assert.equal(displayAnchorFactor("52", direction), "52");
-});
-
-test("conversion input reopens reciprocal factors in anchor-to-unit direction", () => {
-  assert.equal(
-    preferredConversionInputDirection(String(1 / 52)),
-    "anchor_to_unit",
-  );
-  assert.equal(preferredConversionInputDirection("52"), "unit_to_anchor");
 });

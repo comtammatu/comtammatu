@@ -14,6 +14,7 @@ import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
+import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 
 /* ─── Stocktake Schemas ─── */
@@ -21,7 +22,7 @@ import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 const stocktakeSessionIdSchema = z.coerce.number().int().positive();
 const stocktakeLineUpdateSchema = z.object({
   lineId: z.coerce.number().int().positive(),
-  countedQuantity: z.coerce.number().min(0),
+  countedQuantity: inventoryNonnegativeQuantitySchema,
   varianceReason: z.string().optional(),
 });
 

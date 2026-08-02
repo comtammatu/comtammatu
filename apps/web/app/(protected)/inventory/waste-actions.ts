@@ -9,8 +9,8 @@ import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { messages } from "@lib/messages";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
-import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { currentUserHasPermission } from "@/_lib/permissions";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 /* ─── Waste entry (S11) ─── */
 
@@ -40,7 +40,7 @@ const WASTE_SOURCE_TYPES = [
 
 const wasteItemSchema = z.object({
   ingredient_id: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   // Issue-role unit the qty was entered in. NULL = already base;
   // the writeoff decrement converts to base via inv_to_base().
   entry_unit_id: z.coerce.number().int().positive().nullable().optional(),
@@ -224,120 +224,6 @@ export async function createWasteEntry(
       shiftKey: String(raw.shift_key ?? ""),
       itemsCreated: Number(raw.items_created ?? 0),
       requiresApproval: Boolean(raw.requires_approval ?? false),
-    },
-  };
-}
-
-/* ─── Expiry write-off (routes through the waste pipeline) ─── */
-
-const createExpiryWriteoffSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
-  grnItemId: z.coerce.number().int().positive().optional(),
-  note: z.string().max(500).optional(),
-  photoUrls: z.array(z.string().url()).max(10).optional(),
-});
-
-export type CreateExpiryWriteoffResult = {
-  issueId: number;
-  issueNumber: string;
-  requiresApproval: boolean;
-  stockDecremented: boolean;
-};
-
-/**
- * Write off an expiring lot through the waste pipeline (`create_expiry_writeoff`
- * RPC) instead of a raw stock adjustment — it computes the tier, enforces the
- * photo gate, posts the decrementing WAC movement, and stays pending when a
- * tier-2 approval is required. Source location is the branch's default issue
- * location (resolved server-side); the lot is captured in `source_ref` so the
- * expiry alert clears.
- */
-export async function createExpiryWriteoff(
-  input: z.infer<typeof createExpiryWriteoffSchema>,
-): Promise<ActionResult<CreateExpiryWriteoffResult>> {
-  const parsed = createExpiryWriteoffSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.INVENTORY_WRITEOFF,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền xóa sổ hàng" };
-  const { supabase, claims } = ctx;
-
-  const locationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    parsed.data.branchId,
-    "issue",
-  );
-  if (locationId == null) {
-    return {
-      success: false,
-      error: "Chi nhánh chưa có kho mặc định. Vui lòng liên hệ quản trị.",
-    };
-  }
-
-  const { data, error } = await supabase.rpc("create_expiry_writeoff", {
-    p_branch_id: parsed.data.branchId,
-    p_location_id: locationId,
-    p_ingredient_id: parsed.data.ingredientId,
-    p_quantity: parsed.data.quantity,
-    p_grn_item_id: parsed.data.grnItemId ?? undefined,
-    p_note: parsed.data.note ?? undefined,
-    p_photo_urls: parsed.data.photoUrls ?? undefined,
-  });
-
-  if (error) {
-    if (error.code === "42501") {
-      return {
-        success: false,
-        error: "Không có quyền xóa sổ tại chi nhánh này.",
-      };
-    }
-    if (error.code === "22023") {
-      const msg = error.message ?? "";
-      if (msg.includes("photo")) {
-        return {
-          success: false,
-          error: "Cần chụp ảnh bằng chứng để xóa sổ lô này.",
-        };
-      }
-      if (msg.includes("wac_not_ready")) {
-        return {
-          success: false,
-          error:
-            "Chưa có giá vốn cho nguyên liệu tại kho. Cần nhập/định giá trước.",
-        };
-      }
-      if (msg.includes("insufficient_stock")) {
-        return {
-          success: false,
-          error: "Tồn kho tại kho không đủ để xóa sổ số lượng này.",
-        };
-      }
-      return { success: false, error: "Dữ liệu xóa sổ không hợp lệ." };
-    }
-    return { success: false, error: "Không thể xóa sổ hàng hết hạn." };
-  }
-
-  const raw = (data ?? {}) as Record<string, unknown>;
-  revalidatePath("/inventory/consumption");
-
-  return {
-    success: true,
-    data: {
-      issueId: Number(raw.issue_id ?? 0),
-      issueNumber: String(raw.issue_number ?? ""),
-      requiresApproval: Boolean(raw.requires_approval ?? false),
-      stockDecremented: Boolean(raw.stock_decremented ?? false),
     },
   };
 }

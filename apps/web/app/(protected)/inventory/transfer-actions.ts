@@ -19,6 +19,7 @@ import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 /** Placeholder for RPC param; create_stock_transfer_draft allocates DC-YYYY-####. */
 const TRANSFER_NUMBER_SERVER_ALLOCATED = "";
@@ -345,7 +346,7 @@ export async function fetchStockTransfers(
 
 const transferLineInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   // Issue-role unit the qty was entered in. NULL = already base;
   // stock_transfer_confirm_ship converts to base via inv_to_base().
   entryUnitId: z.coerce.number().int().positive().nullable().optional(),

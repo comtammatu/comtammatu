@@ -53,7 +53,7 @@ import {
 import {
   ComboboxField,
   FormDialog,
-  FormattedNumberInput,
+  QuantityInput,
 } from "@/components/form";
 import { AppListFrame } from "@/components/surface";
 import {
@@ -384,7 +384,7 @@ function RecipeDialogFields({
               control={form.control}
               name="output_quantity"
               render={({ field }) => (
-                <FormattedNumberInput
+                <QuantityInput
                   id="recipe-output-quantity"
                   name={field.name}
                   value={field.value ?? ""}

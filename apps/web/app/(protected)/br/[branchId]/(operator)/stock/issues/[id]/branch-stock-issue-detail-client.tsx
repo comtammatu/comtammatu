@@ -49,7 +49,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Combobox, FormattedNumberInput } from "@/components/form";
+import { Combobox, QuantityInput } from "@/components/form";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
@@ -264,7 +264,7 @@ function BranchStockIssueLineSheet({
                   {issuesCopy.quantityLabel}
                 </FieldLabel>
                 <InputGroup className="min-h-12">
-                  <FormattedNumberInput
+                  <QuantityInput
                     id="branch-stock-issue-quantity"
                     maxFractionDigits={3}
                     value={quantity}

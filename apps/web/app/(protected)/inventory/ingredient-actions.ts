@@ -41,17 +41,28 @@ import {
   type SheetDef,
 } from "@/_lib/spreadsheet";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 /* ─── Ingredient catalog (CRUD via save_ingredient_catalog RPC) ─── */
 
+const unitFactorSchema = z
+  .union([
+    z.number(),
+    z.string().trim().regex(/^\d+(?:\.\d{1,12})?$/).transform(Number),
+  ])
+  .refine(Number.isFinite, "Hệ số quy đổi không hợp lệ")
+  .refine((value) => value > 0, "Quy đổi phải lớn hơn 0")
+  .refine(
+    (value) => Math.abs(value * 1e12 - Math.round(value * 1e12)) < 1e-3,
+    "Hệ số quy đổi có tối đa 12 chữ số thập phân",
+  );
+
 const unitRowSchema = z.object({
   unit_id: z.coerce.number().int().positive({ error: "Đơn vị không hợp lệ" }),
-  to_base_factor: z.coerce
-    .number()
-    .positive({ error: "Quy đổi phải lớn hơn 0" }),
+  to_base_factor: unitFactorSchema,
   is_base: z.boolean(),
   anchor_unit_id: z.coerce.number().int().positive().nullable().optional(),
-  anchor_factor: z.coerce.number().positive().nullable().optional(),
+  anchor_factor: unitFactorSchema.nullable().optional(),
 });
 
 const ingredientBaseSchema = z.object({
@@ -62,9 +73,9 @@ const ingredientBaseSchema = z.object({
   sku: z.string().trim().optional(),
   category_id: z.coerce.number().int().positive().nullable().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
-  min_stock_level: z.coerce.number().min(0).default(0),
-  max_stock_level: z.coerce.number().min(0).optional(),
-  reorder_point: z.coerce.number().min(0).optional(),
+  min_stock_level: inventoryNonnegativeQuantitySchema.default(0),
+  max_stock_level: inventoryNonnegativeQuantitySchema.optional(),
+  reorder_point: inventoryNonnegativeQuantitySchema.optional(),
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),
@@ -776,7 +787,7 @@ const importIngredientRowSchema = z.object({
   unit: z.string().trim().min(1, { error: "Thiếu đơn vị" }),
   category: z.string().trim().optional(),
   item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
-  min_stock_level: z.coerce.number().min(0).default(0),
+  min_stock_level: inventoryNonnegativeQuantitySchema.default(0),
   storage_type: z
     .enum(["ambient", "refrigerated", "frozen"])
     .default("ambient"),

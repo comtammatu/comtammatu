@@ -28,6 +28,7 @@ import {
   type RpcClient,
 } from "./_lib/production-shared";
 import { PRODUCTION_RECIPE_MANAGER_ROLES } from "./_lib/production-roles";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const PRODUCTION_RECIPE_READ_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -44,7 +45,7 @@ const PRODUCTION_RECIPE_MANAGE_PERMISSIONS = [
 
 const productionRecipeLineUpsertSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.coerce.number().int().positive({
     error: "Chọn đơn vị cho nguyên liệu.",
   }),
@@ -55,9 +56,7 @@ const productionRecipeLinesSchema = z
   .object({
     finishedGoodId: z.coerce.number().int().positive(),
     oldFinishedGoodId: z.coerce.number().int().positive().optional().nullable(),
-    outputQuantity: z.coerce.number().positive({
-      error: "Số lượng thành phẩm phải lớn hơn 0",
-    }),
+    outputQuantity: inventoryPositiveQuantitySchema,
     outputUnitId: z.coerce.number().int().positive({
       error: "Chọn đơn vị thành phẩm.",
     }),
@@ -101,11 +100,9 @@ type ExportProductionRecipesResult =
 const importProductionRecipeRowSchema = z.object({
   finishedGoodId: z.number().int().positive(),
   ingredientId: z.number().int().positive(),
-  quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
+  quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.number().int().positive(),
-  outputQuantity: z.number().positive({
-    error: "Số lượng thành phẩm phải lớn hơn 0",
-  }),
+  outputQuantity: inventoryPositiveQuantitySchema,
   outputUnitId: z.number().int().positive(),
   note: z.string().trim().optional(),
 });

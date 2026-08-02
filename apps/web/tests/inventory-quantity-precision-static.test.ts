@@ -54,13 +54,13 @@ test("inventory quantity inputs allow three fraction digits", () => {
   );
 });
 
-test("inventory factor inputs are not capped at two fraction digits", () => {
+test("inventory factor inputs preserve database scale 12", () => {
   const ingredientDialog = read(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
   assert.match(
     ingredientDialog,
-    /maxFractionDigits=\{6\}/,
+    /maxFractionDigits=\{12\}/,
   );
 });
 

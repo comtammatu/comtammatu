@@ -582,7 +582,7 @@ BEGIN
       'FINAL CATALOG: required recovery or physical-QC RPC missing';
   END IF;
 
-  IF NOT has_function_privilege(
+  IF has_function_privilege(
     'authenticated',
     'public.create_expiry_writeoff(bigint,bigint,bigint,numeric,bigint,text,text[])',
     'EXECUTE'

@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, type ActionContext } from "@/_lib/with-action";
+import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 
 const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
@@ -45,7 +46,7 @@ const createGrnDraftSchema = poIdSchema.extend({
 
 const purchaseRequestLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
   entryUnitId: z.coerce.number().int().positive(),
 });
 
@@ -79,7 +80,7 @@ const purchaseRequestReasonSchema =
 const purchaseDemandAllocationSchema = z.object({
   requestItemId: z.coerce.number().int().positive(),
   supplierId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().positive(),
+  quantity: inventoryPositiveQuantitySchema,
 });
 
 const savePurchaseDemandAllocationsSchema = z.object({
@@ -127,7 +128,7 @@ const savePurchaseOrderGroupSchema = z.object({
     .array(
       z.object({
         ingredientId: z.coerce.number().int().positive(),
-        quantity: z.coerce.number().positive(),
+        quantity: inventoryPositiveQuantitySchema,
         entryUnitId: z.coerce.number().int().positive(),
       }),
     )

@@ -27,12 +27,14 @@ function iconFor(kind: string) {
     case "workflow.grn_pending":
     case "procurement.purchase_request_submitted":
     case "procurement.po_pending_approval":
+    case "inventory.waste.weekly_report":
       return IconClipboardList;
     case "workflow.transfer_in_transit":
       return IconTruck;
     case "inventory.stock_request_submitted":
       return IconPackageExport;
     case "workflow.stocktake_submitted":
+    case "inventory.stocktake_completed":
       return IconCircleCheck;
     case "hr.leave_approved":
       return IconCircleCheck;
@@ -45,6 +47,7 @@ function iconFor(kind: string) {
     case "inventory.count_slip_approved":
       return IconCircleCheck;
     case "inventory.count_slip_recount":
+    case "inventory.stocktake_conflict":
       return IconAlertTriangle;
     case "inventory.stock_low":
     case "inventory.expiry_soon":

@@ -14,7 +14,7 @@ import {
 import { notify } from "@comtammatu/ui/lib/notify";
 import {
   AppDialog,
-  FormattedNumberInput,
+  QuantityInput,
   PhotoUploadInput,
 } from "@/components/form";
 import { amendGrnLine } from "../../../grn-actions";
@@ -158,7 +158,7 @@ export function AmendOwnerDialog({
           </Alert>
 
           <Item variant="outline" className="flex-col items-stretch gap-1 p-3">
-            <p className="font-bold">{line.name}</p>
+            <p className="font-semibold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
               {grnCopy.line.orderedDeliveredAccepted(
                 line.required,
@@ -175,7 +175,7 @@ export function AmendOwnerDialog({
               <Label htmlFor="amend-qty">
                 {grnCopy.line.actualLabel(line.unit)}
               </Label>
-              <FormattedNumberInput
+              <QuantityInput
                 id="amend-qty"
                 value={quantity}
                 onValueChange={setQuantity}
@@ -187,7 +187,7 @@ export function AmendOwnerDialog({
               <Label htmlFor="amend-rejected">
                 {grnCopy.line.rejectedLabel(line.unit)}
               </Label>
-              <FormattedNumberInput
+              <QuantityInput
                 id="amend-rejected"
                 value={rejectedQuantity}
                 onValueChange={setRejectedQuantity}
