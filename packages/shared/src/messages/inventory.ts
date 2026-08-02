@@ -252,12 +252,12 @@ export const INVENTORY_VI = {
   finishedGoodsWithRecipeBadge: (count: number) =>
     `${formatCount(count)} thành phẩm có công thức`,
   productionRecipeNeedsReviewBadge: (count: number) =>
-    `${formatCount(count)} công thức cần duyệt`,
+    `${formatCount(count)} công thức cần rà soát`,
   productionRecipeListCount: (shown: number, total: number) =>
     `${formatCount(shown)} / ${formatCount(total)} công thức`,
   productionRecipeSearchPlaceholder: "Tìm thành phẩm hoặc nguyên liệu…",
   productionRecipeAllStatuses: "Tất cả trạng thái",
-  productionRecipeNeedsReviewStatus: "Cần duyệt",
+  productionRecipeNeedsReviewStatus: "Cần rà soát",
   productionRecipeActiveStatus: "Đang dùng",
   productionRecipeInactiveStatus: "Ngừng dùng",
   productionRecipeNoResultsTitle: "Không tìm thấy công thức phù hợp",
@@ -276,6 +276,9 @@ export const INVENTORY_VI = {
   productionRecipeGroupDeleted: "Đã ngừng dùng công thức",
   productionRecipeUpdateAria: (name: string) => `Cập nhật công thức ${name}`,
   productionRecipeUpdate: "Cập nhật công thức",
+  productionRecipeReviewAria: (name: string) => `Rà soát công thức ${name}`,
+  productionRecipeReview: "Rà soát công thức",
+  productionRecipeReviewSave: "Lưu và đưa vào dùng",
   productionRecipeDeleteLineAria: (name: string) =>
     `Xóa dòng công thức ${name}`,
   productionRecipeDeleteLine: "Xóa dòng công thức",

@@ -59,7 +59,11 @@ test("recipe UI is list-first and keeps ingredient lines visible", () => {
   assert.match(recipePanel, /unitEditable\s+bulkAdd/);
   assert.doesNotMatch(recipePanel, /groupedRecipes\.map\(\(group\) =>/);
   assert.doesNotMatch(recipePanel, /<Item variant="outline" onClick=/);
-  assert.match(recipePanel, /\{ACTIONS_VI\.update\}/);
+  assert.match(
+    recipePanel,
+    /group\.status === "needs_review"[\s\S]*productionRecipeReview/,
+  );
+  assert.match(recipePanel, /reviewingRecipe[\s\S]*productionRecipeReviewSave/);
   assert.match(ingredientLinesEditor, /const watchedRows = useWatch/);
 });
 

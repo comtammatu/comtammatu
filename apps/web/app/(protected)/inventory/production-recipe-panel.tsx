@@ -606,6 +606,11 @@ export function ProductionRecipePanel({
   const needsReviewCount = groupedRecipes.filter(
     (group) => group.status === "needs_review",
   ).length;
+  const reviewingRecipe = groupedRecipes.some(
+    (group) =>
+      String(group.finishedGoodId) === pendingFinishedGoodId &&
+      group.status === "needs_review",
+  );
 
   const finishedGoodLocked = pendingFinishedGoodId != null;
   const operatorFlow = messages.inventory.operatorFlow;
@@ -721,7 +726,10 @@ export function ProductionRecipePanel({
     return [
       {
         key: "edit",
-        label: INVENTORY_VI.productionRecipeUpdate,
+        label:
+          group.status === "needs_review"
+            ? INVENTORY_VI.productionRecipeReview
+            : INVENTORY_VI.productionRecipeUpdate,
         icon: <IconPencil />,
         onSelect: () => openRecipeDialog(group.finishedGoodId),
       },
@@ -803,9 +811,7 @@ export function ProductionRecipePanel({
               >
                 <RowActionsMenu
                   items={recipeRowActions(group)}
-                  label={INVENTORY_VI.productionRecipeUpdateAria(
-                    group.finishedGoodName,
-                  )}
+                  label={recipeActionAria(group)}
                   triggerSize="icon-sm"
                 />
               </div>
@@ -937,9 +943,7 @@ export function ProductionRecipePanel({
               : undefined
           }
           getRowAriaLabel={(group) =>
-            canManageRecipes
-              ? INVENTORY_VI.productionRecipeUpdateAria(group.finishedGoodName)
-              : undefined
+            canManageRecipes ? recipeActionAria(group) : undefined
           }
           mobileCardRender={(group) => (
             <RecipeGroupCard
@@ -959,9 +963,11 @@ export function ProductionRecipePanel({
         open={recipeDialogOpen}
         onOpenChange={handleRecipeDialogOpenChange}
         title={
-          finishedGoodLocked
-            ? INVENTORY_VI.productionRecipeUpdate
-            : INVENTORY_VI.productionRecipeCreateTitle
+          reviewingRecipe
+            ? INVENTORY_VI.productionRecipeReview
+            : finishedGoodLocked
+              ? INVENTORY_VI.productionRecipeUpdate
+              : INVENTORY_VI.productionRecipeCreateTitle
         }
         description={INVENTORY_VI.productionRecipeDialogIntro}
         schema={recipeFormSchema}
@@ -969,7 +975,11 @@ export function ProductionRecipePanel({
         entityKey={formDefaults.finished_good_id || "new"}
         onSubmit={submitRecipe}
         onSuccess={handleRecipeSaved}
-        submitLabel={INVENTORY_VI.productionRecipeSave}
+        submitLabel={
+          reviewingRecipe
+            ? INVENTORY_VI.productionRecipeReviewSave
+            : INVENTORY_VI.productionRecipeSave
+        }
         cancelLabel={ACTIONS_VI.cancel}
         actionSize={embedded ? "touch" : "default"}
         contentClassName="sm:max-w-5xl"
@@ -1006,6 +1016,12 @@ function recipeStatusBadgeVariant(status: ProductionRecipeGroup["status"]) {
   if (status === "active") return badgeVariantFromTone("success");
   if (status === "needs_review") return badgeVariantFromTone("warning");
   return badgeVariantFromTone("neutral");
+}
+
+function recipeActionAria(group: ProductionRecipeGroup): string {
+  return group.status === "needs_review"
+    ? INVENTORY_VI.productionRecipeReviewAria(group.finishedGoodName)
+    : INVENTORY_VI.productionRecipeUpdateAria(group.finishedGoodName);
 }
 
 function RecipeGroupCard({
@@ -1052,15 +1068,15 @@ function RecipeGroupCard({
             {onOpen ? (
               <Button type="button" variant="ghost" size="sm" onClick={onOpen}>
                 <IconPencil data-icon="inline-start" />
-                {ACTIONS_VI.update}
+                {group.status === "needs_review"
+                  ? INVENTORY_VI.productionRecipeReview
+                  : ACTIONS_VI.update}
               </Button>
             ) : null}
             {overflowActions.length > 0 ? (
               <RowActionsMenu
                 items={overflowActions}
-                label={INVENTORY_VI.productionRecipeUpdateAria(
-                  group.finishedGoodName,
-                )}
+                label={recipeActionAria(group)}
                 triggerSize="icon-touch"
               />
             ) : null}
