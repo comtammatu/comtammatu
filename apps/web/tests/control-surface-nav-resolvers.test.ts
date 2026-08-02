@@ -157,6 +157,17 @@ test("findActivePrimaryNavItem matches the primary tab for the current path", ()
   assert.equal(active?.href, MODULE_ACL.settings.path);
 });
 
+test("findActivePrimaryNavItem ignores URL state on a primary tab", () => {
+  const items = resolveControlSurfacePrimaryTabs("owner", BRANCH_ID).map((item) =>
+    item.href === MODULE_ACL.hr.path
+      ? { ...item, href: `${item.href}?branch=all` }
+      : item,
+  );
+  const active = findActivePrimaryNavItem(items, "/hr/attendance");
+
+  assert.equal(active?.href, "/hr?branch=all");
+});
+
 test("findActivePrimaryNavItem returns undefined for an unmatched path", () => {
   const items = resolveControlSurfacePrimaryTabs("owner", BRANCH_ID);
   assert.equal(

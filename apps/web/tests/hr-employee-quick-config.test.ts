@@ -14,10 +14,7 @@ test("employee list exposes capability-gated quick configuration", () => {
   for (const key of ["role", "branch", "todayShift", "shiftTasks"]) {
     assert.match(table, new RegExp(`key: "${key}"`));
   }
-  assert.match(
-    table,
-    /updateEmployee\(\{ employeeId: employee\.id, positionCode \}\)/,
-  );
+  assert.match(table, /handlePositionChange\(employee, positionCode\)/);
   assert.match(
     table,
     /branchId: value === OFFICE_VALUE \? null : Number\(value\)/,
@@ -33,6 +30,28 @@ test("employee list exposes capability-gated quick configuration", () => {
     page,
     /const canQuickAssignShift = canAssignShift && claims\.user_role === "owner"/,
   );
+});
+
+test("position quick change supports cross-site employee transfers", () => {
+  const table = read("app/(protected)/hr/employee-table.tsx");
+  const positionSelect = table.slice(
+    table.indexOf("function renderPositionSelect"),
+    table.indexOf("function renderBranchSelect"),
+  );
+  const positionChange = table.slice(
+    table.indexOf("function handlePositionChange"),
+    table.indexOf("function renderPositionSelect"),
+  );
+
+  assert.doesNotMatch(positionSelect, /compatiblePositions\(employee\)/);
+  assert.match(positionSelect, /positionOptions\.map/);
+  assert.match(positionSelect, /handlePositionChange\(employee, positionCode\)/);
+  assert.match(positionChange, /requiredBranchKindForPositionCode/);
+  assert.match(
+    positionChange,
+    /updateEmployee\(\{[\s\S]*positionCode,[\s\S]*branchId:/,
+  );
+  assert.match(table, /quickCopy\.transferWorkplaceTitle/);
 });
 
 test("today quick assignment preserves the rest of the week", () => {

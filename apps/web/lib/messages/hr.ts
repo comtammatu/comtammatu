@@ -86,6 +86,14 @@ export const hr = {
       branchUpdated: "Đã cập nhật chi nhánh",
       shiftUpdated: "Đã cập nhật ca hôm nay",
       positionTasksRestored: "Đã dùng lại mẫu việc theo chức vụ",
+      transferWorkplaceTitle: "Chọn nơi làm việc mới",
+      transferWorkplaceDescription: (employee: string, position: string) =>
+        `${employee} sẽ được chuyển sang chức vụ ${position}. Chọn địa điểm làm việc phù hợp để cập nhật cùng lúc.`,
+      transferWorkplaceLabel: "Nơi làm việc mới",
+      transferWorkplaceConfirm: "Xác nhận điều chuyển",
+      noCompatibleWorkplace:
+        "Chưa có địa điểm hoạt động phù hợp với chức vụ này.",
+      cancel: "Hủy",
     },
     attendanceTabs: {
       today: "Hôm nay",

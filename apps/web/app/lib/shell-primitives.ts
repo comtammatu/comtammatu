@@ -50,15 +50,20 @@ export type NavMatchTarget = Pick<
   "href" | "exact" | "matchPrefixes"
 >;
 
+function navPath(href: string): string {
+  return href.split(/[?#]/, 1)[0] ?? href;
+}
+
 export function isNavItemActive(
   item: NavMatchTarget,
   pathname: string,
 ): boolean {
-  if (pathname === item.href) return true;
+  const href = navPath(item.href);
+  if (pathname === href) return true;
   if (item.exact) {
     return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
   }
-  if (pathname.startsWith(item.href + "/")) return true;
+  if (pathname.startsWith(href + "/")) return true;
   return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
 }
 
@@ -69,7 +74,7 @@ export function findActivePrimaryNavItem(
   pathname: string,
 ): ShellNavItem | undefined {
   return [...tier1]
-    .sort((a, b) => b.href.length - a.href.length)
+    .sort((a, b) => navPath(b.href).length - navPath(a.href).length)
     .find((item) => isNavItemActive(item, pathname));
 }
 

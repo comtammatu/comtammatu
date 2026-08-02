@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
-import { requiredBranchKindForPositionCode } from "@comtammatu/shared/auth";
+import {
+  requiredBranchKindForPositionCode,
+  type BranchKind,
+} from "@comtammatu/shared/auth";
 import {
   ACTIONS_VI,
   BRANCH_VI,
@@ -96,6 +99,14 @@ const NO_POSITION_VALUE = "__no_position__";
 const OFFICE_VALUE = "office";
 const NO_SHIFT_VALUE = "__no_shift__";
 
+interface PendingPlacement {
+  employee: EmployeeRow;
+  positionCode: string;
+  positionLabel: string;
+  requiredKind: BranchKind;
+  branchId: string;
+}
+
 export function EmployeeTable({
   employees,
   branches,
@@ -116,6 +127,8 @@ export function EmployeeTable({
   const [taskEmployeeId, setTaskEmployeeId] = useState<number | null>(null);
   const [clearTaskEmployee, setClearTaskEmployee] =
     useState<EmployeeRow | null>(null);
+  const [pendingPlacement, setPendingPlacement] =
+    useState<PendingPlacement | null>(null);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
   const [positionFilter, setPositionFilter] = useState(ALL_FILTER_VALUE);
@@ -219,19 +232,6 @@ export function EmployeeTable({
     });
   }
 
-  function compatiblePositions(employee: EmployeeRow) {
-    const currentBranch = branches.find(
-      (branch) => branch.id === employee.profiles?.branch_id,
-    );
-    return positionOptions.filter((position) => {
-      const requiredKind = requiredBranchKindForPositionCode(position.value);
-      return requiredKind === null
-        ? currentBranch == null
-        : requiredKind !== "unassigned" &&
-            currentBranch?.branch_kind === requiredKind;
-    });
-  }
-
   function compatibleBranches(employee: EmployeeRow) {
     const requiredKind = requiredBranchKindForPositionCode(
       employee.profiles?.positions?.code,
@@ -240,9 +240,63 @@ export function EmployeeTable({
     return branches.filter((branch) => branch.branch_kind === requiredKind);
   }
 
+  function handlePositionChange(
+    employee: EmployeeRow,
+    positionCode: string,
+  ) {
+    const requiredKind = requiredBranchKindForPositionCode(positionCode);
+    const currentBranch = branches.find(
+      (branch) => branch.id === employee.profiles?.branch_id,
+    );
+
+    if (requiredKind === null || requiredKind === "unassigned") {
+      runQuickUpdate(
+        () =>
+          updateEmployee({
+            employeeId: employee.id,
+            positionCode,
+            branchId: null,
+          }),
+        quickCopy.positionUpdated,
+      );
+      return;
+    }
+
+    if (currentBranch?.branch_kind === requiredKind) {
+      runQuickUpdate(
+        () =>
+          updateEmployee({
+            employeeId: employee.id,
+            positionCode,
+            branchId: currentBranch.id,
+          }),
+        quickCopy.positionUpdated,
+      );
+      return;
+    }
+
+    const availableBranches = branches.filter(
+      (branch) => branch.branch_kind === requiredKind,
+    );
+    const firstBranch = availableBranches[0];
+    if (!firstBranch) {
+      toast.error(quickCopy.noCompatibleWorkplace);
+      return;
+    }
+
+    setPendingPlacement({
+      employee,
+      positionCode,
+      positionLabel:
+        positionOptions.find((position) => position.value === positionCode)
+          ?.label ?? positionCode,
+      requiredKind,
+      branchId: String(firstBranch.id),
+    });
+  }
+
   function renderPositionSelect(employee: EmployeeRow, touch = false) {
     const current = employee.profiles?.positions?.code ?? NO_POSITION_VALUE;
-    const options = compatiblePositions(employee);
     const currentOption = positionOptions.find(
       (position) => position.value === current,
     );
@@ -250,10 +304,7 @@ export function EmployeeTable({
       <Select
         value={current}
         onValueChange={(positionCode) =>
-          runQuickUpdate(
-            () => updateEmployee({ employeeId: employee.id, positionCode }),
-            quickCopy.positionUpdated,
-          )
+          handlePositionChange(employee, positionCode)
         }
         disabled={!canManage || isPending}
       >
@@ -271,14 +322,14 @@ export function EmployeeTable({
             </SelectItem>
           ) : null}
           {currentOption &&
-          !options.some(
+          !positionOptions.some(
             (position) => position.value === currentOption.value,
           ) ? (
             <SelectItem value={currentOption.value} disabled>
               {currentOption.label}
             </SelectItem>
           ) : null}
-          {options.map((position) => (
+          {positionOptions.map((position) => (
             <SelectItem key={position.value} value={position.value}>
               {position.label}
             </SelectItem>
@@ -719,6 +770,84 @@ export function EmployeeTable({
           positionOptions={positionOptions}
         />
       ) : null}
+      <AppDialog
+        open={pendingPlacement != null}
+        onOpenChange={(open) => !open && setPendingPlacement(null)}
+        title={quickCopy.transferWorkplaceTitle}
+        description={
+          pendingPlacement
+            ? quickCopy.transferWorkplaceDescription(
+                pendingPlacement.employee.profiles?.full_name ?? "—",
+                pendingPlacement.positionLabel,
+              )
+            : undefined
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPending}
+              onClick={() => setPendingPlacement(null)}
+            >
+              {quickCopy.cancel}
+            </Button>
+            <Button
+              type="button"
+              size="touch"
+              disabled={isPending || pendingPlacement == null}
+              onClick={() => {
+                if (!pendingPlacement) return;
+                const placement = pendingPlacement;
+                setPendingPlacement(null);
+                runQuickUpdate(
+                  () =>
+                    updateEmployee({
+                      employeeId: placement.employee.id,
+                      positionCode: placement.positionCode,
+                      branchId: Number(placement.branchId),
+                    }),
+                  quickCopy.positionUpdated,
+                );
+              }}
+            >
+              {quickCopy.transferWorkplaceConfirm}
+            </Button>
+          </div>
+        }
+      >
+        {pendingPlacement ? (
+          <Select
+            value={pendingPlacement.branchId}
+            onValueChange={(branchId) =>
+              setPendingPlacement((current) =>
+                current ? { ...current, branchId } : current,
+              )
+            }
+          >
+            <SelectTrigger
+              size="touch"
+              className="w-full"
+              aria-label={quickCopy.transferWorkplaceLabel}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {branches
+                .filter(
+                  (branch) =>
+                    branch.branch_kind === pendingPlacement.requiredKind,
+                )
+                .map((branch) => (
+                  <SelectItem key={branch.id} value={String(branch.id)}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </AppDialog>
       {positionTasksData ? (
         <EmployeeTaskOverrideDialog
           employeeId={taskEmployeeId}
