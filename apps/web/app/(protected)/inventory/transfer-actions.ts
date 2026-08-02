@@ -9,6 +9,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { messages } from "@lib/messages";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import type { TenantSupabase } from "@lib/inventory/types";
@@ -364,21 +365,6 @@ const transferCreateSchema = z.object({
     .min(1, { error: messages.inventory.transfer.emptyIngredientsDescription }),
 });
 
-async function loadBranchKind(
-  supabase: TenantSupabase,
-  tenantId: number,
-  branchId: number,
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("branches")
-    .select("branch_kind")
-    .eq("tenant_id", tenantId)
-    .eq("id", branchId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return data.branch_kind;
-}
-
 export async function createStockTransfer(
   input: z.infer<typeof transferCreateSchema>,
 ): Promise<ActionResult> {
@@ -411,23 +397,28 @@ export async function createStockTransfer(
   }
 
   const isIntraBranch = fromBranchId === toBranchId;
-
-  const fromKind = await loadBranchKind(
-    supabase,
-    claims.tenant_id,
-    fromBranchId,
-  );
-  const toKind = await loadBranchKind(supabase, claims.tenant_id, toBranchId);
-  if (!fromKind || !toKind) {
-    return { success: false, error: "Điểm vận hành không hợp lệ." };
-  }
   if (isIntraBranch) {
     return {
       success: false,
       error: "Điểm nhận phải khác điểm xuất.",
     };
   }
-  if (!isAllowedInterSiteDirection(fromKind, toKind)) {
+
+  const { data: authorizedBranches, error: branchesError } = await supabase.rpc(
+    "stock_transfer_list_branches",
+  );
+  const fromBranch = authorizedBranches?.find(
+    (branch) => branch.id === fromBranchId,
+  );
+  const toBranch = authorizedBranches?.find(
+    (branch) => branch.id === toBranchId,
+  );
+  if (branchesError || !fromBranch || !toBranch) {
+    return { success: false, error: "Điểm vận hành không hợp lệ." };
+  }
+  if (
+    !isAllowedInterSiteDirection(fromBranch.branch_kind, toBranch.branch_kind)
+  ) {
     return {
       success: false,
       error:
@@ -437,7 +428,7 @@ export async function createStockTransfer(
   const { data: canCreate, error: canCreateError } = await supabase.rpc(
     "has_permission",
     {
-      p_branch_id: fromBranchId,
+      p_branch_id: fromBranch.id,
       p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
     },
   );
@@ -445,21 +436,22 @@ export async function createStockTransfer(
     return { success: false, error: "Không có quyền tạo phiếu chuyển." };
   }
 
+  const locationClient = createServiceClient();
   // Resolve locations if not provided
   const fromLocationId =
     parsed.data.fromLocationId ??
     (await resolveDefaultInventoryLocation(
-      supabase,
+      locationClient,
       claims.tenant_id,
-      fromBranchId,
+      fromBranch.id,
       "issue",
     ));
   const toLocationId =
     parsed.data.toLocationId ??
     (await resolveDefaultInventoryLocation(
-      supabase,
+      locationClient,
       claims.tenant_id,
-      toBranchId,
+      toBranch.id,
       "receive",
     ));
 
@@ -470,7 +462,7 @@ export async function createStockTransfer(
     };
   }
   const { data: transferLocations, error: transferLocationsError } =
-    await supabase
+    await locationClient
       .from("inventory_locations")
       .select("id, branch_id")
       .eq("tenant_id", claims.tenant_id)
@@ -482,11 +474,11 @@ export async function createStockTransfer(
     transferLocations?.length !== 2 ||
     !transferLocations.some(
       (location) =>
-        location.id === fromLocationId && location.branch_id === fromBranchId,
+        location.id === fromLocationId && location.branch_id === fromBranch.id,
     ) ||
     !transferLocations.some(
       (location) =>
-        location.id === toLocationId && location.branch_id === toBranchId,
+        location.id === toLocationId && location.branch_id === toBranch.id,
     )
   ) {
     return {
@@ -508,7 +500,7 @@ export async function createStockTransfer(
       .from("stock_levels")
       .select("ingredient_id, current_quantity")
       .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", fromBranchId)
+      .eq("branch_id", fromBranch.id)
       .eq("location_id", fromLocationId)
       .in("ingredient_id", ingredientIds);
     if (stockLevelError) {
@@ -546,8 +538,8 @@ export async function createStockTransfer(
   }
 
   const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
-    p_from_branch_id: fromBranchId,
-    p_to_branch_id: toBranchId,
+    p_from_branch_id: fromBranch.id,
+    p_to_branch_id: toBranch.id,
     p_from_location_id: fromLocationId,
     p_to_location_id: toLocationId,
     p_transfer_number: TRANSFER_NUMBER_SERVER_ALLOCATED,
