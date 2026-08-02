@@ -56,6 +56,9 @@ test("assigned company staff can clock in only through live self-service scope",
   const todayWorkState = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
+  const clockClient = read(
+    "apps/web/lib/staff-runtime/clock/clock-client.tsx",
+  );
   const migrationName = readdirSync(resolve(root, "supabase/migrations")).find(
     (name) => name.endsWith("_allow_company_self_service_clock_in.sql"),
   );
@@ -65,6 +68,7 @@ test("assigned company staff can clock in only through live self-service scope",
 
   assert.match(todayWorkState, /Boolean\(assignedShift\)/);
   assert.match(todayWorkState, /claims\.user_role !== "self_service"/);
+  assert.match(clockClient, /state\.todayShifts\[0\]\?\.shiftName/);
   assert.match(migration, /v_is_company_self_service boolean/);
   assert.match(migration, /binding\.role_code = 'self_service_member'/);
   assert.match(migration, /binding\.valid_from <= v_now/);

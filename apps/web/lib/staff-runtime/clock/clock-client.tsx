@@ -281,6 +281,8 @@ export function ClockClient({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const managerAttendanceOnly = state.managerAttendanceOnly;
+  const todayShiftName =
+    state.attendance?.shiftName ?? state.todayShifts[0]?.shiftName ?? null;
 
   useEffect(() => {
     return () => {
@@ -578,8 +580,8 @@ export function ClockClient({
             },
             {
               label: clockCopy.todayShiftLabel,
-              value: state.attendance?.shiftName ?? clockCopy.noTodayShift,
-              muted: !state.attendance?.shiftName,
+              value: todayShiftName ?? clockCopy.noTodayShift,
+              muted: !todayShiftName,
             },
           ]}
         />
@@ -783,8 +785,8 @@ export function ClockClient({
           },
           {
             label: clockCopy.todayShiftLabel,
-            value: state.attendance?.shiftName ?? clockCopy.noTodayShift,
-            muted: !state.attendance?.shiftName,
+            value: todayShiftName ?? clockCopy.noTodayShift,
+            muted: !todayShiftName,
           },
         ]}
       />
