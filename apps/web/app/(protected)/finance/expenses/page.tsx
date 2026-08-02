@@ -68,7 +68,7 @@ export default async function ExpensesPage({
   const summary = rows.reduce(
     (acc, row) => {
       if (isOperatingExpenseCategory(row.category)) {
-        acc.operatingTotal = addMoney([acc.operatingTotal, String(row.amount)]);
+        acc.operatingTotal = addMoney([acc.operatingTotal, String(row.subtotal)]);
         acc.operatingCount += 1;
       }
       if (expenseNeedsAction(row)) {

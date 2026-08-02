@@ -321,7 +321,7 @@ export async function fetchOperatingExpenseSummary({
 }): Promise<OperatingExpenseSummary> {
   let query = supabase
     .from("expenses")
-    .select("amount, category")
+    .select("subtotal, category")
     .eq("tenant_id", tenantId)
     .gte("expense_date", startDate)
     .lte("expense_date", endDate);
@@ -338,9 +338,8 @@ export async function fetchOperatingExpenseSummary({
   );
 
   return {
-    total: operatingRows.reduce(
-      (sum, row) => sum + toNumber(row.amount),
-      0,
+    total: toNumber(
+      addMoney(operatingRows.map((row) => String(row.subtotal))),
     ),
     recorded: operatingRows.length > 0,
   };

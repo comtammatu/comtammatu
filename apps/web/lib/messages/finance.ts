@@ -207,7 +207,7 @@ export const finance = {
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
       grossProfitMissingHint: "Cần đủ giá vốn món",
       operatingExpense: "Chi phí vận hành",
-      operatingExpenseHint: "Thuê, điện, lương… · không gồm nhập hàng",
+      operatingExpenseHint: "Thuê, điện, lương… · chưa thuế GTGT",
       operatingResult: "Kết quả vận hành",
       operatingResultHint: "Lợi nhuận gộp − chi phí vận hành",
       notCalculated: "Chưa tính",
@@ -340,7 +340,7 @@ export const finance = {
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí vận hành",
     totalLabel: "Tổng chi phí vận hành trong kỳ",
-    totalHint: (count: string) => `${count} khoản chi phí vận hành`,
+    totalHint: (count: string) => `${count} khoản · chưa thuế GTGT`,
     needsActionLabel: "Cần xử lý",
     needsActionHint: (count: string) =>
       `${count} khoản chưa trả hoặc chờ khớp NH`,

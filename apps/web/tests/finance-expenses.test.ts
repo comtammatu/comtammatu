@@ -213,14 +213,21 @@ test("expense list separates its KPI summary from the data table", () => {
   assert.doesNotMatch(successPage, /meta=/);
 });
 
-test("operating KPI counts only the rows it sums", () => {
+test("operating KPI uses pre-VAT totals while action totals keep gross cash", () => {
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
 
   // The label says "chi phí vận hành"; a count over every ledger row (incl.
   // bank_deposit / cogs_manual) would not match the amount above it.
   assert.match(
     page,
-    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[acc\.operatingTotal, String\(row\.amount\)\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
+    /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[acc\.operatingTotal, String\(row\.subtotal\)\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
+  );
+  assert.match(cockpit, /\.select\("subtotal, category"\)/);
+  assert.match(cockpit, /String\(row\.subtotal\)/);
+  assert.match(
+    page,
+    /if \(expenseNeedsAction\(row\)\) \{[\s\S]*?acc\.needsActionTotal = addMoney\(\[acc\.needsActionTotal, String\(row\.amount\)\]\)/,
   );
   assert.doesNotMatch(page, /formatCount\(rows\.length\)/);
 });

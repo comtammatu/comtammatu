@@ -301,8 +301,9 @@ Supplier invoice VAT and operating-expense `expenses.vat_breakdown` are only
 evidence for that recorded snapshot. The current schema does not store deduction
 evidence, business-use allocation, declaration period, or adjustment state, so
 Finance must not label either surface `input_vat_deductible` or derive
-`vat_payable`. Operating-expense KPI and cash totals continue to use gross
-`expenses.amount` (= subtotal + recorded VAT).
+`vat_payable`. The operating-expense KPI uses pre-VAT `expenses.subtotal`;
+cash and payable totals continue to use gross `expenses.amount` (= subtotal +
+recorded VAT).
 
 Output VAT belongs to effective issued/corrected sales invoice snapshots. It is
 not revenue. Under the deduction method, the provisional relationship is
