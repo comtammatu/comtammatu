@@ -58,6 +58,10 @@ const ALL_CAPS_UI_COPY_ALLOWLIST = new Set([
 ]);
 const WRONG_ACRONYM_CASING_PATTERN =
   /\b(?:Vat|Kpi|Qr|Pos|Kds|Hđđt|Gtgt|Vietqr|Sepay)\b/;
+const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
+  "docs/runbooks/README.md",
+  "docs/runbooks/food-delivery-platform-onboarding.md",
+]);
 
 const CHECKS = [
   { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
@@ -97,7 +101,12 @@ const CHECKS = [
   { pattern: /\bpost-v1\b/gi, replacement: "không giữ backlog suy đoán trong docs sống" },
   { pattern: /\bwishlist\b/gi, replacement: "không giữ wishlist trong docs sống" },
   { pattern: /\bTelegram bot bridge\b/g, replacement: "Generic JSON POST" },
-  { pattern: /\b(Ahamove|GrabFood|ShopeeFood|Baemin|ZaloPay|Zalo ZNS|SpeedSMS)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
+  {
+    pattern:
+      /\b(Ahamove|GrabFood|ShopeeFood|Baemin|ZaloPay|Zalo ZNS|SpeedSMS)\b/g,
+    replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành",
+    allowedPaths: FOOD_DELIVERY_VENDOR_SOURCE_PATHS,
+  },
   { pattern: /\b(QR Self-Order|Advanced Analytics|Delivery dispatch)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
   { pattern: /\b(Loyalty|Vouchers)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
   { pattern: /submitLabel=["']Import["']/g, replacement: 'submitLabel="Nhập dữ liệu"' },
@@ -401,6 +410,7 @@ async function main() {
     const text = sanitizeText(relPath, raw);
 
     for (const check of CHECKS) {
+      if (check.allowedPaths?.has(relPath)) continue;
       const matches = [...text.matchAll(check.pattern)];
       for (const match of matches) {
         const index = match.index ?? 0;

@@ -70,7 +70,8 @@ dưới 1%, xử lý 100% order submission/order-state update và webhook phản
 trong 10 giây. Grab ước lượng integration đầy đủ thường mất 1–2 tháng.
 
 Merchant Việt Nam vẫn phải đăng ký riêng: giấy tờ người đại diện/chủ, thông tin
-liên hệ, đăng ký kinh doanh nếu là HKD/công ty, ảnh cửa hàng và menu. Trang
+liên hệ, đăng ký kinh doanh nếu là cá nhân kinh doanh/doanh nghiệp, ảnh cửa hàng
+và menu. Trang
 [GrabFood Merchant Sign Up](https://www.grab.com/vn/en/merchant/) nói tiền được
 chuyển vào tài khoản ngân hàng trong ba ngày làm việc và đối soát qua email cùng
 GrabMerchant App.
@@ -126,7 +127,8 @@ Thứ 2, sau chiết khấu phải đạt 100.000 đồng, chuyển khoản có 
 
 Merchant phải cung cấp hồ sơ, ký hợp đồng rồi vận hành bằng Shopee Partner.
 [Trang đăng ký chính thức](https://shopeefood.vn/merchant-register) liệt kê giấy
-tờ cho cá nhân/HKD/công ty, thời gian mở quán dự kiến 5–15 ngày làm việc và kênh
+tờ cho cá nhân kinh doanh/doanh nghiệp, thời gian mở quán dự kiến 5–15 ngày làm
+việc và kênh
 hỗ trợ `hotroquan@support.shopeefood.vn`.
 
 ShopeeFood công bố các hướng dẫn tích hợp cho POS cụ thể:
@@ -176,8 +178,9 @@ thời giữ `Green SM Ngon` như alias khi làm việc với bộ phận mercha
 
 [Hướng dẫn đăng ký Green SM
 Merchant](https://www.greensm.com/vn-vi/news/huong-dan-dang-ky-tro-thanh-doi-tac-cua-green-sm-merchant)
-yêu cầu giấy tờ tùy thân, giấy phép kinh doanh cho HKD/công ty, giấy ủy quyền nếu
-có, giấy ATTP bắt buộc với công ty và tài khoản ngân hàng đúng pháp nhân. Sau khi
+yêu cầu giấy tờ tùy thân, giấy phép kinh doanh cho cá nhân kinh doanh/doanh
+nghiệp, giấy ủy quyền nếu có, giấy ATTP bắt buộc với doanh nghiệp và tài khoản
+ngân hàng đúng pháp nhân. Sau khi
 gửi, bộ phận kinh doanh gọi lại để xử lý hồ sơ.
 
 [Hướng dẫn Green SM

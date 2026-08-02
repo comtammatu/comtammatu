@@ -282,3 +282,11 @@ sử giữ nguyên, master/draft đang mở nhận factor mới. Migration phát
 UI và chỉ apply Production khi owner ủy quyền rõ; sau khi có dữ liệu mới không
 khôi phục guard thứ tự cũ, rollback database phải là forward migration.
 Canonical: `docs/ref/inventory.md`.
+
+## D103: Onboarding nền tảng giao đồ ăn trước khi viết adapter
+
+**Net effect:** Cơm Tấm Má Tư chỉ thiết kế adapter cho nền tảng giao đồ ăn sau
+khi được duyệt quyền đối tác và nhận contract kỹ thuật chính thức. Trong thời
+gian chờ, phạm vi dừng ở merchant onboarding, partner discovery và readiness
+gate; không suy đoán payload hoặc reverse-engineer ứng dụng merchant. Canonical:
+`docs/runbooks/food-delivery-platform-onboarding.md`.
