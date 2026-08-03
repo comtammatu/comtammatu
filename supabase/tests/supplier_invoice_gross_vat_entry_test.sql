@@ -76,6 +76,22 @@ BEGIN
       pg_catalog.jsonb_build_object('full_name', 'Net VAT test owner')
     );
 
+    INSERT INTO public.auth_role_bindings (
+      tenant_id,
+      user_id,
+      role_code,
+      scope_type,
+      branch_id,
+      granted_by
+    ) VALUES (
+      v_tenant,
+      v_owner,
+      'tenant_owner',
+      'tenant',
+      NULL,
+      v_owner
+    );
+
     INSERT INTO public.suppliers (tenant_id, name, is_active)
     VALUES (v_tenant, '__net_vat_supplier_' || v_owner::text, TRUE)
     RETURNING id INTO v_supplier;

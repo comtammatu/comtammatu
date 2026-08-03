@@ -17,6 +17,7 @@
 --   • cashier.nguyenhuutho@comtammatu.vn – cashier Nguyễn Hữu Thọ
 --   • cashier.service.nguyenhuutho@comtammatu.vn – cashier service Nguyễn Hữu Thọ
 --   • chef.nguyenhuutho@comtammatu.vn – chef Nguyễn Hữu Thọ
+--   • accountant@comtammatu.vn         – accountant (tenant-level)
 --   • manager.qa@comtammatu.vn        – branch_manager QA
 --   • cashier.qa@comtammatu.vn        – cashier QA
 --   • cashier.service.qa@comtammatu.vn – cashier service QA
@@ -84,6 +85,7 @@ DECLARE
     'a0000005-0000-4000-8000-000000000005'::uuid, -- cashier.service.nguyenhuutho
     'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.nguyenhuutho
     'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.qa
+    'a0000008-0000-4000-8000-000000000008'::uuid, -- accountant
     'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.qa
     'a000000d-0000-4000-8000-00000000000d'::uuid, -- cashier.service.qa
     'a000000e-0000-4000-8000-00000000000e'::uuid  -- chef.qa
@@ -152,6 +154,7 @@ WHERE email IN (
   'cashier.nguyenhuutho@comtammatu.vn',
   'cashier.service.nguyenhuutho@comtammatu.vn',
   'chef.nguyenhuutho@comtammatu.vn',
+  'accountant@comtammatu.vn',
   'cashier.qa@comtammatu.vn',
   'manager.qa@comtammatu.vn',
   'cashier.service.qa@comtammatu.vn',
@@ -194,6 +197,8 @@ BEGIN
       SELECT 'a0000006-0000-4000-8000-000000000006'::uuid, 'chef.nguyenhuutho@comtammatu.vn'::text, 'chef'::text, v_nguyen_huu_tho, 'Bếp Nguyễn Hữu Thọ'::text, 'EMP-CHEF-NHT'::text
       UNION ALL
       SELECT 'a0000007-0000-4000-8000-000000000007'::uuid, 'cashier.qa@comtammatu.vn'::text, 'cashier'::text, v_qa, 'Thu ngân QA'::text, 'EMP-CASH-QA'::text
+      UNION ALL
+      SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'accountant@comtammatu.vn'::text, 'accountant'::text, NULL::bigint, 'Kế toán QA'::text, 'EMP-ACCOUNTANT'::text
       UNION ALL
       SELECT 'a000000c-0000-4000-8000-00000000000c'::uuid, 'manager.qa@comtammatu.vn'::text, 'branch_manager'::text, v_qa, 'QL Chi nhánh QA'::text, 'EMP-MGR-QA'::text
       UNION ALL
@@ -334,6 +339,41 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+INSERT INTO public.auth_role_bindings (
+  tenant_id,
+  user_id,
+  role_code,
+  scope_type,
+  branch_id,
+  granted_by
+)
+SELECT
+  tenant.id,
+  owner_profile.id,
+  'tenant_owner',
+  'tenant',
+  NULL,
+  'a0000002-0000-4000-8000-000000000002'::uuid
+FROM public.tenants AS tenant
+JOIN public.profiles AS owner_profile
+  ON owner_profile.tenant_id = tenant.id
+JOIN public.positions AS owner_position
+  ON owner_position.id = owner_profile.position_id
+ AND owner_position.tenant_id = owner_profile.tenant_id
+ AND owner_position.code = 'owner'
+WHERE tenant.slug = 'comtammatu'
+  AND owner_profile.is_active
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.auth_role_bindings AS binding
+    WHERE binding.tenant_id = tenant.id
+      AND binding.user_id = owner_profile.id
+      AND binding.role_code = 'tenant_owner'
+      AND binding.scope_type = 'tenant'
+      AND binding.branch_id IS NULL
+      AND binding.valid_until IS NULL
+  );
 
 -- ─── QA fixture: a pending annual leave for the Nguyễn Hữu Thọ cashier so CI can
 -- exercise the HR leave approve/reject + notification flow. Guarded: a fixture

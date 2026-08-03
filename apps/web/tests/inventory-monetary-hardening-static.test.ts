@@ -25,8 +25,7 @@ test("inventory monetary reads fail closed at the current runtime boundary", () 
   const financePage = read("apps/web/app/(protected)/finance/page.tsx");
 
   const accountantTemplate =
-    fixture.match(/\('accountant', 'accountant', ARRAY\[[^\]]*\]\)/)?.[0] ??
-    "";
+    fixture.match(/\('accountant', 'accountant', ARRAY\[[^\]]*\]\)/)?.[0] ?? "";
   const ownerTemplate =
     fixture.match(/\('owner', 'owner', ARRAY\[[^\]]*\]\)/)?.[0] ?? "";
   assert.match(accountantTemplate, /procurement:price_list_read/);
@@ -46,7 +45,7 @@ test("inventory monetary reads fail closed at the current runtime boundary", () 
   );
   assert.match(
     financeCockpit,
-    /canReadRequestedValuation\s+\?\s+fetchInventoryValueByBranch\(\)/,
+    /canReadRequestedValuation\s+&&\s+includesBranchData\s+\?\s+fetchInventoryValueByBranch\(\)/,
   );
   assert.match(
     financeCockpit,
@@ -81,10 +80,9 @@ test("stock on hand exposes only WAC and inventory value", () => {
 test("GRN valuation derives price only from confirmed supplier invoices", () => {
   const migrationFiles = readdirSync(
     resolve(repoRoot, "supabase/migration-archive"),
-  )
-    .filter((file) =>
-      file.endsWith("_invoice_price_authority_for_grn_valuation.sql"),
-    );
+  ).filter((file) =>
+    file.endsWith("_invoice_price_authority_for_grn_valuation.sql"),
+  );
   assert.equal(migrationFiles.length, 1);
   const migrationFile = migrationFiles[0];
   assert.ok(migrationFile);
@@ -97,17 +95,11 @@ test("GRN valuation derives price only from confirmed supplier invoices", () => 
     "apps/web/e2e/inventory/grn-detail-archetype.spec.ts",
   );
 
-  assert.match(
-    migration,
-    /NEW\.unit_cost := coalesce\(v_unit_price, 0\);/,
-  );
+  assert.match(migration, /NEW\.unit_cost := coalesce\(v_unit_price, 0\);/);
   assert.match(migration, /history\.effective_net_unit_price/);
   assert.match(migration, /public\.supplier_ingredient_price_history/);
   assert.match(migration, /zzzz_zero_pending_grn_receipt_valuation/);
-  assert.match(
-    migration,
-    /sync_pending_grn_value_from_invoice_allocation/,
-  );
+  assert.match(migration, /sync_pending_grn_value_from_invoice_allocation/);
   assert.doesNotMatch(migration, /ingredients\.unit_cost/);
   assert.match(
     migration,

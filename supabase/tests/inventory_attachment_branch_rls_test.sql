@@ -22,43 +22,58 @@ DECLARE
   v_same_branch_line bigint;
   v_other_branch_grn bigint;
   v_other_branch_line bigint;
+  v_same_branch_po bigint;
+  v_same_branch_po_line bigint;
+  v_other_branch_po bigint;
+  v_other_branch_po_line bigint;
 BEGIN
-  SELECT profile.tenant_id, profile.id, profile.branch_id
-  INTO v_tenant, v_staff, v_staff_branch
+  SELECT profile.tenant_id, profile.id
+  INTO v_tenant, v_staff
   FROM public.profiles AS profile
   JOIN public.positions AS position
     ON position.id = profile.position_id
    AND position.tenant_id = profile.tenant_id
-  JOIN public.branches AS branch
-    ON branch.id = profile.branch_id
-   AND branch.tenant_id = profile.tenant_id
   WHERE profile.is_active IS TRUE
     AND position.is_active IS TRUE
     AND position.code <> 'owner'
-    AND branch.is_active IS TRUE
-    AND EXISTS (
-      SELECT 1
-      FROM public.branches AS other_branch
-      WHERE other_branch.tenant_id = profile.tenant_id
-        AND other_branch.id <> profile.branch_id
-        AND other_branch.is_active IS TRUE
+    AND 2 <= (
+      SELECT count(*)
+      FROM public.branches AS site
+      WHERE site.tenant_id = profile.tenant_id
+        AND site.branch_kind IN ('central_supply', 'central_kitchen')
+        AND site.is_active IS TRUE
     )
   ORDER BY profile.id
   LIMIT 1;
 
   IF v_staff IS NULL THEN
     RAISE EXCEPTION
-      'TEST FAILED: no active non-owner profile with two active tenant branches found';
+      'TEST FAILED: no active non-owner profile with two active central sites found';
   END IF;
+
+  SELECT branch.id
+  INTO v_staff_branch
+  FROM public.branches AS branch
+  WHERE branch.tenant_id = v_tenant
+    AND branch.branch_kind IN ('central_supply', 'central_kitchen')
+    AND branch.is_active IS TRUE
+  ORDER BY branch.id
+  LIMIT 1;
 
   SELECT branch.id
   INTO v_other_branch
   FROM public.branches AS branch
   WHERE branch.tenant_id = v_tenant
     AND branch.id <> v_staff_branch
+    AND branch.branch_kind IN ('central_supply', 'central_kitchen')
     AND branch.is_active IS TRUE
   ORDER BY branch.id
   LIMIT 1;
+
+  UPDATE public.profiles
+  SET branch_id = v_staff_branch
+  WHERE id = v_staff
+    AND tenant_id = v_tenant;
 
   IF (
     SELECT count(*)
@@ -169,13 +184,59 @@ BEGIN
     v_staff
   );
 
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
+  ) VALUES (
+    v_tenant, v_staff_branch, v_supplier,
+    'RLS-PO-SAME-' || txid_current()::text, 'draft', v_staff
+  ) RETURNING id INTO v_same_branch_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    entry_unit_id
+  ) VALUES (
+    v_tenant, v_same_branch_po, v_ingredient, 1, 0, v_unit
+  ) RETURNING id INTO v_same_branch_po_line;
+
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
+  ) VALUES (
+    v_tenant, v_other_branch, v_supplier,
+    'RLS-PO-OTHER-' || txid_current()::text, 'draft', v_staff
+  ) RETURNING id INTO v_other_branch_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    entry_unit_id
+  ) VALUES (
+    v_tenant, v_other_branch_po, v_ingredient, 1, 0, v_unit
+  ) RETURNING id INTO v_other_branch_po_line;
+
+  INSERT INTO public.goods_received_notes (
+    tenant_id, branch_id, supplier_id, po_id, grn_number,
+    created_by, status
+  ) VALUES (
+    v_tenant, v_staff_branch, v_supplier, v_same_branch_po,
+    'RLS-SAME-' || gen_random_uuid()::text, v_staff, 'draft'
+  ) RETURNING id INTO v_same_branch_grn;
+
+  INSERT INTO public.goods_received_notes (
+    tenant_id, branch_id, supplier_id, po_id, grn_number,
+    created_by, status
+  ) VALUES (
+    v_tenant, v_other_branch, v_supplier, v_other_branch_po,
+    'RLS-OTHER-' || gen_random_uuid()::text, v_staff, 'draft'
+  ) RETURNING id INTO v_other_branch_grn;
+
   INSERT INTO public.grn_items (
     tenant_id,
     grn_id,
     ingredient_id,
     received_quantity,
     rejected_quantity,
-    entry_unit_id
+    entry_unit_id,
+    purchase_order_item_id,
+    supplier_id
   )
   VALUES (
     v_tenant,
@@ -183,7 +244,9 @@ BEGIN
     v_ingredient,
     1,
     0,
-    v_unit
+    v_unit,
+    v_same_branch_po_line,
+    v_supplier
   )
   RETURNING id INTO v_same_branch_line;
 
@@ -193,7 +256,9 @@ BEGIN
     ingredient_id,
     received_quantity,
     rejected_quantity,
-    entry_unit_id
+    entry_unit_id,
+    purchase_order_item_id,
+    supplier_id
   )
   VALUES (
     v_tenant,
@@ -201,7 +266,9 @@ BEGIN
     v_ingredient,
     1,
     0,
-    v_unit
+    v_unit,
+    v_other_branch_po_line,
+    v_supplier
   )
   RETURNING id INTO v_other_branch_line;
 

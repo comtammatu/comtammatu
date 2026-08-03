@@ -200,7 +200,10 @@ BEGIN
     unit_cost,
     item_kind,
     default_fulfill_site_kind,
-    is_active
+    is_active,
+    receipt_unit_id,
+    issue_unit_id,
+    production_unit_id
   )
   VALUES (
     v_tenant,
@@ -209,7 +212,10 @@ BEGIN
     0,
     'raw_material',
     v_source_kind,
-    TRUE
+    TRUE,
+    v_unit,
+    v_unit,
+    v_unit
   )
   RETURNING id INTO v_ingredient;
 
@@ -676,7 +682,10 @@ BEGIN
     unit_cost,
     item_kind,
     default_fulfill_site_kind,
-    is_active
+    is_active,
+    receipt_unit_id,
+    issue_unit_id,
+    production_unit_id
   )
   VALUES (
     v_tenant,
@@ -685,7 +694,10 @@ BEGIN
     0,
     'raw_material',
     'central_supply',
-    TRUE
+    TRUE,
+    v_unit,
+    v_unit,
+    v_unit
   )
   RETURNING id INTO v_supply_ingredient;
 
@@ -696,7 +708,10 @@ BEGIN
     unit_cost,
     item_kind,
     default_fulfill_site_kind,
-    is_active
+    is_active,
+    receipt_unit_id,
+    issue_unit_id,
+    production_unit_id
   )
   VALUES (
     v_tenant,
@@ -705,7 +720,10 @@ BEGIN
     0,
     'raw_material',
     'central_kitchen',
-    TRUE
+    TRUE,
+    v_unit,
+    v_unit,
+    v_unit
   )
   RETURNING id INTO v_kitchen_ingredient;
 

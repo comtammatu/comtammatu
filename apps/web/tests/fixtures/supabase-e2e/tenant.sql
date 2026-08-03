@@ -87,6 +87,94 @@ WHERE t.slug = 'comtammatu'
     WHERE b.tenant_id = t.id AND b.name = v.name
   );
 
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT branch.tenant_id, branch.id
+    FROM public.branches AS branch
+    JOIN public.tenants AS tenant ON tenant.id = branch.tenant_id
+    WHERE tenant.slug = 'comtammatu'
+      AND branch.is_active
+  LOOP
+    PERFORM public.ensure_branch_inventory_location_defaults(r.tenant_id, r.id);
+  END LOOP;
+END;
+$$;
+
+INSERT INTO public.suppliers (tenant_id, name, is_active)
+SELECT tenant.id, 'Nhà cung cấp QA', TRUE
+FROM public.tenants AS tenant
+WHERE tenant.slug = 'comtammatu'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.suppliers AS supplier
+    WHERE supplier.tenant_id = tenant.id
+      AND supplier.name = 'Nhà cung cấp QA'
+  );
+
+INSERT INTO public.units (tenant_id, code, name, is_active)
+SELECT tenant.id, 'kg', 'Kilôgam', TRUE
+FROM public.tenants AS tenant
+WHERE tenant.slug = 'comtammatu'
+ON CONFLICT (code, tenant_id) DO UPDATE SET is_active = TRUE;
+
+INSERT INTO public.ingredients (
+  tenant_id, name, sku, item_kind, is_active,
+  receipt_unit_id, issue_unit_id, production_unit_id
+)
+SELECT
+  tenant.id, 'Nguyên liệu QA', 'QA-INGREDIENT', 'raw_material', TRUE,
+  unit_row.id, unit_row.id, unit_row.id
+FROM public.tenants AS tenant
+JOIN public.units AS unit_row
+  ON unit_row.tenant_id = tenant.id
+ AND unit_row.code = 'kg'
+WHERE tenant.slug = 'comtammatu'
+ON CONFLICT (sku, tenant_id) DO UPDATE SET
+  is_active = TRUE,
+  receipt_unit_id = EXCLUDED.receipt_unit_id,
+  issue_unit_id = EXCLUDED.issue_unit_id,
+  production_unit_id = EXCLUDED.production_unit_id;
+
+INSERT INTO public.ingredient_units (
+  tenant_id, ingredient_id, unit_id, to_base_factor, is_base, is_active
+)
+SELECT tenant.id, ingredient.id, unit_row.id, 1, TRUE, TRUE
+FROM public.tenants AS tenant
+JOIN public.ingredients AS ingredient
+  ON ingredient.tenant_id = tenant.id
+ AND ingredient.sku = 'QA-INGREDIENT'
+JOIN public.units AS unit_row
+  ON unit_row.tenant_id = tenant.id
+ AND unit_row.code = 'kg'
+WHERE tenant.slug = 'comtammatu'
+ON CONFLICT (ingredient_id, unit_id, tenant_id) DO UPDATE SET
+  to_base_factor = 1,
+  is_base = TRUE,
+  is_active = TRUE;
+
+INSERT INTO public.stock_levels (
+  tenant_id, branch_id, ingredient_id, location_id,
+  current_quantity, avg_unit_cost
+)
+SELECT
+  tenant.id, location.branch_id, ingredient.id, location.id,
+  100, 10000
+FROM public.tenants AS tenant
+JOIN public.ingredients AS ingredient
+  ON ingredient.tenant_id = tenant.id
+ AND ingredient.sku = 'QA-INGREDIENT'
+JOIN public.inventory_locations AS location
+  ON location.tenant_id = tenant.id
+ AND location.location_kind = 'warehouse'
+ AND location.is_active
+WHERE tenant.slug = 'comtammatu'
+ON CONFLICT (ingredient_id, branch_id, location_id, tenant_id) DO UPDATE SET
+  current_quantity = EXCLUDED.current_quantity,
+  avg_unit_cost = EXCLUDED.avg_unit_cost;
+
 -- 4) Positions (mirrored from prod; default_checklist_template_id NULLed because
 --    checklist templates are not part of this minimal local seed).
 INSERT INTO public.positions (tenant_id, code, label_vi, label_en, is_active, is_system)

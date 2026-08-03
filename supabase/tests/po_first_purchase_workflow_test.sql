@@ -166,7 +166,10 @@ BEGIN
     unit_cost,
     item_kind,
     default_fulfill_site_kind,
-    is_active
+    is_active,
+    receipt_unit_id,
+    issue_unit_id,
+    production_unit_id
   )
   VALUES
     (
@@ -176,7 +179,10 @@ BEGIN
       0,
       'raw_material',
       'central_supply',
-      TRUE
+      TRUE,
+      v_unit,
+      v_unit,
+      v_unit
     ),
     (
       v_tenant,
@@ -185,7 +191,10 @@ BEGIN
       0,
       'raw_material',
       'central_supply',
-      TRUE
+      TRUE,
+      v_unit,
+      v_unit,
+      v_unit
     ),
     (
       v_tenant,
@@ -194,7 +203,10 @@ BEGIN
       0,
       'raw_material',
       'central_supply',
-      TRUE
+      TRUE,
+      v_unit,
+      v_unit,
+      v_unit
     );
 
   SELECT ingredient.id
@@ -547,12 +559,12 @@ BEGIN
         (v_followup_review->'grn'->>'grn_id')::bigint
       AND item.ingredient_id = v_line_ingredient_id
       AND item.entry_unit_id = v_line_unit_id
-      AND item.unit_cost = 100
-      AND item.cost_pending = FALSE
-      AND item.provisional_cost_source = 'invoice'
+      AND item.unit_cost = 0
+      AND item.cost_pending = TRUE
+      AND item.provisional_cost_source = 'pending'
   ) THEN
     RAISE EXCEPTION
-      'PO FIRST: latest confirmed supplier invoice cost was not reused';
+      'PO FIRST: new receipt reused historical invoice cost';
   END IF;
 END;
 $$;

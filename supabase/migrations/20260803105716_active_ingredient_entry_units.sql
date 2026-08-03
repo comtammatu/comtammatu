@@ -208,6 +208,17 @@ GRANT EXECUTE ON FUNCTION public.save_stock_issue_line(
   bigint, bigint, numeric, bigint, text, text[]
 ) TO authenticated, service_role;
 
+REVOKE DELETE, MAINTAIN ON public.stock_issue_items
+FROM anon, authenticated;
+REVOKE INSERT (
+  tenant_id, issue_id, ingredient_id, quantity,
+  unit_cost, reason, photo_urls, entry_unit_id
+) ON public.stock_issue_items FROM authenticated;
+REVOKE UPDATE (
+  tenant_id, issue_id, ingredient_id, quantity,
+  unit_cost, reason, photo_urls, entry_unit_id
+) ON public.stock_issue_items FROM authenticated;
+
 COMMENT ON FUNCTION public.save_stock_issue_line(
   bigint, bigint, numeric, bigint, text, text[]
 ) IS 'Saves one draft stock-issue line after enforcing actor, tenant, active ingredient unit, location, and stock boundaries.';

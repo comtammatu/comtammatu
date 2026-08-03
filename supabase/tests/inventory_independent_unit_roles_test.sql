@@ -153,7 +153,11 @@ BEGIN
     jsonb_build_object(
       'sub', v_owner::text,
       'role', 'authenticated',
-      'app_metadata', jsonb_build_object('tenant_id', v_tenant)
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'owner',
+        'position_code', 'owner'
+      )
     )::text,
     TRUE
   );

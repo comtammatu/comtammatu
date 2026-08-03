@@ -13,6 +13,8 @@ DECLARE
   v_supplier bigint;
   v_unit bigint;
   v_ingredient bigint;
+  v_po bigint;
+  v_po_line bigint;
   v_grn bigint;
   v_issue bigint;
   v_transfer bigint;
@@ -44,6 +46,7 @@ BEGIN
   ) AS location ON TRUE
   WHERE branch.tenant_id = v_tenant
     AND branch.is_active
+    AND branch.branch_kind IN ('central_supply', 'central_kitchen')
   ORDER BY branch.id
   LIMIT 1;
 
@@ -116,21 +119,76 @@ BEGIN
     tenant_id, ingredient_id, unit_id, to_base_factor, is_base, is_active, sort_order
   ) VALUES (v_tenant, v_ingredient, v_unit, 1, TRUE, TRUE, 0);
 
+  INSERT INTO public.supplier_items (
+    tenant_id, supplier_id, ingredient_id, is_active, created_by
+  ) VALUES (v_tenant, v_supplier, v_ingredient, TRUE, v_owner);
+
   INSERT INTO public.stock_levels (
     tenant_id, branch_id, ingredient_id, location_id, current_quantity, avg_unit_cost
   ) VALUES
     (v_tenant, v_branch_a, v_ingredient, v_location_a, 20, 100),
     (v_tenant, v_branch_b, v_ingredient, v_location_b, 20, 100);
 
-  INSERT INTO public.goods_received_notes (
-    tenant_id, branch_id, location_id, supplier_id, grn_number, status, created_by
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
   ) VALUES (
-    v_tenant, v_branch_a, v_location_a, v_supplier,
-    '__DOC-GRN-' || pg_catalog.gen_random_uuid()::text, 'confirmed', v_owner
-  ) RETURNING id INTO v_grn;
-  INSERT INTO public.grn_items (
-    tenant_id, grn_id, ingredient_id, received_quantity, entry_unit_id
-  ) VALUES (v_tenant, v_grn, v_ingredient, 1, v_unit);
+    v_tenant, v_branch_a, v_supplier,
+    '__DOC-PO-' || pg_catalog.gen_random_uuid()::text, 'draft', v_owner
+  ) RETURNING id INTO v_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    entry_unit_id
+  ) VALUES (
+    v_tenant, v_po, v_ingredient, 1, 100, v_unit
+  ) RETURNING id INTO v_po_line;
+
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, TRUE);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'owner',
+        'position_code', 'owner'
+      )
+    )::text,
+    TRUE
+  );
+
+  UPDATE public.purchase_orders
+  SET status = 'sent'
+  WHERE id = v_po;
+
+  SELECT grn.id
+  INTO STRICT v_grn
+  FROM public.goods_received_notes AS grn
+  WHERE grn.tenant_id = v_tenant
+    AND grn.po_id = v_po
+    AND grn.status = 'draft';
+
+  PERFORM public.save_goods_receipt_note(
+    v_grn,
+    pg_catalog.now(),
+    NULL,
+    pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+      'line_id', (
+        SELECT item.id
+        FROM public.grn_items AS item
+        WHERE item.tenant_id = v_tenant
+          AND item.grn_id = v_grn
+          AND item.purchase_order_item_id = v_po_line
+      ),
+      'received_quantity', 1,
+      'rejected_quantity', 0,
+      'rejection_reason', NULL,
+      'rejected_photo_url', NULL
+    ))
+  );
+  PERFORM public.confirm_goods_receipt_note(v_grn);
 
   INSERT INTO public.stock_issues (
     tenant_id, branch_id, issue_number, issue_type, status, created_by,
@@ -260,6 +318,8 @@ BEGIN
     'production_run', v_run, v_branch_b, v_ingredient, 1,
     'Correct completed production output', gen_random_uuid()
   );
+
+  PERFORM set_config('role', 'none', TRUE);
 
   SELECT count(*)
   INTO v_movement_count

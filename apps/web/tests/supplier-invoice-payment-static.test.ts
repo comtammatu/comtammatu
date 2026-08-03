@@ -211,32 +211,21 @@ test("supplier invoice number is removed without weakening draft or valuation fl
   const compatibilityStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION public.create_supplier_invoice_with_vat_breakdown",
   );
-  const dropStart = migration.indexOf(
-    "ALTER TABLE public.supplier_invoices",
-  );
+  const dropStart = migration.indexOf("ALTER TABLE public.supplier_invoices");
 
   assert.ok(notificationStart > 0);
   assert.ok(compatibilityStart > notificationStart);
   assert.ok(dropStart > compatibilityStart);
-  assert.doesNotMatch(
-    migration.slice(0, notificationStart),
-    /invoice_number/,
-  );
+  assert.doesNotMatch(migration.slice(0, notificationStart), /invoice_number/);
   assert.doesNotMatch(
     migration.slice(notificationStart, compatibilityStart),
     /invoice_number/,
   );
   assert.doesNotMatch(
-    migration.slice(
-      migration.indexOf("AS $$", compatibilityStart),
-      dropStart,
-    ),
+    migration.slice(migration.indexOf("AS $$", compatibilityStart), dropStart),
     /invoice_number/,
   );
-  assert.match(
-    migration.slice(dropStart),
-    /DROP COLUMN invoice_number;/,
-  );
+  assert.match(migration.slice(dropStart), /DROP COLUMN invoice_number;/);
   assert.doesNotMatch(migration, /DROP COLUMN invoice_number CASCADE/);
 });
 
@@ -487,10 +476,7 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
     source,
     /<AppListFrame\s+toolbar=\{\s*<AppToolbar[\s\S]*?filters=\{\s*<>\s*\{viewModeTabs\}\s*\{filterPopover\}\s*<\/>/,
   );
-  assert.doesNotMatch(
-    source,
-    /<AppListFrame[\s\S]{0,400}title=\{viewMode/,
-  );
+  assert.doesNotMatch(source, /<AppListFrame[\s\S]{0,400}title=\{viewMode/);
   assert.doesNotMatch(
     source,
     /<AppListFrame[\s\S]{0,400}action=\{viewModeTabs\}/,
@@ -526,7 +512,7 @@ test("supplier payment RPC requires matched invoice evidence by invoice kind", (
     "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const acceptance = readRoot(
-    "supabase/tests/supplier_invoice_ap_stability_test.sql",
+    "supabase/tests/supplier_payment_idempotency_test.sql",
   );
   const actionSource = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
@@ -539,8 +525,9 @@ test("supplier payment RPC requires matched invoice evidence by invoice kind", (
   assert.match(migration, /invoice\.invoice_kind = 'goods'/);
   assert.match(migration, /grn\.status <> 'confirmed'/);
   assert.match(actionSource, /supplier_payment_allocation_invalid/);
-  assert.match(acceptance, /unverified service payment succeeded/);
-  assert.match(acceptance, /payment without VAT evidence succeeded/);
+  assert.match(acceptance, /verify_service_supplier_invoice/);
+  assert.match(acceptance, /vat_invoice_attachment_path/);
+  assert.match(acceptance, /record_supplier_payment_allocated/);
 });
 
 test("supplier payment migration enforces exact replay, credit-aware cap, and Owner boundary", () => {

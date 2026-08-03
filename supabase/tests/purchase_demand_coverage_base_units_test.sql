@@ -194,10 +194,10 @@ BEGIN
     AND purchase_order.purchase_request_id = v_demand_id
     AND item.purchase_request_item_id = v_item_id;
 
-  IF v_po_qty IS DISTINCT FROM 2
-     OR v_po_unit IS DISTINCT FROM v_receipt_unit THEN
+  IF v_po_qty IS DISTINCT FROM 200
+     OR v_po_unit IS DISTINCT FROM v_issue_unit THEN
     RAISE EXCEPTION
-      'COVERAGE BASE: expected PO 2 receipt units, got qty=% unit=%',
+      'COVERAGE BASE: expected PO to preserve the active demand unit, got qty=% unit=%',
       v_po_qty,
       v_po_unit;
   END IF;

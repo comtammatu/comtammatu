@@ -23,7 +23,8 @@ import { join, resolve } from "node:path";
 const REPO = process.cwd();
 const FIXTURES = join(REPO, "apps", "web", "tests", "fixtures", "supabase-e2e");
 const PROJECT_ID = "comtammatu-e2e";
-const WORKDIR = process.env["E2E_SUPABASE_WORKDIR"] || "/tmp/comtammatu-e2e-stack";
+const WORKDIR =
+  process.env["E2E_SUPABASE_WORKDIR"] || "/tmp/comtammatu-e2e-stack";
 const API_PORT = Number(process.env["E2E_API_PORT"] || 55421);
 const DB_PORT = Number(process.env["E2E_DB_PORT"] || 55432);
 const SHADOW_PORT = Number(process.env["E2E_SHADOW_PORT"] || 55430);
@@ -35,11 +36,19 @@ if (
   process.env["GITHUB_ACTIONS"] !== "true" ||
   !GITHUB_ENV
 ) {
-  throw new Error("supabase-e2e-bringup is restricted to the GitHub Actions CI harness");
+  throw new Error(
+    "supabase-e2e-bringup is restricted to the GitHub Actions CI harness",
+  );
 }
 
 function supabase(args, { timeoutMs = 600_000 } = {}) {
-  return spawnSync("pnpm", ["exec", "supabase", ...args], { cwd: REPO, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: MAX_BUFFER });
+  return spawnSync(join(REPO, "node_modules/.bin/supabase"), args, {
+    cwd: WORKDIR,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: timeoutMs,
+    maxBuffer: MAX_BUFFER,
+  });
 }
 
 function writeScratch() {
@@ -51,17 +60,17 @@ function writeScratch() {
   // rejects them (e.g. WF10 central-site NULL branch claims).
   for (const f of readdirSync(join(REPO, "supabase/migrations")).sort()) {
     if (/^\d{14}_.+\.sql$/.test(f)) {
-      cpSync(join(REPO, "supabase/migrations", f), join(WORKDIR, "supabase/migrations", f));
+      cpSync(
+        join(REPO, "supabase/migrations", f),
+        join(WORKDIR, "supabase/migrations", f),
+      );
     }
   }
   cpSync(
     join(FIXTURES, "tenant.sql"),
     join(WORKDIR, "supabase/_local-dev/dev-tenant-seed.sql"),
   );
-  cpSync(
-    join(FIXTURES, "qa-users.sql"),
-    join(WORKDIR, "supabase/seed.sql"),
-  );
+  cpSync(join(FIXTURES, "qa-users.sql"), join(WORKDIR, "supabase/seed.sql"));
   writeFileSync(
     join(WORKDIR, "supabase", "config.toml"),
     `project_id = "${PROJECT_ID}"
@@ -99,15 +108,24 @@ function parseEnv(text) {
       .filter((l) => l.includes("="))
       .map((l) => {
         const i = l.indexOf("=");
-        return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^["']|["']$/g, "")];
+        return [
+          l.slice(0, i).trim(),
+          l
+            .slice(i + 1)
+            .trim()
+            .replace(/^["']|["']$/g, ""),
+        ];
       }),
   );
 }
 
 function startStack() {
   writeScratch();
-  process.stdout.write("Starting Supabase Local for e2e (baseline + seeds)...\n");
-  const start = supabase(["start", "--workdir", WORKDIR]);
+  supabase(["stop", "--no-backup"], { timeoutMs: 120_000 });
+  process.stdout.write(
+    "Starting Supabase Local for e2e (baseline + seeds)...\n",
+  );
+  const start = supabase(["start"]);
   process.stdout.write((start.stdout || "") + (start.stderr || ""));
   return start.status === 0;
 }
@@ -116,8 +134,10 @@ function main() {
   if (!startStack()) {
     // One retry with full teardown: shared CI runners intermittently hit
     // Docker Hub pull rate limits mid-start and leave a half-started stack.
-    process.stderr.write("\nsupabase start failed — tearing down and retrying once in 90s\n");
-    supabase(["stop", "--workdir", WORKDIR, "--no-backup"], { timeoutMs: 120_000 });
+    process.stderr.write(
+      "\nsupabase start failed — tearing down and retrying once in 90s\n",
+    );
+    supabase(["stop", "--no-backup"], { timeoutMs: 120_000 });
     spawnSync("sleep", ["90"]);
     if (!startStack()) {
       process.stderr.write("\nsupabase start failed\n");
@@ -125,13 +145,15 @@ function main() {
     }
   }
 
-  const status = supabase(["status", "--workdir", WORKDIR, "-o", "env"], { timeoutMs: 60_000 });
+  const status = supabase(["status", "-o", "env"], { timeoutMs: 60_000 });
   const env = parseEnv(status.stdout || "");
   const apiUrl = env["API_URL"];
   const anon = env["ANON_KEY"];
   const service = env["SERVICE_ROLE_KEY"];
   if (!apiUrl || !anon || !service) {
-    process.stderr.write(`missing keys from supabase status (API_URL/ANON_KEY/SERVICE_ROLE_KEY)\n${status.stdout}\n`);
+    process.stderr.write(
+      `missing keys from supabase status (API_URL/ANON_KEY/SERVICE_ROLE_KEY)\n${status.stdout}\n`,
+    );
     process.exit(1);
   }
 
@@ -149,12 +171,11 @@ E2E_INVENTORY_MANAGER_PASSWORD=Test1234!
 `;
   writeFileSync(resolve(REPO, "apps/web/.env.test.local"), testEnv);
 
-  appendFileSync(
-    GITHUB_ENV,
-    `${testEnv}POS_NETWORK_GATE=off\n`,
-  );
+  appendFileSync(GITHUB_ENV, `${testEnv}POS_NETWORK_GATE=off\n`);
 
-  process.stdout.write(`\nSupabase e2e stack ready at ${apiUrl}\nWrote apps/web/.env.test.local and CI environment\n`);
+  process.stdout.write(
+    `\nSupabase e2e stack ready at ${apiUrl}\nWrote apps/web/.env.test.local and CI environment\n`,
+  );
 }
 
 main();

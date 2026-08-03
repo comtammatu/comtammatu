@@ -76,11 +76,11 @@ DECLARE
   v_today    DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_caught   BOOLEAN := false;
 BEGIN
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_main_t1_' || gen_random_uuid()::TEXT, 50000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_main_t1_' || gen_random_uuid()::TEXT, 50000, 0)
   RETURNING id INTO v_main_id;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_side_t1_' || gen_random_uuid()::TEXT, 10000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_side_t1_' || gen_random_uuid()::TEXT, 10000, 0)
   RETURNING id INTO v_side_id;
 
   INSERT INTO public.branch_menu_item_daily_limits
@@ -132,11 +132,11 @@ DECLARE
   v_today    DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_caught   BOOLEAN := false;
 BEGIN
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_main_t2_' || gen_random_uuid()::TEXT, 50000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_main_t2_' || gen_random_uuid()::TEXT, 50000, 0)
   RETURNING id INTO v_main_id;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_side_t2_' || gen_random_uuid()::TEXT, 10000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_side_t2_' || gen_random_uuid()::TEXT, 10000, 0)
   RETURNING id INTO v_side_id;
 
   INSERT INTO public.branch_menu_item_daily_limits
@@ -190,11 +190,11 @@ DECLARE
   v_today    DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_sold     INT;
 BEGIN
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_main_t3_' || gen_random_uuid()::TEXT, 50000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_main_t3_' || gen_random_uuid()::TEXT, 50000, 0)
   RETURNING id INTO v_main_id;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_side_t3_' || gen_random_uuid()::TEXT, 10000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_side_t3_' || gen_random_uuid()::TEXT, 10000, 0)
   RETURNING id INTO v_side_id;
 
   INSERT INTO public.branch_menu_item_daily_limits
@@ -254,8 +254,8 @@ DECLARE
   v_today    DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_sold     INT;
 BEGIN
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_dual_t4_' || gen_random_uuid()::TEXT, 30000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_dual_t4_' || gen_random_uuid()::TEXT, 30000, 0)
   RETURNING id INTO v_item_id;
 
   INSERT INTO public.branch_menu_item_daily_limits
@@ -309,11 +309,11 @@ DECLARE
   v_today    DATE := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
   v_sold     INT;
 BEGIN
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_main_t5_' || gen_random_uuid()::TEXT, 50000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_main_t5_' || gen_random_uuid()::TEXT, 50000, 0)
   RETURNING id INTO v_main_id;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-  VALUES (v_tenant, v_category, '__test_side_t5_' || gen_random_uuid()::TEXT, 10000)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+  VALUES (v_tenant, v_category, '__test_side_t5_' || gen_random_uuid()::TEXT, 10000, 0)
   RETURNING id INTO v_side_id;
 
   -- Side IS disabled. Without skip-hatch the insert would raise.

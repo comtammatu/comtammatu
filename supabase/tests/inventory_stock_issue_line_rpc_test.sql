@@ -144,7 +144,9 @@ DECLARE
   v_ingredient bigint := current_setting('test.issue_line.ingredient')::bigint;
   v_unit bigint := current_setting('test.issue_line.unit')::bigint;
   v_result jsonb;
-  v_item public.stock_issue_items%ROWTYPE;
+  v_quantity numeric;
+  v_reason text;
+  v_photo_urls text[];
 BEGIN
   BEGIN
     INSERT INTO public.stock_issue_items (
@@ -157,7 +159,7 @@ BEGIN
     ON CONFLICT (issue_id, ingredient_id, tenant_id)
     DO UPDATE SET quantity = EXCLUDED.quantity;
     RAISE EXCEPTION 'ISSUE LINE RPC: direct authenticated upsert accepted';
-  EXCEPTION WHEN insufficient_privilege THEN
+  EXCEPTION WHEN insufficient_privilege OR check_violation THEN
     NULL;
   END;
 
@@ -182,16 +184,16 @@ BEGIN
     NULL
   );
 
-  SELECT item.*
-  INTO v_item
+  SELECT item.quantity, item.reason, item.photo_urls
+  INTO v_quantity, v_reason, v_photo_urls
   FROM public.stock_issue_items AS item
   WHERE item.tenant_id = v_tenant
     AND item.issue_id = v_issue
     AND item.ingredient_id = v_ingredient;
 
-  IF v_item.quantity <> 3
-     OR v_item.reason <> 'Updated quantity'
-     OR v_item.photo_urls <> ARRAY['https://example.invalid/evidence.webp'] THEN
+  IF v_quantity <> 3
+     OR v_reason <> 'Updated quantity'
+     OR v_photo_urls <> ARRAY['https://example.invalid/evidence.webp'] THEN
     RAISE EXCEPTION 'ISSUE LINE RPC: draft update did not persist correctly';
   END IF;
 

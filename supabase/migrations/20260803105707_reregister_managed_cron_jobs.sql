@@ -169,8 +169,8 @@ BEGIN
     'refresh_abc_classification',
     'refresh_mv_inventory_stock_current',
     'scan-inventory-alerts-daily',
-    'weekly_grn_override_report',
     'weekly_waste_report',
+    'inventory-valuation-reconciliation-daily',
     'refresh_mv_grn_price_baseline',
     'refresh-finance-views-daily'
   );
@@ -182,8 +182,8 @@ BEGIN
   PERFORM cron.schedule('refresh_abc_classification',          '0 19 * * 6',   'SELECT public.refresh_abc_classification();');
   PERFORM cron.schedule('refresh_mv_inventory_stock_current',  '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; SELECT public.refresh_inventory_dashboard();');
   PERFORM cron.schedule('scan-inventory-alerts-daily',         '0 23 * * *',   'SELECT public.scan_inventory_alerts();');
-  PERFORM cron.schedule('weekly_grn_override_report',          '0 2 * * 5',    'SELECT public.weekly_grn_override_report();');
   PERFORM cron.schedule('weekly_waste_report',                 '0 2 * * 1',    'SELECT public.weekly_waste_report();');
+  PERFORM cron.schedule('inventory-valuation-reconciliation-daily', '15 23 * * *', 'SELECT public.run_inventory_valuation_reconciliation();');
 
   INSERT INTO private.cron_job_health_grace (jobid, registered_at)
   SELECT jobid, now()
@@ -195,8 +195,8 @@ BEGIN
     'refresh_abc_classification',
     'refresh_mv_inventory_stock_current',
     'scan-inventory-alerts-daily',
-    'weekly_grn_override_report',
-    'weekly_waste_report'
+    'weekly_waste_report',
+    'inventory-valuation-reconciliation-daily'
   )
   ON CONFLICT (jobid) DO UPDATE
   SET registered_at = EXCLUDED.registered_at;

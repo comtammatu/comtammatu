@@ -40,17 +40,174 @@ CREATE POLICY "hddt_archive_select" ON storage.objects FOR SELECT TO authenticat
   USING ((bucket_id = 'hddt-archive') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('finance:view'));
 DROP POLICY IF EXISTS "inv_attach_delete" ON storage.objects;
 CREATE POLICY "inv_attach_delete" ON storage.objects FOR DELETE TO authenticated
-  USING ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text));
+USING (
+  bucket_id = 'inventory-attachments'
+  AND (storage.foldername(storage.objects.name))[1] = (
+    SELECT public.auth_tenant_id()::text
+  )
+  AND NOT (
+    (storage.foldername(storage.objects.name))[2] = 'grn'
+    AND (storage.foldername(storage.objects.name))[4] = 'rejected'
+  )
+);
 DROP POLICY IF EXISTS "inv_attach_insert" ON storage.objects;
 CREATE POLICY "inv_attach_insert" ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND (has_permission(NULL::bigint, 'procurement:grn_create') OR has_permission(NULL::bigint, 'supplier_return:create') OR has_permission(NULL::bigint, 'inventory:writeoff')));
+WITH CHECK (
+  bucket_id = 'inventory-attachments'
+  AND (storage.foldername(storage.objects.name))[1] = (
+    SELECT public.auth_tenant_id()::text
+  )
+  AND (
+    (
+      (storage.foldername(storage.objects.name))[2] = 'grn'
+      AND (storage.foldername(storage.objects.name))[4] = 'rejected'
+      AND pg_catalog.array_length(
+        storage.foldername(storage.objects.name),
+        1
+      ) = 5
+      AND coalesce(
+        (storage.foldername(storage.objects.name))[5],
+        ''
+      ) ~ '^[1-9][0-9]*$'
+      AND storage.objects.name ~* '\.(jpe?g|png|webp|heic)$'
+      AND pg_catalog.lower(
+        coalesce(storage.objects.metadata ->> 'mimetype', '')
+      ) IN ('image/jpeg', 'image/png', 'image/webp', 'image/heic')
+      AND EXISTS (
+        SELECT 1
+        FROM public.goods_received_notes AS grn
+        JOIN public.grn_items AS grn_item
+          ON grn_item.grn_id = grn.id
+         AND grn_item.tenant_id = grn.tenant_id
+         AND grn_item.id = CASE
+           WHEN coalesce(
+             (storage.foldername(storage.objects.name))[5],
+             ''
+           ) ~ '^[1-9][0-9]*$'
+             THEN (storage.foldername(storage.objects.name))[5]::bigint
+         END
+        WHERE grn.id = CASE
+            WHEN coalesce(
+              (storage.foldername(storage.objects.name))[3],
+              ''
+            ) ~ '^[1-9][0-9]*$'
+              THEN (storage.foldername(storage.objects.name))[3]::bigint
+          END
+          AND grn.tenant_id = (SELECT public.auth_tenant_id())
+          AND (
+            (
+              grn.status = 'draft'
+              AND public.has_permission(
+                grn.branch_id,
+                'procurement:grn_create'
+              )
+            )
+            OR (
+              grn.status = 'confirmed'
+              AND grn.po_id IS NOT NULL
+              AND public.has_permission(
+                grn.branch_id,
+                'procurement:grn_amend'
+              )
+            )
+          )
+      )
+    )
+    OR (
+      (storage.foldername(storage.objects.name))[2] =
+        'supplier-return-line'
+      AND EXISTS (
+        SELECT 1
+        FROM public.supplier_return_items AS return_item
+        JOIN public.supplier_returns AS supplier_return
+          ON supplier_return.id = return_item.return_id
+         AND supplier_return.tenant_id = return_item.tenant_id
+        WHERE return_item.id = CASE
+            WHEN coalesce(
+              (storage.foldername(storage.objects.name))[3],
+              ''
+            ) ~ '^[1-9][0-9]*$'
+              THEN (storage.foldername(storage.objects.name))[3]::bigint
+          END
+          AND return_item.tenant_id = (SELECT public.auth_tenant_id())
+          AND supplier_return.status = 'draft'
+          AND public.has_permission(
+            supplier_return.branch_id,
+            'supplier_return:create'
+          )
+      )
+    )
+    OR (
+      (storage.foldername(storage.objects.name))[2] = 'stock-issues'
+      AND EXISTS (
+        SELECT 1
+        FROM public.stock_issues AS issue
+        WHERE issue.id = CASE
+            WHEN coalesce(
+              (storage.foldername(storage.objects.name))[3],
+              ''
+            ) ~ '^[1-9][0-9]*$'
+              THEN (storage.foldername(storage.objects.name))[3]::bigint
+          END
+          AND issue.tenant_id = (SELECT public.auth_tenant_id())
+          AND issue.status = 'draft'
+          AND issue.issue_type = 'consumption'
+          AND public.has_permission(issue.branch_id, 'inventory:write')
+      )
+    )
+    OR (
+      (storage.foldername(storage.objects.name))[2] = 'branches'
+      AND (storage.foldername(storage.objects.name))[4] = 'waste'
+      AND EXISTS (
+        SELECT 1
+        FROM public.branches AS branch
+        WHERE branch.id = CASE
+            WHEN coalesce(
+              (storage.foldername(storage.objects.name))[3],
+              ''
+            ) ~ '^[1-9][0-9]*$'
+              THEN (storage.foldername(storage.objects.name))[3]::bigint
+          END
+          AND branch.tenant_id = (SELECT public.auth_tenant_id())
+          AND branch.is_active IS TRUE
+          AND public.has_permission(branch.id, 'inventory:writeoff')
+      )
+    )
+    OR (
+      (storage.foldername(storage.objects.name))[2] = 'waste'
+      AND public.auth_role() = 'owner'
+    )
+    OR (
+      (storage.foldername(storage.objects.name))[2] = 'expenses'
+      AND public.has_permission_any('finance:expense_create')
+    )
+  )
+);
 DROP POLICY IF EXISTS "inv_attach_read" ON storage.objects;
 -- Public bucket object URL access does not require a storage.objects SELECT
 -- policy. Keep object listing closed.
 DROP POLICY IF EXISTS "inv_attach_update" ON storage.objects;
 CREATE POLICY "inv_attach_update" ON storage.objects FOR UPDATE TO authenticated
-  USING ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
-  WITH CHECK ((bucket_id = 'inventory-attachments') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text));
+USING (
+  bucket_id = 'inventory-attachments'
+  AND (storage.foldername(storage.objects.name))[1] = (
+    SELECT public.auth_tenant_id()::text
+  )
+  AND NOT (
+    (storage.foldername(storage.objects.name))[2] = 'grn'
+    AND (storage.foldername(storage.objects.name))[4] = 'rejected'
+  )
+)
+WITH CHECK (
+  bucket_id = 'inventory-attachments'
+  AND (storage.foldername(storage.objects.name))[1] = (
+    SELECT public.auth_tenant_id()::text
+  )
+  AND NOT (
+    (storage.foldername(storage.objects.name))[2] = 'grn'
+    AND (storage.foldername(storage.objects.name))[4] = 'rejected'
+  )
+);
 DROP POLICY IF EXISTS "menu_images_delete" ON storage.objects;
 CREATE POLICY "menu_images_delete" ON storage.objects FOR DELETE TO authenticated
   USING ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('menu:write'));
@@ -64,6 +221,142 @@ DROP POLICY IF EXISTS "menu_images_update" ON storage.objects;
 CREATE POLICY "menu_images_update" ON storage.objects FOR UPDATE TO authenticated
   USING ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
   WITH CHECK ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('menu:write'));
+
+DROP POLICY IF EXISTS "branch_ops_receive" ON realtime.messages;
+CREATE POLICY "branch_ops_receive" ON realtime.messages
+FOR SELECT TO authenticated
+USING (
+  CASE
+    WHEN realtime.topic() ~ '^branch:[1-9][0-9]{0,18}:ops$' THEN
+      CASE
+        WHEN split_part(realtime.topic(), ':', 2)::numeric
+             <= 9223372036854775807::numeric
+          THEN public.can_read_branch_ops(
+            split_part(realtime.topic(), ':', 2)::bigint
+          )
+        ELSE FALSE
+      END
+    ELSE FALSE
+  END
+);
+
+CREATE OR REPLACE FUNCTION private.assign_invoice_allocation_grn_item()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_match_count integer;
+BEGIN
+  IF NEW.grn_item_id IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT count(*), min(item.id)
+  INTO v_match_count, NEW.grn_item_id
+  FROM public.grn_items AS item
+  WHERE item.tenant_id = NEW.tenant_id
+    AND item.grn_id = NEW.grn_id
+    AND item.received_quantity - item.rejected_quantity > 0
+    AND (
+      NEW.purchase_order_item_id IS NULL
+      OR item.purchase_order_item_id = NEW.purchase_order_item_id
+    );
+
+  IF v_match_count <> 1 THEN
+    RAISE EXCEPTION 'supplier_invoice_allocation_grn_item_missing'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.assign_invoice_allocation_grn_item() FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION private.guard_tax_invoice_payment_snapshot()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF TG_OP = 'UPDATE'
+    AND (OLD.provider_data ? 'invoiceSnapshot')
+    AND NOT (coalesce(NEW.provider_data, '{}'::jsonb) ? 'invoiceSnapshot') THEN
+    NEW.provider_data := coalesce(NEW.provider_data, '{}'::jsonb)
+      || jsonb_build_object(
+        'invoiceSnapshot',
+        OLD.provider_data -> 'invoiceSnapshot'
+      );
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+    AND jsonb_typeof(
+      OLD.provider_data #> '{invoiceSnapshot,draftSnapshot}'
+    ) = 'object'
+    AND OLD.provider_data -> 'invoiceSnapshot'
+      IS DISTINCT FROM NEW.provider_data -> 'invoiceSnapshot'
+    AND NOT (
+      jsonb_typeof(
+        OLD.provider_data #> '{invoiceSnapshot,draftSnapshot,invoiceProfile}'
+      ) IS DISTINCT FROM 'object'
+      AND jsonb_typeof(
+        NEW.provider_data #> '{invoiceSnapshot,draftSnapshot,invoiceProfile}'
+      ) = 'object'
+      AND (OLD.provider_data -> 'invoiceSnapshot')
+            #- '{draftSnapshot,invoiceProfile}'
+        IS NOT DISTINCT FROM
+          (NEW.provider_data -> 'invoiceSnapshot')
+            #- '{draftSnapshot,invoiceProfile}'
+    ) THEN
+    RAISE EXCEPTION 'invoice_snapshot_immutable' USING ERRCODE = '22023';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.guard_tax_invoice_payment_snapshot() FROM PUBLIC;
+
+DROP FUNCTION IF EXISTS public.recreate_grn_at_receiving_site(
+  bigint, bigint, bigint, text
+);
+
+DO $migration$
+DECLARE
+  v_definition text;
+  v_before text;
+BEGIN
+  v_definition := pg_get_functiondef(
+    'public.record_bank_transaction_cash_deposit(bigint)'::regprocedure
+  );
+  v_before := v_definition;
+  v_definition := replace(
+    v_definition,
+    E'    amount,\n    payment_method,',
+    E'    amount,\n    subtotal,\n    vat_breakdown,\n    vat_amount,\n    payment_method,'
+  );
+  v_definition := replace(
+    v_definition,
+    E'    v_transaction.amount,\n    \'cash\',',
+    E'    v_transaction.amount,\n    v_transaction.amount,\n'
+      || E'    jsonb_build_array(jsonb_build_object(\n'
+      || E'      \'vat_rate\', 0,\n'
+      || E'      \'taxable_amount\', v_transaction.amount,\n'
+      || E'      \'vat_amount\', 0\n'
+      || E'    )),\n    0,\n    \'cash\','
+  );
+
+  IF v_definition = v_before THEN
+    RAISE EXCEPTION
+      'record_bank_transaction_cash_deposit VAT patch did not match';
+  END IF;
+
+  EXECUTE v_definition;
+END;
+$migration$;
 
 -- ── Section D: realtime publication membership (idempotent — add each table only if not already a member) ──
 DO $$
@@ -99,7 +392,6 @@ SELECT cron.schedule('compute_branch_daily_waste_caps',    '30 17 * * *', 'SELEC
 SELECT cron.schedule('refresh_abc_classification',         '0 19 * * 6',  'SELECT public.refresh_abc_classification();');
 SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/15 * * * *', 'SET LOCAL statement_timeout = ''2min''; SELECT public.refresh_inventory_dashboard();');
 SELECT cron.schedule('scan-inventory-alerts-daily',        '0 23 * * *',  'SELECT public.scan_inventory_alerts();');
-SELECT cron.schedule('weekly_grn_override_report',         '0 2 * * 5',   'SELECT public.weekly_grn_override_report();');
 SELECT cron.schedule('weekly_waste_report',                '0 2 * * 1',   'SELECT public.weekly_waste_report();');
 
 -- ── Section F: global authorization reference data ──

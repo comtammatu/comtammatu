@@ -76,6 +76,46 @@ BEGIN
     RAISE EXCEPTION 'Seed data missing for SePay conflict quarantine test';
   END IF;
 
+  UPDATE public.tenants
+  SET legal_name = 'Công ty Cổ phần Chén Sứ',
+      tax_code = '0123456789',
+      legal_address = 'Test address',
+      representative = 'Test representative'
+  WHERE id = v_tenant_id;
+
+  INSERT INTO public.invoice_profiles (
+    tenant_id,
+    version,
+    provider,
+    seller_tax_code,
+    template_code,
+    invoice_series,
+    status,
+    valid_from,
+    created_by
+  )
+  SELECT
+    v_tenant_id,
+    next_profile.version,
+    'viettel',
+    '0123456789',
+    '1/001',
+    'C26TCS',
+    'active',
+    now(),
+    v_owner_id
+  FROM LATERAL (
+    SELECT coalesce(max(profile.version), 0) + 1 AS version
+    FROM public.invoice_profiles AS profile
+    WHERE profile.tenant_id = v_tenant_id
+  ) AS next_profile
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.invoice_profiles AS active_profile
+    WHERE active_profile.tenant_id = v_tenant_id
+      AND active_profile.status = 'active'
+  );
+
   INSERT INTO public.system_settings (tenant_id, key, value)
   VALUES (v_tenant_id, 'payment_vietqr_account_no', v_account_number)
   ON CONFLICT (key, tenant_id)
@@ -90,12 +130,14 @@ BEGIN
     tenant_id,
     category_id,
     name,
-    base_price
+    base_price,
+    vat_rate
   ) VALUES (
     v_tenant_id,
     v_menu_category_id,
     v_menu_item_name,
-    v_amount
+    v_amount,
+    0
   ) RETURNING id INTO v_menu_item_id;
 
   INSERT INTO public.kds_stations (tenant_id, branch_id, name)
@@ -483,6 +525,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     note,
@@ -493,6 +538,11 @@ BEGIN
     current_date,
     'other',
     v_amount,
+    v_amount,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', v_amount, 'vat_amount', 0
+    )),
+    0,
     'transfer',
     now(),
     'Operational truth invariant test',

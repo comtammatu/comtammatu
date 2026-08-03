@@ -13,6 +13,8 @@ DECLARE
   v_issue_unit bigint;
   v_production_unit bigint;
   v_ingredient bigint;
+  v_po bigint;
+  v_po_line bigint;
   v_grn bigint;
   v_issue bigint;
   v_ok boolean;
@@ -39,6 +41,7 @@ BEGIN
   FROM public.branches AS branch
   WHERE branch.tenant_id = v_tenant
     AND branch.is_active
+    AND branch.branch_kind IN ('central_supply', 'central_kitchen')
   ORDER BY branch.id
   LIMIT 1;
 
@@ -121,6 +124,24 @@ BEGIN
     (v_tenant, v_ingredient, v_issue_unit, 10, FALSE, TRUE, 1),
     (v_tenant, v_ingredient, v_receipt_unit, 100, FALSE, TRUE, 2);
 
+  INSERT INTO public.supplier_items (
+    tenant_id, supplier_id, ingredient_id, is_active, created_by
+  ) VALUES (v_tenant, v_supplier, v_ingredient, TRUE, v_owner);
+
+  INSERT INTO public.purchase_orders (
+    tenant_id, branch_id, supplier_id, po_number, status, created_by
+  ) VALUES (
+    v_tenant, v_branch, v_supplier,
+    '__EUR-PO-' || pg_catalog.gen_random_uuid()::text, 'draft', v_owner
+  ) RETURNING id INTO v_po;
+
+  INSERT INTO public.purchase_order_items (
+    tenant_id, po_id, ingredient_id, quantity, unit_price_est,
+    entry_unit_id
+  ) VALUES (
+    v_tenant, v_po, v_ingredient, 1, 0, v_production_unit
+  ) RETURNING id INTO v_po_line;
+
   v_ok := private.entry_unit_matches_roles(
     v_tenant, v_ingredient, v_issue_unit, 'receipt,issue'
   );
@@ -138,8 +159,8 @@ BEGIN
   v_ok := private.entry_unit_matches_roles(
     v_tenant, v_ingredient, v_production_unit, 'receipt,issue'
   );
-  IF v_ok THEN
-    RAISE EXCEPTION 'ENTRY UNIT ROLES: production unit must not match receipt,issue';
+  IF NOT v_ok THEN
+    RAISE EXCEPTION 'ENTRY UNIT ROLES: every active unit must be accepted';
   END IF;
 
   INSERT INTO public.goods_received_notes (
@@ -147,6 +168,7 @@ BEGIN
     branch_id,
     location_id,
     supplier_id,
+    po_id,
     grn_number,
     status,
     created_by
@@ -156,6 +178,7 @@ BEGIN
     v_branch,
     v_location,
     v_supplier,
+    v_po,
     '__EUR-GRN-' || pg_catalog.gen_random_uuid()::text,
     'draft',
     v_owner
@@ -163,20 +186,12 @@ BEGIN
   RETURNING id INTO v_grn;
 
   INSERT INTO public.grn_items (
-    tenant_id, grn_id, ingredient_id, received_quantity, entry_unit_id
+    tenant_id, grn_id, ingredient_id, received_quantity, entry_unit_id,
+    purchase_order_item_id, supplier_id
   )
-  VALUES (v_tenant, v_grn, v_ingredient, 1, v_issue_unit);
-
-  BEGIN
-    INSERT INTO public.grn_items (
-      tenant_id, grn_id, ingredient_id, received_quantity, entry_unit_id
-    )
-    VALUES (v_tenant, v_grn, v_ingredient, 1, v_production_unit);
-    RAISE EXCEPTION 'ENTRY UNIT ROLES: GRN must reject production unit';
-  EXCEPTION
-    WHEN check_violation THEN
-      NULL;
-  END;
+  VALUES (
+    v_tenant, v_grn, v_ingredient, 1, v_production_unit, v_po_line, v_supplier
+  );
 
   INSERT INTO public.stock_issues (
     tenant_id,
@@ -203,16 +218,11 @@ BEGIN
   )
   VALUES (v_tenant, v_issue, v_ingredient, 1, v_receipt_unit, 0);
 
-  BEGIN
-    INSERT INTO public.stock_issue_items (
-      tenant_id, issue_id, ingredient_id, quantity, entry_unit_id, unit_cost
-    )
-    VALUES (v_tenant, v_issue, v_ingredient, 1, v_production_unit, 0);
-    RAISE EXCEPTION 'ENTRY UNIT ROLES: issue must reject production unit';
-  EXCEPTION
-    WHEN check_violation THEN
-      NULL;
-  END;
+  UPDATE public.stock_issue_items
+  SET entry_unit_id = v_production_unit
+  WHERE tenant_id = v_tenant
+    AND issue_id = v_issue
+    AND ingredient_id = v_ingredient;
 
   RAISE NOTICE 'ENTRY UNIT ROLES: ok';
 END;
