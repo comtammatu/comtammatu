@@ -30,16 +30,23 @@ const actions = readFileSync(
 
 test("ingredient unit editor owns per-row anchor targets and derived previews", () => {
   assert.match(dialog, /unit_anchor_ids: z\.record/);
-  assert.match(dialog, /name: "unit_anchor_ids\./);
+  assert.match(dialog, /name:\s*\("unit_anchor_ids\." \+ unit\.id\)/);
   assert.match(dialog, /deriveEffectiveUnitFactor/);
   assert.match(dialog, /wouldCreateUnitCycle/);
   assert.match(dialog, /findDirectDependents/);
-  assert.match(dialog, /previewCanonical/);
+  assert.match(dialog, /relationSummary/);
+  assert.match(dialog, /effectiveSummary/);
 });
 
 test("catalog payload preserves selected anchors instead of flattening to base", () => {
-  assert.match(model, /const anchorUnitId = relations\.anchorUnitIds\[unitId\]/);
-  assert.match(model, /anchor_unit_id: automatic \? null : anchorUnitId \?\? null/);
+  assert.match(
+    model,
+    /const anchorUnitId = relations\.anchorUnitIds\[unitId\]/,
+  );
+  assert.match(
+    model,
+    /anchor_unit_id: automatic \? null : anchorUnitId \?\? null/,
+  );
   assert.match(
     model,
     /anchor_factor:[\s\S]*automatic \|\| relations\.anchorFactors\[unitId\] == null[\s\S]*Number\(relations\.anchorFactors\[unitId\]\)/,
@@ -62,7 +69,7 @@ test("per-row graph validation locates the failing relation after valid rows", (
   assert.match(dialog, /path: relatedPath\("unit_anchor_ids", issue\.unitId\)/);
 });
 
-test("one canonical unit row keeps relation controls, preview and removal together", () => {
+test("one compact unit row keeps relation controls, summary and removal together", () => {
   assert.match(dialog, /selectedUnitIds\.map\(\(unitId\) =>/);
   assert.match(dialog, /<UnitRelationRow/);
   assert.doesNotMatch(dialog, /conversionRows/);
@@ -72,7 +79,12 @@ test("one canonical unit row keeps relation controls, preview and removal togeth
     /!wouldCreateUnitCycle\([\s\S]*relations\.anchorUnitIds,[\s\S]*unitId,[\s\S]*candidateId,[\s\S]*\)/,
   );
   assert.match(dialog, /\{anchorOptions\.map\(\(option\) => \(/);
-  assert.match(dialog, /baseIdentity/);
+  assert.match(dialog, /const expanded =/);
+  assert.match(dialog, /editingUnitId === unitId/);
+  assert.match(dialog, /<RowActionsMenu/);
+  assert.match(dialog, /copy\.units\.relationSummary/);
+  assert.doesNotMatch(dialog, /<RadioGroup/);
+  assert.doesNotMatch(dialog, /<RadioGroupItem/);
   assert.ok(
     dialog.indexOf("if (dependents.length > 0)") <
       dialog.indexOf('form.setValue("unit_ids", nextUnitIds'),
@@ -85,14 +97,19 @@ test("one canonical unit row keeps relation controls, preview and removal togeth
   assert.match(dialog, /aria-describedby=\{anchorErrorId\}/);
   assert.match(dialog, /onBlur=\{anchor\.field\.onBlur\}/);
   assert.match(dialog, /ref=\{anchor\.field\.ref\}/);
-  assert.match(dialog, /size=\{controlSize === "touch" \? "icon-touch" : "icon-sm"\}/);
+  assert.match(dialog, /controlSize === "touch" \? "icon-touch" : "icon-sm"/);
+  assert.match(dialog, /automatic \? \([\s\S]*<output/);
 });
 
-test("blocked removal stays at the clicked row and moves focus to its first dependent", () => {
+test("blocked removal opens and focuses its first dependent without smooth scrolling", () => {
   assert.match(dialog, /blockedRemovalErrors/);
   assert.match(dialog, /copy\.units\.removeBlocked\(/);
-  assert.match(dialog, /form\.setFocus\(`unit_anchor_ids\.\$\{firstDependentId\}`\)/);
-  assert.match(dialog, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
+  assert.match(dialog, /setEditingUnitId\(firstDependentId\)/);
+  assert.match(
+    dialog,
+    /requestAnimationFrame\(\(\) => \{[\s\S]*form\.setFocus\(`unit_anchor_ids\.\$\{firstDependentId\}`\)/,
+  );
+  assert.doesNotMatch(dialog, /scrollIntoView/);
   assert.match(dialog, /copy\.units\.chooseNewBaseBeforeRemove/);
   assert.doesNotMatch(dialog, /const rebased = changeBase\(nextBaseId\)/);
 });
@@ -106,14 +123,15 @@ test("base changes batch all RHF state before one validation pass", () => {
   assert.match(changeBase, /shouldValidate: false/);
   assert.match(changeBase, /await form\.trigger\(\[/);
   assert.ok(
-    changeBase.lastIndexOf("form.setValue") < changeBase.indexOf("await form.trigger"),
+    changeBase.lastIndexOf("form.setValue") <
+      changeBase.indexOf("await form.trigger"),
   );
 });
 
 test("factor precision and tablet touch contracts are explicit", () => {
   assert.match(dialog, /maxFractionDigits=\{9\}/);
   assert.match(dialog, /<SelectTrigger[\s\S]*size=\{controlSize\}/);
-  assert.match(dialog, /<RadioGroupItem[\s\S]*size=\{controlSize === "touch" \? "touch" : "default"\}/);
+  assert.match(dialog, /triggerSize=\{[\s\S]*controlSize === "touch"/);
   assert.match(actions, /isValidAnchorFactor/);
   assert.match(actions, /isValidEffectiveFactor/);
   assert.doesNotMatch(actions, /const unitFactorSchema/);
@@ -121,8 +139,14 @@ test("factor precision and tablet touch contracts are explicit", () => {
 
 test("dialog preserves raw factor strings until shared domain validation", () => {
   assert.doesNotMatch(dialog, /factor \? Number\(factor\) : null/);
-  assert.match(dialog, /anchorFactors: Object\.fromEntries\([\s\S]*factor \? factor : null/);
-  assert.match(dialog, /const relations = toUnitRelations\(values, unitOptions\)/);
+  assert.match(
+    dialog,
+    /anchorFactors: Object\.fromEntries\([\s\S]*factor \? factor : null/,
+  );
+  assert.match(
+    dialog,
+    /const relations = toUnitRelations\(values, unitOptions\)/,
+  );
   assert.match(dialog, /buildCatalogUnits\(relations\)/);
 });
 
@@ -132,7 +156,8 @@ test("failed rebases cannot partially mutate RHF and surface an actionable base 
     dialog.indexOf("return (", dialog.indexOf("async function changeBase")),
   );
   assert.ok(
-    changeBase.indexOf("rebaseUnitRelations") < changeBase.indexOf("form.setValue"),
+    changeBase.indexOf("rebaseUnitRelations") <
+      changeBase.indexOf("form.setValue"),
   );
   const catchBlock = changeBase.slice(changeBase.indexOf("} catch"));
   assert.doesNotMatch(catchBlock, /form\.setValue/);
@@ -140,16 +165,15 @@ test("failed rebases cannot partially mutate RHF and surface an actionable base 
   assert.match(catchBlock, /form\.setFocus\("base_unit_id"\)/);
 });
 
-test("base radio group owns a stable accessible error and RHF focus ref", () => {
+test("base select owns a stable accessible error and RHF focus ref", () => {
   assert.match(dialog, /const baseErrorId = "base-unit-error"/);
-  assert.match(dialog, /<RadioGroup[\s\S]*inputRef=\{baseField\.ref\}/);
-  assert.doesNotMatch(dialog, /ref=\{baseField\.ref\}/);
+  assert.match(dialog, /id="base-unit-select"/);
+  assert.match(dialog, /ref=\{baseField\.ref\}/);
   assert.match(
     dialog,
-    /aria-describedby=\{[\s\S]*baseFieldState\.error[\s\S]*baseErrorId/,
+    /aria-describedby=\{[\s\S]*baseFieldState\.error \? baseErrorId/,
   );
-  assert.match(dialog, /baseInvalid=\{Boolean\(baseFieldState\.error\)\}/);
-  assert.match(dialog, /<RadioGroupItem[\s\S]*aria-invalid=\{baseInvalid\}/);
+  assert.match(dialog, /aria-invalid=\{Boolean\(baseFieldState\.error\)\}/);
   assert.match(dialog, /<FieldError id=\{baseErrorId\}/);
 });
 

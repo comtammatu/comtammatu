@@ -136,26 +136,22 @@ export const INGREDIENT_FORM_VI = {
     empty: "Chưa có đơn vị nào.",
     maxReached: "Mỗi nguyên liệu có tối đa 20 đơn vị",
     remove: "Bỏ đơn vị",
-    colUnit: "Đơn vị",
-    colFactor: "Quy đổi về đơn vị chuẩn",
-    colAnchor: "Quy đổi theo",
-    colBase: "Chuẩn",
     selectUnit: "Chọn đơn vị",
     anchorPlaceholder: "Chọn đơn vị",
-    autoStandard: "Tự động",
-    previewCanonical: (unit: string, factor: string, base: string) =>
-      `Quy đổi về đơn vị chuẩn: 1 ${unit} = ${factor} ${base}`,
+    actionsFor: "Thao tác đơn vị",
+    doneEditing: "Xong",
+    relationSummary: (unit: string, factor: string, anchor: string) =>
+      `1 ${unit} = ${factor} ${anchor}`,
+    effectiveSummary: (factor: string, base: string) =>
+      `${factor} ${base} theo đơn vị chuẩn`,
     previewInvalid: "Hoàn tất hệ số và đơn vị đích để xem kết quả",
     minOne: "Cần ít nhất 1 đơn vị",
     exactlyOneBase: "Phải có đúng 1 đơn vị chuẩn",
     baseFactorOne: "Đơn vị chuẩn phải có hệ số = 1",
     factorPositive: "Quy đổi phải lớn hơn 0",
-    factorPrecision:
-      "Hệ số quy đổi có tối đa 9 số nguyên và 9 số thập phân",
+    factorPrecision: "Hệ số quy đổi có tối đa 9 số nguyên và 9 số thập phân",
     effectiveFactorPrecision:
       "Kết quả về đơn vị chuẩn phải nằm trong 6 số nguyên và 12 số thập phân",
-    baseIdentity: (unit: string) =>
-      `Đơn vị chuẩn: 1 ${unit} = 1 ${unit}`,
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "Chuẩn",
   },
