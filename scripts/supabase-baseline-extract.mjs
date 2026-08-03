@@ -148,6 +148,7 @@ function buildBaselineDbUrl(expectedRef) {
   //    the requested ref so a stale override can't dump the wrong project.
   const explicit =
     (process.env["SUPABASE_DB_URL"] ?? "").trim() ||
+    readEnvLocalValue("SUPABASE_DB_URL") ||
     readEnvLocalValue(target.explicitUrlEnv);
   if (explicit) {
     if (!explicit.includes(expectedRef)) {
