@@ -309,15 +309,15 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   assert.match(financeMessages, /Nội dung CK:/);
   assert.match(databaseTypes, /create_expense_transfer_intent:/);
   assert.match(
-    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
     /WHEN p_target_method = 'transfer' THEN 'transfer'/,
   );
   assert.match(
-    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
     /WHEN p_target_method IN \('cash', 'transfer'\) THEN now\(\)/,
   );
   assert.doesNotMatch(
-    read("supabase/migrations/20260801042839_expense_mark_transfer_paid.sql"),
+    read("supabase/migration-archive/20260801042839_expense_mark_transfer_paid.sql"),
     /payment_content_expense_token/,
   );
   assert.match(

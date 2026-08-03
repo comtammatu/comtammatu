@@ -7,7 +7,7 @@ const root = join(import.meta.dirname, "../../..");
 const datedDocNumberMigration = readFileSync(
   join(
     root,
-    "supabase/migrations/20260729160000_inventory_doc_numbers_with_date.sql",
+    "supabase/migration-archive/20260729160000_inventory_doc_numbers_with_date.sql",
   ),
   "utf8",
 );

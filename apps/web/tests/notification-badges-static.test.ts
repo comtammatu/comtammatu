@@ -113,7 +113,7 @@ test("notification shell uses one realtime summary for footer and tab badges", (
 
 test("migration targets each handoff role and exposes exact grouped counts", () => {
   const migration = read(
-    "supabase/migrations/20260730180000_ops_notification_badges.sql",
+    "supabase/migration-archive/20260730180000_ops_notification_badges.sql",
   );
   const notificationItem = read(
     "apps/web/app/_components/notification-item.tsx",
@@ -157,7 +157,7 @@ test("migration targets each handoff role and exposes exact grouped counts", () 
 
 test("resolved or deleted GRNs expire receiving notifications in realtime", () => {
   const migration = read(
-    "supabase/migrations/20260730193000_expire_stale_grn_notifications.sql",
+    "supabase/migration-archive/20260730193000_expire_stale_grn_notifications.sql",
   );
   const hook = read("apps/web/app/_hooks/use-notification-badges.ts");
 
@@ -188,7 +188,7 @@ test("resolved or deleted GRNs expire receiving notifications in realtime", () =
 test("procurement notifications route to Mua hàng and GRNs route to Nhập kho", () => {
   const shell = read("apps/web/app/lib/shell-primitives.ts");
   const migration = read(
-    "supabase/migrations/20260730195000_route_procurement_notifications.sql",
+    "supabase/migration-archive/20260730195000_route_procurement_notifications.sql",
   );
 
   for (const kind of [

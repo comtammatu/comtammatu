@@ -7,7 +7,7 @@ const readRoot = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "../../..", path), "utf8");
 
 const migration = readRoot(
-  "supabase/migrations/20260730100000_auto_grn_draft_queue.sql",
+  "supabase/migration-archive/20260730100000_auto_grn_draft_queue.sql",
 );
 
 test("receivable PO status creates one active GRN draft", () => {

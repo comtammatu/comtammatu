@@ -7,21 +7,21 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 const migration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260728170006_harden_greenfield_advisor_findings.sql",
+    "supabase/migration-archive/20260728170006_harden_greenfield_advisor_findings.sql",
   ),
   "utf8",
 );
 const postTopology = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260728170211_reenforce_advisor_harden_after_topology.sql",
+    "supabase/migration-archive/20260728170211_reenforce_advisor_harden_after_topology.sql",
   ),
   "utf8",
 );
 const topology = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260728190000_inventory_topology_physical_qc_cleanup.sql",
+    "supabase/migration-archive/20260728190000_inventory_topology_physical_qc_cleanup.sql",
   ),
   "utf8",
 );

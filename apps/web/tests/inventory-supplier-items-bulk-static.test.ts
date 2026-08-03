@@ -9,7 +9,7 @@ const read = (relativePath: string) =>
 
 test("supplier item batch mapping is atomic and tenant-scoped", () => {
   const migration = read(
-    "supabase/migrations/20260729160100_bulk_create_supplier_items.sql",
+    "supabase/migration-archive/20260729160100_bulk_create_supplier_items.sql",
   );
   const actions = read(
     "apps/web/app/(protected)/inventory/suppliers/[id]/items/actions.ts",

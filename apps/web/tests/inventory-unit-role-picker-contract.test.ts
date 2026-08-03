@@ -124,7 +124,7 @@ test("menu recipe save accepts any active ladder unit and stock migration allows
   assert.match(lineEditor, /getIngredientUnitOptions\(ingredient\)/);
 
   const migration = readRepo(
-    "supabase/migrations/20260801001600_inventory_entry_unit_receipt_or_issue.sql",
+    "supabase/migration-archive/20260801001600_inventory_entry_unit_receipt_or_issue.sql",
   );
   assert.match(migration, /entry_unit_matches_roles/);
   assert.match(migration, /enforce_inventory_unit_roles\('receipt,issue'\)/);

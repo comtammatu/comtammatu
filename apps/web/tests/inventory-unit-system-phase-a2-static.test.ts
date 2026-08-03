@@ -116,7 +116,7 @@ test("A2 historically locked unit ladders after movements; current catalog rebas
 
 test("current catalog save rebases base quantities and keeps the editor unlocked", () => {
   const rebaseMigration = readRepo(
-    "supabase/migrations/20260731220433_catalog_unit_rebase_allow_edit.sql",
+    "supabase/migration-archive/20260731220433_catalog_unit_rebase_allow_edit.sql",
   );
   assert.match(rebaseMigration, /current_quantity = current_quantity \* v_scale/);
   assert.match(rebaseMigration, /avg_unit_cost = CASE/);
@@ -133,7 +133,7 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
     /inventory_unit_ladder_locked_by_stock_movements/,
   );
   const rebaseJoinFix = readRepo(
-    "supabase/migrations/20260731222809_catalog_unit_rebase_fix_draft_factor_join.sql",
+    "supabase/migration-archive/20260731222809_catalog_unit_rebase_fix_draft_factor_join.sql",
   );
   assert.doesNotMatch(
     rebaseJoinFix,

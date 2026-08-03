@@ -19,7 +19,7 @@ const MIGRATION_PATH =
 
 test("Migration backfills leave grants and notifies approvers", () => {
   const migration = read(MIGRATION_PATH);
-  const baseline = read("supabase/migrations/20260727120000_baseline.sql");
+  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
 
   for (const expected of [
     "SELECT public.sync_missing_permissions_from_template();",

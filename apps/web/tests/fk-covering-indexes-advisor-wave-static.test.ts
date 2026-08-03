@@ -7,7 +7,7 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 const migration = readFileSync(
   resolve(
     repoRoot,
-    "supabase/migrations/20260728174910_fk_covering_indexes_advisor_wave.sql",
+    "supabase/migration-archive/20260728174910_fk_covering_indexes_advisor_wave.sql",
   ),
   "utf8",
 );

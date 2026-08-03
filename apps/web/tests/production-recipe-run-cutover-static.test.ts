@@ -7,7 +7,7 @@ const root = resolve(import.meta.dirname, "../../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 const migration = read(
-  "supabase/migrations/20260801171412_production_recipe_unit_workflow_cutover.sql",
+  "supabase/migration-archive/20260801171412_production_recipe_unit_workflow_cutover.sql",
 );
 const recipeActions = read(
   "apps/web/app/(protected)/inventory/production-recipe-actions.ts",

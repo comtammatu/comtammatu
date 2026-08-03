@@ -235,7 +235,7 @@ test("HRM consumption history stays available but no longer gates Employee check
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
   const documentCorrectionMigrationSrc = read(
-    "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql",
+    "supabase/migration-archive/20260801120606_route_document_stock_corrections_through_ledger.sql",
   );
   const hrSetupClientSrc = read(
     "apps/web/app/(protected)/hr/setup/setup-client.tsx",
@@ -363,7 +363,7 @@ test("archived checkout lineage remains testable with branch-scoped manager auth
   const workStateSrc = read(
     "apps/web/lib/staff-runtime/_lib/today-work-state.ts",
   );
-  const baselineSrc = read("supabase/migrations/20260727120000_baseline.sql");
+  const baselineSrc = read("supabase/migration-archive/20260727120000_baseline.sql");
   const countGateMigrationSrc = read(
     "supabase/migration-archive/20260629183853_require_inventory_count_checkout_gate.sql",
   );

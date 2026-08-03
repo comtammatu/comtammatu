@@ -86,7 +86,7 @@ const branchOpsAuthorizationMigration = readFileSync(
 const baseline = normalizePgDumpSql(
   readFileSync(
     new URL(
-      "../../../supabase/migrations/20260727120000_baseline.sql",
+      "../../../supabase/migration-archive/20260727120000_baseline.sql",
       import.meta.url,
     ),
     "utf8",
@@ -95,7 +95,7 @@ const baseline = normalizePgDumpSql(
 
 const branchOpsPolicyMigration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260729250100_restore_branch_ops_realtime_policy.sql",
+    "../../../supabase/migration-archive/20260729250100_restore_branch_ops_realtime_policy.sql",
     import.meta.url,
   ),
   "utf8",

@@ -440,7 +440,7 @@ test.skip("inventory RPCs derive persisted unit text from the unit catalog", () 
   const migration = read(
     "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
-  const baseline = read("supabase/migrations/20260727120000_baseline.sql");
+  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
 
   for (const sql of [migration, baseline]) {
     assert.match(sql, /inventory_entry_unit_code/);
@@ -475,7 +475,7 @@ test.skip("expiry writeoff RPC does not accept a unit text argument", () => {
   const bridge = read(
     "supabase/migration-archive/20260704214448_inventory_expiry_writeoff_optional_unit_bridge.sql",
   );
-  const baseline = read("supabase/migrations/20260727120000_baseline.sql");
+  const baseline = read("supabase/migration-archive/20260727120000_baseline.sql");
   const action = read("apps/web/app/(protected)/inventory/waste-actions.ts");
 
   assert.match(

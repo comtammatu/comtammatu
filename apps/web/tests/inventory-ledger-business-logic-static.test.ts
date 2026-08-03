@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 const lockMigration =
   "supabase/migration-archive/20260709074049_lock_inventory_adjustment_workflow.sql";
 const documentCorrectionMigration =
-  "supabase/migrations/20260801120606_route_document_stock_corrections_through_ledger.sql";
+  "supabase/migration-archive/20260801120606_route_document_stock_corrections_through_ledger.sql";
 
 function read(path: string): string {
   return readFileSync(`${root}${path}`, "utf8");

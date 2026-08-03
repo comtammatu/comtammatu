@@ -19,10 +19,10 @@ const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
 );
 const roleUnitMigration = readRepo(
-  "supabase/migrations/20260731172142_inventory_unit_roles_and_snapshots.sql",
+  "supabase/migration-archive/20260731172142_inventory_unit_roles_and_snapshots.sql",
 );
 const independentRoleMigration = readRepo(
-  "supabase/migrations/20260801151413_independent_inventory_unit_roles.sql",
+  "supabase/migration-archive/20260801151413_independent_inventory_unit_roles.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {

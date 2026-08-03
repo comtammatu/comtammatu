@@ -66,7 +66,7 @@ test("the Inventory cleanup ships as a forward migration", () => {
     existsSync(
       join(
         repoRoot,
-        "supabase/migrations/20260728190000_inventory_topology_physical_qc_cleanup.sql",
+        "supabase/migration-archive/20260728190000_inventory_topology_physical_qc_cleanup.sql",
       ),
     ),
     true,
@@ -186,7 +186,7 @@ test("D101 requires invoice valuation settlement instead of price history only",
   const decisions = read("docs/plan/decisions.md");
   const current = decision(decisions, "D101");
   const migration = read(
-    "supabase/migrations/20260730155938_inventory_valuation_subledger.sql",
+    "supabase/migration-archive/20260730155938_inventory_valuation_subledger.sql",
   );
 
   assert.match(current, /moving WAC/i);

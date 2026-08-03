@@ -15,7 +15,7 @@ const baseline = readFileSync(
   join(
     process.cwd(),
     "../..",
-    "supabase/migrations/20260727120000_baseline.sql",
+    "supabase/migration-archive/20260727120000_baseline.sql",
   ),
   "utf8",
 );

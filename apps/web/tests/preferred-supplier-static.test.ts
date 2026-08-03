@@ -6,12 +6,12 @@ import { test } from "node:test";
 const root = join(process.cwd(), "../..");
 const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 const bulkMigration = read(
-  "supabase/migrations/20260729160100_bulk_create_supplier_items.sql",
+  "supabase/migration-archive/20260729160100_bulk_create_supplier_items.sql",
 );
 
 test("preferred supplier migration adds is_preferred and setter RPC", () => {
   const migration = read(
-    "supabase/migrations/20260729140400_supplier_item_preferred.sql",
+    "supabase/migration-archive/20260729140400_supplier_item_preferred.sql",
   );
   assert.match(migration, /ADD COLUMN IF NOT EXISTS is_preferred boolean/);
   assert.match(migration, /supplier_items_one_preferred_per_ingredient_uidx/);

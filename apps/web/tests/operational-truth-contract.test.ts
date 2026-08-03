@@ -10,7 +10,7 @@ const evidenceMigration = read(
   "../../../supabase/migration-archive/20260725141050_add_order_kds_operational_evidence.sql",
 );
 const baselineMigration = read(
-  "../../../supabase/migrations/20260727120000_baseline.sql",
+  "../../../supabase/migration-archive/20260727120000_baseline.sql",
 );
 const reconciliationMigration = read(
   "../../../supabase/migration-archive/20260725141240_repair_sepay_canonical_reconciliation.sql",

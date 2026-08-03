@@ -8,7 +8,7 @@ import {
 
 const migration = readFileSync(
   new URL(
-    "../../../supabase/migrations/20260802122213_employee_recurring_shift_schedules.sql",
+    "../../../supabase/migration-archive/20260802122213_employee_recurring_shift_schedules.sql",
     import.meta.url,
   ),
   "utf8",

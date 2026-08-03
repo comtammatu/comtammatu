@@ -29,7 +29,7 @@ const poDraftMigration = readRepo(
   "supabase/migration-archive/20260708130514_separate_free_and_po_grn_drafts.sql",
 );
 const multiSupplierMigration = readRepo(
-  "supabase/migrations/20260729010000_multi_supplier_grn_split_po.sql",
+  "supabase/migration-archive/20260729010000_multi_supplier_grn_split_po.sql",
 );
 
 test("GRN drafts are looked up in the selected receiving branch", () => {

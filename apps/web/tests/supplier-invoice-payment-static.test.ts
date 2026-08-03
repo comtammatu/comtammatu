@@ -147,7 +147,7 @@ test("supplier payment retry keeps one intent key after an ambiguous failure", (
 test("supplier invoice payment action allows Finance roles but keeps advances Owner-only", () => {
   const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const migration = readRoot(
-    "supabase/migrations/20260730112426_accountant_supplier_invoice_payment_access.sql",
+    "supabase/migration-archive/20260730112426_accountant_supplier_invoice_payment_access.sql",
   );
 
   assert.match(source, /recordSupplierPayment/);
@@ -203,7 +203,7 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
 
 test("supplier invoice number is removed without weakening draft or valuation flows", () => {
   const migration = readRoot(
-    "supabase/migrations/20260801130848_remove_supplier_invoice_number.sql",
+    "supabase/migration-archive/20260801130848_remove_supplier_invoice_number.sql",
   );
   const notificationStart = migration.indexOf(
     "CREATE OR REPLACE FUNCTION private.notify_supplier_invoice_valuation_variance",
@@ -513,7 +513,7 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
   const source = normalizePgDumpSql(
-    readRoot("supabase/migrations/20260727120000_baseline.sql"),
+    readRoot("supabase/migration-archive/20260727120000_baseline.sql"),
   );
 
   assert.match(source, /CREATE FUNCTION public\.create_supplier_payment/);
@@ -523,7 +523,7 @@ test("baseline keeps supplier payment ledger and invoice status together", () =>
 
 test("supplier payment RPC requires matched invoice evidence by invoice kind", () => {
   const migration = readRoot(
-    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const acceptance = readRoot(
     "supabase/tests/supplier_invoice_ap_stability_test.sql",
@@ -616,7 +616,7 @@ test("supplier returns are unique per active GRN", () => {
 
 test("supplier invoice matching separates goods receipts from service verification", () => {
   const migration = readRoot(
-    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
@@ -703,7 +703,7 @@ test("supplier invoice action no longer reads the removed number column", () => 
 
 test("supplier invoice payment exposes visible append-only advance allocation", () => {
   const migration = readRoot(
-    "supabase/migrations/20260730110000_supplier_invoice_ap_stability.sql",
+    "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
   const client = readWeb(
@@ -746,7 +746,7 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
   assert.match(grnActions, /from\("supplier_invoices"\)/);
   assert.match(
     readRoot(
-      "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
+      "supabase/migration-archive/20260729180000_purchase_request_po_first_grn_ap.sql",
     ),
     /supplier_invoice_receipt_allocations/,
   );
@@ -758,7 +758,7 @@ test("confirmed GRN surfaces link into supplier invoice create or view", () => {
 
 test("supplier_invoices monetary/VAT columns are granted after column lockdown", () => {
   const migration = readRoot(
-    "supabase/migrations/20260729150200_grant_supplier_invoices_monetary_columns.sql",
+    "supabase/migration-archive/20260729150200_grant_supplier_invoices_monetary_columns.sql",
   );
   const cockpit = readWeb("app/(protected)/finance/_lib/finance-cockpit.ts");
 

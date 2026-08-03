@@ -38,7 +38,7 @@ test("accountant runs Finance operations without Orders or Settings grants", () 
 
 test("Finance RPC authority admits accountant and preserves tenant scope", () => {
   const migration = read(
-    "supabase/migrations/20260731123415_accountant_finance_authority.sql",
+    "supabase/migration-archive/20260731123415_accountant_finance_authority.sql",
   );
 
   assert.match(migration, /public\.has_position\('accountant'\)/);

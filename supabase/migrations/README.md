@@ -45,6 +45,8 @@ part of the chain — there is no separate manual apply step:
 - realtime publication membership (`ADD TABLE`, guarded so it only adds tables not
   already members).
 - cron jobs via `cron.schedule(...)`.
+- global permission keys, scoped access roles, and their capability mappings;
+  schema-only dumps omit this required reference data.
 
 The fold migration is the single source of truth for managed surfaces.
 

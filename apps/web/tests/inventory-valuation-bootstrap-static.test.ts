@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 
 const root = resolve(import.meta.dirname, "../../..");
-const migrationsDir = resolve(root, "supabase/migrations");
+const migrationsDir = resolve(root, "supabase/migration-archive");
 
 test("invoice-backed valuation bootstrap is atomic and preserves history", () => {
   const migrationNames = readdirSync(migrationsDir).filter((name) =>

@@ -123,7 +123,7 @@ test("pending intent and provider metadata share one guarded write boundary", ()
 
 test("authenticated remote-payment RPC is absent after provider cutover", () => {
   const baseline = normalizePgDumpSql(
-    read("supabase/migrations/20260727120000_baseline.sql"),
+    read("supabase/migration-archive/20260727120000_baseline.sql"),
   );
 
   assert.doesNotMatch(
@@ -229,7 +229,7 @@ test("Owner bank review is atomic and cannot overwrite provider evidence", () =>
 
 test("HĐĐT payment trigger skips non-invoice provider_data updates", () => {
   const skipMigration = read(
-    "supabase/migrations/20260728170010_skip_tax_invoice_sync_on_non_invoice_provider_data.sql",
+    "supabase/migration-archive/20260728170010_skip_tax_invoice_sync_on_non_invoice_provider_data.sql",
   );
   assert.match(
     skipMigration,

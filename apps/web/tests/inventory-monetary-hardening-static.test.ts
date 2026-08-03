@@ -79,14 +79,16 @@ test("stock on hand exposes only WAC and inventory value", () => {
 });
 
 test("GRN valuation derives price only from confirmed supplier invoices", () => {
-  const migrationFiles = readdirSync(resolve(repoRoot, "supabase/migrations"))
+  const migrationFiles = readdirSync(
+    resolve(repoRoot, "supabase/migration-archive"),
+  )
     .filter((file) =>
       file.endsWith("_invoice_price_authority_for_grn_valuation.sql"),
     );
   assert.equal(migrationFiles.length, 1);
   const migrationFile = migrationFiles[0];
   assert.ok(migrationFile);
-  const migration = read(`supabase/migrations/${migrationFile}`);
+  const migration = read(`supabase/migration-archive/${migrationFile}`);
   const purchaseOrderActions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );

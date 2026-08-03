@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
-const migrationsRoot = path.join(repoRoot, "supabase", "migrations");
+const migrationsRoot = path.join(repoRoot, "supabase", "migration-archive");
 const sqlRegression = readFileSync(
   path.join(repoRoot, "supabase", "tests", "money_precision_contract_test.sql"),
   "utf8",
