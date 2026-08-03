@@ -1,9 +1,19 @@
 import { test as setup } from "@playwright/test";
-import { E2E_AUTH_STORAGE, E2E_AUTH_STORAGE_MANAGER, E2E_AUTH_STORAGE_OWNER } from "../playwright.config";
 import {
-  createServiceClient,
-  resolveUserByEmail,
-} from "./inventory/helpers";
+  E2E_AUTH_STORAGE,
+  E2E_AUTH_STORAGE_MANAGER,
+  E2E_AUTH_STORAGE_OWNER,
+} from "../playwright.config";
+import { resolveUserByEmail } from "./inventory/helpers";
+import {
+  requireIsolatedE2EEnvironment,
+  resolveConfiguredOwnerEmail,
+} from "./helpers/environment";
+import { createE2EServiceClient } from "./helpers/service-client";
+
+setup.beforeAll(() => {
+  requireIsolatedE2EEnvironment();
+});
 
 setup("authenticate as test cashier", async ({ page }) => {
   const email = process.env.E2E_CASHIER_EMAIL;
@@ -41,7 +51,7 @@ setup("authenticate as test manager", async ({ page }) => {
     );
   }
 
-  const supabase = createServiceClient();
+  const supabase = createE2EServiceClient();
   const manager = await resolveUserByEmail(supabase, email);
   const [
     { data: branch, error: branchError },
@@ -95,7 +105,7 @@ setup("authenticate as test manager", async ({ page }) => {
 });
 
 setup("authenticate as test owner", async ({ page }) => {
-  const email = process.env.E2E_OWNER_EMAIL ?? "keeper@comtammatu.vn";
+  const email = resolveConfiguredOwnerEmail();
   const password = process.env.E2E_OWNER_PASSWORD ?? "Test1234!";
 
   await page.goto("/login");

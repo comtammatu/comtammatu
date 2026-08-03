@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { createE2EServiceClient } from "./helpers/service-client";
 import {
   createTestOrder,
   getOrderDiscountAmount,
@@ -121,16 +122,7 @@ test.describe("Edit pending order item — pricing recompute", () => {
 });
 
 async function resolveOrderItemId(orderId: number): Promise<number> {
-  // Inline lookup avoids an extra exported helper for a one-off spec need.
-  const { createClient } = await import("@supabase/supabase-js");
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing SUPABASE env vars for order_item lookup");
-  }
-  const sb = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const sb = createE2EServiceClient();
   const { data, error } = await sb
     .from("order_items")
     .select("id")

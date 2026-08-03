@@ -30,28 +30,31 @@ test("ingredient unit dialog models active units around one standard unit", () =
   assert.match(source, /unit_ids: z/);
   assert.match(source, /\.max\(20/);
   assert.match(source, /name: "base_unit_id"/);
-  assert.match(source, /UnitFactorField/);
+  assert.match(source, /unit_anchor_ids: z\.record/);
+  assert.match(source, /unit_factors: z\.record/);
+  assert.match(source, /UnitRelationRow/);
   assert.match(source, /<RadioGroup/);
   assert.match(source, /<ItemGroup/);
-  assert.match(source, /<InputGroup/);
+  assert.match(source, /<FormattedNumberInput/);
+  assert.match(source, /anchorOptions=\{anchorOptions\}/);
   assert.match(source, /buildCatalogUnits/);
-  assert.match(source, /rebaseUnitFactors/);
+  assert.match(source, /rebaseUnitRelations/);
   assert.doesNotMatch(source, /copy\.units\.productionNone/);
   assert.doesNotMatch(source, /label=\{copy\.units\.productionUnit\}/);
   assert.doesNotMatch(messages, /productionNone|productionUnit/);
-  assert.match(source, /copy\.units\.conversionSection\(/);
+  assert.doesNotMatch(source, /conversionRows|conversionSection/);
   assert.doesNotMatch(source, /disabled=\{isBase \|\| automatic\}/);
-  assert.doesNotMatch(source, /size="touch"/);
+  assert.match(source, /controlSize === "touch" \? "touch" : "default"/);
   assert.doesNotMatch(
     source,
     /input_to_output_factor|output_to_production_factor|input_unit_is_different/,
   );
   assert.doesNotMatch(
     source,
-    /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
+    /DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
   assert.match(messages, /baseUnit: "Đơn vị chuẩn"/);
-  assert.match(messages, /sectionLabel: "Đơn vị lưu trữ"/);
+  assert.match(messages, /sectionLabel: "Đơn vị và quy đổi"/);
   assert.doesNotMatch(messages, /Đơn vị nhập|Đơn vị xuất|vai trò độc lập/);
   assert.doesNotMatch(messages, /Nhập ≥ Xuất ≥ Sản xuất/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);

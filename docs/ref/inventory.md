@@ -131,11 +131,31 @@ của Đơn vị chuẩn; `production_unit_id` để `NULL`. Runtime không đ�
 không coi chúng là cấu hình nghiệp vụ và không hiển thị chúng trên UI. Chúng
 được xóa ở migration contract sau khi runtime mới đã deploy và soak.
 
-Mọi đơn vị quy đổi theo mô hình hình sao về Đơn vị chuẩn. Đơn vị chuẩn có hệ số `1`.
-Hai đơn vị chuẩn cùng `dimension` lấy tỷ lệ từ `units.standard_factor` và không
-cho sửa tay. Bao bì/quy cách riêng khai báo trực tiếp `1 đơn vị = X Đơn vị
-chuẩn`; không tạo chuỗi quy đổi nhiều tầng. Khi đổi Đơn vị chuẩn, RPC quy đổi lại
-hệ số, số lượng và đơn giá để giữ nguyên lượng vật lý và tổng giá trị tồn.
+Trong editor, mỗi đơn vị không phải Đơn vị chuẩn chỉ được chọn đích từ các đơn
+vị đang hoạt động đã thêm cho cùng nguyên liệu, qua `anchor_unit_id` và
+`anchor_factor`. Editor yêu cầu chuỗi neo kết thúc tại Đơn vị chuẩn, không tự
+trỏ và không tạo vòng lặp. Ví dụ: `1 Thùng = 24 Chai`, `1 Chai = 250 ml`, với
+`ml` là Đơn vị chuẩn.
+
+RPC `save_ingredient_catalog` suy hệ số từ payload và xác nhận lại toàn bộ đồ
+thị ở biên database. Mỗi `anchor_unit_id` khác `NULL` phải khớp đúng một dòng
+active trong `p_units` của chính nguyên liệu; Đơn vị chuẩn không được có cạnh đi
+ra. Resolver đi theo cạnh đã khai báo của cả đơn vị chuẩn hệ thống đã chọn,
+không dừng sớm tại registry, đồng thời chặn neo thiếu, tự trỏ, vòng lặp và mọi
+chuỗi có các `dimension` đã biết không tương thích. Đơn vị không chuẩn bắt buộc
+có neo; chỉ đơn vị chuẩn hệ thống không có neo mới được suy trực tiếp bằng
+`standard_factor` khi cùng `dimension` với Đơn vị chuẩn của nguyên liệu.
+
+`anchor_factor` phải biểu diễn chính xác bằng `numeric(18,9)` và
+`to_base_factor` cuối cùng của mỗi dòng phải biểu diễn chính xác bằng
+`numeric(18,12)`. RPC từ chối giá trị không hữu hạn, không dương, vượt miền hoặc
+cần làm tròn; không âm thầm làm tròn payload gọi trực tiếp trước khi lưu.
+
+`ingredient_units.to_base_factor` là hệ số hiệu lực đã suy qua toàn bộ chuỗi.
+Ledger, tồn, ngưỡng và giá vốn chỉ dùng hệ số hiệu lực này. Hai đơn vị chuẩn cùng
+`dimension` mặc định lấy tỷ lệ từ `units.standard_factor`; Owner có thể khai báo
+đích khác khi cần quy cách riêng. Khi đổi Đơn vị chuẩn, RPC quy đổi hệ số, số
+lượng và đơn giá để giữ nguyên lượng vật lý và tổng giá trị tồn.
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
 > và giá vốn BQ **lưu và hiển thị** theo **Đơn vị chuẩn**. Dòng chứng từ cho phép

@@ -1,29 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@comtammatu/database";
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import {
+  createE2EServiceClient,
+  type E2EServiceClient,
+} from "./service-client";
 
-type ServiceClient = ReturnType<typeof createServiceClient>;
+type ServiceClient = E2EServiceClient;
 
 const E2E_MENU_CATEGORY_NAME = "E2E Test Category";
 const E2E_MENU_ITEM_NAME = "E2E Test Item";
 const E2E_TABLE_NUMBER = 999;
 
-/**
- * Service-role Supabase client for test setup / teardown.
- * Only used in E2E helpers — never in application runtime.
- */
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for E2E tests",
-    );
-  }
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+const createServiceClient = createE2EServiceClient;
 
 export interface TestStaffProfile {
   userId: string;
@@ -157,7 +144,9 @@ export async function getCashierProfile(): Promise<TestStaffProfile> {
 export async function getManagerProfile(): Promise<TestStaffProfile> {
   const email = process.env.E2E_INVENTORY_MANAGER_EMAIL;
   if (!email) {
-    throw new Error("E2E_INVENTORY_MANAGER_EMAIL must be set in .env.test.local");
+    throw new Error(
+      "E2E_INVENTORY_MANAGER_EMAIL must be set in .env.test.local",
+    );
   }
 
   return resolveProfileByEmail(createServiceClient(), email);
@@ -179,9 +168,7 @@ export async function resolveChefCredentials() {
   const users = await listAuthUsers(supabase);
   const { data: chefProfile, error } = await supabase
     .from("profiles")
-    .select(
-      "id, tenant_id, branch_id, full_name, positions!inner(code)",
-    )
+    .select("id, tenant_id, branch_id, full_name, positions!inner(code)")
     .eq("tenant_id", cashier.tenantId)
     .eq("branch_id", cashier.branchId)
     .eq("positions.code", "chef")
@@ -372,19 +359,22 @@ async function ensureTerminalAndSession(
       const terminalId = existingTerminal
         ? existingTerminal.id
         : await (async () => {
-            const { data: insertedTerminal, error: terminalError } = await supabase
-              .from("pos_terminals")
-              .insert({
-                tenant_id: cashier.tenantId,
-                branch_id: cashier.branchId,
-                name: terminalName,
-                device_id: `e2e-${cashier.userId.slice(0, 8)}`,
-                is_active: true,
-              })
-              .select("id")
-              .single();
+            const { data: insertedTerminal, error: terminalError } =
+              await supabase
+                .from("pos_terminals")
+                .insert({
+                  tenant_id: cashier.tenantId,
+                  branch_id: cashier.branchId,
+                  name: terminalName,
+                  device_id: `e2e-${cashier.userId.slice(0, 8)}`,
+                  is_active: true,
+                })
+                .select("id")
+                .single();
             if (terminalError || !insertedTerminal) {
-              throw new Error(`Failed to create E2E terminal: ${terminalError?.message}`);
+              throw new Error(
+                `Failed to create E2E terminal: ${terminalError?.message}`,
+              );
             }
             return insertedTerminal.id;
           })();
@@ -395,7 +385,9 @@ async function ensureTerminalAndSession(
         .eq("id", openSession.id);
 
       if (updateErr) {
-        throw new Error(`Failed to assign terminal to open session: ${updateErr.message}`);
+        throw new Error(
+          `Failed to assign terminal to open session: ${updateErr.message}`,
+        );
       }
 
       return {

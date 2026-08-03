@@ -113,11 +113,19 @@ export const INGREDIENT_FORM_VI = {
   units: {
     baseUnit: "Đơn vị chuẩn",
     baseUnitDescription: "Tồn kho và giá vốn được lưu theo đơn vị này.",
-    conversionAria: (fromUnit: string, toUnit: string) =>
-      `Số ${toUnit} trong 1 ${fromUnit}`,
     unitPending: "…",
-    sectionLabel: "Đơn vị lưu trữ",
-    conversionSection: (baseUnit: string) => `Quy đổi về ${baseUnit}`,
+    sectionLabel: "Đơn vị và quy đổi",
+    anchorAria: (unit: string) => `Quy đổi ${unit} sang đơn vị`,
+    factorAria: (unit: string) => `Số lượng đơn vị đích trong 1 ${unit}`,
+    anchorRequired: "Chọn đơn vị cần quy đổi sang",
+    anchorSelf: "Một đơn vị không thể quy đổi sang chính nó",
+    anchorCycle: "Quan hệ này tạo vòng lặp. Chọn đơn vị đích khác",
+    reassignBeforeRemove: (dependent: string, target: string) =>
+      `${dependent} đang quy đổi sang ${target}. Hãy đổi đơn vị đích trước`,
+    removeBlocked: (target: string, dependents: string) =>
+      `Không thể bỏ ${target} vì ${dependents} đang quy đổi theo đơn vị này. Hãy đổi đơn vị đích trước.`,
+    chooseNewBaseBeforeRemove: (unit: string) =>
+      `Hãy chọn đơn vị chuẩn khác trước khi bỏ ${unit}.`,
     selectBase: "Chọn đơn vị chuẩn",
     baseMustBeSelected: "Đơn vị chuẩn phải thuộc danh sách đã chọn",
     invalidBaseFactor:
@@ -135,15 +143,19 @@ export const INGREDIENT_FORM_VI = {
     selectUnit: "Chọn đơn vị",
     anchorPlaceholder: "Chọn đơn vị",
     autoStandard: "Tự động",
-    previewPrefix: (unit: string) => `1 ${unit} =`,
-    previewValue: (factor: string, base: string) => `${factor} ${base}`,
     previewCanonical: (unit: string, factor: string, base: string) =>
       `Quy đổi về đơn vị chuẩn: 1 ${unit} = ${factor} ${base}`,
-    previewInvalid: "Chưa cấu hình quy đổi",
+    previewInvalid: "Hoàn tất hệ số và đơn vị đích để xem kết quả",
     minOne: "Cần ít nhất 1 đơn vị",
     exactlyOneBase: "Phải có đúng 1 đơn vị chuẩn",
     baseFactorOne: "Đơn vị chuẩn phải có hệ số = 1",
     factorPositive: "Quy đổi phải lớn hơn 0",
+    factorPrecision:
+      "Hệ số quy đổi có tối đa 9 số nguyên và 9 số thập phân",
+    effectiveFactorPrecision:
+      "Kết quả về đơn vị chuẩn phải nằm trong 6 số nguyên và 12 số thập phân",
+    baseIdentity: (unit: string) =>
+      `Đơn vị chuẩn: 1 ${unit} = 1 ${unit}`,
     distinctUnits: "Đơn vị không được trùng nhau",
     baseTag: "Chuẩn",
   },

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { createClient, type RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { createE2EServiceClient } from "./helpers/service-client";
 import {
   cleanupBranchMenuDailyLimit,
   getBranchMenuDailyLimitSoldToday,
@@ -35,15 +36,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
       limitQuantity: 5,
     });
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      throw new Error("Missing SUPABASE env vars for realtime test");
-    }
-
-    const subscriber = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const subscriber = createE2EServiceClient();
 
     let receivedPayload: Record<string, unknown> | null = null;
     let channel: RealtimeChannel | null = null;
@@ -80,9 +73,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
       await subscribed;
 
       // Mutate sold_today directly to simulate trigger increment.
-      const mutator = createClient(url, key, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
+      const mutator = createE2EServiceClient();
       // Business date must match the server-side Asia/Ho_Chi_Minh keying used
       // by the daily-limit trigger and availability RPC — a UTC date drifts
       // one day past UTC-midnight on a UTC+7 machine and reads the wrong row.
@@ -134,15 +125,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
       limitQuantity: 2,
     });
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      throw new Error("Missing SUPABASE env vars");
-    }
-
-    const sb = createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const sb = createE2EServiceClient();
 
     // Manually create an order to attach order_items to (the enforcement
     // trigger fires on order_items INSERT). Cleanup happens in finally.
@@ -181,6 +164,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
         modifiers: [],
         sides: [],
         subtotal: ctx.unitPrice * 2,
+        vat_rate: 0,
         status: "pending",
       });
       expect(firstErr).toBeNull();
@@ -203,6 +187,7 @@ test.describe("Daily limit — realtime + enforcement", () => {
         modifiers: [],
         sides: [],
         subtotal: ctx.unitPrice,
+        vat_rate: 0,
         status: "pending",
       });
       expect(secondErr).not.toBeNull();

@@ -89,7 +89,8 @@ jobs:
 
   # Separate job (does not block the fast gates): the CI-only E2E harness starts
   # an isolated Supabase stack with baseline + dev/QA seeds, starts the app, and
-  # runs the Playwright POS->payment->KDS smoke. It never changes workspace env.
+  # runs deterministic payment and ingredient-conversion smoke coverage. It
+  # never changes workspace env.
   e2e-smoke:
     needs: detect
     if: >-
@@ -118,9 +119,8 @@ jobs:
       # compiles it on-demand, which blows the smoke's timeout. The dedicated
       # E2E scripts consume only apps/web/.env.test.local.
       - run: pnpm --filter @comtammatu/web build:e2e
-      # Scoped to the POS->payment->KDS core (payment-cash) — the deterministic
-      # hot-path smoke. The broader suite (guides/visual/inventory RBAC/realtime
-      # KDS) needs more seed/setup and is out of scope for a fast CI gate.
+      # One Playwright invocation covers the payment hot path and the isolated
+      # ingredient unit-conversion graph without starting a second web server.
       - run: pnpm --filter @comtammatu/web run test:e2e:smoke
         env:
           E2E_WEB_COMMAND: pnpm start:e2e

@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@comtammatu/database";
+import { createE2EServiceClient } from "./helpers/service-client";
 import {
   createTestOrder,
   getKdsTicketStatus,
@@ -16,20 +15,12 @@ import {
  * Verifies payment confirmation closes the POS order commercially and releases
  * the dine-in table without forcing KDS ticket state.
  */
-function createServiceClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
 test.describe("VietQR confirmPayment flow", () => {
   test("confirming a pending VietQR payment completes the order and leaves KDS alone", async ({
     page,
   }) => {
     const testOrder = await createTestOrder();
-    const supabase = createServiceClient();
+    const supabase = createE2EServiceClient();
 
     const cashierEmail = process.env.E2E_CASHIER_EMAIL ?? "";
     const {
