@@ -16,9 +16,9 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
   const migration =
-    read("supabase/migrations/20260730140000_po_first_purchase_workflow.sql") +
+    read("supabase/migration-archive/20260730140000_po_first_purchase_workflow.sql") +
     read(
-      "supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql",
+      "supabase/migration-archive/20260730190000_purchase_demand_supplier_allocation.sql",
     );
 
   assert.equal(
@@ -86,7 +86,7 @@ test("warehouse cannot submit demand lines without an active supplier", () => {
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260802162827_block_purchase_demand_without_supplier.sql",
+    "supabase/migration-archive/20260802162827_block_purchase_demand_without_supplier.sql",
   );
   const saveStart = client.indexOf("function saveRequest");
   const saveBlock = client.slice(
@@ -121,7 +121,7 @@ test("warehouse can edit an unallocated pending demand without reopening draft",
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
   const migration = read(
-    "supabase/migrations/20260730121028_allow_pending_demand_edit_before_allocation.sql",
+    "supabase/migration-archive/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );
 
   assert.match(
@@ -221,7 +221,7 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
   );
   const helper = read("apps/web/lib/inventory/purchase-demand-progress.ts");
   const migration = read(
-    "supabase/migrations/20260731212207_purchase_demand_coverage_base_units.sql",
+    "supabase/migration-archive/20260731212207_purchase_demand_coverage_base_units.sql",
   );
 
   assert.match(page, /purchaseDemandLineProgress/);
@@ -241,7 +241,7 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
   assert.match(migration, /repair_demand_coverage_status/);
   assert.match(
     read(
-      "supabase/migrations/20260731212932_fix_purchase_demand_remaining_greatest_form.sql",
+      "supabase/migration-archive/20260731212932_fix_purchase_demand_remaining_greatest_form.sql",
     ),
     /IF v_remaining < 0 THEN/,
   );
@@ -249,7 +249,7 @@ test("demand progress converts PO receipt qty into demand entry units", () => {
 
 test("purchase_order_items entry snapshot columns are granted to authenticated", () => {
   const grantMigration = read(
-    "supabase/migrations/20260731233612_grant_inventory_entry_snapshot_columns.sql",
+    "supabase/migration-archive/20260731233612_grant_inventory_entry_snapshot_columns.sql",
   );
   assert.match(
     grantMigration,

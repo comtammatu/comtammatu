@@ -19,10 +19,13 @@ const recipeActionSource = readRepo(
   "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
 );
 const roleUnitMigration = readRepo(
-  "supabase/migrations/20260731172142_inventory_unit_roles_and_snapshots.sql",
+  "supabase/migration-archive/20260731172142_inventory_unit_roles_and_snapshots.sql",
 );
 const independentRoleMigration = readRepo(
-  "supabase/migrations/20260801151413_independent_inventory_unit_roles.sql",
+  "supabase/migration-archive/20260801151413_independent_inventory_unit_roles.sql",
+);
+const activeUnitMigration = readRepo(
+  "supabase/migrations/20260803105716_active_ingredient_entry_units.sql",
 );
 
 test("ingredient catalog tenant-scope hardening enforces new cross-tenant rows", () => {
@@ -93,17 +96,15 @@ test("role-unit migration snapshots historical document factors without weakenin
   );
 });
 
-test("catalog role factors are independent while base membership and dimensions stay guarded", () => {
+test("catalog keeps one standard unit and accepts up to 20 active units", () => {
   assert.match(
     independentRoleMigration,
     /CREATE OR REPLACE FUNCTION public\.save_ingredient_catalog\(/,
   );
   assert.match(independentRoleMigration, /SECURITY DEFINER/);
   assert.match(independentRoleMigration, /SET search_path TO ''/);
-  assert.match(
-    independentRoleMigration,
-    /v_base_unit_id IS DISTINCT FROM p_receipt_unit_id[\s\S]*v_base_unit_id IS DISTINCT FROM p_issue_unit_id[\s\S]*v_base_unit_id IS DISTINCT FROM p_production_unit_id/,
-  );
+  assert.match(activeUnitMigration, /NOT BETWEEN 1 AND 20/);
+  assert.match(activeUnitMigration, /entry_unit_is_active_for_ingredient/);
   assert.match(independentRoleMigration, /standard_unit_dimension_mismatch/);
   assert.match(independentRoleMigration, /inventory_unit_roles_invalid/);
   assert.doesNotMatch(
@@ -118,10 +119,7 @@ test("catalog role factors are independent while base membership and dimensions 
     ingredientActionSource,
     /Nhập ≥ Xuất ≥ Sản xuất|receipt\.to_base_factor < issue\.to_base_factor/,
   );
-  assert.match(
-    ingredientActionSource,
-    /Đơn vị tồn chuẩn phải thuộc ít nhất một vai trò/,
-  );
+  assert.doesNotMatch(ingredientActionSource, /refineUnitRoles/);
   assert.match(
     independentRoleMigration,
     /REVOKE ALL ON FUNCTION public\.save_ingredient_catalog\([\s\S]*FROM PUBLIC, anon/,

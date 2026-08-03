@@ -1366,7 +1366,7 @@ export const amendGrnLine = withAction(
       if (error.code === "22003" || msg.includes("numeric field overflow")) {
         return {
           success: false,
-          error: "Số lượng vượt giới hạn hệ thống. Kiểm tra lại đơn vị nhập.",
+          error: "Số lượng vượt giới hạn hệ thống. Kiểm tra lại đơn vị.",
         };
       }
       if (msg.includes("rejected_exceeds_received")) {

@@ -8,17 +8,11 @@ export type CatalogUnitPayload = {
   anchor_factor: number | null;
 };
 
-export type UnitRoles = {
-  receiptUnitId: number;
-  issueUnitId: number;
-  productionUnitId: number | null;
-};
-
 export class IngredientUnitModelError extends Error {
   constructor(
     message:
       | "unit_not_found"
-      | "base_unit_not_in_roles"
+      | "base_unit_not_selected"
       | "invalid_factor"
       | "standard_unit_dimension_mismatch",
   ) {
@@ -27,26 +21,16 @@ export class IngredientUnitModelError extends Error {
   }
 }
 
-export function distinctRoleUnitIds(roles: UnitRoles): number[] {
-  return [
-    ...new Set(
-      [roles.receiptUnitId, roles.issueUnitId, roles.productionUnitId].filter(
-        (id): id is number => id != null && Number.isInteger(id) && id > 0,
-      ),
-    ),
-  ];
-}
-
 export function readCatalogUnitModel(
   rows: readonly {
     unit_id: number;
     to_base_factor: number;
     is_base: boolean;
   }[],
-  issueUnitId: number | null,
+  fallbackUnitId: number | null,
 ): { baseUnitId: number | null; factors: Record<number, number> } {
   return {
-    baseUnitId: rows.find((row) => row.is_base)?.unit_id ?? issueUnitId,
+    baseUnitId: rows.find((row) => row.is_base)?.unit_id ?? fallbackUnitId,
     factors: Object.fromEntries(
       rows.map((row) => [row.unit_id, row.to_base_factor]),
     ),
@@ -73,26 +57,26 @@ export function rebaseUnitFactors(
 }
 
 export function buildCatalogUnits({
-  roles,
+  unitIds,
   baseUnitId,
   factors,
   unitOptions,
 }: {
-  roles: UnitRoles;
+  unitIds: readonly number[];
   baseUnitId: number;
   factors: Readonly<Record<number, number>>;
   unitOptions: readonly UnitOption[];
 }): CatalogUnitPayload[] {
-  const unitIds = distinctRoleUnitIds(roles);
-  if (!unitIds.includes(baseUnitId)) {
-    throw new IngredientUnitModelError("base_unit_not_in_roles");
+  const selectedUnitIds = [...new Set(unitIds)];
+  if (!selectedUnitIds.includes(baseUnitId)) {
+    throw new IngredientUnitModelError("base_unit_not_selected");
   }
 
   const unitsById = new Map(unitOptions.map((unit) => [unit.id, unit]));
   const baseUnit = unitsById.get(baseUnitId);
   if (!baseUnit) throw new IngredientUnitModelError("unit_not_found");
 
-  return unitIds.map((unitId) => {
+  return selectedUnitIds.map((unitId) => {
     const unit = unitsById.get(unitId);
     if (!unit) throw new IngredientUnitModelError("unit_not_found");
     if (unitId === baseUnitId) {

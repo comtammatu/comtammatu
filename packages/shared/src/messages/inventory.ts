@@ -420,7 +420,7 @@ export const INVENTORY_VI = {
   submittedAtSuffix: (date: string) => ` • Gửi ${date}`,
   systemStockColon: "Tồn hệ thống:",
   countedColon: "Số đếm:",
-  convertedColon: "Quy đổi về tồn chuẩn:",
+  convertedColon: "Quy đổi về đơn vị chuẩn:",
   conversionMissing: "Chưa cấu hình quy đổi",
   varianceShort: "Lệch",
   employeeNoteLine: (note: string) => `Ghi chú nhân viên: ${note}`,

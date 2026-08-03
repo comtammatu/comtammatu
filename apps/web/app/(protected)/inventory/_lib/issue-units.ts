@@ -1,7 +1,7 @@
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
-  getIngredientRoleUnit,
-  getRoleUnitOptionsWithFactor,
+  getDefaultIngredientUnit,
+  getIngredientUnitOptions,
   type InventoryUnitOptionWithFactor,
 } from "@lib/inventory/unit-options";
 
@@ -17,34 +17,20 @@ function snapNearIntegerQuantity(value: number): number {
   return Math.abs(value - integer) <= ISSUE_INTEGER_EPSILON ? integer : value;
 }
 
-/**
- * Selectable issue/transfer/waste entry units: configured issue and receipt
- * roles. Production-only units are excluded.
- */
 type IngredientWithUnits = {
   units?: IngredientUnitRow[];
-  issue_unit_id?: number | null;
-  receipt_unit_id?: number | null;
 };
 
 export function getIssueUnitOptions(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption[] {
-  return getRoleUnitOptionsWithFactor(ingredient, ["issue", "receipt"]);
+  return getIngredientUnitOptions(ingredient, { includeToBaseFactor: true });
 }
 
-/**
- * Default issue/transfer/waste unit: the configured issue role.
- */
 export function getDefaultIssueUnit(
   ingredient: IngredientWithUnits | undefined,
 ): IssueUnitOption | null {
-  const defaultUnit = getIngredientRoleUnit(ingredient, "issue");
-  if (!defaultUnit) return getIssueUnitOptions(ingredient)[0] ?? null;
-  const factor = ingredient?.units?.find(
-    (row) => row.unit_id === defaultUnit.unitId,
-  )?.to_base_factor;
-  return { ...defaultUnit, toBaseFactor: factor ?? 1 };
+  return getDefaultIngredientUnit(getIssueUnitOptions(ingredient));
 }
 
 function resolveToBaseFactor(issueUnit: IssueUnitFactor): number {

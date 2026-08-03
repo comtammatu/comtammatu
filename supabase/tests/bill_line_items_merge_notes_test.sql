@@ -82,10 +82,10 @@ BEGIN
 
   INSERT INTO public.menu_categories (tenant_id, name)
     VALUES (v_tenant, 'ZZTEST-BILLMERGE') RETURNING id INTO v_category;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-    VALUES (v_tenant, v_category, 'Suon Cot Let', 50000) RETURNING id INTO v_menu_item;
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-    VALUES (v_tenant, v_category, 'Trung', 5000) RETURNING id INTO v_egg_menu_item;
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+    VALUES (v_tenant, v_category, 'Suon Cot Let', 50000, 0) RETURNING id INTO v_menu_item;
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, vat_rate)
+    VALUES (v_tenant, v_category, 'Trung', 5000, 0) RETURNING id INTO v_egg_menu_item;
 
   INSERT INTO public.orders (
     tenant_id, branch_id, order_number, order_type, status, created_by

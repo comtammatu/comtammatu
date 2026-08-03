@@ -37,13 +37,13 @@ Production ledger or schema write.
    ```bash
    CUTOFF=<14-digit verified Production ledger cutoff>
    ART=.baseline-artifacts/supabase-live-baseline-<timestamp>
-   { echo "SET check_function_bodies = false;"; echo;
-     cat "$ART/private.schema.sql"; echo;
-     grep -v "^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin " "$ART/public.schema.sql";
-   } > "supabase/migrations/${CUTOFF}_baseline.sql"
+   cp "$ART/public_private.schema.sql" \
+     "supabase/migrations/${CUTOFF}_baseline.sql"
    ```
 
-   Keep `private` before `public`, preserve explicit grants, and exclude
+   The extractor dumps both schemas in one `pg_dump` call to preserve
+   cross-schema dependency order, normalizes pg_dump session tokens, resets
+   fresh-environment ACL defaults, preserves explicit grants, and excludes
    Supabase-managed default privileges that the migration role cannot set.
 
 3. Classify every active migration at or before the cutoff:

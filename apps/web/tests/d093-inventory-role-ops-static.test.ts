@@ -35,15 +35,15 @@ const branchGrnPage = readFileSync(
   "utf8",
 );
 const migration = readFileSync(
-  "../../supabase/migrations/20260729140000_d093_central_grn_branch_stock_request.sql",
+  "../../supabase/migration-archive/20260729140000_d093_central_grn_branch_stock_request.sql",
   "utf8",
 );
 const fulfillKindGrantMigration = readFileSync(
-  "../../supabase/migrations/20260729140500_grant_ingredients_default_fulfill_site_kind.sql",
+  "../../supabase/migration-archive/20260729140500_grant_ingredients_default_fulfill_site_kind.sql",
   "utf8",
 );
 const catalogSaveMigration = readFileSync(
-  "../../supabase/migrations/20260731182614_catalog_save_unit_roles.sql",
+  "../../supabase/migration-archive/20260731182614_catalog_save_unit_roles.sql",
   "utf8",
 );
 const ingredientActions = readFileSync(
@@ -51,11 +51,11 @@ const ingredientActions = readFileSync(
   "utf8",
 );
 const stockRequestScopeMigration = readFileSync(
-  "../../supabase/migrations/20260729170000_scope_stock_request_reads_by_fulfill_source.sql",
+  "../../supabase/migration-archive/20260729170000_scope_stock_request_reads_by_fulfill_source.sql",
   "utf8",
 );
 const stockRequestScopeAnonRevokeMigration = readFileSync(
-  "../../supabase/migrations/20260729170100_revoke_anon_stock_request_scope_helper.sql",
+  "../../supabase/migration-archive/20260729170100_revoke_anon_stock_request_scope_helper.sql",
   "utf8",
 );
 const permissions = readFileSync(

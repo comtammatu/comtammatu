@@ -42,47 +42,46 @@ $$;
 
 DO $$
 DECLARE
-  v_owner_id uuid := gen_random_uuid();
-  v_staff_id uuid := gen_random_uuid();
+  v_owner_id uuid;
+  v_staff_id uuid;
   v_tenant_id bigint;
-  v_owner_position_id bigint;
-  v_staff_position_id bigint;
   v_profile_id bigint;
+  v_version integer;
 BEGIN
-  PERFORM set_config('session_replication_role', 'replica', true);
-  INSERT INTO auth.users (id, email)
-  VALUES
-    (v_owner_id, 'invoice-profile-owner@example.invalid'),
-    (v_staff_id, 'invoice-profile-staff@example.invalid');
-  PERFORM set_config('session_replication_role', 'origin', true);
+  SELECT profile.tenant_id, profile.id
+  INTO v_tenant_id, v_owner_id
+  FROM public.profiles AS profile
+  JOIN public.positions AS position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE position.code = 'owner'
+    AND coalesce(profile.is_active, TRUE)
+  ORDER BY profile.id
+  LIMIT 1;
 
-  INSERT INTO public.tenants (
-    name,
-    slug,
-    owner_user_id
-  ) VALUES (
-    'Invoice profile activation test',
-    'invoice-profile-activation-' || v_owner_id::text,
-    v_owner_id
-  )
-  RETURNING id INTO v_tenant_id;
+  SELECT profile.id
+  INTO v_staff_id
+  FROM public.profiles AS profile
+  JOIN public.positions AS position
+    ON position.id = profile.position_id
+   AND position.tenant_id = profile.tenant_id
+  WHERE profile.tenant_id = v_tenant_id
+    AND position.code <> 'owner'
+    AND coalesce(profile.is_active, TRUE)
+  ORDER BY profile.id
+  LIMIT 1;
 
-  INSERT INTO public.positions (tenant_id, code, label_vi)
-  VALUES (v_tenant_id, 'owner', 'Chủ sở hữu')
-  RETURNING id INTO v_owner_position_id;
+  IF v_owner_id IS NULL OR v_staff_id IS NULL THEN
+    RAISE EXCEPTION 'invoice_profile_activation_seed_missing';
+  END IF;
 
-  INSERT INTO public.positions (tenant_id, code, label_vi)
-  VALUES (v_tenant_id, 'staff', 'Nhân viên')
-  RETURNING id INTO v_staff_position_id;
+  DELETE FROM public.invoice_profiles
+  WHERE tenant_id = v_tenant_id;
 
-  INSERT INTO public.profiles (
-    id,
-    tenant_id,
-    full_name,
-    position_id
-  ) VALUES
-    (v_owner_id, v_tenant_id, 'Invoice profile owner', v_owner_position_id),
-    (v_staff_id, v_tenant_id, 'Invoice profile staff', v_staff_position_id);
+  SELECT coalesce(max(profile.version), 0) + 1
+  INTO v_version
+  FROM public.invoice_profiles AS profile
+  WHERE profile.tenant_id = v_tenant_id;
 
   INSERT INTO public.invoice_profiles (
     tenant_id,
@@ -95,7 +94,7 @@ BEGIN
     created_by
   ) VALUES (
     v_tenant_id,
-    1,
+    v_version,
     'viettel',
     '1/001',
     'C26TCS',

@@ -88,13 +88,15 @@ BEGIN
     category_id,
     name,
     base_price,
-    sort_order
+    sort_order,
+    vat_rate
   ) VALUES (
     v_tenant,
     v_category,
     '__s1_menu_item_' || gen_random_uuid()::text,
     10000,
-    999
+    999,
+    0
   )
   RETURNING id INTO v_menu_item;
 

@@ -11,7 +11,7 @@ test("menu VAT is validated at the form, action, and database boundaries", () =>
   const actions = read("apps/web/app/(protected)/menu/actions.ts");
   const menuCopy = read("packages/shared/src/messages/menu.ts");
   const migration = read(
-    "supabase/migrations/20260727121036_add_menu_vat_and_purchase_approval.sql",
+    "supabase/migration-archive/20260727121036_add_menu_vat_and_purchase_approval.sql",
   );
 
   assert.match(form, /vat_rate: z\.enum\(\["0", "5", "8", "10"\]\)/);
@@ -44,7 +44,7 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   );
   const inventoryCopy = read("apps/web/lib/messages/inventory.ts");
   const vatMigration = read(
-    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
   assert.match(financeCopy, /Thuế GTGT đầu vào \| Thanh toán NCC/);
@@ -83,14 +83,14 @@ test("finance separates inventory, equipment acquisition, and period expense", (
 
 test("supplier invoice matching uses confirmed GRN quantities and invoice line prices", () => {
   const migration = read(
-    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
   );
   const invoiceActions = read(
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const vatMigration = read(
-    "supabase/migrations/20260730150000_supplier_invoice_line_pricing.sql",
+    "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
   assert.match(

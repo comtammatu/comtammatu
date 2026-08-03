@@ -6,21 +6,21 @@ import test from "node:test";
 const migration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260727120003_initialize_materialized_views.sql",
+    "../../../supabase/migration-archive/20260727120003_initialize_materialized_views.sql",
   ),
   "utf8",
 );
 const foldMigration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260727120001_fold_managed_surfaces.sql",
+    "../../../supabase/migration-archive/20260727120001_fold_managed_surfaces.sql",
   ),
   "utf8",
 );
 const cronMigration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260727120004_reregister_managed_cron_jobs.sql",
+    "../../../supabase/migration-archive/20260727120004_reregister_managed_cron_jobs.sql",
   ),
   "utf8",
 );

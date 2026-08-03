@@ -88,6 +88,47 @@ function createFixture(label, paidAtSql) {
   const result = runDatabase(`
     BEGIN;
     SET LOCAL comtammatu.skip_quota_enforcement = 'true';
+    UPDATE public.tenants tenant
+    SET legal_name = 'HDDT race test tenant',
+        tax_code = '0123456789',
+        legal_address = 'HDDT race test address',
+        representative = 'HDDT race test representative'
+    WHERE tenant.slug = 'comtammatu';
+
+    INSERT INTO public.invoice_profiles (
+      tenant_id,
+      version,
+      provider,
+      seller_tax_code,
+      template_code,
+      invoice_series,
+      status,
+      valid_from,
+      created_by
+    )
+    SELECT
+      tenant.id,
+      coalesce((
+        SELECT max(profile.version)
+        FROM public.invoice_profiles profile
+        WHERE profile.tenant_id = tenant.id
+      ), 0) + 1,
+      'viettel',
+      tenant.tax_code,
+      '1/001',
+      'C26TCS',
+      'active',
+      now() - interval '1 day',
+      tenant.owner_user_id
+    FROM public.tenants tenant
+    WHERE tenant.slug = 'comtammatu'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.invoice_profiles profile
+        WHERE profile.tenant_id = tenant.id
+          AND profile.status = 'active'
+      );
+
     INSERT INTO public.menu_categories (tenant_id, name)
     SELECT branch.tenant_id, ${sqlLiteral(orderNumber)}
     FROM public.branches branch
@@ -97,8 +138,14 @@ function createFixture(label, paidAtSql) {
     ORDER BY branch.id, profile.id
     LIMIT 1;
 
-    INSERT INTO public.menu_items (tenant_id, category_id, name, base_price)
-    SELECT category.tenant_id, category.id, ${sqlLiteral(orderNumber)}, 45000
+    INSERT INTO public.menu_items (
+      tenant_id,
+      category_id,
+      name,
+      base_price,
+      vat_rate
+    )
+    SELECT category.tenant_id, category.id, ${sqlLiteral(orderNumber)}, 45000, 0
     FROM public.menu_categories category
     WHERE category.name = ${sqlLiteral(orderNumber)};
 

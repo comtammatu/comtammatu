@@ -12,12 +12,12 @@ BEGIN
   END IF;
 
   IF has_function_privilege('anon', v_signature, 'EXECUTE')
-     OR NOT has_function_privilege(
+     OR has_function_privilege(
        'authenticated',
        v_signature,
        'EXECUTE'
      )
-     OR NOT has_function_privilege(
+     OR has_function_privilege(
        'service_role',
        v_signature,
        'EXECUTE'

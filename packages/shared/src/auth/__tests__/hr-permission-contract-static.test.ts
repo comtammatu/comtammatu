@@ -372,7 +372,7 @@ test("auth docs define the HR permission contract layers", () => {
 
 test("scoped role bindings require security_admin plus AAL2", () => {
   const migration = read(
-    "supabase/migrations/20260801181125_hr_scoped_role_bindings.sql",
+    "supabase/migration-archive/20260801181125_hr_scoped_role_bindings.sql",
   );
 
   assert.match(migration, /WHERE key <> 'auth:binding_manage'/);
@@ -391,7 +391,7 @@ test("scoped role bindings require security_admin plus AAL2", () => {
 
 test("payroll finalization is transactional and idempotent", () => {
   const migration = read(
-    "supabase/migrations/20260801181125_hr_scoped_role_bindings.sql",
+    "supabase/migration-archive/20260801181125_hr_scoped_role_bindings.sql",
   );
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /FOR UPDATE/);
@@ -404,7 +404,7 @@ test("payroll finalization is transactional and idempotent", () => {
 
 test("employee shift-task overrides are full replacements materialized at check-in", () => {
   const migration = read(
-    "supabase/migrations/20260801181126_employee_shift_task_overrides.sql",
+    "supabase/migration-archive/20260801181126_employee_shift_task_overrides.sql",
   );
   const client = read("apps/web/app/(protected)/hr/position-tasks-client.tsx");
 

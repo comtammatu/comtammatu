@@ -281,12 +281,12 @@ test("Inventory branch selector keeps touch targets through tablet widths", () =
   );
 });
 
-test("Inventory ingredient editor keeps two operational unit roles", () => {
+test("Inventory ingredient editor keeps a touch-safe unit list", () => {
   const ingredientDialog = read(
     "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
-  assert.match(ingredientDialog, /name="input_unit_id"/);
-  assert.match(ingredientDialog, /name="output_unit_id"/);
+  assert.match(ingredientDialog, /unit_ids: z/);
+  assert.match(ingredientDialog, /selectedUnitIds\.map/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|IconTrash/);
 
   const issueDetail = read(

@@ -121,55 +121,44 @@ Các cột trên và generated database types là contract hiện hành.
 
 ### 2.1 Hệ đơn vị
 
-Đơn vị kho không còn nằm trên cột text của `ingredients`. Danh mục có hai vai
-trò bắt buộc:
+`units` là registry dùng chung theo tenant. Mỗi nguyên liệu có từ 1 đến 20 dòng
+`ingredient_units` đang hoạt động và đúng một dòng `is_base = true`, gọi là
+**Đơn vị chuẩn**. Đơn vị đầu tiên được thêm tự động là Đơn vị chuẩn; người dùng
+có thể đổi sang một đơn vị khác trong cùng danh sách.
 
-- **Đơn vị nhập:** đơn vị dùng khi nhận/mua nguyên liệu.
-- **Đơn vị xuất:** đơn vị mặc định khi trừ tồn / UI tồn kho; định mức món bán
-  có thể chọn mọi đơn vị thuộc quy cách.
-- Hai vai trò độc lập, không hàm ý thứ tự độ lớn. Một đơn vị có thể đảm nhiệm
-  cả hai vai trò.
+`ingredients.receipt_unit_id` và `issue_unit_id` chỉ còn là gương tương thích
+của Đơn vị chuẩn; `production_unit_id` để `NULL`. Runtime không đọc ba cột này,
+không coi chúng là cấu hình nghiệp vụ và không hiển thị chúng trên UI. Chúng
+được xóa ở migration contract sau khi runtime mới đã deploy và soak.
 
-`units` vẫn là registry dùng chung theo tenant. `ingredients.receipt_unit_id`,
-`issue_unit_id` là source of truth của vai trò. Đúng một dòng
-`ingredient_units.is_base` là **Đơn vị tồn chuẩn** và phải thuộc ít nhất một
-trong hai vai trò. Khi tạo mới, UI mặc định chọn Đơn vị
-xuất làm tồn chuẩn; khi sửa, giữ nguyên tồn chuẩn hiện có cho đến khi người dùng
-chủ động đổi.
-
-Mọi đơn vị quy đổi theo mô hình hình sao về tồn chuẩn. Tồn chuẩn có hệ số `1`.
+Mọi đơn vị quy đổi theo mô hình hình sao về Đơn vị chuẩn. Đơn vị chuẩn có hệ số `1`.
 Hai đơn vị chuẩn cùng `dimension` lấy tỷ lệ từ `units.standard_factor` và không
-cho sửa tay. Bao bì/quy cách riêng khai báo trực tiếp `1 đơn vị = X đơn vị tồn
-chuẩn`; không tạo chuỗi quy đổi nhiều tầng. Khi đổi tồn chuẩn, RPC quy đổi lại
+cho sửa tay. Bao bì/quy cách riêng khai báo trực tiếp `1 đơn vị = X Đơn vị
+chuẩn`; không tạo chuỗi quy đổi nhiều tầng. Khi đổi Đơn vị chuẩn, RPC quy đổi lại
 hệ số, số lượng và đơn giá để giữ nguyên lượng vật lý và tổng giá trị tồn.
 
-Chọn đơn vị xuất đủ nhỏ cho bếp (ml/g khi chia nhỏ; chai/lon khi dùng nguyên).
-SOP vận hành: [inventory-sop.md](inventory-sop.md) §2c.
-
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
-> và giá vốn BQ **lưu** theo **đơn vị tồn chuẩn**. UI tồn kho / cột giá vốn BQ
-> **hiển thị mặc định theo Đơn vị xuất** (quy đổi từ tồn chuẩn khi hai vai trò
-> khác nhau). Cho phép chọn `entry_unit_id` trên chứng từ:
+> và giá vốn BQ **lưu và hiển thị** theo **Đơn vị chuẩn**. Dòng chứng từ cho phép
+> chọn mọi `ingredient_units` đang hoạt động của nguyên liệu:
 >
-> - PO: chỉ Nhập
-> - GRN: Nhập hoặc Xuất
-> - Điều chuyển / xuất / tiêu hao / hao hụt: Xuất hoặc Nhập
-> - Định mức món bán: mọi đơn vị active thuộc quy cách
-> - Công thức sản xuất: mọi đơn vị active thuộc quy cách của đúng item
+> - YCM → PO → GRN: PO kế thừa đơn vị đã chọn trên YCM; GRN kế thừa PO
+> - Điều chuyển / xuất / tiêu hao / hao hụt: chọn một đơn vị đang hoạt động
+> - Kiểm kê: chọn một đơn vị cho mỗi nguyên liệu trong vòng kiểm kê
+> - Định mức món bán và công thức sản xuất: chọn một đơn vị đang hoạt động
 > - Lệnh sản xuất: dùng snapshot đơn vị từ công thức, không chọn lại
 >
 > Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor. Owner được thêm/đổi
-> đơn vị và quy đổi bất kỳ lúc nào; khi đổi đơn vị tồn chuẩn, RPC
+> đơn vị và quy đổi bất kỳ lúc nào; khi đổi Đơn vị chuẩn, RPC
 > `save_ingredient_catalog` quy đổi tồn hiện tại, ngưỡng, WAC và số lượng
 > valuation hiện hành trong cùng transaction (tổng giá trị không đổi). Snapshot
 > lịch sử không bị viết lại.
 
-Đổi vai trò hoặc quy đổi sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
+Đổi Đơn vị chuẩn hoặc quy đổi sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
 đơn vị vẫn đang được BOM/production recipe tham chiếu.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` (đơn vị tồn chuẩn); UI tồn kho chiếu sang **Đơn vị xuất**.
+Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và hiển thị theo Đơn vị chuẩn.
 
 - `item_kind = raw_material`: nguyên liệu đầu vào.
 - `item_kind = finished_good`: thành phẩm sản xuất tại chi nhánh hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing location của chi nhánh.
@@ -177,8 +166,8 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **đơn vị tồn chuẩn** (`is_base`).
-- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó theo **đơn vị tồn chuẩn**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất). UI tồn kho hiển thị cả hai theo **Đơn vị xuất**.
+- **`current_quantity`:** tồn thực theo **Đơn vị chuẩn** (`is_base`).
+- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó theo **Đơn vị chuẩn**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
 
 ---
 
@@ -194,8 +183,8 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi
 đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP).
 `recipes.entry_unit_id` có thể là bất kỳ đơn vị active trên ladder; số lượng
-được quy về đơn vị tồn chuẩn qua `entry_to_base_factor` khi trừ tồn. UI mặc định
-gợi ý Đơn vị xuất. Định mức món bán không có Yield.
+được quy về Đơn vị chuẩn qua `entry_to_base_factor` khi trừ tồn. UI mặc định
+gợi ý Đơn vị chuẩn. Định mức món bán không có Yield.
 
 ```sql
 -- Mục tiêu schema (triển khai theo migration)
@@ -233,7 +222,7 @@ Workflow sản xuất chuẩn (RPC family gọi từ `apps/web/app/(protected)/i
    - caller là production operator (`is_inventory_production_operator()`) và có `inventory:production_confirm` trên đúng `branch_id`,
    - lệnh đang `in_progress`, sản lượng thực tế `> 0`, đúng đủ tập nguyên liệu snapshot,
    - source/target location thuộc cùng Bếp TT,
-   - tồn kho đủ sau khi quy đổi số thực tế về đơn vị tồn chuẩn.
+   - tồn kho đủ sau khi quy đổi số thực tế về Đơn vị chuẩn.
 5. RPC ghi atomically:
    - `production_consumption` cho nguyên liệu đầu vào,
    - `production_output` cho thành phẩm đầu ra,
@@ -280,7 +269,7 @@ Ngoài phạm vi v1:
 
 - **Append-only** (không UPDATE/DELETE dòng movement).
 - Các loại `type` mở rộng như bảng ở §1b.
-- Liên kết tùy loại: `order_id`, `grn_id`, `transfer_id`, `unit_cost` (**đơn giá ghi sổ** snapshot tại thời điểm ghi, theo đơn vị tồn chuẩn; không gọi là WAC trên lịch sử movement).
+- Liên kết tùy loại: `order_id`, `grn_id`, `transfer_id`, `unit_cost` (**đơn giá ghi sổ** snapshot tại thời điểm ghi, theo Đơn vị chuẩn; không gọi là WAC trên lịch sử movement).
 
 ### POS food-cost boundary
 
@@ -471,7 +460,7 @@ So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` (th
 Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, hoặc route
 `/inventory/expiry`.
 
-- GRN draft ghi số thực nhận / đơn vị nhập / số từ chối / lý do + ảnh khi có;
+- GRN draft ghi số thực nhận / đơn vị theo chứng từ / số từ chối / lý do + ảnh khi có;
   giá chỉ được nhận từ Hóa đơn NCC đã xác nhận. Không ghi lô/HSD/nhiệt độ.
 - Stock control dùng WAC + tồn theo location; cảnh báo ưu tiên hiện tại là tồn thấp/reorder và phiếu đang mở.
 - Khi cần quản lý hạn dùng thật, phải thiết kế lại thành lot ledger hoàn chỉnh.

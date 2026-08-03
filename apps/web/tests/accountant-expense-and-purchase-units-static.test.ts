@@ -6,7 +6,7 @@ import { test } from "node:test";
 const migration = readFileSync(
   resolve(
     import.meta.dirname,
-    "../../../supabase/migrations/20260731195236_repair_accountant_expense_and_purchase_units.sql",
+    "../../../supabase/migration-archive/20260731195236_repair_accountant_expense_and_purchase_units.sql",
   ),
   "utf8",
 );

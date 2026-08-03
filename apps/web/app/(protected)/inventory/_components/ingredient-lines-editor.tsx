@@ -32,7 +32,6 @@ import {
 } from "@/components/form";
 import {
   getDefaultIngredientUnit,
-  getIngredientRoleUnit,
   getIngredientUnitOptions,
   type InventoryUnitOption,
 } from "@lib/inventory/unit-options";
@@ -48,8 +47,6 @@ export interface IngredientLineOption {
   id: number;
   name: string;
   unitLabel: string;
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 }
 
@@ -62,10 +59,7 @@ function getLineUnitOptions(
 function getDefaultLineUnit(
   ingredient: IngredientLineOption | undefined,
 ): InventoryUnitOption | null {
-  return (
-    getIngredientRoleUnit(ingredient, "issue") ??
-    getDefaultIngredientUnit(getIngredientUnitOptions(ingredient))
-  );
+  return getDefaultIngredientUnit(getIngredientUnitOptions(ingredient));
 }
 
 export interface IngredientLineRowValue {
@@ -127,8 +121,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
     IngredientLineRowValue & { id: string }
   >;
   const watchedRows = useWatch({ control, name }) as
-    | IngredientLineRowValue[]
-    | undefined;
+    IngredientLineRowValue[] | undefined;
 
   const alreadySelectedIds = useMemo(() => {
     const ids = new Set<string>();
@@ -189,8 +182,7 @@ export function IngredientLinesEditor<T extends FieldValues>({
             options={ingredients.map((ing) => ({
               value: String(ing.id),
               label: ing.name,
-              hint:
-                getDefaultLineUnit(ing)?.label ?? ing.unitLabel,
+              hint: getDefaultLineUnit(ing)?.label ?? ing.unitLabel,
               alreadySelected: alreadySelectedIds.has(String(ing.id)),
             }))}
             onConfirm={handleBulkAdd}
@@ -291,12 +283,7 @@ function IngredientLineRow<T extends FieldValues>({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div
-        className={cn(
-          "grid items-center gap-2 px-3 py-2",
-          GRID_TEMPLATE,
-        )}
-      >
+      <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
         <div className="min-w-0 md:col-span-3">
           <Controller
             control={control}
@@ -311,8 +298,7 @@ function IngredientLineRow<T extends FieldValues>({
                 options={ingredients.map((ing) => ({
                   value: String(ing.id),
                   label: ing.name,
-                  hint:
-                    getDefaultLineUnit(ing)?.label ?? ing.unitLabel,
+                  hint: getDefaultLineUnit(ing)?.label ?? ing.unitLabel,
                 }))}
                 placeholder={INVENTORY_VI.selectIngredientPlaceholder}
                 searchPlaceholder={INVENTORY_VI.searchByName}

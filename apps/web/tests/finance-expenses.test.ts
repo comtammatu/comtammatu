@@ -174,7 +174,7 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260802135333_add_hospitality_expense_category.sql",
+      "../../../supabase/migration-archive/20260802135333_add_hospitality_expense_category.sql",
     ),
     "utf8",
   );
@@ -339,7 +339,7 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260727141702_expense_vat_and_attachment.sql",
+      "../../../supabase/migration-archive/20260727141702_expense_vat_and_attachment.sql",
     ),
     "utf8",
   );
@@ -370,7 +370,7 @@ test("expense edit keeps payment evidence immutable and audits the locked RPC wr
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260731184719_update_operating_expense.sql",
+      "../../../supabase/migration-archive/20260731184719_update_operating_expense.sql",
     ),
     "utf8",
   );
@@ -408,7 +408,7 @@ test("Owner/Accountant can correct unmatched paid expense payment methods", () =
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260801053526_correct_expense_payment_method.sql",
+      "../../../supabase/migration-archive/20260801053526_correct_expense_payment_method.sql",
     ),
     "utf8",
   );
@@ -461,7 +461,7 @@ test("expense mutate gates Owner/Accountant on finance:expense_create", () => {
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
-      "../../../supabase/migrations/20260801051906_expense_mutate_requires_expense_create.sql",
+      "../../../supabase/migration-archive/20260801051906_expense_mutate_requires_expense_create.sql",
     ),
     "utf8",
   );

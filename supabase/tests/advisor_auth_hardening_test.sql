@@ -27,9 +27,9 @@ BEGIN
     )
     AND policy.qual ~* 'select[[:space:]]+auth[.]uid[[:space:]]*[(]';
 
-  IF v_policy_count <> 6 THEN
+  IF v_policy_count <> 5 THEN
     RAISE EXCEPTION
-      'TEST FAILED: expected 6 initplan-safe Auth policies, found %',
+      'TEST FAILED: expected 5 initplan-safe Auth policies, found %',
       v_policy_count;
   END IF;
 
@@ -50,9 +50,9 @@ BEGIN
     WHERE policy.schemaname = 'public'
       AND policy.tablename = 'profiles'
       AND policy.policyname = 'profiles_select_authorized'
-      AND policy.qual LIKE '%staff:view%'
-      AND policy.qual LIKE '%auth_role()%owner%'
-      AND policy.qual LIKE '%auth_branch_id()%'
+      AND policy.qual LIKE '%hr:view_employee%'
+      AND policy.qual LIKE '%has_permission(NULL::bigint%'
+      AND policy.qual LIKE '%has_permission(branch_id%'
   ) THEN
     RAISE EXCEPTION
       'TEST FAILED: profiles_select_authorized lost its authority gates';

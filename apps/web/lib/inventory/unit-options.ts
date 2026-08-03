@@ -12,11 +12,6 @@ export interface InventoryUnitOptionWithFactor extends InventoryUnitOption {
 }
 
 type IngredientWithUnits = { units?: IngredientUnitRow[] };
-type IngredientWithUnitRoles = IngredientWithUnits & {
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
-  production_unit_id?: number | null;
-};
 
 function activeUnits(ingredient: IngredientWithUnits | undefined) {
   return [...(ingredient?.units ?? [])]
@@ -57,62 +52,12 @@ export function getDefaultIngredientUnit<T extends InventoryUnitOption>(
   return options.find((option) => option.isBase) ?? options[0] ?? null;
 }
 
-export function getLargestIngredientUnit<T extends InventoryUnitOptionWithFactor>(
-  options: readonly T[],
-): T | null {
+export function getLargestIngredientUnit<
+  T extends InventoryUnitOptionWithFactor,
+>(options: readonly T[]): T | null {
   return options.reduce<T | null>(
     (best, option) =>
       best == null || option.toBaseFactor > best.toBaseFactor ? option : best,
     null,
   );
-}
-
-export type InventoryUnitRole = "receipt" | "issue" | "production";
-
-export function getIngredientRoleUnit(
-  ingredient: IngredientWithUnitRoles | undefined,
-  role: InventoryUnitRole,
-): InventoryUnitOption | null {
-  const unitId = ingredient?.[`${role}_unit_id`];
-  if (unitId == null) return null;
-  return getIngredientUnitOptions(ingredient).find(
-    (unit) => unit.unitId === unitId,
-  ) ?? null;
-}
-
-export function getIngredientRoleUnitOptions(
-  ingredient: IngredientWithUnitRoles | undefined,
-  role: InventoryUnitRole,
-): InventoryUnitOption[] {
-  return getRoleUnitOptions(ingredient, [role]);
-}
-
-/**
- * Unique active units for the given catalog roles, preserving `roles` order
- * and dropping duplicates when the same unit fills more than one role.
- */
-export function getRoleUnitOptions(
-  ingredient: IngredientWithUnitRoles | undefined,
-  roles: readonly InventoryUnitRole[],
-): InventoryUnitOption[] {
-  const seen = new Set<number>();
-  const options: InventoryUnitOption[] = [];
-  for (const role of roles) {
-    const unit = getIngredientRoleUnit(ingredient, role);
-    if (!unit || seen.has(unit.unitId)) continue;
-    seen.add(unit.unitId);
-    options.push(unit);
-  }
-  return options;
-}
-
-export function getRoleUnitOptionsWithFactor(
-  ingredient: IngredientWithUnitRoles | undefined,
-  roles: readonly InventoryUnitRole[],
-): InventoryUnitOptionWithFactor[] {
-  return getRoleUnitOptions(ingredient, roles).map((unit) => {
-    const factor = ingredient?.units?.find((row) => row.unit_id === unit.unitId)
-      ?.to_base_factor;
-    return { ...unit, toBaseFactor: factor ?? 1 };
-  });
 }

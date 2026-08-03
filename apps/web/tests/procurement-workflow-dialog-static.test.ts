@@ -16,10 +16,10 @@ test("purchase demand review atomically creates supplier POs and GRN drafts", ()
   const grnActions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
   const migration =
     read(
-      "supabase/migrations/20260730140000_po_first_purchase_workflow.sql",
+      "supabase/migration-archive/20260730140000_po_first_purchase_workflow.sql",
     ) +
     read(
-      "supabase/migrations/20260730190000_purchase_demand_supplier_allocation.sql",
+      "supabase/migration-archive/20260730190000_purchase_demand_supplier_allocation.sql",
     );
 
   assert.match(purchaseActions, /save_purchase_demand/);
@@ -93,7 +93,7 @@ test("submitted demands remain allocatable during cutover", () => {
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260730192000_fix_purchase_demand_legacy_cutover.sql",
+    "supabase/migration-archive/20260730192000_fix_purchase_demand_legacy_cutover.sql",
   );
   const compatibilityAction = purchaseActions.slice(
     purchaseActions.indexOf("export const savePurchaseRequest"),
@@ -132,7 +132,7 @@ test("purchase request URLs redirect to the PO-first workspace", () => {
 
 test("PO cancellation permits only trusted cancellation after linked GRNs are cancelled", () => {
   const migration = read(
-    "supabase/migrations/20260730120000_allow_po_cancel_after_draft_grn.sql",
+    "supabase/migration-archive/20260730120000_allow_po_cancel_after_draft_grn.sql",
   );
 
   assert.match(

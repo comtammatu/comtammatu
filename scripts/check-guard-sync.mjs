@@ -335,7 +335,7 @@ if (!fs.existsSync(e2eBringupPath)) {
   const e2eSource = fs.readFileSync(e2eBringupPath, "utf8");
   if (
     !e2eSource.includes('process.env["GITHUB_ACTIONS"] !== "true"') ||
-    !e2eSource.includes("appendFileSync(\n    GITHUB_ENV") ||
+    !/appendFileSync\(\s*GITHUB_ENV/.test(e2eSource) ||
     e2eSource.includes('resolve(REPO, ".env.local")') ||
     e2eSource.includes('resolve(REPO, "apps/web/.env.local")')
   ) {

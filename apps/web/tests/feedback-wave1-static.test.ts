@@ -20,7 +20,7 @@ function existsRepo(path: string): boolean {
 
 test("Wave 1 feedback migration RPC is service_role-only with empty search_path", () => {
   const migration = readRepo(
-    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
   );
 
   assert.match(
@@ -44,7 +44,7 @@ test("Wave 1 feedback migration RPC is service_role-only with empty search_path"
 
 test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill", () => {
   const migration = readRepo(
-    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
   );
   const permissions = readRepo("packages/shared/src/auth/permissions.ts");
   const fixture = readWeb("tests/fixtures/supabase-e2e/tenant.sql");
@@ -68,7 +68,7 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
 
 test("Wave 1 schema keeps composite ownership and no phone/photo/AI restore", () => {
   const migration = readRepo(
-    "supabase/migrations/20260728062249_qr_feedback_wave1.sql",
+    "supabase/migration-archive/20260728062249_qr_feedback_wave1.sql",
   );
 
   assert.match(migration, /feedback_qr_codes_branch_tenant_fkey/);

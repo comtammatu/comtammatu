@@ -31,7 +31,7 @@ const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 test("bank reconciliation index alignment is replay-safe", () => {
   const baseline = read(
-    "supabase/migrations/20260727120000_baseline.sql",
+    "supabase/migration-archive/20260727120000_baseline.sql",
   );
 
   assert.match(

@@ -96,8 +96,6 @@ export default async function MenuRecipesPage({
     ? (ingredientsRes.data as Array<{
         id: number;
         name: string;
-        receipt_unit_id?: number | null;
-        issue_unit_id?: number | null;
         ingredient_units?: {
           is_base: boolean;
           units: { code: string } | null;
@@ -169,12 +167,7 @@ export default async function MenuRecipesPage({
     ? ingredientRows.map((i) => ({
         id: i.id,
         name: i.name,
-        unitLabel:
-          i.units?.find((u) => u.unit_id === i.issue_unit_id)?.unit_code ??
-          i.units?.find((u) => u.is_base)?.unit_code ??
-          "",
-        receipt_unit_id: i.receipt_unit_id ?? null,
-        issue_unit_id: i.issue_unit_id ?? null,
+        unitLabel: i.units?.find((u) => u.is_base)?.unit_code ?? "",
         units: i.units,
       }))
     : [];

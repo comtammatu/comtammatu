@@ -264,7 +264,7 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
   );
   const snapshotMigration = read(
-    "supabase/migrations/20260727161500_invoice_profile_vat_snapshot.sql",
+    "supabase/migration-archive/20260727161500_invoice_profile_vat_snapshot.sql",
   );
 
   assert.match(
@@ -310,7 +310,7 @@ test("order lines snapshot item VAT without annual-revenue inference", () => {
   const createSrc = read("apps/web/lib/hddt-per-order.ts");
   const providerInitSrc = read("apps/web/lib/invoice-provider-init.ts");
   const migration = read(
-    "supabase/migrations/20260727130000_snapshot_menu_item_vat_rate.sql",
+    "supabase/migration-archive/20260727130000_snapshot_menu_item_vat_rate.sql",
   );
 
   assert.match(
@@ -337,7 +337,7 @@ test("order lines snapshot item VAT without annual-revenue inference", () => {
 
 test("invoice profile and replacement cutover stay fail-closed", () => {
   const migration = read(
-    "supabase/migrations/20260727161500_invoice_profile_vat_snapshot.sql",
+    "supabase/migration-archive/20260727161500_invoice_profile_vat_snapshot.sql",
   );
   const provider = read(
     "packages/shared/src/providers/impl/viettel-sinvoice.ts",

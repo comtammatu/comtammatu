@@ -37,7 +37,7 @@ test("table creation still relies on the database default capacity", () => {
     "app/(protected)/br/_shared/settings/tables/actions.ts",
   );
   const baselineSource = normalizePgDumpSql(
-    readRepoSource("supabase/migrations/20260727120000_baseline.sql"),
+    readRepoSource("supabase/migration-archive/20260727120000_baseline.sql"),
   );
 
   assert.match(

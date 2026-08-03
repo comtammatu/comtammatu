@@ -43,7 +43,7 @@ const SCAN_ROOTS = [
 const SKIP_PATH_PARTS = [
   "apps/web/.next",
   "apps/web/public/sw.js",
-  "supabase/migrations/20260727120000_baseline.sql",
+  "supabase/migration-archive/20260727120000_baseline.sql",
   "supabase/migration-archive",
   // The one-shot dead-role-string cleanup must name the tokens in its strip
   // regexes; it removes them rather than using them in the active contract.

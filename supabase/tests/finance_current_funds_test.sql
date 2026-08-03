@@ -52,7 +52,7 @@ BEGIN
     ON position.id = profile.position_id
    AND position.tenant_id = profile.tenant_id
   WHERE profile.tenant_id = v_tenant_id
-    AND position.code <> 'owner'
+    AND position.code IN ('cashier', 'chef')
     AND COALESCE(profile.is_active, true)
   ORDER BY profile.id
   LIMIT 1;
@@ -279,6 +279,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by,
@@ -290,6 +293,11 @@ BEGIN
       v_after::date,
       'utilities',
       20,
+      20,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0, 'taxable_amount', 20, 'vat_amount', 0
+      )),
+      0,
       'cash',
       v_after,
       v_owner,
@@ -301,6 +309,11 @@ BEGIN
       v_before::date,
       'other',
       99,
+      99,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0, 'taxable_amount', 99, 'vat_amount', 0
+      )),
+      0,
       'cash',
       v_before,
       v_owner,
@@ -320,6 +333,7 @@ BEGIN
     invoice_date,
     subtotal,
     vat_rate,
+    vat_breakdown,
     vat_amount,
     total_amount,
     matching_status,
@@ -333,6 +347,9 @@ BEGIN
     v_before,
     129,
     0,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 129, 'vat_amount', 0
+    )),
     0,
     129,
     'approved',
@@ -345,6 +362,7 @@ BEGIN
 
   INSERT INTO public.supplier_payments (
     tenant_id,
+    supplier_id,
     supplier_invoice_id,
     payment_method,
     amount,
@@ -354,6 +372,7 @@ BEGIN
   ) VALUES
     (
       v_tenant_id,
+      v_supplier,
       v_supplier_invoice,
       'cash',
       30,
@@ -363,6 +382,7 @@ BEGIN
     ),
     (
       v_tenant_id,
+      v_supplier,
       v_supplier_invoice,
       'cash',
       99,
@@ -386,6 +406,7 @@ BEGIN
     invoice_date,
     subtotal,
     vat_rate,
+    vat_breakdown,
     vat_amount,
     total_amount,
     matching_status,
@@ -399,6 +420,9 @@ BEGIN
     v_after,
     25,
     0,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 25, 'vat_amount', 0
+    )),
     0,
     25,
     'approved',
@@ -411,6 +435,7 @@ BEGIN
 
   INSERT INTO public.supplier_payments (
     tenant_id,
+    supplier_id,
     supplier_invoice_id,
     payment_method,
     amount,
@@ -419,6 +444,7 @@ BEGIN
     created_at
   ) VALUES (
     v_tenant_id,
+    v_supplier,
     v_bank_supplier_invoice,
     'bank_transfer',
     25,
@@ -1205,7 +1231,7 @@ BEGIN
     PERFORM public.get_finance_current_funds();
   EXCEPTION
     WHEN insufficient_privilege THEN
-      v_rejected := SQLERRM LIKE '%forbidden_owner_only%';
+      v_rejected := SQLERRM = 'forbidden';
   END;
   IF NOT v_rejected THEN
     RAISE EXCEPTION 'finance_current_funds_non_owner_not_rejected';

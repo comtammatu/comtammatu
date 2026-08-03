@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 test("company self-service is authorized by a live binding only", () => {
   const migration = read(
-    "supabase/migrations/20260801205519_company_self_service_binding.sql",
+    "supabase/migration-archive/20260801205519_company_self_service_binding.sql",
   );
   const proxy = read("apps/web/proxy.ts");
   const types = read("packages/shared/src/auth/types.ts");
@@ -59,12 +59,14 @@ test("assigned company staff can clock in only through live self-service scope",
   const clockClient = read(
     "apps/web/lib/staff-runtime/clock/clock-client.tsx",
   );
-  const migrationName = readdirSync(resolve(root, "supabase/migrations")).find(
+  const migrationName = readdirSync(
+    resolve(root, "supabase/migration-archive"),
+  ).find(
     (name) => name.endsWith("_allow_company_self_service_clock_in.sql"),
   );
 
   assert.ok(migrationName, "missing company self-service clock-in migration");
-  const migration = read(`supabase/migrations/${migrationName}`);
+  const migration = read(`supabase/migration-archive/${migrationName}`);
 
   assert.match(todayWorkState, /Boolean\(assignedShift\)/);
   assert.match(todayWorkState, /claims\.user_role !== "self_service"/);

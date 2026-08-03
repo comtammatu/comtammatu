@@ -91,38 +91,44 @@ BEGIN
   RETURNING id INTO v_pack_unit;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind,
+    receipt_unit_id, issue_unit_id, production_unit_id
   )
   VALUES (
     v_tenant,
     '__g5_suon_cot_let_finished_good_' || gen_random_uuid()::text,
     '__G5-FG-' || floor(random() * 1000000)::text,
     10000,
-    'finished_good'
+    'finished_good',
+    v_part_unit, v_part_unit, v_part_unit
   )
   RETURNING id INTO v_ingredient;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind,
+    receipt_unit_id, issue_unit_id, production_unit_id
   )
   VALUES (
     v_tenant,
     '__g5_trung_finished_good_' || gen_random_uuid()::text,
     '__G5-EGG-' || floor(random() * 1000000)::text,
     3000,
-    'finished_good'
+    'finished_good',
+    v_part_unit, v_part_unit, v_part_unit
   )
   RETURNING id INTO v_side_ingredient;
 
   INSERT INTO public.ingredients (
-    tenant_id, name, sku, unit_cost, item_kind
+    tenant_id, name, sku, unit_cost, item_kind,
+    receipt_unit_id, issue_unit_id, production_unit_id
   )
   VALUES (
     v_tenant,
     '__g5_drink_stock_item_' || gen_random_uuid()::text,
     '__G5-DRINK-' || floor(random() * 1000000)::text,
     12000,
-    'finished_good'
+    'finished_good',
+    v_part_unit, v_part_unit, v_part_unit
   )
   RETURNING id INTO v_drink_ingredient;
 
@@ -134,24 +140,24 @@ BEGIN
     (v_tenant, v_side_ingredient, v_part_unit, 1, true),
     (v_tenant, v_drink_ingredient, v_part_unit, 1, true);
 
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_stock_limit_item_' || gen_random_uuid()::text, 45000, 1)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order, vat_rate)
+  VALUES (v_tenant, v_category, '__g5_stock_limit_item_' || gen_random_uuid()::text, 45000, 1, 0)
   RETURNING id INTO v_limit_menu;
 
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_shared_pool_item_' || gen_random_uuid()::text, 45000, 2)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order, vat_rate)
+  VALUES (v_tenant, v_category, '__g5_shared_pool_item_' || gen_random_uuid()::text, 45000, 2, 0)
   RETURNING id INTO v_pool_menu;
 
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_side_item_' || gen_random_uuid()::text, 7000, 3)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order, vat_rate)
+  VALUES (v_tenant, v_category, '__g5_side_item_' || gen_random_uuid()::text, 7000, 3, 0)
   RETURNING id INTO v_side_menu;
 
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_drink_category, '__g5_drink_item_' || gen_random_uuid()::text, 15000, 4)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order, vat_rate)
+  VALUES (v_tenant, v_drink_category, '__g5_drink_item_' || gen_random_uuid()::text, 15000, 4, 0)
   RETURNING id INTO v_drink_menu;
 
-  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order)
-  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 5)
+  INSERT INTO public.menu_items (tenant_id, category_id, name, base_price, sort_order, vat_rate)
+  VALUES (v_tenant, v_category, '__g5_missing_config_item_' || gen_random_uuid()::text, 45000, 5, 0)
   RETURNING id INTO v_empty_menu;
 
   INSERT INTO public.recipes

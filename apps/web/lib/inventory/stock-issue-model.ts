@@ -34,8 +34,6 @@ export type BranchStockIssueIngredient = {
   category: string | null;
   isActive: boolean;
   currentQuantity: number;
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
   units: IngredientUnitRow[];
 };
 

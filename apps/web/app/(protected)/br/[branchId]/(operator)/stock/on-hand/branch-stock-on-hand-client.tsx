@@ -86,9 +86,7 @@ type AttentionCta = {
 };
 
 function StockQuantity({ item }: { item: StockIngredient }) {
-  const { big, base } = formatStockUnits(item.qty, item.units, formatQty, {
-    preferredUnitId: item.issue_unit_id,
-  });
+  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
   const atRisk = isStockReorderRisk(item);
   const primaryClass = cn(
     "font-mono text-base font-semibold leading-5 tabular-nums",

@@ -112,8 +112,6 @@ function toBranchStockIssueIngredient(
     category: ingredient.category,
     isActive: ingredient.is_active,
     currentQuantity,
-    receipt_unit_id: ingredient.receipt_unit_id ?? null,
-    issue_unit_id: ingredient.issue_unit_id ?? null,
     units: ingredient.units ?? [],
   };
 }

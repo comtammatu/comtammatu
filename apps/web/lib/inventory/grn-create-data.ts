@@ -30,8 +30,6 @@ type IngredientJoinRow = {
   name: string;
   sku: string | null;
   category: string | null;
-  receipt_unit_id: number | null;
-  issue_unit_id: number | null;
   ingredient_units: IngredientUnitJoinRow[] | null;
 };
 
@@ -89,7 +87,7 @@ export async function loadGrnCreatePageData({
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, category, receipt_unit_id, issue_unit_id, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, sku, category, ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)

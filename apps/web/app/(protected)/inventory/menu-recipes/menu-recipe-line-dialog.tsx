@@ -18,8 +18,6 @@ export interface IngredientOption {
   id: number;
   name: string;
   unitLabel: string;
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 }
 

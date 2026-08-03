@@ -14,7 +14,7 @@ test("canonical self-service uses Control shell and keeps Owner denied", () => {
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const clock = read("apps/web/lib/staff-runtime/clock/actions.ts");
   const migration = read(
-    "supabase/migrations/20260801030457_hr_universal_self_service.sql",
+    "supabase/migration-archive/20260801030457_hr_universal_self_service.sql",
   );
 
   assert.match(acl, /role === "owner" && moduleKey === "me"/);
@@ -85,7 +85,7 @@ test("personal workday keeps Branch and Company route families distinct", () => 
 test("payroll is contract-based without double unpaid deduction", () => {
   const payroll = read("apps/web/app/(protected)/hr/payroll-actions.ts");
   const migration = read(
-    "supabase/migrations/20260801030457_hr_universal_self_service.sql",
+    "supabase/migration-archive/20260801030457_hr_universal_self_service.sql",
   );
 
   assert.ok(payroll.includes('contract?.pay_basis ?? "attendance_prorated"'));

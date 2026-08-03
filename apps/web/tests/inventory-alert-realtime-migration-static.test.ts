@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 test("inventory alerts use current thresholds, stable deduplication, and service-only jobs", () => {
   const migration = read(
-    "supabase/migrations/20260802111528_repair_inventory_alert_notifications.sql",
+    "supabase/migration-archive/20260802111528_repair_inventory_alert_notifications.sql",
   );
 
   assert.match(migration, /sum\(stock\.current_quantity\)/);
@@ -24,7 +24,7 @@ test("inventory alerts use current thresholds, stable deduplication, and service
 
 test("branch operations broadcast request, production, and stocktake child changes", () => {
   const migration = read(
-    "supabase/migrations/20260802111529_extend_inventory_branch_ops_realtime.sql",
+    "supabase/migration-archive/20260802111529_extend_inventory_branch_ops_realtime.sql",
   );
 
   for (const table of ["stock_requests", "purchase_requests", "production_runs"]) {

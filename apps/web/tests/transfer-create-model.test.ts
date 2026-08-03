@@ -36,7 +36,6 @@ const ingredient: TransferIngredientOption = {
   name: "Gao",
   is_active: true,
   itemKind: "raw_material",
-  issue_unit_id: 2,
   units: [
     {
       id: 1001,
@@ -216,7 +215,7 @@ test("line payload rejects an empty transfer", () => {
   );
 });
 
-test("changing source clamps the configured issue unit to available stock", () => {
+test("changing source clamps the selected active unit to available stock", () => {
   assert.equal(
     clampTransferLineForSource({
       line: makeLine({ quantity: "3" }),
@@ -233,6 +232,9 @@ test("changing source clamps the configured issue unit to available stock", () =
       sourceStockByLocation: { 200: { 100: 10 } },
       sourceLocationId: 200,
     }),
-    { success: false, error: "invalid_line" },
+    {
+      success: true,
+      lines: [{ ingredientId: 100, quantity: 2, entryUnitId: 1 }],
+    },
   );
 });

@@ -96,7 +96,7 @@ test("shipping and receiving use explicit atomic transitions", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
   );
   const migration = read(
-    "supabase/migrations/20260730090000_unify_stock_fulfillment.sql",
+    "supabase/migration-archive/20260730090000_unify_stock_fulfillment.sql",
   );
 
   const shipAction = actions.slice(
@@ -267,7 +267,7 @@ test("central kitchen request route and database authority stay supply-only", ()
   );
   const roles = read("packages/shared/src/auth/inventory-roles.ts");
   const migration = read(
-    "supabase/migrations/20260730194403_enable_central_kitchen_stock_requests.sql",
+    "supabase/migration-archive/20260730194403_enable_central_kitchen_stock_requests.sql",
   );
 
   assert.match(roles, /STOCK_REQUEST_ROLES[\s\S]*central_kitchen_lead/);

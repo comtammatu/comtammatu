@@ -14,7 +14,7 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HÄÄ
 
   assert.match(
     readRoot(
-      "supabase/migrations/20260731130332_grant_supplier_invoice_cockpit_columns.sql",
+      "supabase/migration-archive/20260731130332_grant_supplier_invoice_cockpit_columns.sql",
     ),
     /GRANT SELECT\s+\(document_status\)\s+ON public\.supplier_invoices\s+TO authenticated/,
   );

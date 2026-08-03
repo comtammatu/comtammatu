@@ -24,7 +24,7 @@ test("branch code matches the migration contract", async () => {
   const migration = await readFile(
     path.join(
       repositoryRoot,
-      "supabase/migrations/20260727120000_baseline.sql",
+      "supabase/migration-archive/20260727120000_baseline.sql",
     ),
     "utf8",
   );

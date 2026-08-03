@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { X as IconX } from "lucide-react";
 import {
   useController,
   type Control,
@@ -10,6 +11,7 @@ import {
 import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
   FieldDescription,
@@ -60,12 +62,10 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import {
   buildCatalogUnits,
-  distinctRoleUnitIds,
   IngredientUnitModelError,
   readCatalogUnitModel,
   rebaseUnitFactors,
   standardFactor,
-  type UnitRoles,
 } from "./ingredient-unit-form-model";
 
 const copy = messages.inventoryMaster.ingredientForm;
@@ -83,25 +83,22 @@ const ingredientSchema = z
     default_fulfill_site_kind: z
       .enum(["none", "central_supply", "central_kitchen"])
       .optional(),
-    input_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
-    output_unit_id: z.string().trim().min(1, { error: copy.units.selectUnit }),
+    unit_ids: z
+      .array(z.string().trim().min(1))
+      .min(1, { error: copy.units.selectUnit })
+      .max(20, { error: copy.units.maxReached }),
     base_unit_id: z.string().trim().min(1, { error: copy.units.selectBase }),
     unit_factors: z.record(z.string(), z.string()),
   })
   .superRefine((data, ctx) => {
-    const roleIds = [
-      data.input_unit_id,
-      data.output_unit_id,
-    ].filter((id): id is string => Boolean(id));
-
-    if (!roleIds.includes(data.base_unit_id)) {
+    if (!data.unit_ids.includes(data.base_unit_id)) {
       ctx.addIssue({
         code: "custom",
         path: ["base_unit_id"],
-        message: copy.units.baseMustBeRole,
+        message: copy.units.baseMustBeSelected,
       });
     }
-    for (const unitId of new Set(roleIds)) {
+    for (const unitId of new Set(data.unit_ids)) {
       if (unitId === data.base_unit_id) continue;
       const factor = Number(data.unit_factors[unitId]);
       if (!Number.isFinite(factor) || factor <= 0) {
@@ -115,21 +112,14 @@ const ingredientSchema = z
   });
 
 type IngredientFormValues = z.infer<typeof ingredientSchema>;
-type RoleFieldName = "input_unit_id" | "output_unit_id";
 
 function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
-  const baseUnit = ingredient?.units?.find((unit) => unit.is_base);
-  const outputUnit =
-    ingredient?.units?.find(
-      (unit) => unit.unit_id === ingredient.issue_unit_id,
-    ) ?? baseUnit;
-  const inputUnit =
-    ingredient?.units?.find(
-      (unit) => unit.unit_id === ingredient.receipt_unit_id,
-    ) ?? outputUnit;
+  const activeUnits = (ingredient?.units ?? []).filter(
+    (unit) => unit.is_active,
+  );
   const unitModel = readCatalogUnitModel(
-    ingredient?.units ?? [],
-    outputUnit?.unit_id ?? null,
+    activeUnits,
+    activeUnits[0]?.unit_id ?? null,
   );
 
   return {
@@ -146,8 +136,7 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
         : "",
     default_fulfill_site_kind:
       ingredient?.default_fulfill_site_kind ?? FULFILL_SITE_NONE,
-    input_unit_id: String(inputUnit?.unit_id ?? ""),
-    output_unit_id: String(outputUnit?.unit_id ?? ""),
+    unit_ids: activeUnits.map((unit) => String(unit.unit_id)),
     base_unit_id: String(unitModel.baseUnitId ?? ""),
     unit_factors: Object.fromEntries(
       Object.entries(unitModel.factors).map(([unitId, factor]) => [
@@ -197,15 +186,9 @@ export function IngredientDialog({
   );
 
   async function handleSubmit(values: IngredientFormValues) {
-    const inputUnitId = Number(values.input_unit_id);
-    const outputUnitId = Number(values.output_unit_id);
     try {
       const units = buildCatalogUnits({
-        roles: {
-          receiptUnitId: inputUnitId,
-          issueUnitId: outputUnitId,
-          productionUnitId: null,
-        },
+        unitIds: values.unit_ids.map(Number),
         baseUnitId: Number(values.base_unit_id),
         factors: Object.fromEntries(
           Object.entries(values.unit_factors).map(([id, factor]) => [
@@ -237,8 +220,6 @@ export function IngredientDialog({
             ? values.default_fulfill_site_kind
             : null,
         units,
-        receipt_unit_id: inputUnitId,
-        issue_unit_id: outputUnitId,
       };
       const result =
         isEdit && ingredient
@@ -301,22 +282,19 @@ function IngredientDialogFields({
   unitOptions: UnitOption[];
 }) {
   const itemKind = form.watch("item_kind");
-  const inputUnitId = form.watch("input_unit_id");
-  const outputUnitId = form.watch("output_unit_id");
+  const unitIds = form.watch("unit_ids");
   const baseUnitId = form.watch("base_unit_id");
   const unitFactors = form.watch("unit_factors");
   const { field: baseField, fieldState: baseFieldState } = useController({
     control: form.control,
     name: "base_unit_id",
   });
-  const roles: UnitRoles = {
-    receiptUnitId: Number(inputUnitId),
-    issueUnitId: Number(outputUnitId),
-    productionUnitId: null,
-  };
-  const roleUnitIds = distinctRoleUnitIds(roles);
+  const selectedUnitIds = [...new Set(unitIds.map(Number))];
   const unitsById = new Map(unitOptions.map((unit) => [unit.id, unit]));
   const baseUnit = unitsById.get(Number(baseUnitId));
+  const availableUnitOptions = unitSelectOptions.filter(
+    (option) => !unitIds.includes(option.value),
+  );
 
   function factorFor(unitId: number): number {
     if (unitId === Number(baseUnitId)) return 1;
@@ -327,51 +305,17 @@ function IngredientDialogFields({
     return Number(unitFactors[String(unitId)]);
   }
 
-  function changeRole(name: RoleFieldName, nextValue: string): boolean {
-    const nextRoles = {
-      input_unit_id: name === "input_unit_id" ? nextValue : inputUnitId,
-      output_unit_id: name === "output_unit_id" ? nextValue : outputUnitId,
-    };
-    const selected = [
-      nextRoles.input_unit_id,
-      nextRoles.output_unit_id,
-    ].filter(Boolean);
-    if (baseUnitId && !selected.includes(baseUnitId)) {
-      form.setError("base_unit_id", {
-        type: "manual",
-        message: copy.units.chooseBaseBeforeRoleChange,
-      });
-      return false;
-    }
-
-    if (name === "output_unit_id" && !inputUnitId) {
-      form.setValue("input_unit_id", nextValue, { shouldValidate: true });
-    }
-    if (!baseUnitId && name === "output_unit_id") {
+  function addUnit(nextValue: string) {
+    if (!nextValue || unitIds.includes(nextValue) || unitIds.length >= 20)
+      return;
+    form.setValue("unit_ids", [...unitIds, nextValue], {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (!baseUnitId) {
       form.setValue("base_unit_id", nextValue, { shouldValidate: true });
       form.setValue(`unit_factors.${nextValue}`, "1");
-      const nextBaseUnit = unitsById.get(Number(nextValue));
-      for (const selectedUnitId of new Set(selected)) {
-        const selectedUnit = unitsById.get(Number(selectedUnitId));
-        if (
-          selectedUnitId !== nextValue &&
-          selectedUnit?.is_standard &&
-          nextBaseUnit?.is_standard
-        ) {
-          try {
-            form.setValue(
-              `unit_factors.${selectedUnitId}`,
-              String(standardFactor(selectedUnit, nextBaseUnit)),
-              { shouldValidate: true },
-            );
-          } catch {
-            form.setValue(`unit_factors.${selectedUnitId}`, "", {
-              shouldValidate: true,
-            });
-          }
-        }
-      }
-    } else if (baseUnitId) {
+    } else {
       const nextUnit = unitsById.get(Number(nextValue));
       if (nextUnit?.is_standard && baseUnit?.is_standard) {
         try {
@@ -388,14 +332,27 @@ function IngredientDialogFields({
       }
     }
     form.clearErrors("base_unit_id");
-    return true;
+  }
+
+  function removeUnit(unitId: number) {
+    if (selectedUnitIds.length <= 1) return;
+    const nextUnitIds = unitIds.filter((id) => Number(id) !== unitId);
+    if (unitId === Number(baseUnitId)) {
+      const nextBaseId = nextUnitIds[0];
+      if (!nextBaseId || !changeBase(nextBaseId)) return;
+      baseField.onChange(nextBaseId);
+    }
+    form.setValue("unit_ids", nextUnitIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 
   function changeBase(nextBaseId: string): boolean {
     if (!baseUnitId) return true;
     try {
       const factors = Object.fromEntries(
-        roleUnitIds.map((unitId) => [unitId, factorFor(unitId)]),
+        selectedUnitIds.map((unitId) => [unitId, factorFor(unitId)]),
       );
       const rebased = rebaseUnitFactors(factors, Number(nextBaseId));
       for (const [unitId, factor] of Object.entries(rebased)) {
@@ -478,45 +435,28 @@ function IngredientDialogFields({
         </Field>
       </div>
 
-      <FieldSet>
-        <FieldLegend>{copy.units.roleSectionLabel}</FieldLegend>
-        <FieldDescription>{copy.units.hint}</FieldDescription>
-        <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
-          <GuardedSelectField
-            control={form.control}
-            name="input_unit_id"
-            label={copy.units.inputUnit}
-            options={unitSelectOptions}
-            onChange={(value) => changeRole("input_unit_id", value)}
-          />
-          <GuardedSelectField
-            control={form.control}
-            name="output_unit_id"
-            label={copy.units.outputUnit}
-            options={unitSelectOptions}
-            onChange={(value) => changeRole("output_unit_id", value)}
-          />
-        </div>
-      </FieldSet>
-
       <FieldSet data-invalid={Boolean(baseFieldState.error)}>
-        <FieldLegend id="base-unit-label">{copy.units.baseUnit} *</FieldLegend>
+        <FieldLegend id="base-unit-label">
+          {copy.units.sectionLabel}
+        </FieldLegend>
         <FieldDescription id="base-unit-description">
           {copy.units.baseUnitDescription}
         </FieldDescription>
-        {roleUnitIds.length === 1 && baseUnitId ? (
-          <Item variant="muted" size="sm">
-            <ItemContent>
-              <ItemTitle>
-                {unitsById.get(roleUnitIds[0] ?? 0)?.name ??
-                  copy.units.unitPending}
-              </ItemTitle>
-            </ItemContent>
-            <ItemActions>
-              <Badge variant="secondary">{copy.units.baseTag}</Badge>
-            </ItemActions>
-          </Item>
-        ) : roleUnitIds.length > 0 ? (
+        {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
+          <Select value="" onValueChange={addUnit}>
+            <SelectTrigger className="w-full" aria-label={copy.units.add}>
+              <SelectValue placeholder={copy.units.add} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableUnitOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        {selectedUnitIds.length > 0 ? (
           <RadioGroup
             value={baseField.value ?? ""}
             onValueChange={(value) => {
@@ -527,14 +467,8 @@ function IngredientDialogFields({
             aria-describedby="base-unit-description"
           >
             <ItemGroup className="gap-2">
-              {roleUnitIds.map((unitId) => {
+              {selectedUnitIds.map((unitId) => {
                 const optionId = `base-unit-${unitId}`;
-                const roleLabels = [
-                  inputUnitId === String(unitId) ? copy.units.inputRole : null,
-                  outputUnitId === String(unitId)
-                    ? copy.units.outputRole
-                    : null,
-                ].filter((label) => label !== null);
 
                 return (
                   <Item
@@ -542,26 +476,36 @@ function IngredientDialogFields({
                     variant="outline"
                     size="sm"
                     role="listitem"
-                    className="cursor-pointer"
-                    render={
-                      <FieldLabel
-                        htmlFor={optionId}
-                        className="w-full items-center gap-3 font-normal"
-                      />
-                    }
                   >
                     <RadioGroupItem id={optionId} value={String(unitId)} />
-                    <ItemContent>
-                      <ItemTitle>
-                        {unitsById.get(unitId)?.name ?? copy.units.unitPending}
-                      </ItemTitle>
-                    </ItemContent>
+                    <FieldLabel
+                      htmlFor={optionId}
+                      className="min-w-0 flex-1 cursor-pointer font-normal"
+                    >
+                      <ItemContent>
+                        <ItemTitle>
+                          {unitsById.get(unitId)?.name ?? copy.units.unitPending}
+                        </ItemTitle>
+                      </ItemContent>
+                    </FieldLabel>
                     <ItemActions className="flex-wrap justify-end">
-                      {roleLabels.map((label) => (
-                        <Badge key={label} variant="outline">
-                          {label}
-                        </Badge>
-                      ))}
+                      {unitId === Number(baseUnitId) ? (
+                        <Badge variant="secondary">{copy.units.baseTag}</Badge>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={selectedUnitIds.length === 1}
+                        aria-label={`${copy.units.remove} ${unitsById.get(unitId)?.name ?? ""}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removeUnit(unitId);
+                        }}
+                      >
+                        <IconX />
+                      </Button>
                     </ItemActions>
                   </Item>
                 );
@@ -574,21 +518,22 @@ function IngredientDialogFields({
         ) : null}
       </FieldSet>
 
-      {roleUnitIds.length > 0 && baseUnit ? (
+      {selectedUnitIds.length > 1 && baseUnit ? (
         <FieldSet>
           <FieldLegend>
             {copy.units.conversionSection(baseUnit.name)}
           </FieldLegend>
           <ItemGroup className="gap-2">
-            {roleUnitIds.map((unitId) => (
-              <UnitFactorField
-                key={unitId}
-                control={form.control}
-                unit={unitsById.get(unitId)}
-                baseUnit={baseUnit}
-                isBase={unitId === Number(baseUnitId)}
-              />
-            ))}
+            {selectedUnitIds
+              .filter((unitId) => unitId !== Number(baseUnitId))
+              .map((unitId) => (
+                <UnitFactorField
+                  key={unitId}
+                  control={form.control}
+                  unit={unitsById.get(unitId)}
+                  baseUnit={baseUnit}
+                />
+              ))}
           </ItemGroup>
         </FieldSet>
       ) : null}
@@ -596,83 +541,21 @@ function IngredientDialogFields({
   );
 }
 
-function GuardedSelectField({
-  control,
-  name,
-  label,
-  options,
-  value,
-  required = true,
-  onChange,
-}: {
-  control: Control<IngredientFormValues>;
-  name: RoleFieldName;
-  label: string;
-  options: Array<{ value: string; label: string }>;
-  value?: string;
-  required?: boolean;
-  onChange: (value: string) => boolean;
-}) {
-  const { field, fieldState } = useController({ control, name });
-  const controlSize = useFormControlSize("responsive");
-  const fieldId = `field-${name}`;
-  const errorId = fieldState.error ? `${fieldId}-error` : undefined;
-
-  return (
-    <Field data-invalid={Boolean(fieldState.error)}>
-      <FieldLabel htmlFor={fieldId}>
-        {label}
-        {required ? " *" : null}
-      </FieldLabel>
-      <Select
-        value={value ?? field.value ?? ""}
-        onValueChange={(value) => {
-          if (onChange(value)) field.onChange(value);
-        }}
-      >
-        <SelectTrigger
-          id={fieldId}
-          size={controlSize}
-          className="w-full"
-          aria-invalid={Boolean(fieldState.error)}
-          aria-describedby={errorId}
-          onBlur={field.onBlur}
-          ref={field.ref}
-        >
-          <SelectValue placeholder={copy.units.selectUnit} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {fieldState.error ? (
-        <FieldError id={errorId} errors={[fieldState.error]} />
-      ) : null}
-    </Field>
-  );
-}
-
 function UnitFactorField({
   control,
   unit,
   baseUnit,
-  isBase,
 }: {
   control: Control<IngredientFormValues>;
   unit: UnitOption | undefined;
   baseUnit: UnitOption | undefined;
-  isBase: boolean;
 }) {
   const name =
     `unit_factors.${unit?.id ?? 0}` as FieldPath<IngredientFormValues>;
   const { field, fieldState } = useController({ control, name });
   const controlSize = useFormControlSize("responsive");
   const automatic = Boolean(unit?.is_standard && baseUnit?.is_standard);
-  let displayedValue = isBase ? "1" : String(field.value ?? "");
+  let displayedValue = String(field.value ?? "");
   if (automatic && unit && baseUnit) {
     try {
       displayedValue = String(standardFactor(unit, baseUnit));
@@ -695,14 +578,7 @@ function UnitFactorField({
           <ItemTitle>{unit?.name ?? copy.units.unitPending}</ItemTitle>
         </ItemContent>
         <ItemActions className="w-full justify-between sm:w-auto sm:justify-end">
-          {isBase ? (
-            <>
-              <span className="text-sm font-medium tabular-nums">
-                1 {baseUnit?.name ?? copy.units.unitPending}
-              </span>
-              <Badge variant="secondary">{copy.units.baseTag}</Badge>
-            </>
-          ) : automatic ? (
+          {automatic ? (
             <>
               <span className="text-sm font-medium tabular-nums">
                 {displayedValue} {baseUnit?.name ?? copy.units.unitPending}

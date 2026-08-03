@@ -6,25 +6,25 @@ import test from "node:test";
 const root = join(process.cwd(), "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const migration = read(
-  "supabase/migrations/20260729180000_purchase_request_po_first_grn_ap.sql",
+  "supabase/migration-archive/20260729180000_purchase_request_po_first_grn_ap.sql",
 );
 const duplicateIngredientMigration = read(
-  "supabase/migrations/20260729190000_allow_duplicate_ingredient_grn_lines.sql",
+  "supabase/migration-archive/20260729190000_allow_duplicate_ingredient_grn_lines.sql",
 );
 const secureLinkedLineTriggerMigration = read(
-  "supabase/migrations/20260729200000_secure_linked_grn_line_trigger.sql",
+  "supabase/migration-archive/20260729200000_secure_linked_grn_line_trigger.sql",
 );
 const secureSupplierInvoiceMigration = read(
-  "supabase/migrations/20260729210000_secure_supplier_invoice_allocation_rpc.sql",
+  "supabase/migration-archive/20260729210000_secure_supplier_invoice_allocation_rpc.sql",
 );
 const supplierAllocationLockMigration = read(
-  "supabase/migrations/20260729220000_fix_supplier_allocation_locks.sql",
+  "supabase/migration-archive/20260729220000_fix_supplier_allocation_locks.sql",
 );
 const linkedGrnPricingMigration = read(
-  "supabase/migrations/20260729230000_price_linked_grn_applied_quantity.sql",
+  "supabase/migration-archive/20260729230000_price_linked_grn_applied_quantity.sql",
 );
 const grnDraftMetricsMigration = read(
-  "supabase/migrations/20260729240000_fix_grn_draft_exception_metrics.sql",
+  "supabase/migration-archive/20260729240000_fix_grn_draft_exception_metrics.sql",
 );
 
 test("new GRNs belong to one supplier PO while legacy multi-supplier rows remain", () => {

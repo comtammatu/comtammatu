@@ -18,12 +18,12 @@ test("stock adjustments preserve the selected issue or receipt unit through the 
     `${root}apps/web/app/(protected)/inventory/stock/stock-client.tsx`,
     "utf8",
   );
-  const migrationName = readdirSync(`${root}supabase/migrations`).find((name) =>
-    name.endsWith("_fix_inventory_movement_entry_boundaries.sql"),
+  const migrationName = readdirSync(`${root}supabase/migration-archive`).find(
+    (name) => name.endsWith("_fix_inventory_movement_entry_boundaries.sql"),
   );
   assert.ok(migrationName, "missing inventory movement boundary migration");
   const migration = readFileSync(
-    `${root}supabase/migrations/${migrationName}`,
+    `${root}supabase/migration-archive/${migrationName}`,
     "utf8",
   );
 

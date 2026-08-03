@@ -38,7 +38,7 @@ test("template test print picks printer via print_types routing", () => {
 
 test("printer fleet migration widens schema and sort_order routing", () => {
   const migration = read(
-    "supabase/migrations/20260729140600_printer_fleet_sort_order.sql",
+    "supabase/migration-archive/20260729140600_printer_fleet_sort_order.sql",
   );
 
   assert.match(migration, /ADD COLUMN IF NOT EXISTS sort_order/);

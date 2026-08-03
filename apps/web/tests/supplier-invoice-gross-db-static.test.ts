@@ -5,7 +5,7 @@ import test from "node:test";
 
 const migrationDir = resolve(
   import.meta.dirname,
-  "../../../supabase/migrations",
+  "../../../supabase/migration-archive",
 );
 const migrationName = readdirSync(migrationDir).find((name) =>
   name.endsWith("_supplier_invoice_net_unit_price.sql"),

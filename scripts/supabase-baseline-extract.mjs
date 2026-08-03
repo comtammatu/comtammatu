@@ -148,6 +148,7 @@ function buildBaselineDbUrl(expectedRef) {
   //    the requested ref so a stale override can't dump the wrong project.
   const explicit =
     (process.env["SUPABASE_DB_URL"] ?? "").trim() ||
+    readEnvLocalValue("SUPABASE_DB_URL") ||
     readEnvLocalValue(target.explicitUrlEnv);
   if (explicit) {
     if (!explicit.includes(expectedRef)) {
@@ -257,11 +258,12 @@ function findPgDump() {
 // pg_dump in Docker; this path needs neither. Applies the two replay fixups that
 // matter for a fresh Supabase restore: idempotent public/private schema creation and
 // neutralised psql `\restrict`/`\unrestrict` meta-lines (pg_dump 18).
-function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
+function runPgDumpEngine({ dbUrl, schemas, outputPath, dryRun, timeoutMs }) {
   const bin = findPgDump();
+  const schemaArgs = schemas.flatMap((schema) => ["--schema", schema]);
   if (dryRun) {
     process.stdout.write(
-      `# pg_dump engine (libpq): ${bin} --schema-only --schema=${schema} --no-owner --dbname <redacted>\n`,
+      `# pg_dump engine (libpq): ${bin} --schema-only ${schemaArgs.join(" ")} --no-owner --dbname <redacted>\n`,
     );
     return;
   }
@@ -269,7 +271,7 @@ function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
     bin,
     [
       "--schema-only",
-      `--schema=${schema}`,
+      ...schemaArgs,
       "--no-owner",
       "--file",
       outputPath,
@@ -285,9 +287,32 @@ function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
     );
     throw new Error(detail || `pg_dump exited with status ${result.status}`);
   }
-  const fixed = readFileSync(outputPath, "utf8")
-    .replace(/^\\(un)?restrict .*$/gm, (m) => `-- ${m}`)
-    .replace(/^CREATE SCHEMA public;$/gm, "CREATE SCHEMA IF NOT EXISTS public;");
+  let fixed = readFileSync(outputPath, "utf8")
+    .replace(
+      /^\\(un)?restrict .*$/gm,
+      (_match, unrestrict) => `-- \\${unrestrict ?? ""}restrict REDACTED`,
+    )
+    .replace(/^CREATE SCHEMA public;$/gm, "CREATE SCHEMA IF NOT EXISTS public;")
+    .replace(/\r$/gm, "");
+  if (schemas.includes("public") && schemas.includes("private")) {
+    fixed = fixed.replace(
+      /^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin .*\n/gm,
+      "",
+    );
+    const aclIndex = fixed.search(/\n--\n-- Name: .*; Type: ACL;/);
+    if (aclIndex < 0) throw new Error("ACL section not found in combined schema dump");
+    const aclReset = [
+      'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";',
+      'REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";',
+      'REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "public", "private" FROM "anon", "authenticated", "service_role";',
+    ].join("\n");
+    fixed = [
+      "SET check_function_bodies = false;",
+      fixed.slice(0, aclIndex),
+      aclReset,
+      fixed.slice(aclIndex),
+    ].join("\n\n");
+  }
   writeFileSync(outputPath, fixed);
 }
 
@@ -307,18 +332,21 @@ async function main() {
   const version = getSupabaseVersion();
 
   if (options.dryRun) {
+    if (options.engine === "pg_dump") {
+      process.stdout.write(
+        `\n# Dry run (engine=${options.engine}) for schemas: ${options.schemas.join(",")}\n`,
+      );
+      runPgDumpEngine({ dbUrl, schemas: options.schemas, dryRun: true });
+      return;
+    }
     for (const schema of options.schemas) {
       process.stdout.write(`\n# Dry run (engine=${options.engine}) for schema: ${schema}\n`);
-      if (options.engine === "pg_dump") {
-        runPgDumpEngine({ dbUrl, schema, dryRun: true });
-      } else {
-        const { stdout, stderr } = runPnpmSupabase(
-          ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
-          options.timeoutMs,
-        );
-        if (stderr) process.stderr.write(`${stderr}\n`);
-        process.stdout.write(`${stdout}\n`);
-      }
+      const { stdout, stderr } = runPnpmSupabase(
+        ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
+        options.timeoutMs,
+      );
+      if (stderr) process.stderr.write(`${stderr}\n`);
+      process.stdout.write(`${stdout}\n`);
     }
     return;
   }
@@ -336,23 +364,29 @@ async function main() {
     supabaseCli: version,
     command:
       options.engine === "pg_dump"
-        ? "pg_dump --schema-only --schema=<schema> --no-owner --dbname <redacted>"
+        ? "pg_dump --schema-only --schema=<schema>... --no-owner --dbname <redacted>"
         : "pnpm exec supabase db dump --db-url <redacted> --schema <schema>",
     schemas: options.schemas,
     files: [],
   };
 
-  for (const schema of options.schemas) {
-    const outputPath = join(outDir, schemaFileName(schema));
-    if (options.engine === "pg_dump") {
-      runPgDumpEngine({
-        dbUrl,
-        schema,
-        outputPath,
-        dryRun: false,
-        timeoutMs: options.timeoutMs,
-      });
-    } else {
+  if (options.engine === "pg_dump") {
+    const outputPath = join(outDir, schemaFileName(options.schemas.join("_")));
+    runPgDumpEngine({
+      dbUrl,
+      schemas: options.schemas,
+      outputPath,
+      dryRun: false,
+      timeoutMs: options.timeoutMs,
+    });
+    manifest.files.push({
+      schemas: options.schemas,
+      path: outputPath,
+      bytes: statSync(outputPath).size,
+    });
+  } else {
+    for (const schema of options.schemas) {
+      const outputPath = join(outDir, schemaFileName(schema));
       const { stdout, stderr } = runPnpmSupabase(
         [
           "db",
@@ -369,13 +403,13 @@ async function main() {
       );
       if (stdout.trim()) process.stdout.write(`${stdout.trim()}\n`);
       if (stderr.trim()) process.stderr.write(`${stderr.trim()}\n`);
-    }
 
-    manifest.files.push({
-      schema,
-      path: outputPath,
-      bytes: statSync(outputPath).size,
-    });
+      manifest.files.push({
+        schema,
+        path: outputPath,
+        bytes: statSync(outputPath).size,
+      });
+    }
   }
 
   const manifestPath = join(outDir, "manifest.json");

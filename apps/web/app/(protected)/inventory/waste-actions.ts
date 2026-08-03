@@ -155,7 +155,7 @@ export async function createWasteEntry(
   for (const item of parsed.data.items) {
     const stock = stockByIngredient.get(item.ingredient_id);
     if (item.entry_unit_id == null) {
-      return { success: false, error: "Chọn đơn vị xuất kho cho từng dòng." };
+      return { success: false, error: "Chọn đơn vị cho từng dòng." };
     }
     const toBaseFactor = factorByIngredientUnit.get(
       `${item.ingredient_id}:${item.entry_unit_id}`,

@@ -21,14 +21,14 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.doesNotMatch(source, /theo WAC/);
 });
 
-test("ingredient unit dialog models independent roles around one explicit base", () => {
+test("ingredient unit dialog models active units around one standard unit", () => {
   const source = readWorkspaceFile(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
   const messages = readWorkspaceFile("lib/messages/inventory-master.ts");
 
-  assert.match(source, /label=\{copy\.units\.inputUnit\}/);
-  assert.match(source, /label=\{copy\.units\.outputUnit\}/);
+  assert.match(source, /unit_ids: z/);
+  assert.match(source, /\.max\(20/);
   assert.match(source, /name: "base_unit_id"/);
   assert.match(source, /UnitFactorField/);
   assert.match(source, /<RadioGroup/);
@@ -50,8 +50,9 @@ test("ingredient unit dialog models independent roles around one explicit base",
     source,
     /previewCanonical|DEFAULT_UNIT_CONVERSION_INPUT_DIRECTION|Đổi chiều quy đổi/,
   );
-  assert.match(messages, /baseUnit: "Đơn vị tồn chuẩn"/);
-  assert.match(messages, /Đơn vị nhập và xuất là các vai trò độc lập/);
+  assert.match(messages, /baseUnit: "Đơn vị chuẩn"/);
+  assert.match(messages, /sectionLabel: "Đơn vị lưu trữ"/);
+  assert.doesNotMatch(messages, /Đơn vị nhập|Đơn vị xuất|vai trò độc lập/);
   assert.doesNotMatch(messages, /Nhập ≥ Xuất ≥ Sản xuất/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);
   assert.doesNotMatch(messages, /1 đơn vị nhập = bao nhiêu đơn vị xuất/);
@@ -77,7 +78,7 @@ test("GRN entry copy keeps unit conversion and omits purchase-price helpers", ()
     /unitCostTitle|priorPriceLine|unitPriceUnit|priceSetOnPoHint/,
   );
   assert.match(source, /baseConversionPreview/);
-  assert.match(source, /Quy đổi về tồn chuẩn/);
+  assert.match(source, /Quy đổi về đơn vị chuẩn/);
   assert.doesNotMatch(source, /label=\{FORM_VI\.unitPrice\}/);
 });
 

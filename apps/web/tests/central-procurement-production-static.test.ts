@@ -12,7 +12,7 @@ const readRoot = (path: string) =>
 const readMigrationChain = () => {
   const migrationDir = resolve(
     import.meta.dirname,
-    "../../../supabase/migrations",
+    "../../../supabase/migration-archive",
   );
 
   return readdirSync(migrationDir)
@@ -39,7 +39,7 @@ test("Production procurement destinations include central_supply and central_kit
 
 test("central site location defaults and seed migration exists", () => {
   const migration = readRoot(
-    "supabase/migrations/20260727190000_central_procurement_and_vat_evidence.sql",
+    "supabase/migration-archive/20260727190000_central_procurement_and_vat_evidence.sql",
   );
 
   assert.match(

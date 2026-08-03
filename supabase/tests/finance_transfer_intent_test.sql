@@ -66,6 +66,9 @@ BEGIN
       expense_date,
       category,
       amount,
+      subtotal,
+      vat_breakdown,
+      vat_amount,
       payment_method,
       paid_at,
       created_by,
@@ -78,6 +81,11 @@ BEGIN
       current_date,
       'utilities',
       250000,
+      250000,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0, 'taxable_amount', 250000, 'vat_amount', 0
+      )),
+      0,
       'unpaid',
       NULL,
       v_owner,
@@ -159,17 +167,17 @@ BEGIN
 
   IF has_function_privilege(
     'anon',
-    'public.create_expense_transfer_intent(bigint,date,text,numeric,text,text)',
+    'public.create_expense_transfer_intent(bigint,date,text,jsonb,text,text,text)',
     'EXECUTE'
   )
     OR has_function_privilege(
       'service_role',
-      'public.create_expense_transfer_intent(bigint,date,text,numeric,text,text)',
+      'public.create_expense_transfer_intent(bigint,date,text,jsonb,text,text,text)',
       'EXECUTE'
     )
     OR NOT has_function_privilege(
       'authenticated',
-      'public.create_expense_transfer_intent(bigint,date,text,numeric,text,text)',
+      'public.create_expense_transfer_intent(bigint,date,text,jsonb,text,text,text)',
       'EXECUTE'
     )
     OR has_function_privilege(
@@ -276,8 +284,11 @@ BEGIN
       v_branch_id,
       current_date,
       'utilities',
-      250000,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0, 'taxable_amount', 250000, 'vat_amount', 0
+      )),
       'Non-owner vendor',
+      NULL,
       NULL
     );
   EXCEPTION
@@ -307,8 +318,11 @@ BEGIN
       v_other_branch_id,
       current_date,
       'utilities',
-      250000,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0, 'taxable_amount', 250000, 'vat_amount', 0
+      )),
       'Cross-tenant vendor',
+      NULL,
       NULL
     );
   EXCEPTION
@@ -325,9 +339,12 @@ BEGIN
     v_branch_id,
     current_date,
     'utilities',
-    250000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 250000, 'vat_amount', 0
+    )),
     'EVN',
-    'Monthly electricity'
+    'Monthly electricity',
+    NULL
   ) result;
 
   IF v_transfer_content !~ (
@@ -633,6 +650,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -642,6 +662,11 @@ BEGIN
     current_date,
     'repair',
     100000,
+    100000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 100000, 'vat_amount', 0
+    )),
+    0,
     'unpaid',
     NULL,
     v_owner
@@ -689,6 +714,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -698,6 +726,11 @@ BEGIN
     current_date,
     'repair',
     125000,
+    125000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 125000, 'vat_amount', 0
+    )),
+    0,
     'unpaid',
     NULL,
     v_owner
@@ -870,6 +903,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -879,6 +915,11 @@ BEGIN
     current_date,
     'utilities',
     481000,
+    481000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 481000, 'vat_amount', 0
+    )),
+    0,
     'unpaid',
     NULL,
     v_owner
@@ -897,20 +938,20 @@ BEGIN
     RAISE EXCEPTION 'expense_payment_null_target_accepted';
   END IF;
 
-  SELECT result.transfer_content
-  INTO v_transfer_content
+  SELECT result.transfer_content, result.paid_at
+  INTO v_transfer_content, v_paid_at
   FROM public.transition_expense_payment(
     v_state_expense_id,
     'transfer'
   ) result;
 
-  IF v_transfer_content IS NULL OR NOT EXISTS (
+  IF v_transfer_content IS NOT NULL OR v_paid_at IS NULL OR NOT EXISTS (
     SELECT 1
     FROM public.expenses expense
     WHERE expense.id = v_state_expense_id
-      AND expense.payment_method = 'unpaid'
-      AND expense.paid_at IS NULL
-      AND expense.transfer_content = v_transfer_content
+      AND expense.payment_method = 'transfer'
+      AND expense.paid_at = v_paid_at
+      AND expense.transfer_content IS NULL
   ) THEN
     RAISE EXCEPTION 'expense_payment_transfer_transition_invalid';
   END IF;
@@ -946,17 +987,8 @@ BEGIN
     RAISE EXCEPTION 'expense_payment_transfer_replay_not_idempotent';
   END IF;
 
-  v_rejected := false;
-  BEGIN
-    PERFORM *
-    FROM public.transition_expense_payment(v_state_expense_id, 'cash');
-  EXCEPTION
-    WHEN SQLSTATE '23514' THEN
-      v_rejected := true;
-  END;
-  IF NOT v_rejected THEN
-    RAISE EXCEPTION 'expense_payment_pending_transfer_cash_accepted';
-  END IF;
+  PERFORM *
+  FROM public.transition_expense_payment(v_state_expense_id, 'cash');
 
   PERFORM *
   FROM public.transition_expense_payment(v_state_expense_id, 'unpaid');
@@ -998,7 +1030,7 @@ BEGIN
     AND audit.entity_id = v_state_expense_id
     AND audit.action = 'update';
 
-  IF v_replay_paid_at IS DISTINCT FROM v_paid_at OR v_audit_count <> 3 THEN
+  IF v_replay_paid_at IS DISTINCT FROM v_paid_at OR v_audit_count <> 4 THEN
     RAISE EXCEPTION 'expense_payment_cash_replay_not_idempotent:%',
       v_audit_count;
   END IF;
@@ -1041,6 +1073,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -1050,6 +1085,11 @@ BEGIN
     current_date,
     'other',
     483000,
+    483000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 483000, 'vat_amount', 0
+    )),
+    0,
     'unpaid',
     NULL,
     v_owner
@@ -1068,6 +1108,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -1077,6 +1120,11 @@ BEGIN
     current_date,
     'repair',
     482000,
+    482000,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 482000, 'vat_amount', 0
+    )),
+    0,
     'unpaid',
     NULL,
     v_owner
@@ -1145,7 +1193,7 @@ BEGIN
     WHERE audit.entity_type = 'expense'
       AND audit.entity_id = v_pending_cancel_id
       AND audit.action = 'cancel'
-      AND audit.old_data->>'transfer_content' = v_transfer_content
+      AND audit.old_data->>'payment_method' = 'transfer'
   ) THEN
     RAISE EXCEPTION 'expense_pending_transfer_cancel_invalid';
   END IF;
@@ -1173,6 +1221,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -1182,6 +1233,11 @@ BEGIN
     DATE '2026-06-30',
     'utilities',
     912345,
+    912345,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 912345, 'vat_amount', 0
+    )),
+    0,
     'cash',
     TIMESTAMPTZ '2026-06-30 17:00:00+00',
     v_owner
@@ -1290,6 +1346,9 @@ BEGIN
     expense_date,
     category,
     amount,
+    subtotal,
+    vat_breakdown,
+    vat_amount,
     payment_method,
     paid_at,
     created_by
@@ -1299,6 +1358,11 @@ BEGIN
     v_business_date,
     'hospitality',
     12345,
+    12345,
+    jsonb_build_array(jsonb_build_object(
+      'vat_rate', 0, 'taxable_amount', 12345, 'vat_amount', 0
+    )),
+    0,
     'cash',
     now(),
     v_owner

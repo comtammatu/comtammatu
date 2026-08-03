@@ -1,6 +1,7 @@
 import type { IngredientRow } from "@lib/inventory/types";
 import {
-  getIngredientRoleUnit,
+  getIngredientUnitOptions,
+  getLargestIngredientUnit,
   type InventoryUnitOptionWithFactor,
 } from "@lib/inventory/unit-options";
 
@@ -14,10 +15,7 @@ export type CountUnitOption = InventoryUnitOptionWithFactor;
 export function getCountUnitOptions(
   ingredient: IngredientRow | undefined,
 ): CountUnitOption[] {
-  const unit = getIngredientRoleUnit(ingredient, "issue");
-  const factor = ingredient?.units?.find((row) => row.unit_id === unit?.unitId)
-    ?.to_base_factor;
-  return unit ? [{ ...unit, toBaseFactor: factor ?? 1 }] : [];
+  return getIngredientUnitOptions(ingredient, { includeToBaseFactor: true });
 }
 
 /**
@@ -28,7 +26,7 @@ export function getCountUnitOptions(
 export function pickDefaultCountUnit(
   options: readonly CountUnitOption[],
 ): CountUnitOption | null {
-  return options[0] ?? null;
+  return getLargestIngredientUnit(options);
 }
 
 /**
