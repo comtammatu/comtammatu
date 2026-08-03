@@ -1,0 +1,7 @@
+{
+  "exclude": [
+    ".agents/",
+    "supabase/migration-archive/",
+    "packages/print-render/src/fonts-data.ts"
+  ]
+}

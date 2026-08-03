@@ -23,9 +23,11 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 | Notification, alert, scheduled report | `docs/spec/toast-notification-system.md` |
 
 All rule paths above are under `docs/agent/rules/`. When `.codegraph/` exists,
-use CodeGraph before `rg` or manual source reads. Re-run `agent:start` after
-source, SQL, or generated-type changes only when later graph review depends on
-fresh edges. If `.codegraph/` is absent, skip it; indexing is an owner decision.
+use CodeGraph first for supported-source symbols, flows, callers, and impact.
+Use `rg` or direct reads for SQL, config/docs, and exact literals. Re-run
+`agent:start` after supported source or generated-type changes only when later
+graph review depends on fresh edges. If `.codegraph/` is absent or unavailable,
+use built-in search tools; indexing remains an owner decision.
 
 ## Critical Constraints
 

@@ -1,10 +1,20 @@
-import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const INDEX_LOCK_FAILURE = /Could not acquire file lock/i;
+import {
+  codeGraphAction,
+  codeGraphErrorPaths,
+  codeGraphInvocation,
+  codeGraphRefreshFailed,
+  skillCheckInvocation,
+} from "./agent-start-policy.mjs";
+
 const INDEX_FILE_FAILURE =
   /files? could not be (?:read|parsed)|files? with errors/i;
+
+const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
 
 function run(command, args, print = true) {
   const result = spawnSync(command, args, {
@@ -16,55 +26,18 @@ function run(command, args, print = true) {
     process.stdout.write(result.stdout ?? "");
     process.stderr.write(result.stderr ?? "");
   }
-  if (result.error) throw result.error;
   return result;
 }
 
-function runSelfTest() {
-  assert.equal(INDEX_LOCK_FAILURE.test("Indexed 1,624 files"), false);
-  assert.equal(INDEX_LOCK_FAILURE.test("Could not acquire file lock"), true);
-  assert.deepEqual(
-    errorPaths("apps/web/page.tsx: Failed to read file: ENOENT\n"),
-    ["apps/web/page.tsx"],
-  );
-  assert.equal(
-    statusNeedsRefresh('{"initialized":true,"pendingChanges":{"added":0,"modified":0,"removed":0},"worktreeMismatch":null,"index":{"reindexRecommended":false}}'),
-    false,
-  );
-  assert.equal(
-    statusNeedsRefresh('{"initialized":true,"pendingChanges":{"added":0,"modified":1,"removed":0},"worktreeMismatch":null,"index":{"reindexRecommended":false}}'),
-    true,
-  );
-  assert.equal(statusNeedsRefresh("not-json"), true);
-  console.log("[agent-start] self-test passed (6 cases)");
-}
-
-function errorPaths(log) {
-  return log
-    .split("\n")
-    .map((line) => line.match(/^(.+?): (?:Failed|Error)\b/)?.[1])
-    .filter(Boolean);
-}
-
-function statusNeedsRefresh(output) {
-  try {
-    const status = JSON.parse(output);
-    const pending = status.pendingChanges ?? {};
-    return (
-      status.initialized !== true ||
-      status.worktreeMismatch !== null ||
-      status.index?.reindexRecommended === true ||
-      ["added", "modified", "removed"].some(
-        (key) => Number(pending[key] ?? 0) > 0,
-      )
-    );
-  } catch {
-    return true;
-  }
+function runCodeGraph(args, print = true) {
+  const invocation = codeGraphInvocation(args);
+  return run(invocation.command, invocation.args, print);
 }
 
 function main() {
-  const skills = run("corepack", ["pnpm", "agent:skills"]);
+  const skillCheck = skillCheckInvocation(scriptsDirectory);
+  const skills = run(skillCheck.command, skillCheck.args);
+  if (skills.error) throw skills.error;
   if (skills.status !== 0) process.exit(skills.status ?? 1);
 
   if (!existsSync(".codegraph")) {
@@ -74,34 +47,57 @@ function main() {
     return;
   }
 
-  const initialStatus = run("codegraph", ["status", "-j"], false);
-  if (
-    initialStatus.status === 0 &&
-    !statusNeedsRefresh(initialStatus.stdout ?? "")
-  ) {
+  const initialStatus = runCodeGraph(["status", "--json"], false);
+  if (initialStatus.error || initialStatus.status !== 0) {
+    process.stdout.write(initialStatus.stdout ?? "");
+    process.stderr.write(initialStatus.stderr ?? "");
+    console.warn(
+      "[agent-start] CodeGraph unavailable; continue with built-in search tools until the runtime is restored.",
+    );
+    return;
+  }
+
+  const action = codeGraphAction(initialStatus.stdout ?? "");
+  if (action === "unavailable") {
+    console.warn(
+      "[agent-start] CodeGraph returned invalid status; refresh skipped to avoid an unsafe full rebuild.",
+    );
+    return;
+  }
+  if (action === "none") {
     console.log("[agent-start] CodeGraph is current; refresh skipped.");
     return;
   }
 
-  const index = run("codegraph", ["index", "."]);
-  const indexOutput = `${index.stdout ?? ""}\n${index.stderr ?? ""}`;
-  const failedExistingFiles = INDEX_FILE_FAILURE.test(indexOutput)
-    ? errorPaths(readFileSync(".codegraph/errors.log", "utf8")).filter((path) =>
-        existsSync(path),
-      )
-    : [];
+  const refresh = runCodeGraph([action, "."]);
+  const refreshOutput = `${refresh.stdout ?? ""}\n${refresh.stderr ?? ""}`;
+  const errorsLog = ".codegraph/errors.log";
+  const failedExistingFiles =
+    INDEX_FILE_FAILURE.test(refreshOutput) && existsSync(errorsLog)
+      ? codeGraphErrorPaths(readFileSync(errorsLog, "utf8")).filter((path) =>
+          existsSync(path),
+        )
+      : [];
   if (
-    index.status !== 0 ||
-    INDEX_LOCK_FAILURE.test(indexOutput) ||
-    failedExistingFiles.length > 0
+    codeGraphRefreshFailed({
+      status: refresh.status,
+      error: refresh.error,
+      output: refreshOutput,
+      failedExistingFiles,
+    })
   ) {
-    console.error("[agent-start] CodeGraph refresh did not complete cleanly.");
-    process.exit(index.status || 1);
+    console.warn(
+      "[agent-start] CodeGraph refresh did not complete cleanly; continue with built-in search tools.",
+    );
+    return;
   }
 
-  const status = run("codegraph", ["status", "."]);
-  if (status.status !== 0) process.exit(status.status ?? 1);
+  const status = runCodeGraph(["status", "."]);
+  if (status.error || status.status !== 0) {
+    console.warn(
+      "[agent-start] CodeGraph post-refresh status is unavailable; verify it before graph-backed review.",
+    );
+  }
 }
 
-if (process.argv.includes("--self-test")) runSelfTest();
-else main();
+main();

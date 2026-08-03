@@ -18,3 +18,7 @@ url = "https://mcp.openrouter.ai/mcp"
 [mcp_servers.stitch]
 command = "npx"
 args = ["-y", "@_davideast/stitch-mcp", "proxy"]
+
+[mcp_servers.codegraph]
+command = "codegraph"
+args = ["serve", "--mcp"]
