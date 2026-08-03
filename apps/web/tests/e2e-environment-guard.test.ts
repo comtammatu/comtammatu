@@ -245,6 +245,12 @@ test("ingredient round-trip builds its graph through the UI from a base-only fix
   const source = readWeb("e2e/inventory/ingredient-unit-conversion.spec.ts");
 
   assert.match(source, /async function addUnitThroughUi/);
+  assert.match(source, /getByRole\("listitem"\)\.filter\(\{\s*hasText: unitName/);
+  assert.doesNotMatch(
+    source,
+    /getByRole\("listitem"\)\.filter\(\{\s*has: dialog\.getByText/,
+    "the descendant matcher must be relative to each list item",
+  );
   assert.match(source, /async function configureManualRelation/);
   assert.match(source, /seedBaseOnlyIngredient/);
   assert.match(

@@ -338,9 +338,7 @@ async function configureManualRelation(
 }
 
 function relationRow(dialog: Locator, unitName: string) {
-  return dialog.getByRole("listitem").filter({
-    has: dialog.getByText(unitName, { exact: true }),
-  });
+  return dialog.getByRole("listitem").filter({ hasText: unitName });
 }
 
 async function readUnitGraph(supabase: ServiceClient, fixture: SeededFixture) {
