@@ -305,11 +305,21 @@ BEGIN
       AND jsonb_typeof(
         NEW.provider_data #> '{invoiceSnapshot,draftSnapshot,invoiceProfile}'
       ) = 'object'
-      AND (OLD.provider_data -> 'invoiceSnapshot')
+      AND jsonb_typeof(
+        NEW.provider_data #> '{invoiceSnapshot,draftSnapshot,subtotal}'
+      ) = 'number'
+      AND jsonb_typeof(
+        NEW.provider_data #> '{invoiceSnapshot,draftSnapshot,vatAmount}'
+      ) = 'number'
+      AND ((OLD.provider_data -> 'invoiceSnapshot')
             #- '{draftSnapshot,invoiceProfile}'
+            #- '{draftSnapshot,subtotal}'
+            #- '{draftSnapshot,vatAmount}')
         IS NOT DISTINCT FROM
-          (NEW.provider_data -> 'invoiceSnapshot')
+          ((NEW.provider_data -> 'invoiceSnapshot')
             #- '{draftSnapshot,invoiceProfile}'
+            #- '{draftSnapshot,subtotal}'
+            #- '{draftSnapshot,vatAmount}')
     ) THEN
     RAISE EXCEPTION 'invoice_snapshot_immutable' USING ERRCODE = '22023';
   END IF;
