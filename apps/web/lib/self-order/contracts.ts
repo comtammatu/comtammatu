@@ -58,7 +58,7 @@ export const selfOrderSubmitRequestSchema = z
 export const selfOrderPaymentRequestSchema = z
   .object({
     clientOpId: selfOrderClientOpIdSchema,
-    method: z.enum(["cash_call", "vietqr"]),
+    method: z.enum(["cash_call", "vietqr", "momo"]),
   })
   .strict();
 
@@ -86,6 +86,7 @@ export const selfOrderDerivedStateSchema = z.enum([
 export const selfOrderPaymentRequestStatusSchema = z.enum([
   "cash_call",
   "vietqr_pending",
+  "momo_pending",
   "completed",
   "cancelled",
   "expired",
@@ -103,7 +104,7 @@ const publicSelfOrderPaymentRequestSchema = z
     id: z.number().int().positive().optional(),
     clientOpId: z.uuid().optional(),
     status: selfOrderPaymentRequestStatusSchema,
-    method: z.enum(["cash_call", "vietqr"]),
+    method: z.enum(["cash_call", "vietqr", "momo"]),
     amount: z.number().finite().min(0),
     paymentId: z.number().int().positive().nullable().optional(),
     paymentCode: z.string().min(1).nullable().optional(),
@@ -111,6 +112,8 @@ const publicSelfOrderPaymentRequestSchema = z
     bankCode: z.string().min(1).nullable().optional(),
     accountNo: z.string().min(1).nullable().optional(),
     accountName: z.string().nullable().optional(),
+    deeplink: z.string().min(1).nullable().optional(),
+    payUrl: z.url().nullable().optional(),
     createdAt: z.string().datetime({ offset: true }),
     expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
   })
@@ -127,6 +130,20 @@ export const selfOrderVietQrResponseSchema = publicSelfOrderPaymentRequestSchema
     accountNo: z.string().min(1),
     accountName: z.string(),
     expiresAt: z.string().datetime({ offset: true }).nullable(),
+    idempotent: z.boolean().optional(),
+    recovered: z.boolean().optional(),
+  })
+  .strict();
+
+export const selfOrderMoMoResponseSchema = publicSelfOrderPaymentRequestSchema
+  .extend({
+    ok: z.literal(true).optional(),
+    method: z.literal("momo"),
+    status: z.literal("momo_pending"),
+    amount: z.number().finite().positive(),
+    deeplink: z.string().min(1),
+    payUrl: z.url(),
+    expiresAt: z.string().datetime({ offset: true }),
     idempotent: z.boolean().optional(),
     recovered: z.boolean().optional(),
   })

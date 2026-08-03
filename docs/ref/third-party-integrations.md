@@ -9,7 +9,8 @@
 
 | Nhóm              | Vendor chọn                    | Fallback      | Module                       |
 | ----------------- | ------------------------------ | ------------- | ---------------------------- |
-| **QR thanh toán** | VietQR (NAPAS) + SePay webhook | —             | Payment                      |
+| **QR thanh toán** | VietQR (NAPAS)                 | SePay webhook | Payment                      |
+| **Ví điện tử**    | MoMo One-Time Payment          | —             | Payment                      |
 | **Card payment**  | VNPay                          | —             | Đã loại bỏ (D012 2026-06-10) |
 | **HĐĐT**          | Viettel S-invoice              | —             | Finance                      |
 | **BHXH**          | iBHXH / VNPT-BHXH              | Manual portal | Nhân sự & tiền lương         |
@@ -23,12 +24,12 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính | Giá trị                                                      |
-| ---------- | ------------------------------------------------------------ |
-| Loại       | EMVCo/NAPAS bank-transfer payload                            |
+| Thuộc tính | Giá trị                                                        |
+| ---------- | -------------------------------------------------------------- |
+| Loại       | EMVCo/NAPAS bank-transfer payload                              |
 | Generation | Sinh payload cục bộ trong provider; không gọi VietQR image API |
-| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền      |
-| Cấu hình   | Tài khoản nhận tiền sống trong Owner settings                |
+| Settlement | SePay evidence webhook hoặc cashier xác nhận theo quyền        |
+| Cấu hình   | Tài khoản nhận tiền sống trong Owner settings                  |
 
 **Cách hoạt động**: Mỗi đơn có mã chuyển khoản cố định trong
 `orders.payment_code`: `<configured prefix> + space + 12 ký tự chữ/số`. Phiếu
@@ -56,7 +57,29 @@ SePay đẩy evidence webhook, hoặc cashier xác nhận theo quyền khi cần
 
 ---
 
-### 1.2 VNPay — Card & Gateway
+### 1.2 MoMo — One-Time Payment for Self-Order
+
+**Lựa chọn**: chỉ bật cho Self-Order công khai. POS không khởi tạo thanh toán
+MoMo.
+
+| Thuộc tính  | Quy ước                                                           |
+| ----------- | ----------------------------------------------------------------- |
+| Create API  | `POST /v2/gateway/api/create`, `requestType=captureWallet`        |
+| Mở ứng dụng | Dùng nguyên `deeplink` do MoMo trả về                             |
+| Dự phòng    | Dùng nguyên `payUrl` do MoMo trả về nếu không mở được ứng dụng    |
+| Đối soát    | IPN đã xác thực; redirect không phải bằng chứng thanh toán        |
+| Runtime     | Thông tin `MOMO_*` chỉ ở server; gọi LIVE cần gate vận hành riêng |
+
+Hệ thống giữ chỗ payment và yêu cầu Self-Order trong một giao dịch nguyên tử
+trước khi gọi MoMo. Request ID và provider order ID không đổi khi mạng retry.
+IPN phải qua HMAC, đúng phạm vi tenant/order, đúng provider ID và đúng số tiền
+trước khi hoàn tất payment đã có trong sổ giao dịch. Cron chỉ query các intent
+đang pending đã quá 30 giây, tối đa một lần mỗi phút; kết quả query vẫn phải
+khớp provider order ID và số tiền trước khi hoàn tất.
+
+---
+
+### 1.3 VNPay — Card & Gateway
 
 **Lựa chọn**: ❌ **Đã loại bỏ (D012 2026-06-10)**
 

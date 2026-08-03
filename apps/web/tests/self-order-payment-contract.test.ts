@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  selfOrderMoMoResponseSchema,
   selfOrderPaymentCancelRequestSchema,
   selfOrderPaymentRequestSchema,
   selfOrderPaymentRequestStatusResponseSchema,
@@ -38,13 +39,6 @@ const guestCancelMigration = readFileSync(
 
 function readWeb(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
-}
-
-function readShared(path: string): string {
-  return readFileSync(
-    join(process.cwd(), "../../packages/shared/src", path),
-    "utf8",
-  );
 }
 
 test("VietQR response contract preserves the exact database snapshot", () => {
@@ -89,6 +83,21 @@ test("VietQR response contract rejects an incomplete committed snapshot", () => 
   });
 
   assert.equal(parsed.success, false);
+});
+
+test("MoMo response contract keeps provider-returned handoff links", () => {
+  const parsed = selfOrderMoMoResponseSchema.safeParse({
+    status: "momo_pending",
+    method: "momo",
+    amount: 125_000,
+    paymentId: 94,
+    deeplink: "momo://provider-returned/deeplink",
+    payUrl: "https://payment.momo.vn/pay/1",
+    createdAt: "2026-08-03T01:00:00+00:00",
+    expiresAt: "2026-08-03T01:30:00+00:00",
+  });
+
+  assert.equal(parsed.success, true);
 });
 
 test("payment server returns only the validated RPC payment snapshot", () => {
@@ -137,12 +146,11 @@ test("Self-Order permits payment while KDS is still preparing", () => {
   assert.doesNotMatch(paymentPanel, /paymentNotReady/);
 });
 
-test("Self-Order creates the selected buyer-neutral payment without a hidden confirmation step", () => {
+test("Self-Order starts each buyer-neutral payment in one tap", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const client = readWeb("app/q/[token]/self-order-client.tsx");
   const route = readWeb("app/api/self-order/[token]/payment/route.ts");
   const server = readWeb("lib/self-order/server.ts");
-  const messages = readShared("messages/self-order.ts");
   const request = {
     clientOpId: "ee023e0f-618c-4b72-b6bc-580030845214",
     method: "vietqr",
@@ -156,12 +164,15 @@ test("Self-Order creates the selected buyer-neutral payment without a hidden con
     }).success,
     false,
   );
-  assert.match(paymentPanel, /selectedPaymentMethod/);
-  assert.match(paymentPanel, /onPaymentMethodChange\("cash_call"\)/);
-  assert.match(paymentPanel, /onPaymentMethodChange\("vietqr"\)/);
-  assert.match(paymentPanel, /onClick=\{onCreatePayment\}/);
-  assert.doesNotMatch(paymentPanel, /onRequestPayment/);
-  assert.match(client, /requestPayment\(selectedPaymentMethod\)/);
+  assert.doesNotMatch(paymentPanel, /selectedPaymentMethod/);
+  assert.match(paymentPanel, /onRequestPayment\("cash_call"\)/);
+  assert.match(paymentPanel, /onRequestPayment\("vietqr"\)/);
+  assert.match(paymentPanel, /onRequestPayment\("momo"\)/);
+  assert.match(client, /onRequestPayment=\{requestPayment\}/);
+  assert.match(
+    client,
+    /method === "momo"[\s\S]*window\.location\.assign\(paymentRequest\.deeplink\)/,
+  );
   assert.doesNotMatch(client, /paymentConfirmationMethod/);
   assert.match(
     client,
@@ -171,14 +182,11 @@ test("Self-Order creates the selected buyer-neutral payment without a hidden con
   assert.doesNotMatch(route, /parsed\.data\.invoice/);
   assert.match(server, /p_invoice_payload: \{\}/);
   assert.doesNotMatch(paymentPanel, /buyerTaxCode|buyerNotGetInvoice/);
-  assert.match(messages, /cashCallAction: "Gọi nhân viên thu tiền"/);
-  assert.match(messages, /vietQrCreateAction: "Tạo mã QR"/);
-  assert.match(
-    paymentPanel,
-    /selectedPaymentMethod === "vietqr"[\s\S]*vietQrCreateAction/,
-  );
   assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
   assert.match(paymentPanel, /<BankAppLauncher/);
+  assert.match(paymentPanel, /href=\{activePaymentRequest\.deeplink \?\? ""\}/);
+  assert.equal(paymentPanel.match(/<QrCodeImage/g)?.length, 1);
+  assert.doesNotMatch(paymentPanel, /momo:\/\/[A-Za-z]/);
 });
 
 test("guest can cancel only the exact active VietQR request", () => {

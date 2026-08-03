@@ -141,7 +141,7 @@ function normalizePaymentRequest(
   const method = readOptionalString(record, "method");
   const amount = Number(record.amount);
   if (
-    (method !== "cash_call" && method !== "vietqr") ||
+    (method !== "cash_call" && method !== "vietqr" && method !== "momo") ||
     !Number.isFinite(amount) ||
     amount < 0
   ) {
@@ -159,6 +159,8 @@ function normalizePaymentRequest(
     bankCode: readOptionalString(record, "bankCode"),
     accountNo: readOptionalString(record, "accountNo"),
     accountName: readOptionalString(record, "accountName"),
+    deeplink: readOptionalString(record, "deeplink"),
+    payUrl: readOptionalString(record, "payUrl"),
     createdAt: readOptionalString(record, "createdAt"),
     expiresAt: readOptionalString(record, "expiresAt"),
   };
@@ -270,11 +272,8 @@ export function SelfOrderClient({
   const [billOpen, setBillOpen] = useState(false);
   const [billView, setBillView] = useState<"bill" | "payment">("bill");
   const [awaitingDialogOpen, setAwaitingDialogOpen] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
-    "cash_call" | "vietqr" | null
-  >(null);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<
-    "cash_call" | "vietqr" | null
+    "cash_call" | "vietqr" | "momo" | null
   >(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [isPaymentPending, startPayment] = useTransition();
@@ -547,7 +546,7 @@ export function SelfOrderClient({
     });
   }
 
-  function requestPayment(method: "cash_call" | "vietqr") {
+  function requestPayment(method: "cash_call" | "vietqr" | "momo") {
     if (!order || activePaymentRequest) return;
     const intent = resolveClientIntent(
       paymentIntentRef.current,
@@ -586,7 +585,6 @@ export function SelfOrderClient({
           return;
         }
         setLocalPaymentRequest(paymentRequest);
-        setSelectedPaymentMethod(null);
         paymentIntentRef.current = clearClientIntent(
           paymentIntentRef.current,
           intent.clientOpId,
@@ -594,17 +592,15 @@ export function SelfOrderClient({
         setBillView("payment");
         setBillOpen(true);
         void refreshSnapshot();
+        if (method === "momo" && paymentRequest.deeplink) {
+          window.location.assign(paymentRequest.deeplink);
+        }
       } catch {
         setPaymentError(SELF_ORDER_VI.paymentFailed);
       } finally {
         setPendingPaymentMethod(null);
       }
     });
-  }
-
-  function createSelectedPayment() {
-    if (!selectedPaymentMethod || !order || activePaymentRequest) return;
-    requestPayment(selectedPaymentMethod);
   }
 
   async function cancelVietQrPayment() {
@@ -675,7 +671,6 @@ export function SelfOrderClient({
         setLocalPaymentRequest(null);
         ignoredPaymentStatusClientOpIdRef.current = currentClientOpId;
         setPaymentStatusClientOpId(null);
-        setSelectedPaymentMethod(null);
         paymentIntentRef.current = null;
         toast.success(SELF_ORDER_VI.cancelVietQrSuccess);
         await refreshSnapshot();
@@ -792,13 +787,11 @@ export function SelfOrderClient({
             disabled={awaiting || paymentPending}
             activeOrder={order}
             activePaymentRequest={activePaymentRequest}
-            selectedPaymentMethod={selectedPaymentMethod}
             isPending={isPaymentPending}
             isCancelling={isPaymentCancelling}
             pendingMethod={pendingPaymentMethod}
             error={paymentError}
-            onPaymentMethodChange={setSelectedPaymentMethod}
-            onCreatePayment={createSelectedPayment}
+            onRequestPayment={requestPayment}
             onCancelVietQr={cancelVietQrPayment}
           />
         ) : null}

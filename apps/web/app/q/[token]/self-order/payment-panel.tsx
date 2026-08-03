@@ -6,6 +6,7 @@ import {
   Landmark as IconBank,
   QrCode as IconQrcode,
   ReceiptText as IconReceipt,
+  Smartphone as IconMomo,
   X as IconCancel,
 } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
@@ -41,7 +42,7 @@ export interface GuestPaymentRequestState {
   id?: number | null;
   clientOpId?: string | null;
   status: string;
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
   amount: number;
   paymentId?: number | null;
   paymentCode?: string | null;
@@ -49,6 +50,8 @@ export interface GuestPaymentRequestState {
   bankCode?: string | null;
   accountNo?: string | null;
   accountName?: string | null;
+  deeplink?: string | null;
+  payUrl?: string | null;
   createdAt?: string | null;
   expiresAt?: string | null;
 }
@@ -57,13 +60,11 @@ export interface PaymentPanelProps {
   disabled: boolean;
   activeOrder: PublicSelfOrderAvailableSnapshot["order"];
   activePaymentRequest: GuestPaymentRequestState | null;
-  selectedPaymentMethod: "cash_call" | "vietqr" | null;
   isPending: boolean;
   isCancelling: boolean;
-  pendingMethod: "cash_call" | "vietqr" | null;
+  pendingMethod: "cash_call" | "vietqr" | "momo" | null;
   error: string | null;
-  onPaymentMethodChange: (method: "cash_call" | "vietqr") => void;
-  onCreatePayment: () => void;
+  onRequestPayment: (method: "cash_call" | "vietqr" | "momo") => void;
   onCancelVietQr: () => Promise<void>;
 }
 
@@ -196,13 +197,11 @@ export function PaymentPanel({
   disabled,
   activeOrder,
   activePaymentRequest,
-  selectedPaymentMethod,
   isPending,
   isCancelling,
   pendingMethod,
   error,
-  onPaymentMethodChange,
-  onCreatePayment,
+  onRequestPayment,
   onCancelVietQr,
 }: PaymentPanelProps) {
   if (!activeOrder) {
@@ -225,6 +224,10 @@ export function PaymentPanel({
     isVietQrPending &&
     Boolean(activePaymentRequest.qrData) &&
     Boolean(activePaymentRequest.paymentCode);
+  const hasRecoverableMoMo =
+    activePaymentRequest?.status === "momo_pending" &&
+    Boolean(activePaymentRequest.deeplink) &&
+    Boolean(activePaymentRequest.payUrl);
   const expiryLabel = formatVNTime(activePaymentRequest?.expiresAt, "") || null;
 
   return (
@@ -321,18 +324,45 @@ export function PaymentPanel({
                   </Button>
                 </div>
               ) : null}
+              {hasRecoverableMoMo ? (
+                <div className="flex flex-col items-center gap-3 rounded-md bg-muted/30 p-3 text-center">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="font-heading text-sm font-semibold">
+                      {SELF_ORDER_VI.momoPendingTitle}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {SELF_ORDER_VI.momoPendingDescription}
+                    </p>
+                  </div>
+                  <p className="font-mono text-sm font-bold tabular-nums">
+                    {formatVND(activePaymentRequest.amount)}
+                  </p>
+                  <Button
+                    size="touch-lg"
+                    className="w-full"
+                    render={<a href={activePaymentRequest.deeplink ?? ""} />}
+                  >
+                    {SELF_ORDER_VI.openMomoApp}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="touch"
+                    className="w-full"
+                    render={<a href={activePaymentRequest.payUrl ?? ""} />}
+                  >
+                    {SELF_ORDER_VI.openMomoWeb}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2">
               <Button
                 type="button"
-                variant={
-                  selectedPaymentMethod === "cash_call" ? "default" : "outline"
-                }
+                variant="outline"
                 size="touch"
                 disabled={disabled || isPending}
-                aria-pressed={selectedPaymentMethod === "cash_call"}
-                onClick={() => onPaymentMethodChange("cash_call")}
+                onClick={() => onRequestPayment("cash_call")}
               >
                 {pendingMethod === "cash_call" ? (
                   <Spinner className="size-4" />
@@ -343,13 +373,10 @@ export function PaymentPanel({
               </Button>
               <Button
                 type="button"
-                variant={
-                  selectedPaymentMethod === "vietqr" ? "default" : "outline"
-                }
+                variant="outline"
                 size="touch"
                 disabled={disabled || isPending}
-                aria-pressed={selectedPaymentMethod === "vietqr"}
-                onClick={() => onPaymentMethodChange("vietqr")}
+                onClick={() => onRequestPayment("vietqr")}
               >
                 {pendingMethod === "vietqr" ? (
                   <Spinner className="size-4" />
@@ -358,24 +385,24 @@ export function PaymentPanel({
                 )}
                 {SELF_ORDER_VI.vietQrCreate}
               </Button>
+              <Button
+                type="button"
+                variant="default"
+                size="touch"
+                disabled={disabled || isPending}
+                onClick={() => onRequestPayment("momo")}
+              >
+                {pendingMethod === "momo" ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <IconMomo data-icon="inline-start" />
+                )}
+                {SELF_ORDER_VI.momoCreate}
+              </Button>
             </div>
           )}
         </>
       </AppSection>
-      {activePaymentRequest ? null : (
-        <Button
-          type="button"
-          size="touch"
-          className="w-full"
-          disabled={disabled || isPending || selectedPaymentMethod == null}
-          onClick={onCreatePayment}
-        >
-          {isPending ? <Spinner className="size-4" /> : null}
-          {selectedPaymentMethod === "vietqr"
-            ? SELF_ORDER_VI.vietQrCreateAction
-            : SELF_ORDER_VI.cashCallAction}
-        </Button>
-      )}
     </section>
   );
 }

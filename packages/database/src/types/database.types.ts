@@ -9908,6 +9908,10 @@ export type Database = {
       cancel_production_run: { Args: { p_run_id: number }; Returns: Json }
       check_cron_jobs_health: { Args: never; Returns: undefined }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
+      claim_pending_momo_reconciliations: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
@@ -11415,6 +11419,14 @@ export type Database = {
         Args: { p_bank_transaction_id: number }
         Returns: Json
       }
+      record_momo_payment_result: {
+        Args: { p_event_id: number; p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
+      record_momo_query_result: {
+        Args: { p_payload: Json; p_payment_id: number }
+        Returns: Json
+      }
       record_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -11677,6 +11689,10 @@ export type Database = {
         Args: { p_order_id: number }
         Returns: number
       }
+      self_order_bind_momo_create_result: {
+        Args: { p_client_op_id: string; p_provider_data: Json; p_token: string }
+        Returns: Json
+      }
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: boolean
@@ -11712,6 +11728,15 @@ export type Database = {
         }
         Returns: Json
       }
+      self_order_create_momo_payment_request: {
+        Args: {
+          p_client_op_id: string
+          p_invoice_payload?: Json
+          p_method: string
+          p_token: string
+        }
+        Returns: Json
+      }
       self_order_create_payment_request: {
         Args: {
           p_client_op_id: string
@@ -11733,6 +11758,10 @@ export type Database = {
         | { Args: { p_token: string }; Returns: Json }
         | { Args: { p_client_op_id: string; p_token: string }; Returns: Json }
       self_order_menu_payload: { Args: { p_tenant_id: number }; Returns: Json }
+      self_order_momo_service_payload: {
+        Args: { p_request_id: number }
+        Returns: Json
+      }
       self_order_normalize_invoice_payload: {
         Args: { p_payload: Json }
         Returns: Json

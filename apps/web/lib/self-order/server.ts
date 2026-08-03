@@ -5,11 +5,13 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import type { PublicSelfOrderSnapshot, SelfOrderCartItem } from "./contracts";
 import {
   publicSelfOrderSnapshotSchema,
+  selfOrderMoMoResponseSchema,
   selfOrderPaymentActionResponseSchema,
   selfOrderPaymentRequestStatusResponseSchema,
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
+import { createMoMoGatewayFromEnv } from "../momo";
 import {
   findCartSoldOutMessage,
   isAvailabilityBlocked,
@@ -57,6 +59,7 @@ type RateLimitPurpose = "batch" | "payment";
 type SelfOrderPaymentRequestStatus =
   | "cash_call"
   | "vietqr_pending"
+  | "momo_pending"
   | "completed"
   | "cancelled"
   | "expired";
@@ -142,7 +145,10 @@ function mapSelfOrderError(
       message: SELF_ORDER_VI.vietQrConfigUnavailable,
     };
   }
-  if (message.includes("self_order_payment_request_expired")) {
+  if (
+    message.includes("self_order_payment_request_expired") ||
+    message.includes("self_order_payment_intent_expired")
+  ) {
     return {
       ok: false,
       status: 409,
@@ -704,7 +710,7 @@ export async function createSelfOrderPaymentRequest(input: {
   token: string;
   ipHash: string | null;
   clientOpId: string;
-  method: "cash_call" | "vietqr";
+  method: "cash_call" | "vietqr" | "momo";
 }): Promise<SelfOrderActionResult<Record<string, unknown>>> {
   const rateLimit = await consumeSelfOrderRateLimit({
     purpose: "payment",
@@ -713,8 +719,10 @@ export async function createSelfOrderPaymentRequest(input: {
   });
   if (!rateLimit.ok) return rateLimit;
 
-  const { data, error } = await service().rpc<Record<string, unknown>>(
-    "self_order_create_payment_request",
+  let { data, error } = await service().rpc<Record<string, unknown>>(
+    input.method === "momo"
+      ? "self_order_create_momo_payment_request"
+      : "self_order_create_payment_request",
     {
       p_token: input.token,
       p_client_op_id: input.clientOpId,
@@ -726,9 +734,71 @@ export async function createSelfOrderPaymentRequest(input: {
     console.error("[self-order] payment request failed", error);
     return mapSelfOrderError(error, "payment");
   }
-  const payload = data ?? {};
+  let payload = data ?? {};
   const failure = dataFailure(payload, "payment");
   if (failure) return failure;
+  if (input.method === "momo" && !payload.deeplink) {
+    const gateway = createMoMoGatewayFromEnv();
+    const tenantId = Number(payload.tenantId ?? payload.tenant_id);
+    const orderId = Number(payload.orderId ?? payload.order_id);
+    const amount = Number(payload.amount);
+    const providerOrderId = String(
+      payload.providerOrderId ?? payload.provider_order_id ?? "",
+    );
+    const providerRequestId = String(
+      payload.providerRequestId ?? payload.provider_request_id ?? "",
+    );
+    const orderNumber = String(
+      payload.orderNumber ?? payload.order_number ?? "",
+    );
+    if (
+      !gateway ||
+      !Number.isInteger(tenantId) ||
+      !Number.isInteger(orderId) ||
+      !Number.isFinite(amount) ||
+      !providerOrderId ||
+      !providerRequestId ||
+      !orderNumber
+    ) {
+      console.error("[self-order] MoMo configuration or intent is invalid");
+      return {
+        ok: false,
+        status: 503,
+        code: "momo_unavailable",
+        message: SELF_ORDER_VI.paymentFailed,
+      };
+    }
+    const created = await gateway.createPayment({
+      tenantId,
+      orderId,
+      orderNumber,
+      amount,
+      requestId: providerRequestId,
+      providerOrderId,
+    });
+    if (!created.ok) {
+      console.error("[self-order] MoMo create failed", created.code);
+      return {
+        ok: false,
+        status: 503,
+        code: created.code,
+        message: SELF_ORDER_VI.paymentFailed,
+      };
+    }
+    ({ data, error } = await service().rpc<Record<string, unknown>>(
+      "self_order_bind_momo_create_result",
+      {
+        p_token: input.token,
+        p_client_op_id: input.clientOpId,
+        p_provider_data: created.providerData,
+      },
+    ));
+    if (error) {
+      console.error("[self-order] MoMo bind failed", error);
+      return mapSelfOrderError(error, "payment");
+    }
+    payload = data ?? {};
+  }
   const publicPayload = {
     ok: true as const,
     id: payload.id,
@@ -742,6 +812,8 @@ export async function createSelfOrderPaymentRequest(input: {
     bankCode: payload.bankCode ?? payload.bank_code,
     accountNo: payload.accountNo ?? payload.account_no,
     accountName: payload.accountName ?? payload.account_name,
+    deeplink: payload.deeplink,
+    payUrl: payload.payUrl ?? payload.pay_url,
     createdAt: payload.createdAt ?? payload.created_at,
     expiresAt: payload.expiresAt ?? payload.expires_at,
     idempotent: payload.idempotent,
@@ -750,10 +822,16 @@ export async function createSelfOrderPaymentRequest(input: {
   const parsed =
     input.method === "vietqr"
       ? selfOrderVietQrResponseSchema.safeParse(publicPayload)
-      : selfOrderPaymentActionResponseSchema.safeParse(publicPayload);
+      : input.method === "momo"
+        ? selfOrderMoMoResponseSchema.safeParse(publicPayload)
+        : selfOrderPaymentActionResponseSchema.safeParse(publicPayload);
   if (!parsed.success) {
     return publicPayloadFailure(
-      input.method === "vietqr" ? "vietqr_payment" : "cash_payment",
+      input.method === "vietqr"
+        ? "vietqr_payment"
+        : input.method === "momo"
+          ? "momo_payment"
+          : "cash_payment",
       parsed.error.issues,
       "payment",
     );

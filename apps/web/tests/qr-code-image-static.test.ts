@@ -154,14 +154,17 @@ test("MB Bank link receives the exact VietQR payload", () => {
   assert.equal(url.searchParams.get("qrContent"), qrData);
 });
 
-test("Self-Order does not hardcode a MoMo payment or unsupported app target", () => {
+test("Self-Order uses only the provider-returned MoMo handoff", () => {
   const paymentPanel = readWeb("app/q/[token]/self-order/payment-panel.tsx");
   const contracts = readWeb("lib/self-order/contracts.ts");
-  const server = readWeb("lib/self-order/server.ts");
-  assert.doesNotMatch(paymentPanel, /id:\s*"momo"/);
-  assert.doesNotMatch(paymentPanel, /onRequestPayment\("momo"\)/);
-  assert.doesNotMatch(contracts, /momoDeeplink|momoPayUrl/);
-  assert.doesNotMatch(server, /createSelfOrderMomoPaymentRequest/);
+  const momo = readWeb("lib/momo.ts");
+  assert.match(paymentPanel, /activePaymentRequest\.deeplink/);
+  assert.match(paymentPanel, /activePaymentRequest\.payUrl/);
+  assert.match(contracts, /selfOrderMoMoResponseSchema/);
+  assert.match(momo, /data\.deeplink/);
+  assert.doesNotMatch(momo, /data\.qrCodeUrl/);
+  assert.equal(paymentPanel.match(/<QrCodeImage/g)?.length, 1);
+  assert.doesNotMatch(paymentPanel, /momo:\/\/[A-Za-z]/);
 });
 
 test("autofill bank app links keep the exact VietQR payment facts", () => {

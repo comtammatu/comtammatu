@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/tax-invoice-issue",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/momo-reconcile",
+      "schedule": "* * * * *"
     }
   ]
 }

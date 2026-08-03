@@ -27,6 +27,9 @@ const paymentSchemas = read(
   "apps/web/app/(protected)/br/[branchId]/pos/_lib/payment-schemas.ts",
 );
 const databaseTypes = read("packages/database/src/types/database.types.ts");
+const momoSelfOrderMigration = read(
+  "supabase/migrations/20260803051613_add_self_order_momo_wallet_payment.sql",
+);
 
 function sourceFiles(root: string): string[] {
   return readdirSync(root).flatMap((entry) => {
@@ -47,7 +50,10 @@ test("payment intent RPC cannot bypass cash or provider settlement", () => {
     /auth\.role\(\) IS DISTINCT FROM 'service_role'/,
   );
   assert.match(providerConstraintMigration, /p_method = 'vietqr'/);
-  assert.match(providerConstraintMigration, /lower\(v_requested_provider_ref\)/);
+  assert.match(
+    providerConstraintMigration,
+    /lower\(v_requested_provider_ref\)/,
+  );
   assert.match(
     providerConstraintMigration,
     /lower\(btrim\(v_order\.payment_code\)\)/,
@@ -166,7 +172,10 @@ test("incremental production schema rejects MoMo payment evidence", () => {
     providerConstraintMigration.match(/VALIDATE CONSTRAINT/g)?.length,
     3,
   );
-  assert.match(providerConstraintMigration, /WHERE key = 'payment_enable_momo'/);
+  assert.match(
+    providerConstraintMigration,
+    /WHERE key = 'payment_enable_momo'/,
+  );
   assert.match(
     providerConstraintMigration,
     /DROP FUNCTION IF EXISTS public\.record_momo_pending_result/,
@@ -227,17 +236,30 @@ test("Owner bank review is atomic and cannot overwrite provider evidence", () =>
   assert.doesNotMatch(reviewActions, /logAudit/);
 });
 
-test("MoMo provider runtime is retired", () => {
+test("MoMo runtime is isolated to Self-Order and service-role settlement", () => {
   assert.equal(
     existsSync(join(repoRoot, "apps/web/app/api/webhooks/momo/route.ts")),
-    false,
+    true,
   );
   assert.equal(
     existsSync(join(repoRoot, "packages/shared/src/providers/impl/momo.ts")),
     false,
   );
-  assert.doesNotMatch(databaseTypes, /finalize_momo|record_momo/);
+  assert.doesNotMatch(databaseTypes, /finalize_momo/);
+  assert.match(databaseTypes, /record_momo_payment_result/);
   assert.doesNotMatch(paymentActions, /\bmomo\b/i);
+  assert.match(
+    momoSelfOrderMigration,
+    /CREATE OR REPLACE FUNCTION public\.record_momo_payment_result/,
+  );
+  assert.match(
+    momoSelfOrderMigration,
+    /GRANT EXECUTE ON FUNCTION public\.record_momo_payment_result[\s\S]*TO service_role/,
+  );
+  assert.match(
+    momoSelfOrderMigration,
+    /REVOKE ALL ON FUNCTION public\.record_momo_payment_result[\s\S]*FROM PUBLIC, anon, authenticated/,
+  );
 });
 
 test("web application has no direct payments mutation", () => {

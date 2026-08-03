@@ -24,15 +24,15 @@ Self-order owns no lifecycle of its own. A seating **is** an open POS order on a
 Guest-visible state is **derived**, never stored. There is exactly one stored enum:
 `self_order_requests.status ∈ {pending, accepted, rejected}`.
 
-| Derived from                                      | Guest state               | Guest may                                                                        |
-| ------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
-| no pending request, no open order on table        | `Chưa mở bàn`             | browse, build cart, **Gửi món** (first round)                                    |
-| a `pending` request exists                        | `Chờ xác nhận`            | browse, build cart, **Gửi thêm món** into the same pending request               |
-| the last request is `rejected`                    | `Bị từ chối`              | resubmit immediately (same cart)                                                 |
-| an open order exists, no live payment intent      | `Bàn đang mở`             | **Gửi thêm món** (straight to KDS), view bill                                    |
-| an open order exists, a live payment intent       | `Đang thanh toán`         | view bill, wait; add-more locked                                                 |
+| Derived from                                      | Guest state               | Guest may                                                                                                     |
+| ------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| no pending request, no open order on table        | `Chưa mở bàn`             | browse, build cart, **Gửi món** (first round)                                                                 |
+| a `pending` request exists                        | `Chờ xác nhận`            | browse, build cart, **Gửi thêm món** into the same pending request                                            |
+| the last request is `rejected`                    | `Bị từ chối`              | resubmit immediately (same cart)                                                                              |
+| an open order exists, no live payment intent      | `Bàn đang mở`             | **Gửi thêm món** (straight to KDS), view bill                                                                 |
+| an open order exists, a live payment intent       | `Đang thanh toán`         | view bill, wait; add-more locked                                                                              |
 | two or more open orders exist, no pending request | `Cần nhân viên chọn bill` | browse, build cart, **Gửi món** for staff approval; bill opens without order details and payment stays hidden |
-| `orders.payment_status = 'paid'`                  | `Đã thanh toán`           | see the receipt for this browser session only                                    |
+| `orders.payment_status = 'paid'`                  | `Đã thanh toán`           | see the receipt for this browser session only                                                                 |
 
 An **open order** = `orders.table_id = <table>` AND `payment_status <> 'paid'` AND `status NOT IN ('completed','cancelled')`.
 
@@ -173,19 +173,21 @@ is unambiguous and open.
 
 ### G7: Payment (inside the full-screen sheet)
 
-After **Thanh toán**, the sheet replaces the bill with `cash_call` | VietQR +
-HĐĐT buyer fields; its back control returns to G6. Exactly one live intent
-across both methods; a live intent locks add-more, item customization, and
-buyer fields. VietQR reload renders the stored amount, payment code, QR bytes,
-bank snapshot, and expiry — it never rebuilds an active QR from current
-settings. MoMo is never a Self-Order payment method. It may appear only when the
-official VietQR app catalog for the current OS supplies a supported deeplink;
-the handoff then carries the stored recipient, amount, payment code, and account
-name and creates no MoMo intent or settlement state. Self-Order must not invent
-an undocumented MoMo scheme or fall back to the MoMo merchant payment API.
-Guests may cancel only their exact active VietQR request. Cancellation returns
-the sheet to payment selection; a concurrent or late verified SePay transfer
-still completes the request and order. Cash cancellation remains staff-owned.
+After **Thanh toán**, the sheet replaces the bill with `cash_call` | VietQR |
+MoMo + HĐĐT buyer fields; its back control returns to G6. Exactly one live
+intent across all methods; a live intent locks add-more, item customization,
+and buyer fields. VietQR reload renders the stored amount, payment code, QR
+bytes, bank snapshot, and expiry — it never rebuilds an active QR from current
+settings. Choosing a method creates it immediately without a second confirmation
+button. MoMo opens the exact `deeplink` returned for the stored merchant intent;
+reload renders only a reopen action plus the `payUrl` fallback, never a MoMo QR.
+The client must never construct or rewrite a MoMo scheme. A redirect is UX only;
+a verified MoMo IPN is the settlement authority. A throttled transaction-query
+worker reconciles a pending merchant intent when IPN delivery is missing. Guests
+may cancel only their exact active VietQR request.
+Cancellation returns the sheet to payment selection; a concurrent or late
+verified SePay transfer still completes the request and order. Cash and MoMo
+cancellation remain staff-owned.
 
 ### G8 · Paid
 
@@ -215,10 +217,10 @@ The bill sheet for a table in `Đang thanh toán` exposes **Huỷ yêu cầu**. 
 
 On the open POS surface (device-local, ADR 0008):
 
-| Event | Tone | Notes |
-| --- | --- | --- |
-| New pending `self_order_requests` row | `pos-self-order` | Distinct from ordinary POS order/sync beep |
-| New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order and POS beeps |
+| Event                                                                     | Tone               | Notes                                      |
+| ------------------------------------------------------------------------- | ------------------ | ------------------------------------------ |
+| New pending `self_order_requests` row                                     | `pos-self-order`   | Distinct from ordinary POS order/sync beep |
+| New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order and POS beeps       |
 
 Both honor the POS sound preference. First poll after mount seeds known ids without beeping. Neither writes `public.notifications` nor sends Telegram.
 
@@ -273,15 +275,15 @@ Deleted: `self_order_sessions`, `self_order_batches`, `self_order_session_device
 
 Seven RPCs survive:
 
-| RPC                                                   | Caller | Effect                                                                                                   |
-| ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
-| `self_order_get_snapshot(token, op_id?)`              | guest  | table + menu + unambiguous open order + pending request or this browser's rejected request + live intent |
+| RPC                                                   | Caller | Effect                                                                                                                        |
+| ----------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `self_order_get_snapshot(token, op_id?)`              | guest  | table + menu + unambiguous open order + pending request or this browser's rejected request + live intent                      |
 | `self_order_submit(token, cart, note, op_id)`         | guest  | exactly one open order → `append_order_items`; an existing `pending` request merges the operation; otherwise insert `pending` |
-| `self_order_create_payment_request(...)`              | guest  | same product flow, but binds directly to the only open order and rejects multi-bill ambiguity            |
-| `self_order_cancel_vietqr_payment(token, op_id)`      | guest  | cancels the exact active VietQR request; late verified SePay evidence still settles it                    |
-| `self_order_accept_request(req_id, target_order_id?)` | staff  | `create_order` or `append_order_items`                                                                   |
-| `self_order_reject_request(req_id)`                   | staff  | `status = 'rejected'`                                                                                    |
-| `self_order_cancel_payment_request(...)`              | staff  | same product flow, keyed by request/order rather than session                                            |
+| `self_order_create_payment_request(...)`              | guest  | same product flow, but binds directly to the only open order and rejects multi-bill ambiguity                                 |
+| `self_order_cancel_vietqr_payment(token, op_id)`      | guest  | cancels the exact active VietQR request; late verified SePay evidence still settles it                                        |
+| `self_order_accept_request(req_id, target_order_id?)` | staff  | `create_order` or `append_order_items`                                                                                        |
+| `self_order_reject_request(req_id)`                   | staff  | `status = 'rejected'`                                                                                                         |
+| `self_order_cancel_payment_request(...)`              | staff  | same product flow, keyed by request/order rather than session                                                                 |
 
 The one-argument snapshot overload remains as a compatibility wrapper during
 S1; it supplies no rejected request context. S3 calls the two-argument overload.
@@ -305,12 +307,12 @@ Public snapshot, submit, and payment endpoints keep bounded per-token and per-ne
 
 ## Brand placement
 
-| Asset                                        | On `/q/[token]`                                                             |
-| -------------------------------------------- | --------------------------------------------------------------------------- |
+| Asset                                        | On `/q/[token]`                                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `BrandMascot`                                | Static only in G0 unavailable and the G4 pending overlay. Never animated or interactive |
-| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**                                                               |
-| `brand-pattern-caro`                         | **Forbidden**                                                               |
-| `BrandSymbol` (`riceBowl`)                   | Empty menu (`AppEmptyState.symbol`) and missing item-photo placeholders     |
+| `BrandLockup` / `BrandMark` / `BrandLogoBox` | **Forbidden**                                                                           |
+| `brand-pattern-caro`                         | **Forbidden**                                                                           |
+| `BrandSymbol` (`riceBowl`)                   | Empty menu (`AppEmptyState.symbol`) and missing item-photo placeholders                 |
 
 ## Non-goals
 

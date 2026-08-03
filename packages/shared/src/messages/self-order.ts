@@ -142,8 +142,7 @@ export const SELF_ORDER_VI = {
   paymentTitle: "Thanh toán",
   cashCall: "Tiền mặt",
   vietQrCreate: "VietQR",
-  cashCallAction: "Gọi nhân viên thu tiền",
-  vietQrCreateAction: "Tạo mã QR",
+  momoCreate: "Ví MoMo",
   paymentConfirmAction: "Xác nhận thanh toán",
   paymentConfirmTitle: "Xác nhận thanh toán?",
   paymentConfirmDescription:
@@ -156,6 +155,11 @@ export const SELF_ORDER_VI = {
   paymentConfirmBack: "Quay lại",
   cashCallOk: "Đã gọi nhân viên thu tiền mặt.",
   vietQrPendingTitle: "Mã QR thanh toán",
+  momoPendingTitle: "Thanh toán bằng MoMo",
+  openMomoApp: "Mở ứng dụng MoMo",
+  openMomoWeb: "Thanh toán trên web",
+  momoPendingDescription:
+    "Xác nhận trong MoMo, sau đó chờ hệ thống đối soát tự động.",
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
