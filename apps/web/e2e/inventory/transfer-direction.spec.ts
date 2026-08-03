@@ -1,5 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
-import { E2E_AUTH_STORAGE_MANAGER, E2E_AUTH_STORAGE_OWNER } from "../../playwright.config";
+import {
+  E2E_AUTH_STORAGE_MANAGER,
+  E2E_AUTH_STORAGE_OWNER,
+} from "../../playwright.config";
 import {
   createServiceClient,
   resolveTenantId,
@@ -33,7 +36,7 @@ test.use({ storageState: E2E_AUTH_STORAGE_MANAGER });
  *       in that case the service-role assertions validate trigger behaviour directly.
  *
  * Pre-conditions (.env.test.local):
- *   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   isolated E2E Supabase URL and service credentials
  *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD  (owner account or warehouse_manager)
  *   E2E_BASE_URL  (default http://localhost:3000)
  */
@@ -73,12 +76,11 @@ async function buildFixtures(): Promise<InventoryFixtures> {
   // Kho Tong is always branch ID 3
   const sourceBranchId = 3;
 
-  const [destinationBranch, branch, ingredient] =
-    await Promise.all([
-      ensureBranch(supabase, tenantId, "branch", "transfer-destination"),
-      ensureBranch(supabase, tenantId, "branch", "1"),
-      ensureIngredient(supabase, tenantId, "transfer"),
-    ]);
+  const [destinationBranch, branch, ingredient] = await Promise.all([
+    ensureBranch(supabase, tenantId, "branch", "transfer-destination"),
+    ensureBranch(supabase, tenantId, "branch", "1"),
+    ensureIngredient(supabase, tenantId, "transfer"),
+  ]);
 
   const [sourceLocId, destinationLocId] = await Promise.all([
     ensureInventoryLocation(supabase, tenantId, sourceBranchId, "issue"),
@@ -144,7 +146,9 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
       // Owner context: keeper@comtammatu.vn (owner role) bypasses branch_claim DB checks
       // and can perform receive at any branch. This accurately models the real-world
       // two-person transfer workflow: manager ships, owner/branch-manager receives.
-      const ownerCtx = await browser.newContext({ storageState: E2E_AUTH_STORAGE_OWNER });
+      const ownerCtx = await browser.newContext({
+        storageState: E2E_AUTH_STORAGE_OWNER,
+      });
       const ownerPage = await ownerCtx.newPage();
 
       try {
@@ -172,7 +176,8 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
         await expect
           .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
             timeout: 15_000,
-            message: "status should become in_transit after confirm_ship due to auto-transit",
+            message:
+              "status should become in_transit after confirm_ship due to auto-transit",
           })
           .toBe("in_transit");
 

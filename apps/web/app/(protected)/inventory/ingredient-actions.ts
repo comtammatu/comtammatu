@@ -42,31 +42,33 @@ import {
 } from "@/_lib/spreadsheet";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
+import {
+  isValidAnchorFactor,
+  isValidEffectiveFactor,
+} from "./ingredients/ingredient-unit-form-model";
 
 /* ─── Ingredient catalog (CRUD via save_ingredient_catalog RPC) ─── */
 
-const unitFactorSchema = z
-  .union([
-    z.number(),
-    z
-      .string()
-      .trim()
-      .regex(/^\d+(?:\.\d{1,12})?$/)
-      .transform(Number),
-  ])
-  .refine(Number.isFinite, "Hệ số quy đổi không hợp lệ")
-  .refine((value) => value > 0, "Quy đổi phải lớn hơn 0")
+const unitNumericInputSchema = z.union([z.number(), z.string().trim().min(1)]);
+const effectiveUnitFactorSchema = unitNumericInputSchema
   .refine(
-    (value) => Math.abs(value * 1e12 - Math.round(value * 1e12)) < 1e-3,
-    "Hệ số quy đổi có tối đa 12 chữ số thập phân",
-  );
+    isValidEffectiveFactor,
+    "Hệ số về đơn vị chuẩn vượt miền 6 số nguyên và 12 số thập phân",
+  )
+  .transform(Number);
+const anchorUnitFactorSchema = unitNumericInputSchema
+  .refine(
+    isValidAnchorFactor,
+    "Hệ số quy đổi có tối đa 9 số nguyên và 9 số thập phân",
+  )
+  .transform(Number);
 
 const unitRowSchema = z.object({
   unit_id: z.coerce.number().int().positive({ error: "Đơn vị không hợp lệ" }),
-  to_base_factor: unitFactorSchema,
+  to_base_factor: effectiveUnitFactorSchema,
   is_base: z.boolean(),
   anchor_unit_id: z.coerce.number().int().positive().nullable().optional(),
-  anchor_factor: unitFactorSchema.nullable().optional(),
+  anchor_factor: anchorUnitFactorSchema.nullable().optional(),
 });
 
 const ingredientBaseSchema = z.object({

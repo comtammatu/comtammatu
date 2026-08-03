@@ -54,14 +54,49 @@ test("inventory quantity inputs allow three fraction digits", () => {
   );
 });
 
-test("inventory factor inputs preserve database scale 12", () => {
+test("inventory factor precision follows separate anchor and effective domains", () => {
   const ingredientDialog = read(
     "app/(protected)/inventory/ingredients/ingredient-dialog.tsx",
   );
+  const ingredientModel = read(
+    "app/(protected)/inventory/ingredients/ingredient-unit-form-model.ts",
+  );
+  const ingredientActions = read(
+    "app/(protected)/inventory/ingredient-actions.ts",
+  );
+
   assert.match(
     ingredientDialog,
-    /maxFractionDigits=\{12\}/,
+    /maxFractionDigits=\{9\}/,
   );
+  assert.match(ingredientDialog, /isValidAnchorFactor/);
+  assert.match(ingredientModel, /const ANCHOR_SCALE = 9/);
+  assert.match(ingredientModel, /const EFFECTIVE_SCALE = 12/);
+  assert.match(ingredientActions, /anchorUnitFactorSchema[\s\S]*isValidAnchorFactor/);
+  assert.match(
+    ingredientActions,
+    /effectiveUnitFactorSchema[\s\S]*isValidEffectiveFactor/,
+  );
+
+  const assertUnitRowSchemaWiring = (source: string) => {
+    assert.match(
+      source,
+      /const unitRowSchema = z\.object\(\{[\s\S]*to_base_factor: effectiveUnitFactorSchema,[\s\S]*anchor_factor: anchorUnitFactorSchema\.nullable\(\)\.optional\(\),[\s\S]*\}\)/,
+    );
+  };
+  assertUnitRowSchemaWiring(ingredientActions);
+
+  const swappedSchemas = ingredientActions
+    .replace(
+      "to_base_factor: effectiveUnitFactorSchema",
+      "to_base_factor: __swappedFactorSchema",
+    )
+    .replace(
+      "anchor_factor: anchorUnitFactorSchema",
+      "anchor_factor: effectiveUnitFactorSchema",
+    )
+    .replace("__swappedFactorSchema", "anchorUnitFactorSchema");
+  assert.throws(() => assertUnitRowSchemaWiring(swappedSchemas));
 });
 
 test("inventory numeric entry points do not reintroduce two-decimal caps", () => {

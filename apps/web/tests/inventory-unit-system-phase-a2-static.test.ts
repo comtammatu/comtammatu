@@ -152,6 +152,10 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
   assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
   assert.match(ingredientDialog, /unit_ids: z/);
+  assert.match(ingredientDialog, /unit_anchor_ids: z\.record/);
+  assert.match(ingredientDialog, /deriveEffectiveUnitFactor/);
+  assert.match(ingredientDialog, /findDirectDependents/);
+  assert.doesNotMatch(ingredientDialog, /conversionSection\(baseUnit\.name\)/);
   assert.match(ingredientDialog, /selectedUnitIds\.map/);
   assert.match(ingredientDialog, /name: "base_unit_id"/);
 });

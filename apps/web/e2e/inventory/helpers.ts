@@ -2,38 +2,28 @@
  * Inventory E2E helpers — Supabase utilities for seeding and verifying branch
  * inventory data in tests.
  *
- * Uses the same service-role client pattern as e2e/helpers/supabase.ts.
+ * Uses the shared guarded service client from e2e/helpers/service-client.ts.
  *
  * Required env vars (same .env.test.local as other E2E suites):
  *   NEXT_PUBLIC_SUPABASE_URL
  *   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY
- *   SUPABASE_SERVICE_ROLE_KEY
+ *   isolated E2E service credentials
  *   E2E_CASHIER_EMAIL / E2E_CASHIER_PASSWORD   — used for auth.setup.ts
  *   E2E_INVENTORY_MANAGER_EMAIL (optional)     — branch_manager at a branch
  *   E2E_INVENTORY_MANAGER_PASSWORD (optional)  — defaults to E2E_CASHIER_PASSWORD
  *   E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD        — retrospective PO approval
  */
 
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@comtammatu/database";
 import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import {
+  createE2EServiceClient,
+  type E2EServiceClient,
+} from "../helpers/service-client";
 
 // ─── Service client ───────────────────────────────────────────────────────────
 
-type ServiceClient = ReturnType<typeof createServiceClient>;
-
-export function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for E2E tests",
-    );
-  }
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+export const createServiceClient = createE2EServiceClient;
+type ServiceClient = E2EServiceClient;
 
 // ─── Tenant resolution ────────────────────────────────────────────────────────
 

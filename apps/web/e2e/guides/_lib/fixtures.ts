@@ -7,21 +7,9 @@
  * ⚠️ MUTATE DB của test branch. Không chạy trên DB production.
  */
 
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@comtammatu/database";
+import { createE2EServiceClient } from "../../helpers/service-client";
 
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "NEXT_PUBLIC_SUPABASE_URL và SUPABASE_SERVICE_ROLE_KEY phải có trong .env.test.local",
-    );
-  }
-  return createClient<Database>(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+const createServiceClient = createE2EServiceClient;
 
 export interface CashierContext {
   userId: string;

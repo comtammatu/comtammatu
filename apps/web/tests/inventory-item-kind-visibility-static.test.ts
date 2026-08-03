@@ -50,8 +50,11 @@ test("ingredient form models active units around one explicit standard unit", ()
   assert.match(ingredientDialogSource, /unit_ids: z/);
   assert.doesNotMatch(ingredientDialogSource, /name="production_unit_id"/);
   assert.match(ingredientDialogSource, /name: "base_unit_id"/);
+  assert.match(ingredientDialogSource, /unit_anchor_ids: z\.record/);
+  assert.match(ingredientDialogSource, /unit_factors: z\.record/);
   assert.match(ingredientDialogSource, /selectedUnitIds\.map/);
-  assert.match(ingredientDialogSource, /<UnitFactorField/);
+  assert.match(ingredientDialogSource, /<UnitRelationRow/);
+  assert.doesNotMatch(ingredientDialogSource, /conversionRows/);
   assert.doesNotMatch(ingredientDialogSource, /productionEnabled \?/);
   assert.doesNotMatch(
     ingredientDialogSource,
@@ -63,7 +66,7 @@ test("ingredient form models active units around one explicit standard unit", ()
   );
   assert.doesNotMatch(
     ingredientDialogSource,
-    /makeSecondaryRow|previewCanonical|anchor_input_direction/,
+    /makeSecondaryRow|anchor_input_direction/,
   );
 });
 
