@@ -2,9 +2,9 @@
 
 `20260802162900_baseline.sql` is the self-contained install for a fresh
 environment: a point-in-time `pg_dump` of the production `public` + `private`
-schemas. `private` is emitted first so public triggers/policies that reference
-`private.*` resolve, and `check_function_bodies` is disabled at the top so the
-private SQL helpers that read public tables create before those tables exist. It
+schemas. Both schemas are dumped in one dependency graph so cross-schema return
+types and helper references are ordered correctly, and `check_function_bodies`
+is disabled at the top for SQL helpers that read later-created tables. It
 replays clean from an empty database — the CI `baseline-replay` job
 (`corepack pnpm db:baseline:local-check`) gates this on every change. The historical
 incremental chains could not replay from empty (squash-vs-history drop ordering
@@ -86,7 +86,7 @@ Full procedure: `docs/runbooks/db/re-baseline.md`. In short — owner dumps
   defaults the migration role cannot set),
 - neutralize environment-managed table/sequence ACL defaults before replaying
   the explicit production grants,
-- prepend `SET check_function_bodies = false;` with `private` before `public`,
+- dump `private` and `public` together so pg_dump preserves cross-schema dependencies,
 - `git mv` the squashed forward chain into `supabase/migration-archive/`,
 - re-version the managed-surfaces fold strictly after the new baseline cutoff,
 - classify required bootstrap DML into seed/fold instead of losing it in a schema

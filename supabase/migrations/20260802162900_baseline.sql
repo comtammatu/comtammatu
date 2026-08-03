@@ -4,7 +4,7 @@ SET check_function_bodies = false;
 -- PostgreSQL database dump
 --
 
--- \restrict L3RBeKt5tIKv1Y0CFTf984uzllspbtFPwAtS8LUEqxDSLHmRQNTXERlfj1Qot4K
+-- \restrict REDACTED
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.3
@@ -26,6 +26,20 @@ SET row_security = off;
 --
 
 CREATE SCHEMA private;
+
+
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA IF NOT EXISTS public;
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
@@ -876,6 +890,37 @@ BEGIN
   RETURN NEW;
 END;
 $_$;
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: leave_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.leave_requests (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint,
+    employee_id bigint NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    leave_type text DEFAULT 'annual'::text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    reason text,
+    reviewed_by uuid,
+    reviewed_at timestamp with time zone,
+    rejected_reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT leave_requests_date_range_check CHECK ((start_date <= end_date)),
+    CONSTRAINT leave_requests_reason_length_check CHECK (((reason IS NULL) OR (char_length(reason) <= 500))),
+    CONSTRAINT leave_requests_rejected_reason_length_check CHECK (((rejected_reason IS NULL) OR (char_length(rejected_reason) <= 500))),
+    CONSTRAINT leave_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text]))),
+    CONSTRAINT leave_requests_type_check CHECK ((leave_type = ANY (ARRAY['annual'::text, 'sick'::text, 'unpaid'::text, 'personal'::text, 'other'::text])))
+);
 
 
 --
@@ -3985,6 +4030,26 @@ BEGIN
   );
 END;
 $$;
+
+
+--
+-- Name: inventory_valuation_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.inventory_valuation_accounts (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint NOT NULL,
+    location_id bigint NOT NULL,
+    ingredient_id bigint NOT NULL,
+    quantity numeric(20,3) DEFAULT 0 NOT NULL,
+    book_value numeric(20,2) DEFAULT 0 NOT NULL,
+    valuation_version bigint DEFAULT 0 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT inventory_valuation_accounts_book_value_check CHECK ((book_value >= (0)::numeric)),
+    CONSTRAINT inventory_valuation_accounts_quantity_check CHECK ((quantity >= (0)::numeric)),
+    CONSTRAINT inventory_valuation_accounts_valuation_version_check CHECK ((valuation_version >= 0))
+);
 
 
 --
@@ -12215,140 +12280,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- Name: auth_user_provisioning_requests; Type: TABLE; Schema: private; Owner: -
---
-
-CREATE TABLE private.auth_user_provisioning_requests (
-    token uuid NOT NULL,
-    email text NOT NULL,
-    tenant_id bigint NOT NULL,
-    branch_id bigint,
-    position_code text NOT NULL,
-    full_name text NOT NULL,
-    provisioned_by uuid,
-    expires_at timestamp with time zone DEFAULT (now() + '00:05:00'::interval) NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: cron_job_health_grace; Type: TABLE; Schema: private; Owner: -
---
-
-CREATE TABLE private.cron_job_health_grace (
-    jobid bigint NOT NULL,
-    registered_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: auth_user_provisioning_requests auth_user_provisioning_requests_pkey; Type: CONSTRAINT; Schema: private; Owner: -
---
-
-ALTER TABLE ONLY private.auth_user_provisioning_requests
-    ADD CONSTRAINT auth_user_provisioning_requests_pkey PRIMARY KEY (token);
-
-
---
--- Name: cron_job_health_grace cron_job_health_grace_pkey; Type: CONSTRAINT; Schema: private; Owner: -
---
-
-ALTER TABLE ONLY private.cron_job_health_grace
-    ADD CONSTRAINT cron_job_health_grace_pkey PRIMARY KEY (jobid);
-
-
-
---
--- PostgreSQL database dump
---
-
--- \restrict r3qV5Mp3bpareE3rd4zH4hoVysmKgAlM19p6m7ifSdKfPdA5k2zO5dE9dyX3fxl
-
--- Dumped from database version 17.6
--- Dumped by pg_dump version 18.3
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA IF NOT EXISTS public;
-
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON SCHEMA public IS 'standard public schema';
-
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- Name: leave_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.leave_requests (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    branch_id bigint,
-    employee_id bigint NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    leave_type text DEFAULT 'annual'::text NOT NULL,
-    status text DEFAULT 'pending'::text NOT NULL,
-    reason text,
-    reviewed_by uuid,
-    reviewed_at timestamp with time zone,
-    rejected_reason text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT leave_requests_date_range_check CHECK ((start_date <= end_date)),
-    CONSTRAINT leave_requests_reason_length_check CHECK (((reason IS NULL) OR (char_length(reason) <= 500))),
-    CONSTRAINT leave_requests_rejected_reason_length_check CHECK (((rejected_reason IS NULL) OR (char_length(rejected_reason) <= 500))),
-    CONSTRAINT leave_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text]))),
-    CONSTRAINT leave_requests_type_check CHECK ((leave_type = ANY (ARRAY['annual'::text, 'sick'::text, 'unpaid'::text, 'personal'::text, 'other'::text])))
-);
-
-
---
--- Name: inventory_valuation_accounts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.inventory_valuation_accounts (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    branch_id bigint NOT NULL,
-    location_id bigint NOT NULL,
-    ingredient_id bigint NOT NULL,
-    quantity numeric(20,3) DEFAULT 0 NOT NULL,
-    book_value numeric(20,2) DEFAULT 0 NOT NULL,
-    valuation_version bigint DEFAULT 0 NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT inventory_valuation_accounts_book_value_check CHECK ((book_value >= (0)::numeric)),
-    CONSTRAINT inventory_valuation_accounts_quantity_check CHECK ((quantity >= (0)::numeric)),
-    CONSTRAINT inventory_valuation_accounts_valuation_version_check CHECK ((valuation_version >= 0))
-);
 
 
 --
@@ -65806,6 +65737,33 @@ $$;
 
 
 --
+-- Name: auth_user_provisioning_requests; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.auth_user_provisioning_requests (
+    token uuid NOT NULL,
+    email text NOT NULL,
+    tenant_id bigint NOT NULL,
+    branch_id bigint,
+    position_code text NOT NULL,
+    full_name text NOT NULL,
+    provisioned_by uuid,
+    expires_at timestamp with time zone DEFAULT (now() + '00:05:00'::interval) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: cron_job_health_grace; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.cron_job_health_grace (
+    jobid bigint NOT NULL,
+    registered_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: accounting_periods; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -72572,6 +72530,22 @@ ALTER TABLE public.webhook_events ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: auth_user_provisioning_requests auth_user_provisioning_requests_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.auth_user_provisioning_requests
+    ADD CONSTRAINT auth_user_provisioning_requests_pkey PRIMARY KEY (token);
+
+
+--
+-- Name: cron_job_health_grace cron_job_health_grace_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.cron_job_health_grace
+    ADD CONSTRAINT cron_job_health_grace_pkey PRIMARY KEY (jobid);
 
 
 --
@@ -88450,6 +88424,17 @@ GRANT USAGE ON SCHEMA private TO authenticated;
 
 
 --
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
+--
+
+GRANT USAGE ON SCHEMA public TO postgres;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+
+
+--
 -- Name: FUNCTION activate_inventory_valuation_cutover_prebootstrap(p_idempotency_key uuid); Type: ACL; Schema: private; Owner: -
 --
 
@@ -88534,6 +88519,14 @@ REVOKE ALL ON FUNCTION private.attach_invoice_buyer_qr_document_to_print_job() F
 --
 
 REVOKE ALL ON FUNCTION private.attach_invoice_buyer_qr_to_print_job() FROM PUBLIC;
+
+
+--
+-- Name: TABLE leave_requests; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.leave_requests TO service_role;
+GRANT SELECT ON TABLE public.leave_requests TO authenticated;
 
 
 --
@@ -88742,6 +88735,14 @@ REVOKE ALL ON FUNCTION private.ensure_grn_draft_after_po_status() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION private.ensure_grn_draft_for_po(p_tenant_id bigint, p_po_id bigint, p_created_by uuid, p_idempotency_key uuid) FROM PUBLIC;
+
+
+--
+-- Name: TABLE inventory_valuation_accounts; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.inventory_valuation_accounts TO service_role;
+GRANT SELECT ON TABLE public.inventory_valuation_accounts TO authenticated;
 
 
 --
@@ -89256,42 +89257,6 @@ REVOKE ALL ON FUNCTION private.version_provisional_print_evidence() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION private.zero_pending_grn_receipt_valuation() FROM PUBLIC;
-
-
---
--- PostgreSQL database dump complete
---
-
--- \unrestrict L3RBeKt5tIKv1Y0CFTf984uzllspbtFPwAtS8LUEqxDSLHmRQNTXERlfj1Qot4K
-
-
-
-
---
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
---
-
-GRANT USAGE ON SCHEMA public TO postgres;
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT USAGE ON SCHEMA public TO service_role;
-GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
-
-
---
--- Name: TABLE leave_requests; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.leave_requests TO service_role;
-GRANT SELECT ON TABLE public.leave_requests TO authenticated;
-
-
---
--- Name: TABLE inventory_valuation_accounts; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.inventory_valuation_accounts TO service_role;
-GRANT SELECT ON TABLE public.inventory_valuation_accounts TO authenticated;
 
 
 --
@@ -97788,5 +97753,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 -- PostgreSQL database dump complete
 --
 
--- \unrestrict r3qV5Mp3bpareE3rd4zH4hoVysmKgAlM19p6m7ifSdKfPdA5k2zO5dE9dyX3fxl
+-- \unrestrict REDACTED
 
