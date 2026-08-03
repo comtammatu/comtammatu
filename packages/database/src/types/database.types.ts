@@ -13532,15 +13532,6 @@ export type Database = {
         }
         Returns: Json
       }
-      recreate_grn_at_receiving_site: {
-        Args: {
-          p_grn_id: number
-          p_reason: string
-          p_target_branch_id: number
-          p_target_location_id: number
-        }
-        Returns: Json
-      }
       reduce_order_item_quantity: {
         Args: {
           p_new_quantity: number
