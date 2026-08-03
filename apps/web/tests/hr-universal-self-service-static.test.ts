@@ -23,7 +23,9 @@ test("canonical self-service uses Control shell and keeps Owner denied", () => {
   assert.doesNotMatch(layout, /AppHeader|SELF_NAV|redirect|loadAuthState/);
   assert.match(shell, /ControlSurfaceModuleId[\s\S]*\| "me"/);
   assert.match(shell, /activeModule === "me"/);
-  assert.match(shell, /personalHref=\{canAccess\(role, "me"\)/);
+  assert.match(protectedLayout, /canonicalizeSelfServicePath\(claims, "\/me"\)/);
+  assert.match(shell, /personalHref=\{personalHref\}/);
+  assert.doesNotMatch(shell, /personalHref=\{canAccess\(role, "me"\)/);
   assert.match(appShell, /personalHref\?: string/);
   assert.match(appShell, /mobileHeaderTitle\?: string/);
   assert.match(appShell, /copy\.personalPage/);

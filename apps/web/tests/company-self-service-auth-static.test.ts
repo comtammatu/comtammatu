@@ -30,6 +30,14 @@ test("company self-service is authorized by a live binding only", () => {
     proxy.indexOf("p_key: PERMISSION_KEYS.SELF_ACCESS") <
       proxy.indexOf("const canonicalPath = canonicalizeSelfServicePath"),
   );
+  assert.match(
+    proxy,
+    /BRANCH_REQUIRED_OPERATIONAL_ROLES\.includes\(claims\.user_role\)[\s\S]*branchSurfaceAllows/,
+  );
+  assert.ok(
+    proxy.indexOf("BRANCH_REQUIRED_OPERATIONAL_ROLES.includes") <
+      proxy.indexOf("const canonicalPath = canonicalizeSelfServicePath"),
+  );
 
   const staffRoles = /export const STAFF_ROLES = \[([\s\S]*?)\] as const/.exec(
     types,

@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { canAccess, MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
 import { AppShell } from "@/components/app-shell";
 import { InventoryBranchFilter } from "@/(protected)/inventory/_components/inventory-branch-filter";
 import { withInventoryBranchNavScope } from "@/(protected)/inventory/_lib/inventory-nav";
@@ -27,6 +27,7 @@ type BaseProps = {
   role: StaffRole;
   /** Home / JWT branch for primary-tab resolution — not URL inventory scope. */
   homeBranchId?: number | null;
+  personalHref?: string;
   children: ReactNode;
   inventory: InventoryNavFlags & {
     allowedBranches: InventoryBranchOption[];
@@ -74,7 +75,16 @@ function FinanceRealtimeBridge() {
  * Persistent control_surface chrome for every protected management route.
  */
 export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
-  const { user, role, homeBranchId, children, inventory, finance, hr } = props;
+  const {
+    user,
+    role,
+    homeBranchId,
+    personalHref,
+    children,
+    inventory,
+    finance,
+    hr,
+  } = props;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeModule = resolveActiveModule(pathname);
@@ -177,7 +187,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       tier1={tier1}
       tier2={tier2}
       sidebarHeaderAccessory={sidebarHeaderAccessory}
-      personalHref={canAccess(role, "me") ? MODULE_ACL.me.path : undefined}
+      personalHref={personalHref}
       mobileHeaderTitle={
         activeModule === "me" ? MODULE_ACL.me.label : undefined
       }

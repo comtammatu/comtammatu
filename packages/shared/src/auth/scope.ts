@@ -6,6 +6,7 @@ import {
   resolveModuleFromPath,
 } from "./route-resolution";
 import {
+  BRANCH_REQUIRED_OPERATIONAL_ROLES,
   STAFF_ROLES,
   requiredOperatorBranchKindForRole,
   staffRoleFromPositionCode,
@@ -161,7 +162,12 @@ export function canonicalizeSelfServicePath(
   }
   if (claims.user_role === "owner") return null;
   if (
-    claims.branch_id == null ||
+    BRANCH_REQUIRED_OPERATIONAL_ROLES.includes(claims.user_role) &&
+    claims.branch_id == null
+  ) {
+    return null;
+  }
+  if (
     requiredOperatorBranchKindForRole(claims.user_role) !== "branch" ||
     !canAccess(claims.user_role, "branch_home")
   ) {

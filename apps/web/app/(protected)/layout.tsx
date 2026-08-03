@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { PERMISSION_KEYS, canAccess } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  canAccess,
+  canonicalizeSelfServicePath,
+} from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -108,6 +112,7 @@ export default async function ProtectedLayout({
       }}
       role={role}
       homeBranchId={claims.branch_id}
+      personalHref={canonicalizeSelfServicePath(claims, "/me") ?? undefined}
       inventory={{
         showProcurement: isOwner || hasProcurementRead,
         showProduction:

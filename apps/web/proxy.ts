@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
+  BRANCH_REQUIRED_OPERATIONAL_ROLES,
   buildAccessDeniedPath,
   canAccess,
   canonicalizeSelfServicePath,
@@ -186,11 +187,10 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  if (
-    claims.user_role === "self_service" ||
-    pathname === "/me" ||
-    pathname.startsWith("/me/")
-  ) {
+  const isSelfServicePath =
+    pathname === "/me" || pathname.startsWith("/me/");
+
+  if (claims.user_role === "self_service" || isSelfServicePath) {
     const { data: canOpenSelfService, error: selfServiceGateError } =
       await supabase.rpc("has_permission", {
         p_branch_id: null as unknown as number,
@@ -205,7 +205,37 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname === "/me" || pathname.startsWith("/me/")) {
+  if (
+    isSelfServicePath &&
+    BRANCH_REQUIRED_OPERATIONAL_ROLES.includes(claims.user_role)
+  ) {
+    if (claims.branch_id == null) {
+      return redirectToAccessDenied(
+        request,
+        response,
+        "branch-scope-mismatch",
+      );
+    }
+    const branchSurface = await getBranchSurface(
+      supabase,
+      claims.tenant_id,
+      claims.branch_id,
+    );
+    if (
+      !branchSurfaceAllows(
+        branchSurface,
+        requiredOperatorBranchKindForRole(claims.user_role),
+      )
+    ) {
+      return redirectToAccessDenied(
+        request,
+        response,
+        "branch-surface-restricted",
+      );
+    }
+  }
+
+  if (isSelfServicePath) {
     const canonicalPath = canonicalizeSelfServicePath(
       claims,
       `${pathname}${request.nextUrl.search}`,

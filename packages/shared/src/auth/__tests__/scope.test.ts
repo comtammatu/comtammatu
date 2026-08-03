@@ -404,6 +404,24 @@ test("self-service excludes Owner and canonicalizes Branch staff", () => {
     canonicalizeSelfServicePath(makeClaims("chef", 9), "/me/clock"),
     "/br/9/shift/clock",
   );
+  for (const role of [
+    "branch_manager",
+    "cashier",
+    "chef",
+    "branch_staff",
+    "central_supply_ops",
+    "central_kitchen_lead",
+  ] as const) {
+    assert.equal(canonicalizeSelfServicePath(makeClaims(role), "/me"), null);
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims(role), "/me"),
+      "/access-denied?reason=branch-scope-mismatch",
+    );
+  }
+  assert.equal(
+    canonicalizeSelfServicePath(makeClaims("self_service"), "/me"),
+    "/me",
+  );
   assert.equal(
     canonicalizeSelfServicePath(makeClaims("owner"), "/me/clock"),
     null,
