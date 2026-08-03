@@ -339,7 +339,11 @@ const setup = runPsql(`
       v_branch_id,
       '2099-12-31'::date,
       'utilities',
-      100001,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0,
+        'taxable_amount', 100001,
+        'vat_amount', 0
+      )),
       'Race same event',
       NULL
     ) result;
@@ -350,7 +354,11 @@ const setup = runPsql(`
       v_branch_id,
       '2099-12-31'::date,
       'utilities',
-      100002,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0,
+        'taxable_amount', 100002,
+        'vat_amount', 0
+      )),
       'Race conflicting events',
       NULL
     ) result;
@@ -430,7 +438,11 @@ const setup = runPsql(`
       v_branch_id,
       '2099-12-31'::date,
       'utilities',
-      100003,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0,
+        'taxable_amount', 100003,
+        'vat_amount', 0
+      )),
       'Race match wins',
       NULL
     ) result;
@@ -464,7 +476,11 @@ const setup = runPsql(`
       v_branch_id,
       '2099-12-31'::date,
       'utilities',
-      100004,
+      jsonb_build_array(jsonb_build_object(
+        'vat_rate', 0,
+        'taxable_amount', 100004,
+        'vat_amount', 0
+      )),
       'Race cancel wins',
       NULL
     ) result;
