@@ -58,8 +58,6 @@ type StockIngredientRow = {
   reorder_point: number | null;
   storage_type: string | null;
   is_active: boolean;
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
 };
 
@@ -282,20 +280,15 @@ export async function loadStockOnHandPageData({
       const reorder = row.reorder_point ?? 0;
       const locationBreakdown = locationMap.get(row.id) ?? [];
 
-      const issueUnit = resolveStockDisplayUnit(
-        row.units,
-        row.issue_unit_id ?? null,
-      );
+      const standardUnit = resolveStockDisplayUnit(row.units);
       return {
         id: row.id,
         name: row.name,
         sku: row.sku ?? "",
         unit:
-          issueUnit?.unit_name?.trim() ||
-          issueUnit?.unit_code ||
+          standardUnit?.unit_name?.trim() ||
+          standardUnit?.unit_code ||
           row.unit,
-        receipt_unit_id: row.receipt_unit_id ?? null,
-        issue_unit_id: row.issue_unit_id ?? null,
         units: row.units,
         category: row.category ?? "",
         itemKind: row.item_kind ?? "raw_material",

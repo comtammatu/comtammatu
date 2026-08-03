@@ -40,7 +40,6 @@ type IngredientRow = {
   max_stock_level: number | null;
   reorder_point: number | null;
   storage_type: string | null;
-  issue_unit_id?: number | null;
   ingredient_units: IngredientUnitJoin[] | null;
 };
 
@@ -98,7 +97,6 @@ function ingredientSelect(includeValuation: boolean): string {
     "max_stock_level",
     "reorder_point",
     "storage_type",
-    "issue_unit_id",
     "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, units!ingredient_units_unit_tenant_fkey(code, name))",
   ]
     .filter((field): field is string => Boolean(field))
@@ -244,13 +242,10 @@ export async function loadStockIngredientDetailData({
       };
     },
   );
-  const issueUnit = resolveStockDisplayUnit(
-    units,
-    ingredientRow.issue_unit_id ?? null,
-  );
+  const standardUnit = resolveStockDisplayUnit(units);
   const unit =
-    issueUnit?.unit_name?.trim() ||
-    issueUnit?.unit_code ||
+    standardUnit?.unit_name?.trim() ||
+    standardUnit?.unit_code ||
     "";
   const stockRows = (stockResult.data ?? []) as unknown as StockLevelRow[];
   const movementRows = (movementResult.data ?? []) as unknown as MovementRow[];
@@ -317,7 +312,7 @@ export async function loadStockIngredientDetailData({
       ? null
       : {
           totalValue,
-          wac: toStockDisplayUnitCost(ledgerWac, issueUnit) ?? ledgerWac,
+          wac: toStockDisplayUnitCost(ledgerWac, standardUnit) ?? ledgerWac,
         };
   const min = Number(ingredientRow.min_stock_level ?? 0);
   const max = Number(ingredientRow.max_stock_level ?? 0);
@@ -335,7 +330,6 @@ export async function loadStockIngredientDetailData({
       sku: ingredientRow.sku ?? "",
       category: ingredientRow.category ?? "",
       unit,
-      issue_unit_id: ingredientRow.issue_unit_id ?? null,
       units,
       min,
       max,

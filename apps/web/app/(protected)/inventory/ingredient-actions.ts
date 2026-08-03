@@ -48,7 +48,11 @@ import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-sc
 const unitFactorSchema = z
   .union([
     z.number(),
-    z.string().trim().regex(/^\d+(?:\.\d{1,12})?$/).transform(Number),
+    z
+      .string()
+      .trim()
+      .regex(/^\d+(?:\.\d{1,12})?$/)
+      .transform(Number),
   ])
   .refine(Number.isFinite, "Hệ số quy đổi không hợp lệ")
   .refine((value) => value > 0, "Quy đổi phải lớn hơn 0")
@@ -86,9 +90,7 @@ const ingredientBaseSchema = z.object({
   units: z
     .array(unitRowSchema)
     .min(1, { error: "Cần ít nhất 1 đơn vị" })
-    .max(3, { error: "Mỗi nguyên liệu có tối đa 3 đơn vị" }),
-  receipt_unit_id: z.coerce.number().int().positive(),
-  issue_unit_id: z.coerce.number().int().positive(),
+    .max(20, { error: "Mỗi nguyên liệu có tối đa 20 đơn vị" }),
 });
 
 function refineUnits(
@@ -100,7 +102,7 @@ function refineUnits(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["units"],
-      message: "Phải có đúng 1 đơn vị tồn chuẩn",
+      message: "Phải có đúng 1 đơn vị chuẩn",
     });
   }
   const baseRow = baseRows[0];
@@ -108,7 +110,7 @@ function refineUnits(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["units"],
-      message: "Đơn vị tồn chuẩn phải có hệ số = 1",
+      message: "Đơn vị chuẩn phải có hệ số = 1",
     });
   }
   const unitIds = units.map((u) => u.unit_id);
@@ -121,43 +123,12 @@ function refineUnits(
   }
 }
 
-function refineUnitRoles(
-  data: z.infer<typeof ingredientBaseSchema>,
-  ctx: z.RefinementCtx,
-) {
-  const unitById = new Map(data.units.map((unit) => [unit.unit_id, unit]));
-  const receipt = unitById.get(data.receipt_unit_id);
-  const issue = unitById.get(data.issue_unit_id);
-  if (!receipt || !issue) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["units"],
-      message:
-        "Đơn vị nhập và xuất phải thuộc quy cách của nguyên liệu",
-    });
-    return;
-  }
-  const baseUnitId = data.units.find((unit) => unit.is_base)?.unit_id;
-  if (
-    baseUnitId == null ||
-    ![data.receipt_unit_id, data.issue_unit_id].includes(baseUnitId)
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["units"],
-      message: "Đơn vị tồn chuẩn phải thuộc ít nhất một vai trò",
-    });
-  }
-}
-
 const ingredientCreateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
   refineUnits(data.units, ctx);
-  refineUnitRoles(data, ctx);
 });
 
 const ingredientUpdateSchema = ingredientBaseSchema.superRefine((data, ctx) => {
   refineUnits(data.units, ctx);
-  refineUnitRoles(data, ctx);
 });
 
 type IngredientInput = z.infer<typeof ingredientBaseSchema>;
@@ -180,7 +151,7 @@ function mapCatalogRpcError(
     message?.includes("unit not found") ||
     message?.includes("unit_not_found")
   ) {
-    return "Đơn vị nhập hoặc đơn vị xuất không hợp lệ";
+    return "Đơn vị không hợp lệ";
   }
   if (
     message?.includes("category not found") ||
@@ -239,11 +210,10 @@ function rpcCatalogArgs(
   ingredientId: number | null,
   data: IngredientInput,
   shelfLifeDays: number | null = null,
-  defaultFulfillSiteKind:
-    | "central_supply"
-    | "central_kitchen"
-    | null = null,
+  defaultFulfillSiteKind: "central_supply" | "central_kitchen" | null = null,
 ): SaveCatalogArgs {
+  const baseUnitId = data.units.find((unit) => unit.is_base)?.unit_id;
+  if (baseUnitId == null) throw new Error("base_unit_missing");
   return {
     p_ingredient_id: ingredientId,
     p_name: data.name,
@@ -257,8 +227,9 @@ function rpcCatalogArgs(
     p_shelf_life_days: shelfLifeDays,
     p_units: buildRpcUnits(data.units),
     p_default_fulfill_site_kind: defaultFulfillSiteKind,
-    p_receipt_unit_id: data.receipt_unit_id,
-    p_issue_unit_id: data.issue_unit_id,
+    // Compatibility mirrors until the legacy role columns are removed.
+    p_receipt_unit_id: baseUnitId,
+    p_issue_unit_id: baseUnitId,
     p_production_unit_id: null,
   };
 }
@@ -295,10 +266,9 @@ const getIngredientsCached = cache(
         : supabase
             .from("ingredients")
             .select(
-              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, receipt_unit_id, issue_unit_id, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
             )
-    )
-      .eq("tenant_id", tenantId);
+    ).eq("tenant_id", tenantId);
 
     if (updatedSince) {
       query = query.gt("updated_at", updatedSince);
@@ -419,8 +389,10 @@ export const createIngredient = withAction<
     anyPermission: CATALOG_MANAGE_PERMISSIONS,
   },
   async (data, { supabase }) => {
-    const { default_fulfill_site_kind: defaultFulfillSiteKind, ...catalogData } =
-      data;
+    const {
+      default_fulfill_site_kind: defaultFulfillSiteKind,
+      ...catalogData
+    } = data;
     const { data: id, error } = await saveIngredientCatalog(
       supabase,
       rpcCatalogArgs(null, catalogData, null, defaultFulfillSiteKind ?? null),
@@ -514,8 +486,6 @@ export const quickCreateIngredient = withAction<
             is_base: true,
           },
         ],
-        receipt_unit_id: unitId,
-        issue_unit_id: unitId,
       }),
     );
 
@@ -586,9 +556,7 @@ export async function updateIngredient(
       existing.shelf_life_days,
       defaultFulfillSiteKind === undefined
         ? (existing.default_fulfill_site_kind as
-            | "central_supply"
-            | "central_kitchen"
-            | null)
+            "central_supply" | "central_kitchen" | null)
         : defaultFulfillSiteKind,
     ),
   );
@@ -606,7 +574,10 @@ export async function updateIngredient(
 /* ─── toggleIngredientActive ─── */
 
 const toggleIngredientIdSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "Mã nguyên liệu không hợp lệ" }),
+  id: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Mã nguyên liệu không hợp lệ" }),
 });
 
 export const toggleIngredientActive = withAction(
@@ -682,8 +653,8 @@ function buildIngredientSheets(
       columns: [
         { header: "Tên nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Mã đơn vị", key: "unit_code", width: 14 },
-        { header: "Quy đổi về tồn chuẩn", key: "to_base_factor", width: 20 },
-        { header: "Đơn vị tồn chuẩn", key: "is_base", width: 18 },
+        { header: "Quy đổi về đơn vị chuẩn", key: "to_base_factor", width: 20 },
+        { header: "Đơn vị chuẩn", key: "is_base", width: 18 },
       ],
       rows: rows.flatMap((r) =>
         r.units.map((u) => ({
@@ -699,9 +670,9 @@ function buildIngredientSheets(
 
 type ExportIngredientsResult =
   | {
-    success: true;
-    data: { filename: string; base64: string; format: "xlsx" | "csv" };
-  }
+      success: true;
+      data: { filename: string; base64: string; format: "xlsx" | "csv" };
+    }
   | { success: false; error: string };
 
 export async function exportIngredients(
@@ -834,9 +805,9 @@ export interface ImportIngredientSummary {
 
 type ImportIngredientsResult =
   | {
-    success: true;
-    data: { summary: ImportIngredientSummary };
-  }
+      success: true;
+      data: { summary: ImportIngredientSummary };
+    }
   | { success: false; error: string; issues?: ImportIngredientIssue[] };
 
 type BulkImportIngredientsRpcClient = {
@@ -869,7 +840,7 @@ function mapBulkIngredientImportError(
     return "Có nhóm nguyên liệu không còn hợp lệ.";
   }
   if (message?.includes("bulk_import_base_unit_change_forbidden")) {
-    return "Không thể đổi đơn vị tồn chuẩn khi nhập dữ liệu; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
+    return "Không thể đổi đơn vị chuẩn khi nhập dữ liệu; giữ đơn vị hiện tại hoặc tạo nguyên liệu mới.";
   }
   if (
     message?.includes("ingredient_unit_in_use_by_recipe") ||

@@ -100,7 +100,6 @@ function OwnerStockIngredientDetail({
     data.totalQty,
     ingredient.units,
     formatQty,
-    { preferredUnitId: ingredient.issue_unit_id },
   );
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const totalValue = data.valuation?.totalValue ?? 0;
@@ -191,7 +190,6 @@ function OwnerStockIngredientDetail({
                     location.qty,
                     ingredient.units,
                     formatQty,
-                    { preferredUnitId: ingredient.issue_unit_id },
                   );
                   const stockValue = location.monetary
                     ? location.qty * (location.monetary.avgUnitCost ?? 0)

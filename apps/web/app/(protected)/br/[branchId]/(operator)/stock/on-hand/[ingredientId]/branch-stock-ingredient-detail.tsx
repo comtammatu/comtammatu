@@ -60,9 +60,7 @@ function QuantityValue({
   data: StockIngredientDetailData;
   danger?: boolean;
 }) {
-  const quantity = formatStockUnits(qty, data.ingredient.units, formatQty, {
-    preferredUnitId: data.ingredient.issue_unit_id,
-  });
+  const quantity = formatStockUnits(qty, data.ingredient.units, formatQty);
 
   return (
     <div className="min-w-0 text-right">

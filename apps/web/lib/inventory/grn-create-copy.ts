@@ -40,14 +40,14 @@ export const GRN_CREATE_COPY = {
     `Lưu & kiểm nhận · ${formatCount(lineCount)} mặt hàng`,
   lineQtyOnly: (quantity: number, unit: string) =>
     `${formatQty(quantity)} ${unit}`,
-  unitLabel: (unit: string) => `Đơn vị nhập: ${unit}`,
+  unitLabel: (unit: string) => `Đơn vị: ${unit}`,
   baseConversionPreview: (
     quantity: string,
     entryUnit: string,
     baseQuantity: string,
     baseUnit: string,
   ) =>
-    `Quy đổi về tồn chuẩn: ${quantity} ${entryUnit} = ${baseQuantity} ${baseUnit}`,
+    `Quy đổi về đơn vị chuẩn: ${quantity} ${entryUnit} = ${baseQuantity} ${baseUnit}`,
   conversionMissing: "Chưa cấu hình quy đổi",
   branchUnselected: "Chưa chọn kho nhận",
   locationUnselected: "Chưa chọn kho nhận",

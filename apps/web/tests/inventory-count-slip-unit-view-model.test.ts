@@ -94,12 +94,12 @@ test("employee count UI previews the comparison unit before submission", () => {
   assert.match(clientSource, /formatQty/);
   assert.match(clientSource, /buildCountUnitPreview/);
   assert.match(clientSource, /INVENTORY_VI\.convertedColon/);
-  assert.match(clientSource, /Đơn vị tồn chuẩn/);
+  assert.match(clientSource, /Đơn vị chuẩn/);
   assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
   assert.doesNotMatch(clientSource, /\.toLocaleString\("vi-VN"/);
   assert.match(
     sharedInventoryMessages,
-    /convertedColon: "Quy đổi về tồn chuẩn:"/,
+    /convertedColon: "Quy đổi về đơn vị chuẩn:"/,
   );
   assert.match(
     sharedInventoryMessages,
@@ -154,7 +154,7 @@ test("stocktake count UI previews conversion to base unit before submission", ()
   assert.match(clientSource, /INVENTORY_VI\.conversionMissing/);
   assert.match(
     sharedInventoryMessages,
-    /convertedColon: "Quy đổi về tồn chuẩn:"/,
+    /convertedColon: "Quy đổi về đơn vị chuẩn:"/,
   );
   assert.match(
     sharedInventoryMessages,

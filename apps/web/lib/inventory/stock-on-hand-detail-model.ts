@@ -13,7 +13,6 @@ export type StockIngredientDetailIngredient = {
   sku: string;
   category: string;
   unit: string;
-  issue_unit_id?: number | null;
   units: IngredientUnitRow[];
   min: number;
   max: number;

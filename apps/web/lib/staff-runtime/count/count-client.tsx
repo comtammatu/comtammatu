@@ -421,7 +421,7 @@ export function CountSlipClient({
                 </SheetTitle>
                 <SheetDescription>
                   {baseUnit?.code
-                    ? `Đơn vị xuất (tồn sổ): ${baseUnit.code}`
+                    ? `Đơn vị chuẩn (tồn sổ): ${baseUnit.code}`
                     : "Nhập số đếm thực tế."}
                 </SheetDescription>
               </SheetHeader>
@@ -653,7 +653,7 @@ export function CountSlipClient({
                       <ItemDescription className="line-clamp-none break-words text-xs">
                         {summary ??
                           (stockUnitLabel
-                            ? `Đơn vị tồn chuẩn: ${stockUnitLabel}`
+                            ? `Đơn vị chuẩn: ${stockUnitLabel}`
                             : "Chưa nhập")}
                       </ItemDescription>
                     </ItemContent>

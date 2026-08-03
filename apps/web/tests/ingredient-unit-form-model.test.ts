@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildCatalogUnits,
-  distinctRoleUnitIds,
   IngredientUnitModelError,
   readCatalogUnitModel,
   rebaseUnitFactors,
@@ -68,16 +67,18 @@ const units: UnitOption[] = [
   },
 ];
 
-test("independent role magnitudes and duplicate roles produce a valid deduplicated payload", () => {
-  const roles = { receiptUnitId: 1, issueUnitId: 2, productionUnitId: 5 };
+test("selected units produce a deduplicated payload with one standard unit", () => {
   const rows = buildCatalogUnits({
-    roles,
+    unitIds: [1, 2, 5, 2],
     baseUnitId: 2,
     factors: { 1: 0.001, 2: 1, 5: 50 },
     unitOptions: units,
   });
 
-  assert.deepEqual(distinctRoleUnitIds(roles), [1, 2, 5]);
+  assert.deepEqual(
+    rows.map((row) => row.unit_id),
+    [1, 2, 5],
+  );
   assert.equal(rows.filter((row) => row.is_base).length, 1);
   assert.deepEqual(
     rows.find((row) => row.unit_id === 1),
@@ -89,10 +90,6 @@ test("independent role magnitudes and duplicate roles produce a valid deduplicat
       anchor_factor: null,
     },
   );
-  assert.deepEqual(
-    distinctRoleUnitIds({ ...roles, productionUnitId: 2 }),
-    [1, 2],
-  );
 });
 
 test("changing the base preserves every physical ratio", () => {
@@ -101,7 +98,7 @@ test("changing the base preserves every physical ratio", () => {
   assert.equal(rebased[5]! / rebased[2]!, 50);
 });
 
-test("new items default to the issue role while edits preserve the stored base", () => {
+test("new items use the first selected unit while edits preserve the stored base", () => {
   assert.equal(readCatalogUnitModel([], 2).baseUnitId, 2);
   assert.equal(
     readCatalogUnitModel(
@@ -114,25 +111,24 @@ test("new items default to the issue role while edits preserve the stored base",
     5,
   );
 
-  const roles = { receiptUnitId: 5, issueUnitId: 2, productionUnitId: null };
   const rows = buildCatalogUnits({
-    roles,
-    baseUnitId: roles.issueUnitId,
+    unitIds: [5, 2],
+    baseUnitId: 2,
     factors: { 5: 50 },
     unitOptions: units,
   });
-  assert.equal(rows.find((row) => row.is_base)?.unit_id, roles.issueUnitId);
+  assert.equal(rows.find((row) => row.is_base)?.unit_id, 2);
 });
 
 test("standard mass and volume factors come from the registry", () => {
   const mass = buildCatalogUnits({
-    roles: { receiptUnitId: 2, issueUnitId: 1, productionUnitId: null },
+    unitIds: [2, 1],
     baseUnitId: 1,
     factors: {},
     unitOptions: units,
   });
   const volume = buildCatalogUnits({
-    roles: { receiptUnitId: 4, issueUnitId: 3, productionUnitId: null },
+    unitIds: [4, 3],
     baseUnitId: 3,
     factors: {},
     unitOptions: units,
@@ -143,7 +139,7 @@ test("standard mass and volume factors come from the registry", () => {
 
 test("packaging units use a direct manual anchor to the base", () => {
   const rows = buildCatalogUnits({
-    roles: { receiptUnitId: 7, issueUnitId: 6, productionUnitId: 3 },
+    unitIds: [7, 6, 3],
     baseUnitId: 3,
     factors: { 7: 6000, 6: 250 },
     unitOptions: units,
@@ -160,12 +156,12 @@ test("packaging units use a direct manual anchor to the base", () => {
   );
 });
 
-test("invalid factors, cross-dimension standards and a base outside the roles fail closed", () => {
+test("invalid factors, cross-dimension standards and an unselected base fail closed", () => {
   for (const factor of [undefined, 0, -1]) {
     assert.throws(
       () =>
         buildCatalogUnits({
-          roles: { receiptUnitId: 5, issueUnitId: 2, productionUnitId: null },
+          unitIds: [5, 2],
           baseUnitId: 2,
           factors: factor == null ? {} : { 5: factor },
           unitOptions: units,
@@ -178,7 +174,7 @@ test("invalid factors, cross-dimension standards and a base outside the roles fa
   assert.throws(
     () =>
       buildCatalogUnits({
-        roles: { receiptUnitId: 2, issueUnitId: 3, productionUnitId: null },
+        unitIds: [2, 3],
         baseUnitId: 3,
         factors: {},
         unitOptions: units,
@@ -190,13 +186,13 @@ test("invalid factors, cross-dimension standards and a base outside the roles fa
   assert.throws(
     () =>
       buildCatalogUnits({
-        roles: { receiptUnitId: 5, issueUnitId: 2, productionUnitId: null },
+        unitIds: [5, 2],
         baseUnitId: 6,
         factors: {},
         unitOptions: units,
       }),
     (error: unknown) =>
       error instanceof IngredientUnitModelError &&
-      error.message === "base_unit_not_in_roles",
+      error.message === "base_unit_not_selected",
   );
 });

@@ -37,10 +37,7 @@ function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
   };
 }
 
-const threeRoleIngredient = {
-  receipt_unit_id: 300,
-  issue_unit_id: 200,
-  production_unit_id: 100,
+const ingredient = {
   units: [
     unit({
       unit_id: 100,
@@ -67,42 +64,58 @@ const threeRoleIngredient = {
   ],
 };
 
-test("GRN picker is receipt+issue; issue picker is issue+receipt; neither includes production-only", () => {
-  const purchase = getPurchaseUnitOptions(threeRoleIngredient);
+test("purchase and issue pickers expose every active unit and default to standard", () => {
+  const purchase = getPurchaseUnitOptions(ingredient);
   assert.deepEqual(
     purchase.map((o) => o.unitId),
-    [300, 200],
+    [100, 200, 300],
   );
-  assert.equal(getDefaultPurchaseUnit(threeRoleIngredient)?.unitId, 300);
+  assert.equal(getDefaultPurchaseUnit(ingredient)?.unitId, 100);
 
-  const issue = getIssueUnitOptions(threeRoleIngredient);
+  const issue = getIssueUnitOptions(ingredient);
   assert.deepEqual(
     issue.map((o) => o.unitId),
-    [200, 300],
+    [100, 200, 300],
   );
-  assert.equal(getDefaultIssueUnit(threeRoleIngredient)?.unitId, 200);
+  assert.equal(getDefaultIssueUnit(ingredient)?.unitId, 100);
 });
 
-test("stock UI converts ledger qty/WAC into issue units for display", () => {
-  const display = resolveStockDisplayUnit(
-    threeRoleIngredient.units,
-    threeRoleIngredient.issue_unit_id,
-  );
-  assert.equal(display?.unit_id, 200);
-  assert.equal(toStockDisplayQuantity(660, display), 2);
-  assert.equal(toStockDisplayUnitCost(10, display), 3300);
+test("stock UI keeps ledger quantity and WAC in the standard unit", () => {
+  const display = resolveStockDisplayUnit(ingredient.units);
+  assert.equal(display?.unit_id, 100);
+  assert.equal(toStockDisplayQuantity(660, display), 660);
+  assert.equal(toStockDisplayUnitCost(10, display), 10);
 
   const formatted = formatStockUnits(
     7920,
-    threeRoleIngredient.units,
+    ingredient.units,
     (n) => String(n),
-    { preferredUnitId: 200 },
   );
-  assert.equal(formatted.big, "1 thung");
-  assert.equal(formatted.base, "24 chai");
+  assert.equal(formatted.big, null);
+  assert.equal(formatted.base, "7920 ml");
 });
 
-test("menu recipe save accepts any active ladder unit and stock migration allows receipt|issue", () => {
+test("active inventory runtime does not carry catalog unit roles", () => {
+  const runtime = [
+    "apps/web/lib/inventory/types.ts",
+    "apps/web/lib/inventory/grn-create-data.ts",
+    "apps/web/lib/inventory/stock-on-hand-data.ts",
+    "apps/web/lib/inventory/stock-on-hand-detail-data.ts",
+    "apps/web/lib/inventory/transfer-create-data.ts",
+    "apps/web/lib/inventory/branch-stock-issue-data.ts",
+    "apps/web/app/(protected)/inventory/menu-recipes/page.tsx",
+    "apps/web/app/(protected)/inventory/waste/new/page.tsx",
+  ]
+    .map(readRepo)
+    .join("\n");
+
+  assert.doesNotMatch(
+    runtime,
+    /receipt_unit_id|issue_unit_id|production_unit_id/,
+  );
+});
+
+test("menu recipe and inventory documents accept any active ingredient unit", () => {
   const menuActions = readRepo(
     "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
   );
@@ -124,9 +137,9 @@ test("menu recipe save accepts any active ladder unit and stock migration allows
   assert.match(lineEditor, /getIngredientUnitOptions\(ingredient\)/);
 
   const migration = readRepo(
-    "supabase/migration-archive/20260801001600_inventory_entry_unit_receipt_or_issue.sql",
+    "supabase/migrations/20260803105716_active_ingredient_entry_units.sql",
   );
-  assert.match(migration, /entry_unit_matches_roles/);
-  assert.match(migration, /enforce_inventory_unit_roles\('receipt,issue'\)/);
-  assert.match(migration, /enforce_inventory_unit_roles\('issue,receipt'\)/);
+  assert.match(migration, /entry_unit_is_active_for_ingredient/);
+  assert.match(migration, /jsonb_array_length\(p_units\) NOT BETWEEN 1 AND 20/);
+  assert.match(migration, /demand_item\.entry_unit_id/);
 });

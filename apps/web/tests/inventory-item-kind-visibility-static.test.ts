@@ -46,19 +46,21 @@ test("inventory ingredients filters expose search metadata and reset action", ()
   assert.match(ingredientsClientSource, /ACTIONS_VI\.clearFilters/);
 });
 
-test("ingredient form models independent roles around an explicit base", () => {
-  assert.match(ingredientDialogSource, /name="input_unit_id"/);
-  assert.match(ingredientDialogSource, /name="output_unit_id"/);
+test("ingredient form models active units around one explicit standard unit", () => {
+  assert.match(ingredientDialogSource, /unit_ids: z/);
   assert.doesNotMatch(ingredientDialogSource, /name="production_unit_id"/);
   assert.match(ingredientDialogSource, /name: "base_unit_id"/);
-  assert.match(ingredientDialogSource, /roleUnitIds\.map/);
+  assert.match(ingredientDialogSource, /selectedUnitIds\.map/);
   assert.match(ingredientDialogSource, /<UnitFactorField/);
   assert.doesNotMatch(ingredientDialogSource, /productionEnabled \?/);
   assert.doesNotMatch(
     ingredientDialogSource,
     /input_to_output_factor|input_unit_is_different/,
   );
-  assert.doesNotMatch(ingredientDialogSource, /unitsLocked|fetchIngredientUnitLock/);
+  assert.doesNotMatch(
+    ingredientDialogSource,
+    /unitsLocked|fetchIngredientUnitLock/,
+  );
   assert.doesNotMatch(
     ingredientDialogSource,
     /makeSecondaryRow|previewCanonical|anchor_input_direction/,

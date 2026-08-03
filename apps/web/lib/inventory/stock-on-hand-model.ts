@@ -23,8 +23,6 @@ export type StockIngredient = {
   name: string;
   sku: string;
   unit: string;
-  receipt_unit_id?: number | null;
-  issue_unit_id?: number | null;
   units?: IngredientUnitRow[];
   category: string;
   itemKind: string;

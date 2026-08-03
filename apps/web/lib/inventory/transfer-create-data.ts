@@ -35,8 +35,6 @@ function toTransferIngredientOption(
     name: ingredient.name,
     is_active: ingredient.is_active,
     itemKind: ingredient.item_kind ?? null,
-    receipt_unit_id: ingredient.receipt_unit_id ?? null,
-    issue_unit_id: ingredient.issue_unit_id ?? null,
     units: ingredient.units,
   };
 }

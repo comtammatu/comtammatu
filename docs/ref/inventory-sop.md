@@ -36,7 +36,7 @@ CN không nhận NCC trực tiếp. Dùng §3 Yêu cầu hàng.
 
 ## 2c. Chọn đơn vị nguyên liệu
 
-Contract: [inventory.md](inventory.md) §2.1 — đơn vị nhập / xuất.
+Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đơn vị quy đổi.
 
 ## 3. Yêu cầu hàng chi nhánh → điều chuyển
 
@@ -63,7 +63,7 @@ Contract: [inventory.md](inventory.md) §2.1 — đơn vị nhập / xuất.
 
 1. QL tạo phiên kiểm kê Kho CN.
 2. Gán người đếm; blind count khi yêu cầu.
-3. Đếm theo đơn vị đóng gói/nhập khi có; hệ thống quy về đơn vị xuất.
+3. Chọn đơn vị đang hoạt động phù hợp lúc đếm; hệ thống quy về Đơn vị chuẩn.
 4. RPC hoàn tất mới post `count_adjustment`.
 
 ## 6. Đóng ngày và bằng chứng

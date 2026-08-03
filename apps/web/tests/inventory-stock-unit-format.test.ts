@@ -27,7 +27,7 @@ test("quantity formatter hides meaningless 3-digit decimal tails", () => {
   assert.equal(formatQty(300.125), "300,125");
 });
 
-test("multi-unit stock decomposes greedily across the packaging ladder", () => {
+test("multi-unit stock stays in the standard ledger unit", () => {
   const units = [
     unit({ unit_code: "g", to_base_factor: 1, is_base: true }),
     unit({ unit_code: "kg", to_base_factor: 1000 }),
@@ -36,46 +36,8 @@ test("multi-unit stock decomposes greedily across the packaging ladder", () => {
 
   const { big, base } = formatStockUnits(17000, units, plain);
 
-  assert.equal(big, "1 cây + 5 kg");
+  assert.equal(big, null);
   assert.equal(base, "17000 g");
-});
-
-test("two-unit stock shows whole packs plus base remainder", () => {
-  const units = [
-    unit({ unit_code: "lon", to_base_factor: 1, is_base: true }),
-    unit({ unit_code: "thùng", to_base_factor: 24 }),
-  ];
-
-  const { big, base } = formatStockUnits(500, units, plain);
-
-  assert.equal(big, "20 thùng + 20 lon");
-  assert.equal(base, "500 lon");
-});
-
-test("three-unit ladder omits zero remainder base parts", () => {
-  const units = [
-    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
-    unit({ unit_code: "chai", to_base_factor: 250 }),
-    unit({ unit_code: "thùng", to_base_factor: 5000 }),
-  ];
-
-  const { big, base } = formatStockUnits(18750, units, plain);
-
-  assert.equal(big, "3 thùng + 15 chai");
-  assert.equal(base, "18750 ml");
-});
-
-test("three-unit stock keeps the warehouse-friendly pack breakdown primary", () => {
-  const units = [
-    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
-    unit({ unit_code: "chai", to_base_factor: 330 }),
-    unit({ unit_code: "thùng", to_base_factor: 7920 }),
-  ];
-
-  const { big, base } = formatStockUnits(10050, units, plain);
-
-  assert.equal(big, "1 thùng + 6 chai + 150 ml");
-  assert.equal(base, "10050 ml");
 });
 
 test("below one largest pack shows base only", () => {
@@ -88,18 +50,6 @@ test("below one largest pack shows base only", () => {
 
   assert.equal(big, null);
   assert.equal(base, "125 ml");
-});
-
-test("exact whole packs omit base remainder from the mixed line", () => {
-  const units = [
-    unit({ unit_code: "ml", to_base_factor: 1, is_base: true }),
-    unit({ unit_code: "thùng", to_base_factor: 7920 }),
-  ];
-
-  const { big, base } = formatStockUnits(15840, units, plain);
-
-  assert.equal(big, "2 thùng");
-  assert.equal(base, "15840 ml");
 });
 
 test("single-unit ingredient renders base only (big is null)", () => {

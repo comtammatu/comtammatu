@@ -118,12 +118,12 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
   const rebaseMigration = readRepo(
     "supabase/migration-archive/20260731220433_catalog_unit_rebase_allow_edit.sql",
   );
-  assert.match(rebaseMigration, /current_quantity = current_quantity \* v_scale/);
-  assert.match(rebaseMigration, /avg_unit_cost = CASE/);
   assert.match(
     rebaseMigration,
-    /UPDATE public\.inventory_valuation_accounts/,
+    /current_quantity = current_quantity \* v_scale/,
   );
+  assert.match(rebaseMigration, /avg_unit_cost = CASE/);
+  assert.match(rebaseMigration, /UPDATE public\.inventory_valuation_accounts/);
   assert.doesNotMatch(
     rebaseMigration,
     /inventory_standard_unit_locked_by_stock_movements/,
@@ -151,8 +151,8 @@ test("current catalog save rebases base quantities and keeps the editor unlocked
   assert.doesNotMatch(ingredientDialog, /unitsLocked/);
   assert.doesNotMatch(ingredientClient, /fetchIngredientUnitLock/);
   assert.doesNotMatch(ingredientDialog, /useFieldArray|UnitsField/);
-  assert.match(ingredientDialog, /name="input_unit_id"/);
-  assert.match(ingredientDialog, /name="output_unit_id"/);
+  assert.match(ingredientDialog, /unit_ids: z/);
+  assert.match(ingredientDialog, /selectedUnitIds\.map/);
   assert.match(ingredientDialog, /name: "base_unit_id"/);
 });
 

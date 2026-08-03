@@ -90,7 +90,7 @@ export async function WasteNewPageContent({
     supabase
       .from("ingredients")
       .select(
-        "id, name, receipt_unit_id, issue_unit_id, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+        "id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -147,13 +147,9 @@ export async function WasteNewPageContent({
           is_active: true,
           sort_order: u.sort_order,
         }));
-      const roleIngredient = {
-        receipt_unit_id: i.receipt_unit_id,
-        issue_unit_id: i.issue_unit_id,
-        units,
-      };
-      const issueUnits = getIssueUnitOptions(roleIngredient);
-      const defaultUnit = getDefaultIssueUnit(roleIngredient);
+      const ingredient = { units };
+      const issueUnits = getIssueUnitOptions(ingredient);
+      const defaultUnit = getDefaultIssueUnit(ingredient);
       const ingredientStockLevels = (stockLevels ?? [])
         .filter((level) => level.ingredient_id === i.id)
         .map((level) => ({

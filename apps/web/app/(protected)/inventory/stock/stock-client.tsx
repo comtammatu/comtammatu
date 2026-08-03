@@ -112,8 +112,6 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "out", label: stockCopy.filters.out },
 ];
 
-// Two-line stock quantity: largest unit on top (emphasis class from caller),
-// base unit muted below. Single-unit ingredients collapse to one line.
 function StockQtyCell({
   item,
   className,
@@ -121,9 +119,7 @@ function StockQtyCell({
   item: StockIngredient;
   className?: string;
 }) {
-  const { big, base } = formatStockUnits(item.qty, item.units, formatQty, {
-    preferredUnitId: item.issue_unit_id,
-  });
+  const { big, base } = formatStockUnits(item.qty, item.units, formatQty);
   if (big === null) {
     return <span className={className}>{base}</span>;
   }
@@ -445,7 +441,7 @@ export function StockClient({
             render: (item: StockIngredient) => {
               const displayWac = toStockDisplayUnitCost(
                 item.monetary?.averageUnitCost,
-                resolveStockDisplayUnit(item.units, item.issue_unit_id),
+                resolveStockDisplayUnit(item.units),
               );
               return (
                 <span className="font-mono tabular-nums">
@@ -737,7 +733,7 @@ export function StockClient({
                 {(() => {
                   const displayWac = toStockDisplayUnitCost(
                     item.monetary.averageUnitCost,
-                    resolveStockDisplayUnit(item.units, item.issue_unit_id),
+                    resolveStockDisplayUnit(item.units),
                   );
                   return displayWac != null && displayWac > 0
                     ? inventoryCommon.currencyCompact(formatVND(displayWac))
