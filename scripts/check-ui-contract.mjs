@@ -3,11 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
-import {
-  APP_ADAPTER_REGISTRY,
-  DOMAIN_ADAPTER_FAMILIES,
-  validateUiComponentRegistry,
-} from "./ui-component-registry.mjs";
+import { validateUiComponentRegistry } from "./ui-component-registry.mjs";
 import {
   buildUiContractGuardReporting,
   UI_CONTRACT_LINT_ONLY_GROUPS,
@@ -1960,7 +1956,8 @@ function runLegacyDebtBudgetSelfTest() {
       0
   ) {
     throw new Error(
-      "operator no-stat-metric self-test did not enforce the badge-only rule",    );
+      "operator no-stat-metric self-test did not enforce the badge-only rule",
+    );
   }
 }
 
