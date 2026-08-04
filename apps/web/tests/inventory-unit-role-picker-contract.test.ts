@@ -91,7 +91,8 @@ test("stock UI keeps ledger quantity and WAC in the standard unit", () => {
     ingredient.units,
     (n) => String(n),
   );
-  assert.equal(formatted.big, null);
+  // Compact line promotes to the largest whole pack; ledger total stays in base.
+  assert.equal(formatted.big, "1 thung");
   assert.equal(formatted.base, "7920 ml");
 });
 
