@@ -149,12 +149,12 @@ test.skip("Menu-Limits manager saves raw manual limit; empty input clears withou
   );
 });
 
-test.skip("Menu-Limits clear-limit button is wired", () => {
+test("Menu-Limits clear-limit button is wired", () => {
   assert.match(tableSource, /clearBranchMenuDailyLimit/);
   assert.match(tableSource, /messages\.pos\.menu\.clearLimit/);
 });
 
-test.skip("stock capacity compute converts recipe entry units to base", () => {
+test("stock capacity compute converts recipe entry units to base", () => {
   assert.match(
     stockCapacityMultiUnitMigration,
     /LEFT JOIN public\.ingredient_units iu[\s\S]*iu\.unit_id = r\.entry_unit_id/,
@@ -169,12 +169,12 @@ test.skip("stock capacity compute converts recipe entry units to base", () => {
   );
 });
 
-test.skip("Menu recipes page passes ingredient unit options to menu recipe editor", () => {
+test("Menu recipes page passes ingredient unit options to menu recipe editor", () => {
   assert.match(recipesPageSource, /units\?: IngredientUnitRow\[\]/);
   assert.match(recipesPageSource, /units: i\.units/);
 });
 
-test.skip("POS stock-control blocks items without computed stock capacity", () => {
+test("POS stock-control blocks items without computed stock capacity", () => {
   assert.match(
     stockCapacityMultiUnitMigration,
     /WHEN r\.stock_capacity_live IS NULL AND p_stock_outcome_enabled THEN 0/,
@@ -185,7 +185,7 @@ test.skip("POS stock-control blocks items without computed stock capacity", () =
   );
 });
 
-test.skip("Menu-Limits RPC exposes availability components", () => {
+test("Menu-Limits RPC exposes availability components", () => {
   assert.match(
     stockOutcomeAvailabilityMigration,
     /stock_capacity_live integer/,
@@ -204,7 +204,7 @@ test.skip("Menu-Limits RPC exposes availability components", () => {
   assert.match(actionsSource, /available_to_sell: number \| null/);
 });
 
-test.skip("Menu-Limits availability computes live stock when daily row is missing", () => {
+test("Menu-Limits availability computes live stock when daily row is missing", () => {
   assert.match(
     liveStockCapacityMigration,
     /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,
@@ -252,7 +252,7 @@ test.skip("Menu-Limits manager copy uses stock availability vocabulary", () => {
   assert.doesNotMatch(posMessagesSource, /Trần thủ công|Phần bán được/);
 });
 
-test.skip("Menu-Limits availability sells freely when stock-outcome deduction is off", () => {
+test("Menu-Limits availability sells freely when stock-outcome deduction is off", () => {
   assert.match(
     unlimitedWhenDeductionOffMigration,
     /CREATE OR REPLACE FUNCTION public\.branch_menu_limit_availability/,

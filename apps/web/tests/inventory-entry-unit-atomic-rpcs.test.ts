@@ -189,7 +189,7 @@ test("stock issue draft lines save through a least-privilege RPC", () => {
   );
 });
 
-test.skip("inventory entry units are persisted inside atomic RPCs", () => {
+test("inventory entry units are persisted inside atomic RPCs", () => {
   const sql = read(
     "supabase/migration-archive/20260629125621_persist_entry_unit_in_atomic_rpcs.sql",
   );
@@ -217,7 +217,7 @@ test.skip("inventory entry units are persisted inside atomic RPCs", () => {
   }
 });
 
-test.skip("server actions do not patch entry units after RPC success", () => {
+test("server actions do not patch entry units after RPC success", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/production-recipe-actions.ts",
@@ -419,7 +419,7 @@ test("menu and production recipe DTOs expose unitLabel", () => {
   );
 });
 
-test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
+test("RPC-backed inventory writes let the RPC derive persisted unit text", () => {
   for (const path of [
     "apps/web/app/(protected)/inventory/production-run-actions.ts",
     "apps/web/app/(protected)/inventory/waste-actions.ts",
@@ -436,7 +436,7 @@ test.skip("RPC-backed inventory writes let the RPC derive persisted unit text", 
   );
 });
 
-test.skip("inventory RPCs derive persisted unit text from the unit catalog", () => {
+test("inventory RPCs derive persisted unit text from the unit catalog", () => {
   const migration = read(
     "supabase/migration-archive/20260704193015_inventory_unit_rpc_contract.sql",
   );
@@ -468,7 +468,7 @@ test.skip("inventory RPCs derive persisted unit text from the unit catalog", () 
   );
 });
 
-test.skip("expiry writeoff RPC does not accept a unit text argument", () => {
+test("expiry writeoff RPC does not accept a unit text argument", () => {
   const migration = read(
     "supabase/migration-archive/20260704200923_inventory_drop_expiry_writeoff_unit_arg.sql",
   );
@@ -520,7 +520,7 @@ test.skip("production recipe bulk import stores catalog-derived units", () => {
   assert.match(action, /entry_unit_id:\s*line\.entryUnitId/);
 });
 
-test.skip("employee count slip prefill preserves the submitted entry unit", () => {
+test("employee count slip prefill preserves the submitted entry unit", () => {
   const sql = read(
     "supabase/migration-archive/20260629144912_employee_count_slip_entry_unit_prefill.sql",
   );
@@ -536,7 +536,7 @@ test.skip("employee count slip prefill preserves the submitted entry unit", () =
   );
 });
 
-test.skip("stock transfer receive converts received entry quantities to base units", () => {
+test("stock transfer receive converts received entry quantities to base units", () => {
   const sql = read(
     "supabase/migration-archive/20260706071001_stock_transfer_receive_base_quantity.sql",
   );
@@ -571,7 +571,7 @@ test.skip("stock transfer receive converts received entry quantities to base uni
   assert.match(sql, /current_quantity = sl\.current_quantity \+ agg\.delta/);
 });
 
-test.skip("GRN amend and historical GRN movements use base quantities", () => {
+test("GRN amend and historical GRN movements use base quantities", () => {
   const sql = read(
     "supabase/migration-archive/20260706084233_grn_base_quantity_legacy_cleanup.sql",
   );
