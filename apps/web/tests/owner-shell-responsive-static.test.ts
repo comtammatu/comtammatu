@@ -38,7 +38,7 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
   assert.match(source, /isTouchLayout \? "min-h-12" : "min-h-10"/);
   assert.match(
     source,
-    /rounded-xl bg-sidebar-accent p-2 ring-1 ring-sidebar-border\/70/,
+    /rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border\/70/,
   );
   assert.match(source, /<BrandMark[\s\S]*?decorative/);
   assert.match(source, /sideOffset=\{8\}/);

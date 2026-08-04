@@ -1467,10 +1467,10 @@ const perFileCountBudgets = [
   {
     id: "inline-chrome-baseline",
     description:
-      "Hand-rolled card/inset chrome (rounded-md|lg + border on a raw element — including border-only, bg-*/N-tinted, and bg-muted|accent|secondary card-clones) is frozen per file; delegate to Card/AppSection/Item/NoteCallout/Alert instead of reimplementing surface chrome inline. Multiline-tolerant (className={cn( then whitespace/newline before the literal).",
+      "Hand-rolled card/inset chrome (rounded-md|lg + border on a raw element — including border-only, bg-*/N-tinted, and bg-muted|accent|secondary card-clones) is frozen per file; delegate to Card/AppSection/Item/NoteCallout/Alert instead of reimplementing surface chrome inline. The border probe counts border utilities only; the border color token inside a ring-* class (e.g. ring-sidebar-border/70) is not chrome. Multiline-tolerant (className={cn( then whitespace/newline before the literal).",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*\bborder\b)[^'"]*['"]/g,
+      /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*(?<!ring-\S*)\bborder\b)[^'"]*['"]/g,
     allowlist: {},
   },
   {
@@ -1657,6 +1657,41 @@ function runLegacyDebtBudgetSelfTest() {
     ) !== 0
   ) {
     throw new Error("heading weight self-test did not enforce the lock");
+  }
+
+  const inlineChromeCheck = perFileCountBudgets.find(
+    (check) => check.id === "inline-chrome-baseline",
+  );
+  if (
+    !inlineChromeCheck ||
+    countMatches(
+      'className="rounded-md border bg-card"',
+      inlineChromeCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="rounded-lg border-t border-sidebar-border p-2"',
+      inlineChromeCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className={cn(\n      "rounded-md border"\n    )}',
+      inlineChromeCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70"',
+      inlineChromeCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      'className="rounded-lg ring-1 ring-border/50"',
+      inlineChromeCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      'className="rounded-xl border bg-card"',
+      inlineChromeCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error(
+      "inline chrome self-test misclassified border utilities or ring color classes",
+    );
   }
 
   if (
