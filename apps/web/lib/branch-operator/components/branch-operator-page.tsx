@@ -655,6 +655,10 @@ export interface BranchOperatorActionSectionProps {
   size?: "default" | "sm";
   tone?: BranchOperatorTone;
   presentation?: "panel" | "plain" | "stations";
+  badge?: {
+    children: ReactNode;
+    variant?: BadgeProps["variant"];
+  };
   className?: string;
 }
 
@@ -668,6 +672,7 @@ export function BranchOperatorActionSection({
   size = "sm",
   tone = "default",
   presentation = "panel",
+  badge,
   className,
 }: BranchOperatorActionSectionProps) {
   if (links.length === 0) return null;
@@ -703,6 +708,7 @@ export function BranchOperatorActionSection({
         description={description}
         size={size}
         tone={tone}
+        badge={badge}
         className={className}
       >
         {content}
@@ -712,10 +718,21 @@ export function BranchOperatorActionSection({
 
   return (
     <section className={cn("flex flex-col gap-2", className)}>
-      {title || description ? (
+      {title || description || badge ? (
         <div className="flex flex-col gap-1">
-          {title ? (
-            <h2 className="font-heading text-base font-semibold">{title}</h2>
+          {title || badge ? (
+            <div className="flex items-center justify-between gap-2">
+              {title ? (
+                <h2 className="font-heading text-base font-semibold">
+                  {title}
+                </h2>
+              ) : null}
+              {badge ? (
+                <Badge variant={badge.variant ?? "secondary"} className="shrink-0">
+                  {badge.children}
+                </Badge>
+              ) : null}
+            </div>
           ) : null}
           {description ? (
             <p className="text-xs text-muted-foreground">{description}</p>
