@@ -16,6 +16,7 @@ import {
 } from "./stock-on-hand-detail-model";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
 import {
+  resolveStockCompactUnit,
   resolveStockDisplayUnit,
   toStockDisplayUnitCost,
 } from "@/(protected)/inventory/_lib/stock-unit-format";
@@ -307,12 +308,13 @@ export async function loadStockIngredientDetailData({
     : null;
   const ledgerWac =
     totalQty > 0 ? (totalValue ?? 0) / totalQty : referenceUnitCost;
+  const compactUnit = resolveStockCompactUnit(totalQty, units) ?? standardUnit;
   const valuation =
     totalValue == null
       ? null
       : {
           totalValue,
-          wac: toStockDisplayUnitCost(ledgerWac, standardUnit) ?? ledgerWac,
+          wac: toStockDisplayUnitCost(ledgerWac, compactUnit) ?? ledgerWac,
         };
   const min = Number(ingredientRow.min_stock_level ?? 0);
   const max = Number(ingredientRow.max_stock_level ?? 0);

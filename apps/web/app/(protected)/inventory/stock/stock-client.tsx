@@ -67,7 +67,8 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "@lib/inventory/format";
 import {
   formatStockUnits,
-  resolveStockDisplayUnit,
+  resolveStockCompactUnit,
+  stockUnitLabel,
   toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
@@ -439,14 +440,16 @@ export function StockClient({
             header: stockCopy.table.wac,
             className: "min-w-28 text-right",
             render: (item: StockIngredient) => {
+              const costUnit = resolveStockCompactUnit(item.qty, item.units);
               const displayWac = toStockDisplayUnitCost(
                 item.monetary?.averageUnitCost,
-                resolveStockDisplayUnit(item.units),
+                costUnit,
               );
+              const unitLabel = stockUnitLabel(costUnit, item.unit);
               return (
                 <span className="font-mono tabular-nums">
                   {displayWac != null && displayWac > 0
-                    ? `${inventoryCommon.currencyCompact(formatVND(displayWac))}/${item.unit}`
+                    ? `${inventoryCommon.currencyCompact(formatVND(displayWac))}/${unitLabel}`
                     : inventoryCommon.noValue}
                 </span>
               );
@@ -726,20 +729,27 @@ export function StockClient({
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">
-                {stockCopy.table.wacPerUnit(item.unit)}
-              </p>
-              <p className="font-mono tabular-nums">
-                {(() => {
-                  const displayWac = toStockDisplayUnitCost(
-                    item.monetary.averageUnitCost,
-                    resolveStockDisplayUnit(item.units),
-                  );
-                  return displayWac != null && displayWac > 0
-                    ? inventoryCommon.currencyCompact(formatVND(displayWac))
-                    : inventoryCommon.noValue;
-                })()}
-              </p>
+              {(() => {
+                const costUnit = resolveStockCompactUnit(item.qty, item.units);
+                const displayWac = toStockDisplayUnitCost(
+                  item.monetary.averageUnitCost,
+                  costUnit,
+                );
+                return (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.wacPerUnit(
+                        stockUnitLabel(costUnit, item.unit),
+                      )}
+                    </p>
+                    <p className="font-mono tabular-nums">
+                      {displayWac != null && displayWac > 0
+                        ? inventoryCommon.currencyCompact(formatVND(displayWac))
+                        : inventoryCommon.noValue}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </>
         ) : null}

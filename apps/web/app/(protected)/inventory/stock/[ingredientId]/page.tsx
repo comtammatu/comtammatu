@@ -35,7 +35,11 @@ import {
   formatQty,
   formatVND,
 } from "@lib/inventory/format";
-import { formatStockUnits } from "../../_lib/stock-unit-format";
+import {
+  formatStockUnits,
+  resolveStockCompactUnit,
+  stockUnitLabel,
+} from "../../_lib/stock-unit-format";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
@@ -101,6 +105,10 @@ function OwnerStockIngredientDetail({
     ingredient.units,
     formatQty,
   );
+  const wacUnitLabel = stockUnitLabel(
+    resolveStockCompactUnit(data.totalQty, ingredient.units),
+    ingredient.unit || inventoryCommon.noValue,
+  );
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const totalValue = data.valuation?.totalValue ?? 0;
   const wac = data.valuation?.wac ?? 0;
@@ -153,9 +161,7 @@ function OwnerStockIngredientDetail({
               description: formatVND(totalValue),
             },
             {
-              term: stockCopy.table.wacPerUnit(
-                ingredient.unit || inventoryCommon.noValue,
-              ),
+              term: stockCopy.table.wacPerUnit(wacUnitLabel),
               description:
                 wac > 0 ? formatVND(wac) : inventoryCommon.noValue,
             },

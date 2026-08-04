@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { formatQty } from "../lib/inventory/format";
-import { formatStockUnits } from "../app/(protected)/inventory/_lib/stock-unit-format";
+import {
+  formatStockUnits,
+  resolveStockCompactUnit,
+  stockUnitLabel,
+  toStockDisplayUnitCost,
+} from "../app/(protected)/inventory/_lib/stock-unit-format";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
 function unit(row: Partial<IngredientUnitRow>): IngredientUnitRow {
@@ -108,4 +113,34 @@ test("negative on-hand still promotes to whole packs", () => {
 
   assert.equal(big, "-1 thùng -6 lon");
   assert.equal(base, "-7500 ml");
+});
+
+test("WAC follows the primary compact pack unit", () => {
+  // Ledger WAC = 10 VND / ml
+  assert.equal(
+    toStockDisplayUnitCost(10, resolveStockCompactUnit(3750, cocaUnits)),
+    2500,
+  );
+  assert.equal(
+    stockUnitLabel(resolveStockCompactUnit(3750, cocaUnits)),
+    "lon",
+  );
+
+  assert.equal(
+    toStockDisplayUnitCost(10, resolveStockCompactUnit(7500, cocaUnits)),
+    60000,
+  );
+  assert.equal(
+    stockUnitLabel(resolveStockCompactUnit(7500, cocaUnits)),
+    "thùng",
+  );
+
+  assert.equal(
+    toStockDisplayUnitCost(10, resolveStockCompactUnit(125, cocaUnits)),
+    10,
+  );
+  assert.equal(
+    stockUnitLabel(resolveStockCompactUnit(125, cocaUnits)),
+    "ml",
+  );
 });

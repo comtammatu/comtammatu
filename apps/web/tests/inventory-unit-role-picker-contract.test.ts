@@ -8,6 +8,7 @@ import {
 } from "../app/(protected)/inventory/_lib/issue-units";
 import {
   formatStockUnits,
+  resolveStockCompactUnit,
   resolveStockDisplayUnit,
   toStockDisplayQuantity,
   toStockDisplayUnitCost,
@@ -80,7 +81,7 @@ test("purchase and issue pickers expose every active unit and default to standar
   assert.equal(getDefaultIssueUnit(ingredient)?.unitId, 100);
 });
 
-test("stock UI keeps ledger quantity and WAC in the standard unit", () => {
+test("stock UI promotes compact qty and aligns WAC to that pack", () => {
   const display = resolveStockDisplayUnit(ingredient.units);
   assert.equal(display?.unit_id, 100);
   assert.equal(toStockDisplayQuantity(660, display), 660);
@@ -94,6 +95,11 @@ test("stock UI keeps ledger quantity and WAC in the standard unit", () => {
   // Compact line promotes to the largest whole pack; ledger total stays in base.
   assert.equal(formatted.big, "1 thung");
   assert.equal(formatted.base, "7920 ml");
+
+  // WAC label follows the same primary compact pack.
+  const compact = resolveStockCompactUnit(7920, ingredient.units);
+  assert.equal(compact?.unit_id, 300);
+  assert.equal(toStockDisplayUnitCost(10, compact), 79200);
 });
 
 test("active inventory runtime does not carry catalog unit roles", () => {

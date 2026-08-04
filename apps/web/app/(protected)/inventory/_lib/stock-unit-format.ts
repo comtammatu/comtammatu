@@ -22,12 +22,37 @@ function isNearInteger(value: number): boolean {
   return Math.abs(value - Math.round(value)) <= QUANTITY_EPSILON;
 }
 
+function usableUnits(
+  units: IngredientUnitRow[] | undefined,
+): IngredientUnitRow[] {
+  return (units ?? []).filter(
+    (u) => u.is_active && u.unit_code.trim() !== "",
+  );
+}
+
+/** Largest → smallest unique factors for packaging decomposition. */
+function unitLadder(usable: IngredientUnitRow[]): IngredientUnitRow[] {
+  const ladder: IngredientUnitRow[] = [];
+  const seenFactors = new Set<number>();
+  for (const unit of usable
+    .filter((row) => Number(row.to_base_factor) > 0)
+    .toSorted(
+      (left, right) =>
+        right.to_base_factor - left.to_base_factor ||
+        left.sort_order - right.sort_order,
+    )) {
+    const factor = Number(unit.to_base_factor);
+    if (seenFactors.has(factor)) continue;
+    seenFactors.add(factor);
+    ladder.push(unit);
+  }
+  return ladder;
+}
+
 export function resolveStockDisplayUnit(
   units: IngredientUnitRow[] | undefined,
 ): IngredientUnitRow | undefined {
-  const usable = (units ?? []).filter(
-    (u) => u.is_active && u.unit_code.trim() !== "",
-  );
+  const usable = usableUnits(units);
   return (
     usable.find((u) => u.is_base) ??
     usable.reduce<IngredientUnitRow | undefined>(
@@ -38,6 +63,39 @@ export function resolveStockDisplayUnit(
       undefined,
     )
   );
+}
+
+/**
+ * Unit for operator-facing WAC / cost labels: the largest whole pack present
+ * in the compact stock line, else the ledger standard unit.
+ */
+export function resolveStockCompactUnit(
+  qtyBase: number,
+  units: IngredientUnitRow[] | undefined,
+): IngredientUnitRow | undefined {
+  const usable = usableUnits(units);
+  const displayRow = resolveStockDisplayUnit(usable);
+  if (
+    usable.length <= 1 ||
+    !Number.isFinite(qtyBase) ||
+    Math.abs(qtyBase) <= QUANTITY_EPSILON
+  ) {
+    return displayRow;
+  }
+
+  for (const unit of unitLadder(usable)) {
+    if (Math.abs(wholeCount(qtyBase, Number(unit.to_base_factor))) >= 1) {
+      return unit;
+    }
+  }
+  return displayRow;
+}
+
+export function stockUnitLabel(
+  unit: Pick<IngredientUnitRow, "unit_code" | "unit_name"> | null | undefined,
+  fallback = "",
+): string {
+  return unit?.unit_name?.trim() || unit?.unit_code || fallback;
 }
 
 /** Convert ledger (base) quantity into the operator-facing display unit. */
@@ -74,9 +132,7 @@ export function formatStockUnits(
   units: IngredientUnitRow[] | undefined,
   formatNumber: (n: number) => string,
 ): { big: string | null; base: string } {
-  const usable = (units ?? []).filter(
-    (u) => u.is_active && u.unit_code.trim() !== "",
-  );
+  const usable = usableUnits(units);
 
   const displayRow = resolveStockDisplayUnit(usable);
   const displayCode = displayRow?.unit_code ?? "";
@@ -92,21 +148,7 @@ export function formatStockUnits(
     return { big: null, base };
   }
 
-  const ladder: IngredientUnitRow[] = [];
-  const seenFactors = new Set<number>();
-  for (const unit of usable
-    .filter((row) => Number(row.to_base_factor) > 0)
-    .toSorted(
-      (left, right) =>
-        right.to_base_factor - left.to_base_factor ||
-        left.sort_order - right.sort_order,
-    )) {
-    const factor = Number(unit.to_base_factor);
-    if (seenFactors.has(factor)) continue;
-    seenFactors.add(factor);
-    ladder.push(unit);
-  }
-
+  const ladder = unitLadder(usable);
   let remaining = snapNearInteger(qtyBase);
   const parts: Array<{ qty: number; code: string; factor: number }> = [];
 
