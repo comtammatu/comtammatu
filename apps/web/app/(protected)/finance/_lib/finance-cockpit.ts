@@ -120,6 +120,7 @@ interface FinanceCockpitKpis {
   netRevenueBeforeVat: number;
   inventoryValue: number;
   inventoryOpeningValue: number;
+  inventoryChange: number;
   operatingExpense: number;
   operatingExpenseRecorded: boolean;
   ingredientCost: number;
@@ -264,12 +265,14 @@ function buildKpis({
   inventoryValue,
   inventoryOpeningValue = inventoryValue,
   operatingExpense,
+  includeInventoryChange = true,
 }: {
   kpis: KpiBundle | null;
   actualFoodCost: ActualFoodCostSnapshot;
   inventoryValue: number;
   inventoryOpeningValue?: number;
   operatingExpense: OperatingExpenseSummary;
+  includeInventoryChange?: boolean;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
   const orderCount = toNumber(kpis?.order_count);
@@ -284,10 +287,14 @@ function buildKpis({
     orderCount > 0 ? costCoverageOrderCount / orderCount : 1;
   const costAvailable =
     orderCount === 0 || costCoverageOrderCount >= orderCount;
+  const inventoryChange = includeInventoryChange
+    ? inventoryValue - inventoryOpeningValue
+    : 0;
   const financeResult = calculateFinanceResult({
     netRevenueBeforeVat,
     ingredientCost,
     operatingExpense: operatingExpense.total,
+    inventoryChange,
     costAvailable,
     operatingExpenseRecorded: operatingExpense.recorded,
   });
@@ -1235,12 +1242,16 @@ export async function fetchFinanceCockpit(
     ? (inventoryPeriodValueRes.data?.openingValue ?? inventoryValue)
     : inventoryValue;
 
+  const canViewInventoryValuation =
+    canReadRequestedValuation && includesBranchData;
+
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
     actualFoodCost,
     inventoryValue,
     inventoryOpeningValue,
     operatingExpense: operatingExpenseSummary,
+    includeInventoryChange: canViewInventoryValuation,
   });
 
   const compareKpis = resolved.compare
@@ -1251,6 +1262,7 @@ export async function fetchFinanceCockpit(
         actualFoodCost: compareActualFoodCost,
         inventoryValue,
         operatingExpense: compareOperatingExpenseSummary,
+        includeInventoryChange: canViewInventoryValuation,
       })
     : null;
 
@@ -1299,7 +1311,7 @@ export async function fetchFinanceCockpit(
 
   return {
     branches,
-    canViewInventoryValuation: canReadRequestedValuation && includesBranchData,
+    canViewInventoryValuation,
     vat,
     kpis,
     compareKpis: compareKpis

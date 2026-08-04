@@ -331,10 +331,10 @@ Nguyên tắc nền:
 | `theoretical_food_cost`  | Giá vốn định mức              | Giá vốn suy ra từ công thức món và mix bán hàng.                                                           | `sum(recipe_qty * cost * sold_qty)`.                                                             | Giá vốn thực tế nếu chưa đối soát tồn/kiểm kê.                                         | Analysis only, `estimated`.                                         |
 | `actual_food_cost`       | Giá vốn thực tế               | Giá vốn từ biến động kho/tiêu hao thực tế.                                                                 | `begin_inventory + purchases + transfers_in - transfers_out - ending_inventory +/- adjustments`. | Định mức recipe, purchase spend.                                                       | Inventory/Finance when source trusted.                              |
 | `food_cost_percentage`   | Tỷ lệ giá vốn món             | Tỷ lệ giá vốn trên doanh thu trước VAT.                                                                    | `food_cost / net_sales_before_vat`.                                                              | Biên gộp, tỷ lệ giảm giá.                                                              | Finance food-cost report.                                           |
-| `gross_profit`           | Lợi nhuận gộp                 | Phần còn lại sau khi trừ giá vốn món khỏi doanh thu thuần.                                                  | `net_sales_before_vat - food_cost`.                                                              | Kết quả vận hành, lợi nhuận ròng, dòng tiền, tiền mặt trong két.                       | `finance.gross_profit.readonly`.                                    |
+| `gross_profit`           | Lợi nhuận gộp                 | Phần còn lại sau khi trừ giá vốn món khỏi doanh thu thuần.                                                  | `net_sales_before_vat - food_cost`.                                                              | Kết quả kinh doanh, lợi nhuận ròng, dòng tiền, tiền mặt trong két.                     | `finance.gross_profit.readonly`.                                    |
 | `gross_margin`           | Biên gộp                      | Tỷ lệ lợi nhuận gộp trên doanh thu thuần.                                                                  | `gross_profit / net_sales_before_vat`.                                                           | Tỷ lệ giá vốn món, biên ròng.                                                          | Supporting context.                                                 |
 | `operating_expense`      | Chi phí vận hành              | Chi phí kỳ đã ghi nhận: thuê, điện nước, lương, phần mềm, marketing, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ và phí. | Sum posted expense trong kỳ, loại direct ingredient COGS và nguyên giá tài sản.         | Giá vốn món, công nợ NCC, tiền mua TSCĐ/thiết bị chưa phân bổ.                         | `finance.expense.operating`.                                        |
-| `operating_result`       | Kết quả vận hành              | Kết quả sau khi trừ giá vốn món và chi phí vận hành đã ghi nhận.                                           | `gross_profit - operating_expense`.                                                              | Lợi nhuận ròng, dòng tiền, kết quả kê khai thuế.                                       | `finance.operating_result`.                                         |
+| `operating_result`       | Kết quả kinh doanh            | Kết quả sau khi trừ giá vốn món và chi phí vận hành, cộng biến động tồn kho.                               | `gross_profit - operating_expense + (closing - opening inventory)`.                              | Lợi nhuận ròng, dòng tiền, kết quả kê khai thuế.                                       | `finance.operating_result`.                                         |
 | `labor_cost`             | Chi phí nhân công             | Lương, phụ cấp chịu chi phí, bảo hiểm và nghĩa vụ của người sử dụng lao động được ghi nhận cho vận hành.  | Theo payroll/HR contract.                                                                        | Cổ tức, phân phối lợi nhuận, chi cá nhân.                                              | Future/HR-linked finance.                                           |
 | `prime_cost`             | Chi phí chính                 | Chi phí kiểm soát chính trong nhà hàng: giá vốn món + chi phí nhân công.                                   | `food_cost + labor_cost`.                                                                        | Chi phí vận hành tổng, lợi nhuận ròng.                                                 | Chỉ dùng khi cả food cost và labor cost trusted.                    |
 | `net_operating_profit`   | Lợi nhuận vận hành ròng       | Lãi sau khi trừ giá vốn, nhân công, chi phí vận hành, và khoản vận hành khác đã định nghĩa.                | `net_sales_before_vat - food_cost - labor_cost - operating_expense +/- other_operating_items`.   | Lợi nhuận gộp, tiền mặt, lợi nhuận kế toán doanh nghiệp.                               | Không là Finance Basic KPI mặc định.                                |
@@ -726,7 +726,7 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 | `gross_profit`           | Lợi nhuận gộp               | LN gộp         | —       |
 | `gross_margin`           | Biên gộp                    | —              | —       |
 | `operating_expense`      | Chi phí vận hành            | Chi phí VH     | —       |
-| `operating_result`       | Kết quả vận hành            | Kết quả VH     | —       |
+| `operating_result`       | Kết quả kinh doanh          | Kết quả KD     | —       |
 | `labor_cost`             | Chi phí nhân công           | Nhân công      | —       |
 | `prime_cost`             | Chi phí chính               | —              | —       |
 | `inventory_value`        | Giá trị tồn kho             | Tiền trong kho | —       |
@@ -951,18 +951,19 @@ không đặt title như một KPI.
 
 ### Finance
 
-Finance Basic hiện có năm card kết quả theo kỳ theo
+Finance Basic hiện có hai dòng kết quả theo kỳ theo
 `docs/modules/finance.md`:
 
 - `finance.revenue.before_vat_after_discount`
 - `finance.food_cost.recorded`
 - `finance.gross_profit.readonly`
 - `finance.expense.operating`
+- biến động tồn (`finance.inventory_value.current` − `finance.inventory_value.opening`)
 - `finance.operating_result`
 
 `finance.revenue.money_collected` thuộc báo cáo doanh thu chi tiết. Số dư hiện
-có và `finance.inventory_value.current` là hai section tách khỏi công thức kết
-quả. `net_operating_profit`, `prime_cost`, `labor_cost`, AP aging, cash variance
+có và `finance.inventory_value.current` (số tuyệt đối cuối kỳ) là section tách
+khỏi công thức kết quả. `net_operating_profit`, `prime_cost`, `labor_cost`, AP aging, cash variance
 và HĐĐT recovery là supporting workflow hoặc analysis.
 
 ### Inventory

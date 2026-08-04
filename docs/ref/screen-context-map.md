@@ -385,23 +385,23 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Archetype:** `DASHBOARD`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
-  - Cung cấp công thức kết quả vận hành rõ ràng theo kỳ, đồng thời tách số dư hiện có và giá trị tồn kho.
-- **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món và chi phí vận hành; mở báo cáo chuyên biệt khi cần đối chiếu.
+  - Cung cấp công thức kết quả kinh doanh rõ ràng theo kỳ (hai dòng), đồng thời tách số dư hiện có và giá trị tồn kho.
+- **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món, chi phí vận hành và biến động tồn kho; mở báo cáo chuyên biệt khi cần đối chiếu.
 - **Luồng thao tác (Workflow):**
   1. **Chọn kỳ báo cáo:** Chọn `Nay`, `Hôm qua`, `Tuần`, `Tháng`, `Quý` hoặc `Năm`. Khi chọn kỳ lịch, chọn tiếp đúng tuần/tháng/quý/năm cần xem; kỳ hiện tại tính đến hôm nay, kỳ quá khứ lấy trọn kỳ.
   2. **Chọn phạm vi:** Chọn `Tất cả`, `Công ty`, `Toàn bộ Chi nhánh` hoặc `Chi nhánh`; khi chọn `Chi nhánh`, chọn tiếp một chi nhánh cụ thể. `Công ty` lấy bản ghi không gắn chi nhánh; `Toàn bộ Chi nhánh` loại các bản ghi cấp công ty; `Tất cả` cộng cả hai phạm vi.
-  3. **Xem kết quả:** Đọc năm card `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp − Chi phí vận hành = Kết quả vận hành`.
-  4. **Xem số dư:** Đọc tiền mặt theo sổ và tiền trong ngân hàng; hai số này không đổi theo bộ lọc.
-  5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc.
+  3. **Xem kết quả:** Đọc hai dòng công thức `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp` rồi `Lợi nhuận gộp − Chi phí vận hành + Biến động tồn kho (Tồn cuối kỳ − Tồn đầu kỳ) = Kết quả kinh doanh`.
+  4. **Xem số dư:** Đọc `Tiền mặt + Tiền tài khoản = Tổng tiền` trong section Tiền mặt hiện có; các số này không đổi theo bộ lọc.
+  5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc (số tuyệt đối; biến động đã nằm trong công thức kết quả).
   6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, chi phí chưa ghi nhận hoặc chứng từ cần xử lý.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Năm KPI kết quả theo kỳ, số dư hiện có, giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
+  - **Nên hiển thị:** Hai dòng KPI kết quả theo kỳ, tiền mặt hiện có (ba card công thức), giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
   - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
-  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả vận hành; chưa ghi nhận chi phí thì không tính Kết quả vận hành.
+  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả kinh doanh; chưa ghi nhận chi phí thì không tính Kết quả kinh doanh.
   - **KHÔNG hiển thị:** `Lợi nhuận sau thuế TNDN` khi chưa đủ sổ kế toán và khóa sổ, nút tạo order, hoặc các bước chế biến món ăn.
 - **Quy chuẩn UX/UI:**
   - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
-  - Desktop hiển thị năm card kết quả trên một hàng, có dấu `−` và `=` nối công thức; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
+  - Desktop: dòng kết quả 1 ba card, dòng 2 bốn card (khi có quyền giá trị tồn); section tiền mặt hiện có ba card `Tiền mặt + Tiền tài khoản = Tổng tiền`; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
   - Tất cả các biểu đồ tài chính chỉ được phép sử dụng bảng màu quy chuẩn từ `chart-1` đến `chart-5` trong token của hệ thống để đảm bảo tính đồng bộ thị giác.
 
 ---

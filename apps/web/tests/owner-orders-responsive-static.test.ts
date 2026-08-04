@@ -40,17 +40,21 @@ test("Owner finance results stay one column on mobile, two on tablet, and expose
 
   assert.match(
     page,
-    /className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]"/,
+    /xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)/,
   );
   assert.equal(
     (page.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
-    4,
+    5,
   );
   assert.match(
     currentFunds,
-    /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"/,
+    /xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/,
   );
-  assert.equal((currentFunds.match(/density="compact"/g) ?? []).length, 3);
+  assert.equal(
+    (currentFunds.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
+    2,
+  );
+  assert.equal((currentFunds.match(/density="compact"/g) ?? []).length, 4);
 });
 
 test("Owner list and finance controls use actual touch-sized fields below desktop", () => {

@@ -7,8 +7,8 @@ ledger and financial statements are outside the current Finance product
 boundary.
 
 Finance Basic is the default Finance experience when `/finance` opens as
-`Tổng quan tài chính`. The first section shows one period-result formula across
-five cards:
+`Tổng quan tài chính`. The first section shows period results in two formula
+rows:
 
 - **Doanh thu thuần**: paid-order merchandise value after discount and before
   VAT.
@@ -18,21 +18,26 @@ five cards:
   repairs, consumables/small tools, marketing, fees/tax, and other operating
   categories. It excludes equipment acquisition that must be capitalized or
   allocated over time.
-- **Kết quả vận hành**: gross profit minus recorded operating expense.
+- **Biến động tồn kho**: closing inventory value minus opening inventory value
+  for the selected period (shown when inventory valuation is readable).
+- **Kết quả kinh doanh**: gross profit minus recorded operating expense, plus
+  inventory change.
 
-Missing food-cost coverage makes both gross profit and operating result
-unavailable. A period with no recorded operating expense keeps operating result
+Missing food-cost coverage makes both gross profit and period result
+unavailable. A period with no recorded operating expense keeps the period result
 unavailable instead of treating missing data as zero.
 
-Below the period result, keep the tenant-wide current-funds row:
+Below the period result, keep the tenant-wide current-funds row as
+`Tiền mặt + Tiền tài khoản = Tổng tiền`:
 
-- **Tiền mặt theo sổ**: immutable opening cash plus completed cash collections,
+- **Tiền mặt**: immutable opening cash plus completed cash collections,
   minus cash refunds, cash expenses, and cash supplier payments, plus
   append-only audited adjustments. POS-session counts and variances are
   reconciliation evidence only and never change this balance.
-- **Tiền trong ngân hàng**: immutable opening bank amount plus every canonical
+- **Tiền tài khoản**: immutable opening bank amount plus every canonical
   SePay movement in `bank_transactions` and append-only audited adjustments.
   Incoming amounts add and outgoing amounts subtract.
+- **Tổng tiền**: sum of the two balances above.
 
 These two balances do not follow the page's period or branch filter. Show
 `Chưa mở sổ` until Finance has created one verified opening through
@@ -128,14 +133,16 @@ period-result cards:
      cash-to-bank deposits/transfers from the top-line operating expense number.
    - If no operating expense has been recorded, display `Chưa ghi nhận`.
 
-5. **Operating result**
-   - `Kết quả vận hành = Lợi nhuận gộp - Chi phí vận hành`.
+5. **Period result**
+   - `Kết quả kinh doanh = Lợi nhuận gộp - Chi phí vận hành + Biến động tồn kho`.
+   - `Biến động tồn kho = Tồn cuối kỳ - Tồn đầu kỳ`.
    - Do not call it net profit. Keep it unavailable when food cost is incomplete
      or operating expense has not been recorded.
 
 After the formula, show the unfiltered current-funds section, the filtered
-period-end inventory value, then the attention queue. Desktop uses five columns,
-tablet uses two, and mobile uses one.
+period-end inventory value, then the attention queue. Desktop uses two formula
+rows (three then four cards when valuation is visible), tablet uses two columns,
+and mobile uses one.
 
 Supporting workflows remain available but are not the first screen:
 
@@ -165,7 +172,7 @@ An over-threshold difference is resolved from
   adjustment: the repayment restores physical cash to the already expected
   amount.
 - `accepted_adjustment` keeps the close count and records the variance outcome
-  for reporting and investigation. It does not change `Tiền mặt theo sổ`.
+  for reporting and investigation. It does not change `Tiền mặt`.
 
 Any verified gain or loss that must change book funds is recorded separately
 through `create_finance_fund_adjustment` with its own reason and evidence.

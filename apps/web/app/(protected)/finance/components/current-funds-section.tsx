@@ -33,6 +33,8 @@ import {
 import type { CashSummary } from "../_lib/cash-cockpit";
 
 const copy = messages.finance;
+const formulaOperatorClass =
+  "flex min-h-6 items-center justify-center font-heading text-lg font-semibold text-muted-foreground xl:min-h-0 xl:self-center";
 const FUND_AMOUNT = /^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
 const SIGNED_FUND_AMOUNT = /^-?(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/;
 const MAX_FUND_MINOR_UNITS = 999_999_999_999_999n;
@@ -147,6 +149,7 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
   }
 
   const openingDate = formatVNDateTime(cash.openingEffectiveAt);
+  const totalOnHand = cash.cashOnHand + cash.bankOnHand;
 
   return (
     <>
@@ -172,46 +175,81 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
       >
         <KpiRow
           density="compact"
-          className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"
+          className="grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]"
         >
-          <KpiCard
-            density="compact"
-            icon={<IconWallet className="size-4 text-muted-foreground" />}
-            label={copy.basic.kpis.cashOnHand}
-            value={
-              cash.hasOpening ? formatVND(cash.cashOnHand) : copy.cash.verifying
-            }
-            shortValue={
-              cash.hasOpening ? formatCompactVND(cash.cashOnHand) : undefined
-            }
-            hint={
-              cash.hasOpening
-                ? copy.cash.openingMeta(openingDate)
-                : cash.legacySettingsPresent
-                  ? copy.cash.noOpeningLegacy
-                  : copy.cash.noOpening
-            }
-          />
+          <div className="min-w-0 md:grid md:gap-2 xl:contents">
+            <span
+              className="min-h-0 md:min-h-6 xl:absolute xl:size-0"
+              aria-hidden
+            />
+            <KpiCard
+              density="compact"
+              icon={<IconWallet className="size-4 text-muted-foreground" />}
+              label={copy.basic.kpis.cashOnHand}
+              value={
+                cash.hasOpening
+                  ? formatVND(cash.cashOnHand)
+                  : copy.cash.verifying
+              }
+              shortValue={
+                cash.hasOpening ? formatCompactVND(cash.cashOnHand) : undefined
+              }
+              hint={
+                cash.hasOpening
+                  ? copy.cash.openingMeta(openingDate)
+                  : cash.legacySettingsPresent
+                    ? copy.cash.noOpeningLegacy
+                    : copy.cash.noOpening
+              }
+            />
+          </div>
 
-          <KpiCard
-            density="compact"
-            icon={<IconBank className="size-4 text-muted-foreground" />}
-            label={copy.basic.kpis.bankOnHand}
-            value={
-              cash.hasOpening ? formatVND(cash.bankOnHand) : copy.cash.verifying
-            }
-            shortValue={
-              cash.hasOpening ? formatCompactVND(cash.bankOnHand) : undefined
-            }
-            hint={
-              cash.hasOpening
-                ? copy.cash.openingMeta(openingDate)
-                : cash.legacySettingsPresent
-                  ? copy.cash.noOpeningLegacy
-                  : copy.cash.noOpening
-            }
-            href="/finance/bank-transactions"
-          />
+          <div className="grid min-w-0 gap-2 xl:contents">
+            <span className={formulaOperatorClass}>
+              <span aria-hidden>+</span>
+              <span className="sr-only">{copy.basic.operators.add}</span>
+            </span>
+            <KpiCard
+              density="compact"
+              icon={<IconBank className="size-4 text-muted-foreground" />}
+              label={copy.basic.kpis.bankOnHand}
+              value={
+                cash.hasOpening
+                  ? formatVND(cash.bankOnHand)
+                  : copy.cash.verifying
+              }
+              shortValue={
+                cash.hasOpening ? formatCompactVND(cash.bankOnHand) : undefined
+              }
+              hint={
+                cash.hasOpening
+                  ? copy.cash.openingMeta(openingDate)
+                  : cash.legacySettingsPresent
+                    ? copy.cash.noOpeningLegacy
+                    : copy.cash.noOpening
+              }
+              href="/finance/bank-transactions"
+            />
+          </div>
+
+          <div className="grid min-w-0 gap-2 xl:contents">
+            <span className={formulaOperatorClass}>
+              <span aria-hidden>=</span>
+              <span className="sr-only">{copy.basic.operators.equals}</span>
+            </span>
+            <KpiCard
+              density="compact"
+              label={copy.basic.kpis.totalOnHand}
+              value={
+                cash.hasOpening ? formatVND(totalOnHand) : copy.cash.verifying
+              }
+              shortValue={
+                cash.hasOpening ? formatCompactVND(totalOnHand) : undefined
+              }
+              hint={copy.basic.kpis.totalOnHandHint}
+              tone={cash.hasOpening ? "primary" : "warning"}
+            />
+          </div>
         </KpiRow>
         {cash.hasOpening ? (
           <details className="text-xs text-muted-foreground">

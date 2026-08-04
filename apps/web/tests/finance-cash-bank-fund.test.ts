@@ -28,10 +28,12 @@ test("finance landing presents immutable book funds", () => {
   assert.match(page, /CurrentFundsSection cash=\{cash\}/);
   assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.cashOnHand/);
   assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.bankOnHand/);
-  assert.match(copy, /cashOnHand: "Tiền mặt theo sổ"/);
-  assert.match(copy, /bankOnHand: "Tiền trong ngân hàng"/);
+  assert.match(currentFunds, /totalOnHand/);
+  assert.match(copy, /cashOnHand: "Tiền mặt"/);
+  assert.match(copy, /bankOnHand: "Tiền tài khoản"/);
+  assert.match(copy, /totalOnHand: "Tổng tiền"/);
   assert.match(copy, /verifying: "Chưa mở sổ"/);
-  assert.match(copy, /onHandTitle: "Tiền đang có"/);
+  assert.match(copy, /onHandTitle: "Tiền mặt hiện có"/);
   assert.doesNotMatch(copy, /onHandDescription|followsFilters/);
   assert.doesNotMatch(
     copy,
@@ -44,7 +46,11 @@ test("finance landing presents immutable book funds", () => {
   assert.doesNotMatch(currentFunds, /onHandDescription/);
   assert.match(
     currentFunds,
-    /className="grid-cols-1 md:grid-cols-2 xl:grid-cols-2"/,
+    /xl:grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/,
+  );
+  assert.equal(
+    (currentFunds.match(/className=\{formulaOperatorClass\}/g) ?? []).length,
+    2,
   );
   assert.match(currentFunds, /copy\.cash\.openingMeta\(openingDate\)/);
   assert.match(currentFunds, /<details/);

@@ -439,7 +439,7 @@ Accountant kiểm tra và ghi nhận posting theo kỳ; lịch không phải bú
 
 ## 11. Lợi nhuận: gọi đúng tên và tính đúng tầng
 
-### 11.1 Kết quả vận hành hiện tại
+### 11.1 Kết quả kinh doanh hiện tại
 
 ```text
 Doanh thu thuần trước GTGT
@@ -448,7 +448,8 @@ Doanh thu thuần trước GTGT
 
 Lợi nhuận gộp vận hành
 - Chi phí vận hành đã ghi nhận
-= Kết quả vận hành
++ Biến động tồn kho (Tồn cuối kỳ - Tồn đầu kỳ)
+= Kết quả kinh doanh
 ```
 
 Trong runtime hiện tại, `food cost` chủ yếu là giá trị nguyên liệu tiêu hao có
@@ -456,13 +457,14 @@ coverage. Nó chưa phải giá vốn kế toán đầy đủ nếu còn thiếu
 tiếp, sản xuất chung, khấu hao thiết bị sản xuất, chênh lệch kiểm kê hoặc phân
 bổ khác. Do đó:
 
-- Giữ tên `Kết quả vận hành`;
+- Giữ tên `Kết quả kinh doanh`;
 - Hiển thị coverage/confidence;
 - Không đổi nhãn thành `Lợi nhuận ròng`;
-- Không cộng giá trị tồn kho cuối kỳ trực tiếp vào kết quả.
+- Không cộng giá trị tồn kho cuối kỳ trực tiếp vào kết quả — chỉ cộng
+  **biến động** (cuối − đầu) trong kỳ đã chọn.
 
-Tồn kho cuối kỳ là tài sản. Nó chỉ ảnh hưởng lợi nhuận qua lượng/giá trị được
-xuất dùng, hao hụt, giảm giá hoặc công thức giá vốn được khóa sổ.
+Tồn kho cuối kỳ vẫn là tài sản trên section riêng. Biến động tồn trong công thức
+kết quả là góc nhìn quản trị kỳ, chưa thay thế giá vốn kế toán đầy đủ.
 
 ### 11.2 Thang lợi nhuận đầy đủ
 

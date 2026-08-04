@@ -51,8 +51,9 @@ Finance hiện là **tài chính vận hành**, không phải sổ cái hoặc b
   kỳ thuế trước khi tính GTGT phải nộp.
 
 ```text
-Kết quả vận hành
+Kết quả kinh doanh
 = Doanh thu thuần - Giá vốn món - Chi phí vận hành đã ghi nhận
+  + Biến động tồn kho (Tồn cuối kỳ - Tồn đầu kỳ)
 ```
 
 Chỉ dùng **lợi nhuận sau thuế TNDN** khi kỳ đã có đầy đủ doanh thu, giá vốn,
