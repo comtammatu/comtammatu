@@ -37,6 +37,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
     reason:
       "Preventive source-pattern checks are blocking in CI but do not represent a useful route-family risk count.",
     guardIds: [
+      "arbitrary-font-size",
       "focus-ring-contrast",
       "input-control-size-api",
       "input-legacy-size-prop",
