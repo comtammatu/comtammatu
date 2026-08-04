@@ -125,6 +125,19 @@ Má Tư components and verified in the runtime. Root `DESIGN.md` is forbidden
 (guarded); only `.stitch/DESIGN.md` is allowed. Do not upload secrets, customer
 data, employee data, or production records.
 
+Mirror-sync contract: the runtime `packages/ui/src/styles/globals.css` is the
+sole source of truth for token values; `.stitch/DESIGN.md` must mirror it and
+never lead. The mirror frontmatter stays in lockstep with the runtime:
+`colors.primary` mirrors the `:root` `--primary`, `colors.night-primary`
+mirrors the `.dark` `--primary`, and the heading `fontFamily` entries mirror
+the resolved `@theme inline` `--font-heading` (`var(--font-geist-sans)` →
+Geist). The `stitch-mirror-runtime-token-sync` guard derives the expected
+values from `globals.css` at check time and fails closed on any mismatch or
+missing mirror field — fix the mirror to the runtime value, never the reverse
+(regressions invariant RUNTIME-TOKEN-LAYERED-OVERRIDE). Any change to
+`--primary` or `--font-heading` in `globals.css` must update `.stitch/DESIGN.md`
+in the same commit; the guard enforces this.
+
 Lookup before composition:
 
 ```bash
