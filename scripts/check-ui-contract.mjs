@@ -591,9 +591,10 @@ const checks = [
   {
     id: "operator-no-stat-metric",
     description:
-      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Owner surface surfaces; under /br/ route the count through the `badge` slot.",
+      "Operator surfaces are job-first, not dashboards: numbers appear as badges on tiles/sections ONLY (design-system.md § Structural C -> Canonical operator-home skeleton). AppLinkCard's `metric` slot renders a mono stat readout and belongs to Owner surface surfaces; under /br/ route the count through the `badge` slot. KpiCard/KpiRow stat strips (imports and JSX alike) are banned under /br/ — branch progress belongs in a subordinate badge on a job tile.",
     roots: [{ dir: "apps/web/app/(protected)/br", extensions: [".tsx"] }],
-    pattern: /\bmetric=\{/g,
+    pattern:
+      /\bmetric=\{|import\s+(?:type\s+)?(?:\{[^}]*\b(?:KpiCard|KpiRow)\b[^}]*\}|[\w$]+\s*,\s*\{[^}]*\b(?:KpiCard|KpiRow)\b[^}]*\}|(?:KpiCard|KpiRow)\b)\s+from\s*["'][^"']+["']|<\s*(?:KpiCard|KpiRow)\b/g,
     allowlist: {},
   },
   {
@@ -1541,6 +1542,67 @@ function runLegacyDebtBudgetSelfTest() {
   ) {
     throw new Error(
       "historical SQL snapshot filter self-test did not enforce scope",
+    );
+  }
+
+  const operatorNoStatMetricCheck = checks.find(
+    (check) => check.id === "operator-no-stat-metric",
+  );
+  if (
+    !operatorNoStatMetricCheck ||
+    countMatches(
+      '<AppLinkCard metric={summary.total} />',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import { KpiCard } from "@/components/kpi/kpi-card";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import { KpiRow } from "@/components/surface";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import { Badge, KpiCard } from "@/components/surface";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import KpiRow from "@/components/surface";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import KpiRow, { KpiCard } from "@/components/surface";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import Foo, { KpiRow } from "x";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import Foo, { Badge } from "x";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      '<KpiRow density="compact" className="grid-cols-1">',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      '< KpiCard value={total} />',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'import { Badge } from "@comtammatu/ui/components/badge";',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      'badge={{ children: count, variant: "secondary" }}',
+      operatorNoStatMetricCheck.pattern,
+    ) !== 0 ||
+    countMatches("<KpiTrend value={total} />", operatorNoStatMetricCheck.pattern) !==
+      0
+  ) {
+    throw new Error(
+      "operator no-stat-metric self-test did not enforce the badge-only rule",
     );
   }
 }

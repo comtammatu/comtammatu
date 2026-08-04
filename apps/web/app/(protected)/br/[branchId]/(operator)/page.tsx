@@ -9,6 +9,7 @@ import {
   type BranchKind,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { formatPercent } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   BranchOperatorActionSection,
@@ -34,8 +35,11 @@ import {
   BranchTodayStatusPending,
   BranchQueuePending,
 } from "./_components/home/branch-home-skeletons";
-import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-target-strip";
 import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
+import {
+  targetProgressTone,
+  type TargetProgressTone,
+} from "@/(protected)/finance/_lib/revenue-target";
 
 const homeCopy = messages.operator.home;
 const branchCopy = messages.settings.branch;
@@ -43,6 +47,16 @@ const stationDescriptions: Record<string, string> = {
   pos: homeCopy.posDescription,
   kds: homeCopy.kdsDescription,
   runner: homeCopy.runnerDescription,
+};
+
+const REVENUE_TONE_BADGE_VARIANT: Record<
+  TargetProgressTone,
+  "secondary" | "success" | "warning" | "destructive"
+> = {
+  success: "success",
+  warning: "warning",
+  destructive: "destructive",
+  neutral: "secondary",
 };
 
 const CENTRAL_KITCHEN_HOME_LABELS = [
@@ -245,12 +259,36 @@ export default async function OperatorHomePage({
         ]
       : [];
 
-  const showRevenueTargetStrip = isManagerLike;
-  const revenueTargetRes = showRevenueTargetStrip
+  const revenueTargetRes = isManagerLike
     ? await fetchBranchRevenueTargetProgress(context.branchId)
     : null;
   const revenueTarget =
     revenueTargetRes?.success === true ? revenueTargetRes.data : null;
+
+  // Revenue progress renders as ONE subordinate badge on the actionable
+  // orders phase section — operator surfaces are job-first, no KPI strip.
+  // A failed fetch renders nothing (pre-wave behavior); the secondary
+  // fallback badge is reserved for a genuine success-with-no-target result.
+  const revenueBadge =
+    !isManagerLike || revenueTargetRes?.success !== true
+      ? null
+      : revenueTarget &&
+          revenueTarget.targetAmount != null &&
+          revenueTarget.targetAmount > 0 &&
+          revenueTarget.progressPct != null
+        ? {
+            children: homeCopy.revenueProgressBadge(
+              formatPercent(revenueTarget.progressPct),
+            ),
+            variant:
+              REVENUE_TONE_BADGE_VARIANT[
+                targetProgressTone(revenueTarget.progressPct)
+              ],
+          }
+        : {
+            children: homeCopy.revenueNoTargetBadge,
+            variant: "secondary" as const,
+          };
 
   const pageTitle = isCentralKitchen
     ? branchCopy.centralKitchenHomeTitle
@@ -289,10 +327,6 @@ export default async function OperatorHomePage({
             ? branchCopy.centralReceiveCta
             : branchCopy.centralProductionCta}
         </Button>
-      ) : null}
-
-      {revenueTarget ? (
-        <BranchRevenueTargetStrip progress={revenueTarget} />
       ) : null}
 
       <Suspense fallback={<BranchQueuePending />}>
@@ -337,6 +371,9 @@ export default async function OperatorHomePage({
                 mobileColumns={2}
                 wideColumns
                 presentation="plain"
+                badge={
+                  section.phase === "run" ? (revenueBadge ?? undefined) : undefined
+                }
               />
             ) : null}
           </Fragment>

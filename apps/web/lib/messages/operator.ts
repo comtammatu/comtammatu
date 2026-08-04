@@ -35,6 +35,8 @@ export const operator = {
     phaseRunDescription: "",
     phaseCloseTitle: "Cuối ca — chốt",
     phaseCloseDescription: "",
+    revenueProgressBadge: (pct: string) => `${pct} chỉ tiêu`,
+    revenueNoTargetBadge: "Chưa đặt chỉ tiêu",
   },
   shift: {
     title: "Ca hôm nay",
