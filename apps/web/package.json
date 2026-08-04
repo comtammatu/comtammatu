@@ -19,6 +19,7 @@
     "test:e2e": "dotenv -e .env.test.local -- playwright test --project=chromium",
     "test:e2e:smoke": "dotenv -e .env.test.local -- playwright test --project=chromium --timeout=120000 payment-cash e2e/inventory/ingredient-unit-conversion.spec.ts",
     "test:e2e:a11y": "dotenv -e .env.test.local -- playwright test --project=accessibility",
+    "test:e2e:visual": "dotenv -e .env.test.local -- playwright test --project=visual --timeout=120000 e2e/visual/theme-baseline.spec.ts",
     "test:e2e:branch-shell": "E2E_BASE_URL=http://localhost:3000 dotenv -e .env.test.local -- playwright test --project=chromium --timeout=120000 branch-shell-routes.spec.ts",
     "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui",
     "guides:capture": "dotenv -e .env.test.local -- playwright test --project=guides",
