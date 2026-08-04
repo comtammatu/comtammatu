@@ -97,7 +97,7 @@ function AccountMenu({
             className={
               isMobile
                 ? "shrink-0 rounded-full p-0"
-                : "w-full justify-start gap-2 rounded-xl bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                : "w-full justify-start gap-2 rounded-md bg-sidebar-accent px-2.5 text-left text-sidebar-foreground ring-1 ring-sidebar-border/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             }
           />
         }
@@ -120,7 +120,7 @@ function AccountMenu({
         side={isMobile ? "bottom" : "top"}
         align={isMobile ? "end" : "start"}
         sideOffset={8}
-        className="rounded-xl p-1.5"
+        className="rounded-lg p-1.5"
       >
         <DropdownMenuGroup>
           {personalHref ? (
@@ -248,7 +248,7 @@ export function AppShell({
     >
       <Sidebar variant="inset" collapsible="offcanvas">
         <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
-          <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
+          <div className="flex items-center gap-3 rounded-md bg-sidebar-accent p-2 ring-1 ring-sidebar-border/70">
             <BrandLogoBox tone="sidebar" className="bg-sidebar">
               <BrandMark variant="seal" decorative className="size-full" />
             </BrandLogoBox>
