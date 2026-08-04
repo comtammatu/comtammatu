@@ -8,7 +8,11 @@ import {
   validateUiComponentRegistry,
 } from "./ui-component-registry.mjs";
 import { buildUiContractGuardReporting } from "./ui-contract-guard-reporting.mjs";
-import { UI_RUNTIME_SOURCE_ROOTS } from "./ui-contract-scope.mjs";
+import {
+  isReportOnlyUiRuntimeFile,
+  UI_RUNTIME_REPORT_ONLY_ROOTS,
+  UI_RUNTIME_SOURCE_ROOTS,
+} from "./ui-contract-scope.mjs";
 import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
 
 const REPO_ROOT = process.cwd();
@@ -54,6 +58,7 @@ const ROUTE_FAMILIES = [
   ["runner", (file) => file.includes("/(protected)/br/[branchId]/runner/")],
   ["employee-runtime", (file) => file.includes("/lib/staff-runtime/")],
   ["branch-adapters", (file) => file.includes("/lib/branch-operator/")],
+  ["hr-runtime", (file) => file.includes("/lib/hr/")],
   ["finance", (file) => file.includes("/(protected)/finance/")],
   ["hr", (file) => file.includes("/(protected)/hr/")],
   ["inventory", (file) => file.includes("/(protected)/inventory/")],
@@ -506,6 +511,7 @@ function summarizeFile(filePath) {
     file,
     family: classifyFamily(file),
     isPage: file.startsWith("apps/web/app/") && file.endsWith("/page.tsx"),
+    reportOnly: isReportOnlyUiRuntimeFile(file),
     imports,
     adapters,
     signals,
@@ -802,7 +808,7 @@ const highRiskRows = appFiles
   .sort((a, b) => b.score - a.score || a.file.localeCompare(b.file))
   .slice(0, options.limit)
   .map((file) => [
-    file.family,
+    file.reportOnly ? `${file.family} (report-only)` : file.family,
     file.file,
     String(file.score),
     formatCount(file.imports.card),
@@ -825,6 +831,17 @@ const highRiskRows = appFiles
     formatCount(file.signals.actionDataStateCopy),
     formatCount(file.signals.useIsMobile),
   ]);
+
+const reportOnlyRows = UI_RUNTIME_REPORT_ONLY_ROOTS.map((root) => {
+  const scoped = appFiles.filter((file) => file.file.startsWith(`${root}/`));
+  const signals = {};
+  for (const file of scoped) addCounts(signals, file.signals);
+  const signalCells = Object.entries(signals)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([signal, count]) => `${signal}:${count}`)
+    .join(", ");
+  return [root, String(scoped.length), signalCells || "none"];
+});
 
 const familyRows = [...familySummary.entries()]
   .sort(([a], [b]) => a.localeCompare(b))
@@ -996,6 +1013,14 @@ console.log(
     familyRows,
   ),
 );
+console.log();
+console.log("## Report-only Scope");
+console.log();
+console.log(
+  "Report-only roots are measured here but not enforced by blocking guards until their debt is burned down.",
+);
+console.log();
+console.log(table(["root", "files", "signals"], reportOnlyRows));
 console.log();
 console.log("## Page Archetype Coverage");
 console.log();
