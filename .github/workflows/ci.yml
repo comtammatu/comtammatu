@@ -108,7 +108,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/supabase-e2e-bringup.mjs
+      - id: supabase-bringup
+        run: node scripts/supabase-e2e-bringup.mjs
       - run: pnpm db:test
       - run: node scripts/hddt-buyer-race-test.mjs
         timeout-minutes: 5
@@ -118,10 +119,42 @@ jobs:
       # Production build so the heavy POS route is pre-compiled; `next dev`
       # compiles it on-demand, which blows the smoke's timeout. The dedicated
       # E2E scripts consume only apps/web/.env.test.local.
-      - run: pnpm --filter @comtammatu/web build:e2e
+      - id: build-e2e
+        run: pnpm --filter @comtammatu/web build:e2e
       # One Playwright invocation covers the payment hot path and the isolated
       # ingredient unit-conversion graph without starting a second web server.
       - run: pnpm --filter @comtammatu/web run test:e2e:smoke
+        env:
+          E2E_WEB_COMMAND: pnpm start:e2e
+      # Má Tư Design System visual baselines (theme-baseline.spec.ts). Runs on
+      # the same pre-built production server setup (zero extra build cost).
+      # Gated on the infra step outcomes (supabase bringup + production build)
+      # so an upstream infra failure does not produce a secondary visual red
+      # that masks the root cause — while staying independent of the smoke
+      # TEST step's result, since the broader e2e surface on main carries
+      # known pre-existing failures (branch-shell-routes.spec.ts) that must
+      # not mask visual signal.
+      # The step self-skips until committed Linux baselines exist, so this
+      # wiring never turns the job red on missing snapshots.
+      #
+      # Linux baseline bootstrap (one-time, human-supervised — NEVER leave
+      # --update-snapshots enabled in CI afterwards):
+      #   1. Push the branch, then temporarily edit this step's script args to
+      #      add `--update-snapshots` for ONE CI pass, plus an artifact upload
+      #      of apps/web/e2e/visual/__screenshots__/ (snapshots are written
+      #      there directly, not into test-results).
+      #   2. Download the 10 Linux PNGs (5 routes × light/night) from that
+      #      run's artifact.
+      #   3. Human-review each PNG, then commit them under
+      #      apps/web/e2e/visual/__screenshots__/.
+      #   4. Revert this step to comparison mode.
+      - name: theme visual baselines
+        if: >-
+          !cancelled() &&
+          steps.supabase-bringup.outcome == 'success' &&
+          steps.build-e2e.outcome == 'success' &&
+          hashFiles('apps/web/e2e/visual/__screenshots__/*.png') != ''
+        run: pnpm --filter @comtammatu/web run test:e2e:visual
         env:
           E2E_WEB_COMMAND: pnpm start:e2e
       - if: failure()
