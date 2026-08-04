@@ -1159,15 +1159,13 @@ scripts, current source, task tracker, and git history.
 
 #### Report-only onboarding
 
-A new runtime root joins the contract report-only first: it is added to
-`UI_RUNTIME_SOURCE_ROOTS` and `UI_RUNTIME_REPORT_ONLY_ROOTS` in
-`scripts/ui-contract-scope.mjs`, the audit
+A new runtime root joins the contract report-only first: the audit
 (`corepack pnpm audit:ui-components`) measures and classifies it under a route
-family, but blocking guards walk only the derived
-`UI_RUNTIME_BLOCKING_SOURCE_ROOTS`. A root is promoted to blocking only after
-its measured debt is burned down to zero. Report-only scope never gains
-allowlist entries or budget increases — debt is fixed in source, never
-grandfathered.
+family while the blocking guards do not yet enforce it. The root is promoted
+into the enforced scope of `UI_RUNTIME_SOURCE_ROOTS` in
+`scripts/ui-contract-scope.mjs` only after its measured debt is burned down to
+zero. Report-only scope never gains allowlist entries or budget increases — debt
+is fixed in source, never grandfathered.
 
 #### Measured exception semantics
 

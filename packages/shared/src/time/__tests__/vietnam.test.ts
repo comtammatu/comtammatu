@@ -7,9 +7,11 @@ import {
   formatVNClockTime,
   formatVNDate,
   formatVNDateTime,
+  formatVNDayMonth,
   formatVNDuration,
   formatVNDurationMinutes,
   formatVNTime,
+  formatVNWeekdayShort,
   getVNDateString,
   getVNDateStringDaysAgo,
   getVNDayUtcRange,
@@ -41,6 +43,8 @@ test("parseClockTimeToMinutes parses HH:MM[:SS] and rejects junk", () => {
 test("VN display helpers pin timestamps and clock ranges to the contract", () => {
   const timestamp = "2026-05-22T01:30:45Z";
   assert.equal(formatVNDate(timestamp), "22/05/2026");
+  assert.equal(formatVNDayMonth(timestamp), "22-05");
+  assert.equal(formatVNWeekdayShort(timestamp), "Thứ 6");
   assert.equal(formatVNTime(timestamp), "08:30");
   assert.equal(formatVNDateTime(timestamp), "08:30 22/05/2026");
   assert.equal(formatVNClockTime("8:05:33"), "08:05");
