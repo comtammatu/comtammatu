@@ -87,7 +87,7 @@ export function AppBottomNav({
                   <Badge
                     aria-hidden
                     variant="secondary"
-                    className="absolute -right-3 -top-2 h-4 min-w-4 justify-center rounded-full px-1 text-[10px] leading-none"
+                    className="absolute -right-3 -top-2 h-4 min-w-4 justify-center rounded-full px-1 text-3xs leading-none"
                   >
                     {badgeCount > 99 ? "99+" : badgeCount}
                   </Badge>

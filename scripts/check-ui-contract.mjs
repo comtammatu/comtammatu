@@ -814,6 +814,18 @@ const checks = [
       /<(?:div|span|p|button|a|li|h[1-6]|td|th)\b[^>]*\btitle\s*=|<Tooltip\b/g,
     allowlist: {},
   },
+  {
+    id: "arbitrary-font-size",
+    description:
+      "Typography sizes use the named scale tokens (text-3xs…text-5xl); arbitrary font-size values must not appear.",
+    roots: [
+      ...uiRuntimeRoots([".tsx"]),
+      { dir: "packages/ui/src/components", extensions: [".tsx"] },
+    ],
+    pattern:
+      /\btext-\[(?:length:[^\]\r\n]+|-?(?:\d*\.?\d+)(?:px|r?em|%|ch|ex|pt|pc|in|cm|mm|q|lh|rlh|vw|vh|vmin|vmax|dvw|dvh|dvmin|dvmax|svw|svh|svmin|svmax|lvw|lvh|lvmin|lvmax|cq[wibhd]|cqmin|cqmax)|(?:clamp|min|max|calc)\([^\]\r\n]+\))\]/gi,
+    allowlist: {},
+  },
 ];
 
 const failures = [];
@@ -1523,6 +1535,39 @@ function runLegacyDebtBudgetSelfTest() {
     throw new Error(
       "legacy Input and CSS variable self-test did not enforce scope",
     );
+  }
+
+  const arbitraryFontSizeCheck = checks.find(
+    (check) => check.id === "arbitrary-font-size",
+  );
+  if (
+    !arbitraryFontSizeCheck ||
+    countMatches('className="text-[10px]"', arbitraryFontSizeCheck.pattern) !==
+      1 ||
+    countMatches(
+      'className="sm:text-[11px]"',
+      arbitraryFontSizeCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="text-[clamp(0.7rem,2vw,0.9rem)]"',
+      arbitraryFontSizeCheck.pattern,
+    ) !== 1 ||
+    countMatches('className="text-[12pt]"', arbitraryFontSizeCheck.pattern) !==
+      1 ||
+    countMatches(
+      'className="text-[1.2lh]"',
+      arbitraryFontSizeCheck.pattern,
+    ) !== 1 ||
+    countMatches('className="text-3xs"', arbitraryFontSizeCheck.pattern) !==
+      0 ||
+    countMatches('className="text-[#fff]"', arbitraryFontSizeCheck.pattern) !==
+      0 ||
+    countMatches(
+      'className="text-[color:var(--brand)]"',
+      arbitraryFontSizeCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("arbitrary font size self-test did not enforce scope");
   }
 
   if (
