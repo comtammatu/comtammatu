@@ -132,19 +132,12 @@ export const INGREDIENT_FORM_VI = {
       "Chưa thể đổi đơn vị chuẩn vì đơn vị mới chưa có hệ số hợp lệ",
     dimensionMismatch:
       "Các đơn vị chuẩn phải cùng loại đo lường (khối lượng hoặc thể tích)",
-    add: "Thêm đơn vị",
+    add: "Thêm đơn vị mới",
     empty: "Chưa có đơn vị nào.",
     maxReached: "Mỗi nguyên liệu có tối đa 20 đơn vị",
     remove: "Bỏ đơn vị",
     selectUnit: "Chọn đơn vị",
     anchorPlaceholder: "Chọn đơn vị",
-    actionsFor: "Thao tác đơn vị",
-    doneEditing: "Xong",
-    relationSummary: (unit: string, factor: string, anchor: string) =>
-      `1 ${unit} = ${factor} ${anchor}`,
-    effectiveSummary: (factor: string, base: string) =>
-      `${factor} ${base} theo đơn vị chuẩn`,
-    previewInvalid: "Hoàn tất hệ số và đơn vị đích để xem kết quả",
     minOne: "Cần ít nhất 1 đơn vị",
     exactlyOneBase: "Phải có đúng 1 đơn vị chuẩn",
     baseFactorOne: "Đơn vị chuẩn phải có hệ số = 1",
@@ -153,6 +146,5 @@ export const INGREDIENT_FORM_VI = {
     effectiveFactorPrecision:
       "Kết quả về đơn vị chuẩn phải nằm trong 6 số nguyên và 12 số thập phân",
     distinctUnits: "Đơn vị không được trùng nhau",
-    baseTag: "Chuẩn",
   },
 } as const;

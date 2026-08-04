@@ -85,6 +85,7 @@ CLAUDE.local.md
 .cursor/tmp/
 .claire/
 .trae/
+.qoder/
 
 # Local agent lockfiles / caches
 skills-lock.json

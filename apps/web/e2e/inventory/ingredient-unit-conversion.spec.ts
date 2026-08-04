@@ -307,7 +307,7 @@ async function openIngredientEditor(page: Page, ingredientName: string) {
 }
 
 async function addUnitThroughUi(page: Page, dialog: Locator, unitName: string) {
-  await dialog.getByRole("combobox", { name: "Thêm đơn vị" }).click();
+  await dialog.getByRole("combobox", { name: "Thêm đơn vị mới" }).click();
   await page.getByRole("option", { name: unitName, exact: true }).click();
   await expect(relationRow(dialog, unitName)).toHaveCount(1);
 }
@@ -382,7 +382,7 @@ test("owner builds and persists a three-unit chain through the ingredient editor
     const thungId = requiredUnit(fixture, "thung").id;
     let dialog = await openIngredientEditor(page, definition.ingredientName);
 
-    await expect(dialog.getByRole("listitem")).toHaveCount(1);
+    await expect(dialog.getByRole("listitem")).toHaveCount(0);
     await addUnitThroughUi(page, dialog, unitNames.chai);
     await addUnitThroughUi(page, dialog, unitNames.thung);
     await configureManualRelation(
@@ -536,7 +536,7 @@ test("blocks dependent deletion until reassigned and keeps tablet controls reach
     await page.keyboard.press("Tab");
     await expect(thungAnchor).toBeFocused();
     await expectTouchTarget(
-      dialog.getByRole("combobox", { name: "Thêm đơn vị" }),
+      dialog.getByRole("combobox", { name: "Thêm đơn vị mới" }),
     );
     await expectTouchTarget(thungFactor);
     await expectTouchTarget(thungAnchor);

@@ -33,7 +33,7 @@ test("ingredient unit dialog models active units around one standard unit", () =
   assert.match(source, /unit_anchor_ids: z\.record/);
   assert.match(source, /unit_factors: z\.record/);
   assert.match(source, /UnitRelationRow/);
-  assert.match(source, /<RadioGroup/);
+  assert.doesNotMatch(source, /<RadioGroup/);
   assert.match(source, /<ItemGroup/);
   assert.match(source, /<FormattedNumberInput/);
   assert.match(source, /anchorOptions=\{anchorOptions\}/);
@@ -55,6 +55,7 @@ test("ingredient unit dialog models active units around one standard unit", () =
   );
   assert.match(messages, /baseUnit: "Đơn vị chuẩn"/);
   assert.match(messages, /sectionLabel: "Đơn vị và quy đổi"/);
+  assert.match(messages, /add: "Thêm đơn vị mới"/);
   assert.doesNotMatch(messages, /Đơn vị nhập|Đơn vị xuất|vai trò độc lập/);
   assert.doesNotMatch(messages, /Nhập ≥ Xuất ≥ Sản xuất/);
   assert.doesNotMatch(messages, /Số đơn vị xuất \/ 1 đơn vị nhập/);

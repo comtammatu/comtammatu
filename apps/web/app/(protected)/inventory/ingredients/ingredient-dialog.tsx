@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil as IconPencil, Trash2 as IconTrash } from "lucide-react";
+import { Trash2 as IconTrash } from "lucide-react";
 import {
   useController,
   type Control,
@@ -10,7 +10,6 @@ import {
 } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Field,
@@ -22,9 +21,7 @@ import {
 import {
   Item,
   ItemActions,
-  ItemContent,
   ItemGroup,
-  ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
   Select,
@@ -42,10 +39,6 @@ import {
   TextField,
 } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
-import {
-  RowActionsMenu,
-  type RowActionItem,
-} from "@/components/row-actions-menu";
 import { createIngredient, updateIngredient } from "../ingredient-actions";
 import type {
   CategoryOption,
@@ -472,7 +465,6 @@ function IngredientDialogFields({
   const [blockedRemovalErrors, setBlockedRemovalErrors] = useState<
     Record<number, string>
   >({});
-  const [editingUnitId, setEditingUnitId] = useState<number | null>(null);
   const controlSize = useFormControlSize("responsive");
   const { field: baseField, fieldState: baseFieldState } = useController({
     control: form.control,
@@ -544,7 +536,6 @@ function IngredientDialogFields({
     }
     form.clearErrors("base_unit_id");
     setBlockedRemovalErrors({});
-    setEditingUnitId(Number(nextValue));
   }
 
   function removeUnit(unitId: number) {
@@ -586,7 +577,6 @@ function IngredientDialogFields({
         });
       }
       const firstDependentId = dependents[0]!;
-      setEditingUnitId(firstDependentId);
       requestAnimationFrame(() => {
         form.setFocus(`unit_anchor_ids.${firstDependentId}`);
       });
@@ -611,7 +601,6 @@ function IngredientDialogFields({
       shouldValidate: true,
     });
     setBlockedRemovalErrors({});
-    setEditingUnitId((current) => (current === unitId ? null : current));
   }
 
   async function changeBase(nextBaseId: string): Promise<void> {
@@ -651,7 +640,6 @@ function IngredientDialogFields({
       });
       form.clearErrors(["base_unit_id", "unit_anchor_ids", "unit_factors"]);
       setBlockedRemovalErrors({});
-      setEditingUnitId(null);
       await form.trigger(["base_unit_id", "unit_anchor_ids", "unit_factors"]);
     } catch (error) {
       const message =
@@ -720,6 +708,50 @@ function IngredientDialogFields({
             },
           ]}
         />
+        {selectedUnitIds.length > 0 && baseUnit && relations ? (
+          <Field data-invalid={Boolean(baseFieldState.error)}>
+            <FieldLabel htmlFor="base-unit-select">
+              {copy.units.baseUnit}
+            </FieldLabel>
+            <Select
+              value={String(baseField.value ?? "")}
+              onValueChange={(value) => void changeBase(value)}
+            >
+              <SelectTrigger
+                id="base-unit-select"
+                size={controlSize}
+                className="w-full"
+                aria-invalid={Boolean(baseFieldState.error)}
+                aria-describedby={
+                  baseFieldState.error ? baseErrorId : undefined
+                }
+                onBlur={baseField.onBlur}
+                ref={baseField.ref}
+              >
+                <SelectValue placeholder={copy.units.selectBase} />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedUnitIds.flatMap((unitId) => {
+                  const unit = unitsById.get(unitId);
+                  return unit == null
+                    ? []
+                    : [
+                        <SelectItem
+                          key={unitId}
+                          value={String(unitId)}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          {unit.name}
+                        </SelectItem>,
+                      ];
+                })}
+              </SelectContent>
+            </Select>
+            {baseFieldState.error ? (
+              <FieldError id={baseErrorId} errors={[baseFieldState.error]} />
+            ) : null}
+          </Field>
+        ) : null}
         <Field orientation="horizontal" className="sm:col-span-2">
           <FieldLabel htmlFor="item-kind-finished-good">
             {dialogCopy.finishedGoodLabel}
@@ -739,82 +771,14 @@ function IngredientDialogFields({
 
       <FieldSet data-invalid={Boolean(baseFieldState.error)}>
         <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
-        {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
-          <div className="sm:ml-auto sm:w-52">
-            <Select value="" onValueChange={addUnit}>
-              <SelectTrigger
-                size={controlSize}
-                className="w-full"
-                aria-label={copy.units.add}
-              >
-                <SelectValue placeholder={copy.units.add} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUnitOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    size={controlSize === "touch" ? "touch" : "default"}
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
         {selectedUnitIds.length > 0 && baseUnit && relations ? (
-          <>
-            <Field data-invalid={Boolean(baseFieldState.error)}>
-              <FieldLabel htmlFor="base-unit-select">
-                {copy.units.baseUnit}
-              </FieldLabel>
-              <Select
-                value={String(baseField.value ?? "")}
-                onValueChange={(value) => void changeBase(value)}
-              >
-                <SelectTrigger
-                  id="base-unit-select"
-                  size={controlSize}
-                  className="w-full sm:w-52"
-                  aria-invalid={Boolean(baseFieldState.error)}
-                  aria-describedby={
-                    baseFieldState.error ? baseErrorId : undefined
-                  }
-                  onBlur={baseField.onBlur}
-                  ref={baseField.ref}
-                >
-                  <SelectValue placeholder={copy.units.selectBase} />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedUnitIds.flatMap((unitId) => {
-                    const unit = unitsById.get(unitId);
-                    return unit == null
-                      ? []
-                      : [
-                          <SelectItem
-                            key={unitId}
-                            value={String(unitId)}
-                            size={controlSize === "touch" ? "touch" : "default"}
-                          >
-                            {unit.name}
-                          </SelectItem>,
-                        ];
-                  })}
-                </SelectContent>
-              </Select>
-              {baseFieldState.error ? (
-                <FieldError id={baseErrorId} errors={[baseFieldState.error]} />
-              ) : null}
-            </Field>
-
-            <ItemGroup className="gap-2" role="list">
-              {selectedUnitIds.map((unitId) => {
+          <ItemGroup className="gap-2" role="list">
+            {selectedUnitIds
+              .filter((unitId) => unitId !== baseUnit.id)
+              .map((unitId) => {
                 const unit = unitsById.get(unitId);
                 if (!unit) return null;
-                const isBase = unitId === baseUnit.id;
                 const effectiveFactor = (() => {
-                  if (isBase) return 1;
                   try {
                     return deriveEffectiveUnitFactor(relations, unitId);
                   } catch {
@@ -844,14 +808,6 @@ function IngredientDialogFields({
                     key={unitId}
                     control={form.control}
                     unit={unit}
-                    baseUnit={baseUnit}
-                    anchorUnit={
-                      anchorUnitId == null
-                        ? undefined
-                        : unitsById.get(anchorUnitId)
-                    }
-                    isBase={isBase}
-                    editing={editingUnitId === unitId}
                     anchorOptions={anchorOptions}
                     effectiveFactor={effectiveFactor}
                     automatic={isAutomaticStandardRelation(
@@ -862,14 +818,35 @@ function IngredientDialogFields({
                     )}
                     removalError={blockedRemovalErrors[unitId]}
                     removeDisabled={selectedUnitIds.length === 1}
-                    onEdit={() => setEditingUnitId(unitId)}
-                    onDone={() => setEditingUnitId(null)}
                     onRemove={() => removeUnit(unitId)}
                   />
                 );
               })}
-            </ItemGroup>
-          </>
+          </ItemGroup>
+        ) : null}
+        {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
+          <div className="w-full">
+            <Select value="" onValueChange={addUnit}>
+              <SelectTrigger
+                size={controlSize}
+                className="w-full"
+                aria-label={copy.units.add}
+              >
+                <SelectValue placeholder={copy.units.add} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUnitOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    size={controlSize === "touch" ? "touch" : "default"}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : null}
       </FieldSet>
     </>
@@ -879,32 +856,20 @@ function IngredientDialogFields({
 function UnitRelationRow({
   control,
   unit,
-  baseUnit,
-  anchorUnit,
-  isBase,
-  editing,
   anchorOptions,
   effectiveFactor,
   automatic,
   removalError,
   removeDisabled,
-  onEdit,
-  onDone,
   onRemove,
 }: {
   control: Control<IngredientFormValues>;
   unit: UnitOption;
-  baseUnit: UnitOption;
-  anchorUnit: UnitOption | undefined;
-  isBase: boolean;
-  editing: boolean;
   anchorOptions: Array<{ value: string; label: string }>;
   effectiveFactor: number | null;
   automatic: boolean;
   removalError: string | undefined;
   removeDisabled: boolean;
-  onEdit: () => void;
-  onDone: () => void;
   onRemove: () => void;
 }) {
   const factorName =
@@ -926,53 +891,6 @@ function UnitRelationRow({
   const removalErrorId = removalError
     ? `field-unit-remove-${unit.id}-error`
     : undefined;
-  const expanded =
-    !isBase &&
-    Boolean(
-      editing ||
-      factor.fieldState.error ||
-      anchor.fieldState.error ||
-      removalError,
-    );
-  const rawRelationFactor = automatic
-    ? effectiveFactor
-    : Number(factor.field.value);
-  const relationFactor =
-    rawRelationFactor != null &&
-    Number.isFinite(rawRelationFactor) &&
-    rawRelationFactor > 0
-      ? rawRelationFactor
-      : null;
-  const relationSummary =
-    anchorUnit && relationFactor != null
-      ? copy.units.relationSummary(
-          unit.name,
-          formatDecimal(relationFactor, 9),
-          anchorUnit.name,
-        )
-      : copy.units.previewInvalid;
-  const rowActions: RowActionItem[] = [
-    ...(!isBase
-      ? [
-          {
-            key: "edit",
-            label: ACTIONS_VI.edit,
-            icon: <IconPencil aria-hidden="true" />,
-            onSelect: onEdit,
-          },
-        ]
-      : []),
-    {
-      key: "remove",
-      label: copy.units.remove,
-      icon: <IconTrash aria-hidden="true" />,
-      onSelect: onRemove,
-      disabled: removeDisabled,
-      destructive: true,
-      separatorBefore: !isBase,
-    },
-  ];
-
   return (
     <Field
       data-invalid={Boolean(
@@ -983,110 +901,82 @@ function UnitRelationRow({
         variant="outline"
         size="sm"
         role="listitem"
-        className="flex-col items-stretch gap-2"
+        className="block min-w-0"
         aria-describedby={removalErrorId}
       >
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <ItemContent>
-              <ItemTitle>{unit.name}</ItemTitle>
-              {!isBase && !expanded ? (
-                <p className="break-words text-sm text-muted-foreground tabular-nums">
-                  {relationSummary}
-                  {anchorUnit?.id !== baseUnit.id && effectiveFactor != null
-                    ? ` · ${copy.units.effectiveSummary(
-                        formatDecimal(effectiveFactor, 12),
-                        baseUnit.name,
-                      )}`
-                    : null}
-                </p>
-              ) : null}
-            </ItemContent>
+        <div className="grid w-full min-w-0 items-center gap-2 sm:grid-cols-[minmax(5rem,1fr)_auto_7rem_minmax(9rem,1.25fr)_auto]">
+          <div className="truncate font-heading text-sm font-semibold" title={unit.name}>
+            {unit.name}
           </div>
-          <ItemActions className="shrink-0 justify-end">
-            {isBase ? (
-              <Badge variant="secondary">{copy.units.baseTag}</Badge>
-            ) : null}
-            {expanded ? (
-              <Button type="button" variant="ghost" size="sm" onClick={onDone}>
-                {copy.units.doneEditing}
-              </Button>
-            ) : null}
-            <RowActionsMenu
-              items={rowActions}
-              label={`${copy.units.actionsFor} ${unit.name}`}
-              triggerSize={controlSize === "touch" ? "icon-touch" : "icon-sm"}
+          <span className="whitespace-nowrap text-sm tabular-nums">
+            1 {unit.name} =
+          </span>
+          {automatic ? (
+            <output className="w-28 text-center text-sm tabular-nums">
+              {effectiveFactor == null
+                ? copy.units.unitPending
+                : formatDecimal(effectiveFactor, 9)}
+            </output>
+          ) : (
+            <FormattedNumberInput
+              id={factorFieldId}
+              name={factorName}
+              className="w-28"
+              value={String(factor.field.value ?? "")}
+              onValueChange={factor.field.onChange}
+              onBlur={factor.field.onBlur}
+              ref={factor.field.ref}
+              controlSize={controlSize}
+              maxFractionDigits={9}
+              aria-invalid={Boolean(factor.fieldState.error)}
+              aria-describedby={factorErrorId}
+              aria-label={copy.units.factorAria(unit.name)}
             />
+          )}
+          <Select
+            value={String(anchor.field.value ?? "")}
+            onValueChange={(value) => {
+              anchor.field.onChange(value);
+              anchor.field.onBlur();
+            }}
+          >
+            <SelectTrigger
+              id={anchorFieldId}
+              size={controlSize}
+              className="w-full min-w-36"
+              aria-invalid={Boolean(anchor.fieldState.error)}
+              aria-describedby={anchorErrorId}
+              aria-label={copy.units.anchorAria(unit.name)}
+              onBlur={anchor.field.onBlur}
+              ref={anchor.field.ref}
+            >
+              <SelectValue placeholder={copy.units.anchorPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {anchorOptions.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  size={controlSize === "touch" ? "touch" : "default"}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ItemActions className="justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size={controlSize === "touch" ? "icon-touch" : "icon-sm"}
+              onClick={onRemove}
+              disabled={removeDisabled}
+              aria-label={`${copy.units.remove} ${unit.name}`}
+            >
+              <IconTrash aria-hidden="true" />
+            </Button>
           </ItemActions>
         </div>
-        {expanded ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm tabular-nums">1 {unit.name} =</span>
-              {automatic ? (
-                <output className="min-w-20 text-center text-sm tabular-nums">
-                  {effectiveFactor == null
-                    ? copy.units.unitPending
-                    : formatDecimal(effectiveFactor, 9)}
-                </output>
-              ) : (
-                <FormattedNumberInput
-                  id={factorFieldId}
-                  name={factorName}
-                  className="w-28 shrink-0"
-                  value={String(factor.field.value ?? "")}
-                  onValueChange={factor.field.onChange}
-                  onBlur={factor.field.onBlur}
-                  ref={factor.field.ref}
-                  controlSize={controlSize}
-                  maxFractionDigits={9}
-                  aria-invalid={Boolean(factor.fieldState.error)}
-                  aria-describedby={factorErrorId}
-                  aria-label={copy.units.factorAria(unit.name)}
-                />
-              )}
-              <Select
-                value={String(anchor.field.value ?? "")}
-                onValueChange={(value) => {
-                  anchor.field.onChange(value);
-                  anchor.field.onBlur();
-                }}
-              >
-                <SelectTrigger
-                  id={anchorFieldId}
-                  size={controlSize}
-                  className="min-w-36 flex-1"
-                  aria-invalid={Boolean(anchor.fieldState.error)}
-                  aria-describedby={anchorErrorId}
-                  aria-label={copy.units.anchorAria(unit.name)}
-                  onBlur={anchor.field.onBlur}
-                  ref={anchor.field.ref}
-                >
-                  <SelectValue placeholder={copy.units.anchorPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  {anchorOptions.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {anchorUnit?.id !== baseUnit.id && effectiveFactor != null ? (
-              <p className="text-sm text-muted-foreground tabular-nums">
-                {copy.units.effectiveSummary(
-                  formatDecimal(effectiveFactor, 12),
-                  baseUnit.name,
-                )}
-              </p>
-            ) : null}
-          </>
-        ) : null}
       </Item>
       {factor.fieldState.error ? (
         <FieldError id={factorErrorId} errors={[factor.fieldState.error]} />

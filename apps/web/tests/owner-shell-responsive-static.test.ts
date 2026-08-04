@@ -287,7 +287,8 @@ test("Inventory ingredient editor keeps a touch-safe unit list", () => {
   );
   assert.match(ingredientDialog, /unit_ids: z/);
   assert.match(ingredientDialog, /selectedUnitIds\.map/);
-  assert.doesNotMatch(ingredientDialog, /useFieldArray|IconTrash/);
+  assert.doesNotMatch(ingredientDialog, /useFieldArray/);
+  assert.match(ingredientDialog, /<IconTrash aria-hidden="true" \/>/);
 
   const issueDetail = read(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",

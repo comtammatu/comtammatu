@@ -34,8 +34,6 @@ test("ingredient unit editor owns per-row anchor targets and derived previews", 
   assert.match(dialog, /deriveEffectiveUnitFactor/);
   assert.match(dialog, /wouldCreateUnitCycle/);
   assert.match(dialog, /findDirectDependents/);
-  assert.match(dialog, /relationSummary/);
-  assert.match(dialog, /effectiveSummary/);
 });
 
 test("catalog payload preserves selected anchors instead of flattening to base", () => {
@@ -69,8 +67,11 @@ test("per-row graph validation locates the failing relation after valid rows", (
   assert.match(dialog, /path: relatedPath\("unit_anchor_ids", issue\.unitId\)/);
 });
 
-test("one compact unit row keeps relation controls, summary and removal together", () => {
-  assert.match(dialog, /selectedUnitIds\.map\(\(unitId\) =>/);
+test("unit rows keep relation controls and removal visible together", () => {
+  assert.match(
+    dialog,
+    /selectedUnitIds[\s\S]*\.filter\(\(unitId\) => unitId !== baseUnit\.id\)/,
+  );
   assert.match(dialog, /<UnitRelationRow/);
   assert.doesNotMatch(dialog, /conversionRows/);
   assert.doesNotMatch(dialog, /<UnitConversionField/);
@@ -79,10 +80,12 @@ test("one compact unit row keeps relation controls, summary and removal together
     /!wouldCreateUnitCycle\([\s\S]*relations\.anchorUnitIds,[\s\S]*unitId,[\s\S]*candidateId,[\s\S]*\)/,
   );
   assert.match(dialog, /\{anchorOptions\.map\(\(option\) => \(/);
-  assert.match(dialog, /const expanded =/);
-  assert.match(dialog, /editingUnitId === unitId/);
-  assert.match(dialog, /<RowActionsMenu/);
-  assert.match(dialog, /copy\.units\.relationSummary/);
+  assert.doesNotMatch(dialog, /const expanded =/);
+  assert.doesNotMatch(dialog, /editingUnitId/);
+  assert.doesNotMatch(dialog, /<RowActionsMenu/);
+  assert.match(dialog, /<Button[\s\S]*aria-label=\{`\$\{copy\.units\.remove\}/);
+  assert.match(dialog, /<FormattedNumberInput/);
+  assert.match(dialog, /sm:grid-cols-\[minmax\(5rem,1fr\)_auto_7rem/);
   assert.doesNotMatch(dialog, /<RadioGroup/);
   assert.doesNotMatch(dialog, /<RadioGroupItem/);
   assert.ok(
@@ -104,7 +107,6 @@ test("one compact unit row keeps relation controls, summary and removal together
 test("blocked removal opens and focuses its first dependent without smooth scrolling", () => {
   assert.match(dialog, /blockedRemovalErrors/);
   assert.match(dialog, /copy\.units\.removeBlocked\(/);
-  assert.match(dialog, /setEditingUnitId\(firstDependentId\)/);
   assert.match(
     dialog,
     /requestAnimationFrame\(\(\) => \{[\s\S]*form\.setFocus\(`unit_anchor_ids\.\$\{firstDependentId\}`\)/,
@@ -131,7 +133,10 @@ test("base changes batch all RHF state before one validation pass", () => {
 test("factor precision and tablet touch contracts are explicit", () => {
   assert.match(dialog, /maxFractionDigits=\{9\}/);
   assert.match(dialog, /<SelectTrigger[\s\S]*size=\{controlSize\}/);
-  assert.match(dialog, /triggerSize=\{[\s\S]*controlSize === "touch"/);
+  assert.match(
+    dialog,
+    /size=\{controlSize === "touch" \? "icon-touch" : "icon-sm"\}/,
+  );
   assert.match(actions, /isValidAnchorFactor/);
   assert.match(actions, /isValidEffectiveFactor/);
   assert.doesNotMatch(actions, /const unitFactorSchema/);
