@@ -87,3 +87,56 @@ corepack pnpm verify       # Dependency, boundary, type, lint, build, and test g
 corepack pnpm agent:start  # Skill check + status-first CodeGraph refresh
 corepack pnpm db:types     # Regenerate database types after an applied migration
 ```
+
+## Cursor Cloud specific instructions
+
+Durable, non-obvious notes for Cloud Agent VMs. The startup update script only
+runs `corepack pnpm install --frozen-lockfile`; everything below is manual and
+snapshot-persisted, not part of that script.
+
+### Node runtime
+
+- The project requires Node 24 (`.nvmrc`), installed via `nvm`. A daemon shim
+  `/exec-daemon/node` (Node 22) sits ahead of `nvm` in `PATH`. `~/.bashrc`
+  already prepends the Node 24 bin so login shells resolve Node 24; verify with
+  `node --version` if a command misbehaves, and run `nvm use 24` if needed.
+- Lint/typecheck/test/build/dev commands are the standard ones in `## Commands`
+  and the README; no extra flags are needed.
+
+### Backend for running the app end-to-end
+
+The web app has no mock backend — it needs Supabase. Owner Supabase Cloud
+credentials are not present in the VM. Use the repo's local Supabase E2E harness
+(Docker) for a fully self-contained, seeded backend:
+
+1. Start Docker (no systemd here): `sudo dockerd > /tmp/dockerd.log 2>&1 &`.
+   Docker is preinstalled and `/etc/docker/daemon.json` is already set for this
+   VM (fuse-overlayfs + `containerd-snapshotter: false`, required for Docker 29).
+   If the CLI hits a socket permission error, `sudo chmod 666 /var/run/docker.sock`.
+2. Bring up seeded local Supabase (migrations + tenant + QA users). The script
+   `scripts/supabase-e2e-bringup.mjs` is CI-guarded, so run it with the guard
+   satisfied:
+   `CI=true GITHUB_ACTIONS=true GITHUB_ENV=/tmp/gh_env.txt node scripts/supabase-e2e-bringup.mjs`.
+   It writes `apps/web/.env.test.local` with the local API URL, anon key,
+   service-role key, and test-account credentials.
+3. The dev server reads `apps/web/.env.local` (gitignored), not
+   `.env.test.local`. Copy the local Supabase `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` into
+   `apps/web/.env.local`, and add `POS_NETWORK_GATE=off` (otherwise
+   `apps/web/proxy.ts` LAN-gates the `/br/*/pos` and `/kds` surfaces and blocks
+   in-VM browser access). Then `corepack pnpm dev:web` (http://localhost:3000).
+
+### Seeded test accounts (local Supabase only)
+
+All passwords are `Test1234!`. Examples: `owner@comtammatu.vn` (tenant owner),
+`manager.nguyenhuutho@comtammatu.vn`, `cashier.nguyenhuutho@comtammatu.vn`,
+`chef.nguyenhuutho@comtammatu.vn` (branch "Chi nhánh Nguyễn Hữu Thọ", id 1).
+Full list is in `apps/web/tests/fixtures/supabase-e2e/qa-users.sql`. The tenant
+seed creates branches but no menu items, so POS ordering needs menu data created
+first (e.g. via `/menu`).
+
+### Playwright E2E
+
+With local Supabase up and `apps/web/.env.test.local` present, run
+`corepack pnpm --filter @comtammatu/web test:e2e`. Set `CI=true` to let
+Playwright auto-start its own web server; otherwise start `dev:web` yourself.
