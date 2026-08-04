@@ -41,7 +41,10 @@ apps/web/tmp/
 
 # Local scratch / one-shot debug scripts
 scratch/
-.stitch/
+# .stitch/ is local tooling state, but DESIGN.md is the tracked design mirror
+# synced by the stitch-mirror-runtime-token-sync guard.
+.stitch/*
+!.stitch/DESIGN.md
 test_output.log
 apps/web/test-fetch.mjs
 

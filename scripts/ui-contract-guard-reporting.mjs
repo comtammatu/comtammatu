@@ -29,6 +29,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "owner-page-header-no-module-eyebrow-module-doc",
       "readme-design-system-contract-pointer",
       "readme-ui-runtime-current",
+      "stitch-mirror-runtime-token-sync",
       "theme-baseline-runtime-current",
     ],
   },
