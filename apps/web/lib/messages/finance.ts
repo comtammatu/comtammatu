@@ -492,7 +492,6 @@ export const finance = {
       "Đã có số dư cũ chưa chốt. Liên hệ hỗ trợ trước khi mở sổ mới.",
     legacyBlockedAction: "Chờ chốt số dư cũ",
     openingMeta: (date: string) => `Từ ${date}`,
-    calculationDetails: "Xem cách tính",
     onHandBreakdown: (
       opening: string,
       cashIn: string,

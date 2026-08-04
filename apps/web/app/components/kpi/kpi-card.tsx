@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { CompareChip, type CompareDelta } from "./compare-chip";
 import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
@@ -24,6 +31,9 @@ const DOT_TONE: Record<KpiTone, string> = {
   destructive: "bg-destructive",
 };
 
+const LABEL_CLASS =
+  "line-clamp-2 min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground";
+
 interface KpiCardProps {
   label: string;
   value: ReactNode;
@@ -35,6 +45,8 @@ interface KpiCardProps {
   compareHint?: string;
   /** Inline secondary metric e.g. "Chưa VAT · 1.234 lượt" */
   hint?: ReactNode;
+  /** Hover explanation for the label; renders a dashed underline affordance */
+  labelTooltip?: ReactNode;
   /** Visual tone — primary highlights hero KPI, warning/destructive flag SLA */
   tone?: KpiTone;
   /** Drill-down target. When set, the whole card is a Link. */
@@ -57,6 +69,7 @@ export function KpiCard({
   delta,
   compareHint = "so với kỳ trước",
   hint,
+  labelTooltip,
   tone = "neutral",
   href,
   sparkline,
@@ -67,6 +80,32 @@ export function KpiCard({
 }: KpiCardProps) {
   const isCompact = density === "compact";
   const hasSparkline = sparkline && sparkline.length > 0;
+  const labelNode = labelTooltip ? (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span
+            className={cn(
+              LABEL_CLASS,
+              "cursor-help underline decoration-dashed decoration-muted-foreground/70 underline-offset-4",
+            )}
+            tabIndex={0}
+          />
+        }
+      >
+        {label}
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-sm whitespace-normal">
+        {typeof labelTooltip === "string" ? (
+          <p className="break-words">{labelTooltip}</p>
+        ) : (
+          labelTooltip
+        )}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    <p className={LABEL_CLASS}>{label}</p>
+  );
   const Body = (
     <CardContent
       className={cn(
@@ -80,9 +119,7 @@ export function KpiCard({
           !isCompact && "min-h-8",
         )}
       >
-        <p className="line-clamp-2 min-w-0 break-words text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
+        {labelNode}
         {icon ? (
           <span
             className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"

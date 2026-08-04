@@ -186,6 +186,16 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
               density="compact"
               icon={<IconWallet className="size-4 text-muted-foreground" />}
               label={copy.basic.kpis.cashOnHand}
+              labelTooltip={
+                cash.hasOpening
+                  ? copy.cash.onHandBreakdown(
+                      formatVND(cash.openingBalance),
+                      formatVND(cash.cashInSince),
+                      formatVND(cash.cashOutSince),
+                      formatVND(cash.cashAdjustments),
+                    )
+                  : undefined
+              }
               value={
                 cash.hasOpening
                   ? formatVND(cash.cashOnHand)
@@ -213,6 +223,16 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
               density="compact"
               icon={<IconBank className="size-4 text-muted-foreground" />}
               label={copy.basic.kpis.bankOnHand}
+              labelTooltip={
+                cash.hasOpening
+                  ? copy.cash.bankBreakdown(
+                      formatVND(cash.bankOpeningBalance),
+                      formatVND(cash.bankInSince),
+                      formatVND(cash.bankOutSince),
+                      formatVND(cash.bankAdjustments),
+                    )
+                  : undefined
+              }
               value={
                 cash.hasOpening
                   ? formatVND(cash.bankOnHand)
@@ -251,31 +271,6 @@ export function CurrentFundsSection({ cash }: { cash: CashSummary }) {
             />
           </div>
         </KpiRow>
-        {cash.hasOpening ? (
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer font-medium text-foreground">
-              {copy.cash.calculationDetails}
-            </summary>
-            <div className="mt-2 grid gap-1 border-l pl-3">
-              <p>
-                {copy.cash.onHandBreakdown(
-                  formatVND(cash.openingBalance),
-                  formatVND(cash.cashInSince),
-                  formatVND(cash.cashOutSince),
-                  formatVND(cash.cashAdjustments),
-                )}
-              </p>
-              <p>
-                {copy.cash.bankBreakdown(
-                  formatVND(cash.bankOpeningBalance),
-                  formatVND(cash.bankInSince),
-                  formatVND(cash.bankOutSince),
-                  formatVND(cash.bankAdjustments),
-                )}
-              </p>
-            </div>
-          </details>
-        ) : null}
       </AppSection>
 
       {!cash.hasOpening && !cash.legacySettingsPresent ? (

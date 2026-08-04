@@ -73,6 +73,8 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
   assert.match(kpiCard, /hover:bg-muted\/50 hover:shadow-effect-card-hover/);
   assert.match(kpiCard, /compareHint = "so với kỳ trước"/);
   assert.doesNotMatch(kpiCard, /compareHint = "vs kỳ trước"/);
+  assert.match(kpiCard, /labelTooltip/);
+  assert.match(kpiCard, /decoration-dashed/);
 });
 
 test("AppSection and AppPageHeader clamp secondary description copy", () => {
