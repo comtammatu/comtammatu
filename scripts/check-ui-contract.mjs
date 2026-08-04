@@ -13,7 +13,7 @@ import {
   UI_CONTRACT_LINT_ONLY_GROUPS,
 } from "./ui-contract-guard-reporting.mjs";
 import {
-  UI_RUNTIME_BLOCKING_SOURCE_ROOTS,
+  UI_RUNTIME_SOURCE_ROOTS,
   uiRuntimeRoots,
 } from "./ui-contract-scope.mjs";
 
@@ -58,7 +58,7 @@ function toPosix(filePath) {
 }
 
 function walkUiRuntimeFiles(extensions) {
-  return UI_RUNTIME_BLOCKING_SOURCE_ROOTS.flatMap((root) =>
+  return UI_RUNTIME_SOURCE_ROOTS.flatMap((root) =>
     walkFiles(root, extensions),
   );
 }
