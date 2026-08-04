@@ -42,3 +42,27 @@ test("owner attendance exposes roster tab with shared week client", () => {
   assert.match(page, /RosterWeekClient/);
   assert.match(page, /loadOwnerRosterPanelData/);
 });
+
+test("roster week grid renders through the design-system DataTable", () => {
+  const weekClient = read("apps/web/lib/hr/roster/roster-week-client.tsx");
+
+  assert.match(
+    weekClient,
+    /from "@\/components\/data-table\/data-table"/,
+  );
+  assert.match(weekClient, /<DataTable/);
+  assert.match(weekClient, /mobileCardRender/);
+  assert.doesNotMatch(weekClient, /<table/);
+  assert.doesNotMatch(weekClient, /min-w-\[/);
+  assert.doesNotMatch(weekClient, /@comtammatu\/ui\/components\/table/);
+});
+
+test("roster week grid keeps the shared cell-change handler and Select", () => {
+  const weekClient = read("apps/web/lib/hr/roster/roster-week-client.tsx");
+
+  assert.match(weekClient, /function handleCellChange\(/);
+  assert.match(weekClient, /handleCellChange\(employee\.employeeId/);
+  assert.match(weekClient, /assignmentMap\.get\(key\)/);
+  assert.match(weekClient, /<Select/);
+  assert.match(weekClient, /EMPTY_SHIFT_VALUE/);
+});
