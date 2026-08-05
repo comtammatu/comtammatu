@@ -9,6 +9,7 @@ Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không
 | --- | --- |
 | Bối cảnh doanh nghiệp, mục tiêu sản phẩm, phạm vi không làm | `business-context.md` |
 | Thuật ngữ và tên gọi canonical | `glossary.md` |
+| Danh sách synonym cấm (lint) | `terminology-synonyms.json` |
 | Kiến thức nền F&B và tài chính vận hành | `domain-encyclopedia.md` |
 | Metric, KPI, card, workflow data contract | `operational-data-contract.md` |
 | Thuế doanh nghiệp, GTGT, TNDN, HĐĐT, hóa đơn đầu vào/đầu ra | `legal-framework-2026.md` trước, rồi `einvoice-tax.md` |

@@ -38,7 +38,7 @@
 
    Khi thiếu kỳ khai, chứng từ, trạng thái khấu trừ hoặc điều chỉnh, card phải
    hiển thị `Chưa đủ dữ liệu`, không được gọi là `GTGT phải nộp`.
-7. Công thức vận hành hiện tại chỉ tạo **Kết quả vận hành**. Chỉ được hiển thị
+7. Công thức vận hành hiện tại chỉ tạo **Kết quả kinh doanh**. Chỉ được hiển thị
    **Lợi nhuận sau thuế** sau khi có giá vốn đầy đủ, khấu hao/phân bổ, kết quả
    tài chính, thu nhập/chi phí khác, đối chiếu thuế TNDN và khóa sổ kỳ.
 8. Không hard-code thuế suất TNDN 15%, 17% hoặc 20%, cũng không tự bật miễn hay
@@ -540,7 +540,7 @@ Chỉ hiển thị khi kỳ đã có:
 - Bảng đối chiếu thu nhập tính thuế, policy TNDN và thuế đã duyệt;
 - Trạng thái khóa sổ có người và thời điểm chịu trách nhiệm.
 
-Trước đó, card phải dùng `Kết quả vận hành` hoặc `Lợi nhuận kế toán tạm tính`
+Trước đó, card phải dùng `Kết quả kinh doanh` hoặc `Lợi nhuận kế toán tạm tính`
 kèm phạm vi loại trừ rõ ràng.
 
 ## 12. Những việc không làm thay đổi lợi nhuận ngay
@@ -568,7 +568,7 @@ có doanh thu hoặc lợi nhuận tương ứng.
 | Hằng tuần | Công nợ NCC, hóa đơn thiếu, khoản đến hạn | Kiểm soát dòng tiền/AP |
 | Hằng tuần/tháng | Tài sản/CCDC theo site, hỏng/mất, chưa phân loại | Kiểm soát custody và vốn |
 | Theo kỳ GTGT | Đầu ra, đầu vào, chờ review, điều chỉnh, chứng từ thanh toán | Workpaper GTGT |
-| Hằng tháng | Kết quả vận hành theo Công ty/chi nhánh | Quản trị kinh doanh |
+| Hằng tháng | Kết quả kinh doanh theo Công ty/chi nhánh | Quản trị kinh doanh |
 | Hằng tháng | Lợi nhuận kế toán, bảng cân đối, lưu chuyển tiền | Chỉ khi Accounting close đủ dữ liệu |
 | Theo kỳ TNDN | Đối chiếu kế toán–thuế, khấu hao được trừ, ưu đãi | Workpaper TNDN |
 | Hằng quý/năm | BCTC, tờ khai/quyết toán và hồ sơ kiểm toán nếu áp dụng | Nghĩa vụ pháp định |
@@ -596,7 +596,7 @@ người duyệt, lý do và kỳ ảnh hưởng.
 | Năng lực | Hiện trạng |
 | --- | --- |
 | Finance landing | Có năm card Finance Basic và confidence gate |
-| Kết quả vận hành | Có; không phải báo cáo lợi nhuận pháp định |
+| Kết quả kinh doanh | Có; không phải báo cáo lợi nhuận pháp định |
 | Giá vốn | Có giá nguyên liệu theo coverage; chưa là full COGS |
 | Chi phí vận hành | Có ghi nhận expense và snapshot GTGT |
 | Hóa đơn NCC/AP/payment | Có, nhưng matching hiện tại chưa phải three-way matching line-level đầy đủ |
@@ -633,7 +633,7 @@ TÀI CHÍNH
 [GTGT] [Tài sản & công cụ]
 
 Doanh thu thuần | Giá vốn có coverage | Lợi nhuận gộp | Chi phí vận hành
-Kết quả vận hành
+Kết quả kinh doanh
 
 ────────────────────────────────────────────────────────────────
 Ngoại lệ cần xử lý
@@ -751,7 +751,7 @@ Một triển khai được coi là đúng khi chứng minh được:
 - Mọi số đã kê khai có kỳ, người duyệt và nguồn chứng từ;
 - Mọi điều chỉnh tham chiếu bản gốc, không viết lại lịch sử;
 - `GTGT tạm tính` fail closed khi thiếu dữ liệu;
-- `Kết quả vận hành` không đổi nhãn thành `Lợi nhuận sau thuế`;
+- `Kết quả kinh doanh` không đổi nhãn thành `Lợi nhuận sau thuế`;
 - Tồn kho, công nợ, tiền và tài sản không bị cộng trực tiếp vào lợi nhuận;
 - Metric/card có formula, nguồn, loại trừ, freshness, confidence, permission và
   drilldown.

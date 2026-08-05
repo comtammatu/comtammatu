@@ -335,6 +335,10 @@ Nguyên tắc nền:
 | `gross_margin`           | Biên gộp                      | Tỷ lệ lợi nhuận gộp trên doanh thu thuần.                                                                  | `gross_profit / net_sales_before_vat`.                                                           | Tỷ lệ giá vốn món, biên ròng.                                                          | Supporting context.                                                 |
 | `operating_expense`      | Chi phí vận hành              | Chi phí kỳ đã ghi nhận: thuê, điện nước, lương, phần mềm, marketing, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ và phí. | Sum posted expense trong kỳ, loại direct ingredient COGS và nguyên giá tài sản.         | Giá vốn món, công nợ NCC, tiền mua TSCĐ/thiết bị chưa phân bổ.                         | `finance.expense.operating`.                                        |
 | `operating_result`       | Kết quả kinh doanh            | Kết quả sau khi trừ giá vốn món và chi phí vận hành, cộng biến động tồn kho.                               | `gross_profit - operating_expense + (closing - opening inventory)`.                              | Lợi nhuận ròng, dòng tiền, kết quả kê khai thuế.                                       | `finance.operating_result`.                                         |
+| `funds_on_hand_section`  | Tiền mặt hiện có              | Section số dư quỹ tenant-wide trên `/finance`: tiền mặt + tiền tài khoản = tổng tiền.                      | Không theo filter kỳ/chi nhánh; chỉ hiện khi đã mở sổ.                                           | Tổng tiền đã thu, tiền đếm ca POS, doanh thu thuần.                                    | `get_finance_current_funds` / CurrentFundsSection.                  |
+| `cash_book_balance`      | Tiền mặt                      | Số dư tiền mặt theo sổ quỹ tenant-wide sau opening bất biến và phát sinh canonical.                        | Opening cash + thu cash − chi/hoàn/trả NCC cash + điều chỉnh append-only.                        | Tiền mặt đã thu trong kỳ, tiền đếm ca, tiền tài khoản.                                 | `finance.cash_on_hand` / `get_finance_current_funds`.               |
+| `bank_book_balance`      | Tiền tài khoản                | Số dư ngân hàng theo sổ quỹ tenant-wide sau opening bất biến và giao dịch canonical.                      | Opening bank + bank in − bank out + điều chỉnh append-only.                                      | Chuyển khoản đã thu trong kỳ, tiền mặt theo sổ.                                        | `finance.bank_on_hand` / `get_finance_current_funds`.               |
+| `total_funds_on_hand`    | Tổng tiền                     | Tổng số dư quỹ hiện có = tiền mặt + tiền tài khoản.                                                       | `cash_book_balance + bank_book_balance`.                                                         | Tổng tiền đã thu (payment kỳ), doanh thu thuần.                                        | Derived on `/finance` CurrentFundsSection.                          |
 | `labor_cost`             | Chi phí nhân công             | Lương, phụ cấp chịu chi phí, bảo hiểm và nghĩa vụ của người sử dụng lao động được ghi nhận cho vận hành.  | Theo payroll/HR contract.                                                                        | Cổ tức, phân phối lợi nhuận, chi cá nhân.                                              | Future/HR-linked finance.                                           |
 | `prime_cost`             | Chi phí chính                 | Chi phí kiểm soát chính trong nhà hàng: giá vốn món + chi phí nhân công.                                   | `food_cost + labor_cost`.                                                                        | Chi phí vận hành tổng, lợi nhuận ròng.                                                 | Chỉ dùng khi cả food cost và labor cost trusted.                    |
 | `net_operating_profit`   | Lợi nhuận vận hành ròng       | Lãi sau khi trừ giá vốn, nhân công, chi phí vận hành, và khoản vận hành khác đã định nghĩa.                | `net_sales_before_vat - food_cost - labor_cost - operating_expense +/- other_operating_items`.   | Lợi nhuận gộp, tiền mặt, lợi nhuận kế toán doanh nghiệp.                               | Không là Finance Basic KPI mặc định.                                |
@@ -366,7 +370,12 @@ Nguyên tắc nền:
   có contract cho `net_operating_profit`, đủ source cho food cost/labor/expense,
   và confidence không phải `estimated`/`needs_review`.
 - `Tiền mặt hiện hữu` chỉ dùng cho cash session/drawer khi có opening/counting
-  contract; không dùng thay `cash_collected`.
+  contract; không dùng thay `cash_collected` hoặc `cash_book_balance`.
+- `Tiền mặt` trên section **Tiền mặt hiện có** là `cash_book_balance` (sổ quỹ),
+  không phải `cash_collected` (tiền mặt đã thu trong kỳ báo cáo).
+- `Tổng tiền` (`total_funds_on_hand`) khác `Tổng tiền đã thu` (`total_collected`).
+- Machine-readable synonym bans live in `docs/ref/terminology-synonyms.json` and
+  are enforced by `corepack pnpm lint:terminology`.
 
 ## Từ điển kiến thức nền F&B/Finance
 
@@ -727,6 +736,10 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 | `gross_margin`           | Biên gộp                    | —              | —       |
 | `operating_expense`      | Chi phí vận hành            | Chi phí VH     | —       |
 | `operating_result`       | Kết quả kinh doanh          | Kết quả KD     | —       |
+| `funds_on_hand_section`  | Tiền mặt hiện có            | —              | —       |
+| `cash_book_balance`      | Tiền mặt                    | —              | —       |
+| `bank_book_balance`      | Tiền tài khoản              | —              | —       |
+| `total_funds_on_hand`    | Tổng tiền                   | —              | —       |
 | `labor_cost`             | Chi phí nhân công           | Nhân công      | —       |
 | `prime_cost`             | Chi phí chính               | —              | —       |
 | `inventory_value`        | Giá trị tồn kho             | Tiền trong kho | —       |

@@ -141,7 +141,7 @@ export const INVENTORY_VI = {
   linkedPo: "Đơn đặt hàng liên kết",
   receiveDate: "Ngày kiểm nhận",
   draft: "Nháp",
-  newGrn: "Phiếu nhập hàng mới",
+  newGrn: "Phiếu nhập kho mới",
   grnSearchPlaceholder: "Tìm mã phiếu nhập, nhà cung cấp, đơn đặt hàng...",
   grnListCount: (count: number) => `${formatCount(count)} phiếu`,
   grnNotFoundFiltered: "Không tìm thấy phiếu nhập phù hợp",

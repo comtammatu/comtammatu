@@ -95,7 +95,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Đối tượng sử dụng chính:** Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
   - Cho biết chi nhánh đang có ngoại lệ vận hành hoặc việc quản lý nào phải xử lý ngay trong ngày, không biến Branch runtime thành dashboard tài chính thu nhỏ.
-- **Mục tiêu Người dùng (Goal):** Biết ngay chi nhánh có đang vận hành ổn định không, có sự cố nào cần xử lý khẩn cấp không (lệch tiền két, thiếu nguyên liệu, chưa mở ca POS).
+- **Mục tiêu Người dùng (Goal):** Biết ngay chi nhánh có đang vận hành ổn định không, có sự cố nào cần xử lý khẩn cấp không (chênh lệch tiền mặt, thiếu nguyên liệu, chưa mở ca POS).
 - **Luồng thao tác (Workflow):**
   1. **Đọc việc cần xử lý:** Xem ngoại lệ hoặc readiness chưa đạt theo mức ưu tiên.
   2. **Giám sát vận hành:** Mở đúng workflow sở hữu trạng thái máy in, phiên POS, nhân sự hoặc kho.
@@ -195,7 +195,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 - **Luồng thao tác (Workflow):**
   - **Yêu cầu mua:** Kho trung tâm ghi nhu cầu mua ngoài; một yêu cầu có thể
     tạo nhiều đơn đặt hàng theo NCC.
-  - **Đơn mua hàng:** Kế toán/Owner tạo từ Yêu cầu mua, nhập giá và duyệt. Mỗi
+  - **Đơn đặt hàng NCC:** Kế toán/Owner tạo từ Yêu cầu mua, nhập giá và duyệt. Mỗi
     PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
   - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
     tạo từ PO, kiểm nhận vật lý, lưu nháp rồi xác nhận để cập nhật tồn và WAC.

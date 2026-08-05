@@ -447,8 +447,8 @@ Branch stock workflow áp dụng cùng ranh giới này:
   `WasteApprovalsPageContent`, `WasteApprovalsClient`, `DocumentFormFrame`,
   `DataTable`, hoặc chrome control_surface.
 - `/inventory/purchase-orders` là workspace **Mua hàng** duy nhất, gồm tab
-  `Nhu cầu mua` và `Đơn mua`. Kho tạo nhu cầu không NCC/giá. Khi mỗi nguyên liệu
-  còn thiếu chỉ có một NCC active, action `Duyệt & tạo đơn mua` tự lấy toàn bộ
+  `Nhu cầu mua` và `Đơn NCC`. Kho tạo nhu cầu không NCC/giá. Khi mỗi nguyên liệu
+  còn thiếu chỉ có một NCC active, action `Duyệt & tạo đơn NCC` tự lấy toàn bộ
   số lượng còn lại; dialog phân bổ chỉ mở cho ca nhiều NCC hoặc thiếu mapping.
   Một lần duyệt tạo PO và GRN nháp. Nhu cầu, PO và GRN mở bằng URL-addressable
   `AppDialog variant="document"`; route `/inventory/purchase-requests` chỉ

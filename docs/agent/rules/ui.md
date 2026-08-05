@@ -71,6 +71,12 @@ change type, and authority granted by the task. Complete
 
 - Use operator language from shared dictionaries/glossary; one concept keeps one
   name across surfaces.
+- Card/section/nav titles use glossary **Long** labels; hints may use **Short**
+  only when glossary defines one. Forbidden synonyms in
+  `docs/ref/terminology-synonyms.json` must not appear in UI dictionaries or
+  module/ref docs (except the glossary itself). Rename in glossary + synonyms
+  JSON in the same PR as copy changes; `corepack pnpm lint:terminology` enforces
+  the ban list.
 - Render explicit loading, empty, error, permission-denied, and recovery states
   appropriate to the workflow.
 - Never expose raw database errors, SQLSTATE, secrets, or internal identifiers as

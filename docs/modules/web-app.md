@@ -93,7 +93,7 @@ Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). 
 nhóm ổn định (UI sidebar vẫn flatMap một list ngắn):
 
 - `1 · Kiểm soát tồn`: `Tồn kho` (landing mặc định của `/inventory`)
-- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, **Đơn mua hàng**, `Tiêu hao`, `Điều chuyển`
+- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, **Đơn đặt hàng NCC**, `Tiêu hao`, `Điều chuyển`
 - `3 · Sản xuất`
 - `4 · Danh mục & thiết lập`
 
@@ -121,7 +121,7 @@ Các nguyên tắc đang được code phản ánh:
 
 Các detail pages của Inventory không còn chỉ là read-only shells:
 
-- `purchase-orders`: Inventory sidebar LIST **Đơn mua hàng** (ADR 0018 **C1**
+- `purchase-orders`: Inventory sidebar LIST **Đơn đặt hàng NCC** (ADR 0018 **C1**
   Owner restore) cho PO tạo từ GRN. Mỗi hàng mở read-only detail; action chỉ sửa
   giá và duyệt theo quyền, không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO.
 - `supplier-invoices`: Finance home at `/finance/supplier-invoices` with client

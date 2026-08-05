@@ -71,6 +71,7 @@ System Sources above.
 - Runbooks: `docs/runbooks/README.md`
 - Business/domain index: `docs/ref/README.md`
 - Vocabulary: `docs/ref/glossary.md`
+- Terminology synonym bans (lint): `docs/ref/terminology-synonyms.json`
 - Operational data: `docs/ref/operational-data-contract.md`
 - Legal register: `docs/ref/legal-framework-2026.md`
 

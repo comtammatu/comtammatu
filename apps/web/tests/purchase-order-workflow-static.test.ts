@@ -44,7 +44,7 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   assert.match(demandClient, /copy\.approveAllocationAction/);
   assert.match(
     inventoryMessages,
-    /approveAllocationAction: "Duyệt & tạo đơn mua"/,
+    /approveAllocationAction: "Duyệt & tạo đơn NCC"/,
   );
   assert.match(demandClient, /variant="document"/);
   assert.match(migration, /save_purchase_demand/);

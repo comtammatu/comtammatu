@@ -109,7 +109,7 @@ Phải tách bốn trạng thái nghiệp vụ:
 | `input_vat_non_deductible` | Phần VAT không được khấu trừ theo kết luận có căn cứ. |
 
 Schema hiện lưu breakdown VAT trên hóa đơn NCC (`supplier_invoices`) và trên
-khoản chi vận hành (`expenses.vat_breakdown`). Cả hai đều chỉ là
+khoản chi phí vận hành (`expenses.vat_breakdown`). Cả hai đều chỉ là
 `input_vat_recorded`. Chưa có trạng thái, bằng chứng thanh toán/kê khai đủ,
 phân bổ dùng chung, kỳ kê khai hoặc điều chỉnh để kết luận
 `input_vat_deductible`; vì vậy UI không được gọi VAT đã nhập là **GTGT được

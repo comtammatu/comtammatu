@@ -63,7 +63,7 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 - **Surface:** `/finance/*`, `/inventory/purchase-requests`,
   `/inventory/purchase-orders`, `/inventory/grn`
 - **Làm:** đọc Yêu cầu mua → tạo/duyệt PO + giá; đọc GRN; HĐ/AP
-- **Nav hiện:** Yêu cầu mua, Đơn mua hàng, Nhập kho (+ Finance)
+- **Nav hiện:** Yêu cầu mua, Đơn đặt hàng NCC, Nhập kho (+ Finance)
 - **Không hiện / không làm:** tồn, SX, định mức món bán, công thức sản xuất,
   valuation, yêu cầu CN, QC confirm
 

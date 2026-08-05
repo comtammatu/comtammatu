@@ -89,7 +89,7 @@ warehouse mới là luồng giảm tồn hiện hành.
 | **Điều chỉnh / hỏng / mất**   | Thủ công                                         | `adjustment`                                          |
 | **Kiểm kê**                   | Điều chỉnh sau đếm                               | `count_adjustment`                                    |
 
-Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu. Lãi gộp vận hành dùng actual food cost từ `stock_movements` consumption đã được duyệt.
+Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu. Lợi nhuận gộp vận hành dùng actual food cost từ `stock_movements` consumption đã được duyệt.
 
 ### Mã chứng từ kho
 
@@ -97,11 +97,11 @@ Mã phiếu mới dùng format `{PREFIX}-{DDMMYYYY}-{####}` (ngày
 `Asia/Ho_Chi_Minh`, sequence pad 4 số), cấp atomic qua
 `next_inventory_doc_number` / `tenant_inventory_doc_counters`. Sequence vẫn
 theo tenant, loại phiếu và năm; không reset theo ngày. Phiếu cũ giữ nguyên mã
-lịch sử (không rewrite). Đơn mua hàng dùng `next_po_display_id` và cùng format.
+lịch sử (không rewrite). Đơn đặt hàng NCC dùng `next_po_display_id` và cùng format.
 
 | Loại              | Prefix | Cột                                                         |
 | ----------------- | ------ | ----------------------------------------------------------- |
-| Đơn mua hàng NCC  | `PO`   | `purchase_orders.display_id`                                |
+| Đơn đặt hàng NCC  | `PO`   | `purchase_orders.display_id`                                |
 | Phiếu nhập        | `GRN`  | `goods_received_notes.grn_number`                           |
 | Điều chuyển       | `DC`   | `stock_transfers.transfer_number`                           |
 | Xuất kho thủ công | `PXK`  | `stock_issues.issue_number`                                 |
@@ -311,7 +311,7 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 2. Kho Tổng hoặc Bếp Trung Tâm tạo **Yêu cầu mua**. Đây là nhu cầu mua ngoài;
    **Yêu cầu hàng** vẫn chỉ dùng cho cấp hàng nội bộ về chi nhánh.
 3. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, Kế toán hoặc Owner dùng
-   **Duyệt & tạo đơn mua** để hệ thống tự lấy toàn bộ số lượng còn lại và gom
+   **Duyệt & tạo đơn NCC** để hệ thống tự lấy toàn bộ số lượng còn lại và gom
    thành một PO/NCC. Chỉ khi nguyên liệu có nhiều NCC, Kế toán mới chọn hoặc
    chia số lượng; nguyên liệu chưa có NCC phải được bổ sung mapping trước. Mỗi
    PO thuộc đúng một Yêu cầu mua và một NCC; PO chỉ xác nhận nhu cầu, NCC, số

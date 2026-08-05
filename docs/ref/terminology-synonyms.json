@@ -1,0 +1,90 @@
+{
+  "$schema_comment": "Machine-readable Vietnamese terminology synonym bans. Authority remains docs/ref/glossary.md; update both in the same PR when renaming labels. Prefer Vietnamese UI/doc drift phrases — do not ban English canonical identifiers used in technical prose.",
+  "entries": [
+    {
+      "term": "operating_result",
+      "label_vi": "Kết quả kinh doanh",
+      "short_vi": "Kết quả KD",
+      "forbidden": ["Kết quả vận hành", "Kết quả VH"]
+    },
+    {
+      "term": "operating_expense",
+      "label_vi": "Chi phí vận hành",
+      "short_vi": "Chi phí VH",
+      "forbidden": ["Chi vận hành", "chi vận hành"]
+    },
+    {
+      "term": "funds_on_hand_section",
+      "label_vi": "Tiền mặt hiện có",
+      "forbidden": ["Tiền đang có"]
+    },
+    {
+      "term": "cash_book_balance",
+      "label_vi": "Tiền mặt",
+      "forbidden": ["Tiền mặt theo sổ"]
+    },
+    {
+      "term": "bank_book_balance",
+      "label_vi": "Tiền tài khoản",
+      "forbidden": ["Tiền trong ngân hàng"]
+    },
+    {
+      "term": "total_funds_on_hand",
+      "label_vi": "Tổng tiền",
+      "forbidden": []
+    },
+    {
+      "term": "total_collected",
+      "label_vi": "Tổng tiền đã thu",
+      "short_vi": "Đã thu",
+      "forbidden": ["Tổng tiền thu được", "Doanh thu đã thu"]
+    },
+    {
+      "term": "net_sales_before_vat",
+      "label_vi": "Doanh thu thuần",
+      "short_vi": "DT thuần",
+      "forbidden": ["Bán hàng sau giảm giá"]
+    },
+    {
+      "term": "gross_profit",
+      "label_vi": "Lợi nhuận gộp",
+      "short_vi": "LN gộp",
+      "forbidden": ["Lãi gộp", "lợi nhuận thực tế"]
+    },
+    {
+      "term": "food_cost",
+      "label_vi": "Giá vốn món",
+      "short_vi": "Giá vốn",
+      "forbidden": ["giá vốn nguyên liệu"]
+    },
+    {
+      "term": "purchase_order",
+      "label_vi": "Đơn đặt hàng NCC",
+      "short_vi": "Đơn NCC",
+      "forbidden": ["đơn mua hàng", "Đơn mua hàng", "đơn mua", "Đơn mua"]
+    },
+    {
+      "term": "purchase_request",
+      "label_vi": "Yêu cầu mua",
+      "short_vi": "Yêu cầu mua",
+      "forbidden": ["Yêu cầu mua hàng", "yêu cầu mua hàng"]
+    },
+    {
+      "term": "goods_received_note",
+      "label_vi": "Phiếu nhập kho",
+      "short_vi": "Phiếu nhập",
+      "forbidden": ["phiếu nhập hàng", "Phiếu nhập hàng"]
+    },
+    {
+      "term": "cash_variance",
+      "label_vi": "Chênh lệch tiền mặt",
+      "short_vi": "Lệch két",
+      "forbidden": ["lệch tiền két", "Lệch tiền két"]
+    },
+    {
+      "term": "pos_session",
+      "label_vi": "Ca POS",
+      "forbidden": ["Ca thu ngân", "ca thu ngân"]
+    }
+  ]
+}
