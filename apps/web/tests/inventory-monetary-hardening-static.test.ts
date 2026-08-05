@@ -9,7 +9,7 @@ function read(path: string): string {
   return readFileSync(resolve(repoRoot, path), "utf8");
 }
 
-test.skip("inventory monetary reads fail closed at the current runtime boundary", () => {
+test("inventory monetary reads fail closed at the current runtime boundary", () => {
   const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
   const boundary = read("apps/web/lib/inventory/monetary-access.ts");
   const ingredientActions = read(
@@ -49,7 +49,7 @@ test.skip("inventory monetary reads fail closed at the current runtime boundary"
   );
   assert.match(
     financeCockpit,
-    /canViewInventoryValuation: canReadRequestedValuation/,
+    /canViewInventoryValuation\s*=\s*canReadRequestedValuation && includesBranchData/,
   );
   assert.match(financePage, /cockpit\.canViewInventoryValuation \?/);
 });
