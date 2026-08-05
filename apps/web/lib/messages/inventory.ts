@@ -1473,7 +1473,7 @@ export const inventory = {
       "Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển.",
     removeLineAria: "Xóa dòng",
     vehicleInfo: "Xe / người giao",
-    notesPlaceholder: "Ghi chú thêm cho phiếu luân chuyển",
+    notesPlaceholder: "Xe / người giao, lưu ý khi giao nhận…",
     creating: "Đang tạo…",
     createSlip: "Tạo phiếu",
     receiveTransferTitle: "Phiếu chuyển cần nhận",

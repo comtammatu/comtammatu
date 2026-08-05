@@ -79,19 +79,56 @@ export function CreateTransferForm({
         {controller.canCreateOutbound ? (
           <div className="flex flex-col gap-3">
             <DescriptionList
-              className="grid gap-2 sm:grid-cols-2"
-              descriptionClassName="font-semibold"
+              className="grid gap-3 sm:grid-cols-2 sm:items-start"
               items={[
                 {
                   term: copy.sourceBranchLabel,
-                  description:
-                    controller.myBranchName ?? copy.outboundFromSelected,
+                  description: (
+                    <span className="font-semibold">
+                      {controller.myBranchName ?? copy.outboundFromSelected}
+                    </span>
+                  ),
                 },
                 {
-                  term: copy.targetBranchLabel,
-                  description:
-                    controller.outboundDestinationName ??
-                    copy.chooseReceivingWarehouse,
+                  term: (
+                    <>
+                      {copy.targetBranchLabel}
+                      <span aria-hidden="true"> *</span>
+                    </>
+                  ),
+                  description: (
+                    <Select
+                      value={controller.outboundToBranchId}
+                      onValueChange={controller.setOutboundToBranchId}
+                    >
+                      <SelectTrigger
+                        id="owner-transfer-target"
+                        size={controlSize}
+                        className="w-full font-normal"
+                        aria-required
+                        aria-label={copy.targetBranchLabel}
+                      >
+                        <SelectValue
+                          placeholder={copy.chooseReceivingWarehouse}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {controller.outboundDestinationOptions.map(
+                            (option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                                size={optionSize}
+                              >
+                                {formatTransferTargetOption(option)}
+                              </SelectItem>
+                            ),
+                          )}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  ),
                 },
               ]}
             />
@@ -135,38 +172,6 @@ export function CreateTransferForm({
                 </Select>
               </FormField>
             ) : null}
-            <FormField
-              controlId="owner-transfer-target"
-              label={copy.receivingWarehouseRequired}
-              required
-            >
-              <Select
-                value={controller.outboundToBranchId}
-                onValueChange={controller.setOutboundToBranchId}
-              >
-                <SelectTrigger
-                  id="owner-transfer-target"
-                  size={controlSize}
-                  className="w-full"
-                  aria-required
-                >
-                  <SelectValue placeholder={copy.chooseReceivingWarehouse} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {controller.outboundDestinationOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        size={optionSize}
-                      >
-                        {formatTransferTargetOption(option)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </FormField>
           </div>
         ) : (
           <AppEmptyState
@@ -178,8 +183,8 @@ export function CreateTransferForm({
       </AppSection>
 
       <AppSection title={copy.ingredientsQtyRequired}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="flex min-w-0 flex-1 items-end gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="min-w-0 flex-1">
               <Combobox
                 value={controller.pickerIngredientId}
@@ -201,19 +206,19 @@ export function CreateTransferForm({
             <Button
               type="button"
               variant="outline"
-              size={removeActionSize}
+              size={controlSize}
               className="shrink-0"
               onClick={controller.addIngredientLine}
               disabled={!controller.pickerIngredientId}
               aria-label={copy.addIngredientAria}
             >
-              <IconPlus data-icon="inline-start" />
+              <IconPlus />
             </Button>
           </div>
           <Button
             type="button"
             variant="outline"
-            size={actionSize}
+            size={controlSize}
             className="w-full shrink-0 sm:w-auto"
             onClick={controller.addAllAvailableStockLines}
             disabled={controller.selectedSourceLocationId == null}
@@ -332,24 +337,15 @@ export function CreateTransferForm({
         )}
       </AppSection>
 
-      <AppSection title={FORM_VI.notes}>
-        <FormField controlId="owner-transfer-vehicle" label={copy.vehicleInfo}>
-          <Input
-            id="owner-transfer-vehicle"
-            name="vehicleInfo"
-            controlSize={controlSize}
-          />
-        </FormField>
-        <FormField controlId="owner-transfer-notes" label={FORM_VI.notes}>
-          <Textarea
-            id="owner-transfer-notes"
-            name="notes"
-            rows={3}
-            placeholder={copy.notesPlaceholder}
-            className="min-h-24"
-          />
-        </FormField>
-      </AppSection>
+      <FormField controlId="owner-transfer-notes" label={copy.transportNote}>
+        <Textarea
+          id="owner-transfer-notes"
+          name="notes"
+          rows={2}
+          placeholder={copy.notesPlaceholder}
+          className="min-h-20"
+        />
+      </FormField>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button

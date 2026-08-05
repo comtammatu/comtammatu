@@ -21,7 +21,6 @@ import {
   getTransferSourceLocationOptions,
   getTransferOutboundDestinationOptions,
   formatTransferLocationLabel,
-  formatTransferTargetOption,
   getTransferLineMaxEntryQuantity,
   parseTransferTargetValue,
   resolveTransferCreatePolicy,
@@ -121,12 +120,6 @@ export function useTransferCreateController({
         selectedSourceLocation?.kind ?? "warehouse",
       )
     : null;
-  const outboundDestinationName = useMemo(() => {
-    const option = outboundDestinationOptions.find(
-      (item) => item.value === outboundToBranchId,
-    );
-    return option ? formatTransferTargetOption(option) : null;
-  }, [outboundDestinationOptions, outboundToBranchId]);
   const listHref = withTransferBranchQuery(basePath, userBranchId);
 
   function resetForm() {
@@ -296,7 +289,6 @@ export function useTransferCreateController({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const notes = String(formData.get("notes") ?? "") || undefined;
-    const vehicleInfo = String(formData.get("vehicleInfo") ?? "") || undefined;
 
     if (loadFailed) {
       toast.error(messages.inventory.transfer.createDataLoadFailedDescription);
@@ -347,7 +339,6 @@ export function useTransferCreateController({
         toBranchId,
         fromLocationId: selectedSourceLocationId,
         notes,
-        vehicleInfo,
         lines: linesResult.lines,
       });
       if (!result.success || !result.data) {
@@ -385,7 +376,6 @@ export function useTransferCreateController({
     listHref,
     loadFailed,
     myBranchName,
-    outboundDestinationName,
     outboundDestinationOptions,
     outboundSourceLocationId: selectedSourceLocationValue,
     outboundSourceLocationOptions: sourceLocationOptions,
