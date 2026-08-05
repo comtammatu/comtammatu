@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { canAccess, MODULE_ACL, type ModuleKey } from "../module-acl";
-import type { StaffRole } from "../types";
+import { STAFF_ROLES, type StaffRole } from "../types";
 
 // Locks the fast route-candidate matrix. Live capability checks and database
 // policies remain the final authority for HR and other sensitive operations.
@@ -44,8 +44,16 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "runner",
     "settings",
     "staff",
+    "workspace",
   ],
-  self_service: ["hr", "hr_payroll", "me", "notifications", "staff"],
+  self_service: [
+    "hr",
+    "hr_payroll",
+    "me",
+    "notifications",
+    "staff",
+    "workspace",
+  ],
   branch_manager: [
     "branch_dashboard",
     "branch_feedback",
@@ -68,6 +76,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "pos",
     "runner",
     "staff",
+    "workspace",
   ],
   cashier: [
     "branch_orders",
@@ -79,6 +88,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "pos",
     "runner",
     "staff",
+    "workspace",
   ],
   chef: [
     "hr",
@@ -89,6 +99,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_home",
     "runner",
     "staff",
+    "workspace",
   ],
   branch_staff: [
     "hr",
@@ -97,6 +108,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "branch_home",
     "staff",
+    "workspace",
   ],
   accountant: [
     "finance",
@@ -106,6 +118,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "me",
     "notifications",
     "staff",
+    "workspace",
   ],
   central_supply_ops: [
     "branch_home",
@@ -117,6 +130,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "me",
     "notifications",
     "staff",
+    "workspace",
   ],
   central_kitchen_lead: [
     "branch_home",
@@ -128,6 +142,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "me",
     "notifications",
     "staff",
+    "workspace",
   ],
 };
 
@@ -149,4 +164,12 @@ test("owner reaches every module except self-service", () => {
       `owner access mismatch for ${key}`,
     );
   }
+});
+
+test("workspace is only a candidate gate; every valid staff role may be checked by live membership", () => {
+  for (const role of STAFF_ROLES) {
+    assert.equal(canAccess(role, "workspace"), true);
+  }
+  assert.equal(MODULE_ACL.workspace.app, "workspace");
+  assert.equal(MODULE_ACL.workspace.path, "/");
 });

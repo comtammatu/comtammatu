@@ -36,9 +36,12 @@ export type ModuleKey =
   | "employee_leave_approvals"
   | "branch_shift_roster"
   | "branch_shift_attendance"
-  | "notifications";
+  | "notifications"
+  | "workspace";
 
 interface ModuleAcl {
+  /** App host owning this route; omitted means the web app. */
+  app?: "web" | "workspace";
   path: string;
   allowedRoles: readonly StaffRole[];
   label: string;
@@ -219,6 +222,17 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/notifications",
     allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("notifications"),
+  },
+  /**
+   * Separate app host (work.comtammatu.com), not a web route: candidate gate
+   * only. can_access_workspace() and RLS remain the live authority, and web
+   * route resolution never resolves this key.
+   */
+  workspace: {
+    app: "workspace",
+    path: "/",
+    allowedRoles: STAFF_ROLES,
+    label: "Workspace",
   },
 };
 

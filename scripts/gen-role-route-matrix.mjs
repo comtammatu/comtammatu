@@ -97,6 +97,9 @@ function parseModuleAcl(source, staffRoles) {
       i++;
     }
     const entryBody = body.slice(start, i - 1);
+    // Entries owned by another app host (e.g. `app: "workspace"`) have no
+    // web path; the local route matrix must not print them as web routes.
+    if (/app:\s*"workspace"/.test(entryBody)) continue;
     const pathMatch = entryBody.match(/path:\s*"([^"]+)"/);
     const rolesMatch = entryBody.match(/allowedRoles:\s*(\[[\s\S]*?\]|\w+)/);
     const excludedRoleMatch = entryBody.match(

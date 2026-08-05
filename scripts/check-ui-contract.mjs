@@ -1619,11 +1619,39 @@ if (missingLegacyDebtExecutions.length > 0) {
 // route cannot escape the family/nav contract. ACL paths are read live from
 // the SSoT so the gate never drifts from the access map.
 const MODULE_ACL_SOURCE = "packages/shared/src/auth/module-acl.ts";
-const ACL_PATHS = [
-  ...fs
-    .readFileSync(path.join(REPO_ROOT, MODULE_ACL_SOURCE), "utf8")
-    .matchAll(/\bpath:\s*"([^"]+)"/g),
-].map((match) => match[1]);
+// ACL entries for other app hosts (e.g. `app: "workspace"`) own no web
+// routes; the web route-manifest must ignore them so a separate hostname
+// cannot collide with web family paths.
+function parseWebAclPaths(source) {
+  const block = source.match(
+    /export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = \{([\s\S]*?)\n\};/,
+  );
+  if (!block) {
+    throw new Error("module-acl.ts: could not find MODULE_ACL");
+  }
+  const body = block[1];
+  const paths = [];
+  const entryRegex = /(\w+):\s*\{/g;
+  let match;
+  while ((match = entryRegex.exec(body)) !== null) {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let i = start;
+    while (depth > 0 && i < body.length) {
+      if (body[i] === "{") depth++;
+      else if (body[i] === "}") depth--;
+      i++;
+    }
+    const entryBody = body.slice(start, i - 1);
+    if (/app:\s*"workspace"/.test(entryBody)) continue;
+    const pathMatch = entryBody.match(/path:\s*"([^"]+)"/);
+    if (pathMatch) paths.push(pathMatch[1]);
+  }
+  return paths;
+}
+const ACL_PATHS = parseWebAclPaths(
+  fs.readFileSync(path.join(REPO_ROOT, MODULE_ACL_SOURCE), "utf8"),
+);
 
 // Canonical route selectors may resolve to no family when they only redirect.
 const ROUTE_MANIFEST_SELECTOR_ROUTES = new Set();

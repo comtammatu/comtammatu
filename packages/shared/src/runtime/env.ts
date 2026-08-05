@@ -2,3 +2,5 @@
 export function getCronSecret(): string | null {
   return process.env["CRON_SECRET"] || null;
 }
+
+export { resolveTrustedApplicationOrigin } from "./application-origin";
