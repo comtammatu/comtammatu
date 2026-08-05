@@ -67,7 +67,7 @@ import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "@lib/inventory/format";
 import {
   formatStockUnits,
-  resolveStockCompactUnit,
+  resolveStockDisplayUnit,
   stockUnitLabel,
   toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
@@ -440,7 +440,7 @@ export function StockClient({
             header: stockCopy.table.wac,
             className: "min-w-28 text-right",
             render: (item: StockIngredient) => {
-              const costUnit = resolveStockCompactUnit(item.qty, item.units);
+              const costUnit = resolveStockDisplayUnit(item.units);
               const displayWac = toStockDisplayUnitCost(
                 item.monetary?.averageUnitCost,
                 costUnit,
@@ -730,7 +730,7 @@ export function StockClient({
             </div>
             <div>
               {(() => {
-                const costUnit = resolveStockCompactUnit(item.qty, item.units);
+                const costUnit = resolveStockDisplayUnit(item.units);
                 const displayWac = toStockDisplayUnitCost(
                   item.monetary.averageUnitCost,
                   costUnit,

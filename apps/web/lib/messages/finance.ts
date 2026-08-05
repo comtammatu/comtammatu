@@ -203,6 +203,8 @@ export const finance = {
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
+      ingredientCostSourceValuation: "Theo phân bổ định giá",
+      ingredientCostSourceLegacy: "Theo xuất tiêu hao",
       missingCost: "Chưa đủ dữ liệu",
       grossProfit: "Lợi nhuận gộp",
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
@@ -1058,6 +1060,8 @@ export const finance = {
     actualFoodCost: "Giá vốn thực tế đã ghi nhận",
     actualFoodCostHint:
       "Tổng tiêu hao kho đã ghi nhận trong kỳ; khác giá vốn định mức theo món.",
+    foodCostSourceValuation: "Theo phân bổ định giá",
+    foodCostSourceLegacy: "Theo xuất tiêu hao",
     coverage: "Độ phủ giá vốn",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,

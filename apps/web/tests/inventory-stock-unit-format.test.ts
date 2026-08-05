@@ -115,7 +115,10 @@ test("negative on-hand still promotes to whole packs", () => {
   assert.equal(base, "-7500 ml");
 });
 
-test("WAC follows the primary compact pack unit", () => {
+test("compact unit picker selects the largest whole pack (helper contract)", () => {
+  // resolveStockCompactUnit is used for on-hand quantity decomposition, not for
+  // WAC labels — WAC is always shown in the standard/base unit. This test pins
+  // the helper's largest-whole-pack selection behavior for the quantity path.
   // Ledger WAC = 10 VND / ml
   assert.equal(
     toStockDisplayUnitCost(10, resolveStockCompactUnit(3750, cocaUnits)),

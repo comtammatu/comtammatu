@@ -129,6 +129,30 @@ export function MatchExpenseCell({
     setSelectedIds(expenseIds);
   }, [expenseIds]);
 
+  // When the match sheet opens on a clean slate (no saved or user-picked match),
+  // pre-select a single exact-amount expense candidate so the common case — one
+  // bank outflow matching one unpaid expense — is two taps (open → Save) instead
+  // of four. Ambiguous cases (zero or multiple exact matches) leave selection to
+  // the user, who can still change or clear the pre-selection.
+  const previousOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    const justOpened = open && !previousOpenRef.current;
+    previousOpenRef.current = open;
+    if (!justOpened) return;
+    if (!sameIds(selectedIds, expenseIds)) return;
+    const exactMatches = expenseOptions.filter(
+      (expense) =>
+        isExpenseVisibleForBankMatch(expense, eventId, bankTransactionId) &&
+        expense.amount === amount,
+    );
+    const onlyExactMatch = exactMatches.length === 1 ? exactMatches[0] : null;
+    if (onlyExactMatch) {
+      setSelectedIds([onlyExactMatch.id]);
+      if (purpose == null) setPurpose("expense");
+    }
+    // Intentionally minimal deps: this fires only on the open transition.
+  }, [open, expenseOptions]);
+
   if (matchKey == null) {
     return <span className="text-muted-foreground">—</span>;
   }

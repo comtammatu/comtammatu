@@ -159,7 +159,7 @@ export const SELF_ORDER_VI = {
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
-    "Kiểm tra người nhận, số tiền và nội dung trước khi xác nhận.",
+    "MB Bank điền sẵn mã QR. Ứng dụng khác mở rồi quét QR trên màn hình này.",
   bankAppsLoading: "Đang tải danh sách ứng dụng...",
   bankAppsLoadFailed: "Không tải được danh sách ứng dụng.",
   saveVietQr: "Lưu QR",

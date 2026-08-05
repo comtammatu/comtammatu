@@ -32,6 +32,9 @@ interface Props {
   actualFoodCost: number;
   coveredOrderCount: number;
   totalOrderCount: number;
+  /** Truth source the actual food cost was computed from, so the owner can tell
+   * canonical valuation allocations apart from legacy consumption movements. */
+  foodCostSource: "valuation" | "legacy";
 }
 
 const foodCopy = messages.finance.foodCost;
@@ -61,6 +64,7 @@ export function FoodCostClient({
   actualFoodCost,
   coveredOrderCount,
   totalOrderCount,
+  foodCostSource,
 }: Props) {
   const columns: DataTableColumn<FoodCostRow>[] = [
     {
@@ -127,7 +131,17 @@ export function FoodCostClient({
           label={foodCopy.actualFoodCost}
           value={formatVND(actualFoodCost)}
           shortValue={formatCompactVND(actualFoodCost)}
-          hint={foodCopy.actualFoodCostHint}
+          hint={
+            <>
+              <span className="font-medium text-foreground">
+                {foodCostSource === "valuation"
+                  ? foodCopy.foodCostSourceValuation
+                  : foodCopy.foodCostSourceLegacy}
+              </span>
+              {" · "}
+              {foodCopy.actualFoodCostHint}
+            </>
+          }
           tone={
             totalOrderCount > 0 && coveredOrderCount < totalOrderCount
               ? "warning"

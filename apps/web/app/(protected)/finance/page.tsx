@@ -295,10 +295,20 @@ export default async function FinancePage({
                     ? formatCompactVND(cockpit.kpis.ingredientCost)
                     : undefined
                 }
-                hint={financeCopy.basic.kpis.ingredientCostHint(
-                  formatCount(cockpit.kpis.costCoverageOrderCount),
-                  formatCount(cockpit.kpis.orderCount),
-                )}
+                hint={
+                  <>
+                    <span className="font-medium text-foreground">
+                      {cockpit.kpis.foodCostSource === "valuation"
+                        ? financeCopy.basic.kpis.ingredientCostSourceValuation
+                        : financeCopy.basic.kpis.ingredientCostSourceLegacy}
+                    </span>
+                    {" · "}
+                    {financeCopy.basic.kpis.ingredientCostHint(
+                      formatCount(cockpit.kpis.costCoverageOrderCount),
+                      formatCount(cockpit.kpis.orderCount),
+                    )}
+                  </>
+                }
                 tone={cockpit.kpis.costAvailable ? "neutral" : "warning"}
                 href="/finance/food-cost"
               />

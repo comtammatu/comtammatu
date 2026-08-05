@@ -1194,6 +1194,7 @@ export const inventory = {
       operation: "Nghiệp vụ",
       creating: "Đang tạo...",
       createSlip: "Tạo phiếu",
+      createAndConfirm: "Tạo & xác nhận",
       quantityPositive: "Số lượng phải lớn hơn 0.",
       quantityExceedsStock: "Số lượng vượt tồn hiện tại.",
       unitRequired: "Đơn vị không được để trống.",
@@ -1201,7 +1202,9 @@ export const inventory = {
       draftNotes: (name: string) => `Tạo nhanh từ tồn kho: ${name}`,
       createDraftFailed: "Không thể tạo phiếu kho.",
       addLineFailed: "Đã tạo phiếu nhưng chưa thêm được dòng nguyên liệu.",
+      confirmFailed: "Đã tạo phiếu nháp, mở phiếu để xác nhận lại.",
       created: (name: string) => `Đã tạo phiếu có sẵn ${name}.`,
+      confirmed: (name: string) => `Đã ghi nhận xuất ${name}.`,
     },
     movement: {
       grnReceipt: "Nhập phiếu",
@@ -1548,9 +1551,10 @@ export const inventory = {
       receiveSent: (qty: string, unit: string) => `Gửi ${qty} ${unit}`,
       receiveNextLine: "Dòng kế →",
       receiveTapToEnter: "Nhập",
-      receiveConfirmRemaining: (n: number) =>
-        `Xác nhận nhận hàng (còn ${formatCount(n)} dòng)`,
       receiveConfirmAll: "Xác nhận nhận hàng",
+      receiveConfirmAllAsSent: "Nhận đủ theo phiếu",
+      receiveDefaultRemainingHint: (n: number) =>
+        `${formatCount(n)} dòng sẽ nhận bằng số gửi`,
       receiveExceedsSent: "Số nhận vượt quá số gửi.",
       receiveInvalidQty: "Nhập số lượng hợp lệ.",
       receiveFailed: "Không thể xác nhận nhận hàng.",

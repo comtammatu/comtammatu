@@ -57,6 +57,9 @@ test("public QR surfaces use the shared web QR renderer", () => {
     /getVietQrBankAppCatalogUrl[\s\S]*parseVietQrBankApps/,
   );
   assert.match(selfOrderPayment, /apps\.map\(\(app\)/);
+  assert.match(selfOrderPayment, /resolveBankAppPlatform/);
+  assert.match(selfOrderPayment, /platform,/);
+  assert.doesNotMatch(selfOrderPayment, /target="_blank"/);
   assert.doesNotMatch(selfOrderPayment, /AUTOFILL_BANK_APPS/);
   assert.doesNotMatch(selfOrderPayment, /import QRCode from "qrcode"/);
   assert.match(tableQr, /<QrCodeImage[\s\S]*value=\{url\}/);
@@ -84,20 +87,32 @@ test("bank app catalog keeps safe unique apps for testing", () => {
           appId: "icb",
           appName: "VietinBank iPay",
           appLogo: "https://is4-ssl.mzstatic.com/icb-logo",
+          autofill: 1,
+          monthlyInstall: 10,
         },
       ],
     }),
     [
       {
-        id: "mb",
-        name: "MB Bank",
-        logoUrl: "https://play-lh.googleusercontent.com/mb-logo",
-      },
-      { id: "vcb", name: "Vietcombank", logoUrl: null },
-      {
         id: "icb",
         name: "VietinBank iPay",
         logoUrl: "https://is4-ssl.mzstatic.com/icb-logo",
+        autofill: true,
+        monthlyInstall: 10,
+      },
+      {
+        id: "mb",
+        name: "MB Bank",
+        logoUrl: "https://play-lh.googleusercontent.com/mb-logo",
+        autofill: false,
+        monthlyInstall: 0,
+      },
+      {
+        id: "vcb",
+        name: "Vietcombank",
+        logoUrl: null,
+        autofill: false,
+        monthlyInstall: 0,
       },
     ],
   );
@@ -164,25 +179,71 @@ test("Self-Order does not hardcode a MoMo payment or unsupported app target", ()
   assert.doesNotMatch(server, /createSelfOrderMomoPaymentRequest/);
 });
 
-test("autofill bank app links keep the exact VietQR payment facts", () => {
-  for (const appId of ["acb", "bidv", "icb", "ocb"]) {
-    const href = buildVietQrBankAppUrl({
+test("native bank handoffs open apps directly; only MB carries EMV QR", () => {
+  const qrData =
+    "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
+
+  for (const appId of ["acb", "bidv", "icb", "ocb", "vcb"] as const) {
+    const iosHref = buildVietQrBankAppUrl({
       appId,
       accountNo: "0123456789",
       bankCode: "MB",
       amount: 167_000,
       paymentCode: "MATU ABC123",
       accountName: "CONG TY CO PHAN CHEN SU",
+      qrData,
+      platform: "ios",
     });
+    assert.ok(iosHref);
+    assert.match(iosHref, /^[a-z0-9.+-]+:\/\//i);
+    assert.doesNotMatch(iosHref, /dl\.vietqr\.io/);
+    assert.doesNotMatch(iosHref, /qrContent|targetPage/);
 
-    assert.ok(href);
-    const url = new URL(href);
-    assert.equal(url.searchParams.get("app"), appId);
-    assert.equal(url.searchParams.get("ba"), "0123456789@mb");
-    assert.equal(url.searchParams.get("am"), "167000");
-    assert.equal(url.searchParams.get("tn"), "MATU ABC123");
-    assert.equal(url.searchParams.get("bn"), "CONG TY CO PHAN CHEN SU");
+    const androidHref = buildVietQrBankAppUrl({
+      appId,
+      accountNo: "0123456789",
+      bankCode: "MB",
+      amount: 167_000,
+      paymentCode: "MATU ABC123",
+      platform: "android",
+    });
+    assert.ok(androidHref);
+    assert.match(androidHref, /^intent:\/\//);
+    assert.match(androidHref, /#Intent;scheme=/);
+    assert.match(androidHref, /;package=/);
+    assert.doesNotMatch(androidHref, /dl\.vietqr\.io/);
   }
+
+  const bidvAndroid = buildVietQrBankAppUrl({
+    appId: "bidv",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 1_000,
+    paymentCode: "X",
+    platform: "android",
+  });
+  assert.ok(bidvAndroid);
+  assert.match(bidvAndroid, /^intent:\/\/payment#Intent;/);
+  assert.match(bidvAndroid, /scheme=bidv\.smartbanking\.partner/);
+  assert.match(bidvAndroid, /package=com\.vnpay\.bidv/);
+});
+
+test("unknown catalog appIds still fall back to the VietQR aggregator", () => {
+  const href = buildVietQrBankAppUrl({
+    appId: "futurebank",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 167_000,
+    paymentCode: "MATU ABC123",
+    platform: "ios",
+  });
+  assert.ok(href);
+  const url = new URL(href);
+  assert.equal(url.hostname, "dl.vietqr.io");
+  assert.equal(url.searchParams.get("app"), "futurebank");
+  assert.equal(url.searchParams.get("ba"), "0123456789@mb");
+  assert.equal(url.searchParams.get("am"), "167000");
+  assert.equal(url.searchParams.get("tn"), "MATU ABC123");
 });
 
 test("self-order snapshot migration does not read unassigned records", () => {
