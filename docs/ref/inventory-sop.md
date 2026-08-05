@@ -57,6 +57,7 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
   mới nhập sản lượng/nguyên liệu thực tế để hoàn thành.
 - Mẻ không có sản lượng: hủy lệnh, sau đó ghi vật tư hỏng qua Hao hụt.
 - Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh dùng Điều chuyển riêng.
+  Trả nguyên liệu thừa / tồn dư về Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
 - Tiêu hao / hao hụt theo contract hiện hành tại site được cấp.
 
 ## 5. Kiểm kê

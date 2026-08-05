@@ -147,16 +147,20 @@ export function getTransferSourceLocationOptions({
 export function getTransferSelectableIngredients({
   ingredients,
   sourceBranchKind,
+  targetBranchKind = null,
 }: {
   ingredients: TransferIngredientOption[];
   sourceBranchKind: string | null;
+  targetBranchKind?: string | null;
 }): TransferIngredientOption[] {
-  return ingredients.filter(
-    (ingredient) =>
-      ingredient.is_active &&
-      (sourceBranchKind !== "central_kitchen" ||
-        ingredient.itemKind === "finished_good"),
-  );
+  return ingredients.filter((ingredient) => {
+    if (!ingredient.is_active) return false;
+    // Kitchen → branch: finished goods only. Kitchen → Kho Tổng: any stock
+    // (return unused materials / excess). Other sources: any active item.
+    if (sourceBranchKind !== "central_kitchen") return true;
+    if (targetBranchKind === "central_supply") return true;
+    return ingredient.itemKind === "finished_good";
+  });
 }
 
 export function getTransferOutboundDestinationOptions({
@@ -179,7 +183,9 @@ export function getTransferOutboundDestinationOptions({
 
     const branchKind = branch.branch_kind ?? "branch";
     if (sourceBranchKind === "central_kitchen") {
-      if (branchKind !== "branch") return [];
+      if (branchKind !== "branch" && branchKind !== "central_supply") {
+        return [];
+      }
       return [
         {
           value: transferTargetValue(branch.id, "warehouse"),

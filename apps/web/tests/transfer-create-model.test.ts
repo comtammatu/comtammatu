@@ -110,7 +110,7 @@ test("central supply can dispatch to active branch warehouses and Central Kitche
   );
 });
 
-test("Central Kitchen dispatches finished goods from its warehouse to branch warehouses", () => {
+test("Central Kitchen dispatches finished goods to branches and can return stock to Kho Tổng", () => {
   assert.deepEqual(
     getTransferSourceLocationOptions({
       locations: [
@@ -127,7 +127,7 @@ test("Central Kitchen dispatches finished goods from its warehouse to branch war
       sourceBranchKind: "central_kitchen",
       sourceLocationKind: "warehouse",
     }).map((option) => option.value),
-    ["10:warehouse", "40:warehouse"],
+    ["10:warehouse", "20:warehouse", "40:warehouse"],
   );
 
   assert.deepEqual(
@@ -150,6 +150,23 @@ test("Central Kitchen dispatches finished goods from its warehouse to branch war
       sourceBranchKind: "central_kitchen",
     }).map((item) => item.id),
     [101],
+  );
+
+  assert.deepEqual(
+    getTransferSelectableIngredients({
+      ingredients: [
+        ingredient,
+        {
+          id: 101,
+          name: "Suon da nuong",
+          is_active: true,
+          itemKind: "finished_good",
+        },
+      ],
+      sourceBranchKind: "central_kitchen",
+      targetBranchKind: "central_supply",
+    }).map((item) => item.id),
+    [100, 101],
   );
 });
 

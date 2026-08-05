@@ -422,7 +422,7 @@ export async function createStockTransfer(
     return {
       success: false,
       error:
-        "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh hoặc điều chuyển giữa các chi nhánh.",
+        "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho Tổng/Bếp Trung Tâm cấp chi nhánh, Kho Tổng ↔ Bếp Trung Tâm, hoặc điều chuyển giữa các chi nhánh.",
     };
   }
   const { data: canCreate, error: canCreateError } = await supabase.rpc(

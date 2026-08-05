@@ -56,7 +56,7 @@ export function useTransferCreateController({
     () => resolveTransferCreatePolicy({ branches, userBranchId }),
     [branches, userBranchId],
   );
-  const [outboundToBranchId, setOutboundToBranchId] = useState("");
+  const [outboundToBranchId, setOutboundToBranchIdState] = useState("");
   const [outboundSourceLocationId, setOutboundSourceLocationId] = useState("");
   const [draftLines, setDraftLines] = useState<TransferDraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
@@ -96,13 +96,24 @@ export function useTransferCreateController({
       selectedSourceLocation?.kind,
     ],
   );
+  const selectedTarget = parseTransferTargetValue(outboundToBranchId);
+  const selectedTargetBranchKind =
+    selectedTarget == null
+      ? null
+      : (branches.find((branch) => branch.id === selectedTarget.branchId)
+          ?.branch_kind ?? null);
   const activeIngredients = useMemo(
     () =>
       getTransferSelectableIngredients({
         ingredients,
         sourceBranchKind: selectedSourceBranch?.branch_kind ?? null,
+        targetBranchKind: selectedTargetBranchKind,
       }),
-    [ingredients, selectedSourceBranch?.branch_kind],
+    [
+      ingredients,
+      selectedSourceBranch?.branch_kind,
+      selectedTargetBranchKind,
+    ],
   );
   const myBranchName = policy.currentBranch
     ? formatTransferLocationLabel(
@@ -119,9 +130,29 @@ export function useTransferCreateController({
   const listHref = withTransferBranchQuery(basePath, userBranchId);
 
   function resetForm() {
-    setOutboundToBranchId("");
+    setOutboundToBranchIdState("");
     setOutboundSourceLocationId("");
     setDraftLines([]);
+    setPickerIngredientId("");
+  }
+
+  function setOutboundToBranchId(value: string) {
+    const nextTarget = parseTransferTargetValue(value);
+    const nextTargetBranchKind =
+      nextTarget == null
+        ? null
+        : (branches.find((branch) => branch.id === nextTarget.branchId)
+            ?.branch_kind ?? null);
+    const nextSelectable = getTransferSelectableIngredients({
+      ingredients,
+      sourceBranchKind: selectedSourceBranch?.branch_kind ?? null,
+      targetBranchKind: nextTargetBranchKind,
+    });
+    const selectableIds = new Set(nextSelectable.map((item) => item.id));
+    setOutboundToBranchIdState(value);
+    setDraftLines((current) =>
+      current.filter((line) => selectableIds.has(line.ingredientId)),
+    );
     setPickerIngredientId("");
   }
 
@@ -158,11 +189,14 @@ export function useTransferCreateController({
       sourceLocationKind: nextSourceLocation.kind,
     });
     setOutboundSourceLocationId(value);
-    setOutboundToBranchId((current) =>
-      nextDestinationOptions.some((option) => option.value === current)
-        ? current
-        : "",
-    );
+    const nextTargetValue = nextDestinationOptions.some(
+      (option) => option.value === outboundToBranchId,
+    )
+      ? outboundToBranchId
+      : "";
+    if (nextTargetValue !== outboundToBranchId) {
+      setOutboundToBranchId(nextTargetValue);
+    }
     setDraftLines((current) =>
       current.map((line) =>
         clampTransferLineForSource({

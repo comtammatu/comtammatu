@@ -202,10 +202,12 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Sản xuất:** Chọn công thức đang dùng và sản lượng -> tạo lệnh snapshot tại Bếp TT -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
-    không có same-branch Kho↔Bếp. Quyền tạo/giao/nhận tiếp tục theo role matrix.
-    Hub Giao nhận hiển thị một YCH thành một dòng với lane Kho Tổng/Bếp TT;
-    DC liên kết không thành dòng độc lập. Bếp TT có CTA `Yêu cầu Kho Tổng` khi
-    đúng site và chỉ chọn nguyên liệu nguồn Kho Tổng.
+    không có same-branch Kho↔Bếp. Kho Tổng → Bếp TT / chi nhánh; Bếp TT →
+    chi nhánh hoặc trả về Kho Tổng; chi nhánh ↔ chi nhánh / Bếp TT. Quyền
+    tạo/giao/nhận tiếp tục theo role matrix. Hub Giao nhận hiển thị một YCH
+    thành một dòng với lane Kho Tổng/Bếp TT; DC liên kết không thành dòng độc
+    lập. Bếp TT có CTA `Yêu cầu Kho Tổng` khi đúng site và chỉ chọn nguyên
+    liệu nguồn Kho Tổng.
   - **Xuất nội bộ (Issue):** Mở phiếu hủy hỏng hoặc xuất khác tại chi nhánh -> thêm từng nguyên liệu với đơn vị, số lượng và lý do -> rà soát phiếu nháp -> xác nhận để ghi giảm tồn hoặc hủy trước khi chốt.
   - **Hao hụt thủ công (Waste):** Chọn đúng vị trí kho của chi nhánh -> thêm từng nguyên liệu trong một dòng chạm riêng -> nhập số lượng không vượt tồn, lý do và ảnh khi được yêu cầu -> xem cảnh báo cap theo ca/ngày -> tạo phiếu để ghi giảm hoặc chờ quản lý duyệt theo tier. WAC, đơn vị và bằng chứng được server kiểm tra lại khi submit.
   - **Hàng NCC bị từ chối:** Ghi trực tiếp trên dòng GRN bằng số lượng từ chối,
