@@ -54,6 +54,7 @@ const ROUTE_FAMILIES = [
   ["runner", (file) => file.includes("/(protected)/br/[branchId]/runner/")],
   ["employee-runtime", (file) => file.includes("/lib/staff-runtime/")],
   ["branch-adapters", (file) => file.includes("/lib/branch-operator/")],
+  ["hr-runtime", (file) => file.includes("/lib/hr/")],
   ["finance", (file) => file.includes("/(protected)/finance/")],
   ["hr", (file) => file.includes("/(protected)/hr/")],
   ["inventory", (file) => file.includes("/(protected)/inventory/")],

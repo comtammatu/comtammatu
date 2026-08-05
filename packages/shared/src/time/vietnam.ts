@@ -259,6 +259,31 @@ export function formatVNDate(
   });
 }
 
+export function formatVNWeekdayShort(
+  value: string | number | Date | null | undefined,
+  dash = "—",
+): string {
+  const date = toDate(value);
+  if (!date) return dash;
+  return date.toLocaleDateString(VN_LOCALE, {
+    timeZone: VN_TIME_ZONE,
+    weekday: "short",
+  });
+}
+
+export function formatVNDayMonth(
+  value: string | number | Date | null | undefined,
+  dash = "—",
+): string {
+  const date = toDate(value);
+  if (!date) return dash;
+  return date.toLocaleDateString(VN_LOCALE, {
+    timeZone: VN_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 export function formatVNLongDate(
   value: string | number | Date | null | undefined,
   dash = "—",

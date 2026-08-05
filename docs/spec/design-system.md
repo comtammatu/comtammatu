@@ -125,6 +125,19 @@ Má Tư components and verified in the runtime. Root `DESIGN.md` is forbidden
 (guarded); only `.stitch/DESIGN.md` is allowed. Do not upload secrets, customer
 data, employee data, or production records.
 
+Mirror-sync contract: the runtime `packages/ui/src/styles/globals.css` is the
+sole source of truth for token values; `.stitch/DESIGN.md` must mirror it and
+never lead. The mirror frontmatter stays in lockstep with the runtime:
+`colors.primary` mirrors the `:root` `--primary`, `colors.night-primary`
+mirrors the `.dark` `--primary`, and the heading `fontFamily` entries mirror
+the resolved `@theme inline` `--font-heading` (`var(--font-geist-sans)` →
+Geist). The `stitch-mirror-runtime-token-sync` guard derives the expected
+values from `globals.css` at check time and fails closed on any mismatch or
+missing mirror field — fix the mirror to the runtime value, never the reverse
+(regressions invariant RUNTIME-TOKEN-LAYERED-OVERRIDE). Any change to
+`--primary` or `--font-heading` in `globals.css` must update `.stitch/DESIGN.md`
+in the same commit; the guard enforces this.
+
 Lookup before composition:
 
 ```bash
@@ -1156,6 +1169,16 @@ and `scripts/ui-contract-scope.mjs`. Run `corepack pnpm audit:ui-components`
 for current counts and findings. This contract does not preserve dated audit
 results, guard inventories, exception history, or open-debt snapshots; use the
 scripts, current source, task tracker, and git history.
+
+#### Report-only onboarding
+
+A new runtime root joins the contract report-only first: the audit
+(`corepack pnpm audit:ui-components`) measures and classifies it under a route
+family while the blocking guards do not yet enforce it. The root is promoted
+into the enforced scope of `UI_RUNTIME_SOURCE_ROOTS` in
+`scripts/ui-contract-scope.mjs` only after its measured debt is burned down to
+zero. Report-only scope never gains allowlist entries or budget increases — debt
+is fixed in source, never grandfathered.
 
 #### Measured exception semantics
 

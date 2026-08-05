@@ -15,7 +15,14 @@ import {
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
 import { addVNDateDays } from "@comtammatu/shared/time";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Select,
   SelectContent,
@@ -25,12 +32,14 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { copyRosterWeek, reconcileShiftAssignmentsWeek } from "./actions";
 import {
   rosterAssignmentKey,
   type RosterAssignment,
+  type RosterEmployee,
   type RosterWeekData,
 } from "./roster-model";
 import {
@@ -217,6 +226,75 @@ export function RosterWeekClient({
     );
   }
 
+  function renderScheduleButton(employee: RosterEmployee, className?: string) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn("h-7 px-2 text-xs", className)}
+        onClick={() => setScheduleEmployeeId(employee.employeeId)}
+        disabled={isPending || data.shifts.length === 0}
+      >
+        <IconRepeat className="size-3.5" />
+        {scheduleLabel(employee.employeeId)}
+      </Button>
+    );
+  }
+
+  function renderShiftSelect(employee: RosterEmployee, workDate: string) {
+    const key = rosterAssignmentKey(employee.employeeId, workDate);
+    const selected = assignmentMap.get(key)?.toString() ?? EMPTY_SHIFT_VALUE;
+    return (
+      <Select
+        value={selected}
+        onValueChange={(value) =>
+          handleCellChange(employee.employeeId, workDate, value)
+        }
+        disabled={isPending}
+      >
+        <SelectTrigger className="w-full min-w-32">
+          <SelectValue placeholder={copy.emptyShift} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={EMPTY_SHIFT_VALUE}>{copy.emptyShift}</SelectItem>
+          {data.shifts.map((shift) => (
+            <SelectItem key={shift.id} value={String(shift.id)}>
+              {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  const rosterColumns: DataTableColumn<RosterEmployee>[] = [
+    {
+      key: "employee",
+      header: copy.columnEmployee,
+      className: "sticky left-0 z-10 min-w-48 bg-card",
+      render: (employee) => (
+        <>
+          <div className="font-medium">{employee.fullName}</div>
+          <div className="text-muted-foreground text-xs">
+            {[employee.employeeCode, employee.positionLabel]
+              .filter(Boolean)
+              .join(" · ") || "—"}
+          </div>
+          {renderScheduleButton(employee, "mt-1 -ml-2")}
+        </>
+      ),
+    },
+    ...weekDates.map(
+      (date): DataTableColumn<RosterEmployee> => ({
+        key: date,
+        header: formatRosterDayHeader(date),
+        className: "min-w-32",
+        render: (employee) => renderShiftSelect(employee, date),
+      }),
+    ),
+  ];
+
   if (!canAssign) {
     return <AppEmptyState mode="no-access" />;
   }
@@ -236,7 +314,7 @@ export function RosterWeekClient({
             onValueChange={handleSiteChange}
             disabled={isPending}
           >
-            <SelectTrigger className="w-full min-w-[12rem] sm:w-auto">
+            <SelectTrigger className="w-full min-w-48 sm:w-auto">
               <SelectValue placeholder={copy.siteFilterLabel} />
             </SelectTrigger>
             <SelectContent>
@@ -318,92 +396,42 @@ export function RosterWeekClient({
             description={copy.emptyEmployeesDescription}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[48rem] border-collapse text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="sticky left-0 z-10 bg-background px-3 py-2 text-left font-medium">
-                    {copy.columnEmployee}
-                  </th>
-                  {weekDates.map((date) => (
-                    <th
-                      key={date}
-                      className="min-w-[8.5rem] px-2 py-2 text-left font-medium"
-                    >
-                      {formatRosterDayHeader(date)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.employees.map((employee) => (
-                  <tr key={employee.employeeId} className="border-b align-top">
-                    <td className="sticky left-0 z-10 bg-background px-3 py-2">
-                      <div className="font-medium">{employee.fullName}</div>
-                      <div className="text-muted-foreground text-xs">
+          <DataTable
+            columns={rosterColumns}
+            data={data.employees}
+            getRowKey={(employee) => employee.employeeId}
+            mobileCardRender={(employee) => (
+              <Item variant="outline" className="items-start">
+                <ItemContent className="min-w-0 gap-3">
+                  <div className="flex w-full items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <ItemTitle size="heading" className="line-clamp-none">
+                        {employee.fullName}
+                      </ItemTitle>
+                      <ItemDescription>
                         {[employee.employeeCode, employee.positionLabel]
                           .filter(Boolean)
                           .join(" · ") || "—"}
+                      </ItemDescription>
+                    </div>
+                    {renderScheduleButton(employee, "shrink-0")}
+                  </div>
+                  <div className="flex w-full flex-col gap-2">
+                    {weekDates.map((date) => (
+                      <div key={date} className="flex items-center gap-2">
+                        <span className="text-muted-foreground w-24 shrink-0 text-xs">
+                          {formatRosterDayHeader(date)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          {renderShiftSelect(employee, date)}
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mt-1 -ml-2 h-7 px-2 text-xs"
-                        onClick={() =>
-                          setScheduleEmployeeId(employee.employeeId)
-                        }
-                        disabled={isPending || data.shifts.length === 0}
-                      >
-                        <IconRepeat className="size-3.5" />
-                        {scheduleLabel(employee.employeeId)}
-                      </Button>
-                    </td>
-                    {weekDates.map((date) => {
-                      const key = rosterAssignmentKey(
-                        employee.employeeId,
-                        date,
-                      );
-                      const selected =
-                        assignmentMap.get(key)?.toString() ?? EMPTY_SHIFT_VALUE;
-                      return (
-                        <td key={key} className="px-2 py-2">
-                          <Select
-                            value={selected}
-                            onValueChange={(value) =>
-                              handleCellChange(employee.employeeId, date, value)
-                            }
-                            disabled={isPending}
-                          >
-                            <SelectTrigger className="w-full min-w-[8rem]">
-                              <SelectValue placeholder={copy.emptyShift} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={EMPTY_SHIFT_VALUE}>
-                                {copy.emptyShift}
-                              </SelectItem>
-                              {data.shifts.map((shift) => (
-                                <SelectItem
-                                  key={shift.id}
-                                  value={String(shift.id)}
-                                >
-                                  {formatShiftLabel(
-                                    shift.name,
-                                    shift.startTime,
-                                    shift.endTime,
-                                  )}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                  </div>
+                </ItemContent>
+              </Item>
+            )}
+          />
         )}
       </AppSection>
 

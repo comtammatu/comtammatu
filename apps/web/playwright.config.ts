@@ -66,15 +66,33 @@ export default defineConfig({
       testIgnore: [/visual\//, /accessibility\//],
     },
     // Visual regression — opt-in. Run with:
-    //   pnpm test:e2e --project=visual --update-snapshots   (bootstrap)
-    //   pnpm test:e2e --project=visual                      (verify)
-    // Commit the resulting PNGs under apps/web/e2e/visual/__screenshots__/.
+    //   pnpm test:e2e:visual -- --update-snapshots   (bootstrap, local only)
+    //   pnpm test:e2e:visual                          (verify)
+    // Committed baselines must come from the Linux CI bootstrap pass (see the
+    // header of e2e/visual/theme-baseline.spec.ts), not local macOS captures.
     {
       name: "visual",
       testMatch: /visual\/.*\.spec\.ts/,
+      // Visual baselines live in one stable, reviewable directory.
+      // Snapshot names always carry a `.png` extension, so Playwright adds no
+      // platform suffix — committed Linux baselines and local comparison runs
+      // resolve to the same path.
+      snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
+      expect: {
+        toHaveScreenshot: {
+          // Deterministic visual comparison: freeze CSS animations and
+          // tolerate only sub-pixel anti-aliasing noise.
+          maxDiffPixelRatio: 0.01,
+          animations: "disabled",
+        },
+      },
       use: {
         ...devices["Desktop Chrome"],
-        storageState: E2E_AUTH_STORAGE,
+        // Cashier lacks KDS/Inventory ACL for the covered routes.
+        storageState: E2E_AUTH_STORAGE_OWNER,
+        // Pin the browser timezone: the cookie-less theme fallback reads the
+        // local hour, so an unpinned runner clock made night captures flaky.
+        timezoneId: "Asia/Ho_Chi_Minh",
       },
       dependencies: ["setup"],
     },

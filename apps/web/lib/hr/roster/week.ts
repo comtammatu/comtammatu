@@ -1,9 +1,10 @@
 import {
   addVNDateDays,
+  formatVNDate,
+  formatVNDayMonth,
+  formatVNWeekdayShort,
   getVNDateString,
   parseISODateParts,
-  VN_LOCALE,
-  VN_TIME_ZONE,
 } from "@comtammatu/shared/time";
 
 export function getVNWeekStartMonday(dateStr?: string): string {
@@ -25,15 +26,8 @@ export function formatRosterDayHeader(dateStr: string): string {
   if (!parts) return dateStr;
 
   const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 5, 0, 0));
-  const weekday = date.toLocaleDateString(VN_LOCALE, {
-    timeZone: VN_TIME_ZONE,
-    weekday: "short",
-  });
-  const dayMonth = date.toLocaleDateString(VN_LOCALE, {
-    timeZone: VN_TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-  });
+  const weekday = formatVNWeekdayShort(date);
+  const dayMonth = formatVNDayMonth(date);
   return `${weekday} ${dayMonth}`;
 }
 
@@ -49,16 +43,7 @@ export function formatRosterWeekRange(weekStart: string): string {
   const endDate = new Date(
     Date.UTC(endParts.year, endParts.month - 1, endParts.day, 5, 0, 0),
   );
-  const startLabel = startDate.toLocaleDateString(VN_LOCALE, {
-    timeZone: VN_TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-  });
-  const endLabel = endDate.toLocaleDateString(VN_LOCALE, {
-    timeZone: VN_TIME_ZONE,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const startLabel = formatVNDayMonth(startDate);
+  const endLabel = formatVNDate(endDate);
   return `${startLabel} – ${endLabel}`;
 }

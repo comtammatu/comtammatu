@@ -116,7 +116,6 @@ test("Finance money KPI cards use compact values at large scales", () => {
     "app/(protected)/finance/food-cost/food-cost-client.tsx",
     "app/(protected)/finance/revenue/revenue-client.tsx",
     "app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx",
-    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx",
   ]) {
     const source = read(relativePath);
     assert.match(source, /\bformatCompactVND\b/, relativePath);

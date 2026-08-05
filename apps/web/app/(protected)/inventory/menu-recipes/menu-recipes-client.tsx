@@ -164,7 +164,7 @@ export function MenuRecipesClient({
     {
       key: "ingredients",
       header: "Định mức",
-      className: "min-w-[200px]",
+      className: "min-w-48",
       render: (menuRecipe) => (
         <div className="flex flex-col gap-1 text-sm">
           {menuRecipe.items.length === 0 ? (

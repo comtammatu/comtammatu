@@ -11,8 +11,8 @@ import {
 
 // global-error.tsx is the named inline-style exception (design-system.md
 // § Token Contract). It renders its own bare <html><body> outside ThemeProvider,
-// so it resolves the `matu-theme` cookie itself and picks warm Concept-01
-// values for either mode (never neutral greys).
+// so it resolves the `matu-theme` cookie itself and picks warm Má Tư
+// Design System values for either mode (never neutral greys).
 function readMode(): MatuThemeMode {
   if (typeof document === "undefined") return "light";
   const match = document.cookie.match(

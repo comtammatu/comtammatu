@@ -29,6 +29,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "owner-page-header-no-module-eyebrow-module-doc",
       "readme-design-system-contract-pointer",
       "readme-ui-runtime-current",
+      "stitch-mirror-runtime-token-sync",
       "theme-baseline-runtime-current",
     ],
   },
@@ -37,6 +38,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
     reason:
       "Preventive source-pattern checks are blocking in CI but do not represent a useful route-family risk count.",
     guardIds: [
+      "arbitrary-font-size",
       "focus-ring-contrast",
       "input-control-size-api",
       "input-legacy-size-prop",

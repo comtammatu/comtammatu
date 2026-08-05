@@ -49,7 +49,7 @@ test("inventory monetary reads fail closed at the current runtime boundary", () 
   );
   assert.match(
     financeCockpit,
-    /canViewInventoryValuation: canReadRequestedValuation/,
+    /canViewInventoryValuation\s*=\s*canReadRequestedValuation && includesBranchData/,
   );
   assert.match(financePage, /cockpit\.canViewInventoryValuation \?/);
 });
