@@ -75,7 +75,14 @@ supabase/.branches/
 .agents/logs/
 .agents/tmp/
 .context/
-.zcode/
+.zcode/.cache/
+.zcode/cache/
+.zcode/logs/
+.zcode/tmp/
+.qoder/.cache/
+.qoder/cache/
+.qoder/logs/
+.qoder/tmp/
 AGENTS.local.md
 CLAUDE.local.md
 .headroom/
