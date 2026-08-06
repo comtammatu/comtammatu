@@ -32,7 +32,7 @@ const closeBranchDaySchema = z.object({
 
 export type CloseBranchDayInput = z.infer<typeof closeBranchDaySchema>;
 
-type CloseBranchDayRpcResult = {
+export interface CloseBranchDayRpcResult {
   branch_day_state_id: number;
   summary: {
     revenue: number;
@@ -43,22 +43,7 @@ type CloseBranchDayRpcResult = {
     closed_session_count: number;
     open_session_count: number;
   };
-};
-
-type CloseBranchDayRpcClient = {
-  rpc: (
-    fn: "close_branch_day",
-    args: {
-      p_branch_id: number;
-      p_business_date: string;
-      p_cash_recon: unknown;
-      p_note: string | null;
-    },
-  ) => PromiseLike<{
-    data: CloseBranchDayRpcResult | null;
-    error: { code?: string; message?: string } | null;
-  }>;
-};
+}
 
 export const closeBranchDay = withAction(
   {
@@ -70,9 +55,7 @@ export const closeBranchDay = withAction(
   async ({ branchId, businessDate, cashRecon, note }, { supabase }): Promise<
     ActionResult<CloseBranchDayRpcResult>
   > => {
-    const { data, error } = await (
-      supabase as unknown as CloseBranchDayRpcClient
-    ).rpc("close_branch_day", {
+    const { data, error } = await supabase.rpc("close_branch_day", {
       p_branch_id: branchId,
       p_business_date: businessDate,
       // Cash reconciliation is a client-provided snapshot of counted totals
@@ -85,7 +68,7 @@ export const closeBranchDay = withAction(
         closing_cash: row.closingCash,
         cash_difference: row.cashDifference,
       })),
-      p_note: note ?? null,
+      p_note: note ?? "",
     });
 
     if (error) {
@@ -115,6 +98,6 @@ export const closeBranchDay = withAction(
     revalidatePath(`/br/${String(branchId)}/dashboard`);
     revalidatePath(`/br/${String(branchId)}/pos-sessions`);
 
-    return { success: true, data: data ?? undefined };
+    return { success: true, data: (data ?? undefined) as CloseBranchDayRpcResult | undefined };
   },
 );

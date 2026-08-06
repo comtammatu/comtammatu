@@ -43,20 +43,14 @@ export interface CloseDayData {
   loadFailed: boolean;
 }
 
-type SummaryRpcClient = {
-  rpc: (
-    fn: "get_branch_day_summary",
-    args: { p_branch_id: number; p_business_date: string },
-  ) => PromiseLike<{
-    data: BranchDaySummary | null;
-    error: { message?: string } | null;
-  }>;
-};
-
 /**
  * Loads the branch-day summary (read RPC) plus today's POS sessions for the
  * cash-reconciliation step. The summary RPC gates on settings:branch OR
  * finance:view; the route already restricts to branch_manager/owner.
+ *
+ * The RPC returns `jsonb`, so its generated return type is `Json`; we narrow
+ * it to {@link BranchDaySummary} after a shape check rather than asserting
+ * blindly.
  */
 export async function fetchCloseDayData(
   supabase: ServerClient,
@@ -66,7 +60,7 @@ export async function fetchCloseDayData(
 ): Promise<CloseDayData> {
   const businessDate = getVNDateString();
   const [summaryRes, sessionsRes] = await Promise.all([
-    (supabase as unknown as SummaryRpcClient).rpc("get_branch_day_summary", {
+    supabase.rpc("get_branch_day_summary", {
       p_branch_id: branchId,
       p_business_date: businessDate,
     }),
@@ -82,7 +76,9 @@ export async function fetchCloseDayData(
   ]);
 
   const loadFailed = !!summaryRes.error;
-  const summary = summaryRes.data ?? null;
+  const summary = isBranchDaySummary(summaryRes.data)
+    ? summaryRes.data
+    : null;
 
   // Resolve denormalized display fields (terminal name, opener name) without
   // N+1 — fetch the distinct ids then bulk-resolve.
@@ -146,4 +142,21 @@ export async function fetchCloseDayData(
     businessDate,
     loadFailed,
   };
+}
+
+/**
+ * Narrows the `jsonb` return of `get_branch_day_summary` to the typed shape.
+ * Treats any structural mismatch as "no summary" (fail-soft) rather than
+ * asserting, so a schema drift degrades the close-day screen instead of
+ * crashing it.
+ */
+function isBranchDaySummary(value: unknown): value is BranchDaySummary {
+  if (typeof value !== "object" || value == null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v["business_date"] === "string" &&
+    typeof v["revenue"] === "number" &&
+    typeof v["paid_orders"] === "number" &&
+    typeof v["is_closed"] === "boolean"
+  );
 }
