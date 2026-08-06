@@ -100,7 +100,6 @@ export type RecordedConsumptionRow = {
 const ISSUE_TYPES = [
   { value: "consumption", label: INVENTORY_VI.issueTypeConsumption },
   { value: "writeoff", label: INVENTORY_VI.issueTypeWriteoff },
-  { value: "other", label: INVENTORY_VI.issueTypeOther },
 ] as const;
 
 function issueTypeLabel(type: string, branchKind: string | null): string {
@@ -120,7 +119,6 @@ const TYPE_FILTER_OPTIONS = [
   { value: "all", label: INVENTORY_VI.issueTypeFilterAll },
   { value: "consumption", label: INVENTORY_VI.issueTypeConsumption },
   { value: "writeoff", label: INVENTORY_VI.issueTypeWriteoff },
-  { value: "other", label: INVENTORY_VI.issueTypeOther },
 ];
 
 const labelBranchExportSuffix = " xuất";
@@ -130,7 +128,7 @@ const createIssueSchema = z.object({
   branchId: z
     .string()
     .min(1, { error: INVENTORY_VI.issueCreateBranchRequired }),
-  issueType: z.enum(["consumption", "writeoff", "other"]),
+  issueType: z.enum(["consumption"]),
   notes: z.string().trim().optional(),
 });
 
@@ -170,8 +168,9 @@ export function IssuesClient({
   recordedStartDate: initialRecordedStartDate,
   listBasePath = "/inventory/consumption",
   detailBasePath = listBasePath,
-  allowedIssueTypes = ["consumption", "writeoff", "other"],
+  allowedIssueTypes = ["consumption", "writeoff"],
   defaultIssueType = "consumption",
+  createHref,
   pageTitle,
   embedded = false,
 }: {
@@ -189,6 +188,7 @@ export function IssuesClient({
   detailBasePath?: string;
   allowedIssueTypes?: string[];
   defaultIssueType?: string;
+  createHref?: string;
   pageTitle?: string;
   embedded?: boolean;
 }) {
@@ -221,7 +221,49 @@ export function IssuesClient({
     [defaultBranchId, defaultIssueType],
   );
 
-  const issueDetailHref = (item: IssueRow) => `${detailBasePath}/${item.id}`;
+  const allowedCreateIssueTypes = ISSUE_TYPES.filter(
+    (option) =>
+      allowedIssueTypes.includes(option.value) &&
+      option.value !== "writeoff" &&
+      (!allowedIssueTypes.includes("consumption") ||
+        allowedIssueTypes.length === 1 ||
+        option.value === "consumption"),
+  );
+  const isWriteoffScope =
+    allowedIssueTypes.length === 1 && allowedIssueTypes[0] === "writeoff";
+  const isHubScope =
+    allowedIssueTypes.includes("consumption") &&
+    allowedIssueTypes.includes("writeoff");
+  const showsRecordedConsumption =
+    showRecordedConsumptions && allowedIssueTypes.includes("consumption");
+  const showsWasteTab = isHubScope || isWriteoffScope;
+  const consumptionIssues = useMemo(
+    () => issues.filter((issue) => issue.type === "consumption"),
+    [issues],
+  );
+  const writeoffIssues = useMemo(
+    () => issues.filter((issue) => issue.type === "writeoff"),
+    [issues],
+  );
+  const activeView = searchParams.get("view");
+  const resolvedView =
+    activeView === "waste" && showsWasteTab
+      ? "waste"
+      : activeView === "manual"
+        ? "manual"
+        : activeView === "recorded" && showsRecordedConsumption
+          ? "recorded"
+          : showsRecordedConsumption
+            ? "recorded"
+            : showsWasteTab && isWriteoffScope
+              ? "waste"
+              : "manual";
+
+
+  const issueDetailHref = (item: IssueRow) =>
+    item.type === "writeoff"
+      ? `/inventory/issues/${item.id}`
+      : `${detailBasePath}/${item.id}`;
 
   const getIssueRowActions = (item: IssueRow): RowActionItem[] => [
     {
@@ -235,49 +277,13 @@ export function IssuesClient({
   const openIssueDetail = (item: IssueRow) => {
     router.push(issueDetailHref(item));
   };
-  const allowedCreateIssueTypes = ISSUE_TYPES.filter(
-    (option) =>
-      allowedIssueTypes.includes(option.value) &&
-      option.value !== "writeoff" &&
-      (!allowedIssueTypes.includes("consumption") ||
-        allowedIssueTypes.length === 1 ||
-        option.value === "consumption"),
-  );
+
   const allowedTypeFilterOptions = TYPE_FILTER_OPTIONS.filter(
     (option) =>
       option.value === "all" || allowedIssueTypes.includes(option.value),
   );
-  const isConsumptionScope =
-    allowedIssueTypes.length === 1 && allowedIssueTypes[0] === "consumption";
-  const isCombinedConsumptionScope =
-    allowedIssueTypes.length > 1 && allowedIssueTypes.includes("consumption");
-  const showsRecordedConsumption =
-    showRecordedConsumptions && allowedIssueTypes.includes("consumption");
-  const issueListTitle = isCombinedConsumptionScope
-    ? INVENTORY_VI.combinedConsumptionSlipsTitle
-    : isConsumptionScope
-      ? INVENTORY_VI.manualConsumptionSlipsTitle
-      : INVENTORY_VI.issueSlipsTitle;
-  const createIssueActionLabel = isCombinedConsumptionScope
-    ? INVENTORY_VI.combinedConsumptionCreateAction
-    : isConsumptionScope
-      ? INVENTORY_VI.manualConsumptionCreateAction
-      : INVENTORY_VI.issueCreateAction;
-  const createIssueDialogDescription = isCombinedConsumptionScope
-    ? INVENTORY_VI.combinedConsumptionCreateDescription
-    : isConsumptionScope
-      ? INVENTORY_VI.manualConsumptionCreateDescription
-      : INVENTORY_VI.issueCreateDialogDescription;
-  const issueEmptyNoDataTitle = isCombinedConsumptionScope
-    ? INVENTORY_VI.combinedConsumptionEmptyTitle
-    : isConsumptionScope
-      ? INVENTORY_VI.manualConsumptionEmptyTitle
-      : INVENTORY_VI.issueEmptyNoData;
-  const issueEmptyDescription = isCombinedConsumptionScope
-    ? INVENTORY_VI.combinedConsumptionEmptyDescription
-    : isConsumptionScope
-      ? INVENTORY_VI.manualConsumptionEmptyDescription
-      : INVENTORY_VI.issueEmptyDescription;
+  // Hub tabs already partition by type; hide the redundant type filter.
+  const showTypeFilter = !isHubScope && allowedTypeFilterOptions.length > 2;
   // Capability-gated only — the CSV builds client-side and downloads fine
   // on phones; hiding it by breakpoint forced warehouse staff back to a
   // desktop just to press one button.
@@ -309,12 +315,12 @@ export function IssuesClient({
     initialRecordedStartDate,
   ]);
 
-  const filtered = useMemo(() => {
-    let result = issues;
+  const filteredConsumption = useMemo(() => {
+    let result = consumptionIssues;
     if (activeStatus !== "all") {
       result = result.filter((i) => i.status === activeStatus);
     }
-    if (activeType !== "all") {
+    if (showTypeFilter && activeType !== "all") {
       result = result.filter((i) => i.type === activeType);
     }
     const q = search.trim();
@@ -322,7 +328,22 @@ export function IssuesClient({
       result = result.filter((i) => matchesSearch([i.code, i.branchName], q));
     }
     return result;
-  }, [activeStatus, activeType, search, issues]);
+  }, [activeStatus, activeType, search, consumptionIssues, showTypeFilter]);
+
+  const filteredWriteoff = useMemo(() => {
+    let result = writeoffIssues;
+    if (activeStatus !== "all") {
+      result = result.filter((i) => i.status === activeStatus);
+    }
+    const q = search.trim();
+    if (q) {
+      result = result.filter((i) => matchesSearch([i.code, i.branchName], q));
+    }
+    return result;
+  }, [activeStatus, search, writeoffIssues]);
+
+  const filtered =
+    resolvedView === "waste" ? filteredWriteoff : filteredConsumption;
 
   async function handleCreate(values: CreateIssueValues) {
     const res = await createStockIssueDraft({
@@ -340,7 +361,9 @@ export function IssuesClient({
   }
 
   const hasActiveFilters =
-    activeStatus !== "all" || activeType !== "all" || search.trim().length > 0;
+    activeStatus !== "all" ||
+    (showTypeFilter && activeType !== "all") ||
+    search.trim().length > 0;
   const visibleRecordedConsumptions = useMemo(() => {
     const q = recordedSearch.trim();
     if (!q) return recordedConsumptions;
@@ -408,9 +431,10 @@ export function IssuesClient({
       .replaceAll(":", "-")
       .replace("T", "-");
 
-    const filePrefix = isConsumptionScope
-      ? "phieu-tieu-hao-thu-cong"
-      : "wo-pxk-khac";
+    const filePrefix =
+      resolvedView === "waste" || isWriteoffScope
+        ? "phieu-hao-hut"
+        : "phieu-tieu-hao-thu-cong";
 
     downloadCsv(toUtf8Base64(csv), `${filePrefix}-${stamp}.csv`);
     toast.success(INVENTORY_VI.issueExportSuccess(filtered.length));
@@ -492,18 +516,30 @@ export function IssuesClient({
     router.push(buildListHref(listBasePath, next));
   }
 
-  const issueActions = (
-    <>
+  const resolvedCreateHref =
+    createHref && defaultBranchId
+      ? `${createHref}?branchId=${defaultBranchId}`
+      : createHref;
+
+  const issueActions =
+    resolvedView === "waste" && resolvedCreateHref ? (
+      <Button
+        size={embedded ? controlSize : "lg"}
+        render={<Link href={resolvedCreateHref} />}
+      >
+        <IconPlus className="size-4" />
+        {INVENTORY_VI.createWasteTitle}
+      </Button>
+    ) : resolvedView === "manual" && allowedCreateIssueTypes.length > 0 ? (
       <Button
         type="button"
         size={embedded ? controlSize : "lg"}
         onClick={() => setCreateOpen(true)}
       >
         <IconPlus className="size-4" />
-        {createIssueActionLabel}
+        {INVENTORY_VI.manualConsumptionCreateAction}
       </Button>
-    </>
-  );
+    ) : null;
 
   const filterBar = (
     <AppToolbar
@@ -549,25 +585,27 @@ export function IssuesClient({
             </SelectContent>
           </Select>
 
-          <Select value={activeType} onValueChange={setActiveType}>
-            <SelectTrigger
-              size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
-            >
-              <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
-            </SelectTrigger>
-            <SelectContent>
-              {allowedTypeFilterOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {showTypeFilter ? (
+            <Select value={activeType} onValueChange={setActiveType}>
+              <SelectTrigger
+                size={controlSize}
+                className={
+                  controlSize === "touch"
+                    ? "w-full"
+                    : inventoryListFilterSelectClassName
+                }
+              >
+                <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedTypeFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
         </>
       }
       actions={embedded ? issueActions : null}
@@ -907,10 +945,14 @@ export function IssuesClient({
     </InteractiveCard>
   );
 
-  // Tab structure: recorded (POS-ledger consumption) and manual (hand-entered
-  // consumption/writeoff/other slips). Each tab owns its filters and its own
-  // list frame so the two never compete in one viewport.
-  const tabDefaultValue = showsRecordedConsumption ? "recorded" : "manual";
+  // Tab structure: recorded (POS ledger), manual consumption slips, and
+  // writeoff/hao hụt. Each tab owns filters + one primary create action.
+  const showsManualTab = !isWriteoffScope;
+  const tabDefaultValue = showsRecordedConsumption
+    ? "recorded"
+    : showsManualTab
+      ? "manual"
+      : "waste";
   const tabsItems = [
     ...(showsRecordedConsumption
       ? [
@@ -921,11 +963,24 @@ export function IssuesClient({
           },
         ]
       : []),
-    {
-      value: "manual",
-      label: INVENTORY_VI.consumptionTabManual,
-      count: issues.length,
-    },
+    ...(showsManualTab
+      ? [
+          {
+            value: "manual",
+            label: INVENTORY_VI.consumptionTabManual,
+            count: consumptionIssues.length,
+          },
+        ]
+      : []),
+    ...(showsWasteTab
+      ? [
+          {
+            value: "waste",
+            label: INVENTORY_VI.consumptionTabWaste,
+            count: writeoffIssues.length,
+          },
+        ]
+      : []),
   ];
 
   const content = (
@@ -945,6 +1000,7 @@ export function IssuesClient({
         queryKeysByValue={{
           recorded: ["branchId", "startDate", "endDate"],
           manual: [],
+          waste: [],
         }}
       >
         {showsRecordedConsumption ? (
@@ -980,26 +1036,16 @@ export function IssuesClient({
           </TabsContent>
         ) : null}
 
-        <TabsContent value="manual" className="mt-0">
-          <AppListFrame
-            title={issueListTitle}
-            headerHint={INVENTORY_VI.rowRatio(filtered.length, issues.length)}
-            action={
-              <>
-                {isCombinedConsumptionScope && defaultBranchId ? (
-                  <Button
-                    render={
-                      <Link
-                        href={`/inventory/waste/new?branchId=${defaultBranchId}`}
-                      />
-                    }
-                    variant="outline"
-                    size={compactActionSize}
-                  >
-                    {INVENTORY_VI.createWasteTitle}
-                  </Button>
-                ) : null}
-                {showExportAction ? (
+        {showsManualTab ? (
+          <TabsContent value="manual" className="mt-0">
+            <AppListFrame
+              title={INVENTORY_VI.manualConsumptionSlipsTitle}
+              headerHint={INVENTORY_VI.rowRatio(
+                filteredConsumption.length,
+                consumptionIssues.length,
+              )}
+              action={
+                showExportAction ? (
                   <Button
                     type="button"
                     variant="outline"
@@ -1009,47 +1055,103 @@ export function IssuesClient({
                     <IconFileDownload className="size-4" />
                     {INVENTORY_VI.exportReportAction}
                   </Button>
-                ) : null}
-              </>
-            }
-            toolbar={filterBar}
-          >
-            <DataTable
-              columns={issueColumns}
-              data={filtered}
-              pageSize={50}
-              getRowKey={(item) => item.id}
-              emptyTitle={
-                hasActiveFilters
-                  ? INVENTORY_VI.issueEmptyFiltered
-                  : issueEmptyNoDataTitle
+                ) : null
               }
-              emptyDescription={issueEmptyDescription}
-              emptyMode={hasActiveFilters ? "no-results" : "no-data"}
-              onRowClick={openIssueDetail}
-              getRowDataState={(item) =>
-                openActionRowId === item.id ? "selected" : undefined
-              }
-              renderRowContextMenu={(item) => (
-                <RowActionsContextMenuItems items={getIssueRowActions(item)} />
+              size={embedded ? "sm" : "default"}
+              toolbar={filterBar}
+            >
+              <DataTable
+                columns={issueColumns}
+                data={filteredConsumption}
+                pageSize={50}
+                getRowKey={(item) => item.id}
+                emptyTitle={
+                  hasActiveFilters
+                    ? INVENTORY_VI.issueEmptyFiltered
+                    : INVENTORY_VI.manualConsumptionEmptyTitle
+                }
+                emptyDescription={
+                  INVENTORY_VI.manualConsumptionEmptyDescription
+                }
+                emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+                onRowClick={openIssueDetail}
+                getRowDataState={(item) =>
+                  openActionRowId === item.id ? "selected" : undefined
+                }
+                renderRowContextMenu={(item) => (
+                  <RowActionsContextMenuItems
+                    items={getIssueRowActions(item)}
+                  />
+                )}
+                mobileCardRender={renderIssueCard}
+              />
+            </AppListFrame>
+          </TabsContent>
+        ) : null}
+
+        {showsWasteTab ? (
+          <TabsContent value="waste" className="mt-0">
+            <AppListFrame
+              title={INVENTORY_VI.writeoffSlipsTitle}
+              headerHint={INVENTORY_VI.rowRatio(
+                filteredWriteoff.length,
+                writeoffIssues.length,
               )}
-              mobileCardRender={renderIssueCard}
-            />
-          </AppListFrame>
-        </TabsContent>
+              action={
+                showExportAction ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size={compactActionSize}
+                    onClick={handleExportIssuesCsv}
+                  >
+                    <IconFileDownload className="size-4" />
+                    {INVENTORY_VI.exportReportAction}
+                  </Button>
+                ) : null
+              }
+              size={embedded ? "sm" : "default"}
+              toolbar={filterBar}
+            >
+              <DataTable
+                columns={issueColumns}
+                data={filteredWriteoff}
+                pageSize={50}
+                getRowKey={(item) => item.id}
+                emptyTitle={
+                  hasActiveFilters
+                    ? INVENTORY_VI.issueEmptyFiltered
+                    : INVENTORY_VI.writeoffEmptyTitle
+                }
+                emptyDescription={INVENTORY_VI.writeoffEmptyDescription}
+                emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+                onRowClick={openIssueDetail}
+                getRowDataState={(item) =>
+                  openActionRowId === item.id ? "selected" : undefined
+                }
+                renderRowContextMenu={(item) => (
+                  <RowActionsContextMenuItems
+                    items={getIssueRowActions(item)}
+                  />
+                )}
+                mobileCardRender={renderIssueCard}
+              />
+            </AppListFrame>
+          </TabsContent>
+        ) : null}
       </AppPageTabs>
 
       <FormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title={createIssueActionLabel}
-        description={createIssueDialogDescription}
+        title={INVENTORY_VI.manualConsumptionCreateAction}
+        description={INVENTORY_VI.manualConsumptionCreateDescription}
         schema={createIssueSchema}
         defaultValues={createIssueDefaultValues}
         entityKey={defaultBranchId ?? "new-issue"}
         onSubmit={handleCreate}
         successMessage={INVENTORY_VI.issueCreated}
-        submitLabel={createIssueActionLabel}
+        submitLabel={INVENTORY_VI.manualConsumptionCreateAction}
         cancelLabel={ACTIONS_VI.cancel}
       >
         {(form) => {

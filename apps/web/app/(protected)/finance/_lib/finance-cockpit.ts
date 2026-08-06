@@ -26,6 +26,7 @@ import type {
   FinanceParams,
   ResolvedFinanceRange,
 } from "./finance-params";
+import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
 import { isOperatingExpenseCategory } from "./expense-categories";
 
@@ -111,10 +112,6 @@ interface FinanceCockpitKpis {
   costCoverageRatio: number;
   cashRevenue: number;
   vietqrRevenue: number;
-  /** Truth source actual food cost was computed from: "valuation" allocations
-   * vs "legacy" consumption movements. Surfaced so the owner can tell which
-   * engine produced the ingredient-cost number. */
-  foodCostSource: "valuation" | "legacy";
 }
 
 export interface FinanceException {
@@ -221,7 +218,6 @@ function buildKpis({
   inventoryOpeningValue = inventoryValue,
   operatingExpense,
   includeInventoryChange = true,
-  foodCostSource,
 }: {
   kpis: KpiBundle | null;
   actualFoodCost: ActualFoodCostSnapshot;
@@ -229,7 +225,6 @@ function buildKpis({
   inventoryOpeningValue?: number;
   operatingExpense: OperatingExpenseSummary;
   includeInventoryChange?: boolean;
-  foodCostSource: "valuation" | "legacy";
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
   const orderCount = toNumber(kpis?.order_count);
@@ -271,7 +266,6 @@ function buildKpis({
     costCoverageRatio,
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
-    foodCostSource,
   };
 }
 
@@ -538,11 +532,17 @@ async function fetchActualFoodCostSnapshot({
   if (!supabase) return { rows: [], orderCount: 0 };
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
   const valuationActive = await isInventoryValuationActive(supabase, tenantId);
-  if (valuationActive) {
-    const { data, error } = await supabase
-      .from("inventory_value_allocations")
-      .select(
-        `
+  if (!valuationActive) {
+    console.error(
+      "[finance:food-cost] inventory valuation cutover is not active",
+    );
+    return { rows: [], orderCount: 0 };
+  }
+
+  const { data, error } = await supabase
+    .from("inventory_value_allocations")
+    .select(
+      `
         source_origin_id,
         allocated_value,
         inventory_valuation_events!inner (
@@ -552,38 +552,38 @@ async function fetchActualFoodCostSnapshot({
           stock_movements ( branch_id, order_id )
         )
       `,
-      )
-      .eq("tenant_id", tenantId)
-      .eq("allocation_bucket", "food_cost")
-      .gte("inventory_valuation_events.effective_at", startIso)
-      .lt("inventory_valuation_events.effective_at", endIso);
-    if (error) return { rows: [], orderCount: 0 };
+    )
+    .eq("tenant_id", tenantId)
+    .eq("allocation_bucket", "food_cost")
+    .gte("inventory_valuation_events.effective_at", startIso)
+    .lt("inventory_valuation_events.effective_at", endIso);
+  if (error) return { rows: [], orderCount: 0 };
 
-    const repriceRows = (data ?? []).filter((row) => {
-      const event = Array.isArray(row.inventory_valuation_events)
-        ? row.inventory_valuation_events[0]
-        : row.inventory_valuation_events;
-      return (
-        event?.event_type === "invoice_reprice" ||
-        event?.event_type === "credit_reprice"
-      );
-    });
-    const branchWeights = new Map<
-      number,
-      { total: number; byBranch: Map<number, number> }
-    >();
-    if (repriceRows.length > 0) {
-      const originIds = [
-        ...new Set(
-          repriceRows
-            .map((row) => row.source_origin_id)
-            .filter((id): id is number => id != null),
-        ),
-      ];
-      const { data: lineage, error: lineageError } = await supabase
-        .from("inventory_value_allocations")
-        .select(
-          `
+  const repriceRows = (data ?? []).filter((row) => {
+    const event = Array.isArray(row.inventory_valuation_events)
+      ? row.inventory_valuation_events[0]
+      : row.inventory_valuation_events;
+    return (
+      event?.event_type === "invoice_reprice" ||
+      event?.event_type === "credit_reprice"
+    );
+  });
+  const branchWeights = new Map<
+    number,
+    { total: number; byBranch: Map<number, number> }
+  >();
+  if (repriceRows.length > 0) {
+    const originIds = [
+      ...new Set(
+        repriceRows
+          .map((row) => row.source_origin_id)
+          .filter((id): id is number => id != null),
+      ),
+    ];
+    const { data: lineage, error: lineageError } = await supabase
+      .from("inventory_value_allocations")
+      .select(
+        `
           source_origin_id,
           allocated_quantity,
           inventory_valuation_events!inner (
@@ -591,131 +591,90 @@ async function fetchActualFoodCostSnapshot({
             stock_movements!inner ( branch_id )
           )
         `,
-        )
-        .eq("tenant_id", tenantId)
-        .in("source_origin_id", originIds)
-        .eq("inventory_valuation_events.terminal_bucket", "food_cost");
-      if (lineageError) return { rows: [], orderCount: 0 };
-      for (const allocation of lineage ?? []) {
-        if (allocation.source_origin_id == null) continue;
-        const event = Array.isArray(allocation.inventory_valuation_events)
-          ? allocation.inventory_valuation_events[0]
-          : allocation.inventory_valuation_events;
-        const movement = Array.isArray(event?.stock_movements)
-          ? event.stock_movements[0]
-          : event?.stock_movements;
-        if (movement?.branch_id == null) continue;
-        const weight = branchWeights.get(allocation.source_origin_id) ?? {
-          total: 0,
-          byBranch: new Map<number, number>(),
-        };
-        const quantity = toNumber(allocation.allocated_quantity);
-        weight.total += quantity;
-        weight.byBranch.set(
-          movement.branch_id,
-          (weight.byBranch.get(movement.branch_id) ?? 0) + quantity,
-        );
-        branchWeights.set(allocation.source_origin_id, weight);
-      }
-    }
-
-    const rows = new Map<string, FoodCostRow>();
-    const orderIds = new Set<number>();
-    const addCost = (period: string, rowBranchId: number, value: number) => {
-      if (branchId != null && rowBranchId !== branchId) return;
-      const key = `${period}:${rowBranchId}`;
-      const current =
-        rows.get(key) ??
-        ({
-          period_start: period,
-          branch_id: rowBranchId,
-          item_name: "Actual consumption",
-          revenue: null,
-          ingredient_cost: 0,
-          food_cost_pct: null,
-        } satisfies FoodCostRow);
-      current.ingredient_cost = toNumber(current.ingredient_cost) + value;
-      rows.set(key, current);
-    };
-    for (const allocation of data ?? []) {
+      )
+      .eq("tenant_id", tenantId)
+      .in("source_origin_id", originIds)
+      .eq("inventory_valuation_events.terminal_bucket", "food_cost");
+    if (lineageError) return { rows: [], orderCount: 0 };
+    for (const allocation of lineage ?? []) {
+      if (allocation.source_origin_id == null) continue;
       const event = Array.isArray(allocation.inventory_valuation_events)
         ? allocation.inventory_valuation_events[0]
         : allocation.inventory_valuation_events;
-      if (!event?.effective_at) continue;
-      const period = getVNDateString(event.effective_at);
-      const movement = Array.isArray(event.stock_movements)
+      const movement = Array.isArray(event?.stock_movements)
         ? event.stock_movements[0]
-        : event.stock_movements;
-      if (
-        event.event_type !== "invoice_reprice" &&
-        event.event_type !== "credit_reprice"
-      ) {
-        if (movement?.branch_id == null) continue;
-        if (movement.order_id != null) orderIds.add(movement.order_id);
-        addCost(
-          period,
-          movement.branch_id,
-          toNumber(allocation.allocated_value),
-        );
-        continue;
-      }
-      if (allocation.source_origin_id == null) continue;
-      const weight = branchWeights.get(allocation.source_origin_id);
-      if (!weight || weight.total <= 0) continue;
-      for (const [rowBranchId, quantity] of weight.byBranch) {
-        addCost(
-          period,
-          rowBranchId,
-          (toNumber(allocation.allocated_value) * quantity) / weight.total,
-        );
-      }
+        : event?.stock_movements;
+      if (movement?.branch_id == null) continue;
+      const weight = branchWeights.get(allocation.source_origin_id) ?? {
+        total: 0,
+        byBranch: new Map<number, number>(),
+      };
+      const quantity = toNumber(allocation.allocated_quantity);
+      weight.total += quantity;
+      weight.byBranch.set(
+        movement.branch_id,
+        (weight.byBranch.get(movement.branch_id) ?? 0) + quantity,
+      );
+      branchWeights.set(allocation.source_origin_id, weight);
     }
-    return { rows: Array.from(rows.values()), orderCount: orderIds.size };
   }
-
-  let query = supabase
-    .from("stock_movements")
-    .select("branch_id, order_id, quantity_change, unit_cost, created_at")
-    .eq("tenant_id", tenantId)
-    .eq("type", "consumption")
-    .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (branchId != null) {
-    query = query.eq("branch_id", branchId);
-  }
-
-  const { data, error } = await query;
-  if (error) return { rows: [], orderCount: 0 };
 
   const rows = new Map<string, FoodCostRow>();
   const orderIds = new Set<number>();
-  for (const row of data ?? []) {
-    if (!row.created_at || row.branch_id == null) continue;
-    if (row.order_id != null) orderIds.add(row.order_id);
-    const period = getVNDateString(row.created_at);
-    const key = `${period}:${row.branch_id}`;
+  const addCost = (period: string, rowBranchId: number, value: number) => {
+    if (branchId != null && rowBranchId !== branchId) return;
+    const key = `${period}:${rowBranchId}`;
     const current =
       rows.get(key) ??
       ({
         period_start: period,
-        branch_id: row.branch_id,
+        branch_id: rowBranchId,
         item_name: "Actual consumption",
         revenue: null,
         ingredient_cost: 0,
         food_cost_pct: null,
       } satisfies FoodCostRow);
-    current.ingredient_cost =
-      toNumber(current.ingredient_cost) +
-      Math.abs(toNumber(row.quantity_change)) * toNumber(row.unit_cost);
+    current.ingredient_cost = toNumber(current.ingredient_cost) + value;
     rows.set(key, current);
+  };
+  for (const allocation of data ?? []) {
+    const event = Array.isArray(allocation.inventory_valuation_events)
+      ? allocation.inventory_valuation_events[0]
+      : allocation.inventory_valuation_events;
+    if (!event?.effective_at) continue;
+    const period = getVNDateString(event.effective_at);
+    const movement = Array.isArray(event.stock_movements)
+      ? event.stock_movements[0]
+      : event.stock_movements;
+    if (
+      event.event_type !== "invoice_reprice" &&
+      event.event_type !== "credit_reprice"
+    ) {
+      if (movement?.branch_id == null) continue;
+      if (movement.order_id != null) orderIds.add(movement.order_id);
+      addCost(
+        period,
+        movement.branch_id,
+        toNumber(allocation.allocated_value),
+      );
+      continue;
+    }
+    if (allocation.source_origin_id == null) continue;
+    const weight = branchWeights.get(allocation.source_origin_id);
+    if (!weight || weight.total <= 0) continue;
+    for (const [rowBranchId, quantity] of weight.byBranch) {
+      addCost(
+        period,
+        rowBranchId,
+        (toNumber(allocation.allocated_value) * quantity) / weight.total,
+      );
+    }
   }
-
   return { rows: Array.from(rows.values()), orderCount: orderIds.size };
 }
 
 function buildExceptions({
+  params,
   kpis,
   dashboardSummary,
   cashVariance,
@@ -726,6 +685,7 @@ function buildExceptions({
   reconciliationAttention,
   reconciliationHref,
 }: {
+  params: FinanceParams;
   kpis: FinanceCockpitKpis;
   dashboardSummary: Pick<
     FinanceDashboardSummary,
@@ -746,6 +706,7 @@ function buildExceptions({
   const highFoodCost = foodCostRows
     .filter((row) => toNumber(row.food_cost_pct) >= 60)
     .sort((a, b) => toNumber(b.food_cost_pct) - toNumber(a.food_cost_pct))[0];
+  const invoiceAttentionCount = dashboardSummary?.invoice_attention_count ?? 0;
 
   return [
     {
@@ -792,7 +753,9 @@ function buildExceptions({
       hint: kpis.operatingExpenseRecorded
         ? copy.exceptions.operatingExpenseRecorded
         : copy.exceptions.operatingExpenseMissing,
-      href: "/finance/expenses",
+      href: financeHref("/finance/expenses", params, {
+        state: kpis.operatingExpenseRecorded ? null : "pending",
+      }),
       tone: kpis.operatingExpenseRecorded ? "neutral" : "warning",
     },
     {
@@ -810,18 +773,17 @@ function buildExceptions({
                 formatPercent(toNumber(highFoodCost.food_cost_pct)),
               )
             : copy.exceptions.costDataClear,
-      href: "/finance/food-cost",
+      href: financeHref("/finance/food-cost", params),
       tone: missingCostCount > 0 || highFoodCost ? "warning" : "neutral",
     },
     {
       label: copy.exceptions.invoiceAttentionLabel,
-      value: formatCount(dashboardSummary?.invoice_attention_count ?? 0),
+      value: formatCount(invoiceAttentionCount),
       hint: copy.exceptions.invoiceAttentionHint,
-      href: "/finance/invoices",
-      tone:
-        (dashboardSummary?.invoice_attention_count ?? 0) > 0
-          ? "warning"
-          : "neutral",
+      href: financeHref("/finance/invoices", params, {
+        queue: invoiceAttentionCount > 0 ? "attention" : null,
+      }),
+      tone: invoiceAttentionCount > 0 ? "warning" : "neutral",
     },
     {
       label: copy.exceptions.supplierInvoiceLabel,
@@ -829,7 +791,7 @@ function buildExceptions({
       hint: copy.exceptions.supplierInvoiceHint(
         formatCount(unpaidSupplierInvoices.count),
       ),
-      href: "/finance/supplier-invoices",
+      href: financeHref("/finance/supplier-invoices", params),
       tone: unpaidSupplierInvoices.count > 0 ? "warning" : "neutral",
     },
     {
@@ -842,7 +804,9 @@ function buildExceptions({
       // Point at the bank-transactions reconciliation screen instead of the
       // revenue chart (which had no desync-fix affordance). The dedicated
       // desync resolution screen is a follow-up; this stops the dead-end link.
-      href: "/finance/bank-transactions",
+      href: financeHref("/finance/bank-transactions", params, {
+        recon: "needs_review",
+      }),
       tone: paymentDesync.count > 0 ? "warning" : "neutral",
     },
   ];
@@ -1019,16 +983,6 @@ export async function fetchFinanceCockpit(
   const canViewInventoryValuation =
     canReadRequestedValuation && includesBranchData;
 
-  // Mirror the cutover check inside fetchActualFoodCostSnapshot so the source
-  // label matches the engine that produced the ingredient-cost rows.
-  const foodCostSourceValuationActive =
-    includesBranchData &&
-    monetaryClient != null &&
-    (await isInventoryValuationActive(monetaryClient, claims.tenant_id));
-  const foodCostSource: "valuation" | "legacy" = foodCostSourceValuationActive
-    ? "valuation"
-    : "legacy";
-
   const kpis = buildKpis({
     kpis: kpisRes.success ? (kpisRes.data as KpiBundle | null) : null,
     actualFoodCost,
@@ -1036,7 +990,6 @@ export async function fetchFinanceCockpit(
     inventoryOpeningValue,
     operatingExpense: operatingExpenseSummary,
     includeInventoryChange: canViewInventoryValuation,
-    foodCostSource,
   });
 
   const compareKpis = resolved.compare
@@ -1048,7 +1001,6 @@ export async function fetchFinanceCockpit(
         inventoryValue,
         operatingExpense: compareOperatingExpenseSummary,
         includeInventoryChange: canViewInventoryValuation,
-        foodCostSource,
       })
     : null;
 
@@ -1058,7 +1010,17 @@ export async function fetchFinanceCockpit(
       : params.branch != null
         ? `/br/${String(params.branch)}/pos-sessions`
         : undefined;
-  const reconciliationHref = `/finance/bank-transactions?range=custom&from=${resolved.start}&to=${resolved.end}`;
+  const reconciliationHref = financeHref(
+    "/finance/bank-transactions",
+    {
+      ...params,
+      range: "custom",
+      period: null,
+      from: resolved.start,
+      to: resolved.end,
+    },
+    { recon: "needs_review" },
+  );
   const dashboardSummary = dashboardSummaryRes.success
     ? (dashboardSummaryRes.data as FinanceDashboardSummary | null)
     : null;
@@ -1081,6 +1043,7 @@ export async function fetchFinanceCockpit(
       : null,
     dashboardSummary,
     exceptions: buildExceptions({
+      params,
       kpis,
       dashboardSummary,
       cashVariance: cashVarianceRes.success

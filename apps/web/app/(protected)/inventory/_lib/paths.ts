@@ -18,7 +18,7 @@ export type InventoryPaths = {
   reports: string;
   production: string;
   consumption: string;
-  /** Prefer `consumption`; `/inventory/issues` redirects there. */
+  /** Compat alias; list redirects to `/inventory/consumption?view=waste`. */
   issues: string;
   suppliers: string;
   ingredients: string;

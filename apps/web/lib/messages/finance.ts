@@ -124,6 +124,8 @@ export const finance = {
     ownerNewsTitle: "Cần xử lý",
     noOwnerNews: "Chưa có điểm cần xử lý.",
     openWorkItem: "Mở xử lý",
+    attentionBadge: (count: string) => `${count} việc`,
+    viewAttention: "Xem việc cần xử lý",
     hddtComplianceTitle: "HĐĐT bán ra",
     hddtComplianceDescription: "Hàng đợi cần xử lý sau thanh toán.",
     hddtComplianceAction: "Mở HĐĐT",
@@ -192,6 +194,9 @@ export const finance = {
       inventory: "Tồn kho",
       vat: "Thuế GTGT",
     },
+    formula: {
+      showDetails: "Chi tiết công thức",
+    },
     operators: {
       subtract: "trừ",
       add: "cộng",
@@ -203,8 +208,6 @@ export const finance = {
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
-      ingredientCostSourceValuation: "Theo phân bổ định giá",
-      ingredientCostSourceLegacy: "Theo xuất tiêu hao",
       missingCost: "Chưa đủ dữ liệu",
       grossProfit: "Lợi nhuận gộp",
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
@@ -237,8 +240,9 @@ export const finance = {
   },
   nav: {
     groups: {
-      basic: "Cơ bản",
-      invoices: "Hóa đơn",
+      money: "Điều hành tiền",
+      reports: "Báo cáo",
+      documents: "Chứng từ",
     },
     items: {
       finance: "Tài chính",
@@ -877,6 +881,9 @@ export const finance = {
     pickQuarter: "Chọn quý",
     pickYear: "Chọn năm",
     quarterOption: (quarter: number) => `Quý ${quarter}`,
+    monthShort: (month: number) => `Thg ${month}`,
+    periodPrevAria: "Kỳ trước",
+    periodNextAria: "Kỳ sau",
     fromDate: "Từ ngày",
     toDate: "Đến ngày",
     apply: "Áp dụng",
@@ -1056,12 +1063,10 @@ export const finance = {
   foodCost: {
     eyebrow: "Tài chính",
     description:
-      "Giá vốn định mức dùng công thức và giá vốn bình quân hiện tại; giá vốn thực tế lấy từ tiêu hao đã ghi nhận.",
+      "Giá vốn định mức dùng công thức và giá vốn bình quân hiện tại; giá vốn thực tế lấy từ phân bổ định giá kho.",
     actualFoodCost: "Giá vốn thực tế đã ghi nhận",
     actualFoodCostHint:
-      "Tổng tiêu hao kho đã ghi nhận trong kỳ; khác giá vốn định mức theo món.",
-    foodCostSourceValuation: "Theo phân bổ định giá",
-    foodCostSourceLegacy: "Theo xuất tiêu hao",
+      "Tổng giá trị phân bổ bucket giá vốn món trong kỳ; khác giá vốn định mức theo món.",
     coverage: "Độ phủ giá vốn",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,

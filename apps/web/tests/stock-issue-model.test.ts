@@ -3,7 +3,6 @@ import { test } from "node:test";
 import {
   canConfirmBranchStockIssue,
   filterBranchStockIssues,
-  getBranchStockIssueCreateTypes,
   isBranchInternalIssueType,
   isBranchStockIssueType,
   toBranchStockIssueStatus,
@@ -14,7 +13,7 @@ import {
 function makeIssue(patch: Partial<BranchStockIssue> = {}): BranchStockIssue {
   return {
     id: 1,
-    code: "PXK-001",
+    code: "HH-001",
     type: "writeoff",
     status: "draft",
     issuedAt: "2026-07-10T03:00:00.000Z",
@@ -35,35 +34,19 @@ function makeLine(
     unit: "kg",
     entryUnitId: 3,
     reason: "Hàng hỏng",
+    photoUrls: [],
     ...patch,
   };
 }
 
-test("Branch issue model only creates the permitted internal issue types", () => {
-  assert.deepEqual(
-    getBranchStockIssueCreateTypes({
-      canCreateOther: true,
-      canCreateWriteoff: true,
-    }),
-    ["writeoff", "other"],
-  );
-  assert.deepEqual(
-    getBranchStockIssueCreateTypes({
-      canCreateOther: false,
-      canCreateWriteoff: true,
-    }),
-    ["writeoff"],
-  );
-  assert.deepEqual(
-    getBranchStockIssueCreateTypes({
-      canCreateOther: false,
-      canCreateWriteoff: false,
-    }),
-    [],
-  );
+test("Branch issue model accepts only consumption and writeoff", () => {
   assert.equal(toBranchStockIssueStatus("unexpected"), "draft");
   assert.equal(isBranchStockIssueType("consumption"), true);
+  assert.equal(isBranchStockIssueType("writeoff"), true);
+  assert.equal(isBranchStockIssueType("other"), false);
+  assert.equal(isBranchInternalIssueType("writeoff"), true);
   assert.equal(isBranchInternalIssueType("consumption"), false);
+  assert.equal(isBranchInternalIssueType("other"), false);
 });
 
 test("Branch issue filters retain fixed-branch draft and final records", () => {
@@ -71,10 +54,10 @@ test("Branch issue filters retain fixed-branch draft and final records", () => {
     makeIssue(),
     makeIssue({
       id: 2,
-      code: "PXK-002",
-      type: "other",
+      code: "HH-002",
+      type: "writeoff",
       status: "confirmed",
-      notes: "Xuất cấp bếp",
+      notes: "Hủy hàng hỏng",
     }),
   ];
 

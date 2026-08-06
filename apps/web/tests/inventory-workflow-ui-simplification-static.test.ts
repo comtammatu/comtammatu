@@ -26,7 +26,7 @@ test("stocktake list exposes one create entrypoint", () => {
   assert.doesNotMatch(source, /<FormDialog/);
 });
 
-test("Branch keeps separate roles while Owner combines consumption and waste", () => {
+test("Branch keeps separate roles; Owner hubs consumption and waste as tabs", () => {
   const operatorConsumption = read(
     "app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx",
   );
@@ -53,11 +53,11 @@ test("Branch keeps separate roles while Owner combines consumption and waste", (
     /listBasePath=\{`\$\{stockBasePath\}\/consumption`\}/,
   );
   assert.match(branchIssueData, /isBranchInternalIssueType/);
-  assert.match(ownerConsumption, /scope="all"/);
+  assert.match(ownerConsumption, /scope="hub"/);
   assert.match(ownerConsumption, /detailBasePath="\/inventory\/consumption"/);
   assert.match(
     dictionary,
-    /issues: \{ short: "Sự cố kho", long: "Sự cố kho" \}/,
+    /issues: \{ short: "Hao hụt", long: "Hao hụt" \}/,
   );
   assert.match(dictionary, /stocktake: \{ long: "Kiểm kê đối chiếu" \}/);
 });
@@ -74,51 +74,50 @@ test("Owner surface stock quick issue stays on consumption while Branch lookup s
 
   assert.match(stock, /stockCopy\.actions\.issueStock/);
   assert.doesNotMatch(stock, /ACTIONS_VI\.export/);
-  assert.match(
-    stock,
-    /issueType === "consumption"\s+\? "\/inventory\/consumption"\s+: "\/inventory\/issues"/,
-  );
+  assert.match(stock, /quickIssueBasePath[\s\S]*"\/inventory\/consumption"/);
+  assert.match(stock, /href: actionHrefs\.waste/);
+  assert.doesNotMatch(stock, /issueType:\s*"writeoff"/);
   assert.doesNotMatch(
     branchStock,
     /QuickStockIssueDialog|QuickInternalTransferDialog|AdjustStockDialog/,
   );
-  assert.match(dialog, /form\.register\("issueType"\)/);
-  assert.doesNotMatch(dialog, /name="issueType"/);
+  assert.match(dialog, /z\.enum\(\["consumption"\]\)/);
+  assert.doesNotMatch(dialog, /"writeoff"|"other"/);
   assert.doesNotMatch(dialog, /stockCopy\.quickIssue\.operation/);
   assert.match(messages, /issueStock: "Ghi tiêu hao"/);
   assert.match(messages, /issueTitle: "Ghi tiêu hao nhanh"/);
 });
 
-test("consumption list separates POS ledger rows from operational slips via tabs", () => {
+test("consumption list separates POS ledger, manual slips, and waste via tabs", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const messages = read("../../packages/shared/src/messages/inventory.ts");
 
-  assert.match(
-    issues,
-    /const isConsumptionScope =\s+allowedIssueTypes\.length === 1 && allowedIssueTypes\[0\] === "consumption";/,
-  );
+  assert.match(issues, /const isHubScope =/);
   assert.match(issues, /const showsRecordedConsumption =/);
+  assert.match(issues, /const showsWasteTab =/);
   assert.match(issues, /<AppPageTabs/);
   assert.match(issues, /paramKey="view"/);
   assert.match(
     issues,
     /queryKeysByValue=\{\{\s+recorded: \["branchId", "startDate", "endDate"\]/,
   );
+  assert.match(issues, /waste: \[\]/);
   assert.match(issues, /<TabsContent value="recorded"/);
   assert.match(issues, /<TabsContent value="manual"/);
+  assert.match(issues, /<TabsContent value="waste"/);
   assert.match(issues, /title=\{INVENTORY_VI\.recordedConsumptionTitle\}/);
-  assert.match(issues, /const issueListTitle = isCombinedConsumptionScope/);
+  assert.match(issues, /title=\{INVENTORY_VI\.manualConsumptionSlipsTitle\}/);
+  assert.match(issues, /title=\{INVENTORY_VI\.writeoffSlipsTitle\}/);
+  assert.match(issues, /title=\{INVENTORY_VI\.manualConsumptionCreateAction\}/);
   assert.match(
     issues,
-    /const createIssueActionLabel = isCombinedConsumptionScope/,
+    /submitLabel=\{INVENTORY_VI\.manualConsumptionCreateAction\}/,
   );
-  assert.match(issues, /title=\{issueListTitle\}/);
-  assert.match(issues, /title=\{createIssueActionLabel\}/);
-  assert.match(issues, /submitLabel=\{createIssueActionLabel\}/);
 
   assert.match(messages, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
   assert.match(messages, /consumptionTabRecorded: "Đã ghi nhận"/);
-  assert.match(messages, /consumptionTabManual: "Phiếu chứng từ"/);
+  assert.match(messages, /consumptionTabManual: "Phiếu tiêu hao"/);
+  assert.match(messages, /consumptionTabWaste: "Hao hụt"/);
   assert.match(
     messages,
     /manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công"/,
@@ -127,15 +126,12 @@ test("consumption list separates POS ledger rows from operational slips via tabs
     messages,
     /manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công"/,
   );
-  assert.match(
-    messages,
-    /combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt"/,
-  );
-  assert.match(
-    messages,
-    /combinedConsumptionCreateAction: "Tạo phiếu vận hành"/,
-  );
-  assert.match(issues, /\/inventory\/waste\/new\?branchId=/);
+  assert.match(messages, /writeoffSlipsTitle: "Phiếu hao hụt"/);
+  assert.match(messages, /createWasteTitle: "Tạo phiếu hao hụt"/);
+  assert.match(issues, /value: "waste"/);
+  assert.match(issues, /resolvedView === "waste"/);
+  assert.match(issues, /INVENTORY_VI\.createWasteTitle/);
+  assert.doesNotMatch(issues, /isCombinedConsumptionScope/);
 });
 
 test("recorded consumption toolbar keeps one baseline and separate slots", () => {

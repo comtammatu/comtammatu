@@ -215,6 +215,7 @@ export async function createWasteEntry(
 
   const raw = (data ?? {}) as Record<string, unknown>;
   revalidatePath("/inventory/consumption");
+  revalidatePath("/inventory/issues");
 
   return {
     success: true,
@@ -290,6 +291,7 @@ export async function approveWaste(
 
   revalidatePath("/inventory/waste/approvals");
   revalidatePath("/inventory/consumption");
+  revalidatePath("/inventory/issues");
   return { success: true };
 }
 

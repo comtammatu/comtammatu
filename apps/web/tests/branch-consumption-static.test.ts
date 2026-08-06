@@ -66,7 +66,9 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.match(ownerDetail, /initialLine\?: IssueLine \| null/);
   assert.match(ownerDetail, /IconPencil/);
   assert.match(ownerDetail, /onEdit=\{handleEditLine\}/);
-  assert.match(ownerList, /\/inventory\/waste\/new\?branchId=/);
+  assert.match(ownerList, /\$\{createHref\}\?branchId=\$\{defaultBranchId\}/);
+  assert.match(ownerList, /createHref/);
+  assert.match(ownerList, /value: "waste"/);
   assert.match(ownerList, /option\.value === "consumption"/);
   assert.match(ownerList, /option\.value !== "writeoff"/);
   assert.match(issueData, /photo_urls/);

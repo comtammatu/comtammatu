@@ -56,11 +56,12 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
   const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
 
-  // The cockpit's actual-food-cost snapshot drives the valuation vs legacy
-  // branch via isInventoryValuationActive (status === "active"). The orphaned
-  // inventory-cash-tied fetch that also read inventory_valuation_accounts /
-  // stock_levels was dropped (it fed a field no landing screen consumed).
   assert.match(cockpit, /data\?\.status === "active"/);
+  assert.match(
+    cockpit,
+    /inventory valuation cutover is not active/,
+  );
+  assert.doesNotMatch(cockpit, /movement_subtype", "sale_consumption"/);
   assert.doesNotMatch(cockpit, /ingredient\?\.unit_cost/);
   assert.equal(
     foodCost.includes("fallbackUnitCost: Number(ingredient?.unit_cost"),
@@ -68,8 +69,15 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   );
   assert.match(actualFoodCost, /\.from\("inventory_valuation_events"\)/);
   assert.match(actualFoodCost, /allocation_bucket", "food_cost"/);
-  assert.match(actualFoodCost, /cutover\?\.status !== "active"/);
-  assert.match(actualFoodCost, /\.from\("stock_movements"\)/);
+  assert.match(
+    actualFoodCost,
+    /Giá vốn món yêu cầu sổ định giá kho đang hoạt động/,
+  );
+  assert.doesNotMatch(
+    actualFoodCost,
+    /movement_subtype", "sale_consumption"/,
+  );
+  assert.doesNotMatch(actualFoodCost, /foodCostSource/);
 });
 
 test("valuation warning kinds have durable notification copy and icon mapping", () => {

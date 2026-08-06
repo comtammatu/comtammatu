@@ -801,6 +801,12 @@ export function RevenueClient({
             summary={dashboardSummary}
             health={dashboardHealth}
             hide={["foodCost", "webhook"]}
+            scope={params}
+            cashVarianceHref={
+              cashVariance && params.branch != null
+                ? `/br/${String(params.branch)}/pos-sessions`
+                : undefined
+            }
           />
 
           {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}

@@ -1173,12 +1173,10 @@ export const inventory = {
       options: {
         consumption: "Tiêu hao vận hành",
         writeoff: "Hủy hỏng / hao hụt",
-        other: "Xuất khác",
       },
       placeholders: {
         consumption: "Ví dụ: bếp dùng cho ca chiều",
         writeoff: "Ví dụ: chai vỡ, đổ, hàng hỏng",
-        other: "Nhập rõ lý do xuất kho",
       },
       writeoffTitle: "Ghi hủy hỏng nhanh",
       issueTitle: "Ghi tiêu hao nhanh",
@@ -1246,13 +1244,6 @@ export const inventory = {
         confirmTitle: "Xác nhận tiêu hao?",
         confirmAction: "Xác nhận tiêu hao",
         noteLabel: "Ghi chú tiêu hao",
-      },
-      other: {
-        eyebrow: "Xuất kho",
-        label: "Phiếu xuất",
-        confirmTitle: "Xác nhận xuất kho?",
-        confirmAction: "Xác nhận xuất kho",
-        noteLabel: "Ghi chú phiếu xuất",
       },
     },
     hrmConsumptionSource: "Nhân sự - Tiêu hao bếp trong ngày",

@@ -304,7 +304,6 @@ test("Inventory ingredient editor keeps a touch-safe unit list", () => {
 
 test("Owner page-header actions use named button sizes", () => {
   const touchPaths = [
-    "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
     "apps/web/app/(protected)/hr/attendance/page.tsx",
     "apps/web/app/(protected)/hr/hr-client.tsx",
     "apps/web/app/(protected)/hr/payroll/page.tsx",
@@ -315,6 +314,28 @@ test("Owner page-header actions use named button sizes", () => {
     "apps/web/app/(protected)/inventory/inventory-value-panel.tsx",
     "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   ];
+
+  const bankPage = read(
+    "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  );
+  assert.match(
+    bankPage,
+    /actions=\{canLinkPayments \? <SepayImportDialog \/> : undefined\}/,
+    "bank header keeps Import as the only primary action (shell owns back-nav)",
+  );
+  assert.doesNotMatch(
+    bankPage,
+    /backToFinance/,
+    "bank header must not duplicate shell navigation with Quay lại Tài chính",
+  );
+  const importDialog = read(
+    "apps/web/app/(protected)/finance/bank-transactions/sepay-import-dialog.tsx",
+  );
+  assert.match(
+    importDialog,
+    /size="touch"/,
+    "bank Import trigger must stay touch-sized",
+  );
 
   for (const path of touchPaths) {
     const source = read(path);

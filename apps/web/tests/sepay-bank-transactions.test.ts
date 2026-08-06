@@ -877,7 +877,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   );
   assert.match(table, /type BankReconciliationRow/);
   assert.match(table, /rowMatchesFilter/);
-  assert.match(table, /useState<BankReconciliationFilter>\("needs_review"\)/);
+  assert.match(table, /parseBankReconciliationFilter/);
   assert.match(table, /<FilterBar/);
   assert.match(table, /trailing=\{/);
   assert.match(table, /aria-label=\{copy\.filters\.label\}/);

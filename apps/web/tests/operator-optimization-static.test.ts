@@ -93,12 +93,12 @@ test("operator a11y: realtime regions announce, panels use headings, locked tile
   assert.match(today, /role="status"/);
   assert.match(today, /aria-live="polite"/);
 
-  const layout = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/layout.tsx",
+  const bell = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-notification-bell.tsx",
   );
   // Unread count is merged into the bell's accessible name, not left as a stray digit.
-  assert.match(layout, /const notificationsAria =/);
-  assert.match(layout, /\$\{unread\} chưa đọc/);
+  assert.match(bell, /messages\.operator\.header\.notificationsAria/);
+  assert.match(bell, /\$\{unread\} chưa đọc/);
 
   const tile = read(
     "apps/web/lib/branch-operator/components/branch-operator-page.tsx",

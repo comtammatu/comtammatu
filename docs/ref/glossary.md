@@ -907,11 +907,14 @@ hoặc `short`; không nhúng acronym whitelist vào câu.
 ### `stock_transfer` vs `stock_issue` vs `consumption`
 
 - `stock_transfer` giữ hàng trong hệ thống tồn kho nhưng đổi site/location stock-bearing.
-- `stock_issue` là xuất nội bộ khi runtime có chứng từ issue và không còn tồn ở
-  location nhận.
-- `consumption` là tiêu hao/giá vốn/hao hụt làm giảm tồn vì sử dụng hoặc bán.
+- `stock_issue` là bảng chứng từ kỹ thuật cho phiếu tiêu hao (`consumption`) hoặc
+  hao hụt (`writeoff`). Không còn loại `other`.
+- `consumption` (movement) là tiêu hao làm giảm tồn; subtype `sale_consumption`
+  vào giá vốn món, `writeoff` vào waste.
 - `stock_transfer` chỉ chuyển tồn giữa hai warehouse/site hợp lệ; không tạo
   target Bếp trong cùng chi nhánh.
+- UI: tạo tiêu hao qua surface tiêu hao; tạo hao hụt qua `/waste` — không chọn
+  “loại phiếu xuất”.
 
 ### `order` vs `purchase_order`
 

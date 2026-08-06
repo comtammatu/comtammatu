@@ -100,7 +100,7 @@ const QuickStockIssueDialog = dynamic<QuickStockIssueDialogProps>(
   { ssr: false },
 );
 
-type QuickIssueType = "consumption" | "writeoff" | "other";
+type QuickIssueType = "consumption";
 type QuickIssueTarget = {
   ingredient: StockIngredient;
   issueType: QuickIssueType;
@@ -321,10 +321,8 @@ export function StockClient({
     stocktake: branchHref(branchId, "/inventory/stocktake"),
     waste: branchHref(branchId, "/inventory/waste/new"),
   };
-  const quickIssueBasePath = (issueType: QuickIssueType) =>
-    issueType === "consumption"
-      ? "/inventory/consumption"
-      : "/inventory/issues";
+  const quickIssueBasePath = (_issueType: QuickIssueType) =>
+    "/inventory/consumption";
   const actionPermissions = permissions;
   const canReceiveStock = actionPermissions.canReceiveGrn;
   const getStockRowActions = (item: StockIngredient): RowActionItem[] => {
@@ -358,11 +356,7 @@ export function StockClient({
         label: stockCopy.actions.waste,
         icon: <IconTrash />,
         destructive: true,
-        onSelect: () =>
-          setQuickIssueTarget({
-            ingredient: item,
-            issueType: "writeoff",
-          }),
+        href: actionHrefs.waste,
       });
     }
 

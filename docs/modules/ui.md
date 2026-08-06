@@ -404,10 +404,11 @@ Branch stock workflow áp dụng cùng ranh giới này:
   complete theo permission; completed result dùng `ItemGroup` system/count/
   variance. Không đưa audit history, control_surface detail client, report CTA, WAC, hay
   giá trị tồn vào route này.
-- `/br/[branchId]/stock/issues` là Branch-native touch `LIST` chỉ cho `writeoff`
-  và `other`: branch bị khóa bởi URL, danh sách chỉ giữ mã phiếu, loại, ngày và
-  trạng thái; tạo nháp mở trong bottom `Sheet`, không có branch picker,
-  `DataTable`, export, audit hoặc tổng giá trị control_surface.
+- `/br/[branchId]/stock/issues` là Branch-native touch `LIST` chỉ cho phiếu
+  `writeoff` (hao hụt đã tạo): branch bị khóa bởi URL, danh sách chỉ giữ mã
+  phiếu, ngày và trạng thái. **Tạo hao hụt mới** đi `/stock/waste`, không còn
+  picker loại `other` / “Xuất khác”. Không có branch picker, `DataTable`, export,
+  audit hoặc tổng giá trị control_surface.
 - `/br/[branchId]/stock/issues/[id]` là Branch-native touch `DETAIL`: nháp cho
   thêm/sửa/xóa từng dòng bằng bottom `Sheet` với đơn vị nhập, số lượng không vượt
   tồn và lý do bắt buộc; xác nhận/hủy dùng `AppDetailFooter` sticky và authority

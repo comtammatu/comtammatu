@@ -41,9 +41,8 @@ function revalidateStockIssueSurfaces({
 
 const issueCreateSchema = z.object({
   branchId: z.coerce.number().int().positive(),
-  issueType: z
-    .enum(["consumption", "writeoff", "other"])
-    .default("consumption"),
+  // Manual writeoff/hao hụt is created only via create_waste_entry (/waste).
+  issueType: z.enum(["consumption"]).default("consumption"),
   notes: z.string().optional(),
 });
 

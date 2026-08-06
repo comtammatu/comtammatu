@@ -11,6 +11,7 @@ export default async function IssuesPage({
 }) {
   const params = await searchParams;
   const qParams = new URLSearchParams();
+  qParams.set("view", "waste");
   for (const key of ["branchId", "startDate", "endDate"] as const) {
     const value = params[key];
     if (!value) continue;
@@ -20,6 +21,5 @@ export default async function IssuesPage({
       qParams.set(key, value);
     }
   }
-  const query = qParams.toString();
-  redirect(query ? `/inventory/consumption?${query}` : "/inventory/consumption");
+  redirect(`/inventory/consumption?${qParams.toString()}`);
 }

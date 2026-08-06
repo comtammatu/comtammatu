@@ -156,5 +156,5 @@ test("growth lists opted in", () => {
     ),
     "utf8",
   );
-  assert.equal(issues.match(/pageSize=\{50\}/g)?.length, 2);
+  assert.equal(issues.match(/pageSize=\{50\}/g)?.length, 3);
 });

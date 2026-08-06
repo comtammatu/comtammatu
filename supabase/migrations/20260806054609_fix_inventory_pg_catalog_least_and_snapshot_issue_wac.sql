@@ -205,3 +205,7 @@ WHERE item.issue_id = issue.id
   AND issue.issue_type IN ('consumption', 'other')
   AND coalesce(item.unit_cost, 0) = 0
   AND issue.source_location_id IS NOT NULL;
+
+REVOKE ALL ON FUNCTION public.save_stock_issue_line(bigint, bigint, numeric, bigint, text, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.save_stock_issue_line(bigint, bigint, numeric, bigint, text, text[]) TO authenticated;
+

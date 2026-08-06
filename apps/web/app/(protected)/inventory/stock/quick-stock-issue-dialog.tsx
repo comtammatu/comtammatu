@@ -48,7 +48,7 @@ import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
 const stockCopy = messages.inventory.stock;
 
-export type QuickIssueType = "consumption" | "writeoff" | "other";
+export type QuickIssueType = "consumption";
 
 const quickIssueTypeOptions: {
   value: QuickIssueType;
@@ -60,16 +60,6 @@ const quickIssueTypeOptions: {
     label: stockCopy.quickIssue.options.consumption,
     reasonPlaceholder: stockCopy.quickIssue.placeholders.consumption,
   },
-  {
-    value: "writeoff",
-    label: stockCopy.quickIssue.options.writeoff,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.writeoff,
-  },
-  {
-    value: "other",
-    label: stockCopy.quickIssue.options.other,
-    reasonPlaceholder: stockCopy.quickIssue.placeholders.other,
-  },
 ];
 
 function createQuickIssueSchema(
@@ -78,7 +68,7 @@ function createQuickIssueSchema(
 ) {
   return z
     .object({
-      issueType: z.enum(["consumption", "writeoff", "other"]),
+      issueType: z.enum(["consumption"]),
       quantity: z.string().refine((value) => Number(value) > 0, {
         error: stockCopy.quickIssue.quantityPositive,
       }),
@@ -154,10 +144,7 @@ export function QuickStockIssueDialog({
     }),
     [defaultIssueUnit, target.issueType],
   );
-  const title =
-    target.issueType === "writeoff"
-      ? stockCopy.quickIssue.writeoffTitle
-      : stockCopy.quickIssue.issueTitle;
+  const title = stockCopy.quickIssue.issueTitle;
   const activeIssueType = quickIssueTypeOptions.find(
     (option) => option.value === target.issueType,
   );

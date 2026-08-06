@@ -1,7 +1,7 @@
 import { matchesSearch } from "@lib/search";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
-export type BranchInternalIssueType = "writeoff" | "other";
+export type BranchInternalIssueType = "writeoff";
 export type BranchStockIssueType = BranchInternalIssueType | "consumption";
 export type BranchStockIssueStatus = "draft" | "confirmed" | "cancelled";
 export type BranchStockIssueStatusFilter = "all" | BranchStockIssueStatus;
@@ -38,7 +38,6 @@ export type BranchStockIssueIngredient = {
 };
 
 export type BranchStockIssuePermissions = {
-  canCreateOther: boolean;
   canCreateWriteoff: boolean;
 };
 
@@ -53,13 +52,13 @@ export type BranchStockIssueDetail = {
 export function isBranchStockIssueType(
   value: string,
 ): value is BranchStockIssueType {
-  return value === "writeoff" || value === "other" || value === "consumption";
+  return value === "writeoff" || value === "consumption";
 }
 
 export function isBranchInternalIssueType(
   value: string,
 ): value is BranchInternalIssueType {
-  return value === "writeoff" || value === "other";
+  return value === "writeoff";
 }
 
 export function toBranchStockIssueStatus(
@@ -67,15 +66,6 @@ export function toBranchStockIssueStatus(
 ): BranchStockIssueStatus {
   if (value === "confirmed" || value === "cancelled") return value;
   return "draft";
-}
-
-export function getBranchStockIssueCreateTypes(
-  permissions: BranchStockIssuePermissions,
-): BranchInternalIssueType[] {
-  return [
-    ...(permissions.canCreateWriteoff ? (["writeoff"] as const) : []),
-    ...(permissions.canCreateOther ? (["other"] as const) : []),
-  ];
 }
 
 export function filterBranchStockIssues(

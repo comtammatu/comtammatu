@@ -98,6 +98,7 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
 
   for (const href of [
     "/inventory/operations",
+    "/inventory/issues",
     "/inventory/supplier-invoices",
     "/inventory/stocktake",
     "/inventory/count-assignments",

@@ -58,7 +58,9 @@ Những thứ dưới đây không thuộc Inventory current contract dù có xu
   một `warehouse`.
   `production_storage` chỉ hợp lệ khi production trung tâm chọn tường minh,
   không làm fallback cho site/branch thiếu warehouse.
-- **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu được ghi tại Kho CN bằng `stock_movements.type = 'consumption'`, `movement_subtype = 'sale_consumption'`.
+- **Tiêu hao chi nhánh:** nguyên liệu đã dùng để tạo doanh thu hoặc tiêu hao
+  vận hành đã ghi nhận tại Kho CN bằng `stock_movements.type = 'consumption'`,
+  `movement_subtype = 'sale_consumption'`.
 
 ```
 Kho trung tâm → Yêu cầu mua → PO theo NCC → GRN theo lần giao → `*/warehouse`
@@ -66,14 +68,15 @@ Kho trung tâm → Yêu cầu mua → PO theo NCC → GRN theo lần giao → `*
 Site ── [production_run hiện hành] → trừ nguyên liệu, cộng thành phẩm
   (branch: warehouse; trung tâm: warehouse hoặc production_storage đã chọn)
 
-Kho CN → [phiếu xuất/tiêu hao] → `stock_movements.consumption`
+Kho CN → [phiếu tiêu hao] → `stock_movements.consumption` / `sale_consumption`
+Kho CN → [phiếu hao hụt HH / waste] → `writeoff` (không vào giá vốn món)
 ```
 
 ### 1b. Luân chuyển nội bộ
 
 `stock_transfers` chỉ chuyển tồn giữa hai warehouse hợp lệ. Không có target
-stock location Bếp trong cùng branch. Phiếu consumption/sale-consumption tại
-warehouse mới là luồng giảm tồn hiện hành.
+stock location Bếp trong cùng branch. Phiếu tiêu hao (`sale_consumption`) tại
+warehouse mới là luồng giảm tồn gắn giá vốn món.
 
 ### Các loại phiếu kho
 
@@ -82,14 +85,25 @@ warehouse mới là luồng giảm tồn hiện hành.
 | **Nhập từ NCC (GRN)**         | Tại CN / Kho Tổng / Bếp TT                       | `grn_receipt`                                         |
 | **Xuất luân chuyển**          | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`                                        |
 | **Nhận luân chuyển**          | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`                                         |
-| **Tiêu hao bán hàng thực tế** | Trừ Kho CN theo báo cáo tiêu hao đã duyệt        | `consumption` + `movement_subtype = sale_consumption` |
+| **Tiêu hao bán hàng thực tế** | POS recipe hoặc phiếu tiêu hao đã xác nhận       | `consumption` + `movement_subtype = sale_consumption` |
 | **Tiêu hao sản xuất**         | Trừ nguyên liệu tại site khi confirm production  | `production_consumption`                              |
 | **Nhập thành phẩm**           | Cộng tồn thành phẩm tại site                     | `production_output`                                   |
-| **Xuất theo bán**             | Theo recipe khi order `completed`                | `consumption`                                         |
-| **Điều chỉnh / hỏng / mất**   | Thủ công                                         | `adjustment`                                          |
-| **Kiểm kê**                   | Điều chỉnh sau đếm                               | `count_adjustment`                                    |
+| **Hao hụt / hủy hỏng**        | Phiếu HH qua luồng waste                         | `consumption` + `movement_subtype = writeoff`         |
+| **Điều chỉnh / kiểm kê**      | Thủ công / sau đếm                               | `adjustment` / `count_adjustment`                     |
 
-Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu. Lãi gộp vận hành dùng actual food cost từ `stock_movements` consumption đã được duyệt.
+**Contract chứng từ thủ công (không còn `other`):**
+
+| Việc vận hành | Surface tạo | `stock_issues.issue_type` | Finance |
+| --- | --- | --- | --- |
+| Tiêu hao | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao) | `consumption` | Giá vốn món |
+| Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
+
+Không có loại `other` / “Xuất khác”. `stock_issues` là bảng chứng từ kỹ thuật;
+ngôn ngữ UI là **phiếu tiêu hao** hoặc **hao hụt**, không phải “phiếu xuất loại …”.
+
+Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu. Lãi gộp vận
+hành dùng actual food cost từ phân bổ định giá bucket `food_cost` (sale
+consumption), không gồm writeoff/waste.
 
 ### Mã chứng từ kho
 

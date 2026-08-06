@@ -7,6 +7,8 @@ import { AppShell } from "@/components/app-shell";
 import { InventoryBranchFilter } from "@/(protected)/inventory/_components/inventory-branch-filter";
 import { withInventoryBranchNavScope } from "@/(protected)/inventory/_lib/inventory-nav";
 import type { InventoryBranchOption } from "@/(protected)/inventory/_lib/inventory-scope";
+import { withFinanceNavScope } from "@/(protected)/finance/components/finance-nav";
+import { parseFinanceParams } from "@/(protected)/finance/_lib/finance-params";
 import { useFinanceRealtimeRefresh } from "@/(protected)/finance/use-finance-realtime-refresh";
 import type { ControlSurfaceModuleId } from "@/lib/control-surface-module";
 import { CONTROL_SURFACE_MODULE_IDS } from "@/lib/control-surface-module";
@@ -103,6 +105,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
   );
 
   const inventoryBranchKey = searchParams.get("branchId");
+  const financeScopeKey = searchParams.toString();
   const inventoryCurrentBranchId = useMemo(() => {
     if (!inventory) return null;
     const { allowedBranches, defaultBranchId } = inventory;
@@ -131,7 +134,13 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     }
 
     if (activeModule === "finance") {
-      return resolveControlSurfaceDeepNav(role, "finance", { finance });
+      const financeParams = parseFinanceParams(
+        Object.fromEntries(new URLSearchParams(financeScopeKey).entries()),
+      );
+      return withFinanceNavScope(
+        resolveControlSurfaceDeepNav(role, "finance", { finance }),
+        financeParams,
+      );
     }
 
     if (
@@ -160,6 +169,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     }));
   }, [
     finance,
+    financeScopeKey,
     homeBranchId,
     inventory,
     inventoryCurrentBranchId,

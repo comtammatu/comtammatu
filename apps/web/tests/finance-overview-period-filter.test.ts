@@ -110,17 +110,27 @@ describe("Finance overview period filter", () => {
     assert.match(page, /<FilterBar[\s\S]*?locationFilter/);
     assert.match(filterBar, /FINANCE_OVERVIEW_PERIODS\.map/);
     assert.match(filterBar, /lg:flex-row lg:flex-nowrap lg:items-center/);
-    assert.match(filterBar, /<BusinessDatePicker/);
+    assert.match(filterBar, /<FinanceCalendarPeriodPicker/);
     assert.doesNotMatch(filterBar, /type="(?:date|month|week)"/);
     assert.match(
       readFileSync(
         new URL(
-          "../app/components/form/business-date-field.tsx",
+          "../app/(protected)/finance/components/finance-calendar-period-picker.tsx",
           import.meta.url,
         ),
         "utf8",
       ),
-      /<Calendar[\s\S]*?locale=\{vi\}/,
+      /period === "month"[\s\S]*?monthShort[\s\S]*?period === "quarter"[\s\S]*?quarterOption[\s\S]*?period === "year"/,
+    );
+    assert.match(
+      readFileSync(
+        new URL(
+          "../app/(protected)/finance/components/finance-calendar-period-picker.tsx",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      /period === "week"[\s\S]*?<Calendar[\s\S]*?locale=\{vi\}/,
     );
   });
 

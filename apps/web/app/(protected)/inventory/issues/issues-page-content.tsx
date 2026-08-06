@@ -82,23 +82,25 @@ function vnBusinessDateBoundaryUtc(value: string, offsetDays = 0): string {
 }
 
 // Scope splits the shared stock_issues surface into route variants:
-// "consumption" (Tiêu hao) and "internal" (hủy hỏng/xuất khác). "all" remains
-// available only for callers that intentionally need the full stock_issues list.
-type IssuesScope = "all" | "consumption" | "internal";
+// "hub" (Owner Tiêu hao page: consumption + writeoff tabs),
+// "consumption" (consumption-only), "internal" (writeoff-only / Branch-style).
+type IssuesScope = "hub" | "consumption" | "internal";
 
 interface ScopeConfig {
   issueTypes: string[] | undefined;
   showRecordedConsumptions: boolean;
   allowedIssueTypes: string[];
   defaultIssueType: string;
+  createHref?: string;
 }
 
 const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
-  all: {
-    issueTypes: undefined,
+  hub: {
+    issueTypes: ["consumption", "writeoff"],
     showRecordedConsumptions: true,
-    allowedIssueTypes: ["consumption", "writeoff", "other"],
+    allowedIssueTypes: ["consumption", "writeoff"],
     defaultIssueType: "consumption",
+    createHref: "/inventory/waste/new",
   },
   consumption: {
     issueTypes: ["consumption"],
@@ -107,10 +109,11 @@ const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
     defaultIssueType: "consumption",
   },
   internal: {
-    issueTypes: ["writeoff", "other"],
+    issueTypes: ["writeoff"],
     showRecordedConsumptions: false,
-    allowedIssueTypes: ["writeoff", "other"],
-    defaultIssueType: "other",
+    allowedIssueTypes: ["writeoff"],
+    defaultIssueType: "writeoff",
+    createHref: "/inventory/waste/new",
   },
 };
 
@@ -130,7 +133,7 @@ export async function IssuesPageContent({
   searchParams,
   listBasePath = "/inventory/consumption",
   detailBasePath = listBasePath,
-  scope: scopeVariant = "all",
+  scope: scopeVariant = "consumption",
   embedded = false,
 }: IssuesPageContentProps) {
   const scopeConfig = SCOPE_CONFIG[scopeVariant];
@@ -284,10 +287,8 @@ export async function IssuesPageContent({
       };
     });
 
-  // Desktop route variants derive their heading/section title from the route
-  // dictionary so each variant shows its own label; "all" (operator shell)
-  // leaves it undefined so the client keeps its Tiêu hao default.
-  const pageTitle = scopeVariant === "all" ? undefined : tRoute(listBasePath);
+  // Desktop route variants derive heading from the route dictionary.
+  const pageTitle = tRoute(listBasePath);
 
   return (
     <IssuesClient
@@ -305,6 +306,9 @@ export async function IssuesPageContent({
       detailBasePath={detailBasePath}
       allowedIssueTypes={scopeConfig.allowedIssueTypes}
       defaultIssueType={scopeConfig.defaultIssueType}
+      {...(scopeConfig.createHref
+        ? { createHref: scopeConfig.createHref }
+        : {})}
       pageTitle={pageTitle}
       embedded={embedded}
     />

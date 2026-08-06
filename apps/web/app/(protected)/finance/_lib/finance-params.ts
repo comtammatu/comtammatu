@@ -193,6 +193,63 @@ export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
   return usp;
 }
 
+/** Shared Finance URL keys — list-local keys (recon, state, queue) stay outside. */
+export const FINANCE_QUERY_KEYS = [
+  "location",
+  "branch",
+  "range",
+  "period",
+  "from",
+  "to",
+  "gran",
+  "compare",
+  "payment",
+  "cashier",
+] as const;
+
+export type FinanceQueryKey = (typeof FINANCE_QUERY_KEYS)[number];
+
+export function isFinanceQueryKey(key: string): key is FinanceQueryKey {
+  return (FINANCE_QUERY_KEYS as readonly string[]).includes(key);
+}
+
+/**
+ * Build a Finance route href that carries period/branch scope and optional
+ * list-local extras (`recon`, `queue`, `state`). Existing query on `path`
+ * is kept when the scoped serializer does not set the same key.
+ */
+export function financeHref(
+  path: string,
+  params: FinanceParams,
+  extra?: Readonly<Record<string, string | null | undefined>>,
+): string {
+  const [pathname = path, existingQuery = ""] = path.split("?", 2);
+  const usp = serializeFinanceParams(params);
+  for (const [key, value] of new URLSearchParams(existingQuery)) {
+    if (!usp.has(key)) usp.set(key, value);
+  }
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value == null || value === "") usp.delete(key);
+      else usp.set(key, value);
+    }
+  }
+  const qs = usp.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
+}
+
+/** Merge list-local query keys from the current URL into a finance search. */
+export function mergePreservedFinanceSearch(
+  financeSearch: URLSearchParams,
+  currentSearch: URLSearchParams,
+): URLSearchParams {
+  const next = new URLSearchParams(financeSearch);
+  for (const [key, value] of currentSearch) {
+    if (!isFinanceQueryKey(key) && !next.has(key)) next.set(key, value);
+  }
+  return next;
+}
+
 // ─── Period preset library — Asia/Ho_Chi_Minh ───────────────────
 
 function vnDateParts(date: Date): { y: number; m: number; d: number } {

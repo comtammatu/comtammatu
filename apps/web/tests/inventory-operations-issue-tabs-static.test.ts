@@ -11,14 +11,15 @@ const issuesSource = readFileSync(
   "utf8",
 );
 
-test("consumption combines operational usage and waste while keeping issue details", () => {
+test("Owner consumption hub keeps issues as waste-tab redirect", () => {
   assert.equal(
     existsSync("app/(protected)/inventory/operations/page.tsx"),
     false,
   );
   assert.match(
     consumptionSource,
-    /scope="all"[\s\S]*listBasePath="\/inventory\/consumption"[\s\S]*detailBasePath="\/inventory\/consumption"/,
+    /scope="hub"[\s\S]*listBasePath="\/inventory\/consumption"[\s\S]*detailBasePath="\/inventory\/consumption"/,
   );
   assert.match(issuesSource, /redirect\([\s\S]*\/inventory\/consumption/);
+  assert.match(issuesSource, /qParams\.set\("view", "waste"\)/);
 });

@@ -109,22 +109,17 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
   assert.match(layout, /aria-label=\{messages\.operator\.nav\.profileShort\}/);
-  assert.match(
-    layout,
-    /const notificationsAria =[\s\S]*?messages\.operator\.header\.notificationsAria/,
+  const bell = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/operator-notification-bell.tsx",
   );
-  assert.match(layout, /aria-label=\{notificationsAria\}/);
-  assert.match(layout, /\$\{unread\} chưa đọc/);
-  assert.doesNotMatch(layout, /messages\.employee\.(?:nav|header)/);
-  assert.match(layout, /notificationsHref/);
-  assert.match(layout, /const unreadPromise = getUnreadCount\(\)\.catch/);
-  assert.match(layout, /const unreadResult = await unreadPromise/);
-  assert.match(layout, /encodeURIComponent\(`\/br\/\$\{context\.branchId\}`\)/);
-  assert.match(layout, /href=\{notificationsHref\}/);
-  assert.match(layout, /size="icon-touch"/);
-  assert.match(layout, /className="hidden sm:inline"/);
-  assert.doesNotMatch(layout, /IconBell data-icon="inline-start"/);
-  assert.doesNotMatch(layout, /<Badge/);
+  assert.match(layout, /<OperatorNotificationBell/);
+  assert.match(bell, /messages\.operator\.header\.notificationsAria/);
+  assert.match(bell, /aria-label=\{aria\}/);
+  assert.match(bell, /\$\{unread\} chưa đọc/);
+  assert.doesNotMatch(bell, /messages\.employee\.(?:nav|header)/);
+  assert.match(bell, /encodeURIComponent/);
+  assert.match(bell, /size="icon-touch"/);
+  assert.doesNotMatch(bell, /IconBell data-icon="inline-start"/);
   assert.doesNotMatch(layout, /shift\/profile/);
 });
 

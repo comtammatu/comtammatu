@@ -134,6 +134,17 @@ test("migration expires leave checkout count-slip and adds payroll ready", () =>
   assert.match(migration, /WHEN 'critical' THEN 0/);
 });
 
+test("migration retires cron health from the Owner notification feed", () => {
+  const migration = read(
+    "supabase/migrations/20260806145335_remove_cron_health_owner_notifications.sql",
+  );
+  assert.match(migration, /CREATE OR REPLACE FUNCTION public\.check_cron_jobs_health/);
+  assert.match(migration, /jobname = 'check_cron_jobs_health_job'/);
+  assert.match(migration, /cron\.unschedule/);
+  assert.match(migration, /DELETE FROM public\.notifications[\s\S]*kind = 'system\.cron_failed'/);
+  assert.doesNotMatch(migration, /INSERT INTO public\.notifications/);
+});
+
 test("migration targets each handoff role and exposes exact grouped counts", () => {
   const migration = read(
     "supabase/migration-archive/20260730180000_ops_notification_badges.sql",

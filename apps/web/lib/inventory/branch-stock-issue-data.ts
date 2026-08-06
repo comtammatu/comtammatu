@@ -117,15 +117,15 @@ function toBranchStockIssueIngredient(
 }
 
 async function loadIssuePermissions(branchId: number) {
-  const [canCreateOther, canCreateWriteoff] = await Promise.all([
+  const [canWriteConsumption, canCreateWriteoff] = await Promise.all([
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
   ]);
 
   return {
-    canCreateOther,
+    canWriteConsumption,
     canCreateWriteoff,
-  } satisfies BranchStockIssuePermissions;
+  };
 }
 
 export async function loadBranchStockIssueListData(routeBranchId: number) {
@@ -138,7 +138,7 @@ export async function loadBranchStockIssueListData(routeBranchId: number) {
   const [issuesResult, permissions] = await Promise.all([
     fetchStockIssues({
       branchId: routeBranchId,
-      issueTypes: ["writeoff", "other"],
+      issueTypes: ["writeoff"],
     }),
     loadIssuePermissions(routeBranchId),
   ]);
@@ -157,7 +157,9 @@ export async function loadBranchStockIssueListData(routeBranchId: number) {
       ? getBranchSiteDisplayName(branch)
       : `CN #${routeBranchId}`,
     issues,
-    permissions,
+    permissions: {
+      canCreateWriteoff: permissions.canCreateWriteoff,
+    } satisfies BranchStockIssuePermissions,
   };
 }
 
@@ -218,7 +220,7 @@ export async function loadBranchStockIssueDetailData(
   const canManage =
     issue.type === "writeoff"
       ? permissions.canCreateWriteoff
-      : permissions.canCreateOther;
+      : permissions.canWriteConsumption;
 
   return {
     tenantId: detail.tenantId,

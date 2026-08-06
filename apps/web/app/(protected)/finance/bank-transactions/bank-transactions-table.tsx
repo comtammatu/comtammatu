@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDownLeft as IconMoneyIn,
   ArrowUpRight as IconMoneyOut,
@@ -70,20 +70,18 @@ import {
 } from "../bank-webhook-review-actions";
 import type { ExpenseMatchOption } from "../expense-actions";
 import type { FinanceParams } from "../_lib/finance-params";
+import {
+  BANK_RECONCILIATION_FILTER_DEFAULT,
+  BANK_RECONCILIATION_FILTER_PARAM,
+  isBankReconciliationFilter,
+  parseBankReconciliationFilter,
+  type BankReconciliationFilter,
+} from "../_lib/bank-reconciliation-filter";
 import { FilterBar } from "../components/filter-bar";
 import { MatchExpenseCell } from "./match-expense-cell";
 
 const copy = messages.finance.bankTransactions;
 const REVIEW_PENDING_VALUE = "pending";
-const BANK_RECONCILIATION_FILTER_VALUES = [
-  "all",
-  "needs_review",
-  "money_in_review",
-  "money_out_review",
-  "missing_webhook",
-  "matched",
-  "webhook_error",
-] as const;
 function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
   label: string;
   variant: "success" | "warning" | "destructive";
@@ -107,9 +105,6 @@ interface BankTransactionsTableProps {
   expenseOptions: ExpenseMatchOption[];
   canLinkPayments: boolean;
 }
-
-type BankReconciliationFilter =
-  (typeof BANK_RECONCILIATION_FILTER_VALUES)[number];
 
 type BankReconciliationRow =
   | {
@@ -135,12 +130,6 @@ function formatProviderRef(providerRef: string | null): string {
 
 function isReviewStatus(value: string): value is SepayBankWebhookReviewStatus {
   return SEPAY_BANK_WEBHOOK_REVIEW_VALUES.some((status) => status === value);
-}
-
-function isBankReconciliationFilter(
-  value: string,
-): value is BankReconciliationFilter {
-  return BANK_RECONCILIATION_FILTER_VALUES.some((filter) => filter === value);
 }
 
 function AmountCell({ tx }: { tx: SepayBankTransaction }) {
@@ -639,10 +628,29 @@ export function BankTransactionsTable({
   expenseOptions,
   canLinkPayments,
 }: BankTransactionsTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isFilterPending, startFilterTransition] = React.useTransition();
   const isTouchLayout = useIsMobile(1024);
   const controlSize = isTouchLayout ? "touch" : "field";
-  const [filter, setFilter] =
-    React.useState<BankReconciliationFilter>("needs_review");
+  const filter = parseBankReconciliationFilter(
+    searchParams.get(BANK_RECONCILIATION_FILTER_PARAM),
+  );
+
+  function setFilter(next: BankReconciliationFilter) {
+    const usp = new URLSearchParams(searchParams.toString());
+    if (next === BANK_RECONCILIATION_FILTER_DEFAULT) {
+      usp.delete(BANK_RECONCILIATION_FILTER_PARAM);
+    } else {
+      usp.set(BANK_RECONCILIATION_FILTER_PARAM, next);
+    }
+    const qs = usp.toString();
+    startFilterTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    });
+  }
+
   const rows = React.useMemo<BankReconciliationRow[]>(
     () => [
       ...transactions.map((tx) => ({ kind: "bank" as const, tx })),
@@ -803,6 +811,7 @@ export function BankTransactionsTable({
             </span>
             <Select
               value={filter}
+              disabled={isFilterPending}
               onValueChange={(value) => {
                 if (isBankReconciliationFilter(value)) setFilter(value);
               }}

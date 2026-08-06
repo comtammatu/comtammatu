@@ -343,7 +343,8 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/requests\/new/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/transfer/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/stocktake/);
-  assert.match(branchDetailSource, /\$\{stockBasePath\}\/issues/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/consumption/);
+  assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchDetailSource,
@@ -401,12 +402,11 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(stockClientSource, /href=\{stockDetailHref\(item\.id\)\}/);
   assert.match(
     stockClientSource,
-    /const quickIssueBasePath = \(issueType: QuickIssueType\) =>/,
+    /const quickIssueBasePath = \(_issueType: QuickIssueType\) =>/,
   );
-  assert.match(
-    stockClientSource,
-    /issueType === "consumption"[\s\S]*\? "\/inventory\/consumption"[\s\S]*: "\/inventory\/issues"/,
-  );
+  assert.match(stockClientSource, /"\/inventory\/consumption"/);
+  assert.match(stockClientSource, /href: actionHrefs\.waste/);
+  assert.doesNotMatch(stockClientSource, /issueType:\s*"writeoff"/);
   assert.match(
     stockClientSource,
     /canReceiveStock = actionPermissions\.canReceiveGrn/,
@@ -590,10 +590,11 @@ test("operator stock branch-native extensions keep issue and report actions in t
   );
   assert.match(branchIssuesListClient, /BranchOperatorPage/);
   assert.match(branchIssuesListClient, /ItemGroup/);
-  assert.match(branchIssuesListClient, /<Sheet/);
+  assert.match(branchIssuesListClient, /wasteHref/);
+  assert.match(branchIssuesListClient, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchIssuesListClient,
-    /DataTable|useLongPress|FormDialog/,
+    /<Sheet|createStockIssueDraft|DataTable|useLongPress|FormDialog/,
   );
   assert.match(branchIssueDetailClient, /BranchOperatorDetailList/);
   assert.match(branchIssueDetailClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
@@ -604,9 +605,10 @@ test("operator stock branch-native extensions keep issue and report actions in t
   );
   assert.match(branchStockIssueData, /resolveInventoryListScope/);
   assert.match(branchStockIssueData, /resolveInventoryBranchScope/);
-  assert.match(branchStockIssueData, /issueTypes: \["writeoff", "other"\]/);
+  assert.match(branchStockIssueData, /issueTypes: \["writeoff"\]/);
   assert.match(branchStockIssueData, /INVENTORY_WRITEOFF/);
   assert.match(stockIssueModel, /canConfirmBranchStockIssue/);
+  assert.doesNotMatch(stockIssueModel, /canCreateOther|"other"/);
   assert.match(reportsRoute, /loadBranchStockReportData\(branchId\)/);
   assert.match(reportsRoute, /<BranchStockReportsClient/);
   assert.doesNotMatch(reportsRoute, /ReportsPageContent|embedded|DataTable/);
@@ -864,8 +866,12 @@ test("operator stock issues keep internal issue workflow native to Branch", () =
 
   assert.match(listClient, /BranchOperatorPage/);
   assert.match(listClient, /ItemGroup/);
-  assert.match(listClient, /<Sheet/);
-  assert.doesNotMatch(listClient, /DataTable|useLongPress|FormDialog/);
+  assert.match(listClient, /wasteHref/);
+  assert.match(listClient, /\$\{stockBasePath\}\/waste/);
+  assert.doesNotMatch(
+    listClient,
+    /<Sheet|createStockIssueDraft|DataTable|useLongPress|FormDialog/,
+  );
   assert.match(detailClient, /BranchOperatorDetailList/);
   assert.match(detailClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
   assert.match(detailClient, /<Sheet/);
@@ -876,10 +882,11 @@ test("operator stock issues keep internal issue workflow native to Branch", () =
 
   assert.match(data, /resolveInventoryListScope/);
   assert.match(data, /resolveInventoryBranchScope/);
-  assert.match(data, /issueTypes: \["writeoff", "other"\]/);
+  assert.match(data, /issueTypes: \["writeoff"\]/);
   assert.match(data, /INVENTORY_WRITEOFF/);
   assert.match(data, /detail\.issue\.branch_id !== routeBranchId/);
   assert.match(model, /canConfirmBranchStockIssue/);
+  assert.doesNotMatch(model, /canCreateOther|"other"/);
 });
 
 test("operator stocktake routes keep session stocktake native to Branch", () => {

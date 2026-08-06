@@ -10,10 +10,28 @@ import {
 } from "lucide-react";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
+import { financeHref, type FinanceParams } from "../_lib/finance-params";
 
 // Finance deep nav as data (D019 § D): the finance-specific sidebar group
 // appended under the shared Owner surface nav. Labels stay in the finance copy layer.
 const financeNav = messages.finance.nav;
+
+/** Carry period/branch scope on nav clicks; keep bare `href` for active match. */
+export function withFinanceNavScope(
+  groups: ShellNavGroup[],
+  params: FinanceParams,
+): ShellNavGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.map((item) => {
+      // Targets own `?month=` — do not overwrite with finance period params.
+      if (item.href === "/finance/targets") return item;
+      const linkHref = financeHref(item.href, params);
+      if (linkHref === item.href) return item;
+      return { ...item, linkHref };
+    }),
+  }));
+}
 
 export function resolveFinanceNav({
   showInvoices,
@@ -26,7 +44,7 @@ export function resolveFinanceNav({
 }): ShellNavGroup[] {
   const groups: ShellNavGroup[] = [
     {
-      title: financeNav.groups.basic,
+      title: financeNav.groups.money,
       items: [
         {
           href: "/finance",
@@ -35,24 +53,29 @@ export function resolveFinanceNav({
           exact: true,
         },
         {
-          href: "/finance/revenue",
-          label: financeNav.items.revenue,
-          icon: IconBarChart3,
-        },
-        {
           href: "/finance/bank-transactions",
           label: financeNav.items.bankTransactions,
           icon: IconLandmark,
         },
         {
-          href: "/finance/food-cost",
-          label: financeNav.items.foodCost,
-          icon: IconTrendingUp,
-        },
-        {
           href: "/finance/expenses",
           label: financeNav.items.expenses,
           icon: IconReceipt,
+        },
+      ],
+    },
+    {
+      title: financeNav.groups.reports,
+      items: [
+        {
+          href: "/finance/revenue",
+          label: financeNav.items.revenue,
+          icon: IconBarChart3,
+        },
+        {
+          href: "/finance/food-cost",
+          label: financeNav.items.foodCost,
+          icon: IconTrendingUp,
         },
         ...(showRevenueTargets
           ? [
@@ -67,7 +90,7 @@ export function resolveFinanceNav({
     },
   ];
 
-  const invoiceItems: ShellNavGroup["items"] = [
+  const documentItems: ShellNavGroup["items"] = [
     ...(showInvoices
       ? [
           {
@@ -87,10 +110,10 @@ export function resolveFinanceNav({
         ]
       : []),
   ];
-  if (invoiceItems.length > 0) {
+  if (documentItems.length > 0) {
     groups.push({
-      title: financeNav.groups.invoices,
-      items: invoiceItems,
+      title: financeNav.groups.documents,
+      items: documentItems,
     });
   }
 

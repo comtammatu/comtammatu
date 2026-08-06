@@ -1,9 +1,8 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
   ChevronRight as IconChevronRight,
@@ -11,11 +10,10 @@ import {
   FileText as IconFileText,
   Search as IconSearch,
 } from "lucide-react";
-import { ACTIONS_VI, FORM_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -36,15 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import {
@@ -54,17 +43,11 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   filterBranchStockIssues,
-  getBranchStockIssueCreateTypes,
   type BranchStockIssue,
   type BranchStockIssuePermissions,
   type BranchStockIssueStatusFilter,
-  type BranchInternalIssueType,
   type BranchStockIssueType,
 } from "@lib/inventory/stock-issue-model";
-import { messages } from "@lib/messages";
-import { createStockIssueDraft } from "@/(protected)/inventory/issue-actions";
-
-const issuesCopy = messages.inventory.issues;
 
 const statusOptions: Array<{
   value: BranchStockIssueStatusFilter;
@@ -87,145 +70,7 @@ const statusOptions: Array<{
 
 function issueTypeLabel(type: BranchStockIssueType) {
   if (type === "writeoff") return INVENTORY_VI.issueTypeWriteoff;
-  if (type === "consumption") return INVENTORY_VI.issueTypeConsumption;
-  return INVENTORY_VI.issueTypeOther;
-}
-
-function BranchStockIssueCreateSheet({
-  branchId,
-  branchName,
-  open,
-  permissions,
-  onOpenChange,
-}: {
-  branchId: number;
-  branchName: string;
-  open: boolean;
-  permissions: BranchStockIssuePermissions;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const createTypes = getBranchStockIssueCreateTypes(permissions);
-  const [issueType, setIssueType] = useState<BranchInternalIssueType>(
-    permissions.canCreateWriteoff ? "writeoff" : "other",
-  );
-  const [notes, setNotes] = useState("");
-
-  function handleOpenChange(nextOpen: boolean) {
-    onOpenChange(nextOpen);
-    if (!nextOpen) setNotes("");
-  }
-
-  function handleCreate() {
-    if (!createTypes.includes(issueType)) return;
-
-    startTransition(async () => {
-      const result = await createStockIssueDraft({
-        branchId,
-        issueType,
-        notes: notes.trim() || undefined,
-      });
-      if (!result.success || !result.data) {
-        toast.error(result.error ?? issuesCopy.listLoadFailed);
-        return;
-      }
-
-      const issueId = Number((result.data as { id: number }).id);
-      if (!Number.isInteger(issueId) || issueId <= 0) {
-        toast.error(issuesCopy.listLoadFailed);
-        return;
-      }
-
-      toast.success(INVENTORY_VI.issueCreated);
-      handleOpenChange(false);
-      router.push(`/br/${branchId}/stock/issues/${issueId}`);
-    });
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="max-h-dvh-95 overflow-y-auto bg-background p-0 text-foreground"
-      >
-        <SheetHeader>
-          <SheetTitle>{INVENTORY_VI.issueCreateAction}</SheetTitle>
-          <p className="text-xs text-muted-foreground">{branchName}</p>
-        </SheetHeader>
-
-        <div className="p-4">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="branch-stock-issue-type">
-                {INVENTORY_VI.issueTypeLabel}
-              </FieldLabel>
-              <Select
-                value={issueType}
-                disabled={createTypes.length === 1}
-                onValueChange={(value) =>
-                  setIssueType(value as BranchInternalIssueType)
-                }
-              >
-                <SelectTrigger
-                  id="branch-stock-issue-type"
-                  size="touch"
-                  className="w-full"
-                >
-                  <SelectValue placeholder={INVENTORY_VI.issueTypeLabel} />
-                </SelectTrigger>
-                <SelectContent>
-                  {createTypes.map((type) => (
-                    <SelectItem key={type} value={type} size="touch">
-                      {issueTypeLabel(type)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="branch-stock-issue-notes">
-                {FORM_VI.notes}
-              </FieldLabel>
-              <Textarea
-                id="branch-stock-issue-notes"
-                rows={3}
-                value={notes}
-                placeholder={INVENTORY_VI.issueNotesPlaceholder}
-                onChange={(event) => setNotes(event.target.value)}
-              />
-            </Field>
-          </FieldGroup>
-        </div>
-
-        <SheetFooter>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch-lg"
-              className="flex-1"
-              disabled={isPending}
-              onClick={() => handleOpenChange(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch-lg"
-              className="flex-1"
-              disabled={isPending || createTypes.length === 0}
-              onClick={handleCreate}
-            >
-              <IconCirclePlus data-icon="inline-start" />
-              {INVENTORY_VI.createSlipAction}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
-  );
+  return INVENTORY_VI.issueTypeConsumption;
 }
 
 export function BranchStockIssuesListClient({
@@ -241,10 +86,10 @@ export function BranchStockIssuesListClient({
 }) {
   const stockBasePath = `/br/${branchId}/stock`;
   const issuesBasePath = `${stockBasePath}/issues`;
+  const wasteHref = `${stockBasePath}/waste`;
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
-  const [createOpen, setCreateOpen] = useState(false);
-  const createTypes = getBranchStockIssueCreateTypes(permissions);
+  const canCreateWaste = permissions.canCreateWriteoff;
   const filteredIssues = useMemo(
     () => filterBranchStockIssues(issues, { query: search, status }),
     [issues, search, status],
@@ -257,11 +102,10 @@ export function BranchStockIssuesListClient({
       description={branchName}
       hideHeaderOnMobile
       action={
-        createTypes.length > 0 ? (
+        canCreateWaste ? (
           <Button
-            type="button"
             size="touch"
-            onClick={() => setCreateOpen(true)}
+            render={<Link href={wasteHref} />}
           >
             <IconCirclePlus data-icon="inline-start" />
             {INVENTORY_VI.issueCreateAction}
@@ -286,12 +130,11 @@ export function BranchStockIssuesListClient({
               {branchName}
             </p>
           </div>
-          {createTypes.length > 0 ? (
+          {canCreateWaste ? (
             <Button
-              type="button"
               size="touch"
               className="shrink-0"
-              onClick={() => setCreateOpen(true)}
+              render={<Link href={wasteHref} />}
             >
               {ACTIONS_VI.create}
             </Button>
@@ -406,14 +249,6 @@ export function BranchStockIssuesListClient({
           )}
         </BranchOperatorPanel>
       </div>
-
-      <BranchStockIssueCreateSheet
-        branchId={branchId}
-        branchName={branchName}
-        open={createOpen}
-        permissions={permissions}
-        onOpenChange={setCreateOpen}
-      />
     </BranchOperatorPage>
   );
 }

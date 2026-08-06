@@ -37,6 +37,7 @@ import {
 } from "@/components/row-actions-menu";
 import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   DataTable,
   type DataTableColumn,
@@ -117,6 +118,7 @@ export function RevenueTargetsClient({
   yearMonth: string;
   initialRows: RevenueTargetSetupRow[];
 }) {
+  const controlSize = useFormControlSize();
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((row) => ({
       ...row,
@@ -411,12 +413,12 @@ export function RevenueTargetsClient({
         }
         actions={
           <>
-            <Button type="submit" variant="outline" size="field">
+            <Button type="submit" variant="outline" size={controlSize}>
               {copy.applyMonth}
             </Button>
             <Button
               type="button"
-              size="field"
+              size={controlSize}
               render={<Link href="/finance/revenue" />}
               variant="ghost"
             >
@@ -424,7 +426,7 @@ export function RevenueTargetsClient({
             </Button>
             <Button
               type="button"
-              size="field"
+              size={controlSize}
               disabled={pending || !hasUnconfigured}
               onClick={() => {
                 const row = rows.find((item) => item.targetAmount == null);

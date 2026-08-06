@@ -104,13 +104,16 @@ test("Finance cockpit actual food cost follows the VN business-day window", () =
 
   assert.match(cockpit, /getVNDayUtcRange/);
   assert.match(cockpit, /getVNDateString/);
-  assert.match(cockpit, /\.gte\("created_at",\s*startIso\)/);
-  assert.match(cockpit, /\.lt\("created_at",\s*endIso\)/);
-  assert.match(cockpit, /const period = getVNDateString\(row\.created_at\)/);
-  assert.doesNotMatch(
+  assert.match(
     cockpit,
-    /String\(row\.created_at \?\? ""\)\.slice\(0,\s*10\)/,
+    /\.gte\("inventory_valuation_events\.effective_at",\s*startIso\)/,
   );
+  assert.match(
+    cockpit,
+    /\.lt\("inventory_valuation_events\.effective_at",\s*endIso\)/,
+  );
+  assert.match(cockpit, /const period = getVNDateString\(event\.effective_at\)/);
+  assert.doesNotMatch(cockpit, /\.gte\("created_at",\s*startIso\)/);
   assert.doesNotMatch(cockpit, /function nextDate/);
 });
 
@@ -247,11 +250,20 @@ test("Finance gates gross profit and operating result on data coverage", () => {
 
   assert.match(
     cockpit,
-    /\.select\("branch_id, order_id, quantity_change, unit_cost, created_at"\)/,
+    /stock_movements \( branch_id, order_id \)/,
     "actual food cost must keep order_id for coverage",
   );
   assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
-  assert.match(cockpit, /orderIds\.add\(row\.order_id\)/);
+  assert.match(cockpit, /orderIds\.add\(movement\.order_id\)/);
+  assert.match(
+    cockpit,
+    /inventory valuation cutover is not active/,
+    "food cost must not fall back to legacy WAC movements",
+  );
+  assert.doesNotMatch(
+    cockpit,
+    /movement_subtype", "sale_consumption"/,
+  );
   assert.match(
     cockpit,
     /const costAvailable =\s*orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,

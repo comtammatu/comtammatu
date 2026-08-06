@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
@@ -50,18 +48,7 @@ export default async function BankTransactionsPage({
       <AppPageHeader
         title={copy.title}
         description={copy.description}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {canLinkPayments ? <SepayImportDialog /> : null}
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href="/finance" />}
-            >
-              {messages.finance.common.backToFinance}
-            </Button>
-          </div>
-        }
+        actions={canLinkPayments ? <SepayImportDialog /> : undefined}
       />
       <BankTransactionsTable
         params={params}

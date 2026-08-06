@@ -366,7 +366,8 @@ export const INVENTORY_VI = {
   exportReportAction: "Xuất báo cáo",
   recordedConsumptionTitle: "Tiêu hao đã ghi nhận",
   consumptionTabRecorded: "Đã ghi nhận",
-  consumptionTabManual: "Phiếu chứng từ",
+  consumptionTabManual: "Phiếu tiêu hao",
+  consumptionTabWaste: "Hao hụt",
   exportCsvAction: "Xuất CSV",
   visibleRowsLabel: "Dòng hiển thị",
   totalAmountLabel: "Tổng thành tiền",
@@ -381,15 +382,12 @@ export const INVENTORY_VI = {
   manualConsumptionEmptyTitle: "Chưa có phiếu tiêu hao thủ công",
   manualConsumptionEmptyDescription:
     "Chỉ theo dõi chứng từ nhập tay; dòng đã ghi sổ nằm ở mục tiêu hao đã ghi nhận.",
-  combinedConsumptionSlipsTitle: "Phiếu vận hành và hao hụt",
-  combinedConsumptionCreateAction: "Tạo phiếu vận hành",
-  combinedConsumptionCreateDescription:
-    "Ghi nguyên liệu dùng cho vận hành ngoài đơn POS.",
-  combinedConsumptionEmptyTitle: "Chưa có phiếu vận hành hoặc hao hụt",
-  combinedConsumptionEmptyDescription:
-    "Tạo phiếu vận hành hoặc ghi nhận hao hụt bằng luồng chuyên biệt.",
-  issueSlipsTitle: "Phiếu xuất kho khác",
-  issueCreateAction: "Tạo phiếu xuất kho khác",
+  writeoffSlipsTitle: "Phiếu hao hụt",
+  writeoffEmptyTitle: "Chưa có phiếu hao hụt",
+  writeoffEmptyDescription:
+    "Ghi nhận hao hụt / hủy hỏng qua luồng phiếu hao hụt chuyên biệt.",
+  issueSlipsTitle: "Phiếu xuất kho",
+  issueCreateAction: "Tạo phiếu xuất kho",
   issueEmptyFiltered: "Không tìm thấy phiếu phù hợp",
   issueEmptyNoData: "Chưa có phiếu nào",
   issueEmptyDescription: "Điều chỉnh bộ lọc hoặc tạo phiếu mới để bắt đầu.",

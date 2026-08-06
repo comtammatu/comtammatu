@@ -10,6 +10,7 @@ import type {
   FinanceDashboardHealth,
   FinanceDashboardSummary,
 } from "../_lib/finance-types";
+import { financeHref, type FinanceParams } from "../_lib/finance-params";
 
 // Operational queue strip — keep the default Finance support queue focused on
 // Operating checks. Accounting-close tiles exist for direct support routes,
@@ -28,6 +29,10 @@ interface WorkQueueStripProps {
   /** Hide tiles that don't apply on a given route. Default: all visible. */
   hide?: ReadonlyArray<WorkQueueTile>;
   className?: string;
+  /** When set, tiles deep-link into the matching workflow with this scope. */
+  scope?: FinanceParams;
+  /** Prefer a concrete POS-session href when a variance target is known. */
+  cashVarianceHref?: string;
 }
 
 type WorkQueueTile = "invoices" | "cash" | "foodCost" | "webhook";
@@ -59,9 +64,31 @@ export function WorkQueueStrip({
   health,
   hide = [],
   className,
+  scope,
+  cashVarianceHref,
 }: WorkQueueStripProps) {
   const visible = DEFAULT_TILES.filter((t) => !hide.includes(t));
   if (visible.length === 0) return null;
+
+  const invoiceAttentionCount = summary?.invoice_attention_count ?? 0;
+  const invoicesHref = scope
+    ? financeHref("/finance/invoices", scope, {
+        queue: invoiceAttentionCount > 0 ? "attention" : null,
+      })
+    : undefined;
+  const foodCostHref = scope
+    ? financeHref("/finance/food-cost", scope)
+    : undefined;
+  const webhookHref = scope
+    ? financeHref("/finance/bank-transactions", scope, {
+        recon: "needs_review",
+      })
+    : undefined;
+  const cashHref =
+    cashVarianceHref ??
+    (scope?.branch != null
+      ? `/br/${String(scope.branch)}/pos-sessions`
+      : undefined);
 
   return (
     <AppSection
@@ -76,11 +103,8 @@ export function WorkQueueStrip({
             label={copy.workQueue.invoicesAttention}
             value={formatNullableCount(summary?.invoice_attention_count)}
             hint={copy.workQueue.invoicesAttentionHint}
-            tone={
-              (summary?.invoice_attention_count ?? 0) > 0
-                ? "warning"
-                : "neutral"
-            }
+            tone={invoiceAttentionCount > 0 ? "warning" : "neutral"}
+            href={invoicesHref}
           />
         )}
         {visible.includes("cash") && (
@@ -98,6 +122,7 @@ export function WorkQueueStrip({
                   ? "warning"
                   : "neutral"
             }
+            href={cashHref}
           />
         )}
         {visible.includes("foodCost") && (
@@ -113,6 +138,7 @@ export function WorkQueueStrip({
                   )
             }
             tone={health.foodCostExceptionCount > 0 ? "warning" : "neutral"}
+            href={foodCostHref}
           />
         )}
         {visible.includes("webhook") && (
@@ -126,6 +152,7 @@ export function WorkQueueStrip({
                 ? "destructive"
                 : "neutral"
             }
+            href={webhookHref}
           />
         )}
       </KpiRow>

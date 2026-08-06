@@ -118,7 +118,10 @@ test("Finance attention deep-links to the exact unresolved POS session", () => {
     /pos-sessions\?session=\$\{String\(cashVarianceTarget\.session_id\)\}/,
   );
   assert.match(cockpit, /get_finance_reconciliation_attention/);
-  assert.match(cockpit, /bank-transactions\?range=custom&from=/);
+  assert.match(
+    cockpit,
+    /financeHref\("\/finance\/bank-transactions", params, \{\s*recon: "needs_review"/,
+  );
   assert.match(migration, /variance_resolution_type IS NULL/);
   assert.match(migration, /bank_transaction_reconciliation_matches/);
   assert.match(migration, /payment\.method = 'vietqr'/);

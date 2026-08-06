@@ -123,7 +123,11 @@ export function resolveInventoryNav({
     href: "/inventory/consumption",
     label: "Tiêu hao",
     icon: IconCircleMinus,
-    matchPrefixes: ["/inventory/consumption/", "/inventory/issues"],
+    matchPrefixes: [
+      "/inventory/consumption/",
+      "/inventory/issues",
+      "/inventory/waste",
+    ],
   });
   if (showStockRequestInbox || userRole === "owner") {
     inboundItems.push({

@@ -7,12 +7,13 @@ export default async function ConsumptionPage({
     branchId?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
+    view?: string | string[];
   }>;
 }) {
   return (
     <IssuesPageContent
       searchParams={searchParams}
-      scope="all"
+      scope="hub"
       listBasePath="/inventory/consumption"
       detailBasePath="/inventory/consumption"
     />

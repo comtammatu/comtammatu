@@ -512,10 +512,11 @@ function getVNDateRangeUtc(startDate: string, endDate: string) {
   return { startIso, endIso };
 }
 
-// Read-only actual food cost (giá vốn món) from approved consumption, mirroring
-// the finance cockpit's ingredientCost so the expenses page shows the same
-// figure. NOT an expense-ledger row: keeps it out of operating expense / net
-// profit (which already nets consumption via gross profit), so no double count.
+// Read-only actual food cost (giá vốn món) from inventory valuation
+// allocations, mirroring the finance cockpit's ingredientCost so the expenses
+// page shows the same figure. NOT an expense-ledger row: keeps it out of
+// operating expense / net profit (which already nets food cost via gross
+// profit), so no double count.
 export async function fetchActualFoodCostTotal(params: {
   branchId?: number | null;
   startDate: string;
@@ -540,7 +541,6 @@ export async function fetchActualFoodCostSummary(params: {
   ActionResult<{
     total: number;
     orderCount: number;
-    foodCostSource: "valuation" | "legacy";
   }>
 > {
   const ctx = await getAuthContextWithPermission(
@@ -573,31 +573,9 @@ export async function fetchActualFoodCostSummary(params: {
     return { success: false, error: "Không tải được giá vốn món." };
   }
   if (cutover?.status !== "active") {
-    let movementQuery = monetary.client
-      .from("stock_movements")
-      .select("order_id, quantity_change, unit_cost")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("type", "consumption")
-      .eq("movement_subtype", "sale_consumption")
-      .gte("created_at", startIso)
-      .lt("created_at", endIso);
-    if (params.branchId != null) {
-      movementQuery = movementQuery.eq("branch_id", params.branchId);
-    }
-    const { data, error } = await movementQuery;
-    if (error) {
-      return { success: false, error: "Không tải được giá vốn món." };
-    }
-    const orderIds = new Set<number>();
-    const total = (data ?? []).reduce((sum, row) => {
-      if (row.order_id != null) orderIds.add(row.order_id);
-      return (
-        sum + Math.abs(Number(row.quantity_change)) * Number(row.unit_cost ?? 0)
-      );
-    }, 0);
     return {
-      success: true,
-      data: { total, orderCount: orderIds.size, foodCostSource: "legacy" },
+      success: false,
+      error: "Giá vốn món yêu cầu sổ định giá kho đang hoạt động.",
     };
   }
 
@@ -635,7 +613,7 @@ export async function fetchActualFoodCostSummary(params: {
   }
 
   const orderIds = new Set<number>();
-  const issueTotal = (eventsResult.data ?? []).reduce((sum, row) => {
+  const foodCostTotal = (eventsResult.data ?? []).reduce((sum, row) => {
     const movement = Array.isArray(row.stock_movements)
       ? row.stock_movements[0]
       : row.stock_movements;
@@ -694,10 +672,10 @@ export async function fetchActualFoodCostSummary(params: {
       );
     }, 0);
   }
-  const total = issueTotal + scopedRepriceTotal;
+  const total = foodCostTotal + scopedRepriceTotal;
   return {
     success: true,
-    data: { total, orderCount: orderIds.size, foodCostSource: "valuation" },
+    data: { total, orderCount: orderIds.size },
   };
 }
 

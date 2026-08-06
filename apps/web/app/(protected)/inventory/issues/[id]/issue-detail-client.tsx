@@ -169,7 +169,7 @@ function getIssueSurface(
     return ISSUES_VI.surface.consumption;
   }
 
-  return ISSUES_VI.surface.other;
+  return ISSUES_VI.surface.writeoff;
 }
 
 function getIssueSourceLabel(issue: IssueRecord) {

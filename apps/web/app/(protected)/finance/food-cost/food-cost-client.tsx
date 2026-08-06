@@ -21,8 +21,12 @@ import {
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
+import {
+  FinanceExportActions,
+  type CsvSection,
+} from "../components/export-toolbar";
 import { KpiCard } from "@/components/kpi/kpi-card";
-import type { FinanceParams } from "../_lib/finance-params";
+import { getPresetRange, type FinanceParams } from "../_lib/finance-params";
 import type { FoodCostRow } from "./_types";
 
 interface Props {
@@ -32,12 +36,10 @@ interface Props {
   actualFoodCost: number;
   coveredOrderCount: number;
   totalOrderCount: number;
-  /** Truth source the actual food cost was computed from, so the owner can tell
-   * canonical valuation allocations apart from legacy consumption movements. */
-  foodCostSource: "valuation" | "legacy";
 }
 
 const foodCopy = messages.finance.foodCost;
+const filterCopy = messages.finance.filterBar;
 
 // Margin tone thresholds — kept consistent with existing rule:
 //   ≥60% green, 40-60% warn, <40% destructive. The owner Q4 conflict
@@ -64,8 +66,41 @@ export function FoodCostClient({
   actualFoodCost,
   coveredOrderCount,
   totalOrderCount,
-  foodCostSource,
 }: Props) {
+  const range = getPresetRange(params.range, new Date(), {
+    from: params.from,
+    to: params.to,
+  });
+  const branchLabel =
+    params.branch == null
+      ? messages.finance.common.allBranches
+      : (branches.find((branch) => branch.id === params.branch)?.name ??
+        messages.finance.common.branchFallback(params.branch));
+  const csvFilename = `gia-von-mon_${range.start}_${range.end}.csv`;
+  const csvSections: CsvSection[] = [
+    {
+      title: foodCopy.tableTitle,
+      header: [
+        PRODUCT_VI.posItem,
+        foodCopy.quantitySold,
+        foodCopy.revenueCurrency,
+        foodCopy.unitFoodCostCurrency,
+        foodCopy.foodCostCurrency,
+        foodCopy.grossProfitCurrency,
+        foodCopy.grossMargin,
+      ],
+      rows: rows.map((row) => [
+        row.item_name ?? "—",
+        Number(row.quantity_sold ?? 0),
+        Math.round(Number(row.revenue ?? 0)),
+        Math.round(Number(row.unit_ingredient_cost ?? 0)),
+        Math.round(Number(row.ingredient_cost ?? 0)),
+        Math.round(Number(row.gross_profit ?? 0)),
+        marginPct(row) == null ? "—" : Number(marginPct(row)?.toFixed(2)),
+      ]),
+    },
+  ];
+
   const columns: DataTableColumn<FoodCostRow>[] = [
     {
       key: "item",
@@ -81,31 +116,31 @@ export function FoodCostClient({
     {
       key: "revenue",
       header: foodCopy.revenueCurrency,
-      className: "w-36 text-right font-mono tabular-nums",
+      className: "text-right font-mono tabular-nums",
       render: (row) => formatVND(Number(row.revenue ?? 0)),
+    },
+    {
+      key: "unit_cost",
+      header: foodCopy.unitFoodCostCurrency,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatVND(Number(row.unit_ingredient_cost ?? 0)),
     },
     {
       key: "food_cost",
       header: foodCopy.foodCostCurrency,
-      className: "w-36 text-right font-mono tabular-nums",
+      className: "text-right font-mono tabular-nums",
       render: (row) => formatVND(Number(row.ingredient_cost ?? 0)),
-    },
-    {
-      key: "unit_food_cost",
-      header: foodCopy.unitFoodCostCurrency,
-      className: "w-32 text-right font-mono tabular-nums",
-      render: (row) => formatVND(Number(row.unit_ingredient_cost ?? 0)),
     },
     {
       key: "gross_profit",
       header: foodCopy.grossProfitCurrency,
-      className: "w-36 text-right font-mono font-medium tabular-nums",
+      className: "text-right font-mono tabular-nums",
       render: (row) => formatVND(Number(row.gross_profit ?? 0)),
     },
     {
       key: "margin",
       header: foodCopy.grossMargin,
-      className: "w-24 text-right font-mono font-medium tabular-nums",
+      className: "w-24 text-right font-mono tabular-nums",
       render: (row) => {
         const pct = marginPct(row);
         return (
@@ -124,6 +159,18 @@ export function FoodCostClient({
         branches={branches}
         basePath="/finance/food-cost"
         hide={["compare", "granularity"]}
+        trailing={
+          <FinanceExportActions
+            filename={csvFilename}
+            signature={{
+              branchLabel,
+              rangeLabel: `${range.start} → ${range.end}`,
+              granularityLabel: filterCopy.granularityDay,
+            }}
+            sections={csvSections}
+            disabled={rows.length === 0}
+          />
+        }
       />
 
       <KpiRow density="compact">
@@ -131,17 +178,7 @@ export function FoodCostClient({
           label={foodCopy.actualFoodCost}
           value={formatVND(actualFoodCost)}
           shortValue={formatCompactVND(actualFoodCost)}
-          hint={
-            <>
-              <span className="font-medium text-foreground">
-                {foodCostSource === "valuation"
-                  ? foodCopy.foodCostSourceValuation
-                  : foodCopy.foodCostSourceLegacy}
-              </span>
-              {" · "}
-              {foodCopy.actualFoodCostHint}
-            </>
-          }
+          hint={foodCopy.actualFoodCostHint}
           tone={
             totalOrderCount > 0 && coveredOrderCount < totalOrderCount
               ? "warning"

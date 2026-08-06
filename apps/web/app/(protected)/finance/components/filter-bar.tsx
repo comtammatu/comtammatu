@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -11,7 +11,6 @@ import {
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
-import { BusinessDatePicker } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -24,9 +23,11 @@ import {
   type FinanceParams,
   getFinanceCalendarPeriodSelection,
   getPresetRange,
+  mergePreservedFinanceSearch,
   resolveFinanceCalendarPeriod,
   serializeFinanceParams,
 } from "../_lib/finance-params";
+import { FinanceCalendarPeriodPicker } from "./finance-calendar-period-picker";
 
 interface AccessibleBranch {
   id: number;
@@ -114,6 +115,7 @@ export function FilterBar({
   allBranchesLabel = messages.finance.common.allBranches,
 }: FilterBarProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
   const optionSize = controlSize === "touch" ? "touch" : "default";
   const [isPending, startTransition] = useTransition();
@@ -132,7 +134,11 @@ export function FilterBar({
   const today = getPresetRange("today");
 
   function pushParams(next: Partial<FinanceParams>) {
-    const search = serializeFinanceParams({ ...params, ...next }).toString();
+    const financeSearch = serializeFinanceParams({ ...params, ...next });
+    const search = mergePreservedFinanceSearch(
+      financeSearch,
+      new URLSearchParams(searchParams.toString()),
+    ).toString();
     startTransition(() => {
       router.replace(search ? `${basePath}?${search}` : basePath, {
         scroll: false,
@@ -174,12 +180,8 @@ export function FilterBar({
     });
   }
 
-  function handleCalendarDateChange(value: string) {
-    if (!calendarPeriod || !value) return;
-    const selection = getFinanceCalendarPeriodSelection(calendarPeriod, {
-      start: value,
-      end: value,
-    });
+  function handlePeriodSelectionChange(selection: string) {
+    if (!calendarPeriod || !selection) return;
     const range = resolveFinanceCalendarPeriod(calendarPeriod, selection);
     if (!range) return;
     pushParams({
@@ -304,17 +306,17 @@ export function FilterBar({
         ) : null}
 
         {showRange && calendarPeriod ? (
-          <BusinessDatePicker
+          <FinanceCalendarPeriodPicker
             id="finance-period-picker"
             aria-label={PERIOD_PICKER_LABEL[calendarPeriod]}
-            value={resolvedRange.start}
+            period={calendarPeriod}
+            selection={periodSelection}
             displayValue={periodDisplay}
             placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
             max={today.start}
-            captionLayout="dropdown"
             disabled={isPending}
             className="w-full sm:w-64"
-            onValueChange={handleCalendarDateChange}
+            onSelectionChange={handlePeriodSelectionChange}
           />
         ) : null}
 

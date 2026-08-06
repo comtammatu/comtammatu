@@ -12,6 +12,7 @@ import {
 import type { TaxInvoiceCursor } from "../actions";
 import type { InvoiceRow } from "../_lib/finance-types";
 import { parseFinanceParams } from "../_lib/finance-params";
+import { FilterBar } from "../components/filter-bar";
 import { InvoiceList } from "../invoice-list";
 
 const copy = messages.finance.invoicesPage;
@@ -50,9 +51,12 @@ export default async function InvoicesPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
+      <AppPageHeader title={copy.title} description={copy.description} />
+      <FilterBar
+        params={params}
+        branches={branches}
+        basePath="/finance/invoices"
+        hide={["range", "granularity", "compare"]}
       />
       {res.success ? (
         <InvoiceList

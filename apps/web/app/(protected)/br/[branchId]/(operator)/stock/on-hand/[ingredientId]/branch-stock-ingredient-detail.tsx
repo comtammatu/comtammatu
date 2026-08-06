@@ -213,7 +213,7 @@ export function BranchStockIngredientDetail({
       ? [
           {
             key: "issue",
-            href: `${stockBasePath}/issues`,
+            href: `${stockBasePath}/consumption`,
             icon: IconTruck,
             title: stockCopy.actions.issueStock,
           },

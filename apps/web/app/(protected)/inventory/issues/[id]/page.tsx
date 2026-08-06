@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { IssueDetailPageContent } from "../issue-detail-page-content";
 
 export default async function IssueDetailPage({
   params,
@@ -6,5 +6,10 @@ export default async function IssueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(`/inventory/consumption/${id}`);
+  return (
+    <IssueDetailPageContent
+      issueId={Number(id)}
+      listBasePath="/inventory/issues"
+    />
+  );
 }
