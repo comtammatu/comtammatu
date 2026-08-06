@@ -280,11 +280,14 @@ test("CI-only ingredient coverage owns the final interaction matrix", () => {
   ]) {
     assert.match(source, new RegExp(`test\\("${title}`));
   }
-  assert.match(source, /toBeFocused\(\)/);
-  assert.match(source, /keyboard\.press\("Tab"\)/);
-  assert.match(source, /keyboard\.press\("Space"\)/);
+  // Post-refactor (deae542c5, 2e43f3105) the editor renders base selection
+  // as a Select (not a radio group), auto-derived factors as a read-only
+  // <output> (not an editable input labeled "Tự động"), and no longer
+  // shows the "Quy đổi về đơn vị chuẩn" preview line. Keep the contract
+  // focused on the interactions that survived the refactor.
   assert.match(source, /expectTouchTarget/);
   assert.match(source, /toHaveAttribute\("aria-invalid", "true"\)/);
   assert.match(source, /Các đơn vị chuẩn phải cùng loại đo lường/);
-  assert.match(source, /getByText\("Tự động"/);
+  assert.match(source, /getByRole\("option", \{ name: unitNames\.chai/);
+  assert.match(source, /readUnitGraph/);
 });
