@@ -45,8 +45,12 @@ export default async function FoodCostPage({
   }[];
   const rows = (foodRes.success ? (foodRes.data ?? []) : []) as FoodCostRow[];
   const actualSummary = actualRes.success
-    ? (actualRes.data ?? { total: 0, orderCount: 0 })
-    : { total: 0, orderCount: 0 };
+    ? (actualRes.data ?? {
+        total: 0,
+        orderCount: 0,
+        foodCostSource: "legacy" as const,
+      })
+    : { total: 0, orderCount: 0, foodCostSource: "legacy" as const };
   const revenueKpis = revenueRes.success
     ? (revenueRes.data as { order_count?: number | null } | null)
     : null;
@@ -73,6 +77,7 @@ export default async function FoodCostPage({
           actualFoodCost={actualSummary.total}
           coveredOrderCount={actualSummary.orderCount}
           totalOrderCount={Number(revenueKpis?.order_count ?? 0)}
+          foodCostSource={actualSummary.foodCostSource}
         />
       )}
     </AppPage>

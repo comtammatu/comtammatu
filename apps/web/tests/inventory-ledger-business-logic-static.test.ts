@@ -156,7 +156,7 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
   const actualFoodCost = sliceBetween(
     finance,
     "async function fetchActualFoodCostSnapshot",
-    "function buildTrends",
+    "function buildExceptions",
   );
 
   assert.match(operatingExpense, /\.from\("expenses"\)/);

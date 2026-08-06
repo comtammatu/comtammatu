@@ -23,9 +23,6 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
   const recipeActions = read(
     "apps/web/app/(protected)/inventory/menu-recipe-actions.ts",
   );
-  const financeCockpit = read(
-    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
-  );
 
   assert.match(
     helper,
@@ -48,5 +45,8 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
     recipeActions,
     /messages\.inventory\.menuRecipes\.branchWacLoadFailed/,
   );
-  assert.match(financeCockpit, /!stockBearingLocations\.ok/);
+  // The finance cockpit no longer consumes stock-bearing locations directly:
+  // the orphaned inventory-cash-tied fetch that used them was dropped from the
+  // landing load (it fed a field no screen read). Stock data, detail data,
+  // inventory value, and menu-recipe actions remain the live consumers above.
 });

@@ -94,8 +94,16 @@ export function TransferReceiveClient({
     setConfirmed((current) => new Set(current).add(id));
   }
 
-  function handleConfirm() {
-    if (!isOnline) {
+  // One-tap "receive as sent": values are pre-filled with the sent qty, so
+  // marking every line confirmed lets the operator skip the per-line number-pad
+  // when nothing is short. Submit itself already defaults unopened lines to
+  // sent qty, so this is purely a progress/review affordance — it does not gate
+  // the submit.
+  function handleConfirmAllAsSent() {
+    setConfirmed(() => new Set(items.map((item) => item.ingredientId)));
+  }
+
+  function handleConfirm() {    if (!isOnline) {
       toast.error(messages.inventory.stockRequests.journey.offlineMutation);
       return;
     }
@@ -211,6 +219,19 @@ export function TransferReceiveClient({
             </span>
           </div>
 
+          {remaining > 0 ? (
+            <Button
+              type="button"
+              size="touch"
+              variant="secondary"
+              className="mt-2 w-full"
+              disabled={isPending || !isOnline}
+              onClick={handleConfirmAllAsSent}
+            >
+              {receiveCopy.receiveConfirmAllAsSent}
+            </Button>
+          ) : null}
+
           {nextItem ? (
             <InteractiveCard
               padding="compact"
@@ -324,18 +345,23 @@ export function TransferReceiveClient({
             </Button>
           }
           trailing={
-            <Button
-              type="button"
-              size="touch-lg"
-              variant={remaining > 0 ? "outline" : "default"}
-              disabled={isPending || !isOnline}
-              onClick={handleConfirm}
-            >
-              {isPending ? <Spinner className="size-5" /> : null}
-              {remaining > 0
-                ? receiveCopy.receiveConfirmRemaining(remaining)
-                : receiveCopy.receiveConfirmAll}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              {remaining > 0 ? (
+                <span className="text-2xs leading-none text-muted-foreground">
+                  {receiveCopy.receiveDefaultRemainingHint(remaining)}
+                </span>
+              ) : null}
+              <Button
+                type="button"
+                size="touch-lg"
+                variant={remaining > 0 ? "outline" : "default"}
+                disabled={isPending || !isOnline}
+                onClick={handleConfirm}
+              >
+                {isPending ? <Spinner className="size-5" /> : null}
+                {receiveCopy.receiveConfirmAll}
+              </Button>
+            </div>
           }
         />
 

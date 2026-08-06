@@ -10,12 +10,12 @@ test("Finance Revenue top items follows the selected date range", () => {
   const revenueLoader = read(
     "apps/web/app/(protected)/finance/revenue/_lib/revenue-loader.ts",
   );
-  const cockpit = read(
-    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
-  );
   const actions = read("apps/web/app/(protected)/finance/actions.ts");
 
-  for (const source of [revenueLoader, cockpit]) {
+  // Top items live on the Revenue page via loadRevenueBundle. The finance
+  // landing cockpit no longer fetches top items (the field was orphaned and
+  // dropped), so only the revenue loader is checked here.
+  for (const source of [revenueLoader]) {
     assert.match(
       source,
       /fetchTopItems\(params\.branch,\s*resolved\.start,\s*resolved\.end\)/,

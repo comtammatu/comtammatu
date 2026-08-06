@@ -536,7 +536,13 @@ export async function fetchActualFoodCostSummary(params: {
   branchId?: number | null;
   startDate: string;
   endDate: string;
-}): Promise<ActionResult<{ total: number; orderCount: number }>> {
+}): Promise<
+  ActionResult<{
+    total: number;
+    orderCount: number;
+    foodCostSource: "valuation" | "legacy";
+  }>
+> {
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
     PERMISSION_KEYS.FINANCE_VIEW,
@@ -589,7 +595,10 @@ export async function fetchActualFoodCostSummary(params: {
         sum + Math.abs(Number(row.quantity_change)) * Number(row.unit_cost ?? 0)
       );
     }, 0);
-    return { success: true, data: { total, orderCount: orderIds.size } };
+    return {
+      success: true,
+      data: { total, orderCount: orderIds.size, foodCostSource: "legacy" },
+    };
   }
 
   let eventQuery = monetary.client
@@ -686,7 +695,10 @@ export async function fetchActualFoodCostSummary(params: {
     }, 0);
   }
   const total = issueTotal + scopedRepriceTotal;
-  return { success: true, data: { total, orderCount: orderIds.size } };
+  return {
+    success: true,
+    data: { total, orderCount: orderIds.size, foodCostSource: "valuation" },
+  };
 }
 
 const bankReconciliationIdentityShape = {

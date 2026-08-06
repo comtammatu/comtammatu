@@ -227,6 +227,29 @@ finalization or financial statements.
 support. No current app route exposes period close/reopen. Reopening that scope
 requires a new decision.
 
+### Permission Enforcement (mutation gates)
+
+Finance mutations gate on one of two patterns at the action layer, mirrored by
+the RPC's own checks:
+
+- **Expense mutations** (`createExpense`, `transitionExpensePayment`, cancel,
+  period updates) require `finance:expense_create` (Owner or Accountant).
+- **Supplier-invoice / fund mutations** (`createSupplierInvoice`,
+  `confirmSupplierInvoice`, `recordSupplierPayment`, `allocateSupplierAdvance`,
+  `createSupplierCreditAllocated`, `acceptSupplierInvoiceDiscrepancy`,
+  `verifyServiceSupplierInvoice`, `initialize_finance_funds`,
+  `create_finance_fund_adjustment`) gate on `finance:view` plus the
+  `owner`/`accountant` position — not on `finance:ap_pay`. The finer-grained
+  `finance:ap_pay` is reserved for `attachSupplierInvoiceVatEvidence` (which
+  also accepts `procurement:invoice_create`), matching its RPC.
+- The "Owner only may pay above the current allocation" rule is enforced inside
+  the `recordSupplierPayment` / allocation RPC, not by a distinct permission key.
+
+The `finance:ap_pay` / `finance:expense_create` / `accounting:period_close`
+keys in `module-acl.ts` still exist for future fine-grained delegation; they are
+not the current mutation gate for the actions listed above. RLS remains the
+final enforcement on every RPC.
+
 ## Route Contract
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
@@ -268,8 +291,10 @@ store one immutable `vat_breakdown` bucket per rate; database normalization
 derives the header totals and leaves the compatibility `vat_rate` null when
 more than one rate is present. Recording a supplier payment requires at least
 one HĐ GTGT file on `supplier_invoices.vat_invoice_attachment_path` (private
-bucket `supplier-invoice-attachments`). Owner and Accountant with
-`finance:ap_pay` may record an invoice-bound payment; only Owner may pay above
+bucket `supplier-invoice-attachments`). Owner and Accountant with `finance:view`
+may record an invoice-bound payment via `recordSupplierPayment` (the action and
+its RPC gate on `finance:view` plus the `owner`/`accountant` position, not on
+`finance:ap_pay`). Only Owner may pay above
 the current allocation. The remainder is a visible supplier advance that may
 be allocated later without changing cash or bank a second time. Attachment may
 be uploaded optionally during invoice create or later on the detail Sheet; the

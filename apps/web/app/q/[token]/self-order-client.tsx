@@ -284,6 +284,7 @@ export function SelfOrderClient({
   const guestToastKeyRef = useRef<string | null>(null);
   const refreshErrorRef = useRef<string | null>(null);
   const ignoredPaymentStatusClientOpIdRef = useRef<string | null>(null);
+  const restorePaymentAfterBankHandoffRef = useRef(false);
 
   const { snapshot, setSnapshot, refreshSnapshot, refreshError } =
     useSnapshotSync(token, initialSnapshot, clientOpId, () => {
@@ -291,7 +292,7 @@ export function SelfOrderClient({
       setCustomerNote("");
       setClientOpId(null);
       setLocalPaymentRequest(null);
-      ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
+      // Keep polling the live intent after bfcache restore (bank-app return).
       setPaymentStatusClientOpId(null);
       batchIntentRef.current = null;
       paymentIntentRef.current = null;
@@ -307,11 +308,68 @@ export function SelfOrderClient({
       ? null
       : currentPaymentStatusClientOpId;
 
+  const livePaymentRequest =
+    (snapshot.ok
+      ? normalizePaymentRequest(snapshot.paymentRequest)
+      : null) ?? localPaymentRequest;
+  const livePaymentClientOpId =
+    livePaymentRequest &&
+    (livePaymentRequest.status === "vietqr_pending" ||
+      livePaymentRequest.status === "cash_call")
+      ? (livePaymentRequest.clientOpId ??
+        (livePaymentRequest.id != null
+          ? String(livePaymentRequest.id)
+          : null))
+      : null;
+  const livePaymentClientOpIdRef = useRef(livePaymentClientOpId);
+  livePaymentClientOpIdRef.current = livePaymentClientOpId;
+
   useEffect(() => {
     if (observedPaymentStatusClientOpId) {
       setPaymentStatusClientOpId(observedPaymentStatusClientOpId);
     }
   }, [observedPaymentStatusClientOpId]);
+
+  // Spec G7: reload must re-show the stored VietQR/cash_call sheet.
+  useEffect(() => {
+    if (!livePaymentClientOpId) {
+      restorePaymentAfterBankHandoffRef.current = false;
+      return;
+    }
+    setBillView("payment");
+    setBillOpen(true);
+  }, [livePaymentClientOpId]);
+
+  useEffect(() => {
+    function restorePaymentUiAfterBankHandoff() {
+      if (document.visibilityState === "hidden") return;
+      if (!restorePaymentAfterBankHandoffRef.current) return;
+      if (!livePaymentClientOpIdRef.current) {
+        restorePaymentAfterBankHandoffRef.current = false;
+        return;
+      }
+      setBillView("payment");
+      setBillOpen(true);
+    }
+    document.addEventListener(
+      "visibilitychange",
+      restorePaymentUiAfterBankHandoff,
+    );
+    window.addEventListener("pageshow", restorePaymentUiAfterBankHandoff);
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        restorePaymentUiAfterBankHandoff,
+      );
+      window.removeEventListener("pageshow", restorePaymentUiAfterBankHandoff);
+    };
+  }, []);
+
+  const markBankAppHandoff = useCallback(() => {
+    restorePaymentAfterBankHandoffRef.current = true;
+    setBillView("payment");
+    setBillOpen(true);
+  }, []);
 
   const resetPaymentCompleted = useCallback(() => {
     setPaymentCompleted(false);
@@ -800,6 +858,7 @@ export function SelfOrderClient({
             onPaymentMethodChange={setSelectedPaymentMethod}
             onCreatePayment={createSelectedPayment}
             onCancelVietQr={cancelVietQrPayment}
+            onBankAppHandoff={markBankAppHandoff}
           />
         ) : null}
       </BillDrawer>

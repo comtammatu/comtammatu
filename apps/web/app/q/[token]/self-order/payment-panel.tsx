@@ -33,6 +33,7 @@ import {
   buildVietQrBankAppUrl,
   getVietQrBankAppCatalogUrl,
   parseVietQrBankApps,
+  resolveBankAppPlatform,
   type VietQrBankApp,
 } from "@lib/self-order/bank-app-link";
 import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
@@ -65,6 +66,7 @@ export interface PaymentPanelProps {
   onPaymentMethodChange: (method: "cash_call" | "vietqr") => void;
   onCreatePayment: () => void;
   onCancelVietQr: () => Promise<void>;
+  onBankAppHandoff?: () => void;
 }
 
 function BankAppLauncher({
@@ -74,6 +76,7 @@ function BankAppLauncher({
   amount,
   paymentCode,
   qrData,
+  onBankAppHandoff,
 }: {
   accountNo: string;
   bankCode: string;
@@ -81,11 +84,13 @@ function BankAppLauncher({
   amount: number;
   paymentCode: string;
   qrData: string;
+  onBankAppHandoff?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [apps, setApps] = useState<VietQrBankApp[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const platform = resolveBankAppPlatform(navigator);
 
   useEffect(() => {
     if (!open || apps !== null) return;
@@ -142,6 +147,7 @@ function BankAppLauncher({
                   paymentCode,
                   accountName,
                   qrData,
+                  platform,
                 });
                 if (!href) return null;
                 return (
@@ -151,6 +157,7 @@ function BankAppLauncher({
                       size="touch"
                       className="w-full justify-start"
                       render={<a href={href} />}
+                      onClick={() => onBankAppHandoff?.()}
                     >
                       <Avatar aria-hidden="true">
                         {app.logoUrl ? (
@@ -204,6 +211,7 @@ export function PaymentPanel({
   onPaymentMethodChange,
   onCreatePayment,
   onCancelVietQr,
+  onBankAppHandoff,
 }: PaymentPanelProps) {
   if (!activeOrder) {
     return (
@@ -282,6 +290,7 @@ export function PaymentPanel({
                         amount={activePaymentRequest.amount}
                         paymentCode={activePaymentRequest.paymentCode}
                         qrData={activePaymentRequest.qrData ?? ""}
+                        onBankAppHandoff={onBankAppHandoff}
                       />
                     ) : null}
                   </QrCodeImage>

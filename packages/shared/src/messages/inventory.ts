@@ -365,6 +365,8 @@ export const INVENTORY_VI = {
   createSlipAction: "Tạo phiếu",
   exportReportAction: "Xuất báo cáo",
   recordedConsumptionTitle: "Tiêu hao đã ghi nhận",
+  consumptionTabRecorded: "Đã ghi nhận",
+  consumptionTabManual: "Phiếu chứng từ",
   exportCsvAction: "Xuất CSV",
   visibleRowsLabel: "Dòng hiển thị",
   totalAmountLabel: "Tổng thành tiền",

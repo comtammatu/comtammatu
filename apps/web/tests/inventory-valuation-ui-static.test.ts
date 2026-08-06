@@ -56,9 +56,11 @@ test("finance valuation surfaces do not fall back to mutable reference cost", ()
   const foodCost = readWeb("app/_lib/food-cost-actions.ts");
   const actualFoodCost = readWeb("app/(protected)/finance/expense-actions.ts");
 
-  assert.match(cockpit, /\.from\("inventory_valuation_accounts"\)/);
+  // The cockpit's actual-food-cost snapshot drives the valuation vs legacy
+  // branch via isInventoryValuationActive (status === "active"). The orphaned
+  // inventory-cash-tied fetch that also read inventory_valuation_accounts /
+  // stock_levels was dropped (it fed a field no landing screen consumed).
   assert.match(cockpit, /data\?\.status === "active"/);
-  assert.match(cockpit, /\.from\("stock_levels"\)/);
   assert.doesNotMatch(cockpit, /ingredient\?\.unit_cost/);
   assert.equal(
     foodCost.includes("fallbackUnitCost: Number(ingredient?.unit_cost"),

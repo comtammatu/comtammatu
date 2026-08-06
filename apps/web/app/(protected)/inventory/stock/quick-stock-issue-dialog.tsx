@@ -38,7 +38,11 @@ import {
   getIssueUnitOptions,
   type IssueUnitOption,
 } from "../_lib/issue-units";
-import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
+import {
+  confirmStockIssue,
+  createStockIssueDraft,
+  upsertStockIssueLine,
+} from "../issue-actions";
 import { formatQty } from "@lib/inventory/format";
 import type { StockIngredient } from "@lib/inventory/stock-on-hand-model";
 
@@ -111,6 +115,12 @@ export interface QuickStockIssueDialogProps {
     issueType: QuickIssueType;
   };
   issueBasePath?: string;
+  /**
+   * When true (default), the dialog confirms the single-line slip in the same
+   * submit, so the user lands on a confirmed slip instead of a draft awaiting a
+   * second Confirm tap. Set false to keep the legacy "create draft only" path.
+   */
+  autoConfirm?: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -119,6 +129,7 @@ export function QuickStockIssueDialog({
   open,
   target,
   issueBasePath = "/inventory/consumption",
+  autoConfirm = true,
   onOpenChange,
 }: QuickStockIssueDialogProps) {
   const router = useRouter();
@@ -182,6 +193,19 @@ export function QuickStockIssueDialog({
       };
     }
 
+    if (autoConfirm) {
+      const confirmRes = await confirmStockIssue(issueId);
+      if (!confirmRes.success) {
+        // Line was saved but confirm failed (e.g. race on stock). Keep the dialog
+        // open with the error so the user can retry or close it and find the
+        // saved draft in the issues list — do not auto-navigate away on failure.
+        return {
+          success: false,
+          error: confirmRes.error ?? stockCopy.quickIssue.confirmFailed,
+        };
+      }
+    }
+
     router.push(`${issueBasePath}/${issueId}`);
     return { success: true };
   }
@@ -195,8 +219,16 @@ export function QuickStockIssueDialog({
       defaultValues={defaultValues}
       entityKey={`${target.ingredient.id}-${target.issueType}`}
       onSubmit={handleSubmit}
-      successMessage={stockCopy.quickIssue.created(target.ingredient.name)}
-      submitLabel={stockCopy.quickIssue.createSlip}
+      successMessage={
+        autoConfirm
+          ? stockCopy.quickIssue.confirmed(target.ingredient.name)
+          : stockCopy.quickIssue.created(target.ingredient.name)
+      }
+      submitLabel={
+        autoConfirm
+          ? stockCopy.quickIssue.createAndConfirm
+          : stockCopy.quickIssue.createSlip
+      }
       cancelLabel={ACTIONS_VI.cancel}
       contentClassName="sm:max-w-md"
     >

@@ -37,7 +37,7 @@ import {
 } from "@lib/inventory/format";
 import {
   formatStockUnits,
-  resolveStockCompactUnit,
+  resolveStockDisplayUnit,
   stockUnitLabel,
 } from "../../_lib/stock-unit-format";
 
@@ -106,7 +106,7 @@ function OwnerStockIngredientDetail({
     formatQty,
   );
   const wacUnitLabel = stockUnitLabel(
-    resolveStockCompactUnit(data.totalQty, ingredient.units),
+    resolveStockDisplayUnit(ingredient.units),
     ingredient.unit || inventoryCommon.noValue,
   );
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
