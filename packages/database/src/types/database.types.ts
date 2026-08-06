@@ -1077,6 +1077,69 @@ export type Database = {
           },
         ]
       }
+      branch_day_state: {
+        Row: {
+          branch_id: number
+          business_date: string
+          cash_recon: Json
+          closed_at: string
+          closed_by: string
+          created_at: string
+          id: number
+          note: string | null
+          opened_at: string | null
+          status: string
+          summary: Json
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          business_date: string
+          cash_recon?: Json
+          closed_at?: string
+          closed_by: string
+          created_at?: string
+          id?: never
+          note?: string | null
+          opened_at?: string | null
+          status?: string
+          summary?: Json
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          business_date?: string
+          cash_recon?: Json
+          closed_at?: string
+          closed_by?: string
+          created_at?: string
+          id?: never
+          note?: string | null
+          opened_at?: string | null
+          status?: string
+          summary?: Json
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_day_state_branch_fk"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_day_state_branch_fk"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
       branch_feature_flags: {
         Row: {
           branch_id: number
@@ -11838,6 +11901,15 @@ export type Database = {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
+      close_branch_day: {
+        Args: {
+          p_branch_id: number
+          p_business_date: string
+          p_cash_recon: Json
+          p_note: string
+        }
+        Returns: Json
+      }
       close_period_hard: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
@@ -12504,6 +12576,10 @@ export type Database = {
       }
       get_bank_ledger_movement_since: {
         Args: { p_since: string }
+        Returns: Json
+      }
+      get_branch_day_summary: {
+        Args: { p_branch_id: number; p_business_date: string }
         Returns: Json
       }
       get_branch_menu_daily_limits_for_pos: {

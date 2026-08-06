@@ -100,7 +100,19 @@ function parseRemoteMigrationVersions(output) {
 function listRemoteMigrationVersions(projectRoot, url) {
   const result = spawnSync(
     "corepack",
-    ["pnpm", "exec", "supabase", "migration", "list", "--db-url", url.href],
+    [
+      "pnpm",
+      "exec",
+      "supabase",
+      "migration",
+      "list",
+      "--db-url",
+      url.href,
+      // CLI 2.10x defaults to a text table; the parser below expects the JSON
+      // shape `{ migrations: [{ remote }] }`.
+      "--output-format",
+      "json",
+    ],
     {
       cwd: projectRoot,
       encoding: "utf8",
