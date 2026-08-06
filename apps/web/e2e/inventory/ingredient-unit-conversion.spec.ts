@@ -561,8 +561,11 @@ test("preserves physical ratios when the base changes by keyboard", async ({
     const baseSelect = dialog.getByRole("combobox", {
       name: "Đơn vị chuẩn",
     });
+    await expect(baseSelect).toBeVisible();
     await baseSelect.click();
-    await page.getByRole("option", { name: unitNames.chai, exact: true }).click();
+    await page
+      .getByRole("option", { name: unitNames.chai, exact: true })
+      .click();
     await expect(baseSelect).toContainText(unitNames.chai);
 
     await dialog.getByRole("button", { name: "Cập nhật" }).click();
@@ -606,9 +609,10 @@ test("handles automatic standards and invalid manual drafts with retry", async (
     await addUnitThroughUi(page, dialog, kilogram.name);
     const kilogramRow = relationRow(dialog, kilogram.name);
     // Standard unit auto-derives its factor from the base; the row renders
-    // a read-only <output> instead of an editable factor input.
+    // a read-only <output> instead of an editable factor input. formatDecimal
+    // uses vi-VN grouping (".") so 1000 renders as "1.000".
     await expect(
-      kilogramRow.getByText("1000", { exact: true }),
+      kilogramRow.getByText("1.000", { exact: true }),
     ).toBeVisible();
 
     await addUnitThroughUi(page, dialog, milliliter.name);
