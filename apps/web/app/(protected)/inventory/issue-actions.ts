@@ -31,8 +31,6 @@ function revalidateStockIssueSurfaces({
   issueType: string;
 }) {
   revalidatePath("/inventory/consumption");
-  revalidatePath("/inventory/consumption");
-  revalidatePath(`/inventory/consumption/${issueId}`);
   revalidatePath(`/inventory/consumption/${issueId}`);
   const branchSurface = issueType === "consumption" ? "consumption" : "issues";
   revalidatePath(`/br/${branchId}/stock/${branchSurface}`);

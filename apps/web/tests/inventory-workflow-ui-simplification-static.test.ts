@@ -89,7 +89,7 @@ test("Owner surface stock quick issue stays on consumption while Branch lookup s
   assert.match(messages, /issueTitle: "Ghi tiêu hao nhanh"/);
 });
 
-test("consumption list combines POS ledger rows with operational and waste slips", () => {
+test("consumption list separates POS ledger rows from operational slips via tabs", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const messages = read("../../packages/shared/src/messages/inventory.ts");
 
@@ -98,10 +98,14 @@ test("consumption list combines POS ledger rows with operational and waste slips
     /const isConsumptionScope =\s+allowedIssueTypes\.length === 1 && allowedIssueTypes\[0\] === "consumption";/,
   );
   assert.match(issues, /const showsRecordedConsumption =/);
+  assert.match(issues, /<AppPageTabs/);
+  assert.match(issues, /paramKey="view"/);
   assert.match(
     issues,
-    /recordedConsumptions\.length > 0 \|\| showsRecordedConsumption/,
+    /queryKeysByValue=\{\{\s+recorded: \["branchId", "startDate", "endDate"\]/,
   );
+  assert.match(issues, /<TabsContent value="recorded"/);
+  assert.match(issues, /<TabsContent value="manual"/);
   assert.match(issues, /title=\{INVENTORY_VI\.recordedConsumptionTitle\}/);
   assert.match(issues, /const issueListTitle = isCombinedConsumptionScope/);
   assert.match(
@@ -113,6 +117,8 @@ test("consumption list combines POS ledger rows with operational and waste slips
   assert.match(issues, /submitLabel=\{createIssueActionLabel\}/);
 
   assert.match(messages, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
+  assert.match(messages, /consumptionTabRecorded: "Đã ghi nhận"/);
+  assert.match(messages, /consumptionTabManual: "Phiếu chứng từ"/);
   assert.match(
     messages,
     /manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công"/,

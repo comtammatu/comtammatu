@@ -37,6 +37,7 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
   type DataTableColumn,
@@ -501,28 +502,6 @@ export function IssuesClient({
         <IconPlus className="size-4" />
         {createIssueActionLabel}
       </Button>
-      {isCombinedConsumptionScope && defaultBranchId ? (
-        <Button
-          render={
-            <Link href={`/inventory/waste/new?branchId=${defaultBranchId}`} />
-          }
-          variant="outline"
-          size={embedded ? controlSize : "lg"}
-        >
-          {INVENTORY_VI.createWasteTitle}
-        </Button>
-      ) : null}
-      {showExportAction ? (
-        <Button
-          type="button"
-          variant="outline"
-          size={embedded ? controlSize : "lg"}
-          onClick={handleExportIssuesCsv}
-        >
-          <IconFileDownload className="size-4" />
-          {INVENTORY_VI.exportReportAction}
-        </Button>
-      ) : null}
     </>
   );
 
@@ -928,6 +907,27 @@ export function IssuesClient({
     </InteractiveCard>
   );
 
+  // Tab structure: recorded (POS-ledger consumption) and manual (hand-entered
+  // consumption/writeoff/other slips). Each tab owns its filters and its own
+  // list frame so the two never compete in one viewport.
+  const tabDefaultValue = showsRecordedConsumption ? "recorded" : "manual";
+  const tabsItems = [
+    ...(showsRecordedConsumption
+      ? [
+          {
+            value: "recorded",
+            label: INVENTORY_VI.consumptionTabRecorded,
+            count: recordedConsumptions.length,
+          },
+        ]
+      : []),
+    {
+      value: "manual",
+      label: INVENTORY_VI.consumptionTabManual,
+      count: issues.length,
+    },
+  ];
+
   const content = (
     <>
       {embedded ? null : (
@@ -937,66 +937,107 @@ export function IssuesClient({
         />
       )}
 
-      {(recordedConsumptions.length > 0 || showsRecordedConsumption) && (
-        <AppListFrame
-          title={INVENTORY_VI.recordedConsumptionTitle}
-          headerHint={visibleRecordedConsumptionHint}
-          action={
-            <Button
-              type="button"
-              variant="outline"
-              size={compactActionSize}
-              onClick={handleExportRecordedCsv}
-            >
-              <IconFileDownload className="size-4" />
-              {INVENTORY_VI.exportCsvAction}
-            </Button>
-          }
-          size={embedded ? "sm" : "default"}
-          collapsible
-          defaultOpen={!embedded}
-          toolbar={recordedConsumptionFilterBar}
-        >
-          <DataTable
-            columns={recordedConsumptionColumns}
-            data={visibleRecordedConsumptions}
-            pageSize={50}
-            getRowKey={(item) => item.id}
-            emptyTitle={INVENTORY_VI.recordedEmptyTitle}
-            emptyDescription={INVENTORY_VI.recordedEmptyDescription}
-            emptyMode="no-data"
-            mobileCardRender={renderRecordedConsumptionCard}
-          />
-        </AppListFrame>
-      )}
-
-      <AppListFrame
-        title={issueListTitle}
-        headerHint={INVENTORY_VI.rowRatio(filtered.length, issues.length)}
-        toolbar={filterBar}
+      <AppPageTabs
+        items={tabsItems}
+        defaultValue={tabDefaultValue}
+        paramKey="view"
+        ariaLabel={pageTitle ?? tNav("consumption", "navigation")}
+        queryKeysByValue={{
+          recorded: ["branchId", "startDate", "endDate"],
+          manual: [],
+        }}
       >
-        <DataTable
-          columns={issueColumns}
-          data={filtered}
-          pageSize={50}
-          getRowKey={(item) => item.id}
-          emptyTitle={
-            hasActiveFilters
-              ? INVENTORY_VI.issueEmptyFiltered
-              : issueEmptyNoDataTitle
-          }
-          emptyDescription={issueEmptyDescription}
-          emptyMode={hasActiveFilters ? "no-results" : "no-data"}
-          onRowClick={openIssueDetail}
-          getRowDataState={(item) =>
-            openActionRowId === item.id ? "selected" : undefined
-          }
-          renderRowContextMenu={(item) => (
-            <RowActionsContextMenuItems items={getIssueRowActions(item)} />
-          )}
-          mobileCardRender={renderIssueCard}
-        />
-      </AppListFrame>
+        {showsRecordedConsumption ? (
+          <TabsContent value="recorded" className="mt-0">
+            <AppListFrame
+              title={INVENTORY_VI.recordedConsumptionTitle}
+              headerHint={visibleRecordedConsumptionHint}
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={compactActionSize}
+                  onClick={handleExportRecordedCsv}
+                >
+                  <IconFileDownload className="size-4" />
+                  {INVENTORY_VI.exportCsvAction}
+                </Button>
+              }
+              size={embedded ? "sm" : "default"}
+              toolbar={recordedConsumptionFilterBar}
+            >
+              <DataTable
+                columns={recordedConsumptionColumns}
+                data={visibleRecordedConsumptions}
+                pageSize={50}
+                getRowKey={(item) => item.id}
+                emptyTitle={INVENTORY_VI.recordedEmptyTitle}
+                emptyDescription={INVENTORY_VI.recordedEmptyDescription}
+                emptyMode="no-data"
+                mobileCardRender={renderRecordedConsumptionCard}
+              />
+            </AppListFrame>
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="manual" className="mt-0">
+          <AppListFrame
+            title={issueListTitle}
+            headerHint={INVENTORY_VI.rowRatio(filtered.length, issues.length)}
+            action={
+              <>
+                {isCombinedConsumptionScope && defaultBranchId ? (
+                  <Button
+                    render={
+                      <Link
+                        href={`/inventory/waste/new?branchId=${defaultBranchId}`}
+                      />
+                    }
+                    variant="outline"
+                    size={compactActionSize}
+                  >
+                    {INVENTORY_VI.createWasteTitle}
+                  </Button>
+                ) : null}
+                {showExportAction ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size={compactActionSize}
+                    onClick={handleExportIssuesCsv}
+                  >
+                    <IconFileDownload className="size-4" />
+                    {INVENTORY_VI.exportReportAction}
+                  </Button>
+                ) : null}
+              </>
+            }
+            toolbar={filterBar}
+          >
+            <DataTable
+              columns={issueColumns}
+              data={filtered}
+              pageSize={50}
+              getRowKey={(item) => item.id}
+              emptyTitle={
+                hasActiveFilters
+                  ? INVENTORY_VI.issueEmptyFiltered
+                  : issueEmptyNoDataTitle
+              }
+              emptyDescription={issueEmptyDescription}
+              emptyMode={hasActiveFilters ? "no-results" : "no-data"}
+              onRowClick={openIssueDetail}
+              getRowDataState={(item) =>
+                openActionRowId === item.id ? "selected" : undefined
+              }
+              renderRowContextMenu={(item) => (
+                <RowActionsContextMenuItems items={getIssueRowActions(item)} />
+              )}
+              mobileCardRender={renderIssueCard}
+            />
+          </AppListFrame>
+        </TabsContent>
+      </AppPageTabs>
 
       <FormDialog
         open={createOpen}
