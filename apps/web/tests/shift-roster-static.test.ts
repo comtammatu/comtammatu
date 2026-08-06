@@ -27,9 +27,16 @@ test("branch roster route uses leave-approvals auth gating pattern", () => {
   const page = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
   );
+  const rosterTab = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/roster-tab.tsx",
+  );
   const loader = read("apps/web/lib/hr/roster/load-branch-roster-data.ts");
 
-  assert.match(page, /loadBranchRosterData/);
+  // The legacy route is a redirect shim into the Team hub (`?tab=roster`).
+  assert.match(page, /import \{ redirect \} from "next\/navigation"/);
+  assert.match(page, /\/team\?tab=roster/);
+  // The hub tab reuses the loader + client presenter.
+  assert.match(rosterTab, /loadBranchRosterData/);
   assert.match(loader, /branch\.branch_kind !== "branch"/);
   assert.match(loader, /PERMISSION_KEYS\.HR_ASSIGN_SHIFT/);
 });

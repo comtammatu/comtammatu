@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   Bell as IconBell,
+  CalendarCheck as IconCalendarCheck,
   Ellipsis as IconEllipsis,
   House as IconHouse,
   LayoutDashboard as IconLayoutDashboard,
   User as IconUser,
+  UsersRound as IconUsersRound,
 } from "lucide-react";
 import {
   canAccess,
@@ -74,6 +76,8 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
+  const canManageTeam = canAccess(claims.user_role, "branch_team");
+  const canCloseDay = canAccess(claims.user_role, "branch_close_day");
   const canOpenOwnerHome = claims.user_role === "owner";
   const usesHeaderOverflow = canOpenOwnerHome || canManageBranch;
   const unreadResult = await unreadPromise;
@@ -142,6 +146,26 @@ export default async function OperatorLayout({
                       >
                         <IconLayoutDashboard data-icon="inline-start" />
                         {APP_COPY_VI.branchCommand}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canManageTeam ? (
+                      <DropdownMenuItem
+                        className="min-h-12 text-sm"
+                        render={<Link href={`/br/${context.branchId}/team`} />}
+                      >
+                        <IconUsersRound data-icon="inline-start" />
+                        {APP_COPY_VI.hrWorkspace}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canCloseDay ? (
+                      <DropdownMenuItem
+                        className="min-h-12 text-sm"
+                        render={
+                          <Link href={`/br/${context.branchId}/close-day`} />
+                        }
+                      >
+                        <IconCalendarCheck data-icon="inline-start" />
+                        {messages.settings.branch.closeDayTitle}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuSeparator />

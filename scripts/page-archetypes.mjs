@@ -29,6 +29,8 @@ export const PAGE_ARCHETYPES = {
     "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":
     "REPORT",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/close-day/page.tsx":
+    "DOC-WORKFLOW",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/pos/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/printers/page.tsx":
@@ -36,15 +38,15 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
-    "EMBED-WRAPPER",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":

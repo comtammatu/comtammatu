@@ -11,6 +11,12 @@ type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
 
 const OPEN_KITCHEN_ORDER_STATES = ["pending", "preparing", "ready"] as const;
+const AWAITING_PAYMENT_ORDER_STATES = [
+  "confirmed",
+  "preparing",
+  "ready",
+  "served",
+] as const;
 
 export interface BranchDayStatus {
   todayRevenue: number;
@@ -30,6 +36,10 @@ export interface BranchDayStatus {
   setupActiveStaff: number;
   setupPaymentReady: boolean;
   setupHddtReady: boolean;
+  /** Cockpit live floor + payment lanes. Fail-soft like every other metric. */
+  ordersAwaitingPayment: number;
+  vietqrPending: number;
+  readyItems: number;
 }
 
 /**
@@ -69,6 +79,9 @@ export async function fetchBranchDayStatus(
     printerRes,
     staffRes,
     invoiceProfileRes,
+    awaitingPaymentRes,
+    vietqrPendingRes,
+    readyItemsRes,
   ] = await Promise.all([
     supabase
       .from("payments")
@@ -149,6 +162,39 @@ export async function fetchBranchDayStatus(
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
       .eq("status", "active"),
+    // Cockpit floor lane: open orders today still awaiting payment.
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .in("status", [...AWAITING_PAYMENT_ORDER_STATES])
+      .eq("payment_status", "unpaid")
+      .gte("created_at", todayRange.startIso)
+      .lt("created_at", todayRange.endIso),
+    // Cockpit payment lane: pending VietQR remote payments.
+    supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("status", "pending")
+      .gte("created_at", todayRange.startIso)
+      .lt("created_at", todayRange.endIso),
+    // Cockpit floor lane: items already bumped ready, awaiting serve. Branch
+    // scoping rides the order_items → orders join (order_items has no
+    // branch_id column).
+    supabase
+      .from("order_items")
+      .select("id, orders!inner(branch_id,created_at)", {
+        count: "exact",
+        head: true,
+      })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "ready")
+      .eq("orders.branch_id", branchId)
+      .gte("orders.created_at", todayRange.startIso)
+      .lt("orders.created_at", todayRange.endIso),
   ]);
 
   const paymentRows = paymentsRes.data ?? [];
@@ -191,6 +237,9 @@ export async function fetchBranchDayStatus(
       hddtCredentialsReady &&
       !invoiceProfileRes.error &&
       (invoiceProfileRes.count ?? 0) === 1,
+    ordersAwaitingPayment: awaitingPaymentRes.count ?? 0,
+    vietqrPending: vietqrPendingRes.count ?? 0,
+    readyItems: readyItemsRes.count ?? 0,
   };
 }
 

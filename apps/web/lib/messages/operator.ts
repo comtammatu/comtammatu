@@ -145,6 +145,26 @@ export const operator = {
         title: "Danh sách nhân viên",
         description: "Thông tin liên hệ và trạng thái vận hành hôm nay.",
       },
+      roster: {
+        label: "Phân ca",
+        title: "Phân ca tuần",
+        description: "Sắp xếp ca làm việc cho nhân viên trong tuần.",
+      },
+      attendance: {
+        label: "Chấm công",
+        title: "Bảng chấm công",
+        description: "Theo dõi và chốt chấm công nhân viên chi nhánh.",
+      },
+      checkouts: {
+        label: "Duyệt kết ca",
+        title: "Duyệt kết ca",
+        description: "Xử lý duyệt lượt kết ca đang chờ.",
+      },
+      leaves: {
+        label: "Duyệt nghỉ phép",
+        title: "Duyệt nghỉ phép",
+        description: "Xử lý duyệt yêu cầu nghỉ phép đang chờ.",
+      },
     },
     approvalsStripTitle: "Cần duyệt",
     actionSectionTitle: "Cần xử lý trong ca",

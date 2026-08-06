@@ -10,6 +10,9 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
   );
+  const leavesTab = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/leaves-tab.tsx",
+  );
   const client = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
   );
@@ -18,19 +21,21 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx",
   );
 
-  assert.match(route, /loadBranchLeaveApprovalData/);
-  assert.match(route, /BranchLeaveApprovalsClient/);
-  assert.doesNotMatch(route, /LeaveApprovalsPageContent|EmployeePage|embedded/);
+  // The legacy route is a redirect shim into the Team hub (`?tab=leaves`).
+  assert.match(route, /import \{ redirect \} from "next\/navigation"/);
+  assert.match(route, /\/team\?tab=leaves/);
+
+  // The hub tab reuses the data loader + client presenter.
+  assert.match(leavesTab, /loadBranchLeaveApprovalData/);
+  assert.match(leavesTab, /BranchLeaveApprovalsClient/);
+  assert.doesNotMatch(leavesTab, /LeaveApprovalsPageContent|EmployeePage/);
 
   assert.match(data, /import "server-only"/);
   assert.match(data, /resolveBranchContext/);
   assert.match(data, /branch\.branchId !== routeBranchId/);
   assert.match(data, /branch\.branch\.branch_kind !== ["']branch["']/);
   assert.match(data, /PERMISSION_KEYS\.HR_APPROVE_LEAVE_REQUEST/);
-  assert.match(
-    teamPage,
-    /canApproveLeave && isStoreBranch[\s\S]{0,80}?leave-approvals/,
-  );
+  assert.match(teamPage, /LeavesTab/);
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);

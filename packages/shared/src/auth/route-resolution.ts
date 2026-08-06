@@ -143,6 +143,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/pos-sessions(?:\/|$)/.test(pathname))
     return "branch_pos_sessions";
   if (/^\/br\/\d+\/settings\/pos-sessions(?:\/|$)/.test(pathname)) return null;
+  if (/^\/br\/\d+\/close-day(?:\/|$)/.test(pathname)) return "branch_close_day";
   if (/^\/br\/\d+\/settings(?:\/|$)/.test(pathname)) return "branch_settings";
   if (/^\/br\/\d+\/pos(?:\/|$)/.test(pathname)) return "pos";
   if (/^\/br\/\d+\/kds(?:\/|$)/.test(pathname)) return "kds";

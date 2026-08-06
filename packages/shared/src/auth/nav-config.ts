@@ -89,6 +89,16 @@ export const BRANCH_MANAGEMENT_ITEMS: BranchManagementNavItemConfig[] = [
     label: APP_COPY_VI.branchCommand,
   },
   {
+    // The Team hub is the single home for branch staff management: board,
+    // members, roster, attendance, checkout/leave approvals (Manager IA
+    // redesign). Former `/shift/{roster,attendance,checkout-approvals,
+    // leave-approvals}` routes now redirect into this hub via `?tab=`.
+    moduleKey: "branch_team",
+    icon: "Users",
+    hrefTemplate: "/br/{branchId}/team",
+    label: APP_COPY_VI.hrWorkspace,
+  },
+  {
     moduleKey: "branch_settings",
     icon: "Settings",
     hrefTemplate: "/br/{branchId}/settings",
@@ -123,6 +133,11 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     moduleKey: "branch_pos_sessions",
     icon: "ReceiptText",
     hrefTemplate: "/br/{branchId}/pos-sessions",
+  },
+  {
+    moduleKey: "branch_close_day",
+    icon: "CalendarCheck",
+    hrefTemplate: "/br/{branchId}/close-day",
   },
   {
     moduleKey: "runner",
@@ -167,35 +182,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "my_shift",
     hrefTemplate: "/br/{branchId}/team",
     label: "Đội hôm nay",
-  },
-  {
-    moduleKey: "branch_shift_roster",
-    icon: "CalendarRange",
-    group: "my_shift",
-    hrefTemplate: "/br/{branchId}/shift/roster",
-    label: "Phân ca",
-    kinds: ["branch"],
-  },
-  {
-    moduleKey: "branch_shift_attendance",
-    icon: "CalendarClock",
-    group: "my_shift",
-    hrefTemplate: "/br/{branchId}/shift/attendance",
-    label: "Bảng chấm công",
-  },
-  {
-    moduleKey: "employee_checkout_approvals",
-    icon: "ClipboardCheck",
-    group: "approvals",
-    hrefTemplate: "/br/{branchId}/shift/checkout-approvals",
-    label: "Duyệt kết ca",
-  },
-  {
-    moduleKey: "employee_leave_approvals",
-    icon: "CalendarCheck",
-    group: "approvals",
-    hrefTemplate: "/br/{branchId}/shift/leave-approvals",
-    label: "Duyệt nghỉ phép",
   },
   {
     moduleKey: "branch_stock",

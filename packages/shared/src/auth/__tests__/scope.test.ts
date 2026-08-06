@@ -885,11 +885,18 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.deepEqual(
     branchManagementGroup?.items.map((app) => app.moduleKey),
-    ["branch_dashboard", "branch_settings", "branch_feedback"],
+    ["branch_dashboard", "branch_team", "branch_settings", "branch_feedback"],
   );
   assert.deepEqual(
     branchOperationGroup?.items.map((app) => app.moduleKey),
-    ["pos", "kds", "branch_menu_limits", "branch_pos_sessions", "runner"],
+    [
+      "pos",
+      "kds",
+      "branch_menu_limits",
+      "branch_pos_sessions",
+      "branch_close_day",
+      "runner",
+    ],
   );
   assert.equal(
     branchManagerApps.some((app) => app.moduleKey === "settings"),

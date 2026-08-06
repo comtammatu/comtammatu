@@ -162,14 +162,15 @@ by direct URL or as a redirect target.
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `branch_pos_sessions` | `/br/*/pos-sessions` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
-| `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
+| `branch_close_day` | `/br/*/close-day` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
+| `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (my_shift) |
 | `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh, Quản lý kho Tổng, Bếp trưởng Bếp TT | Operator tile (approvals); Operator tile (stock) |
 | `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen) |
 | `branch_feedback` | `/br/*/feedback` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
-| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
-| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (approvals) |
-| `branch_shift_roster` | `/br/*/shift/roster` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
-| `branch_shift_attendance` | `/br/*/shift/attendance` | Chủ sở hữu, Quản lý chi nhánh | Operator tile (my_shift) |
+| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `branch_shift_roster` | `/br/*/shift/roster` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `branch_shift_attendance` | `/br/*/shift/attendance` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `notifications` | `/notifications` | Chủ sở hữu, Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
@@ -195,16 +196,17 @@ declared before their broader siblings.
 | `notifications` | utility | `/notifications` | `/notifications` | `notifications` | no |
 | `self` | self | `/me` | `/me` | `me` | no |
 | `branch-home` | branch_operation | `/br/[branchId]` | `/br/[branchId]` | `branch_home` | yes |
-| `branch-shift-checkout-approvals` | branch_operation | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
-| `branch-shift-leave-approvals` | branch_operation | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
-| `branch-shift-roster` | branch_operation | `/br/[branchId]/shift/roster` | `/br/[branchId]/shift/roster` | `branch_shift_roster` | yes |
-| `branch-shift-attendance` | branch_operation | `/br/[branchId]/shift/attendance` | `/br/[branchId]/shift/attendance` | `branch_shift_attendance` | yes |
+| `branch-shift-checkout-approvals` | branch_management | `/br/[branchId]/shift/checkout-approvals` | `/br/[branchId]/shift/checkout-approvals` | `employee_checkout_approvals` | yes |
+| `branch-shift-leave-approvals` | branch_management | `/br/[branchId]/shift/leave-approvals` | `/br/[branchId]/shift/leave-approvals` | `employee_leave_approvals` | yes |
+| `branch-shift-roster` | branch_management | `/br/[branchId]/shift/roster` | `/br/[branchId]/shift/roster` | `branch_shift_roster` | yes |
+| `branch-shift-attendance` | branch_management | `/br/[branchId]/shift/attendance` | `/br/[branchId]/shift/attendance` | `branch_shift_attendance` | yes |
 | `branch-shift` | branch_operation | `/br/[branchId]/shift` | `/br/[branchId]/shift` | `branch_home` | yes |
 | `branch-profile` | branch_operation | `/br/[branchId]/profile` | `/br/[branchId]/profile` | `branch_home` | yes |
 | `branch-stock` | branch_operation | `/br/[branchId]/stock` | `/br/[branchId]/stock` | `branch_stock` | yes |
 | `branch-orders` | branch_operation | `/br/[branchId]/orders` | `/br/[branchId]/orders` | `branch_orders` | yes |
 | `branch-menu-limits` | branch_operation | `/br/[branchId]/menu-limits` | `/br/[branchId]/menu-limits` | `branch_menu_limits` | yes |
 | `branch-pos-sessions` | branch_operation | `/br/[branchId]/pos-sessions` | `/br/[branchId]/pos-sessions` | `branch_pos_sessions` | yes |
+| `branch-close-day` | branch_management | `/br/[branchId]/close-day` | `/br/[branchId]/close-day` | `branch_close_day` | yes |
 | `branch-settings` | branch_management | `/br/[branchId]/settings` | `/br/[branchId]/settings` | `branch_settings` | yes |
 | `branch-dashboard` | branch_management | `/br/[branchId]/dashboard` | `/br/[branchId]/dashboard` | `branch_dashboard` | yes |
 | `branch-team` | branch_management | `/br/[branchId]/team` | `/br/[branchId]/team` | `branch_team` | yes |
@@ -264,6 +266,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | branch-orders | `/br/[branchId]/orders` | branch_manager/cashier/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-menu-limits | `/br/[branchId]/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-pos-sessions | `/br/[branchId]/pos-sessions` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-close-day | `/br/[branchId]/close-day` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-settings | `/br/[branchId]/settings` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-dashboard | `/br/[branchId]/dashboard` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-team | `/br/[branchId]/team` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |

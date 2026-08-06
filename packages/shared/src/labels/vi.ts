@@ -24,6 +24,7 @@ export type ModuleLabelKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "branch_pos_sessions"
+  | "branch_close_day"
   | "branch_team"
   | "branch_stock"
   | "branch_orders"
@@ -58,6 +59,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_settings: "Thiết lập chi nhánh",
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
+  branch_close_day: "Chốt ngày",
   branch_team: "Nhân sự chi nhánh",
   branch_stock: "Kho chi nhánh",
   branch_orders: "Đơn hàng chi nhánh",

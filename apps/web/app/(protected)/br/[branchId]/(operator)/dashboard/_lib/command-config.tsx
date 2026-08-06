@@ -7,11 +7,11 @@ import {
   CreditCard as IconCreditCard,
   Monitor as IconMonitor,
   MonitorUp as IconMonitorUp,
-  Package as IconPackage,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
   Utensils as IconUtensils,
   Users as IconUsers,
+  Wallet as IconWallet,
 } from "lucide-react";
 import {
   canAccess,
@@ -24,6 +24,112 @@ import { messages } from "@lib/messages";
 import type { BranchDayStatus } from "../data";
 
 type BranchCopy = (typeof messages)["settings"]["branch"];
+
+export type CockpitLaneTone = "success" | "warning" | "info" | "secondary";
+
+export type CockpitCard = {
+  key: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+  tone: CockpitLaneTone;
+  href?: string;
+};
+
+export type CockpitLane = {
+  id: "floor" | "kitchen" | "payment";
+  title: string;
+  cards: CockpitCard[];
+};
+
+/**
+ * Live cockpit lanes for the Branch Command landing. Reuses the operational
+ * board card vocabulary — the operator-home skeleton forbids KPI mosaics, so
+ * numbers stay inline in the description line of each actionable card.
+ */
+export function buildCockpitLanes(
+  day: BranchDayStatus,
+  copy: BranchCopy,
+  hrefs: {
+    posHref?: string;
+    kdsHref?: string;
+    posSessionsHref?: string;
+    tablesHref?: string;
+  },
+): CockpitLane[] {
+  const floorOccupiedTone: CockpitLaneTone =
+    day.tablesOccupied > 0 ? "info" : "secondary";
+  const readyTone: CockpitLaneTone = day.readyItems > 0 ? "warning" : "success";
+  const kitchenTone: CockpitLaneTone =
+    day.kitchenActiveOrders > 0 ? "warning" : "success";
+  const paymentAwaitingTone: CockpitLaneTone =
+    day.ordersAwaitingPayment > 0 ? "warning" : "success";
+  const sessionTone: CockpitLaneTone =
+    day.posSessionOpenedAt !== null ? "success" : "warning";
+
+  return [
+    {
+      id: "floor",
+      title: copy.cockpitFloorLaneTitle,
+      cards: [
+        {
+          key: "floor-occupied",
+          icon: <IconArmchair />,
+          title: copy.cockpitFloorOccupied(day.tablesOccupied, day.tablesTotal),
+          description: copy.cockpitFloorReadyItems(day.readyItems),
+          tone: day.readyItems > 0 ? readyTone : floorOccupiedTone,
+          href: hrefs.tablesHref,
+        },
+      ],
+    },
+    {
+      id: "kitchen",
+      title: copy.cockpitKitchenLaneTitle,
+      cards: [
+        {
+          key: "kitchen-active",
+          icon: <IconChefHat />,
+          title: copy.cockpitKitchenActive(day.kitchenActiveOrders),
+          description: copy.cockpitDescription,
+          tone: kitchenTone,
+          href: hrefs.kdsHref,
+        },
+      ],
+    },
+    {
+      id: "payment",
+      title: copy.cockpitPaymentLaneTitle,
+      cards: [
+        {
+          key: "payment-awaiting",
+          icon: <IconWallet />,
+          title: copy.cockpitPaymentAwaiting(day.ordersAwaitingPayment),
+          description:
+            day.posSessionOpenedAt !== null
+              ? copy.cockpitSessionOpen
+              : copy.cockpitSessionClosed,
+          tone:
+            day.ordersAwaitingPayment > 0
+              ? paymentAwaitingTone
+              : sessionTone,
+          href: hrefs.posSessionsHref ?? hrefs.posHref,
+        },
+        ...(day.vietqrPending > 0
+          ? [
+              {
+                key: "payment-vietqr",
+                icon: <IconCreditCard />,
+                title: copy.cockpitPaymentVietqr(day.vietqrPending) ?? "",
+                description: copy.cockpitDescription,
+                tone: "warning" as CockpitLaneTone,
+                href: hrefs.posSessionsHref ?? hrefs.posHref,
+              },
+            ]
+          : []),
+      ],
+    },
+  ];
+}
 
 export type BranchCommandTile = {
   moduleKey: ModuleKey;
@@ -47,7 +153,6 @@ export type BranchReadinessItem = {
 export type BranchCommandTileGroups = {
   liveOperations: BranchCommandTile[];
   endDay: BranchCommandTile[];
-  drilldown: BranchCommandTile[];
 };
 
 function buildTileGroups(
@@ -100,14 +205,12 @@ function buildTileGroups(
         description: copy.commandPosSessionsDescription,
         icon: <IconReceiptText />,
       },
-    ],
-    drilldown: [
       {
-        moduleKey: "branch_stock",
-        href: `/br/${branchId}/stock`,
-        title: "Kho chi nhánh",
-        description: copy.commandInventoryDescription,
-        icon: <IconPackage />,
+        moduleKey: "branch_close_day",
+        href: `/br/${branchId}/close-day`,
+        title: copy.closeDayTitle,
+        description: copy.closeDayDescription,
+        icon: <IconClipboardCheck />,
       },
     ],
   };
@@ -129,7 +232,6 @@ export function buildVisibleTileGroups(
   return {
     liveOperations: visible(groups.liveOperations),
     endDay: visible(groups.endDay),
-    drilldown: visible(groups.drilldown),
   };
 }
 

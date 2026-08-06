@@ -205,53 +205,57 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Approval routes must precede the broader shift family.
+    // Legacy approval routes redirect into the Team hub (`?tab=checkouts`);
+    // they still carry their own module key so the proxy gates the capability
+    // before the redirect resolves. Breadcrumb root is branch management.
     id: "branch-shift-checkout-approvals",
     label: MODULE_ACL.employee_checkout_approvals.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/shift/checkout-approvals",
     matchPrefixes: ["/br/[branchId]/shift/checkout-approvals"],
     moduleKeys: ["employee_checkout_approvals"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {
-    // Approval routes must precede the broader shift family.
+    // Legacy approval routes redirect into the Team hub (`?tab=leaves`).
     id: "branch-shift-leave-approvals",
     label: MODULE_ACL.employee_leave_approvals.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/shift/leave-approvals",
     matchPrefixes: ["/br/[branchId]/shift/leave-approvals"],
     moduleKeys: ["employee_leave_approvals"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {
+    // Legacy roster route redirects into the Team hub (`?tab=roster`).
     id: "branch-shift-roster",
     label: MODULE_ACL.branch_shift_roster.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/shift/roster",
     matchPrefixes: ["/br/[branchId]/shift/roster"],
     moduleKeys: ["branch_shift_roster"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {
+    // Legacy attendance route redirects into the Team hub (`?tab=attendance`).
     id: "branch-shift-attendance",
     label: MODULE_ACL.branch_shift_attendance.label,
-    surface: "branch_operation",
+    surface: "branch_management",
     entryPath: "/br/[branchId]/shift/attendance",
     matchPrefixes: ["/br/[branchId]/shift/attendance"],
     moduleKeys: ["branch_shift_attendance"],
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
-    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {
@@ -324,6 +328,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     primaryNav: "operator-bottom-nav",
     backBehavior: "in-flow",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.branchOperations,
+    requiresBranchId: true,
+  },
+  {
+    id: "branch-close-day",
+    label: MODULE_ACL.branch_close_day.label,
+    surface: "branch_management",
+    entryPath: "/br/[branchId]/close-day",
+    matchPrefixes: ["/br/[branchId]/close-day"],
+    moduleKeys: ["branch_close_day"],
+    primaryNav: "operator-bottom-nav",
+    backBehavior: "in-flow",
+    breadcrumbRoot: NAV_GROUP_LABELS_VI.branchManagement,
     requiresBranchId: true,
   },
   {

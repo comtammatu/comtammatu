@@ -353,7 +353,7 @@ test("Branch command dashboard is a branch-native command surface", () => {
     "/br/${branchId}/menu-limits",
     "/br/${branchId}/orders",
     "/br/${branchId}/pos-sessions",
-    "/br/${branchId}/stock",
+    "/br/${branchId}/close-day",
   ]) {
     assert.ok(commandConfig.includes(expected), `expected ${expected}`);
   }

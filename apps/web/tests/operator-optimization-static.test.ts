@@ -114,7 +114,7 @@ test("operator dashboard streams readiness behind Suspense while tiles render im
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
   assert.match(source, /<Suspense/);
-  assert.match(source, /BranchReadinessSection/);
+  assert.match(source, /BranchCockpitSection/);
   assert.match(source, /BranchOperatorPanelSkeleton/);
   assert.match(source, /await fetchBranchDayStatus/);
 });

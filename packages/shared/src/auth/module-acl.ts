@@ -27,6 +27,7 @@ export type ModuleKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "branch_pos_sessions"
+  | "branch_close_day"
   | "branch_team"
   | "branch_stock"
   | "branch_orders"
@@ -168,6 +169,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/pos-sessions",
     allowedRoles: ["owner", "branch_manager"],
     label: getModuleLabelVi("branch_pos_sessions"),
+  },
+  /** Branch end-of-day close workflow (operational roll-up). */
+  branch_close_day: {
+    path: "/br/*/close-day",
+    allowedRoles: ["owner", "branch_manager"],
+    label: getModuleLabelVi("branch_close_day"),
   },
   /** Branch-safe people, attendance, and leave visibility. */
   branch_team: {

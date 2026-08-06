@@ -308,8 +308,10 @@ test("branch home owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/tasks"/,
   );
-  assert.match(operatorTiles, /moduleKey: "employee_checkout_approvals"/);
-  assert.match(
+  // Manager shift approvals now live inside the Team hub (`?tab=...`), not as
+  // standalone operator tiles. The hub entry tile remains.
+  assert.match(operatorTiles, /hrefTemplate: "\/br\/\{branchId\}\/team"/);
+  assert.doesNotMatch(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/shift\/checkout-approvals"/,
   );

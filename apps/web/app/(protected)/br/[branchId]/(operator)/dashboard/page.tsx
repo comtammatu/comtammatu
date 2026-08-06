@@ -10,6 +10,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchDayStatus } from "./data";
 import {
+  buildCockpitLanes,
   buildReadinessItems,
   buildVisibleTileGroups,
   filterReadinessExceptions,
@@ -18,6 +19,7 @@ import {
 import {
   BranchCommandTileGrid,
   BranchReadinessList,
+  CockpitLanes,
 } from "./_components/command-sections";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -69,7 +71,10 @@ export default async function BranchCommandPage({
     ? `/br/${branchId}/menu-limits`
     : undefined;
   const checkoutApprovalsHref = canAccess(role, "employee_checkout_approvals")
-    ? `/br/${branchId}/shift/checkout-approvals`
+    ? `/br/${branchId}/team?tab=checkouts`
+    : undefined;
+  const posSessionsHref = canAccess(role, "branch_pos_sessions")
+    ? `/br/${branchId}/pos-sessions`
     : undefined;
   const staffHref = canAccess(role, "branch_team")
     ? `/br/${branchId}/team`
@@ -90,6 +95,30 @@ export default async function BranchCommandPage({
 
   return (
     <BranchOperatorPage title={copy.commandTitle} hideHeaderOnMobile>
+      <Suspense
+        fallback={
+          <BranchOperatorPanelSkeleton
+            title={copy.cockpitTitle}
+            tone="default"
+          />
+        }
+      >
+        <BranchCockpitSection
+          supabase={supabase}
+          claims={claims}
+          branchId={branchId}
+          hrefs={{
+            posHref,
+            kdsHref,
+            posSessionsHref,
+            tablesHref,
+          }}
+          readinessHrefs={readinessHrefs}
+          posSettingsHref={posSettingsHref}
+          settingsHref={settingsHref}
+        />
+      </Suspense>
+
       {tileGroups.liveOperations.length > 0 ? (
         <BranchOperatorPanel
           title={copy.liveOperationsTitle}
@@ -104,25 +133,6 @@ export default async function BranchCommandPage({
           />
         </BranchOperatorPanel>
       ) : null}
-
-      <Suspense
-        fallback={
-          <BranchOperatorPanelSkeleton
-            title={copy.readinessTitle}
-            tone="default"
-          />
-        }
-      >
-        <BranchReadinessSection
-          supabase={supabase}
-          claims={claims}
-          branchId={branchId}
-          hrefs={readinessHrefs}
-          tablesHref={tablesHref}
-          posSettingsHref={posSettingsHref}
-          settingsHref={settingsHref}
-        />
-      </Suspense>
 
       {tileGroups.endDay.length > 0 ? (
         <BranchOperatorPanel title={copy.endDayTitle} headingLevel="h2">
@@ -139,20 +149,30 @@ export default async function BranchCommandPage({
   );
 }
 
-async function BranchReadinessSection({
+/**
+ * Cockpit + readiness section. Both consume the same fail-soft day snapshot, so
+ * they share one fetch. Cockpit lanes render first (live floor/kitchen/payment);
+ * readiness exceptions follow as a compact card when anything needs attention.
+ */
+async function BranchCockpitSection({
   supabase,
   claims,
   branchId,
   hrefs,
-  tablesHref,
+  readinessHrefs,
   posSettingsHref,
   settingsHref,
 }: {
   supabase: SupabaseClient;
   claims: Claims;
   branchId: number;
-  hrefs: Omit<ReadinessHrefs, "floorHref">;
-  tablesHref?: string;
+  hrefs: {
+    posHref?: string;
+    kdsHref?: string;
+    posSessionsHref?: string;
+    tablesHref?: string;
+  };
+  readinessHrefs: Omit<ReadinessHrefs, "floorHref">;
   posSettingsHref?: string;
   settingsHref?: string;
 }) {
@@ -161,19 +181,29 @@ async function BranchReadinessSection({
   // floorHref depends on the readiness snapshot, so resolve it here from day.
   const floorHref =
     day.tablesTotal <= 0
-      ? tablesHref
+      ? hrefs.tablesHref
       : day.setupActiveTerminals <= 0
         ? posSettingsHref
         : settingsHref;
+  const lanes = buildCockpitLanes(day, copy, hrefs);
   const readinessItems = filterReadinessExceptions(
-    buildReadinessItems(day, copy, { ...hrefs, floorHref }),
+    buildReadinessItems(day, copy, { ...readinessHrefs, floorHref }),
   );
-  if (readinessItems.length === 0) {
-    return null;
-  }
+
   return (
-    <BranchOperatorPanel title={copy.readinessTitle} headingLevel="h2">
-      <BranchReadinessList items={readinessItems} />
-    </BranchOperatorPanel>
+    <>
+      <BranchOperatorPanel
+        title={copy.cockpitTitle}
+        description={copy.cockpitDescription}
+        headingLevel="h2"
+      >
+        <CockpitLanes lanes={lanes} />
+      </BranchOperatorPanel>
+      {readinessItems.length > 0 ? (
+        <BranchOperatorPanel title={copy.readinessTitle} headingLevel="h2">
+          <BranchReadinessList items={readinessItems} />
+        </BranchOperatorPanel>
+      ) : null}
+    </>
   );
 }

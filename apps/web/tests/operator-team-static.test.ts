@@ -331,10 +331,10 @@ test("operator team members use a roster grid with real profile fields", () => {
 test("operator team stays read-only for HR and keeps focused status actions", () => {
   assert.match(
     teamTabsSource,
-    /TeamWorkspaceTabValue = "board" \| "members"/,
+    /TeamWorkspaceTabValue =[\s\S]*?"board"[\s\S]*?"members"[\s\S]*?"roster"[\s\S]*?"attendance"[\s\S]*?"checkouts"[\s\S]*?"leaves"/,
   );
   assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
-  assert.match(teamPageSource, /approverRole=\{claims\.user_role\}/);
+  assert.match(teamPageSource, /approverRole=\{claims\.user_role as StaffRole\}/);
   assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(
     teamBoardSource,

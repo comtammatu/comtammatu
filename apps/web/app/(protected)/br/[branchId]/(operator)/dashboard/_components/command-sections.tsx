@@ -1,9 +1,76 @@
+import Link from "next/link";
 import { ItemGroup } from "@comtammatu/ui/components/item";
+import { OperationalBoardCard } from "@/components/surface";
 import { BranchActionItem } from "../../../_components/branch-action-item";
 import type {
   BranchCommandTile,
   BranchReadinessItem,
+  CockpitCard,
+  CockpitLane,
+  CockpitLaneTone,
 } from "../_lib/command-config";
+
+const COCKPIT_TONE_CLASS: Record<CockpitLaneTone, string> = {
+  success: "border-success/20 bg-success/10",
+  warning: "border-warning/20 bg-warning/10",
+  info: "border-info/20 bg-info/10",
+  secondary: "border-border bg-muted/30",
+};
+
+function CockpitCardView({ card }: { card: CockpitCard }) {
+  const body = (
+    <div className="flex w-full items-center gap-3 px-3 py-3">
+      <span aria-hidden="true" className="text-muted-foreground">
+        {card.icon}
+      </span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-sm font-medium leading-tight text-foreground">
+          {card.title}
+        </span>
+        {card.description ? (
+          <span className="text-xs leading-tight text-muted-foreground">
+            {card.description}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+  return (
+    <OperationalBoardCard
+      className={`${COCKPIT_TONE_CLASS[card.tone]} min-w-0`}
+      interactive={!!card.href}
+    >
+      {card.href ? (
+        <Link href={card.href} className="block rounded-lg">
+          {body}
+        </Link>
+      ) : (
+        body
+      )}
+    </OperationalBoardCard>
+  );
+}
+
+export function CockpitLanes({ lanes }: { lanes: CockpitLane[] }) {
+  const nonEmpty = lanes.filter((lane) => lane.cards.length > 0);
+  if (nonEmpty.length === 0) return null;
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {nonEmpty.map((lane) => (
+        <section key={lane.id} className="flex min-w-0 flex-col gap-2">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {lane.title}
+          </h3>
+          <div className="flex min-w-0 flex-col gap-2">
+            {lane.cards.map((card) => (
+              <CockpitCardView key={card.key} card={card} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
 
 export function BranchCommandTileGrid({
   tiles,
