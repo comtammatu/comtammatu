@@ -237,6 +237,7 @@ function main() {
         "supabase",
         "db",
         "push",
+        "--include-all",
         ...(dryRun ? ["--dry-run"] : []),
         "--db-url",
         url.href,

@@ -19,7 +19,7 @@ Evidence: migration `20260801131049_hr_shift_assignments_roster_and_hour_ratio_c
 
 ## Clarify Branch-mobile and Company personal self-service
 
-State: doing
+State: verify
 Kind: feature
 Tier: T3
 Lane: platform/navigation-ia
@@ -32,18 +32,6 @@ Evidence: ADR 0012/0022; `docs/ref/screen-context-map.md`; `docs/modules/ui.md`;
 - [ ] Route active zero-module company-office employees to `/me` through the shared auth/default-landing contract without granting Finance, Inventory, HR, or Tenant capabilities; inactive membership remains denied.
 - [ ] Keep Owner denied, wrong-branch and missing required `branch_id` fail closed, and central roles pinned to their assigned Inventory site.
 - [ ] Synchronize ADR 0022 and owning UI docs with runtime, then pass targeted tests, repository gates, and authenticated mobile-first browser smoke before closing the outcome.
-
-## Drop confirmed-dead purchase-request create/submit RPCs after demand cutover
-
-State: triage
-Kind: debt
-Tier: T3
-Lane: database/rpc-cleanup
-Exit: `create_purchase_request` and `submit_purchase_request` are absent from Production after deployed callers and data proof; types regenerated; 6-channel scan + `pg_depend`/`pg_stat_user_functions` evidence recorded.
-Evidence: 2026-08-01 inventory — both RPCs have zero JS `.rpc()` callers and no active SQL call/trigger/cron/policy refs beyond their own CREATE/GRANT; still present in types and additive migration `20260729180000`. Related blocked outcomes already cover `create_supplier_payment` and purchase-request retirement smoke.
-
-- [ ] Reconfirm zero callers against Production catalogs (`pg_proc`, `pg_depend`, `pg_stat_user_functions.calls`) before writing a DROP migration.
-- [ ] Drop only after the purchase-demand cutover Exit is proven and owner delegates Production apply; keep rollback bodies per `RPC-ROLLBACK-MUST-INCLUDE-BODY`.
 
 ## Unit role picker + stock display contract
 
@@ -159,7 +147,7 @@ Evidence: CodeGraph caller trace, focused SQL/static regressions, repository gat
 
 ## Revalidate the HRM F1-F15 findings against current authority
 
-State: triage
+State: verify
 Kind: debt
 Tier: T3
 Lane: hr/domain-integrity
@@ -232,7 +220,7 @@ Blocker: Authenticated live smoke needs an owner-delegated Production Owner/Bran
 
 ## Complete the CTCP authority and e-invoice cutover on Production
 
-State: doing
+State: verify
 Kind: feature
 Tier: T3
 Lane: platform/security-finance
@@ -277,7 +265,7 @@ Evidence: Focused worker regression coverage, repository gates, T3 review, contr
 
 ## Finish authenticated Design System rollout proof
 
-State: doing
+State: verify
 Kind: feature
 Tier: T3
 Lane: ui/design-system

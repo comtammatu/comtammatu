@@ -165,7 +165,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/grn/new/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
   "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",

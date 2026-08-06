@@ -12224,15 +12224,6 @@ export type Database = {
         Args: { p_orders: Json; p_request_id: number }
         Returns: Json
       }
-      create_purchase_request: {
-        Args: {
-          p_branch_id: number
-          p_lines: Json
-          p_needed_by: string
-          p_notes: string
-        }
-        Returns: Json
-      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
@@ -14280,7 +14271,6 @@ export type Database = {
         }
         Returns: number
       }
-      submit_purchase_request: { Args: { p_request_id: number }; Returns: Json }
       submit_stock_request: { Args: { p_request_id: number }; Returns: Json }
       sync_insurance_base: {
         Args: { p_employee_id: number }
