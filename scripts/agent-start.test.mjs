@@ -4,6 +4,18 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+// The CodeGraph npm shim is a globally-installed developer tool; CI runners
+// do not carry it. Probe once so the smoke test can skip (rather than fail)
+// when the binary is absent.
+const codeGraphBinaryAvailable = (() => {
+  const probe = spawnSync(
+    process.platform === "win32" ? "where" : "which",
+    ["codegraph"],
+    { encoding: "utf8" },
+  );
+  return probe.status === 0;
+})();
+
 import {
   codeGraphAction,
   codeGraphErrorPaths,
@@ -45,7 +57,7 @@ test("launches the tracked skill check through Node without a shell shim", () =>
   );
 });
 
-test("launches the CodeGraph npm shim through the Windows command processor", () => {
+test("launches the CodeGraph npm shim through the Windows command processor", { skip: !codeGraphBinaryAvailable }, () => {
   const invocation = codeGraphInvocation(["version"]);
 
   if (process.platform === "win32") {
