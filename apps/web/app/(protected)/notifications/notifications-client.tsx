@@ -18,11 +18,11 @@ export function NotificationsClient({
     loading,
     loadingMore,
     hasMore,
-    unreadOnly,
+    feedMode,
     markRead,
     markAll,
     loadMore,
-    setUnreadOnly,
+    setFeedMode,
   } = useNotifications({ tenantId, branchId });
 
   return (
@@ -35,11 +35,11 @@ export function NotificationsClient({
           loading={loading}
           loadingMore={loadingMore}
           hasMore={hasMore}
-          unreadOnly={unreadOnly}
+          feedMode={feedMode}
           onRead={markRead}
           onMarkAll={markAll}
           onLoadMore={loadMore}
-          onUnreadOnlyChange={setUnreadOnly}
+          onFeedModeChange={setFeedMode}
           showViewAll={false}
           scrollClassName="max-h-[70vh]"
         />

@@ -7,6 +7,9 @@ import {
   type NotificationBadgeSummary,
 } from "@/(protected)/notifications/actions";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import {
+  NOTIFICATIONS_CHANGED_EVENT,
+} from "@lib/notifications/changed-event";
 
 const EMPTY_SUMMARY: NotificationBadgeSummary = {
   unreadCount: 0,
@@ -69,9 +72,12 @@ export function useNotificationBadges(): NotificationBadgeSummary {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void refreshRef.current();
     };
+    const handleChanged = () => void refreshRef.current();
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handleChanged);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, handleChanged);
     };
   }, []);
 

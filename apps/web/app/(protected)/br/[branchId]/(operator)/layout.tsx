@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  Bell as IconBell,
   CalendarCheck as IconCalendarCheck,
   Ellipsis as IconEllipsis,
   House as IconHouse,
@@ -29,15 +28,14 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { AppPage } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
-import { NotificationCountBadge } from "@/components/notification-count-badge";
 import { PwaRuntimeProvider } from "@/components/pwa-runtime";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
-import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import { BranchOpsRefresh } from "./branch-ops-refresh";
 import { OperatorBottomNav } from "./operator-bottom-nav";
+import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 
@@ -64,7 +62,6 @@ export default async function OperatorLayout({
   if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
-  const unreadPromise = getUnreadCount().catch(() => null);
   const context = await resolveBranchContext(supabase, claims, branchId);
   if (!context) notFound();
 
@@ -80,14 +77,8 @@ export default async function OperatorLayout({
   const canCloseDay = canAccess(claims.user_role, "branch_close_day");
   const canOpenOwnerHome = claims.user_role === "owner";
   const usesHeaderOverflow = canOpenOwnerHome || canManageBranch;
-  const unreadResult = await unreadPromise;
-  const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
-  const notificationsHref = `/notifications?returnTo=${encodeURIComponent(`/br/${context.branchId}`)}`;
   const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
-  const notificationsAria =
-    unread > 0
-      ? `${messages.operator.header.notificationsAria}, ${unread} chưa đọc`
-      : messages.operator.header.notificationsAria;
+  const notificationsReturnTo = `/br/${context.branchId}`;
 
   return (
     <PwaRuntimeProvider>
@@ -181,16 +172,7 @@ export default async function OperatorLayout({
               >
                 <IconUser />
               </Button>
-              <Button
-                variant="outline"
-                size="icon-touch"
-                aria-label={notificationsAria}
-                className="relative"
-                render={<Link href={notificationsHref} />}
-              >
-                <IconBell />
-                <NotificationCountBadge count={unread} />
-              </Button>
+              <OperatorNotificationBell returnTo={notificationsReturnTo} />
             </>
           }
         />

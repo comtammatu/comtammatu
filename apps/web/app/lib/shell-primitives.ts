@@ -23,16 +23,18 @@ export interface ShellNotificationTarget {
 
 const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "attendance.checkout_requested": "/hr/attendance",
+  "hr.checkout_requested": "/hr/attendance",
   "hr.leave_approved": "/hr/attendance",
   "hr.leave_rejected": "/hr/attendance",
   "hr.leave_requested": "/hr/attendance",
+  "hr.payroll_period_ready": "/hr/payroll",
+  "inventory.count_slip_submitted": "/inventory/count-slips",
   "inventory.expiry_soon": "/inventory/stock",
   "inventory.stock_low": "/inventory/stock",
   "inventory.stocktake_completed": "/inventory/stocktake",
   "inventory.stocktake_conflict": "/inventory/stocktake",
   "inventory.waste.weekly_report": "/inventory/waste/approvals",
   "inventory.stock_request_submitted": "/inventory/transfers",
-  "pos.shift_variance": "/finance",
   "procurement.purchase_request_submitted": "/inventory/purchase-orders",
   "procurement.po_pending_approval": "/inventory/purchase-orders",
   "workflow.grn_pending": "/inventory/grn",
@@ -79,6 +81,8 @@ export function findActivePrimaryNavItem(
 }
 
 function notificationKindTargetPath(kind: string): string | null {
+  // Prefer action_url for POS variance — lands on branch pos-sessions, not Finance.
+  if (kind === "pos.shift_variance") return null;
   const targetPath = NOTIFICATION_KIND_TARGET_PATH[kind];
   if (targetPath) return targetPath;
   if (

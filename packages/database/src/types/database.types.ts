@@ -13243,7 +13243,12 @@ export type Database = {
         Returns: Json
       }
       list_notifications: {
-        Args: { p_before?: string; p_limit?: number; p_unread_only?: boolean }
+        Args: {
+          p_before?: string
+          p_include_expired?: boolean
+          p_limit?: number
+          p_unread_only?: boolean
+        }
         Returns: {
           action_url: string
           body: string

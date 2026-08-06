@@ -22,11 +22,11 @@ interface Props {
   loading: boolean;
   loadingMore?: boolean;
   hasMore?: boolean;
-  unreadOnly?: boolean;
-  onRead: (id: number) => void;
+  feedMode?: "active" | "all";
+  onRead: (id: number, options?: { quiet?: boolean }) => void;
   onMarkAll: () => void;
   onLoadMore?: () => void;
-  onUnreadOnlyChange?: (next: boolean) => void;
+  onFeedModeChange?: (next: "active" | "all") => void;
   onItemNavigate?: () => void;
   showViewAll?: boolean;
   /** Constrain the scroll viewport height; omit to grow with content. */
@@ -133,17 +133,17 @@ export function NotificationList({
   loading,
   loadingMore = false,
   hasMore = false,
-  unreadOnly = false,
+  feedMode = "active",
   onRead,
   onMarkAll,
   onLoadMore,
-  onUnreadOnlyChange,
+  onFeedModeChange,
   onItemNavigate,
   showViewAll = true,
   scrollClassName = "max-h-[28rem]",
 }: Props) {
   const hasUnread = unreadCount > 0;
-  const showFilter = typeof onUnreadOnlyChange === "function";
+  const showFilter = typeof onFeedModeChange === "function";
 
   return (
     <div className="flex flex-col">
@@ -175,17 +175,17 @@ export function NotificationList({
             type="single"
             size="sm"
             variant="outline"
-            value={unreadOnly ? "unread" : "all"}
+            value={feedMode}
             onValueChange={(value) => {
-              if (value) onUnreadOnlyChange(value === "unread");
+              if (value === "active" || value === "all") onFeedModeChange(value);
             }}
             className="h-7"
           >
+            <ToggleGroupItem value="active" className="h-7 px-3 text-xs">
+              {messages.notifications.filters.active}
+            </ToggleGroupItem>
             <ToggleGroupItem value="all" className="h-7 px-3 text-xs">
               {messages.notifications.filters.all}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="unread" className="h-7 px-3 text-xs">
-              {messages.notifications.filters.unread}
             </ToggleGroupItem>
           </ToggleGroup>
         </div>

@@ -66,7 +66,7 @@ const targets: ShellNotificationTarget[] = [
 
 test("notification counts roll up to modules and matching work queues", () => {
   assert.equal(getNavNotificationCount(navItem("/inventory"), targets), 14);
-  assert.equal(getNavNotificationCount(navItem("/finance"), targets), 1);
+  assert.equal(getNavNotificationCount(navItem("/finance"), targets), 0);
   assert.equal(getNavNotificationCount(navItem("/hr"), targets), 5);
   assert.equal(
     getNavNotificationCount(
@@ -107,8 +107,31 @@ test("notification shell uses one realtime summary for footer and tab badges", (
   assert.match(hook, /status === "SUBSCRIBED"[\s\S]*refreshRef\.current/);
   assert.doesNotMatch(hook, /target_branch_id/);
   assert.match(foreground, /showInAppToast[\s\S]*toast\.info/);
+  assert.match(foreground, /action:[\s\S]*openCtaLabel|options\.action/);
   assert.match(foreground, /document\.visibilityState === "visible"/);
   assert.doesNotMatch(foreground, /target_branch_id/);
+});
+
+test("notification feed uses RowActionsMenu and ContextMenu from one RowActionItem array", () => {
+  const item = read("apps/web/app/_components/notification-item.tsx");
+  assert.match(item, /getNotificationRowActions/);
+  assert.match(item, /RowActionsMenu/);
+  assert.match(item, /RowActionsContextMenuItems/);
+  assert.match(item, /ContextMenuTrigger/);
+});
+
+test("migration expires leave checkout count-slip and adds payroll ready", () => {
+  const migration = read(
+    "supabase/migrations/20260806141945_notification_work_queue_expire_and_payroll.sql",
+  );
+  assert.match(migration, /expire_leave_request_notification/);
+  assert.match(migration, /expire_checkout_request_notification/);
+  assert.match(migration, /expire_count_slip_submitted_notification/);
+  assert.match(migration, /hr\.payroll_period_ready/);
+  assert.match(migration, /team\?tab=leaves/);
+  assert.match(migration, /team\?tab=checkouts/);
+  assert.match(migration, /p_include_expired/);
+  assert.match(migration, /WHEN 'critical' THEN 0/);
 });
 
 test("migration targets each handoff role and exposes exact grouped counts", () => {

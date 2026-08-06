@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   extractClaimsFromAccessToken,
   isRunnerPublicDisplayPath,
@@ -9,24 +9,32 @@ import {
 } from "@comtammatu/shared/auth";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import { listNotifications } from "@/(protected)/notifications/actions";
+import {
+  listNotifications,
+  markNotificationRead,
+  type NotificationItem,
+} from "@/(protected)/notifications/actions";
+import { emitNotificationsChanged } from "@lib/notifications/changed-event";
 import { areNotificationPopupsEnabled } from "@lib/notifications/popup-preference";
+import { messages } from "@lib/messages";
 
 const SCAN_LIMIT = 10;
 const MAX_POPUPS = 3;
+
+function openCtaLabel(kind: string): string {
+  return (
+    messages.notifications.ctaByKind[kind] ?? messages.notifications.openAction
+  );
+}
 
 async function showPopupsForNewNotifications(
   highWaterRef: { current: number | null },
   inFlightRef: { current: boolean },
   showInAppToast: boolean,
+  navigate: (url: string) => void,
 ): Promise<void> {
   if (typeof window === "undefined") return;
-  // Not seeded yet — skip until the high-water mark is known so we never
-  // replay the backlog as a burst of popups.
   if (highWaterRef.current === null) return;
-  // Coalesce overlapping triggers: a single fetch already captures every
-  // recent row, so a second concurrent run would only re-pop the same items
-  // and double the work. Also serializes the read-modify-write of highWater.
   if (inFlightRef.current) return;
 
   inFlightRef.current = true;
@@ -44,14 +52,7 @@ async function showPopupsForNewNotifications(
 
     if (showInAppToast && document.visibilityState === "visible") {
       for (const item of fresh.slice(-MAX_POPUPS)) {
-        const options = {
-          description: item.body ?? undefined,
-          id: `notification:${String(item.id)}`,
-        };
-        if (item.severity === "critical") toast.error(item.title, options);
-        else if (item.severity === "warning")
-          toast.warning(item.title, options);
-        else toast.info(item.title, options);
+        showArrivalToast(item, navigate);
       }
       return;
     }
@@ -60,8 +61,6 @@ async function showPopupsForNewNotifications(
     if (Notification.permission !== "granted") return;
     if (!areNotificationPopupsEnabled()) return;
 
-    // Cap simultaneous popups — a reconnect after offline can surface a
-    // backlog at once. The in-app bell badge carries the full count.
     const registration = await navigator.serviceWorker.ready;
     for (const item of fresh.slice(-MAX_POPUPS)) {
       await registration.showNotification(item.title, {
@@ -77,22 +76,55 @@ async function showPopupsForNewNotifications(
   }
 }
 
+function showArrivalToast(
+  item: NotificationItem,
+  navigate: (url: string) => void,
+): void {
+  const options: {
+    description?: string;
+    id: string;
+    action?: { label: string; onClick: () => void };
+  } = {
+    description: item.body ?? undefined,
+    id: `notification:${String(item.id)}`,
+  };
+  if (item.action_url) {
+    options.action = {
+      label: openCtaLabel(item.kind),
+      onClick: () => {
+        void markNotificationRead({ id: item.id }).then((result) => {
+          if (result.success) emitNotificationsChanged();
+        });
+        navigate(item.action_url!);
+      },
+    };
+  }
+  if (item.severity === "critical") toast.error(item.title, options);
+  else if (item.severity === "warning") toast.warning(item.title, options);
+  else toast.info(item.title, options);
+}
+
 /**
  * Foreground notification attention while the PWA is open. A Realtime INSERT
- * triggers an RLS-scoped refetch. Visible control-surface routes use Sonner;
- * other states keep the permission-gated service-worker popup whose click
- * handler routes to the notification's action_url.
+ * triggers an RLS-scoped refetch. Visible control-surface routes use Sonner
+ * with an optional Open CTA; other states keep the permission-gated
+ * service-worker popup whose click handler routes to the action_url.
  */
 export function useForegroundNotifications(): void {
   const highWaterRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const navigateRef = useRef((url: string) => {
+    router.push(url);
+  });
+  navigateRef.current = (url: string) => {
+    router.push(url);
+  };
   const disabled = isRunnerPublicDisplayPath(pathname ?? "");
   const showInAppToast =
     resolveRouteFamilyContract(pathname ?? "")?.surface === "owner";
 
-  // Seed the high-water mark from the newest visible notification so a fresh
-  // mount does not popup notifications that arrived before the app opened.
   useEffect(() => {
     if (disabled) {
       highWaterRef.current = 0;
@@ -134,6 +166,7 @@ export function useForegroundNotifications(): void {
               highWaterRef,
               inFlightRef,
               showInAppToast,
+              (url) => navigateRef.current(url),
             ),
         )
         .subscribe((status) => {
@@ -146,13 +179,13 @@ export function useForegroundNotifications(): void {
             highWaterRef,
             inFlightRef,
             showInAppToast,
+            (url) => navigateRef.current(url),
           );
         });
     },
     [disabled, showInAppToast],
   );
 
-  // Re-fetch when tab returns to foreground
   useEffect(() => {
     if (disabled) return;
     const handleVisibility = () => {
@@ -161,6 +194,7 @@ export function useForegroundNotifications(): void {
           highWaterRef,
           inFlightRef,
           showInAppToast,
+          (url) => navigateRef.current(url),
         );
       }
     };

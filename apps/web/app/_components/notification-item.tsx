@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
+} from "@comtammatu/ui/components/context-menu";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
@@ -13,6 +20,11 @@ import {
   Truck as IconTruck,
 } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/(protected)/notifications/actions";
+import {
+  RowActionsContextMenuItems,
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { messages } from "@lib/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
@@ -37,10 +49,13 @@ function iconFor(kind: string) {
     case "inventory.stocktake_completed":
       return IconCircleCheck;
     case "hr.leave_approved":
+    case "hr.payroll_period_ready":
       return IconCircleCheck;
     case "hr.leave_rejected":
       return IconAlertTriangle;
     case "hr.leave_requested":
+    case "hr.checkout_requested":
+    case "attendance.checkout_requested":
       return IconClipboardList;
     case "inventory.count_slip_submitted":
       return IconClipboardList;
@@ -89,29 +104,85 @@ function relativeTime(iso: string) {
   return formatVNDate(iso);
 }
 
+function openCtaLabel(kind: string): string {
+  return (
+    messages.notifications.ctaByKind[kind] ?? messages.notifications.openWork
+  );
+}
+
+export function getNotificationRowActions(
+  item: NotificationItemModel,
+  handlers: {
+    onOpen: () => void;
+    onRead: (id: number, options?: { quiet?: boolean }) => void;
+  },
+): RowActionItem[] {
+  const unread = item.read_at === null;
+  const actions: RowActionItem[] = [];
+  if (item.action_url) {
+    actions.push({
+      key: "open",
+      label: openCtaLabel(item.kind),
+      onSelect: handlers.onOpen,
+    });
+  }
+  if (unread) {
+    actions.push({
+      key: "mark-read",
+      label: messages.notifications.markRead,
+      onSelect: () => handlers.onRead(item.id),
+    });
+  }
+  if (item.action_url) {
+    actions.push({
+      key: "copy",
+      label: messages.notifications.copyLink,
+      separatorBefore: actions.length > 0,
+      onSelect: () => {
+        void navigator.clipboard.writeText(
+          `${window.location.origin}${item.action_url}`,
+        );
+        toast.success(messages.notifications.copyLinkSuccess);
+      },
+    });
+  }
+  return actions;
+}
+
 interface Props {
   item: NotificationItemModel;
-  onRead: (id: number) => void;
+  onRead: (id: number, options?: { quiet?: boolean }) => void;
   onNavigate?: () => void;
 }
 
 export function NotificationItem({ item, onRead, onNavigate }: Props) {
+  const router = useRouter();
   const Icon = iconFor(item.kind);
   const tone = toneFor(item.severity);
   const unread = item.read_at === null;
   const kindLabel =
     messages.notifications.kindLabel[item.kind] ?? UNKNOWN_LABEL_VI;
+  const cta = item.action_url ? openCtaLabel(item.kind) : null;
 
-  const handleRead = () => {
-    if (unread) onRead(item.id);
+  const handleOpen = () => {
+    if (unread) onRead(item.id, { quiet: true });
+    onNavigate?.();
+    if (item.action_url) router.push(item.action_url);
   };
+
+  const actions = getNotificationRowActions(item, {
+    onOpen: handleOpen,
+    onRead,
+  });
+
   const className = cn(
     "flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-lg border p-3 text-left font-normal transition-colors",
     unread
       ? "border-primary/20 bg-primary/10 hover:bg-primary/15"
       : "border-border bg-card hover:bg-muted/50",
   );
-  const content = (
+
+  const body = (
     <>
       <span
         className={cn(
@@ -132,53 +203,79 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           >
             {item.title}
           </p>
-          {unread && (
+          {unread ? (
             <span
               className="inline-block size-2 shrink-0 rounded-full bg-primary"
               aria-label={messages.notifications.filters.unread}
             />
-          )}
+          ) : null}
         </div>
-        {item.body && (
+        {item.body ? (
           <p className="line-clamp-2 text-xs text-muted-foreground">
             {item.body}
           </p>
-        )}
+        ) : null}
         <p className="text-xs text-muted-foreground">
+          {cta ? `${cta} · ` : null}
           {kindLabel} · {relativeTime(item.created_at)}
         </p>
       </div>
     </>
   );
 
-  if (item.action_url) {
-    return (
+  const primary =
+    item.action_url != null ? (
       <Button
         variant="ghost"
-        className={className}
+        className={cn(className, "min-w-0 flex-1")}
         render={
           <Link
             href={item.action_url}
             onClick={() => {
-              handleRead();
+              if (unread) onRead(item.id, { quiet: true });
               onNavigate?.();
             }}
           />
         }
       >
-        {content}
+        {body}
+      </Button>
+    ) : (
+      <Button
+        type="button"
+        variant="ghost"
+        className={cn(className, "min-w-0 flex-1")}
+        onClick={() => {
+          if (unread) onRead(item.id);
+        }}
+      >
+        {body}
       </Button>
     );
-  }
+
+  const row = (
+    <div className="flex items-stretch gap-1">
+      {primary}
+      {actions.length > 0 ? (
+        <div className="flex shrink-0 items-start pt-2 pr-1">
+          <RowActionsMenu
+            items={actions}
+            label={messages.notifications.openWork}
+            triggerSize="icon-sm"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (actions.length === 0) return row;
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      className={className}
-      onClick={handleRead}
-    >
-      {content}
-    </Button>
+    <ContextMenu>
+      <ContextMenuTrigger render={row} />
+      <ContextMenuContent>
+        <RowActionsContextMenuItems items={actions} />
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

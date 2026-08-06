@@ -44,6 +44,7 @@ const listSchema = z.object({
   limit: z.number().int().min(1).max(50).default(20),
   before: z.string().datetime().optional(),
   unreadOnly: z.boolean().default(false),
+  includeExpired: z.boolean().default(false),
 });
 
 const badgeTargetSchema = z.object({
@@ -67,13 +68,14 @@ export async function listNotifications(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const { limit, before, unreadOnly } = parsed.data;
+  const { limit, before, unreadOnly, includeExpired } = parsed.data;
   const { supabase, claims } = await loadAuthState();
 
   const { data, error } = await supabase.rpc("list_notifications", {
     p_limit: limit,
     p_before: before ?? undefined,
     p_unread_only: unreadOnly,
+    p_include_expired: includeExpired,
   });
   if (error)
     return { success: false, error: messages.notifications.loadFailed };

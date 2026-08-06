@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import {
   getUnreadCount,
@@ -9,7 +10,10 @@ import {
   markNotificationRead,
   type NotificationItem,
 } from "@/(protected)/notifications/actions";
-import { messages } from "@lib/messages";
+import { emitNotificationsChanged } from "@lib/notifications/changed-event";
+import { messages, m } from "@lib/messages";
+
+export type NotificationFeedMode = "active" | "all";
 
 interface UseNotificationsArgs {
   tenantId: number;
@@ -39,16 +43,22 @@ interface UseNotificationsResult {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  unreadOnly: boolean;
+  feedMode: NotificationFeedMode;
   error: string | null;
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
-  setUnreadOnly: (next: boolean) => void;
-  markRead: (id: number) => Promise<void>;
+  setFeedMode: (next: NotificationFeedMode) => void;
+  markRead: (id: number, options?: { quiet?: boolean }) => Promise<void>;
   markAll: () => Promise<void>;
 }
 
 const PAGE_SIZE = 20;
+
+function listArgsForMode(mode: NotificationFeedMode) {
+  return mode === "active"
+    ? { unreadOnly: true, includeExpired: false }
+    : { unreadOnly: false, includeExpired: true };
+}
 
 /**
  * Subscribes to new INSERTs on the `notifications` table filtered by tenant.
@@ -66,15 +76,12 @@ export function useNotifications({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [unreadOnly, setUnreadOnlyState] = useState(false);
+  const [feedMode, setFeedModeState] = useState<NotificationFeedMode>("active");
   const [error, setError] = useState<string | null>(null);
   const inflightRef = useRef(false);
-  const unreadOnlyRef = useRef(unreadOnly);
+  const feedModeRef = useRef(feedMode);
   const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const initialSubscribeSeenRef = useRef(false);
-  // Stable ref so the channel callback always sees the latest branchId
-  // without needing to be listed in the dep array (would tear down + rebuild
-  // the subscription on every render where branchId changes identity).
   const branchIdRef = useRef(branchId);
 
   const refresh = useCallback(async () => {
@@ -82,8 +89,9 @@ export function useNotifications({
     inflightRef.current = true;
     setLoading(true);
     try {
+      const modeArgs = listArgsForMode(feedModeRef.current);
       const [list, count] = await Promise.all([
-        listNotifications({ limit: PAGE_SIZE, unreadOnly: unreadOnlyRef.current }),
+        listNotifications({ limit: PAGE_SIZE, ...modeArgs }),
         getUnreadCount(),
       ]);
       if (list.success && list.data) {
@@ -109,10 +117,11 @@ export function useNotifications({
     inflightRef.current = true;
     setLoadingMore(true);
     try {
+      const modeArgs = listArgsForMode(feedModeRef.current);
       const list = await listNotifications({
         limit: PAGE_SIZE,
         before: cursor,
-        unreadOnly: unreadOnlyRef.current,
+        ...modeArgs,
       });
       if (list.success && list.data) {
         setItems((prev) => {
@@ -131,14 +140,14 @@ export function useNotifications({
     }
   }, [items]);
 
-  const setUnreadOnly = useCallback((next: boolean) => {
-    unreadOnlyRef.current = next;
-    setUnreadOnlyState(next);
+  const setFeedMode = useCallback((next: NotificationFeedMode) => {
+    feedModeRef.current = next;
+    setFeedModeState(next);
     void refreshRef.current();
   }, []);
 
   const markRead = useCallback(
-    async (id: number) => {
+    async (id: number, options?: { quiet?: boolean }) => {
       setItems((prev) =>
         prev.map((n) =>
           n.id === id && !n.read_at
@@ -150,7 +159,13 @@ export function useNotifications({
       const r = await markNotificationRead({ id });
       if (!r.success) {
         void refresh();
+        return;
       }
+      emitNotificationsChanged();
+      if (!options?.quiet) {
+        toast.success(messages.notifications.markReadSuccess);
+      }
+      if (feedModeRef.current === "active") void refreshRef.current();
     },
     [refresh],
   );
@@ -163,9 +178,13 @@ export function useNotifications({
         prev.map((n) => (n.read_at ? n : { ...n, read_at: now })),
       );
       setUnreadCount(0);
-      // In the unread-only view the now-read rows would otherwise linger;
-      // refetch so the filtered list reflects the cleared state.
-      if (unreadOnlyRef.current) void refreshRef.current();
+      emitNotificationsChanged();
+      toast.success(
+        m(messages.notifications.markAllReadSuccess, {
+          count: r.data?.count ?? 0,
+        }),
+      );
+      if (feedModeRef.current === "active") void refreshRef.current();
     }
   }, []);
 
@@ -188,21 +207,21 @@ export function useNotifications({
         .on(
           "postgres_changes",
           {
-            event: "INSERT",
+            event: "*",
             schema: "public",
             table: "notifications",
             filter: `tenant_id=eq.${String(tenantId)}`,
           },
-          (payload: { new: { target_branch_id?: number | null } }) => {
+          (payload: {
+            new?: { target_branch_id?: number | null };
+            old?: { target_branch_id?: number | null };
+          }) => {
             const scopedBranchId = branchIdRef.current;
-            // Branch-scoped users: skip refetch when the notification targets
-            // a different branch. target_branch_id=null means tenant-wide and
-            // must always pass through (cannot use server-side eq filter for
-            // this — it would exclude NULL rows and silently drop broadcasts).
+            const row = payload.new ?? payload.old;
             if (
               scopedBranchId != null &&
-              payload.new.target_branch_id != null &&
-              payload.new.target_branch_id !== scopedBranchId
+              row?.target_branch_id != null &&
+              row.target_branch_id !== scopedBranchId
             ) {
               return;
             }
@@ -211,9 +230,6 @@ export function useNotifications({
         )
         .subscribe((status) => {
           if (status !== "SUBSCRIBED") return;
-          // Skip the FIRST SUBSCRIBED — list/unread are seeded from RSC
-          // props. Every SUBSCRIBED after that is a reconnect: refetch to
-          // catch any INSERTs that fired during the disconnect window.
           if (!initialSubscribeSeenRef.current) {
             initialSubscribeSeenRef.current = true;
             return;
@@ -239,11 +255,11 @@ export function useNotifications({
     loading,
     loadingMore,
     hasMore,
-    unreadOnly,
+    feedMode,
     error,
     refresh,
     loadMore,
-    setUnreadOnly,
+    setFeedMode,
     markRead,
     markAll,
   };
