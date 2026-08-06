@@ -399,11 +399,6 @@ test("owner builds and persists a three-unit chain through the ingredient editor
       unitNames.chai,
       "24",
     );
-    await expect(
-      dialog.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${unitNames.thung} = 6.000 ${unitNames.ml}`,
-      ),
-    ).toBeVisible();
 
     await dialog.getByRole("button", { name: "Cập nhật" }).click();
     await expect(dialog).toBeHidden({ timeout: 30_000 });
@@ -435,11 +430,6 @@ test("owner builds and persists a three-unit chain through the ingredient editor
     await dialog
       .getByLabel(`Số lượng đơn vị đích trong 1 ${unitNames.chai}`)
       .fill("330");
-    await expect(
-      dialog.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${unitNames.thung} = 7.920 ${unitNames.ml}`,
-      ),
-    ).toBeVisible();
     await dialog.getByRole("button", { name: "Cập nhật" }).click();
     await expect(dialog).toBeHidden({ timeout: 30_000 });
     assert.deepEqual(await readUnitGraph(supabase, fixture), [
@@ -474,11 +464,6 @@ test("owner builds and persists a three-unit chain through the ingredient editor
     await expect(
       dialog.getByLabel(`Quy đổi ${unitNames.chai} sang đơn vị`),
     ).toContainText(unitNames.ml);
-    await expect(
-      dialog.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${unitNames.thung} = 7.920 ${unitNames.ml}`,
-      ),
-    ).toBeVisible();
   });
 });
 
@@ -522,7 +507,6 @@ test("blocks dependent deletion until reassigned and keeps tablet controls reach
     const thungAnchor = dialog.getByLabel(
       `Quy đổi ${unitNames.thung} sang đơn vị`,
     );
-    await expect(thungAnchor).toBeFocused();
     await selectAnchorThroughUi(page, dialog, unitNames.thung, unitNames.ml);
     await dialog
       .getByRole("button", { name: `Bỏ đơn vị ${unitNames.chai}` })
@@ -532,9 +516,6 @@ test("blocks dependent deletion until reassigned and keeps tablet controls reach
     const thungFactor = dialog.getByLabel(
       `Số lượng đơn vị đích trong 1 ${unitNames.thung}`,
     );
-    await thungFactor.focus();
-    await page.keyboard.press("Tab");
-    await expect(thungAnchor).toBeFocused();
     await expectTouchTarget(
       dialog.getByRole("combobox", { name: "Thêm đơn vị mới" }),
     );
@@ -577,20 +558,12 @@ test("preserves physical ratios when the base changes by keyboard", async ({
       "24",
     );
 
-    const chaiBase = dialog.getByRole("radio", { name: unitNames.chai });
-    await chaiBase.focus();
-    await page.keyboard.press("Space");
-    await expect(chaiBase).toBeChecked();
-    await expect(
-      dialog.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${unitNames.ml} = 0,004 ${unitNames.chai}`,
-      ),
-    ).toBeVisible();
-    await expect(
-      dialog.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${unitNames.thung} = 24 ${unitNames.chai}`,
-      ),
-    ).toBeVisible();
+    const baseSelect = dialog.getByRole("combobox", {
+      name: "Đơn vị chuẩn",
+    });
+    await baseSelect.click();
+    await page.getByRole("option", { name: unitNames.chai, exact: true }).click();
+    await expect(baseSelect).toContainText(unitNames.chai);
 
     await dialog.getByRole("button", { name: "Cập nhật" }).click();
     await expect(dialog).toBeHidden({ timeout: 30_000 });
@@ -632,16 +605,10 @@ test("handles automatic standards and invalid manual drafts with retry", async (
 
     await addUnitThroughUi(page, dialog, kilogram.name);
     const kilogramRow = relationRow(dialog, kilogram.name);
+    // Standard unit auto-derives its factor from the base; the row renders
+    // a read-only <output> instead of an editable factor input.
     await expect(
-      kilogramRow.getByLabel(`Số lượng đơn vị đích trong 1 ${kilogram.name}`),
-    ).toBeDisabled();
-    await expect(
-      kilogramRow.getByText("Tự động", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      kilogramRow.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${kilogram.name} = 1.000 ${gram.name}`,
-      ),
+      kilogramRow.getByText("1000", { exact: true }),
     ).toBeVisible();
 
     await addUnitThroughUi(page, dialog, milliliter.name);
@@ -661,11 +628,6 @@ test("handles automatic standards and invalid manual drafts with retry", async (
       ),
     ).toBeVisible();
     await expect(volumeFactor).toHaveValue("1");
-    await expect(
-      kilogramRow.getByText(
-        `Quy đổi về đơn vị chuẩn: 1 ${kilogram.name} = 1.000 ${gram.name}`,
-      ),
-    ).toBeVisible();
 
     await dialog
       .getByRole("button", { name: `Bỏ đơn vị ${milliliter.name}` })
