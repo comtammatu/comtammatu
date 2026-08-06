@@ -32,18 +32,29 @@ const closeBranchDaySchema = z.object({
 
 export type CloseBranchDayInput = z.infer<typeof closeBranchDaySchema>;
 
-export interface CloseBranchDayRpcResult {
-  branch_day_state_id: number;
-  summary: {
-    revenue: number;
-    paid_orders: number;
-    unpaid_orders: number;
-    cash_revenue: number;
-    noncash_revenue: number;
-    closed_session_count: number;
-    open_session_count: number;
-  };
-}
+/**
+ * Validates the `jsonb` return of `close_branch_day`. Mirrors the same pattern
+ * as `branchDaySummarySchema` in `data.ts`: the RPC's generated return type is
+ * `Json`, so the typed shape is owned by this single Zod schema and validated
+ * with `safeParse` rather than asserted. The nested `summary` repeats only the
+ * fields the client surface reads.
+ */
+const closeBranchDayResultSchema = z.object({
+  branch_day_state_id: z.coerce.number(),
+  summary: z.object({
+    revenue: z.coerce.number(),
+    paid_orders: z.coerce.number(),
+    unpaid_orders: z.coerce.number(),
+    cash_revenue: z.coerce.number(),
+    noncash_revenue: z.coerce.number(),
+    closed_session_count: z.coerce.number(),
+    open_session_count: z.coerce.number(),
+  }),
+});
+
+export type CloseBranchDayRpcResult = z.infer<
+  typeof closeBranchDayResultSchema
+>;
 
 export const closeBranchDay = withAction(
   {
@@ -98,6 +109,10 @@ export const closeBranchDay = withAction(
     revalidatePath(`/br/${String(branchId)}/dashboard`);
     revalidatePath(`/br/${String(branchId)}/pos-sessions`);
 
-    return { success: true, data: (data ?? undefined) as CloseBranchDayRpcResult | undefined };
+    const validated = closeBranchDayResultSchema.safeParse(data);
+    if (!validated.success) {
+      return { success: false, error: "Dữ liệu chốt ngày không hợp lệ" };
+    }
+    return { success: true, data: validated.data };
   },
 );

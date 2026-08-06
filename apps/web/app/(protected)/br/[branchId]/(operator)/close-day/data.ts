@@ -1,26 +1,39 @@
+import { z } from "zod";
 import type { JwtClaims } from "@comtammatu/shared/auth";
 import { getVNDateString } from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
-export interface BranchDaySummary {
-  business_date: string;
-  day_start: string;
-  day_end: string;
-  revenue: number;
-  paid_orders: number;
-  unpaid_orders: number;
-  cash_revenue: number;
-  noncash_revenue: number;
-  payment_mix: Record<string, number> | null;
-  closed_session_count: number;
-  open_session_count: number;
-  is_closed: boolean;
-  closed_at: string | null;
-  closed_by_user_id: string | null;
-  note: string | null;
-}
+/**
+ * Validates the `jsonb` return of `get_branch_day_summary`. `RETURNS jsonb`
+ * maps to `Json` in generated types, so the typed shape is derived here from a
+ * single Zod schema (the same pattern as `reportSchema` in
+ * `pos-sessions/report-actions.ts`) — `z.coerce.number()` absorbs the numeric
+ * strings jsonb may emit, and `safeParse` degrades to "no summary" on drift
+ * rather than asserting blindly.
+ */
+const paymentMixSchema = z.record(z.string(), z.coerce.number());
+
+export const branchDaySummarySchema = z.object({
+  business_date: z.string(),
+  day_start: z.string(),
+  day_end: z.string(),
+  revenue: z.coerce.number(),
+  paid_orders: z.coerce.number(),
+  unpaid_orders: z.coerce.number(),
+  cash_revenue: z.coerce.number(),
+  noncash_revenue: z.coerce.number(),
+  payment_mix: paymentMixSchema.nullable(),
+  closed_session_count: z.coerce.number(),
+  open_session_count: z.coerce.number(),
+  is_closed: z.boolean(),
+  closed_at: z.string().nullable(),
+  closed_by_user_id: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
+export type BranchDaySummary = z.infer<typeof branchDaySummarySchema>;
 
 export interface CloseDaySessionRow {
   id: number;
@@ -48,9 +61,9 @@ export interface CloseDayData {
  * cash-reconciliation step. The summary RPC gates on settings:branch OR
  * finance:view; the route already restricts to branch_manager/owner.
  *
- * The RPC returns `jsonb`, so its generated return type is `Json`; we narrow
- * it to {@link BranchDaySummary} after a shape check rather than asserting
- * blindly.
+ * The RPC returns `jsonb` (generated type `Json`); `branchDaySummarySchema`
+ * validates the shape, and an invalid/missing result degrades to a null
+ * summary (fail-soft) instead of crashing the screen.
  */
 export async function fetchCloseDayData(
   supabase: ServerClient,
@@ -76,9 +89,8 @@ export async function fetchCloseDayData(
   ]);
 
   const loadFailed = !!summaryRes.error;
-  const summary = isBranchDaySummary(summaryRes.data)
-    ? summaryRes.data
-    : null;
+  const summaryParsed = branchDaySummarySchema.safeParse(summaryRes.data);
+  const summary = summaryParsed.success ? summaryParsed.data : null;
 
   // Resolve denormalized display fields (terminal name, opener name) without
   // N+1 — fetch the distinct ids then bulk-resolve.
@@ -142,21 +154,4 @@ export async function fetchCloseDayData(
     businessDate,
     loadFailed,
   };
-}
-
-/**
- * Narrows the `jsonb` return of `get_branch_day_summary` to the typed shape.
- * Treats any structural mismatch as "no summary" (fail-soft) rather than
- * asserting, so a schema drift degrades the close-day screen instead of
- * crashing it.
- */
-function isBranchDaySummary(value: unknown): value is BranchDaySummary {
-  if (typeof value !== "object" || value == null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v["business_date"] === "string" &&
-    typeof v["revenue"] === "number" &&
-    typeof v["paid_orders"] === "number" &&
-    typeof v["is_closed"] === "boolean"
-  );
 }
