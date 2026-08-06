@@ -1,45 +1,4 @@
--- P0: LEAST is a SQL special form, not a pg_catalog function.
--- pg_catalog.least(...) raises 42883 and breaks multi-layer FIFO posting.
-DO $fix_least$
-DECLARE
-  v_def text;
-BEGIN
-  SELECT pg_get_functiondef(p.oid)
-  INTO v_def
-  FROM pg_proc p
-  JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'private'
-    AND p.proname = 'post_stock_movement_valuation';
-
-  IF v_def IS NULL THEN
-    RAISE EXCEPTION 'post_stock_movement_valuation missing';
-  END IF;
-
-  IF v_def ~ 'pg_catalog\.least\(' THEN
-    v_def := replace(v_def, 'pg_catalog.least(', 'least(');
-    EXECUTE v_def;
-  END IF;
-
-  SELECT pg_get_functiondef(p.oid)
-  INTO v_def
-  FROM pg_proc p
-  JOIN pg_namespace n ON n.oid = p.pronamespace
-  WHERE n.nspname = 'private'
-    AND p.proname = 'post_supplier_credit_valuation';
-
-  IF v_def IS NULL THEN
-    RAISE EXCEPTION 'post_supplier_credit_valuation missing';
-  END IF;
-
-  IF v_def ~ 'pg_catalog\.least\(' THEN
-    v_def := replace(v_def, 'pg_catalog.least(', 'least(');
-    EXECUTE v_def;
-  END IF;
-END
-$fix_least$;
-
--- P1: Snapshot WAC onto draft stock_issue_items so line value is visible
--- before confirm. Confirm still re-reads live WAC at posting time.
+-- Re-assert function definition and explicit permissions on public.save_stock_issue_line.
 CREATE OR REPLACE FUNCTION public.save_stock_issue_line(
   p_issue_id bigint,
   p_ingredient_id bigint,
@@ -190,19 +149,5 @@ BEGIN
 END;
 $function$;
 
--- Backfill open draft consumption/other lines that still carry unit_cost = 0.
-UPDATE public.stock_issue_items AS item
-SET unit_cost = coalesce(stock.avg_unit_cost, 0)::numeric(15, 2)
-FROM public.stock_issues AS issue,
-     public.stock_levels AS stock
-WHERE item.issue_id = issue.id
-  AND item.tenant_id = issue.tenant_id
-  AND stock.tenant_id = issue.tenant_id
-  AND stock.branch_id = issue.branch_id
-  AND stock.location_id = issue.source_location_id
-  AND stock.ingredient_id = item.ingredient_id
-  AND issue.status = 'draft'
-  AND issue.issue_type IN ('consumption', 'other')
-  AND coalesce(item.unit_cost, 0) = 0
-  AND issue.source_location_id IS NOT NULL;
-
+REVOKE ALL ON FUNCTION public.save_stock_issue_line(bigint, bigint, numeric, bigint, text, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.save_stock_issue_line(bigint, bigint, numeric, bigint, text, text[]) TO authenticated;
