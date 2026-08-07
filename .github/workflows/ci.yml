@@ -3,7 +3,19 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - 'LICENSE'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -39,13 +51,11 @@ jobs:
 
       - run: pnpm verify
 
-  # PR-only path filter for the two docker jobs below (each stands up Supabase
+  # Path filter for the two docker jobs below (each stands up Supabase
   # Local — the slow part of CI). Skip them when the diff can't affect what they
-  # cover. On push to main both always run, so a PR that skipped via shared code
-  # the filter couldn't see is still caught at merge.
+  # cover.
   detect:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     outputs:
       db: ${{ steps.filter.outputs.db }}
       code: ${{ steps.filter.outputs.code }}
@@ -55,9 +65,14 @@ jobs:
           fetch-depth: 0
       - id: filter
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          FILES=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_REF" ]; then
+            FILES=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          else
+            FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+          fi
           echo "changed files:"; echo "$FILES"
           db=false; code=false
           if echo "$FILES" | grep -qE '^supabase/'; then db=true; fi
@@ -72,9 +87,7 @@ jobs:
   # (see the re-baseline runbook).
   baseline-replay:
     needs: detect
-    if: >-
-      always() &&
-      (github.event_name == 'push' || needs.detect.outputs.db == 'true')
+    if: needs.detect.outputs.db == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -93,9 +106,7 @@ jobs:
   # never changes workspace env.
   e2e-smoke:
     needs: detect
-    if: >-
-      always() &&
-      (github.event_name == 'push' || needs.detect.outputs.code == 'true')
+    if: needs.detect.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
