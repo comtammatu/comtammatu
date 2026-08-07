@@ -1,0 +1,6 @@
+# Exclude archived database migrations & SQL baseline snapshots from language stats
+supabase/migration-archive/** linguist-generated=true
+supabase/migrations/*_baseline.sql linguist-generated=true
+
+# Exclude generated database types
+packages/database/src/types/database.types.ts linguist-generated=true
