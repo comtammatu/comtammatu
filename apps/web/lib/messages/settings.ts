@@ -430,6 +430,8 @@ export const settings = {
     closeDayPaidOrdersLabel: "Đơn đã thanh toán",
     closeDayUnpaidOrdersLabel: "Đơn chưa thanh toán",
     closeDaySessionsLabel: "Ca POS trong ngày",
+    closeDayOpenSessionsGroup: "Ca đang mở",
+    closeDayClosedSessionsGroup: "Ca đã đóng",
     closeDayCashLabel: "Quỹ",
     closeDayOpenSessionsWarning: (count: number) =>
       `${count} ca POS đang mở — đóng tất cả trước khi chốt ngày.`,
@@ -576,6 +578,10 @@ export const settings = {
     centralNavReceive: "Nhập",
     /** Branch bottom-nav label — lands on on-hand. */
     branchNavStock: "Kho",
+    /** Branch bottom-nav label — lands on team hub. */
+    branchNavTeam: "Đội",
+    /** Branch bottom-nav label — lands on feedback. */
+    branchNavFeedback: "Phản hồi",
     /** Kho Tổng bottom-nav middle tab. */
     centralNavStock: "Tồn",
     centralNavStocktake: "Kiểm",

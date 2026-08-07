@@ -34,9 +34,9 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
+import { TeamMemberTile } from "./_components/team-member-tile";
 import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { forceCloseStaleAttendance } from "@/(protected)/hr/actions";
@@ -383,35 +383,30 @@ function MobileTeamCard({
   const subtitle = showShiftName
     ? `${positionLabel} · ${shiftLabel}`
     : positionLabel;
+  const footerBadges = (
+    <>
+      <CountBadge status={row.countStatus} />
+      {row.onApprovedLeave ? (
+        <StatusBadge
+          domain="leave-request"
+          value="approved"
+          label={copy.leaveApproved}
+        />
+      ) : null}
+    </>
+  );
 
   return (
-    <InteractiveCard
-      minHeight="tap"
-      padding="compact"
-      className={`h-auto touch-manipulation select-none text-left ${className ?? ""}`}
-      render={<button type="button" onClick={() => onOpenDrawer(row)} />}
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-2 pointer-events-none">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{row.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-          </div>
-          <AttendanceBadge shift={row.shift} />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <CountBadge status={row.countStatus} />
-          {row.onApprovedLeave ? (
-            <StatusBadge
-              domain="leave-request"
-              value="approved"
-              label={copy.leaveApproved}
-            />
-          ) : null}
-        </div>
-      </div>
-      <IconChevronRight className="size-4 shrink-0 text-muted-foreground pointer-events-none" />
-    </InteractiveCard>
+    <TeamMemberTile
+      name={row.fullName}
+      subtitle={subtitle}
+      badges={<AttendanceBadge shift={row.shift} />}
+      footerBadges={footerBadges}
+      ariaLabel={`Mở chi tiết ${row.fullName}`}
+      layout="row"
+      className={className}
+      onSelect={() => onOpenDrawer(row)}
+    />
   );
 }
 

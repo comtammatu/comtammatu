@@ -141,7 +141,7 @@ export function OperatorBottomNav({
             ? [
                 {
                   href: `/br/${branchId}/team`,
-                  label: "Đội",
+                  label: branchCopy.branchNavTeam,
                   icon: Users,
                   exact: false,
                   matchPrefixes: [`/br/${branchId}/team`],
@@ -155,7 +155,7 @@ export function OperatorBottomNav({
                 },
                 {
                   href: `/br/${branchId}/feedback`,
-                  label: "Phản hồi",
+                  label: branchCopy.branchNavFeedback,
                   icon: MessageSquareHeart,
                   exact: false,
                   matchPrefixes: [`/br/${branchId}/feedback`],

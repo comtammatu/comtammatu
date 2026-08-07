@@ -110,6 +110,9 @@ export function TeamWorkspaceTabs({
 
   const items = tabItems.filter((item) => visibleTabs.includes(item.value));
   const colCount = Math.max(2, items.length);
+  // With 4+ tabs the equal-column grid cramps each trigger on narrow phones.
+  // Fall back to a horizontally scrollable strip with fixed-width triggers.
+  const scrollable = colCount > 3;
 
   // Keep the active tab inside the visible set; fall back to the first tab.
   const effectiveValue = items.some((item) => item.value === value)
@@ -154,30 +157,51 @@ export function TeamWorkspaceTabs({
       <TabsList
         size="touch"
         aria-label={copy.tabsAriaLabel}
-        style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
-        className="sticky top-0 z-20 grid w-full items-center overflow-hidden bg-background/95 backdrop-blur"
+        style={
+          scrollable
+            ? undefined
+            : { gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }
+        }
+        className={cn(
+          "sticky top-0 z-20 w-full items-center bg-background/95 backdrop-blur",
+          scrollable
+            ? "no-scrollbar flex touch-pan-x gap-1 overflow-x-auto overscroll-x-contain"
+            : "grid overflow-hidden",
+        )}
       >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-1 left-1 right-1"
-          style={{ display: "grid", gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
-        >
+        {!scrollable ? (
           <span
-            className="rounded-md bg-background transition-transform duration-150 motion-reduce:transition-none"
-            style={{ transform: `translateX(${activeIndex * 100}%)` }}
-          />
-        </span>
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-1 left-1 right-1"
+            style={{ display: "grid", gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}
+          >
+            <span
+              className="rounded-md bg-background transition-transform duration-150 motion-reduce:transition-none"
+              style={{ transform: `translateX(${activeIndex * 100}%)` }}
+            />
+          </span>
+        ) : null}
         {items.map(({ value: tabValue, label, Icon }) => (
           <TabsTrigger
             key={tabValue}
             value={tabValue}
             className={cn(
-              "relative z-10 min-h-12 min-w-0 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
+              "relative z-10 min-h-12 items-center justify-center gap-1 px-1 py-0 text-xs leading-none text-muted-foreground sm:gap-2 sm:px-2 sm:text-sm data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
+              scrollable
+                ? "min-w-20 shrink-0 flex-col gap-1"
+                : "min-w-0",
               effectiveValue === tabValue && "text-foreground",
             )}
           >
             <Icon aria-hidden="true" className="size-4 shrink-0 sm:size-5" />
-            <span className="min-w-0 whitespace-nowrap leading-none">
+            <span
+              className={cn(
+                "min-w-0 leading-none",
+                scrollable
+                  ? "max-w-full truncate text-center"
+                  : "truncate",
+              )}
+            >
               {label}
             </span>
           </TabsTrigger>

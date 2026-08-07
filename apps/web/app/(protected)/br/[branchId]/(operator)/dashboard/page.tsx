@@ -191,19 +191,20 @@ async function BranchCockpitSection({
   );
 
   return (
-    <>
-      <BranchOperatorPanel
-        title={copy.cockpitTitle}
-        description={copy.cockpitDescription}
-        headingLevel="h2"
-      >
-        <CockpitLanes lanes={lanes} />
-      </BranchOperatorPanel>
+    <BranchOperatorPanel
+      title={copy.cockpitTitle}
+      description={copy.cockpitDescription}
+      headingLevel="h2"
+    >
+      <CockpitLanes lanes={lanes} />
       {readinessItems.length > 0 ? (
-        <BranchOperatorPanel title={copy.readinessTitle} headingLevel="h2">
+        <div className="mt-1 flex flex-col gap-2 border-t pt-3">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {copy.readinessTitle}
+          </h3>
           <BranchReadinessList items={readinessItems} />
-        </BranchOperatorPanel>
+        </div>
       ) : null}
-    </>
+    </BranchOperatorPanel>
   );
 }

@@ -33,10 +33,10 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
+import { TeamMemberTile } from "../_components/team-member-tile";
 
 export type TeamMemberTodayStatus =
   "working" | "checked_out" | "on_leave" | "not_started";
@@ -168,30 +168,26 @@ function MemberCard({
   member: TeamMemberRow;
   onOpenDrawer: (member: TeamMemberRow) => void;
 }) {
+  const codeOrPlaceholder = member.code
+    ? `(${member.code})`
+    : "Chưa có mã NV";
   return (
-    <InteractiveCard
-      padding="compact"
-      className="h-full min-h-24 flex-col justify-center text-center"
-      render={
-        <button
-          type="button"
-          className="w-full"
-          onClick={() => onOpenDrawer(member)}
-          aria-label={`Mở hồ sơ ${member.name}`}
-        />
-      }
-    >
-      <MemberAvatar member={member} size="lg" />
-      <div className="grid min-w-0 gap-1">
-        <p className="truncate text-sm font-semibold leading-5">
-          {member.name}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {member.code ? `(${member.code})` : "Chưa có mã NV"}
-        </p>
-      </div>
-    </InteractiveCard>
+    <TeamMemberTile
+      name={member.name}
+      subtitle={member.positionLabel ?? "Chưa có chức danh"}
+      secondarySubtitle={codeOrPlaceholder}
+      avatar={<MemberAvatar member={member} size="lg" />}
+      badges={renderMemberCardBadges(member)}
+      ariaLabel={`Mở hồ sơ ${member.name}`}
+      layout="grid"
+      onSelect={() => onOpenDrawer(member)}
+    />
   );
+}
+
+function renderMemberCardBadges(member: TeamMemberRow) {
+  const status = todayStatusMeta(member.todayStatus);
+  return <Badge variant={status.variant}>{status.label}</Badge>;
 }
 
 function MemberDetailBlock({

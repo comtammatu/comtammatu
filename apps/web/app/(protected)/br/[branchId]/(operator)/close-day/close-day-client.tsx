@@ -16,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import {
   BranchOperatorPanel,
+  BranchOperatorStatusStrip,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { AppDetailFooter } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -28,27 +29,60 @@ import { closeBranchDay } from "./actions";
 
 const copy = messages.settings.branch;
 
-function SummaryRow({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function SessionItem({ session }: { session: CloseDaySessionRow }) {
   return (
     <Item>
       <ItemContent>
-        <ItemTitle className="text-sm text-muted-foreground">{label}</ItemTitle>
-        <span className="text-base font-semibold tabular-nums text-foreground">
-          {value}
+        <ItemTitle className="text-sm">
+          {session.terminal_name ?? "Ca chi nhánh"}
+        </ItemTitle>
+        <span className="text-xs text-muted-foreground">
+          {session.opened_by_name ?? "—"} ·{" "}
+          {formatVNTime(session.opened_at)}
+          {session.closed_at ? ` → ${formatVNTime(session.closed_at)}` : ""}
         </span>
-        {hint ? (
-          <span className="text-xs text-muted-foreground">{hint}</span>
-        ) : null}
+        <span className="flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
+          <span>
+            {copy.closeDayCashLabel}:{" "}
+            {formatVND(session.closing_cash ?? session.opening_cash)}
+          </span>
+          {session.cash_difference != null ? (
+            <Badge
+              variant={
+                Math.abs(session.cash_difference) > 0
+                  ? "warning"
+                  : "secondary"
+              }
+            >
+              {session.cash_difference >= 0 ? "+" : ""}
+              {formatVND(session.cash_difference)}
+            </Badge>
+          ) : null}
+        </span>
       </ItemContent>
     </Item>
+  );
+}
+
+function SessionGroup({
+  label,
+  sessions,
+}: {
+  label: string;
+  sessions: CloseDaySessionRow[];
+}) {
+  if (sessions.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-1.5">
+      <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </h3>
+      <ItemGroup>
+        {sessions.map((session) => (
+          <SessionItem key={session.id} session={session} />
+        ))}
+      </ItemGroup>
+    </section>
   );
 }
 
@@ -119,29 +153,35 @@ export function CloseDayClient({
         description={copy.closeDayDescription}
         headingLevel="h2"
       >
-        <ItemGroup>
-          <SummaryRow
-            label={copy.closeDayRevenueLabel}
-            value={formatVND(summary?.revenue ?? 0)}
-            hint={copy.dayRevenueHint}
-          />
-          <SummaryRow
-            label={copy.closeDayCashRevenueLabel}
-            value={formatVND(summary?.cash_revenue ?? 0)}
-          />
-          <SummaryRow
-            label={copy.closeDayNoncashRevenueLabel}
-            value={formatVND(summary?.noncash_revenue ?? 0)}
-          />
-          <SummaryRow
-            label={copy.closeDayPaidOrdersLabel}
-            value={String(summary?.paid_orders ?? 0)}
-          />
-          <SummaryRow
-            label={copy.closeDayUnpaidOrdersLabel}
-            value={String(summary?.unpaid_orders ?? 0)}
-          />
-        </ItemGroup>
+        <BranchOperatorStatusStrip
+          items={[
+            {
+              label: copy.closeDayRevenueLabel,
+              value: formatVND(summary?.revenue ?? 0),
+              mono: true,
+            },
+            {
+              label: copy.closeDayCashRevenueLabel,
+              value: formatVND(summary?.cash_revenue ?? 0),
+              mono: true,
+            },
+            {
+              label: copy.closeDayNoncashRevenueLabel,
+              value: formatVND(summary?.noncash_revenue ?? 0),
+              mono: true,
+            },
+            {
+              label: copy.closeDayPaidOrdersLabel,
+              value: String(summary?.paid_orders ?? 0),
+              mono: true,
+            },
+            {
+              label: copy.closeDayUnpaidOrdersLabel,
+              value: String(summary?.unpaid_orders ?? 0),
+              mono: true,
+            },
+          ]}
+        />
       </BranchOperatorPanel>
 
       <BranchOperatorPanel title={copy.closeDaySessionsLabel} headingLevel="h2">
@@ -150,8 +190,8 @@ export function CloseDayClient({
             {copy.closeDayOpenSessionsWarning(openSessionCount)}
           </NoteCallout>
         ) : null}
-        <ItemGroup>
-          {sessions.length === 0 ? (
+        {sessions.length === 0 ? (
+          <ItemGroup>
             <Item>
               <ItemContent>
                 <ItemTitle className="text-sm text-muted-foreground">
@@ -159,43 +199,19 @@ export function CloseDayClient({
                 </ItemTitle>
               </ItemContent>
             </Item>
-          ) : (
-            sessions.map((session) => (
-              <Item key={session.id}>
-                <ItemContent>
-                  <ItemTitle className="text-sm">
-                    {session.terminal_name ?? "Ca chi nhánh"}
-                  </ItemTitle>
-                  <span className="text-xs text-muted-foreground">
-                    {session.opened_by_name ?? "—"} ·{" "}
-                    {formatVNTime(session.opened_at)}
-                    {session.closed_at
-                      ? ` → ${formatVNTime(session.closed_at)}`
-                      : ""}
-                  </span>
-                  <span className="flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
-                    <span>
-                      {copy.closeDayCashLabel}:{" "}
-                      {formatVND(session.closing_cash ?? session.opening_cash)}
-                    </span>
-                    {session.cash_difference != null ? (
-                      <Badge
-                        variant={
-                          Math.abs(session.cash_difference) > 0
-                            ? "warning"
-                            : "secondary"
-                        }
-                      >
-                        {session.cash_difference >= 0 ? "+" : ""}
-                        {formatVND(session.cash_difference)}
-                      </Badge>
-                    ) : null}
-                  </span>
-                </ItemContent>
-              </Item>
-            ))
-          )}
-        </ItemGroup>
+          </ItemGroup>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <SessionGroup
+              label={copy.closeDayOpenSessionsGroup}
+              sessions={sessions.filter((s) => s.status === "open")}
+            />
+            <SessionGroup
+              label={copy.closeDayClosedSessionsGroup}
+              sessions={sessions.filter((s) => s.status === "closed")}
+            />
+          </div>
+        )}
       </BranchOperatorPanel>
 
       {isClosed ? (

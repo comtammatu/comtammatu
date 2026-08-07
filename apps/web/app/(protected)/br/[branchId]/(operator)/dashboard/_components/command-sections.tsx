@@ -54,6 +54,22 @@ function CockpitCardView({ card }: { card: CockpitCard }) {
 export function CockpitLanes({ lanes }: { lanes: CockpitLane[] }) {
   const nonEmpty = lanes.filter((lane) => lane.cards.length > 0);
   if (nonEmpty.length === 0) return null;
+
+  const totalCards = nonEmpty.reduce((sum, lane) => sum + lane.cards.length, 0);
+  // When the cockpit holds few cards, a 3-lane grid just stacks one card
+  // under each header on mobile. Collapse to a single dense list instead.
+  if (totalCards <= 3) {
+    return (
+      <div className="flex flex-col gap-2">
+        {nonEmpty.map((lane) =>
+          lane.cards.map((card) => (
+            <CockpitCardView key={card.key} card={card} />
+          )),
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-2 sm:grid-cols-3">
       {nonEmpty.map((lane) => (
@@ -101,8 +117,13 @@ export function BranchReadinessList({
 }: {
   items: BranchReadinessItem[];
 }) {
+  // Keep long readiness lists from swallowing the first viewport; they stay
+  // fully scrollable, not truncated.
+  const tall = items.length > 4;
   return (
-    <ItemGroup className="gap-2">
+    <ItemGroup
+      className={tall ? "max-h-96 gap-2 overflow-y-auto overscroll-contain" : "gap-2"}
+    >
       {items.map((item) => (
         <BranchActionItem
           key={item.key}

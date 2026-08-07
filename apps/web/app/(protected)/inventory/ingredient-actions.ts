@@ -11,7 +11,9 @@ import { getVNDateString } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
   INVENTORY_CATALOG_ROLES,
+  INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -250,6 +252,13 @@ function saveIngredientCatalog(
 
 /* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
 
+// Read gate: procurement roles read for valuation/PO context, inventory ops
+// roles (incl. branch_manager) read for branch stock workflows (on-hand,
+// stock-issues, transfers). Write stays on INVENTORY_CATALOG_ROLES (owner).
+const INGREDIENT_READ_ROLES: readonly StaffRole[] = Array.from(
+  new Set([...PROCUREMENT_ROLES, ...INVENTORY_OPS_ROLES]),
+);
+
 const getIngredientsCached = cache(
   async (
     supabase: SupabaseClient,
@@ -284,7 +293,7 @@ export async function fetchIngredients(
   limit = 2000,
   updatedSince?: string,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContext(PROCUREMENT_ROLES);
+  const ctx = await getAuthContext(INGREDIENT_READ_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

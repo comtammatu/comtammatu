@@ -177,12 +177,12 @@ export async function loadStockOnHandPageData({
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
   ]);
 
-  const dbIngredients = (() => {
-    if (!ingredientsResult.success) {
-      throw new Error("inventory.stock.ingredients_load_failed");
-    }
-    return (ingredientsResult.data ?? []) as StockIngredientRow[];
-  })();
+  // Fail-soft: a denied/failed ingredient catalog read degrades to an empty
+  // list + coreDataLoadFailed flag instead of crashing the whole page. Stock
+  // levels, permissions and summary stay usable. Matches catalog/page.tsx.
+  const dbIngredients = (
+    ingredientsResult.success ? (ingredientsResult.data ?? []) : []
+  ) as StockIngredientRow[];
   const stockRows = (stockResult.data ?? []) as StockLevelRow[];
   const stockMap = new Map<
     number,
