@@ -168,6 +168,7 @@ function MemberCard({
   member: TeamMemberRow;
   onOpenDrawer: (member: TeamMemberRow) => void;
 }) {
+  // min-h-24 flex-col justify-center text-center
   const codeOrPlaceholder = member.code
     ? `(${member.code})`
     : "Chưa có mã NV";

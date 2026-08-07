@@ -7,6 +7,7 @@ import {
   Ellipsis as IconEllipsis,
   House as IconHouse,
   LayoutDashboard as IconLayoutDashboard,
+  ShieldAlert as IconShieldAlert,
   User as IconUser,
   UsersRound as IconUsersRound,
 } from "lucide-react";
@@ -129,15 +130,26 @@ export default async function OperatorLayout({
                       </DropdownMenuItem>
                     ) : null}
                     {canManageBranch ? (
-                      <DropdownMenuItem
-                        className="min-h-12 text-sm"
-                        render={
-                          <Link href={`/br/${context.branchId}/dashboard`} />
-                        }
-                      >
-                        <IconLayoutDashboard data-icon="inline-start" />
-                        {APP_COPY_VI.branchCommand}
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem
+                          className="min-h-12 text-sm"
+                          render={
+                            <Link href={`/br/${context.branchId}/dashboard`} />
+                          }
+                        >
+                          <IconLayoutDashboard data-icon="inline-start" />
+                          {APP_COPY_VI.branchCommand}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="min-h-12 text-sm"
+                          render={
+                            <Link href={`/br/${context.branchId}/menu-limits`} />
+                          }
+                        >
+                          <IconShieldAlert data-icon="inline-start" className="text-warning" />
+                          {MODULE_ACL.branch_menu_limits.label}
+                        </DropdownMenuItem>
+                      </>
                     ) : null}
                     {canManageTeam ? (
                       <DropdownMenuItem

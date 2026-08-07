@@ -200,14 +200,17 @@ test("operator stock landing is a branch-native landing, not the Owner surface s
   assert.match(source, /resolveOperatorTiles/);
   assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
   assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
-  assert.match(source, /AppPageTabs/);
-  assert.match(source, /paramKey="group"/);
+  assert.match(source, /StockWorkflowSections/);
+  assert.match(source, /stockFlowDailyTitle/);
+  assert.match(source, /stockJobOnHand/);
+  assert.match(source, /presentation=\{section\.primary \? "stations" : "plain"\}/);
   assert.match(
     source,
     /tile\.href === stockRoot\s*\?\s*`\$\{stockRoot\}\/on-hand`/,
   );
   assert.match(source, /mobileColumns=\{2\}/);
-  assert.match(source, /stockTabOnhand/);
+  assert.doesNotMatch(source, /AppPageTabs/);
+  assert.doesNotMatch(source, /paramKey="group"/);
   assert.doesNotMatch(source, /operatorStockPrimaryDescription/);
   assert.doesNotMatch(source, /StockPageContent/);
   assert.doesNotMatch(source, /embedded/);

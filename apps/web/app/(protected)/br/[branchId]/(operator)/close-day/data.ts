@@ -5,14 +5,6 @@ import type { loadAuthState } from "@/_lib/auth";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
-/**
- * Validates the `jsonb` return of `get_branch_day_summary`. `RETURNS jsonb`
- * maps to `Json` in generated types, so the typed shape is derived here from a
- * single Zod schema (the same pattern as `reportSchema` in
- * `pos-sessions/report-actions.ts`) — `z.coerce.number()` absorbs the numeric
- * strings jsonb may emit, and `safeParse` degrades to "no summary" on drift
- * rather than asserting blindly.
- */
 const paymentMixSchema = z.record(z.string(), z.coerce.number());
 
 export const branchDaySummarySchema = z.object({
@@ -53,18 +45,12 @@ export interface CloseDayData {
   sessions: CloseDaySessionRow[];
   branchName: string;
   businessDate: string;
+  pendingWasteCount: number;
+  pendingCountSlipsCount: number;
+  pendingCheckoutsCount: number;
   loadFailed: boolean;
 }
 
-/**
- * Loads the branch-day summary (read RPC) plus today's POS sessions for the
- * cash-reconciliation step. The summary RPC gates on settings:branch OR
- * finance:view; the route already restricts to branch_manager/owner.
- *
- * The RPC returns `jsonb` (generated type `Json`); `branchDaySummarySchema`
- * validates the shape, and an invalid/missing result degrades to a null
- * summary (fail-soft) instead of crashing the screen.
- */
 export async function fetchCloseDayData(
   supabase: ServerClient,
   claims: JwtClaims,
@@ -72,7 +58,13 @@ export async function fetchCloseDayData(
   branchName: string,
 ): Promise<CloseDayData> {
   const businessDate = getVNDateString();
-  const [summaryRes, sessionsRes] = await Promise.all([
+  const [
+    summaryRes,
+    sessionsRes,
+    wasteRes,
+    countSlipsRes,
+    checkoutsRes,
+  ] = await Promise.all([
     supabase.rpc("get_branch_day_summary", {
       p_branch_id: branchId,
       p_business_date: businessDate,
@@ -86,14 +78,29 @@ export async function fetchCloseDayData(
       .eq("branch_id", branchId)
       .order("opened_at", { ascending: false })
       .limit(50),
+    supabase
+      .from("stock_issues")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("issue_type", "writeoff")
+      .eq("approval_status", "pending"),
+    supabase
+      .from("inventory_count_slips")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("status", "submitted"),
+    supabase.rpc("get_checkout_review_queue", {
+      p_branch_id: branchId,
+      p_include_rows: false,
+    }),
   ]);
 
   const loadFailed = !!summaryRes.error;
   const summaryParsed = branchDaySummarySchema.safeParse(summaryRes.data);
   const summary = summaryParsed.success ? summaryParsed.data : null;
 
-  // Resolve denormalized display fields (terminal name, opener name) without
-  // N+1 — fetch the distinct ids then bulk-resolve.
   const rawSessions = (sessionsRes.data ?? []) as Array<{
     id: number;
     terminal_id: number | null;
@@ -152,6 +159,9 @@ export async function fetchCloseDayData(
     sessions,
     branchName,
     businessDate,
+    pendingWasteCount: wasteRes.count ?? 0,
+    pendingCountSlipsCount: countSlipsRes.count ?? 0,
+    pendingCheckoutsCount: checkoutsRes.data?.[0]?.pending_count ?? 0,
     loadFailed,
   };
 }

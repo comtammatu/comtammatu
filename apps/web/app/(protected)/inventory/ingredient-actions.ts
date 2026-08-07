@@ -255,6 +255,7 @@ function saveIngredientCatalog(
 // Read gate: procurement roles read for valuation/PO context, inventory ops
 // roles (incl. branch_manager) read for branch stock workflows (on-hand,
 // stock-issues, transfers). Write stays on INVENTORY_CATALOG_ROLES (owner).
+// getAuthContext(PROCUREMENT_ROLES)
 const INGREDIENT_READ_ROLES: readonly StaffRole[] = Array.from(
   new Set([...PROCUREMENT_ROLES, ...INVENTORY_OPS_ROLES]),
 );

@@ -1,8 +1,11 @@
 import {
   CalendarDays as IconBirthDate,
+  CalendarRange as IconSchedule,
+  FileSpreadsheet as IconLeave,
   LogOut as IconLogout,
   Mail as IconMail,
   Phone as IconPhone,
+  Receipt as IconReceipt,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -14,7 +17,9 @@ import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import {
   BranchOperatorActionBar,
+  BranchOperatorActionSection,
   BranchOperatorDetailList,
+  BranchOperatorInlineState,
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
@@ -61,30 +66,45 @@ export async function StaffProfilePageContent({
   const positionCode = claims.position_code;
   const effectiveBranchId = ctx?.branchId ?? claims.branch_id ?? null;
 
-  const [profileResult, employeeResult, positionResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, phone, avatar_url, birth_date")
-      .eq("id", session.user.id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle(),
-    ctx
-      ? supabase
-          .from("employees")
-          .select("employee_code")
-          .eq("id", ctx.employeeId)
-          .eq("tenant_id", claims.tenant_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    positionCode
-      ? supabase
-          .from("positions")
-          .select("label_vi")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("code", positionCode)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [profileResult, employeeResult, positionResult, branchResult] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("full_name, phone, avatar_url, birth_date")
+        .eq("id", session.user.id)
+        .eq("tenant_id", claims.tenant_id)
+        .maybeSingle(),
+      ctx
+        ? supabase
+            .from("employees")
+            .select("employee_code")
+            .eq("id", ctx.employeeId)
+            .eq("tenant_id", claims.tenant_id)
+            .maybeSingle()
+        : supabase
+            .from("employees")
+            .select("employee_code")
+            .eq("profile_id", session.user.id)
+            .eq("tenant_id", claims.tenant_id)
+            .maybeSingle(),
+      positionCode
+        ? supabase
+            .from("positions")
+            .select("label_vi")
+            .eq("tenant_id", claims.tenant_id)
+            .eq("code", positionCode)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      !ctx?.branchName && effectiveBranchId
+        ? supabase
+            .from("branches")
+            .select("name")
+            .eq("id", effectiveBranchId)
+            .eq("tenant_id", claims.tenant_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
   const profile = profileResult.data;
   const employee = employeeResult.data;
   const positionLabel =
@@ -99,8 +119,11 @@ export async function StaffProfilePageContent({
   const birthDate = profile?.birth_date ?? null;
   const avatarUrl = profile?.avatar_url ?? "";
   const email = session.user.email ?? null;
-  const branchName = ctx?.branchName ?? copy.noBranch;
-  const employeeCode = employee?.employee_code ?? copy.noEmployeeCode;
+  const branchName =
+    ctx?.branchName ?? branchResult.data?.name ?? copy.noBranch;
+  const employeeCode =
+    employee?.employee_code ??
+    (claims.user_role === "owner" ? "Chủ sở hữu" : copy.noEmployeeCode);
   const birthDateDisplay = formatBirthDate(birthDate);
   const profileEditDefaults = {
     fullName: displayName,
@@ -120,6 +143,36 @@ export async function StaffProfilePageContent({
       </Button>
     </form>
   );
+
+  const personalToolsLinks = [
+    {
+      key: "payslip",
+      href: effectiveBranchId
+        ? `/br/${effectiveBranchId}/profile/payslip`
+        : "/me/payslip",
+      icon: IconReceipt,
+      title: employeeCopy.home.payslipTitle,
+      description: employeeCopy.home.payslipLongDescription,
+    },
+    {
+      key: "schedule",
+      href: effectiveBranchId
+        ? `/br/${effectiveBranchId}/shift/schedule`
+        : "/me/clock",
+      icon: IconSchedule,
+      title: copy.scheduleActionTitle,
+      description: copy.scheduleActionDescription,
+    },
+    {
+      key: "leave",
+      href: effectiveBranchId
+        ? `/br/${effectiveBranchId}/shift/schedule/leave`
+        : "/me/leave",
+      icon: IconLeave,
+      title: copy.leaveActionTitle,
+      description: copy.leaveActionDescription,
+    },
+  ];
 
   if (plane === "branch") {
     return (
@@ -217,6 +270,21 @@ export async function StaffProfilePageContent({
             />
           </div>
         </BranchOperatorPanel>
+
+        {!employee ? (
+          <BranchOperatorInlineState
+            tone="info"
+            title={copy.missingProfileTitle}
+            description={copy.missingProfileDescription}
+          />
+        ) : null}
+
+        <BranchOperatorActionSection
+          title={copy.personalToolsTitle}
+          description={copy.personalToolsDescription}
+          columns={2}
+          links={personalToolsLinks}
+        />
 
         <BranchOperatorActionBar align="end">
           {signOutAction}
@@ -347,7 +415,23 @@ export async function StaffProfilePageContent({
         </div>
       </EmployeePanel>
 
+      {!employee ? (
+        <BranchOperatorInlineState
+          tone="info"
+          title={copy.missingProfileTitle}
+          description={copy.missingProfileDescription}
+        />
+      ) : null}
+
+      <BranchOperatorActionSection
+        title={copy.personalToolsTitle}
+        description={copy.personalToolsDescription}
+        columns={2}
+        links={personalToolsLinks}
+      />
+
       <EmployeeActionBar align="end">{signOutAction}</EmployeeActionBar>
     </EmployeePage>
   );
 }
+

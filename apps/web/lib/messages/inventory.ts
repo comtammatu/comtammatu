@@ -99,6 +99,35 @@ export const inventory = {
     stockTabCount: "Kiểm kê",
     stockTabWaste: "Hao hụt & Tiêu hao",
     stockTabCatalog: "Danh mục",
+    stockFlowDailyTitle: "Luồng hàng ngày",
+    stockFlowDailyDescription:
+      "Xem tồn thực, yêu cầu bổ sung, nhận và chuyển hàng nội bộ theo thứ tự làm việc.",
+    stockFlowCountTitle: "Kiểm kê",
+    stockFlowCountDescription:
+      "Mở phiên kiểm, phân công đếm và duyệt phiếu đếm của chi nhánh.",
+    stockFlowWasteTitle: "Hao hụt & tiêu hao",
+    stockFlowWasteDescription:
+      "Ghi hao hụt có lý do và theo dõi tiêu hao đã ghi trong ca.",
+    stockFlowCatalogTitle: "Danh mục",
+    stockFlowCatalogDescription:
+      "Nguyên liệu, đơn vị và ngưỡng tồn dùng khi tạo phiếu kho.",
+    stockFlowLookupTitle: "Tra cứu tồn",
+    stockFlowLookupDescription:
+      "Xem tồn kho và danh mục tại kho trung tâm trước khi mua hoặc kiểm.",
+    stockFlowBuyCountTitle: "Mua & kiểm kê",
+    stockFlowBuyCountDescription:
+      "Yêu cầu mua, mở phiên kiểm và xử lý phiếu đếm tại kho trung tâm.",
+    stockJobOnHand: "Danh sách tồn thực và cảnh báo cần bổ sung.",
+    stockJobRequests: "Tạo và theo dõi yêu cầu hàng gửi kho trung tâm.",
+    stockJobReceive: "Nhận hàng từ phiếu chuyển nội bộ về chi nhánh.",
+    stockJobTransfer: "Chuyển hàng nội bộ giữa các vị trí hoặc chi nhánh.",
+    stockJobStocktake: "Mở và theo dõi phiên kiểm kê của quản lý.",
+    stockJobCountAssignments: "Phân công nhóm nguyên liệu cho nhân viên đếm.",
+    stockJobCountSlips: "Duyệt hoặc yêu cầu đếm lại phiếu đã nộp.",
+    stockJobWaste: "Tạo phiếu hao hụt kèm lý do và bằng chứng.",
+    stockJobConsumption: "Xem ledger tiêu hao và chứng từ thủ công cần rà.",
+    stockJobCatalog: "Tra cứu nguyên liệu, đơn vị và danh mục kho.",
+    stockJobPurchaseRequests: "Tạo và theo dõi yêu cầu mua cho kho trung tâm.",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
       "Số việc đang mở; xử lý qua phiếu ở các mục bên dưới.",

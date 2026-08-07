@@ -37,6 +37,9 @@ export default async function CloseDayPage({
         summary={data.summary}
         sessions={data.sessions}
         businessDate={data.businessDate}
+        pendingWasteCount={data.pendingWasteCount}
+        pendingCountSlipsCount={data.pendingCountSlipsCount}
+        pendingCheckoutsCount={data.pendingCheckoutsCount}
         loadFailed={data.loadFailed}
       />
     </BranchOperatorPage>

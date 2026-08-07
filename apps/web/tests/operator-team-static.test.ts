@@ -61,7 +61,13 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.match(tabsPrimitiveSource, /touch:[\s\S]*min-h-14/);
   assert.match(tabsPrimitiveSource, /data-size=\{size\}/);
   assert.match(teamTabsSource, /sm:gap-2 sm:px-2 sm:text-sm/);
-  assert.match(teamTabsSource, /whitespace-nowrap leading-none/);
+  assert.match(teamTabsSource, /whitespace-nowrap/);
+  assert.match(teamTabsSource, /!flex-none/);
+  assert.match(teamTabsSource, /shortLabel/);
+  assert.match(teamTabsSource, /activeItem\.title/);
+  assert.match(teamTabsSource, /activeItem\.description/);
+  assert.match(teamTabsSource, /overflow-x-auto/);
+  assert.match(teamTabsSource, /\[scrollbar-width:thin\]/);
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);
 });
 
@@ -70,6 +76,8 @@ test("operator team copy stays in the Branch operator plane", () => {
   assert.match(teamTabsSource, /messages\.operator\.teamBoard/);
   assert.match(teamBoardSource, /messages\.operator\.teamBoard/);
   assert.match(operatorMessagesSource, /teamBoard:\s*\{/);
+  assert.match(operatorMessagesSource, /shortLabel:\s*"Ca hôm nay"/);
+  assert.match(operatorMessagesSource, /shortLabel:\s*"Nhân viên"/);
   assert.doesNotMatch(employeeMessagesSource, /teamBoard:\s*\{/);
   assert.doesNotMatch(teamPageSource, /messages\.employee\.teamBoard/);
   assert.doesNotMatch(teamTabsSource, /messages\.employee\.teamBoard/);

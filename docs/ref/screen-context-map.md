@@ -128,7 +128,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
-- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace **hai tab** (`Theo dõi ca`, `Nhân sự`). Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
+- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace với strip tab cuộn ngang: `Theo dõi ca` · `Nhân sự` luôn có, cộng `Phân ca` / `Chấm công` / `Duyệt kết ca` / `Duyệt nghỉ phép` theo quyền. Mỗi tab có chrome title + mô tả job phía trên nội dung. Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
 - **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`) và Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
 - **Quy chuẩn UX/UI:**
@@ -136,7 +136,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - Hub CN: hàng chờ > 0 rồi điểm vào bán hàng/bếp; queue **không** GRN/SX (D093).
   - **Exception hẹp (manager-like CN):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` … Cashier/chef/staff không thấy strip. Hub trung tâm không hiện strip doanh thu.
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
-  - `Đội` mở hai tab `Theo dõi ca` và `Nhân sự` (CN).
+  - `Đội` mở workspace tab cuộn ngang (`Theo dõi ca`, `Nhân sự`, và tab quản lý theo quyền).
 
 ---
 
@@ -229,7 +229,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
   - Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
   - `/br/[branchId]/stock/on-hand` là **stock home** (điểm vào mặc định khi bấm Kho/Tồn): LIST touch-first mọi viewport phone/tablet kể cả `1024px` landscape. Attention theo `branch_kind`: CN/Bếp TT “Cần bổ sung” → Yêu cầu hàng / Yêu cầu Kho Tổng; Kho Tổng “Cần nhập / mua” → Nhập kho (+ YCM khi được phép), CTA 1–2 nút lưới 2 cột. Toolbar: search + `ToggleGroup` trạng thái + Sheet bộ lọc (`MultiSelectCombobox` danh mục) + Sheet “Thêm chức năng kho” (grid 2 cột job phụ). Risk rows đầu list; không WAC/KPI/DataTable. One-warehouse topology không hiển thị bộ lọc vị trí.
-  - `/br/[branchId]/stock` là hub **Thêm chức năng** (secondary), không còn land mặc định của tab Kho. Back từ subflow về `/stock/on-hand`.
+  - `/br/[branchId]/stock` là hub **Thêm chức năng** (secondary): các section workflow xếp theo thứ tự D093 (luồng hàng ngày → kiểm kê → hao hụt/tiêu hao → danh mục), mỗi job có mô tả ngắn; không còn land mặc định của tab Kho và không dùng tab lưới trần. Back từ subflow về `/stock/on-hand`.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
   - Branch `/br/[branchId]/stock/grn/new` và `/br/[branchId]/stock/grn/new/[supplierId]` chỉ là redirect tương thích: chi nhánh thường về Yêu cầu hàng; Kho Tổng/Bếp TT về Yêu cầu mua. Không tạo phiếu nhập ngoài PO.

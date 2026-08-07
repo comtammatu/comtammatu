@@ -31,10 +31,8 @@ import { resolveOperatorTileIcon } from "./operator-tile-icons";
 
 import { BranchQueueSection } from "./_components/home/branch-queue-section";
 import { BranchTodayStatus } from "./_components/home/branch-today-status";
-import {
-  BranchTodayStatusPending,
-  BranchQueuePending,
-} from "./_components/home/branch-home-skeletons";
+import { BranchTodayStatusPending, BranchQueuePending } from "./_components/home/branch-home-skeletons";
+import { BranchQuickMenuLimitTrigger } from "./_components/home/branch-quick-menu-limit-trigger";
 import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
 import {
   targetProgressTone,
@@ -302,6 +300,12 @@ export default async function OperatorHomePage({
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />
         </Suspense>
+      ) : null}
+
+      {isManagerLike ? (
+        <div className="flex w-full items-center justify-between gap-2 pb-1">
+          <BranchQuickMenuLimitTrigger branchId={context.branchId} />
+        </div>
       ) : null}
 
       {isCentral ? (

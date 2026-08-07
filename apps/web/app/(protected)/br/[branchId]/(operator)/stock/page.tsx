@@ -5,7 +5,6 @@ import {
   type ResolvedOperatorTile,
 } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   BranchOperatorActionSection,
   BranchOperatorPage,
@@ -21,9 +20,10 @@ interface OperatorStockLink {
   href: string;
   icon: ReturnType<typeof resolveOperatorTileIcon>;
   title: string;
+  description?: string;
 }
 
-const stockTab = messages.inventory.dashboard;
+const stockCopy = messages.inventory.dashboard;
 
 type BranchStockGroupId = "onhand" | "count" | "waste" | "catalog";
 type CentralStockGroupId = "lookup" | "buy_count" | "waste";
@@ -76,6 +76,35 @@ const CENTRAL_BOTTOM_NAV_SUFFIXES: Partial<
   ],
 };
 
+const STOCK_JOB_DESCRIPTION_BY_SUFFIX: ReadonlyArray<{
+  suffix: string;
+  description: string;
+}> = [
+  { suffix: "/stock/on-hand", description: stockCopy.stockJobOnHand },
+  { suffix: "/stock/requests", description: stockCopy.stockJobRequests },
+  { suffix: "/stock/receive", description: stockCopy.stockJobReceive },
+  { suffix: "/stock/transfer", description: stockCopy.stockJobTransfer },
+  { suffix: "/stock/stocktake", description: stockCopy.stockJobStocktake },
+  {
+    suffix: "/stock/count-assignments",
+    description: stockCopy.stockJobCountAssignments,
+  },
+  { suffix: "/stock/count-slips", description: stockCopy.stockJobCountSlips },
+  { suffix: "/stock/waste", description: stockCopy.stockJobWaste },
+  { suffix: "/stock/consumption", description: stockCopy.stockJobConsumption },
+  { suffix: "/stock/catalog", description: stockCopy.stockJobCatalog },
+  {
+    suffix: "/stock/purchase-requests",
+    description: stockCopy.stockJobPurchaseRequests,
+  },
+];
+
+function stockJobDescription(href: string): string | undefined {
+  return STOCK_JOB_DESCRIPTION_BY_SUFFIX.find(({ suffix }) =>
+    href.endsWith(suffix),
+  )?.description;
+}
+
 function toOperatorStockLink(
   tile: ResolvedOperatorTile,
   stockRoot: string,
@@ -89,6 +118,7 @@ function toOperatorStockLink(
       tile.href === stockRoot
         ? messages.inventory.dashboard.viewStockAction
         : tile.label,
+    description: stockJobDescription(href),
   };
 }
 
@@ -103,6 +133,46 @@ function pickStockLinks(
 
 function isCentralKind(branchKind: BranchKind): boolean {
   return branchKind === "central_supply" || branchKind === "central_kitchen";
+}
+
+function StockWorkflowSections({
+  sections,
+}: {
+  sections: ReadonlyArray<{
+    id: string;
+    title: string;
+    description: string;
+    links: OperatorStockLink[];
+    primary?: boolean;
+  }>;
+}) {
+  const visible = sections.filter((section) => section.links.length > 0);
+  if (visible.length === 0) {
+    return (
+      <AppEmptyState
+        compact
+        title={messages.inventory.dashboard.noUrgentTasks}
+        symbol="riceGrain"
+      />
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      {visible.map((section) => (
+        <BranchOperatorActionSection
+          key={section.id}
+          title={section.title}
+          description={section.description}
+          links={section.links}
+          columns={2}
+          mobileColumns={2}
+          wideColumns
+          presentation={section.primary ? "stations" : "plain"}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default async function OperatorStockPage({
@@ -153,38 +223,36 @@ export default async function OperatorStockPage({
       groupedLinks.lookup = [...groupedLinks.lookup, ...fallbackLinks];
     }
 
-    const tabs = (
-      [
-        { id: "lookup" as const, label: stockTab.stockTabOnhand },
-        { id: "buy_count" as const, label: stockTab.stockTabCount },
-        { id: "waste" as const, label: stockTab.stockTabWaste },
-      ] as const
-    ).filter((tab) => groupedLinks[tab.id].length > 0);
-
     return (
       <BranchOperatorPage
         title={stockGroup?.title ?? messages.inventory.shell.moduleName}
         description={messages.inventory.dashboard.mainFlowsOperatorDescription}
         hideHeaderOnMobile
       >
-        {links.length > 0 && tabs.length > 0 ? (
-          <AppPageTabs
-            paramKey="group"
-            defaultValue={tabs[0]?.id}
-            ariaLabel={stockTab.stockTabsAriaLabel}
-            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
-          >
-            {tabs.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id}>
-                <BranchOperatorActionSection
-                  links={groupedLinks[tab.id]}
-                  columns={2}
-                  mobileColumns={2}
-                  wideColumns
-                />
-              </TabsContent>
-            ))}
-          </AppPageTabs>
+        {links.length > 0 ? (
+          <StockWorkflowSections
+            sections={[
+              {
+                id: "lookup",
+                title: stockCopy.stockFlowLookupTitle,
+                description: stockCopy.stockFlowLookupDescription,
+                links: groupedLinks.lookup,
+                primary: true,
+              },
+              {
+                id: "buy_count",
+                title: stockCopy.stockFlowBuyCountTitle,
+                description: stockCopy.stockFlowBuyCountDescription,
+                links: groupedLinks.buy_count,
+              },
+              {
+                id: "waste",
+                title: stockCopy.stockFlowWasteTitle,
+                description: stockCopy.stockFlowWasteDescription,
+                links: groupedLinks.waste,
+              },
+            ]}
+          />
         ) : (
           <AppEmptyState
             compact
@@ -212,39 +280,42 @@ export default async function OperatorStockPage({
     groupedLinks.onhand = [...groupedLinks.onhand, ...fallbackLinks];
   }
 
-  const tabs = (
-    [
-      { id: "onhand" as const, label: stockTab.stockTabOnhand },
-      { id: "count" as const, label: stockTab.stockTabCount },
-      { id: "waste" as const, label: stockTab.stockTabWaste },
-      { id: "catalog" as const, label: stockTab.stockTabCatalog },
-    ] as const
-  ).filter((tab) => groupedLinks[tab.id].length > 0);
-
   return (
     <BranchOperatorPage
       title={stockGroup?.title ?? messages.inventory.shell.moduleName}
       description={messages.inventory.dashboard.mainFlowsOperatorDescription}
       hideHeaderOnMobile
     >
-      {links.length > 0 && tabs.length > 0 ? (
-        <AppPageTabs
-          paramKey="group"
-          defaultValue={tabs[0]?.id}
-          ariaLabel={stockTab.stockTabsAriaLabel}
-          items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
-        >
-          {tabs.map((tab) => (
-            <TabsContent key={tab.id} value={tab.id}>
-              <BranchOperatorActionSection
-                links={groupedLinks[tab.id]}
-                columns={2}
-                mobileColumns={2}
-                wideColumns
-              />
-            </TabsContent>
-          ))}
-        </AppPageTabs>
+      {links.length > 0 ? (
+        <StockWorkflowSections
+          sections={[
+            {
+              id: "onhand",
+              title: stockCopy.stockFlowDailyTitle,
+              description: stockCopy.stockFlowDailyDescription,
+              links: groupedLinks.onhand,
+              primary: true,
+            },
+            {
+              id: "count",
+              title: stockCopy.stockFlowCountTitle,
+              description: stockCopy.stockFlowCountDescription,
+              links: groupedLinks.count,
+            },
+            {
+              id: "waste",
+              title: stockCopy.stockFlowWasteTitle,
+              description: stockCopy.stockFlowWasteDescription,
+              links: groupedLinks.waste,
+            },
+            {
+              id: "catalog",
+              title: stockCopy.stockFlowCatalogTitle,
+              description: stockCopy.stockFlowCatalogDescription,
+              links: groupedLinks.catalog,
+            },
+          ]}
+        />
       ) : (
         <AppEmptyState
           compact

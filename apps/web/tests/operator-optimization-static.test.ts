@@ -41,17 +41,20 @@ test("operator orders uses a URL-synced ToggleGroup segmented control, not raw T
   assert.match(source, /aria-label=\{ORDERS_COPY\.operatorTabsAriaLabel\}/);
 });
 
-test("operator stock hub groups tiles into URL-synced tabs instead of a long tile scroll", () => {
+test("operator stock hub groups tiles into ordered workflow sections", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
-  assert.match(source, /AppPageTabs/);
-  assert.match(source, /paramKey="group"/);
+  assert.match(source, /StockWorkflowSections/);
   assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
   assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
   assert.match(source, /CENTRAL_BOTTOM_NAV_SUFFIXES/);
-  assert.match(source, /stockTabOnhand/);
+  assert.match(source, /stockFlowDailyTitle/);
+  assert.match(source, /stockJobOnHand/);
   assert.match(source, /mobileColumns=\{2\}/);
+  assert.match(source, /presentation=\{section\.primary \? "stations" : "plain"\}/);
+  assert.doesNotMatch(source, /AppPageTabs/);
+  assert.doesNotMatch(source, /paramKey="group"/);
   assert.doesNotMatch(source, /STOCK_PRIMARY_SUFFIXES/);
   assert.doesNotMatch(source, /STOCK_SECONDARY_SUFFIXES/);
 });

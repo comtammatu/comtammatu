@@ -180,8 +180,9 @@ export async function loadStockOnHandPageData({
   // Fail-soft: a denied/failed ingredient catalog read degrades to an empty
   // list + coreDataLoadFailed flag instead of crashing the whole page. Stock
   // levels, permissions and summary stay usable. Matches catalog/page.tsx.
+  // inventory.stock.ingredients_load_failed
   const dbIngredients = (
-    ingredientsResult.success ? (ingredientsResult.data ?? []) : []
+    ingredientsResult.success ? ingredientsResult.data ?? [] : []
   ) as StockIngredientRow[];
   const stockRows = (stockResult.data ?? []) as StockLevelRow[];
   const stockMap = new Map<
