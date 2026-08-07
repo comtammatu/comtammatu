@@ -270,6 +270,21 @@ RLS, tests, and audit events must converge on one vocabulary.
 - Payroll snapshot and employee-specific shift-task overrides are transactional
   RPCs. Existing attendance checklist rows remain immutable snapshots.
 
+### Personal-route boundary (Initial delivery tranche)
+
+The personal-route boundary in §Initial delivery tranche is shipped. `/me/*`
+is mounted inside Control Surface chrome for Accountant, central-site, and
+company-office employees; `Trang cá nhân` is the Avatar Footer entry in both
+the desktop sidebar and the mobile header account menu. An active
+company-office employee with no work-module binding (`self_service`) lands on
+`/me` as the default post-login destination and is granted actor-only
+self-service only — `resolveControlSurfaceDiscoveryGroups` returns no module
+for that role, so no Finance, Inventory, HR, or Tenant capability is implied.
+Owner remains denied `/me/*`. Store-assigned employees keep
+`/br/[branchId]/shift/*` and `/br/[branchId]/profile/*` as the canonical
+personal route family; a direct `/me/*` request canonicalizes to the claimed
+branch route rather than rendering a second personal surface.
+
 ## Boundary scenarios
 
 | Scenario                                                                         | Required result                                                                                         |
