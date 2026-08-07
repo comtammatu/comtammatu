@@ -16,6 +16,7 @@ on:
       - '.gitattributes'
       - '.gitignore'
       - 'LICENSE'
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -87,7 +88,9 @@ jobs:
   # (see the re-baseline runbook).
   baseline-replay:
     needs: detect
-    if: needs.detect.outputs.db == 'true'
+    if: >-
+      (github.event_name == 'pull_request' && needs.detect.outputs.db == 'true') ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -106,7 +109,9 @@ jobs:
   # never changes workspace env.
   e2e-smoke:
     needs: detect
-    if: needs.detect.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'pull_request' && needs.detect.outputs.code == 'true') ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -165,7 +170,7 @@ jobs:
           steps.supabase-bringup.outcome == 'success' &&
           steps.build-e2e.outcome == 'success' &&
           hashFiles('apps/web/e2e/visual/__screenshots__/*.png') != ''
-        run: pnpm --filter @comtammatu/web run test:e2e:visual
+        run: pnpm --filter @comtammatu/web run test:e2e:smoke
         env:
           E2E_WEB_COMMAND: pnpm start:e2e
       - if: failure()
