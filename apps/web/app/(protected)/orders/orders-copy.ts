@@ -48,4 +48,17 @@ export const ORDERS_COPY = {
     "Các đơn hoàn thành và đã hủy nằm trong Lịch sử gần đây.",
   emptyTitle: ORDERS_VI.noOrders,
   emptyDescription: "Chi nhánh chưa có đơn nào trong phạm vi đang xem.",
+  // Delay monitoring & alerts
+  waitTimeHeader: "Thời gian chờ",
+  alertFilterAll: "Tất cả",
+  alertFilterWarning: "Cảnh báo (10-15 ph)",
+  alertFilterCritical: "Báo đỏ (>15 ph)",
+  warningCountLabel: "Cảnh báo (10-15 ph)",
+  criticalCountLabel: "Báo đỏ (>15 ph)",
+  kdsSectionTitle: "Thời gian xử lý & Cảnh báo KDS",
+  kdsAlertCalloutWarning:
+    "Cảnh báo: Đơn hàng đã chờ 10–15 phút kể từ lúc lên đơn.",
+  kdsAlertCalloutCritical:
+    "Báo đỏ: Đơn hàng đã chờ quá 15 phút! Quản lý cần kiểm tra ngay với Bếp (KDS).",
+  notificationTitle: "Cảnh báo trễ đơn hàng (>15 phút)",
 } as const;

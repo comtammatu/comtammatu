@@ -26,6 +26,11 @@ import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
 import type { OrderRow } from "@/(protected)/orders/actions";
 import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
 
+import {
+  computeOrderWaitInfo,
+  getOrderAlertBadgeProps,
+} from "@/(protected)/orders/_lib/order-wait-time";
+
 type OrderView = "active" | "recent";
 const VALID_VIEWS: readonly OrderView[] = ["active", "recent"] as const;
 
@@ -111,51 +116,73 @@ export function OperatorOrdersClient({
         />
       ) : (
         <ItemGroup className="gap-2">
-          {visibleOrders.map((order) => (
-            <Item
-              key={order.id}
-              variant="outline"
-              size="sm"
-              className="chrome-tap min-h-14 bg-card text-left"
-              render={
-                <button type="button" onClick={() => setSelectedOrder(order)} />
-              }
-            >
-              <ItemHeader>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="font-mono">
-                    {order.order_number}
-                  </ItemTitle>
-                  <ItemDescription>
-                    {STAFF_VI.long}: {order.created_by_name}
-                  </ItemDescription>
-                </ItemContent>
-                <StatusBadge domain="order" value={order.status} />
-              </ItemHeader>
-              <ItemFooter>
-                <span className="text-xs text-muted-foreground">
-                  {BRANCH_VI.long}: {order.branch_name}
-                </span>
-                <span className="font-mono text-sm font-semibold tabular-nums">
-                  {formatVND(order.total_amount)}
-                </span>
-              </ItemFooter>
-              <ItemFooter>
-                <span className="text-xs text-muted-foreground">
-                  {formatVNDateTime(order.created_at)}
-                </span>
-                {order.payment_method ? (
-                  <Badge variant="outline" className="text-xs">
-                    {getPaymentMethodLabelVi(order.payment_method)}
-                  </Badge>
-                ) : (
+          {visibleOrders.map((order) => {
+            const waitInfo = computeOrderWaitInfo(
+              order.created_at,
+              order.kds_completed_at,
+            );
+            const badgeProps = getOrderAlertBadgeProps(waitInfo);
+
+            return (
+              <Item
+                key={order.id}
+                variant="outline"
+                size="sm"
+                className={`chrome-tap min-h-14 bg-card text-left ${
+                  waitInfo.alertLevel === "critical"
+                    ? "border-destructive/20 bg-destructive/10"
+                    : waitInfo.alertLevel === "warning"
+                      ? "border-warning/20 bg-warning/10"
+                      : ""
+                }`}
+                render={
+                  <button type="button" onClick={() => setSelectedOrder(order)} />
+                }
+              >
+                <ItemHeader>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="font-mono">
+                      {order.order_number}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {STAFF_VI.long}: {order.created_by_name}
+                    </ItemDescription>
+                  </ItemContent>
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge domain="order" value={order.status} />
+                    <Badge
+                      variant={badgeProps.badgeVariant}
+                      className={badgeProps.badgeClassName}
+                    >
+                      {badgeProps.label}
+                    </Badge>
+                  </div>
+                </ItemHeader>
+                <ItemFooter>
                   <span className="text-xs text-muted-foreground">
-                    {ORDERS_COPY.noPayment}
+                    {BRANCH_VI.long}: {order.branch_name}
                   </span>
-                )}
-              </ItemFooter>
-            </Item>
-          ))}
+                  <span className="font-mono text-sm font-semibold tabular-nums">
+                    {formatVND(order.total_amount)}
+                  </span>
+                </ItemFooter>
+                <ItemFooter>
+                  <span className="text-xs text-muted-foreground">
+                    {formatVNDateTime(order.created_at)}
+                  </span>
+                  {order.payment_method ? (
+                    <Badge variant="outline" className="text-xs">
+                      {getPaymentMethodLabelVi(order.payment_method)}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {ORDERS_COPY.noPayment}
+                    </span>
+                  )}
+                </ItemFooter>
+              </Item>
+            );
+          })}
         </ItemGroup>
       )}
       <p className="text-sm text-muted-foreground">

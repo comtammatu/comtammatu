@@ -39,16 +39,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { fetchOrders } from "./actions";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { fetchOrders, createOrderDelayNotification } from "./actions";
 import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
 import { useIsXlUp } from "./_hooks/use-is-xl-up";
 import type { OrderRow, OrdersSummary, FetchOrdersFilters } from "./actions";
+import {
+  computeOrderWaitInfo,
+  getOrderAlertBadgeProps,
+} from "./_lib/order-wait-time";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
+
+function OrderWaitTimeBadge({ order }: { order: OrderRow }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (
+      order.status === "completed" ||
+      order.status === "cancelled" ||
+      order.kds_completed_at
+    ) {
+      return;
+    }
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [order.status, order.kds_completed_at]);
+
+  const waitInfo = computeOrderWaitInfo(
+    order.created_at,
+    order.kds_completed_at,
+    nowMs,
+  );
+  const badgeProps = getOrderAlertBadgeProps(waitInfo);
+
+  return (
+    <Badge
+      variant={badgeProps.badgeVariant}
+      className={badgeProps.badgeClassName}
+    >
+      {badgeProps.label}
+    </Badge>
+  );
+}
 
 const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
   {
@@ -77,6 +116,11 @@ const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
     header: "Thời gian",
     className: "text-sm text-muted-foreground",
     render: (order) => formatVNDateTime(order.created_at),
+  },
+  {
+    key: "wait_time",
+    header: "Thời gian chờ",
+    render: (order) => <OrderWaitTimeBadge order={order} />,
   },
   {
     key: "total",
@@ -162,6 +206,8 @@ export function OrdersClient({
   const [dateTo, setDateTo] = useState("");
   const [status, setStatus] = useState<string>("");
   const [branchId, setBranchId] = useState<string>("");
+  const [alertFilter, setAlertFilter] = useState<"all" | "warning" | "critical">("all");
+  const notifiedRef = useRef<Set<string>>(new Set());
 
   // Sync prop-to-state for router.refresh() updates
   useEffect(() => {
@@ -179,6 +225,51 @@ export function OrdersClient({
       : branchId
         ? Number(branchId)
         : null;
+
+  // Active orders delay monitoring & toast/durable notification triggers
+  useEffect(() => {
+    const checkDelayAlerts = () => {
+      const nowMs = Date.now();
+      for (const order of orders) {
+        if (order.status === "completed" || order.status === "cancelled") continue;
+        const info = computeOrderWaitInfo(
+          order.created_at,
+          order.kds_completed_at,
+          nowMs,
+        );
+
+        if (info.alertLevel === "warning") {
+          const warnKey = `warn:${order.id}`;
+          if (!notifiedRef.current.has(warnKey)) {
+            notifiedRef.current.add(warnKey);
+            toast.warning(
+              `⚠️ Cảnh báo: Đơn #${order.order_number} đã chờ ${info.waitMinutes} phút!`,
+            );
+          }
+        } else if (info.alertLevel === "critical") {
+          const critKey = `crit:${order.id}`;
+          if (!notifiedRef.current.has(critKey)) {
+            notifiedRef.current.add(critKey);
+            toast.error(
+              `🚨 BÁO ĐỎ: Đơn #${order.order_number} đã chờ ${info.waitMinutes} phút — Cần điều tra ngay!`,
+            );
+            if (currentBranchId || order.id) {
+              void createOrderDelayNotification({
+                orderId: order.id,
+                branchId: currentBranchId ?? 1,
+                orderNumber: order.order_number,
+                waitMinutes: info.waitMinutes,
+              });
+            }
+          }
+        }
+      }
+    };
+
+    checkDelayAlerts();
+    const timer = setInterval(checkDelayAlerts, 30000);
+    return () => clearInterval(timer);
+  }, [orders, currentBranchId]);
 
   const initialSubscribeSeenRef = useRef(false);
 
@@ -266,6 +357,7 @@ export function OrdersClient({
     setDateTo("");
     setStatus("");
     setBranchId("");
+    setAlertFilter("all");
     startTransition(async () => {
       const result = await fetchOrders();
       if (result.success && result.data) {
@@ -275,14 +367,33 @@ export function OrdersClient({
     });
   }
 
-  const hasFilters = !!(dateFrom || dateTo || status || branchId);
+  const hasFilters = !!(dateFrom || dateTo || status || branchId || alertFilter !== "all");
 
-  const displayOrders = useMemo(() => orders, [orders]);
+  const { delayStats, displayOrders } = useMemo(() => {
+    let warningCount = 0;
+    let criticalCount = 0;
+
+    const filtered = orders.filter((order) => {
+      const info = computeOrderWaitInfo(order.created_at, order.kds_completed_at);
+      if (info.alertLevel === "warning") warningCount++;
+      if (info.alertLevel === "critical") criticalCount++;
+
+      if (alertFilter === "warning") return info.alertLevel === "warning";
+      if (alertFilter === "critical") return info.alertLevel === "critical";
+      return true;
+    });
+
+    return {
+      delayStats: { warningCount, criticalCount },
+      displayOrders: filtered,
+    };
+  }, [orders, alertFilter]);
+
   const showInlineDetail = isXlUp && !!selectedOrder;
 
   const listContent = (
     <>
-      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-3">
+      <KpiRow density="compact" className="grid-cols-2 md:grid-cols-5">
         <KpiCard
           label={ORDERS_COPY.inProgressLabel}
           value={summary.inProgressCount}
@@ -300,7 +411,20 @@ export function OrdersClient({
           value={formatVND(summary.paidRevenue)}
           hint={ORDERS_COPY.revenueHint}
           density="compact"
-          className="col-span-2 md:col-span-1"
+        />
+        <KpiCard
+          label="Cảnh báo (10-15 ph)"
+          value={delayStats.warningCount}
+          hint="Đơn chờ 10–15 phút"
+          density="compact"
+          className={delayStats.warningCount > 0 ? "border-warning/20 bg-warning/10" : ""}
+        />
+        <KpiCard
+          label="Báo đỏ (>15 ph)"
+          value={delayStats.criticalCount}
+          hint="Cần điều tra ngay"
+          density="compact"
+          className={delayStats.criticalCount > 0 ? "border-destructive/20 bg-destructive/10 text-destructive" : ""}
         />
       </KpiRow>
 
@@ -362,6 +486,29 @@ export function OrdersClient({
                   {label}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+          <Label htmlFor="alert-filter" className="text-xs">
+            Cảnh báo trễ
+          </Label>
+          <Select
+            value={alertFilter}
+            onValueChange={(val) => setAlertFilter(val as "all" | "warning" | "critical")}
+          >
+            <SelectTrigger
+              id="alert-filter"
+              size={controlSize}
+              className="w-full sm:w-44"
+            >
+              <SelectValue placeholder="Tất cả" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả ({orders.length})</SelectItem>
+              <SelectItem value="warning">Cảnh báo 10-15m ({delayStats.warningCount})</SelectItem>
+              <SelectItem value="critical">Báo đỏ trên 15 ph ({delayStats.criticalCount})</SelectItem>
             </SelectContent>
           </Select>
         </div>

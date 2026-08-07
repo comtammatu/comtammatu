@@ -38,6 +38,12 @@ import {
   type OrderOperationalVerdict,
 } from "./_lib/order-kds-evidence";
 
+import {
+  computeOrderWaitInfo,
+  getOrderAlertBadgeProps,
+} from "./_lib/order-wait-time";
+import { ORDERS_COPY } from "./orders-copy";
+
 /* ─── Helpers ─── */
 
 import {
@@ -384,10 +390,30 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
     })),
   ].sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
 
+  const waitInfo = computeOrderWaitInfo(
+    order.created_at,
+    order.kds_completed_at,
+  );
+  const alertBadgeProps = getOrderAlertBadgeProps(waitInfo);
+
   return (
     <>
       {/* ─── Order info ─── */}
       <div className="flex flex-col gap-4">
+        {waitInfo.alertLevel === "critical" && (
+          <NoteCallout
+            tone="warning"
+            className="border border-destructive/20 bg-destructive/10 text-destructive"
+            label="Báo đỏ - Cần điều tra (KDS)"
+          >
+            {ORDERS_COPY.kdsAlertCalloutCritical} (Thời gian chờ: {waitInfo.waitMinutes} phút)
+          </NoteCallout>
+        )}
+        {waitInfo.alertLevel === "warning" && (
+          <NoteCallout tone="warning" label="Cảnh báo thời gian chờ">
+            {ORDERS_COPY.kdsAlertCalloutWarning} (Thời gian chờ: {waitInfo.waitMinutes} phút)
+          </NoteCallout>
+        )}
         <DescriptionList
           className="text-sm flex flex-col gap-2 [&>div]:flex [&>div]:flex-row [&>div]:justify-between [&>div]:items-center sm:grid sm:grid-cols-2 sm:gap-x-4 sm:gap-y-2 sm:[&>div]:flex-col sm:[&>div]:items-start"
           items={[
@@ -406,6 +432,17 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
             {
               term: ORDERS_VI.time,
               description: formatVNDateTime(order.created_at),
+            },
+            {
+              term: ORDERS_COPY.waitTimeHeader,
+              description: (
+                <Badge
+                  variant={alertBadgeProps.badgeVariant}
+                  className={alertBadgeProps.badgeClassName}
+                >
+                  {alertBadgeProps.label}
+                </Badge>
+              ),
             },
             {
               term: ORDERS_VI.orderType,

@@ -73,6 +73,7 @@ export interface OrderRow {
   payment_method: string | null;
   payment_status: string | null;
   created_at: string;
+  kds_completed_at?: string | null;
   branch_name: string;
   created_by_name: string;
   items: OrderItem[];
@@ -273,7 +274,8 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
        created_at,
        branches(name),
        profiles!orders_created_by_fkey(full_name),
-       payments(id, method, amount, status, paid_at, created_at)`,
+       payments(id, method, amount, status, paid_at, created_at),
+       kds_tickets(status, first_ready_at, bumped_at)`,
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -312,6 +314,28 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
       Array.isArray(row.payments) ? row.payments : [],
     );
 
+    const kdsTickets = Array.isArray(row.kds_tickets)
+      ? (row.kds_tickets as Array<{
+          status: string;
+          first_ready_at: string | null;
+          bumped_at: string | null;
+        }>)
+      : [];
+    let kds_completed_at: string | null = null;
+    if (
+      kdsTickets.length > 0 &&
+      kdsTickets.every((t) => t.status === "ready")
+    ) {
+      const timestamps = kdsTickets
+        .map((t) => t.first_ready_at || t.bumped_at)
+        .filter((ts): ts is string => Boolean(ts));
+      if (timestamps.length > 0) {
+        kds_completed_at = timestamps.reduce((latest, current) =>
+          Date.parse(current) > Date.parse(latest) ? current : latest,
+        );
+      }
+    }
+
     return {
       id: row.id,
       order_number: row.order_number,
@@ -325,6 +349,7 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
       payment_method: row.payment_method,
       payment_status: row.payment_status,
       created_at: row.created_at,
+      kds_completed_at,
       branch_name: (row.branches as { name: string } | null)?.name ?? "—",
       created_by_name:
         (row.profiles as { full_name: string } | null)?.full_name ?? "—",
@@ -686,3 +711,50 @@ export async function fetchOrderOperationalTrace(
 
   return { success: true, data: trace.data };
 }
+
+const createDelayNotificationSchema = z.object({
+  orderId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
+  orderNumber: z.string(),
+  waitMinutes: z.coerce.number().int().positive(),
+});
+
+export async function createOrderDelayNotification(
+  input: z.input<typeof createDelayNotificationSchema>,
+): Promise<ActionResult<{ created: boolean }>> {
+  const parsed = createDelayNotificationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    ALLOWED_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const supabase = await createClient();
+  const dedupKey = `order.delay_sla_breach:${parsed.data.orderId}`;
+
+  const { error } = await supabase.from("notifications").insert({
+    tenant_id: ctx.claims.tenant_id,
+    target_branch_id: parsed.data.branchId,
+    target_roles: ["owner", "branch_manager"],
+    kind: "order.delay_sla_breach",
+    severity: "critical",
+    title: `Cảnh báo trễ đơn #${parsed.data.orderNumber} (${parsed.data.waitMinutes} phút)`,
+    body: `Đơn hàng #${parsed.data.orderNumber} đã chờ ${parsed.data.waitMinutes} phút chưa hoàn thành. Quản lý cần kiểm tra với Bếp (KDS).`,
+    entity_type: "order",
+    entity_id: parsed.data.orderId,
+    action_url: `/orders?orderId=${parsed.data.orderId}`,
+    dedup_key: dedupKey,
+  });
+
+  if (error) {
+    // If conflict on dedup_key or failed insert, don't fail client
+    return { success: true, data: { created: false } };
+  }
+
+  return { success: true, data: { created: true } };
+}
+
