@@ -9,7 +9,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatSidePortionLabel, formatVND } from "@comtammatu/shared/format";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -62,7 +62,7 @@ function cartOptionSummary(item: SelfOrderCartItem) {
     item.variant_name,
     ...item.modifiers.map((modifier) => modifier.name),
     ...item.sides.map((side) =>
-      side.quantity > 1 ? `${side.quantity}x ${side.name}` : side.name,
+      formatSidePortionLabel(side.name, side.quantity),
     ),
     item.note ? `${SELF_ORDER_VI.itemNoteLabel}: ${item.note}` : null,
   ]

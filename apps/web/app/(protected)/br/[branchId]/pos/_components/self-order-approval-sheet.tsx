@@ -2,7 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Check as IconCheck, X as IconX } from "lucide-react";
-import { formatCount, formatVND } from "@comtammatu/shared/format";
+import {
+  formatCount,
+  formatPortionQuantity,
+  formatSidePortionLabel,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -67,9 +72,7 @@ function itemOptionSummary(item: SelfOrderStoredCartItem) {
   return [
     ...item.modifiers.map((modifier) => modifier.name),
     ...item.sides.map((side) =>
-      side.quantity > 1
-        ? `${formatCount(side.quantity)}x ${side.name}`
-        : side.name,
+      formatSidePortionLabel(side.name, side.quantity),
     ),
     item.note ? `${SELF_ORDER_VI.itemNoteLabel}: ${item.note}` : null,
   ]
@@ -245,7 +248,7 @@ export function SelfOrderApprovalSheet({
                               >
                                 <ItemContent>
                                   <ItemTitle>
-                                    {formatCount(item.quantity)}x{" "}
+                                    {formatPortionQuantity(item.quantity)}{" "}
                                     {item.item_name}
                                     {item.variant_name
                                       ? ` · ${item.variant_name}`

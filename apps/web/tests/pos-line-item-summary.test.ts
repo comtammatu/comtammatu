@@ -31,8 +31,8 @@ function buildItem(overrides: Partial<CartItem> = {}): CartItem {
 test("POS side summary does not multiply per-portion side quantity by parent item quantity", () => {
   const summary = getPosLineItemSummary(buildItem());
 
-  assert.deepEqual(summary.sides, ["Trứng"]);
-  assert.equal(summary.options, "+ Trứng");
+  assert.deepEqual(summary.sides, ["Trứng x1"]);
+  assert.equal(summary.options, "+ Trứng x1");
   assert.ok(!summary.sides.includes("Trứng x5"));
 });
 
@@ -51,9 +51,10 @@ test("POS side summary keeps side quantity as per portion when greater than one"
     }),
   );
 
-  assert.deepEqual(summary.sides, ["Trứng x2/phần"]);
-  assert.equal(summary.options, "+ Trứng x2/phần");
+  assert.deepEqual(summary.sides, ["Trứng x2"]);
+  assert.equal(summary.options, "+ Trứng x2");
   assert.ok(!summary.sides.includes("Trứng x10"));
+  assert.ok(!summary.sides.some((side) => side.includes("/phần")));
 });
 
 test("POS side display fix does not change subtotal math", () => {
@@ -77,5 +78,5 @@ test("POS option lines also describe side quantity per portion", () => {
     }),
   );
 
-  assert.deepEqual(lines, ["Kèm: Trứng x2/phần (+10.000đ)"]);
+  assert.deepEqual(lines, ["Kèm: Trứng x2 (+10.000đ)"]);
 });

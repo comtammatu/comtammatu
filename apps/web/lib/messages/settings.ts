@@ -809,7 +809,7 @@ export const settings = {
     orderInvestigationAction: "Xem toàn bộ diễn biến đơn",
     billBreakdown: (count: number) =>
       `Chi tiết tính tiền (${formatCount(count)} dòng món)`,
-    quantityPrefix: (quantity: number) => `×${quantity}`,
+    quantityPrefix: (quantity: number) => `${quantity}x`,
     linePrice: (unitPrice: string, quantity: number) =>
       `${unitPrice} ×${quantity}`,
     cancelledItem: "(đã hủy)",

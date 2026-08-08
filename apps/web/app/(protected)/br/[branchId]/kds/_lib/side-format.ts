@@ -1,6 +1,10 @@
+import {
+  formatSidePortionLabel,
+  sidePortionQuantity,
+} from "@comtammatu/shared/format";
 import type { OrderItemSide } from "../types";
 
-type QuantityValue = number | null | undefined;
+export { sidePortionQuantity };
 
 const SIDE_BADGE_TONE_CLASSES = [
   "border-chart-1/40 bg-chart-1/15",
@@ -10,18 +14,8 @@ const SIDE_BADGE_TONE_CLASSES = [
   "border-chart-5/40 bg-chart-5/15",
 ] as const;
 
-function positiveQuantity(value: QuantityValue, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
-}
-
-export function sidePortionQuantity(sideQuantity: QuantityValue): number {
-  return positiveQuantity(sideQuantity, 1);
-}
-
 export function formatSideLabel(side: OrderItemSide): string {
-  return `${side.name} x${sidePortionQuantity(side.quantity)}`;
+  return formatSidePortionLabel(side.name, side.quantity);
 }
 
 export function getSideBadgeToneClass(side: OrderItemSide): string {

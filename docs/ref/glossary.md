@@ -553,6 +553,8 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | ------------------ | ---------------- | -------------------------------------------------------------- | ---------------------------------------- |
 | `order`            | đơn hàng bán     | Đơn phát sinh ở POS.                                           | đơn hàng nếu đang đứng cạnh procurement  |
 | `order_item`       | dòng món         | Một món trong đơn.                                             | item nếu viết user-facing copy           |
+| `portion_quantity` | số phần (`Nx`)   | Tiền tố `Nx` / badge phần = số đĩa/phần của món chính. Ví dụ `4x Sườn`. | nhầm với tổng món kèm trên cả dòng |
+| `side_portion_qty` | SL trên phần (`xN`) | Hậu tố `xN` trên món kèm = số lượng **mỗi phần**, không nhân với số phần. Ví dụ `4x Sườn (Trứng x1)` = 4 đĩa, mỗi đĩa 1 trứng. Cột SL hóa đơn khách vẫn dùng tổng (`side × phần`) để khớp tiền. | `Trứng x4` khi muốn nói 4 trứng trên 1 phần nhưng đang có 4 phần |
 | `menu_item`        | món bán          | Item trong menu.                                               | sản phẩm nếu đang nói F&B order flow     |
 | `table_session`    | phiên bàn        | Lifecycle phục vụ tại bàn.                                     | bàn mở nếu cần phân biệt record          |
 | `takeaway_context` | ngữ cảnh mang về | Context bán mang về; có thể có nhiều order mở như bàn.         | đơn nhanh nếu workflow cần chọn order    |

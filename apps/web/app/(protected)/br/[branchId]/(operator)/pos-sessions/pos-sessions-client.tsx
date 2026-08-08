@@ -28,6 +28,7 @@ import {
 import {
   formatCount,
   formatPercent,
+  formatSidePortionLabel,
   formatVND,
 } from "@comtammatu/shared/format";
 import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
@@ -1439,10 +1440,10 @@ function OrderDetailDrawer({
                                   {item.sides.map((side) => {
                                     const totalQuantity =
                                       side.quantity * item.quantity;
-                                    const name =
-                                      totalQuantity > 1
-                                        ? `${side.name} ×${String(totalQuantity)}`
-                                        : side.name;
+                                    const name = formatSidePortionLabel(
+                                      side.name,
+                                      side.quantity,
+                                    );
 
                                     return (
                                       <AddOnLine

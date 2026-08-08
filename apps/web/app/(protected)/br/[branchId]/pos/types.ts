@@ -1,4 +1,8 @@
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatSidePortionLabel,
+  formatVND,
+  sidePortionQuantity,
+} from "@comtammatu/shared/format";
 import { z } from "zod";
 
 /* ─── Order Types ─── */
@@ -113,11 +117,10 @@ function formatPosLineItemPrice(price: number | null | undefined): string {
 }
 
 function formatPosLineItemSide(side: PosLineItemSideInput): string {
-  const quantity = side.quantity ?? 1;
-  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}/phần` : "";
+  const quantity = sidePortionQuantity(side.quantity);
   const price = typeof side.price === "number" ? side.price * quantity : null;
 
-  return `${side.name}${quantitySuffix}${formatPosLineItemPrice(price)}`;
+  return `${formatSidePortionLabel(side.name, quantity)}${formatPosLineItemPrice(price)}`;
 }
 
 export function getPosLineItemDisplayName(
@@ -164,10 +167,7 @@ function formatPosLineItemCompactOption(
 }
 
 function formatPosLineItemCompactSide(side: PosLineItemSideInput): string {
-  const quantity = side.quantity ?? 1;
-  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}/phần` : "";
-
-  return `${side.name}${quantitySuffix}`;
+  return formatSidePortionLabel(side.name, side.quantity);
 }
 
 export interface PosLineItemSummary {

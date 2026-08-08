@@ -6,7 +6,11 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { cn } from "@comtammatu/ui";
-import { formatVND } from "@comtammatu/shared/format";
+import {
+  formatSidePortionLabel,
+  formatVND,
+  sidePortionQuantity,
+} from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Item } from "@comtammatu/ui/components/item";
@@ -81,12 +85,10 @@ function formatModifier(m: OrderItemModifier): string {
 }
 
 function formatSide(s: OrderItemSide): string {
-  const qty = s.quantity ?? 1;
-  const qtySuffix = qty > 1 ? ` x${qty}` : "";
+  const qty = sidePortionQuantity(s.quantity);
+  const label = formatSidePortionLabel(s.name, qty);
   const totalPrice = s.price * qty;
-  return totalPrice > 0
-    ? `${s.name}${qtySuffix} (+${formatVND(totalPrice)})`
-    : `${s.name}${qtySuffix}`;
+  return totalPrice > 0 ? `${label} (+${formatVND(totalPrice)})` : label;
 }
 
 const KDS_EVENT_LABELS: Record<string, string> = {

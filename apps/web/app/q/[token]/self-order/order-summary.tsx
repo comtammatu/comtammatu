@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock as IconClock } from "lucide-react";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatSidePortionLabel, formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import {
   Item,
@@ -89,7 +89,7 @@ function optionSummary(item: {
   return [
     ...item.modifiers.map((modifier) => modifier.name),
     ...item.sides.map((side) =>
-      side.quantity > 1 ? `${side.quantity}x ${side.name}` : side.name,
+      formatSidePortionLabel(side.name, side.quantity),
     ),
     item.note ? `${SELF_ORDER_VI.itemNoteLabel}: ${item.note}` : null,
   ]

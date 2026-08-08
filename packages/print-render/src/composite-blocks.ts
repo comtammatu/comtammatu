@@ -6,6 +6,10 @@
  * (supabase baseline) — same structure, headings, and conditions.
  */
 
+import {
+  formatPortionQuantity,
+  formatSidePortionLabel,
+} from "@comtammatu/shared/format";
 import type { PrintDocumentBlock } from "./print-document";
 import { PAYMENT_LABEL_FULL } from "./labels";
 import {
@@ -62,11 +66,14 @@ export const kitchenItemBlocks = (
     if (idx > 0) blocks.push(textBlock(KITCHEN_BORDER));
     const qty = item.quantity ?? 0;
     blocks.push(
-      textBlock(` x${fmtInt(qty)} | ${item.item_name ?? ""}`, {
-        bold: true,
-        double: true,
-        ...opts,
-      }),
+      textBlock(
+        ` ${formatPortionQuantity(qty)} | ${item.item_name ?? ""}`,
+        {
+          bold: true,
+          double: true,
+          ...opts,
+        },
+      ),
     );
     if (item.variant_name) {
       blocks.push(textBlock(`    |   (${item.variant_name})`, opts));
@@ -79,10 +86,10 @@ export const kitchenItemBlocks = (
     for (const side of item.sides ?? []) {
       const sideName = side.name || side.side_item_name || "";
       if (!sideName) continue;
-      const sideQty = (side.quantity ?? 1) * qty;
+      // Side quantity is per portion; parent Nx is already on the item line.
       blocks.push(
         textBlock(
-          `    |   - ${sideName}${sideQty > 0 ? ` x${fmtInt(sideQty)}` : ""}`,
+          `    |   - ${formatSidePortionLabel(sideName, side.quantity)}`,
           { bold: true, double: true, ...opts },
         ),
       );

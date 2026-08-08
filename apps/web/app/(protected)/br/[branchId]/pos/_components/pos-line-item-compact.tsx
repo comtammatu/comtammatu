@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
+import { formatPortionQuantity } from "@comtammatu/shared/format";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 
@@ -178,7 +179,7 @@ export function PosLineItemCompact({
             quantityClassName,
           )}
         >
-          x{quantity}
+          {formatPortionQuantity(quantity)}
         </Badge>
         {quantityDelta !== null ? (
           <Badge

@@ -5,6 +5,11 @@ export {
   type NumericInputOptions,
   type NumericInputParseResult,
 } from "./numeric-input";
+export {
+  formatPortionQuantity,
+  formatSidePortionLabel,
+  sidePortionQuantity,
+} from "./portion-quantity";
 import {
   canonicalizeMoney,
   minorUnitsToCanonical,

@@ -1,6 +1,10 @@
 "use client";
 
-import { formatPercent, formatVND } from "@comtammatu/shared/format";
+import {
+  formatPercent,
+  formatSidePortionLabel,
+  formatVND,
+} from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -188,8 +192,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                       className="flex gap-3 text-muted-foreground"
                     >
                       <div className="min-w-0 flex-1 break-words leading-4">
-                        - {s.name}
-                        {totalSideQty > 1 ? ` x${String(totalSideQty)}` : ""}
+                        - {formatSidePortionLabel(s.name, s.quantity)}
                       </div>
                       <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
                         {sideAmt > 0 ? formatVND(sideAmt) : ""}
