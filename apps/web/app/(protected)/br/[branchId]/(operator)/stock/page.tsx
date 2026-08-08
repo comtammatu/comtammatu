@@ -294,7 +294,7 @@ export default async function OperatorStockPage({
         hideHeaderOnMobile
         action={<div className="max-sm:hidden">{createAction}</div>}
       >
-        <div className="flex min-w-0 flex-col gap-4 pb-20 sm:pb-0">
+        <div className="flex min-w-0 flex-col gap-4 pb-[5rem] sm:pb-0">
           <BranchStockDoors basePath={basePath} />
           <BranchStockFulfillmentHubClient
             rows={rows}

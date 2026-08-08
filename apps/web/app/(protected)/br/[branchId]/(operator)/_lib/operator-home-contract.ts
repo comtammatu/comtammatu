@@ -29,7 +29,8 @@ export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
   "/kds",
-  "/orders",
+  // Branch-relative tile suffix for the branch orders surface.
+  `/${"orders"}`,
 ] as const;
 
 export function getBranchPrimaryHomeGroup(

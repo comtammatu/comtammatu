@@ -76,7 +76,7 @@ export interface InvoiceRequest {
   /**
    * Domain buyer label before Viettel field mapping via `buyerKind`:
    * - `consumer` / `buyerNotGetInvoice`: ignored (provider emits the legal phrase)
-   * - `business`: registered company/HKD name → Viettel `buyerLegalName`
+   * - `business`: registered company name → Viettel `buyerLegalName`
    * - `individual`: person name → Viettel `buyerName` (personal MST stays on tax field)
    */
   buyerName?: string;

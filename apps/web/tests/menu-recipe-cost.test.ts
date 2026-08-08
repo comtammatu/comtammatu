@@ -1,41 +1,104 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  buildValuedWacMap,
+  buildSourceSiteWacMap,
+  menuRecipeSourceWacKey,
   resolveMenuRecipeUnitCost,
   sumMenuRecipeEstimatedCost,
 } from "../app/(protected)/inventory/_lib/menu-recipe-cost";
 
-test("buildValuedWacMap ignores zero/null placeholders and averages valued sites", () => {
-  const map = buildValuedWacMap([
-    { ingredientId: 67, avgUnitCost: 0 },
-    { ingredientId: 67, avgUnitCost: 127.15 },
-    { ingredientId: 72, avgUnitCost: null },
-    { ingredientId: 72, avgUnitCost: 18 },
-    { ingredientId: 68, avgUnitCost: 0 },
+test("buildSourceSiteWacMap keys by Kho gốc and never mixes site kinds", () => {
+  const map = buildSourceSiteWacMap([
+    {
+      ingredientId: 67,
+      branchKind: "central_supply",
+      avgUnitCost: 0,
+    },
+    {
+      ingredientId: 67,
+      branchKind: "central_kitchen",
+      avgUnitCost: 127.15,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_kitchen",
+      avgUnitCost: 2400,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "branch",
+      avgUnitCost: 9999,
+    },
   ]);
 
-  assert.equal(map["67"], 127.15);
-  assert.equal(map["72"], 18);
-  assert.equal(map["68"], undefined);
+  assert.equal(map[menuRecipeSourceWacKey("central_kitchen", 67)], 127.15);
+  assert.equal(map[menuRecipeSourceWacKey("central_supply", 67)], undefined);
+  assert.equal(map[menuRecipeSourceWacKey("central_supply", 72)], 2500);
+  assert.equal(map[menuRecipeSourceWacKey("central_kitchen", 72)], 2400);
+  assert.equal(map["branch:72"], undefined);
 });
 
-test("resolveMenuRecipeUnitCost prefers valued WAC then positive reference cost", () => {
+test("resolveMenuRecipeUnitCost uses ingredient Nguồn hàng WAC only", () => {
+  const sourceSiteWacMap = buildSourceSiteWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_kitchen",
+      avgUnitCost: 2400,
+    },
+  ]);
+
   assert.equal(
-    resolveMenuRecipeUnitCost({ valuedWac: 18, referenceUnitCost: 9 }),
-    18,
+    resolveMenuRecipeUnitCost({
+      ingredientId: 72,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      referenceUnitCost: 9,
+    }),
+    2500,
   );
   assert.equal(
-    resolveMenuRecipeUnitCost({ valuedWac: 0, referenceUnitCost: 9 }),
-    9,
+    resolveMenuRecipeUnitCost({
+      ingredientId: 72,
+      sourceSiteKind: "central_kitchen",
+      sourceSiteWacMap,
+      referenceUnitCost: 9,
+    }),
+    2400,
   );
+  // Source site has no valued WAC → do not borrow the other kho.
   assert.equal(
-    resolveMenuRecipeUnitCost({ valuedWac: undefined, referenceUnitCost: 0 }),
+    resolveMenuRecipeUnitCost({
+      ingredientId: 67,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      referenceUnitCost: 0,
+    }),
     null,
   );
   assert.equal(
     resolveMenuRecipeUnitCost({
-      valuedWac: undefined,
+      ingredientId: 67,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      referenceUnitCost: 9,
+    }),
+    9,
+  );
+  assert.equal(
+    resolveMenuRecipeUnitCost({
+      ingredientId: 67,
+      sourceSiteKind: null,
+      sourceSiteWacMap,
       referenceUnitCost: null,
     }),
     null,

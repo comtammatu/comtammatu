@@ -93,7 +93,7 @@ import {
   type PurchaseOrderDraft,
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
-} from "@/(protected)/inventory/purchase-requests/purchase-order-drafts";
+} from "@lib/inventory/purchase-order-drafts";
 
 const copy = messages.inventory.purchaseRequests;
 
@@ -671,7 +671,7 @@ export function BranchPurchaseRequestsClient({
       description={messages.inventory.po.workspaceDescription}
       hideHeaderOnMobile
     >
-      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-24">
+      <div className="flex min-w-0 touch-manipulation flex-col gap-3 pb-[6rem]">
         <BranchOperatorPanel
           title={copy.title}
           description={branchName}
@@ -754,7 +754,7 @@ export function BranchPurchaseRequestsClient({
               description={copy.emptyDescription}
             />
           ) : (
-            <ItemGroup className="gap-0" role="list">
+            <ItemGroup role="list">
               {filtered.map((row) => (
                 <Item
                   key={row.id}

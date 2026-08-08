@@ -51,7 +51,7 @@ export function BranchRevenueTargetStrip({
     <BranchOperatorPanel title={progressCopy.targetLabel} size="sm">
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/40 px-3 py-2.5">
+          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 px-3 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">
               {progressCopy.monthRevenueLabel}
             </span>
@@ -62,7 +62,7 @@ export function BranchRevenueTargetStrip({
               {progressCopy.mtdHint}
             </span>
           </div>
-          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/40 px-3 py-2.5">
+          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 px-3 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">
               {progressCopy.dayRevenueLabel}
             </span>

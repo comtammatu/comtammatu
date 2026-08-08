@@ -16,6 +16,7 @@ import {
   RotateCcw as IconRotateCcw,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -186,7 +187,6 @@ export function TransferReceiveClient({
     }
     startReceiveSession();
     // Auto-open the receive session once when the pad loads in_transit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount/status gate
   }, [canStartReceive, isOnline, transfer.id]);
 
   function handleSheetConfirm(value: number) {
@@ -307,19 +307,21 @@ export function TransferReceiveClient({
       ) : null}
 
       {canStartReceive && startError != null ? (
-        <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
-          <p className="text-xs text-destructive">{startError}</p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={!isOnline || isPending}
-            onClick={() => startReceiveSession({ force: true })}
-          >
-            <IconRotateCcw data-icon="inline-start" />
-            {receiveCopy.receiveStartRetry}
-          </Button>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col gap-2">
+            <p>{startError}</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!isOnline || isPending}
+              onClick={() => startReceiveSession({ force: true })}
+            >
+              <IconRotateCcw data-icon="inline-start" />
+              {receiveCopy.receiveStartRetry}
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       <div className="rounded-md bg-muted/50 p-2.5">

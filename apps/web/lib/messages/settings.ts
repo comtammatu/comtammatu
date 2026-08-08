@@ -320,11 +320,11 @@ export const settings = {
     sepayDescription: "Xác nhận tự động khi tiền vào tài khoản.",
     sepayEndpointLabel: "Webhook",
     sepayEndpoint: "/api/webhooks/sepay",
-    envStatus: "Bí mật webhook",
+    envStatus: "Khóa bí mật SePay",
     envConfigured: "Đã cấu hình",
     envMissing: "Chưa cấu hình",
     sepayEnvMissingNote:
-      "Thiếu SEPAY_WEBHOOK_SECRET — webhook SePay sẽ không xác thực được.",
+      "Thiếu khóa bí mật SePay trên máy chủ — xác nhận tự động sẽ không hoạt động.",
     contentSectionTitle: "Lệnh vận hành SePay",
     contentSectionToggle: "Lệnh vận hành SePay (tùy chọn)",
     contentPrefix: "Tiền tố chung",

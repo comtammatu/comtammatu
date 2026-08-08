@@ -72,7 +72,7 @@ export default async function MenuRecipesPage({
       fetchMenuRecipes(),
       fetchMenuItemsForMenuRecipes(),
       fetchIngredients(),
-      // Portion cost is a catalog estimate: use any valued stock-bearing site.
+      // Portion cost uses WAC at each ingredient's Kho gốc (Nguồn hàng).
       fetchBranchWacMap(null),
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)
@@ -101,6 +101,7 @@ export default async function MenuRecipesPage({
     ? (ingredientsRes.data as Array<{
         id: number;
         name: string;
+        default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
         ingredient_units?: {
           is_base: boolean;
           units: { code: string } | null;
@@ -117,13 +118,15 @@ export default async function MenuRecipesPage({
       const items: MenuRecipeItem[] = (row.menu_recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
         const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
+        const catalogIngredient = ingredientById.get(ingredientId);
         const unitCost = resolveMenuRecipeUnitCost({
-          valuedWac: wacMap[String(ingredientId)],
+          ingredientId,
+          sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
+          sourceSiteWacMap: wacMap,
           referenceUnitCost: line.ingredients?.monetary?.unitCost,
         });
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
-        const catalogIngredient = ingredientById.get(ingredientId);
         const baseQuantity = getMenuRecipeLineBaseQuantity({
           quantity: qty,
           entryUnitId,
@@ -143,8 +146,7 @@ export default async function MenuRecipesPage({
           ),
           entryUnitId,
           note: line.note ?? null,
-          lineCost:
-            unitCost == null ? null : baseQuantity * unitCost,
+          lineCost: unitCost == null ? null : baseQuantity * unitCost,
         };
       });
 

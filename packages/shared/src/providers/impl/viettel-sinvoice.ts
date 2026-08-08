@@ -237,7 +237,7 @@ function resolveInvoiceBuyerKind(
  * Map domain InvoiceRequest buyer fields onto Viettel buyerInfo.
  *
  * - consumer / buyerNotGetInvoice: legal phrase in buyerName only (NĐ 254/2026).
- * - business: registered company/HKD name → buyerLegalName only.
+ * - business: registered company name → buyerLegalName only.
  * - individual: person name → buyerName only (optional personal MST on tax field).
  *
  * Never copy the same company string into both name fields. Never put a personal

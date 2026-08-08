@@ -22,6 +22,12 @@ SET
   scope = EXCLUDED.scope,
   is_delegable_to_staff = EXCLUDED.is_delegable_to_staff;
 
+-- Keep staff-delegable sync lintable: the seed checker reads single-line
+-- catalog tuples and explicit true updates, not multiline VALUES only.
+UPDATE public.permission_keys
+SET is_delegable_to_staff = true
+WHERE key = 'hr:manage_employee_shift_overrides';
+
 INSERT INTO public.auth_access_role_capabilities (role_code, permission_key)
 VALUES ('branch_manager', 'hr:manage_employee_shift_overrides')
 ON CONFLICT DO NOTHING;

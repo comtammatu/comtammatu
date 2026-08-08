@@ -20,11 +20,11 @@ export const invoiceBuyer = {
   sectionDescription: (expiresAt: string) =>
     `Chọn loại người mua rồi điền thông tin. Xác nhận trước ${expiresAt}.`,
   buyerKindLabel: "Loại người mua",
-  buyerKindBusiness: "Doanh nghiệp / HKD",
+  buyerKindBusiness: "Doanh nghiệp",
   buyerKindIndividual: "Cá nhân",
   buyerKindSelected: (kind: "business" | "individual") =>
     kind === "business"
-      ? "Đang chọn: Doanh nghiệp / HKD — cần MST và tra cứu."
+      ? "Đang chọn: Doanh nghiệp — cần MST và tra cứu."
       : "Đang chọn: Cá nhân — nhập họ tên; MST tùy chọn.",
   taxCodeLabel: "Mã số thuế",
   taxCodeOptionalLabel: "Mã số thuế (nếu có)",

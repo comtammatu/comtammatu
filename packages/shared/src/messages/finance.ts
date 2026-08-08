@@ -26,7 +26,7 @@ export const FINANCE_VI = {
   buyerEmailPlaceholder: "email@example.com",
   buyerTaxCodePlaceholder: "0312891234 hoặc 0312891234-001",
   buyerKindLabel: "Loại người mua",
-  buyerKindBusiness: "Doanh nghiệp / HKD",
+  buyerKindBusiness: "Doanh nghiệp",
   buyerKindIndividual: "Cá nhân",
   taxCodeFormatError: "MST phải có dạng 10 số hoặc 10-3 số",
   emailFormatError: "Email không hợp lệ",

@@ -14,7 +14,7 @@ import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
-import { buildValuedWacMap } from "./_lib/menu-recipe-cost";
+import { buildSourceSiteWacMap } from "./_lib/menu-recipe-cost";
 
 /* ─── Menu recipes (branch WAC + menu-item ingredient consumption) ─── */
 
@@ -100,10 +100,9 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
 }
 
 /**
- * Valued WAC for menu-recipe portion cost. Uses tenant-wide stock-bearing
- * locations and keeps only avg_unit_cost > 0 so empty-site zeros cannot wipe
- * a valued kitchen/warehouse cost. Optional branchId narrows capacity-style
- * callers; menu-recipes passes null.
+ * Valued WAC for menu-recipe portion cost, keyed by Kho gốc
+ * (`central_supply` / `central_kitchen` × ingredient). Zero placeholders are
+ * dropped. Callers resolve with ingredients.default_fulfill_site_kind.
  */
 export async function fetchBranchWacMap(
   branchId?: number | null,
@@ -151,11 +150,33 @@ export async function fetchBranchWacMap(
     query = query.eq("branch_id", parsedBranchId.data);
   }
 
-  const { data, error } = await query;
+  const [stockResult, branchesResult] = await Promise.all([
+    query,
+    supabase
+      .from("branches")
+      .select("id, branch_kind")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true),
+  ]);
 
-  if (error) {
+  if (stockResult.error) {
     console.error("inventory.menu_recipe.fetch_branch_wac_map_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error:
+        stockResult.error instanceof Error
+          ? stockResult.error.message
+          : String(stockResult.error),
+    });
+    return {
+      success: false,
+      error: messages.inventory.menuRecipes.branchWacLoadFailed,
+    };
+  }
+  if (branchesResult.error) {
+    console.error("inventory.menu_recipe.fetch_branch_kinds_failed", {
+      error:
+        branchesResult.error instanceof Error
+          ? branchesResult.error.message
+          : String(branchesResult.error),
     });
     return {
       success: false,
@@ -166,10 +187,18 @@ export async function fetchBranchWacMap(
   type WacRow = {
     ingredient_id: number;
     avg_unit_cost: number | string | null;
+    branch_id: number;
   };
-  const map = buildValuedWacMap(
-    ((data ?? []) as WacRow[]).map((row) => ({
+  const branchKindById = new Map(
+    (branchesResult.data ?? []).map((branch) => [
+      Number(branch.id),
+      branch.branch_kind as string | null,
+    ]),
+  );
+  const map = buildSourceSiteWacMap(
+    ((stockResult.data ?? []) as WacRow[]).map((row) => ({
       ingredientId: row.ingredient_id,
+      branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
       avgUnitCost: row.avg_unit_cost,
     })),
   );

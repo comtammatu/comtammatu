@@ -134,7 +134,7 @@ function AppendDraftPaneComponent({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-auto w-full min-w-0 justify-start px-3 py-2 pr-12 text-left font-normal whitespace-normal hover:bg-transparent sm:pr-14"
+                      className="h-auto w-full min-w-0 justify-start px-3 py-2 pr-[2.75rem] text-left font-normal whitespace-normal hover:bg-transparent sm:pr-[3.5rem]"
                       aria-label={messages.pos.appendDraft.editItemAria(
                         displayName,
                       )}

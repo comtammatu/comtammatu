@@ -301,7 +301,7 @@ export default async function OperatorHomePage({
                 <div className="grid grid-cols-2 gap-2">
                   <BranchQuickMenuLimitTrigger
                     branchId={context.branchId}
-                    className="h-full min-h-12 w-full justify-start font-medium"
+                    className="w-full justify-start font-medium"
                   />
                   {supportingTiles.map((tile) => {
                     const link = toLink(tile);
@@ -312,7 +312,7 @@ export default async function OperatorHomePage({
                         variant="outline"
                         size="touch"
                         disabled={link.disabled}
-                        className="h-full min-h-12 w-full justify-start font-medium"
+                        className="w-full justify-start font-medium"
                         render={
                           link.disabled ? undefined : <Link href={link.href} />
                         }

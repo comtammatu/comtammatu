@@ -232,13 +232,14 @@ export function GrnListClient({
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
-              className="font-mono font-medium text-primary hover:underline"
+              variant="link"
+              className="h-auto p-0 font-mono font-medium"
               onClick={() => openDetail(row)}
             >
               {row.code}
-            </button>
+            </Button>
             <StatusBadge
               domain="inventory"
               value={row.status}

@@ -4,7 +4,7 @@ import {
   buildAutomaticPurchaseDemandAllocations,
   buildPurchaseOrderDrafts,
   findUnassignedPurchaseRequestItemIds,
-} from "../app/(protected)/inventory/purchase-requests/purchase-order-drafts";
+} from "../lib/inventory/purchase-order-drafts";
 
 test("purchase demand auto-allocates when every remaining item has one supplier", () => {
   const allocations = buildAutomaticPurchaseDemandAllocations(

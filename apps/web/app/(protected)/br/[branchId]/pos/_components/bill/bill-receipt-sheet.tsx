@@ -970,7 +970,7 @@ export function BillReceipt({
   const dialogTitleHeader =
     order ?? (initialHeaderSeed?.id === orderId ? initialHeaderSeed : null);
   const dialogTitle = dialogTitleHeader ? (
-    <span className="flex min-w-0 flex-col gap-0.5">
+    <span className="flex min-w-0 flex-col gap-1">
       <span className="flex items-baseline justify-between gap-3">
         <span>{dialogTitleLabel}</span>
         <span className="shrink-0 font-mono text-lg font-bold tabular-nums tracking-tight">

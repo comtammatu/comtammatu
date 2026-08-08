@@ -223,7 +223,7 @@ function SummaryMeta({
       ).map(([label, value]) => (
         <div
           key={label}
-          className="rounded-md border border-border/60 px-2 py-1.5"
+          className="rounded-md bg-muted/50 px-2 py-1.5"
         >
           <div className="text-xs text-muted-foreground">{label}</div>
           <div className="font-mono text-sm tabular-nums">
@@ -633,7 +633,7 @@ export function BranchAttendanceClient({
               </ItemGroup>
             )
           ) : !summaryLoaded || isPending ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-4">
               <Spinner />
             </div>
           ) : summary.length === 0 ? (
@@ -703,7 +703,7 @@ export function BranchAttendanceClient({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
             {selectedEmployeeSummary ? (
               <SummaryMeta
                 workdays={selectedEmployeeSummary.workdays}
@@ -714,7 +714,7 @@ export function BranchAttendanceClient({
             ) : null}
 
             {!summaryLoaded || isPending ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center py-4">
                 <Spinner />
               </div>
             ) : employeeMonthRows.length === 0 ? (
@@ -812,7 +812,7 @@ export function BranchAttendanceClient({
           </SheetHeader>
 
           {selected ? (
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
               <div className="flex flex-wrap gap-2">
                 {recordStateBadge(selected, todayStr)}
               </div>

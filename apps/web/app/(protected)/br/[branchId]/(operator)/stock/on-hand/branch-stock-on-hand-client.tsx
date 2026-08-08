@@ -22,6 +22,7 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   InputGroup,
   InputGroupAddon,
@@ -328,30 +329,36 @@ export function BranchStockOnHandClient({
       hideHeaderOnMobile
     >
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
-        <div className="flex min-h-12 items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {attentionTitle(branchKind)}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {stockCopy.attention.description(underThresholdCount)}
-            </p>
-          </div>
-          <Badge variant="warning">{underThresholdCount}</Badge>
-          {primaryAttentionCta ? (
-            <Button
-              size="touch"
-              className="shrink-0"
-              render={<Link href={primaryAttentionCta.href} />}
-            >
-              {(() => {
-                const Icon = primaryAttentionCta.icon;
-                return <Icon />;
-              })()}
-              {primaryAttentionCta.label}
-            </Button>
-          ) : null}
-        </div>
+        <NoteCallout
+          tone="warning"
+          className="min-h-12 items-center"
+          label={
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {attentionTitle(branchKind)}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {stockCopy.attention.description(underThresholdCount)}
+                </p>
+              </div>
+              <Badge variant="warning">{underThresholdCount}</Badge>
+              {primaryAttentionCta ? (
+                <Button
+                  size="touch"
+                  className="shrink-0"
+                  render={<Link href={primaryAttentionCta.href} />}
+                >
+                  {(() => {
+                    const Icon = primaryAttentionCta.icon;
+                    return <Icon />;
+                  })()}
+                  {primaryAttentionCta.label}
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
       ) : null}
 
       <BranchOperatorPanel

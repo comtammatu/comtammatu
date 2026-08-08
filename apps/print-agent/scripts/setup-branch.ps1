@@ -6,7 +6,7 @@
 #
 # Examples:
 #   .\scripts\setup-branch.ps1
-#   .\scripts\setup-branch.ps1 -EnvFile C:\secure\phuoc-hai.env
+#   .\scripts\setup-branch.ps1 -EnvFile C:\secure\branch.env
 #   .\scripts\setup-branch.ps1 -TenantId 1 -BranchId 3 -AgentId nguyen-huu-tho
 
 param(
