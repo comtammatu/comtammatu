@@ -309,6 +309,10 @@ export const hr = {
       `${pending} chờ duyệt · tổng ${total}`,
     pendingTab: (count: number) => `Chờ duyệt (${formatCount(count)})`,
     historyTab: (count: number) => `Lịch sử (${formatCount(count)})`,
+    historyAction: "Xem lịch sử nghỉ",
+    historyDialogTitle: "Lịch sử nghỉ phép",
+    historyDialogDescription:
+      "Yêu cầu đã duyệt, từ chối, hoặc đã huỷ theo phạm vi đang chọn.",
     emptyBranchTitle: "Chưa có chi nhánh",
     emptyBranchDescription:
       "Cần có chi nhánh hợp lệ trước khi duyệt nghỉ phép.",
@@ -345,6 +349,8 @@ export const hr = {
     approvedMonthTitle: "Nghỉ phép đã duyệt trong tháng",
     approvedMonthTab: "Đã duyệt trong tháng",
     approvedMonthMonthLabel: "Tháng nghỉ phép đã duyệt",
+    historyStatusFilterLabel: "Trạng thái lịch sử",
+    historyStatusAll: "Mọi trạng thái",
     approvalsHomeLabel: "Nay",
     approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
     approvalsNoAccessDescription:

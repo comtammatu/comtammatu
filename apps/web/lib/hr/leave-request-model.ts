@@ -14,7 +14,7 @@ export interface LeaveRequestRow {
   rejected_reason: string | null;
   created_at: string;
   reviewed_at: string | null;
-  branch_id: number;
+  branch_id: number | null;
   employees: {
     id: number;
     employee_code: string | null;

@@ -8,7 +8,7 @@ import { withAction } from "@/_lib/with-action";
 
 const REVIEW_ROLES: readonly StaffRole[] = ["owner", "branch_manager"];
 const fetchSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
+  branchId: z.number().int().positive().nullable(),
 });
 
 export const fetchLeaveRequests = withAction(
@@ -29,14 +29,17 @@ export const fetchLeaveRequests = withAction(
 );
 
 const requestIdSchema = z.object({
-  requestId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive(),
+  requestId: z.number().int().positive(),
+  branchId: z.number().int().positive().nullable(),
 });
 
-function revalidateLeavePaths(branchId: number) {
+function revalidateLeavePaths(branchId: number | null) {
   revalidatePath("/hr");
-  revalidatePath(`/br/${branchId}/shift/leave-approvals`);
-  revalidatePath(`/br/${branchId}/team`);
+  revalidatePath("/hr/attendance");
+  if (branchId != null) {
+    revalidatePath(`/br/${branchId}/shift/leave-approvals`);
+    revalidatePath(`/br/${branchId}/team`);
+  }
 }
 
 export const approveLeaveRequest = withAction(

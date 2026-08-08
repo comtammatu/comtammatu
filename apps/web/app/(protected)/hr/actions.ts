@@ -948,6 +948,11 @@ const fetchAttendanceSchema = z.object({
   branchId: z.coerce.number().int().positive().nullable().optional(),
   officeOnly: z.boolean().optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/),
+  /** When set, return only that VN business date (Today tab). */
+  day: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 const attendancePhotoSchema = z.object({
@@ -986,6 +991,8 @@ export const fetchAttendance = withAction(
     const startDate = `${data.month}-01`;
     const [year, mon] = data.month.split("-").map(Number);
     const endDate = getVNMonthEndDateString(year!, mon!);
+    const day =
+      data.day && data.day.startsWith(`${data.month}-`) ? data.day : null;
 
     const attendanceClient =
       claims.user_role === "branch_manager" ? createServiceClient() : supabase;
@@ -1009,10 +1016,13 @@ export const fetchAttendance = withAction(
     `,
       )
       .eq("tenant_id", claims.tenant_id)
-      .gte("date", startDate)
-      .lte("date", endDate!)
       .order("date")
       .order("employee_id");
+    if (day) {
+      query = query.eq("date", day);
+    } else {
+      query = query.gte("date", startDate).lte("date", endDate!);
+    }
     if (data.branchId != null) query = query.eq("branch_id", data.branchId);
     else if (data.officeOnly) query = query.is("branch_id", null);
     const { data: result, error } = await query;

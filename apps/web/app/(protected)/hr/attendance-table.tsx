@@ -3,7 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR attendance checklist detail copy is local to this manager review surface */
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import {
   Image as IconImage,
@@ -207,6 +207,7 @@ export function AttendanceTable({
 }: AttendanceTableProps) {
   const controlSize = useFormControlSize();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isCalendarDetailTouch = useIsMobile();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummaryRow[]>([]);
@@ -216,6 +217,7 @@ export function AttendanceTable({
   const [calendarLeaves, setCalendarLeaves] = useState<
     AttendanceCalendarLeave[]
   >([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const selectedBranch = resolveHrBranchScope(
     initialBranchScope ?? String(initialBranchId ?? "all"),
     branches,
@@ -232,6 +234,68 @@ export function AttendanceTable({
     initialView === "calendar" ? initialCalendarScope : "all",
   );
   const [isPending, startTransition] = useTransition();
+  const todayDate = getVNDateString();
+
+  function ownsLiveTab(): boolean {
+    const liveTab = searchParams.get("tab");
+    if (todayMode) {
+      return liveTab == null || liveTab === "today";
+    }
+    if (!urlTab) return true;
+    return liveTab === urlTab;
+  }
+
+  function syncAttendanceUrl(
+    branchId: string,
+    month: string,
+    nextView: AttendanceView,
+    nextDay: string | null,
+    nextEmployeeId: number | null,
+    nextCalendarScope: CalendarScope,
+  ) {
+    if (!ownsLiveTab()) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("branch", String(branchId));
+
+    if (todayMode) {
+      params.delete("tab");
+      params.delete("month");
+      params.delete("view");
+      params.delete("day");
+      params.delete("employee");
+      params.delete("filter");
+      params.delete("week");
+      params.delete("panel");
+      params.delete("leave-view");
+    } else {
+      if (urlTab) params.set("tab", urlTab);
+      params.set("month", month);
+      params.set("view", nextView);
+      params.delete("week");
+      params.delete("panel");
+      params.delete("leave-view");
+      if (nextView === "calendar" && nextDay) params.set("day", nextDay);
+      else params.delete("day");
+      if (nextView === "calendar" && nextEmployeeId != null) {
+        params.set("employee", String(nextEmployeeId));
+      } else {
+        params.delete("employee");
+      }
+      if (nextView === "calendar" && nextCalendarScope === "attention") {
+        params.set("filter", "attention");
+      } else {
+        params.delete("filter");
+      }
+    }
+
+    const next = params.toString();
+    const current = searchParams.toString();
+    if (next === current) return;
+    router.replace(next ? `${routePath}?${next}` : routePath, {
+      scroll: false,
+    });
+  }
 
   // `nextView` rides as a parameter: the view-toggle handlers call
   // setView + loadData in the same tick, so reading `view` from the
@@ -248,22 +312,14 @@ export function AttendanceTable({
     setSelectedDay(nextDay);
     setSelectedEmployeeId(nextEmployeeId);
     setCalendarScope(nextView === "calendar" ? nextCalendarScope : "all");
-    const params = new URLSearchParams({
-      branch: String(branchId),
+    syncAttendanceUrl(
+      branchId,
       month,
-      view: nextView,
-    });
-    if (urlTab) params.set("tab", urlTab);
-    if (nextView === "calendar" && nextDay) {
-      params.set("day", nextDay);
-    }
-    if (nextView === "calendar" && nextEmployeeId != null) {
-      params.set("employee", String(nextEmployeeId));
-    }
-    if (nextView === "calendar" && nextCalendarScope === "attention") {
-      params.set("filter", "attention");
-    }
-    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
+      nextView,
+      nextDay,
+      nextEmployeeId,
+      nextCalendarScope,
+    );
     startTransition(async () => {
       const numericBranchId = Number(branchId);
       const scopeInput = {
@@ -273,6 +329,7 @@ export function AttendanceTable({
             : null,
         officeOnly: branchId === "office",
         month,
+        day: todayMode ? todayDate : undefined,
       };
       const viewResult =
         nextView === "summary"
@@ -301,6 +358,7 @@ export function AttendanceTable({
       } else {
         toast.error(viewResult.error ?? ERRORS_VI.fallback);
       }
+      setHasLoaded(true);
     });
   }
 
@@ -318,54 +376,40 @@ export function AttendanceTable({
 
   function selectCalendarDay(date: string | null) {
     setSelectedDay(date);
-    const params = new URLSearchParams({
-      branch: String(selectedBranch),
-      month: selectedMonth,
-      view: "calendar",
-    });
-    if (urlTab) params.set("tab", urlTab);
-    if (date) params.set("day", date);
-    if (selectedEmployeeId != null) {
-      params.set("employee", String(selectedEmployeeId));
-    }
-    if (calendarScope === "attention") {
-      params.set("filter", "attention");
-    }
-    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
+    syncAttendanceUrl(
+      selectedBranch,
+      selectedMonth,
+      "calendar",
+      date,
+      selectedEmployeeId,
+      calendarScope,
+    );
   }
 
   function selectCalendarEmployee(employeeId: number | null) {
     setSelectedEmployeeId(employeeId);
     setSelectedDay(null);
-    const params = new URLSearchParams({
-      branch: String(selectedBranch),
-      month: selectedMonth,
-      view: "calendar",
-    });
-    if (urlTab) params.set("tab", urlTab);
-    if (employeeId != null) params.set("employee", String(employeeId));
-    if (calendarScope === "attention") {
-      params.set("filter", "attention");
-    }
-    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
+    syncAttendanceUrl(
+      selectedBranch,
+      selectedMonth,
+      "calendar",
+      null,
+      employeeId,
+      calendarScope,
+    );
   }
 
   function selectCalendarScope(scope: CalendarScope) {
     setCalendarScope(scope);
     setSelectedDay(null);
-    const params = new URLSearchParams({
-      branch: String(selectedBranch),
-      month: selectedMonth,
-      view: "calendar",
-    });
-    if (urlTab) params.set("tab", urlTab);
-    if (selectedEmployeeId != null) {
-      params.set("employee", String(selectedEmployeeId));
-    }
-    if (scope === "attention") {
-      params.set("filter", "attention");
-    }
-    router.replace(`${routePath}?${params.toString()}`, { scroll: false });
+    syncAttendanceUrl(
+      selectedBranch,
+      selectedMonth,
+      "calendar",
+      null,
+      selectedEmployeeId,
+      scope,
+    );
   }
 
   // Initial load on mount — the tab used to open blank with a hint
@@ -393,7 +437,7 @@ export function AttendanceTable({
     : records;
   const employeeLeaves = selectedEmployeeId
     ? calendarLeaves.filter((leave) => leave.employee_id === selectedEmployeeId)
-    : [];
+    : calendarLeaves;
   const staleOpenDates = calendarRecords
     .filter((record) => isStaleOpenAttendanceRecord(record, getVNDateString()))
     .map((record) => record.date);
@@ -560,7 +604,7 @@ export function AttendanceTable({
           contentFlush
           contentScroll
         >
-          <SummaryView data={summary} />
+          <SummaryView data={summary} loading={!hasLoaded || isPending} />
         </AppSection>
       ) : view === "clock" ? (
         <AppSection
@@ -575,6 +619,7 @@ export function AttendanceTable({
             data={records}
             compact={todayMode}
             todayColumns={todayMode}
+            loading={!hasLoaded || isPending}
             canForceClose={canForceClose}
             canCorrect={canCorrect}
             onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
@@ -690,7 +735,20 @@ export function AttendanceTable({
   );
 }
 
-function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
+function SummaryView({
+  data,
+  loading = false,
+}: {
+  data: AttendanceSummaryRow[];
+  loading?: boolean;
+}) {
+  if (loading && data.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Spinner />
+      </div>
+    );
+  }
   if (data.length === 0) {
     return (
       <AppEmptyState
@@ -776,6 +834,7 @@ function DetailView({
   data,
   compact = false,
   todayColumns = false,
+  loading = false,
   canForceClose,
   canCorrect,
   onMutated,
@@ -784,6 +843,7 @@ function DetailView({
   data: AttendanceRecord[];
   compact?: boolean;
   todayColumns?: boolean;
+  loading?: boolean;
   canForceClose: boolean;
   canCorrect: boolean;
   onMutated: () => void;
@@ -958,6 +1018,14 @@ function DetailView({
         <Pencil data-icon="inline-start" />
         Hiệu chỉnh
       </Button>
+    );
+  }
+
+  if (loading && data.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Spinner />
+      </div>
     );
   }
 

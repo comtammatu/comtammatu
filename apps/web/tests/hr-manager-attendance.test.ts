@@ -62,7 +62,7 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     attendancePageSource,
-    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable[\s\S]*branches=\{storeBranches\}[\s\S]*branchScope=\{branchScope\}/,
+    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable[\s\S]*branches=\{storeBranches\}[\s\S]*branchScope=\{branchScope\}[\s\S]*historyPanelOpen/,
     "day-work and leave review should share their dedicated route",
   );
   assert.match(
@@ -169,12 +169,12 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.ok(
     attendanceTableSource.indexOf("<AppToolbar") <
-      attendanceTableSource.indexOf("<SummaryView data={summary} />"),
+      attendanceTableSource.indexOf("<SummaryView data={summary}"),
     "the filter toolbar must precede the data table",
   );
   assert.match(
     attendanceTableSource,
-    /<AppSection\s+title=\{messages\.hr\.client\.attendanceTitle\}[\s\S]*<SummaryView data=\{summary\} \/>/,
+    /<AppSection\s+title=\{messages\.hr\.client\.attendanceTitle\}[\s\S]*<SummaryView data=\{summary\} loading=\{!hasLoaded \|\| isPending\} \/>/,
     "attendance data must render in its own section",
   );
   assert.doesNotMatch(
@@ -184,22 +184,22 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     leaveRequestsTableSource,
-    /const approvedMonthRows = useMemo\([\s\S]*request\.status === "approved"[\s\S]*request\.start_date <= endDate[\s\S]*request\.end_date >= startDate/,
-    "leave approval history must derive approved rows for the selected month",
+    /const historyRows = useMemo\([\s\S]*request\.status === "pending"[\s\S]*request\.start_date <= endDate[\s\S]*request\.end_date >= startDate/,
+    "leave history dialog must derive non-pending rows for the selected month",
   );
   assert.match(
     leaveRequestsTableSource,
-    /value: "approved-month",[\s\S]*copy\.approvedMonthTab[\s\S]*<TabsContent value="approved-month"[\s\S]*<AppToolbar[\s\S]*variant="inline"[\s\S]*data=\{approvedMonthRows\}/,
-    "approved monthly leave needs its own view, with inline month filter before its rows",
+    /panel", "leave-history"[\s\S]*<AppDialog[\s\S]*historyPanelOpen[\s\S]*data=\{historyRows\}/,
+    "leave history opens as an addressable dialog with month/status filters",
   );
   assert.match(
     leaveRequestsTableSource,
-    /<AppListFrame[\s\S]*variant="inline"[\s\S]*<AppPageTabs/,
-    "leave list merges branch filter and tabs into one Owner LIST frame",
+    /<AppListFrame[\s\S]*variant="inline"[\s\S]*copy\.historyAction/,
+    "leave pending queue keeps one Owner LIST frame without nested tabs",
   );
-  assert.match(
+  assert.doesNotMatch(
     leaveRequestsTableSource,
-    /<AppPageTabs\s+defaultValue="pending"\s+paramKey="leave-view"/,
+    /paramKey="leave-view"|AppPageTabs/,
     "leave views must not overwrite the attendance tab URL state",
   );
   assert.doesNotMatch(
@@ -259,8 +259,13 @@ test("calendar attention scope uses the stale-shift predicate and pending leave 
   );
   assert.match(
     attendanceTableSource,
-    /type CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*params\.set\("filter", "attention"\)/,
+    /type CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*syncAttendanceUrl\([\s\S]*scope/,
     "attention scope should be recoverable through the calendar URL",
+  );
+  assert.match(
+    attendanceTableSource,
+    /nextCalendarScope === "attention"[\s\S]*params\.set\("filter", "attention"\)/,
+    "attention filter must be written into owned timesheet URL keys",
   );
   assert.match(
     attendanceTableSource,
@@ -320,8 +325,13 @@ test("calendar controls preserve a compact, non-scrolling mobile presentation", 
 test("calendar day detail is a responsive contextual sheet with URL recovery", () => {
   assert.match(
     attendanceTableSource,
-    /function selectCalendarDay\(date: string \| null\)[\s\S]*if \(date\) params\.set\("day", date\)/,
+    /function selectCalendarDay\(date: string \| null\)[\s\S]*syncAttendanceUrl\([\s\S]*date,[\s\S]*selectedEmployeeId/,
     "closing the calendar detail should remove its deep-link day state",
+  );
+  assert.match(
+    attendanceTableSource,
+    /nextView === "calendar" && nextDay\) params\.set\("day", nextDay\)/,
+    "calendar day deep links stay in owned timesheet URL keys",
   );
   assert.match(
     attendanceTableSource,

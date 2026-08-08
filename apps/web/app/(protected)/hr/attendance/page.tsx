@@ -14,6 +14,10 @@ import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { AttendanceTable } from "../attendance-table";
+import {
+  AttendanceTabSync,
+  type AttendanceTab,
+} from "../attendance-tab-sync";
 import { LeaveRequestsTable } from "../leave-requests-table";
 import type { BranchOption } from "../_types";
 import { loadOwnerRosterPanelData } from "@lib/hr/roster/load-owner-roster-data";
@@ -31,12 +35,11 @@ type AttendanceSearchParams = {
   employee?: string;
   filter?: string;
   month?: string;
+  panel?: string;
   tab?: string;
   view?: string;
   week?: string;
 };
-
-type AttendanceTab = "today" | "approvals" | "timesheet" | "roster";
 
 function resolveMonth(value: string | undefined) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value ?? "")
@@ -198,7 +201,7 @@ export default async function HrAttendancePage({
         ariaLabel={copy.attendanceTabs.ariaLabel}
         queryKeysByValue={{
           today: ["branch"],
-          approvals: ["branch", "panel", "leave-view"],
+          approvals: ["branch", "panel"],
           timesheet: [
             "branch",
             "month",
@@ -210,103 +213,112 @@ export default async function HrAttendancePage({
           roster: ["branch", "week"],
         }}
       >
-        {tab === "today" ? (
-          <TabsContent value="today">
-            <AttendanceTable
-              key={branchScope}
-              branches={branches}
-              initialBranchId={branchId ?? undefined}
-              initialBranchScope={branchScope}
-              initialMonth={todayMonth}
-              initialView="clock"
-              initialDay={today}
-              initialEmployeeId={null}
-              initialCalendarScope="all"
-              urlTab="today"
-              todayMode
-              canForceClose={canForceClose}
-              canCorrect={canCorrect}
-            />
-          </TabsContent>
-        ) : null}
-        {tab === "approvals" ? (
-          <TabsContent value="approvals">
-            <div className="flex flex-col gap-4">
-              <AppSection
-                title={copy.checkoutApprovalsAction}
-                description={copy.checkoutApprovalsHint}
-                contentFlush
-              >
-                {canLoadCheckoutApprovals ? (
-                  <StaffCheckoutApprovalsPageContent
-                    routeBranchId={branchId}
-                    ownerHomeHref={withHrBranchScope(
-                      "/hr/attendance?tab=approvals",
-                      branchScope,
-                    )}
-                    embedded
+        <AttendanceTabSync serverTab={tab}>
+          {tab === "today" ? (
+            <TabsContent value="today">
+              <AttendanceTable
+                key={branchScope}
+                branches={branches}
+                initialBranchId={branchId ?? undefined}
+                initialBranchScope={branchScope}
+                initialMonth={todayMonth}
+                initialView="clock"
+                initialDay={today}
+                initialEmployeeId={null}
+                initialCalendarScope="all"
+                urlTab="today"
+                todayMode
+                canForceClose={canForceClose}
+                canCorrect={canCorrect}
+              />
+            </TabsContent>
+          ) : null}
+          {tab === "approvals" ? (
+            <TabsContent value="approvals">
+              <div className="flex flex-col gap-4">
+                <AppSection
+                  title={copy.checkoutApprovalsAction}
+                  description={copy.checkoutApprovalsHint}
+                  contentFlush
+                >
+                  {canLoadCheckoutApprovals ? (
+                    <StaffCheckoutApprovalsPageContent
+                      routeBranchId={branchId}
+                      ownerHomeHref={withHrBranchScope(
+                        "/hr/attendance?tab=approvals",
+                        branchScope,
+                      )}
+                      embedded
+                    />
+                  ) : (
+                    <AppEmptyState mode="no-data" />
+                  )}
+                </AppSection>
+                <AppSection
+                  title={messages.hr.leave.approvalsTitle}
+                  description={messages.hr.leave.approvalsDescription}
+                  contentFlush
+                >
+                  <LeaveRequestsTable
+                    branches={storeBranches}
+                    branchScope={branchScope}
+                    historyPanelOpen={params.panel === "leave-history"}
                   />
-                ) : (
-                  <AppEmptyState mode="no-data" />
-                )}
-              </AppSection>
-              <LeaveRequestsTable
-                branches={storeBranches}
-                branchScope={branchScope}
+                </AppSection>
+              </div>
+            </TabsContent>
+          ) : null}
+          {tab === "timesheet" ? (
+            <TabsContent value="timesheet">
+              <AttendanceTable
+                key={branchScope}
+                branches={branches}
+                initialBranchId={branchId ?? undefined}
+                initialBranchScope={branchScope}
+                initialMonth={month}
+                initialView={initialView}
+                initialDay={
+                  initialView === "calendar"
+                    ? resolveDay(params.day, month)
+                    : null
+                }
+                initialEmployeeId={
+                  initialView === "calendar"
+                    ? resolveEmployeeId(params.employee)
+                    : null
+                }
+                initialCalendarScope={
+                  initialView === "calendar"
+                    ? resolveCalendarScope(params.filter)
+                    : "all"
+                }
+                urlTab="timesheet"
+                canForceClose={canForceClose}
+                canCorrect={canCorrect}
               />
-            </div>
-          </TabsContent>
-        ) : null}
-        {tab === "timesheet" ? (
-          <TabsContent value="timesheet">
-            <AttendanceTable
-              key={branchScope}
-              branches={branches}
-              initialBranchId={branchId ?? undefined}
-              initialBranchScope={branchScope}
-              initialMonth={month}
-              initialView={initialView}
-              initialDay={
-                initialView === "calendar"
-                  ? resolveDay(params.day, month)
-                  : null
-              }
-              initialEmployeeId={
-                initialView === "calendar"
-                  ? resolveEmployeeId(params.employee)
-                  : null
-              }
-              initialCalendarScope={
-                initialView === "calendar"
-                  ? resolveCalendarScope(params.filter)
-                  : "all"
-              }
-              urlTab="timesheet"
-              canForceClose={canForceClose}
-              canCorrect={canCorrect}
-            />
-          </TabsContent>
-        ) : null}
-        {tab === "roster" ? (
-          <TabsContent value="roster">
-            {branchScope === "all" ? (
-              <AppEmptyState
-                mode="no-results"
-                title={messages.hr.roster.scopeRequiredTitle}
-                description={messages.hr.roster.scopeRequiredDescription}
-              />
-            ) : rosterPanel ? (
-              <RosterWeekClient
-                branchId={rosterPanel.branchId}
-                weekStart={rosterPanel.weekStart}
-                data={rosterPanel.roster}
-                canAssign={rosterPanel.canAssign}
-                loadFailed={rosterPanel.loadFailed}
-                urlTab="roster"
-              />
-            ) : null}
-          </TabsContent>
-        ) : null}
+            </TabsContent>
+          ) : null}
+          {tab === "roster" ? (
+            <TabsContent value="roster">
+              {branchScope === "all" ? (
+                <AppEmptyState
+                  mode="no-results"
+                  title={messages.hr.roster.scopeRequiredTitle}
+                  description={messages.hr.roster.scopeRequiredDescription}
+                />
+              ) : rosterPanel ? (
+                <RosterWeekClient
+                  branchId={rosterPanel.branchId}
+                  weekStart={rosterPanel.weekStart}
+                  data={rosterPanel.roster}
+                  canAssign={rosterPanel.canAssign}
+                  loadFailed={rosterPanel.loadFailed}
+                  urlTab="roster"
+                />
+              ) : null}
+            </TabsContent>
+          ) : null}
+        </AttendanceTabSync>
       </AppPageTabs>
     </AppPage>
   );

@@ -7,10 +7,12 @@ import {
   useState,
   useTransition,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import {
   CalendarX as IconCalendarX,
   Check as IconCheck,
+  History as IconHistory,
   X as IconX,
 } from "lucide-react";
 import {
@@ -29,7 +31,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Item,
@@ -42,12 +43,13 @@ import { messages } from "@lib/messages";
 import {
   getLeaveRequestEmployeeName,
   type LeaveRequestRow,
+  type LeaveRequestStatus,
 } from "@lib/hr/leave-request-model";
 import { countInclusiveDays } from "@lib/hr/payroll-day-math";
 import { StatusBadge } from "@/components/status-badge";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
-import { FormDialog, TextareaField } from "@/components/form";
+import { AppDialog, FormDialog, TextareaField } from "@/components/form";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
   DataTable,
@@ -67,6 +69,7 @@ import {
 interface LeaveRequestsTableProps {
   branches: BranchOption[];
   branchScope: HrBranchScope;
+  historyPanelOpen?: boolean;
 }
 
 const copy = messages.hr.leave;
@@ -76,6 +79,8 @@ const rejectFormSchema = z.object({
 });
 
 type RejectFormValues = z.infer<typeof rejectFormSchema>;
+
+type HistoryStatusFilter = "all" | LeaveRequestStatus;
 
 function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
@@ -89,16 +94,23 @@ function getEmployeeName(request: LeaveRequestRow): string {
 export function LeaveRequestsTable({
   branches,
   branchScope,
+  historyPanelOpen = false,
 }: LeaveRequestsTableProps) {
   const controlSize = useFormControlSize();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [requests, setRequests] = useState<LeaveRequestRow[]>([]);
-  const [approvedMonth, setApprovedMonth] = useState(getVNMonthString);
+  const [historyMonth, setHistoryMonth] = useState(getVNMonthString);
+  const [historyStatus, setHistoryStatus] =
+    useState<HistoryStatusFilter>("all");
   const [isPending, startTransition] = useTransition();
   const [rejectTarget, setRejectTarget] = useState<LeaveRequestRow | null>(
     null,
   );
 
   const branchIds = useMemo(() => {
+    if (branchScope === "office") return [];
     if (branchScope === "all") return branches.map((branch) => branch.id);
     const branchId = getHrScopeBranchId(branchScope);
     return branchId != null && branches.some((branch) => branch.id === branchId)
@@ -106,16 +118,34 @@ export function LeaveRequestsTable({
       : [];
   }, [branches, branchScope]);
   const eventBranchId = branchIds.length === 1 ? branchIds[0]! : null;
+  const canLoad =
+    branchScope === "office" ||
+    branchIds.length > 0 ||
+    (branchScope === "all" && branches.length > 0);
+
+  const setHistoryPanelOpen = useCallback(
+    (open: boolean) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (open) params.set("panel", "leave-history");
+      else params.delete("panel");
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const load = useCallback(() => {
-    if (branchIds.length === 0) {
+    if (branchScope !== "office" && branchIds.length === 0) {
       setRequests([]);
       return;
     }
     startTransition(async () => {
-      const results = await Promise.all(
-        branchIds.map((branchId) => fetchLeaveRequests({ branchId })),
-      );
+      const results =
+        branchScope === "office"
+          ? [await fetchLeaveRequests({ branchId: null })]
+          : await Promise.all(
+              branchIds.map((branchId) => fetchLeaveRequests({ branchId })),
+            );
       const failed = results.find((result) => !result.success);
       if (failed && !failed.success) {
         toast.error(failed.error ?? copy.loadFailed);
@@ -134,7 +164,7 @@ export function LeaveRequestsTable({
         ),
       );
     });
-  }, [branchIds]);
+  }, [branchIds, branchScope]);
 
   useEffect(() => {
     load();
@@ -154,23 +184,22 @@ export function LeaveRequestsTable({
     () => requests.filter((request) => request.status === "pending"),
     [requests],
   );
-  const historyRows = useMemo(
-    () => requests.filter((request) => request.status !== "pending"),
-    [requests],
-  );
-  const approvedMonthRows = useMemo(() => {
-    const [year, month] = approvedMonth.split("-").map(Number);
-    const startDate = `${approvedMonth}-01`;
+  const historyRows = useMemo(() => {
+    const [year, month] = historyMonth.split("-").map(Number);
+    const startDate = `${historyMonth}-01`;
     const endDate = getVNMonthEndDateString(year!, month!);
 
-    return historyRows.filter(
-      (request) =>
-        request.status === "approved" &&
-        request.start_date <= endDate &&
-        request.end_date >= startDate,
-    );
-  }, [approvedMonth, historyRows]);
-  const approvedMonthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
+    return requests.filter((request) => {
+      if (request.status === "pending") return false;
+      if (historyStatus !== "all" && request.status !== historyStatus) {
+        return false;
+      }
+      return (
+        request.start_date <= endDate && request.end_date >= startDate
+      );
+    });
+  }, [historyMonth, historyStatus, requests]);
+  const historyMonthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
     date.slice(0, 7),
   );
 
@@ -391,7 +420,7 @@ export function LeaveRequestsTable({
   const pendingColumns = leaveColumns("pending");
   const historyColumns = leaveColumns("history");
 
-  if (branches.length === 0) {
+  if (!canLoad) {
     return (
       <AppEmptyState
         title={copy.emptyBranchTitle}
@@ -411,105 +440,131 @@ export function LeaveRequestsTable({
             actions={
               <>
                 <span className="text-sm text-muted-foreground">
-                  {copy.summary(pendingRows.length, requests.length)}
+                  {copy.pendingTab(pendingRows.length)}
                 </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  onClick={() => setHistoryPanelOpen(true)}
+                >
+                  <IconHistory data-icon="inline-start" />
+                  {copy.historyAction}
+                </Button>
                 {isPending ? <Spinner /> : null}
               </>
             }
           />
         }
       >
-        <AppPageTabs
-          defaultValue="pending"
-          paramKey="leave-view"
-          items={[
-            { value: "pending", label: copy.pendingTab(pendingRows.length) },
-            {
-              value: "approved-month",
-              label: copy.approvedMonthTab,
-              count: approvedMonthRows.length,
-            },
-            { value: "history", label: copy.historyTab(historyRows.length) },
-          ]}
-        >
-          <TabsContent value="pending" className="mt-0">
-            {pendingRows.length === 0 && !isPending ? (
-              <AppEmptyState
-                title={copy.emptyPendingTitle}
-                description={copy.emptyPendingDescription}
-                icon={<IconCalendarX />}
-              />
-            ) : pendingRows.length === 0 ? null : (
-              <DataTable
-                columns={pendingColumns}
-                data={pendingRows}
-                getRowKey={(request) => request.id}
-                mobileBreakpoint={1024}
-                rowClassName={() => (isPending ? "opacity-60" : undefined)}
-                mobileCardRender={(request) =>
-                  renderLeaveMobileCard(
-                    request,
-                    renderPendingActions(request, true),
-                  )
-                }
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="approved-month" className="mt-0">
-            <AppToolbar
-              variant="inline"
-              filters={
-                <Select value={approvedMonth} onValueChange={setApprovedMonth}>
-                  <SelectTrigger
-                    size={controlSize}
-                    className="w-40"
-                    aria-label={copy.approvedMonthMonthLabel}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {approvedMonthOptions.map((month) => (
-                      <SelectItem key={month} value={month}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              }
-            />
-            <DataTable
-              columns={historyColumns}
-              data={approvedMonthRows}
-              pageSize={25}
-              getRowKey={(request) => request.id}
-              mobileBreakpoint={1024}
-              rowClassName={() => (isPending ? "opacity-60" : undefined)}
-              mobileCardRender={(request) => renderLeaveMobileCard(request)}
-            />
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-0">
-            {historyRows.length === 0 && !isPending ? (
-              <AppEmptyState
-                title={copy.emptyHistoryTitle}
-                description={copy.emptyHistoryDescription}
-                icon={<IconCalendarX />}
-              />
-            ) : historyRows.length === 0 ? null : (
-              <DataTable
-                columns={historyColumns}
-                data={historyRows}
-                pageSize={25}
-                getRowKey={(request) => request.id}
-                mobileBreakpoint={1024}
-                rowClassName={() => (isPending ? "opacity-60" : undefined)}
-                mobileCardRender={(request) => renderLeaveMobileCard(request)}
-              />
-            )}
-          </TabsContent>
-        </AppPageTabs>
+        {pendingRows.length === 0 && !isPending ? (
+          <AppEmptyState
+            title={copy.emptyPendingTitle}
+            description={copy.emptyPendingDescription}
+            icon={<IconCalendarX />}
+          />
+        ) : pendingRows.length === 0 ? (
+          <div className="flex items-center justify-center py-4">
+            <Spinner />
+          </div>
+        ) : (
+          <DataTable
+            columns={pendingColumns}
+            data={pendingRows}
+            getRowKey={(request) => request.id}
+            mobileBreakpoint={1024}
+            rowClassName={() => (isPending ? "opacity-60" : undefined)}
+            mobileCardRender={(request) =>
+              renderLeaveMobileCard(
+                request,
+                renderPendingActions(request, true),
+              )
+            }
+          />
+        )}
       </AppListFrame>
+
+      <AppDialog
+        open={historyPanelOpen}
+        onOpenChange={setHistoryPanelOpen}
+        title={copy.historyDialogTitle}
+        description={copy.historyDialogDescription}
+        contentClassName="sm:max-w-4xl"
+      >
+        <AppToolbar
+          variant="inline"
+          filters={
+            <>
+              <Select value={historyMonth} onValueChange={setHistoryMonth}>
+                <SelectTrigger
+                  size={controlSize}
+                  className="w-40"
+                  aria-label={copy.approvedMonthMonthLabel}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {historyMonthOptions.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={historyStatus}
+                onValueChange={(value) => {
+                  if (
+                    value === "all" ||
+                    value === "approved" ||
+                    value === "rejected" ||
+                    value === "cancelled"
+                  ) {
+                    setHistoryStatus(value);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className="w-44"
+                  aria-label={copy.historyStatusFilterLabel}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{copy.historyStatusAll}</SelectItem>
+                  <SelectItem value="approved">
+                    {copy.status.approved}
+                  </SelectItem>
+                  <SelectItem value="rejected">
+                    {copy.status.rejected}
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    {copy.status.cancelled}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          }
+        />
+        {historyRows.length === 0 ? (
+          <AppEmptyState
+            title={copy.emptyHistoryTitle}
+            description={copy.emptyHistoryDescription}
+            icon={<IconCalendarX />}
+          />
+        ) : (
+          <DataTable
+            columns={historyColumns}
+            data={historyRows}
+            pageSize={25}
+            getRowKey={(request) => request.id}
+            mobileBreakpoint={1024}
+            rowClassName={() => (isPending ? "opacity-60" : undefined)}
+            mobileCardRender={(request) => renderLeaveMobileCard(request)}
+          />
+        )}
+      </AppDialog>
 
       <FormDialog
         open={rejectTarget !== null}

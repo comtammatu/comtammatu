@@ -113,11 +113,17 @@ export function RosterWeekClient({
 
   const replaceParams = useCallback(
     (mutate: (params: URLSearchParams) => void) => {
+      const liveTab = searchParams.get("tab");
+      if (urlTab && liveTab && liveTab !== urlTab) return;
+
       const params = new URLSearchParams(searchParams.toString());
       mutate(params);
       if (urlTab) params.set("tab", urlTab);
+      const next = params.toString();
+      const current = searchParams.toString();
+      if (next === current) return;
       startTransition(() => {
-        router.replace(`${pathname}?${params.toString()}`);
+        router.replace(next ? `${pathname}?${next}` : pathname);
       });
     },
     [pathname, router, searchParams, startTransition, urlTab],
