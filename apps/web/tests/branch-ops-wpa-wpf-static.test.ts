@@ -43,6 +43,24 @@ test("WP-C pos_void_requests is SELECT-only for authenticated", () => {
   );
 });
 
+test("WP-C pos_void_requests select policy avoids locked auth_is_owner EXECUTE", () => {
+  const createQueue = readRepo(
+    "supabase/migrations/20260808085549_shift_leader_void_request_queue.sql",
+  );
+  const fix = readRepo(
+    "supabase/migrations/20260808134718_remove_auth_is_owner_from_authenticated_policies.sql",
+  );
+  assert.match(createQueue, /pos_void_requests_select/);
+  assert.match(createQueue, /public\.auth_is_owner\(auth\.uid\(\)\)/);
+  assert.match(fix, /ALTER POLICY pos_void_requests_select/);
+  assert.match(fix, /public\.has_permission\(branch_id, 'pos:use'\)/);
+  assert.match(fix, /public\.has_permission\(branch_id, 'settings:branch'\)/);
+  assert.doesNotMatch(
+    fix,
+    /ALTER POLICY pos_void_requests_select[\s\S]*auth_is_owner/,
+  );
+});
+
 test("WP-C void request queue is wired into POS", () => {
   const inner = readWeb(
     "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
