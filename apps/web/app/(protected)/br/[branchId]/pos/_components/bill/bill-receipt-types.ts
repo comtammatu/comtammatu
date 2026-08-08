@@ -76,7 +76,7 @@ export interface PendingExtras {
   };
 }
 
-export const METHOD_LABELS: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-};
+import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
+
+export const METHOD_LABELS: Record<string, string> = PAYMENT_METHOD_LABELS_VI;
+

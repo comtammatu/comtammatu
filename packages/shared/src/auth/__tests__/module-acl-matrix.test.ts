@@ -93,11 +93,14 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "staff",
   ],
   branch_staff: [
+    "branch_orders",
     "hr",
     "hr_payroll",
     "me",
     "notifications",
     "branch_home",
+    "pos",
+    "runner",
     "staff",
   ],
   accountant: [

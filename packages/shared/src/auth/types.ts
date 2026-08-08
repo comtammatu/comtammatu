@@ -111,6 +111,7 @@ const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   branch_manager: "branch_manager",
   cleaner: "branch_staff",
   guard: "branch_staff",
+  waiter: "branch_staff",
   kitchen_counter: "chef",
   kitchen_helper: "chef",
   grill_counter: "chef",
@@ -135,6 +136,7 @@ const POSITION_CODE_TO_REQUIRED_BRANCH_KIND: Record<string, BranchKind | null> =
     grill_counter: "branch",
     cleaner: "branch",
     guard: "branch",
+    waiter: "branch",
   };
 
 export function staffRoleFromPositionCode(

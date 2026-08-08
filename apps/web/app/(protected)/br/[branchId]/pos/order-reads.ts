@@ -550,16 +550,24 @@ export const fetchOrderDetail = withActionPositional(
     // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
     // round-trip + getSession() cookie parse. Server-side void/cancel RPCs
     // remain the authoritative gate; hint=false on probe error is fail-safe.
-    const [{ data: order, error }, canManageOrders, canVoidPaidOrder] =
-      await Promise.all([
-        detailQuery.single(),
-        probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
-        probePermission(
-          ctx,
-          PERMISSION_KEYS.POS_VOID_PAID_ORDER,
-          claims.branch_id,
-        ),
-      ]);
+    const [
+      { data: order, error },
+      canManageOrders,
+      canVoidPaidDirect,
+      canUsePos,
+    ] = await Promise.all([
+      detailQuery.single(),
+      probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_VOID_PAID_ORDER,
+        claims.branch_id,
+      ),
+      // Cashiers without void_paid may still enqueue a leader/BM approval
+      // request (ADR 0023).
+      probePermission(ctx, PERMISSION_KEYS.POS_USE, claims.branch_id),
+    ]);
+    const canVoidPaidOrder = canVoidPaidDirect || canUsePos;
 
     if (error) {
       if (error.code === "PGRST116") {

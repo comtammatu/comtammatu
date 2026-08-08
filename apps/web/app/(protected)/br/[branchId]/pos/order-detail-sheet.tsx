@@ -70,6 +70,7 @@ import {
 } from "./actions";
 import { printReceipt } from "./print-actions";
 import { voidPaidOrder } from "./void-paid-actions";
+import { requestPosVoidAfterPaid } from "./void-request-actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES } from "./order-history";
@@ -683,10 +684,11 @@ export function OrderDetailSheet({
       return;
     }
     startMutation(async () => {
-      const r = await voidPaidOrder(orderId, reason, refundPayoutMethod);
-      if (r.success) {
-        if (r.data?.providerWarning) {
-          notify.warning(r.data.providerWarning);
+      // Owner (pos:void_paid_order) voids directly; floor staff enqueue ADR 0023.
+      const direct = await voidPaidOrder(orderId, reason, refundPayoutMethod);
+      if (direct.success) {
+        if (direct.data?.providerWarning) {
+          notify.warning(direct.data.providerWarning);
         }
         notify.success(messages.pos.order.voidPaidSuccess);
         setShowVoidPaid(false);
@@ -694,9 +696,28 @@ export function OrderDetailSheet({
         setRefundPayoutMethod(null);
         await onOrderUpdated?.();
         onClose();
-      } else {
-        notify.error(r.error ?? messages.pos.order.voidPaidFailed);
+        return;
       }
+
+      const requested = await requestPosVoidAfterPaid({
+        orderId,
+        reason,
+        payoutMethod: refundPayoutMethod,
+        branchId,
+      });
+      if (requested.success) {
+        notify.success(messages.pos.order.voidPaidRequestSuccess);
+        setShowVoidPaid(false);
+        setVoidPaidReason("");
+        setRefundPayoutMethod(null);
+        await onOrderUpdated?.();
+        onClose();
+        return;
+      }
+
+      notify.error(
+        requested.error ?? direct.error ?? messages.pos.order.voidPaidFailed,
+      );
     });
   };
 

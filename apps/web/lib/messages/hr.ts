@@ -235,6 +235,7 @@ export const hr = {
       kindLabel: "Loại việc",
       phaseLabel: "Thời điểm",
       requiredLabel: "Bắt buộc",
+      allowsPhotoLabel: "Cho phép kèm ảnh",
       doneDefinitionLabel: "Tiêu chí xong",
       doneDefinitionPlaceholder:
         "Dấu hiệu để quản lý và nhân viên biết việc đã xong",
@@ -545,6 +546,12 @@ export const hr = {
     emptyEmployeesDescription:
       "Không có nhân viên đang hoạt động tại địa điểm này.",
     columnEmployee: "Nhân viên",
+    markShiftLeader: "Gán trưởng ca",
+    unmarkShiftLeader: "Bỏ trưởng ca",
+    shiftLeaderBadge: "Trưởng ca",
+    shiftLeaderSetSuccess: "Đã gán trưởng ca.",
+    shiftLeaderClearedSuccess: "Đã bỏ trưởng ca.",
+    shiftLeaderFailed: "Không thể cập nhật trưởng ca.",
     schedule: "Lịch cố định",
     scheduleDays: (count: number) =>
       `Lịch cố định · ${formatCount(count)} ngày`,

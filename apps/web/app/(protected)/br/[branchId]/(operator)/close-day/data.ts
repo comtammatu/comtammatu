@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { JwtClaims } from "@comtammatu/shared/auth";
-import { getVNDateString } from "@comtammatu/shared/time";
+import {
+  getVNBusinessDateString,
+  getVNBusinessDayUtcRange,
+} from "@comtammatu/shared/time";
 import type { loadAuthState } from "@/_lib/auth";
 
 type ServerClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
@@ -57,7 +60,8 @@ export async function fetchCloseDayData(
   branchId: number,
   branchName: string,
 ): Promise<CloseDayData> {
-  const businessDate = getVNDateString();
+  const businessDate = getVNBusinessDateString();
+  const { startIso, endIso } = getVNBusinessDayUtcRange(businessDate);
   const [
     summaryRes,
     sessionsRes,
@@ -76,6 +80,8 @@ export async function fetchCloseDayData(
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("branch_id", branchId)
+      .gte("opened_at", startIso)
+      .lt("opened_at", endIso)
       .order("opened_at", { ascending: false })
       .limit(50),
     supabase

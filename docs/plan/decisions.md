@@ -40,6 +40,8 @@ hoặc runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
 
 **Net effect:** PWA là client vận hành; không đưa Local-first POS, native rewrite
 hay payment rail không có consumer vào backlog. Role sàn bán hàng là `cashier`.
+Ngoại lệ kiểm soát: hàng đợi duyệt void của trưởng ca theo ADR 0023 — không suy
+ra khung multi-tier approval chung.
 
 ## D015: `main` là Production track của CTCP Chén Sứ
 
@@ -76,8 +78,10 @@ outer padding thuộc `AppPage`. Canonical: `docs/spec/design-system.md`,
 ## D020: Finance vận hành, không phải sổ kế toán doanh nghiệp
 
 **Net effect:** Product không cung cấp General Ledger/TT 200/VAS close UI.
-Database close/reopen support không trở thành app surface. Canonical:
-`docs/modules/finance.md`, ADR 0016.
+Database close/reopen support không trở thành app surface. Branch **business-day
+window** (04:00) không phải buổi “đóng sổ”; ceremony Chốt ngày thủ công bị loại
+khỏi product surface theo ADR 0024 (shipped). Canonical:
+`docs/modules/finance.md`, ADR 0016, ADR 0024.
 
 ## D022: HĐĐT theo payment event
 
@@ -173,7 +177,8 @@ Không dựng roster hoặc admin surface thứ hai.
 ## D049: Full void-after-paid
 
 **Net effect:** POS chỉ được full void theo canonical atomic correction; partial
-financial correction vẫn thuộc Owner/Accountant.
+financial correction vẫn thuộc Owner/Accountant. Ủy quyền duyệt void cho trưởng
+ca (assignment flag + queue) theo ADR 0023; không gồm refund.
 
 ## D050: Operator workspace
 
@@ -291,5 +296,7 @@ Canonical: `docs/ref/inventory.md`.
 **Net effect:** Cơm Tấm Má Tư chỉ thiết kế adapter cho nền tảng giao đồ ăn sau
 khi được duyệt quyền đối tác và nhận contract kỹ thuật chính thức. Trong thời
 gian chờ, phạm vi dừng ở merchant onboarding, partner discovery và readiness
-gate; không suy đoán payload hoặc reverse-engineer ứng dụng merchant. Canonical:
+gate; không suy đoán payload hoặc reverse-engineer ứng dụng merchant. Adapter
+code và ticket tích hợp **gated** cho đến trigger đó (disposition:
+`docs/ref/branch-operations.md`). Canonical:
 `docs/runbooks/food-delivery-platform-onboarding.md`.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -48,6 +48,7 @@ export function OperatorOrdersClient({
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(
     initialSelectedOrder,
   );
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,6 +78,20 @@ export function OperatorOrdersClient({
     (order) => order.status !== "completed" && order.status !== "cancelled",
   );
   const visibleOrders = view === "active" ? activeOrders : orders;
+  const hasLiveWait = visibleOrders.some(
+    (order) =>
+      order.status !== "completed" &&
+      order.status !== "cancelled" &&
+      !order.kds_completed_at,
+  );
+
+  useEffect(() => {
+    if (!hasLiveWait) return;
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [hasLiveWait]);
 
   if (orders.length === 0) {
     return (
@@ -100,10 +115,16 @@ export function OperatorOrdersClient({
         onValueChange={onValueChange}
         aria-label={ORDERS_COPY.operatorTabsAriaLabel}
       >
-        <ToggleGroupItem value="active" aria-label={ORDERS_COPY.operatorActiveAria(inProgressCount)}>
+        <ToggleGroupItem
+          value="active"
+          aria-label={ORDERS_COPY.operatorActiveAria(inProgressCount)}
+        >
           {ORDERS_COPY.operatorActiveTab(inProgressCount)}
         </ToggleGroupItem>
-        <ToggleGroupItem value="recent" aria-label={ORDERS_COPY.operatorRecentAria}>
+        <ToggleGroupItem
+          value="recent"
+          aria-label={ORDERS_COPY.operatorRecentAria}
+        >
           {ORDERS_COPY.operatorRecentTab}
         </ToggleGroupItem>
       </ToggleGroup>
@@ -120,6 +141,7 @@ export function OperatorOrdersClient({
             const waitInfo = computeOrderWaitInfo(
               order.created_at,
               order.kds_completed_at,
+              nowMs,
             );
             const badgeProps = getOrderAlertBadgeProps(waitInfo);
 
@@ -136,7 +158,10 @@ export function OperatorOrdersClient({
                       : ""
                 }`}
                 render={
-                  <button type="button" onClick={() => setSelectedOrder(order)} />
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(order)}
+                  />
                 }
               >
                 <ItemHeader>

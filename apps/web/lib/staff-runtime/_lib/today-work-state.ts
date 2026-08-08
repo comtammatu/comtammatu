@@ -30,6 +30,8 @@ export interface TodayChecklistItem {
   phase: TodayChecklistPhase;
   doneDefinition: string;
   isRequired: boolean;
+  allowsPhoto: boolean;
+  photoPath: string | null;
   sortOrder: number;
   done: boolean;
   completedAt: string | null;
@@ -362,7 +364,7 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
     ? await supabase
         .from("attendance_checklist_items")
         .select(
-          "id, template_item_id, title, task_kind, phase, done_definition, is_required, sort_order, is_done, completed_at",
+          "id, template_item_id, title, task_kind, phase, done_definition, is_required, allows_photo, photo_path, sort_order, is_done, completed_at",
         )
         .eq("tenant_id", claims.tenant_id)
         .eq("attendance_record_id", attendance.id)
@@ -374,17 +376,32 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
       const taskKind = normalizeTaskKind(
         (item as { task_kind?: unknown }).task_kind,
       );
+      const row = item as {
+        id: number;
+        template_item_id: number | null;
+        title: string;
+        phase: string;
+        done_definition: string;
+        is_required: boolean;
+        allows_photo?: boolean | null;
+        photo_path?: string | null;
+        sort_order: number;
+        is_done: boolean;
+        completed_at: string | null;
+      };
       return {
-        id: item.id,
-        templateItemId: item.template_item_id ?? null,
-        title: item.title,
+        id: row.id,
+        templateItemId: row.template_item_id ?? null,
+        title: row.title,
         taskKind,
-        phase: normalizeChecklistPhase(item.phase),
-        doneDefinition: item.done_definition,
-        isRequired: item.is_required,
-        sortOrder: item.sort_order,
-        done: item.is_done,
-        completedAt: item.completed_at,
+        phase: normalizeChecklistPhase(row.phase),
+        doneDefinition: row.done_definition,
+        isRequired: row.is_required,
+        allowsPhoto: row.allows_photo === true,
+        photoPath: row.photo_path ?? null,
+        sortOrder: row.sort_order,
+        done: row.is_done,
+        completedAt: row.completed_at,
       };
     },
   );
@@ -467,6 +484,8 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
           phase: "end_of_shift",
           doneDefinition: messages.employee.home.countDescription,
           isRequired: true,
+          allowsPhoto: false,
+          photoPath: null,
           sortOrder: Number.MAX_SAFE_INTEGER,
           done: countTaskDone,
           completedAt: null,

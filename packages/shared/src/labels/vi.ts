@@ -59,7 +59,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_settings: "Thiết lập chi nhánh",
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
-  branch_close_day: "Chốt ngày",
+  branch_close_day: "Báo cáo tổng hợp ngày",
   branch_team: "Nhân sự chi nhánh",
   branch_stock: "Kho chi nhánh",
   branch_orders: "Đơn hàng chi nhánh",
@@ -535,3 +535,47 @@ export const COUNT_SLIP_STATUS_LABELS_VI = {
   needs_changes: "Cần đếm lại",
   approved: "Đã duyệt",
 } as const;
+
+/**
+ * Clean & translate raw error strings from Viettel S-Invoice / HĐĐT API into
+ * friendly Vietnamese operational copy.
+ */
+export function sanitizeViettelInvoiceError(
+  error: string | null | undefined,
+): string {
+  if (!error) return "";
+  const lower = error.toLowerCase();
+  if (
+    lower.includes("tax code") ||
+    lower.includes("mst") ||
+    lower.includes("ma so thue")
+  ) {
+    return "Cơ quan thuế từ chối: Mã số thuế người mua không hợp lệ hoặc chưa chính xác.";
+  }
+  if (
+    lower.includes("invalid signature") ||
+    lower.includes("sign") ||
+    lower.includes("chu ky so")
+  ) {
+    return "Lỗi chữ ký số hoặc chứng thư số HĐĐT chưa hợp lệ.";
+  }
+  if (
+    lower.includes("template") ||
+    lower.includes("symbol") ||
+    lower.includes("mau so")
+  ) {
+    return "Mẫu số hoặc ký hiệu HĐĐT chưa đúng cấu hình Viettel.";
+  }
+  if (lower.includes("duplicate") || lower.includes("already exists")) {
+    return "Hóa đơn đã được khởi tạo hoặc trùng số trên Viettel S-Invoice.";
+  }
+  if (
+    lower.includes("connect") ||
+    lower.includes("timeout") ||
+    lower.includes("network")
+  ) {
+    return "Không thể kết nối đến cổng Viettel S-Invoice. Vui lòng thử lại.";
+  }
+  return error;
+}
+

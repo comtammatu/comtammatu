@@ -211,6 +211,35 @@ Card Owner có số tiền hoặc tính toán tài chính phải dùng `finance.
 có tồn kho hoặc phiếu kho phải dùng `inventory.*`. Nếu chỉ là link điều hướng,
 không được đặt title như một KPI.
 
+## branch_day_state / ngày kinh doanh chi nhánh
+
+**Authority sản phẩm:** ADR 0024 — Daily Summary không ceremony Chốt ngày.
+Cutoff 04:00 **chỉ** định nghĩa cửa sổ ngày kinh doanh; **không** tự ghi
+`is_closed` và không phải “đóng sổ”.
+
+- **Ngày kinh doanh (window):** `[D 04:00 local, (D+1) 04:00 local)` theo
+  `branches.timezone` (fallback `Asia/Ho_Chi_Minh`), khớp cut-off của
+  `inventory_shift_key`. Dùng cho `get_branch_day_summary` và mọi gom số theo
+  ngày chi nhánh.
+- Helpers: SQL `branch_business_day_bounds` / `branch_business_date`; TS
+  `getVNBusinessDateString` / `getVNBusinessDayUtcRange` /
+  `VN_BUSINESS_DAY_CUTOFF_HOUR = 4`.
+- **ADR 0024 (retired ceremony):** product surface `/close-day` là Daily
+  Summary đọc aggregate qua `get_branch_day_summary`. RPC `close_branch_day`
+  raise `branch_day_close_retired` — không ghi `is_closed` mới. Hàng
+  `branch_day_state` đã đóng trước đó giữ cho audit. **Không** dạy rằng qua
+  04:00 là đã chốt/đóng sổ.
+- `open_session_count`: chỉ ca POS có `opened_at` trong bounds của
+  `p_business_date` và `status = 'open'`.
+- **Lệch tạm với finance filters (scheduled, không phải rejected):** nhiều
+  báo cáo finance/order vẫn dùng `getVNDayUtcRange` (00:00–24:00 VN calendar).
+  Branch-day summary dùng 04:00. **Không** align trong PR branch-ops. Follow-up
+  ODC riêng chỉ mở khi Owner xác nhận đau đối chiếu Daily Summary ↔ finance
+  (đặc biệt đơn/payment trong `00:00–04:00`); ship theo bề mặt hẹp, ghi rõ per
+  surface calendar vs business-day — không one-shot toàn repo.
+- **Tiền mặt:** SSOT vẫn là chốt `pos_sessions` (`opening_cash` / `closing_cash`
+  nhập thủ công). Không có `carryover_cash` (ADR 0024 — rejected).
+
 ## Quy tắc cho Agent
 
 - Trước khi sửa tổng quan/card/title/KPI ở Owner, Inventory, Finance, Reports:

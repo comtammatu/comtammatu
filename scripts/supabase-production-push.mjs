@@ -84,8 +84,39 @@ function selectProductionMigrations(
   return selected;
 }
 
+function extractFirstJsonObject(output) {
+  const start = output.indexOf("{");
+  if (start < 0) {
+    throw new Error("Could not read the Production migration ledger");
+  }
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < output.length; i += 1) {
+    const ch = output[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === "\\") escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return output.slice(start, i + 1);
+    }
+  }
+  throw new Error("Could not read the Production migration ledger");
+}
+
 function parseRemoteMigrationVersions(output) {
-  const { migrations } = JSON.parse(output);
+  // CLI may append a second JSON diagnostic line (e.g. PostHog shutdown) after
+  // the ledger object; parse only the first complete JSON value.
+  const { migrations } = JSON.parse(extractFirstJsonObject(output ?? ""));
   const versions = new Set(
     migrations
       ?.map(({ remote }) => remote)
@@ -122,8 +153,15 @@ function listRemoteMigrationVersions(projectRoot, url) {
   );
   if (result.error) throw result.error;
   if (result.status !== 0) {
-    process.stderr.write(result.stderr);
-    throw new Error("Could not list the Production migration ledger");
+    // CLI 2.10x can exit non-zero when local migrations/ contains a non-versioned
+    // file (README.md) while still printing a complete JSON ledger on stdout.
+    // Prefer the ledger when it parses; otherwise fail closed with CLI stderr.
+    try {
+      return parseRemoteMigrationVersions(result.stdout ?? "");
+    } catch {
+      process.stderr.write(result.stderr ?? "");
+      throw new Error("Could not list the Production migration ledger");
+    }
   }
   return parseRemoteMigrationVersions(result.stdout);
 }

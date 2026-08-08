@@ -186,6 +186,7 @@ export type Database = {
       }
       attendance_checklist_items: {
         Row: {
+          allows_photo: boolean
           attendance_record_id: number
           completed_at: string | null
           created_at: string
@@ -194,6 +195,7 @@ export type Database = {
           is_done: boolean
           is_required: boolean
           phase: string
+          photo_path: string | null
           scope: string
           sort_order: number
           task_kind: string
@@ -203,6 +205,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allows_photo?: boolean
           attendance_record_id: number
           completed_at?: string | null
           created_at?: string
@@ -211,6 +214,7 @@ export type Database = {
           is_done?: boolean
           is_required?: boolean
           phase?: string
+          photo_path?: string | null
           scope?: string
           sort_order: number
           task_kind?: string
@@ -220,6 +224,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allows_photo?: boolean
           attendance_record_id?: number
           completed_at?: string | null
           created_at?: string
@@ -228,6 +233,7 @@ export type Database = {
           is_done?: boolean
           is_required?: boolean
           phase?: string
+          photo_path?: string | null
           scope?: string
           sort_order?: number
           task_kind?: string
@@ -5607,8 +5613,86 @@ export type Database = {
           },
         ]
       }
+      pos_void_requests: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          order_id: number
+          payout_method: string
+          reason: string
+          requested_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          order_id: number
+          payout_method: string
+          reason: string
+          requested_by: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          order_id?: number
+          payout_method?: string
+          reason?: string
+          requested_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_void_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_void_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_void_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_void_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       position_shift_tasks: {
         Row: {
+          allows_photo: boolean
           applicability: string
           created_at: string
           done_definition: string
@@ -5624,6 +5708,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allows_photo?: boolean
           applicability?: string
           created_at?: string
           done_definition?: string
@@ -5639,6 +5724,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allows_photo?: boolean
           applicability?: string
           created_at?: string
           done_definition?: string
@@ -7709,6 +7795,7 @@ export type Database = {
           created_at: string
           employee_id: number
           id: number
+          is_shift_leader: boolean
           shift_id: number | null
           source: string
           tenant_id: number
@@ -7722,6 +7809,7 @@ export type Database = {
           created_at?: string
           employee_id: number
           id?: never
+          is_shift_leader?: boolean
           shift_id?: number | null
           source?: string
           tenant_id: number
@@ -7735,6 +7823,7 @@ export type Database = {
           created_at?: string
           employee_id?: number
           id?: never
+          is_shift_leader?: boolean
           shift_id?: number | null
           source?: string
           tenant_id?: number
@@ -11753,6 +11842,17 @@ export type Database = {
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
       bill_line_items: { Args: { p_order_id: number }; Returns: Json }
+      branch_business_date: {
+        Args: { p_at?: string; p_branch_id: number }
+        Returns: string
+      }
+      branch_business_day_bounds: {
+        Args: { p_branch_id: number; p_business_date: string }
+        Returns: {
+          day_end: string
+          day_start: string
+        }[]
+      }
       branch_manager_approve_consumption_report: {
         Args: { p_report_id: number; p_tenant_id: number }
         Returns: Json
@@ -11905,8 +12005,8 @@ export type Database = {
         Args: {
           p_branch_id: number
           p_business_date: string
-          p_cash_recon: Json
-          p_note: string
+          p_cash_recon?: Json
+          p_note?: string
         }
         Returns: Json
       }
@@ -13685,6 +13785,10 @@ export type Database = {
         Args: { p_note?: string; p_slip_id: number }
         Returns: undefined
       }
+      request_pos_void_after_paid: {
+        Args: { p_order_id: number; p_payout_method: string; p_reason: string }
+        Returns: Json
+      }
       requeue_tax_invoice_issue_job: {
         Args: { p_job_id: number }
         Returns: Json
@@ -13742,6 +13846,14 @@ export type Database = {
           p_note: string
           p_resolution_type: string
           p_session_id: number
+        }
+        Returns: Json
+      }
+      resolve_pos_void_request: {
+        Args: {
+          p_decision: string
+          p_request_id: number
+          p_resolution_note?: string
         }
         Returns: Json
       }
@@ -13967,6 +14079,7 @@ export type Database = {
         Returns: Json
       }
       scan_inventory_alerts: { Args: never; Returns: number }
+      scan_order_delay_sla: { Args: never; Returns: number }
       self_order_accept_request: {
         Args: { p_request_id: number; p_target_order_id?: number }
         Returns: Json
@@ -14075,6 +14188,10 @@ export type Database = {
         }
         Returns: number
       }
+      self_service_attach_task_photo: {
+        Args: { p_item_id: number; p_photo_path: string }
+        Returns: undefined
+      }
       self_service_cancel_checkout: {
         Args: { p_attendance_id: number }
         Returns: undefined
@@ -14147,6 +14264,10 @@ export type Database = {
       }
       set_production_recipe_status: {
         Args: { p_recipe_spec_id: number; p_status: string }
+        Returns: Json
+      }
+      set_shift_assignment_leader: {
+        Args: { p_assignment_id: number; p_is_leader: boolean }
         Returns: Json
       }
       set_supplier_item_preferred: {

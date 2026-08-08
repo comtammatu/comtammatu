@@ -17,8 +17,15 @@ import { Label } from "@comtammatu/ui/components/label";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
-import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
+
+import {
+  PAYMENT_METHOD_LABELS_VI,
+  getPaymentMethodLabelVi,
+  sanitizeViettelInvoiceError,
+} from "@comtammatu/shared/labels";
+
 import {
   cancelTaxInvoice,
   fetchTaxInvoicesPage,
@@ -612,15 +619,21 @@ export function InvoiceList({
                       {
                         term: "Phương thức thanh toán",
                         description: job.payment_method
-                          ? PAYMENT_METHOD_LABELS_VI[job.payment_method]
+                          ? (getPaymentMethodLabelVi(job.payment_method) ||
+                            PAYMENT_METHOD_LABELS_VI[job.payment_method])
                           : "Chưa ghi nhận",
                       },
                     ]}
                   />
                   <p className="mt-3 text-xs text-destructive">
-                    {formatIssueAttentionStatus(job.status)} ·{" "}
+                    {formatIssueAttentionStatus(job.status)}
+                    {job.last_error
+                      ? ` · ${sanitizeViettelInvoiceError(job.last_error)}`
+                      : ""}
+                    {" · "}
                     {formatDate(job.updated_at)}
                   </p>
+
                 </ItemContent>
                 {canManageInvoices ? (
                   <ItemFooter className="gap-2">

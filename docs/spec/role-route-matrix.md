@@ -86,7 +86,7 @@ boundary enforced by route ACL, Server Actions, permission keys, RPC, and RLS.
 | `branch_manager`                              | One branch: POS/KDS/floor settings, daily ops, stock request + on-hand/consumption/stocktake/waste (D093 — no branch GRN/production), staff/attendance, checkout/leave | Staff editor, payroll viewer, contract/insurance reader, or L0 user  |
 | `cashier`                                     | POS orders, payments, receipts according to grants                                                                                                                     | Branch settings owner                                                |
 | `chef`                                        | KDS ready/recall and kitchen status according to grants                                                                                                                | Inventory production manager                                         |
-| `branch_staff`                                | Shift/profile day runtime according to branch assignment                                                                                                               | POS/KDS or tenant admin by label                                     |
+| `branch_staff`                                | Shift/profile day runtime; Waiter near-cashier POS (order/pay/print; no void/cashbox/close)                                                                            | KDS specialty, cashbox/close-shift, or tenant admin by label         |
 | `self_service`                                | Personal work, schedule, leave, payslip, and profile through a live company binding                                                                                    | Office role, HR title, or implicit Finance/Inventory/HR membership   |
 | `accountant`                                  | Finance plus branchless `/me/*` personal runtime                                                                                                                       | Owner, fake-HQ Branch user, or attendance-prorated by role inference |
 | `central_supply_ops` / `central_kitchen_lead` | Assigned central site operations and full personal attendance/leave runtime                                                                                            | Cross-site operator or Branch Manager checkout approver              |
@@ -154,9 +154,9 @@ by direct URL or as a redirect target.
 | `finance` | `/finance` | Chủ sở hữu, Kế toán | Control surface nav |
 | `branches` | `/branches` | Chủ sở hữu | Control surface nav |
 | `settings` | `/settings` | Chủ sở hữu | Control surface nav |
-| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh, Nhân sự chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
+| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh, Nhân sự chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
 | `branch_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh, Quản lý kho Tổng, Bếp trưởng Bếp TT | Operator tile (my_shift) |
 | `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
@@ -165,7 +165,7 @@ by direct URL or as a redirect target.
 | `branch_close_day` | `/br/*/close-day` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
 | `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (my_shift) |
 | `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh, Quản lý kho Tổng, Bếp trưởng Bếp TT | Operator tile (approvals); Operator tile (stock) |
-| `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân | Operator tile (sales_kitchen) |
+| `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Nhân sự chi nhánh | Operator tile (sales_kitchen) |
 | `branch_feedback` | `/br/*/feedback` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
 | `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
@@ -263,7 +263,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | branch-shift | `/br/[branchId]/shift` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-profile | `/br/[branchId]/profile` | branch_manager/branch_staff/cashier/central_kitchen_lead/central_supply_ops/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-stock | `/br/[branchId]/stock` | branch_manager/central_kitchen_lead/central_supply_ops/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| branch-orders | `/br/[branchId]/orders` | branch_manager/cashier/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| branch-orders | `/br/[branchId]/orders` | branch_manager/branch_staff/cashier/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-menu-limits | `/br/[branchId]/menu-limits` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-pos-sessions | `/br/[branchId]/pos-sessions` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-close-day | `/br/[branchId]/close-day` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
@@ -271,9 +271,9 @@ separate gates (route bucket here, permission key at the mutation site).
 | branch-dashboard | `/br/[branchId]/dashboard` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-team | `/br/[branchId]/team` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | branch-feedback | `/br/[branchId]/feedback` | branch_manager/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
-| pos | `/br/[branchId]/pos` | branch_manager/cashier/owner | `pos:apply_discount`, `pos:close_shift`, `pos:close_shift_variance_override`, `pos:confirm_payment`, `pos:open_cashbox`, `pos:print`, `pos:reprint_receipt`, `pos:send_kitchen`, `pos:use`, `pos:void_order`, `pos:void_paid_order` |
+| pos | `/br/[branchId]/pos` | branch_manager/branch_staff/cashier/owner | `pos:apply_discount`, `pos:close_shift`, `pos:close_shift_variance_override`, `pos:confirm_payment`, `pos:open_cashbox`, `pos:print`, `pos:reprint_receipt`, `pos:send_kitchen`, `pos:use`, `pos:void_order`, `pos:void_paid_order` |
 | kds | `/br/[branchId]/kds` | branch_manager/chef/owner | `kds:mark_ready`, `kds:recall`, `kds:use` |
-| runner | `/br/[branchId]/runner` | branch_manager/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
+| runner | `/br/[branchId]/runner` | branch_manager/branch_staff/cashier/chef/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 
 <!-- GENERATED:role-route-matrix:end -->
 

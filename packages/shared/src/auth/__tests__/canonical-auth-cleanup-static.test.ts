@@ -94,6 +94,7 @@ test("local seed mirrors the canonical position template set", () => {
     "kitchen_counter",
     "kitchen_helper",
     "grill_counter",
+    "waiter",
     "cleaner",
     "guard",
   ]) {
@@ -101,7 +102,15 @@ test("local seed mirrors the canonical position template set", () => {
   }
   assert.match(
     devSeed,
-    /\('kitchen_helper', 'kitchen_helper', ARRAY\['hr:request_leave','kds:mark_ready','kds:use'\]\)/,
+    /\('kitchen_counter', 'kitchen_counter', ARRAY\['hr:request_leave','kds:mark_ready','kds:use'\]\)/,
+  );
+  assert.match(
+    devSeed,
+    /\('kitchen_helper', 'kitchen_helper', ARRAY\['hr:request_leave'\]\)/,
+  );
+  assert.match(
+    devSeed,
+    /\('waiter', 'waiter', ARRAY\['hr:request_leave','orders:read','orders:write','pos:confirm_payment','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use'\]\)/,
   );
   assert.match(
     devSeed,

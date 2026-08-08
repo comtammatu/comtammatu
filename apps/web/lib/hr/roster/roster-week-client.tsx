@@ -12,6 +12,7 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Repeat2 as IconRepeat,
+  Star as IconStar,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
 import { addVNDateDays } from "@comtammatu/shared/time";
@@ -35,7 +36,11 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
-import { copyRosterWeek, reconcileShiftAssignmentsWeek } from "./actions";
+import {
+  copyRosterWeek,
+  reconcileShiftAssignmentsWeek,
+  setShiftAssignmentLeader,
+} from "./actions";
 import {
   rosterAssignmentKey,
   type RosterAssignment,
@@ -71,6 +76,19 @@ function buildAssignmentMap(
   return map;
 }
 
+function buildLeaderMap(
+  assignments: RosterAssignment[],
+): Map<string, { assignmentId: number; isLeader: boolean }> {
+  const map = new Map<string, { assignmentId: number; isLeader: boolean }>();
+  for (const assignment of assignments) {
+    map.set(rosterAssignmentKey(assignment.employeeId, assignment.workDate), {
+      assignmentId: assignment.id,
+      isLeader: assignment.isShiftLeader,
+    });
+  }
+  return map;
+}
+
 function formatShiftLabel(name: string, startTime: string, endTime: string) {
   return `${name} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)})`;
 }
@@ -99,6 +117,9 @@ export function RosterWeekClient({
   const [assignmentMap, setAssignmentMap] = useState(() =>
     buildAssignmentMap(data.assignments),
   );
+  const [leaderMap, setLeaderMap] = useState(() =>
+    buildLeaderMap(data.assignments),
+  );
   const [dirty, setDirty] = useState(false);
   const [scheduleEmployeeId, setScheduleEmployeeId] = useState<number | null>(
     null,
@@ -108,6 +129,7 @@ export function RosterWeekClient({
 
   useEffect(() => {
     setAssignmentMap(buildAssignmentMap(data.assignments));
+    setLeaderMap(buildLeaderMap(data.assignments));
     setDirty(false);
   }, [data.assignments, weekStart, branchId]);
 
@@ -248,29 +270,90 @@ export function RosterWeekClient({
     );
   }
 
+  function handleLeaderToggle(
+    employeeId: number,
+    workDate: string,
+    nextLeader: boolean,
+  ) {
+    if (branchId == null || dirty) return;
+    const key = rosterAssignmentKey(employeeId, workDate);
+    const current = leaderMap.get(key);
+    if (!current || current.assignmentId <= 0) return;
+
+    startTransition(async () => {
+      const result = await setShiftAssignmentLeader({
+        branchId,
+        assignmentId: current.assignmentId,
+        isLeader: nextLeader,
+      });
+      if (!result.success) {
+        toast.error(result.error ?? copy.shiftLeaderFailed);
+        return;
+      }
+      toast.success(
+        nextLeader ? copy.shiftLeaderSetSuccess : copy.shiftLeaderClearedSuccess,
+      );
+      refreshRoster();
+    });
+  }
+
   function renderShiftSelect(employee: RosterEmployee, workDate: string) {
     const key = rosterAssignmentKey(employee.employeeId, workDate);
     const selected = assignmentMap.get(key)?.toString() ?? EMPTY_SHIFT_VALUE;
+    const leader = leaderMap.get(key);
+    const canToggleLeader =
+      branchId != null &&
+      !dirty &&
+      selected !== EMPTY_SHIFT_VALUE &&
+      leader != null &&
+      leader.assignmentId > 0;
     return (
-      <Select
-        value={selected}
-        onValueChange={(value) =>
-          handleCellChange(employee.employeeId, workDate, value)
-        }
-        disabled={isPending}
-      >
-        <SelectTrigger className="w-full min-w-32">
-          <SelectValue placeholder={copy.emptyShift} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={EMPTY_SHIFT_VALUE}>{copy.emptyShift}</SelectItem>
-          {data.shifts.map((shift) => (
-            <SelectItem key={shift.id} value={String(shift.id)}>
-              {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex min-w-32 items-center gap-1">
+        <Select
+          value={selected}
+          onValueChange={(value) =>
+            handleCellChange(employee.employeeId, workDate, value)
+          }
+          disabled={isPending}
+        >
+          <SelectTrigger className="w-full min-w-0 flex-1">
+            <SelectValue placeholder={copy.emptyShift} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={EMPTY_SHIFT_VALUE}>{copy.emptyShift}</SelectItem>
+            {data.shifts.map((shift) => (
+              <SelectItem key={shift.id} value={String(shift.id)}>
+                {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          disabled={isPending || !canToggleLeader}
+          aria-label={
+            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
+          }
+          title={
+            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
+          }
+          onClick={() =>
+            handleLeaderToggle(employee.employeeId, workDate, !leader?.isLeader)
+          }
+        >
+          <IconStar
+            className={cn(
+              "size-4",
+              leader?.isLeader
+                ? "fill-current text-warning"
+                : "text-muted-foreground",
+            )}
+          />
+        </Button>
+      </div>
     );
   }
 

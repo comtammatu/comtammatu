@@ -207,6 +207,49 @@ export function getVNDayUtcRange(dateStr: string): {
   return { startIso: start.toISOString(), endIso: end.toISOString() };
 }
 
+/** Matches inventory_shift_key / branch_day 04:00 local cut-off (VN wall clock). */
+export const VN_BUSINESS_DAY_CUTOFF_HOUR = 4;
+
+/**
+ * Business date for a timestamp: before 04:00 VN belongs to the previous calendar day.
+ * Does not change getVNDateString (calendar midnight).
+ */
+export function getVNBusinessDateString(
+  value: string | number | Date = new Date(),
+): string {
+  const date = toDate(value) ?? new Date();
+  const parts = getVNDateParts(date);
+  if (getVNMinutesOfDay(date) < VN_BUSINESS_DAY_CUTOFF_HOUR * 60) {
+    return addVNDateDays(formatISODateParts(parts), -1);
+  }
+  return formatISODateParts(parts);
+}
+
+/** UTC bounds for business date D: [D 04:00 VN, (D+1) 04:00 VN). */
+export function getVNBusinessDayUtcRange(dateStr: string): {
+  startIso: string;
+  endIso: string;
+} {
+  const parts = parseISODateParts(dateStr) ?? getVNDateParts();
+  const start = new Date(
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      VN_BUSINESS_DAY_CUTOFF_HOUR - 7,
+    ),
+  );
+  const end = new Date(
+    Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day + 1,
+      VN_BUSINESS_DAY_CUTOFF_HOUR - 7,
+    ),
+  );
+  return { startIso: start.toISOString(), endIso: end.toISOString() };
+}
+
 export function diffVNDateDays(fromDate: string, toDate: string): number {
   const from = parseISODateParts(fromDate);
   const to = parseISODateParts(toDate);

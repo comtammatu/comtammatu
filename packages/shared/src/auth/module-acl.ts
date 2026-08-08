@@ -120,7 +120,8 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   pos: {
     path: "/br/*/pos",
-    allowedRoles: ["owner", "cashier", "branch_manager"],
+    // Waiter (branch_staff) is near-cashier on POS: order + pay + print, no void/cashbox/close.
+    allowedRoles: ["owner", "cashier", "branch_manager", "branch_staff"],
     label: getModuleLabelVi("pos"),
   },
   kds: {
@@ -130,7 +131,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   runner: {
     path: "/br/*/runner",
-    allowedRoles: ["owner", "cashier", "chef", "branch_manager"],
+    allowedRoles: ["owner", "cashier", "chef", "branch_manager", "branch_staff"],
     label: getModuleLabelVi("runner"),
   },
   branch_home: {
@@ -194,7 +195,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   branch_orders: {
     path: "/br/*/orders",
-    allowedRoles: ["owner", "branch_manager", "cashier"],
+    allowedRoles: ["owner", "branch_manager", "cashier", "branch_staff"],
     label: getModuleLabelVi("branch_orders"),
   },
   branch_feedback: {

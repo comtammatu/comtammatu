@@ -12,6 +12,7 @@ import {
 import { getPosLineItemDisplayName } from "../../types";
 import { POS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
 
@@ -35,9 +36,11 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
       ? messages.pos.receipt.paymentCancelled
       : isPaid
         ? (METHOD_LABELS[order.payment_method ?? ""] ??
-          order.payment_method ??
-          messages.pos.receipt.paymentPaid)
+          (order.payment_method
+            ? getPaymentMethodLabelVi(order.payment_method)
+            : messages.pos.receipt.paymentPaid))
         : messages.pos.receipt.paymentUnpaid;
+
 
   return (
     <div id="pos-receipt" className="px-4 py-3">

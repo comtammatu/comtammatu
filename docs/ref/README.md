@@ -21,6 +21,7 @@ Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không
 | Tích hợp bên thứ ba | `third-party-integrations.md` |
 | Setup local project | `setup.md` |
 | Screen context / UI workflow | `screen-context-map.md` |
+| Vận hành chi nhánh (ca làm × ca bán, định biên, Daily Summary) | `branch-operations.md` |
 
 ## Hygiene
 

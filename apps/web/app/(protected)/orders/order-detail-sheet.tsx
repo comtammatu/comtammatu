@@ -404,14 +404,19 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
           <NoteCallout
             tone="warning"
             className="border border-destructive/20 bg-destructive/10 text-destructive"
-            label="Báo đỏ - Cần điều tra (KDS)"
+            label={ORDERS_COPY.kdsAlertCalloutCriticalLabel}
           >
-            {ORDERS_COPY.kdsAlertCalloutCritical} (Thời gian chờ: {waitInfo.waitMinutes} phút)
+            {ORDERS_COPY.kdsAlertCalloutCritical}
+            {ORDERS_COPY.kdsAlertWaitMinutes(waitInfo.waitMinutes)}
           </NoteCallout>
         )}
         {waitInfo.alertLevel === "warning" && (
-          <NoteCallout tone="warning" label="Cảnh báo thời gian chờ">
-            {ORDERS_COPY.kdsAlertCalloutWarning} (Thời gian chờ: {waitInfo.waitMinutes} phút)
+          <NoteCallout
+            tone="warning"
+            label={ORDERS_COPY.kdsAlertCalloutWarningLabel}
+          >
+            {ORDERS_COPY.kdsAlertCalloutWarning}
+            {ORDERS_COPY.kdsAlertWaitMinutes(waitInfo.waitMinutes)}
           </NoteCallout>
         )}
         <DescriptionList

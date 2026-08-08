@@ -79,16 +79,16 @@ test("resolveOperatorTiles -> domain groups render Bán hàng, Nhân sự, Kho h
   assert.equal(groups.find((group) => group.id === "stock")?.title, "Kho hàng");
 });
 
-test("resolveOperatorTiles -> branch staff sees shift tools only", () => {
+test("resolveOperatorTiles -> branch staff sees near-cashier POS without KDS/finance", () => {
   const groups = resolveOperatorTiles("branch_staff", 7);
   const moduleKeys = groups.flatMap((group) =>
     group.tiles.map((tile) => tile.moduleKey),
   );
 
   assert.ok(moduleKeys.includes("branch_home"));
-  assert.equal(moduleKeys.includes("pos"), false);
+  assert.ok(moduleKeys.includes("pos"));
+  assert.ok(moduleKeys.includes("branch_orders"));
   assert.equal(moduleKeys.includes("kds"), false);
-  assert.equal(moduleKeys.includes("orders"), false);
   assert.equal(moduleKeys.includes("finance"), false);
 });
 

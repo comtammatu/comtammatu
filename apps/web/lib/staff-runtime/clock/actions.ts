@@ -394,6 +394,62 @@ export async function toggleChecklistItem(input: {
   return { success: true };
 }
 
+export async function attachChecklistTaskPhoto(
+  formData: FormData,
+): Promise<ActionResult> {
+  const itemIdRaw = formData.get("itemId");
+  const itemId = Number(itemIdRaw);
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+
+  const photo = getPhotoFromFormData(formData);
+  if (!photo || photo.size <= 0) {
+    return { success: false, error: "Cần chọn ảnh minh chứng." };
+  }
+  if (!isSupportedPhotoMime(photo.type)) {
+    return { success: false, error: "Định dạng ảnh không hỗ trợ." };
+  }
+  if (photo.size > MAX_PHOTO_BYTES) {
+    return { success: false, error: "Ảnh quá lớn (tối đa 3,5MB)." };
+  }
+
+  const service = createServiceClient();
+  const calendarDate = getTodayVN();
+  const ext = PHOTO_MIME_TO_EXT[photo.type];
+  const photoPath = `${ctx.claims.tenant_id}/${calendarDate}/${ctx.employeeId}/task-${itemId}-${randomUUID()}.${ext}`;
+  const bytes = Buffer.from(await photo.arrayBuffer());
+
+  const { error: uploadError } = await service.storage
+    .from(ATTENDANCE_PHOTO_BUCKET)
+    .upload(photoPath, bytes, {
+      contentType: photo.type,
+      upsert: false,
+    });
+  if (uploadError) {
+    return { success: false, error: "Tải ảnh minh chứng thất bại." };
+  }
+
+  const { error } = await ctx.supabase.rpc(
+    "self_service_attach_task_photo" as never,
+    {
+      p_item_id: itemId,
+      p_photo_path: photoPath,
+    } as never,
+  );
+
+  if (error) {
+    await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
+    return { success: false, error: "Lưu ảnh minh chứng thất bại." };
+  }
+
+  revalidateEmployeeWorkPaths(ctx.branchId);
+  return { success: true };
+}
+
 export async function requestCheckoutApproval(
   input: unknown,
 ): Promise<ActionResult<{ requestedAt: string }>> {

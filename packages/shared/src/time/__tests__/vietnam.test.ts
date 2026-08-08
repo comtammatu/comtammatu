@@ -15,6 +15,8 @@ import {
   getVNDateString,
   getVNDateStringDaysAgo,
   getVNDayUtcRange,
+  getVNBusinessDateString,
+  getVNBusinessDayUtcRange,
   getVNMonthCalendarCells,
   getVNMonthEndDateString,
   getVNMonthSequenceBack,
@@ -91,6 +93,21 @@ test("VN day UTC range uses exclusive next-day boundary", () => {
   assert.deepEqual(getVNDayUtcRange("2026-05-23"), {
     startIso: "2026-05-22T17:00:00.000Z",
     endIso: "2026-05-23T17:00:00.000Z",
+  });
+});
+
+test("VN business day uses 04:00 cut-off", () => {
+  assert.equal(
+    getVNBusinessDateString("2026-05-23T03:59:00+07:00"),
+    "2026-05-22",
+  );
+  assert.equal(
+    getVNBusinessDateString("2026-05-23T04:00:00+07:00"),
+    "2026-05-23",
+  );
+  assert.deepEqual(getVNBusinessDayUtcRange("2026-05-23"), {
+    startIso: "2026-05-22T21:00:00.000Z",
+    endIso: "2026-05-23T21:00:00.000Z",
   });
 });
 

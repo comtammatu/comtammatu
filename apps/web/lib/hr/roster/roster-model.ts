@@ -14,9 +14,11 @@ export type RosterShift = {
 };
 
 export type RosterAssignment = {
+  id: number;
   employeeId: number;
   workDate: string;
   shiftId: number;
+  isShiftLeader: boolean;
 };
 
 export const ROSTER_WEEKDAY_KEYS = [

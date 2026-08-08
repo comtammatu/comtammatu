@@ -378,6 +378,10 @@ export const employee = {
     done: "Xong",
     markTodo: "Đánh dấu chưa làm",
     markDone: "Đánh dấu xong",
+    attachPhoto: "Kèm ảnh minh chứng",
+    photoAttached: "Đã kèm ảnh",
+    photoOptionalHint: "Ảnh tùy chọn khi hoàn thành việc này.",
+    photoUploadError: "Không thể tải ảnh minh chứng.",
     phaseLabels: {
       start_of_shift: "Đầu ca",
       end_of_shift: "Cuối ca",

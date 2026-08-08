@@ -101,9 +101,11 @@ export default async function OperatorHomePage({
     context.branchId,
     branchKind,
   );
-  // Pre-clock-in gate for cashier/chef roles
+  // Pre-clock-in gate for floor operators (includes waiter → branch_staff).
   const isFloorRole =
-    claims.user_role === "cashier" || claims.user_role === "chef";
+    claims.user_role === "cashier" ||
+    claims.user_role === "chef" ||
+    claims.user_role === "branch_staff";
 
   const workState = isFloorRole && !isCentral ? await getTodayWorkState() : null;
   const beforeClockIn = workState?.status === "not_started";

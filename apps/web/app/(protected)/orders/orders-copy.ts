@@ -48,17 +48,30 @@ export const ORDERS_COPY = {
     "Các đơn hoàn thành và đã hủy nằm trong Lịch sử gần đây.",
   emptyTitle: ORDERS_VI.noOrders,
   emptyDescription: "Chi nhánh chưa có đơn nào trong phạm vi đang xem.",
-  // Delay monitoring & alerts
   waitTimeHeader: "Thời gian chờ",
+  alertFilterLabel: "Cảnh báo trễ",
   alertFilterAll: "Tất cả",
   alertFilterWarning: "Cảnh báo (10-15 ph)",
   alertFilterCritical: "Báo đỏ (>15 ph)",
   warningCountLabel: "Cảnh báo (10-15 ph)",
   criticalCountLabel: "Báo đỏ (>15 ph)",
-  kdsSectionTitle: "Thời gian xử lý & Cảnh báo KDS",
+  warningCountHint: "Đơn chờ 10–15 phút",
+  criticalCountHint: "Cần điều tra ngay",
+  waitingSuffix: " (Đang chờ)",
+  badgeCritical: (waitMinutes: number, suffix: string) =>
+    `Báo đỏ: ${String(waitMinutes)} phút - Cần điều tra${suffix}`,
+  badgeWarning: (waitMinutes: number, suffix: string) =>
+    `Cảnh báo: ${String(waitMinutes)} phút${suffix}`,
+  badgeNormal: (waitMinutes: number, suffix: string) =>
+    `${String(waitMinutes)} phút${suffix}`,
+  warningToast: (orderNumber: string, waitMinutes: number) =>
+    `Cảnh báo: Đơn #${orderNumber} đã chờ ${String(waitMinutes)} phút`,
+  kdsAlertCalloutWarningLabel: "Cảnh báo thời gian chờ",
+  kdsAlertCalloutCriticalLabel: "Báo đỏ - Cần điều tra (KDS)",
   kdsAlertCalloutWarning:
     "Cảnh báo: Đơn hàng đã chờ 10–15 phút kể từ lúc lên đơn.",
   kdsAlertCalloutCritical:
     "Báo đỏ: Đơn hàng đã chờ quá 15 phút! Quản lý cần kiểm tra ngay với Bếp (KDS).",
-  notificationTitle: "Cảnh báo trễ đơn hàng (>15 phút)",
+  kdsAlertWaitMinutes: (waitMinutes: number) =>
+    ` (Thời gian chờ: ${String(waitMinutes)} phút)`,
 } as const;

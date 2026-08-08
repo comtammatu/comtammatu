@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardList as IconCount, LogOut as IconLogout } from "lucide-react";
+import {
+  Camera as IconCamera,
+  ClipboardList as IconCount,
+  LogOut as IconLogout,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -20,7 +24,10 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import type { TodayChecklistItem } from "../_lib/today-work-state";
-import { toggleChecklistItem } from "../clock/actions";
+import {
+  attachChecklistTaskPhoto,
+  toggleChecklistItem,
+} from "../clock/actions";
 
 const taskCopy = messages.employee.tasks;
 const homeCopy = messages.employee.home;
@@ -133,6 +140,35 @@ export function TasksClient({
         setItemPending(itemId, false);
         revertItem(itemId, previousDone);
         toast.error(taskCopy.updateError);
+      });
+  }
+
+  function handlePhotoChange(itemId: number, file: File | null) {
+    if (!file || disabled) return;
+    setItemPending(itemId, true);
+    const formData = new FormData();
+    formData.set("itemId", String(itemId));
+    formData.set("photo", file);
+    void attachChecklistTaskPhoto(formData)
+      .then((result) => {
+        setItemPending(itemId, false);
+        if (!result.success) {
+          toast.error(result.error ?? taskCopy.photoUploadError);
+          return;
+        }
+        setLocalItems((current) =>
+          current.map((item) =>
+            item.id === itemId
+              ? { ...item, photoPath: item.photoPath ?? "local" }
+              : item,
+          ),
+        );
+        toast.success(taskCopy.photoAttached);
+        scheduleRefresh();
+      })
+      .catch(() => {
+        setItemPending(itemId, false);
+        toast.error(taskCopy.photoUploadError);
       });
   }
 
@@ -256,6 +292,49 @@ export function TasksClient({
                             <Badge variant="outline">{taskCopy.required}</Badge>
                           ) : null}
                           <Badge variant="secondary">{taskCopy.todo}</Badge>
+                          {item.allowsPhoto ? (
+                            <Badge variant="outline">{taskCopy.attachPhoto}</Badge>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {item.allowsPhoto && !isCountTask ? (
+                        <div className="flex w-full flex-col gap-1.5">
+                          <p className="text-muted-foreground text-xs leading-5">
+                            {item.photoPath
+                              ? taskCopy.photoAttached
+                              : taskCopy.photoOptionalHint}
+                          </p>
+                          <Button
+                            type="button"
+                            size="touch"
+                            variant="outline"
+                            className="w-full sm:w-fit"
+                            disabled={disabled || isItemPending}
+                            onClick={() => {
+                              const input = document.getElementById(
+                                `shift-task-photo-${item.id}`,
+                              );
+                              if (input instanceof HTMLInputElement) {
+                                input.click();
+                              }
+                            }}
+                          >
+                            <IconCamera data-icon="inline-start" />
+                            {taskCopy.attachPhoto}
+                          </Button>
+                          <input
+                            id={`shift-task-photo-${item.id}`}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            capture="environment"
+                            className="sr-only"
+                            disabled={disabled || isItemPending}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              handlePhotoChange(item.id, file);
+                              event.target.value = "";
+                            }}
+                          />
                         </div>
                       ) : null}
                       {isCountTask && !item.done ? (

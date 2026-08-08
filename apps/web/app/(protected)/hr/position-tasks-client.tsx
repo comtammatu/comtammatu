@@ -61,6 +61,7 @@ const taskRowSchema = z.object({
   applicability: z.literal("every_shift"),
   phase: z.enum(POSITION_TASK_PHASES),
   isRequired: z.boolean(),
+  allowsPhoto: z.boolean(),
   doneDefinition: z.string().max(240),
   ingredientIds: z.array(z.number().int().positive()),
 });
@@ -80,6 +81,7 @@ const EMPTY_TASK: TaskRowValues = {
   applicability: "every_shift",
   phase: "start_of_shift",
   isRequired: true,
+  allowsPhoto: false,
   doneDefinition: "",
   ingredientIds: [],
 };
@@ -93,6 +95,7 @@ function toFormValues(tasks: PositionTaskRow[], employeeId = ""): FormValues {
       applicability: "every_shift",
       phase: task.phase,
       isRequired: task.isRequired,
+      allowsPhoto: task.allowsPhoto,
       doneDefinition: task.doneDefinition,
       ingredientIds: task.ingredientIds,
     })),
@@ -248,25 +251,46 @@ function TaskRow({
           placeholder={copy.doneDefinitionPlaceholder}
           className="min-h-16"
         />
-        <Controller
-          control={control}
-          name={`tasks.${index}.isRequired`}
-          render={({ field }) => (
-            <div className="flex items-center gap-2 pb-2">
-              <Switch
-                id={`task-required-${index}`}
-                checked={field.value}
-                onCheckedChange={(value) => field.onChange(value === true)}
-              />
-              <Label
-                htmlFor={`task-required-${index}`}
-                className="text-sm font-normal"
-              >
-                {copy.requiredLabel}
-              </Label>
-            </div>
-          )}
-        />
+        <div className="flex flex-col gap-3 pb-2">
+          <Controller
+            control={control}
+            name={`tasks.${index}.isRequired`}
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={`task-required-${index}`}
+                  checked={field.value}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+                <Label
+                  htmlFor={`task-required-${index}`}
+                  className="text-sm font-normal"
+                >
+                  {copy.requiredLabel}
+                </Label>
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name={`tasks.${index}.allowsPhoto`}
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={`task-photo-${index}`}
+                  checked={field.value}
+                  onCheckedChange={(value) => field.onChange(value === true)}
+                />
+                <Label
+                  htmlFor={`task-photo-${index}`}
+                  className="text-sm font-normal"
+                >
+                  {copy.allowsPhotoLabel}
+                </Label>
+              </div>
+            )}
+          />
+        </div>
       </div>
       {watchedKind === "consumption_report" ? (
         <IngredientPicker
@@ -574,6 +598,7 @@ export function PositionTasksClient({
       applicability: task.applicability,
       phase: task.phase,
       isRequired: task.isRequired,
+      allowsPhoto: task.allowsPhoto,
       doneDefinition: task.doneDefinition.trim(),
       ingredientIds:
         task.kind === "consumption_report" ? task.ingredientIds : [],

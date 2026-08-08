@@ -63,6 +63,7 @@ export interface OrderItem {
 export interface OrderRow {
   id: number;
   order_number: string;
+  branch_id: number;
   status: string;
   order_type: string;
   subtotal: number;
@@ -262,6 +263,7 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
     .select(
       `id,
        order_number,
+       branch_id,
        status,
        order_type,
        subtotal,
@@ -321,12 +323,15 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
           bumped_at: string | null;
         }>)
       : [];
+    const activeKdsTickets = kdsTickets.filter((t) => t.status !== "cancelled");
     let kds_completed_at: string | null = null;
     if (
-      kdsTickets.length > 0 &&
-      kdsTickets.every((t) => t.status === "ready")
+      activeKdsTickets.length > 0 &&
+      activeKdsTickets.every(
+        (t) => t.status === "ready" || t.status === "served",
+      )
     ) {
-      const timestamps = kdsTickets
+      const timestamps = activeKdsTickets
         .map((t) => t.first_ready_at || t.bumped_at)
         .filter((ts): ts is string => Boolean(ts));
       if (timestamps.length > 0) {
@@ -339,6 +344,7 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
     return {
       id: row.id,
       order_number: row.order_number,
+      branch_id: row.branch_id,
       status: row.status,
       order_type: row.order_type,
       subtotal: row.subtotal,
@@ -710,51 +716,5 @@ export async function fetchOrderOperationalTrace(
   }
 
   return { success: true, data: trace.data };
-}
-
-const createDelayNotificationSchema = z.object({
-  orderId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive(),
-  orderNumber: z.string(),
-  waitMinutes: z.coerce.number().int().positive(),
-});
-
-export async function createOrderDelayNotification(
-  input: z.input<typeof createDelayNotificationSchema>,
-): Promise<ActionResult<{ created: boolean }>> {
-  const parsed = createDelayNotificationSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    ALLOWED_ROLES,
-    PERMISSION_KEYS.ORDERS_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const supabase = await createClient();
-  const dedupKey = `order.delay_sla_breach:${parsed.data.orderId}`;
-
-  const { error } = await supabase.from("notifications").insert({
-    tenant_id: ctx.claims.tenant_id,
-    target_branch_id: parsed.data.branchId,
-    target_roles: ["owner", "branch_manager"],
-    kind: "order.delay_sla_breach",
-    severity: "critical",
-    title: `Cảnh báo trễ đơn #${parsed.data.orderNumber} (${parsed.data.waitMinutes} phút)`,
-    body: `Đơn hàng #${parsed.data.orderNumber} đã chờ ${parsed.data.waitMinutes} phút chưa hoàn thành. Quản lý cần kiểm tra với Bếp (KDS).`,
-    entity_type: "order",
-    entity_id: parsed.data.orderId,
-    action_url: `/orders?orderId=${parsed.data.orderId}`,
-    dedup_key: dedupKey,
-  });
-
-  if (error) {
-    // If conflict on dedup_key or failed insert, don't fail client
-    return { success: true, data: { created: false } };
-  }
-
-  return { success: true, data: { created: true } };
 }
 

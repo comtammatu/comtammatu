@@ -157,7 +157,9 @@ export async function BranchQueueSection({
 }) {
   const { supabase, claims } = await loadAuthState();
   const isFloorRole =
-    claims.user_role === "cashier" || claims.user_role === "chef";
+    claims.user_role === "cashier" ||
+    claims.user_role === "chef" ||
+    claims.user_role === "branch_staff";
 
   if (isFloorRole) return null;
 

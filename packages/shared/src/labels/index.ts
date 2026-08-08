@@ -51,4 +51,6 @@ export {
   COUNT_SLIP_STATUS_LABELS_VI,
   getOrderTypeLabelVi,
   getPaymentMethodLabelVi,
+  sanitizeViettelInvoiceError,
 } from "./vi";
+

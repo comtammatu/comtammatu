@@ -17,7 +17,7 @@ function KdsStatusShell({ description }: { description: string }) {
         icon={<IconAlertCircle />}
         iconClassName="size-12 border border-border/70 bg-background/80 text-destructive"
         title={KDS_VI.statusErrorTitle}
-        titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
+        titleClassName="font-heading text-xl font-semibold tracking-tight sm:text-2xl"
       >
         <Badge variant="destructive">
           <IconAlertCircle className="size-3.5" />

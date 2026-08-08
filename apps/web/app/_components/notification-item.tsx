@@ -32,6 +32,7 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 function iconFor(kind: string) {
   switch (kind) {
     case "pos.order_new":
+    case "order.delay_sla_breach":
       return IconShoppingBag;
     case "workflow.po_sent":
     case "workflow.po_approved":
@@ -56,6 +57,7 @@ function iconFor(kind: string) {
     case "hr.leave_requested":
     case "hr.checkout_requested":
     case "attendance.checkout_requested":
+    case "pos.void_requested":
       return IconClipboardList;
     case "inventory.count_slip_submitted":
       return IconClipboardList;

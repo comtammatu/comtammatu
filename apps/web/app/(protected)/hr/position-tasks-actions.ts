@@ -36,6 +36,7 @@ const positionTaskInputSchema = z.object({
   applicability: z.enum(POSITION_TASK_APPLICABILITY).default("every_shift"),
   phase: z.enum(POSITION_TASK_PHASES).default("start_of_shift"),
   isRequired: z.boolean().default(true),
+  allowsPhoto: z.boolean().default(false),
   doneDefinition: z.string().trim().max(240).default(""),
   ingredientIds: z
     .array(z.coerce.number().int().positive())
@@ -65,6 +66,7 @@ type PositionTaskDbRow = {
   applicability: string;
   phase: string;
   is_required: boolean;
+  allows_photo: boolean;
   done_definition: string;
   sort_order: number;
 };
@@ -158,7 +160,7 @@ export async function fetchPositionTasksData(): Promise<
     service
       .from("position_shift_tasks")
       .select(
-        "id, position_id, title, kind, applicability, phase, is_required, done_definition, sort_order",
+        "id, position_id, title, kind, applicability, phase, is_required, allows_photo, done_definition, sort_order",
       )
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)
@@ -235,6 +237,7 @@ export async function fetchPositionTasksData(): Promise<
       applicability: "every_shift",
       phase: row.phase === "end_of_shift" ? "end_of_shift" : "start_of_shift",
       isRequired: row.is_required,
+      allowsPhoto: row.allows_photo === true,
       doneDefinition: row.done_definition,
       sortOrder: row.sort_order,
       ingredientIds: ingredientIdsByTask.get(row.id) ?? [],
@@ -314,6 +317,7 @@ export async function fetchPositionTasksData(): Promise<
         phase:
           item.phase === "end_of_shift" ? "end_of_shift" : "start_of_shift",
         isRequired: item.is_required,
+        allowsPhoto: false,
         doneDefinition: item.done_definition,
         sortOrder: item.sort_order,
         ingredientIds: ingredientIdsByTemplateItem.get(item.id) ?? [],
@@ -423,6 +427,7 @@ export const savePositionTasks = withAction(
       applicability: task.applicability,
       phase: task.phase,
       isRequired: task.isRequired,
+      allowsPhoto: task.allowsPhoto,
       doneDefinition: task.doneDefinition,
       ingredientIds: task.ingredientIds,
     }));

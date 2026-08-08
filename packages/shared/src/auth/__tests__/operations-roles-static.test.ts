@@ -36,6 +36,11 @@ test("company self-service is not inferred from an HR title", () => {
   assert.equal(staffRoleFromPositionCode("office_admin"), "unassigned");
 });
 
+test("ADR 0023 waiter maps to branch_staff and requires a store branch", () => {
+  assert.equal(staffRoleFromPositionCode("waiter"), "branch_staff");
+  assert.equal(requiredBranchKindForPositionCode("waiter"), "branch");
+});
+
 test("D076 position mapping pins central operators to their site kind", () => {
   assert.equal(staffRoleFromPositionCode("accountant"), "accountant");
   assert.equal(

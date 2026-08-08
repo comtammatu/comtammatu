@@ -17,6 +17,7 @@ export interface PositionTaskInput {
   applicability: PositionTaskApplicability;
   phase: PositionTaskPhase;
   isRequired: boolean;
+  allowsPhoto: boolean;
   doneDefinition: string;
 }
 

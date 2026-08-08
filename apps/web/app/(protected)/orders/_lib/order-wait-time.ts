@@ -1,3 +1,5 @@
+import { ORDERS_COPY } from "../orders-copy";
+
 export type OrderAlertLevel = "normal" | "warning" | "critical";
 
 export interface OrderWaitInfo {
@@ -17,14 +19,15 @@ export function computeOrderWaitInfo(
 ): OrderWaitInfo {
   const startMs = Date.parse(createdAt);
   const isKdsCompleted = Boolean(kdsCompletedAt);
-  const endMs = isKdsCompleted && kdsCompletedAt
-    ? Date.parse(kdsCompletedAt)
-    : (referenceTimeMs ?? Date.now());
+  const endMs =
+    isKdsCompleted && kdsCompletedAt
+      ? Date.parse(kdsCompletedAt)
+      : (referenceTimeMs ?? Date.now());
 
-  const diffMinutes = Math.max(
-    0,
-    Math.floor((endMs - (Number.isNaN(startMs) ? Date.now() : startMs)) / 60000),
-  );
+  const diffMinutes =
+    Number.isNaN(startMs) || Number.isNaN(endMs)
+      ? 0
+      : Math.max(0, Math.floor((endMs - startMs) / 60000));
 
   let alertLevel: OrderAlertLevel = "normal";
   if (diffMinutes > 15) {
@@ -47,19 +50,19 @@ export function getOrderAlertBadgeProps(waitInfo: OrderWaitInfo): {
   badgeClassName: string;
 } {
   const { waitMinutes, alertLevel, isKdsCompleted } = waitInfo;
-  const statusSuffix = isKdsCompleted ? "" : " (Đang chờ)";
+  const statusSuffix = isKdsCompleted ? "" : ORDERS_COPY.waitingSuffix;
 
   switch (alertLevel) {
     case "critical":
       return {
-        label: `Báo đỏ: ${waitMinutes} phút - Cần điều tra${statusSuffix}`,
+        label: ORDERS_COPY.badgeCritical(waitMinutes, statusSuffix),
         badgeVariant: "destructive",
         badgeClassName:
           "border-destructive/20 bg-destructive text-destructive-foreground font-semibold shadow-xs animate-pulse",
       };
     case "warning":
       return {
-        label: `Cảnh báo: ${waitMinutes} phút${statusSuffix}`,
+        label: ORDERS_COPY.badgeWarning(waitMinutes, statusSuffix),
         badgeVariant: "warning",
         badgeClassName:
           "border-warning/20 bg-warning/15 text-warning font-medium",
@@ -67,7 +70,7 @@ export function getOrderAlertBadgeProps(waitInfo: OrderWaitInfo): {
     case "normal":
     default:
       return {
-        label: `${waitMinutes} phút${statusSuffix}`,
+        label: ORDERS_COPY.badgeNormal(waitMinutes, statusSuffix),
         badgeVariant: "outline",
         badgeClassName: "text-muted-foreground font-mono text-xs",
       };

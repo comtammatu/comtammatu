@@ -134,7 +134,7 @@ async function loadRosterWeekData(
 
   const assignmentsQuery = readClient
     .from("shift_assignments" as never)
-    .select("employee_id, work_date, shift_id")
+    .select("id, employee_id, work_date, shift_id, is_shift_leader")
     .eq("tenant_id", tenantId)
     .gte("work_date", weekStart)
     .lte("work_date", weekEnd);
@@ -216,17 +216,21 @@ async function loadRosterWeekData(
   const assignments: RosterAssignment[] = (assignmentsResult.data ?? [])
     .flatMap((row) => {
       const record = row as {
+        id: number;
         employee_id: number;
         work_date: string;
         shift_id: number | null;
+        is_shift_leader?: boolean | null;
       };
       if (!weekDateSet.has(record.work_date) || record.shift_id == null)
         return [];
       return [
         {
+          id: record.id,
           employeeId: record.employee_id,
           workDate: record.work_date,
           shiftId: record.shift_id,
+          isShiftLeader: record.is_shift_leader === true,
         },
       ];
     })
@@ -398,9 +402,11 @@ export const setEmployeeTodayShiftAssignment = withAction(
     );
     if (data.shiftId != null) {
       assignments.push({
+        id: 0,
         employeeId: data.employeeId,
         workDate: today,
         shiftId: data.shiftId,
+        isShiftLeader: false,
       });
     }
 
@@ -471,6 +477,47 @@ export const saveEmployeeWeeklySchedule = withAction(
 
     revalidateRosterPaths(data.branchId);
     revalidatePath("/hr");
+    return { success: true, data: null };
+  },
+);
+
+const setLeaderSchema = z.object({
+  branchId: branchIdSchema,
+  assignmentId: z.coerce.number().int().positive(),
+  isLeader: z.boolean(),
+});
+
+export const setShiftAssignmentLeader = withAction(
+  {
+    roles: ROSTER_ROLES,
+    schema: setLeaderSchema,
+    permission: PERMISSION_KEYS.HR_ASSIGN_SHIFT,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const scopeError = assertBranchManagerScope(claims, data.branchId);
+    if (scopeError) return { success: false, error: scopeError };
+    if (data.branchId == null) {
+      return { success: false, error: messages.hr.roster.shiftLeaderFailed };
+    }
+
+    const { error } = await supabase.rpc(
+      "set_shift_assignment_leader" as never,
+      {
+        p_assignment_id: data.assignmentId,
+        p_is_leader: data.isLeader,
+      } as never,
+    );
+    if (error) {
+      console.error(
+        "[hr/roster/actions:setShiftAssignmentLeader] RPC error:",
+        error,
+      );
+      return { success: false, error: messages.hr.roster.shiftLeaderFailed };
+    }
+
+    revalidateRosterPaths(data.branchId);
     return { success: true, data: null };
   },
 );

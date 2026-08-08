@@ -110,6 +110,7 @@ const loadOrderDetailSheet = () =>
 const BillReceipt = dynamic(loadBillReceipt, { ssr: false });
 const OrderDetailSheet = dynamic(loadOrderDetailSheet, { ssr: false });
 import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
+import { VoidRequestQueue } from "./_components/void-request-queue";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { useDailyLimitHolds } from "./_hooks/use-daily-limit-holds";
@@ -1768,6 +1769,10 @@ export function PosDesktopInner({
           }
         />
       ) : null}
+
+      <div className="px-3 pt-2 sm:px-4">
+        <VoidRequestQueue branchId={branchId} />
+      </div>
 
       {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
