@@ -6,7 +6,6 @@ import {
   ClipboardList as IconClipboardList,
   CreditCard as IconCreditCard,
   Monitor as IconMonitor,
-  MonitorUp as IconMonitorUp,
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
   Utensils as IconUtensils,
@@ -164,23 +163,16 @@ function buildTileGroups(
       {
         moduleKey: "pos",
         href: `/br/${branchId}/pos`,
-        title: "POS",
+        title: "Bán hàng",
         description: copy.commandPosDescription,
         icon: <IconMonitor />,
       },
       {
         moduleKey: "kds",
         href: `/br/${branchId}/kds`,
-        title: "KDS",
+        title: "Quầy Bếp",
         description: copy.commandKdsDescription,
         icon: <IconChefHat />,
-      },
-      {
-        moduleKey: "runner",
-        href: `/br/${branchId}/runner`,
-        title: "Màn gọi số",
-        description: copy.commandRunnerDescription,
-        icon: <IconMonitorUp />,
       },
       {
         moduleKey: "branch_menu_limits",

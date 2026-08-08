@@ -1,10 +1,9 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 
 /**
- * Redirect shim — checkout approvals live under the Team hub
- * (`/br/{branchId}/team?tab=checkouts`) as of the Branch Manager IA redesign.
- * `?attendanceId=` is forwarded to focus the same record.
+ * Full-page checkout approval queue for branch managers.
  */
 export default async function OperatorCheckoutApprovalsPage({
   params,
@@ -16,12 +15,22 @@ export default async function OperatorCheckoutApprovalsPage({
   const { branchId: rawBranchId } = await params;
   const { attendanceId: rawAttendanceId } = await searchParams;
   const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) redirect("/br");
+  if (branchId == null) notFound();
   const attendanceId = Array.isArray(rawAttendanceId)
     ? rawAttendanceId[0]
     : rawAttendanceId;
-  const query = attendanceId
-    ? `?tab=checkouts&attendanceId=${encodeURIComponent(attendanceId)}`
-    : "?tab=checkouts";
-  redirect(`/br/${branchId}/team${query}`);
+  const focusAttendanceId = Number(attendanceId);
+
+  return (
+    <StaffCheckoutApprovalsPageContent
+      routeBranchId={branchId}
+      focusAttendanceId={
+        Number.isInteger(focusAttendanceId) && focusAttendanceId > 0
+          ? focusAttendanceId
+          : undefined
+      }
+      plane="branch"
+      hideHeaderOnMobile
+    />
+  );
 }

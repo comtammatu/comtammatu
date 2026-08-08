@@ -174,7 +174,7 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     attendanceTableSource,
-    /<AppSection\s+title=\{messages\.hr\.client\.attendanceTitle\}[\s\S]*<SummaryView data=\{summary\} loading=\{!hasLoaded \|\| isPending\} \/>/,
+    /title=\{\s*routePath\.startsWith\("\/br\/"\)\s*\?[\s\S]*messages\.hr\.client\.attendanceTitle[\s\S]*\}[\s\S]*<SummaryView data=\{summary\} loading=\{!hasLoaded \|\| isPending\} \/>/,
     "attendance data must render in its own section",
   );
   assert.doesNotMatch(

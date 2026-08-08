@@ -76,6 +76,26 @@ export type ReceivingLocationOption = {
   isDefaultReceive: boolean;
 };
 
+export type GrnDetailData = {
+  grn: GrnDetail;
+  ingredients: IngredientRow[];
+  auditLogs: Array<{
+    id: number;
+    action: string;
+    entityType: string;
+    entityId: string;
+    userId: string | null;
+    actorName: string | null;
+    createdAt: string;
+  }>;
+  canEditDraft: boolean;
+  canConfirm: boolean;
+  canManageSupplierInvoice: boolean;
+  canAdjustStock: boolean;
+  canAmendConfirmed: boolean;
+  receivingLocationOptions: ReceivingLocationOption[];
+};
+
 export type EditableGrnLine = GrnDetailItem & { dirty: boolean };
 
 export function acceptedGrnQuantity(

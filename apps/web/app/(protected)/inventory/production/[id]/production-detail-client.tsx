@@ -113,8 +113,12 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
       if (!result.success) {
         setActionError(result.error ?? "Không thể hoàn thành Lệnh sản xuất.");
         setShortages(
-          result.errorCode === "PRODUCTION_SHORTAGE" && Array.isArray(result.data)
-            ? (result.data as ProductionShortageRow[])
+          result.errorCode === "PRODUCTION_SHORTAGE"
+            ? Array.isArray(result.data)
+              ? (result.data as ProductionShortageRow[])
+              : Array.isArray(result.meta?.shortages)
+                ? (result.meta.shortages as ProductionShortageRow[])
+                : []
             : [],
         );
         return;

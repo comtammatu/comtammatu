@@ -1,12 +1,8 @@
 import { Suspense } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
-import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { NotificationsClient } from "./notifications-client";
-import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage } from "@/components/surface";
 
 export const metadata = {
   title: "Thông báo — Cơm Tấm Má Tư",
@@ -36,26 +32,11 @@ export default async function NotificationsPage({
 
   return (
     <AppPage width="narrow">
-      <AppPageHeader
-        title={messages.notifications.pageTitle}
-        description={messages.notifications.pageDescription}
-        actions={
-          backHref ? (
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href={backHref} />}
-            >
-              <ArrowLeft data-icon="inline-start" />
-              {messages.notifications.back}
-            </Button>
-          ) : undefined
-        }
-      />
       <Suspense>
         <NotificationsClient
           tenantId={claims.tenant_id}
           branchId={claims.branch_id}
+          backHref={backHref}
         />
       </Suspense>
     </AppPage>

@@ -89,10 +89,24 @@ export type BranchRevenueTargetProgress = {
   branchId: number;
   yearMonth: string;
   netRevenueMtd: number;
+  netRevenueToday: number;
   targetAmount: number | null;
   progressPct: number | null;
   gapAmount: number | null;
+  rewardTiers: RevenueRewardTier[];
 };
+
+function parseRewardTiers(value: unknown): RevenueRewardTier[] | null {
+  const parsed = rewardTiersSchema.safeParse(value);
+  if (!parsed.success) return null;
+  return normalizeRevenueRewardTiers(
+    parsed.data.map((tier) => ({
+      thresholdPct: tier.threshold_pct,
+      rewardType: tier.reward_type,
+      rewardValue: tier.reward_value,
+    })),
+  );
+}
 
 function toNumber(value: number | string | null | undefined): number {
   const parsed = Number(value ?? 0);
@@ -358,15 +372,22 @@ export async function fetchBranchRevenueTargetProgress(
     return { success: true, data: null };
   }
 
+  const rewardTiers = parseRewardTiers(row.reward_tiers ?? []);
+  if (!rewardTiers) {
+    return { success: false, error: targetCopy.errors.loadFailed };
+  }
+
   return {
     success: true,
     data: {
       branchId: toNumber(row.branch_id),
       yearMonth: row.year_month,
       netRevenueMtd: toNumber(row.net_revenue_mtd),
+      netRevenueToday: toNumber(row.net_revenue_today),
       targetAmount: toNullableNumber(row.target_amount),
       progressPct: toNullableNumber(row.progress_pct),
       gapAmount: toNullableNumber(row.gap_amount),
+      rewardTiers,
     },
   };
 }

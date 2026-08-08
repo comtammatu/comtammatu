@@ -30,6 +30,12 @@ const teamMembersSource = readWeb(
 const teamMembersContentSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/members/members-content.tsx",
 );
+const teamMembersActionsSource = readWeb(
+  "app/(protected)/br/[branchId]/(operator)/team/members/actions.ts",
+);
+const teamMemberTileSource = readWeb(
+  "app/(protected)/br/[branchId]/(operator)/team/_components/team-member-tile.tsx",
+);
 const countAssignmentsSource = readWeb(
   "app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
 );
@@ -53,22 +59,51 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.match(teamTabsSource, /TabsList/);
   assert.match(teamTabsSource, /TabsTrigger/);
   assert.match(teamTabsSource, /TabsContent/);
-  assert.match(teamTabsSource, /window\.history\.replaceState/);
+  // Soft-navigate via router.replace so the RSC page re-fetches the active tab
+  // panel (lazy server render). history.replaceState alone leaves panels null.
+  assert.match(teamTabsSource, /router\.replace/);
+  assert.doesNotMatch(teamTabsSource, /window\.history\.replaceState/);
+  assert.match(teamTabsSource, /useTransition/);
+  assert.match(teamTabsSource, /PageSkeleton/);
   assert.match(teamTabsSource, /sticky top-0 z-20/);
   assert.match(teamTabsSource, /<TabsList\s+size="touch"/);
   assert.doesNotMatch(teamTabsSource, /group-data-horizontal\/tabs:!h-12/);
   assert.doesNotMatch(teamTabsSource, /\bh-10\b/);
   assert.match(tabsPrimitiveSource, /touch:[\s\S]*min-h-14/);
   assert.match(tabsPrimitiveSource, /data-size=\{size\}/);
-  assert.match(teamTabsSource, /sm:gap-2 sm:px-2 sm:text-sm/);
   assert.match(teamTabsSource, /whitespace-nowrap/);
-  assert.match(teamTabsSource, /!flex-none/);
   assert.match(teamTabsSource, /shortLabel/);
-  assert.match(teamTabsSource, /activeItem\.title/);
-  assert.match(teamTabsSource, /activeItem\.description/);
-  assert.match(teamTabsSource, /overflow-x-auto/);
-  assert.match(teamTabsSource, /\[scrollbar-width:thin\]/);
+  assert.match(teamTabsSource, /repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(teamTabsSource, /activeItem\.title/);
+  assert.doesNotMatch(teamTabsSource, /activeItem\.description/);
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);
+});
+
+test("operator team hub keeps only board and members peer tabs", () => {
+  assert.match(
+    teamTabsSource,
+    /TeamWorkspaceTabValue = "board" \| "members"/,
+  );
+  assert.match(teamTabsSource, /value: "board"/);
+  assert.match(teamTabsSource, /value: "members"/);
+  assert.doesNotMatch(teamTabsSource, /value: "roster"/);
+  assert.doesNotMatch(teamTabsSource, /value: "attendance"/);
+  assert.doesNotMatch(teamTabsSource, /value: "checkouts"/);
+  assert.doesNotMatch(teamTabsSource, /value: "leaves"/);
+});
+
+test("legacy team hub tab query params redirect to shift routes", () => {
+  assert.match(teamPageSource, /function redirectLegacyTeamTab/);
+  assert.match(teamPageSource, /case "roster":[\s\S]*\/shift\/roster/);
+  assert.match(teamPageSource, /case "attendance":[\s\S]*\/shift\/attendance/);
+  assert.match(
+    teamPageSource,
+    /case "checkouts":[\s\S]*\/shift\/checkout-approvals/,
+  );
+  assert.match(
+    teamPageSource,
+    /case "leaves":[\s\S]*\/shift\/leave-approvals/,
+  );
 });
 
 test("operator team copy stays in the Branch operator plane", () => {
@@ -103,8 +138,8 @@ test("operator team board exposes a real status filter", () => {
   );
   assert.match(teamBoardSource, /size="touch"/);
   assert.match(teamBoardSource, /className="shrink-0 gap-2 px-3"/);
-  assert.match(teamBoardSource, /minHeight="tap"/);
-  assert.match(teamBoardSource, /padding="compact"/);
+  assert.doesNotMatch(teamBoardSource, /minHeight="tap"/);
+  assert.doesNotMatch(teamBoardSource, /padding="compact"/);
   assert.match(teamBoardSource, /const filteredRows = displayRows\.filter/);
   assert.match(
     teamBoardSource,
@@ -137,6 +172,40 @@ test("operator team board exposes a real status filter", () => {
   assert.doesNotMatch(teamBoardSource, /copy\.boardSectionDescription/);
   assert.doesNotMatch(teamBoardSource, /SummaryBadges/);
   assert.doesNotMatch(teamBoardSource, /summaryPeople/);
+  assert.doesNotMatch(teamBoardSource, /TeamApprovalsStrip/);
+  assert.match(teamBoardSource, /function TeamToolsStrip/);
+  assert.match(teamBoardSource, /function TeamStripRows/);
+  assert.match(teamBoardSource, /countAssignmentsHref/);
+  assert.match(teamBoardSource, /key: "count-assignments"/);
+  assert.match(teamBoardSource, /copy\.actionCountAssign/);
+  assert.match(teamBoardSource, /copy\.actionCountReview/);
+  // Two panels: Cần duyệt (checkout/leave when pending) + Quản lý đội (tools).
+  assert.match(teamBoardSource, /copy\.approvalsStripTitle/);
+  assert.match(teamBoardSource, /copy\.toolsStripTitle/);
+  assert.match(teamBoardSource, /const approvalRows: TeamStripRow\[\]/);
+  assert.match(teamBoardSource, /const toolRows: TeamStripRow\[\]/);
+  assert.match(
+    teamBoardSource,
+    /key: "checkout"[\s\S]*key: "leave"|key: "leave"[\s\S]*key: "checkout"/,
+  );
+  assert.match(
+    teamBoardSource,
+    /key: "count-slips"[\s\S]*key: "count-assignments"[\s\S]*key: "roster"[\s\S]*key: "attendance"/,
+  );
+  // Tools panel must not retitle to Cần duyệt when any pending exists.
+  assert.doesNotMatch(
+    teamBoardSource,
+    /title=\{pendingTotal > 0 \? copy\.approvalsStripTitle : copy\.toolsStripTitle\}/,
+  );
+  assert.doesNotMatch(teamBoardSource, /pendingOnly:/);
+  assert.match(teamBoardSource, /copy\.emptyNoStaffTitle/);
+  assert.match(teamBoardSource, /copy\.viewMembersCta/);
+  assert.match(operatorMessagesSource, /approvalsStripTitle:\s*"Cần duyệt"/);
+  assert.match(operatorMessagesSource, /toolsStripTitle:\s*"Quản lý đội"/);
+  assert.match(operatorMessagesSource, /actionCountAssign:\s*"Phân công đếm"/);
+  assert.match(operatorMessagesSource, /actionCountReview:\s*"Phiếu đếm"/);
+  assert.match(operatorMessagesSource, /emptyNoStaffTitle:/);
+  assert.match(operatorMessagesSource, /viewMembersCta:/);
   assert.doesNotMatch(
     teamBoardSource,
     /grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-7/,
@@ -252,12 +321,28 @@ test("operator team board drawer keeps long shift details inside the drawer", ()
   assert.match(teamBoardSource, /className="break-words"/);
 });
 
+test("operator team board shows requested checkout time while approval is pending", () => {
+  // checkout_pending keeps check_out null until approval; end time must fall back
+  // to checkoutRequestedAt (same contract as staff-runtime today summary).
+  assert.match(teamBoardSource, /function resolveCheckoutDisplayAt/);
+  assert.match(
+    teamBoardSource,
+    /checkOut\s*\?\?\s*shift\.checkoutRequestedAt/,
+  );
+  assert.match(teamBoardSource, /formatCheckoutDisplayTime\(drawerRow\.shift\)/);
+  assert.match(teamBoardSource, /formatCheckoutDisplayTime\(shift\)/);
+  assert.match(
+    staffRuntimeSource,
+    /checkOut\s*\?\?\s*state\.attendance\?\.checkoutRequestedAt/,
+  );
+});
+
 test("operator team shift rows open one detail drawer before focused actions", () => {
   assert.match(
     teamBoardSource,
-    /<InteractiveCard[\s\S]*render=\{[\s\S]*<button type="button" onClick=\{\(\) => onOpenDrawer\(row\)\}/,
+    /<TeamMemberTile[\s\S]*onSelect=\{\(\) => onOpenDrawer\(row\)\}/,
   );
-  assert.doesNotMatch(teamBoardSource, /useLongPress|rowHref/);
+  assert.doesNotMatch(teamBoardSource, /useLongPress|rowHref|InteractiveCard/);
   assert.match(
     teamBoardSource,
     /checkoutApprovalsHref\}\?attendanceId=\$\{drawerRow\.shift\?\.attendanceId\}/,
@@ -268,6 +353,11 @@ test("operator team shift rows open one detail drawer before focused actions", (
   );
   assert.match(teamBoardSource, /drawerActionCheckout/);
   assert.match(teamBoardSource, /drawerActionCountSubmitted/);
+  assert.match(teamBoardSource, /DrawerFooter className="shrink-0/);
+  assert.doesNotMatch(
+    teamBoardSource,
+    /needsAction \? <Badge variant="warning">\{copy\.filters\.needsAction\}/,
+  );
 });
 
 test("operator team members use a roster grid with real profile fields", () => {
@@ -282,9 +372,10 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /<InputGroup size="touch">/);
   assert.doesNotMatch(teamMembersSource, /className="h-11"/);
   assert.doesNotMatch(teamMembersSource, /h-7 cursor-pointer/);
-  assert.match(teamMembersSource, /grid gap-2 sm:grid-cols-2/);
+  assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
+  assert.match(teamMembersSource, /TeamMemberTile/);
   assert.match(
-    teamMembersSource,
+    teamMemberTileSource,
     /min-h-24 flex-col justify-center text-center/,
   );
   assert.match(teamMembersSource, /aria-pressed=\{active\}/);
@@ -293,7 +384,6 @@ test("operator team members use a roster grid with real profile fields", () => {
     teamMembersSource,
     /\.filter\(\s*\(chip\) => chip\.value === "all" \|\| chip\.count > 0,?\s*\)/,
   );
-  assert.match(teamMembersSource, /grid grid-cols-2 gap-2/);
   assert.match(teamMembersSource, /import \{ matchesSearch \} from "@lib\/search"/);
   assert.match(teamMembersSource, /function memberMatchesQuery/);
   assert.doesNotMatch(teamMembersSource, /DataTable/);
@@ -301,7 +391,7 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.doesNotMatch(teamMembersSource, /AppToolbar/);
   assert.doesNotMatch(teamMembersSource, /minHeight="mobile"/);
   assert.doesNotMatch(teamMembersSource, /attendanceRecords\.map/);
-  assert.doesNotMatch(teamMembersSource, /leaves\.map/);
+  assert.doesNotMatch(teamMembersSource, /ScrollArea/);
   assert.doesNotMatch(teamMembersSource, /\bemail\b/i);
   assert.match(teamMembersContentSource, /avatar_url/);
   assert.doesNotMatch(teamMembersContentSource, /birth_date/);
@@ -332,16 +422,70 @@ test("operator team members use a roster grid with real profile fields", () => {
     teamMembersContentSource,
     /supabase\s*\.from\("employees"\)/,
   );
-  assert.doesNotMatch(teamMembersSource, /fetchEmployeeSummary|Tháng này/);
-  assert.doesNotMatch(teamMembersSource, /birthDate|startDate|profileId/);
+  assert.match(teamMembersSource, /employeeId: number \| null/);
+  assert.match(teamMembersContentSource, /employeeId: employeeId,/);
+  assert.match(teamMembersSource, /fetchTeamMemberMonthDetail/);
+  assert.match(teamMembersActionsSource, /export const fetchTeamMemberMonthDetail/);
+  assert.match(teamMembersActionsSource, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(teamMembersActionsSource, /requireBranchScope:\s*true/);
+  assert.match(teamMembersSource, /detailCopy\.monthSection/);
+  assert.match(teamMembersSource, /detailCopy\.monthDetailHint/);
+  assert.match(operatorMessagesSource, /memberDetail:[\s\S]*monthSection:\s*"Tháng này"/);
+  assert.match(operatorMessagesSource, /monthDetailHint:/);
+  assert.match(operatorMessagesSource, /openShiftTasks:\s*"Việc trong ca"/);
+  assert.match(teamMembersSource, /canManageEmployeeOverrides/);
+  assert.match(teamMembersSource, /BranchEmployeeTasksSheet/);
+  assert.match(teamMembersSource, /shift\/attendance/);
+  // Drawer stays a short touch summary: one scroll body + sticky footer CTA.
+  // Full day lists belong on /shift/attendance, not inside the drawer.
+  assert.match(
+    teamMembersSource,
+    /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"/,
+  );
+  assert.match(teamMembersSource, /DrawerFooter className="shrink-0/);
+  assert.match(
+    teamMembersSource,
+    /shift\/attendance\?view=summary&employeeId=\$\{activeMember\.employeeId\}&month=/,
+  );
+  assert.doesNotMatch(teamMembersSource, /detail\.attendance\.map/);
+  assert.doesNotMatch(teamMembersSource, /detail\.leaves\.map/);
+  assert.doesNotMatch(teamMembersActionsSource, /attendance:\s*TeamMemberMonthAttendance/);
+  assert.doesNotMatch(teamMembersSource, /fetchEmployeeSummary/);
+  assert.doesNotMatch(teamMembersSource, /salary|payslip|birthDate|profileId/i);
+  assert.doesNotMatch(teamMembersActionsSource, /salary|payslip|estimatedPay/i);
 });
 
-test("operator team stays read-only for HR and keeps focused status actions", () => {
+test("operator team board derives checklist progress from attendance snapshots", () => {
+  // Clock-in materializes position_shift_tasks into attendance_checklist_items;
+  // the board must not gate on retired default_checklist_template_id.
   assert.match(
-    teamTabsSource,
-    /TeamWorkspaceTabValue =[\s\S]*?"board"[\s\S]*?"members"[\s\S]*?"roster"[\s\S]*?"attendance"[\s\S]*?"checkouts"[\s\S]*?"leaves"/,
+    teamDataSource,
+    /checklistConfigured:\s*checklistItems\.length\s*>\s*0/,
   );
+  assert.doesNotMatch(teamDataSource, /effectiveChecklistTemplateId/);
+  assert.doesNotMatch(
+    teamDataSource,
+    /default_checklist_template_id/,
+  );
+});
+
+test("operator team board keeps focused approval actions on shift routes", () => {
   assert.match(teamPageSource, /canApproveCheckout=\{canApproveCheckout\}/);
+  assert.match(
+    teamPageSource,
+    /checkoutApprovalsHref=\{`\$\{basePath\}\/shift\/checkout-approvals`\}/,
+  );
+  assert.match(
+    teamPageSource,
+    /leaveApprovalsHref=[\s\S]*\/shift\/leave-approvals/,
+  );
+  assert.match(teamPageSource, /rosterHref=[\s\S]*\/shift\/roster/);
+  assert.match(teamPageSource, /attendanceHref=[\s\S]*\/shift\/attendance/);
+  assert.match(
+    teamPageSource,
+    /countAssignmentsHref=[\s\S]*\/stock\/count-assignments/,
+  );
+  assert.match(teamPageSource, /INVENTORY_COUNT_ASSIGN/);
   assert.match(teamPageSource, /approverRole=\{claims\.user_role as StaffRole\}/);
   assert.match(teamPageSource, /canApproveCount=\{canApproveCount\}/);
   assert.match(

@@ -46,7 +46,8 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 3. Submit. Kho Tổng / Bếp TT thấy inbox dòng thuộc nguồn mình trên
    `/inventory/transfers`.
 4. Bên nguồn fulfill → tạo DC → ship. Có thể 1 hoặc 2 DC / phiếu.
-5. QL CN nhận DC; tồn CN tăng theo cost snapshot nguồn.
+5. QL CN nhận DC trên hub `/br/.../stock` (filter cần nhận hoặc bước Xác nhận
+   của YCH); tồn CN tăng theo cost snapshot nguồn.
 
 ## 4. Sản xuất và tiêu hao
 
@@ -57,7 +58,9 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
   mới nhập sản lượng/nguyên liệu thực tế để hoàn thành.
 - Mẻ không có sản lượng: hủy lệnh, sau đó ghi vật tư hỏng qua Hao hụt.
 - Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh dùng Điều chuyển riêng.
-  Trả nguyên liệu thừa / tồn dư về Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
+  Sau khi xuất kho, DC inbound hiện trên hub nhận của CN (cùng chỗ với YCH cần
+  nhận) — CN không quản lý lifecycle DC xuất. Trả nguyên liệu thừa / tồn dư về
+  Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
 - Tiêu hao / hao hụt theo contract hiện hành tại site được cấp.
 
 ## 5. Kiểm kê

@@ -23,6 +23,11 @@ test("menu recipe list hides menu items without lines and omits Yield", () => {
     page,
     /\.filter\(\(menuRecipe\) => menuRecipe\.items\.length > 0\)/,
   );
+  assert.match(page, /fetchBranchWacMap\(null\)/);
+  assert.match(page, /resolveMenuRecipeUnitCost/);
+  assert.match(actions, /\.gt\("avg_unit_cost", 0\)/);
+  assert.match(menuRecipeCost, /buildValuedWacMap/);
+  assert.match(client, /menuRecipeCostUnavailable/);
   assert.doesNotMatch(dialog, /showYield/);
   assert.doesNotMatch(dialog, /INVENTORY_VI\.yieldHint/);
   assert.doesNotMatch(

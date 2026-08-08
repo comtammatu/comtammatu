@@ -79,6 +79,7 @@ import {
   getIssueUnitOptions,
 } from "@/(protected)/inventory/_lib/issue-units";
 import { formatQty } from "@lib/inventory/format";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import {
   cancelStockIssue,
   confirmStockIssue,
@@ -464,7 +465,10 @@ export function BranchStockIssueDetailClient({
     startTransition(async () => {
       const result = await confirmStockIssue(issue.id);
       if (!result.success) {
-        toast.error(result.error ?? issuesCopy.confirmFailed);
+        toast.error(
+          applyInventoryActionError(result, issuesCopy.confirmFailed)
+            .toastMessage,
+        );
         return;
       }
 

@@ -8,15 +8,15 @@ import { BranchOperatorPage } from "@lib/branch-operator/components/branch-opera
 import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
 import { purchaseDemandLineProgress } from "@lib/inventory/purchase-demand-progress";
+import type {
+  PurchaseRequestIngredientOption,
+  PurchaseRequestRow,
+} from "@lib/inventory/purchase-request-model";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
-import {
-  PurchaseRequestsClient,
-  type PurchaseRequestIngredientOption,
-  type PurchaseRequestRow,
-} from "@/(protected)/inventory/purchase-requests/purchase-requests-client";
 import type { PurchaseOrderSupplier } from "@/(protected)/inventory/purchase-requests/purchase-order-drafts";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { BranchPurchaseRequestsClient } from "./branch-purchase-requests-client";
 
 const DEMAND_SELECT =
   "id, request_number, branch_id, status, status_reason, needed_by, notes, created_at, updated_at, purchase_request_items(id, ingredient_id, quantity, entry_unit_id, notes, ingredients(name, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_active)), units!purchase_request_items_entry_unit_id_fkey(code, name)), purchase_orders(id, po_number, display_id, status, supplier_id, purchase_order_items(purchase_request_item_id, quantity, entry_to_base_factor))";
@@ -275,23 +275,21 @@ export default async function OperatorPurchaseRequestsPage({
       })),
   }));
 
-  const requestBranches = [{ id: branchId, name: branchContext.branch.name }];
+  const requestBranches = [
+    { id: branchId, name: branchContext.branch.name },
+  ];
 
   return (
-    <BranchOperatorPage
-      title={messages.settings.branch.centralPurchaseRequestsJob}
-      description={messages.inventory.po.workspaceDescription}
-    >
-      <PurchaseRequestsClient
-        rows={demandRows}
-        branches={requestBranches}
-        ingredients={ingredientOptions}
-        suppliers={suppliers}
-        mappedIngredientIds={mappedIngredientIds}
-        canCreateRequest={canCreateRequest}
-        canAllocate={canAllocate}
-        embedded
-      />
-    </BranchOperatorPage>
+    <BranchPurchaseRequestsClient
+      rows={demandRows}
+      branches={requestBranches}
+      ingredients={ingredientOptions}
+      suppliers={suppliers}
+      mappedIngredientIds={mappedIngredientIds}
+      canCreateRequest={canCreateRequest}
+      canAllocate={canAllocate}
+      branchId={branchId}
+      branchName={branchContext.branch.name}
+    />
   );
 }

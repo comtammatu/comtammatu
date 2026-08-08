@@ -297,10 +297,17 @@ export function projectStockFulfillmentRows({
     },
   );
 
+  // Central: all orphan DCs. Branch: only inbound receive-ready DCs (push /
+  // FG handoff) — not draft/dispatch chrome or outbound from the store.
   const manualTransferRows = transfers.flatMap<StockFulfillmentJourneyRow>(
     (transfer) => {
       if (transfer.stockRequestId != null) return [];
       const workKinds = transferWorkKinds(transfer, viewer);
+      if (viewer.mode === "branch") {
+        if (viewer.branchId == null) return [];
+        if (transfer.toSite.id !== viewer.branchId) return [];
+        if (!workKinds.includes("receive")) return [];
+      }
       return [
         {
           kind: "manual_transfer",

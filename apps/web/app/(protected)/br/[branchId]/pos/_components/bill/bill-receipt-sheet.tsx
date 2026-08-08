@@ -30,6 +30,7 @@ import {
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { cn } from "@comtammatu/ui";
 import {
   TriangleAlert as IconAlertTriangle,
   Banknote as IconCash,
@@ -214,7 +215,6 @@ const PAYMENT_LOADING_TEXT = {
   cash: "Ti\u1ec1n m\u1eb7t",
   qr: "Chuy\u1ec3n kho\u1ea3n",
   received: "T\u1ed5ng nh\u1eadn",
-  total: "T\u1ed5ng t\u1ea1m t\u00ednh",
 } as const;
 
 function PaymentLoadingFixture() {
@@ -223,9 +223,10 @@ function PaymentLoadingFixture() {
       <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"
-          variant="default"
+          variant="outline"
           size="touch-lg"
-          className="flex-col gap-2"
+          aria-pressed
+          className="flex-col gap-2 border-foreground bg-muted"
         >
           <IconCash data-icon="inline-start" />
           {PAYMENT_LOADING_TEXT.cash}
@@ -242,14 +243,6 @@ function PaymentLoadingFixture() {
       </div>
       <AppSection size="sm" contentClassName="gap-3">
         <>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">
-              {PAYMENT_LOADING_TEXT.total}
-            </span>
-            <span className="text-lg font-mono font-bold tabular-nums">
-              {formatVND(165000)}
-            </span>
-          </div>
           <InputGroup className="h-10">
             <InputGroupAddon>{PAYMENT_LOADING_TEXT.received}</InputGroupAddon>
             <InputGroupInput
@@ -976,13 +969,25 @@ export function BillReceipt({
   // opens, while the fetch runs in the background.
   const dialogTitleHeader =
     order ?? (initialHeaderSeed?.id === orderId ? initialHeaderSeed : null);
-  const dialogTitle = dialogTitleHeader
-    ? `${dialogTitleLabel} · #${dialogTitleHeader.order_number} · ${formatVND(Number(dialogTitleHeader.total_amount))}`
-    : dialogTitleLabel;
+  const dialogTitle = dialogTitleHeader ? (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="flex items-baseline justify-between gap-3">
+        <span>{dialogTitleLabel}</span>
+        <span className="shrink-0 font-mono text-lg font-bold tabular-nums tracking-tight">
+          {formatVND(Number(dialogTitleHeader.total_amount))}
+        </span>
+      </span>
+      <span className="truncate text-sm font-normal text-muted-foreground">
+        #{dialogTitleHeader.order_number}
+      </span>
+    </span>
+  ) : (
+    dialogTitleLabel
+  );
   const dialogDescription =
     isReceiptIntent || isReadOnlyOrder
       ? "Hóa đơn đã xử lý."
-      : "Chọn phương thức và xác nhận.";
+      : messages.pos.payment.stepDescription;
   const remoteQrValue =
     selectedMethod === "cash"
       ? undefined
@@ -996,6 +1001,13 @@ export function BillReceipt({
     paymentCreateError ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription;
   const isWaitingForVietQr =
     selectedMethod === "vietqr" && pendingExtras?.payment_id != null;
+  const hasPaymentBreakdown =
+    order != null &&
+    (Number(order.service_charge) > 0 ||
+      Number(order.discount_amount) > 0 ||
+      Number(order.order_discount_amount) > 0 ||
+      Number(order.item_discount_amount) > 0 ||
+      Number(order.subtotal) !== Number(order.total_amount));
 
   return (
     <AppDialog
@@ -1061,11 +1073,6 @@ export function BillReceipt({
           <div className="flex flex-col gap-4">
             <AppSection
               title={messages.pos.payment.stepTitle}
-              description={
-                selectedMethod === "cash"
-                  ? messages.pos.payment.stepDescription
-                  : undefined
-              }
               icon={<IconCreditCard />}
               size="sm"
               contentClassName="gap-3"
@@ -1094,23 +1101,31 @@ export function BillReceipt({
                     </div>
                   </Alert>
                 ) : null}
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                  className="grid grid-cols-2 gap-2"
+                  role="group"
+                  aria-label={messages.pos.payment.methodsTitle}
+                >
                   {methods.map((method) => {
                     const meta = METHOD_META[method] ?? {
                       label: method,
                       icon: IconCreditCard,
                     };
                     const Icon = meta.icon;
+                    const isSelected = selectedMethod === method;
                     return (
                       <Button
                         key={method}
                         data-testid={`bill-pay-${method}`}
                         type="button"
-                        variant={
-                          selectedMethod === method ? "default" : "outline"
-                        }
+                        variant="outline"
                         size="touch-lg"
-                        className="flex-col gap-2"
+                        aria-pressed={isSelected}
+                        className={cn(
+                          "flex-col gap-2",
+                          isSelected &&
+                            "border-foreground bg-muted text-foreground hover:bg-muted",
+                        )}
                         onClick={() => handleSelectMethod(method)}
                         disabled={actionPending || methodPending}
                       >
@@ -1133,8 +1148,9 @@ export function BillReceipt({
 
                 {selectedMethod === "cash" ? (
                   <div className="flex flex-col gap-3 rounded-md bg-muted/30 p-3">
-                    {order && (
+                    {order && hasPaymentBreakdown ? (
                       <OrderTotalsSummary
+                        variant="compact"
                         subtotal={order.subtotal}
                         serviceCharge={order.service_charge}
                         discountAmount={order.discount_amount}
@@ -1145,7 +1161,7 @@ export function BillReceipt({
                         discountNote={order.discount_note}
                         totalAmount={order.total_amount}
                       />
-                    )}
+                    ) : null}
 
                     <InputGroup className="h-10">
                       <InputGroupAddon>
@@ -1178,7 +1194,7 @@ export function BillReceipt({
                       ))}
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 bg-muted/50 p-3">
+                    <div className="flex items-center justify-between gap-3 rounded-md bg-muted/50 p-3">
                       <span className="text-sm font-medium">
                         {messages.pos.payment.cashChange}
                       </span>
@@ -1257,9 +1273,9 @@ export function BillReceipt({
                         !selfOrderPaymentRequestId ? (
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="touch"
-                            className="w-full sm:w-auto sm:self-start"
+                            className="self-start text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => void handleCancelPendingPayment()}
                             disabled={actionPending || methodPending}
                             title={messages.pos.payment.cancelPendingTitle}
@@ -1295,29 +1311,20 @@ export function BillReceipt({
                 )}
                 {messages.pos.payment.printProvisional}
               </Button>
-              <Button
-                type="button"
-                variant={isWaitingForVietQr ? "default" : "outline"}
-                size="touch"
-                className="flex-1"
-                onClick={onClose}
-                disabled={actionPending}
-              >
-                {isWaitingForVietQr
-                  ? SELF_ORDER_VI.paymentReconcileAction
-                  : ACTIONS_VI.cancel}
-              </Button>
+              {!isWaitingForVietQr ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="flex-1"
+                  onClick={onClose}
+                  disabled={actionPending}
+                >
+                  {ACTIONS_VI.cancel}
+                </Button>
+              ) : null}
             </div>
-            {selectedMethod === "vietqr" ? (
-              <p
-                role="status"
-                className="text-center text-sm text-muted-foreground"
-              >
-                {pendingExtras?.payment_id
-                  ? SELF_ORDER_VI.paymentReconcileDescription
-                  : "Tạo mã chuyển khoản để chờ SePay xác thực thanh toán."}
-              </p>
-            ) : disabledReason ? (
+            {selectedMethod === "cash" && disabledReason ? (
               <p className="text-sm text-muted-foreground">{disabledReason}</p>
             ) : null}
             {selectedMethod === "cash" ? (
@@ -1325,6 +1332,7 @@ export function BillReceipt({
                 data-testid="bill-confirm-cash"
                 type="button"
                 size="touch-lg"
+                className="w-full"
                 onClick={() => void handleConfirmPaid()}
                 disabled={
                   isPending || methodPending || actionPending || !canConfirmPaid
@@ -1333,6 +1341,16 @@ export function BillReceipt({
               >
                 {actionPending ? <Spinner data-icon="inline-start" /> : null}
                 {messages.pos.payment.paidConfirm}
+              </Button>
+            ) : isWaitingForVietQr ? (
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={onClose}
+                disabled={actionPending}
+              >
+                {SELF_ORDER_VI.paymentReconcileAction}
               </Button>
             ) : null}
           </div>

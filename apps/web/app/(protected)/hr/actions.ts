@@ -1296,6 +1296,7 @@ export const forceCloseStaleAttendance = withAction(
 
     revalidatePath("/hr");
     revalidatePath(`/br/${data.branchId}/team`);
+    revalidatePath(`/br/${data.branchId}/shift/attendance`);
     return { success: true, data: checkOutTime };
   },
 );

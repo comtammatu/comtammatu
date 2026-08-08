@@ -1,19 +1,18 @@
-import { Fragment, Suspense } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChefHat, Truck } from "lucide-react";
 import {
   canAccess,
-  MODULE_ACL,
   resolveOperatorTiles,
   type BranchKind,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { formatPercent } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   BranchOperatorActionSection,
   BranchOperatorPage,
+  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { messages } from "@lib/messages";
@@ -23,7 +22,6 @@ import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import {
   CENTRAL_HOME_TILE_SUFFIXES,
   getBranchHomeTileLimit,
-  getBranchManagerHomePhaseGroups,
   getBranchPrimaryHomeGroup,
   getOperatorHomeTileHrefs,
 } from "./_lib/operator-home-contract";
@@ -33,29 +31,11 @@ import { BranchQueueSection } from "./_components/home/branch-queue-section";
 import { BranchTodayStatus } from "./_components/home/branch-today-status";
 import { BranchTodayStatusPending, BranchQueuePending } from "./_components/home/branch-home-skeletons";
 import { BranchQuickMenuLimitTrigger } from "./_components/home/branch-quick-menu-limit-trigger";
+import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-target-strip";
 import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
-import {
-  targetProgressTone,
-  type TargetProgressTone,
-} from "@/(protected)/finance/_lib/revenue-target";
 
 const homeCopy = messages.operator.home;
 const branchCopy = messages.settings.branch;
-const stationDescriptions: Record<string, string> = {
-  pos: homeCopy.posDescription,
-  kds: homeCopy.kdsDescription,
-  runner: homeCopy.runnerDescription,
-};
-
-const REVENUE_TONE_BADGE_VARIANT: Record<
-  TargetProgressTone,
-  "secondary" | "success" | "warning" | "destructive"
-> = {
-  success: "success",
-  warning: "warning",
-  destructive: "destructive",
-  neutral: "secondary",
-};
 
 const CENTRAL_KITCHEN_HOME_LABELS = [
   { suffix: "/stock/grn", label: branchCopy.centralKitchenReceiveJob },
@@ -123,9 +103,6 @@ export default async function OperatorHomePage({
   const isManagerLike =
     !isCentral &&
     (claims.user_role === "branch_manager" || claims.user_role === "owner");
-  const managerPhases = isManagerLike
-    ? getBranchManagerHomePhaseGroups(rawGroups, claims.user_role)
-    : null;
 
   const centralSuffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind] ?? null;
   const centralGroups =
@@ -164,20 +141,11 @@ export default async function OperatorHomePage({
             branchKind,
             claims.user_role,
           );
-          const phaseHrefs = managerPhases
-            ? new Set([
-                ...managerPhases.phases.open,
-                ...managerPhases.phases.run,
-                ...managerPhases.phases.close,
-              ])
-            : new Set<string>();
           return rawGroups
             .map((group) => ({
               ...group,
-              tiles: group.tiles.filter(
-                (tile) =>
-                  managerHomeHrefs.has(tile.href) &&
-                  !phaseHrefs.has(tile.href),
+              tiles: group.tiles.filter((tile) =>
+                managerHomeHrefs.has(tile.href),
               ),
             }))
             .filter((group) => group.tiles.length > 0);
@@ -190,62 +158,6 @@ export default async function OperatorHomePage({
             },
           ].filter((group) => group.tiles.length > 0)
         : [];
-
-  const phaseSections: {
-    phase: "open" | "run" | "close";
-    title: string;
-    description: string;
-    tiles: { href: string; moduleKey: string; icon: string; label: string }[];
-  }[] = [];
-  if (managerPhases) {
-    const phaseConfig: {
-      phase: "open" | "run" | "close";
-      title: string;
-      description: string;
-    }[] = [
-      {
-        phase: "open",
-        title: homeCopy.phaseOpenTitle,
-        description: homeCopy.phaseOpenDescription,
-      },
-      {
-        phase: "run",
-        title: homeCopy.phaseRunTitle,
-        description: homeCopy.phaseRunDescription,
-      },
-      {
-        phase: "close",
-        title: homeCopy.phaseCloseTitle,
-        description: homeCopy.phaseCloseDescription,
-      },
-    ];
-    for (const config of phaseConfig) {
-      const hrefs = managerPhases.phases[config.phase];
-      if (hrefs.size === 0) continue;
-      const phaseTiles = rawGroups
-        .flatMap((group) => group.tiles)
-        .filter((tile) => hrefs.has(tile.href));
-      if (phaseTiles.length > 0) {
-        phaseSections.push({
-          phase: config.phase,
-          title: config.title,
-          description: config.description,
-          tiles: phaseTiles,
-        });
-      }
-    }
-  }
-
-  const branchManagementLinks = canManageBranch
-    ? [
-        {
-          key: "branch-settings",
-          href: `/br/${context.branchId}/settings`,
-          icon: resolveOperatorTileIcon("Settings"),
-          title: MODULE_ACL.branch_settings.label,
-        },
-      ]
-    : [];
 
   const ownerLinks =
     claims.user_role === "owner"
@@ -265,31 +177,6 @@ export default async function OperatorHomePage({
   const revenueTarget =
     revenueTargetRes?.success === true ? revenueTargetRes.data : null;
 
-  // Revenue progress renders as ONE subordinate badge on the actionable
-  // orders phase section — operator surfaces are job-first, no KPI strip.
-  // A failed fetch renders nothing (pre-wave behavior); the secondary
-  // fallback badge is reserved for a genuine success-with-no-target result.
-  const revenueBadge =
-    !isManagerLike || revenueTargetRes?.success !== true
-      ? null
-      : revenueTarget &&
-          revenueTarget.targetAmount != null &&
-          revenueTarget.targetAmount > 0 &&
-          revenueTarget.progressPct != null
-        ? {
-            children: homeCopy.revenueProgressBadge(
-              formatPercent(revenueTarget.progressPct),
-            ),
-            variant:
-              REVENUE_TONE_BADGE_VARIANT[
-                targetProgressTone(revenueTarget.progressPct)
-              ],
-          }
-        : {
-            children: homeCopy.revenueNoTargetBadge,
-            variant: "secondary" as const,
-          };
-
   const pageTitle = isCentralKitchen
     ? branchCopy.centralKitchenHomeTitle
     : isCentralSupply
@@ -304,10 +191,8 @@ export default async function OperatorHomePage({
         </Suspense>
       ) : null}
 
-      {isManagerLike ? (
-        <div className="flex w-full items-center justify-between gap-2 pb-1">
-          <BranchQuickMenuLimitTrigger branchId={context.branchId} />
-        </div>
+      {revenueTarget ? (
+        <BranchRevenueTargetStrip progress={revenueTarget} />
       ) : null}
 
       {isCentral ? (
@@ -342,50 +227,6 @@ export default async function OperatorHomePage({
         />
       </Suspense>
 
-      {phaseSections.map((section) => {
-        const stationTiles = section.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] != null,
-        );
-        const supportingTiles = section.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] == null,
-        );
-        const toPhaseLink = (tile: (typeof section.tiles)[number]) => ({
-          key: `phase-${section.phase}-${tile.moduleKey}-${tile.href}`,
-          href: tile.href,
-          icon: resolveOperatorTileIcon(tile.icon),
-          title: tile.label,
-          disabled: tilesLockedBeforeClockIn,
-          disabledReason: tilesLockedBeforeClockIn
-            ? homeCopy.lockedBeforeClockIn
-            : undefined,
-        });
-
-        return (
-          <Fragment key={`phase-${section.phase}`}>
-            {stationTiles.length > 0 ? (
-              <BranchOperatorActionSection
-                title={section.title}
-                links={stationTiles.map(toPhaseLink)}
-                presentation="stations"
-              />
-            ) : null}
-            {supportingTiles.length > 0 ? (
-              <BranchOperatorActionSection
-                title={section.title}
-                links={supportingTiles.map(toPhaseLink)}
-                columns={2}
-                mobileColumns={2}
-                wideColumns
-                presentation="plain"
-                badge={
-                  section.phase === "run" ? (revenueBadge ?? undefined) : undefined
-                }
-              />
-            ) : null}
-          </Fragment>
-        );
-      })}
-
       {groups.map((group) => {
         if (isCentral) {
           return (
@@ -413,11 +254,15 @@ export default async function OperatorHomePage({
           );
         }
 
+        // Home stations: Bán hàng + Quầy Bếp only — runner stays off this surface.
         const stationTiles = group.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] != null,
+          (tile) => tile.moduleKey === "pos" || tile.moduleKey === "kds",
         );
         const supportingTiles = group.tiles.filter(
-          (tile) => stationDescriptions[tile.moduleKey] == null,
+          (tile) =>
+            tile.moduleKey !== "pos" &&
+            tile.moduleKey !== "kds" &&
+            tile.moduleKey !== "runner",
         );
         const toLink = (tile: (typeof group.tiles)[number]) => ({
           key: `${group.id}-${tile.moduleKey}-${tile.href}`,
@@ -430,43 +275,71 @@ export default async function OperatorHomePage({
               ? homeCopy.lockedBeforeClockIn
               : undefined,
         });
+        const showLimitsBesideOrders =
+          group.id === "sales_kitchen" && isManagerLike;
+        const hasSupporting =
+          showLimitsBesideOrders || supportingTiles.length > 0;
+        if (stationTiles.length === 0 && !hasSupporting) return null;
+
+        const panelTitle =
+          stationTiles.length > 0
+            ? homeCopy.stationsTitle
+            : group.id === "sales_kitchen"
+              ? homeCopy.shiftControlTitle
+              : group.title;
 
         return (
-          <Fragment key={group.id}>
-            <BranchOperatorActionSection
-              title={homeCopy.stationsTitle}
-              links={stationTiles.map(toLink)}
-              presentation="stations"
-            />
-            <BranchOperatorActionSection
-              title={
-                group.id === "sales_kitchen"
-                  ? homeCopy.shiftControlTitle
-                  : group.title
-              }
-              links={supportingTiles.map(toLink)}
-              columns={2}
-              mobileColumns={2}
-              wideColumns
-              presentation="plain"
-            />
-          </Fragment>
+          <BranchOperatorPanel key={group.id} title={panelTitle} size="sm">
+            <div className="flex flex-col gap-2">
+              {stationTiles.length > 0 ? (
+                <BranchOperatorActionSection
+                  links={stationTiles.map(toLink)}
+                  presentation="stations"
+                />
+              ) : null}
+              {showLimitsBesideOrders ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <BranchQuickMenuLimitTrigger
+                    branchId={context.branchId}
+                    className="h-full min-h-12 w-full justify-start font-medium"
+                  />
+                  {supportingTiles.map((tile) => {
+                    const link = toLink(tile);
+                    const Icon = link.icon;
+                    return (
+                      <Button
+                        key={link.key}
+                        variant="outline"
+                        size="touch"
+                        disabled={link.disabled}
+                        className="h-full min-h-12 w-full justify-start font-medium"
+                        render={
+                          link.disabled ? undefined : <Link href={link.href} />
+                        }
+                      >
+                        {Icon ? (
+                          <Icon data-icon="inline-start" className="size-4" />
+                        ) : null}
+                        {link.title}
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : supportingTiles.length > 0 ? (
+                <BranchOperatorActionSection
+                  links={supportingTiles.map(toLink)}
+                  columns={2}
+                  mobileColumns={2}
+                  wideColumns
+                  presentation="plain"
+                />
+              ) : null}
+            </div>
+          </BranchOperatorPanel>
         );
       })}
 
-      {!isCentral ? (
-        <BranchOperatorActionSection
-          title={APP_COPY_VI.operatorOpsActions}
-          links={branchManagementLinks}
-          columns={2}
-          mobileColumns={2}
-          wideColumns
-          presentation="plain"
-        />
-      ) : null}
-
       <BranchOperatorActionSection
-        title={APP_COPY_VI.ownerTitle}
         links={ownerLinks}
         columns={2}
         mobileColumns={2}

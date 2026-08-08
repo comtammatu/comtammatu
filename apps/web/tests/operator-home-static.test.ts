@@ -21,55 +21,62 @@ function walkFiles(dir: string): string[] {
 }
 
 const HOME_PAGE = "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx";
+const STRIP =
+  "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx";
 
-test("operator home KPI strip is gone; revenue survives as one subordinate badge", () => {
+test("operator home shows manager revenue strip with month, day, and milestones", () => {
   const home = read(HOME_PAGE);
+  const strip = read(STRIP);
 
-  assert.equal(
-    exists(
-      "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx",
-    ),
-    false,
-  );
-  assert.doesNotMatch(home, /BranchRevenueTargetStrip|KpiCard|KpiRow/);
-  assert.doesNotMatch(home, /formatVND|shortValue=|<Progress\b/);
-
-  // Same server action + ACL gate as before: manager/owner only.
+  assert.equal(exists(STRIP), true);
+  assert.match(home, /BranchRevenueTargetStrip/);
   assert.match(
     home,
     /const revenueTargetRes = isManagerLike\s*\?\s*await fetchBranchRevenueTargetProgress\(context\.branchId\)/,
   );
-  // A failed fetch (success:false forbidden/loadFailed paths) renders NO
-  // badge; the secondary no-target badge only covers genuine
-  // success-with-no-target results.
-  assert.match(
-    home,
-    /const revenueBadge =\s*!isManagerLike \|\| revenueTargetRes\?\.success !== true\s*\?\s*null/,
-  );
+  assert.match(home, /\{revenueTarget \? \(\s*<BranchRevenueTargetStrip/);
+  assert.doesNotMatch(home, /revenueBadge|revenueProgressBadge|revenueNoTargetBadge/);
 
-  // Exactly one badge wiring carries the revenue info: the actionable
-  // orders (run-phase) section badge slot.
-  const badgeWirings = home.match(/badge=\{/g) ?? [];
-  assert.equal(badgeWirings.length, 1);
-  assert.match(
-    home,
-    /section\.phase === "run" \? \(revenueBadge \?\? undefined\) : undefined/,
+  const todayIndex = home.indexOf("<BranchTodayStatus");
+  const stripIndex = home.indexOf("<BranchRevenueTargetStrip");
+  const queueIndex = home.indexOf("<BranchQueueSection");
+  assert.ok(stripIndex !== -1, "revenue strip is rendered");
+  assert.ok(queueIndex !== -1, "queue section is rendered");
+  assert.ok(
+    todayIndex === -1 || todayIndex < stripIndex,
+    "today status renders before revenue strip when present",
   );
-  assert.match(home, /homeCopy\.revenueProgressBadge\(/);
-  assert.match(home, /homeCopy\.revenueNoTargetBadge/);
-  assert.match(home, /variant: "secondary" as const/);
+  assert.ok(stripIndex < queueIndex, "revenue strip renders before queue");
+
+  assert.match(strip, /monthRevenueLabel|Doanh thu tháng/);
+  assert.match(strip, /dayRevenueLabel|Doanh thu ngày/);
+  assert.match(strip, /netRevenueMtd/);
+  assert.match(strip, /netRevenueToday/);
+  assert.match(strip, /rewardTiers/);
+  assert.match(strip, /isRevenueRewardTierAchieved/);
+  assert.match(strip, /<Progress\b/);
+  assert.match(strip, /formatVND/);
+  // One panel: target progress + collapsed reward milestones (not a second card).
+  assert.match(strip, /BranchOperatorPanel/);
+  assert.match(strip, /progressCopy\.targetLabel/);
+  assert.match(strip, /<Collapsible>/);
+  assert.match(strip, /CollapsibleTrigger/);
+  assert.match(strip, /CollapsibleContent/);
+  assert.match(strip, /rewardCopy\.trackingTitle/);
+  assert.ok(
+    strip.indexOf("<Collapsible>") < strip.indexOf("rewardTiers.map"),
+    "milestones render inside Collapsible",
+  );
+  assert.doesNotMatch(strip, /\b(?:KpiCard|KpiRow)\b/);
 });
 
 test("operator home restores the queue-before-tiles landing order", () => {
   const home = read(HOME_PAGE);
   const queueIndex = home.indexOf("<BranchQueueSection");
-  const phaseIndex = home.indexOf("phaseSections.map(");
   const groupsIndex = home.indexOf("groups.map(");
 
   assert.ok(queueIndex !== -1, "queue section is rendered");
-  assert.ok(phaseIndex !== -1, "phase tile map is rendered");
   assert.ok(groupsIndex !== -1, "group tile map is rendered");
-  assert.ok(queueIndex < phaseIndex, "queue renders before phase tiles");
   assert.ok(queueIndex < groupsIndex, "queue renders before group tiles");
 });
 
@@ -88,15 +95,14 @@ test("no KpiCard/KpiRow stat surfaces remain under the /br/ route tree", () => {
   }
 });
 
-test("revenue badge copy is localized through operator messages", () => {
-  const operatorCopy = read("apps/web/lib/messages/operator.ts");
-  assert.match(
-    operatorCopy,
-    /revenueProgressBadge: \(pct: string\) => `\$\{pct\} chỉ tiêu`/,
-  );
-  assert.match(operatorCopy, /revenueNoTargetBadge: "Chưa đặt chỉ tiêu"/);
+test("revenue strip copy is localized through finance messages", () => {
+  const financeCopy = read("apps/web/lib/messages/finance.ts");
+  assert.match(financeCopy, /monthRevenueLabel: "Doanh thu tháng"/);
+  assert.match(financeCopy, /dayRevenueLabel: "Doanh thu ngày"/);
+  assert.match(financeCopy, /trackingTitle: "Các mốc chỉ tiêu"/);
+  assert.match(financeCopy, /milestone: \(threshold: string\) => `Mốc \$\{threshold\}`/);
 
-  const home = read(HOME_PAGE);
-  assert.doesNotMatch(home, /chỉ tiêu/);
-  assert.doesNotMatch(home, /Chưa đặt chỉ tiêu/);
+  const strip = read(STRIP);
+  assert.doesNotMatch(strip, /"Doanh thu tháng"/);
+  assert.doesNotMatch(strip, /"Các mốc chỉ tiêu"/);
 });

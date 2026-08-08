@@ -8,5 +8,5 @@ export default async function BranchStockRequestsPage({
 }) {
   const { branchId: raw } = await params;
   const branchId = parseOperatorBranchId(raw);
-  redirect(branchId == null ? "/br" : `/br/${branchId}/stock/transfer`);
+  redirect(branchId == null ? "/br" : `/br/${branchId}/stock`);
 }

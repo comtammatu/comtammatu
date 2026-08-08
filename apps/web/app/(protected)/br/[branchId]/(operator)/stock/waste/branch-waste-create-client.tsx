@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { Button } from "@comtammatu/ui/components/button";
 import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorControlBar,
@@ -38,7 +42,16 @@ export function BranchWasteCreateClient({
       hideHeaderOnMobile
     >
       <BranchOperatorControlBar className="sm:hidden">
-        <div className="min-w-0">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{copy.title}</p>
           <p className="truncate text-xs text-muted-foreground">{branchName}</p>
         </div>

@@ -2,8 +2,8 @@
 
 import { messages } from "@lib/messages";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
-import { RosterWeekClient } from "@lib/hr/roster/roster-week-client";
 import type { RosterWeekData } from "@lib/hr/roster/roster-model";
+import { BranchRosterWeekClient } from "./branch-roster-week-client";
 
 const copy = messages.hr.roster;
 
@@ -26,8 +26,9 @@ export function BranchRosterClient({
     <BranchOperatorPage
       title={copy.title}
       description={`${branchName} · ${copy.description}`}
+      hideHeaderOnMobile
     >
-      <RosterWeekClient
+      <BranchRosterWeekClient
         branchId={branchId}
         weekStart={weekStart}
         data={roster}

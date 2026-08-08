@@ -47,7 +47,6 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { AppEmptyState } from "@/components/surface";
-import { StatusBadge } from "@/components/status-badge";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
@@ -58,6 +57,7 @@ import {
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   STOCK_NO_CATEGORY_VALUE,
+  STOCK_ON_HAND_DEFAULT_STATUS,
   filterStockOnHandIngredients,
   getStockOnHandCategories,
   hasStockOnHandFilters,
@@ -109,11 +109,6 @@ function StockQuantity({ item }: { item: StockIngredient }) {
   );
 }
 
-function StockRiskBadge({ item }: { item: StockIngredient }) {
-  if (item.status === "normal") return null;
-  return <StatusBadge domain="inventory" value={item.status} size="sm" />;
-}
-
 function StockTouchRow({
   branchId,
   item,
@@ -125,7 +120,7 @@ function StockTouchRow({
     <Item
       variant="default"
       size="sm"
-      className="min-h-11 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1 last:border-b-0"
+      className="min-h-12 touch-manipulation gap-2 rounded-none border-x-0 border-t-0 border-b border-border px-2 py-1.5 last:border-b-0"
       render={
         <Link
           href={`/br/${branchId}/stock/on-hand/${item.id}`}
@@ -135,12 +130,9 @@ function StockTouchRow({
       }
     >
       <ItemContent className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <ItemTitle size="heading" className="min-w-0 flex-1">
-            {item.name}
-          </ItemTitle>
-          <StockRiskBadge item={item} />
-        </div>
+        <ItemTitle size="heading" className="min-w-0">
+          {item.name}
+        </ItemTitle>
         <ItemDescription>
           {[ITEM_KIND_LABELS[item.itemKind] ?? UNKNOWN_LABEL_VI, item.sku]
             .filter(Boolean)
@@ -257,11 +249,10 @@ export function BranchStockOnHandClient({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [status, setStatus] = useState<StockFilter>("all");
+  const [status, setStatus] = useState<StockFilter>(STOCK_ON_HAND_DEFAULT_STATUS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreJobsOpen, setMoreJobsOpen] = useState(false);
   const [draftCategories, setDraftCategories] = useState<string[]>([]);
-  const [draftStatus, setDraftStatus] = useState<StockFilter>("all");
 
   const { categories: categoryOptions, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
@@ -274,7 +265,7 @@ export function BranchStockOnHandClient({
   );
   const filtersActive = hasStockOnHandFilters(filters);
   const facetCount =
-    (status !== "all" ? 1 : 0) +
+    (status !== STOCK_ON_HAND_DEFAULT_STATUS ? 1 : 0) +
     normalizeStockOnHandCategories(categories).length;
   const isFirstLoadEmpty = !filtersActive && isPristineStockOnHand(ingredients);
   const attentionCtas = resolveAttentionCtas({
@@ -306,22 +297,19 @@ export function BranchStockOnHandClient({
 
   function openFilterSheet() {
     setDraftCategories(categories);
-    setDraftStatus(status);
     setFilterOpen(true);
   }
 
   function applyFilters() {
     setCategories(normalizeStockOnHandCategories(draftCategories));
-    setStatus(draftStatus);
     setFilterOpen(false);
   }
 
   function resetFilters() {
     setQuery("");
     setCategories([]);
-    setStatus("all");
+    setStatus(STOCK_ON_HAND_DEFAULT_STATUS);
     setDraftCategories([]);
-    setDraftStatus("all");
     setFilterOpen(false);
   }
 
@@ -331,8 +319,7 @@ export function BranchStockOnHandClient({
     );
   }
 
-  const toolbarStatus =
-    status === "in_stock" ? "all" : (status as "all" | "low" | "out");
+  const primaryAttentionCta = attentionCtas[0] ?? null;
 
   return (
     <BranchOperatorPage
@@ -341,43 +328,30 @@ export function BranchStockOnHandClient({
       hideHeaderOnMobile
     >
       {!coreDataLoadFailed && underThresholdCount > 0 ? (
-        <BranchOperatorPanel
-          title={attentionTitle(branchKind)}
-          description={stockCopy.attention.description(underThresholdCount)}
-          tone="warning"
-          badge={{
-            children: underThresholdCount,
-            variant: "warning",
-          }}
-          size="sm"
-        >
-          <p className="text-sm leading-6 text-muted-foreground">
-            {stockCopy.attention.listHint}
-          </p>
-          {attentionCtas.length > 0 ? (
-            <div
-              className={cn(
-                "mt-2 grid gap-2",
-                attentionCtas.length > 1 ? "grid-cols-2" : "grid-cols-1",
-              )}
+        <div className="flex min-h-12 items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {attentionTitle(branchKind)}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {stockCopy.attention.description(underThresholdCount)}
+            </p>
+          </div>
+          <Badge variant="warning">{underThresholdCount}</Badge>
+          {primaryAttentionCta ? (
+            <Button
+              size="touch"
+              className="shrink-0"
+              render={<Link href={primaryAttentionCta.href} />}
             >
-              {attentionCtas.map((cta) => {
-                const Icon = cta.icon;
-                return (
-                  <Button
-                    key={cta.key}
-                    size="touch"
-                    className="w-full"
-                    render={<Link href={cta.href} />}
-                  >
-                    <Icon />
-                    {cta.label}
-                  </Button>
-                );
-              })}
-            </div>
+              {(() => {
+                const Icon = primaryAttentionCta.icon;
+                return <Icon />;
+              })()}
+              {primaryAttentionCta.label}
+            </Button>
           ) : null}
-        </BranchOperatorPanel>
+        </div>
       ) : null}
 
       <BranchOperatorPanel
@@ -488,9 +462,13 @@ export function BranchStockOnHandClient({
 
               <ToggleGroup
                 type="single"
-                value={toolbarStatus}
+                value={status === "low" ? "in_stock" : status}
                 onValueChange={(next) => {
-                  if (next === "all" || next === "low" || next === "out") {
+                  if (
+                    next === "in_stock" ||
+                    next === "out" ||
+                    next === "all"
+                  ) {
                     setStatus(next);
                   }
                 }}
@@ -499,14 +477,14 @@ export function BranchStockOnHandClient({
                 className="grid w-full grid-cols-3"
                 aria-label={stockCopy.filters.statusPlaceholder}
               >
-                <ToggleGroupItem value="all">
-                  {stockCopy.filters.all}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="low">
-                  {stockCopy.filters.low}
+                <ToggleGroupItem value="in_stock">
+                  {stockCopy.filters.inStock}
                 </ToggleGroupItem>
                 <ToggleGroupItem value="out">
                   {stockCopy.filters.out}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="all">
+                  {stockCopy.filters.all}
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
@@ -577,30 +555,6 @@ export function BranchStockOnHandClient({
             </SheetDescription>
           </SheetHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
-            <ToggleGroup
-              type="single"
-              value={draftStatus === "in_stock" ? "all" : draftStatus}
-              onValueChange={(next) => {
-                if (next === "all" || next === "low" || next === "out") {
-                  setDraftStatus(next);
-                }
-              }}
-              variant="outline"
-              size="touch"
-              className="grid w-full grid-cols-3"
-              aria-label={stockCopy.filters.statusPlaceholder}
-            >
-              <ToggleGroupItem value="all">
-                {stockCopy.filters.all}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="low">
-                {stockCopy.filters.low}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="out">
-                {stockCopy.filters.out}
-              </ToggleGroupItem>
-            </ToggleGroup>
-
             <div className="grid gap-2 sm:grid-cols-2">
               <MultiSelectCombobox
                 options={multiSelectOptions}
@@ -653,7 +607,6 @@ export function BranchStockOnHandClient({
               size="touch"
               onClick={() => {
                 setDraftCategories([]);
-                setDraftStatus("all");
               }}
             >
               <IconReset />

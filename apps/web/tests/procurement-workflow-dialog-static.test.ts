@@ -48,16 +48,18 @@ test("Owner and Ops keep procurement documents in URL-addressable AppDialogs", (
   const grnClient = read(
     "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  assert.match(poClient, /searchParams\.get\("poId"\)/);
-  assert.match(
-    poClient,
-    /router\[history\]\(`\$\{pathname\}\?\$\{params\}`, \{ scroll: false \}\)/,
+  const overlayHook = read(
+    "apps/web/lib/navigation/use-document-overlay-url.ts",
   );
+  assert.match(poClient, /useDocumentOverlayUrl/);
+  assert.match(poClient, /overlay\.patchOverlay/);
   assert.match(poClient, /variant="document"/);
   assert.doesNotMatch(poClient, /reviewPurchaseOrder|savePurchaseOrderGroup/);
+  assert.match(overlayHook, /history\.pushState/);
+  assert.match(overlayHook, /history\.replaceState/);
 
-  assert.match(grnPage, /params\.grnId/);
-  assert.match(grnPage, /presentation="dialog"/);
+  assert.match(grnPage, /GrnDocumentDialogHost/);
+  assert.doesNotMatch(grnPage, /presentation="dialog"/);
   assert.match(grnClient, /variant="document"/);
 });
 

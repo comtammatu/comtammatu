@@ -35,8 +35,8 @@ import {
   type TransferActionKind,
   type TransferDetail,
 } from "@lib/inventory/transfer-detail-model";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import {
-  transferConfirmReceive,
   transferConfirmShip,
   transferMarkInTransit,
 } from "@/(protected)/inventory/transfer-actions";
@@ -74,7 +74,7 @@ export function BranchTransferDetailClient({
   const [isPending, startTransition] = useTransition();
   const copy = messages.inventory.transfer;
   const listHref =
-    listHrefOverride ?? `/br/${branchId}/stock/transfer`;
+    listHrefOverride ?? `/br/${branchId}/stock`;
   const receiveHref =
     receiveHrefOverride ?? `/br/${branchId}/stock/receive/${transfer.id}`;
   const actionConfig = useMemo(
@@ -87,6 +87,7 @@ export function BranchTransferDetailClient({
     if (
       !actionConfig?.enabled ||
       actionConfig.kind === "receive" ||
+      actionConfig.kind === "confirm_receive" ||
       isPending
     ) {
       return;
@@ -100,26 +101,26 @@ export function BranchTransferDetailClient({
       const result =
         actionConfig.kind === "mark_in_transit"
           ? await transferMarkInTransit(transfer.id)
-          : actionConfig.kind === "confirm_receive"
-            ? await transferConfirmReceive(transfer.id)
-            : await transferConfirmShip(transfer.id);
+          : await transferConfirmShip(transfer.id);
 
       if (!result.success) {
-        toast.error(result.error ?? copy.updateFailed);
+        const applied = applyInventoryActionError(result, copy.updateFailed);
+        toast.error(applied.toastMessage);
         return;
       }
 
       toast.success(actionLabel ?? copy.completedSlip);
-      if (actionConfig.kind === "confirm_receive") {
-        router.push(receiveHref);
-      }
       router.refresh();
     });
   }
 
+  const opensReceiveWorkspace =
+    actionConfig?.kind === "receive" ||
+    actionConfig?.kind === "confirm_receive";
+
   const primaryAction =
     actionConfig && actionLabel ? (
-      actionConfig.kind === "receive" ? (
+      opensReceiveWorkspace ? (
         actionConfig.enabled ? (
           <Button size="touch-lg" render={<Link href={receiveHref} />}>
             <IconPackageCheck data-icon="inline-start" />

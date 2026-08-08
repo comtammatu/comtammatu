@@ -93,12 +93,20 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 
 ### 4.5 Quản lý chi nhánh (`branch_manager`)
 
-- **Surface:** tab Kho land `/br/{id}/stock/on-hand`; hub `/stock` là secondary
-- **Từ Tồn / Sheet chức năng:** Yêu cầu hàng · Tiêu hao · Kiểm kê · Hao hụt ·
-  Giao đếm · Danh mục · nhận DC
-- **Không hiện:** GRN, Sản xuất, PO, giá mua, WAC
+- **Surface:** tab Kho land `/br/{id}/stock` (list phiếu + 4 cửa: tồn / YCH / kiểm kê / hao); không Tiêu Hao SX; `/stock/transfer` store → redirect `/stock`
+- YCH chi nhánh: phiếu + tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); chi tiết thao tác chỉ bước 1 (tạo/sửa gửi) và bước 4 (xác nhận nhận). Không hiện chuẩn bị của Kho Tổng/Bếp TT.
+- **Bốn cửa trên `/stock`:** Kho hàng · Yêu cầu hàng · Kiểm kê · Hao hụt; nhận
+  từ list phiếu (không cửa/tile Giao nhận riêng)
+- **Tiếp nhận trên hub:** YCH (DC liên kết) **và** DC thủ công inbound đã xuất
+  kho tới CN (đẩy hàng / thành phẩm). Không hiện DC draft đang chuẩn bị ở trung
+  tâm; không tạo/sửa/ship DC từ store shell.
+- **Không hiện primary:** Tiêu Hao SX, GRN, Sản xuất, PO, giá mua, WAC, Danh mục,
+  Giao đếm
+
 - **Playbook yêu cầu:** tạo phiếu → thêm dòng (nguồn auto từ catalog) → gửi →
   theo dõi → nhận DC khi trung tâm xuất
+- **Playbook nhận đẩy hàng:** khi Kho/Bếp tạo DC tới CN và xuất kho, phiếu hiện
+  trên `/stock` (hoặc `?work=receive`) → Kiểm nhận
 
 ### 4.6 Thu ngân / Bếp / NV CN
 
@@ -120,7 +128,7 @@ GRN·SX; inventory-nav từng lộ PO/menu recipes cho Kho Tổng; notification 
 2. Thêm dòng: hệ thống copy `default_fulfill_site_kind`; thiếu mapping → chặn.
 3. Submit.
 4. Kho Tổng / Bếp TT mở inbox (filter nguồn mình) → fulfill → tạo DC → ship.
-5. QL CN nhận DC → tồn CN tăng.
+5. QL CN nhận DC (YCH hoặc DC đẩy inbound sẵn sàng kiểm nhận) → tồn CN tăng.
 
 ### 5.3 Kiểm kê / hao hụt CN
 

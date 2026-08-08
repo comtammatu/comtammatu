@@ -16,7 +16,11 @@ import {
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
 import { formatDate } from "@lib/inventory/format";
-import { getMenuRecipeLineBaseQuantity } from "../_lib/menu-recipe-cost";
+import {
+  getMenuRecipeLineBaseQuantity,
+  resolveMenuRecipeUnitCost,
+  sumMenuRecipeEstimatedCost,
+} from "../_lib/menu-recipe-cost";
 import { getIngredientUnitDisplayName } from "../_lib/unit-display";
 import { MenuRecipesClient } from "./menu-recipes-client";
 import type { MenuRecipeRow, MenuRecipeItem } from "./menu-recipes-client";
@@ -68,7 +72,8 @@ export default async function MenuRecipesPage({
       fetchMenuRecipes(),
       fetchMenuItemsForMenuRecipes(),
       fetchIngredients(),
-      fetchBranchWacMap(branchId),
+      // Portion cost is a catalog estimate: use any valued stock-bearing site.
+      fetchBranchWacMap(null),
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)
         : Promise.resolve({ success: true as const, data: {} }),
@@ -112,10 +117,10 @@ export default async function MenuRecipesPage({
       const items: MenuRecipeItem[] = (row.menu_recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
         const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
-        // WAC (average received branch cost) takes precedence over unit_cost.
-        const wac = wacMap[String(ingredientId)];
-        const unitCost =
-          wac != null ? wac : Number(line.ingredients?.monetary.unitCost ?? 0);
+        const unitCost = resolveMenuRecipeUnitCost({
+          valuedWac: wacMap[String(ingredientId)],
+          referenceUnitCost: line.ingredients?.monetary?.unitCost,
+        });
         const entryUnitId =
           line.entry_unit_id == null ? null : Number(line.entry_unit_id);
         const catalogIngredient = ingredientById.get(ingredientId);
@@ -138,11 +143,14 @@ export default async function MenuRecipesPage({
           ),
           entryUnitId,
           note: line.note ?? null,
-          lineCost: baseQuantity * unitCost,
+          lineCost:
+            unitCost == null ? null : baseQuantity * unitCost,
         };
       });
 
-      const estimatedCost = items.reduce((sum, i) => sum + i.lineCost, 0);
+      const estimatedCost = sumMenuRecipeEstimatedCost(
+        items.map((item) => item.lineCost),
+      );
 
       return {
         id: row.id,

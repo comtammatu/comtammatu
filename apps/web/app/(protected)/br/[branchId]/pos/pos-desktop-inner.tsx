@@ -1704,7 +1704,7 @@ export function PosDesktopInner({
               ? "Đơn trong ca"
               : messages.pos.desktop.pendingNewTitle}
         </DrawerTitle>
-        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
           <PosSidebarContent
             {...sidebarContentProps}
             onClosePane={() => setCartDrawerOpen(false)}

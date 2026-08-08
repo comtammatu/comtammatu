@@ -4,6 +4,9 @@ export interface TransferDetail {
   id: number;
   code: string;
   status: string;
+  /** Parent YCH when this DC fulfills a stock request. */
+  stockRequestId: number | null;
+  stockRequestNumber: string | null;
   fromBranchId: number;
   toBranchId: number;
   fromBranch: string;
@@ -39,6 +42,20 @@ export interface TransferActionConfig {
 
 export function isTransferReceiveReady(status: string): boolean {
   return status === "confirmed_receive";
+}
+
+/** Destination can start the receive session (in_transit → confirmed_receive). */
+export function isTransferReceiveStartable(status: string): boolean {
+  return status === "in_transit";
+}
+
+/** Hub “Kiểm nhận” statuses that should open the receive workspace. */
+export function isTransferReceiveWorkspaceStatus(status: string): boolean {
+  return (
+    status === "in_transit" ||
+    status === "confirmed_ship" ||
+    status === "confirmed_receive"
+  );
 }
 
 export function getTransferActionConfig({

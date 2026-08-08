@@ -65,6 +65,7 @@ import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "@lib/inventory/format";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import { messages } from "@lib/messages";
 import {
   cancelStockIssue,
@@ -299,7 +300,9 @@ export function IssueDetailClient({
     startTransition(async () => {
       const res = await confirmStockIssue(issueId);
       if (!res.success) {
-        toast.error(res.error ?? ISSUES_VI.confirmFailed);
+        toast.error(
+          applyInventoryActionError(res, ISSUES_VI.confirmFailed).toastMessage,
+        );
         return;
       }
 

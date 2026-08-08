@@ -205,9 +205,8 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Legacy approval routes redirect into the Team hub (`?tab=checkouts`);
-    // they still carry their own module key so the proxy gates the capability
-    // before the redirect resolves. Breadcrumb root is branch management.
+    // Full-page checkout queue (Team hub links here; legacy `?tab=checkouts`
+    // redirects to this route). Breadcrumb root is branch management.
     id: "branch-shift-checkout-approvals",
     label: MODULE_ACL.employee_checkout_approvals.label,
     surface: "branch_management",
@@ -220,7 +219,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Legacy approval routes redirect into the Team hub (`?tab=leaves`).
+    // Full-page leave queue (legacy Team `?tab=leaves` redirects here).
     id: "branch-shift-leave-approvals",
     label: MODULE_ACL.employee_leave_approvals.label,
     surface: "branch_management",
@@ -233,7 +232,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Legacy roster route redirects into the Team hub (`?tab=roster`).
+    // Full-page weekly roster (legacy Team `?tab=roster` redirects here).
     id: "branch-shift-roster",
     label: MODULE_ACL.branch_shift_roster.label,
     surface: "branch_management",
@@ -246,7 +245,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: true,
   },
   {
-    // Legacy attendance route redirects into the Team hub (`?tab=attendance`).
+    // Full-page attendance table (legacy Team `?tab=attendance` redirects here).
     id: "branch-shift-attendance",
     label: MODULE_ACL.branch_shift_attendance.label,
     surface: "branch_management",

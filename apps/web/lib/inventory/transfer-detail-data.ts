@@ -66,6 +66,7 @@ export async function loadTransferDetailPageData({
       id: number;
       transfer_number: string;
       status: string;
+      stock_request_id: number | null;
       from_branch_id: number;
       to_branch_id: number;
       from_location_id: number;
@@ -135,10 +136,28 @@ export async function loadTransferDetailPageData({
     (sum, item) => sum + (item.monetary?.total ?? 0),
     0,
   );
+  const stockRequestId =
+    detail.transfer.stock_request_id != null &&
+    Number.isInteger(detail.transfer.stock_request_id) &&
+    detail.transfer.stock_request_id > 0
+      ? detail.transfer.stock_request_id
+      : null;
+  let stockRequestNumber: string | null = null;
+  if (stockRequestId != null) {
+    const { data: parentRequest } = await supabase
+      .from("stock_requests")
+      .select("request_number")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", stockRequestId)
+      .maybeSingle();
+    stockRequestNumber = parentRequest?.request_number ?? null;
+  }
   const transfer: TransferDetail = {
     id: detail.transfer.id ?? transferId,
     code: detail.transfer.transfer_number ?? "",
     status: detail.transfer.status ?? "draft",
+    stockRequestId,
+    stockRequestNumber,
     fromBranchId: detail.transfer.from_branch_id,
     toBranchId: detail.transfer.to_branch_id,
     fromBranch:

@@ -14,6 +14,7 @@ import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { fetchStockBearingLocationIds } from "./_lib/stock-bearing-locations";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import { buildValuedWacMap } from "./_lib/menu-recipe-cost";
 
 /* ─── Menu recipes (branch WAC + menu-item ingredient consumption) ─── */
 
@@ -98,7 +99,12 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
   return { success: true, data: rows };
 }
 
-// WAC = the actual average cost (avg_unit_cost) in branch stock levels.
+/**
+ * Valued WAC for menu-recipe portion cost. Uses tenant-wide stock-bearing
+ * locations and keeps only avg_unit_cost > 0 so empty-site zeros cannot wipe
+ * a valued kitchen/warehouse cost. Optional branchId narrows capacity-style
+ * callers; menu-recipes passes null.
+ */
 export async function fetchBranchWacMap(
   branchId?: number | null,
 ): Promise<ActionResult<{ monetary: Record<string, number> }>> {
@@ -138,7 +144,8 @@ export async function fetchBranchWacMap(
     .select("ingredient_id, avg_unit_cost, branch_id")
     .eq("tenant_id", claims.tenant_id)
     .in("location_id", stockBearingLocations.locationIds)
-    .not("avg_unit_cost", "is", null);
+    .not("avg_unit_cost", "is", null)
+    .gt("avg_unit_cost", 0);
 
   if (parsedBranchId.data != null) {
     query = query.eq("branch_id", parsedBranchId.data);
@@ -160,20 +167,12 @@ export async function fetchBranchWacMap(
     ingredient_id: number;
     avg_unit_cost: number | string | null;
   };
-  const accum = new Map<number, { sum: number; count: number }>();
-  for (const row of (data ?? []) as WacRow[]) {
-    const id = Number(row.ingredient_id);
-    const wac = Number(row.avg_unit_cost ?? 0);
-    const entry = accum.get(id) ?? { sum: 0, count: 0 };
-    entry.sum += wac;
-    entry.count += 1;
-    accum.set(id, entry);
-  }
-
-  const map: Record<string, number> = {};
-  for (const [id, e] of accum) {
-    map[String(id)] = e.sum / e.count;
-  }
+  const map = buildValuedWacMap(
+    ((data ?? []) as WacRow[]).map((row) => ({
+      ingredientId: row.ingredient_id,
+      avgUnitCost: row.avg_unit_cost,
+    })),
+  );
   return { success: true, data: { monetary: map } };
 }
 

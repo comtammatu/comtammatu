@@ -7,9 +7,9 @@ import {
   Ellipsis as IconEllipsis,
   House as IconHouse,
   LayoutDashboard as IconLayoutDashboard,
+  MessageSquareHeart as IconMessageSquareHeart,
   ShieldAlert as IconShieldAlert,
   User as IconUser,
-  UsersRound as IconUsersRound,
 } from "lucide-react";
 import {
   canAccess,
@@ -34,7 +34,9 @@ import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
+import { branchNavBadgeCounts } from "./_lib/branch-nav-badges";
 import { BranchOpsRefresh } from "./branch-ops-refresh";
+import { fetchBranchQueueCounts } from "./dashboard/data";
 import { OperatorBottomNav } from "./operator-bottom-nav";
 import { OperatorNotificationBell } from "./operator-notification-bell";
 import { OperatorPwaToolbar } from "./operator-pwa-toolbar";
@@ -74,12 +76,35 @@ export default async function OperatorLayout({
     canAccess(claims.user_role, "branch_dashboard") ||
     canAccess(claims.user_role, "branch_settings") ||
     canAccess(claims.user_role, "branch_pos_sessions");
-  const canManageTeam = canAccess(claims.user_role, "branch_team");
   const canCloseDay = canAccess(claims.user_role, "branch_close_day");
+  const canOpenFeedback = canAccess(claims.user_role, "branch_feedback");
   const canOpenOwnerHome = claims.user_role === "owner";
-  const usesHeaderOverflow = canOpenOwnerHome || canManageBranch;
+  const usesHeaderOverflow =
+    canOpenOwnerHome || canManageBranch || canOpenFeedback;
   const compactBranchName = context.branch.name.replace(/^Chi nhánh\s+/, "");
   const notificationsReturnTo = `/br/${context.branchId}`;
+  const branchKind = context.branch.branch_kind as BranchKind;
+  const navBadges =
+    branchKind === "branch" && canManageBranch
+      ? branchNavBadgeCounts(
+          await fetchBranchQueueCounts(
+            supabase,
+            claims,
+            context.branchId,
+            branchKind,
+          ).catch((error: unknown) => {
+            console.error("operator.layout.queue_badges_failed", error);
+            return {
+              pendingCheckouts: null,
+              pendingLeaveRequests: null,
+              pendingCountSlips: null,
+              pendingWaste: null,
+              inboundTransfers: null,
+              openStockRequests: null,
+            };
+          }),
+        )
+      : undefined;
 
   return (
     <PwaRuntimeProvider>
@@ -151,15 +176,6 @@ export default async function OperatorLayout({
                         </DropdownMenuItem>
                       </>
                     ) : null}
-                    {canManageTeam ? (
-                      <DropdownMenuItem
-                        className="min-h-12 text-sm"
-                        render={<Link href={`/br/${context.branchId}/team`} />}
-                      >
-                        <IconUsersRound data-icon="inline-start" />
-                        {APP_COPY_VI.hrWorkspace}
-                      </DropdownMenuItem>
-                    ) : null}
                     {canCloseDay ? (
                       <DropdownMenuItem
                         className="min-h-12 text-sm"
@@ -169,6 +185,17 @@ export default async function OperatorLayout({
                       >
                         <IconCalendarCheck data-icon="inline-start" />
                         {messages.settings.branch.closeDayTitle}
+                      </DropdownMenuItem>
+                    ) : null}
+                    {canOpenFeedback ? (
+                      <DropdownMenuItem
+                        className="min-h-12 text-sm"
+                        render={
+                          <Link href={`/br/${context.branchId}/feedback`} />
+                        }
+                      >
+                        <IconMessageSquareHeart data-icon="inline-start" />
+                        {MODULE_ACL.branch_feedback.label}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuSeparator />
@@ -193,7 +220,7 @@ export default async function OperatorLayout({
           id="main-content"
           tabIndex={-1}
           role="main"
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+          className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain"
         >
           <AppPage
             density="compact"
@@ -207,7 +234,8 @@ export default async function OperatorLayout({
           branchId={context.branchId}
           showEmployeeLinks={canUseShiftTab}
           showBranchManagement={canManageBranch}
-          branchKind={context.branch.branch_kind as BranchKind}
+          branchKind={branchKind}
+          badges={navBadges}
         />
       </div>
     </PwaRuntimeProvider>

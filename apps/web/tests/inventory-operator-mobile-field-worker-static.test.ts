@@ -36,16 +36,28 @@ test("branch home queue only renders positive pending work", () => {
   assert.match(branchQueueSource, /<Badge variant="warning">/);
 });
 
-test("operator transfer receive requires an inspection step and shortage notes", () => {
+test("operator transfer receive auto-starts inspection and requires shortage notes", () => {
   assert.match(receiveClientSource, /isTransferReceiveReady/);
+  assert.match(receiveClientSource, /isTransferReceiveStartable/);
+  assert.match(receiveClientSource, /transferConfirmReceive/);
+  assert.match(receiveClientSource, /receiveSessionStartRequested/);
+  assert.match(receiveClientSource, /receiveStarting/);
+  assert.match(receiveClientSource, /receiveStartRetry/);
+  assert.doesNotMatch(receiveClientSource, /receiveStartAction/);
+  assert.doesNotMatch(receiveClientSource, /receiveStartTitle/);
   assert.match(
     transferDetailModelSource,
     /return status === "confirmed_receive";/,
   );
-  assert.doesNotMatch(receiveClientSource, /isWaitingForTransit/);
-  assert.doesNotMatch(receiveClientSource, /receiveWaitingTransit/);
+  assert.match(
+    transferDetailModelSource,
+    /export function isTransferReceiveStartable/,
+  );
+  assert.match(receiveClientSource, /receiveWaitingShipTitle/);
   assert.match(receiveClientSource, /receiveCopy\.receiveOpenDetail/);
+  assert.match(receiveClientSource, /detailHref \?/);
   assert.match(receiveClientSource, /render=\{<Link href=\{detailHref\}/);
+  assert.match(receiveClientSource, /documentTitle/);
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
   assert.match(receiveClientSource, /qty < item\.qty && note\.length < 5/);
   assert.match(receiveClientSource, /copy\.shortageNoteMinLength/);

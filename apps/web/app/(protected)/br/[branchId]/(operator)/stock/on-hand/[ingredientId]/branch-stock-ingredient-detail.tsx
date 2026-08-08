@@ -28,7 +28,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
-import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorControlBar,
   BranchOperatorDetailList,
@@ -181,13 +180,13 @@ export function BranchStockIngredientDetail({
     );
   }
 
-  const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const atRisk = data.status === "low" || data.status === "out";
   const primaryActions = resolvePrimaryActions({
     stockBasePath,
     branchKind,
     permissions: data.permissions,
   });
+  const primaryAction = primaryActions[0] ?? null;
   const secondaryActions = [
     ...(data.permissions.canCreateTransfer
       ? [
@@ -238,7 +237,6 @@ export function BranchStockIngredientDetail({
         .filter(Boolean)
         .join(" · ")}
       hideHeaderOnMobile
-      badge={{ children: statusBadge.label, variant: statusBadge.variant }}
     >
       <div className="flex min-w-0 touch-manipulation flex-col gap-3">
         <BranchOperatorControlBar className="sm:hidden">
@@ -257,7 +255,6 @@ export function BranchStockIngredientDetail({
               {[ingredient.sku, ingredient.unit].filter(Boolean).join(" · ")}
             </p>
           </div>
-          <StatusBadge domain="inventory" value={data.status} size="sm" />
           {secondaryActions.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -296,10 +293,6 @@ export function BranchStockIngredientDetail({
               title={stockCopy.table.currentStock}
               icon={IconPackageCheck}
               tone={atRisk ? "warning" : "default"}
-              badge={{
-                children: statusBadge.label,
-                variant: statusBadge.variant,
-              }}
               size="sm"
             >
               <div className="flex items-end justify-between gap-3">
@@ -507,36 +500,48 @@ export function BranchStockIngredientDetail({
 
         <AppDetailFooter
           sticky
-          trailing={
-            <div
-              className={
-                primaryActions.length > 1
-                  ? "grid w-full grid-cols-2 gap-2"
-                  : "flex w-full gap-2"
-              }
+          leading={
+            <Button
+              size="touch-lg"
+              variant="outline"
+              className="min-w-0 flex-1"
+              render={<Link href={onHandHref} />}
             >
+              <IconArrowLeft data-icon="inline-start" />
+              {ACTIONS_VI.back}
+            </Button>
+          }
+          trailing={
+            primaryActions.length > 1 ? (
+              <div className="grid w-full min-w-0 grid-cols-2 gap-2">
+                {primaryActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <Button
+                      key={action.key}
+                      size="touch-lg"
+                      className="min-w-0"
+                      render={<Link href={action.href} />}
+                    >
+                      <Icon data-icon="inline-start" />
+                      {action.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            ) : primaryAction ? (
               <Button
                 size="touch-lg"
-                variant="outline"
-                render={<Link href={onHandHref} />}
+                className="min-w-0 flex-1"
+                render={<Link href={primaryAction.href} />}
               >
-                <IconArrowLeft data-icon="inline-start" />
-                {ACTIONS_VI.back}
+                {(() => {
+                  const Icon = primaryAction.icon;
+                  return <Icon data-icon="inline-start" />;
+                })()}
+                {primaryAction.label}
               </Button>
-              {primaryActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={action.key}
-                    size="touch-lg"
-                    render={<Link href={action.href} />}
-                  >
-                    <Icon data-icon="inline-start" />
-                    {action.label}
-                  </Button>
-                );
-              })}
-            </div>
+            ) : undefined
           }
         />
       </div>

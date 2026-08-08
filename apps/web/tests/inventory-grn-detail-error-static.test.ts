@@ -14,10 +14,6 @@ const listPageSource = readFileSync(
   "app/(protected)/inventory/grn/page.tsx",
   "utf8",
 );
-const listClientSource = readFileSync(
-  "app/(protected)/inventory/grn/grn-list-client.tsx",
-  "utf8",
-);
 const dataSource = readFileSync("lib/inventory/grn-detail-data.ts", "utf8");
 const modelSource = readFileSync("lib/inventory/grn-detail-model.ts", "utf8");
 const lineActionsSource = readFileSync(
@@ -31,9 +27,13 @@ test("GRN detail load failures render an error state instead of inventory not-fo
   assert.match(actionsSource, /errorCode: "not_found"/);
 
   assert.match(dataSource, /notFound: result\.errorCode === "not_found"/);
-  assert.match(listPageSource, /detailError=\{detailError\}/);
-  assert.match(listClientSource, /open=\{detailError != null\}/);
-  assert.match(listClientSource, /<AppEmptyState[\s\S]*mode="error"/);
+  const dialogHostSource = readFileSync(
+    "app/(protected)/inventory/grn/grn-document-dialog-host.tsx",
+    "utf8",
+  );
+  assert.match(listPageSource, /GrnDocumentDialogHost/);
+  assert.match(dialogHostSource, /loadGrnDocumentDialog/);
+  assert.match(dialogHostSource, /<AppEmptyState[\s\S]*mode="error"/);
 });
 
 test("GRN detail route accepts numeric IDs and GRN document numbers", () => {

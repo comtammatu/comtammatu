@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
+import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import { TransferReceiveClient } from "./transfer-receive-client";
 
@@ -21,6 +23,10 @@ export default async function OperatorStockReceiveDetailPage({
     notFound();
   }
 
+  const { supabase, claims } = await loadAuthState();
+  const branchContext = await resolveBranchContext(supabase, claims, branchId);
+  if (!branchContext) notFound();
+
   const data = await loadTransferDetailPageData({
     transferId,
     routeBranchId: branchId,
@@ -28,11 +34,21 @@ export default async function OperatorStockReceiveDetailPage({
     includeCorrections: false,
   });
 
+  const isStoreBranch = branchContext.branch.branch_kind === "branch";
+  const documentTitle = isStoreBranch
+    ? (data.transfer.stockRequestNumber ?? data.transfer.code)
+    : data.transfer.code;
+
   return (
     <TransferReceiveClient
       transfer={data.transfer}
-      backHref={`/br/${branchId}/stock/transfer?work=receive`}
-      detailHref={`/br/${branchId}/stock/transfer/${transferId}`}
+      backHref={`/br/${branchId}/stock?work=receive`}
+      detailHref={
+        isStoreBranch
+          ? null
+          : `/br/${branchId}/stock/transfer/${transferId}`
+      }
+      documentTitle={documentTitle}
     />
   );
 }

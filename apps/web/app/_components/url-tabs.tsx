@@ -38,7 +38,13 @@ export function UrlTabs({
 
   const onValueChange = useCallback(
     (next: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      // Prefer the live browser URL so History-API overlay keys (dialog ids,
+      // client filters) are not clobbered by a stale useSearchParams snapshot.
+      const params = new URLSearchParams(
+        typeof window !== "undefined"
+          ? window.location.search
+          : searchParams.toString(),
+      );
       if (next === defaultValue) params.delete(paramKey);
       else params.set(paramKey, next);
       const ownedKeys = queryKeysByValue?.[next];

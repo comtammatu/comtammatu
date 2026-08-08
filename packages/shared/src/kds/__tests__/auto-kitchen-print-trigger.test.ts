@@ -27,6 +27,8 @@ const nonKdsDispatchMigrationPath =
   "supabase/migration-archive/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
 const routePolicyMigrationPath =
   "supabase/migration-archive/20260701065350_pos_kitchen_print_route_policy.sql";
+const sortOrderFixMigrationPath =
+  "supabase/migrations/20260808141712_fix_kds_completion_kitchen_print_sort_order.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;
@@ -145,6 +147,26 @@ test("POS actions do not revive broad kitchen paper enqueueing", () => {
     printActions,
     /deferred_to: "kds_completion"/,
     "manual POS send action must preserve compatibility while deferring paper",
+  );
+});
+
+test("KDS completion print LATERAL projects printer.sort_order for slot", () => {
+  const src = read(sortOrderFixMigrationPath);
+
+  assert.match(
+    src,
+    /CREATE OR REPLACE FUNCTION private\.enqueue_kitchen_completion_print_internal/,
+    "fix migration must replace the completion-print helper",
+  );
+  assert.match(
+    src,
+    /JOIN LATERAL \(\s*SELECT\s+candidate\.id,\s*candidate\.role,\s*candidate\.sort_order\s+FROM public\.printers candidate/s,
+    "LATERAL printer projection must include sort_order used by outer slot expression",
+  );
+  assert.match(
+    src,
+    /\(printer\.sort_order \+ 1\)::smallint AS slot/,
+    "outer SELECT must keep slot derived from projected printer.sort_order",
   );
 });
 

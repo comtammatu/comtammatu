@@ -49,7 +49,9 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
   assert.match(form, /createWasteEntry/);
   assert.match(form, /WastePhotoUpload/);
   assert.match(form, /copy\.priceReviewHint/);
+  assert.match(form, /showLocationPicker = context\.locations\.length > 1/);
   assert.match(inventoryMessages, /Cần Kế toán kiểm tra giá/);
+  assert.match(inventoryMessages, /noLocationAvailable:/);
   assert.doesNotMatch(
     form,
     /unitCost|totalValue|formatVND|priceVariance|branchCap|shiftCap/,

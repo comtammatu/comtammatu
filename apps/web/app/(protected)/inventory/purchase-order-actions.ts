@@ -12,6 +12,12 @@ import {
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, type ActionContext } from "@/_lib/with-action";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
+import {
+  INVENTORY_ERROR_CODES,
+  procurementRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
+import type { ActionResult } from "@comtammatu/shared/types";
 
 const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
@@ -167,103 +173,14 @@ type PurchaseOrderGroupActionData = {
   }>;
 };
 
-function procurementRpcError(
+function mapProcurementRpcError<T = never>(
   error: { code?: string; message: string },
   fallback: string,
-): string {
-  const known: Array<[string, string]> = [
-    [
-      "purchase_request_central_site_required",
-      "Yêu cầu mua phải thuộc Kho Tổng hoặc Bếp Trung Tâm.",
-    ],
-    ["purchase_request_line_invalid", "Có dòng yêu cầu mua không hợp lệ."],
-    [
-      "purchase_request_not_editable",
-      "Yêu cầu mua đã có đơn đặt hàng hoặc không còn được phép sửa.",
-    ],
-    [
-      "purchase_request_not_cancellable",
-      "Yêu cầu mua đã có đơn đặt hàng hoặc không còn được phép hủy.",
-    ],
-    [
-      "purchase_request_not_closable",
-      "Chỉ đóng được yêu cầu mua đã xử lý một phần.",
-    ],
-    [
-      "purchase_request_not_orderable",
-      "Yêu cầu mua chưa sẵn sàng tạo đơn đặt hàng.",
-    ],
-    [
-      "purchase_demand_not_editable",
-      "Nhu cầu mua không còn được phép sửa.",
-    ],
-    [
-      "purchase_demand_allocation_started",
-      "Kế toán đã lưu phân bổ NCC. Cần gửi lại Kho trước khi sửa.",
-    ],
-    [
-      "purchase_demand_not_allocatable",
-      "Nhu cầu mua không còn chờ phân bổ nhà cung cấp.",
-    ],
-    [
-      "purchase_demand_not_reviewable",
-      "Nhu cầu mua không còn chờ Kế toán xử lý.",
-    ],
-    [
-      "purchase_demand_allocation_incomplete",
-      "Phải phân bổ đủ số lượng của mọi nguyên liệu trước khi duyệt.",
-    ],
-    [
-      "purchase_demand_allocations_invalid",
-      "Phân bổ nhà cung cấp hoặc số lượng không hợp lệ.",
-    ],
-    [
-      "purchase_demand_idempotency_required",
-      "Không thể chống gửi trùng cho thao tác này.",
-    ],
-    [
-      "purchase_order_line_invalid",
-      "Số lượng hoặc đơn vị trên phiếu mua không hợp lệ.",
-    ],
-    [
-      "purchase_order_group_not_editable",
-      "Nhóm phiếu mua không còn được phép sửa.",
-    ],
-    ["purchase_order_not_reviewable", "Phiếu mua không còn chờ duyệt."],
-    [
-      "purchase_order_not_sendable",
-      "Đơn đặt hàng chưa đủ dữ liệu hoặc không còn được phép gửi.",
-    ],
-    [
-      "purchase_order_not_editable",
-      "Đơn đặt hàng đã phát sinh nhập kho hoặc không còn được phép sửa.",
-    ],
-    [
-      "purchase_order_lines_locked",
-      "Đơn đặt hàng đã có phiếu nhập nháp nên các dòng hàng đang bị khóa.",
-    ],
-    [
-      "purchase_order_not_cancellable",
-      "Đơn đặt hàng đã có phiếu nhập xác nhận hoặc không còn được phép hủy.",
-    ],
-    [
-      "purchase_order_not_closable",
-      "Chỉ đóng được đơn đặt hàng đã nhận một phần.",
-    ],
-    ["reason_required", "Vui lòng nhập lý do tối thiểu 5 ký tự."],
-    [
-      "supplier_item_mapping_required",
-      "Có nguyên liệu chưa được gán cho nhà cung cấp.",
-    ],
-    ["receiving_warehouse_required", "Chưa cấu hình kho nhận hàng."],
-    ["42501", "Bạn không có quyền thực hiện thao tác này."],
-    ["P0002", "Không tìm thấy chứng từ hoặc nhà cung cấp."],
-  ];
-  return (
-    known.find(
-      ([token]) => error.code === token || error.message.includes(token),
-    )?.[1] ?? fallback
-  );
+): ActionResult<T> {
+  return mapInventoryRpcFailure(error, procurementRpcMappings, {
+    userMessage: fallback,
+    errorCode: INVENTORY_ERROR_CODES.PROCUREMENT_FAILED,
+  });
 }
 
 export const savePurchaseOrderGroup = withAction<
@@ -304,10 +221,7 @@ export const savePurchaseOrderGroup = withAction<
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể lưu phiếu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể lưu phiếu mua.");
     }
 
     const parsed = z
@@ -386,10 +300,7 @@ export const reviewPurchaseOrder = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể xử lý phiếu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể xử lý phiếu mua.");
     }
     const parsed = z
       .object({
@@ -458,10 +369,7 @@ export const savePurchaseRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể tạo yêu cầu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể tạo yêu cầu mua.");
     }
     const parsed = z
       .object({
@@ -524,10 +432,7 @@ export const savePurchaseDemand = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể lưu nhu cầu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể lưu nhu cầu mua.");
     }
     const parsed = z
       .object({
@@ -574,10 +479,7 @@ export const savePurchaseDemandAllocations = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể lưu phân bổ NCC."),
-      };
+      return mapProcurementRpcError(error, "Không thể lưu phân bổ NCC.");
     }
     revalidateSurfacePath("/inventory/purchase-orders");
     return { success: true };
@@ -610,10 +512,7 @@ export const reviewPurchaseDemand = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể xử lý nhu cầu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể xử lý nhu cầu mua.");
     }
     const parsed = z
       .object({
@@ -671,10 +570,7 @@ export const cancelPurchaseRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể hủy yêu cầu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể hủy yêu cầu mua.");
     }
     revalidateSurfacePath("/inventory/purchase-orders");
     return { success: true };
@@ -696,10 +592,7 @@ export const closePurchaseRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể đóng yêu cầu mua."),
-      };
+      return mapProcurementRpcError(error, "Không thể đóng yêu cầu mua.");
     }
     revalidateSurfacePath("/inventory/purchase-orders");
     return { success: true };
@@ -843,10 +736,7 @@ export const sendPurchaseOrder = withAction(
           error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
         };
       }
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể gửi đơn đặt hàng."),
-      };
+      return mapProcurementRpcError(error, "Không thể gửi đơn đặt hàng.");
     }
 
     revalidateSurfacePath("/inventory/purchase-orders");
@@ -870,10 +760,7 @@ export const cancelPurchaseOrder = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể hủy đơn đặt hàng."),
-      };
+      return mapProcurementRpcError(error, "Không thể hủy đơn đặt hàng.");
     }
     const parsed = z
       .object({
@@ -902,10 +789,7 @@ export const closePurchaseOrder = withAction(
       p_reason: reason,
     } as never);
     if (error) {
-      return {
-        success: false,
-        error: procurementRpcError(error, "Không thể đóng đơn đặt hàng."),
-      };
+      return mapProcurementRpcError(error, "Không thể đóng đơn đặt hàng.");
     }
     revalidateSurfacePath("/inventory/purchase-orders");
     revalidateSurfacePath("/inventory/grn");

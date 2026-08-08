@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
@@ -11,24 +11,50 @@ import { fetchBranchQueueCounts } from "../dashboard/data";
 import { fetchTeamBoard, type TeamBoardRow } from "./data";
 import { TeamBoardClient } from "./team-board-client";
 import { TeamMembersContent } from "./members/members-content";
-import { RosterTab } from "./_tabs/roster-tab";
-import { AttendanceTab } from "./_tabs/attendance-tab";
-import { CheckoutsTab } from "./_tabs/checkouts-tab";
-import { LeavesTab } from "./_tabs/leaves-tab";
 import {
   TeamWorkspaceTabs,
   type TeamWorkspaceTabValue,
 } from "./team-workspace-tabs";
 
 const copy = messages.operator.teamBoard;
-const ALL_TABS: TeamWorkspaceTabValue[] = [
-  "board",
-  "members",
-  "roster",
-  "attendance",
-  "checkouts",
-  "leaves",
-];
+const HUB_TABS: TeamWorkspaceTabValue[] = ["board", "members"];
+
+/** Legacy hub tabs → full routes (keeps old notification / bookmark URLs alive). */
+function redirectLegacyTeamTab(
+  branchId: number,
+  tab: string | undefined,
+  search: {
+    week?: string;
+    attendanceId?: string | string[];
+  },
+): void {
+  switch (tab) {
+    case "roster": {
+      const week = search.week
+        ? `?week=${encodeURIComponent(search.week)}`
+        : "";
+      redirect(`/br/${branchId}/shift/roster${week}`);
+      return;
+    }
+    case "attendance":
+      redirect(`/br/${branchId}/shift/attendance`);
+      return;
+    case "checkouts": {
+      const raw = search.attendanceId;
+      const attendanceId = Array.isArray(raw) ? raw[0] : raw;
+      const query = attendanceId
+        ? `?attendanceId=${encodeURIComponent(attendanceId)}`
+        : "";
+      redirect(`/br/${branchId}/shift/checkout-approvals${query}`);
+      return;
+    }
+    case "leaves":
+      redirect(`/br/${branchId}/shift/leave-approvals`);
+      return;
+    default:
+      return;
+  }
+}
 
 export default async function TeamBoardPage({
   params,
@@ -44,14 +70,17 @@ export default async function TeamBoardPage({
   const { branchId: rawBranchId } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const requestedTab = resolvedSearchParams.tab;
-  const activeTab: TeamWorkspaceTabValue = ALL_TABS.includes(
+
+  const branchId = parseOperatorBranchId(rawBranchId);
+  if (branchId == null) notFound();
+
+  redirectLegacyTeamTab(branchId, requestedTab, resolvedSearchParams);
+
+  const activeTab: TeamWorkspaceTabValue = HUB_TABS.includes(
     requestedTab as TeamWorkspaceTabValue,
   )
     ? (requestedTab as TeamWorkspaceTabValue)
     : "board";
-
-  const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) notFound();
 
   const { supabase, claims } = await loadAuthState();
   const context = await resolveBranchContext(supabase, claims, branchId);
@@ -69,6 +98,7 @@ export default async function TeamBoardPage({
     canViewTeam,
     canApproveCheckout,
     canApproveCount,
+    canAssignCount,
     canApproveLeave,
     canRoster,
     canViewAttendance,
@@ -90,6 +120,11 @@ export default async function TeamBoardPage({
     ),
     probePermission(
       { supabase, claims },
+      PERMISSION_KEYS.INVENTORY_COUNT_ASSIGN,
+      context.branchId,
+    ),
+    probePermission(
+      { supabase, claims },
       PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
       context.branchId,
     ),
@@ -97,28 +132,13 @@ export default async function TeamBoardPage({
     canAccess(claims.user_role, "branch_shift_attendance"),
   ]);
 
-  // Resolve which manager tabs are visible for this role. Board + members are
-  // always visible to anyone with `branch_team`; the rest require their
-  // module/permission.
-  const visibleTabs: TeamWorkspaceTabValue[] = ["board", "members"];
-  if (canRoster) visibleTabs.push("roster");
-  if (canViewAttendance && canViewTeam) visibleTabs.push("attendance");
-  if (canApproveCheckout) visibleTabs.push("checkouts");
-  if (canApproveLeave) visibleTabs.push("leaves");
-
-  // Guard: if the requested tab isn't visible, fall back to board server-side
-  // (the client component also clamps, this avoids fetching forbidden data).
-  const effectiveTab: TeamWorkspaceTabValue = visibleTabs.includes(activeTab)
-    ? activeTab
-    : "board";
-
   const isStoreBranch = context.branch.branch_kind === "branch";
   const canSeeApprovals =
-    effectiveTab === "board" &&
+    activeTab === "board" &&
     (canApproveCheckout || canApproveCount || canApproveLeave);
 
   const [result, queueCounts] = await Promise.all([
-    effectiveTab === "board" && canViewTeam
+    activeTab === "board" && canViewTeam
       ? fetchTeamBoard({ branchId: context.branchId })
       : Promise.resolve({ success: false as const, error: "Không có quyền" }),
     canSeeApprovals
@@ -131,31 +151,42 @@ export default async function TeamBoardPage({
       : Promise.resolve(null),
   ]);
   const rows: TeamBoardRow[] = result.success ? (result.data?.rows ?? []) : [];
+  const activeEmployeeCount = result.success
+    ? (result.data?.activeEmployeeCount ?? 0)
+    : 0;
   const basePath = `/br/${context.branchId}`;
-
-  // Forwarded deep-link params from the legacy redirect shims.
-  const rawAttendanceId = resolvedSearchParams.attendanceId;
-  const focusAttendanceId = Number(
-    Array.isArray(rawAttendanceId) ? rawAttendanceId[0] : rawAttendanceId,
-  );
 
   return (
     <BranchOperatorPage title={copy.title} description={context.branch.name}>
       <TeamWorkspaceTabs
-        initialValue={effectiveTab}
-        visibleTabs={visibleTabs}
+        initialValue={activeTab}
         board={
-          effectiveTab !== "board" ? null : !canViewTeam ? (
+          activeTab !== "board" ? null : !canViewTeam ? (
             <AppEmptyState mode="no-access" />
           ) : result.success ? (
             <TeamBoardClient
               rows={rows}
+              activeEmployeeCount={activeEmployeeCount}
               branchId={context.branchId}
+              membersHref={`${basePath}/team?tab=members`}
               countSlipsHref={`${basePath}/stock/count-slips`}
-              checkoutApprovalsHref={`${basePath}/team?tab=checkouts`}
+              countAssignmentsHref={
+                canAssignCount
+                  ? `${basePath}/stock/count-assignments`
+                  : undefined
+              }
+              checkoutApprovalsHref={`${basePath}/shift/checkout-approvals`}
               leaveApprovalsHref={
                 canApproveLeave && isStoreBranch
-                  ? `${basePath}/team?tab=leaves`
+                  ? `${basePath}/shift/leave-approvals`
+                  : undefined
+              }
+              rosterHref={
+                canRoster ? `${basePath}/shift/roster` : undefined
+              }
+              attendanceHref={
+                canViewAttendance && canViewTeam
+                  ? `${basePath}/shift/attendance`
                   : undefined
               }
               canApproveCheckout={canApproveCheckout}
@@ -177,37 +208,10 @@ export default async function TeamBoardPage({
           )
         }
         members={
-          effectiveTab !== "members" ? null : canViewTeam ? (
+          activeTab !== "members" ? null : canViewTeam ? (
             <TeamMembersContent branchId={context.branchId} />
           ) : (
             <AppEmptyState mode="no-access" />
-          )
-        }
-        roster={
-          effectiveTab !== "roster" || !canRoster ? null : (
-            <RosterTab branchId={context.branchId} week={resolvedSearchParams.week} />
-          )
-        }
-        attendance={
-          effectiveTab !== "attendance" || !canViewAttendance ? null : (
-            <AttendanceTab branchId={context.branchId} />
-          )
-        }
-        checkouts={
-          effectiveTab !== "checkouts" || !canApproveCheckout ? null : (
-            <CheckoutsTab
-              branchId={context.branchId}
-              attendanceId={
-                Number.isInteger(focusAttendanceId) && focusAttendanceId > 0
-                  ? focusAttendanceId
-                  : undefined
-              }
-            />
-          )
-        }
-        leaves={
-          effectiveTab !== "leaves" || !canApproveLeave ? null : (
-            <LeavesTab branchId={context.branchId} />
           )
         }
       />

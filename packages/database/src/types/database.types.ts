@@ -11709,6 +11709,10 @@ export type Database = {
         Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
         Returns: Json
       }
+      aggregate_daily_b2c_invoice_vat_line_name: {
+        Args: { p_vat_rate: number }
+        Returns: string
+      }
       allocate_supplier_advance: {
         Args: {
           p_allocations: Json
@@ -11842,6 +11846,7 @@ export type Database = {
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
       bill_line_items: { Args: { p_order_id: number }; Returns: Json }
+      bill_tax_breakdowns: { Args: { p_order_id: number }; Returns: Json }
       branch_business_date: {
         Args: { p_at?: string; p_branch_id: number }
         Returns: string
@@ -12699,7 +12704,9 @@ export type Database = {
           branch_id: number
           gap_amount: number
           net_revenue_mtd: number
+          net_revenue_today: number
           progress_pct: number
+          reward_tiers: Json
           target_amount: number
           year_month: string
         }[]

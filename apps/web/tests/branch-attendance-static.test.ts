@@ -1,0 +1,90 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { test } from "node:test";
+
+const repoRoot = resolve(process.cwd(), "../..");
+const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+
+test("Branch attendance owns a fixed-scope touch presenter", () => {
+  const route = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
+  );
+  const attendanceTab = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/attendance-tab.tsx",
+  );
+  const client = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/branch-attendance-client.tsx",
+  );
+  const data = read("apps/web/lib/hr/branch-attendance-data.ts");
+
+  assert.match(
+    route,
+    /import \{ AttendanceTab \} from "\.\.\/\.\.\/team\/_tabs\/attendance-tab"/,
+  );
+  assert.match(route, /return <AttendanceTab branchId=\{branchId\} \/>/);
+
+  assert.match(attendanceTab, /loadBranchAttendanceData/);
+  assert.match(attendanceTab, /BranchAttendanceClient/);
+  assert.doesNotMatch(attendanceTab, /AttendanceTable/);
+
+  assert.match(data, /import "server-only"/);
+  assert.match(data, /resolveBranchContext/);
+  assert.match(data, /branch\.branchId !== routeBranchId/);
+  assert.match(data, /branch\.branch\.branch_kind !== ["']branch["']/);
+  assert.match(data, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(data, /PERMISSION_KEYS\.HR_FORCE_CLOSE_ATTENDANCE/);
+  assert.match(data, /fetchAttendance/);
+
+  assert.match(client, /BranchOperatorPage/);
+  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
+  assert.match(client, /size="touch"/);
+  assert.match(client, /sticky bottom-0/);
+  assert.doesNotMatch(
+    client,
+    /DataTable|AttendanceTable|AttendanceCalendar|correctAttendanceRecord/,
+  );
+});
+
+test("Branch attendance summary drills into employee month days via URL", () => {
+  const client = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/branch-attendance-client.tsx",
+  );
+  const model = read("apps/web/lib/hr/branch-attendance-model.ts");
+  const copy = read("apps/web/lib/messages/employee.ts");
+
+  assert.match(client, /buildBranchAttendanceMonthSummary/);
+  assert.match(client, /filterAttendanceByEmployee/);
+  assert.match(client, /fetchAttendance\(\{\s*branchId,\s*month: targetMonth/);
+  assert.doesNotMatch(client, /fetchAttendanceSummary/);
+  assert.match(client, /params\.set\("employeeId"/);
+  assert.match(client, /params\.delete\("employeeId"\)/);
+  assert.match(client, /employeeMonthOpen/);
+  assert.match(
+    client,
+    /overscroll-contain px-4 pb-2/,
+  );
+  assert.doesNotMatch(client, /ScrollArea/);
+
+  assert.match(model, /export function buildBranchAttendanceMonthSummary/);
+  assert.match(model, /closedShifts/);
+  assert.match(model, /openShifts/);
+
+  assert.match(copy, /summaryRowHint:/);
+  assert.match(copy, /employeeMonthTitle:/);
+  assert.match(copy, /employeeMonthEmptyTitle:/);
+});
+
+test("Owner attendance table keeps its desktop presenter", () => {
+  const ownerTable = read(
+    "apps/web/app/(protected)/hr/attendance-table.tsx",
+  );
+  assert.match(ownerTable, /export function AttendanceTable/);
+  assert.match(ownerTable, /DataTable/);
+  assert.match(ownerTable, /isStaleOpenAttendanceRecord/);
+  assert.match(
+    ownerTable,
+    /from "@lib\/hr\/branch-attendance-model"/,
+  );
+});

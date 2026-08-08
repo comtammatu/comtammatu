@@ -23,6 +23,7 @@ import {
   CheckoutApprovalsClient,
   type CheckoutApprovalItem,
 } from "./checkout-approvals-client";
+import { loadCheckoutChecklistPhotoMeta } from "./checklist-photo-meta";
 
 const copy = messages.employee.home;
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
@@ -153,6 +154,10 @@ export async function StaffCheckoutApprovalsPageContent({
     });
   }
   const records = parsedRecords.success ? parsedRecords.data : [];
+  const photoMetaByItemId = await loadCheckoutChecklistPhotoMeta(
+    claims.tenant_id,
+    records.map((record) => record.id),
+  );
   const items: CheckoutApprovalItem[] = records.map((record) => {
     const shiftRange =
       record.shift_start_time || record.shift_end_time
@@ -171,6 +176,7 @@ export async function StaffCheckoutApprovalsPageContent({
       requestedLabel: record.checkout_requested_at
         ? formatTimeVN(record.checkout_requested_at)
         : "—",
+      shiftName: record.shift_name ?? "Chưa có ca",
       shiftLabel: record.shift_name
         ? shiftRange
           ? `${record.shift_name} · ${shiftRange}`
@@ -180,12 +186,17 @@ export async function StaffCheckoutApprovalsPageContent({
         record.checkout_requested_by_role === "branch_manager"
           ? "Quản lý chi nhánh"
           : "Nhân viên chi nhánh",
-      checklist: record.checklist.map((c) => ({
-        id: c.id,
-        title: c.title,
-        isDone: c.is_done,
-        isRequired: c.is_required,
-      })),
+      checklist: record.checklist.map((c) => {
+        const photoMeta = photoMetaByItemId.get(c.id);
+        return {
+          id: c.id,
+          title: c.title,
+          isDone: c.is_done,
+          isRequired: c.is_required,
+          allowsPhoto: photoMeta?.allowsPhoto === true,
+          hasPhoto: photoMeta?.hasPhoto === true,
+        };
+      }),
     };
   });
 

@@ -101,7 +101,18 @@ export const inventory = {
     stockTabCatalog: "Danh mục",
     stockFlowDailyTitle: "Luồng hàng ngày",
     stockFlowDailyDescription:
-      "Xem tồn thực, yêu cầu bổ sung, nhận và chuyển hàng nội bộ theo thứ tự làm việc.",
+      "Xem tồn thực và mở giao nhận hàng (YCH, nhận, chuyển) theo thứ tự làm việc.",
+    stockWorkPanelTitle: "Việc cần xử lý",
+    stockWorkReceiveTitle: "Cần nhận",
+    stockWorkReceiveMeta: (count: number) =>
+      `${formatCount(count)} phiếu sẵn sàng kiểm nhận`,
+    stockWorkOpenRequestsTitle: "YCH đang mở",
+    stockWorkOpenRequestsMeta: (count: number) =>
+      `${formatCount(count)} yêu cầu đang theo dõi`,
+    stockWorkActiveTitle: "Đang xử lý",
+    stockWorkActiveMeta: (count: number) =>
+      `${formatCount(count)} hành trình đang mở`,
+    stockWorkEmpty: "Không có phiếu cần xử lý",
     stockFlowCountTitle: "Kiểm kê",
     stockFlowCountDescription:
       "Mở phiên kiểm, phân công đếm và duyệt phiếu đếm của chi nhánh.",
@@ -120,7 +131,8 @@ export const inventory = {
     stockJobOnHand: "Danh sách tồn thực và cảnh báo cần bổ sung.",
     stockJobRequests: "Tạo và theo dõi yêu cầu hàng gửi kho trung tâm.",
     stockJobReceive: "Nhận hàng từ phiếu chuyển nội bộ về chi nhánh.",
-    stockJobTransfer: "Chuyển hàng nội bộ giữa các vị trí hoặc chi nhánh.",
+    stockJobTransfer:
+      "Yêu cầu hàng, nhận hàng về chi nhánh và chuyển nội bộ — một hàng đợi giao nhận.",
     stockJobStocktake: "Mở và theo dõi phiên kiểm kê của quản lý.",
     stockJobCountAssignments: "Phân công nhóm nguyên liệu cho nhân viên đếm.",
     stockJobCountSlips: "Duyệt hoặc yêu cầu đếm lại phiếu đã nộp.",
@@ -128,6 +140,15 @@ export const inventory = {
     stockJobConsumption: "Xem ledger tiêu hao và chứng từ thủ công cần rà.",
     stockJobCatalog: "Tra cứu nguyên liệu, đơn vị và danh mục kho.",
     stockJobPurchaseRequests: "Tạo và theo dõi yêu cầu mua cho kho trung tâm.",
+    branchDoorOnHand: "Kho hàng",
+    branchDoorOnHandMeta: "Tồn thực và cảnh báo cần bổ sung",
+    branchDoorRequest: "Yêu cầu hàng",
+    branchDoorRequestMeta: "Xin hàng từ Kho Tổng hoặc Bếp TT",
+    branchDoorStocktake: "Kiểm kê",
+    branchDoorStocktakeMeta: "Phiên kiểm đối chiếu của quản lý",
+    branchDoorWaste: "Hao hụt",
+    branchDoorWasteMeta: "Ghi hao hụt thủ công trong ngày",
+    branchDoorsTitle: "Việc kho",
     operationalMetricsTitle: "Số liệu vận hành",
     operationalMetricsDescription:
       "Số việc đang mở; xử lý qua phiếu ở các mục bên dưới.",
@@ -525,7 +546,8 @@ export const inventory = {
       hubTitle: "Giao nhận hàng",
       centralHubDescription:
         "Xử lý yêu cầu, giao hàng và kiểm nhận theo từng hàng đợi.",
-      branchHubDescription: "Theo dõi yêu cầu và kiểm nhận hàng về chi nhánh.",
+      branchHubDescription: "Theo dõi phiếu yêu cầu hàng và xác nhận khi hàng về.",
+      receiveCta: "Kiểm nhận",
       requestAction: "Yêu cầu hàng",
       centralSupplyRequestAction: "Yêu cầu Kho Tổng",
       centralSupplyRequestDescription: (siteName: string) =>
@@ -538,6 +560,8 @@ export const inventory = {
       submittedAt: (value: string) => `Đã gửi yêu cầu lúc ${value}`,
       submittedDescription:
         "Kho Tổng / Bếp Trung Tâm tiếp nhận theo từng nguyên liệu.",
+      branchSubmittedDescription:
+        "Theo dõi tiến độ bên dưới. Chi nhánh chỉ thao tác gửi yêu cầu và xác nhận nhận hàng.",
       progressTitle: "Tiến độ giao nhận",
       sourceProgressTitle: "Nguồn và tiến độ",
       sourceItemSummary: (source: string, count: number) =>
@@ -1082,7 +1106,7 @@ export const inventory = {
       all: "Tất cả",
       allStatuses: "Mọi trạng thái",
       allCategories: "Mọi danh mục",
-      inStock: "Đủ hàng",
+      inStock: "Còn hàng",
       low: "Chạm ngưỡng",
       out: "Hết hàng",
       reorder: "Chạm ngưỡng",
@@ -1486,6 +1510,8 @@ export const inventory = {
     chooseTargetError: "Chọn kho nhận.",
     invalidLine: "Kiểm tra số lượng và đơn vị cho từng dòng.",
     stockExceeded: "Số lượng vượt tồn hiện tại.",
+    lineShortageHint: "Tồn kho gửi không đủ cho dòng này.",
+    shortageNamed: (name: string) => `Tồn kho không đủ: ${name}.`,
     createFailed: "Không tạo được phiếu.",
     createSuccess: "Đã tạo phiếu điều chuyển.",
     createDataLoadFailedTitle: "Chưa tải đủ dữ liệu tạo phiếu",
@@ -1554,7 +1580,7 @@ export const inventory = {
     actions: {
       confirmShip: "Xác nhận xuất kho",
       markInTransit: "Chuyển sang đang vận chuyển",
-      confirmReceive: "Bắt đầu kiểm nhận",
+      confirmReceive: "Kiểm nhận hàng",
       receive: "Xác nhận nhận hàng",
       cancel: "Hủy phiếu",
     },
@@ -1579,10 +1605,16 @@ export const inventory = {
       receiveInvalidQty: "Nhập số lượng hợp lệ.",
       receiveFailed: "Không thể xác nhận nhận hàng.",
       receiveFrom: (branch: string) => `từ ${branch}`,
-      receiveNotReady: "Yêu cầu chưa ở trạng thái nhận",
+      receiveStarting: "Đang mở kiểm nhận…",
+      receiveStartFailed: "Không thể mở kiểm nhận.",
+      receiveStartRetry: "Thử lại",
+      receiveWaitingShipTitle: "Đang chờ kho xuất hàng",
+      receiveWaitingShipDescription:
+        "Phiếu đã tạo nhưng chưa ở trạng thái đang giao. Quay lại khi kho đã xuất.",
+      receiveNotReady: "Chưa nhận được hàng",
       receiveNotReadyDescription:
-        "Mở phiếu điều chuyển để bắt đầu kiểm nhận hoặc chờ kho xuất hàng.",
-      receiveOpenDetail: "Mở phiếu điều chuyển",
+        "Phiếu chưa sẵn sàng kiểm nhận. Quay lại danh sách hoặc xem chi tiết phiếu.",
+      receiveOpenDetail: "Xem phiếu điều chuyển",
       receiveSuccess: "Đã nhận hàng thành công.",
     },
     createNative: {
@@ -2030,6 +2062,7 @@ export const inventory = {
       countRatio: (done: number, total: number) =>
         `${formatCount(done)}/${formatCount(total)}`,
       countSaveNext: "Lưu · món kế →",
+      countTapToEnter: "Nhập",
       countUpNext: (names: string[]) => `Kế: ${names.join(" · ")}…`,
       countSubmitRemaining: (n: number) =>
         `Gửi kết quả (còn ${formatCount(n)} mục)`,
@@ -2108,6 +2141,7 @@ export const inventory = {
         "Cần Kế toán kiểm tra giá. Nhân viên vận hành chỉ cần hoàn tất số lượng, lý do và ảnh bằng chứng khi hệ thống yêu cầu.",
       locationLabel: "Vị trí xuất kho",
       locationPlaceholder: "Chọn vị trí kho",
+      noLocationAvailable: "Chi nhánh chưa có kho đang hoạt động.",
       linesTitle: "Nguyên liệu hao hụt",
       addLine: "Thêm dòng",
       ingredientLabel: (index: number) => `Nguyên liệu ${index}`,
@@ -2116,6 +2150,8 @@ export const inventory = {
       quantityLabel: "Số lượng",
       stockHint: (quantity: string, unit: string) =>
         ` · Tồn ${quantity} ${unit}`,
+      lineShortageHint: "Số lượng vượt tồn hiện tại.",
+      shortageNamed: (name: string) => `Tồn kho không đủ: ${name}.`,
       reasonLabel: "Lý do",
       lineNotesLabel: "Ghi chú",
       evidenceLabel: (required: boolean) =>

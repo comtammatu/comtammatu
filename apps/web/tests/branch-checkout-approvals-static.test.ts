@@ -39,8 +39,36 @@ test("checkout queue and decisions share the live exact-branch hierarchy", () =>
     page,
     /createServiceClient|\.from\("attendance_records"\)/,
   );
+  assert.match(page, /loadCheckoutChecklistPhotoMeta/);
+  assert.match(page, /allowsPhoto/);
+  assert.match(page, /hasPhoto/);
   assert.match(dashboard, /get_checkout_review_queue/);
   assert.match(workday, /get_checkout_review_queue/);
+
+  const photoMeta = read(
+    "apps/web/lib/staff-runtime/checkout-approvals/checklist-photo-meta.ts",
+  );
+  assert.match(photoMeta, /createServiceClient/);
+  assert.match(photoMeta, /\.from\("attendance_checklist_items"\)/);
+
+  const client = read(
+    "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
+  );
+  assert.match(client, /getCheckoutChecklistTaskPhotoUrl/);
+  assert.match(client, /Xem ảnh minh chứng/);
+  assert.match(client, /Ảnh minh chứng việc trong ca/);
+  assert.match(client, /data-checkout-approval-row/);
+  assert.match(client, /bg-card/);
+  assert.match(client, /item\.shiftName/);
+  assert.doesNotMatch(client, /EmployeeDetailList/);
+  assert.doesNotMatch(
+    client,
+    /data-checkout-approval-row[\s\S]*?employeeCode/,
+  );
+  assert.match(actions, /export async function getCheckoutChecklistTaskPhotoUrl/);
+  assert.match(actions, /ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS/);
+  assert.match(actions, /ATTENDANCE_PHOTO_BUCKET/);
+  assert.match(actions, /createSignedUrl\(item\.photo_path/);
 
   for (const functionName of [
     "approve_employee_clock_out",

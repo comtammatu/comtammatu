@@ -1,5 +1,12 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { messages } from "@lib/messages";
@@ -144,22 +151,40 @@ export default async function BranchStockRequestNewPage({
 
   const journeyCopy = messages.inventory.stockRequests.journey;
   const isCentralKitchen = kind === "central_kitchen";
+  const pageTitle = isCentralKitchen
+    ? journeyCopy.centralSupplyRequestAction
+    : editing == null
+      ? "Yêu cầu hàng"
+      : "Sửa yêu cầu hàng";
+  const pageDescription = isCentralKitchen
+    ? journeyCopy.centralSupplyRequestDescription(branchContext.branch.name)
+    : "Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu.";
+  const backHref =
+    kind === "branch"
+      ? `/br/${branchId}/stock`
+      : `/br/${branchId}/stock/transfer`;
 
   return (
     <BranchOperatorPage
-      title={
-        isCentralKitchen
-          ? journeyCopy.centralSupplyRequestAction
-          : editing == null
-            ? "Yêu cầu hàng"
-            : "Sửa yêu cầu hàng"
-      }
-      description={
-        isCentralKitchen
-          ? journeyCopy.centralSupplyRequestDescription(branchContext.branch.name)
-          : "Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu."
-      }
+      title={pageTitle}
+      description={pageDescription}
+      hideHeaderOnMobile
     >
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{pageTitle}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {pageDescription}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
       <StockRequestEditor
         branchId={branchId}
         requestId={editing}
@@ -171,7 +196,9 @@ export default async function BranchStockRequestNewPage({
         returnHref={
           isCentralKitchen
             ? `/br/${branchId}/stock/transfer?requestId=:requestId`
-            : undefined
+            : kind === "branch"
+              ? `/br/${branchId}/stock?requestId=:requestId`
+              : undefined
         }
       />
     </BranchOperatorPage>

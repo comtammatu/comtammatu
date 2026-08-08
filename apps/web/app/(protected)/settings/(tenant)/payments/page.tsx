@@ -5,13 +5,26 @@ import { SettingsPageFrame } from "../../settings-page-frame";
 import { messages } from "@lib/messages";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
+import { fetchVietQrBanks } from "@lib/vietqr/banks-server";
+import type { VietQrBank } from "@lib/vietqr/banks";
 
 export default async function PaymentSettingsPage() {
   const { supabase } = await loadAuthState();
 
-  const { data: rows, error } = await supabase
-    .from("system_settings")
-    .select("key, value");
+  const [{ data: rows, error }, banksResult] = await Promise.all([
+    supabase.from("system_settings").select("key, value"),
+    fetchVietQrBanks()
+      .then((banks): { banks: VietQrBank[]; banksUnavailable: boolean } => ({
+        banks,
+        banksUnavailable: false,
+      }))
+      .catch(
+        (): { banks: VietQrBank[]; banksUnavailable: boolean } => ({
+          banks: [],
+          banksUnavailable: true,
+        }),
+      ),
+  ]);
 
   const settings: Record<string, string> = { ...SYSTEM_SETTING_DEFAULTS };
   if (rows) {
@@ -36,6 +49,8 @@ export default async function PaymentSettingsPage() {
       ) : (
         <PaymentsForm
           settings={settings}
+          banks={banksResult.banks}
+          banksUnavailable={banksResult.banksUnavailable}
           sepayEnvConfigured={sepayEnvConfigured}
         />
       )}

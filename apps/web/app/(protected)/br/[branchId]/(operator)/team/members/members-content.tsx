@@ -1,5 +1,8 @@
 import { AppEmptyState } from "@/components/surface";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import {
+  getAuthContextWithPermission,
+  probePermission,
+} from "@/_lib/auth";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import {
@@ -68,6 +71,12 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
   if (claims.user_role === "branch_manager" && claims.branch_id !== branchId) {
     return <AppEmptyState mode="no-access" />;
   }
+
+  const canManageEmployeeOverrides = await probePermission(
+    ctx,
+    PERMISSION_KEYS.HR_MANAGE_EMPLOYEE_SHIFT_OVERRIDES,
+    branchId,
+  );
 
   const readClient = createServiceClient();
 
@@ -252,6 +261,7 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
 
       return {
         id: profile.id,
+        employeeId: employeeId,
         name: profile.full_name || "Chưa cập nhật tên",
         code: employee?.employee_code ?? null,
         phone: profile.phone,
@@ -282,5 +292,11 @@ export async function TeamMembersContent({ branchId }: { branchId: number }) {
     })
     .sort((a, b) => a.name.localeCompare(b.name, "vi"));
 
-  return <MembersClient branchId={branchId} employees={employees} />;
+  return (
+    <MembersClient
+      branchId={branchId}
+      employees={employees}
+      canManageEmployeeOverrides={canManageEmployeeOverrides}
+    />
+  );
 }

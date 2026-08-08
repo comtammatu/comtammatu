@@ -82,12 +82,15 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   assert.match(receiveRoute, /permanentRedirect/);
   assert.match(
     receiveRoute,
-    /permanentRedirect\(`\/br\/\$\{branchId\}\/stock\/transfer\?work=receive`\)/,
+    /permanentRedirect\(`\/br\/\$\{branchId\}\/stock\?work=receive`\)/,
   );
   assert.doesNotMatch(receiveRoute, /TransfersPageContent|embedded|DataTable/);
-  assert.match(transferRoute, /StockFulfillmentHubClient/);
-  assert.match(transferRoute, /isBranchKind \? "branch" : "central"/);
+  assert.match(transferRoute, /BranchStockFulfillmentHubClient/);
+  assert.match(transferRoute, /mode = "central"/);
+  assert.match(transferRoute, /isBranchKind/);
+  assert.match(transferRoute, /redirect\([\s\S]*\/stock/);
   assert.match(transferRoute, /stock\/requests\/new/);
+  assert.doesNotMatch(transferRoute, /(?<!Branch)StockFulfillmentHubClient/);
   assert.doesNotMatch(
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer\?queue=receive"/,
@@ -122,11 +125,14 @@ test("operator stock receive merges into the native transfer queue and keeps nat
   );
   assert.match(
     receiveDetailRoute,
-    /backHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\?work=receive`\}/,
+    /backHref=\{`\/br\/\$\{branchId\}\/stock\?work=receive`\}/,
   );
+  assert.match(receiveDetailRoute, /resolveBranchContext/);
+  assert.match(receiveDetailRoute, /isStoreBranch/);
+  assert.match(receiveDetailRoute, /documentTitle=\{documentTitle\}/);
   assert.match(
     receiveDetailRoute,
-    /detailHref=\{`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\}/,
+    /detailHref=\{\s*isStoreBranch\s*\?\s*null\s*:\s*`\/br\/\$\{branchId\}\/stock\/transfer\/\$\{transferId\}`\s*\}/,
   );
   assert.match(receiveClient, /size="icon-touch"/);
   assert.match(receiveClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
@@ -190,31 +196,30 @@ test("operator count-slip approvals render inside the branch operator shell", ()
   assert.doesNotMatch(clientSource, /embedded|branchScoped/);
 });
 
-test("operator stock landing is a branch-native landing, not the Owner surface stock page wrapper", () => {
+test("operator stock landing is a branch-native list with four doors", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
 
   assert.match(source, /BranchOperatorPage/);
-  assert.match(source, /BranchOperatorActionSection/);
-  assert.match(source, /resolveOperatorTiles/);
-  assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
+  assert.match(source, /BranchStockFulfillmentHubClient/);
+  assert.match(source, /BranchStockDoors/);
+  assert.match(source, /branchDoorOnHand/);
+  assert.match(source, /branchDoorRequest/);
+  assert.match(source, /branchDoorStocktake/);
+  assert.match(source, /branchDoorWaste/);
+  assert.match(source, /loadStockFulfillmentRows/);
   assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
   assert.match(source, /StockWorkflowSections/);
-  assert.match(source, /stockFlowDailyTitle/);
-  assert.match(source, /stockJobOnHand/);
-  assert.match(source, /presentation=\{section\.primary \? "stations" : "plain"\}/);
   assert.match(
     source,
     /tile\.href === stockRoot\s*\?\s*`\$\{stockRoot\}\/on-hand`/,
   );
-  assert.match(source, /mobileColumns=\{2\}/);
+  assert.doesNotMatch(source, /BranchStockWorkPanel/);
+  assert.doesNotMatch(source, /BRANCH_STOCK_TAB_SUFFIXES/);
   assert.doesNotMatch(source, /AppPageTabs/);
-  assert.doesNotMatch(source, /paramKey="group"/);
-  assert.doesNotMatch(source, /operatorStockPrimaryDescription/);
   assert.doesNotMatch(source, /StockPageContent/);
-  assert.doesNotMatch(source, /embedded/);
-  assert.doesNotMatch(source, /href: `\/br\/\$\{branchId\}\/stock\/count`/);
+  assert.doesNotMatch(source, /key: "consumption"/);
 });
 
 test("operator stock on-hand list forks Branch presentation over the shared loader", () => {
@@ -264,7 +269,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
     /aria-label=\{stockCopy\.filters\.searchPlaceholder\}/,
   );
   assert.match(branchClientSource, /variant="default"/);
-  assert.match(branchClientSource, /min-h-11/);
+  assert.match(branchClientSource, /min-h-12/);
   assert.match(branchClientSource, /border-b border-border/);
   assert.doesNotMatch(branchClientSource, /<ItemGroup/);
   assert.match(branchClientSource, /size="touch"/);
@@ -986,12 +991,14 @@ test("operator and central routes share the fulfillment hub while details stay c
 
   assert.match(transferRoute, /BranchOperatorPage/);
   assert.match(transferRoute, /loadStockFulfillmentRows/);
-  assert.match(transferRoute, /StockFulfillmentHubClient/);
-  assert.match(transferRoute, /isBranchKind \? "branch" : "central"/);
+  assert.match(transferRoute, /BranchStockFulfillmentHubClient/);
+  assert.match(transferRoute, /mode = "central"/);
+  assert.match(transferRoute, /isBranchKind/);
+  assert.match(transferRoute, /redirect\([\s\S]*\/stock/);
   assert.match(transferRoute, /stock.requests.new/);
   assert.doesNotMatch(
     transferRoute,
-    /fetchBranchesForTransfer|TransfersListClient/,
+    /fetchBranchesForTransfer|TransfersListClient|(?<!Branch)StockFulfillmentHubClient/,
   );
 
   assert.match(transfersPage, /loadStockFulfillmentRows/);
@@ -999,9 +1006,23 @@ test("operator and central routes share the fulfillment hub while details stay c
   assert.match(transfersPage, /mode="central"/);
   assert.match(transferNewPage, /loadTransferCreatePageData/);
   assert.match(transferNewPage, /CreateTransferForm/);
+  const branchTransferNew = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx",
+  );
+  assert.match(branchTransferNew, /BranchTransferCreateClient/);
+  assert.doesNotMatch(branchTransferNew, /CreateTransferForm/);
 
   assert.match(transferDetailRoute, /loadTransferDetailPageData/);
   assert.match(transferDetailRoute, /BranchTransferDetailClient/);
+  assert.match(transferDetailRoute, /branch_kind === "branch"/);
+  assert.match(
+    transferDetailRoute,
+    /redirect\(\s*`\/br\/\$\{branchId\}\/stock\/requests\/\$\{data\.transfer\.stockRequestId\}`/,
+  );
+  assert.match(
+    transferDetailRoute,
+    /redirect\(`\/br\/\$\{branchId\}\/stock\/receive\/\$\{transferId\}`\)/,
+  );
   assert.match(transferDetailPage, /loadTransferDetailPageData/);
 });
 

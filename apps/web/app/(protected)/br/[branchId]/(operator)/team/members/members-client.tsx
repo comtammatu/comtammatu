@@ -1,17 +1,28 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
 import {
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
+import {
+  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Clock3,
   Phone,
   Search,
-  UserRound,
   UsersRound,
 } from "lucide-react";
-import { formatCount } from "@comtammatu/shared/format";
+import { formatCount, formatDecimal } from "@comtammatu/shared/format";
+import {
+  formatVNTime as formatTimeVN,
+  getVNMonthString,
+} from "@comtammatu/shared/time";
 import {
   Avatar,
   AvatarFallback,
@@ -23,6 +34,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@comtammatu/ui/components/drawer";
@@ -32,20 +44,35 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppEmptyState } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
-import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 import { TeamMemberTile } from "../_components/team-member-tile";
+import {
+  fetchTeamMemberMonthDetail,
+  type TeamMemberMonthDetail,
+} from "./actions";
+import { BranchEmployeeTasksSheet } from "./branch-employee-tasks-sheet";
+
+const detailCopy = messages.operator.teamBoard.memberDetail;
 
 export type TeamMemberTodayStatus =
-  "working" | "checked_out" | "on_leave" | "not_started";
+  | "working"
+  | "checked_out"
+  | "on_leave"
+  | "not_started";
 
 export type TeamMemberCountStatus =
-  "not_assigned" | "not_submitted" | "submitted" | "needs_changes" | "approved";
+  | "not_assigned"
+  | "not_submitted"
+  | "submitted"
+  | "needs_changes"
+  | "approved";
 
 export interface TeamMemberRow {
   id: string;
+  /** Numeric employees.id; null when profile has no active employee row. */
+  employeeId: number | null;
   name: string;
   code: string | null;
   phone: string | null;
@@ -76,6 +103,10 @@ function todayStatusMeta(status: TeamMemberTodayStatus): {
       return { label: "Nghỉ phép", variant: "warning" };
     case "not_started":
       return { label: "Chưa vào ca", variant: "outline" };
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
 }
 
@@ -94,6 +125,10 @@ function countStatusMeta(status: TeamMemberCountStatus): {
       return { label: "Cần sửa kiểm kê", variant: "warning" };
     case "approved":
       return { label: "Kiểm kê đã duyệt", variant: "success" };
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
 }
 
@@ -129,6 +164,10 @@ function matchesFilter(
       return member.todayStatus === "on_leave";
     case "count_assigned":
       return member.countStatus !== "not_assigned";
+    default: {
+      const _exhaustive: never = filter;
+      return _exhaustive;
+    }
   }
 }
 
@@ -137,7 +176,12 @@ function memberMatchesQuery(member: TeamMemberRow, query: string): boolean {
   if (!normalizedQuery) return true;
 
   return matchesSearch(
-    [member.name, member.code ?? "", member.phone ?? "", member.positionLabel ?? ""],
+    [
+      member.name,
+      member.code ?? "",
+      member.phone ?? "",
+      member.positionLabel ?? "",
+    ],
     normalizedQuery,
   );
 }
@@ -168,7 +212,6 @@ function MemberCard({
   member: TeamMemberRow;
   onOpenDrawer: (member: TeamMemberRow) => void;
 }) {
-  // min-h-24 flex-col justify-center text-center
   const codeOrPlaceholder = member.code
     ? `(${member.code})`
     : "Chưa có mã NV";
@@ -193,19 +236,14 @@ function renderMemberCardBadges(member: TeamMemberRow) {
 
 function MemberDetailBlock({
   title,
-  action,
   children,
 }: {
   title: string;
-  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-2 border-b pb-4 last:border-b-0">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold">{title}</h4>
-        {action}
-      </div>
+    <section className="flex flex-col gap-2">
+      <h4 className="text-sm font-semibold">{title}</h4>
       {children}
     </section>
   );
@@ -233,15 +271,115 @@ function InfoTile({
   );
 }
 
+function MonthSummary({
+  detail,
+  loading,
+  error,
+  hasEmployee,
+}: {
+  detail: TeamMemberMonthDetail | null;
+  loading: boolean;
+  error: string | null;
+  hasEmployee: boolean;
+}) {
+  if (!hasEmployee) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {detailCopy.noEmployeeRecord}
+      </p>
+    );
+  }
+
+  if (loading && !detail) {
+    return (
+      <p className="text-sm text-muted-foreground">{detailCopy.monthLoading}</p>
+    );
+  }
+
+  if (error && !detail) {
+    return <p className="text-sm text-destructive">{error}</p>;
+  }
+
+  if (!detail) return null;
+
+  return (
+    <MemberDetailBlock title={detailCopy.monthSection}>
+      <div className="grid grid-cols-2 gap-2">
+        <InfoTile
+          icon={<CalendarDays />}
+          label={detailCopy.workdays}
+          value={formatDecimal(detail.workdays, 1)}
+        />
+        <InfoTile
+          icon={<Clock3 />}
+          label={detailCopy.workHours}
+          value={formatDecimal(detail.workHours, 1)}
+        />
+        <InfoTile
+          icon={<CalendarDays />}
+          label={detailCopy.approvedLeaveDays}
+          value={formatDecimal(detail.approvedLeaveDays, 1)}
+        />
+        <InfoTile
+          icon={<ClipboardList />}
+          label={detailCopy.pendingLeave}
+          value={formatCount(detail.pendingLeaveCount)}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">{detailCopy.monthDetailHint}</p>
+    </MemberDetailBlock>
+  );
+}
+
 export function MembersClient({
+  branchId,
   employees,
+  canManageEmployeeOverrides = false,
 }: {
   branchId: number;
   employees: TeamMemberRow[];
+  canManageEmployeeOverrides?: boolean;
 }) {
   const [activeMember, setActiveMember] = useState<TeamMemberRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TeamMemberFilter>("all");
+  const [monthDetail, setMonthDetail] = useState<TeamMemberMonthDetail | null>(
+    null,
+  );
+  const [monthError, setMonthError] = useState<string | null>(null);
+  const [isMonthLoading, startMonthTransition] = useTransition();
+  const [tasksEmployeeId, setTasksEmployeeId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!activeMember) {
+      setMonthDetail(null);
+      setMonthError(null);
+      return;
+    }
+    if (activeMember.employeeId == null) {
+      setMonthDetail(null);
+      setMonthError(null);
+      return;
+    }
+
+    const employeeId = activeMember.employeeId;
+    setMonthDetail(null);
+    setMonthError(null);
+    startMonthTransition(async () => {
+      const result = await fetchTeamMemberMonthDetail({
+        branchId,
+        employeeId,
+      });
+      if (!result.success) {
+        setMonthError(result.error ?? detailCopy.monthLoadFailed);
+        setMonthDetail(null);
+        return;
+      }
+      setMonthDetail(result.data ?? null);
+      setMonthError(null);
+    });
+  }, [activeMember, branchId]);
+
   const stats = useMemo(
     () => ({
       total: employees.length,
@@ -385,88 +523,130 @@ export function MembersClient({
           {activeMember ? (
             <>
               <DrawerHeader className="shrink-0 text-left">
-                <DrawerTitle>Chi tiết nhân viên</DrawerTitle>
-                <DrawerDescription className="sr-only">
-                  Hồ sơ tóm tắt của nhân viên trong chi nhánh.
+                <DrawerTitle className="truncate">
+                  {activeMember.name}
+                </DrawerTitle>
+                <DrawerDescription>
+                  {[activeMember.code, activeMember.positionLabel]
+                    .filter(Boolean)
+                    .join(" · ") || detailCopy.description}
                 </DrawerDescription>
               </DrawerHeader>
 
-              <ScrollArea className="min-h-0 flex-1 px-4">
-                <div className="workflow-safe-pb flex flex-col gap-4 pr-2">
-                  <MemberDetailBlock title="Hồ sơ">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <InfoTile
-                        icon={<UserRound />}
-                        label="Tên"
-                        value={activeMember.name}
-                      />
-                      <InfoTile
-                        icon={<UserRound />}
-                        label="Mã NV"
-                        value={activeMember.code ?? "Chưa có"}
-                      />
-                      <InfoTile
-                        icon={<UserRound />}
-                        label="Chức danh"
-                        value={activeMember.positionLabel ?? "Chưa có"}
-                      />
-                      <InfoTile
-                        icon={<Phone />}
-                        label="SĐT"
-                        value={
-                          activeMember.phone ? (
-                            <a
-                              href={phoneHref(activeMember.phone)}
-                              className="text-primary hover:underline"
-                            >
-                              {activeMember.phone}
-                            </a>
-                          ) : (
-                            "Chưa cập nhật"
-                          )
-                        }
-                      />
-                    </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
+                <div className="flex flex-col gap-4">
+                  <MemberDetailBlock title={detailCopy.contactSection}>
+                    <InfoTile
+                      icon={<Phone />}
+                      label={detailCopy.phone}
+                      value={
+                        activeMember.phone ? (
+                          <a
+                            href={phoneHref(activeMember.phone)}
+                            className="text-primary hover:underline"
+                          >
+                            {activeMember.phone}
+                          </a>
+                        ) : (
+                          detailCopy.phoneMissing
+                        )
+                      }
+                    />
                   </MemberDetailBlock>
 
-                  <MemberDetailBlock title="Hôm nay">
-                    <div className="grid gap-2 sm:grid-cols-2">
+                  <MemberDetailBlock title={detailCopy.todaySection}>
+                    <div className="grid grid-cols-2 gap-2">
                       <InfoTile
                         icon={<CheckCircle2 />}
-                        label="Trạng thái"
+                        label={detailCopy.status}
                         value={
                           activeTodayStatus ? (
                             <Badge variant={activeTodayStatus.variant}>
                               {activeTodayStatus.label}
                             </Badge>
                           ) : (
-                            "Chưa rõ"
+                            detailCopy.statusUnknown
                           )
                         }
                       />
                       <InfoTile
                         icon={<Clock3 />}
-                        label="Ca"
-                        value={activeMember.todayShiftName ?? "Chưa có ca"}
+                        label={detailCopy.shift}
+                        value={
+                          activeMember.todayShiftName ?? detailCopy.noShift
+                        }
                       />
                       <InfoTile
                         icon={<CheckCircle2 />}
-                        label="Giờ"
+                        label={detailCopy.times}
                         value={`${formatOptionalTime(activeMember.checkIn)} - ${formatOptionalTime(activeMember.checkOut)}`}
                       />
                       <InfoTile
                         icon={<ClipboardList />}
-                        label="Kiểm kê"
-                        value={activeCountStatus?.label ?? "Không giao"}
+                        label={detailCopy.count}
+                        value={
+                          activeCountStatus?.label ?? detailCopy.countNone
+                        }
                       />
                     </div>
                   </MemberDetailBlock>
+
+                  <MonthSummary
+                    detail={monthDetail}
+                    loading={isMonthLoading}
+                    error={monthError}
+                    hasEmployee={activeMember.employeeId != null}
+                  />
                 </div>
-              </ScrollArea>
+              </div>
+
+              {activeMember.employeeId != null ? (
+                <DrawerFooter className="shrink-0 pt-2">
+                  {canManageEmployeeOverrides ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        setTasksEmployeeId(activeMember.employeeId)
+                      }
+                    >
+                      {detailCopy.openShiftTasks}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="default"
+                    size="touch"
+                    className="w-full"
+                    render={
+                      <Link
+                        href={`/br/${branchId}/shift/attendance?view=summary&employeeId=${activeMember.employeeId}&month=${
+                          monthDetail?.monthStart.slice(0, 7) ??
+                          getVNMonthString()
+                        }`}
+                      />
+                    }
+                  >
+                    {detailCopy.openAttendance}
+                  </Button>
+                </DrawerFooter>
+              ) : null}
             </>
           ) : null}
         </DrawerContent>
       </Drawer>
+
+      {canManageEmployeeOverrides ? (
+        <BranchEmployeeTasksSheet
+          branchId={branchId}
+          employeeId={tasksEmployeeId}
+          open={tasksEmployeeId != null}
+          onOpenChange={(open) => {
+            if (!open) setTasksEmployeeId(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }

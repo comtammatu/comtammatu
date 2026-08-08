@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getStockJourney } from "../lib/inventory/stock-journey-model";
+import {
+  getBranchStockRequestProgress,
+  getStockJourney,
+} from "../lib/inventory/stock-journey-model";
 
 test("stock journey stops at the earliest unfinished stage", () => {
   assert.deepEqual(
@@ -114,4 +117,47 @@ test("cancelled transfers do not inflate delivery progress", () => {
   assert.equal(result.activeTransfers, 0);
   assert.equal(result.receivedTransfers, 0);
   assert.equal(result.stage, "preparation");
+});
+
+test("branch YCH progress is submit → approved → shipping → confirm", () => {
+  assert.equal(
+    getBranchStockRequestProgress({
+      requestStatus: "draft",
+      items: [{ status: "pending" }],
+      transfers: [],
+    }).currentStep,
+    "submit",
+  );
+  assert.equal(
+    getBranchStockRequestProgress({
+      requestStatus: "submitted",
+      items: [{ status: "pending" }],
+      transfers: [],
+    }).currentStep,
+    "approved",
+  );
+  assert.equal(
+    getBranchStockRequestProgress({
+      requestStatus: "submitted",
+      items: [{ status: "allocated" }],
+      transfers: [{ id: 1, status: "draft" }],
+    }).currentStep,
+    "shipping",
+  );
+  const receiveReady = getBranchStockRequestProgress({
+    requestStatus: "submitted",
+    items: [{ status: "allocated" }],
+    transfers: [{ id: 9, status: "in_transit" }],
+  });
+  assert.equal(receiveReady.currentStep, "confirm");
+  assert.equal(receiveReady.canConfirm, true);
+  assert.equal(receiveReady.firstReceiveTransferId, 9);
+  assert.equal(
+    getBranchStockRequestProgress({
+      requestStatus: "fulfilled",
+      items: [{ status: "allocated" }],
+      transfers: [{ id: 9, status: "received" }],
+    }).allDone,
+    true,
+  );
 });

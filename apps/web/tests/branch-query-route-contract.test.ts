@@ -11,17 +11,45 @@ const transferPage = readFileSync(
   ),
   "utf8",
 );
+const hubClient = readFileSync(
+  resolve(
+    repoRoot,
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/branch-stock-fulfillment-hub-client.tsx",
+  ),
+  "utf8",
+);
 
-test("Branch fulfillment query links hydrate their requested detail", () => {
-  assert.match(transferPage, /requestId\?: string \| string\[\]/);
-  assert.match(transferPage, /transferId\?: string \| string\[\]/);
-  assert.match(transferPage, /loadStockRequestFulfillmentDetail/);
-  assert.match(transferPage, /loadTransferDetailPageData/);
-  assert.match(
-    transferPage,
-    /mode === "central" && Number\.isInteger\(requestId\)/,
+test("Branch fulfillment hub deep-links to detail pages without Owner dialogs", () => {
+  const stockPage = readFileSync(
+    resolve(
+      repoRoot,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
+    ),
+    "utf8",
   );
-  assert.match(transferPage, /\{ transferId, routeBranchId: branchId \}/);
-  assert.match(transferPage, /selectedRequest=\{selectedRequest\}/);
-  assert.match(transferPage, /selectedTransfer=\{selectedTransfer\}/);
+  assert.match(stockPage, /BranchStockFulfillmentHubClient/);
+  assert.match(stockPage, /loadStockFulfillmentRows/);
+  assert.match(transferPage, /redirect\([\s\S]*\/stock/);
+  assert.doesNotMatch(transferPage, /loadStockRequestFulfillmentDetail/);
+  assert.doesNotMatch(transferPage, /loadTransferDetailPageData/);
+  assert.doesNotMatch(transferPage, /selectedRequest|selectedTransfer/);
+
+  assert.match(hubClient, /stockFulfillmentRowHref/);
+  assert.match(hubClient, /preferWork:\s*work/);
+  assert.match(hubClient, /searchParams\.get\("work"\)/);
+  assert.match(hubClient, /searchParams\.get\("q"\)/);
+  assert.match(hubClient, /mode === "branch" \? "active" : "all"/);
+  assert.match(hubClient, /copy\.receiveCta/);
+  assert.doesNotMatch(hubClient, /DataTable|AppDialog|AppListFrame/);
+
+  const hubModel = readFileSync(
+    resolve(repoRoot, "apps/web/lib/inventory/stock-fulfillment-hub-model.ts"),
+    "utf8",
+  );
+  assert.match(hubModel, /preferWork\?:/);
+  assert.match(hubModel, /\/stock\/receive\/\$\{transferId\}/);
+  assert.match(hubModel, /\/stock\/requests\/\$\{row\.requestId\}/);
+  assert.match(hubModel, /\/stock\/transfer\/\$\{row\.transferId\}/);
+  assert.match(hubModel, /summarizeBranchStockWork/);
+  assert.match(hubModel, /stockFulfillmentReceiveTransferId/);
 });

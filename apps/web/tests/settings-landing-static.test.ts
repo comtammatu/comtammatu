@@ -45,6 +45,7 @@ test("Owner settings routes use the shared hierarchy and field description compo
   assert.match(frame, /@comtammatu\/ui\/components\/breadcrumb/);
   assert.match(payments, /<FieldDescription id="enable-vietqr-description">/);
   assert.match(payments, /<DescriptionList/);
+  assert.doesNotMatch(payments, /from "@comtammatu\/ui\/components\/tabs"/);
   assert.doesNotMatch(
     payments,
     /<p className="text-2xs text-muted-foreground">/,

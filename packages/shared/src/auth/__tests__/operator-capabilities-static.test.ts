@@ -37,7 +37,7 @@ test("resolveOperatorTiles -> branch manager sees branch workflows in branch hom
 
   assert.equal(hrefs.includes("/br/3/stock"), true);
   assert.equal(hrefs.includes("/br/3/stock/transfer?queue=receive"), false);
-  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
   assert.equal(hrefs.includes("/br/3/stock/stocktake"), true);
   assert.equal(hrefs.includes("/br/3/stock/waste"), true);
   assert.equal(moduleKeys.includes("branch_dashboard"), false);
@@ -151,10 +151,15 @@ test("resolveOperatorTiles -> branch kind keeps GRN/production off the stock hub
       `${role} must not see GRN tile on branch`,
     );
     const fulfillmentTile = stock?.tiles.find(
-      (tile) => tile.href === "/br/3/stock/transfer",
+      (tile) => tile.href === "/br/3/stock",
     );
-    assert.ok(fulfillmentTile, `${role} must see fulfillment hub`);
-    assert.equal(fulfillmentTile?.label, "Giao nhận hàng");
+    assert.ok(fulfillmentTile, `${role} must see stock home`);
+    assert.equal(fulfillmentTile?.label, "Tồn kho");
+    assert.equal(
+      stock?.tiles.some((tile) => tile.href === "/br/3/stock/transfer"),
+      false,
+      `${role} must not see duplicate Giao nhận tile`,
+    );
   }
 });
 
@@ -200,27 +205,20 @@ test("resolveOperatorTiles -> branch stock group renders the D093 tile set", () 
   );
   assert.deepEqual(
     branchStock?.tiles.map((tile) => tile.label),
-    [
-      "Tồn kho",
-      "Giao nhận hàng",
-      "Kiểm kê",
-      "Giao đếm",
-      "Hao hụt",
-      "Tiêu hao",
-      "Danh mục",
-    ],
+    ["Tồn kho", "Kiểm kê", "Hao hụt"],
   );
 });
 
-test("resolveOperatorTiles -> branch stock exposes one fulfillment tile", () => {
+test("resolveOperatorTiles -> branch stock exposes fulfillment on /stock root", () => {
   const groups = resolveOperatorTiles("branch_manager", 3, "branch");
   const hrefs = groups.flatMap((group) => group.tiles.map((tile) => tile.href));
-  assert.equal(hrefs.includes("/br/3/stock/transfer"), true);
+  assert.equal(hrefs.includes("/br/3/stock"), true);
+  assert.equal(hrefs.includes("/br/3/stock/transfer"), false);
   assert.equal(
     groups
       .find((group) => group.id === "stock")
-      ?.tiles.filter((tile) => tile.label === "Giao nhận hàng").length,
-    1,
+      ?.tiles.some((tile) => tile.label === "Tiêu hao"),
+    false,
   );
   assert.equal(
     groups

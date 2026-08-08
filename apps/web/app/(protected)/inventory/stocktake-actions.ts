@@ -7,6 +7,11 @@ import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
+import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
+import {
+  stocktakeSubmitRpcFallback,
+  stocktakeSubmitRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 /* ─── Start stocktake (S13a) ─── */
 
@@ -207,10 +212,11 @@ export async function submitCountRound(
   });
 
   if (error) {
-    if (error.code === "42501") {
-      return { success: false, error: "Không có quyền hoặc kỳ đã đóng" };
-    }
-    return { success: false, error: "Không submit được vòng đếm." };
+    return mapInventoryRpcFailure(
+      error,
+      stocktakeSubmitRpcMappings,
+      stocktakeSubmitRpcFallback,
+    );
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;

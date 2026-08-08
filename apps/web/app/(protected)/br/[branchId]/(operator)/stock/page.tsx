@@ -1,19 +1,39 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  ClipboardCheck,
+  ClipboardList,
+  Package,
+  Plus as IconPlus,
+  Trash2,
+} from "lucide-react";
 import {
   resolveOperatorTiles,
   type BranchKind,
   type ResolvedOperatorTile,
 } from "@comtammatu/shared/auth";
-import { AppEmptyState } from "@/components/surface";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionSection,
   BranchOperatorPage,
+  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
+import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
+import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
 import { messages } from "@lib/messages";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { resolveOperatorTileIcon } from "../operator-tile-icons";
+import { BranchStockFulfillmentHubClient } from "./transfer/branch-stock-fulfillment-hub-client";
 
 interface OperatorStockLink {
   key: string;
@@ -24,24 +44,9 @@ interface OperatorStockLink {
 }
 
 const stockCopy = messages.inventory.dashboard;
+const journeyCopy = messages.inventory.stockRequests.journey;
 
-type BranchStockGroupId = "onhand" | "count" | "waste" | "catalog";
 type CentralStockGroupId = "lookup" | "buy_count" | "waste";
-
-const BRANCH_STOCK_TAB_SUFFIXES: Record<
-  BranchStockGroupId,
-  readonly string[]
-> = {
-  onhand: [
-    "/stock/on-hand",
-    "/stock/requests",
-    "/stock/receive",
-    "/stock/transfer",
-  ],
-  count: ["/stock/stocktake", "/stock/count-assignments", "/stock/count-slips"],
-  waste: ["/stock/waste", "/stock/consumption"],
-  catalog: ["/stock/catalog"],
-};
 
 const CENTRAL_STOCK_TAB_SUFFIXES: Record<
   CentralStockGroupId,
@@ -175,6 +180,73 @@ function StockWorkflowSections({
   );
 }
 
+function BranchStockDoors({ basePath }: { basePath: string }) {
+  const doors = [
+    {
+      key: "on-hand",
+      href: `${basePath}/stock/on-hand`,
+      icon: Package,
+      title: stockCopy.branchDoorOnHand,
+      meta: stockCopy.branchDoorOnHandMeta,
+    },
+    {
+      key: "request",
+      href: `${basePath}/stock/requests/new`,
+      icon: ClipboardList,
+      title: stockCopy.branchDoorRequest,
+      meta: stockCopy.branchDoorRequestMeta,
+    },
+    {
+      key: "stocktake",
+      href: `${basePath}/stock/stocktake`,
+      icon: ClipboardCheck,
+      title: stockCopy.branchDoorStocktake,
+      meta: stockCopy.branchDoorStocktakeMeta,
+    },
+    {
+      key: "waste",
+      href: `${basePath}/stock/waste`,
+      icon: Trash2,
+      title: stockCopy.branchDoorWaste,
+      meta: stockCopy.branchDoorWasteMeta,
+    },
+  ] as const;
+
+  return (
+    <BranchOperatorPanel
+      title={stockCopy.branchDoorsTitle}
+      icon={Package}
+      size="sm"
+      headingLevel="h2"
+    >
+      {/* Plain grid — ItemGroup is flex-col and fights grid-cols-2. */}
+      <div className="grid grid-cols-2 gap-2">
+        {doors.map((door) => (
+          <Item
+            key={door.key}
+            variant="outline"
+            size="sm"
+            className="chrome-tap min-h-14 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            render={<Link href={door.href} />}
+          >
+            <ItemMedia variant="icon" className="rounded-md bg-muted p-2">
+              <door.icon />
+            </ItemMedia>
+            <ItemContent className="min-w-0">
+              <ItemTitle size="heading" className="line-clamp-none text-sm">
+                {door.title}
+              </ItemTitle>
+              <ItemDescription className="line-clamp-2 text-xs">
+                {door.meta}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
+        ))}
+      </div>
+    </BranchOperatorPanel>
+  );
+}
+
 export default async function OperatorStockPage({
   params,
 }: {
@@ -191,11 +263,56 @@ export default async function OperatorStockPage({
   const branchKind = context.branch.branch_kind as BranchKind;
   const basePath = `/br/${context.branchId}`;
   const stockRoot = `${basePath}/stock`;
+
+  if (branchKind === "branch") {
+    const rows = await loadStockFulfillmentRows({
+      supabase,
+      tenantId: claims.tenant_id,
+      mode: "branch",
+      branchId: context.branchId,
+      scopeSiteKind: "branch" as StockFulfillmentSiteKind,
+      seeAllSources: claims.user_role === "owner",
+    }).catch((error: unknown) => {
+      console.error("inventory.stock_landing.work_load_failed", error);
+      return [];
+    });
+
+    const createAction = (
+      <Button
+        size="touch"
+        render={<Link href={`${stockRoot}/requests/new`} />}
+      >
+        <IconPlus data-icon="inline-start" />
+        {journeyCopy.requestAction}
+      </Button>
+    );
+
+    return (
+      <BranchOperatorPage
+        title={journeyCopy.hubTitle}
+        description={journeyCopy.branchHubDescription}
+        hideHeaderOnMobile
+        action={<div className="max-sm:hidden">{createAction}</div>}
+      >
+        <div className="flex min-w-0 flex-col gap-4 pb-20 sm:pb-0">
+          <BranchStockDoors basePath={basePath} />
+          <BranchStockFulfillmentHubClient
+            rows={rows}
+            mode="branch"
+            branchId={context.branchId}
+          />
+        </div>
+        <AppDetailFooter sticky className="sm:hidden" trailing={createAction} />
+      </BranchOperatorPage>
+    );
+  }
+
   const stockGroup = resolveOperatorTiles(
     claims.user_role,
     context.branchId,
     branchKind,
   ).find((group) => group.id === "stock");
+
   const allLinks =
     stockGroup?.tiles.map((tile) => toOperatorStockLink(tile, stockRoot)) ?? [];
 
@@ -207,68 +324,10 @@ export default async function OperatorStockPage({
       )
     : allLinks;
 
-  if (isCentralKind(branchKind)) {
-    const groupedLinks: Record<CentralStockGroupId, OperatorStockLink[]> = {
-      lookup: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.lookup),
-      buy_count: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.buy_count),
-      waste: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.waste),
-    };
-    const usedKeys = new Set(
-      Object.values(groupedLinks)
-        .flat()
-        .map((link) => link.key),
-    );
-    const fallbackLinks = links.filter((link) => !usedKeys.has(link.key));
-    if (fallbackLinks.length > 0) {
-      groupedLinks.lookup = [...groupedLinks.lookup, ...fallbackLinks];
-    }
-
-    return (
-      <BranchOperatorPage
-        title={stockGroup?.title ?? messages.inventory.shell.moduleName}
-        description={messages.inventory.dashboard.mainFlowsOperatorDescription}
-        hideHeaderOnMobile
-      >
-        {links.length > 0 ? (
-          <StockWorkflowSections
-            sections={[
-              {
-                id: "lookup",
-                title: stockCopy.stockFlowLookupTitle,
-                description: stockCopy.stockFlowLookupDescription,
-                links: groupedLinks.lookup,
-                primary: true,
-              },
-              {
-                id: "buy_count",
-                title: stockCopy.stockFlowBuyCountTitle,
-                description: stockCopy.stockFlowBuyCountDescription,
-                links: groupedLinks.buy_count,
-              },
-              {
-                id: "waste",
-                title: stockCopy.stockFlowWasteTitle,
-                description: stockCopy.stockFlowWasteDescription,
-                links: groupedLinks.waste,
-              },
-            ]}
-          />
-        ) : (
-          <AppEmptyState
-            compact
-            title={messages.inventory.dashboard.noUrgentTasks}
-            symbol="riceGrain"
-          />
-        )}
-      </BranchOperatorPage>
-    );
-  }
-
-  const groupedLinks: Record<BranchStockGroupId, OperatorStockLink[]> = {
-    onhand: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.onhand),
-    count: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.count),
-    waste: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.waste),
-    catalog: pickStockLinks(links, BRANCH_STOCK_TAB_SUFFIXES.catalog),
+  const groupedLinks: Record<CentralStockGroupId, OperatorStockLink[]> = {
+    lookup: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.lookup),
+    buy_count: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.buy_count),
+    waste: pickStockLinks(links, CENTRAL_STOCK_TAB_SUFFIXES.waste),
   };
   const usedKeys = new Set(
     Object.values(groupedLinks)
@@ -277,7 +336,7 @@ export default async function OperatorStockPage({
   );
   const fallbackLinks = links.filter((link) => !usedKeys.has(link.key));
   if (fallbackLinks.length > 0) {
-    groupedLinks.onhand = [...groupedLinks.onhand, ...fallbackLinks];
+    groupedLinks.lookup = [...groupedLinks.lookup, ...fallbackLinks];
   }
 
   return (
@@ -290,29 +349,23 @@ export default async function OperatorStockPage({
         <StockWorkflowSections
           sections={[
             {
-              id: "onhand",
-              title: stockCopy.stockFlowDailyTitle,
-              description: stockCopy.stockFlowDailyDescription,
-              links: groupedLinks.onhand,
+              id: "lookup",
+              title: stockCopy.stockFlowLookupTitle,
+              description: stockCopy.stockFlowLookupDescription,
+              links: groupedLinks.lookup,
               primary: true,
             },
             {
-              id: "count",
-              title: stockCopy.stockFlowCountTitle,
-              description: stockCopy.stockFlowCountDescription,
-              links: groupedLinks.count,
+              id: "buy_count",
+              title: stockCopy.stockFlowBuyCountTitle,
+              description: stockCopy.stockFlowBuyCountDescription,
+              links: groupedLinks.buy_count,
             },
             {
               id: "waste",
               title: stockCopy.stockFlowWasteTitle,
               description: stockCopy.stockFlowWasteDescription,
               links: groupedLinks.waste,
-            },
-            {
-              id: "catalog",
-              title: stockCopy.stockFlowCatalogTitle,
-              description: stockCopy.stockFlowCatalogDescription,
-              links: groupedLinks.catalog,
             },
           ]}
         />

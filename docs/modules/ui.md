@@ -337,14 +337,14 @@ control_surface và không gọi trực tiếp vocabulary Employee ở các rout
 
 Branch stock workflow áp dụng cùng ranh giới này:
 
-- `/br/[branchId]/stock/on-hand` là **stock home** (tab Kho/Tồn land đây):
-  Branch-native touch `LIST` dùng shared `loadStockOnHandPageData` + filter
-  model (`categories[]`, status). Presentation: `Item` separator rows, `ToggleGroup`
-  trạng thái, bottom `Sheet` lọc (`MultiSelectCombobox`), Sheet “Thêm chức năng
-  kho” grid 2 cột. Không `DataTable`/WAC/KPI ở mọi viewport; mở detail qua
-  `/on-hand/[ingredientId]`.
-- `/br/[branchId]/stock` là hub **Thêm** (secondary tabs), không còn land mặc
-  định của tab Kho. Central hub loại job đã có trên Bottom-Nav.
+- `/br/[branchId]/stock` là **stock home** (tab Kho land đây): list phiếu
+  fulfillment + 4 cửa (Kho hàng / Yêu cầu hàng / Kiểm kê / Hao hụt). Không
+  Tiêu Hao SX. `/stock/transfer` store redirect về `/stock`.
+- `/br/[branchId]/stock/on-hand` là LIST tồn Branch-native touch dùng shared
+  `loadStockOnHandPageData` + filter model (`categories[]`, status).
+  Presentation: `Item` separator rows, `ToggleGroup` trạng thái, bottom `Sheet`
+  lọc. Không `DataTable`/WAC/KPI; detail qua `/on-hand/[ingredientId]`.
+  Central hub loại job đã có trên Bottom-Nav.
 - list workflow native như `/br/[branchId]/stock/transfer` dùng archetype `LIST`
   với `BranchOperatorPage`/`BranchOperatorPanel`, action rows full-width trên
   mobile, và route-scoped href `/br/[branchId]/stock/*`.
@@ -674,6 +674,13 @@ at the first match.
    Transfer dùng một fulfillment hub; Owner/Ops mở cùng một document dialog,
    Branch giữ canonical Page/fullscreen touch workflow. Line array hoặc stage
    footer không tự động ép sang Page; mỗi state vẫn chỉ có một primary action.
+
+**URL write split (perf):** dialog-only keys (`demandId`, `poId`, `grnId`,
+`mode`, and client-only list filters) use History API via
+`useDocumentOverlayUrl` — push to open, replace for mode change/close — so the
+list RSC does not refetch. Scope keys that change the server dataset
+(`branchId`, server-backed pagination/filters) still use App Router
+`router.push` / `router.replace`.
 
 `Popover` never renders a record view or a multi-step workflow. `Drawer` is a
 touch-plane frame, not a second Owner overlay tier.

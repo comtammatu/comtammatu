@@ -1,17 +1,22 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Plus as IconPlus } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
+import {
+  ArrowLeft as IconArrowLeft,
+  Plus as IconPlus,
+} from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppDetailFooter } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { loadStockFulfillmentRows } from "@lib/inventory/stock-fulfillment-data";
-import { loadStockRequestFulfillmentDetail } from "@lib/inventory/stock-request-fulfillment-detail-data";
-import { loadTransferDetailPageData } from "@lib/inventory/transfer-detail-data";
 import type { StockFulfillmentSiteKind } from "@lib/inventory/stock-fulfillment-projection";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
-import { StockFulfillmentHubClient } from "@/(protected)/inventory/transfers/stock-fulfillment-hub-client";
+import { BranchStockFulfillmentHubClient } from "./branch-stock-fulfillment-hub-client";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
 
 const copy = messages.inventory.stockRequests.journey;
@@ -21,15 +26,9 @@ export default async function OperatorStockTransferPage({
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{
-    requestId?: string | string[];
-    transferId?: string | string[];
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ branchId: rawBranchId }, query] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
@@ -42,7 +41,25 @@ export default async function OperatorStockTransferPage({
   const isCentralKind = kind === "central_supply" || kind === "central_kitchen";
   if (!isBranchKind && !isCentralKind) notFound();
 
-  const mode = isBranchKind ? "branch" : "central";
+  // Store branch: fulfillment list lives on /stock (one work surface).
+  if (isBranchKind) {
+    const query = await searchParams;
+    const paramsOut = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (typeof value === "string" && value.length > 0) {
+        paramsOut.set(key, value);
+      } else if (Array.isArray(value)) {
+        const first = value[0];
+        if (typeof first === "string" && first.length > 0) {
+          paramsOut.set(key, first);
+        }
+      }
+    }
+    const qs = paramsOut.toString();
+    redirect(qs ? `/br/${branchId}/stock?${qs}` : `/br/${branchId}/stock`);
+  }
+
+  const mode = "central" as const;
   const scopeSiteKind = kind as StockFulfillmentSiteKind;
   const fulfillSiteKind =
     kind === "central_kitchen"
@@ -51,29 +68,15 @@ export default async function OperatorStockTransferPage({
         ? "central_supply"
         : undefined;
 
-  const requestId = Number(
-    Array.isArray(query.requestId) ? query.requestId[0] : query.requestId,
-  );
-  const transferId = Number(
-    Array.isArray(query.transferId) ? query.transferId[0] : query.transferId,
-  );
-  const [rows, selectedRequest, selectedTransfer] = await Promise.all([
-    loadStockFulfillmentRows({
-      supabase,
-      tenantId: claims.tenant_id,
-      mode,
-      branchId,
-      fulfillSiteKind,
-      scopeSiteKind,
-      seeAllSources: claims.user_role === "owner",
-    }),
-    mode === "central" && Number.isInteger(requestId) && requestId > 0
-      ? loadStockRequestFulfillmentDetail({ supabase, claims, requestId })
-      : Promise.resolve(null),
-    mode === "central" && Number.isInteger(transferId) && transferId > 0
-      ? loadTransferDetailPageData({ transferId, routeBranchId: branchId })
-      : Promise.resolve(null),
-  ]);
+  const rows = await loadStockFulfillmentRows({
+    supabase,
+    tenantId: claims.tenant_id,
+    mode,
+    branchId,
+    fulfillSiteKind,
+    scopeSiteKind,
+    seeAllSources: claims.user_role === "owner",
+  });
 
   const canRequestCentralSupply =
     kind === "central_kitchen" &&
@@ -85,21 +88,20 @@ export default async function OperatorStockTransferPage({
       claims.user_role === "central_supply_ops" ||
       claims.user_role === "central_kitchen_lead");
 
-  const createAction = isBranchKind ? (
-    <Button render={<Link href={`/br/${branchId}/stock/requests/new`} />}>
-      <IconPlus data-icon="inline-start" />
-      {copy.requestAction}
-    </Button>
-  ) : (
+  const createAction = (
     <div className="flex flex-wrap gap-2">
       {canRequestCentralSupply ? (
-        <Button render={<Link href={`/br/${branchId}/stock/requests/new`} />}>
+        <Button
+          size="touch"
+          render={<Link href={`/br/${branchId}/stock/requests/new`} />}
+        >
           <IconPlus data-icon="inline-start" />
           {copy.centralSupplyRequestAction}
         </Button>
       ) : null}
       {canCreateManualTransfer ? (
         <Button
+          size="touch"
           variant="outline"
           render={<Link href={`/br/${branchId}/stock/transfer/new`} />}
         >
@@ -110,24 +112,40 @@ export default async function OperatorStockTransferPage({
     </div>
   );
 
+  const stockBasePath = `/br/${branchId}/stock`;
+
   return (
     <BranchOperatorPage
       title={copy.hubTitle}
-      description={
-        isBranchKind ? copy.branchHubDescription : copy.centralHubDescription
-      }
+      description={copy.centralHubDescription}
+      hideHeaderOnMobile
       action={
         createAction ? (
           <div className="max-sm:hidden">{createAction}</div>
         ) : undefined
       }
     >
-      <StockFulfillmentHubClient
+      <BranchOperatorControlBar className="sm:hidden">
+        <Button
+          variant="ghost"
+          size="icon-touch"
+          render={
+            <Link href={stockBasePath} aria-label={ACTIONS_VI.back} />
+          }
+        >
+          <IconArrowLeft />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{copy.hubTitle}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {copy.centralHubDescription}
+          </p>
+        </div>
+      </BranchOperatorControlBar>
+      <BranchStockFulfillmentHubClient
         rows={rows}
         mode={mode}
         branchId={branchId}
-        selectedRequest={selectedRequest}
-        selectedTransfer={selectedTransfer}
       />
       {createAction ? (
         <AppDetailFooter sticky className="sm:hidden" trailing={createAction} />

@@ -111,7 +111,7 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       actionUrl: "/br/3/shift/checkout-approvals?attendanceId=7",
       entityId: 7,
       kind: "attendance.checkout_requested",
-      expected: "/br/3/team?tab=checkouts&attendanceId=7",
+      expected: "/br/3/shift/checkout-approvals?attendanceId=7",
     },
     {
       role: "cashier",
@@ -170,7 +170,7 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
       entityId: 5,
       targetBranchId: 3,
     }),
-    "/br/3/team?tab=leaves&leaveRequestId=5",
+    "/br/3/shift/leave-approvals?leaveRequestId=5",
   );
 });
 

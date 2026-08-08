@@ -17,6 +17,13 @@ import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
+import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
+import {
+  grnConfirmRpcMappings,
+  grnLineRpcFallback,
+  grnLineRpcMappings,
+  INVENTORY_ERROR_CODES,
+} from "@lib/messages/inventory-rpc-errors";
 
 const ROLES = PROCUREMENT_ROLES;
 const grnLoadFailedError = messages.inventory.grn.loadFailed;
@@ -1019,8 +1026,24 @@ export const upsertGrnLine = withAction(
         .eq("ingredient_id", data.ingredientId)
         .select("id")
         .maybeSingle();
-      if (error || !row) {
-        return { success: false, error: "Không thể lưu dòng phiếu nhập." };
+      if (error) {
+        return mapInventoryRpcFailure(
+          error,
+          grnLineRpcMappings,
+          grnLineRpcFallback,
+        );
+      }
+      if (!row) {
+        return {
+          success: false,
+          error: grnLineRpcFallback.userMessage,
+          errorCode: INVENTORY_ERROR_CODES.GRN_LINE_FAILED,
+          meta: {
+            ingredientId: data.ingredientId,
+            ...(data.lineId != null ? { lineId: data.lineId } : {}),
+            field: "quantity",
+          },
+        };
       }
       return { success: true, data: row };
     }
@@ -1052,14 +1075,23 @@ export const upsertGrnLine = withAction(
       )
       .select("id")
       .single();
-    if (error?.message.includes("supplier_item_mapping_required")) {
+    if (error) {
+      return mapInventoryRpcFailure(
+        error,
+        grnLineRpcMappings,
+        grnLineRpcFallback,
+      );
+    }
+    if (!row) {
       return {
         success: false,
-        error: "Nguyên liệu chưa được gán cho nhà cung cấp.",
+        error: grnLineRpcFallback.userMessage,
+        errorCode: INVENTORY_ERROR_CODES.GRN_LINE_FAILED,
+        meta: {
+          ingredientId: data.ingredientId,
+          field: "quantity",
+        },
       };
-    }
-    if (error || !row) {
-      return { success: false, error: "Không thể lưu dòng phiếu nhập." };
     }
     return { success: true, data: row };
   },
@@ -1203,49 +1235,14 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     console.error("inventory.grn.confirm_failed", {
       error: error,
     });
-    if (error.message.includes("grn_qc_quantity_mismatch")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmQcQuantityInvalid,
-      };
-    }
-    if (error.message.includes("grn_qc_reason_required")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmQcReasonRequired,
-      };
-    }
-    if (error.message.includes("grn_qc_photo_required")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmQcPhotoRequired,
-      };
-    }
-    if (error.message.includes("grn_rejection_evidence_required")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmQcEvidenceRequired,
-      };
-    }
-    if (error.message.includes("grn_has_no_accepted_quantity")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmNoAcceptedQuantity,
-      };
-    }
-    if (error.message.includes("grn_confirm_requires_approved_po")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmRequiresApprovedPo,
-      };
-    }
-    if (error.message.includes("grn_not_draft")) {
-      return {
-        success: false,
-        error: messages.inventory.grn.confirmNotDraft,
-      };
-    }
-    return { success: false, error: messages.inventory.grn.confirmFailed };
+    return mapInventoryRpcFailure(
+      error,
+      grnConfirmRpcMappings,
+      {
+        userMessage: messages.inventory.grn.confirmFailed,
+        errorCode: INVENTORY_ERROR_CODES.GRN_CONFIRM_FAILED,
+      },
+    );
   }
 
   revalidatePath("/inventory/grn");

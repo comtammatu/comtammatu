@@ -8,7 +8,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { messages } from "@lib/messages";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithAnyPermission } from "./_lib/auth";
-import { PG_ERR } from "./_lib/constants";
 import {
   isProductionSiteScopedRole,
   PRODUCTION_ROLES,
@@ -19,6 +18,12 @@ import {
   inventoryNonnegativeQuantitySchema,
   inventoryPositiveQuantitySchema,
 } from "./_lib/inventory-quantity-schema";
+import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
+import {
+  INVENTORY_ERROR_CODES,
+  productionRpcFallback,
+  productionRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 const PRODUCTION_ORDER_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -313,53 +318,22 @@ function createResult(value: Json | null): CreateProductionRunResult | null {
 function mapMutationError<T>(
   error: { code?: string; message: string; details?: string | null },
 ): ActionResult<T> {
-  if (error.message.includes("recipe_not_active")) {
-    return {
-      success: false,
-      error: "Công thức cần được duyệt trước khi tạo lệnh.",
-      errorCode: "PRODUCTION_RECIPE_NOT_ACTIVE",
-    };
-  }
-  if (error.message.includes("production_transition_invalid")) {
-    return {
-      success: false,
-      error: "Trạng thái lệnh không cho phép thao tác này.",
-      errorCode: "PRODUCTION_TRANSITION_INVALID",
-    };
-  }
-  if (error.message.includes("actual_payload_invalid")) {
-    return {
-      success: false,
-      error: "Số liệu nguyên liệu thực tế không khớp lệnh đã tạo.",
-      errorCode: "PRODUCTION_ACTUAL_PAYLOAD_INVALID",
-    };
-  }
+  // Keep DETAIL JSON on production shortage; clients read `data` + `meta`.
   if (error.message.includes("insufficient_stock_for_production")) {
+    const shortages = parseShortagesDetail(error.details);
     return {
       success: false,
       error: "Kho không đủ nguyên liệu.",
-      errorCode: "PRODUCTION_SHORTAGE",
-      data: parseShortagesDetail(error.details) as T,
+      errorCode: INVENTORY_ERROR_CODES.PRODUCTION_SHORTAGE,
+      data: shortages as T,
+      meta: { shortages },
     };
   }
-  if (
-    error.message.includes("production_site_invalid") ||
-    error.message.includes("production_source_location_invalid") ||
-    error.message.includes("production_target_location_invalid")
-  ) {
-    return {
-      success: false,
-      error: "Vị trí sản xuất không thuộc Bếp Trung Tâm đã chọn.",
-      errorCode: "PRODUCTION_LOCATION_SCOPE_INVALID",
-    };
-  }
-  if (
-    error.code === PG_ERR.INSUFFICIENT_PRIVILEGE ||
-    error.message.includes("branch_scope_violation")
-  ) {
-    return { success: false, error: "Không có quyền thực hiện." };
-  }
-  return { success: false, error: "Không thể cập nhật Lệnh sản xuất." };
+  return mapInventoryRpcFailure(
+    error,
+    productionRpcMappings,
+    productionRpcFallback,
+  );
 }
 
 export const createProductionRun = withAction<

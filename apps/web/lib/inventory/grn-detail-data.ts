@@ -2,7 +2,7 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
-import { fetchEntityAuditLogs, type AuditLogRow } from "@/_lib/audit";
+import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "@/(protected)/inventory/_lib/auth";
 import { formatDate } from "@lib/inventory/format";
@@ -18,21 +18,12 @@ import {
   grnSupplierSummaryFromItems,
   hasLinkedPurchaseOrders,
   type GrnDetail,
+  type GrnDetailData,
   type GrnLinkedPo,
   type ReceivingLocationOption,
 } from "./grn-detail-model";
 
-export type GrnDetailData = {
-  grn: GrnDetail;
-  ingredients: IngredientRow[];
-  auditLogs: AuditLogRow[];
-  canEditDraft: boolean;
-  canConfirm: boolean;
-  canManageSupplierInvoice: boolean;
-  canAdjustStock: boolean;
-  canAmendConfirmed: boolean;
-  receivingLocationOptions: ReceivingLocationOption[];
-};
+export type { GrnDetailData };
 
 type InventoryLocationRow = {
   id: number;

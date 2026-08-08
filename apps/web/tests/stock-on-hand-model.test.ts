@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   STOCK_NO_CATEGORY_VALUE,
+  STOCK_ON_HAND_DEFAULT_STATUS,
   filterStockOnHandIngredients,
   hasStockOnHandFilters,
   isPristineStockOnHand,
@@ -49,6 +50,22 @@ test("stock list sorts out and low ingredients before normal stock", () => {
   assert.deepEqual(
     rows.map((row) => row.id),
     [3, 2, 1],
+  );
+});
+
+test("in_stock hides out and keeps low ahead of normal", () => {
+  const rows = filterStockOnHandIngredients(
+    [
+      makeIngredient({ id: 1, name: "Rice" }),
+      makeIngredient({ id: 2, name: "Oil", qty: 1, status: "low" }),
+      makeIngredient({ id: 3, name: "Salt", qty: 0, status: "out" }),
+    ],
+    { ...defaultFilters, status: "in_stock" },
+  );
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    [2, 1],
   );
 });
 
@@ -120,10 +137,22 @@ test("pristine stock and active filter state remain distinct", () => {
     ]),
     true,
   );
-  assert.equal(hasStockOnHandFilters(defaultFilters), false);
+  assert.equal(STOCK_ON_HAND_DEFAULT_STATUS, "in_stock");
+  assert.equal(
+    hasStockOnHandFilters({
+      ...defaultFilters,
+      status: STOCK_ON_HAND_DEFAULT_STATUS,
+    }),
+    false,
+  );
+  assert.equal(hasStockOnHandFilters(defaultFilters), true);
   assert.equal(hasStockOnHandFilters({ ...defaultFilters, status: "low" }), true);
   assert.equal(
-    hasStockOnHandFilters({ ...defaultFilters, categories: ["Dry"] }),
+    hasStockOnHandFilters({
+      ...defaultFilters,
+      status: STOCK_ON_HAND_DEFAULT_STATUS,
+      categories: ["Dry"],
+    }),
     true,
   );
 });

@@ -59,7 +59,7 @@ export type MenuRecipeItem = {
   unitLabel: string;
   entryUnitId: number | null;
   note: string | null;
-  lineCost: number;
+  lineCost: number | null;
 };
 
 export type MenuRecipeRow = {
@@ -68,7 +68,7 @@ export type MenuRecipeRow = {
   name: string;
   category: string;
   updatedAt: string;
-  estimatedCost: number;
+  estimatedCost: number | null;
   items: MenuRecipeItem[];
 };
 
@@ -191,7 +191,13 @@ export function MenuRecipesClient({
       header: INVENTORY_VI.menuRecipeColUnitCost,
       className: "font-mono",
       render: (menuRecipe) =>
-        INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost)),
+        menuRecipe.estimatedCost == null ? (
+          <span className="text-muted-foreground">
+            {INVENTORY_VI.menuRecipeCostUnavailable}
+          </span>
+        ) : (
+          INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost))
+        ),
     },
     {
       key: "stockCapacity",
@@ -347,10 +353,12 @@ function MenuRecipeCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {INVENTORY_VI.menuRecipeCardSummary(
-            menuRecipe.items.length,
-            formatVND(menuRecipe.estimatedCost),
-          )}
+          {menuRecipe.estimatedCost == null
+            ? INVENTORY_VI.menuRecipeCardSummaryNoCost(menuRecipe.items.length)
+            : INVENTORY_VI.menuRecipeCardSummary(
+                menuRecipe.items.length,
+                formatVND(menuRecipe.estimatedCost),
+              )}
         </ItemDescription>
         <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
           {menuRecipe.items.length === 0 ? (

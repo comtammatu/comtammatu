@@ -18,6 +18,16 @@ import {
 } from "./_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import {
+  insufficientStockFailure,
+  mapInventoryRpcFailure,
+} from "./_lib/rpc-failure";
+import {
+  issueConfirmRpcFallback,
+  issueConfirmRpcMappings,
+  issueLineRpcFallback,
+  issueLineRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -353,7 +363,7 @@ export const upsertStockIssueLine = withAction(
       issue.source_location_id &&
       requestedBaseQuantity > availableQuantity + 1e-9
     ) {
-      return { success: false, error: "Số lượng vượt tồn hiện tại." };
+      return insufficientStockFailure(d.ingredientId);
     }
 
     const { error } = await supabase.rpc("save_stock_issue_line" as never, {
@@ -366,25 +376,11 @@ export const upsertStockIssueLine = withAction(
     } as never);
 
     if (error) {
-      if (error.code === "42501") {
-        return { success: false, error: "Không có quyền sửa phiếu này." };
-      }
-      if (error.code === "23503") {
-        return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
-      }
-      if (
-        error.code === "22023" &&
-        error.message.includes("insufficient_stock")
-      ) {
-        return { success: false, error: "Số lượng vượt tồn hiện tại." };
-      }
-      if (error.code === "22023" || error.code === "P0002") {
-        return {
-          success: false,
-          error: "Phiếu đã thay đổi. Tải lại trang rồi thử lại.",
-        };
-      }
-      return { success: false, error: "Không thể lưu dòng phiếu xuất." };
+      return mapInventoryRpcFailure(
+        error,
+        issueLineRpcMappings,
+        issueLineRpcFallback,
+      );
     }
     revalidateStockIssueSurfaces({
       issueId: d.issueId,
@@ -460,16 +456,14 @@ export async function confirmStockIssue(
   });
 
   if (error) {
-    if (error.message.includes("insufficient_stock")) {
-      return {
-        success: false,
-        error: "Tồn kho không đủ để xuất. Kiểm tra lại số lượng.",
-      };
-    }
     console.error("inventory.issue.confirm_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: "Không thể xác nhận phiếu xuất." };
+    return mapInventoryRpcFailure(
+      error,
+      issueConfirmRpcMappings,
+      issueConfirmRpcFallback,
+    );
   }
 
   revalidateStockIssueSurfaces({

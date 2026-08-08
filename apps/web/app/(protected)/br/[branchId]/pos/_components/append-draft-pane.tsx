@@ -3,7 +3,6 @@
 import { memo, useState } from "react";
 import { AppEmptyState } from "@/components/surface";
 import { formatVND } from "@comtammatu/shared/format";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -74,37 +73,31 @@ function AppendDraftPaneComponent({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
-                {messages.pos.appendDraft.title}
-              </h2>
-              <Badge variant="warning">
-                {messages.pos.appendDraft.draftState}
-              </Badge>
-              <Badge variant="outline" className="font-mono tabular-nums">
-                {targetLabel}
-              </Badge>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            className="shrink-0 text-muted-foreground"
-            aria-label={
-              onClosePane
-                ? messages.pos.appendDraft.closeAria
-                : messages.pos.appendDraft.cancelAria
-            }
-            disabled={isSubmitting}
-            onClick={onClosePane ?? onCancel}
-          >
-            <IconX />
-          </Button>
+      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-2 sm:px-4">
+        <div className="min-w-0">
+          <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
+            {messages.pos.appendDraft.title}
+          </h2>
+          {/* Menu target row already shows the table/order label from md up. */}
+          <p className="truncate text-sm text-muted-foreground md:sr-only">
+            {targetLabel}
+          </p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-touch"
+          className="shrink-0 text-muted-foreground"
+          aria-label={
+            onClosePane
+              ? messages.pos.appendDraft.closeAria
+              : messages.pos.appendDraft.cancelAria
+          }
+          disabled={isSubmitting}
+          onClick={onClosePane ?? onCancel}
+        >
+          <IconX />
+        </Button>
       </div>
 
       {items.length === 0 ? (
@@ -133,38 +126,38 @@ function AppendDraftPaneComponent({
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "bg-card pr-12 text-left transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 hover:shadow-effect-card-hover sm:pr-14",
+                      "bg-card p-0 text-left transition-[background-color,border-color,box-shadow,opacity,transform] duration-150 hover:shadow-effect-card-hover",
                       isRemoving &&
                         "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}
-                    render={
-                      <Button
-                        variant="ghost"
-                        className="w-full min-w-0 text-left justify-start font-normal h-auto p-0 disabled:pointer-events-none disabled:opacity-50"
-                        aria-label={messages.pos.appendDraft.editItemAria(
-                          displayName,
-                        )}
-                        disabled={isSubmitting || isRemoving}
-                        onClick={() => onEditItem(item)}
-                      />
-                    }
                   >
-                    <PosLineItemCompact
-                      quantity={item.quantity}
-                      title={displayName}
-                      total={formatVND(subtotal)}
-                      options={summary.options}
-                      modifiers={summary.modifiers}
-                      sides={summary.sides}
-                      note={summary.note}
-                      isPriority={summary.isPriority}
-                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full min-w-0 justify-start px-3 py-2 pr-12 text-left font-normal whitespace-normal hover:bg-transparent sm:pr-14"
+                      aria-label={messages.pos.appendDraft.editItemAria(
+                        displayName,
+                      )}
+                      disabled={isSubmitting || isRemoving}
+                      onClick={() => onEditItem(item)}
+                    >
+                      <PosLineItemCompact
+                        quantity={item.quantity}
+                        title={displayName}
+                        total={formatVND(subtotal)}
+                        options={summary.options}
+                        modifiers={summary.modifiers}
+                        sides={summary.sides}
+                        note={summary.note}
+                        isPriority={summary.isPriority}
+                      />
+                    </Button>
                   </Item>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-touch"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
                     aria-label={messages.pos.appendDraft.removeItemAria(
                       displayName,
                     )}
@@ -182,37 +175,21 @@ function AppendDraftPaneComponent({
 
       <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="min-w-0">
             <SectionLabel>{messages.pos.appendDraft.summaryLabel}</SectionLabel>
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <Badge variant="outline">
-                {messages.pos.appendDraft.itemCount(quantity)}
-              </Badge>
-              <Badge variant="secondary">
-                {messages.pos.appendDraft.sentState}{" "}
-                <span className="font-mono tabular-nums">{targetLabel}</span>
-              </Badge>
-            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {messages.pos.appendDraft.itemCount(quantity)}
+            </p>
           </div>
           <p className="shrink-0 font-mono text-xl font-bold text-primary tabular-nums">
             {formatVND(total)}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            className="basis-1/3"
-            disabled={isSubmitting}
-            onClick={onCancel}
-          >
-            {messages.pos.appendDraft.cancel}
-          </Button>
+        <div className="grid grid-cols-1 gap-2">
           <Button
             type="button"
             size="touch"
-            className="basis-2/3"
+            className="w-full min-w-0"
             disabled={!canSubmit}
             onClick={onSubmit}
           >
@@ -222,6 +199,16 @@ function AppendDraftPaneComponent({
               <IconSend data-icon="inline-start" />
             )}
             {messages.pos.appendDraft.submit}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full min-w-0"
+            disabled={isSubmitting}
+            onClick={onCancel}
+          >
+            {messages.pos.appendDraft.cancel}
           </Button>
         </div>
       </div>

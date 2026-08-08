@@ -73,7 +73,7 @@ không void trực tiếp.
 | Runner (public) | `/br/[branchId]/runner` |
 | Chốt ca POS | `/br/[branchId]/pos-sessions` |
 | Báo cáo ngày | `/br/[branchId]/close-day` |
-| Phân ca | `/br/[branchId]/team?tab=roster` |
+| Phân ca | `/br/[branchId]/shift/roster` |
 
 ## Disposition — không tái mở khi dọn kỹ thuật
 
@@ -101,3 +101,18 @@ và dừng; không tạo ticket “để dành soft”.
 | Mục | Trigger |
 | --- | --- |
 | Align finance/order window `00:00` với branch-day `04:00` | Owner xác nhận đau khi đối chiếu Daily Summary ↔ finance; không nhét vào PR branch-ops — xem ODC `branch_day_state` |
+
+## Lỗi phiếu kho (user-addressable)
+
+Mutation phiếu kho (chuyển kho, hủy, kiểm kê, YCM/YCH, GRN, yêu cầu mua, xuất,
+sản xuất) phải trả `ActionResult` với:
+
+- `error`: câu tiếng Việt vận hành (không raw Postgres/Supabase).
+- `errorCode` ổn định để UI nhánh xử lý.
+- `meta.ingredientId` (và `field: "quantity"` khi liên quan số lượng) khi lỗi gắn
+  một dòng nguyên liệu — ví dụ thiếu tồn.
+
+UI: toast mức chứng từ; highlight dòng / ô số lượng khi có `meta.ingredientId`.
+Mapper dùng chung: `mapInventoryRpcFailure` + vocabulary
+`apps/web/lib/messages/inventory-rpc-errors.ts`. Helper client:
+`applyInventoryActionError`.

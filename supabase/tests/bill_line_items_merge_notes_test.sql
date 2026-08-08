@@ -58,6 +58,14 @@ BEGIN
   IF v_recv_def NOT ILIKE '%bill_line_items%' THEN
     RAISE EXCEPTION 'TEST FAILED: enqueue_receipt_print does not use bill_line_items';
   END IF;
+  IF v_prov_def NOT ILIKE '%bill_tax_breakdowns%'
+     OR v_prov_def NOT ILIKE '%tax_breakdowns%' THEN
+    RAISE EXCEPTION 'TEST FAILED: enqueue_provisional_bill does not attach tax_breakdowns';
+  END IF;
+  IF v_recv_def NOT ILIKE '%bill_tax_breakdowns%'
+     OR v_recv_def NOT ILIKE '%tax_breakdowns%' THEN
+    RAISE EXCEPTION 'TEST FAILED: enqueue_receipt_print does not attach tax_breakdowns';
+  END IF;
 
   -- 2. Behavioral guard: seed an order with two identical plain portions (one
   --    noted, one not) plus a third portion carrying an add-on egg side, then

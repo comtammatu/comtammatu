@@ -9,7 +9,6 @@ type PrinterBase = {
   lan_host: string | null;
   lan_port: number | null;
   paper_width_mm: number;
-  code_page: string;
   is_active: boolean;
 };
 

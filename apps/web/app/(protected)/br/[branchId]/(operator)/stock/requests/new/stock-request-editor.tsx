@@ -23,6 +23,7 @@ import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import { saveStockRequest } from "@/(protected)/inventory/stock-request-actions";
 import { messages } from "@lib/messages";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import { matchesSearch } from "@lib/search";
 
 const copy = messages.inventory.stockRequests.editor;
@@ -169,7 +170,9 @@ export function StockRequestEditor({
         idempotencyKey: requestId == null ? idempotencyKey : undefined,
       });
       if (!result.success || !result.data) {
-        toast.error(result.error ?? copy.saveFailed);
+        toast.error(
+          applyInventoryActionError(result, copy.saveFailed).toastMessage,
+        );
         return;
       }
       toast.success(shouldSubmit ? copy.submitSuccess : copy.draftSuccess);

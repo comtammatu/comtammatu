@@ -9,49 +9,11 @@ import {
 } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
-
-const INSUFFICIENT_STOCK_RE = /insufficient_stock(?::|_)(\d+)/i;
-
-function parseInsufficientStockIngredientId(
-  message: string | undefined,
-): number | null {
-  const match = INSUFFICIENT_STOCK_RE.exec(message ?? "");
-  if (!match?.[1]) return null;
-  const ingredientId = Number(match[1]);
-  return Number.isInteger(ingredientId) && ingredientId > 0
-    ? ingredientId
-    : null;
-}
-
-function mapStockRequestRpcError(
-  code: string | undefined,
-  message?: string,
-): string {
-  const msg = message ?? "";
-  if (msg.includes("ingredient_fulfill_site_required")) {
-    return "Nguyên liệu chưa gán nguồn Kho Tổng / Bếp TT.";
-  }
-  if (msg.includes("stock_request_empty")) {
-    return "Phiếu yêu cầu cần ít nhất một dòng.";
-  }
-  if (msg.includes("stock_request_line_invalid")) {
-    return "Nguyên liệu hoặc đơn vị không còn hợp lệ.";
-  }
-  if (msg.includes("insufficient_stock")) {
-    return "Tồn kho không đủ cho các dòng đã chọn.";
-  }
-  if (msg.includes("reason_required")) {
-    return "Vui lòng nhập lý do ít nhất 5 ký tự.";
-  }
-  switch (code) {
-    case "42501":
-      return "Không có quyền thực hiện trên phiếu yêu cầu hàng.";
-    case "P0002":
-      return "Không tìm thấy phiếu yêu cầu.";
-    default:
-      return "Không thể hoàn tất yêu cầu hàng.";
-  }
-}
+import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
+import {
+  stockRequestRpcFallback,
+  stockRequestRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 type RpcJson = {
   transfer_id?: number;
@@ -100,10 +62,11 @@ export const saveStockRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
+      return mapInventoryRpcFailure(
+        error,
+        stockRequestRpcMappings,
+        stockRequestRpcFallback,
+      );
     }
     const parsed = z
       .object({
@@ -152,10 +115,11 @@ export const cancelStockRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
+      return mapInventoryRpcFailure(
+        error,
+        stockRequestRpcMappings,
+        stockRequestRpcFallback,
+      );
     }
     revalidatePath(`/br/${data.branchId}/stock/transfer`);
     revalidatePath(`/br/${data.branchId}/stock/requests/${data.requestId}`);
@@ -182,10 +146,11 @@ export const closeStockRequest = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
+      return mapInventoryRpcFailure(
+        error,
+        stockRequestRpcMappings,
+        stockRequestRpcFallback,
+      );
     }
     revalidatePath("/inventory/transfers");
     revalidatePath(`/inventory/stock-requests/${data.requestId}`);
@@ -215,10 +180,11 @@ export const rejectStockRequestLines = withAction(
       } as never,
     );
     if (error) {
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
+      return mapInventoryRpcFailure(
+        error,
+        stockRequestRpcMappings,
+        stockRequestRpcFallback,
+      );
     }
     revalidatePath("/inventory/transfers");
     revalidatePath(`/inventory/stock-requests/${data.requestId}`);
@@ -251,19 +217,11 @@ export const fulfillStockRequestLines = withAction(
       },
     );
     if (error) {
-      const ingredientId = parseInsufficientStockIngredientId(error.message);
-      if (ingredientId != null) {
-        return {
-          success: false as const,
-          error: mapStockRequestRpcError(error.code, error.message),
-          errorCode: "insufficient_stock",
-          meta: { ingredientId },
-        };
-      }
-      return {
-        success: false as const,
-        error: mapStockRequestRpcError(error.code, error.message),
-      };
+      return mapInventoryRpcFailure(
+        error,
+        stockRequestRpcMappings,
+        stockRequestRpcFallback,
+      );
     }
     const row = raw as RpcJson | null;
     const transferId = row?.transfer_id ?? row?.id;

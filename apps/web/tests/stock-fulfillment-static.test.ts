@@ -35,17 +35,35 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   assert.match(centralHub, /row\.kind === "request" \? "YCH" : "DC"/);
   assert.match(centralHub, /copy\.linkedTransferLabel/);
   assert.match(inventoryMessages, /linkedTransferLabel: "DC liên kết"/);
+  const branchHubClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/branch-stock-fulfillment-hub-client.tsx",
+  );
+  const projection = read(
+    "apps/web/lib/inventory/stock-fulfillment-projection.ts",
+  );
+  assert.match(projection, /viewer\.mode === "branch"/);
+  assert.match(projection, /inbound receive-ready/);
+  assert.match(projection, /workKinds\.includes\("receive"\)/);
+  assert.match(branchHubClient, /omitLinkedTransferSearch: mode === "branch"/);
+  assert.match(branchHubClient, /Đang lọc: cần nhận/);
+  assert.match(branchHubClient, /Yêu cầu hàng và phiếu đang tới/);
+  assert.doesNotMatch(branchHubClient, /grid-cols-3/);
+  assert.match(
+    read(
+      "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/data.ts",
+    ),
+    /STOCK_FULFILLMENT_RECEIVE_READY_STATUSES/,
+  );
   assert.doesNotMatch(centralHub, /AppPageTabs|TabsContent/);
   assert.match(centralHub, /state.*"all"/s);
-  assert.match(branchHub, /copy\.requestAction/);
   assert.match(inventoryMessages, /requestAction: "Yêu cầu hàng"/);
-  assert.match(branchHub, /AppDetailFooter/);
+  assert.match(branchHub, /AppDetailFooter|permanentRedirect|redirect\(/);
   assert.match(
     read("apps/web/app/(protected)/inventory/transfers/page.tsx"),
     /STOCK_REQUEST_FULFILL_ROLES/,
   );
   assert.match(centralAlias, /\/inventory\/transfers\?work=request/);
-  assert.match(branchAlias, /\/stock\/transfer/);
+  assert.match(branchAlias, /\/br\/\$\{branchId\}\/stock`\);/);
 });
 
 test("fulfillment loader restores parents and sibling trips outside list windows", () => {
@@ -74,6 +92,17 @@ test("stock request details stay canonical and expose the full timeline", () => 
   assert.match(detail, /Collapsible/);
   assert.match(detail, /tripsSection/);
   assert.match(detail, /transfersForSite/);
+  // Branch: 4-step progress only — no central source/DC prep chrome.
+  assert.match(detail, /getBranchStockRequestProgress/);
+  assert.match(detail, /BRANCH_STOCK_REQUEST_STEP_LABELS/);
+  assert.match(detail, /BranchRequestDetailContent/);
+  assert.match(detail, /`\/br\/\$\{data\.branchId\}\/stock`/);
+  assert.match(detail, /branchSubmittedDescription/);
+  const branchBlock = detail.slice(
+    detail.indexOf("function BranchRequestDetailContent"),
+    detail.indexOf("export function StockRequestDetailView"),
+  );
+  assert.doesNotMatch(branchBlock, /sourceProgressTitle|TransferLinks|AuditHistoryList/);
   // Work-first: actions → visible trips → details collapsible (meta only).
   assert.match(
     detail,
@@ -92,8 +121,8 @@ test("shipping and receiving use explicit atomic transitions", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/transfer-actions.ts",
   );
-  const branchDetail = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
+  const receiveClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
   );
   const migration = read(
     "supabase/migration-archive/20260730090000_unify_stock_fulfillment.sql",
@@ -105,7 +134,8 @@ test("shipping and receiving use explicit atomic transitions", () => {
   );
   assert.doesNotMatch(shipAction, /stock_transfer_mark_in_transit/);
   assert.match(actions, /Hãy bắt đầu kiểm nhận trước/);
-  assert.match(branchDetail, /transferConfirmReceive/);
+  assert.match(receiveClient, /transferConfirmReceive/);
+  assert.match(receiveClient, /startReceiveSession/);
   assert.match(migration, /RETURN public\.stock_transfer_mark_in_transit/);
   assert.match(migration, /short_receive_reason_required/);
   assert.match(migration, /FROM PUBLIC, anon, authenticated, service_role/);
@@ -162,9 +192,13 @@ test("fulfill maps insufficient_stock ingredient id for UI feedback", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/stock-request-actions.ts",
   );
-  assert.match(actions, /parseInsufficientStockIngredientId|insufficient_stock/);
-  assert.match(actions, /errorCode: "insufficient_stock"/);
-  assert.match(actions, /meta: \{ ingredientId \}/);
+  const helper = read(
+    "apps/web/app/(protected)/inventory/_lib/rpc-failure.ts",
+  );
+  assert.match(actions, /mapInventoryRpcFailure/);
+  assert.match(helper, /parseInsufficientStockIngredientId/);
+  assert.match(helper, /INSUFFICIENT_STOCK/);
+  assert.match(helper, /meta:[\s\S]*ingredientId/);
 });
 
 test("fulfill copy shows quantity with unit, on-hand, and shortage alerts", () => {
@@ -232,8 +266,13 @@ test("branch confirm_receive navigates into native receive workspace", () => {
   const branchDetail = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/[id]/branch-transfer-detail-client.tsx",
   );
-  assert.match(branchDetail, /actionConfig\.kind === "confirm_receive"/);
-  assert.match(branchDetail, /router\.push\(receiveHref\)/);
+  assert.match(branchDetail, /opensReceiveWorkspace/);
+  assert.match(
+    branchDetail,
+    /actionConfig\?\.kind === "confirm_receive"/,
+  );
+  assert.match(branchDetail, /render=\{<Link href=\{receiveHref\} \/>\}/);
+  assert.doesNotMatch(branchDetail, /transferConfirmReceive/);
 });
 
 test("mixed-source requests expose source ownership without source tabs", () => {

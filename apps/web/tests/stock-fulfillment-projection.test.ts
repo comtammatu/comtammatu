@@ -163,3 +163,68 @@ test("linked transfers never become independent rows", () => {
     [203],
   );
 });
+
+test("branch mode keeps YCH and omits draft/central-bound manual DCs", () => {
+  const rows = projectStockFulfillmentRows({
+    requests: [request],
+    items,
+    transfers,
+    viewer: {
+      mode: "branch",
+      branchId: branch.id,
+      scopeSiteKind: "branch",
+    },
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.kind, "request");
+  assert.equal(rows.filter((row) => row.kind === "manual_transfer").length, 0);
+  const requestRow = rows[0];
+  assert.ok(requestRow?.kind === "request");
+  assert.ok(
+    requestRow.sources.some((source) =>
+      source.transfers.some((transfer) => transfer.id === 202),
+    ),
+  );
+});
+
+test("branch mode emits inbound receive-ready manual DCs only", () => {
+  const inboundReady: StockFulfillmentTransferRecord = {
+    id: 204,
+    transferNumber: "DC-204",
+    status: "in_transit",
+    stockRequestId: null,
+    fromSite: supply,
+    toSite: branch,
+    createdAt: "2026-07-30T10:04:00Z",
+    lines: [{ quantity: 2, quantityReceived: null }],
+  };
+  const inboundDraft: StockFulfillmentTransferRecord = {
+    id: 205,
+    transferNumber: "DC-205",
+    status: "draft",
+    stockRequestId: null,
+    fromSite: supply,
+    toSite: branch,
+    createdAt: "2026-07-30T10:05:00Z",
+    lines: [{ quantity: 1, quantityReceived: null }],
+  };
+  const rows = projectStockFulfillmentRows({
+    requests: [],
+    items: [],
+    transfers: [...transfers, inboundReady, inboundDraft],
+    viewer: {
+      mode: "branch",
+      branchId: branch.id,
+      scopeSiteKind: "branch",
+    },
+  });
+
+  assert.deepEqual(
+    rows.map((row) =>
+      row.kind === "manual_transfer" ? row.transferId : row.requestId,
+    ),
+    [204],
+  );
+  assert.deepEqual(rows[0]?.workKinds, ["receive"]);
+});

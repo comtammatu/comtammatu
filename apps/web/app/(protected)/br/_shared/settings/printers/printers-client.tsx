@@ -54,7 +54,6 @@ export type Printer = {
   lan_host: string | null;
   lan_port: number | null;
   paper_width_mm: number;
-  code_page: string;
   is_active: boolean;
   print_types: string[];
   category_ids: number[];
@@ -123,7 +122,6 @@ const PRINTER_FIELD_IDS = {
   lanPort: "branch-printer-lan-port",
   lanPortHelp: "branch-printer-lan-port-help",
   paperWidth: "branch-printer-paper-width",
-  codePage: "branch-printer-code-page",
   active: "branch-printer-active",
 } as const;
 
@@ -135,6 +133,16 @@ function asPrintTypes(values: string[]): PrintType[] {
 
 function showsCategoryRoutes(printTypes: readonly PrintType[]): boolean {
   return printTypes.some((type) => KITCHEN_PRINT_TYPES.has(type));
+}
+
+function formatLanEndpoint(
+  host: string | null,
+  port: number | null,
+): string | null {
+  const trimmed = host?.trim();
+  if (!trimmed) return null;
+  if (port && port !== 9100) return `${trimmed}:${port}`;
+  return trimmed;
 }
 
 export function PrintersClient(props: {
@@ -183,7 +191,7 @@ export function PrintersClient(props: {
               variant: agent?.is_online ? "default" : "outline",
             }}
           >
-            <ItemGroup className="gap-3">
+            <ItemGroup className="gap-2">
               {branchPrinters.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {PRINTER_COPY.emptyBranch}
@@ -192,6 +200,10 @@ export function PrintersClient(props: {
                 branchPrinters.map((printer) => {
                   const printTypes = asPrintTypes(printer.print_types);
                   const categoryIds = printer.category_ids;
+                  const endpoint = formatLanEndpoint(
+                    printer.lan_host,
+                    printer.lan_port,
+                  );
                   const canTestPrint =
                     printer.is_active && Boolean(printer.lan_host?.trim());
                   const isTesting =
@@ -202,7 +214,7 @@ export function PrintersClient(props: {
                       variant="outline"
                       className="items-start gap-3 sm:flex-nowrap sm:items-center"
                     >
-                      <ItemContent className="min-w-0">
+                      <ItemContent className="min-w-0 gap-1.5">
                         <ItemHeader className="justify-start gap-2">
                           <ItemTitle
                             size="heading"
@@ -210,50 +222,46 @@ export function PrintersClient(props: {
                           >
                             {printer.name}
                           </ItemTitle>
-                          {printer.is_active ? (
-                            <Badge variant="default">
-                              {PRINTER_COPY.active}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              {PRINTER_COPY.inactive}
-                            </Badge>
-                          )}
+                          <Badge
+                            variant={printer.is_active ? "default" : "outline"}
+                          >
+                            {printer.is_active
+                              ? PRINTER_COPY.active
+                              : PRINTER_COPY.inactive}
+                          </Badge>
                         </ItemHeader>
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                          <p className="break-words leading-6">
-                            {printer.lan_host}
-                            {printer.lan_port && printer.lan_port !== 9100
-                              ? `:${printer.lan_port}`
-                              : ""}{" "}
-                            · {printer.paper_width_mm}mm · {printer.code_page}
-                          </p>
+                        <p className="break-words text-sm leading-5 text-muted-foreground">
+                          {endpoint ?? "—"} · {printer.paper_width_mm}mm
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {printTypes.length > 0 ? (
+                            printTypes.map((type) => (
+                              <Badge key={type} variant="secondary">
+                                {PRINT_TYPE_LABEL[type]}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {PRINTER_COPY.noPrintTypes}
+                            </span>
+                          )}
+                        </div>
+                        {showsCategoryRoutes(printTypes) ? (
                           <div className="flex flex-wrap gap-1">
-                            {printTypes.length > 0 ? (
-                              printTypes.map((type) => (
-                                <Badge key={type} variant="secondary">
-                                  {PRINT_TYPE_LABEL[type]}
+                            {categoryIds.length > 0 ? (
+                              categoryIds.map((categoryId) => (
+                                <Badge key={categoryId} variant="outline">
+                                  {categoryMap.get(categoryId) ??
+                                    `#${categoryId}`}
                                 </Badge>
                               ))
                             ) : (
-                              <span>{PRINTER_COPY.noPrintTypes}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {PRINTER_COPY.noCategories}
+                              </span>
                             )}
                           </div>
-                          {showsCategoryRoutes(printTypes) ? (
-                            <div className="flex flex-wrap gap-1">
-                              {categoryIds.length > 0 ? (
-                                categoryIds.map((categoryId) => (
-                                  <Badge key={categoryId} variant="outline">
-                                    {categoryMap.get(categoryId) ??
-                                      `#${categoryId}`}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span>{PRINTER_COPY.noCategories}</span>
-                              )}
-                            </div>
-                          ) : null}
-                        </div>
+                        ) : null}
                       </ItemContent>
                       <ItemActions className="basis-full justify-start gap-2 pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
                         <Button
@@ -333,7 +341,6 @@ function PrinterForm({
     lan_host: initial?.lan_host ?? "",
     lan_port: String(initial?.lan_port ?? 9100),
     paper_width_mm: (initial?.paper_width_mm ?? 80) as 58 | 80,
-    code_page: initial?.code_page ?? "CP1258",
     is_active: initial?.is_active ?? true,
     print_types: asPrintTypes(initial?.print_types ?? []),
     category_ids: initial?.category_ids ?? [],
@@ -382,7 +389,6 @@ function PrinterForm({
         lan_host: form.lan_host,
         lan_port: form.lan_port ? Number(form.lan_port) : null,
         paper_width_mm: form.paper_width_mm,
-        code_page: form.code_page,
         is_active: form.is_active,
         print_types: printTypes,
         category_ids: showsCategoryRoutes(printTypes)
@@ -475,9 +481,9 @@ function PrinterForm({
           save();
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {canSwitchBranch ? (
-            <div className="flex flex-col gap-2 sm:col-span-2">
+            <Field className="sm:col-span-2">
               <FieldLabel htmlFor={PRINTER_FIELD_IDS.branch}>
                 {BRANCH_VI.long}
               </FieldLabel>
@@ -521,7 +527,7 @@ function PrinterForm({
                   </SelectContent>
                 </Select>
               )}
-            </div>
+            </Field>
           ) : null}
 
           <Field className="sm:col-span-2">
@@ -613,26 +619,7 @@ function PrinterForm({
             </Select>
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor={PRINTER_FIELD_IDS.codePage}>
-              Code page
-            </FieldLabel>
-            <Input
-              id={PRINTER_FIELD_IDS.codePage}
-              name="code_page"
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              controlSize={controlSize}
-              value={form.code_page}
-              onChange={(event) =>
-                setForm({ ...form, code_page: event.target.value })
-              }
-              placeholder="CP1258"
-            />
-          </Field>
-
-          <Field orientation="horizontal" className="sm:col-span-2">
+          <Field orientation="horizontal" className="items-center self-end pb-1">
             <Switch
               id={PRINTER_FIELD_IDS.active}
               name="is_active"
@@ -652,12 +639,11 @@ function PrinterForm({
           <FieldLegend variant="label">
             {PRINTER_COPY.printTypesLabel}
           </FieldLegend>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-1.5 sm:grid-cols-2">
             {PRINT_TYPE_ORDER.map((type) => (
-              <Item
+              <div
                 key={type}
-                variant="outline"
-                className="flex cursor-pointer items-center gap-2 p-3"
+                className="flex min-h-11 items-center gap-2 rounded-md px-1"
               >
                 <Checkbox
                   id={`print-type-${type}`}
@@ -675,7 +661,7 @@ function PrinterForm({
                 >
                   {PRINT_TYPE_LABEL[type]}
                 </Label>
-              </Item>
+              </div>
             ))}
           </div>
         </FieldSet>
@@ -686,12 +672,11 @@ function PrinterForm({
               {PRINTER_COPY.categoriesLabel}
             </FieldLegend>
             <FieldDescription>{PRINTER_COPY.categoriesHint}</FieldDescription>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               {categories.map((category) => (
-                <Item
+                <div
                   key={category.id}
-                  variant="outline"
-                  className="flex cursor-pointer items-center gap-2 p-3"
+                  className="flex min-h-11 items-center gap-2 rounded-md px-1"
                 >
                   <Checkbox
                     id={`print-category-${category.id}`}
@@ -709,7 +694,7 @@ function PrinterForm({
                   >
                     {category.name}
                   </Label>
-                </Item>
+                </div>
               ))}
             </div>
           </FieldSet>

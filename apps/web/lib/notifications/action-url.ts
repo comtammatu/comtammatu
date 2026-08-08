@@ -18,28 +18,34 @@ function rewriteRetiredBranchGrnPath(url: string): string {
   return `/br/${match[1]}/stock/transfer`;
 }
 
-/** Legacy leave/checkout shims → Team hub (same as page redirects). */
-function rewriteTeamHubPath(url: string): string {
-  const leave = /^\/br\/(\d+)\/shift\/leave-approvals(?:\?(.*))?$/.exec(url);
-  if (leave) {
-    const branchId = leave[1];
-    const params = new URLSearchParams(leave[2] ?? "");
+/** Legacy Team hub tab deep links → full shift management routes. */
+function rewriteLegacyTeamTabPath(url: string): string {
+  const match = /^\/br\/(\d+)\/team(?:\?(.*))?$/.exec(url);
+  if (!match) return url;
+  const branchId = match[1];
+  const params = new URLSearchParams(match[2] ?? "");
+  const tab = params.get("tab");
+  if (tab === "leaves") {
     const leaveRequestId = params.get("leaveRequestId");
     const query = leaveRequestId
-      ? `?tab=leaves&leaveRequestId=${encodeURIComponent(leaveRequestId)}`
-      : "?tab=leaves";
-    return `/br/${branchId}/team${query}`;
+      ? `?leaveRequestId=${encodeURIComponent(leaveRequestId)}`
+      : "";
+    return `/br/${branchId}/shift/leave-approvals${query}`;
   }
-  const checkout =
-    /^\/br\/(\d+)\/shift\/checkout-approvals(?:\?(.*))?$/.exec(url);
-  if (checkout) {
-    const branchId = checkout[1];
-    const params = new URLSearchParams(checkout[2] ?? "");
+  if (tab === "checkouts") {
     const attendanceId = params.get("attendanceId");
     const query = attendanceId
-      ? `?tab=checkouts&attendanceId=${encodeURIComponent(attendanceId)}`
-      : "?tab=checkouts";
-    return `/br/${branchId}/team${query}`;
+      ? `?attendanceId=${encodeURIComponent(attendanceId)}`
+      : "";
+    return `/br/${branchId}/shift/checkout-approvals${query}`;
+  }
+  if (tab === "roster") {
+    const week = params.get("week");
+    const query = week ? `?week=${encodeURIComponent(week)}` : "";
+    return `/br/${branchId}/shift/roster${query}`;
+  }
+  if (tab === "attendance") {
+    return `/br/${branchId}/shift/attendance`;
   }
   return url;
 }
@@ -56,8 +62,8 @@ function rewriteHrPath(
   ) {
     const leaveRequestId = target.entityId;
     return leaveRequestId != null
-      ? `/br/${claims.branch_id}/team?tab=leaves&leaveRequestId=${leaveRequestId}`
-      : `/br/${claims.branch_id}/team?tab=leaves`;
+      ? `/br/${claims.branch_id}/shift/leave-approvals?leaveRequestId=${leaveRequestId}`
+      : `/br/${claims.branch_id}/shift/leave-approvals`;
   }
   if (
     claims.user_role === "branch_manager" &&
@@ -67,8 +73,8 @@ function rewriteHrPath(
   ) {
     const attendanceId = target.entityId;
     return attendanceId != null
-      ? `/br/${claims.branch_id}/team?tab=checkouts&attendanceId=${attendanceId}`
-      : `/br/${claims.branch_id}/team?tab=checkouts`;
+      ? `/br/${claims.branch_id}/shift/checkout-approvals?attendanceId=${attendanceId}`
+      : `/br/${claims.branch_id}/shift/checkout-approvals`;
   }
   return url;
 }
@@ -84,7 +90,7 @@ export function resolveNotificationActionUrl(
   const actionUrl = rewriteHrPath(
     claims,
     target,
-    rewriteTeamHubPath(rewriteRetiredBranchGrnPath(safeActionUrl)),
+    rewriteLegacyTeamTabPath(rewriteRetiredBranchGrnPath(safeActionUrl)),
   );
 
   if (

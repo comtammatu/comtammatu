@@ -3,14 +3,25 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuTrigger,
 } from "@comtammatu/ui/components/context-menu";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  ChevronRight as IconChevronRight,
   TriangleAlert as IconAlertTriangle,
   CircleCheck as IconCircleCheck,
   ClipboardList as IconClipboardList,
@@ -80,14 +91,29 @@ function iconFor(kind: string) {
   }
 }
 
-function toneFor(severity: NotificationItemModel["severity"]) {
+function severityTone(severity: NotificationItemModel["severity"]) {
   switch (severity) {
     case "critical":
-      return "text-destructive";
+      return {
+        icon: "bg-destructive/10 text-destructive",
+        rail: "border-l-destructive",
+        badge: "destructive" as const,
+        label: messages.notifications.severity.critical,
+      };
     case "warning":
-      return "text-warning";
+      return {
+        icon: "bg-warning/10 text-warning",
+        rail: "border-l-warning",
+        badge: "warning" as const,
+        label: messages.notifications.severity.warning,
+      };
     default:
-      return "text-primary";
+      return {
+        icon: "bg-primary/10 text-primary",
+        rail: "border-l-primary",
+        badge: "info" as const,
+        label: messages.notifications.severity.info,
+      };
   }
 }
 
@@ -160,11 +186,12 @@ interface Props {
 export function NotificationItem({ item, onRead, onNavigate }: Props) {
   const router = useRouter();
   const Icon = iconFor(item.kind);
-  const tone = toneFor(item.severity);
+  const tone = severityTone(item.severity);
   const unread = item.read_at === null;
   const kindLabel =
     messages.notifications.kindLabel[item.kind] ?? UNKNOWN_LABEL_VI;
   const cta = item.action_url ? openCtaLabel(item.kind) : null;
+  const showSeverityBadge = item.severity !== "info";
 
   const handleOpen = () => {
     if (unread) onRead(item.id, { quiet: true });
@@ -177,59 +204,78 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     onRead,
   });
 
-  const className = cn(
-    "flex h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-lg border p-3 text-left font-normal transition-colors",
-    unread
-      ? "border-primary/20 bg-primary/10 hover:bg-primary/15"
-      : "border-border bg-card hover:bg-muted/50",
-  );
-
-  const body = (
+  const content = (
     <>
-      <span
+      <ItemMedia
+        variant="icon"
         className={cn(
-          "inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted",
-          tone,
+          "size-9 rounded-md",
+          unread ? tone.icon : "bg-muted text-muted-foreground",
         )}
         aria-hidden
       >
         <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1 flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <p
+      </ItemMedia>
+      <ItemContent className="gap-2">
+        <ItemHeader className="items-start gap-3">
+          <ItemTitle
+            size="heading"
             className={cn(
-              "truncate text-sm",
-              unread ? "font-semibold text-foreground" : "text-foreground/80",
+              "min-w-0 flex-1 whitespace-normal",
+              unread ? "text-foreground" : "font-medium text-foreground/80",
             )}
           >
-            {item.title}
-          </p>
-          {unread ? (
-            <span
-              className="inline-block size-2 shrink-0 rounded-full bg-primary"
-              aria-label={messages.notifications.filters.unread}
-            />
-          ) : null}
-        </div>
+            <span className="line-clamp-2">{item.title}</span>
+            {unread ? (
+              <span
+                className="inline-block size-2 shrink-0 rounded-full bg-primary"
+                aria-label={messages.notifications.filters.unread}
+              />
+            ) : null}
+          </ItemTitle>
+          <time
+            dateTime={item.created_at}
+            className="shrink-0 pt-0.5 text-2xs text-muted-foreground tabular-nums"
+          >
+            {relativeTime(item.created_at)}
+          </time>
+        </ItemHeader>
         {item.body ? (
-          <p className="line-clamp-2 text-xs text-muted-foreground">
+          <ItemDescription className="line-clamp-2">
             {item.body}
-          </p>
+          </ItemDescription>
         ) : null}
-        <p className="text-xs text-muted-foreground">
-          {cta ? `${cta} · ` : null}
-          {kindLabel} · {relativeTime(item.created_at)}
-        </p>
-      </div>
+        <ItemFooter className="mt-0.5 gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {showSeverityBadge ? (
+              <Badge variant={tone.badge}>{tone.label}</Badge>
+            ) : null}
+            <Badge variant="outline">{kindLabel}</Badge>
+          </div>
+          {cta ? (
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+              {cta}
+              <IconChevronRight className="size-3.5" aria-hidden />
+            </span>
+          ) : null}
+        </ItemFooter>
+      </ItemContent>
     </>
+  );
+
+  const itemClassName = cn(
+    "items-start gap-3 border-l-[3px] bg-card py-3 transition-colors",
+    unread ? tone.rail : "border-l-transparent",
+    unread
+      ? "hover:bg-primary/10"
+      : "opacity-90 hover:bg-muted/50 hover:opacity-100",
   );
 
   const primary =
     item.action_url != null ? (
-      <Button
-        variant="ghost"
-        className={cn(className, "min-w-0 flex-1")}
+      <Item
+        variant="outline"
+        className={cn(itemClassName, "min-w-0 flex-1")}
         render={
           <Link
             href={item.action_url}
@@ -240,32 +286,35 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           />
         }
       >
-        {body}
-      </Button>
+        {content}
+      </Item>
     ) : (
-      <Button
-        type="button"
-        variant="ghost"
-        className={cn(className, "min-w-0 flex-1")}
+      <Item
+        variant="outline"
+        className={cn(itemClassName, "min-w-0 flex-1 cursor-pointer")}
+        role="button"
+        tabIndex={0}
         onClick={() => {
           if (unread) onRead(item.id);
         }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            if (unread) onRead(item.id);
+          }
+        }}
       >
-        {body}
-      </Button>
+        {content}
+      </Item>
     );
 
   const row = (
-    <div className="flex items-stretch gap-1">
+    <div className="flex items-stretch gap-2">
       {primary}
       {actions.length > 0 ? (
-        <div className="flex shrink-0 items-start pt-2 pr-1">
-          <RowActionsMenu
-            items={actions}
-            label={messages.notifications.openWork}
-            triggerSize="icon-sm"
-          />
-        </div>
+        <ItemActions className="shrink-0 items-start pt-2">
+          <RowActionsMenu items={actions} triggerSize="icon-sm" />
+        </ItemActions>
       ) : null}
     </div>
   );

@@ -37,7 +37,7 @@ payments, stock, or another local database.
 | Data client   | `supabase-js` 2 + `@supabase/ssr`                           | web/database/agent manifests                             |
 | Database CLI  | Workspace-pinned Supabase CLI                               | root `package.json`                                      |
 | PWA           | Serwist 9                                                   | `apps/web/package.json`, `apps/web/app/sw.ts`            |
-| Branch bundle | esbuild ESM bundle, Node.js installed on host, NSSM service | `apps/print-agent/package.json`, rollout runbook         |
+| Branch bundle | esbuild ESM bundle, Node.js on host, one-shot `SETUP.cmd` | `apps/print-agent/package.json`, rollout runbook |
 | Verification  | Node test runner through `tsx`; Playwright browser checks   | package scripts                                          |
 
 ## Monorepo Structure

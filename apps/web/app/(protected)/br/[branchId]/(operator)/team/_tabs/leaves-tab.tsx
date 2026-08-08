@@ -7,8 +7,7 @@ interface TabProps {
 }
 
 /**
- * Leave approvals tab inside the Team hub. Mirrors the legacy
- * `/br/{branchId}/shift/leave-approvals` presentation.
+ * Leave approvals body shared by `/br/{branchId}/shift/leave-approvals`.
  */
 export async function LeavesTab({ branchId }: TabProps) {
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();

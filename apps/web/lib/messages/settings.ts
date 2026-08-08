@@ -53,8 +53,7 @@ export const settings = {
     kdsTitle: "Trạm bếp (KDS)",
     kdsDescription: "Quản lý trạm hiển thị bếp và gán danh mục món ăn",
     paymentsTitle: "Thanh toán POS",
-    paymentsDescription:
-      "Cấu hình Chuyển khoản và SePay xác nhận tự động cho POS.",
+    paymentsDescription: "Tài khoản VietQR nhận tiền POS và xác nhận SePay.",
     printersTitle: "In ấn vận hành",
     printersDescription:
       "Loại phiếu và danh mục món in trên từng máy của chi nhánh.",
@@ -297,43 +296,45 @@ export const settings = {
   },
   payments: {
     saved: "Đã lưu cài đặt thanh toán",
-    sectionTitle: "Phương thức thanh toán trên POS",
-    connectionTab: "Kết nối",
-    editTab: "Chỉnh sửa",
-    vietqrLabel: "VietQR (chuyển khoản QR)",
-    vietqrDescription: "Tài khoản nhận tiền POS dùng để tạo QR chuyển khoản.",
-    vietqrEnabled: "Đang hiển thị QR chuyển khoản trên POS.",
-    vietqrDisabled: "Đang tắt QR chuyển khoản trên POS.",
-    bankCode: "Mã ngân hàng",
-    bankCodePlaceholder: "TCB hoặc 970407",
+    accountSectionTitle: "Tài khoản nhận VietQR",
+    accountSectionDescription:
+      "Tài khoản dùng để tạo QR chuyển khoản trên POS.",
+    vietqrLabel: "VietQR trên POS",
+    vietqrEnabled: "Đang hiện QR chuyển khoản trên POS.",
+    vietqrDisabled: "QR chuyển khoản đang tắt trên POS.",
+    bankCode: "Ngân hàng",
+    bankSearchPlaceholder: "Tìm theo tên, mã hoặc BIN",
+    bankPlaceholder: "Chọn ngân hàng",
+    bankEmpty: "Không tìm thấy ngân hàng",
+    bankListUnavailable: "Không tải được danh sách ngân hàng. Thử lại sau.",
     accountNo: "Số tài khoản",
     accountName: "Chủ tài khoản",
-    codePrefix: "Nội dung QR POS / MB Soundbox",
-    codePrefixHelp:
-      "Hệ thống tự thêm 12 ký tự đối soát. Chỉ chữ, số và khoảng trắng.",
-    codeModelOwnerLabel: "Chủ sở hữu lưu",
-    codeModelSuffixLabel: "Hệ thống tự thêm",
-    codeModelFinalLabel: "Nội dung QR POS",
-    codePreviewEmpty: "Nhập nội dung cố định để xem ví dụ.",
-    sepayLabel: "SePay tự động xác nhận",
-    sepayDescription:
-      "SePay chỉ xác nhận tiền vào, không phải phương thức thanh toán riêng.",
-    sepayEndpointLabel: "Địa chỉ nhận dữ liệu",
+    memoSectionTitle: "Nội dung chuyển khoản POS",
+    memoSectionDescription:
+      "Tiền tố cố định; hệ thống tự thêm 12 ký tự đối soát.",
+    codePrefix: "Tiền tố nội dung",
+    codePrefixHelp: "Chỉ chữ, số và khoảng trắng.",
+    codePreviewLabel: "Ví dụ nội dung",
+    codePreviewEmpty: "Nhập tiền tố để xem ví dụ.",
+    sepayLabel: "SePay",
+    sepayDescription: "Xác nhận tự động khi tiền vào tài khoản.",
+    sepayEndpointLabel: "Webhook",
     sepayEndpoint: "/api/webhooks/sepay",
-    envStatus: "Trạng thái cấu hình",
+    envStatus: "Bí mật webhook",
     envConfigured: "Đã cấu hình",
-    envMissing: "Chưa đủ biến môi trường",
-    contentSectionTitle: "Lệnh SePay vận hành (tùy chọn)",
+    envMissing: "Chưa cấu hình",
+    sepayEnvMissingNote:
+      "Thiếu SEPAY_WEBHOOK_SECRET — webhook SePay sẽ không xác thực được.",
+    contentSectionTitle: "Lệnh vận hành SePay",
+    contentSectionToggle: "Lệnh vận hành SePay (tùy chọn)",
     contentPrefix: "Tiền tố chung",
-    contentExpenseToken: "Mã khớp phiếu chi",
+    contentExpenseToken: "Mã phiếu chi",
     contentCashDepositToken: "Mã nộp tiền mặt",
-    contentHelp:
-      "Thu đơn POS dùng trực tiếp nội dung QR POS; mã vận hành chỉ dùng cho phiếu chi và nộp tiền mặt.",
-    contentCategoryRuleLabel: "Danh mục chi nằm ở phiếu chi",
+    contentHelp: "Chỉ dùng cho phiếu chi và nộp tiền mặt, không dùng cho thu POS.",
     contentCategoryRule:
-      "Dùng mã phiếu chi trong lệnh; SePay không suy ra danh mục từ nội dung chuyển khoản. Không dùng LUONG hoặc DIEN thay cho mã phiếu chi.",
-    contentExpensePreview: "1. Khớp phiếu chi",
-    contentCashDepositPreview: "2. Nộp tiền mặt",
+      "Dùng mã phiếu chi trong lệnh; không đặt tên danh mục chi vào nội dung.",
+    contentExpensePreview: "Khớp phiếu chi",
+    contentCashDepositPreview: "Nộp tiền mặt",
     saveSettings: "Lưu cài đặt",
   },
   pos: {
@@ -569,6 +570,7 @@ export const settings = {
     readinessCheckoutEmpty: "Không có yêu cầu chờ duyệt.",
     readinessCheckoutCta: "Vào duyệt kết ca",
     queueTitle: "Cần duyệt",
+    queueManagerTitle: "Cần duyệt",
     queueAriaLabel: (count: number) => `Cần duyệt, ${formatCount(count)} mục`,
     queueCheckoutMeta: (count: number) =>
       `${formatCount(count)} nhân viên đang chờ`,
@@ -584,6 +586,9 @@ export const settings = {
     queueInboundTransfersTitle: "Chờ nhận nguyên liệu",
     queueInboundTransfersMeta: (count: number) =>
       `${formatCount(count)} chuyến hàng đang đến`,
+    queueOpenRequestsTitle: "YCH đang mở",
+    queueOpenRequestsMeta: (count: number) =>
+      `${formatCount(count)} yêu cầu hàng đang theo dõi`,
     centralSupplyTilesTitle: "Kho Tổng",
     centralSupplyTilesDescription:
       "Tồn kho, nhập hàng, giao nhận và kiểm kê — không POS/KDS/Runner.",
@@ -601,7 +606,7 @@ export const settings = {
     centralKitchenNavReceive: "Nhập",
     centralKitchenNavDispatch: "Giao nhận",
     centralNavReceive: "Nhập",
-    /** Branch bottom-nav label — lands on on-hand. */
+    /** Branch bottom-nav label — lands on work-first `/stock`. */
     branchNavStock: "Kho",
     /** Branch bottom-nav label — lands on team hub. */
     branchNavTeam: "Đội",

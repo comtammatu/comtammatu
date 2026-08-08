@@ -21,6 +21,7 @@ Tài liệu tham chiếu dài hạn cho nghiệp vụ Cơm Tấm Má Tư. Không
 | Tích hợp bên thứ ba | `third-party-integrations.md` |
 | Setup local project | `setup.md` |
 | Screen context / UI workflow | `screen-context-map.md` |
+| Inventory routing Branch (`/br/[branchId]` plane A/B/C) | `branch-route-inventory.md` sau `screen-context-map.md` §2.4A |
 | Vận hành chi nhánh (ca làm × ca bán, định biên, Daily Summary) | `branch-operations.md` |
 
 ## Hygiene

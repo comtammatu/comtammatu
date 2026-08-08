@@ -16,12 +16,23 @@ export const notifications = {
   loadMore: "Tải thêm",
   pageTitle: "Thông báo",
   pageDescription: "Việc còn mở: duyệt, handoff kho và cảnh báo vận hành",
+  pageDescriptionUnread: "{count} việc chưa đọc — mở để xử lý",
   back: "Quay lại",
   filters: {
-    active: "Đang cần xử lý",
+    active: "Cần xử lý",
     all: "Tất cả",
     unread: "Chưa đọc",
   },
+  groups: {
+    today: "Hôm nay",
+    yesterday: "Hôm qua",
+  },
+  severity: {
+    critical: "Khẩn",
+    warning: "Cảnh báo",
+    info: "Thông tin",
+  },
+  deviceToggle: "Cài đặt thiết bị",
   kindLabel: {
     "pos.order_new": "Đơn mới",
     "order.delay_sla_breach": "Cảnh báo trễ đơn",

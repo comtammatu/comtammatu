@@ -218,7 +218,8 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(selectSource, /SelectPrimitive\.(?:Positioner|Popup|List)/);
   assert.doesNotMatch(selectSource, /radix-ui|--radix-|asChild/);
   assert.match(scrollAreaSource, /@base-ui\/react\/scroll-area/);
-  assert.match(scrollAreaSource, /ScrollAreaPrimitive\.(?:Viewport|Content)/);
+  assert.match(scrollAreaSource, /ScrollAreaPrimitive\.Viewport/);
+  assert.doesNotMatch(scrollAreaSource, /ScrollAreaPrimitive\.Content/);
   assert.doesNotMatch(scrollAreaSource, /radix-ui/);
   assert.match(sidebarSource, /@base-ui\/react\/use-render/);
   assert.match(sidebarSource, /useRender\.ComponentProps<"button">/);

@@ -134,20 +134,46 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     "`/br/${branchId}`",
     "`/br/${branchId}/shift`",
     "`/br/${branchId}/team`",
-    "`/br/${branchId}/stock/on-hand`",
+    "`/br/${branchId}/stock`",
   ]) {
     assert.ok(bottomNav.includes(expected), `expected bottom nav ${expected}`);
   }
   assert.match(
     bottomNav,
-    /href: `\/br\/\$\{branchId\}\/stock\/on-hand`[\s\S]*?matchPrefixes: \[`\/br\/\$\{branchId\}\/stock`\]/,
-    "Kho tab lands on-hand but stays active for /stock/*",
+    /href: `\/br\/\$\{branchId\}\/stock`[\s\S]*?exact: true[\s\S]*?matchPrefixes: \[`\/br\/\$\{branchId\}\/stock`\]/,
+    "Kho tab lands work-first /stock and stays active for /stock/*",
+  );
+  assert.match(
+    bottomNav,
+    /badgeCount: badges\?\.stock/,
+    "Kho tab surfaces live queue badge",
   );
 
   assert.match(
     bottomNav,
-    /href: `\/br\/\$\{branchId\}\/shift`[\s\S]*?exact: false/,
-    "shift tab must stay prefix-active for /shift/* deep routes",
+    /href: `\/br\/\$\{branchId\}\/shift`[\s\S]*?exact: true/,
+    "Ca tab must not stay active on deep shift management routes",
+  );
+  // Managers keep schedule under Ca; employees get a dedicated Lịch ca tab.
+  assert.match(
+    bottomNav,
+    /matchPrefixes: showBranchManagement[\s\S]*?\/shift\/clock[\s\S]*?\/shift\/schedule[\s\S]*?: \[`\/br\/\$\{branchId\}\/shift\/clock`\]/,
+    "Ca matchPrefixes stay role-scoped for clock vs schedule",
+  );
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/shift\/schedule`[\s\S]*employeeNavCopy\.schedule/,
+    "Employees get Lịch ca on the bottom nav when not managing the branch",
+  );
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/profile`[\s\S]*employeeNavCopy\.profileShort/,
+    "Employees get Hồ sơ on the bottom nav when not managing the branch",
+  );
+  assert.match(
+    bottomNav,
+    /href: `\/br\/\$\{branchId\}\/team`[\s\S]*?matchPrefixes: \[[\s\S]*?\/shift\/roster[\s\S]*?\/shift\/attendance[\s\S]*?\/shift\/checkout-approvals[\s\S]*?\/shift\/leave-approvals/,
+    "Đội tab stays active for team hub and shift management routes",
   );
 
   for (const forbiddenRoute of [
@@ -155,18 +181,20 @@ test("Branch bottom nav only contains persistent daily job families", () => {
     "/settings",
     "/menu-limits",
     "/pos-sessions",
-    "/profile",
+    "/feedback",
     "/notifications",
     "/more",
   ]) {
     assert.doesNotMatch(
       bottomNav,
       new RegExp(`\`/br/\\$\\{branchId\\}${escapeRegExp(forbiddenRoute)}`),
-      `${forbiddenRoute} must stay out of the persistent bottom nav`,
+      `${forbiddenRoute} must stay out of the manager persistent bottom nav`,
     );
   }
 
-  assert.doesNotMatch(bottomNav, /\bEllipsis\b|\bUser\b/);
+  // Profile/User are employee-only bottom-nav items (!showBranchManagement).
+  assert.doesNotMatch(bottomNav, /\bEllipsis\b/);
+  assert.match(bottomNav, /\bUser\b/);
 });
 
 test("POS, KDS, and Runner stay standalone station apps", () => {

@@ -273,7 +273,7 @@ export function FormDialog<TValues extends FieldValues>({
           aria-busy={isPending}
         >
           <FieldGroup>
-            {children(form)}
+            {open ? children(form) : null}
             {serverError && (
               <p className="text-sm text-destructive" role="alert">
                 {serverError}
@@ -369,9 +369,11 @@ export function AppDialog({
   footerClassName,
 }: AppDialogProps) {
   const documentVariant = variant === "document";
-  const { body, slottedFooter } = splitAppDialogChildren(children);
-  const resolvedFooter = footer ?? slottedFooter;
-  const showFooterChrome = resolvedFooter != null || documentVariant;
+  // Gate before split so closed overlays do not pay Children.forEach / body work.
+  const gatedChildren = open ? children : null;
+  const { body, slottedFooter } = splitAppDialogChildren(gatedChildren);
+  const resolvedFooter = open ? (footer ?? slottedFooter) : null;
+  const showFooterChrome = resolvedFooter != null || (open && documentVariant);
   const contentRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 

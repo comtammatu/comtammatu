@@ -25,7 +25,6 @@ test("Branch printer dialog has a semantic form and associated touch controls", 
     "lan_host",
     "lan_port",
     "paper_width_mm",
-    "code_page",
     "is_active",
     "print_types",
     "category_ids",
@@ -33,13 +32,14 @@ test("Branch printer dialog has a semantic form and associated touch controls", 
     assert.match(source, new RegExp(`name="${name}"`));
   }
 
+  assert.doesNotMatch(source, /code_page|codePage|Code page/);
+
   for (const field of [
     "branch",
     "name",
     "lanHost",
     "lanPort",
     "paperWidth",
-    "codePage",
     "active",
   ]) {
     assert.match(

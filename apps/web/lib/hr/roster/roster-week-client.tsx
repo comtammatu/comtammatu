@@ -1,21 +1,12 @@
 "use client";
 
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Repeat2 as IconRepeat,
   Star as IconStar,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
-import { addVNDateDays } from "@comtammatu/shared/time";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -32,66 +23,31 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
-  copyRosterWeek,
-  reconcileShiftAssignmentsWeek,
-  setShiftAssignmentLeader,
-} from "./actions";
-import {
   rosterAssignmentKey,
-  type RosterAssignment,
   type RosterEmployee,
   type RosterWeekData,
 } from "./roster-model";
 import {
+  EMPTY_SHIFT_VALUE,
+  formatShiftLabel,
+} from "./roster-week-helpers";
+import { useRosterWeekEditor } from "./use-roster-week-editor";
+import {
   formatRosterDayHeader,
   formatRosterWeekRange,
-  getVNWeekDates,
-  getVNWeekStartMonday,
 } from "./week";
 import { WeeklyScheduleDialog } from "./weekly-schedule-dialog";
 
 const copy = messages.hr.roster;
-const EMPTY_SHIFT_VALUE = "__empty__";
 
 export type RosterSiteOption = {
   branchId: number | null;
   label: string;
 };
-
-function buildAssignmentMap(
-  assignments: RosterAssignment[],
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const assignment of assignments) {
-    map.set(
-      rosterAssignmentKey(assignment.employeeId, assignment.workDate),
-      assignment.shiftId,
-    );
-  }
-  return map;
-}
-
-function buildLeaderMap(
-  assignments: RosterAssignment[],
-): Map<string, { assignmentId: number; isLeader: boolean }> {
-  const map = new Map<string, { assignmentId: number; isLeader: boolean }>();
-  for (const assignment of assignments) {
-    map.set(rosterAssignmentKey(assignment.employeeId, assignment.workDate), {
-      assignmentId: assignment.id,
-      isLeader: assignment.isShiftLeader,
-    });
-  }
-  return map;
-}
-
-function formatShiftLabel(name: string, startTime: string, endTime: string) {
-  return `${name} (${startTime.slice(0, 5)}–${endTime.slice(0, 5)})`;
-}
 
 export function RosterWeekClient({
   branchId,
@@ -110,191 +66,40 @@ export function RosterWeekClient({
   loadFailed: boolean;
   urlTab?: string;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-  const [assignmentMap, setAssignmentMap] = useState(() =>
-    buildAssignmentMap(data.assignments),
-  );
-  const [leaderMap, setLeaderMap] = useState(() =>
-    buildLeaderMap(data.assignments),
-  );
-  const [dirty, setDirty] = useState(false);
-  const [scheduleEmployeeId, setScheduleEmployeeId] = useState<number | null>(
-    null,
-  );
-
-  const weekDates = useMemo(() => getVNWeekDates(weekStart), [weekStart]);
-
-  useEffect(() => {
-    setAssignmentMap(buildAssignmentMap(data.assignments));
-    setLeaderMap(buildLeaderMap(data.assignments));
-    setDirty(false);
-  }, [data.assignments, weekStart, branchId]);
-
-  const replaceParams = useCallback(
-    (mutate: (params: URLSearchParams) => void) => {
-      const liveTab = searchParams.get("tab");
-      if (urlTab && liveTab && liveTab !== urlTab) return;
-
-      const params = new URLSearchParams(searchParams.toString());
-      mutate(params);
-      if (urlTab) params.set("tab", urlTab);
-      const next = params.toString();
-      const current = searchParams.toString();
-      if (next === current) return;
-      startTransition(() => {
-        router.replace(next ? `${pathname}?${next}` : pathname);
-      });
-    },
-    [pathname, router, searchParams, startTransition, urlTab],
-  );
-
-  function handleSiteChange(value: string) {
-    replaceParams((params) => {
-      params.set("branch", value === "office" ? "office" : value);
-    });
-  }
-
-  function handleWeekShift(deltaDays: number) {
-    const nextWeekStart = getVNWeekStartMonday(
-      addVNDateDays(weekStart, deltaDays),
-    );
-    replaceParams((params) => {
-      params.set("week", nextWeekStart);
-    });
-  }
-
-  function handleCellChange(
-    employeeId: number,
-    workDate: string,
-    value: string,
-  ) {
-    const key = rosterAssignmentKey(employeeId, workDate);
-    setAssignmentMap((current) => {
-      const next = new Map(current);
-      if (value === EMPTY_SHIFT_VALUE) {
-        next.delete(key);
-      } else {
-        next.set(key, Number(value));
-      }
-      return next;
-    });
-    setDirty(true);
-  }
-
-  function refreshRoster() {
-    startTransition(() => {
-      router.refresh();
-    });
-  }
-
-  function handleSave() {
-    startTransition(async () => {
-      const assignments = Array.from(assignmentMap.entries()).flatMap(
-        ([key, shiftId]) => {
-          const separator = key.indexOf(":");
-          if (separator <= 0) return [];
-          const employeeId = Number(key.slice(0, separator));
-          const workDate = key.slice(separator + 1);
-          if (!employeeId || !workDate) return [];
-          return [{ employeeId, workDate, shiftId }];
-        },
-      );
-      const result = await reconcileShiftAssignmentsWeek({
-        branchId,
-        weekStart,
-        assignments,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(copy.saveSuccess);
-      setDirty(false);
-      refreshRoster();
-    });
-  }
-
-  function handleCopyPreviousWeek() {
-    const sourceWeekStart = addVNDateDays(weekStart, -7);
-    startTransition(async () => {
-      const result = await copyRosterWeek({
-        branchId,
-        sourceWeekStart,
-        targetWeekStart: weekStart,
-      });
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(copy.copySuccess);
-      refreshRoster();
-    });
-  }
-
-  const scheduleEmployee =
-    data.employees.find(
-      (employee) => employee.employeeId === scheduleEmployeeId,
-    ) ?? null;
-  const selectedSchedule =
-    data.weeklySchedules.find(
-      (schedule) => schedule.employeeId === scheduleEmployeeId,
-    ) ?? null;
-
-  function scheduleLabel(employeeId: number) {
-    const schedule = data.weeklySchedules.find(
-      (item) => item.employeeId === employeeId,
-    );
-    if (!schedule) return copy.schedule;
-    return copy.scheduleDays(
-      Object.values(schedule.shiftsByDay).filter((shiftId) => shiftId != null)
-        .length,
-    );
-  }
+  const {
+    isPending,
+    assignmentMap,
+    leaderMap,
+    dirty,
+    weekDates,
+    scheduleEmployeeId,
+    setScheduleEmployeeId,
+    scheduleEmployee,
+    selectedSchedule,
+    scheduleLabel,
+    handleSiteChange,
+    handleWeekShift,
+    handleCellChange,
+    handleSave,
+    handleCopyPreviousWeek,
+    handleLeaderToggle,
+    refreshRoster,
+  } = useRosterWeekEditor({ branchId, weekStart, data, urlTab });
 
   function renderScheduleButton(employee: RosterEmployee, className?: string) {
     return (
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className={cn("h-7 px-2 text-xs", className)}
+        size="touch"
+        className={cn("px-3 text-sm", className)}
         onClick={() => setScheduleEmployeeId(employee.employeeId)}
         disabled={isPending || data.shifts.length === 0}
       >
-        <IconRepeat className="size-3.5" />
+        <IconRepeat className="size-4" />
         {scheduleLabel(employee.employeeId)}
       </Button>
     );
-  }
-
-  function handleLeaderToggle(
-    employeeId: number,
-    workDate: string,
-    nextLeader: boolean,
-  ) {
-    if (branchId == null || dirty) return;
-    const key = rosterAssignmentKey(employeeId, workDate);
-    const current = leaderMap.get(key);
-    if (!current || current.assignmentId <= 0) return;
-
-    startTransition(async () => {
-      const result = await setShiftAssignmentLeader({
-        branchId,
-        assignmentId: current.assignmentId,
-        isLeader: nextLeader,
-      });
-      if (!result.success) {
-        toast.error(result.error ?? copy.shiftLeaderFailed);
-        return;
-      }
-      toast.success(
-        nextLeader ? copy.shiftLeaderSetSuccess : copy.shiftLeaderClearedSuccess,
-      );
-      refreshRoster();
-    });
   }
 
   function renderShiftSelect(employee: RosterEmployee, workDate: string) {
@@ -316,13 +121,15 @@ export function RosterWeekClient({
           }
           disabled={isPending}
         >
-          <SelectTrigger className="w-full min-w-0 flex-1">
+          <SelectTrigger size="touch" className="w-full min-w-0 flex-1">
             <SelectValue placeholder={copy.emptyShift} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={EMPTY_SHIFT_VALUE}>{copy.emptyShift}</SelectItem>
+            <SelectItem value={EMPTY_SHIFT_VALUE} size="touch">
+              {copy.emptyShift}
+            </SelectItem>
             {data.shifts.map((shift) => (
-              <SelectItem key={shift.id} value={String(shift.id)}>
+              <SelectItem key={shift.id} value={String(shift.id)} size="touch">
                 {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
               </SelectItem>
             ))}
@@ -331,8 +138,8 @@ export function RosterWeekClient({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="size-8 shrink-0"
+          size="icon-touch"
+          className="shrink-0"
           disabled={isPending || !canToggleLeader}
           aria-label={
             leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
@@ -451,33 +258,7 @@ export function RosterWeekClient({
         </div>
       </AppToolbar>
 
-      <AppSection
-        title={copy.title}
-        description={copy.description}
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={handleCopyPreviousWeek}
-              disabled={isPending}
-            >
-              {copy.copyPreviousWeek}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              onClick={handleSave}
-              disabled={isPending || !dirty}
-            >
-              {isPending ? <Spinner className="size-4" /> : null}
-              {copy.save}
-            </Button>
-          </div>
-        }
-        contentFlush
-      >
+      <AppSection contentFlush>
         {data.employees.length === 0 ? (
           <AppEmptyState
             mode="no-data"
@@ -530,6 +311,29 @@ export function RosterWeekClient({
           {STATES_VI.loading}
         </div>
       ) : null}
+
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap gap-2 border-t bg-background px-4 py-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          className="min-w-0 flex-1"
+          onClick={handleCopyPreviousWeek}
+          disabled={isPending}
+        >
+          {copy.copyPreviousWeek}
+        </Button>
+        <Button
+          type="button"
+          size="touch"
+          className="min-w-0 flex-1"
+          onClick={handleSave}
+          disabled={isPending || !dirty}
+        >
+          {isPending ? <Spinner className="size-4" /> : null}
+          {copy.save}
+        </Button>
+      </div>
 
       <WeeklyScheduleDialog
         open={scheduleEmployeeId != null}

@@ -239,7 +239,7 @@ function CartPaneComponent({
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div
         className={cn(
           "shrink-0 border-b border-border/60",
@@ -537,10 +537,10 @@ function CartPaneComponent({
                   </p>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2">
                   <Button
                     type="button"
-                    className="min-w-12 w-full text-base font-bold tracking-wide"
+                    className="min-w-0 w-full text-base font-bold tracking-wide"
                     size="touch-lg"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
@@ -553,8 +553,10 @@ function CartPaneComponent({
                       </>
                     ) : (
                       <>
-                        {messages.pos.pendingDraft.submitKitchen(totalQuantity)}
-                        <KbdGroup className="ml-2 hidden [@media(hover:hover)]:inline-flex">
+                        <span className="min-w-0 truncate">
+                          {messages.pos.pendingDraft.submitKitchen(totalQuantity)}
+                        </span>
+                        <KbdGroup className="ml-2 hidden shrink-0 [@media(hover:hover)_and_(min-width:1536px)]:inline-flex">
                           <Kbd>{"⌘"}</Kbd>
                           <Kbd>Enter</Kbd>
                         </KbdGroup>
@@ -564,7 +566,7 @@ function CartPaneComponent({
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-w-12 w-full text-base font-semibold tracking-wide text-muted-foreground"
+                    className="min-w-0 w-full text-base font-semibold tracking-wide text-muted-foreground"
                     size="touch-lg"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
                     onClick={() => void handlePrioritySubmit()}

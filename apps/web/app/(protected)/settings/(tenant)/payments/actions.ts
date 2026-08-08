@@ -44,7 +44,7 @@ const paymentSettingsSchema = z.object({
     .max(40)
     .regex(/^[A-Za-z0-9 ]+$/, {
       error: "Tiền tố chỉ chứa chữ, số và khoảng trắng.",
-  }),
+    }),
   [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_PREFIX]: paymentContentTokenSchema,
   [SYSTEM_SETTING_KEYS.PAYMENT_CONTENT_EXPENSE_TOKEN]:
     paymentContentTokenSchema,
@@ -132,20 +132,21 @@ export async function updatePaymentSettings(
   const { supabase, claims } = ctx;
 
   const entries = Object.entries(parsed.data) as [string, string][];
-  for (const [key, value] of entries) {
-    const { error } = await supabase
-      .from("system_settings")
-      .upsert(
-        { tenant_id: claims.tenant_id, key, value },
-        { onConflict: "key,tenant_id" },
-      );
-
-    if (error) {
-      return {
-        success: false,
-        error: "Không thể lưu cài đặt. Vui lòng thử lại.",
-      };
-    }
+  const results = await Promise.all(
+    entries.map(([key, value]) =>
+      supabase
+        .from("system_settings")
+        .upsert(
+          { tenant_id: claims.tenant_id, key, value },
+          { onConflict: "key,tenant_id" },
+        ),
+    ),
+  );
+  if (results.some((result) => result.error)) {
+    return {
+      success: false,
+      error: "Không thể lưu cài đặt. Vui lòng thử lại.",
+    };
   }
 
   revalidateSurfacePath("/settings/payments");

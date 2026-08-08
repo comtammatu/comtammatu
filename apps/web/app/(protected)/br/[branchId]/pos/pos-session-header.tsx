@@ -52,7 +52,7 @@ function PosSessionTopBarComponent({
   const { branchId } = usePosSession();
 
   return (
-    <div className="border-b border-border/60 px-2 py-2 md:px-3 md:py-1.5">
+    <div className="flex h-12 shrink-0 items-center border-b border-border/60 bg-background px-2 md:px-3">
       <div className="flex w-full items-center justify-between gap-2">
         {onBack ? (
           <Button
@@ -67,7 +67,7 @@ function PosSessionTopBarComponent({
           </Button>
         ) : null}
 
-        <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 md:justify-center">
+        <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5">
           <AppHeaderBrand
             title={null}
             subtitleHiddenOnMobile={false}

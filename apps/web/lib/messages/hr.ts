@@ -266,6 +266,7 @@ export const hr = {
       },
       errors: {
         position_not_found: "Không tìm thấy vị trí.",
+        employee_not_found: "Không tìm thấy nhân viên thuộc chi nhánh này.",
         too_many_tasks: "Vượt quá số việc cho phép (tối đa 40).",
         task_title_too_long: "Tên việc quá dài.",
         task_kind_invalid: "Loại việc không hợp lệ.",

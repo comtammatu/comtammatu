@@ -10,5 +10,5 @@ export default async function OperatorStockReceivePage({ params }: PageProps) {
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
 
-  permanentRedirect(`/br/${branchId}/stock/transfer?work=receive`);
+  permanentRedirect(`/br/${branchId}/stock?work=receive`);
 }

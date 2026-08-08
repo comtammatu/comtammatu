@@ -35,9 +35,18 @@ test("POS touch actions share one safe-area-aware fixed dock", () => {
 
 test("POS desktop approval action stays in the sidebar flow", () => {
   assert.match(desktop, /sessionAction=\{desktopSelfOrderAction\}/);
-  assert.match(sidebar, /const sessionActionRow = sessionAction \? \(/);
-  assert.match(sidebar, /\{sessionActionRow\}[\s\S]*<OrderListPane/);
+  assert.match(sidebar, /sessionAction \? \(/);
+  assert.match(sidebar, /\{sessionAction \? \([\s\S]*\{orderList\}/);
   assert.doesNotMatch(sidebar, /sessionAction=\{sessionAction\}/);
+  // Dual-pane: session chrome lives only above the order-list column.
+  assert.match(
+    sidebar,
+    /border-l border-border\/60 2xl:w-80">\s*\{sessionTopBar\}/,
+  );
+  assert.doesNotMatch(
+    sidebar,
+    /hidden h-full min-h-0 shrink-0 flex-col border-l[\s\S]*\{sessionTopBar\}[\s\S]*flex min-h-0 flex-1/,
+  );
 });
 
 test("POS context gates preserve clearance for the complete touch dock", () => {

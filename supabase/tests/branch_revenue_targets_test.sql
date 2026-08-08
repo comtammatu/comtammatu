@@ -40,8 +40,10 @@ BEGIN
   IF v_definition NOT LIKE '%branch_manager%'
     OR v_definition NOT LIKE '%branch scope mismatch%'
     OR v_definition NOT LIKE '%discount_amount%'
+    OR v_definition NOT LIKE '%net_revenue_today%'
+    OR v_definition NOT LIKE '%reward_tiers%'
   THEN
-    RAISE EXCEPTION 'get_branch_revenue_target_progress missing BM scope or Doanh thu thuần formula';
+    RAISE EXCEPTION 'get_branch_revenue_target_progress missing BM scope, day revenue, tiers, or Doanh thu thuần formula';
   END IF;
 
   SELECT pg_get_functiondef(

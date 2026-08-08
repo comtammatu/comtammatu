@@ -191,7 +191,7 @@ export function PosLineItemCompact({
         ) : null}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 max-w-full flex-wrap items-start gap-x-2 gap-y-1">
+        <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
           <p
             className={cn(
               "min-w-0 flex-1 break-words text-base font-semibold leading-snug text-foreground",
@@ -207,6 +207,14 @@ export function PosLineItemCompact({
           ) : null}
           {afterTitle ? <span className="shrink-0">{afterTitle}</span> : null}
         </div>
+        <p
+          className={cn(
+            "mt-0.5 text-base font-bold leading-snug text-primary tabular-nums",
+            totalClassName,
+          )}
+        >
+          {total}
+        </p>
         <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
           <DetailLine
             label={POS_VI.options}
@@ -253,14 +261,6 @@ export function PosLineItemCompact({
           ) : null}
         </div>
       </div>
-      <p
-        className={cn(
-          "shrink-0 whitespace-nowrap text-right text-base font-bold leading-snug text-primary tabular-nums",
-          totalClassName,
-        )}
-      >
-        {total}
-      </p>
     </div>
   );
 }

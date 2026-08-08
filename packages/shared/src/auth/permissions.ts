@@ -101,6 +101,7 @@ export const PERMISSION_KEYS = {
   HR_MANAGE_LEAVE_POLICY: "hr:manage_leave_policy",
   HR_MANAGE_SHIFT_CATALOG: "hr:manage_shift_catalog",
   HR_MANAGE_POSITION_TASKS: "hr:manage_position_tasks",
+  HR_MANAGE_EMPLOYEE_SHIFT_OVERRIDES: "hr:manage_employee_shift_overrides",
   HR_PAYROLL_PREPARE: "hr:payroll_prepare",
   HR_PAYROLL_SNAPSHOT: "hr:payroll_snapshot",
 
@@ -164,7 +165,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 107;
+export const PERMISSION_KEY_COUNT = 108;
 
 /**
  * Pure function: check if a permission set contains a given key.

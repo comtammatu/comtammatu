@@ -200,11 +200,14 @@ filtered to that branch.
 | Approve checkout                                    | Use `/hr/attendance`                   | Operate for oversight                   | Operate own branch                   |
 | Approve/reject leave                                | Use `/hr/attendance`                   | Operate for oversight                   | Operate own branch                   |
 | Define company shift catalog or leave policy        | Denied on Branch plane                 | Denied on Branch plane; use `/hr/setup` | Denied                               |
+| Employee shift-task overrides (`shift_checklist_templates.employee_id`) | Operate via `/hr/setup` | Operate via `/hr/setup` | Operate own-branch employees via Team → Nhân viên (`hr:manage_employee_shift_overrides`) |
+| Company position task templates (`position_shift_tasks`) | Operate via `/hr/setup` | Operate via `/hr/setup` | Denied |
 
 The Branch Manager can manage people operations, not legal employment or
 security administration. `Thiết lập ca làm` at branch scope means assigning an
 approved shift to employees. It does not mean creating a second branch shift
-catalog.
+catalog. Branch Managers may customize per-employee “Việc trong ca” overrides
+for staff on their branch; company-wide position templates stay Owner/HR-only.
 
 ### Personal self-service
 
@@ -247,6 +250,7 @@ membership, not from broad HR or Branch Manager capabilities.
 | `hr:manage_leave_policy`     | Stop borrowing broad `settings:tenant`                                     | Tenant          | Tenant                | None              |
 | `hr:manage_shift_catalog`    | Stop borrowing `staff:manage` for company shifts                           | Tenant          | Tenant                | None              |
 | `hr:manage_position_tasks`   | Stop borrowing `staff:manage` for shift-task rules                         | Tenant          | Tenant                | None              |
+| `hr:manage_employee_shift_overrides` | Branch-scoped employee override templates without position CRUD     | Tenant (via position-tasks key) | Tenant (via position-tasks key) | Site              |
 | `hr:payroll_prepare`         | Replace the HR use of `finance:payroll_calculate`                          | Tenant          | Tenant                | None              |
 | `hr:payroll_snapshot`        | Separate preparation from final HR obligation snapshot                     | Tenant          | Tenant                | None              |
 | `staff:provision`            | Separate account lifecycle from employee and authorization mutation        | Tenant          | Tenant                | None              |

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   PackagePlus as IconPackagePlus,
   Search as IconSearch,
@@ -44,6 +44,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
@@ -53,6 +54,15 @@ import {
 } from "../purchase-order-actions";
 
 const copy = messages.inventory.po;
+const ORDER_OVERLAY_KEYS = [
+  "poId",
+  "demandId",
+  "mode",
+  "ordersQ",
+  "ordersStatus",
+  "ordersSite",
+  "ordersPage",
+] as const;
 
 export type PurchaseOrderLineRow = {
   id: number;
@@ -110,30 +120,25 @@ export function PurchaseOrdersClient({
   embedded?: boolean;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [search, setSearch] = useState(
-    () => searchParams.get("ordersQ") ?? "",
-  );
+  const overlay = useDocumentOverlayUrl(ORDER_OVERLAY_KEYS);
+  const [search, setSearch] = useState(() => overlay.get("ordersQ") ?? "");
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [isPending, startTransition] = useTransition();
 
-  const statusFilter = searchParams.get("ordersStatus") ?? "all";
-  const siteFilter = searchParams.get("ordersSite") ?? "all";
-  const currentPage = Math.max(
-    Number(searchParams.get("ordersPage")) || 1,
-    1,
-  );
-  const parsedPoId = Number(searchParams.get("poId"));
+  const statusFilter = overlay.get("ordersStatus") ?? "all";
+  const siteFilter = overlay.get("ordersSite") ?? "all";
+  const currentPage = Math.max(Number(overlay.get("ordersPage")) || 1, 1);
+  const parsedPoId = Number(overlay.get("poId"));
   const selectedPoId =
     Number.isInteger(parsedPoId) && parsedPoId > 0 ? parsedPoId : null;
-  const mode = searchParams.get("mode");
+  const mode = overlay.get("mode");
   const selectedRow =
     selectedPoId == null
       ? null
       : (rows.find((row) => row.id === selectedPoId) ?? null);
+  const viewOpen = mode === "view" && selectedRow != null;
   const filteredRows = useMemo(
     () =>
       rows.filter(
@@ -161,21 +166,22 @@ export function PurchaseOrdersClient({
       nextMode: "view" | null,
       history: "push" | "replace" = "push",
     ) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "orders");
-      params.delete("demandId");
-      if (poId == null) params.delete("poId");
-      else params.set("poId", String(poId));
-      if (nextMode == null) params.delete("mode");
-      else params.set("mode", nextMode);
-      router[history](`${pathname}?${params}`, { scroll: false });
+      overlay.patchOverlay(
+        {
+          tab: "orders",
+          demandId: null,
+          poId,
+          mode: nextMode,
+        },
+        history,
+      );
     },
-    [pathname, router, searchParams],
+    [overlay.patchOverlay],
   );
 
   useEffect(() => {
-    setSearch(searchParams.get("ordersQ") ?? "");
-  }, [searchParams]);
+    setSearch(overlay.get("ordersQ") ?? "");
+  }, [overlay.get, overlay.values]);
 
   useEffect(() => {
     if (mode !== "view" || selectedPoId == null || selectedRow != null) return;
@@ -359,11 +365,13 @@ export function PurchaseOrdersClient({
                 onChange={(event) => {
                   const value = event.target.value;
                   setSearch(value);
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (value) params.set("ordersQ", value);
-                  else params.delete("ordersQ");
-                  params.delete("ordersPage");
-                  router.replace(`${pathname}?${params}`, { scroll: false });
+                  overlay.patchOverlay(
+                    {
+                      ordersQ: value || null,
+                      ordersPage: null,
+                    },
+                    "replace",
+                  );
                 }}
                 placeholder={copy.searchPlaceholder}
                 aria-label={copy.searchPlaceholder}
@@ -375,11 +383,13 @@ export function PurchaseOrdersClient({
               <Select
                 value={statusFilter}
                 onValueChange={(value) => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (value === "all") params.delete("ordersStatus");
-                  else params.set("ordersStatus", value);
-                  params.delete("ordersPage");
-                  router.replace(`${pathname}?${params}`, { scroll: false });
+                  overlay.patchOverlay(
+                    {
+                      ordersStatus: value === "all" ? null : value,
+                      ordersPage: null,
+                    },
+                    "replace",
+                  );
                 }}
               >
                 <SelectTrigger
@@ -401,11 +411,13 @@ export function PurchaseOrdersClient({
                 <Select
                   value={siteFilter}
                   onValueChange={(value) => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    if (value === "all") params.delete("ordersSite");
-                    else params.set("ordersSite", value);
-                    params.delete("ordersPage");
-                    router.replace(`${pathname}?${params}`, { scroll: false });
+                    overlay.patchOverlay(
+                      {
+                        ordersSite: value === "all" ? null : value,
+                        ordersPage: null,
+                      },
+                      "replace",
+                    );
                   }}
                 >
                   <SelectTrigger
@@ -437,10 +449,10 @@ export function PurchaseOrdersClient({
         pageSize={50}
         currentPage={currentPage}
         onPageChange={(page) => {
-          const params = new URLSearchParams(searchParams.toString());
-          if (page <= 1) params.delete("ordersPage");
-          else params.set("ordersPage", String(page));
-          router.replace(`${pathname}?${params}`, { scroll: false });
+          overlay.patchOverlay(
+            { ordersPage: page <= 1 ? null : page },
+            "replace",
+          );
         }}
         emptyTitle={copy.emptyInitialTitle}
         emptyDescription={copy.emptyInitialDescription}
@@ -480,7 +492,7 @@ export function PurchaseOrdersClient({
     <>
       {content}
       <AppDialog
-        open={mode === "view" && selectedRow != null}
+        open={viewOpen}
         onOpenChange={(open) => {
           if (!open) updateUrl(null, null, "replace");
         }}
@@ -492,7 +504,7 @@ export function PurchaseOrdersClient({
             : undefined
         }
         footer={
-          selectedRow ? (
+          viewOpen && selectedRow ? (
             <>
               {canManage &&
               selectedRow.status === "approved" &&
@@ -546,7 +558,7 @@ export function PurchaseOrdersClient({
           ) : null
         }
       >
-        {selectedRow ? (
+        {viewOpen && selectedRow ? (
           <div className="flex flex-col gap-4">
             <DescriptionList
               className="sm:grid sm:grid-cols-4 sm:gap-4"

@@ -12,7 +12,6 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDetailFooter } from "@/components/surface";
 import {
   BranchOperatorControlBar,
-  BranchOperatorPanel,
   BranchOperatorPage,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
@@ -20,6 +19,7 @@ import {
   type BranchStocktakeCountUnit,
 } from "@lib/inventory/stocktake-model";
 import { messages } from "@lib/messages";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import { formatQty } from "@lib/inventory/format";
 import {
   getDefaultIngredientUnit,
@@ -196,7 +196,11 @@ export function BranchStocktakeCountClient({
         counts: payload,
       });
       if (!result.success || !result.data) {
-        toast.error(result.error ?? "Không submit được vòng đếm");
+        const applied = applyInventoryActionError(
+          result,
+          "Không gửi được vòng đếm. Kiểm tra quyền và trạng thái phiên.",
+        );
+        toast.error(applied.toastMessage);
         return;
       }
       toast.success(`Đã lưu ${formatCount(result.data.appliedCount)} dòng đếm`);
@@ -283,14 +287,6 @@ export function BranchStocktakeCountClient({
           unitPreviewByIngredient={unitPreviewByIngredient}
           chrome={safetyChrome}
         />
-
-        <BranchOperatorPanel title="Phiên đếm" size="sm">
-          <p className="text-sm text-muted-foreground">
-            {data.blindMode
-              ? "Không hiển thị tồn hệ thống trước khi chốt."
-              : "Số đếm được lưu theo vòng hiện tại."}
-          </p>
-        </BranchOperatorPanel>
 
         <AppDetailFooter
           sticky

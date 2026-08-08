@@ -289,9 +289,9 @@ test("Payment settings use POS QR as the only order receipt path", () => {
   assert.doesNotMatch(form, /content_order_token/);
   assert.doesNotMatch(settingsAction, /PAYMENT_CONTENT_ORDER_TOKEN/);
   assert.doesNotMatch(messages, /MATU\/DON/);
-  assert.match(messages, /Nội dung QR POS \/ MB Soundbox/);
-  assert.match(messages, /Lệnh SePay vận hành \(tùy chọn\)/);
-  assert.match(messages, /Thu đơn POS dùng trực tiếp nội dung QR POS/);
+  assert.match(messages, /Nội dung chuyển khoản POS/);
+  assert.match(messages, /Lệnh vận hành SePay \(tùy chọn\)/);
+  assert.match(messages, /không dùng cho thu POS/);
   assert.match(webhook, /PAYMENT_CONTENT_ORDER_TOKEN/);
   assert.match(webhook, /token === settings\.orderToken/);
 });
@@ -309,9 +309,8 @@ test("SePay expense commands match an existing expense instead of classifying it
     /function parseExpenseCommandId\(value: string \| null\)/,
   );
   assert.match(webhook, /p_expense_ids:\s*\[expenseId\]/);
-  assert.match(messages, /Danh mục chi nằm ở phiếu chi/);
-  assert.match(messages, /không suy ra danh mục từ nội dung chuyển khoản/);
-  assert.match(messages, /LUONG hoặc DIEN thay cho mã phiếu chi/);
+  assert.match(messages, /Dùng mã phiếu chi trong lệnh/);
+  assert.match(messages, /không đặt tên danh mục chi vào nội dung/);
 });
 
 test("Printed provisional bills create or reuse the canonical VietQR payment", () => {

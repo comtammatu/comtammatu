@@ -56,6 +56,10 @@ import {
   type TransferActionKind,
   type TransferDetail,
 } from "@lib/inventory/transfer-detail-model";
+import {
+  applyInventoryActionError,
+  inventoryShortageToastMessage,
+} from "@lib/inventory/apply-inventory-action-error";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 
@@ -115,6 +119,9 @@ export function TransferDetailClient({
   const [shortNote, setShortNote] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [shortageIngredientId, setShortageIngredientId] = useState<
+    number | null
+  >(null);
   const isReceiveMode = isTransferReceiveReady(transfer.status);
   const transferListHref =
     listHref ??
@@ -209,10 +216,28 @@ export function TransferDetailClient({
       }
 
       if (!res?.success) {
-        toast.error(res?.error ?? "Không thể cập nhật phiếu điều chuyển.");
+        const applied = applyInventoryActionError(
+          res ?? {},
+          "Không thể cập nhật phiếu điều chuyển.",
+        );
+        const namedLine =
+          applied.lineTarget == null
+            ? null
+            : transfer.items.find(
+                (item) => item.ingredientId === applied.lineTarget?.ingredientId,
+              );
+        setShortageIngredientId(applied.lineTarget?.ingredientId ?? null);
+        toast.error(
+          inventoryShortageToastMessage(
+            applied,
+            namedLine?.name,
+            copy.shortageNamed,
+          ),
+        );
         return;
       }
 
+      setShortageIngredientId(null);
       toast.success(actionLabel);
       router.refresh();
     });
@@ -226,7 +251,11 @@ export function TransferDetailClient({
     startTransition(async () => {
       const result = await cancelStockTransfer(transfer.id, cancelReason);
       if (!result.success) {
-        toast.error(result.error);
+        const applied = applyInventoryActionError(
+          result,
+          "Không thể hủy phiếu điều chuyển.",
+        );
+        toast.error(applied.toastMessage);
         return;
       }
       toast.success(copy.cancelSuccess);
@@ -241,9 +270,22 @@ export function TransferDetailClient({
       key: "ingredient",
       header: tTerm("ingredient"),
       render: (item) => (
-        <div className="flex flex-col whitespace-normal break-words min-w-48 max-w-80">
+        <div
+          className={cn(
+            "flex flex-col whitespace-normal break-words min-w-48 max-w-80",
+            shortageIngredientId === item.ingredientId && "text-destructive",
+          )}
+          data-shortage={
+            shortageIngredientId === item.ingredientId ? "true" : undefined
+          }
+        >
           <span>{item.name}</span>
           <span className="text-xs text-muted-foreground">{item.sku}</span>
+          {shortageIngredientId === item.ingredientId ? (
+            <span className="text-xs text-destructive">
+              {copy.lineShortageHint}
+            </span>
+          ) : null}
         </div>
       ),
     },

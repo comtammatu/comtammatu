@@ -8,7 +8,7 @@ import {
   useTransition,
 } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
@@ -62,6 +62,13 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
+import {
+  defaultPurchaseRequestUnit,
+  purchaseRequestStatusVariant,
+  type PurchaseRequestIngredientOption,
+  type PurchaseRequestRow,
+} from "@lib/inventory/purchase-request-model";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
@@ -81,56 +88,26 @@ import {
   type PurchaseOrderSupplier,
 } from "./purchase-order-drafts";
 
+export type {
+  PurchaseRequestItemRow,
+  PurchaseRequestRow,
+  PurchaseRequestIngredientOption,
+} from "@lib/inventory/purchase-request-model";
+
 const copy = messages.inventory.purchaseRequests;
+const DEMAND_OVERLAY_KEYS = [
+  "demandId",
+  "poId",
+  "mode",
+  "needsQ",
+  "needsStatus",
+  "needsSite",
+  "needsPage",
+] as const;
 const comboFilter = (
   option: { label: string; keywords?: string[] },
   query: string,
 ) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
-
-export type PurchaseRequestItemRow = {
-  id: number;
-  ingredientId: number;
-  ingredientName: string;
-  quantity: number;
-  orderedQuantity: number;
-  remainingQuantity: number;
-  entryUnitId: number;
-  unitLabel: string;
-  notes: string | null;
-};
-
-export type PurchaseRequestRow = {
-  id: number;
-  code: string;
-  branchId: number;
-  branchName: string;
-  status: string;
-  statusReason: string | null;
-  neededBy: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  lineCount: number;
-  orderedLineCount: number;
-  items: PurchaseRequestItemRow[];
-  allocations: Array<{
-    requestItemId: number;
-    supplierId: number;
-    quantity: number;
-  }>;
-  purchaseOrders: Array<{
-    id: number;
-    code: string;
-    status: string;
-    supplierName: string;
-  }>;
-};
-
-export type PurchaseRequestIngredientOption = {
-  id: number;
-  name: string;
-  units: Array<{ id: number; label: string; factor: number }>;
-};
 
 type RequestDraftLine = {
   key: string;
@@ -143,29 +120,6 @@ type ReasonAction = {
   kind: "cancel" | "close" | "request_changes" | "reject";
   row: PurchaseRequestRow;
 };
-
-function statusVariant(status: string) {
-  if (status === "ordered") return "success" as const;
-  if (
-    status === "pending_allocation" ||
-    status === "partially_ordered" ||
-    status === "changes_requested"
-  ) {
-    return "warning" as const;
-  }
-  if (status === "cancelled") return "destructive" as const;
-  return "secondary" as const;
-}
-
-function defaultUnit(ingredient?: PurchaseRequestIngredientOption) {
-  return ingredient?.units.reduce<
-    PurchaseRequestIngredientOption["units"][number] | undefined
-  >(
-    (selected, unit) =>
-      selected == null || unit.factor > selected.factor ? unit : selected,
-    undefined,
-  );
-}
 
 function blankRequestLine(): RequestDraftLine {
   return {
@@ -197,8 +151,8 @@ export function PurchaseRequestsClient({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [search, setSearch] = useState(() => searchParams.get("needsQ") ?? "");
+  const overlay = useDocumentOverlayUrl(DEMAND_OVERLAY_KEYS);
+  const [search, setSearch] = useState(() => overlay.get("needsQ") ?? "");
   const [branchId, setBranchId] = useState(String(branches[0]?.id ?? ""));
   const [neededBy, setNeededBy] = useState(() => getVNDateString());
   const [requestLines, setRequestLines] = useState<RequestDraftLine[]>([
@@ -220,11 +174,11 @@ export function PurchaseRequestsClient({
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const mode = searchParams.get("mode");
-  const statusFilter = searchParams.get("needsStatus") ?? "all";
-  const siteFilter = searchParams.get("needsSite") ?? "all";
-  const currentPage = Math.max(Number(searchParams.get("needsPage")) || 1, 1);
-  const demandId = Number(searchParams.get("demandId"));
+  const mode = overlay.get("mode");
+  const statusFilter = overlay.get("needsStatus") ?? "all";
+  const siteFilter = overlay.get("needsSite") ?? "all";
+  const currentPage = Math.max(Number(overlay.get("needsPage")) || 1, 1);
+  const demandId = Number(overlay.get("demandId"));
   const selectedId =
     Number.isInteger(demandId) && demandId > 0 ? demandId : null;
   const selected =
@@ -236,6 +190,14 @@ export function PurchaseRequestsClient({
   const createOpen = mode === "create" || (mode === "edit" && selected != null);
   const allocateOpen = mode === "allocate" && selected != null;
   const recordMode = mode === "view" || mode === "edit" || mode === "allocate";
+  const ingredientOptions = useMemo(
+    () =>
+      ingredients.map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      })),
+    [ingredients],
+  );
   const filtered = useMemo(
     () =>
       rows.filter(
@@ -273,21 +235,22 @@ export function PurchaseRequestsClient({
       nextMode: "view" | "edit" | "create" | "allocate" | null,
       method: "push" | "replace" = "push",
     ) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", "needs");
-      params.delete("poId");
-      if (nextDemandId == null) params.delete("demandId");
-      else params.set("demandId", String(nextDemandId));
-      if (nextMode == null) params.delete("mode");
-      else params.set("mode", nextMode);
-      router[method](`${pathname}?${params}`, { scroll: false });
+      overlay.patchOverlay(
+        {
+          tab: "needs",
+          poId: null,
+          demandId: nextDemandId,
+          mode: nextMode,
+        },
+        method,
+      );
     },
-    [pathname, router, searchParams],
+    [overlay.patchOverlay],
   );
 
   useEffect(() => {
-    setSearch(searchParams.get("needsQ") ?? "");
-  }, [searchParams]);
+    setSearch(overlay.get("needsQ") ?? "");
+  }, [overlay.get, overlay.values]);
 
   useEffect(() => {
     if (!recordMode || selectedId == null || selected != null) return;
@@ -371,7 +334,7 @@ export function PurchaseRequestsClient({
     const ingredient = ingredients.find((item) => item.id === Number(value));
     patchRequestLine(line.key, {
       ingredientId: value,
-      entryUnitId: String(defaultUnit(ingredient)?.id ?? ""),
+      entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
     });
   }
 
@@ -508,7 +471,7 @@ export function PurchaseRequestsClient({
         }
         const purchaseOrders = result.data?.purchaseOrders ?? [];
         toast.success(copy.approveSuccess(purchaseOrders.map((po) => po.code)));
-        const params = new URLSearchParams(searchParams.toString());
+        const params = new URLSearchParams(window.location.search);
         params.set("tab", "orders");
         params.delete("demandId");
         if (purchaseOrders[0]) params.set("poId", String(purchaseOrders[0].id));
@@ -684,7 +647,7 @@ export function PurchaseRequestsClient({
       key: "status",
       header: copy.statusColumn,
       render: (row) => (
-        <Badge variant={statusVariant(row.status)}>
+        <Badge variant={purchaseRequestStatusVariant(row.status)}>
           {copy.statusLabel(row.status)}
         </Badge>
       ),
@@ -735,11 +698,13 @@ export function PurchaseRequestsClient({
             onChange={(event) => {
               const value = event.target.value;
               setSearch(value);
-              const params = new URLSearchParams(searchParams.toString());
-              if (value) params.set("needsQ", value);
-              else params.delete("needsQ");
-              params.delete("needsPage");
-              router.replace(`${pathname}?${params}`, { scroll: false });
+              overlay.patchOverlay(
+                {
+                  needsQ: value || null,
+                  needsPage: null,
+                },
+                "replace",
+              );
             }}
             placeholder={copy.searchPlaceholder}
             aria-label={copy.searchPlaceholder}
@@ -751,11 +716,13 @@ export function PurchaseRequestsClient({
           <Select
             value={statusFilter}
             onValueChange={(value) => {
-              const params = new URLSearchParams(searchParams.toString());
-              if (value === "all") params.delete("needsStatus");
-              else params.set("needsStatus", value);
-              params.delete("needsPage");
-              router.replace(`${pathname}?${params}`, { scroll: false });
+              overlay.patchOverlay(
+                {
+                  needsStatus: value === "all" ? null : value,
+                  needsPage: null,
+                },
+                "replace",
+              );
             }}
           >
             <SelectTrigger size="field" aria-label={copy.statusFilterAria}>
@@ -774,11 +741,13 @@ export function PurchaseRequestsClient({
             <Select
               value={siteFilter}
               onValueChange={(value) => {
-                const params = new URLSearchParams(searchParams.toString());
-                if (value === "all") params.delete("needsSite");
-                else params.set("needsSite", value);
-                params.delete("needsPage");
-                router.replace(`${pathname}?${params}`, { scroll: false });
+                overlay.patchOverlay(
+                  {
+                    needsSite: value === "all" ? null : value,
+                    needsPage: null,
+                  },
+                  "replace",
+                );
               }}
             >
               <SelectTrigger size="field" aria-label={copy.warehouseFilterAria}>
@@ -830,10 +799,10 @@ export function PurchaseRequestsClient({
         pageSize={50}
         currentPage={currentPage}
         onPageChange={(page) => {
-          const params = new URLSearchParams(searchParams.toString());
-          if (page <= 1) params.delete("needsPage");
-          else params.set("needsPage", String(page));
-          router.replace(`${pathname}?${params}`, { scroll: false });
+          overlay.patchOverlay(
+            { needsPage: page <= 1 ? null : page },
+            "replace",
+          );
         }}
         onRowClick={(row) => updateUrl(row.id, "view")}
         emptyTitle={copy.emptyTitle}
@@ -851,7 +820,7 @@ export function PurchaseRequestsClient({
           >
             <span className="flex items-center justify-between gap-2">
               <span className="font-mono font-semibold">{row.code}</span>
-              <Badge variant={statusVariant(row.status)}>
+              <Badge variant={purchaseRequestStatusVariant(row.status)}>
                 {copy.statusLabel(row.status)}
               </Badge>
             </span>
@@ -952,129 +921,136 @@ export function PurchaseRequestsClient({
           </>
         }
       >
-        {selected?.status === "changes_requested" && selected.statusReason ? (
-          <Item variant="muted" size="sm">
-            <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
-            {selected.statusReason}
-          </Item>
-        ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Select value={branchId} onValueChange={setBranchId}>
-            <SelectTrigger
-              size="field"
-              className="w-full"
-              aria-label={copy.branchRequired}
-            >
-              <SelectValue placeholder={copy.branchRequired} />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={String(branch.id)}>
-                  {branch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <BusinessDatePicker
-            value={neededBy}
-            onValueChange={setNeededBy}
-            aria-label={copy.neededBy}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          {requestLines.map((line) => {
-            const ingredient = ingredients.find(
-              (item) => item.id === Number(line.ingredientId),
-            );
-            const hasSupplier = mappedIngredientIds.includes(
-              Number(line.ingredientId),
-            );
-            return (
-              <Item
-                key={line.key}
-                variant="outline"
-                size="sm"
-                className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
-              >
-                <div className="min-w-0">
-                  <Combobox
-                    filter={comboFilter}
-                    size="field"
-                    value={line.ingredientId}
-                    onValueChange={(value) => chooseIngredient(line, value)}
-                    options={ingredients.map((item) => ({
-                      value: String(item.id),
-                      label: item.name,
-                    }))}
-                    placeholder={copy.ingredient}
-                    searchPlaceholder={copy.searchPlaceholder}
-                  />
-                  {line.ingredientId && !hasSupplier ? (
-                    <span className="mt-1 block text-xs text-warning-foreground">
-                      {copy.missingSupplierShort}
-                    </span>
-                  ) : null}
-                </div>
-                <QuantityInput
-                  controlSize="field"
-                  value={line.quantity}
-                  onValueChange={(value) =>
-                    patchRequestLine(line.key, { quantity: value })
-                  }
-                  maxFractionDigits={3}
-                  placeholder={copy.quantity}
-                  aria-label={copy.quantity}
-                />
-                <Select
-                  value={line.entryUnitId}
-                  onValueChange={(value) =>
-                    patchRequestLine(line.key, { entryUnitId: value })
-                  }
-                >
-                  <SelectTrigger
-                    size="field"
-                    className="w-full"
-                    aria-label={copy.unit}
-                  >
-                    <SelectValue placeholder={copy.unit} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(ingredient?.units ?? []).map((unit) => (
-                      <SelectItem key={unit.id} value={String(unit.id)}>
-                        {unit.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-lg"
-                  disabled={requestLines.length === 1}
-                  onClick={() =>
-                    setRequestLines((current) =>
-                      current.filter((item) => item.key !== line.key),
-                    )
-                  }
-                  aria-label={ACTIONS_VI.delete}
-                >
-                  <IconTrash />
-                </Button>
+        {createOpen ? (
+          <>
+            {selected?.status === "changes_requested" &&
+            selected.statusReason ? (
+              <Item variant="muted" size="sm">
+                <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
+                {selected.statusReason}
               </Item>
-            );
-          })}
-          <Button
-            type="button"
-            variant="outline"
-            className="self-start"
-            onClick={() =>
-              setRequestLines((current) => [...current, blankRequestLine()])
-            }
-          >
-            <IconPlus data-icon="inline-start" />
-            {copy.addLine}
-          </Button>
-        </div>
+            ) : null}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger
+                  size="field"
+                  className="w-full"
+                  aria-label={copy.branchRequired}
+                >
+                  <SelectValue placeholder={copy.branchRequired} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <BusinessDatePicker
+                value={neededBy}
+                onValueChange={setNeededBy}
+                aria-label={copy.neededBy}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              {requestLines.map((line) => {
+                const ingredient = ingredients.find(
+                  (item) => item.id === Number(line.ingredientId),
+                );
+                const hasSupplier = mappedIngredientIds.includes(
+                  Number(line.ingredientId),
+                );
+                return (
+                  <Item
+                    key={line.key}
+                    variant="outline"
+                    size="sm"
+                    className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
+                  >
+                    <div className="min-w-0">
+                      <Combobox
+                        filter={comboFilter}
+                        size="field"
+                        value={line.ingredientId}
+                        onValueChange={(value) =>
+                          chooseIngredient(line, value)
+                        }
+                        options={ingredientOptions}
+                        placeholder={copy.ingredient}
+                        searchPlaceholder={copy.searchPlaceholder}
+                      />
+                      {line.ingredientId && !hasSupplier ? (
+                        <span className="mt-1 block text-xs text-warning-foreground">
+                          {copy.missingSupplierShort}
+                        </span>
+                      ) : null}
+                    </div>
+                    <QuantityInput
+                      controlSize="field"
+                      value={line.quantity}
+                      onValueChange={(value) =>
+                        patchRequestLine(line.key, { quantity: value })
+                      }
+                      maxFractionDigits={3}
+                      placeholder={copy.quantity}
+                      aria-label={copy.quantity}
+                    />
+                    <Select
+                      value={line.entryUnitId}
+                      onValueChange={(value) =>
+                        patchRequestLine(line.key, { entryUnitId: value })
+                      }
+                    >
+                      <SelectTrigger
+                        size="field"
+                        className="w-full"
+                        aria-label={copy.unit}
+                      >
+                        <SelectValue placeholder={copy.unit} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(ingredient?.units ?? []).map((unit) => (
+                          <SelectItem key={unit.id} value={String(unit.id)}>
+                            {unit.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-lg"
+                      disabled={requestLines.length === 1}
+                      onClick={() =>
+                        setRequestLines((current) =>
+                          current.filter((item) => item.key !== line.key),
+                        )
+                      }
+                      aria-label={ACTIONS_VI.delete}
+                    >
+                      <IconTrash />
+                    </Button>
+                  </Item>
+                );
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                className="self-start"
+                onClick={() =>
+                  setRequestLines((current) => [
+                    ...current,
+                    blankRequestLine(),
+                  ])
+                }
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.addLine}
+              </Button>
+            </div>
+          </>
+        ) : null}
       </AppDialog>
 
       <AppDialog

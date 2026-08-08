@@ -1,14 +1,15 @@
 "use client";
 
 import {
+  CalendarDays,
   ChefHat,
   Clock,
   Home,
-  MessageSquareHeart,
   MoreHorizontal,
   Package,
   Send,
   Truck,
+  User,
   Users,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -17,8 +18,10 @@ import type { BranchKind } from "@comtammatu/shared/auth";
 import { AppBottomNav } from "@/components/app-bottom-nav";
 import { isNavItemActive, type ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
+import type { BranchNavBadgeCounts } from "./_lib/branch-nav-badges";
 
 const branchCopy = messages.settings.branch;
+const employeeNavCopy = messages.employee.nav;
 
 function centralNavItems(
   branchId: number,
@@ -100,16 +103,23 @@ function centralNavItems(
   ];
 }
 
+function pendingBadgeLabel(count: number | undefined): string | undefined {
+  if (count == null || count <= 0) return undefined;
+  return messages.operator.nav.pendingBadge(count);
+}
+
 export function OperatorBottomNav({
   branchId,
   showEmployeeLinks,
   showBranchManagement,
   branchKind = "branch",
+  badges,
 }: {
   branchId: number;
   showEmployeeLinks: boolean;
   showBranchManagement: boolean;
   branchKind?: BranchKind;
+  badges?: BranchNavBadgeCounts;
 }) {
   const pathname = usePathname();
 
@@ -122,6 +132,7 @@ export function OperatorBottomNav({
             label: APP_COPY_VI.branchHome,
             icon: Home,
             exact: true,
+            badgeCount: badges?.home,
           },
           ...(showEmployeeLinks
             ? [
@@ -129,12 +140,25 @@ export function OperatorBottomNav({
                   href: `/br/${branchId}/shift`,
                   label: APP_COPY_VI.operatorShift,
                   icon: Clock,
-                  exact: false,
-                  matchPrefixes: [
-                    `/br/${branchId}/shift/clock`,
-                    `/br/${branchId}/shift/checkout-approvals`,
-                  ],
+                  exact: true,
+                  // Managers keep schedule under Ca; employees have a Lịch tab.
+                  matchPrefixes: showBranchManagement
+                    ? [
+                        `/br/${branchId}/shift/clock`,
+                        `/br/${branchId}/shift/schedule`,
+                      ]
+                    : [`/br/${branchId}/shift/clock`],
                 },
+                ...(!showBranchManagement
+                  ? [
+                      {
+                        href: `/br/${branchId}/shift/schedule`,
+                        label: employeeNavCopy.schedule,
+                        icon: CalendarDays,
+                        exact: false,
+                      },
+                    ]
+                  : []),
               ]
             : []),
           ...(showBranchManagement
@@ -144,24 +168,35 @@ export function OperatorBottomNav({
                   label: branchCopy.branchNavTeam,
                   icon: Users,
                   exact: false,
-                  matchPrefixes: [`/br/${branchId}/team`],
+                  badgeCount: badges?.team,
+                  matchPrefixes: [
+                    `/br/${branchId}/team`,
+                    `/br/${branchId}/shift/roster`,
+                    `/br/${branchId}/shift/attendance`,
+                    `/br/${branchId}/shift/checkout-approvals`,
+                    `/br/${branchId}/shift/leave-approvals`,
+                  ],
                 },
                 {
-                  href: `/br/${branchId}/stock/on-hand`,
+                  // Work-first stock landing (phiếu + tiles), not bare on-hand.
+                  href: `/br/${branchId}/stock`,
                   label: branchCopy.branchNavStock,
                   icon: Package,
-                  exact: false,
+                  exact: true,
+                  badgeCount: badges?.stock,
                   matchPrefixes: [`/br/${branchId}/stock`],
                 },
-                {
-                  href: `/br/${branchId}/feedback`,
-                  label: branchCopy.branchNavFeedback,
-                  icon: MessageSquareHeart,
-                  exact: false,
-                  matchPrefixes: [`/br/${branchId}/feedback`],
-                },
               ]
-            : []),
+            : showEmployeeLinks
+              ? [
+                  {
+                    href: `/br/${branchId}/profile`,
+                    label: employeeNavCopy.profileShort,
+                    icon: User,
+                    exact: false,
+                  },
+                ]
+              : []),
         ];
 
   return (
@@ -174,6 +209,8 @@ export function OperatorBottomNav({
         label: item.label,
         icon: item.icon,
         active: isNavItemActive(item, pathname),
+        badgeCount: item.badgeCount,
+        badgeLabel: pendingBadgeLabel(item.badgeCount),
       }))}
     />
   );

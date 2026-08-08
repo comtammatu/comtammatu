@@ -38,15 +38,15 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/tables/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/checkout-approvals/page.tsx":
-    "REDIRECT-SHIM",
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx":
-    "REDIRECT-SHIM",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx":
-    "REDIRECT-SHIM",
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx":
-    "REDIRECT-SHIM",
+    "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx":
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/shift/schedule/leave/page.tsx":

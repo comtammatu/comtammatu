@@ -162,8 +162,8 @@ export function OrderCardSummary({
 }) {
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
-      <ItemTitle className="w-full min-w-0 justify-between gap-3 text-base">
-        <span className="min-w-0 truncate">
+      <ItemTitle className="w-full min-w-0 max-w-full justify-between gap-3 text-base">
+        <span className="min-w-0 flex-1 truncate">
           {getCompactOrderTitle(order, { showDineInSequence })}
         </span>
         <span
@@ -216,7 +216,7 @@ const OrderCard = memo(function OrderCard({
       variant="outline"
       size="sm"
       role="listitem"
-      className="bg-card"
+      className="w-full max-w-full min-w-0 flex-col items-stretch overflow-hidden bg-card"
     >
       <OrderCardSummary
         order={order}
@@ -233,12 +233,12 @@ const OrderCard = memo(function OrderCard({
           </>
         }
       />
-      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+      <ItemFooter className="mt-1.5 grid w-full min-w-0 grid-cols-2 gap-2 border-t border-border/60 pt-2">
         <Button
           data-testid={`pos-order-detail-${order.id}`}
           variant="outline"
           size="touch"
-          className="px-3 text-sm"
+          className="w-full min-w-0 px-2 text-sm"
           onClick={() => onViewDetail(order.id, order.order_number, order)}
         >
           {messages.pos.orderHistory.handleOrder}
@@ -247,7 +247,7 @@ const OrderCard = memo(function OrderCard({
           data-testid={`pos-order-bill-${order.id}`}
           variant="default"
           size="touch"
-          className="px-3 text-sm"
+          className="w-full min-w-0 px-2 text-sm"
           onClick={() => onViewBill(order.id, "payment")}
         >
           <IconReceipt data-icon="inline-start" />
@@ -320,10 +320,10 @@ function ActiveOrdersListComponent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-3 px-3 pb-4 pt-2 md:p-2">
-          <ItemGroup className="gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      <ScrollArea className="min-h-0 min-w-0 w-full flex-1 overflow-hidden">
+        <div className="flex w-full min-w-0 max-w-full flex-col gap-3 px-3 pb-4 pt-2 md:p-2">
+          <ItemGroup className="w-full min-w-0 gap-2">
             {activeOrders.map((order) => (
               <OrderCard
                 key={order.id}

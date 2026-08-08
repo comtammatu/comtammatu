@@ -46,6 +46,6 @@ test("POS payment recovery controls stay touch-sized and responsive", () => {
   );
   assert.match(
     source,
-    /size="touch"\s+className="w-full sm:w-auto sm:self-start"\s+onClick=\{\(\) => void handleCancelPendingPayment\(\)\}[\s\S]{0,400}\{messages\.pos\.payment\.cancelPending\}/,
+    /size="touch"\s+className="self-start text-destructive[^"]*"\s+onClick=\{\(\) => void handleCancelPendingPayment\(\)\}[\s\S]{0,400}\{messages\.pos\.payment\.cancelPending\}/,
   );
 });

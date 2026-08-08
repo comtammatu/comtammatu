@@ -12,6 +12,10 @@ import {
 import { createStockTransfer } from "@/(protected)/inventory/transfer-actions";
 import { messages } from "@lib/messages";
 import {
+  applyInventoryActionError,
+  inventoryShortageToastMessage,
+} from "@lib/inventory/apply-inventory-action-error";
+import {
   buildTransferLinesPayload,
   clampTransferLineForSource,
   createAllAvailableTransferLines,
@@ -342,7 +346,23 @@ export function useTransferCreateController({
         lines: linesResult.lines,
       });
       if (!result.success || !result.data) {
-        toast.error(result.error ?? messages.inventory.transfer.createFailed);
+        const applied = applyInventoryActionError(
+          result,
+          messages.inventory.transfer.createFailed,
+        );
+        const named =
+          applied.lineTarget == null
+            ? null
+            : ingredients.find(
+                (item) => item.id === applied.lineTarget?.ingredientId,
+              )?.name;
+        toast.error(
+          inventoryShortageToastMessage(
+            applied,
+            named,
+            messages.inventory.transfer.shortageNamed,
+          ),
+        );
         return;
       }
       toast.success(messages.inventory.transfer.createSuccess);

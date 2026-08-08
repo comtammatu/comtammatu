@@ -22,24 +22,23 @@ export function PosOrderTargetRow({
 }) {
   const isExisting = target.kind === "existing-order";
 
+  // Existing-order append: keep one quiet label + cancel. The append pane
+  // already owns the "Món thêm chưa gửi" title — repeating warning badges
+  // here stacked three contexts across columns.
   return (
-    <div className="hidden shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background px-3 py-2 md:flex lg:px-4">
+    <div className="hidden h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 bg-background px-3 md:flex lg:px-4">
       <div className="flex min-w-0 items-center gap-2">
         <p className="font-heading min-w-0 truncate text-base font-semibold tracking-tight text-foreground">
           {target.label}
         </p>
-        <Badge
-          variant={isExisting ? "warning" : "outline"}
-          className="shrink-0 text-xs font-semibold"
-        >
-          {isExisting
-            ? messages.pos.desktop.pendingAppendTitle
-            : messages.pos.desktop.pendingNewTitle}
-        </Badge>
-        {isExisting && appendDraftQuantity > 0 ? (
-          <Badge variant="secondary" className="shrink-0 text-xs font-semibold">
-            {messages.pos.appendDraft.itemCount(appendDraftQuantity)}
+        {!isExisting ? (
+          <Badge variant="outline" className="shrink-0 text-xs font-semibold">
+            {messages.pos.desktop.pendingNewTitle}
           </Badge>
+        ) : appendDraftQuantity > 0 ? (
+          <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+            {messages.pos.appendDraft.itemCount(appendDraftQuantity)}
+          </span>
         ) : null}
       </div>
       <Button

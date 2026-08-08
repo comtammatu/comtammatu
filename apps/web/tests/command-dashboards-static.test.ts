@@ -271,7 +271,7 @@ test("branch command landing surfaces operations and readiness", () => {
   assert.match(page, /branch\.branch_kind !== "branch"/);
   assert.match(page, /const floorHref =[\s\S]*day\.tablesTotal <= 0/);
   assert.match(page, /day\.setupActiveTerminals <= 0/);
-  assert.match(page, /\/br\/\$\{branchId\}\/team\?tab=checkouts/);
+  assert.match(page, /\/br\/\$\{branchId\}\/shift\/checkout-approvals/);
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 

@@ -16,11 +16,17 @@ function ScrollArea({
       className={cn("relative", className)}
       {...props}
     >
+      {/*
+        Do not wrap children in ScrollArea.Content: Base UI sets
+        `style={{ minWidth: "fit-content" }}` on Content, which expands
+        full-width padded lists past the viewport and clips POS order cards.
+        Viewport still scrolls when children are intrinsically wider.
+      */}
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
         className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-foreground focus-visible:outline-1"
       >
-        <ScrollAreaPrimitive.Content>{children}</ScrollAreaPrimitive.Content>
+        {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar />
       <ScrollAreaPrimitive.Corner />

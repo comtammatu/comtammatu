@@ -92,7 +92,7 @@ export const APP_COPY_VI = {
   employeePortal: "Ca của tôi",
   hrWorkspace: "Nhân sự",
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
-  branchOperationsKds: "Bếp (KDS)",
+  branchOperationsKds: "Quầy Bếp",
   branchOperationsRunner: "Màn gọi số",
   branchCommand: "Điều hành chi nhánh",
   branchHome: "Hôm nay",

@@ -59,25 +59,30 @@ test("operator stock hub groups tiles into ordered workflow sections", () => {
   assert.doesNotMatch(source, /STOCK_SECONDARY_SUFFIXES/);
 });
 
-test("operator home surfaces manager shift phases (open/run/close)", () => {
+test("operator home keeps manager tiles job-first without shift phases", () => {
   const page = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
   const contract = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/_lib/operator-home-contract.ts",
   );
-  assert.match(contract, /getBranchManagerHomePhaseGroups/);
-  assert.match(contract, /BranchManagerHomePhase/);
-  assert.match(page, /getBranchManagerHomePhaseGroups/);
-  assert.match(page, /phaseSections/);
+  assert.match(contract, /BRANCH_MANAGER_HOME_TILE_SUFFIXES/);
+  assert.match(contract, /getOperatorHomeTileHrefs/);
+  assert.doesNotMatch(contract, /getBranchManagerHomePhaseGroups/);
+  assert.doesNotMatch(contract, /BranchManagerHomePhase/);
+  assert.doesNotMatch(page, /getBranchManagerHomePhaseGroups/);
+  assert.doesNotMatch(page, /phaseSections/);
+  assert.doesNotMatch(page, /phaseOpenTitle|phaseRunTitle|phaseCloseTitle/);
+  assert.match(page, /homeCopy\.stationsTitle/);
+  // Stations + limits/orders share one BranchOperatorPanel job-tiles block.
+  assert.match(page, /BranchOperatorPanel[\s\S]*presentation="stations"/);
   assert.match(
     page,
-    /phaseOpenTitle[\s\S]*phaseRunTitle[\s\S]*phaseCloseTitle/,
+    /presentation="stations"[\s\S]*BranchQuickMenuLimitTrigger/,
   );
-  // Manager phase config must not include /team; central home may list /stock/*.
   assert.doesNotMatch(
     contract,
-    /BRANCH_MANAGER_HOME_PHASE_SUFFIXES[\s\S]*?"\/team"/,
+    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/team"/,
   );
 });
 

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   addVNDateDays,
@@ -21,6 +21,7 @@ const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
 ];
 const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
+const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 const MAX_PHOTO_BYTES = 3_500_000;
 const PHOTO_MIME_TO_EXT = {
   "image/jpeg": "jpg",
@@ -608,6 +609,108 @@ export async function clockOutManagerShift(
 
   revalidateEmployeeWorkPaths(ctx.branchId);
   return { success: true, data: { checkOutTime: result.check_out } };
+}
+
+const checklistTaskPhotoSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  itemId: z.coerce.number().int().positive(),
+});
+
+export async function getCheckoutChecklistTaskPhotoUrl(
+  input: unknown,
+): Promise<ActionResult<{ url: string; expires_in: number }>> {
+  const parsed = checklistTaskPhotoSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(CHECKOUT_APPROVAL_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const service = createServiceClient();
+  const { data: item, error: itemError } = await service
+    .from("attendance_checklist_items")
+    .select("id, photo_path, allows_photo, attendance_record_id, tenant_id")
+    .eq("id", parsed.data.itemId)
+    .eq("attendance_record_id", parsed.data.attendanceId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .maybeSingle();
+
+  if (itemError) {
+    console.error("[employee/clock] checklist task photo lookup failed", {
+      code: itemError.code,
+    });
+    return { success: false, error: "Không mở được ảnh minh chứng." };
+  }
+  if (!item?.allows_photo || !item.photo_path) {
+    return { success: false, error: "Việc này chưa có ảnh minh chứng." };
+  }
+
+  const { data: attendance, error: attendanceError } = await service
+    .from("attendance_records")
+    .select(
+      "id, branch_id, check_out, checkout_requested_at, checkout_approval_target_roles",
+    )
+    .eq("id", item.attendance_record_id)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .maybeSingle();
+
+  if (attendanceError || !attendance) {
+    if (attendanceError) {
+      console.error("[employee/clock] checklist photo attendance lookup failed", {
+        code: attendanceError.code,
+      });
+    }
+    return { success: false, error: "Không tìm thấy yêu cầu kết ca." };
+  }
+  if (attendance.check_out != null || !attendance.checkout_requested_at) {
+    return { success: false, error: "Yêu cầu kết ca không còn hiệu lực." };
+  }
+
+  const targetRoles = attendance.checkout_approval_target_roles ?? [];
+  if (ctx.claims.user_role === "branch_manager") {
+    if (
+      ctx.claims.branch_id == null ||
+      attendance.branch_id == null ||
+      attendance.branch_id !== ctx.claims.branch_id ||
+      !targetRoles.includes("branch_manager")
+    ) {
+      return { success: false, error: "Không có quyền" };
+    }
+    const { data: allowed } = await ctx.supabase.rpc("has_permission", {
+      p_branch_id: attendance.branch_id,
+      p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+    });
+    if (allowed !== true) {
+      return { success: false, error: "Không có quyền" };
+    }
+  } else if (
+    ctx.claims.user_role === "owner" &&
+    !targetRoles.includes("owner")
+  ) {
+    return { success: false, error: "Không có quyền" };
+  }
+
+  const { data: signed, error: signError } = await service.storage
+    .from(ATTENDANCE_PHOTO_BUCKET)
+    .createSignedUrl(item.photo_path, ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS);
+
+  if (signError || !signed?.signedUrl) {
+    if (signError) {
+      console.error("[employee/clock] checklist photo signed URL failed", {
+        code: signError.message,
+      });
+    }
+    return { success: false, error: "Không thể tạo đường dẫn xem ảnh." };
+  }
+
+  return {
+    success: true,
+    data: {
+      url: signed.signedUrl,
+      expires_in: ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS,
+    },
+  };
 }
 
 const approveCheckoutSchema = z.object({

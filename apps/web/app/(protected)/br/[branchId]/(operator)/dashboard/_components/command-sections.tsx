@@ -96,7 +96,7 @@ export function BranchCommandTileGrid({
   ctaLabel: string;
 }) {
   return (
-    <ItemGroup className="gap-2">
+    <ItemGroup className="grid grid-cols-2 gap-2">
       {tiles.map((tile) => (
         <BranchActionItem
           key={`${tile.moduleKey}-${tile.href}`}

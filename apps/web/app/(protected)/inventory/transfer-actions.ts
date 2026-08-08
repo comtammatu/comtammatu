@@ -16,11 +16,28 @@ import type { TenantSupabase } from "@lib/inventory/types";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
-import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedUnitDisplayName } from "./_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import {
+  insufficientStockFailure,
+  mapInventoryRpcFailure,
+} from "./_lib/rpc-failure";
+import {
+  transferCancelRpcFallback,
+  transferCancelRpcMappings,
+  transferConfirmReceiveRpcFallback,
+  transferConfirmReceiveRpcMappings,
+  transferCreateRpcFallback,
+  transferCreateRpcMappings,
+  transferInTransitRpcFallback,
+  transferInTransitRpcMappings,
+  transferReceiveRpcFallback,
+  transferReceiveRpcMappings,
+  transferShipRpcFallback,
+  transferShipRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 /** Placeholder for RPC param; create_stock_transfer_draft allocates DC-YYYY-####. */
 const TRANSFER_NUMBER_SERVER_ALLOCATED = "";
@@ -532,7 +549,7 @@ export async function createStockTransfer(
       const availableQuantity =
         availableByIngredient.get(line.ingredientId) ?? 0;
       if (requestedBaseQuantity > availableQuantity + 1e-9) {
-        return { success: false, error: "Số lượng vượt tồn hiện tại." };
+        return insufficientStockFailure(line.ingredientId);
       }
     }
   }
@@ -549,19 +566,11 @@ export async function createStockTransfer(
   });
 
   if (error) {
-    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-      return { success: false, error: "Không có quyền tạo phiếu chuyển." };
-    }
-    if (
-      error.code === PG_ERR.CHECK_VIOLATION ||
-      error.code === PG_ERR.INVALID_TEXT_REPRESENTATION
-    ) {
-      return {
-        success: false,
-        error: "Thông tin kho luân chuyển không hợp lệ.",
-      };
-    }
-    return { success: false, error: "Không thể tạo phiếu chuyển." };
+    return mapInventoryRpcFailure(
+      error,
+      transferCreateRpcMappings,
+      transferCreateRpcFallback,
+    );
   }
 
   const result = data as unknown as { id?: number } | null;
@@ -594,10 +603,11 @@ export async function transferConfirmShip(
     console.error("inventory.transfer.confirm_ship_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return {
-      success: false,
-      error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
-    };
+    return mapInventoryRpcFailure(
+      error,
+      transferShipRpcMappings,
+      transferShipRpcFallback,
+    );
   }
 
   revalidatePath("/inventory/transfers");
@@ -624,7 +634,11 @@ export async function transferMarkInTransit(
     console.error("inventory.transfer.mark_in_transit_failed", {
       error: error,
     });
-    return { success: false, error: "Không thể chuyển trạng thái vận chuyển." };
+    return mapInventoryRpcFailure(
+      error,
+      transferInTransitRpcMappings,
+      transferInTransitRpcFallback,
+    );
   }
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
@@ -650,13 +664,18 @@ export async function transferConfirmReceive(
     console.error("inventory.transfer.confirm_receive_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return {
-      success: false,
-      error: "Không thể bắt đầu kiểm nhận (phiếu phải đang vận chuyển).",
-    };
+    return mapInventoryRpcFailure(
+      error,
+      transferConfirmReceiveRpcMappings,
+      transferConfirmReceiveRpcFallback,
+    );
   }
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
+  revalidatePath(`/br/${authz.transfer.to_branch_id}/stock`);
+  revalidatePath(
+    `/br/${authz.transfer.to_branch_id}/stock/receive/${id.data}`,
+  );
   return { success: true };
 }
 
@@ -703,7 +722,11 @@ export async function transferReceive(
     console.error("inventory.transfer.receive_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { success: false, error: "Không thể xác nhận nhập kho đích." };
+    return mapInventoryRpcFailure(
+      error,
+      transferReceiveRpcMappings,
+      transferReceiveRpcFallback,
+    );
   }
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${id.data}`);
@@ -737,10 +760,11 @@ export async function cancelStockTransfer(
     } as never,
   );
   if (error) {
-    return {
-      success: false,
-      error: "Chỉ có thể hủy phiếu điều chuyển đang ở trạng thái nháp.",
-    };
+    return mapInventoryRpcFailure(
+      error,
+      transferCancelRpcMappings,
+      transferCancelRpcFallback,
+    );
   }
   revalidatePath("/inventory/transfers");
   revalidatePath(`/inventory/transfers/${parsed.data.transferId}`);

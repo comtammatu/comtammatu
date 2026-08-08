@@ -47,7 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/compone
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormField } from "@/components/form";
-import { AppEmptyState } from "@/components/surface";
+import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -208,18 +208,6 @@ export function BranchConsumptionListClient({
           </TabsTrigger>
         </TabsList>
         <TabsContent value={view}>
-      {canManage ? (
-        <Button
-          type="button"
-          size="touch"
-          className="w-full"
-          onClick={() => setCreateOpen(true)}
-        >
-          <IconPlus className="size-4" />
-          {INVENTORY_VI.manualConsumptionCreateAction}
-        </Button>
-      ) : null}
-
       <BranchOperatorPanel
         title={
           view === "recorded"
@@ -535,6 +523,23 @@ export function BranchConsumptionListClient({
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {canManage ? (
+        <AppDetailFooter
+          sticky
+          trailing={
+            <Button
+              type="button"
+              size="touch-lg"
+              className="w-full"
+              onClick={() => setCreateOpen(true)}
+            >
+              <IconPlus className="size-4" />
+              {INVENTORY_VI.manualConsumptionCreateAction}
+            </Button>
+          }
+        />
+      ) : null}
     </BranchOperatorPage>
   );
 }

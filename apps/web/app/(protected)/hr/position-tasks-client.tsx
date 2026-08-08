@@ -368,18 +368,38 @@ function AssigneeSummary({ position }: { position: PositionOption }) {
 
 type TemplateRow = ShiftTaskTemplateSummary & { key: string };
 
+type EmployeeOverrideSaveInput = {
+  employeeId: number;
+  tasks: Array<{
+    title: string;
+    kind: FormValues["tasks"][number]["kind"];
+    applicability: FormValues["tasks"][number]["applicability"];
+    phase: FormValues["tasks"][number]["phase"];
+    isRequired: boolean;
+    allowsPhoto: boolean;
+    doneDefinition: string;
+    ingredientIds: number[];
+  }>;
+};
+
 export function EmployeeTaskOverrideDialog({
   employeeId,
   open,
   onOpenChange,
   data,
   onSaved,
+  onClear,
+  saveOverride = saveEmployeeShiftTaskOverride,
 }: {
   employeeId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: PositionTasksData;
   onSaved?: () => void;
+  onClear?: () => void;
+  saveOverride?: (
+    input: EmployeeOverrideSaveInput,
+  ) => Promise<{ success: boolean; error?: string }>;
 }) {
   const employee =
     data.employees.find((item) => item.id === employeeId) ?? null;
@@ -397,7 +417,7 @@ export function EmployeeTaskOverrideDialog({
 
   async function handleSubmit(values: FormValues) {
     if (!employee) return { success: false, error: copy.employeePlaceholder };
-    const result = await saveEmployeeShiftTaskOverride({
+    const result = await saveOverride({
       employeeId: employee.id,
       tasks: values.tasks.map((task) => ({
         ...task,
@@ -426,6 +446,52 @@ export function EmployeeTaskOverrideDialog({
       successMessage={copy.saved}
       submitLabel={template ? copy.save : copy.createEmployeeTemplate}
       contentClassName="sm:max-w-4xl"
+      actionSize="touch"
+      renderFooter={
+        onClear
+          ? ({
+              formId,
+              isPending,
+              requestClose,
+              submitLabel,
+              submitVariant,
+              actionSize,
+              cancelLabel,
+            }) => (
+              <div className="flex w-full flex-col gap-2">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size={actionSize}
+                    disabled={isPending}
+                    onClick={requestClose}
+                  >
+                    {cancelLabel}
+                  </Button>
+                  <Button
+                    type="submit"
+                    form={formId}
+                    variant={submitVariant}
+                    size={actionSize}
+                    disabled={isPending}
+                  >
+                    {submitLabel}
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size={actionSize}
+                  disabled={isPending}
+                  onClick={onClear}
+                >
+                  {copy.clearEmployeeTemplate}
+                </Button>
+              </div>
+            )
+          : undefined
+      }
     >
       {(form) => (
         <PositionTaskFields form={form} ingredients={data.ingredients} />

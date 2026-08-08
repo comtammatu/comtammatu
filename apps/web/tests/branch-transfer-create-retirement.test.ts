@@ -8,19 +8,30 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
-test("Branch transfer creation stays central-site only", () => {
+test("Branch transfer creation stays central-site only with Branch DOC presenter", () => {
   const createRoute = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/page.tsx",
+  );
+  const createClient = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
   );
   assert.equal(
     exists(
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/new/branch-transfer-create-client.tsx",
     ),
-    false,
+    true,
   );
   assert.match(createRoute, /branch_kind !== "central_supply"/);
   assert.match(createRoute, /branch_kind !== "central_kitchen"/);
   assert.match(createRoute, /redirect\(`\/br\/\$\{branchId\}\/stock\/transfer`\)/);
+  assert.match(createRoute, /BranchTransferCreateClient/);
+  assert.doesNotMatch(createRoute, /CreateTransferForm/);
+
+  assert.match(createClient, /basePath = `\/br\/\$\{branchId\}\/stock\/transfer`/);
+  assert.match(createClient, /NumberPadSheet/);
+  assert.match(createClient, /AppDetailFooter/);
+  assert.match(createClient, /useTransferCreateController/);
+  assert.doesNotMatch(createClient, /DataTable|QuantityInput/);
 
   const branchList = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx",

@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   ChevronRight as IconChevronRight,
   ClipboardCheck,
+  ClipboardList,
   Clock as IconClock,
   Users as IconUsers,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import {
 import {
   Drawer,
   DrawerContent,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
@@ -367,6 +369,26 @@ function TeamBoardFilters({
   );
 }
 
+function resolveCheckoutDisplayAt(
+  shift: TeamBoardShiftAttendance | null,
+): string | null {
+  if (!shift) return null;
+  // Pending checkout keeps check_out null until approval; show the requested time.
+  return shift.checkOut ?? shift.checkoutRequestedAt ?? null;
+}
+
+function formatCheckoutDisplayTime(
+  shift: TeamBoardShiftAttendance | null,
+): string {
+  const checkoutAt = resolveCheckoutDisplayAt(shift);
+  return checkoutAt ? formatVNTime(checkoutAt) : "—";
+}
+
+function formatShiftTimes(shift: TeamBoardShiftAttendance | null): string | null {
+  if (!shift?.checkIn) return null;
+  return `${formatVNTime(shift.checkIn)}–${formatCheckoutDisplayTime(shift)}`;
+}
+
 function MobileTeamCard({
   row,
   onOpenDrawer,
@@ -380,9 +402,11 @@ function MobileTeamCard({
 }) {
   const positionLabel = row.positionLabel ?? copy.positionUnknown;
   const shiftLabel = row.shift?.shiftName ?? copy.shiftNone;
-  const subtitle = showShiftName
-    ? `${positionLabel} · ${shiftLabel}`
-    : positionLabel;
+  const times = formatShiftTimes(row.shift);
+  const subtitleParts = showShiftName
+    ? [positionLabel, shiftLabel, times]
+    : [positionLabel, times];
+  const subtitle = subtitleParts.filter(Boolean).join(" · ");
   const footerBadges = (
     <>
       <CountBadge status={row.countStatus} />
@@ -449,10 +473,62 @@ function TeamBoardMobileGroups({
   );
 }
 
-function TeamApprovalsStrip({
+type TeamStripRow = {
+  key: string;
+  href: string;
+  icon: typeof ClipboardCheck;
+  title: string;
+  count: number | undefined;
+};
+
+function TeamStripRows({ rows }: { rows: TeamStripRow[] }) {
+  return (
+    <ItemGroup className="gap-1.5">
+      {rows.map((row) => {
+        const hasPending = row.count != null && row.count > 0;
+        return (
+          <Item
+            key={row.key}
+            variant={hasPending ? "outline" : "muted"}
+            size="sm"
+            className="chrome-tap min-h-11 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
+            render={<Link href={row.href} />}
+          >
+            <ItemMedia
+              variant="icon"
+              className={
+                hasPending
+                  ? "rounded-md bg-warning/10 p-2 text-warning"
+                  : "rounded-md bg-muted p-2 text-muted-foreground"
+              }
+            >
+              <row.icon aria-hidden="true" />
+            </ItemMedia>
+            <ItemContent className="min-w-0">
+              <ItemTitle size="heading" className="line-clamp-none w-full">
+                {row.title}
+              </ItemTitle>
+            </ItemContent>
+            <ItemActions className="shrink-0 text-muted-foreground">
+              {hasPending ? (
+                <Badge variant="warning">{formatCount(row.count!)}</Badge>
+              ) : null}
+              <IconChevronRight aria-hidden="true" className="size-4" />
+            </ItemActions>
+          </Item>
+        );
+      })}
+    </ItemGroup>
+  );
+}
+
+function TeamToolsStrip({
   checkoutApprovalsHref,
   leaveApprovalsHref,
   countSlipsHref,
+  countAssignmentsHref,
+  rosterHref,
+  attendanceHref,
   canApproveCheckout,
   canApproveCount,
   approvalCounts,
@@ -460,123 +536,144 @@ function TeamApprovalsStrip({
   checkoutApprovalsHref: string;
   leaveApprovalsHref?: string;
   countSlipsHref: string;
+  countAssignmentsHref?: string;
+  rosterHref?: string;
+  attendanceHref?: string;
   canApproveCheckout: boolean;
   canApproveCount: boolean;
   approvalCounts?: TeamBoardApprovalCounts;
 }) {
-  type ApprovalRow = {
-    key: string;
-    href: string;
-    icon: typeof ClipboardCheck;
-    title: string;
-    count: number | undefined;
-  };
-
-  const rows: ApprovalRow[] = [];
-  if (canApproveCheckout) {
-    rows.push({
+  // Approvals panel: checkout + leave only, and only when pending > 0.
+  const approvalRows: TeamStripRow[] = [];
+  if (
+    canApproveCheckout &&
+    approvalCounts?.checkoutPending != null &&
+    approvalCounts.checkoutPending > 0
+  ) {
+    approvalRows.push({
       key: "checkout",
       href: checkoutApprovalsHref,
       icon: ClipboardCheck,
       title: branchCopy.readinessCheckoutTitle,
-      count: approvalCounts?.checkoutPending,
+      count: approvalCounts.checkoutPending,
     });
   }
-  if (leaveApprovalsHref) {
-    rows.push({
+  if (
+    leaveApprovalsHref &&
+    approvalCounts?.leavePending != null &&
+    approvalCounts.leavePending > 0
+  ) {
+    approvalRows.push({
       key: "leave",
       href: leaveApprovalsHref,
       icon: CalendarCheck,
       title: branchCopy.queueLeaveTitle,
-      count: approvalCounts?.leavePending,
+      count: approvalCounts.leavePending,
     });
   }
+
+  // Tools panel: count / roster / attendance shortcuts (never retitled to Cần duyệt).
+  const toolRows: TeamStripRow[] = [];
   if (canApproveCount) {
-    rows.push({
+    toolRows.push({
       key: "count-slips",
       href: countSlipsHref,
       icon: ClipboardCheck,
-      title: branchCopy.queueCountSlipsTitle,
+      title: copy.actionCountReview,
       count: approvalCounts?.countSlipsPending,
     });
   }
+  if (countAssignmentsHref) {
+    toolRows.push({
+      key: "count-assignments",
+      href: countAssignmentsHref,
+      icon: ClipboardList,
+      title: copy.actionCountAssign,
+      count: undefined,
+    });
+  }
+  if (rosterHref) {
+    toolRows.push({
+      key: "roster",
+      href: rosterHref,
+      icon: CalendarCheck,
+      title: copy.actionRoster,
+      count: undefined,
+    });
+  }
+  if (attendanceHref) {
+    toolRows.push({
+      key: "attendance",
+      href: attendanceHref,
+      icon: IconClock,
+      title: copy.actionAttendance,
+      count: undefined,
+    });
+  }
 
-  if (rows.length === 0) return null;
+  if (approvalRows.length === 0 && toolRows.length === 0) return null;
 
-  const pendingTotal = rows.reduce(
-    (sum, row) => sum + (row.count != null && row.count > 0 ? row.count : 0),
+  const approvalPendingTotal = approvalRows.reduce(
+    (sum, row) => sum + (row.count ?? 0),
     0,
   );
 
   return (
-    <BranchOperatorPanel
-      title={copy.approvalsStripTitle}
-      tone={pendingTotal > 0 ? "warning" : "default"}
-      size="sm"
-      headingLevel="h2"
-      badge={
-        pendingTotal > 0
-          ? { children: String(pendingTotal), variant: "warning" }
-          : undefined
-      }
-      className="mb-3"
-    >
-      <ItemGroup className="gap-2">
-        {rows.map((row) => {
-          const hasPending = row.count != null && row.count > 0;
-          return (
-            <Item
-              key={row.key}
-              variant={hasPending ? "outline" : "muted"}
-              size="sm"
-              className="chrome-tap min-h-12 select-none bg-card transition-transform motion-safe:active:scale-[0.97]"
-              render={<Link href={row.href} />}
-            >
-              <ItemMedia
-                variant="icon"
-                className={
-                  hasPending
-                    ? "rounded-md bg-warning/10 p-2 text-warning"
-                    : "rounded-md bg-muted p-2 text-muted-foreground"
-                }
-              >
-                <row.icon aria-hidden="true" />
-              </ItemMedia>
-              <ItemContent className="min-w-0">
-                <ItemTitle size="heading" className="line-clamp-none w-full">
-                  {row.title}
-                </ItemTitle>
-              </ItemContent>
-              <ItemActions className="shrink-0 text-muted-foreground">
-                {hasPending ? (
-                  <Badge variant="warning">{formatCount(row.count!)}</Badge>
-                ) : null}
-                <IconChevronRight aria-hidden="true" className="size-4" />
-              </ItemActions>
-            </Item>
-          );
-        })}
-      </ItemGroup>
-    </BranchOperatorPanel>
+    <div className="mb-3 flex flex-col gap-3">
+      {approvalRows.length > 0 ? (
+        <BranchOperatorPanel
+          title={copy.approvalsStripTitle}
+          tone="warning"
+          size="sm"
+          headingLevel="h2"
+          badge={{
+            children: String(approvalPendingTotal),
+            variant: "warning",
+          }}
+        >
+          <TeamStripRows rows={approvalRows} />
+        </BranchOperatorPanel>
+      ) : null}
+      {toolRows.length > 0 ? (
+        <BranchOperatorPanel
+          title={copy.toolsStripTitle}
+          tone="default"
+          size="sm"
+          headingLevel="h2"
+        >
+          <TeamStripRows rows={toolRows} />
+        </BranchOperatorPanel>
+      ) : null}
+    </div>
   );
 }
 
 export function TeamBoardClient({
   rows,
+  activeEmployeeCount,
   branchId,
+  membersHref,
   countSlipsHref,
+  countAssignmentsHref,
   checkoutApprovalsHref,
   leaveApprovalsHref,
+  rosterHref,
+  attendanceHref,
   canApproveCheckout,
   canApproveCount,
   approverRole,
   approvalCounts,
 }: {
   rows: TeamBoardRow[];
+  activeEmployeeCount: number;
   branchId: number;
+  membersHref: string;
   countSlipsHref: string;
+  countAssignmentsHref?: string;
   checkoutApprovalsHref: string;
   leaveApprovalsHref?: string;
+  rosterHref?: string;
+  attendanceHref?: string;
   canApproveCheckout: boolean;
   canApproveCount: boolean;
   approverRole: StaffRole;
@@ -602,13 +699,43 @@ export function TeamBoardClient({
   );
   const filteredGroups = groupRowsByShift(filteredRows);
 
+  const tools = (
+    <TeamToolsStrip
+      checkoutApprovalsHref={checkoutApprovalsHref}
+      leaveApprovalsHref={leaveApprovalsHref}
+      countSlipsHref={countSlipsHref}
+      countAssignmentsHref={countAssignmentsHref}
+      rosterHref={rosterHref}
+      attendanceHref={attendanceHref}
+      canApproveCheckout={canApproveCheckout}
+      canApproveCount={canApproveCount}
+      approvalCounts={approvalCounts}
+    />
+  );
+
   if (displayRows.length === 0) {
+    const noStaff = activeEmployeeCount === 0;
     return (
-      <AppEmptyState
-        title={copy.emptyTitle}
-        description={copy.emptyDescription}
-        icon={<IconUsers />}
-      />
+      <>
+        {tools}
+        <AppEmptyState
+          title={noStaff ? copy.emptyNoStaffTitle : copy.emptyTitle}
+          description={
+            noStaff ? copy.emptyNoStaffDescription : copy.emptyDescription
+          }
+          icon={<IconUsers />}
+        >
+          {noStaff ? null : (
+            <Button
+              variant="outline"
+              size="touch"
+              render={<Link href={membersHref} />}
+            >
+              {copy.viewMembersCta}
+            </Button>
+          )}
+        </AppEmptyState>
+      </>
     );
   }
 
@@ -645,14 +772,7 @@ export function TeamBoardClient({
 
   return (
     <>
-      <TeamApprovalsStrip
-        checkoutApprovalsHref={checkoutApprovalsHref}
-        leaveApprovalsHref={leaveApprovalsHref}
-        countSlipsHref={countSlipsHref}
-        canApproveCheckout={canApproveCheckout}
-        canApproveCount={canApproveCount}
-        approvalCounts={approvalCounts}
-      />
+      {tools}
       <section
         className="flex flex-col gap-2"
         aria-label={copy.boardSectionTitle}
@@ -722,9 +842,7 @@ export function TeamBoardClient({
                             ? formatVNTime(drawerRow.shift.checkIn)
                             : "—"}
                           {" - "}
-                          {drawerRow.shift.checkOut
-                            ? formatVNTime(drawerRow.shift.checkOut)
-                            : "—"}
+                          {formatCheckoutDisplayTime(drawerRow.shift)}
                         </span>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
@@ -740,57 +858,61 @@ export function TeamBoardClient({
                     </div>
                   )}
 
-                  <div className="workflow-safe-pb grid gap-2">
-                    {canApproveCheckoutForRow(drawerRow, capabilities) &&
-                    isPastShiftEnd(drawerRow.shift) ? (
-                      <Button
-                        variant="destructive"
-                        size="touch"
-                        className="w-full"
-                        disabled={isForceClosing}
-                        onClick={() => requestForceClose(drawerRow)}
-                      >
-                        {copy.drawerActionForceClose}
-                      </Button>
-                    ) : null}
-                    {canApproveCheckoutForRow(drawerRow, capabilities) &&
-                    attendanceState(drawerRow.shift) === "checkout_pending" ? (
-                      <Button
-                        variant="default"
-                        size="touch"
-                        className="w-full"
-                        onClick={() =>
-                          router.push(
-                            `${checkoutApprovalsHref}?attendanceId=${drawerRow.shift?.attendanceId}`,
-                          )
-                        }
-                      >
-                        {copy.drawerActionCheckout}
-                      </Button>
-                    ) : null}
-                    {canApproveCount &&
-                    drawerRow.countStatus === "submitted" ? (
-                      <Button
-                        variant={
-                          attendanceState(drawerRow.shift) ===
-                          "checkout_pending"
-                            ? "outline"
-                            : "default"
-                        }
-                        size="touch"
-                        className="w-full"
-                        onClick={() =>
-                          router.push(
-                            `${countSlipsHref}?employeeId=${drawerRow.employeeId}`,
-                          )
-                        }
-                      >
-                        {copy.drawerActionCountSubmitted}
-                      </Button>
-                    ) : null}
-                  </div>
                 </div>
               </div>
+              {(canApproveCheckoutForRow(drawerRow, capabilities) &&
+                isPastShiftEnd(drawerRow.shift)) ||
+              (canApproveCheckoutForRow(drawerRow, capabilities) &&
+                attendanceState(drawerRow.shift) === "checkout_pending") ||
+              (canApproveCount && drawerRow.countStatus === "submitted") ? (
+                <DrawerFooter className="shrink-0 gap-2 pt-2">
+                  {canApproveCheckoutForRow(drawerRow, capabilities) &&
+                  isPastShiftEnd(drawerRow.shift) ? (
+                    <Button
+                      variant="destructive"
+                      size="touch"
+                      className="w-full"
+                      disabled={isForceClosing}
+                      onClick={() => requestForceClose(drawerRow)}
+                    >
+                      {copy.drawerActionForceClose}
+                    </Button>
+                  ) : null}
+                  {canApproveCheckoutForRow(drawerRow, capabilities) &&
+                  attendanceState(drawerRow.shift) === "checkout_pending" ? (
+                    <Button
+                      variant="default"
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        router.push(
+                          `${checkoutApprovalsHref}?attendanceId=${drawerRow.shift?.attendanceId}`,
+                        )
+                      }
+                    >
+                      {copy.drawerActionCheckout}
+                    </Button>
+                  ) : null}
+                  {canApproveCount && drawerRow.countStatus === "submitted" ? (
+                    <Button
+                      variant={
+                        attendanceState(drawerRow.shift) === "checkout_pending"
+                          ? "outline"
+                          : "default"
+                      }
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        router.push(
+                          `${countSlipsHref}?employeeId=${drawerRow.employeeId}`,
+                        )
+                      }
+                    >
+                      {copy.drawerActionCountSubmitted}
+                    </Button>
+                  ) : null}
+                </DrawerFooter>
+              ) : null}
             </>
           )}
         </DrawerContent>

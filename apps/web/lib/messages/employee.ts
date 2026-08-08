@@ -254,6 +254,16 @@ export const employee = {
     summaryEmptyTitle: "Chưa có ngày công",
     summaryEmptyDescription:
       "Chọn chi nhánh/tháng khác hoặc chờ nhân viên chấm công ca đầu tiên.",
+    summaryRowHint: "Chạm để xem từng ngày trong tháng",
+    summaryClosedShifts: "Ca đóng",
+    summaryOpenShifts: "Ca mở",
+    summaryWorkdays: "Ngày công",
+    summaryWorkHours: "Giờ công",
+    employeeMonthTitle: "Công trong tháng",
+    employeeMonthEmptyTitle: "Chưa có lượt chấm trong tháng",
+    employeeMonthEmptyDescription:
+      "Nhân viên chưa có ca vào/ra nào trong tháng đã chọn.",
+    employeeMonthClose: "Đóng",
     employeeCode: "Mã NV",
     fullName: "Họ tên",
     present: "Có mặt",

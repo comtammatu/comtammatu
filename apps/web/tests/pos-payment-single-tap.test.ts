@@ -28,7 +28,10 @@ test("POS only lets the cashier confirm cash; VietQR waits for SePay", () => {
     /confirmCashPaymentWithInvoice\([\s\S]*?cashReceived,[\s\S]*?null/,
   );
   assert.doesNotMatch(confirmPaidBlock, /confirmVietQrPaymentWithInvoice\(/);
-  assert.match(billReceiptSource, /SELF_ORDER_VI\.paymentReconcileDescription/);
+  assert.doesNotMatch(
+    billReceiptSource,
+    /SELF_ORDER_VI\.paymentReconcileDescription/,
+  );
   assert.doesNotMatch(confirmPaidBlock, /await confirm\(/);
   assert.doesNotMatch(posMessagesSource, /confirmIssue/);
 });
@@ -40,18 +43,25 @@ test("POS closes a pending VietQR sheet as waiting without confirming payment", 
   );
   assert.match(
     billReceiptSource,
-    /variant=\{isWaitingForVietQr \? "default" : "outline"\}/,
+    /isWaitingForVietQr \? \(\s*<Button[\s\S]*?onClick=\{onClose\}[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
   );
   assert.match(
     billReceiptSource,
-    /onClick=\{onClose\}[\s\S]*?isWaitingForVietQr[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
+    /size="touch-lg"[\s\S]*?className="w-full"[\s\S]*?SELF_ORDER_VI\.paymentReconcileAction/,
   );
   assert.match(
     billReceiptSource,
     /<PaymentQrCode[\s\S]*?className="max-h-56 max-w-56"/,
   );
   assert.doesNotMatch(billReceiptSource, /InvoiceFormSection|invoiceForm/);
-  assert.match(billReceiptSource, /role="status"/);
+  assert.match(
+    billReceiptSource,
+    /aria-pressed=\{isSelected\}/,
+  );
+  assert.match(
+    billReceiptSource,
+    /variant="ghost"[\s\S]*?size="touch"[\s\S]*?messages\.pos\.payment\.cancelPending/,
+  );
 });
 
 test("POS payment sheet delegates HĐĐT buyer details to the receipt QR", () => {

@@ -514,8 +514,11 @@ export const INVENTORY_VI = {
   menuRecipeColIngredientCount: "Số nguyên liệu",
   menuRecipeColUnitCost: "Giá vốn/phần",
   menuRecipeColStockCapacity: "Phần bán được",
+  menuRecipeCostUnavailable: "Chưa có giá vốn",
   menuRecipeCardSummary: (count: number, cost: string) =>
     `${formatCount(count)} nguyên liệu · ${cost}/phần`,
+  menuRecipeCardSummaryNoCost: (count: number) =>
+    `${formatCount(count)} nguyên liệu · Chưa có giá vốn`,
   amountDong: (amount: string) =>
     amount.trim().endsWith("đ") ? amount : `${amount} đ`,
   daysAgo: (days: number) => `${days} ngày trước`,

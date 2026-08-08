@@ -48,6 +48,11 @@ test("inventory stock status and category filters have one control source", () =
 
 test("inventory stock status filters are mutually exclusive", () => {
   assert.match(stockModelSource, /export function isStockReorderRisk/);
+  assert.match(stockModelSource, /STOCK_ON_HAND_DEFAULT_STATUS/);
+  assert.match(
+    stockModelSource,
+    /filters\.status === "in_stock"\) \{\s*[\s\S]*?ingredient\.status !== "out"/,
+  );
   assert.match(
     stockModelSource,
     /filters\.status === "low"\) \{\s*result = result\.filter\(\(ingredient\) => ingredient\.status === "low"\);/,
@@ -65,10 +70,21 @@ test("inventory stock status filters are mutually exclusive", () => {
 test("branch stock facets share one model and stay touch-native", () => {
   assert.match(branchStockClientSource, /filterStockOnHandIngredients/);
   assert.match(branchStockClientSource, /getStockOnHandCategories/);
+  assert.match(branchStockClientSource, /STOCK_ON_HAND_DEFAULT_STATUS/);
   assert.match(branchStockClientSource, /MultiSelectCombobox/);
   assert.match(branchStockClientSource, /ToggleGroup/);
+  assert.match(branchStockClientSource, /grid-cols-3/);
+  assert.match(branchStockClientSource, /value="in_stock"/);
+  assert.match(branchStockClientSource, /value="out"/);
+  assert.match(branchStockClientSource, /value="all"/);
+  assert.doesNotMatch(branchStockClientSource, /value="low"/);
+  assert.doesNotMatch(branchStockClientSource, /StockRiskBadge/);
+  assert.doesNotMatch(branchStockClientSource, /StatusBadge/);
   assert.match(branchStockClientSource, /SheetContent[\s\S]*side="bottom"/);
   assert.match(branchStockClientSource, /normalizeStockOnHandCategories/);
+  assert.doesNotMatch(branchStockClientSource, /listHint/);
+  assert.doesNotMatch(branchStockClientSource, /toolbarStatus/);
+  assert.doesNotMatch(branchStockClientSource, /grid-cols-4/);
   assert.doesNotMatch(branchStockClientSource, /value=\{location\}/);
   assert.doesNotMatch(branchStockClientSource, /StockMobileGrid|DataTable/);
   assert.doesNotMatch(branchStockClientSource, /overflow-x-auto/);

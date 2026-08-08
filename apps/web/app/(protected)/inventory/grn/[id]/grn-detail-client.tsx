@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -111,7 +111,6 @@ export function GRNDetailClient({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   // Device-derived, not param-derived: the old `?m=1` flag had no setter
   // anywhere in the codebase, so the mobile post-confirm navigation and
   // back-link paths below never activated for phone receivers.
@@ -147,12 +146,16 @@ export function GRNDetailClient({
   const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
 
   function closeOwnerDialogUrl() {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     params.delete("grnId");
     params.delete("mode");
-    router.replace(params.size > 0 ? `${pathname}?${params}` : pathname, {
-      scroll: false,
-    });
+    const q = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      q ? `${pathname}?${q}` : pathname,
+    );
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =

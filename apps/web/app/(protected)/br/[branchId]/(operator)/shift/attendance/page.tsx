@@ -1,9 +1,9 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { AttendanceTab } from "../../team/_tabs/attendance-tab";
 
 /**
- * Redirect shim — attendance lives under the Team hub
- * (`/br/{branchId}/team?tab=attendance`) as of the Branch Manager IA redesign.
+ * Full-page branch attendance for branch managers.
  */
 export default async function BranchAttendancePage({
   params,
@@ -12,6 +12,6 @@ export default async function BranchAttendancePage({
 }) {
   const { branchId: rawBranchId } = await params;
   const branchId = parseOperatorBranchId(rawBranchId);
-  if (branchId == null) redirect("/br");
-  redirect(`/br/${branchId}/team?tab=attendance`);
+  if (branchId == null) notFound();
+  return <AttendanceTab branchId={branchId} />;
 }

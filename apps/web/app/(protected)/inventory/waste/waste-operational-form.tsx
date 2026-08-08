@@ -33,6 +33,12 @@ import {
   type WasteLineState,
 } from "@lib/inventory/waste-create-model";
 import { formatQty } from "@lib/inventory/format";
+import {
+  applyInventoryActionError,
+  inventoryShortageToastMessage,
+} from "@lib/inventory/apply-inventory-action-error";
+import { INVENTORY_ERROR_CODES } from "@lib/messages/inventory-rpc-errors";
+import { cn } from "@comtammatu/ui";
 
 export function WasteOperationalForm({
   context,
@@ -52,11 +58,17 @@ export function WasteOperationalForm({
     newWasteLine("line-0"),
   ]);
   const [evidenceRequired, setEvidenceRequired] = useState(false);
+  const [shortageIngredientId, setShortageIngredientId] = useState<
+    number | null
+  >(null);
   const [isPending, startTransition] = useTransition();
   const ingredientById = useMemo(
     () => new Map(context.ingredients.map((item) => [item.id, item])),
     [context.ingredients],
   );
+  // Sites keep one active warehouse (docs/ref/inventory.md) — only prompt when
+  // more than one stock-bearing location is actually available.
+  const showLocationPicker = context.locations.length > 1;
 
   function patchLine(uid: string, patch: Partial<WasteLineState>) {
     setLines((current) =>
@@ -91,7 +103,7 @@ export function WasteOperationalForm({
 
   function submit() {
     if (locationId == null) {
-      toast.error("Chọn vị trí kho.");
+      toast.error(copy.noLocationAvailable);
       return;
     }
 
@@ -143,12 +155,28 @@ export function WasteOperationalForm({
         sourceType: "manual",
       });
       if (!result.success) {
-        if (result.errorCode === "waste_evidence_required") {
+        const applied = applyInventoryActionError(
+          result,
+          "Không tạo được phiếu hao hụt.",
+        );
+        if (applied.errorCode === INVENTORY_ERROR_CODES.WASTE_EVIDENCE_REQUIRED) {
           setEvidenceRequired(true);
         }
-        toast.error(result.error ?? "Không tạo được phiếu hao hụt.");
+        const named =
+          applied.lineTarget == null
+            ? null
+            : ingredientById.get(applied.lineTarget.ingredientId)?.name;
+        setShortageIngredientId(applied.lineTarget?.ingredientId ?? null);
+        toast.error(
+          inventoryShortageToastMessage(
+            applied,
+            named,
+            copy.shortageNamed,
+          ),
+        );
         return;
       }
+      setShortageIngredientId(null);
       toast.success(
         result.data?.requiresApproval
           ? "Đã tạo phiếu, đang chờ duyệt."
@@ -164,28 +192,30 @@ export function WasteOperationalForm({
         <NoteCallout tone="warning">{copy.priceReviewHint}</NoteCallout>
       ) : null}
 
-      <Field>
-        <FieldLabel>{copy.locationLabel}</FieldLabel>
-        <Select
-          value={locationId == null ? "" : String(locationId)}
-          onValueChange={(value) => setLocationId(Number(value))}
-        >
-          <SelectTrigger size="touch">
-            <SelectValue placeholder={copy.locationPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {context.locations.map((location) => (
-              <SelectItem
-                key={location.id}
-                value={String(location.id)}
-                size="touch"
-              >
-                {location.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
+      {showLocationPicker ? (
+        <Field>
+          <FieldLabel>{copy.locationLabel}</FieldLabel>
+          <Select
+            value={locationId == null ? "" : String(locationId)}
+            onValueChange={(value) => setLocationId(Number(value))}
+          >
+            <SelectTrigger size="touch">
+              <SelectValue placeholder={copy.locationPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {context.locations.map((location) => (
+                <SelectItem
+                  key={location.id}
+                  value={String(location.id)}
+                  size="touch"
+                >
+                  {location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
 
       <AppSection
         title={copy.linesTitle}
@@ -215,7 +245,18 @@ export function WasteOperationalForm({
               <Item
                 key={line.uid}
                 variant="outline"
-                className="grid gap-3 md:grid-cols-2"
+                className={cn(
+                  "grid gap-3 md:grid-cols-2",
+                  shortageIngredientId != null &&
+                    line.ingredientId === shortageIngredientId &&
+                    "border-destructive",
+                )}
+                data-shortage={
+                  shortageIngredientId != null &&
+                  line.ingredientId === shortageIngredientId
+                    ? "true"
+                    : undefined
+                }
               >
                 <Field>
                   <FieldLabel>{copy.ingredientLabel(index + 1)}</FieldLabel>
@@ -271,11 +312,26 @@ export function WasteOperationalForm({
                   <QuantityInput
                     value={line.quantity}
                     maxFractionDigits={3}
-                    className="h-12"
+                    className={cn(
+                      "h-12",
+                      shortageIngredientId != null &&
+                        line.ingredientId === shortageIngredientId &&
+                        "border-destructive",
+                    )}
+                    aria-invalid={
+                      shortageIngredientId != null &&
+                      line.ingredientId === shortageIngredientId
+                    }
                     onValueChange={(value) =>
                       patchLine(line.uid, { quantity: value })
                     }
                   />
+                  {shortageIngredientId != null &&
+                  line.ingredientId === shortageIngredientId ? (
+                    <p className="text-xs text-destructive">
+                      {copy.lineShortageHint}
+                    </p>
+                  ) : null}
                 </Field>
                 <Field>
                   <FieldLabel>{copy.reasonLabel}</FieldLabel>
@@ -328,6 +384,7 @@ export function WasteOperationalForm({
       </AppSection>
 
       <AppDetailFooter
+        sticky
         leading={
           <Button
             type="button"

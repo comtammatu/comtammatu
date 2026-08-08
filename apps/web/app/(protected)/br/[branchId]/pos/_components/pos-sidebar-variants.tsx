@@ -41,39 +41,46 @@ function SplitSidebarComponent({
     onOpenArchivedSheet,
     hideTakeawayOrders,
   } = sidebarContentProps;
-  const sessionActionRow = sessionAction ? (
-    <div className="flex shrink-0 justify-end border-b border-border/60 px-3 py-2">
-      {sessionAction}
-    </div>
-  ) : null;
 
+  const sessionTopBar = (
+    <PosSessionTopBar
+      canCloseShift={canCloseShift}
+      onShowCloseSession={onShowCloseSession}
+    />
+  );
+
+  const orderList = (
+    <OrderListPane
+      onViewBill={onViewBill}
+      onViewDetail={onViewDetail}
+      onOpenArchivedSheet={onOpenArchivedSheet}
+      hideTakeawayOrders={hideTakeawayOrders}
+    />
+  );
+
+  // min-h-0 + h-full: parent is overflow-hidden; without these the column
+  // grows to content height and the bottom of order cards / cart CTAs clips.
   if (isContextGate) {
     return (
-      <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background xl:flex 2xl:w-96">
-        <PosSessionTopBar
-          canCloseShift={canCloseShift}
-          onShowCloseSession={onShowCloseSession}
-        />
-        {sessionActionRow}
-        <OrderListPane
-          onViewBill={onViewBill}
-          onViewDetail={onViewDetail}
-          onOpenArchivedSheet={onOpenArchivedSheet}
-          hideTakeawayOrders={hideTakeawayOrders}
-        />
+      <div className="hidden h-full min-h-0 w-80 shrink-0 flex-col border-l border-border/60 bg-background xl:flex 2xl:w-96">
+        {sessionTopBar}
+        {sessionAction ? (
+          <div className="flex shrink-0 justify-end px-3 py-2">
+            {sessionAction}
+          </div>
+        ) : null}
+        {orderList}
       </div>
     );
   }
 
+  // Dual pane: keep session chrome (logo / printer / ⋮) only above the
+  // order-list column so it does not span both panes and create a floating
+  // logo cell with misaligned border crosses.
   return (
-    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
-      <PosSessionTopBar
-        canCloseShift={canCloseShift}
-        onShowCloseSession={onShowCloseSession}
-      />
-      {sessionActionRow}
+    <div className="hidden h-full min-h-0 shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <div className="flex min-h-0 flex-1">
-        <div className="flex w-72 shrink-0 flex-col xl:w-80 2xl:w-96">
+        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80">
           {appendDraft.target != null ? (
             <AppendDraftPane
               targetLabel={appendDraft.target.targetLabel}
@@ -95,13 +102,14 @@ function SplitSidebarComponent({
             />
           )}
         </div>
-        <div className="flex w-72 shrink-0 flex-col border-l border-border/60 xl:w-80 2xl:w-96">
-          <OrderListPane
-            onViewBill={onViewBill}
-            onViewDetail={onViewDetail}
-            onOpenArchivedSheet={onOpenArchivedSheet}
-            hideTakeawayOrders={hideTakeawayOrders}
-          />
+        <div className="flex h-full min-h-0 w-72 shrink-0 flex-col border-l border-border/60 2xl:w-80">
+          {sessionTopBar}
+          {sessionAction ? (
+            <div className="flex shrink-0 justify-end px-3 py-2">
+              {sessionAction}
+            </div>
+          ) : null}
+          {orderList}
         </div>
       </div>
     </div>

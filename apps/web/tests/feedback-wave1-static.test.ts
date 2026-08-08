@@ -51,7 +51,7 @@ test("Wave 1 permission catalog is branch-scoped and delegable with BM backfill"
 
   assert.match(permissions, /FEEDBACK_VIEW: "feedback:view"/);
   assert.match(permissions, /FEEDBACK_MANAGE_QR: "feedback:manage_qr"/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 107/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 108/);
 
   assert.match(migration, /\('feedback:view'[\s\S]*?'branch'[\s\S]*?true\)/);
   assert.match(
@@ -127,7 +127,13 @@ test("ACL modules wire Owner /feedback and Branch /br/*/feedback", () => {
   const bottomNav = readWeb(
     "app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx",
   );
-  assert.match(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
+  assert.doesNotMatch(bottomNav, /`\/br\/\$\{branchId\}\/feedback`/);
+
+  const layout = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/layout.tsx",
+  );
+  assert.match(layout, /canAccess\(claims\.user_role, "branch_feedback"\)/);
+  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/);
 });
 
 test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () => {
@@ -135,6 +141,7 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
     "app/(protected)/feedback/_components/feedback-sub-nav.tsx",
   );
   assert.match(subNav, /<AppToolbar/);
+  assert.match(subNav, /size="touch"/);
   assert.doesNotMatch(subNav, /border-b border-border/);
   assert.doesNotMatch(subNav, /cn\(/);
 

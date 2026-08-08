@@ -288,6 +288,11 @@ export const finance = {
       count: (count: number) => `${count} mốc`,
       highest: (threshold: string) => `cao nhất ${threshold} chỉ số`,
       title: (branch: string) => `Mốc thưởng · ${branch}`,
+      trackingTitle: "Các mốc chỉ tiêu",
+      milestone: (threshold: string) => `Mốc ${threshold}`,
+      reward: (value: string) => `Thưởng ${value}`,
+      achieved: "Đã đạt",
+      pending: "Chưa đạt",
       description:
         "Mốc cao nhất đạt được là mức áp dụng, không cộng dồn. Khoản thưởng không tự động ghi vào bảng lương.",
       empty: "Chưa có mốc thưởng.",
@@ -324,8 +329,11 @@ export const finance = {
     },
     progress: {
       revenueLabel: "Doanh thu thuần",
+      monthRevenueLabel: "Doanh thu tháng",
+      dayRevenueLabel: "Doanh thu ngày",
       targetLabel: "Chỉ tiêu doanh thu thuần",
       mtdHint: "Đã đạt trong tháng",
+      dayHint: "Hôm nay (lịch VN)",
       noTarget: "Chưa đặt chỉ tiêu",
       unavailable: "Chưa tải được",
       remaining: (amount: string) => `Còn thiếu ${amount}`,

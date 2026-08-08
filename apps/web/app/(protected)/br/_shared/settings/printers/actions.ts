@@ -31,7 +31,6 @@ const printerSchema = z.object({
   lan_host: z.string().trim().min(1, { error: "Nhập LAN host" }),
   lan_port: z.coerce.number().int().min(1).max(65535).nullable().optional(),
   paper_width_mm: z.union([z.literal(58), z.literal(80)]).default(80),
-  code_page: z.string().trim().default("CP1258"),
   is_active: z.boolean().default(true),
   print_types: z.array(z.enum(PRINT_TYPES)).default([]),
   category_ids: z.array(z.coerce.number().int().positive()).default([]),
@@ -77,7 +76,8 @@ export async function upsertPrinter(
     p_lan_host: parsed.data.lan_host,
     p_lan_port: parsed.data.lan_port ?? 9100,
     p_paper_width_mm: parsed.data.paper_width_mm,
-    p_code_page: parsed.data.code_page,
+    // Bitmap render path ignores code page; keep DB default for schema compatibility.
+    p_code_page: "CP1258",
     p_is_active: parsed.data.is_active,
     p_print_types: parsed.data.print_types,
     p_category_ids: parsed.data.category_ids,

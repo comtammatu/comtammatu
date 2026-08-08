@@ -26,6 +26,7 @@ import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
 import { formatQty } from "@lib/inventory/format";
 import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import { messages } from "@lib/messages";
+import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import {
   submitCountRound,
   type StocktakeLineBlind,
@@ -204,7 +205,11 @@ export function StocktakeCountClient({
         counts: payload,
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? toastSubmitRoundFailed);
+        const applied = applyInventoryActionError(
+          res,
+          toastSubmitRoundFailed,
+        );
+        toast.error(applied.toastMessage);
         return;
       }
       toast.success(toastSavedCounts(res.data.appliedCount));

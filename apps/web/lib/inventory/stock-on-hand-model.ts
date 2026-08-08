@@ -8,6 +8,9 @@ export const STOCK_NO_CATEGORY_VALUE = "__none__";
 export type StockStatus = "normal" | "low" | "out";
 export type StockFilter = "all" | "in_stock" | "low" | "out";
 
+/** Branch/owner land default: hide out-of-stock rows. */
+export const STOCK_ON_HAND_DEFAULT_STATUS: StockFilter = "in_stock";
+
 export type StockLocationBreakdown = {
   locationId: number;
   name: string;
@@ -141,7 +144,7 @@ export function hasStockOnHandFilters(filters: StockOnHandFilters): boolean {
   return (
     filters.query.trim() !== "" ||
     normalizeStockOnHandCategories(filters.categories).length > 0 ||
-    filters.status !== "all"
+    filters.status !== STOCK_ON_HAND_DEFAULT_STATUS
   );
 }
 
@@ -176,7 +179,8 @@ export function filterStockOnHandIngredients(
   }
 
   if (filters.status === "in_stock") {
-    result = result.filter((ingredient) => ingredient.status === "normal");
+    // Còn hàng: anything with qty left (normal + low), hide hết hàng.
+    result = result.filter((ingredient) => ingredient.status !== "out");
   } else if (filters.status === "low") {
     result = result.filter((ingredient) => ingredient.status === "low");
   } else if (filters.status === "out") {
@@ -189,9 +193,15 @@ export function filterStockOnHandIngredients(
     );
   }
 
+  // in_stock: low before normal. all: out → low → normal.
+  const priority =
+    filters.status === "in_stock"
+      ? ({ low: 0, normal: 1, out: 2 } as const)
+      : STATUS_PRIORITY;
+
   return [...result].sort(
     (left, right) =>
-      STATUS_PRIORITY[left.status] - STATUS_PRIORITY[right.status] ||
+      priority[left.status] - priority[right.status] ||
       Number(isStockReorderRisk(right)) - Number(isStockReorderRisk(left)) ||
       left.name.localeCompare(right.name, "vi"),
   );

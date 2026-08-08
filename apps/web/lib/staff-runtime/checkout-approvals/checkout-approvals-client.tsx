@@ -2,12 +2,15 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing employee checkout approval surface keeps operational copy inline */
 
+import Image from "next/image";
 import { useEffect, useState, useTransition } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   CheckCircle2 as IconCheck,
+  ChevronRight as IconChevronRight,
   Circle as IconPending,
   ClipboardCheck as IconClipboardCheck,
+  Image as IconImage,
   X as IconX,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
@@ -16,6 +19,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
+  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,
@@ -36,10 +40,11 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
+import { AppDialog } from "@/components/form/form-dialog";
 import { AppEmptyState } from "@/components/surface";
-import { EmployeeDetailList } from "../components/staff-runtime-page";
 import {
   approveCheckoutRequest,
+  getCheckoutChecklistTaskPhotoUrl,
   rejectCheckoutRequest,
 } from "../clock/actions";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -53,6 +58,7 @@ export interface CheckoutApprovalItem {
   dateLabel: string;
   checkInLabel: string;
   requestedLabel: string;
+  shiftName: string;
   shiftLabel: string;
   requestKindLabel: string;
   checklist: {
@@ -60,6 +66,8 @@ export interface CheckoutApprovalItem {
     title: string;
     isDone: boolean;
     isRequired: boolean;
+    allowsPhoto: boolean;
+    hasPhoto: boolean;
   }[];
 }
 
@@ -132,7 +140,7 @@ function ApprovalRow({
   };
 
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative overflow-hidden rounded-md">
       <div
         className="absolute inset-y-0 right-0 flex w-35 items-stretch justify-end"
         {...swipe.actionRegionProps(String(item.id))}
@@ -140,7 +148,7 @@ function ApprovalRow({
         <Button
           variant="destructive"
           size="touch"
-          className="h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
+          className="self-stretch rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
           disabled={!canApprove || approving || isPending}
           onClick={() => {
             swipe.clearReveal();
@@ -152,7 +160,7 @@ function ApprovalRow({
         </Button>
         <Button
           size="touch"
-          className="bg-success text-success-foreground h-full rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
+          className="bg-success text-success-foreground self-stretch rounded-none w-1/2 flex flex-col items-center justify-center p-0 gap-1"
           disabled={!canApprove || approving || isPending}
           onClick={() => {
             swipe.clearReveal();
@@ -170,73 +178,34 @@ function ApprovalRow({
 
       <div
         className={cn(
-          "bg-background transition-transform duration-300 ease-out cursor-pointer h-full border-r touch-pan-y",
+          "bg-card transition-transform duration-300 ease-out cursor-pointer touch-pan-y",
           isRevealed ? "-translate-x-35" : "translate-x-0",
         )}
         {...handlers}
       >
         <Item
           variant="outline"
-          className="items-start flex flex-col gap-3 p-4 pointer-events-none select-none rounded-none border-0"
+          size="sm"
+          className="min-h-20 pointer-events-none select-none bg-card"
+          data-checkout-approval-row
         >
-          <div className="flex w-full items-start gap-3">
-            <ItemMedia variant="icon" className="mt-0.5 shrink-0">
-              <IconClipboardCheck />
-            </ItemMedia>
-            <ItemContent className="min-w-0">
-              <ItemTitle
-                size="heading"
-                className="flex items-center flex-wrap gap-2"
-              >
-                {item.employeeName}
-                {item.employeeCode ? (
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {item.employeeCode}
-                  </span>
-                ) : null}
-              </ItemTitle>
-              <ItemDescription className="text-xs text-muted-foreground mt-0.5">
-                {item.requestKindLabel}
-                {item.branchName ? ` · ${item.branchName}` : ""}
-                {" · "}
-                {item.shiftLabel}
-              </ItemDescription>
-              <div className="mt-3">
-                <EmployeeDetailList
-                  columns={3}
-                  rows={[
-                    {
-                      label: "Vào ca",
-                      value: (
-                        <span className="font-mono">{item.checkInLabel}</span>
-                      ),
-                    },
-                    {
-                      label: "Yêu cầu ra",
-                      value: (
-                        <span className="font-mono">{item.requestedLabel}</span>
-                      ),
-                    },
-                  ]}
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <Badge variant="warning" className="pointer-events-none">
-                  Chờ duyệt
-                </Badge>
-                {item.checklist && item.checklist.length > 0 ? (
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    Việc trong ca:{" "}
-                    <span className="font-mono text-foreground font-bold">
-                      {item.checklist.filter((c) => c.isDone).length}/
-                      {item.checklist.length}
-                    </span>{" "}
-                    xong
-                  </span>
-                ) : null}
-              </div>
-            </ItemContent>
-          </div>
+          <ItemContent className="min-w-0 gap-0.5">
+            <ItemTitle size="heading" className="truncate">
+              {item.employeeName}
+            </ItemTitle>
+            <ItemDescription className="font-mono tabular-nums">
+              {item.checkInLabel} → {item.requestedLabel}
+            </ItemDescription>
+            <ItemDescription className="truncate">
+              {item.shiftName}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions className="shrink-0 self-center">
+            <IconChevronRight
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </ItemActions>
         </Item>
       </div>
     </div>
@@ -265,8 +234,42 @@ export function CheckoutApprovalsClient({
     useState<CheckoutApprovalItem | null>(
       () => items.find((item) => item.id === focusAttendanceId) ?? null,
     );
+  const [photoPreview, setPhotoPreview] = useState<{
+    url: string;
+    title: string;
+    employeeName: string;
+  } | null>(null);
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [pendingPhotoItemId, setPendingPhotoItemId] = useState<number | null>(
+    null,
+  );
 
   const swipe = useSwipeReveal({ revealWidth: 140 });
+
+  async function openChecklistPhoto(
+    item: CheckoutApprovalItem,
+    checklistItem: CheckoutApprovalItem["checklist"][number],
+  ) {
+    if (!checklistItem.hasPhoto) return;
+    setPendingPhotoItemId(checklistItem.id);
+    startTransition(async () => {
+      const result = await getCheckoutChecklistTaskPhotoUrl({
+        attendanceId: item.id,
+        itemId: checklistItem.id,
+      });
+      setPendingPhotoItemId(null);
+      if (!result.success || !result.data?.url) {
+        toast.error(result.error ?? "Không mở được ảnh minh chứng.");
+        return;
+      }
+      setPhotoPreview({
+        url: result.data.url,
+        title: checklistItem.title,
+        employeeName: item.employeeName,
+      });
+      setPhotoOpen(true);
+    });
+  }
 
   async function approve(item: CheckoutApprovalItem) {
     const checklistTotal = item.checklist.length;
@@ -390,7 +393,9 @@ export function CheckoutApprovalsClient({
           <DrawerHeader className="shrink-0">
             <DrawerTitle>Chi tiết kết ca</DrawerTitle>
             <DrawerDescription>
-              {detailsTarget?.employeeName} - {detailsTarget?.shiftLabel}
+              {detailsTarget
+                ? `${detailsTarget.employeeName} · ${detailsTarget.shiftLabel} · ${detailsTarget.checkInLabel}→${detailsTarget.requestedLabel}`
+                : null}
             </DrawerDescription>
           </DrawerHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-4">
@@ -406,11 +411,12 @@ export function CheckoutApprovalsClient({
                         role="listitem"
                         variant="muted"
                         size="sm"
+                        className="items-start"
                       >
                         <ItemMedia variant="icon" aria-hidden="true">
                           {c.isDone ? <IconCheck /> : <IconPending />}
                         </ItemMedia>
-                        <ItemContent>
+                        <ItemContent className="gap-2">
                           <ItemTitle
                             className={cn(
                               "line-clamp-none",
@@ -426,7 +432,35 @@ export function CheckoutApprovalsClient({
                             {c.isRequired ? (
                               <Badge variant="destructive">Bắt buộc</Badge>
                             ) : null}
+                            {c.allowsPhoto ? (
+                              <Badge
+                                variant={c.hasPhoto ? "success" : "outline"}
+                              >
+                                {c.hasPhoto ? "Có ảnh" : "Chưa kèm ảnh"}
+                              </Badge>
+                            ) : null}
                           </ItemDescription>
+                          {c.allowsPhoto && c.hasPhoto ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="touch"
+                              className="w-full sm:w-fit"
+                              disabled={
+                                isPending || pendingPhotoItemId === c.id
+                              }
+                              onClick={() =>
+                                openChecklistPhoto(detailsTarget, c)
+                              }
+                            >
+                              {pendingPhotoItemId === c.id ? (
+                                <Spinner data-icon="inline-start" />
+                              ) : (
+                                <IconImage data-icon="inline-start" />
+                              )}
+                              Xem ảnh minh chứng
+                            </Button>
+                          ) : null}
                         </ItemContent>
                       </Item>
                     ))}
@@ -473,6 +507,28 @@ export function CheckoutApprovalsClient({
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <AppDialog
+        open={photoOpen}
+        onOpenChange={(open) => {
+          setPhotoOpen(open);
+          if (!open) setPhotoPreview(null);
+        }}
+        title="Ảnh minh chứng việc trong ca"
+        description="Đường dẫn xem ảnh có hiệu lực trong 5 phút."
+        contentClassName="sm:max-w-lg"
+      >
+        {photoPreview ? (
+          <Image
+            src={photoPreview.url}
+            alt={`Ảnh minh chứng «${photoPreview.title}» của ${photoPreview.employeeName}`}
+            width={960}
+            height={720}
+            className="h-auto max-h-dvh-80 w-full rounded-md object-contain"
+            unoptimized
+          />
+        ) : null}
+      </AppDialog>
 
       {/* Reject Reason Drawer */}
       <Drawer

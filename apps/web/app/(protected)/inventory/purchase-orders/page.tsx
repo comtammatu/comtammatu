@@ -137,9 +137,6 @@ export default async function PurchaseOrdersPage({
   searchParams: Promise<{
     tab?: string | string[];
     branchId?: string | string[];
-    demandId?: string | string[];
-    poId?: string | string[];
-    mode?: string | string[];
   }>;
 }) {
   const params = await searchParams;

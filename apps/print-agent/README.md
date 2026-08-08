@@ -64,16 +64,29 @@ corepack pnpm --filter @comtammatu/print-agent start  # node dist/index.js
 Or run as a long-lived service via your platform's process manager
 (NSSM on Windows, systemd on Linux, termux-services on Android).
 
-### Windows Service via NSSM
+### Windows — one-shot per branch
 
-```powershell
-# Run as Administrator
-cd apps\print-agent
-.\scripts\install-service.ps1
+Branch IT should not install Node/NSSM or wire the service by hand. After HQ
+builds the zip (`bash apps/print-agent/scripts/build-bundle.sh`) and prepares
+`branch.env`:
+
+```bat
+:: Unzip to C:\ComTamMaTu\print-agent\ then:
+SETUP.cmd -EnvFile branch.env
 ```
 
-The script registers service `ComTamMaTu-PrintAgent` with auto-restart on crash,
-launching `node.exe dist\index.js`. Logs rotate at 10 MB each:
+`SETUP.cmd` elevates and runs `scripts\setup-branch.ps1`, which:
+
+1. Ensures Node.js 24.x + NSSM
+2. Creates/updates `.env` (keeps values, supplements new keys, migrates legacy
+   `dist-bin\.env`)
+3. Installs/updates service `ComTamMaTu-PrintAgent`
+4. Checks service Running and Realtime `SUBSCRIBED`
+
+Re-run the same command after unzipping a newer bundle to upgrade. Low-level
+helper (already called by setup): `scripts\install-service.ps1`.
+
+Logs rotate at 10 MB each:
 
 ```
 C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log
@@ -94,8 +107,8 @@ Uninstall:
 | `SUPABASE_SERVICE_ROLE_KEY`  | yes                          | Service role JWT (bypasses RLS)                                                                                                                                                                                                                         |
 | `AGENT_TENANT_ID`            | yes                          | Numeric tenant id                                                                                                                                                                                                                                       |
 | `AGENT_BRANCH_ID`            | yes                          | Numeric branch id this agent serves                                                                                                                                                                                                                     |
-| `AGENT_ID`                   | required with presence       | Stable identifier. Required when `PRINT_AGENT_PRESENCE_TOKEN` is set because presence tokens are bound to this value.                                                                                                                                   |
-| `WEB_BASE_URL`               | no                           | Web app base URL for branch-presence registration.                                                                                                                                                                                                      |
+| `AGENT_ID`                   | required with presence       | Stable branch-slug id (e.g. `nguyen-huu-tho`). Required when `PRINT_AGENT_PRESENCE_TOKEN` is set; tokens are bound to this value.                                                                                                                        |
+| `WEB_BASE_URL`               | production recommended       | App origin for receipt invoice QR and branch-presence registration.                                                                                                                                                                                     |
 | `PRINT_AGENT_PRESENCE_TOKEN` | required with `WEB_BASE_URL` | Raw per-agent bearer token for `/api/branch-presence`. Store only its SHA-256 hash in `printer_agent_presence_tokens`.                                                                                                                                  |
 | `PRINT_TIMEOUT_MS`           | no                           | Per-attempt socket timeout. Default `5000`.                                                                                                                                                                                                            |
 | `PRINT_MAX_ATTEMPTS`         | no                           | Total send attempts before a job is marked `failed`. Default `3`. A resend stops the moment any bytes reach the printer, so a half-sent ticket is never duplicated.                                                                                       |
@@ -106,8 +119,8 @@ Provision or rotate the token from the repo CLI:
 ```bash
 corepack pnpm --filter @comtammatu/print-agent presence:provision -- create \
   --tenant-id 1 \
-  --branch-id 1 \
-  --agent-id pos-branch-1 \
+  --branch-id 3 \
+  --agent-id nguyen-huu-tho \
   --confirm-project-ref enloyfnuerqgaqderbwb
 ```
 
@@ -118,7 +131,7 @@ and `status` to inspect token/IP state:
 
 ```bash
 corepack pnpm --filter @comtammatu/print-agent presence:provision -- status \
-  --tenant-id 1 --branch-id 1 --agent-id pos-branch-1
+  --tenant-id 1 --branch-id 3 --agent-id nguyen-huu-tho
 ```
 
 The old global shared-token mode is retired; one leaked branch token must not

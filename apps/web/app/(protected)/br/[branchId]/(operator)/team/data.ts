@@ -73,7 +73,6 @@ interface EmployeeMeta {
   fullName: string;
   positionLabel: string | null;
   positionRole: StaffRole | "unassigned";
-  effectiveChecklistTemplateId: number | null;
 }
 
 function embeddedRecord(value: unknown): Record<string, unknown> | null {
@@ -132,10 +131,10 @@ export const fetchTeamBoard = withAction(
         .from("employees")
         .select(
           `
-            id, employee_code, is_active, default_checklist_template_id,
+            id, employee_code, is_active,
             profiles!inner (
               full_name, branch_id,
-              positions ( code, label_vi, default_checklist_template_id )
+              positions ( code, label_vi )
             )
           `,
         )
@@ -150,10 +149,10 @@ export const fetchTeamBoard = withAction(
             checkout_requested_at, checkout_approved_at,
             shifts ( name, start_time, end_time ),
             employees (
-              employee_code, default_checklist_template_id,
+              employee_code,
               profiles (
                 full_name,
-                positions ( code, label_vi, default_checklist_template_id )
+                positions ( code, label_vi )
               )
             ),
             attendance_checklist_items ( phase, is_required, is_done )
@@ -255,10 +254,6 @@ export const fetchTeamBoard = withAction(
     for (const row of employeeRows) {
       const profile = embeddedRecord(row.profiles);
       const position = embeddedRecord(profile?.positions);
-      const positionTemplateId =
-        typeof position?.default_checklist_template_id === "number"
-          ? position.default_checklist_template_id
-          : null;
       employeeMetaById.set(row.id, {
         employeeId: row.id,
         employeeCode: row.employee_code ?? null,
@@ -268,8 +263,6 @@ export const fetchTeamBoard = withAction(
         positionRole: staffRoleFromPositionCode(
           typeof position?.code === "string" ? position.code : null,
         ),
-        effectiveChecklistTemplateId:
-          row.default_checklist_template_id ?? positionTemplateId,
       });
     }
 
@@ -311,10 +304,6 @@ export const fetchTeamBoard = withAction(
         const employee = embeddedRecord(record.employees);
         const profile = embeddedRecord(employee?.profiles);
         const position = embeddedRecord(profile?.positions);
-        const positionTemplateId =
-          typeof position?.default_checklist_template_id === "number"
-            ? position.default_checklist_template_id
-            : null;
         meta = {
           employeeId: record.employee_id,
           employeeCode: stringField(employee, "employee_code"),
@@ -324,10 +313,6 @@ export const fetchTeamBoard = withAction(
           positionRole: staffRoleFromPositionCode(
             typeof position?.code === "string" ? position.code : null,
           ),
-          effectiveChecklistTemplateId:
-            (typeof employee?.default_checklist_template_id === "number"
-              ? employee.default_checklist_template_id
-              : null) ?? positionTemplateId,
         };
         employeeMetaById.set(record.employee_id, meta);
       }
@@ -354,7 +339,8 @@ export const fetchTeamBoard = withAction(
         checkOut: record.check_out,
         checkoutRequestedAt: record.checkout_requested_at,
         checkoutApprovedAt: record.checkout_approved_at,
-        checklistConfigured: meta?.effectiveChecklistTemplateId != null,
+        // Clock-in snapshots position_shift_tasks into attendance_checklist_items.
+        checklistConfigured: checklistItems.length > 0,
         checklist,
         countStatus: resolveCountStatusForShift(
           assignmentRows,
@@ -399,6 +385,13 @@ export const fetchTeamBoard = withAction(
       .filter((row): row is TeamBoardRow => row !== null)
       .sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
 
-    return { success: true, data: { date: today, rows } };
+    return {
+      success: true,
+      data: {
+        date: today,
+        rows,
+        activeEmployeeCount: employeeRows.length,
+      },
+    };
   },
 );

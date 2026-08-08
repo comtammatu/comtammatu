@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item } from "@comtammatu/ui/components/item";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+} from "@comtammatu/ui/components/item";
+import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
   ToggleGroup,
@@ -13,6 +18,11 @@ import { Inbox as IconInbox } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/(protected)/notifications/actions";
 import { messages, m } from "@lib/messages";
 import { AppEmptyState } from "@/components/surface";
+import {
+  formatVNDate,
+  getVNDateString,
+  getYesterdayVNDateString,
+} from "@comtammatu/shared/time";
 import { AppBoneyardSkeleton } from "./boneyard-skeleton";
 import { NotificationItem } from "./notification-item";
 
@@ -29,9 +39,22 @@ interface Props {
   onFeedModeChange?: (next: "active" | "all") => void;
   onItemNavigate?: () => void;
   showViewAll?: boolean;
-  /** Constrain the scroll viewport height; omit to grow with content. */
+  /** Hide the compact panel title row when the page header already owns it. */
+  showPanelHeader?: boolean;
+  /**
+   * Render the feed-mode toggle inside this list. Page layouts usually host
+   * the toggle in `AppListFrame` toolbar instead.
+   */
+  showFilterBar?: boolean;
+  /** Constrain the scroll viewport height; omit for normal page flow. */
   scrollClassName?: string;
 }
+
+type DayGroup = {
+  key: string;
+  label: string;
+  items: NotificationItemModel[];
+};
 
 const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
   {
@@ -87,43 +110,122 @@ const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
   },
 ];
 
+export function NotificationFeedFilter({
+  feedMode,
+  unreadCount,
+  onFeedModeChange,
+}: {
+  feedMode: "active" | "all";
+  unreadCount: number;
+  onFeedModeChange: (next: "active" | "all") => void;
+}) {
+  const hasUnread = unreadCount > 0;
+
+  return (
+    <ToggleGroup
+      type="single"
+      size="sm"
+      variant="outline"
+      value={feedMode}
+      onValueChange={(value) => {
+        if (value === "active" || value === "all") onFeedModeChange(value);
+      }}
+      className="h-8 w-full sm:w-auto"
+    >
+      <ToggleGroupItem
+        value="active"
+        className="h-8 flex-1 px-3 text-xs sm:flex-none"
+      >
+        {messages.notifications.filters.active}
+        {hasUnread ? (
+          <span className="ml-1.5 tabular-nums text-muted-foreground">
+            {unreadCount}
+          </span>
+        ) : null}
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="all"
+        className="h-8 flex-1 px-3 text-xs sm:flex-none"
+      >
+        {messages.notifications.filters.all}
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+}
+
+export function groupNotificationsByDay(
+  items: NotificationItemModel[],
+  now: Date = new Date(),
+): DayGroup[] {
+  const today = getVNDateString(now);
+  const yesterday = getYesterdayVNDateString(now);
+  const groups: DayGroup[] = [];
+
+  for (const item of items) {
+    const key = getVNDateString(item.created_at);
+    let label = formatVNDate(item.created_at);
+    if (key === today) label = messages.notifications.groups.today;
+    else if (key === yesterday) label = messages.notifications.groups.yesterday;
+
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.items.push(item);
+      continue;
+    }
+    groups.push({ key, label, items: [item] });
+  }
+
+  return groups;
+}
+
 function NotificationRows({
   items,
   onItemNavigate,
   onRead,
 }: Pick<Props, "items" | "onItemNavigate" | "onRead">) {
+  const groups = groupNotificationsByDay(items);
+
   return (
-    <>
-      {items.map((item) => (
-        <NotificationItem
-          key={item.id}
-          item={item}
-          onRead={onRead}
-          onNavigate={onItemNavigate}
-        />
+    <div className="flex flex-col gap-4">
+      {groups.map((group) => (
+        <section key={group.key} className="flex flex-col gap-2">
+          <SectionLabel density="dense" as="h3">
+            {group.label}
+          </SectionLabel>
+          <ItemGroup className="gap-2" data-size="sm">
+            {group.items.map((item) => (
+              <NotificationItem
+                key={item.id}
+                item={item}
+                onRead={onRead}
+                onNavigate={onItemNavigate}
+              />
+            ))}
+          </ItemGroup>
+        </section>
       ))}
-    </>
+    </div>
   );
 }
 
 function NotificationListSkeletonFallback() {
   return (
-    <>
+    <div className="flex flex-col gap-2">
       {Array.from({ length: 4 }).map((_, index) => (
         <Item
           key={index}
           variant="outline"
-          className="items-start gap-3 bg-card p-3"
+          className="items-start gap-3 border-l-[3px] border-l-transparent bg-card p-3"
         >
-          <Skeleton className="size-8 shrink-0 rounded-md" />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Skeleton className="size-9 shrink-0 rounded-md" />
+          <ItemContent className="gap-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-1/3" />
-          </div>
+          </ItemContent>
         </Item>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -140,64 +242,61 @@ export function NotificationList({
   onFeedModeChange,
   onItemNavigate,
   showViewAll = true,
-  scrollClassName = "max-h-[28rem]",
+  showPanelHeader = true,
+  showFilterBar,
+  scrollClassName,
 }: Props) {
   const hasUnread = unreadCount > 0;
-  const showFilter = typeof onFeedModeChange === "function";
+  const showFilter =
+    showFilterBar ?? typeof onFeedModeChange === "function";
+  const nestedScroll = Boolean(scrollClassName);
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <p className="text-sm font-semibold">
-          {messages.notifications.pageTitle}
+      {showPanelHeader ? (
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <p className="text-sm font-semibold">
+            {messages.notifications.pageTitle}
+            {hasUnread ? (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {m(messages.notifications.unreadBadge, { count: unreadCount })}
+              </span>
+            ) : null}
+          </p>
           {hasUnread ? (
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              {m(messages.notifications.unreadBadge, { count: unreadCount })}
-            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onMarkAll}
+            >
+              {messages.notifications.markAllRead}
+            </Button>
           ) : null}
-        </p>
-        {hasUnread ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={onMarkAll}
-          >
-            {messages.notifications.markAllRead}
-          </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {showFilter ? (
+      {showFilter && onFeedModeChange ? (
         <div className="border-b px-3 py-2">
-          <ToggleGroup
-            type="single"
-            size="sm"
-            variant="outline"
-            value={feedMode}
-            onValueChange={(value) => {
-              if (value === "active" || value === "all") onFeedModeChange(value);
-            }}
-            className="h-7"
-          >
-            <ToggleGroupItem value="active" className="h-7 px-3 text-xs">
-              {messages.notifications.filters.active}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="all" className="h-7 px-3 text-xs">
-              {messages.notifications.filters.all}
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <NotificationFeedFilter
+            feedMode={feedMode}
+            unreadCount={unreadCount}
+            onFeedModeChange={onFeedModeChange}
+          />
         </div>
       ) : null}
 
       <div
-        className={cn("overflow-y-auto overscroll-contain", scrollClassName)}
+        className={cn(
+          nestedScroll ? "overflow-y-auto overscroll-contain" : null,
+          scrollClassName,
+        )}
       >
         <AppBoneyardSkeleton
           name="notifications-list"
           loading={loading}
-          className="flex flex-col gap-2 p-3"
+          className={cn("flex flex-col", nestedScroll ? "gap-2 p-3" : "gap-3 pt-3")}
           fixture={
             <NotificationRows
               items={NOTIFICATION_SKELETON_ITEMS}
@@ -223,12 +322,12 @@ export function NotificationList({
           )}
         </AppBoneyardSkeleton>
         {hasMore && onLoadMore && !loading ? (
-          <div className="px-3 pb-3">
+          <div className={cn(nestedScroll ? "px-3 pb-3" : "pt-3")}>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 w-full text-xs"
+              className="h-9 w-full text-xs"
               onClick={onLoadMore}
               disabled={loadingMore}
             >

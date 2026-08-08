@@ -128,15 +128,20 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
-- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` workspace với strip tab cuộn ngang: `Theo dõi ca` · `Nhân sự` luôn có, cộng `Phân ca` / `Chấm công` / `Duyệt kết ca` / `Duyệt nghỉ phép` theo quyền. Mỗi tab có chrome title + mô tả job phía trên nội dung. Phân công đếm nằm dưới Kho (`/stock/count-assignments`), không phải tab Team.
+- **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` hub 2 tab peer (`Ca hôm nay` · `Nhân viên`) tối ưu phone. Phân ca / Chấm công / Duyệt kết ca / Duyệt nghỉ phép là full route dưới `/shift/*` (mở từ strip công cụ trên board hoặc deep link); không còn peer-tab trên Đội. **Entry** Phân công đếm + Phiếu đếm từ strip công cụ Đội (việc trong ca); route vẫn `/stock/count-assignments` và `/stock/count-slips` (không tạo peer-tab Đội mới).
 - **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`) và Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
+- **Inventory plane:** mọi `page.tsx` dưới `/br/[branchId]` (class A / A- / B / C / D / E, Owner wrapper, shim, backlog fork) nằm ở [`branch-route-inventory.md`](./branch-route-inventory.md) — không nhân bản 66 dòng tại đây.
 - **Quy chuẩn UX/UI:**
-  - Bottom nav **chi nhánh** (`branch_kind=branch`): `Hôm nay` · `Ca` · `Đội` · `Kho` · `Phản hồi`. Tab **Kho** land mặc định `/stock/on-hand` (danh sách tồn); `matchPrefixes` vẫn cover `/stock/*`. `Điều hành` và `Thiết lập` nằm trong overflow header.
-  - Hub CN: hàng chờ > 0 rồi điểm vào bán hàng/bếp; queue **không** GRN/SX (D093).
-  - **Exception hẹp (manager-like CN):** trên `/br/[branchId]` (không phải Dashboard), `owner` và `branch_manager` được một strip hai tín hiệu `Doanh thu` (thuần MTD) + `Chỉ tiêu` … Cashier/chef/staff không thấy strip. Hub trung tâm không hiện strip doanh thu.
-  - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`.
-  - `Đội` mở workspace tab cuộn ngang (`Theo dõi ca`, `Nhân sự`, và tab quản lý theo quyền).
+  - Bottom nav **chi nhánh** (`branch_kind=branch`) theo vai trò:
+    - Nhân viên (`cashier` / `chef` / `branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
+    - Quản lý (`branch_manager`; owner khi vào shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa hàng hóa trước (Kho hàng / Yêu cầu hàng / Kiểm kê phiên / Hao hụt) rồi list phiếu giao nhận (YCH + nhận). Phân công đếm / Phiếu đếm vào từ **Đội**. Không Tiêu Hao SX. Badge queue live.
+    - Chuông = unread inbox. `Điều hành`, `Phản hồi`, `Giới hạn bán` trong `⋯` (QL/owner). Avatar header vẫn mở Hồ sơ cho mọi role.
+  - Hub CN thứ tự: trạng thái ca → **Cần duyệt** (khi > 0) → trạm **Bán hàng** / **Quầy Bếp** → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). `/menu-limits` vẫn reachable từ overflow header / sheet.
+  - **Exception hẹp (manager-like CN):** panel KPI Doanh thu tháng | ngày + tiến độ chỉ tiêu + các mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
+  - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Nhân viên: `/shift/schedule` và `/profile` là tab riêng; QL giữ lịch dưới shortcut trong `Ca` + avatar.
+  - `Đội` mở hub 2 tab (`Ca hôm nay`, `Nhân viên`). Trên board: panel **Cần duyệt** chỉ Duyệt kết ca / Duyệt nghỉ khi có pending; panel **Quản lý đội** luôn hiện Phân công đếm + Phiếu đếm (badge khi chờ duyệt) cùng Phân ca / Chấm công. Workflow sâu gắn bottom-nav Đội qua `matchPrefixes` `/shift/roster|attendance|checkout-approvals|leave-approvals`.
+
 
 ---
 
@@ -228,8 +233,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
     Bếp TT dùng cùng route để yêu cầu Kho Tổng.
   - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
   - Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
-  - `/br/[branchId]/stock/on-hand` là **stock home** (điểm vào mặc định khi bấm Kho/Tồn): LIST touch-first mọi viewport phone/tablet kể cả `1024px` landscape. Attention theo `branch_kind`: CN/Bếp TT “Cần bổ sung” → Yêu cầu hàng / Yêu cầu Kho Tổng; Kho Tổng “Cần nhập / mua” → Nhập kho (+ YCM khi được phép), CTA 1–2 nút lưới 2 cột. Toolbar: search + `ToggleGroup` trạng thái + Sheet bộ lọc (`MultiSelectCombobox` danh mục) + Sheet “Thêm chức năng kho” (grid 2 cột job phụ). Risk rows đầu list; không WAC/KPI/DataTable. One-warehouse topology không hiển thị bộ lọc vị trí.
-  - `/br/[branchId]/stock` là hub **Thêm chức năng** (secondary): các section workflow xếp theo thứ tự D093 (luồng hàng ngày → kiểm kê → hao hụt/tiêu hao → danh mục), mỗi job có mô tả ngắn; không còn land mặc định của tab Kho và không dùng tab lưới trần. Back từ subflow về `/stock/on-hand`.
+  - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / YCH / kiểm kê phiên / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). YCH CN: tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); không hiện chuẩn bị Kho Tổng/Bếp TT; chi tiết thao tác chỉ bước 1 và 4.
+  - `/br/[branchId]/stock/on-hand` là LIST tồn touch-first. Attention theo `branch_kind`. Không Tiêu Hao SX trên primary CN.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.
   - Branch `/br/[branchId]/stock/grn` ưu tiên nháp của người đang nhận hàng, sau đó là hàng đợi GRN có tìm kiếm/lọc trạng thái. Mỗi row chỉ hiển thị mã, NCC, ngày và trạng thái; chạm để tiếp tục/xem phiếu, bỏ nháp là action riêng có xác nhận. Không đưa tổng tiền, tên chi nhánh, `DataTable` hay long-press từ control_surface sang route này.
   - Branch `/br/[branchId]/stock/grn/new` và `/br/[branchId]/stock/grn/new/[supplierId]` chỉ là redirect tương thích: chi nhánh thường về Yêu cầu hàng; Kho Tổng/Bếp TT về Yêu cầu mua. Không tạo phiếu nhập ngoài PO.
@@ -244,7 +249,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
     trị, export, `DataTable` hoặc audit control_surface.
   - Branch `/br/[branchId]/stock/issues/[id]` là `DETAIL` touch-native: nháp cho thêm/sửa/xóa một dòng nguyên liệu bằng bottom sheet, bắt buộc lý do và kiểm tra số lượng theo đơn vị đã chọn trước khi gọi Server Action; chốt/hủy là action sticky có xác nhận. Phiếu cuối chỉ đọc; WAC, giá trị, audit và correction thuộc control_surface.
   - Branch `/br/[branchId]/stock/consumption` là `LIST` touch-native với hai view tách bạch: ledger tiêu hao đã ghi và chứng từ thủ công cần rà soát. Row giữ loại nguồn (`pos`, `manual`, `hrm`, `import`, `other`), trạng thái và thời điểm; `/stock/consumption/[id]` chỉ mở detail đúng loại tiêu hao. Không import presenter control_surface hoặc đổi thành bảng desktop ở tablet.
-  - Branch `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai `LIST` touch-native riêng cho quản lý: màn phân công nhóm nguyên liệu theo nhân viên; màn phiếu đếm review từng chênh lệch rồi duyệt/yêu cầu đếm lại trong bottom sheet có action sticky. Không dẫn quản lý vào phiếu đếm cá nhân của chính họ và không dùng client control_surface.
+  - Branch `/br/[branchId]/stock/count-assignments` và `/stock/count-slips` là hai `LIST` touch-native riêng cho quản lý (route stock, **entry từ Đội**): màn phân công nhóm nguyên liệu theo nhân viên; màn phiếu đếm review từng chênh lệch rồi duyệt/yêu cầu đếm lại trong bottom sheet có action sticky. Khác `/stock/stocktake` (phiên kiểm đối chiếu). Không dẫn quản lý vào phiếu đếm cá nhân của chính họ và không dùng client control_surface.
   - control_surface `/inventory/count-assignments` và `/inventory/count-slips` giữ management list desktop-responsive bằng `DataTable`; chỉnh phân công và review dòng phiếu mở trong `AppDialog` với action hiển thị rõ. Không dùng swipe, long-press, drawer hoặc presenter Branch.
   - Branch `/br/[branchId]/stock/reports` là `REPORT` touch-native: branch URL và tháng hiện tại khóa phạm vi; first viewport là chênh lệch tiêu hao warning/critical, sau đó là các nguyên liệu biến động nhiều nhất. Mỗi quantity giữ nguyên unit của nguyên liệu và row chạm vào tồn thực tương ứng. Không đưa biểu đồ, KPI/tổng quantity chéo đơn vị, công nợ NCC, giá vốn, branch/date picker, export, `DataTable`, audit hoặc presenter control_surface vào phone/tablet.
   - Branch `/br/[branchId]/stock/waste` là `DOC-WORKFLOW` touch-native: vị trí kho và cảnh báo cap ở màn chính, danh sách dòng hao hụt chỉ hiển thị nguyên liệu, số lượng/đơn vị, tier và giá trị dự kiến; mỗi dòng sửa trong bottom sheet để giữ ngữ cảnh tồn, lý do và bằng chứng. URL khóa branch, không dùng branch picker, `DocumentFormFrame`, `DataTable`, header/toolbar control_surface, audit hoặc tổng quan chi phí control_surface. Server Action/RPC vẫn là authority cho WAC, tồn, tier và approval.
@@ -338,7 +343,7 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   1. Tab **Hôm nay** — clock hôm nay (ẩn month/view switcher; cột ưu tiên NV · Ca · Vào · Ra · Ghi nhận).
   2. Tab **Duyệt** — queue kết ca nhúng + bảng phép (một bộ cột; filter trạng thái).
   3. Tab **Bảng công** — summary mặc định; toggle lịch / vào-ra trong tháng.
-  4. Tab **Phân ca** (`tab=roster`) — lưới tuần theo site (chi nhánh + Văn phòng `branch_id` null); quyền `hr:assign_shift`.
+  4. **Phân ca** — `/br/*/shift/roster`; lưới tuần theo site (chi nhánh + Văn phòng `branch_id` null); quyền `hr:assign_shift`.
 - **Nên hiển thị:** Pending counts trên tab Duyệt; site gồm Văn phòng; cảnh báo khi chưa phân ca.
 - **KHÔNG hiển thị:** Phân quyền staff; chỉnh `pay_basis`; KPI bán hàng; fallback chọn ca theo đồng hồ tường.
 - **Quy chuẩn:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL. Duyệt tách khỏi cấu hình Setup. BM dùng `/br/{id}/shift/roster`.

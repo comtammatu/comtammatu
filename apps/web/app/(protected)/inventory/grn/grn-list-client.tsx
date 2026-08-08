@@ -49,6 +49,7 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import { discardGrnDraft } from "../grn-actions";
@@ -66,6 +67,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const grnCopy = messages.inventory.grn;
+const GRN_OVERLAY_KEYS = ["grnId", "mode"] as const;
 
 const comboFilter = (
   option: { label: string; keywords?: string[] },
@@ -84,7 +86,6 @@ export function GrnListClient({
   canManageSupplierInvoice,
   loadFailed,
   withinOwnerTabs = false,
-  detailError,
 }: {
   rows: GrnListRow[];
   total: number;
@@ -95,9 +96,9 @@ export function GrnListClient({
   canManageSupplierInvoice: boolean;
   loadFailed: boolean;
   withinOwnerTabs?: boolean;
-  detailError?: string | null;
 }) {
   const router = useRouter();
+  const overlay = useDocumentOverlayUrl(GRN_OVERLAY_KEYS);
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(filters.query);
   const [supplierId, setSupplierId] = useState(
@@ -154,11 +155,14 @@ export function GrnListClient({
     );
   }
 
-  function detailHref(row: GrnListRow) {
-    return listHref({
-      grnId: String(row.id),
-      mode: row.status === "draft" ? "receive" : "view",
-    });
+  function openDetail(row: GrnListRow, method: "push" | "replace" = "push") {
+    overlay.patchOverlay(
+      {
+        grnId: row.id,
+        mode: row.status === "draft" ? "receive" : "view",
+      },
+      method,
+    );
   }
 
   function rowActions(row: GrnListRow): RowActionItem[] {
@@ -170,7 +174,7 @@ export function GrnListClient({
             ? "Tiếp tục nhập hàng"
             : ACTIONS_VI.viewDetails,
         icon: <IconExternalLink />,
-        href: detailHref(row),
+        onSelect: () => openDetail(row),
       },
       {
         key: "purchase-order",
@@ -228,12 +232,13 @@ export function GrnListClient({
       render: (row) => (
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={detailHref(row)}
+            <button
+              type="button"
               className="font-mono font-medium text-primary hover:underline"
+              onClick={() => openDetail(row)}
             >
               {row.code}
-            </Link>
+            </button>
             <StatusBadge
               domain="inventory"
               value={row.status}
@@ -467,7 +472,7 @@ export function GrnListClient({
       rowClassName={(row) =>
         row.status === "cancelled" ? "opacity-60" : undefined
       }
-      onRowClick={(row) => router.push(detailHref(row), { scroll: false })}
+      onRowClick={(row) => openDetail(row)}
       renderRowContextMenu={(row) => (
         <RowActionsContextMenuItems items={rowActions(row)} />
       )}
@@ -475,7 +480,7 @@ export function GrnListClient({
         <GrnMobileCard
           row={row}
           actions={rowActions(row)}
-          onOpen={() => router.push(detailHref(row), { scroll: false })}
+          onOpen={() => openDetail(row)}
         />
       )}
     />
@@ -502,35 +507,6 @@ export function GrnListClient({
   return (
     <>
       {content}
-      <AppDialog
-        variant="document"
-        open={detailError != null}
-        onOpenChange={(open) => {
-          if (!open) {
-            router.replace(listHref({ grnId: null, mode: null }), {
-              scroll: false,
-            });
-          }
-        }}
-        title={grnCopy.detailLoadFailed}
-        footer={
-          <Button
-            onClick={() =>
-              router.replace(listHref({ grnId: null, mode: null }), {
-                scroll: false,
-              })
-            }
-          >
-            {ACTIONS_VI.close}
-          </Button>
-        }
-      >
-        <AppEmptyState
-          mode="error"
-          title={grnCopy.detailLoadFailed}
-          description={detailError ?? grnCopy.notFound}
-        />
-      </AppDialog>
       <AppDialog
         open={cancelRow != null}
         onOpenChange={(open) => {

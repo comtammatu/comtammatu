@@ -11,6 +11,16 @@ import { messages } from "@lib/messages";
 import { getIssueBaseQuantity } from "./_lib/issue-units";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
+import {
+  insufficientStockFailure,
+  mapInventoryRpcFailure,
+} from "./_lib/rpc-failure";
+import {
+  wasteApproveRpcFallback,
+  wasteApproveRpcMappings,
+  wasteCreateRpcFallback,
+  wasteCreateRpcMappings,
+} from "@lib/messages/inventory-rpc-errors";
 
 /* ─── Waste entry (S11) ─── */
 
@@ -169,7 +179,7 @@ export async function createWasteEntry(
     });
     const availableQuantity = stock?.currentQuantity ?? 0;
     if (requestedBaseQuantity > availableQuantity + 1e-9) {
-      return { success: false, error: "Số lượng vượt tồn hiện tại." };
+      return insufficientStockFailure(item.ingredient_id);
     }
     items.push({
       ingredient_id: item.ingredient_id,
@@ -194,23 +204,11 @@ export async function createWasteEntry(
   });
 
   if (error) {
-    if (error.code === "42501") {
-      return {
-        success: false,
-        error: "Cần ảnh bằng chứng trước khi ghi nhận hao hụt.",
-        errorCode: "waste_evidence_required",
-      };
-    }
-    if (error.code === "22023") {
-      return {
-        success: false,
-        error: "Dữ liệu hủy hàng không hợp lệ hoặc thiếu bằng chứng bắt buộc.",
-      };
-    }
-    if (error.code === "23503") {
-      return { success: false, error: "Đơn vị không thuộc nguyên liệu." };
-    }
-    return { success: false, error: "Không tạo được phiếu hủy" };
+    return mapInventoryRpcFailure(
+      error,
+      wasteCreateRpcMappings,
+      wasteCreateRpcFallback,
+    );
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
@@ -277,16 +275,11 @@ export async function approveWaste(
   });
 
   if (error) {
-    if (error.code === "42501" && error.message?.includes("self-approval")) {
-      return {
-        success: false,
-        error: "Không thể tự duyệt phiếu của mình (4-eye principle)",
-      };
-    }
-    if (error.code === "42501") {
-      return { success: false, error: "Không có quyền duyệt" };
-    }
-    return { success: false, error: "Không duyệt được" };
+    return mapInventoryRpcFailure(
+      error,
+      wasteApproveRpcMappings,
+      wasteApproveRpcFallback,
+    );
   }
 
   revalidatePath("/inventory/waste/approvals");

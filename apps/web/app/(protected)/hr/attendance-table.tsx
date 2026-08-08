@@ -54,8 +54,8 @@ import {
   formatVNBusinessDate,
   formatVNTime,
 } from "@comtammatu/shared/time";
-import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import { isStaleOpenAttendanceRecord } from "@lib/hr/branch-attendance-model";
 import { messages } from "@lib/messages";
 import {
   fetchAttendance,
@@ -121,19 +121,6 @@ interface AttendanceRecord {
     is_done: boolean;
     sort_order: number;
   }[];
-}
-
-function isStaleOpenAttendanceRecord(
-  record: Pick<AttendanceRecord, "date" | "check_in" | "check_out" | "shifts">,
-  todayStr: string,
-): boolean {
-  if (!record.check_in || record.check_out) return false;
-  if (!record.shifts) return record.date < todayStr;
-  return isShiftEndedForBusinessDate(record.date, {
-    id: 0,
-    start_time: record.shifts.start_time,
-    end_time: record.shifts.end_time,
-  });
 }
 
 interface AttendanceSummaryRow {
@@ -564,6 +551,7 @@ export function AttendanceTable({
               {todayMode ? null : (
                 <ToggleGroup
                   type="single"
+                  size="touch"
                   value={view}
                   onValueChange={(value) => {
                     if (
@@ -576,13 +564,13 @@ export function AttendanceTable({
                   }}
                   aria-label={attendanceCopy.viewSwitcher}
                 >
-                  <ToggleGroupItem value="summary" size="sm">
+                  <ToggleGroupItem value="summary">
                     {attendanceCopy.summaryView}
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="calendar" size="sm">
+                  <ToggleGroupItem value="calendar">
                     {attendanceCopy.calendarView}
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="clock" size="sm">
+                  <ToggleGroupItem value="clock">
                     {attendanceCopy.clockView}
                   </ToggleGroupItem>
                 </ToggleGroup>
@@ -600,7 +588,11 @@ export function AttendanceTable({
 
       {view === "summary" ? (
         <AppSection
-          title={messages.hr.client.attendanceTitle}
+          title={
+            routePath.startsWith("/br/")
+              ? undefined
+              : messages.hr.client.attendanceTitle
+          }
           contentFlush
           contentScroll
         >
@@ -608,7 +600,11 @@ export function AttendanceTable({
         </AppSection>
       ) : view === "clock" ? (
         <AppSection
-          title={messages.hr.client.attendanceTitle}
+          title={
+            routePath.startsWith("/br/")
+              ? undefined
+              : messages.hr.client.attendanceTitle
+          }
           contentFlush
           contentScroll
         >
@@ -1300,21 +1296,48 @@ function DetailView({
         </FormDialog>
       ) : null}
 
-      <AppDialog
-        open={checklistRecord !== null}
-        onOpenChange={(open) => {
-          if (!open) setChecklistRecord(null);
-        }}
-        title="Việc trong ca"
-        description={
-          checklistRecord
-            ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
-            : ""
-        }
-        contentClassName="sm:max-w-2xl"
-      >
-        {checklistRecord ? <ChecklistDetail record={checklistRecord} /> : null}
-      </AppDialog>
+      {isTouchLayout ? (
+        <Sheet
+          open={checklistRecord !== null}
+          onOpenChange={(open) => {
+            if (!open) setChecklistRecord(null);
+          }}
+        >
+          <SheetContent side="bottom" className="max-h-dvh-80">
+            <SheetHeader className="text-left">
+              <SheetTitle>Việc trong ca</SheetTitle>
+              <SheetDescription>
+                {checklistRecord
+                  ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
+                  : ""}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+              {checklistRecord ? (
+                <ChecklistDetail record={checklistRecord} />
+              ) : null}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <AppDialog
+          open={checklistRecord !== null}
+          onOpenChange={(open) => {
+            if (!open) setChecklistRecord(null);
+          }}
+          title="Việc trong ca"
+          description={
+            checklistRecord
+              ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
+              : ""
+          }
+          contentClassName="sm:max-w-2xl"
+        >
+          {checklistRecord ? (
+            <ChecklistDetail record={checklistRecord} />
+          ) : null}
+        </AppDialog>
+      )}
 
       <AppDialog
         open={closingRecord !== null}

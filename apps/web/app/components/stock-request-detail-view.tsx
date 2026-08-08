@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -22,10 +24,15 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AuditHistoryList } from "@/components/audit-history-list";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorPage,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import type { StockRequestDetailData } from "@lib/inventory/stock-request-detail-data";
 import {
+  BRANCH_STOCK_REQUEST_STEP_LABELS,
+  getBranchStockRequestProgress,
   getStockJourney,
   STOCK_JOURNEY_OUTCOME_LABELS,
   STOCK_JOURNEY_STAGE_LABELS,
@@ -154,6 +161,135 @@ function RequestMetaSections({ data }: { data: StockRequestDetailData }) {
   );
 }
 
+function BranchRequestDetailContent({
+  data,
+  actions,
+}: {
+  data: StockRequestDetailData;
+  actions?: ReactNode;
+}) {
+  const progress = getBranchStockRequestProgress({
+    requestStatus: data.status,
+    items: data.items,
+    transfers: data.transfers.map((transfer) => ({
+      id: transfer.id,
+      status: transfer.status,
+    })),
+  });
+  const receiveHref =
+    progress.firstReceiveTransferId != null
+      ? `/br/${data.branchId}/stock/receive/${progress.firstReceiveTransferId}`
+      : null;
+
+  return (
+    <>
+      {data.submittedAt ? (
+        <Item variant="outline">
+          <ItemContent>
+            <ItemTitle>
+              {copy.submittedAt(formatVNDateTime(data.submittedAt))}
+            </ItemTitle>
+            <ItemDescription>{copy.branchSubmittedDescription}</ItemDescription>
+          </ItemContent>
+        </Item>
+      ) : null}
+
+      <AppSection title={copy.progressTitle}>
+        <ItemGroup>
+          {progress.steps.map((step, index) => {
+            const completed = progress.allDone || index < progress.currentIndex;
+            const active = !progress.allDone && index === progress.currentIndex;
+            return (
+              <Item key={step} variant="outline">
+                <ItemContent>
+                  <ItemTitle>
+                    {index + 1}. {BRANCH_STOCK_REQUEST_STEP_LABELS[step]}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {completed
+                      ? copy.completed
+                      : active
+                        ? copy.active
+                        : copy.upcoming}
+                  </ItemDescription>
+                </ItemContent>
+                <Badge
+                  variant={
+                    completed ? "success" : active ? "default" : "secondary"
+                  }
+                >
+                  {completed
+                    ? copy.completedShort
+                    : active
+                      ? copy.activeShort
+                      : copy.upcomingShort}
+                </Badge>
+              </Item>
+            );
+          })}
+        </ItemGroup>
+        {progress.outcome ? (
+          <Badge variant="warning">
+            {STOCK_JOURNEY_OUTCOME_LABELS[progress.outcome]}
+          </Badge>
+        ) : null}
+      </AppSection>
+
+      {/* Step 1 detail: requested lines only — no line/source central status. */}
+      <AppSection title={copy.ingredientsTitle}>
+        <ItemGroup>
+          {data.items.map((item) => (
+            <Item key={item.id} variant="outline">
+              <ItemContent>
+                <ItemTitle>{item.ingredientName}</ItemTitle>
+                <ItemDescription>
+                  {item.quantity} {item.unitLabel}
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
+      </AppSection>
+
+      <AppSection title={copy.infoTitle}>
+        <DescriptionList
+          items={[
+            {
+              term: copy.neededAt,
+              description: data.neededAt
+                ? formatVNDateTime(data.neededAt)
+                : copy.notRequired,
+            },
+            { term: copy.notes, description: data.notes || "—" },
+            {
+              term: copy.referenceCode,
+              description: (
+                <span className="font-mono tabular-nums">
+                  {data.requestNumber}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </AppSection>
+
+      {/* Step 1 actions (edit/cancel) — component self-hides when not editable. */}
+      {actions}
+
+      {/* Step 4: confirm receive — no DC prep detail. */}
+      {receiveHref != null ? (
+        <Button
+          size="touch-lg"
+          className="w-full"
+          render={<Link href={receiveHref} />}
+        >
+          {copy.receiveCta}
+        </Button>
+      ) : null}
+    </>
+  );
+}
+
 export function StockRequestDetailView({
   data,
   mode,
@@ -170,13 +306,29 @@ export function StockRequestDetailView({
   const stageIndex = STAGES.indexOf(data.journey.stage);
   const backHref =
     mode === "branch"
-      ? `/br/${data.branchId}/stock/transfer`
+      ? `/br/${data.branchId}/stock`
       : "/inventory/transfers?work=request";
+  const branchProgress =
+    mode === "branch"
+      ? getBranchStockRequestProgress({
+          requestStatus: data.status,
+          items: data.items,
+          transfers: data.transfers.map((transfer) => ({
+            id: transfer.id,
+            status: transfer.status,
+          })),
+        })
+      : null;
   const nextAction =
-    mode === "branch" && data.journey.nextAction === "prepare"
-      ? "Chờ chuẩn bị hàng"
+    mode === "branch" && branchProgress != null
+      ? branchProgress.canConfirm
+        ? copy.receiveCta
+        : BRANCH_STOCK_REQUEST_STEP_LABELS[branchProgress.currentStep]
       : NEXT_ACTION_LABELS[data.journey.nextAction];
-  const description = `${data.branchName} · ${STOCK_JOURNEY_STAGE_LABELS[data.journey.stage]} · ${nextAction}`;
+  const description =
+    mode === "branch" && branchProgress != null
+      ? `${data.requestNumber} · ${BRANCH_STOCK_REQUEST_STEP_LABELS[branchProgress.currentStep]}`
+      : `${data.branchName} · ${STOCK_JOURNEY_STAGE_LABELS[data.journey.stage]} · ${nextAction}`;
   const statusLabel = messages.inventory.stockRequests.statusLabel(data.status);
   const sourceKinds = (["central_supply", "central_kitchen"] as const).filter(
     (siteKind) => data.items.some((item) => item.fulfillSiteKind === siteKind),
@@ -192,6 +344,44 @@ export function StockRequestDetailView({
       transfersForSite(data, siteKind).map((transfer) => transfer.id),
     ),
   ).size;
+
+  if (mode === "branch" && !embedded) {
+    return (
+      <BranchOperatorPage
+        title={copy.detailTitle}
+        description={description}
+        badge={{ children: statusLabel }}
+        hideHeaderOnMobile
+        action={
+          <Button
+            variant="ghost"
+            className="max-sm:hidden"
+            render={<Link href={backHref} />}
+          >
+            {copy.back}
+          </Button>
+        }
+      >
+        <BranchOperatorControlBar className="sm:hidden">
+          <Button
+            variant="ghost"
+            size="icon-touch"
+            render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
+          >
+            <IconArrowLeft />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{copy.detailTitle}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {description}
+            </p>
+          </div>
+          <Badge variant="secondary">{statusLabel}</Badge>
+        </BranchOperatorControlBar>
+        <BranchRequestDetailContent data={data} actions={actions} />
+      </BranchOperatorPage>
+    );
+  }
 
   const tripsSection =
     sourcesWithTrips.length > 0 ? (
@@ -377,23 +567,6 @@ export function StockRequestDetailView({
   );
 
   if (embedded) return content;
-
-  if (mode === "branch") {
-    return (
-      <BranchOperatorPage
-        title={copy.detailTitle}
-        description={description}
-        badge={{ children: statusLabel }}
-        action={
-          <Button variant="ghost" render={<Link href={backHref} />}>
-            {copy.back}
-          </Button>
-        }
-      >
-        {content}
-      </BranchOperatorPage>
-    );
-  }
 
   return (
     <AppPage width="xwide" density="compact">

@@ -3,6 +3,7 @@ import {
   CheckCircle,
   ChevronRight,
   ClipboardCheck,
+  ClipboardList,
   ShieldAlert,
   Truck,
 } from "lucide-react";
@@ -92,11 +93,23 @@ function buildQueueRows(
   if (counts.inboundTransfers != null) {
     rows.push({
       key: "inbound-transfers",
-      href: `${basePath}/stock/receive`,
+      href: `${basePath}/stock?work=receive&state=active`,
       icon: Truck,
       title: branchCopy.queueInboundTransfersTitle,
       meta: branchCopy.queueInboundTransfersMeta(counts.inboundTransfers),
       count: counts.inboundTransfers,
+      priority: "medium",
+    });
+  }
+
+  if (counts.openStockRequests != null) {
+    rows.push({
+      key: "open-stock-requests",
+      href: `${basePath}/stock`,
+      icon: ClipboardList,
+      title: branchCopy.queueOpenRequestsTitle,
+      meta: branchCopy.queueOpenRequestsMeta(counts.openStockRequests),
+      count: counts.openStockRequests,
       priority: "medium",
     });
   }
@@ -192,9 +205,7 @@ export async function BranchQueueSection({
     >
       <BranchOperatorPanel
         title={
-          isManager
-            ? "Trung tâm Phê duyệt & Việc cần xử lý"
-            : branchCopy.queueTitle
+          isManager ? branchCopy.queueManagerTitle : branchCopy.queueTitle
         }
         icon={ClipboardCheck}
         tone="warning"

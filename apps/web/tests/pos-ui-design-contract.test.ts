@@ -173,10 +173,13 @@ test("POS append draft item rows stay on Item composition instead of Button heig
   assert.match(appendDraftSource, /<Item[\s\S]*size="sm"/);
   assert.match(
     appendDraftSource,
-    /render=\{[\s\S]*<Button[\s\S]*onClick=\{\(\) => onEditItem\(item\)\}/,
+    /<Button[\s\S]*onClick=\{\(\) => onEditItem\(item\)\}[\s\S]*<PosLineItemCompact/,
   );
+  assert.doesNotMatch(appendDraftSource, /render=\{/);
   assert.doesNotMatch(appendDraftSource, /asChild/);
   assert.match(appendDraftSource, /size="icon-touch"/);
+  assert.doesNotMatch(appendDraftSource, /variant="warning"/);
+  assert.doesNotMatch(appendDraftSource, /Badge/);
 
   assert.doesNotMatch(appendDraftSource, /<Button[\s\S]*min-h-24/);
   assert.doesNotMatch(appendDraftSource, /transition-all/);
@@ -268,6 +271,24 @@ test("POS takeaway mode uses a context grid before entering the new-order menu",
   assert.match(sidebarVariantsSource, /if \(isContextGate\)/);
   assert.match(
     sidebarVariantsSource,
+    /hidden h-full min-h-0 w-80 shrink-0 flex-col/,
+  );
+  assert.match(
+    sidebarVariantsSource,
+    /hidden h-full min-h-0 shrink-0 flex-col border-l/,
+  );
+  assert.match(
+    sidebarVariantsSource,
+    /flex h-full min-h-0 w-72 shrink-0 flex-col 2xl:w-80/,
+  );
+  assert.match(sidebarVariantsSource, /const sessionTopBar = \(/);
+  assert.doesNotMatch(
+    posDesktopSource,
+    // Desktop dual-pane must not keep a spanning top bar above both columns.
+    /xl:flex">\s*<PosSessionTopBar/,
+  );
+  assert.match(
+    sidebarVariantsSource,
     /<OrderListPane[\s\S]*hideTakeawayOrders=\{hideTakeawayOrders\}/,
   );
   assert.match(
@@ -300,13 +321,37 @@ test("POS active order cards do not badge unpaid as a default status", () => {
   assert.doesNotMatch(orderHistorySource, /waitingPayment/);
 });
 
+test("POS active order card actions fill the sidebar width without overflow", () => {
+  assert.match(
+    orderHistorySource,
+    /className="w-full max-w-full min-w-0 flex-col items-stretch overflow-hidden bg-card"/,
+  );
+  assert.match(
+    orderHistorySource,
+    /ItemFooter className="mt-1\.5 grid w-full min-w-0 grid-cols-2 gap-2 border-t border-border\/60 pt-2"/,
+  );
+  assert.match(orderHistorySource, /className="w-full min-w-0 px-2 text-sm"/);
+  assert.match(
+    orderHistorySource,
+    /flex w-full min-w-0 max-w-full flex-col gap-3/,
+  );
+  assert.match(
+    orderHistorySource,
+    /ScrollArea className="min-h-0 min-w-0 w-full flex-1 overflow-hidden"/,
+  );
+  assert.doesNotMatch(
+    orderHistorySource,
+    /ItemFooter className="[^"]*justify-end/,
+  );
+});
+
 test("POS active order sidebar stays a single queue without status section headers", () => {
   assert.match(activeOrdersListSource, /const activeOrders = useMemo/);
   assert.match(activeOrdersListSource, /\.sort\(compareOrdersByNextAction\)/);
   assert.match(activeOrdersListSource, /const multiOrderTableIds = useMemo/);
   assert.match(activeOrdersListSource, /count > 1/);
   assert.match(activeOrdersListSource, /showDineInSequence=/);
-  assert.match(activeOrdersListSource, /<ItemGroup className="gap-2">/);
+  assert.match(activeOrdersListSource, /<ItemGroup className="w-full min-w-0 gap-2">/);
   assert.match(activeOrdersListSource, /activeOrders\.map/);
 
   assert.doesNotMatch(activeOrdersListSource, /getOrderSectionKey/);

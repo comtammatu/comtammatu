@@ -71,7 +71,7 @@ export default async function BranchCommandPage({
     ? `/br/${branchId}/menu-limits`
     : undefined;
   const checkoutApprovalsHref = canAccess(role, "employee_checkout_approvals")
-    ? `/br/${branchId}/team?tab=checkouts`
+    ? `/br/${branchId}/shift/checkout-approvals`
     : undefined;
   const posSessionsHref = canAccess(role, "branch_pos_sessions")
     ? `/br/${branchId}/pos-sessions`

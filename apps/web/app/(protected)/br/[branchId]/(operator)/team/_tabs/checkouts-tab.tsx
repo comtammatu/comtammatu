@@ -8,9 +8,8 @@ interface TabProps {
 }
 
 /**
- * Checkout approvals tab inside the Team hub. Re-mounts the shared
- * `StaffCheckoutApprovalsPageContent` with `embedded` so it renders without
- * its own page shell (R1–R6).
+ * Checkout approvals body. Prefer the full `/shift/checkout-approvals` route;
+ * kept for any remaining embedded callers.
  */
 export async function CheckoutsTab({ branchId, attendanceId }: TabProps) {
   if (!Number.isInteger(branchId) || branchId <= 0) notFound();

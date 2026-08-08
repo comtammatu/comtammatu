@@ -12,10 +12,19 @@ const source = readFileSync(
 );
 
 const submitButtonsBlock =
-  /<div className="grid gap-2 sm:grid-cols-2">([\s\S]*?)<\/div>/.exec(
+  /<div className="grid grid-cols-1 gap-2">([\s\S]*?)<\/div>/.exec(
     source,
   )?.[1] ?? "";
 const submitButtons = submitButtonsBlock.match(/<Button[\s\S]*?<\/Button>/g);
+
+test("POS cart stacks submit actions so narrow desktop sidebars do not clip labels", () => {
+  assert.match(source, /grid grid-cols-1 gap-2/);
+  assert.doesNotMatch(source, /grid gap-2 sm:grid-cols-2/);
+  assert.match(
+    source,
+    /\[@media\(hover:hover\)_and_\(min-width:1536px\)\]:inline-flex/,
+  );
+});
 
 test("POS cart makes Gửi bếp the primary submit action and keeps Ưu tiên secondary", () => {
   assert.ok(submitButtons);

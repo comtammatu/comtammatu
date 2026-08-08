@@ -202,6 +202,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "Monitor",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/pos",
+    label: "Bán hàng",
     kinds: ["branch"],
   },
   {
@@ -209,7 +210,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "ChefHat",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/kds",
-    label: APP_COPY_VI.branchOperationsKds,
+    label: "Quầy Bếp",
     kinds: ["branch"],
   },
   {
@@ -248,7 +249,8 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
     label: "Giao nhận hàng",
-    kinds: ["branch", "central_supply", "central_kitchen"],
+    // Store branch lands on /stock list — no duplicate “Giao nhận” tile.
+    kinds: ["central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -287,7 +289,8 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/count-assignments",
     label: "Giao đếm",
-    kinds: ["branch", "central_supply", "central_kitchen"],
+    // Store primary IA is 4 doors only — assignments stay inside kiểm kê flow.
+    kinds: ["central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -302,6 +305,8 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
+    // POS auto-deducts sale consumption — hide from store branch Kho.
+    kinds: ["central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -309,6 +314,6 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/catalog",
     label: "Danh mục",
-    kinds: ["branch", "central_supply", "central_kitchen"],
+    kinds: ["central_supply", "central_kitchen"],
   },
 ] satisfies readonly OperatorTileConfig[];

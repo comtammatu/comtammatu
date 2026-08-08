@@ -40,35 +40,58 @@ Complete all items before opening the branch for the day.
   database stores only the SHA-256 hash. Use `rotate`, `revoke`, and `status`
   from the same command for later changes.
 
-### Windows PC per branch
+### Windows PC per branch (one-shot)
 
-- [ ] **Node.js 24.x** installed (`node --version` starts with `v24.`). Download from nodejs.org.
-- [ ] NSSM installed (`choco install nssm` or download from nssm.cc)
-- [ ] Bundle unzip vào máy POS (build qua `pnpm --filter @comtammatu/print-agent build` + `scripts/build-bundle.sh` — chỉ cần `dist/index.js`)
-- [ ] `.env` đặt tại thư mục gốc bundle (cạnh `dist/`) chứa:
-  ```
-  SUPABASE_URL=https://<ref>.supabase.co
-  SUPABASE_SERVICE_ROLE_KEY=<service role JWT>
-  AGENT_TENANT_ID=<numeric>
-  AGENT_BRANCH_ID=<numeric>
-  AGENT_ID=pos-<branch-slug>
-  WEB_BASE_URL=https://<app-host>
-  PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
-  ```
-  > Agent tự đọc version từ `apps/print-agent/package.json`; SQL view
-  > `v_print_agent_fleet` dùng version heartbeat này để xác định fleet status.
-  > `PRINT_AGENT_PRESENCE_TOKEN` là token riêng của agent này, không dùng chung
-  > giữa các chi nhánh. Token được tạo/xoay/thu hồi bằng
-  > `pnpm --filter @comtammatu/print-agent presence:provision -- ...`; không
-  > thao tác trực tiếp trên Supabase Dashboard.
-  > Chạy service bằng Windows account riêng, giới hạn NTFS ACL của `.env` cho
-  > account đó + Administrators, không backup/sync file secret ra cloud drive,
-  > và rotate service-role key ngay nếu máy hoặc file có dấu hiệu lộ.
-- [ ] Run `apps\print-agent\scripts\install-service.ps1` as Administrator
-- [ ] `Get-Service ComTamMaTu-PrintAgent` → `Running`
-- [ ] `C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log` shows
-      `realtime status=SUBSCRIBED` within 10 seconds
+HQ builds the zip once (`pnpm --filter @comtammatu/print-agent build` +
+`bash apps/print-agent/scripts/build-bundle.sh`) and prepares a per-branch
+`branch.env` (same keys as below, including the presence token from §0
+Database). Branch IT does **not** install Node/NSSM or edit service settings
+by hand.
+
+- [ ] Unzip bundle to `C:\ComTamMaTu\print-agent\`
+- [ ] Place HQ `branch.env` next to `SETUP.cmd` (or keep an existing `.env` on
+      upgrade)
+- [ ] Right-click `SETUP.cmd` → **Run as administrator**
+      (`SETUP.cmd -EnvFile branch.env` on first install)
+- [ ] Script exit shows service Running + Realtime `SUBSCRIBED` (or a clear
+      warning if subscribe is still pending)
 - [ ] POS header shows **"Máy in: online"** badge (green)
+
+`SETUP.cmd` calls `scripts\setup-branch.ps1`, which is idempotent:
+
+1. Ensures Node.js 24.x and NSSM
+2. Creates/updates `.env` (keeps existing values, supplements new keys from
+   `.env.example`, migrates legacy `dist-bin\.env`)
+3. Installs or reinstalls Windows service `ComTamMaTu-PrintAgent`
+4. Verifies service health
+
+Required `branch.env` / `.env` keys (same catalog as
+`apps/print-agent/.env.example`):
+
+```
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-jwt>
+AGENT_TENANT_ID=<numeric>
+AGENT_BRANCH_ID=<numeric>
+AGENT_ID=<branch-slug>
+WEB_BASE_URL=https://<app-host>
+PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
+```
+
+Example — Nguyễn Hữu Thọ: `AGENT_TENANT_ID=1`, `AGENT_BRANCH_ID=3`,
+`AGENT_ID=nguyen-huu-tho`.
+
+> Agent version comes from `apps/print-agent/package.json`; SQL view
+> `v_print_agent_fleet` uses the heartbeat version for fleet status.
+> `PRINT_AGENT_PRESENCE_TOKEN` is per-agent — never share across branches.
+> Provision/rotate/revoke only via
+> `pnpm --filter @comtammatu/print-agent presence:provision -- ...`.
+> Restrict NTFS ACL on `.env` to the service account + Administrators; do not
+> sync secrets to cloud drives; rotate the service-role key if the PC or file
+> may have leaked.
+
+Upgrade: unzip the new bundle over the same folder, then re-run `SETUP.cmd`
+(no need to re-enter env if `.env` already exists).
 
 ### Smoke test (staff manager on site)
 
@@ -114,7 +137,8 @@ remaining active items creates a separate kitchen ticket.
 
 1. On the POS PC: `Get-Service ComTamMaTu-PrintAgent`.
    - `Stopped` → `Start-Service ComTamMaTu-PrintAgent`.
-   - `Not found` → re-run `install-service.ps1` as Administrator.
+   - `Not found` → re-run `SETUP.cmd` as Administrator (or
+     `scripts\setup-branch.ps1`).
 2. Tail `agent.err.log` — look for:
    - `Missing env ...` → fix `.env` and restart service.
    - `realtime status=CHANNEL_ERROR` → verify `SUPABASE_SERVICE_ROLE_KEY`
@@ -208,7 +232,9 @@ Go criteria for fleet rollout:
 ## 6. References
 
 - Agent source: [apps/print-agent/README.md](../../../apps/print-agent/README.md)
-- Install script: [apps/print-agent/scripts/install-service.ps1](../../../apps/print-agent/scripts/install-service.ps1)
+- One-shot setup: [apps/print-agent/SETUP.cmd](../../../apps/print-agent/SETUP.cmd) →
+  [apps/print-agent/scripts/setup-branch.ps1](../../../apps/print-agent/scripts/setup-branch.ps1)
+- Service helper: [apps/print-agent/scripts/install-service.ps1](../../../apps/print-agent/scripts/install-service.ps1)
 - Owner monitor: `/settings/printers/jobs`
 - DB schema: `supabase/migrations/20260727120000_baseline.sql` (print_jobs,
   printer_agents, v_print_agent_fleet, enqueue/completion RPCs) +

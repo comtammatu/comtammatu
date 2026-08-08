@@ -716,29 +716,36 @@ export function BranchOperatorActionSection({
     );
   }
 
+  // Nested job tiles: omit section chrome when the parent panel owns the title.
+  if (!title && !description && !badge) {
+    return className ? (
+      <div className={className}>{content}</div>
+    ) : (
+      content
+    );
+  }
+
   return (
     <section className={cn("flex flex-col gap-2", className)}>
-      {title || description || badge ? (
-        <div className="flex flex-col gap-1">
-          {title || badge ? (
-            <div className="flex items-center justify-between gap-2">
-              {title ? (
-                <h2 className="font-heading text-base font-semibold">
-                  {title}
-                </h2>
-              ) : null}
-              {badge ? (
-                <Badge variant={badge.variant ?? "secondary"} className="shrink-0">
-                  {badge.children}
-                </Badge>
-              ) : null}
-            </div>
-          ) : null}
-          {description ? (
-            <p className="text-xs text-muted-foreground">{description}</p>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-1">
+        {title || badge ? (
+          <div className="flex items-center justify-between gap-2">
+            {title ? (
+              <h2 className="font-heading text-base font-semibold">
+                {title}
+              </h2>
+            ) : null}
+            {badge ? (
+              <Badge variant={badge.variant ?? "secondary"} className="shrink-0">
+                {badge.children}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
+        {description ? (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
       {content}
     </section>
   );

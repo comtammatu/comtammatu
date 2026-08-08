@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   clampProgressValue,
   daysInMonthFromStart,
+  isRevenueRewardTierAchieved,
   isSingleCalendarMonth,
   monthStartFromIsoDate,
   normalizeRevenueRewardTiers,
@@ -77,5 +78,11 @@ describe("revenue-target helpers", () => {
       ]),
       null,
     );
+  });
+
+  it("marks reward tiers achieved at or above the progress threshold", () => {
+    assert.equal(isRevenueRewardTierAchieved(80, 80), true);
+    assert.equal(isRevenueRewardTierAchieved(79.9, 80), false);
+    assert.equal(isRevenueRewardTierAchieved(null, 80), false);
   });
 });

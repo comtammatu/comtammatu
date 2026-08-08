@@ -28,6 +28,7 @@ export function FeedbackSubNav({
           <Button
             key={item.href}
             variant={active ? "secondary" : "ghost"}
+            size="touch"
             aria-current={active ? "page" : undefined}
             render={<Link href={item.href} />}
           >
