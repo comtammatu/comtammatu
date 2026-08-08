@@ -16,6 +16,10 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
 import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
@@ -138,6 +142,7 @@ const replaceInvoiceSchema = z
     buyerName: z.string().trim().max(200, {
       error: "Tên người mua tối đa 200 ký tự",
     }),
+    buyerKind: z.enum(["individual", "business"]),
     buyerTaxCode: z
       .string()
       .trim()
@@ -151,7 +156,24 @@ const replaceInvoiceSchema = z
   .refine((values) => !values.buyerTaxCode || values.buyerName.length > 0, {
     path: ["buyerName"],
     error: "Tên người mua không được để trống khi có MST",
-  });
+  })
+  .refine(
+    (values) => {
+      const hasBuyer =
+        values.buyerName.length > 0 ||
+        values.buyerTaxCode.length > 0 ||
+        values.buyerAddress.length > 0;
+      if (!hasBuyer) return true;
+      if (values.buyerKind === "business") {
+        return values.buyerTaxCode.length > 0 && values.buyerName.length > 0;
+      }
+      return values.buyerName.length > 0;
+    },
+    {
+      path: ["buyerName"],
+      error: "Thông tin người mua chưa đầy đủ theo loại đã chọn",
+    },
+  );
 
 type ReplaceInvoiceFormValues = z.infer<typeof replaceInvoiceSchema>;
 
@@ -202,6 +224,7 @@ export function InvoiceList({
       reason: "",
       agreementRef: "",
       agreementDate: todayISODate(),
+      buyerKind: replaceTarget?.buyer_tax_code ? "business" : "individual",
       buyerName: replaceTarget?.buyer_name ?? "",
       buyerTaxCode: replaceTarget?.buyer_tax_code ?? "",
       buyerAddress: "",
@@ -230,6 +253,7 @@ export function InvoiceList({
       reason: values.reason,
       agreementRef: values.agreementRef,
       agreementDate: values.agreementDate,
+      buyerKind: values.buyerKind,
       buyerName: values.buyerName || undefined,
       buyerTaxCode: values.buyerTaxCode || undefined,
       buyerAddress: values.buyerAddress || undefined,
@@ -906,6 +930,30 @@ export function InvoiceList({
                   max={todayISODate()}
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label>{FINANCE_VI.buyerKindLabel}</Label>
+                <ToggleGroup
+                  type="single"
+                  value={form.watch("buyerKind")}
+                  onValueChange={(value) => {
+                    if (value === "business" || value === "individual") {
+                      form.setValue("buyerKind", value, {
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                  size="sm"
+                  className="grid w-full grid-cols-2"
+                  aria-label={FINANCE_VI.buyerKindLabel}
+                >
+                  <ToggleGroupItem value="business">
+                    {FINANCE_VI.buyerKindBusiness}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="individual">
+                    {FINANCE_VI.buyerKindIndividual}
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
               <TextField
                 control={form.control}

@@ -13,6 +13,7 @@ export {
 } from "./payment";
 
 export type {
+  InvoiceBuyerKind,
   InvoiceProvider,
   InvoiceRequest,
   InvoiceResult,
@@ -33,5 +34,9 @@ export {
   buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
   deriveInvoiceTypeFromTemplate,
+  resolveSinvoiceBuyerInfo,
 } from "./impl/viettel-sinvoice";
-export type { ViettelSinvoiceConfig } from "./impl/viettel-sinvoice";
+export type {
+  SinvoiceBuyerInfo,
+  ViettelSinvoiceConfig,
+} from "./impl/viettel-sinvoice";

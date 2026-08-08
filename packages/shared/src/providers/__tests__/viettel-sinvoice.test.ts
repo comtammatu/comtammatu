@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { InvoiceLineItem, InvoiceRequest } from "../invoice";
+import {
+  BUYER_NOT_GET_INVOICE_NAME,
+  type InvoiceLineItem,
+  type InvoiceRequest,
+} from "../invoice";
 import {
   buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
   deriveInvoiceTypeFromTemplate,
+  resolveSinvoiceBuyerInfo,
   ViettelSinvoiceProvider,
 } from "../impl/viettel-sinvoice";
 
@@ -60,6 +65,106 @@ test("template and transaction identity are fail-closed", () => {
   assert.notEqual(
     buildSinvoiceTransactionUuid(42),
     buildSinvoiceTransactionUuid(43),
+  );
+});
+
+test("buyerNotGetInvoice uses legal consumer phrase only in buyerName", () => {
+  assert.deepEqual(
+    resolveSinvoiceBuyerInfo({
+      buyerName: "stale client phrase",
+      buyerTaxCode: "0312345678",
+      buyerAddress: "should clear",
+      buyerEmail: "a@b.c",
+      buyerNotGetInvoice: true,
+    }),
+    {
+      buyerName: BUYER_NOT_GET_INVOICE_NAME,
+      buyerLegalName: null,
+      buyerTaxCode: null,
+      buyerAddressLine: null,
+      buyerEmail: null,
+      buyerNotGetInvoice: "1",
+    },
+  );
+});
+
+test("buyer with tax code maps company name to buyerLegalName only", () => {
+  assert.deepEqual(
+    resolveSinvoiceBuyerInfo({
+      buyerKind: "business",
+      buyerName: "CÔNG TY TNHH TẬP ĐOÀN HIGH TECH PHARMA",
+      buyerTaxCode: "5801429167",
+      buyerAddress: "Lâm Đồng",
+      buyerEmail: "invoice@hightechpharma.vn",
+      buyerNotGetInvoice: false,
+    }),
+    {
+      buyerName: null,
+      buyerLegalName: "CÔNG TY TNHH TẬP ĐOÀN HIGH TECH PHARMA",
+      buyerTaxCode: "5801429167",
+      buyerAddressLine: "Lâm Đồng",
+      buyerEmail: "invoice@hightechpharma.vn",
+      buyerNotGetInvoice: "0",
+    },
+  );
+});
+
+test("individual buyer without tax code maps to buyerName only", () => {
+  assert.deepEqual(
+    resolveSinvoiceBuyerInfo({
+      buyerKind: "individual",
+      buyerName: "Nguyễn Văn A",
+      buyerAddress: "Phước Hải",
+      buyerEmail: "a@example.com",
+      buyerNotGetInvoice: false,
+    }),
+    {
+      buyerName: "Nguyễn Văn A",
+      buyerLegalName: null,
+      buyerTaxCode: null,
+      buyerAddressLine: "Phước Hải",
+      buyerEmail: "a@example.com",
+      buyerNotGetInvoice: "0",
+    },
+  );
+});
+
+test("individual with personal MST stays on buyerName, not buyerLegalName", () => {
+  assert.deepEqual(
+    resolveSinvoiceBuyerInfo({
+      buyerKind: "individual",
+      buyerName: "Nguyễn Văn A",
+      buyerTaxCode: "0123456789",
+      buyerAddress: "Phước Hải",
+      buyerEmail: "a@example.com",
+      buyerNotGetInvoice: false,
+    }),
+    {
+      buyerName: "Nguyễn Văn A",
+      buyerLegalName: null,
+      buyerTaxCode: "0123456789",
+      buyerAddressLine: "Phước Hải",
+      buyerEmail: "a@example.com",
+      buyerNotGetInvoice: "0",
+    },
+  );
+});
+
+test("legacy tax-code payload without buyerKind still maps as business", () => {
+  assert.deepEqual(
+    resolveSinvoiceBuyerInfo({
+      buyerName: "CÔNG TY TNHH LEGACY",
+      buyerTaxCode: "0319631419",
+      buyerNotGetInvoice: false,
+    }),
+    {
+      buyerName: null,
+      buyerLegalName: "CÔNG TY TNHH LEGACY",
+      buyerTaxCode: "0319631419",
+      buyerAddressLine: null,
+      buyerEmail: null,
+      buyerNotGetInvoice: "0",
+    },
   );
 });
 
@@ -148,6 +253,7 @@ test("valid request uses snapshotted profile and reconciled totals", async () =>
     assert.equal(result.status, "issued");
     const body = bodies[0] as {
       generalInvoiceInfo: Record<string, unknown>;
+      buyerInfo: Record<string, unknown>;
       summarizeInfo: Record<string, unknown>;
       taxBreakdowns: Array<Record<string, unknown>>;
     };
@@ -159,6 +265,44 @@ test("valid request uses snapshotted profile and reconciled totals", async () =>
       body.taxBreakdowns.map((line) => line["taxPercentage"]),
       [8, 10],
     );
+    assert.equal(body.buyerInfo["buyerName"], BUYER_NOT_GET_INVOICE_NAME);
+    assert.equal(body.buyerInfo["buyerLegalName"], null);
+    assert.equal(body.buyerInfo["buyerNotGetInvoice"], "1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice posts company buyer only on buyerLegalName", async () => {
+  const originalFetch = globalThis.fetch;
+  const bodies: unknown[] = [];
+  globalThis.fetch = (async (input, init) => {
+    if (String(input).endsWith("/auth/login")) {
+      return Response.json({ access_token: "token", expires_in: 3600 });
+    }
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({
+      result: { invoiceNo: "00000009", codeOfTax: "CQT-9" },
+    });
+  }) as typeof fetch;
+  try {
+    const company = request([item("Món", 1, 108_000, 8)]);
+    company.buyerNotGetInvoice = false;
+    company.buyerKind = "business";
+    company.buyerName = "CÔNG TY CỔ PHẦN CHÉN SỨ";
+    company.buyerTaxCode = "0319631419";
+    company.buyerAddress = "TP Hồ Chí Minh";
+    company.buyerEmail = "ketoan@csr-vn.com";
+    const result = await provider().createInvoice(company);
+    assert.equal(result.status, "issued");
+    const body = bodies[0] as { buyerInfo: Record<string, unknown> };
+    assert.equal(body.buyerInfo["buyerName"], null);
+    assert.equal(
+      body.buyerInfo["buyerLegalName"],
+      "CÔNG TY CỔ PHẦN CHÉN SỨ",
+    );
+    assert.equal(body.buyerInfo["buyerTaxCode"], "0319631419");
+    assert.equal(body.buyerInfo["buyerNotGetInvoice"], "0");
   } finally {
     globalThis.fetch = originalFetch;
   }

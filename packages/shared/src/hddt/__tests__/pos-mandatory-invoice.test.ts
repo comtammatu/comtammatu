@@ -131,6 +131,29 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     src.includes("buyerNotGetInvoice"),
     "missing buyerNotGetInvoice pass-through to provider calls",
   );
+  const providerSrc = read(
+    "packages/shared/src/providers/impl/viettel-sinvoice.ts",
+  );
+  assert.match(
+    providerSrc,
+    /export function resolveSinvoiceBuyerInfo/,
+    "Viettel buyer mapping must stay in resolveSinvoiceBuyerInfo",
+  );
+  assert.doesNotMatch(
+    providerSrc,
+    /buyerLegalName:\s*buyerNotGetInvoice\s*\?\s*null\s*:\s*buyerName/,
+    "company name must not be copied into both Viettel buyerName and buyerLegalName",
+  );
+  assert.match(
+    providerSrc,
+    /kind === "business"/,
+    "business buyers must map via buyerKind, not tax-code alone",
+  );
+  assert.match(
+    providerSrc,
+    /kind === "individual"|buyerKind === "individual"/,
+    "individual buyers must keep person name on buyerName",
+  );
   assert.ok(
     src.includes("buyerEmail"),
     "missing buyerEmail pass-through to provider calls",

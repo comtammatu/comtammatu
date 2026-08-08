@@ -8,6 +8,10 @@ import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppSection } from "@/components/surface";
 import {
@@ -20,7 +24,10 @@ import {
   type SubmitInvoiceBuyerDetailsResult,
 } from "./actions";
 
+type BuyerKind = "business" | "individual";
 type LookupStatus = "idle" | "loading" | "found" | "not-found" | "unavailable";
+
+const MST_REGEX = /^\d{10}(-\d{3})?$/;
 
 export function InvoiceBuyerForm({
   token,
@@ -29,6 +36,7 @@ export function InvoiceBuyerForm({
   token: string;
   expiresAt: string;
 }) {
+  const [buyerKind, setBuyerKind] = useState<BuyerKind>("business");
   const [taxCode, setTaxCode] = useState("");
   const [email, setEmail] = useState("");
   const [buyerName, setBuyerName] = useState("");
@@ -58,16 +66,34 @@ export function InvoiceBuyerForm({
     return () => window.clearTimeout(timer);
   }, [expiresAt]);
 
-  function handleTaxCodeChange(value: string) {
+  function resetBuyerFields() {
     requestRef.current?.abort();
-    setTaxCode(value);
+    setTaxCode("");
     setBuyerName("");
     setBuyerAddress("");
     setLookupStatus("idle");
     setResult(null);
   }
 
+  function handleBuyerKindChange(value: string | null) {
+    if (value !== "business" && value !== "individual") return;
+    setBuyerKind(value);
+    resetBuyerFields();
+  }
+
+  function handleTaxCodeChange(value: string) {
+    requestRef.current?.abort();
+    setTaxCode(value);
+    if (buyerKind === "business") {
+      setBuyerName("");
+      setBuyerAddress("");
+      setLookupStatus("idle");
+    }
+    setResult(null);
+  }
+
   async function handleLookup() {
+    if (buyerKind !== "business") return;
     const normalized = taxCode.trim();
     if (!isBusinessTaxCode(normalized)) {
       setLookupStatus("not-found");
@@ -99,14 +125,40 @@ export function InvoiceBuyerForm({
     }
   }
 
+  const taxTrim = taxCode.trim();
+  const taxCodeInvalid =
+    taxTrim.length > 0 &&
+    (buyerKind === "business"
+      ? !isBusinessTaxCode(taxTrim)
+      : !MST_REGEX.test(taxTrim));
+  const individualNameMissing =
+    buyerKind === "individual" && buyerName.trim().length === 0;
+  const canSubmit =
+    buyerKind === "business"
+      ? lookupStatus === "found" && email.trim().length > 0
+      : !individualNameMissing &&
+        email.trim().length > 0 &&
+        !taxCodeInvalid;
+
   function handleSubmit() {
-    if (lookupStatus !== "found") return;
+    if (!canSubmit) return;
     startTransition(async () => {
-      const nextResult = await submitInvoiceBuyerDetails({
-        token,
-        taxCode: taxCode.trim(),
-        email: email.trim(),
-      });
+      const nextResult =
+        buyerKind === "business"
+          ? await submitInvoiceBuyerDetails({
+              buyerKind: "business",
+              token,
+              taxCode: taxTrim,
+              email: email.trim(),
+            })
+          : await submitInvoiceBuyerDetails({
+              buyerKind: "individual",
+              token,
+              buyerName: buyerName.trim(),
+              email: email.trim(),
+              taxCode: taxTrim,
+              buyerAddress: buyerAddress.trim(),
+            });
       setResult(nextResult);
     });
   }
@@ -128,18 +180,18 @@ export function InvoiceBuyerForm({
     );
   }
 
-  const taxCodeInvalid =
-    taxCode.trim().length > 0 && !isBusinessTaxCode(taxCode);
   const lookupMessage =
-    lookupStatus === "loading"
-      ? invoiceBuyer.lookupLoading
-      : lookupStatus === "found"
-        ? invoiceBuyer.lookupFound
-        : lookupStatus === "not-found"
-          ? invoiceBuyer.lookupNotFound
-          : lookupStatus === "unavailable"
-            ? invoiceBuyer.lookupUnavailable
-            : null;
+    buyerKind !== "business"
+      ? null
+      : lookupStatus === "loading"
+        ? invoiceBuyer.lookupLoading
+        : lookupStatus === "found"
+          ? invoiceBuyer.lookupFound
+          : lookupStatus === "not-found"
+            ? invoiceBuyer.lookupNotFound
+            : lookupStatus === "unavailable"
+              ? invoiceBuyer.lookupUnavailable
+              : null;
 
   return (
     <AppSection
@@ -155,11 +207,38 @@ export function InvoiceBuyerForm({
           handleSubmit();
         }}
       >
+        <Field>
+          <FieldLabel>{invoiceBuyer.buyerKindLabel}</FieldLabel>
+          <ToggleGroup
+            type="single"
+            value={buyerKind}
+            onValueChange={handleBuyerKindChange}
+            size="touch"
+            className="grid w-full grid-cols-2"
+            aria-label={invoiceBuyer.buyerKindLabel}
+          >
+            <ToggleGroupItem value="business">
+              {invoiceBuyer.buyerKindBusiness}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="individual">
+              {invoiceBuyer.buyerKindIndividual}
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </Field>
+
         <Field data-invalid={taxCodeInvalid || undefined}>
           <FieldLabel htmlFor="invoice-buyer-tax-code">
-            {invoiceBuyer.taxCodeLabel}
+            {buyerKind === "business"
+              ? invoiceBuyer.taxCodeLabel
+              : invoiceBuyer.taxCodeOptionalLabel}
           </FieldLabel>
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div
+            className={
+              buyerKind === "business"
+                ? "grid gap-2 sm:grid-cols-[1fr_auto]"
+                : undefined
+            }
+          >
             <Input
               id="invoice-buyer-tax-code"
               controlSize="touch"
@@ -176,20 +255,24 @@ export function InvoiceBuyerForm({
               }
               placeholder="0123456789"
               onChange={(event) => handleTaxCodeChange(event.target.value)}
-              onBlur={() => void handleLookup()}
+              onBlur={() => {
+                if (buyerKind === "business") void handleLookup();
+              }}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending || lookupStatus === "loading"}
-              onClick={() => void handleLookup()}
-            >
-              {lookupStatus === "loading" ? (
-                <Spinner data-icon="inline-start" />
-              ) : null}
-              {invoiceBuyer.lookupAction}
-            </Button>
+            {buyerKind === "business" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                disabled={isPending || lookupStatus === "loading"}
+                onClick={() => void handleLookup()}
+              >
+                {lookupStatus === "loading" ? (
+                  <Spinner data-icon="inline-start" />
+                ) : null}
+                {invoiceBuyer.lookupAction}
+              </Button>
+            ) : null}
           </div>
           {taxCodeInvalid ? (
             <FieldError>{invoiceBuyer.taxCodeInvalid}</FieldError>
@@ -206,28 +289,55 @@ export function InvoiceBuyerForm({
           ) : null}
         </Field>
 
-        <Field>
+        <Field data-invalid={individualNameMissing || undefined}>
           <FieldLabel htmlFor="invoice-buyer-name">
-            {invoiceBuyer.buyerNameLabel}
+            {buyerKind === "business"
+              ? invoiceBuyer.buyerNameLabel
+              : invoiceBuyer.individualNameLabel}
           </FieldLabel>
           <Input
             id="invoice-buyer-name"
             controlSize="touch"
             value={buyerName}
-            readOnly
-            placeholder={invoiceBuyer.autoFilledPlaceholder}
+            readOnly={buyerKind === "business"}
+            disabled={isPending && buyerKind === "individual"}
+            required={buyerKind === "individual"}
+            maxLength={200}
+            placeholder={
+              buyerKind === "business"
+                ? invoiceBuyer.autoFilledPlaceholder
+                : undefined
+            }
+            onChange={
+              buyerKind === "individual"
+                ? (event) => setBuyerName(event.target.value)
+                : undefined
+            }
           />
         </Field>
 
         <Field>
           <FieldLabel htmlFor="invoice-buyer-address">
-            {invoiceBuyer.addressLabel}
+            {buyerKind === "business"
+              ? invoiceBuyer.addressLabel
+              : invoiceBuyer.addressOptionalLabel}
           </FieldLabel>
           <Textarea
             id="invoice-buyer-address"
             value={buyerAddress}
-            readOnly
-            placeholder={invoiceBuyer.autoFilledPlaceholder}
+            readOnly={buyerKind === "business"}
+            disabled={isPending && buyerKind === "individual"}
+            maxLength={500}
+            placeholder={
+              buyerKind === "business"
+                ? invoiceBuyer.autoFilledPlaceholder
+                : undefined
+            }
+            onChange={
+              buyerKind === "individual"
+                ? (event) => setBuyerAddress(event.target.value)
+                : undefined
+            }
           />
         </Field>
 
@@ -256,11 +366,7 @@ export function InvoiceBuyerForm({
           </Alert>
         ) : null}
 
-        <Button
-          type="submit"
-          size="touch"
-          disabled={isPending || lookupStatus !== "found"}
-        >
+        <Button type="submit" size="touch" disabled={isPending || !canSubmit}>
           {isPending ? <Spinner data-icon="inline-start" /> : null}
           {invoiceBuyer.submitAction}
         </Button>

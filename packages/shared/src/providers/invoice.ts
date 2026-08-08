@@ -27,6 +27,9 @@ export interface InvoiceLineItem {
 // "Nội dung của hóa đơn" mục 4b (effective 01/07/2026). Do not translate/reword.
 export const BUYER_NOT_GET_INVOICE_NAME = "Bán cho người tiêu dùng";
 
+/** Explicit buyer classification for Viettel buyerName vs buyerLegalName mapping. */
+export type InvoiceBuyerKind = "consumer" | "individual" | "business";
+
 /**
  * Replacement context per TT 32/2025 + NĐ 254/2026 (Path C). When present in
  * InvoiceRequest, provider MUST send the call as `adjustmentType=3`
@@ -70,11 +73,21 @@ export interface InvoiceRequest {
   sellerTaxCode: string;
   sellerAddress: string;
 
-  /** Buyer info (optional for B2C) */
+  /**
+   * Domain buyer label before Viettel field mapping via `buyerKind`:
+   * - `consumer` / `buyerNotGetInvoice`: ignored (provider emits the legal phrase)
+   * - `business`: registered company/HKD name → Viettel `buyerLegalName`
+   * - `individual`: person name → Viettel `buyerName` (personal MST stays on tax field)
+   */
   buyerName?: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
   buyerEmail?: string;
+  /**
+   * Required for named buyers. When omitted on legacy payloads, the provider
+   * falls back to tax-code → business / else individual.
+   */
+  buyerKind?: InvoiceBuyerKind;
   buyerNotGetInvoice?: boolean;
 
   /** Line items */

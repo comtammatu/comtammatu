@@ -208,6 +208,91 @@ function findNetDiscountForGrossTarget(
   return best;
 }
 
+export type SinvoiceBuyerInfo = {
+  buyerName: string | null;
+  buyerLegalName: string | null;
+  buyerTaxCode: string | null;
+  buyerAddressLine: string | null;
+  buyerEmail: string | null;
+  buyerNotGetInvoice: "0" | "1";
+};
+
+function resolveInvoiceBuyerKind(
+  request: Pick<
+    InvoiceRequest,
+    "buyerKind" | "buyerTaxCode" | "buyerNotGetInvoice"
+  >,
+): NonNullable<InvoiceRequest["buyerKind"]> {
+  if (request.buyerNotGetInvoice === true || request.buyerKind === "consumer") {
+    return "consumer";
+  }
+  if (request.buyerKind === "business" || request.buyerKind === "individual") {
+    return request.buyerKind;
+  }
+  // Legacy payloads without buyerKind: tax present → business, else individual.
+  return request.buyerTaxCode?.trim() ? "business" : "individual";
+}
+
+/**
+ * Map domain InvoiceRequest buyer fields onto Viettel buyerInfo.
+ *
+ * - consumer / buyerNotGetInvoice: legal phrase in buyerName only (NĐ 254/2026).
+ * - business: registered company/HKD name → buyerLegalName only.
+ * - individual: person name → buyerName only (optional personal MST on tax field).
+ *
+ * Never copy the same company string into both name fields. Never put a personal
+ * MST buyer's name into buyerLegalName.
+ */
+export function resolveSinvoiceBuyerInfo(
+  request: Pick<
+    InvoiceRequest,
+    | "buyerName"
+    | "buyerTaxCode"
+    | "buyerAddress"
+    | "buyerEmail"
+    | "buyerKind"
+    | "buyerNotGetInvoice"
+  >,
+): SinvoiceBuyerInfo {
+  const kind = resolveInvoiceBuyerKind(request);
+  if (kind === "consumer") {
+    // Server-controlled legal phrase — ignore any client-sent buyerName.
+    return {
+      buyerName: BUYER_NOT_GET_INVOICE_NAME,
+      buyerLegalName: null,
+      buyerTaxCode: null,
+      buyerAddressLine: null,
+      buyerEmail: null,
+      buyerNotGetInvoice: "1",
+    };
+  }
+
+  const label = request.buyerName?.trim() || null;
+  const taxCode = request.buyerTaxCode?.trim() || null;
+  const address = request.buyerAddress?.trim() || null;
+  const email = request.buyerEmail?.trim() || null;
+
+  if (kind === "business") {
+    return {
+      buyerName: null,
+      buyerLegalName: label,
+      buyerTaxCode: taxCode,
+      buyerAddressLine: address,
+      buyerEmail: email,
+      buyerNotGetInvoice: "0",
+    };
+  }
+
+  return {
+    buyerName: label,
+    buyerLegalName: null,
+    buyerTaxCode: taxCode,
+    buyerAddressLine: address,
+    buyerEmail: email,
+    buyerNotGetInvoice: "0",
+  };
+}
+
 /**
  * Compute Sinvoice itemInfo + reconciled sums.
  *
@@ -495,27 +580,15 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         `Thay thế hóa đơn số ${r.originalInvoiceNumber}`;
     }
 
-    const buyerNotGetInvoice = request.buyerNotGetInvoice === true;
-    // The no-buyer-info legal phrase is server-controlled: when buyerNotGetInvoice
-    // is set, always emit the server constant and ignore any client-sent buyerName.
-    // A stale POS client bundle ships an outdated constant; trusting it would put
-    // the wrong legally-mandated text (NĐ 254/2026) on the invoice.
-    const buyerName = buyerNotGetInvoice
-      ? BUYER_NOT_GET_INVOICE_NAME
-      : (request.buyerName ?? "");
+    const buyerInfo = resolveSinvoiceBuyerInfo(request);
 
     const body = {
       generalInvoiceInfo,
       buyerInfo: {
-        buyerName,
-        buyerLegalName: buyerNotGetInvoice ? null : buyerName || null,
-        buyerTaxCode: request.buyerTaxCode ?? null,
-        buyerAddressLine: request.buyerAddress ?? null,
+        ...buyerInfo,
         buyerPhoneNumber: null,
-        buyerEmail: buyerNotGetInvoice ? null : (request.buyerEmail ?? null),
         buyerIdNo: null,
         buyerIdType: null,
-        buyerNotGetInvoice: buyerNotGetInvoice ? "1" : "0",
       },
       payments: [{ paymentMethod: "3", paymentMethodName: "TM/CK" }],
       itemInfo,

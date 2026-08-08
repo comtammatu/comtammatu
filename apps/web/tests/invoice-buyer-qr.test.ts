@@ -142,6 +142,8 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   );
   assert.match(selfOrderClient, /\{ clientOpId: intent\.clientOpId, method \}/);
   assert.doesNotMatch(selfOrderClient, /invoice: invoicePayload/);
+  assert.match(action, /buyerKind: z\.literal\("business"\)/);
+  assert.match(action, /buyerKind: z\.literal\("individual"\)/);
   assert.match(action, /fetchBusinessTaxCode\(parsed\.data\.taxCode\)/);
   assert.match(action, /rateLimit\.limit/);
   assert.match(action, /runTaxInvoiceIssueWorker\(jobId\)/);
@@ -157,20 +159,29 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
     action,
     /submission\.status === "expired"[\s\S]*terminal: true[\s\S]*submission\.status === "closed"[\s\S]*terminal: true/,
   );
-  assert.match(issuer, /value\.buyerAddress &&[\s\S]*value\.buyerEmail/);
+  assert.match(
+    issuer,
+    /kind === "business"[\s\S]*buyerTaxCode &&[\s\S]*buyerName &&[\s\S]*buyerAddress &&[\s\S]*buyerEmail/,
+  );
+  assert.match(
+    issuer,
+    /kind === "individual"[\s\S]*buyerName && value\.buyerEmail/,
+  );
   assert.match(
     issuer,
     /const invoiceProvider = createInvoiceProvider\(profile\);[\s\S]*invoice_provider_not_configured[\s\S]*const providerRef = buildSinvoiceTransactionUuid\(taxInvoiceId\);[\s\S]*invoice_total_mismatch[\s\S]*prepare_tax_invoice_issue_job_as_system/,
   );
   assert.doesNotMatch(issuer, /issueTaxInvoiceForPaidOrder|DRAFT-/);
   assert.match(buyerServer, /if \(result\.success\)/);
+  assert.match(buyerServer, /buyerKind: "business" \| "individual"/);
   assert.match(buyerServer, /buyerEmail: string/);
   assert.match(buyerServer, /return \{ status: "failed", jobId: null \}/);
-  assert.doesNotMatch(
-    action,
-    /buyerName:\s*parsed\.data|buyerAddress:\s*parsed\.data/,
-  );
-  assert.match(form, /readOnly/);
+  assert.match(action, /buyerName: business\.name/);
+  assert.match(action, /buyerAddress: business\.address/);
+  assert.match(action, /buyerName: parsed\.data\.buyerName/);
+  assert.match(form, /ToggleGroup/);
+  assert.match(form, /buyerKindBusiness|buyerKindIndividual/);
+  assert.match(form, /readOnly=\{buyerKind === "business"\}/);
   assert.match(form, /id="invoice-buyer-email"[\s\S]*required/);
   assert.match(form, /formatVNDateTime\(expiresAt\)/);
   assert.match(
@@ -181,8 +192,13 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(page, /expiresAt=\{request\.expiresAt\}/);
   assert.match(page, /export const dynamic = "force-dynamic"/);
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
-  assert.match(
-    migration,
-    /COALESCE\(v_buyer_payload->>'buyerEmail', ''\) = ''/,
+  const buyerKindMigration = readRepo(
+    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );
+  assert.match(buyerKindMigration, /buyerKind/);
+  assert.match(
+    buyerKindMigration,
+    /v_kind NOT IN \('business', 'individual'\)/,
+  );
+  assert.match(buyerKindMigration, /p_buyer_kind text DEFAULT NULL/);
 });

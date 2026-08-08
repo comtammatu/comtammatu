@@ -51,9 +51,10 @@ export async function getInvoiceBuyerRequest(
 export async function saveInvoiceBuyerRequest(
   token: string,
   invoicePayload: {
+    buyerKind: "business" | "individual";
     buyerName: string;
-    buyerTaxCode: string;
-    buyerAddress: string;
+    buyerTaxCode?: string;
+    buyerAddress?: string;
     buyerEmail: string;
   },
 ): Promise<SubmitInvoiceBuyerRequestResult> {

@@ -14,6 +14,7 @@ const replaceInvoiceSchema = z
     reason: z.string().trim().min(20).max(255),
     agreementRef: z.string().trim().min(1).max(225),
     agreementDate: z.string().date(),
+    buyerKind: z.enum(["individual", "business"]).optional(),
     buyerName: z.string().trim().max(200).optional(),
     buyerTaxCode: z.string().trim().regex(MST_REGEX).optional(),
     buyerAddress: z.string().trim().max(500).optional(),
@@ -21,7 +22,15 @@ const replaceInvoiceSchema = z
   .refine((value) => !value.buyerTaxCode || Boolean(value.buyerName), {
     error: "Có MST thì phải nhập tên người mua",
     path: ["buyerName"],
-  });
+  })
+  .refine(
+    (value) =>
+      value.buyerKind !== "business" || Boolean(value.buyerTaxCode?.trim()),
+    {
+      error: "Doanh nghiệp cần mã số thuế",
+      path: ["buyerTaxCode"],
+    },
+  );
 
 export async function replaceTaxInvoice(
   input: z.infer<typeof replaceInvoiceSchema>,
@@ -61,6 +70,7 @@ export async function replaceTaxInvoice(
       p_buyer_name: parsed.data.buyerName ?? "",
       p_buyer_tax_code: parsed.data.buyerTaxCode ?? "",
       p_buyer_address: parsed.data.buyerAddress ?? "",
+      p_buyer_kind: parsed.data.buyerKind ?? null,
     },
   );
 

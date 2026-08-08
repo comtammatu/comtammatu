@@ -18,6 +18,7 @@ import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { z } from "zod";
 
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
+const buyerKindSchema = z.enum(["consumer", "individual", "business"]);
 
 export const createInvoiceSchema = z
   .object({
@@ -30,12 +31,23 @@ export const createInvoiceSchema = z
       .optional(),
     buyerAddress: z.string().trim().max(500).optional(),
     buyerEmail: z.email({ error: "Email không hợp lệ" }).optional(),
+    buyerKind: z.enum(["individual", "business"]).optional(),
     buyerNotGetInvoice: z.boolean().optional(),
   })
   .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
     error: "Có MST thì phải nhập tên người mua",
     path: ["buyerName"],
   })
+  .refine(
+    (v) =>
+      v.buyerNotGetInvoice === true ||
+      v.buyerKind !== "business" ||
+      Boolean(v.buyerTaxCode?.trim()),
+    {
+      error: "Doanh nghiệp cần mã số thuế",
+      path: ["buyerTaxCode"],
+    },
+  )
   .refine(
     (v) =>
       v.buyerNotGetInvoice !== false ||
@@ -95,6 +107,7 @@ const preparedInvoicePayloadSchema = z
     buyerTaxCode: z.string().trim().regex(MST_REGEX).optional(),
     buyerAddress: z.string().trim().max(500).optional(),
     buyerEmail: z.email().optional(),
+    buyerKind: buyerKindSchema.optional(),
     buyerNotGetInvoice: z.boolean(),
     replacement: z
       .object({
@@ -154,15 +167,26 @@ const preparedInvoicePayloadSchema = z
     path: ["draftSnapshot", "orderId"],
   })
   .refine(
-    (value) =>
-      value.replacement !== undefined ||
-      value.buyerNotGetInvoice ||
-      Boolean(
-        value.buyerTaxCode &&
-        value.buyerName &&
-        value.buyerAddress &&
-        value.buyerEmail,
-      ),
+    (value) => {
+      if (value.replacement !== undefined || value.buyerNotGetInvoice) {
+        return true;
+      }
+      const kind =
+        value.buyerKind ??
+        (value.buyerTaxCode ? ("business" as const) : ("individual" as const));
+      if (kind === "business") {
+        return Boolean(
+          value.buyerTaxCode &&
+          value.buyerName &&
+          value.buyerAddress &&
+          value.buyerEmail,
+        );
+      }
+      if (kind === "individual") {
+        return Boolean(value.buyerName && value.buyerEmail);
+      }
+      return false;
+    },
     {
       error: "Thông tin người mua chưa đầy đủ",
       path: ["buyerTaxCode"],
@@ -436,6 +460,10 @@ export async function issuePreparedTaxInvoice({
   }
 
   const buyerNotGetInvoice = parsed.data.buyerNotGetInvoice;
+  const buyerKind = buyerNotGetInvoice
+    ? ("consumer" as const)
+    : (parsed.data.buyerKind ??
+      (parsed.data.buyerTaxCode ? ("business" as const) : ("individual" as const)));
   return submitReservedTaxInvoice({
     supabase,
     invoiceProvider,
@@ -454,6 +482,7 @@ export async function issuePreparedTaxInvoice({
       buyerTaxCode: buyerNotGetInvoice ? undefined : parsed.data.buyerTaxCode,
       buyerAddress: buyerNotGetInvoice ? undefined : parsed.data.buyerAddress,
       buyerEmail: buyerNotGetInvoice ? undefined : parsed.data.buyerEmail,
+      buyerKind,
       buyerNotGetInvoice,
       items: invoiceItems,
       subtotal,

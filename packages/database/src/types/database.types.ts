@@ -13808,6 +13808,7 @@ export type Database = {
           p_agreement_date: string
           p_agreement_ref: string
           p_buyer_address: string
+          p_buyer_kind?: string
           p_buyer_name: string
           p_buyer_tax_code: string
           p_old_id: number

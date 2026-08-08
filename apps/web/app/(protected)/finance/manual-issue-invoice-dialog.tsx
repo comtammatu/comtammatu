@@ -16,6 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { FINANCE_VI, POS_VI } from "@comtammatu/shared/messages";
@@ -66,6 +70,9 @@ export function ManualIssueInvoiceDialog({
   // Finance recovery may issue either a named buyer or the server-owned
   // consumer fallback.
   const [enabled, setEnabled] = useState(false);
+  const [buyerKind, setBuyerKind] = useState<"individual" | "business">(
+    "business",
+  );
   const [buyerName, setBuyerName] = useState("");
   const [buyerTaxCode, setBuyerTaxCode] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
@@ -77,6 +84,7 @@ export function ManualIssueInvoiceDialog({
     setOrderNumber("");
     setPreview(null);
     setEnabled(false);
+    setBuyerKind("business");
     setBuyerName("");
     setBuyerTaxCode("");
     setBuyerAddress("");
@@ -91,6 +99,7 @@ export function ManualIssueInvoiceDialog({
   function resetToLookup() {
     setPreview(null);
     setEnabled(false);
+    setBuyerKind("business");
     setBuyerName("");
     setBuyerTaxCode("");
     setBuyerAddress("");
@@ -116,15 +125,25 @@ export function ManualIssueInvoiceDialog({
 
   const mstTrim = buyerTaxCode.trim();
   const emailTrim = buyerEmail.trim();
+  const nameTrim = buyerName.trim();
   const mstInvalid = mstTrim.length > 0 && !MST_REGEX.test(mstTrim);
   const emailInvalid = emailTrim.length > 0 && !EMAIL_REGEX.test(emailTrim);
   const nameMissing =
-    enabled && mstTrim.length > 0 && buyerName.trim().length === 0;
-  const buyerValid = !mstInvalid && !emailInvalid && !nameMissing;
+    enabled &&
+    ((buyerKind === "business" && mstTrim.length > 0 && nameTrim.length === 0) ||
+      (buyerKind === "individual" &&
+        (mstTrim.length > 0 ||
+          buyerAddress.trim().length > 0 ||
+          emailTrim.length > 0) &&
+        nameTrim.length === 0));
+  const businessMstMissing =
+    enabled && buyerKind === "business" && nameTrim.length > 0 && mstTrim.length === 0;
+  const buyerValid =
+    !mstInvalid && !emailInvalid && !nameMissing && !businessMstMissing;
 
   function handleIssue() {
     if (!preview || !preview.issuable || !buyerValid) return;
-    const name = enabled ? buyerName.trim() : "";
+    const name = enabled ? nameTrim : "";
     const mst = enabled ? mstTrim : "";
     const addr = enabled ? buyerAddress.trim() : "";
     const email = enabled ? emailTrim : "";
@@ -139,7 +158,9 @@ export function ManualIssueInvoiceDialog({
         ...(mst ? { buyerTaxCode: mst } : {}),
         ...(addr ? { buyerAddress: addr } : {}),
         ...(email ? { buyerEmail: email } : {}),
-        ...(!enabled || !hasBuyerDetails ? { buyerNotGetInvoice: true } : {}),
+        ...(!enabled || !hasBuyerDetails
+          ? { buyerNotGetInvoice: true }
+          : { buyerKind }),
       });
       if (!result.success) {
         toast.error(result.error ?? MI.failed);
@@ -265,6 +286,7 @@ export function ManualIssueInvoiceDialog({
                   onCheckedChange={(checked) => {
                     if (checked === true) {
                       setEnabled(false);
+                      setBuyerKind("business");
                       setBuyerName("");
                       setBuyerTaxCode("");
                       setBuyerAddress("");
@@ -280,6 +302,29 @@ export function ManualIssueInvoiceDialog({
               </div>
               {enabled ? (
                 <div className="grid gap-3">
+                  <div className="grid gap-2">
+                    <Label>{FINANCE_VI.buyerKindLabel}</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={buyerKind}
+                      onValueChange={(value) => {
+                        if (value === "business" || value === "individual") {
+                          setBuyerKind(value);
+                        }
+                      }}
+                      size="sm"
+                      className="grid w-full grid-cols-2"
+                      aria-label={FINANCE_VI.buyerKindLabel}
+                      disabled={isPending}
+                    >
+                      <ToggleGroupItem value="business">
+                        {FINANCE_VI.buyerKindBusiness}
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="individual">
+                        {FINANCE_VI.buyerKindIndividual}
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
                   <div className="grid gap-2">
                     <Label htmlFor="manual-issue-buyer-name">
                       {FINANCE_VI.buyerNameLabel}
