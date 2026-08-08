@@ -295,6 +295,13 @@ export const INVENTORY_VI = {
   productionRecipeImportSummary: (recipes: number, lines: number) =>
     `Đã cập nhật ${recipes} công thức sản xuất / ${lines} dòng nguyên liệu.`,
   productionInsufficientStock: "Không đủ tồn kho",
+  productionMaxProducible: (qty: string, unit: string) =>
+    `Có thể sản xuất tối đa ${qty} ${unit}`.trim(),
+  productionPlanExceedsStock: "Sản lượng kế hoạch vượt tồn hiện có.",
+  productionIngredientsNeedVsStock:
+    "Đối chiếu số cần theo lệnh với tồn tại kho xuất mặc định.",
+  productionSelectRecipeForStock: "Chọn công thức để xem nguyên liệu và tồn.",
+  productionCreateValidate: "Kiểm tra công thức và sản lượng trước khi tạo lệnh.",
   productionConfirmFailed: "Không thể xác nhận",
   productionOrderConfirmed: "Đã xác nhận lệnh sản xuất",
   productionCancelFailed: "Không thể hủy",
