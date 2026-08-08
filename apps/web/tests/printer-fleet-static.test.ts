@@ -22,6 +22,14 @@ test("printer fleet UI drops 3-slot role grid", () => {
   assert.doesNotMatch(client, /kitchen_1|kitchen_2/);
   assert.match(client, /Thêm máy in/);
   assert.match(client, /showsCategoryRoutes/);
+  assert.match(client, /testPrintPrinter/);
+  assert.match(client, /PRINTER_COPY\.testPrint/);
+  assert.match(actions, /export async function testPrintPrinter/);
+  assert.match(actions, /job_type: "provisional_bill"/);
+  assert.match(actions, /SAMPLE_PAYLOADS\.provisional_bill/);
+  assert.match(actions, /idempotency_key: `printer-test:\$\{printer\.id\}:\$\{Date\.now\(\)\}`/);
+  assert.doesNotMatch(actions, /resolveTestPrintTypes/);
+  assert.doesNotMatch(actions, /SAFE_TEST_PRINT_TYPES/);
   assert.doesNotMatch(actions, /z\.enum\(\["receipt", "kitchen_1", "kitchen_2"\]\)/);
 });
 

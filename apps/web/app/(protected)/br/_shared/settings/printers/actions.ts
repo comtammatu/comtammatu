@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Json } from "@comtammatu/database";
+import { SAMPLE_PAYLOADS } from "@comtammatu/print-render";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 const MANAGER_ROLES = ["owner", "branch_manager"] as const;
 const PRINT_TYPES = [
@@ -14,6 +17,12 @@ const PRINT_TYPES = [
   "kitchen_ticket",
   "cancel_ticket",
 ] as const;
+
+const printerCopy = messages.settings.printers;
+
+function toSupabaseJson(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value)) as Json;
+}
 
 const printerSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
@@ -145,4 +154,87 @@ export async function deletePrinter(id: number): Promise<ActionResult> {
   }
   revalidatePrinterPaths(existing.branch_id);
   return { success: true, data: null };
+}
+
+const testPrintSchema = z.object({
+  printer_id: z.coerce.number().int().positive(),
+});
+
+export async function testPrintPrinter(
+  input: z.infer<typeof testPrintSchema>,
+): Promise<ActionResult<{ job_id: number }>> {
+  const parsed = testPrintSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Mã máy in không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    MANAGER_ROLES,
+    PERMISSION_KEYS.PRINTER_MANAGE,
+  );
+  if (!ctx) return { success: false, error: printerCopy.testPrintDenied };
+
+  const { supabase, claims } = ctx;
+
+  const { data: printer, error: printerError } = await supabase
+    .from("printers")
+    .select("id, branch_id, is_active, lan_host")
+    .eq("id", parsed.data.printer_id)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+
+  if (printerError) {
+    console.error(
+      "[branch-settings/printers:testPrintPrinter] Load printer error:",
+      printerError,
+    );
+    return { success: false, error: printerCopy.loadPrintersFailed };
+  }
+  if (!printer) {
+    return { success: false, error: printerCopy.testPrintMissing };
+  }
+  if (
+    claims.user_role === "branch_manager" &&
+    printer.branch_id !== claims.branch_id
+  ) {
+    return { success: false, error: "Không có quyền với chi nhánh này" };
+  }
+  if (!printer.is_active) {
+    return { success: false, error: printerCopy.testPrintInactive };
+  }
+  if (!printer.lan_host?.trim()) {
+    return { success: false, error: printerCopy.testPrintMissingHost };
+  }
+
+  const sample = SAMPLE_PAYLOADS.provisional_bill;
+  const payload = {
+    ...(sample as unknown as Record<string, unknown>),
+    template_version: "printer-test",
+    note: printerCopy.testPrintSlipNote,
+  };
+
+  const { data: job, error } = await supabase
+    .from("print_jobs")
+    .insert({
+      tenant_id: claims.tenant_id,
+      branch_id: printer.branch_id,
+      printer_id: printer.id,
+      job_type: "provisional_bill",
+      payload: toSupabaseJson(payload),
+      idempotency_key: `printer-test:${printer.id}:${Date.now()}`,
+    })
+    .select("id")
+    .single();
+
+  if (error || !job) {
+    if (error) {
+      console.error(
+        "[branch-settings/printers:testPrintPrinter] Insert print job error:",
+        error,
+      );
+    }
+    return { success: false, error: printerCopy.testPrintFailed };
+  }
+
+  return { success: true, data: { job_id: job.id } };
 }

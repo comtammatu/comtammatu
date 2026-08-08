@@ -33,7 +33,9 @@ import {
 } from "@comtammatu/ui/components/select";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { deletePrinter, upsertPrinter } from "./actions";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
+import { deletePrinter, testPrintPrinter, upsertPrinter } from "./actions";
 
 export type Branch = { id: number; name: string };
 
@@ -109,6 +111,8 @@ const PRINTER_COPY = {
   categoriesHint:
     "Mỗi danh mục chỉ gán cho một máy in bếp trong chi nhánh.",
   activeControlLabel: "Cho phép nhận lệnh in",
+  testPrint: messages.settings.printers.testPrint,
+  testPrintSent: messages.settings.printers.testPrintSent,
 } as const;
 
 const PRINTER_FORM_ID = "branch-printer-form";
@@ -143,9 +147,25 @@ export function PrintersClient(props: {
   const { branches, printers, agents, categories, embedded = false } = props;
   const [editing, setEditing] = useState<Printer | null>(null);
   const [addingBranchId, setAddingBranchId] = useState<number | null>(null);
+  const [testPendingId, setTestPendingId] = useState<number | null>(null);
+  const [testPending, startTestPrint] = useTransition();
 
   const agentByBranch = new Map(agents.map((a) => [a.branch_id, a]));
   const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+
+  const handleTestPrint = (printerId: number) => {
+    if (testPending) return;
+    setTestPendingId(printerId);
+    startTestPrint(async () => {
+      const result = await testPrintPrinter({ printer_id: printerId });
+      setTestPendingId(null);
+      if (result.success) {
+        toast.success(PRINTER_COPY.testPrintSent);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -172,6 +192,10 @@ export function PrintersClient(props: {
                 branchPrinters.map((printer) => {
                   const printTypes = asPrintTypes(printer.print_types);
                   const categoryIds = printer.category_ids;
+                  const canTestPrint =
+                    printer.is_active && Boolean(printer.lan_host?.trim());
+                  const isTesting =
+                    testPending && testPendingId === printer.id;
                   return (
                     <Item
                       key={printer.id}
@@ -231,7 +255,18 @@ export function PrintersClient(props: {
                           ) : null}
                         </div>
                       </ItemContent>
-                      <ItemActions className="basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
+                      <ItemActions className="basis-full justify-start gap-2 pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0">
+                        <Button
+                          variant="outline"
+                          size={embedded ? "touch" : "sm"}
+                          className="w-full sm:w-auto"
+                          disabled={!canTestPrint || testPending}
+                          onClick={() => handleTestPrint(printer.id)}
+                        >
+                          {isTesting
+                            ? `${PRINTER_COPY.testPrint}…`
+                            : PRINTER_COPY.testPrint}
+                        </Button>
                         <Button
                           variant="outline"
                           size={embedded ? "touch" : "sm"}
