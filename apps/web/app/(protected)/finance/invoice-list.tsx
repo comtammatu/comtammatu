@@ -53,6 +53,7 @@ import {
   ItemFooter,
   ItemHeader,
 } from "@comtammatu/ui/components/item";
+import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { DescriptionList } from "@/components/surface";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
@@ -943,14 +944,21 @@ export function InvoiceList({
                       });
                     }
                   }}
+                  variant="outline"
                   size="sm"
-                  className="grid w-full grid-cols-2"
+                  className="grid w-full grid-cols-2 gap-2"
                   aria-label={FINANCE_VI.buyerKindLabel}
                 >
-                  <ToggleGroupItem value="business">
+                  <ToggleGroupItem
+                    value="business"
+                    className={BUYER_KIND_TOGGLE_ITEM_CLASS}
+                  >
                     {FINANCE_VI.buyerKindBusiness}
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="individual">
+                  <ToggleGroupItem
+                    value="individual"
+                    className={BUYER_KIND_TOGGLE_ITEM_CLASS}
+                  >
                     {FINANCE_VI.buyerKindIndividual}
                   </ToggleGroupItem>
                 </ToggleGroup>

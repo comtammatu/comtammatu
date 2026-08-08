@@ -179,6 +179,9 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(action, /buyerName: business\.name/);
   assert.match(action, /buyerAddress: business\.address/);
   assert.match(action, /buyerName: parsed\.data\.buyerName/);
+  assert.match(form, /BUYER_KIND_TOGGLE_ITEM_CLASS|data-pressed:bg-primary/);
+  assert.match(form, /buyerKindSelected/);
+  assert.match(form, /variant="outline"/);
   assert.match(form, /ToggleGroup/);
   assert.match(form, /buyerKindBusiness|buyerKindIndividual/);
   assert.match(form, /readOnly=\{buyerKind === "business"\}/);

@@ -18,6 +18,7 @@ import {
   isBusinessTaxCode,
   lookupBusinessTaxCode,
 } from "@lib/hddt/business-tax-lookup";
+import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { invoiceBuyer } from "@lib/messages/invoice-buyer";
 import {
   submitInvoiceBuyerDetails,
@@ -213,17 +214,31 @@ export function InvoiceBuyerForm({
             type="single"
             value={buyerKind}
             onValueChange={handleBuyerKindChange}
+            variant="outline"
             size="touch"
-            className="grid w-full grid-cols-2"
+            className="grid w-full grid-cols-2 gap-2"
             aria-label={invoiceBuyer.buyerKindLabel}
           >
-            <ToggleGroupItem value="business">
+            <ToggleGroupItem
+              value="business"
+              className={`text-sm ${BUYER_KIND_TOGGLE_ITEM_CLASS}`}
+            >
               {invoiceBuyer.buyerKindBusiness}
             </ToggleGroupItem>
-            <ToggleGroupItem value="individual">
+            <ToggleGroupItem
+              value="individual"
+              className={`text-sm ${BUYER_KIND_TOGGLE_ITEM_CLASS}`}
+            >
               {invoiceBuyer.buyerKindIndividual}
             </ToggleGroupItem>
           </ToggleGroup>
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs text-muted-foreground"
+          >
+            {invoiceBuyer.buyerKindSelected(buyerKind)}
+          </p>
         </Field>
 
         <Field data-invalid={taxCodeInvalid || undefined}>

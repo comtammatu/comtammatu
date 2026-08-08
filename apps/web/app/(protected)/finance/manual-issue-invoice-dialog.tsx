@@ -24,6 +24,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { FINANCE_VI, POS_VI } from "@comtammatu/shared/messages";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
+import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { createTaxInvoice, resolveOrderForManualInvoice } from "./actions";
 import type { ManualInvoiceOrderPreview } from "./_lib/finance-types";
 import { messages } from "@lib/messages";
@@ -312,15 +313,22 @@ export function ManualIssueInvoiceDialog({
                           setBuyerKind(value);
                         }
                       }}
+                      variant="outline"
                       size="sm"
-                      className="grid w-full grid-cols-2"
+                      className="grid w-full grid-cols-2 gap-2"
                       aria-label={FINANCE_VI.buyerKindLabel}
                       disabled={isPending}
                     >
-                      <ToggleGroupItem value="business">
+                      <ToggleGroupItem
+                        value="business"
+                        className={BUYER_KIND_TOGGLE_ITEM_CLASS}
+                      >
                         {FINANCE_VI.buyerKindBusiness}
                       </ToggleGroupItem>
-                      <ToggleGroupItem value="individual">
+                      <ToggleGroupItem
+                        value="individual"
+                        className={BUYER_KIND_TOGGLE_ITEM_CLASS}
+                      >
                         {FINANCE_VI.buyerKindIndividual}
                       </ToggleGroupItem>
                     </ToggleGroup>
