@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type MutableRefObject,
 } from "react";
 import { BellRing as IconBell } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
@@ -166,6 +167,7 @@ export function PosDesktopInner({
   initialPaymentMethods,
   initialVietQrConfig,
   initialOpenOrderId,
+  selfOrderSignalRef,
 }: {
   categories: MenuCategory[];
   canCloseShift: boolean;
@@ -174,6 +176,8 @@ export function PosDesktopInner({
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
   initialOpenOrderId?: number;
+  /** Filled by shell's private branch-ops bus for instant QR self-order alerts. */
+  selfOrderSignalRef: MutableRefObject<(() => void) | null>;
 }) {
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
@@ -447,47 +451,17 @@ export function PosDesktopInner({
     };
   }, [refreshSelfOrderPosState]);
 
-  // Instant self-order alert: a realtime channel fires the same loader the poll
-  // uses, so the cashier's tone and approval sheet surface a guest QR request as
-  // soon as the row lands. The 5s poll stays as a safety net for a silently
-  // dropped socket (the loader is idempotent — tone only plays on genuinely new
-  // request ids).
-  // Assigning the ref in the render body (not in an effect) keeps it in sync on
-  // every render, so a realtime event always calls the latest closure (with the
-  // current audioMode) instead of a one-frame-stale one.
-  const refreshSelfOrderPosStateRef = useRef(refreshSelfOrderPosState);
-  refreshSelfOrderPosStateRef.current = refreshSelfOrderPosState;
-  useRealtimeChannel(
-    (supabase) => {
-      const filter = `branch_id=eq.${String(branchId)}`;
-      return supabase
-        .channel(`pos-self-order-branch-${String(branchId)}`, {
-          config: { private: true },
-        })
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "self_order_requests",
-            filter,
-          },
-          () => refreshSelfOrderPosStateRef.current(),
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "self_order_payment_requests",
-            filter,
-          },
-          () => refreshSelfOrderPosStateRef.current(),
-        )
-        .subscribe();
-    },
-    [branchId],
-  );
+  // Instant self-order alert: shell's private branch:{id}:ops bus (same channel
+  // as menu sync) fires this loader when self_order_* rows change. The 5s poll
+  // stays as a safety net for a silently dropped socket (the loader is
+  // idempotent — tone only plays on genuinely new request ids).
+  // Assign in the render body so the bus always calls the latest closure.
+  selfOrderSignalRef.current = refreshSelfOrderPosState;
+  useEffect(() => {
+    return () => {
+      selfOrderSignalRef.current = null;
+    };
+  }, [selfOrderSignalRef]);
 
   const refreshSelfOrderWorkflow = useCallback(async () => {
     await Promise.all([refreshSelfOrderPosState(), refreshOperational()]);

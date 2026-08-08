@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { usePosMenuSync } from "./_hooks/use-pos-menu-sync";
 import { PosDesktopInner } from "./pos-desktop-inner";
 import type { OrderType } from "./types";
@@ -41,10 +41,18 @@ interface PosDesktopShellProps {
 
 export function PosDesktopShell(props: PosDesktopShellProps) {
   const [categories, setCategories] = useState(props.categories);
+  // Shared private branch:{id}:ops channel lives in usePosMenuSync; Inner
+  // registers its self-order refresher so we never open a second same-topic
+  // channel (useRealtimeChannel force-evicts duplicates).
+  const selfOrderSignalRef = useRef<(() => void) | null>(null);
+  const onSelfOrderSignal = useCallback(() => {
+    selfOrderSignalRef.current?.();
+  }, []);
 
   usePosMenuSync({
     branchId: props.branchId,
     setCategories,
+    onSelfOrderSignal,
   });
 
   // Extract the volatile slice (sold_today / is_disabled / available_to_sell)
@@ -82,6 +90,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         initialPaymentMethods={props.initialPaymentMethods}
         initialVietQrConfig={props.initialVietQrConfig}
         initialOpenOrderId={props.initialOpenOrderId}
+        selfOrderSignalRef={selfOrderSignalRef}
       />
     </PosDesktopProvider>
   );

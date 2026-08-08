@@ -152,18 +152,40 @@ test("Runner board halves its poll cadence to 6s while keeping deterministic sta
   assert.match(source, /router\.refresh\(\)/);
 });
 
-test("POS self-order uses a realtime channel plus the 5s poll as a safety net", () => {
-  const source = read(
+test("POS self-order uses the private branch-ops bus plus the 5s poll as a safety net", () => {
+  const inner = read(
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
-  // The poll stays (safety net for a silently dropped socket); a realtime channel
-  // surfaces guest QR requests instantly through the same idempotent loader.
-  assert.match(source, /pos-self-order-branch-/);
-  assert.match(source, /table: "self_order_requests"/);
-  assert.match(source, /table: "self_order_payment_requests"/);
-  assert.match(source, /refreshSelfOrderPosStateRef\.current\(\)/);
+  const menuSync = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-pos-menu-sync.ts",
+  );
+  const shell = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
+  );
+  const migration = read(
+    "supabase/migrations/20260808170144_self_order_branch_ops_realtime.sql",
+  );
+  // Instant alerts ride the hardened private branch:{id}:ops bus (not a
+  // separate private topic without a realtime.messages policy).
+  assert.doesNotMatch(inner, /pos-self-order-branch-/);
+  assert.match(inner, /selfOrderSignalRef\.current = refreshSelfOrderPosState/);
+  assert.match(shell, /onSelfOrderSignal/);
+  assert.match(menuSync, /branch:\$\{String\(branchId\)\}:ops/);
+  assert.match(menuSync, /private:\s*true/);
+  assert.match(menuSync, /self_order_requests/);
+  assert.match(menuSync, /self_order_payment_requests/);
+  assert.match(menuSync, /stopRealtimeAuthorizationRejoin/);
+  assert.match(
+    migration,
+    /ON public\.self_order_requests[\s\S]*broadcast_branch_ops/,
+  );
+  assert.match(
+    migration,
+    /ON public\.self_order_payment_requests[\s\S]*broadcast_branch_ops/,
+  );
+  assert.doesNotMatch(migration, /ALTER PUBLICATION supabase_realtime/);
   // 5s poll safety net is still present.
-  assert.match(source, /5_000/);
+  assert.match(inner, /5_000/);
 });
 
 test("floor clock-in stays in the Branch personal flow", () => {
@@ -250,15 +272,15 @@ test("POS self-order ref is synced in the render body, not a one-frame-stale eff
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
   );
-  // Assigning in the render body keeps the ref current on every render, so a
-  // realtime event always invokes the latest closure (current audioMode).
+  // Assigning in the render body keeps the shell bus ref current on every
+  // render, so a realtime event always invokes the latest closure (audioMode).
   assert.match(
     source,
-    /const refreshSelfOrderPosStateRef = useRef\(refreshSelfOrderPosState\);\s*refreshSelfOrderPosStateRef\.current = refreshSelfOrderPosState;/,
+    /selfOrderSignalRef\.current = refreshSelfOrderPosState;/,
   );
   assert.doesNotMatch(
     source,
-    /useEffect\(\(\) => \{\s*refreshSelfOrderPosStateRef\.current = refreshSelfOrderPosState;/,
+    /useEffect\(\(\) => \{\s*selfOrderSignalRef\.current = refreshSelfOrderPosState;/,
   );
 });
 
