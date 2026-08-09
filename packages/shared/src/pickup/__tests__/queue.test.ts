@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  buildRunnerQueue,
-  formatRunnerOrderLabel,
-  type BuildRunnerQueueInput,
-  type RunnerQueueItem,
+  buildPickupQueue,
+  formatPickupOrderLabel,
+  type BuildPickupQueueInput,
+  type PickupQueueItem,
 } from "../queue";
 
-const base: BuildRunnerQueueInput = {
+const base: BuildPickupQueueInput = {
   tickets: [
     {
       id: 1,
@@ -88,7 +88,7 @@ const base: BuildRunnerQueueInput = {
   ],
 };
 
-function makeRunnerItem(overrides: Partial<RunnerQueueItem>): RunnerQueueItem {
+function makePickupItem(overrides: Partial<PickupQueueItem>): PickupQueueItem {
   return {
     id: "item-1",
     lane: "active",
@@ -112,43 +112,43 @@ function makeRunnerItem(overrides: Partial<RunnerQueueItem>): RunnerQueueItem {
   };
 }
 
-test("formatRunnerOrderLabel shortens date-based takeaway order numbers", () => {
-  const item = makeRunnerItem({
+test("formatPickupOrderLabel shortens date-based takeaway order numbers", () => {
+  const item = makePickupItem({
     orderNumber: "MV-260525-055-PH",
   });
 
-  assert.equal(formatRunnerOrderLabel(item), "Mang về #055");
+  assert.equal(formatPickupOrderLabel(item), "Mang về #055");
   assert.equal(item.orderNumber, "MV-260525-055-PH");
 });
 
-test("formatRunnerOrderLabel preserves leading zeroes with branch suffixes", () => {
+test("formatPickupOrderLabel preserves leading zeroes with branch suffixes", () => {
   assert.equal(
-    formatRunnerOrderLabel(
-      makeRunnerItem({ orderNumber: "MV-20260524-007-CN1" }),
+    formatPickupOrderLabel(
+      makePickupItem({ orderNumber: "MV-20260524-007-CN1" }),
     ),
     "Mang về #007",
   );
   assert.equal(
-    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-20260524-014" })),
+    formatPickupOrderLabel(makePickupItem({ orderNumber: "MV-20260524-014" })),
     "Mang về #014",
   );
 });
 
-test("formatRunnerOrderLabel falls back for old-format or malformed takeaway codes", () => {
+test("formatPickupOrderLabel falls back for old-format or malformed takeaway codes", () => {
   assert.equal(
-    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-0007" })),
+    formatPickupOrderLabel(makePickupItem({ orderNumber: "MV-0007" })),
     "Mang về MV-0007",
   );
   assert.equal(
-    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-ABC-PH" })),
+    formatPickupOrderLabel(makePickupItem({ orderNumber: "MV-ABC-PH" })),
     "Mang về MV-ABC-PH",
   );
 });
 
-test("formatRunnerOrderLabel keeps dine-in table labels unchanged", () => {
+test("formatPickupOrderLabel keeps dine-in table labels unchanged", () => {
   assert.equal(
-    formatRunnerOrderLabel(
-      makeRunnerItem({
+    formatPickupOrderLabel(
+      makePickupItem({
         orderNumber: "TC-260525-055-PH",
         orderType: "dine_in",
         tableNumber: 5,
@@ -158,8 +158,8 @@ test("formatRunnerOrderLabel keeps dine-in table labels unchanged", () => {
   );
 });
 
-test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and uses stable fallback number", () => {
-  const queue = buildRunnerQueue(base);
+test("buildPickupQueue groups completed takeaway tickets by kitchen batch and uses stable fallback number", () => {
+  const queue = buildPickupQueue(base);
 
   assert.equal(queue.length, 2);
   const ready = queue.find(
@@ -177,8 +177,8 @@ test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and us
   assert.deepEqual(ready?.readyTicketIds, [1, 2]);
 });
 
-test("buildRunnerQueue preserves order-based append kitchen ticket suffixes", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue preserves order-based append kitchen ticket suffixes", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -214,14 +214,14 @@ test("buildRunnerQueue preserves order-based append kitchen ticket suffixes", ()
     ],
   };
 
-  const [item] = buildRunnerQueue(input);
+  const [item] = buildPickupQueue(input);
 
   assert.equal(item?.callNumber, "#105-2");
   assert.equal(item?.referenceNumber, "#105-2");
 });
 
-test("buildRunnerQueue keeps preparing orders and skips cancelled KDS tickets", () => {
-  const queue = buildRunnerQueue(base);
+test("buildPickupQueue keeps preparing orders and skips cancelled KDS tickets", () => {
+  const queue = buildPickupQueue(base);
   const preparing = queue.find(
     (item) => item.orderNumber === "TC-20260524-008-CN1",
   );
@@ -237,8 +237,8 @@ test("buildRunnerQueue keeps preparing orders and skips cancelled KDS tickets", 
   );
 });
 
-test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue keeps POS-completed orders while KDS tickets are live", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -265,7 +265,7 @@ test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", (
     kitchenBatches: [],
   };
 
-  const [item] = buildRunnerQueue(input);
+  const [item] = buildPickupQueue(input);
 
   assert.equal(item?.orderNumber, "TC-20260524-023-CN1");
   assert.equal(item?.lane, "active");
@@ -274,8 +274,8 @@ test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", (
   assert.equal(item?.callNumber, "7");
 });
 
-test("buildRunnerQueue ranks active priority before normal active work and ready hand-offs", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue ranks active priority before normal active work and ready hand-offs", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -361,7 +361,7 @@ test("buildRunnerQueue ranks active priority before normal active work and ready
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.deepEqual(
     queue.map((item) => item.orderNumber),
@@ -377,8 +377,8 @@ test("buildRunnerQueue ranks active priority before normal active work and ready
   assert.equal(queue[3]?.lane, "ready");
 });
 
-test("buildRunnerQueue keeps a fully-bumped order on the ready lane without blocking cooking orders", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue keeps a fully-bumped order on the ready lane without blocking cooking orders", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -423,7 +423,7 @@ test("buildRunnerQueue keeps a fully-bumped order on the ready lane without bloc
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue[0]?.orderNumber, "MV-20260524-041-CN1");
   assert.equal(queue[0]?.lane, "active");
@@ -432,8 +432,8 @@ test("buildRunnerQueue keeps a fully-bumped order on the ready lane without bloc
   assert.equal(queue[1]?.status, "ready");
 });
 
-test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue keeps mixed KDS batch statuses in one active row", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -480,7 +480,7 @@ test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => 
     ],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue.length, 1);
   assert.equal(queue[0]?.lane, "active");
@@ -489,8 +489,8 @@ test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => 
   assert.deepEqual(queue[0]?.readyTicketIds, [35]);
 });
 
-test("buildRunnerQueue falls back to order number and preserves leading zeroes", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue falls back to order number and preserves leading zeroes", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -517,11 +517,11 @@ test("buildRunnerQueue falls back to order number and preserves leading zeroes",
     kitchenBatches: [],
   };
 
-  assert.equal(buildRunnerQueue(input)[0]?.callNumber, "MV-0007");
+  assert.equal(buildPickupQueue(input)[0]?.callNumber, "MV-0007");
 });
 
-test("buildRunnerQueue uses table number as the dominant dine-in display", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue uses table number as the dominant dine-in display", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -548,15 +548,15 @@ test("buildRunnerQueue uses table number as the dominant dine-in display", () =>
     kitchenBatches: [],
   };
 
-  const [item] = buildRunnerQueue(input);
+  const [item] = buildPickupQueue(input);
 
   assert.equal(item?.callPrefix, "Bàn");
   assert.equal(item?.callNumber, "12");
   assert.equal(item?.referenceNumber, "TC-20260524-010-CN1");
 });
 
-test("buildRunnerQueue lets active work win over completed history for the same target", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue lets active work win over completed history for the same target", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -601,7 +601,7 @@ test("buildRunnerQueue lets active work win over completed history for the same 
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue.length, 1);
   assert.equal(queue[0]?.lane, "active");
@@ -609,8 +609,8 @@ test("buildRunnerQueue lets active work win over completed history for the same 
   assert.equal(queue[0]?.callNumber, "12");
 });
 
-test("buildRunnerQueue keeps recently served targets in the served lane", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue keeps recently served targets in the served lane", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -655,7 +655,7 @@ test("buildRunnerQueue keeps recently served targets in the served lane", () => 
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue.length, 2);
   assert.equal(queue[0]?.lane, "served");
@@ -665,8 +665,8 @@ test("buildRunnerQueue keeps recently served targets in the served lane", () => 
   assert.equal(queue[1]?.callNumber, "12");
 });
 
-test("buildRunnerQueue ages old served targets out of the served lane", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue ages old served targets out of the served lane", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     servedAfterIso: "2026-05-24T03:25:00.000Z",
     tickets: [
@@ -712,14 +712,14 @@ test("buildRunnerQueue ages old served targets out of the served lane", () => {
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue.length, 1);
   assert.equal(queue[0]?.orderNumber, "MV-20260524-016-CN1");
 });
 
-test("buildRunnerQueue lets active work win over recent served history for the same target", () => {
-  const input: BuildRunnerQueueInput = {
+test("buildPickupQueue lets active work win over recent served history for the same target", () => {
+  const input: BuildPickupQueueInput = {
     ...base,
     tickets: [
       {
@@ -764,7 +764,7 @@ test("buildRunnerQueue lets active work win over recent served history for the s
     kitchenBatches: [],
   };
 
-  const queue = buildRunnerQueue(input);
+  const queue = buildPickupQueue(input);
 
   assert.equal(queue.length, 1);
   assert.equal(queue[0]?.lane, "active");

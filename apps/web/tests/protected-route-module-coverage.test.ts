@@ -12,8 +12,8 @@ const PROTECTED_ROOT = "apps/web/app/(protected)";
 // family (no moduleKeys). Keep this list tiny and individually justified — a new
 // entry here means a route deliberately bypasses ACL coverage.
 const PUBLIC_PROTECTED_ROUTES = new Set<string>([
-  // Customer-facing read-only runner display (isRunnerPublicDisplayPath).
-  "apps/web/app/(protected)/br/[branchId]/runner/page.tsx",
+  // Customer-facing read-only pickup display (isPickupPublicDisplayPath).
+  "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx",
 ]);
 
 function listPageFiles(dir: string): string[] {

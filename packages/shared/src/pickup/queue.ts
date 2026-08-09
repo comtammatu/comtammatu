@@ -1,5 +1,5 @@
-export type RunnerTicketStatus = "pending" | "preparing" | "ready" | "served";
-export type RunnerOrderStatus =
+export type PickupTicketStatus = "pending" | "preparing" | "ready" | "served";
+export type PickupOrderStatus =
   | "new"
   | "confirmed"
   | "preparing"
@@ -9,37 +9,37 @@ export type RunnerOrderStatus =
   | "cancelled"
   | string;
 
-export type RunnerOrderType = "dine_in" | "takeaway" | string;
+export type PickupOrderType = "dine_in" | "takeaway" | string;
 
-export interface RunnerTicketRow {
+export interface PickupTicketRow {
   id: number;
   order_id: number;
   order_item_id?: number;
   kitchen_send_batch_id: number | null;
-  status: RunnerTicketStatus | string;
+  status: PickupTicketStatus | string;
   bumped_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface RunnerOrderRow {
+export interface PickupOrderRow {
   id: number;
   order_number: string;
-  order_type: RunnerOrderType;
+  order_type: PickupOrderType;
   table_id: number | null;
-  status: RunnerOrderStatus;
+  status: PickupOrderStatus;
   created_at: string;
   is_priority?: boolean | null;
   tables?: { number: number } | null;
 }
 
-export interface RunnerOrderItemRow {
+export interface PickupOrderItemRow {
   id: number;
   order_id?: number;
   is_priority?: boolean | null;
 }
 
-export interface RunnerKitchenBatchRow {
+export interface PickupKitchenBatchRow {
   id: number;
   order_id: number;
   kitchen_ticket_number: string;
@@ -48,12 +48,12 @@ export interface RunnerKitchenBatchRow {
   created_at: string;
 }
 
-export type RunnerQueueLane = "active" | "ready" | "served";
+export type PickupQueueLane = "active" | "ready" | "served";
 
-export interface RunnerQueueItem {
+export interface PickupQueueItem {
   id: string;
-  lane: RunnerQueueLane;
-  status: RunnerTicketStatus;
+  lane: PickupQueueLane;
+  status: PickupTicketStatus;
   isPriority: boolean;
   ticketIds: number[];
   readyTicketIds: number[];
@@ -64,26 +64,26 @@ export interface RunnerQueueItem {
   callPrefix: "Bàn" | "Số";
   referenceNumber: string;
   referenceNumbers: string[];
-  orderType: RunnerOrderType;
+  orderType: PickupOrderType;
   targetKey: string;
   tableNumber: number | null;
   ticketCount: number;
   sortAt: string;
 }
 
-export interface BuildRunnerQueueInput {
-  tickets: RunnerTicketRow[];
-  orders: RunnerOrderRow[];
-  kitchenBatches: RunnerKitchenBatchRow[];
-  orderItems?: RunnerOrderItemRow[];
+export interface BuildPickupQueueInput {
+  tickets: PickupTicketRow[];
+  orders: PickupOrderRow[];
+  kitchenBatches: PickupKitchenBatchRow[];
+  orderItems?: PickupOrderItemRow[];
   servedAfterIso?: string;
 }
 
 const ORDER_DATE_SEGMENT_PATTERN = /^\d{6}(?:\d{2})?$/;
 const ORDER_SEQUENCE_SEGMENT_PATTERN = /^\d{1,5}$/;
 
-export function formatRunnerOrderLabel(
-  item: Pick<RunnerQueueItem, "orderNumber" | "orderType" | "tableNumber">,
+export function formatPickupOrderLabel(
+  item: Pick<PickupQueueItem, "orderNumber" | "orderType" | "tableNumber">,
 ): string {
   if (item.tableNumber !== null) return `Bàn ${String(item.tableNumber)}`;
 
@@ -97,9 +97,9 @@ export function formatRunnerOrderLabel(
   return `Bàn chưa rõ ${item.orderNumber}`;
 }
 
-export function buildRunnerQueue(
-  input: BuildRunnerQueueInput,
-): RunnerQueueItem[] {
+export function buildPickupQueue(
+  input: BuildPickupQueueInput,
+): PickupQueueItem[] {
   const orderById = new Map(input.orders.map((order) => [order.id, order]));
   const batchById = new Map(
     input.kitchenBatches.map((batch) => [batch.id, batch]),
@@ -109,13 +109,13 @@ export function buildRunnerQueue(
       .filter((item) => item.is_priority === true)
       .map((item) => item.id),
   );
-  const groupByKey = new Map<string, RunnerQueueItem>();
+  const groupByKey = new Map<string, PickupQueueItem>();
 
   for (const ticket of input.tickets) {
-    if (!isRunnerTicketStatus(ticket.status)) continue;
+    if (!isPickupTicketStatus(ticket.status)) continue;
 
     const order = orderById.get(ticket.order_id);
-    // Runner follows KDS fulfillment state. POS `orders.status` may be
+    // Pickup follows KDS fulfillment state. POS `orders.status` may be
     // `completed` immediately after payment while kitchen work is still live.
     if (!order) continue;
 
@@ -144,7 +144,7 @@ export function buildRunnerQueue(
     const existing = groupByKey.get(groupKey);
     if (existing) {
       existing.isPriority = existing.isPriority || isTicketPriority;
-      existing.status = pickRunnerQueueStatus(
+      existing.status = pickPickupQueueStatus(
         existing.status,
         ticket.status,
         existing.isPriority,
@@ -201,10 +201,10 @@ export function buildRunnerQueue(
       if (item.lane === "active") return true;
       return !activeTargetKeys.has(item.targetKey);
     })
-    .sort(compareRunnerQueueItems);
+    .sort(comparePickupQueueItems);
 }
 
-function isRunnerTicketStatus(status: string): status is RunnerTicketStatus {
+function isPickupTicketStatus(status: string): status is PickupTicketStatus {
   return (
     status === "pending" ||
     status === "preparing" ||
@@ -213,13 +213,13 @@ function isRunnerTicketStatus(status: string): status is RunnerTicketStatus {
   );
 }
 
-function laneForTicketStatus(status: RunnerTicketStatus): RunnerQueueLane {
+function laneForTicketStatus(status: PickupTicketStatus): PickupQueueLane {
   if (status === "pending" || status === "preparing") return "active";
   if (status === "ready") return "ready";
   return "served";
 }
 
-function sortAtForTicket(ticket: RunnerTicketRow): string {
+function sortAtForTicket(ticket: PickupTicketRow): string {
   if (ticket.status === "ready" || ticket.status === "served") {
     return ticket.bumped_at ?? ticket.updated_at ?? ticket.created_at;
   }
@@ -227,9 +227,9 @@ function sortAtForTicket(ticket: RunnerTicketRow): string {
 }
 
 function sortAtForQueue(
-  order: RunnerOrderRow,
-  batch: RunnerKitchenBatchRow | null,
-  ticket: RunnerTicketRow,
+  order: PickupOrderRow,
+  batch: PickupKitchenBatchRow | null,
+  ticket: PickupTicketRow,
 ): string {
   if (ticket.status === "served") return sortAtForTicket(ticket);
   return batch?.created_at ?? order.created_at ?? ticket.created_at;
@@ -240,8 +240,8 @@ function minIso(a: string, b: string): string {
 }
 
 function resolveDisplayTarget(
-  order: RunnerOrderRow,
-  batch: RunnerKitchenBatchRow | null,
+  order: PickupOrderRow,
+  batch: PickupKitchenBatchRow | null,
   tableNumber: number | null,
 ): {
   callNumber: string;
@@ -272,8 +272,8 @@ function resolveDisplayTarget(
 }
 
 function resolveGroupKey(
-  order: RunnerOrderRow,
-  batch: RunnerKitchenBatchRow | null,
+  order: PickupOrderRow,
+  batch: PickupKitchenBatchRow | null,
   tableNumber: number | null,
 ): string {
   if (tableNumber !== null) return `order-${String(order.id)}`;
@@ -319,11 +319,11 @@ function formatReferences(references: string[]): string {
   return `${references[0] ?? ""} / ${references[1] ?? ""} +${String(references.length - 2)}`;
 }
 
-function compareRunnerQueueItems(
-  a: RunnerQueueItem,
-  b: RunnerQueueItem,
+function comparePickupQueueItems(
+  a: PickupQueueItem,
+  b: PickupQueueItem,
 ): number {
-  const rankDelta = runnerQueueRank(a) - runnerQueueRank(b);
+  const rankDelta = pickupQueueRank(a) - pickupQueueRank(b);
   if (rankDelta !== 0) return rankDelta;
 
   const aTime = new Date(a.sortAt).getTime();
@@ -337,23 +337,23 @@ function compareRunnerQueueItems(
   return a.callNumber.localeCompare(b.callNumber, "vi", { numeric: true });
 }
 
-function pickRunnerQueueStatus(
-  current: RunnerTicketStatus,
-  next: RunnerTicketStatus,
+function pickPickupQueueStatus(
+  current: PickupTicketStatus,
+  next: PickupTicketStatus,
   isPriority: boolean,
-): RunnerTicketStatus {
-  return runnerQueueStatusRank(current, isPriority) <=
-    runnerQueueStatusRank(next, isPriority)
+): PickupTicketStatus {
+  return pickupQueueStatusRank(current, isPriority) <=
+    pickupQueueStatusRank(next, isPriority)
     ? current
     : next;
 }
 
-function runnerQueueRank(item: RunnerQueueItem): number {
-  return runnerQueueStatusRank(item.status, item.isPriority);
+function pickupQueueRank(item: PickupQueueItem): number {
+  return pickupQueueStatusRank(item.status, item.isPriority);
 }
 
-function runnerQueueStatusRank(
-  status: RunnerTicketStatus,
+function pickupQueueStatusRank(
+  status: PickupTicketStatus,
   isPriority: boolean,
 ): number {
   if (status === "pending" || status === "preparing") {

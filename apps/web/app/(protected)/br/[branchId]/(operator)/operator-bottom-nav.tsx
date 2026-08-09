@@ -25,16 +25,16 @@ const employeeNavCopy = messages.employee.nav;
 
 /**
  * R04 residual pad when central deep-links into `/br/{site}/stock/*`.
- * Home escapes to L0 `/inventory` — not a second daily hub on `/br`.
+ * Home escapes to Control home `/` — not a second daily hub on `/br`.
  */
 function centralResidualNavItems(
   branchId: number,
   branchKind: BranchKind,
 ): ShellNavItem[] {
   const base = `/br/${branchId}`;
-  const inventoryHome = {
-    href: "/inventory",
-    label: APP_COPY_VI.inventory,
+  const controlHome = {
+    href: "/",
+    label: APP_COPY_VI.ownerTitle,
     icon: Home,
     exact: true,
   };
@@ -77,7 +77,7 @@ function centralResidualNavItems(
 
   if (branchKind === "central_supply") {
     return [
-      inventoryHome,
+      controlHome,
       receive,
       {
         href: `${base}/stock/on-hand`,
@@ -91,7 +91,7 @@ function centralResidualNavItems(
   }
 
   return [
-    inventoryHome,
+    controlHome,
     receive,
     {
       href: "/inventory/production",

@@ -49,6 +49,7 @@ approved file extensions.
 | `Topping` / `blind` / `peer cross` | `Món thêm` / `đếm mù` / `đếm chéo` |
 | Embedded `GRN`/`PO` in UI sentences | `phiếu nhập` / `đơn đặt hàng` (acronym only as pill/badge) |
 | `Quầy Bếp` (chrome) | `KDS` |
+| `Runner` (chrome) / `Màn gọi số` on tiles/nav | `Gọi số` (`pickup_display`) |
 | `Quản lý kho` / `Bản điều hành kho` (module chrome) | `Kho hàng` (role title `Quản lý kho Tổng` stays) |
 | `Đơn hàng` / `Đơn hàng bán` as module/nav chrome | `Đơn bán` (long `Đơn hàng bán` only via `ORDER_VI.long`) |
 | `Công việc của tôi` | `Ca của tôi` |
@@ -68,6 +69,7 @@ same concept.
 | Sale order module | `Đơn bán` | `Đơn hàng bán` | `ORDER_VI` / `MODULE_LABELS_VI.orders` |
 | Inventory module | `Kho hàng` | — | `MODULE_LABELS_VI.inventory` |
 | Kitchen display | `KDS` | — | `MODULE_LABELS_VI.kds` |
+| Guest pickup board | `Gọi số` | `Màn gọi số` | `MODULE_LABELS_VI.pickup` |
 | Personal work surface | `Ca của tôi` | — | `APP_COPY_VI.employeePortal` |
 | Branch home / today chip | `Hôm nay` | — | `MODULE_LABELS_VI.branch_home` |
 | Stock fulfillment workspace | `Giao nhận` | covers YCH + nhận/giao | inventory dictionary `transfers` |
@@ -83,7 +85,7 @@ SSOT map: `docs/spec/architecture.md`. Role ACL `owner` ≠ product plane.
 | --- | --- | --- |
 | `control_surface` | Quản trị | L0 admin plane (`AppShell`): `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. |
 | `branch_surface` | Chi nhánh | `/br/[branchId]/*` branch runtime chrome excluding full-screen stations. |
-| `station_chrome` | POS / KDS / Runner | Full-screen one-job chrome under `/br/[branchId]/{pos,kds,runner}`. |
+| `station_chrome` | POS / KDS / Gọi số | Full-screen one-job chrome under `/br/[branchId]/{pos,kds,pickup}`. |
 | `operational_role` | vai trò vận hành | Non-full-Owner roles in the route matrix; not a plane name. |
 | `owner` | Chủ sở hữu | Full L0 ACL role; never the name of the product plane. |
 | `restaurant_operations_system` | bộ phần mềm quản lý vận hành và bán hàng | Product name for `comtammatu`. |
@@ -115,6 +117,7 @@ domain doc.
 | `finance_basic` | tài chính vận hành | Daily money, stock value, food cost, expenses, HĐĐT — not full GL. |
 | `inventory_ops` | điều hành kho | Inventory module on `control_surface`. |
 | `point_of_sale` / `kitchen_display_system` | POS / KDS | Order capture / kitchen display stations. |
+| `pickup_display` | Gọi số (formal: Màn gọi số) | Guest + delivery shipper read-only ready board (`/br/[branchId]/pickup`). Not a staff food-runner workflow. |
 | `employee_portal` | Ca của tôi | Personal day-flow surface (`/me/*`, Branch shift/profile). Not the shift checklist label `Việc trong ca`. |
 
 ### Sales / POS / KDS
@@ -139,7 +142,7 @@ domain doc.
 | `covers` | lượt khách | Guest count only when POS captures it. |
 | `party_size` | quy mô nhóm khách | Guests in one table/party. |
 
-Branch Ops CTA verbs: **Vào POS**, **Mở ca**, **Vào KDS**, **Bếp (KDS)**,
+Branch Ops CTA verbs: **Vào POS**, **Mở ca**, **Vào KDS**, **Vào Gọi số**, **Bếp (KDS)**,
 **Trạm bếp**, **Đăng ký POS**, **Thiết lập chi nhánh**, **Điều hành**.
 
 ### Inventory / procurement

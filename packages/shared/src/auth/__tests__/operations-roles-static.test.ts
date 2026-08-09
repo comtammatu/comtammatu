@@ -155,15 +155,11 @@ test("D091 procurement surfaces are permission-driven", () => {
   );
 });
 
-test("D091 inventory L0 landing is a fixed redirect without site-kind override", () => {
-  const home = read(
-    "apps/web/app/(protected)/inventory/_lib/inventory-home.ts",
-  );
+test("D091 inventory L0 landing is a workflow LANDING without dashboard KPI", () => {
   const page = read("apps/web/app/(protected)/inventory/page.tsx");
-  assert.match(home, /\/inventory\/stock/);
-  assert.match(home, /accountant/);
-  assert.match(page, /resolveInventoryHomePath/);
-  assert.doesNotMatch(page, /siteKind|DashboardClient/);
+  assert.match(page, /resolveInventoryNav/);
+  assert.doesNotMatch(page, /resolveInventoryHomePath|redirect\(/);
+  assert.doesNotMatch(page, /siteKind|DashboardClient|totalStockValue/);
 });
 
 test("accountant reviews PO while invoice lines own purchase prices", () => {

@@ -1,16 +1,16 @@
 import { cn } from "@comtammatu/ui";
 import { BrandMascot } from "@/components/brand";
 
-export type RunnerIdleState = "empty" | "done";
+export type PickupIdleState = "empty" | "done";
 
-export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
+export function PickupIdleVisual({ state }: { state: PickupIdleState }) {
   const mascotMood = state === "done" ? "waving" : "waiting";
 
   return (
     <div
       aria-hidden="true"
       className="relative flex h-48 w-48 shrink-0 items-center justify-center sm:h-56 sm:w-56 xl:h-64 xl:w-64"
-      data-runner-idle-state={state}
+      data-pickup-idle-state={state}
     >
       <span
         className={cn(
@@ -22,7 +22,7 @@ export function RunnerIdleVisual({ state }: { state: RunnerIdleState }) {
 
       <div
         className="relative z-10 flex h-40 w-32 items-center justify-center sm:h-48 sm:w-36 xl:h-56 xl:w-44"
-        data-runner-idle-state={state}
+        data-pickup-idle-state={state}
       >
         <BrandMascot
           animated

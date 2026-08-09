@@ -18,7 +18,7 @@ export type ModuleLabelKey =
   | "settings"
   | "pos"
   | "kds"
-  | "runner"
+  | "pickup"
   | "branch_home"
   | "branch_dashboard"
   | "branch_settings"
@@ -53,7 +53,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
-  runner: "Màn gọi số",
+  pickup: "Gọi số",
   branch_home: "Hôm nay",
   branch_dashboard: "Điều hành",
   branch_settings: "Thiết lập",
@@ -93,7 +93,7 @@ export const APP_COPY_VI = {
   hrWorkspace: "Nhân sự",
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
   branchOperationsKds: "KDS",
-  branchOperationsRunner: "Màn gọi số",
+  branchOperationsPickup: "Gọi số",
   branchCommand: "Điều hành",
   branchHome: "Hôm nay",
   inventory: "Kho hàng",

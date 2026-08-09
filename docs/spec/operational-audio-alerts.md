@@ -34,7 +34,7 @@ Board/realtime event on open POS|KDS
 ```
 
 **Non-goals:** cloud/realtime TTS; clip pack MVP; full menu readouts;
-server-synced prefs; `public.notifications` inserts; Runner audio (needs ADR).
+server-synced prefs; `public.notifications` inserts; Pickup display audio (needs ADR).
 
 ## Alert Catalog
 
@@ -95,7 +95,7 @@ pure/unit-tested; volume `1`. Kinds stable if brand pack replaces engine later.
 
 - **KDS:** board = SoT; bell cycles mode; toast titles align with voice kind.
 - **POS:** only four catalog kinds speak; payment request beep-only; confirmed payment needs real table.
-- **Other:** Owner / inventory / employee / Runner — no operational audio.
+- **Other:** Owner / inventory / employee / pickup display — no operational audio.
 
 ```ts
 type OperationalAudioMode = "off" | "beep" | "voice" | "beep+voice";

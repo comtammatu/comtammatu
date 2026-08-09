@@ -70,7 +70,7 @@ không void trực tiếp.
 | --- | --- |
 | POS | `/br/[branchId]/pos` |
 | KDS | `/br/[branchId]/kds` |
-| Runner (public) | `/br/[branchId]/runner` |
+| Gọi số (public pickup) | `/br/[branchId]/pickup` |
 | Chốt ca POS | `/br/[branchId]/pos-sessions` |
 | Báo cáo ngày | `/br/[branchId]/close-day` |
 | Phân ca | `/br/[branchId]/shift/roster` |

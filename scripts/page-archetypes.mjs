@@ -9,6 +9,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/page.tsx": "LANDING",
+  "apps/web/app/(protected)/settings/security/page.tsx": "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/printers/jobs/page.tsx": "LIST",
   "apps/web/app/(protected)/settings/printers/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/printers/templates/page.tsx":
@@ -134,7 +135,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": "BOARD",
   "apps/web/app/(protected)/br/[branchId]/pos/page.tsx": "BOARD",
-  "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": "BOARD",
+  "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx": "BOARD",
   "apps/web/app/(protected)/branches/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
   "apps/web/app/(protected)/finance/expenses/page.tsx": "LIST",
@@ -167,7 +168,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT-SHIM",
-  "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD",
+  "apps/web/app/(protected)/inventory/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
   "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
@@ -261,7 +262,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     evidence: "implemented-static",
     final: false,
   },
-  "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": {
+  "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,

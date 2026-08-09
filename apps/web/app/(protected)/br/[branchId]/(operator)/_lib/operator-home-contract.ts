@@ -9,7 +9,7 @@ import type {
  * `resolveOperatorTiles` + stock hub / bottom-nav — not this home contract.
  */
 
-/** Stations + orders. Runner stays off home; pause/limits share the orders row. */
+/** Stations + orders. Pickup stays off home; pause/limits share the orders row. */
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
   "/pos",
   "/kds",

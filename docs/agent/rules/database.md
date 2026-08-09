@@ -42,17 +42,18 @@ over older task notes, regressions, and memory.
   mutation fails closed. File replay is allowed only against a verified Preview
   Branch; it remains blocked against Production.
 - Org-scoped MCP servers and the Supabase CLI are write-capable. This repo has
-  no tracked `.mcp.json`; never infer a project binding from one. Codex's direct
-  repo MCP URL in `.codex/config.toml` is pinned to comtammatu Production with
-  `read_only=true`; the runtime guard and `lint:guard-sync` both verify that
-  exact binding before a project-less direct MCP read is accepted. Claude and
-  connector-wrapped MCP tools must carry an explicit registered project ref.
-- `scripts/guard-prod-db.mjs` enforces this registry through registered adapters
-  in `.claude/settings.json` and `.codex/hooks.json`.
-  `corepack pnpm lint:guard-sync` verifies the registry, guard, adapters, and
-  behavior fixtures. Every Supabase MCP action is routed through the guard;
-  unknown future actions fail closed. Unregistered runtimes remain read-only
-  around production.
+  no tracked `.mcp.json`; never infer a project binding from one. An optional
+  local Codex `.codex/config.toml` may pin comtammatu Production with
+  `read_only=true`; the runtime guard and `lint:guard-sync` verify that binding
+  when the file is present before a project-less direct MCP read is accepted.
+  Without it, project-less reads fail closed. Claude and connector-wrapped MCP
+  tools must carry an explicit registered project ref.
+- `scripts/guard-prod-db.mjs` enforces this registry. Optional local adapters
+  (`.claude/settings.json`, `.codex/hooks.json`) may wire PreToolUse to it.
+  `corepack pnpm lint:guard-sync` verifies the registry, guard, any present
+  adapters, and behavior fixtures. Every Supabase MCP action is routed through
+  the guard; unknown future actions fail closed. Unregistered runtimes remain
+  read-only around production.
 - Guarded Supabase CLI, SQL, and HTTP reads require one literal registered ref;
   stored-link state, env-indirected URLs/refs, unregistered refs, and ambiguous
   target selectors fail closed. Project-scoped CLI reads use a literal

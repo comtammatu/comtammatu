@@ -143,9 +143,9 @@ test("AppPageTabs exposes an accessible name for the tablist", () => {
   assert.match(source, /aria-label=\{ariaLabel\}/);
 });
 
-test("Runner board halves its poll cadence to 6s while keeping deterministic staleness", () => {
+test("Pickup board halves its poll cadence to 6s while keeping deterministic staleness", () => {
   const source = read(
-    "apps/web/app/(protected)/br/[branchId]/runner/runner-realtime-refresh.tsx",
+    "apps/web/app/(protected)/br/[branchId]/pickup/pickup-realtime-refresh.tsx",
   );
   // Still polling (derived "now serving" view needs a full rebuild per change and
   // must stay fresh on an always-visible kiosk even if the socket drops).

@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 
-// The runner board is a derived "now serving" view for every order, so it cannot
+// The pickup board is a derived "now serving" view for every order, so it cannot
 // take cheap per-row realtime updates the way KDS does — any change still needs a
 // full queue rebuild. Polling keeps a deterministic max staleness on an
 // always-visible kiosk even if the realtime socket drops silently. 6s halves the
@@ -12,7 +12,7 @@ import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 // customer reads on a number-calling board.
 const POLL_INTERVAL_MS = 6_000;
 
-export function RunnerRealtimeRefresh() {
+export function PickupRealtimeRefresh() {
   const router = useRouter();
   const refresh = useMemo(
     () =>
@@ -21,7 +21,7 @@ export function RunnerRealtimeRefresh() {
           router.refresh();
         },
         undefined,
-        { metricName: "runner.board.refresh" },
+        { metricName: "pickup.board.refresh" },
       ),
     [router],
   );

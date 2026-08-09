@@ -26,7 +26,7 @@ the contract changes.
 | Surface | Route family | Entry | Nav / scope |
 | --- | --- | --- | --- |
 | Root | `/` | Single-branch resolver | `getDefaultRedirect`; multi-branch → picker; wrong scope fails closed |
-| Public / auth | `/login`, `/access-denied`, `/br/…/runner`, health/webhooks | `/login` or Runner URL | No app shell; Runner validates branch itself |
+| Public / auth | `/login`, `/access-denied`, `/br/…/pickup`, health/webhooks | `/login` or pickup display URL | No app shell; pickup page validates branch itself |
 | control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
 | Utility | `/notifications/*` | `returnTo` | Not a product plane |
 | Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
@@ -63,13 +63,13 @@ on the same page.
 
 `resolveInventoryNav` + `flattenInventoryDeepNav`:
 
-1. Stock control → `Tồn kho` (landing `/inventory`)
+1. Stock control → `Tồn kho`
 2. Receive/reconcile → GRN, **`Đơn mua hàng`**, consumption, transfers
 3. Production
 4. Catalog & setup
 
-- Exact `/inventory` = `REDIRECT-SHIM`: accountant → `/inventory/grn`, else →
-  `/inventory/stock` (keep `branchId`).
+- Exact `/inventory` = `LANDING`: ACL-filtered workflow lanes from inventory-nav
+  (keep `branchId`); Control home `"Hôm nay"` remains `/`.
 - Canonical transactions: `/inventory/{grn,purchase-orders,consumption,transfers}`.
   `/inventory/operations` retired.
 - Sidebar does not advertise stocktake reconciliation / count / reports / supplier invoices;
@@ -125,7 +125,8 @@ Browser → proxy.ts (auth + ACL) → route → layout (trusts proxy) → page
 - **Proxy = sole auth gate** — layout/page reads invariant, no second gate
 - **RSC by default** — `"use client"` only for interactive UI
 - **control_surface Owner-only** — BM/Staff on `/br/[branchId]/*`
-- **Inventory surface independent** — exact `/inventory` redirects to stock (or accountant GRN)
+- **Inventory surface independent** — exact `/inventory` is a workflow LANDING
+  (lanes); Control home for L0 roles is `/`
 - **Shared staff runtime** — Branch for site-pinned; `/me/*` for accountant;
   HR/`/hr/payroll` Owner-only; Owner has no self runtime
 - **Finance = operational finance** — not enterprise GL / financial statements / period close

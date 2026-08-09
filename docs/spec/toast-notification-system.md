@@ -55,7 +55,7 @@ Foreground attention (PWA open)
   -> Realtime INSERT on notifications triggers an RLS-scoped refetch
   -> visible control surface (Owner L0, branch_management, non-POS/KDS
      branch_operation chrome): Sonner toast
-  -> POS/KDS/runner or backgrounded tab: Notification API popup via SW
+  -> POS/KDS/pickup or backgrounded tab: Notification API popup via SW
   -> notification click focuses or opens the action URL
 
 Unread / badge freshness
@@ -306,11 +306,11 @@ UI rules: use list/item primitives; row click may mark read then navigate `actio
 
 ### Inventory
 
-- Durable notifications are expected for stock low, stocktake conflicts, period-close issues, and real approval queues.
-- A submitted branch stock request targets the responsible `Kho Tổng` or `Bếp Trung tâm` role. A purchase demand submitted to `pending_allocation` targets Owner and `Kế toán` (`procurement.purchase_request_submitted`).
-- Purchase-request and purchase-order notifications open the matching `Nhu cầu mua` or `Đơn mua` queue inside `Mua hàng`.
-- Only GRN work opens `Nhập kho`; an approved purchase order may still target the receiving central-site role without moving its badge to the GRN queue.
-- Toasts confirm the local action only; durable rows carry cross-role obligations.
+Durable rows for stock low, stocktake conflicts, period-close, and approval
+queues. Branch stock requests target `Kho Tổng` / `Bếp Trung tâm`; purchase
+demand at `pending_allocation` targets Owner + `Kế toán`. PR/PO open `Mua hàng`
+queues; only GRN work opens `Nhập kho`. Toasts confirm local action; durable
+rows carry cross-role obligations.
 
 ### Staff (`Cổng nhân viên`)
 
@@ -319,50 +319,36 @@ UI rules: use list/item primitives; row click may mark read then navigate `actio
 
 ## Domain producer matrix (P0–P1)
 
-| Domain | Kind | Targets | Fire |
-| --- | --- | --- | --- |
-| Inventory | `procurement.purchase_request_submitted` | owner, accountant | demand → `pending_allocation` |
-| Inventory | `procurement.po_pending_approval` | owner, accountant | PO → `pending_approval` (expires when leaving) |
-| Inventory | `inventory.stock_request_submitted` | owner + fulfill-site role | stock request → `submitted` |
-| Inventory | `inventory.stock_request_rejected` | branch_manager, owner | reject lines |
-| Inventory | `inventory.waste_pending_approval` | owner, accountant, site role | writeoff → `pending` |
-| Inventory | `workflow.transfer_in_transit` | branch_manager, owner | `confirmed_ship` / `in_transit` (deduped) |
-| Finance | `inventory.valuation_variance` | owner, accountant | invoice confirmed with variance |
-| Finance | `inventory.valuation_reconciliation_failed` | owner, accountant | daily recon drift |
-| Orders | `pos.void_requested` | floor roles | void request pending |
-| Orders | `pos.void_resolved` / `pos.void_rejected` | requester role | resolve void |
-| HR | `hr.leave_requested` | BM/owner | leave submit |
-| HR | `hr.leave_approved` / `hr.leave_rejected` | requester role | leave review |
-| HR | `hr.checkout_*` / `attendance.checkout_requested` | BM/owner or requester | checkout request / decision |
-| HR | `hr.payroll_period_ready` | owner, accountant | period calculated |
-
-Closed-app Web Push / APNs / FCM remains out of scope.
+Inventory: `procurement.purchase_request_submitted` /
+`procurement.po_pending_approval` (owner, accountant); `inventory.stock_request_*`
+/ `inventory.waste_pending_approval` / `workflow.transfer_in_transit` (owner +
+site/BM roles). Finance: `inventory.valuation_variance` /
+`inventory.valuation_reconciliation_failed`. Orders: `pos.void_*`. HR:
+`hr.leave_*`, `hr.checkout_*` / `attendance.checkout_requested`,
+`hr.payroll_period_ready`. Closed-app Web Push / APNs / FCM remains out of scope.
 
 ## External Outbox
 
-`notification_outbox` is for delivery attempts, not unread state. A workflow may write both `notifications` (in-app) and `notification_outbox` (external webhook/worker).
-
-Rules:
-
-- Dispatchers must be idempotent.
-- Retries must be bounded.
-- No webhook configured should become `skipped`, not infinite `pending`.
-- Failed external delivery must not roll back the parent business transaction unless the business explicitly requires external acknowledgement.
-- Payloads should include stable identifiers and links, not raw database errors or secrets.
+`notification_outbox` is delivery attempts, not unread state. A workflow may
+write both `notifications` (in-app) and `notification_outbox` (external).
+Dispatchers must be idempotent with bounded retries; missing webhook →
+`skipped` (not infinite `pending`). Failed external delivery must not roll back
+the parent transaction unless the business requires acknowledgement. Payloads
+carry stable ids/links only — no raw DB errors or secrets.
 
 ## Error Handling
 
-Server-side: log technical details; return safe Vietnamese messages in `ActionResult.error`; never return raw Supabase/Postgres `error.message` to clients.
-
-Client-side: inline field errors for specific fields; toast errors for action-level failures; durable notifications only for actual workflow obligations.
-
-Database: RPC errors intended for UI must be mapped by the server action; constraint names and SQLSTATE codes must not appear in toast or notification title/body.
+Server: log details; return safe Vietnamese `ActionResult.error` (never raw
+Supabase/Postgres `error.message`). Client: field errors inline; action-level
+toasts; durable notifications only for real workflow obligations. Map RPC/UI
+errors in the Server Action — no constraint names/SQLSTATE in toast/body.
 
 ## Security And Privacy
 
-- RLS is the primary visibility boundary for durable notifications.
-- Do not put secrets, tokens, raw webhook URLs, customer payment details, or sensitive staff data in `title`, `body`, or external payloads.
-- `meta` is still client-readable when the row is visible; treat it as user-facing data.
-- `action_url` must point to routes protected by proxy/ACL.
-- Branch scope must be explicit for branch-local work.
-- Inventory residual `/br/{site}/stock/*` URLs resolve to L0 `/inventory/*` for Owner, Accountant, and central roles at feed hydration (`resolveNotificationActionUrl`); Branch Manager / floor keep the `/br` operator plane.
+RLS is the visibility boundary. Never put secrets, tokens, webhook URLs,
+payment details, or sensitive staff data in `title`/`body`/external payloads.
+`meta` is client-readable when the row is visible. `action_url` must target
+proxy/ACL-protected routes. Branch scope must be explicit for branch-local
+work. Inventory residual `/br/{site}/stock/*` URLs resolve to L0 `/inventory/*`
+for Owner, Accountant, and central roles at feed hydration
+(`resolveNotificationActionUrl`); Branch Manager / floor keep the `/br` plane.

@@ -47,11 +47,11 @@ const ROUTE_FAMILIES = [
       file.includes("/(protected)/br/[branchId]/") &&
       !file.includes("/(protected)/br/[branchId]/pos/") &&
       !file.includes("/(protected)/br/[branchId]/kds/") &&
-      !file.includes("/(protected)/br/[branchId]/runner/"),
+      !file.includes("/(protected)/br/[branchId]/pickup/"),
   ],
   ["pos", (file) => file.includes("/(protected)/br/[branchId]/pos/")],
   ["kds", (file) => file.includes("/(protected)/br/[branchId]/kds/")],
-  ["runner", (file) => file.includes("/(protected)/br/[branchId]/runner/")],
+  ["pickup", (file) => file.includes("/(protected)/br/[branchId]/pickup/")],
   ["employee-runtime", (file) => file.includes("/lib/staff-runtime/")],
   ["branch-adapters", (file) => file.includes("/lib/branch-operator/")],
   ["hr-runtime", (file) => file.includes("/lib/hr/")],

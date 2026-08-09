@@ -9,7 +9,7 @@ export type ErrorPanelProps = {
   reset: () => void;
   /**
    * Opt-in re-authentication escape hatch. Only app-wide boundaries may enable
-   * it; station boundaries (POS, KDS, runner, operator) must keep retry alone
+   * it; station boundaries (POS, KDS, pickup, operator) must keep retry alone
    * so a mis-tap cannot end the shift session mid-service.
    */
   allowSignOut?: boolean;

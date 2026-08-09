@@ -32,21 +32,21 @@ Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** ·
 - **Actor:** `chef` / NV bếp.
 - **Job:** Nhận ticket realtime từ POS; đúng món, đúng thứ tự; giảm sai/lãng phí.
 - **Goal:** Biết món ưu tiên + số lượng; bump `ready` nhanh.
-- **Workflow:** Ticket realtime → xếp theo thời gian/ưu tiên → gộp công suất → bump → Runner/in bill; `recall` nếu nhầm.
+- **Workflow:** Ticket realtime → xếp theo thời gian/ưu tiên → gộp công suất → bump → Gọi số / in bill; `recall` nếu nhầm.
 - **Ưu tiên data:** Thẻ order (món, SL, chờ, bàn/mã). **Không:** giá, PTTT, doanh thu, nút quản trị.
 - **UX:** Tương phản cao/dark. Không skeleton giả; chỉ `PageSpinner` khi chưa có data thật.
 
 ---
 
-### 2.3. Runner — `/br/[branchId]/runner`
+### 2.3. Gọi số (`pickup_display`) — `/br/[branchId]/pickup`
 
 - **Archetype:** `BOARD`.
-- **Actor:** `runner` / NV điều phối.
-- **Job:** Khớp món ready → đúng bàn/mang đi; tránh nhầm/thiếu/nguội.
-- **Goal:** Lấy đĩa + bill → `served`.
-- **Workflow:** Nhìn món ready → so khớp bàn/mã → giao → xác nhận `served`.
-- **Ưu tiên data:** Món + bàn + mã + SL, theo thời gian ready. **Không:** giá, kho, lịch sử ca.
-- **UX:** Chữ lớn (~2m). Chỉ chờ giao hoặc vừa giao ~5 phút.
+- **Actor:** Khách tại quán + shipper giao hàng (public read-only).
+- **Job:** Nhìn số/bàn/đơn đã sẵn sàng để nhận món — không phải workflow nhân viên runner ghép đĩa.
+- **Goal:** Biết đơn nào sẵn sàng lấy; tự nhận hoặc shipper lấy đúng mã.
+- **Workflow:** Màn hình công khai cập nhật realtime → khách/shipper đối chiếu số/bàn → nhận món tại quầy.
+- **Ưu tiên data:** Số đơn / bàn / trạng thái sẵn sàng, chữ lớn. **Không:** giá, kho, thao tác staff, lịch sử ca.
+- **UX:** Chữ lớn (~2m), light mode; không nav nhân viên.
 
 ---
 
@@ -65,11 +65,11 @@ Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** ·
 ### 2.4. control_surface — `/`
 
 - **Archetype:** `LANDING`.
-- **Actor:** `owner`.
-- **Job:** Gom điểm vào điều hành / kiểm soát / thiết lập L0, tách khỏi ngày CN.
-- **Goal:** Một cửa → chọn đúng mô-đun.
-- **Ưu tiên data:** Nhóm `Điều hành` + `Nền tảng` (Tài chính, Đơn, Kho, Thực đơn, Nhân sự, Chi nhánh, Cài đặt). Không KPI khi chưa có contract Owner.
-- **UX:** `AppPage` + `AppSection` + `ItemGroup` + `Item`; không breadcrumb thừa. 1 cột phone / 2 cột tablet; desktop Điều hành rộng hơn. Chỉ Owner vào mọi route top-level.
+- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (qua `hr:view_employee`).
+- **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
+- **Goal:** Một cửa → xử lý việc hôm nay hoặc chọn đúng mô-đun.
+- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`.
+- **UX:** `AppPage` + `AppSection` + `ItemGroup` + `Item` + `Badge`; không breadcrumb thừa. 1 cột phone / 2 cột tablet. Branch roles giữ `/br/...`; `self_service` thuần giữ `/me`.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
@@ -81,7 +81,7 @@ Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** ·
   - NV (`cashier`/`chef`/`branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
   - QL (`branch_manager`; owner trong shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa (Kho hàng / Yêu cầu hàng / Kiểm kê phiên / Hao hụt) rồi list phiếu giao nhận; Phân công/Phiếu đếm từ **Đội**. Không Tiêu Hao SX. Badge queue live.
   - Chuông = unread inbox. `Điều hành` / `Phản hồi` / `Giới hạn bán` trong `⋯` (QL/owner). Avatar → Hồ sơ.
-- **Hub CN:** trạng thái ca → **Cần duyệt** (khi >0) → trạm Bán hàng / Quầy Bếp → Giới hạn bán + Đơn hàng. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). `/menu-limits` từ overflow.
+- **Hub CN:** trạng thái ca → **Cần duyệt** (khi >0) → trạm Bán hàng / Quầy Bếp → Giới hạn bán + Đơn hàng. Không Gọi số trên home. Queue **không** GRN/SX (D093). `/menu-limits` từ overflow.
 - **Exception hẹp (manager-like):** panel KPI Doanh thu tháng|ngày + chỉ tiêu + mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub không hiện doanh thu. Không badge chỉ tiêu trên Đơn hàng.
 - **Ca / Đội:** `Ca` = ngày làm việc cá nhân (Owner không tab; deep-link → `Đội`). NV: `/shift/schedule` + `/profile` tab riêng; QL: lịch shortcut trong `Ca`. `Đội`: board **Cần duyệt** (kết ca/nghỉ khi pending) + **Quản lý đội** (Phân công đếm / Phiếu đếm + Phân ca / Chấm công). Deep workflows: `matchPrefixes` `/shift/roster|attendance|checkout-approvals|leave-approvals`.
 
@@ -104,7 +104,7 @@ Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** ·
 > On-hand exemplar context (tests may cite as comment only) — giữ section này.
 
 - **Planes (ADR 0012 / 0018):** BM daily → `/br`; Owner + KT + Kho Tổng/Bếp TT → L0 `/inventory` (KT slice `/finance`). Operator stock CN: `/br/[branchId]/stock/*`. Central còn residual deep-link/pad `/br/{pinnedSiteId}/stock/*` (GRN touch, giao nhận, kiểm nhận) — không daily hub; home `/br/{siteId}` → `/inventory`. Feed R14 rewrite stock → L0 cho Owner/KT/central; BM giữ `/br`. Site central theo JWT `branch_id`; việc cá nhân → `/me/*`. Chi tiết phân vai → `docs/ref/inventory.md` §11.
-- **Archetype (tóm tắt):** `/inventory` = `DASHBOARD`; `/br/.../stock` = `LANDING`; hầu hết list kho = `LIST` (khác presentation plane); form mới = `DOC-WORKFLOW`; detail GRN/consumption/issue Branch = `DETAIL`; `/stock/reports` = Branch `REPORT`; `/inventory/supplier-invoices` = shim → `/finance/supplier-invoices`; `/inventory/issues` → `/inventory/consumption?view=waste`. Chi tiết composition → `page-archetypes.md`.
+- **Archetype (tóm tắt):** `/inventory` = `LANDING` (workflow lanes từ inventory-nav; không redirect Tồn, không KPI «Nay»); `/br/.../stock` = `LANDING`; hầu hết list kho = `LIST` (khác presentation plane); form mới = `DOC-WORKFLOW`; detail GRN/consumption/issue Branch = `DETAIL`; `/stock/reports` = Branch `REPORT`; `/inventory/supplier-invoices` = shim → `/finance/supplier-invoices`; `/inventory/issues` → `/inventory/consumption?view=waste`. Chi tiết composition → `page-archetypes.md`.
 - **Actor:** L0 = `owner`, KT (PO/GRN), `central_supply_ops`, `central_kitchen_lead`. `/br/.../stock` = `branch_manager` (+ residual pad central).
 - **Job:** Tồn thực, WAC, giảm hao hụt, tối ưu mua.
 - **Goal:** Nhìn tồn → đúng việc; nhập nhanh; SX không lệch.

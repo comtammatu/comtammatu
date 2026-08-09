@@ -29,7 +29,7 @@ type BranchSurfaceGate = {
   isActive: boolean | null;
 };
 
-// Per-warm-instance cache of the branch-surface gate lookup (POS/KDS/runner
+// Per-warm-instance cache of the branch-surface gate lookup (POS/KDS/pickup
 // surfaces and central-site scope checks). Key includes tenant_id so an entry
 // can never be reused across tenants. Value is null when no matching branch
 // row exists for that tenant.
@@ -267,9 +267,22 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Owner-plane routes default to owner-only. D076 operational roles may access
-  // specific ModuleKeys (finance / inventory); D091 narrows the Inventory jobs.
-  if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
+  // Control home (`/`): JWT roles in MODULE_ACL.owner, plus HR Control
+  // bindings that already pass hr:view_employee (same gate as `/hr`).
+  if (pathname === "/" && !canAccess(claims.user_role, "owner")) {
+    const { data: canOpenHrHome, error: hrHomeError } = await supabase.rpc(
+      "has_permission",
+      {
+        p_branch_id: null as unknown as number,
+        p_key: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+      },
+    );
+    if (hrHomeError || canOpenHrHome !== true) {
+      return redirectToDefaultLanding(request, response, claims);
+    }
+  } else if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
+    // Owner-plane routes default to owner-only. D076 operational roles may
+    // access specific ModuleKeys (finance / inventory); D091 narrows Inventory.
     const ownerModuleKey: ModuleKey | null = resolveModuleFromPath(pathname);
     if (!ownerModuleKey || !canAccess(claims.user_role, ownerModuleKey)) {
       return redirectToDefaultLanding(request, response, claims);
@@ -282,7 +295,11 @@ export async function proxy(request: NextRequest) {
   // /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
-    if (!canAccess(claims.user_role, moduleKey)) {
+    const homeHrBypass =
+      pathname === "/" &&
+      moduleKey === "owner" &&
+      !canAccess(claims.user_role, "owner");
+    if (!canAccess(claims.user_role, moduleKey) && !homeHrBypass) {
       if (isOwnerRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);
       }
@@ -308,12 +325,12 @@ export async function proxy(request: NextRequest) {
       }
 
       const isStationRoute =
-        moduleKey === "pos" || moduleKey === "kds" || moduleKey === "runner";
+        moduleKey === "pos" || moduleKey === "kds" || moduleKey === "pickup";
       const needsBranchSurface =
         isStationRoute || pathname.startsWith(`/br/${routeBranchId}/stock`);
 
       if (needsBranchSurface) {
-        // Stations (POS/KDS/runner) stay branch-kind "branch". Owner enters
+        // Stations (POS/KDS/pickup) stay branch-kind "branch". Owner enters
         // any ACTIVE site's non-station surfaces; central roles are pinned to
         // their site kind; store roles stay on branch-kind sites.
         const requiredBranchKind = isStationRoute
@@ -336,7 +353,7 @@ export async function proxy(request: NextRequest) {
       if (isStationRoute) {
         // Network gate: only devices sharing NAT egress IP with the branch's
         // print-agent (registered via /api/branch-presence) may load protected
-        // POS/KDS branch surfaces. The exact Runner customer board path is public.
+        // POS/KDS branch surfaces. The exact pickup customer board path is public.
         // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
         // data access (PostgREST direct calls bypass this gate). Kill-switch
         // via POS_NETWORK_GATE=off for incident response.
@@ -348,7 +365,7 @@ export async function proxy(request: NextRequest) {
         // set POS_NETWORK_GATE=off on those if you don't want the gate there.
         //
         // Owner is the business break-glass role for all Má Tư surfaces,
-        // including POS/KDS/Runner.
+        // including POS/KDS/pickup.
         const networkGateEnabled =
           process.env.NODE_ENV === "production" &&
           claims.user_role !== "owner" &&

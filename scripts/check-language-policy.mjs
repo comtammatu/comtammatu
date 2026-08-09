@@ -195,9 +195,10 @@ export function collectLanguagePolicyErrors(repoRoot = REPO_ROOT) {
 function runSelfTest() {
   const fixture = mkdtempSync(join(tmpdir(), "comtammatu-language-policy-"));
   try {
+    const sampleRel = ["docs", "agent", "rules", "sample.md"].join("/");
     mkdirSync(join(fixture, "docs/agent/rules"), { recursive: true });
     writeFileSync(
-      join(fixture, "docs/agent/rules/sample.md"),
+      join(fixture, sampleRel),
       "# Sample\n\nThis has tiếng Việt diacritics.\n",
     );
     writeFileSync(

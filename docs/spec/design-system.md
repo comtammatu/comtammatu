@@ -54,8 +54,8 @@ Active runtime:
 - brand assets: `/brand/*` (consume via `BrandMark` / `BrandLockup` /
   `BrandSymbol` / `BrandMascot` in `apps/web/app/components/brand.tsx`)
 - web app surface adapters: `apps/web/app/components/surface.tsx`
-- Stitch/agent mirror (non-SSOT): `.stitch/DESIGN.md` only; root `DESIGN.md`
-  forbidden
+- Stitch/agent mirror (optional, non-SSOT, untracked): `.stitch/DESIGN.md` only
+  when present locally; root `DESIGN.md` forbidden
 
 Lookup before composition:
 
@@ -177,8 +177,8 @@ spacing when it does not create competing chrome.
 | Eyebrow / metadata | `AppPageHeader.eyebrow` (`text-xs` uppercase) |
 | Panel / field / section label | `SectionLabel` (`text-xs`; dense KDS `text-2xs`) |
 | Table column header | `TableHead` |
-| Runner board tokens | `text-runner-*` (height-responsive `dvh` clamps) |
-| Display call target | customer queue/runner only (`text-6xl`+) |
+| Pickup board tokens | `text-pickup-*` (height-responsive `dvh` clamps) |
+| Display call target | customer queue / pickup board only (`text-6xl`+) |
 
 Uppercase labels are one locked role: `text-xs` (dense KDS `text-2xs`) — never
 `text-sm`/`text-base` with `uppercase`. `text-4xl`/`text-5xl` marketing/login
@@ -291,7 +291,7 @@ Exactly one approved family per route:
    alias).
 2. **Branch runtime** — `/br/[branchId]/(operator)` layout; compact `AppPage` +
    `AppBottomNav`. Operator home skeleton below.
-3. **station_chrome** — POS / KDS / Runner full-screen single-job surfaces.
+3. **station_chrome** — POS / KDS / `"Gọi số"` (`pickup`) full-screen single-job surfaces.
 4. **Standalone chrome-less** — closed set: `/notifications`, `/br` picker.
 
 ### B. Shell Composition
@@ -360,7 +360,7 @@ measured outcome and a documented reason — never grandfathered allowlists.
 
 ## Loading / Error / Copy (pointers)
 
-- Loading: `PageSkeleton` / `PageSpinner`; KDS/runner use spinner only.
+- Loading: `PageSkeleton` / `PageSpinner`; KDS/pickup use spinner only.
 - Error: `ErrorPanel`; not-found: `NotFoundPanel`.
 - Copy: Vietnamese default; ladder in `docs/ref/glossary.md` → shared labels →
   messages. Secondary copy budgets: page/section ≤~80 chars; KPI hint ≤~60.

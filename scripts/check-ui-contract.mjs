@@ -495,10 +495,9 @@ const formatterGuards = [
   },
 ];
 
-// `.stitch/DESIGN.md` is the agent/Stitch mirror of the runtime token SSoT
-// (`packages/ui/src/styles/globals.css`); the mirror never leads
-// (regressions invariant RUNTIME-TOKEN-LAYERED-OVERRIDE). Expectations are
-// derived from the runtime CSS at check time — never hardcoded a second time.
+// Optional local Stitch/agent mirror of the runtime token SSoT
+// (`packages/ui/src/styles/globals.css`). Not tracked; when present, values
+// must match runtime (regressions invariant RUNTIME-TOKEN-LAYERED-OVERRIDE).
 const STITCH_GLOBALS_CSS_PATH = "packages/ui/src/styles/globals.css";
 const STITCH_DESIGN_MD_PATH = ".stitch/DESIGN.md";
 
@@ -645,20 +644,18 @@ function stitchMirrorRuntimeTokenSyncErrors(css, mirrorContent) {
 const stitchMirrorRuntimeTokenSyncCheck = {
   id: "stitch-mirror-runtime-token-sync",
   description:
-    ".stitch/DESIGN.md mirrors the runtime token SSoT in packages/ui/src/styles/globals.css; the runtime values always win.",
+    "Optional `.stitch/DESIGN.md` mirrors the runtime token SSoT in packages/ui/src/styles/globals.css when present; the runtime values always win.",
   allowlist: {},
   custom() {
     const cssPath = path.join(REPO_ROOT, STITCH_GLOBALS_CSS_PATH);
     const mirrorPath = path.join(REPO_ROOT, STITCH_DESIGN_MD_PATH);
+    if (!fs.existsSync(mirrorPath)) {
+      // Retired from the tracked repo; local mirrors remain optional.
+      return;
+    }
     if (!fs.existsSync(cssPath)) {
       failures.push(
         `stitch-mirror-runtime-token-sync: ${STITCH_GLOBALS_CSS_PATH} is missing`,
-      );
-      return;
-    }
-    if (!fs.existsSync(mirrorPath)) {
-      failures.push(
-        `stitch-mirror-runtime-token-sync: ${STITCH_DESIGN_MD_PATH} is missing`,
       );
       return;
     }
@@ -951,6 +948,9 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": 1,
     },
   },
   {
@@ -1029,8 +1029,8 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
 }
 
-// Root DESIGN.md is blocked. Allowed Stitch/agent mirror: `.stitch/DESIGN.md`
-// (seeded from docs/spec/design-system.md; never a second product SSOT).
+// Root DESIGN.md is blocked. Optional local Stitch/agent mirror:
+// `.stitch/DESIGN.md` (never a second product SSOT; not required in repo).
 const blockedRootContextFiles = new Map([
   ["PRODUCT.md", "use docs/ref/business-context.md"],
   ["DESIGN.md", "use docs/spec/design-system.md"],
@@ -1297,7 +1297,7 @@ const textChecks = [
   {
     id: "owner-page-header-no-module-eyebrow-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["không** dùng `eyebrow` để lặp tên module"],
+    includes: ["**do not** use `eyebrow` to repeat module name"],
   },
   {
     id: "app-section-icon-size-contract",
@@ -1332,8 +1332,8 @@ const textChecks = [
     id: "card-content-layout-props-module-doc",
     file: "docs/modules/ui.md",
     includes: [
-      "`flush` cho table-edge/list-edge alignment",
-      "`scroll` cho horizontal table",
+      "`flush` for table-edge/list-edge alignment",
+      "`scroll` for horizontal table",
     ],
   },
   {
@@ -1349,7 +1349,7 @@ const textChecks = [
   {
     id: "matu-ds-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["Runtime hiện tại: Má Tư DS shared components"],
+    includes: ["Current runtime: Má Tư DS shared components"],
   },
   {
     id: "readme-ui-runtime-current",

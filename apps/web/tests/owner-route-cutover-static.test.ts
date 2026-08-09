@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-test("root route owns the Owner overview", () => {
+test("root route owns the Control home", () => {
   const rootPage = read("apps/web/app/(protected)/page.tsx");
   const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
   const overview = read("apps/web/app/_components/owner-overview.tsx");
@@ -14,9 +14,11 @@ test("root route owns the Owner overview", () => {
   assert.doesNotMatch(rootPage, /ControlSurfaceShell/);
   assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<OwnerOverview/);
+  assert.match(rootPage, /loadControlHomeAttention/);
   assert.match(overview, /MODULE_ACL\.finance\.path/);
   assert.match(overview, /MODULE_ACL\.inventory\.path/);
   assert.match(overview, /MODULE_ACL\.settings\.path/);
+  assert.match(overview, /attentionTitle|AttentionQueue/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });
 
@@ -50,7 +52,6 @@ test("Branch home keeps management branch-local and exposes one Owner entry", ()
     );
   }
   assert.doesNotMatch(landing, /owner-(?:finance|hr|payroll|settings)/);
-  assert.match(landing, /APP_COPY_VI\.operatorOpsActions/);
   assert.match(landing, /APP_COPY_VI\.ownerTitle/);
   assert.doesNotMatch(layout, /canUseBranchPicker|canSwitchBranch/);
 });
@@ -61,24 +62,26 @@ test("Owner surface membership has one ACL source", () => {
   const scope = read("packages/shared/src/auth/scope.ts");
 
   assert.doesNotMatch(types, /ADMIN_ROLES/);
-  assert.match(branchHome, /claims\.user_role === "owner"/);
+  assert.match(branchHome, /canAccess\(claims\.user_role, "owner"\)/);
   assert.match(branchHome, /canAccess\(claims\.user_role, "branch_home"\)/);
   assert.doesNotMatch(scope, /function isAdminRole|ADMIN_ROLES/);
 });
 
-test("Owner surface root is a real responsive landing", () => {
+test("Control home root is a real responsive landing", () => {
   const owner = read("apps/web/app/_components/owner-overview.tsx");
   const copy = read("apps/web/lib/messages/owner.ts");
 
   assert.match(owner, /<AppPage density="compact" width="wide">/);
   assert.match(owner, /<AppPageHeader/);
   assert.match(owner, /<AppSection/);
-  assert.match(owner, /lg:grid-cols-\[minmax\(0,2fr\)_minmax\(18rem,1fr\)\]/);
+  assert.match(owner, /AttentionQueue/);
   assert.match(owner, /<ItemGroup/);
   assert.match(owner, /motion-safe:group-hover\/module-link:translate-x-1/);
   assert.doesNotMatch(owner, /AppLinkCard|LinkCardGrid/);
   assert.doesNotMatch(owner, /KpiCard/);
   assert.match(copy, /eyebrow: "Toàn hệ thống"/);
+  assert.match(copy, /title: "Hôm nay"/);
+  assert.match(copy, /attentionTitle: "Cần xử lý"/);
   assert.doesNotMatch(copy, /Chỉ dành cho Owner/);
 });
 

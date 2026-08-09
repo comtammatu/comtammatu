@@ -1,6 +1,6 @@
 import { BROWSER_CHROME_THEME_COLORS } from "@/_lib/theme-tokens";
 
-type OperationalApp = "pos" | "kds" | "runner" | "operator";
+type OperationalApp = "pos" | "kds" | "pickup" | "operator";
 type OperationalOrientation = "portrait" | "landscape";
 
 const APP_LABELS: Record<
@@ -17,7 +17,7 @@ const APP_LABELS: Record<
     description: "Màn hình bếp - Cơm Tấm Má Tư",
     orientation: "landscape",
   },
-  runner: {
+  pickup: {
     label: "Gọi số",
     description: "Màn gọi số - Cơm Tấm Má Tư",
     orientation: "landscape",

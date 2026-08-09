@@ -27,7 +27,7 @@ export const operator = {
     stationsDescription: "",
     posDescription: "Nhận món và thanh toán",
     kdsDescription: "Làm món theo hàng chờ",
-    runnerDescription: "Gọi số và giao món",
+    pickupDescription: "Gọi số cho khách và shipper",
     shiftControlTitle: "Theo dõi trong ca",
     shiftControlDescription: "",
     lockedBeforeClockIn: "Cần chấm công để mở",

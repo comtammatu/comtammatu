@@ -24,7 +24,7 @@ test("resolveOperatorTiles -> chef sees kitchen tools but not POS", () => {
 
   assert.ok(groupIds.includes("sales_kitchen"));
   assert.ok(moduleKeys.includes("kds"));
-  assert.ok(moduleKeys.includes("runner"));
+  assert.ok(moduleKeys.includes("pickup"));
   assert.equal(moduleKeys.includes("pos"), false);
 });
 

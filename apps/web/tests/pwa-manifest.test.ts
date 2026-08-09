@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(operator)/manifest.webmanifest/route";
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
-import { GET as getRunnerManifest } from "../app/(protected)/br/[branchId]/runner/manifest.webmanifest/route";
+import { GET as getPickupManifest } from "../app/(protected)/br/[branchId]/pickup/manifest.webmanifest/route";
 
 test("protected Vercel previews do not register a service worker", () => {
   const rootLayoutSource = readFileSync(
@@ -107,11 +107,11 @@ test("KDS PWA manifest requests landscape orientation per branch", async () => {
   assert.equal(manifest.orientation, "landscape");
 });
 
-test("Runner PWA manifest keeps its station identity and landscape orientation", async () => {
-  const response = await getRunnerManifest(
+test("Pickup PWA manifest keeps its station identity and landscape orientation", async () => {
+  const response = await getPickupManifest(
     new Request(
-      "https://app.test/br/3/runner/manifest.webmanifest",
-    ) as Parameters<typeof getRunnerManifest>[0],
+      "https://app.test/br/3/pickup/manifest.webmanifest",
+    ) as Parameters<typeof getPickupManifest>[0],
     { params: Promise.resolve({ branchId: "3" }) },
   );
   const manifest = (await response.json()) as {
@@ -123,8 +123,8 @@ test("Runner PWA manifest keeps its station identity and landscape orientation",
   };
 
   assert.equal(response.status, 200);
-  assert.equal(manifest.id, "/br/3/runner");
-  assert.equal(manifest.start_url, "/br/3/runner");
+  assert.equal(manifest.id, "/br/3/pickup");
+  assert.equal(manifest.start_url, "/br/3/pickup");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.short_name, "Má Tư Gọi số");
   assert.equal(manifest.orientation, "landscape");
@@ -201,11 +201,11 @@ test("KDS PWA manifest keeps rejecting invalid branch ids", async () => {
   assert.equal(response.status, 400);
 });
 
-test("Runner PWA manifest keeps rejecting invalid branch ids", async () => {
-  const response = await getRunnerManifest(
+test("Pickup PWA manifest keeps rejecting invalid branch ids", async () => {
+  const response = await getPickupManifest(
     new Request(
-      "https://app.test/br/abc/runner/manifest.webmanifest",
-    ) as Parameters<typeof getRunnerManifest>[0],
+      "https://app.test/br/abc/pickup/manifest.webmanifest",
+    ) as Parameters<typeof getPickupManifest>[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
 
@@ -230,7 +230,7 @@ test("operational PWA install dismissal is isolated by app and branch", () => {
   assert.doesNotMatch(toolbarSource, /pos-pwa-install-dismissed/);
 });
 
-test("POS and KDS toolbars render a return-to-entry link; runner never does", () => {
+test("POS and KDS toolbars render a return-to-entry link; pickup never does", () => {
   const toolbarSource = readFileSync(
     new URL(
       "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
@@ -243,12 +243,12 @@ test("POS and KDS toolbars render a return-to-entry link; runner never does", ()
     "utf8",
   );
 
-  // Runner is a guest-facing display: staff navigation is excluded there.
-  assert.match(toolbarSource, /surface !== "runner"/);
+  // Pickup is a guest-facing display: staff navigation is excluded there.
+  assert.match(toolbarSource, /surface !== "pickup"/);
   assert.match(toolbarSource, /<PwaToolbarEntryLink/);
   assert.match(toolbarSource, /surface="pos"/);
   assert.match(toolbarSource, /surface="kds"/);
-  assert.match(toolbarSource, /surface="runner"/);
+  assert.match(toolbarSource, /surface="pickup"/);
 
   // The link targets the operator entry for the current branch, carries an
   // accessible label from the copy catalog, and uses the 48px touch size.
@@ -291,8 +291,8 @@ test("station layouts mount the branch-scoped PWA toolbars", () => {
   assert.match(layoutSource("pos"), /<PosPwaToolbar branchId=\{branchId\} \/>/);
   assert.match(layoutSource("kds"), /<KdsPwaToolbar branchId=\{branchId\} \/>/);
   assert.match(
-    layoutSource("runner"),
-    /<RunnerPwaToolbar branchId=\{branchId\} \/>/,
+    layoutSource("pickup"),
+    /<PickupPwaToolbar branchId=\{branchId\} \/>/,
   );
 });
 
@@ -302,7 +302,7 @@ test("authenticated shell roots own top safe-area padding", () => {
     "../app/(protected)/br/[branchId]/(operator)/layout.tsx",
     "../app/(protected)/br/[branchId]/pos/layout.tsx",
     "../app/(protected)/br/[branchId]/kds/layout.tsx",
-    "../app/(protected)/br/[branchId]/runner/layout.tsx",
+    "../app/(protected)/br/[branchId]/pickup/layout.tsx",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
   const uiStyles = readFileSync(
     new URL("../../../packages/ui/src/styles/globals.css", import.meta.url),
@@ -337,7 +337,7 @@ test("SW offline fallback (PWA-2) only precaches/serves the operator shell, neve
     "utf8",
   );
 
-  // Operator navigations get a fallback plugin; POS/KDS/Runner stay plain NetworkOnly.
+  // Operator navigations get a fallback plugin; POS/KDS/Pickup stay plain NetworkOnly.
   assert.match(swSource, /isOperatorShellPath\(url\.pathname\)/);
   assert.match(
     swSource,
@@ -345,7 +345,7 @@ test("SW offline fallback (PWA-2) only precaches/serves the operator shell, neve
   );
   assert.match(
     swSource,
-    /BRANCH_STATION_SEGMENTS = \["pos", "kds", "runner"\]/,
+    /BRANCH_STATION_SEGMENTS = \["pos", "kds", "pickup"\]/,
   );
 
   // The fallback only fires on handlerDidError (network failure), and only
@@ -423,7 +423,7 @@ test("Serwist precache keeps install assets but skips mascot art", () => {
 
 // Mirrors app/sw.ts's isOperatorShellPath — sw.ts runs in the SW global scope
 // and can't be imported directly from a Node test.
-const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
+const BRANCH_STATION_SEGMENTS = ["pos", "kds", "pickup"];
 function isOperatorShellPath(pathname: string) {
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
@@ -433,13 +433,13 @@ function isOperatorShellPath(pathname: string) {
   );
 }
 
-test("isOperatorShellPath matches the operator entry/root and excludes POS/KDS/Runner", () => {
+test("isOperatorShellPath matches the operator entry/root and excludes POS/KDS/Pickup", () => {
   assert.equal(isOperatorShellPath("/br/3"), true);
   assert.equal(isOperatorShellPath("/br/3/dashboard"), true);
   assert.equal(isOperatorShellPath("/br/3/stock/on-hand"), true);
   assert.equal(isOperatorShellPath("/br/3/pos"), false);
   assert.equal(isOperatorShellPath("/br/3/kds"), false);
-  assert.equal(isOperatorShellPath("/br/3/runner"), false);
+  assert.equal(isOperatorShellPath("/br/3/pickup"), false);
   assert.equal(isOperatorShellPath("/"), false);
   assert.equal(isOperatorShellPath("/employee"), false);
 });

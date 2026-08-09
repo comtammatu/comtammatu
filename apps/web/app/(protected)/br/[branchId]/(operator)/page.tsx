@@ -49,9 +49,9 @@ export default async function OperatorHomePage({
   if (!context) notFound();
 
   const branchKind = context.branch.branch_kind as BranchKind;
-  // R04: central daily hub is L0 `/inventory` — not a second home on /br.
+  // R04: central sites use Control home `/` — not a second daily hub on /br.
   if (branchKind !== "branch") {
-    redirect("/inventory");
+    redirect("/");
   }
 
   const rawGroups = resolveOperatorTiles(
@@ -144,7 +144,7 @@ export default async function OperatorHomePage({
       </Suspense>
 
       {groups.map((group) => {
-        // Home stations: Bán hàng + KDS only — runner stays off this surface.
+        // Home stations: Bán hàng + KDS only — pickup stays off this surface.
         const stationTiles = group.tiles.filter(
           (tile) => tile.moduleKey === "pos" || tile.moduleKey === "kds",
         );
@@ -152,7 +152,7 @@ export default async function OperatorHomePage({
           (tile) =>
             tile.moduleKey !== "pos" &&
             tile.moduleKey !== "kds" &&
-            tile.moduleKey !== "runner",
+            tile.moduleKey !== "pickup",
         );
         const toLink = (tile: (typeof group.tiles)[number]) => ({
           key: `${group.id}-${tile.moduleKey}-${tile.href}`,

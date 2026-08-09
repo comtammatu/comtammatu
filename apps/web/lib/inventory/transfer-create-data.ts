@@ -6,7 +6,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { fetchBranchesForTransfer } from "@/(protected)/inventory/transfer-actions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
-import type { IngredientRow } from "@/(protected)/inventory/page";
+import type { IngredientRow } from "@lib/inventory/types";
 import {
   type BranchForTransfer,
   type TransferIngredientOption,

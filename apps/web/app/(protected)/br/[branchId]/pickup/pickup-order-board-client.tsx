@@ -6,21 +6,21 @@ import { formatCount } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { RunnerIdleVisual, type RunnerIdleState } from "./runner-idle-visual";
-import { RunnerWaitTime } from "./runner-wait-time";
+import { PickupIdleVisual, type PickupIdleState } from "./pickup-idle-visual";
+import { PickupWaitTime } from "./pickup-wait-time";
 
-const RUNNER_EXIT_MS = 320;
-const RUNNER_ROW_LIMIT_BASE = 4;
-const RUNNER_ROW_LIMIT_XL = 6;
-const RUNNER_OVERFLOW_TILE_LIMIT = 4;
-const RUNNER_OVERFLOW_PREVIEW_LIMIT = RUNNER_OVERFLOW_TILE_LIMIT - 1;
-const RUNNER_COLUMN_CLASS = {
+const PICKUP_EXIT_MS = 320;
+const PICKUP_ROW_LIMIT_BASE = 4;
+const PICKUP_ROW_LIMIT_XL = 6;
+const PICKUP_OVERFLOW_TILE_LIMIT = 4;
+const PICKUP_OVERFLOW_PREVIEW_LIMIT = PICKUP_OVERFLOW_TILE_LIMIT - 1;
+const PICKUP_COLUMN_CLASS = {
   order: "col-span-1 border-r sm:col-span-4",
   quantity: "col-span-1 sm:col-span-3 sm:border-r",
   status: "col-span-1 max-sm:border-t sm:col-span-4 sm:border-r",
   wait: "col-span-1 max-sm:border-l max-sm:border-t sm:col-span-1",
 } as const;
-const RUNNER_BOARD_COPY = {
+const PICKUP_BOARD_COPY = {
   pending: "Đang chờ",
   idleEmptyTitle: "Chưa có món cần phục vụ.",
   idleDoneTitle: "Đã phục vụ hết món đang chờ.",
@@ -36,32 +36,32 @@ const RUNNER_BOARD_COPY = {
   },
 } as const;
 
-export type RunnerBoardStatus = "pending";
+export type PickupBoardStatus = "pending";
 
-export type RunnerBoardRow = {
+export type PickupBoardRow = {
   key: string;
   orderLabel: string;
   itemQuantity: number;
-  status: RunnerBoardStatus;
+  status: PickupBoardStatus;
   sortAt: string;
 };
 
-type RunnerColumn = keyof typeof RUNNER_COLUMN_CLASS;
+type PickupColumn = keyof typeof PICKUP_COLUMN_CLASS;
 
-type DisplayRunnerBoardRow = RunnerBoardRow & {
+type DisplayPickupBoardRow = PickupBoardRow & {
   exiting?: boolean;
 };
 
-export function RunnerOrderBoardClient({
+export function PickupOrderBoardClient({
   rows,
   nowMs,
   idleState,
 }: {
-  rows: RunnerBoardRow[];
+  rows: PickupBoardRow[];
   nowMs: number;
-  idleState: RunnerIdleState | null;
+  idleState: PickupIdleState | null;
 }) {
-  const displayRows = useRunnerDisplayRows(rows);
+  const displayRows = usePickupDisplayRows(rows);
   const usesBaseRowLimit = useIsMobile(1280);
 
   if (displayRows.length === 0) {
@@ -69,17 +69,17 @@ export function RunnerOrderBoardClient({
 
     return (
       <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-background px-4 py-4 text-center">
-        <RunnerIdleAtmosphere state={resolvedIdleState} />
+        <PickupIdleAtmosphere state={resolvedIdleState} />
         <div className="relative z-10 flex max-w-6xl flex-col items-center justify-center gap-4">
-          <RunnerIdleVisual state={resolvedIdleState} />
+          <PickupIdleVisual state={resolvedIdleState} />
           <div className="flex max-w-full flex-col items-center gap-2">
-            <p className="max-w-full font-heading text-runner-board font-semibold text-foreground">
+            <p className="max-w-full font-heading text-pickup-board font-semibold text-foreground">
               {resolvedIdleState === "done"
-                ? RUNNER_BOARD_COPY.idleDoneTitle
-                : RUNNER_BOARD_COPY.idleEmptyTitle}
+                ? PICKUP_BOARD_COPY.idleDoneTitle
+                : PICKUP_BOARD_COPY.idleEmptyTitle}
             </p>
-            <p className="max-w-full font-heading text-runner-empty-secondary font-semibold text-muted-foreground">
-              {RUNNER_BOARD_COPY.idleBrandLine}
+            <p className="max-w-full font-heading text-pickup-empty-secondary font-semibold text-muted-foreground">
+              {PICKUP_BOARD_COPY.idleBrandLine}
             </p>
           </div>
         </div>
@@ -88,33 +88,33 @@ export function RunnerOrderBoardClient({
   }
 
   const rowLimit = usesBaseRowLimit
-    ? RUNNER_ROW_LIMIT_BASE
-    : RUNNER_ROW_LIMIT_XL;
+    ? PICKUP_ROW_LIMIT_BASE
+    : PICKUP_ROW_LIMIT_XL;
   const visibleRows = displayRows.slice(0, rowLimit);
   const overflowRows = displayRows.slice(rowLimit);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="grid grid-cols-2 border-b border-border bg-muted/50 sm:grid-cols-12">
-        <RunnerColumnHeading column="order">
-          {RUNNER_BOARD_COPY.tableHeaders.order}
-        </RunnerColumnHeading>
-        <RunnerColumnHeading column="quantity">
-          {RUNNER_BOARD_COPY.tableHeaders.quantity}
-        </RunnerColumnHeading>
-        <RunnerColumnHeading column="status">
-          {RUNNER_BOARD_COPY.tableHeaders.status}
-        </RunnerColumnHeading>
-        <RunnerColumnHeading column="wait" align="right">
-          {RUNNER_BOARD_COPY.tableHeaders.wait}
-        </RunnerColumnHeading>
+        <PickupColumnHeading column="order">
+          {PICKUP_BOARD_COPY.tableHeaders.order}
+        </PickupColumnHeading>
+        <PickupColumnHeading column="quantity">
+          {PICKUP_BOARD_COPY.tableHeaders.quantity}
+        </PickupColumnHeading>
+        <PickupColumnHeading column="status">
+          {PICKUP_BOARD_COPY.tableHeaders.status}
+        </PickupColumnHeading>
+        <PickupColumnHeading column="wait" align="right">
+          {PICKUP_BOARD_COPY.tableHeaders.wait}
+        </PickupColumnHeading>
       </div>
       <ItemGroup
         role="list"
         className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6 p-0 rounded-none border-0"
       >
         {visibleRows.map((row, index) => (
-          <RunnerOrderListRow
+          <PickupOrderListRow
             key={row.key}
             row={row}
             featured={!row.exiting && index === 0}
@@ -122,14 +122,14 @@ export function RunnerOrderBoardClient({
           />
         ))}
       </ItemGroup>
-      <RunnerOverflowRail rows={overflowRows} />
+      <PickupOverflowRail rows={overflowRows} />
     </div>
   );
 }
 
-function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
+function PickupOverflowRail({ rows }: { rows: DisplayPickupBoardRow[] }) {
   const activeRows = rows.filter((row) => row.exiting !== true);
-  const previewRows = activeRows.slice(0, RUNNER_OVERFLOW_PREVIEW_LIMIT);
+  const previewRows = activeRows.slice(0, PICKUP_OVERFLOW_PREVIEW_LIMIT);
   const remainingCount = activeRows.length - previewRows.length;
 
   if (activeRows.length === 0) return null;
@@ -137,10 +137,10 @@ function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
   return (
     <div
       className="shrink-0 border-t border-border bg-muted/50 p-2"
-      data-runner-overflow-rail
+      data-pickup-overflow-rail
     >
       <div
-        aria-label={RUNNER_BOARD_COPY.overflowLabel}
+        aria-label={PICKUP_BOARD_COPY.overflowLabel}
         className="grid grid-flow-col auto-cols-fr gap-2"
         role="list"
       >
@@ -150,11 +150,11 @@ function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
             className="min-w-0 border-border bg-background p-2"
             role="listitem"
           >
-            <span className="truncate font-heading text-runner-footer font-semibold text-foreground">
+            <span className="truncate font-heading text-pickup-footer font-semibold text-foreground">
               {row.orderLabel}
             </span>
-            <span className="font-mono text-runner-footer text-muted-foreground tabular-nums">
-              {formatCount(row.itemQuantity)} {RUNNER_BOARD_COPY.itemUnit}
+            <span className="font-mono text-pickup-footer text-muted-foreground tabular-nums">
+              {formatCount(row.itemQuantity)} {PICKUP_BOARD_COPY.itemUnit}
             </span>
           </Item>
         ))}
@@ -163,8 +163,8 @@ function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
             className="items-center justify-center border-border bg-background p-2 text-center"
             role="listitem"
           >
-            <span className="font-heading text-runner-footer font-semibold text-foreground">
-              {RUNNER_BOARD_COPY.moreOrders(remainingCount)}
+            <span className="font-heading text-pickup-footer font-semibold text-foreground">
+              {PICKUP_BOARD_COPY.moreOrders(remainingCount)}
             </span>
           </Item>
         ) : null}
@@ -173,9 +173,9 @@ function RunnerOverflowRail({ rows }: { rows: DisplayRunnerBoardRow[] }) {
   );
 }
 
-function useRunnerDisplayRows(rows: RunnerBoardRow[]): DisplayRunnerBoardRow[] {
+function usePickupDisplayRows(rows: PickupBoardRow[]): DisplayPickupBoardRow[] {
   const previousRowsRef = useRef(rows);
-  const [displayRows, setDisplayRows] = useState<DisplayRunnerBoardRow[]>(() =>
+  const [displayRows, setDisplayRows] = useState<DisplayPickupBoardRow[]>(() =>
     rows.map(toVisibleDisplayRow),
   );
 
@@ -196,7 +196,7 @@ function useRunnerDisplayRows(rows: RunnerBoardRow[]): DisplayRunnerBoardRow[] {
 
     setDisplayRows((currentRows) => {
       const currentByKey = new Map(currentRows.map((row) => [row.key, row]));
-      const mergedRows: DisplayRunnerBoardRow[] = [];
+      const mergedRows: DisplayPickupBoardRow[] = [];
       const seenKeys = new Set<string>();
 
       const baseRows = currentRows.length > 0 ? currentRows : previousRows;
@@ -233,7 +233,7 @@ function useRunnerDisplayRows(rows: RunnerBoardRow[]): DisplayRunnerBoardRow[] {
           (row) => row.exiting !== true || !removedKeys.has(row.key),
         ),
       );
-    }, RUNNER_EXIT_MS);
+    }, PICKUP_EXIT_MS);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -243,19 +243,19 @@ function useRunnerDisplayRows(rows: RunnerBoardRow[]): DisplayRunnerBoardRow[] {
   return displayRows;
 }
 
-function toVisibleDisplayRow(row: RunnerBoardRow): DisplayRunnerBoardRow {
+function toVisibleDisplayRow(row: PickupBoardRow): DisplayPickupBoardRow {
   return {
     ...row,
     exiting: false,
   };
 }
 
-function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
+function PickupIdleAtmosphere({ state }: { state: PickupIdleState }) {
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 overflow-hidden"
-      data-runner-idle-atmosphere={state}
+      data-pickup-idle-atmosphere={state}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background" />
       <div
@@ -271,21 +271,21 @@ function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
   );
 }
 
-function RunnerColumnHeading({
+function PickupColumnHeading({
   children,
   column,
   align = "left",
 }: {
   children: ReactNode;
-  column: RunnerColumn;
+  column: PickupColumn;
   align?: "left" | "right";
 }) {
   return (
     <div
       className={cn(
-        "border-border/70 py-2 font-heading text-runner-header font-semibold text-foreground xl:py-4",
+        "border-border/70 py-2 font-heading text-pickup-header font-semibold text-foreground xl:py-4",
         column === "wait" ? "px-2 xl:px-4" : "px-2 sm:px-4",
-        RUNNER_COLUMN_CLASS[column],
+        PICKUP_COLUMN_CLASS[column],
         align === "right" && "text-right",
       )}
     >
@@ -294,56 +294,56 @@ function RunnerColumnHeading({
   );
 }
 
-function RunnerOrderListRow({
+function PickupOrderListRow({
   row,
   featured,
   nowMs,
 }: {
-  row: DisplayRunnerBoardRow;
+  row: DisplayPickupBoardRow;
   featured: boolean;
   nowMs: number;
 }) {
-  const statusLabel = getRunnerStatusLabel(row.status);
+  const statusLabel = getPickupStatusLabel(row.status);
 
   return (
     <Item
       role="listitem"
       aria-current={featured ? "true" : undefined}
-      data-runner-exiting={row.exiting ? "true" : undefined}
-      data-runner-featured={featured ? "true" : undefined}
+      data-pickup-exiting={row.exiting ? "true" : undefined}
+      data-pickup-featured={featured ? "true" : undefined}
       className={cn(
         "grid h-full min-h-0 w-full grid-cols-2 items-stretch border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out sm:grid-cols-12",
-        getRunnerRowClass(),
+        getPickupRowClass(),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/20",
         row.exiting &&
           "pointer-events-none -translate-x-full opacity-0 motion-safe:scale-95",
       )}
     >
-      <RunnerOrderCell column="order" mono>
+      <PickupOrderCell column="order" mono>
         {row.orderLabel}
-      </RunnerOrderCell>
-      <RunnerOrderCell column="quantity" mono>
-        {formatCount(row.itemQuantity)} {RUNNER_BOARD_COPY.itemUnit}
-      </RunnerOrderCell>
-      <RunnerOrderCell column="status" mono>
+      </PickupOrderCell>
+      <PickupOrderCell column="quantity" mono>
+        {formatCount(row.itemQuantity)} {PICKUP_BOARD_COPY.itemUnit}
+      </PickupOrderCell>
+      <PickupOrderCell column="status" mono>
         {statusLabel}
-      </RunnerOrderCell>
-      <RunnerOrderCell column="wait" align="right" mono>
-        <RunnerWaitTime startIso={row.sortAt} initialNowMs={nowMs} />
-      </RunnerOrderCell>
+      </PickupOrderCell>
+      <PickupOrderCell column="wait" align="right" mono>
+        <PickupWaitTime startIso={row.sortAt} initialNowMs={nowMs} />
+      </PickupOrderCell>
     </Item>
   );
 }
 
-function RunnerOrderCell({
+function PickupOrderCell({
   children,
   column,
   align = "left",
   mono = false,
 }: {
   children: ReactNode;
-  column: RunnerColumn;
+  column: PickupColumn;
   align?: "left" | "right";
   mono?: boolean;
 }) {
@@ -352,13 +352,13 @@ function RunnerOrderCell({
       className={cn(
         "flex h-full min-w-0 flex-col justify-center border-border/70 py-2 xl:py-4",
         column === "wait" ? "px-2 xl:px-4" : "px-2 sm:px-4",
-        RUNNER_COLUMN_CLASS[column],
+        PICKUP_COLUMN_CLASS[column],
         align === "right" && "text-right",
       )}
     >
       <div
         className={cn(
-          "min-w-0 whitespace-normal break-words font-semibold text-runner-board",
+          "min-w-0 whitespace-normal break-words font-semibold text-pickup-board",
           mono && "font-mono tabular-nums",
         )}
       >
@@ -368,10 +368,10 @@ function RunnerOrderCell({
   );
 }
 
-function getRunnerStatusLabel(_status: RunnerBoardStatus): "Đang chờ" {
-  return RUNNER_BOARD_COPY.pending;
+function getPickupStatusLabel(_status: PickupBoardStatus): "Đang chờ" {
+  return PICKUP_BOARD_COPY.pending;
 }
 
-function getRunnerRowClass(): string {
+function getPickupRowClass(): string {
   return "border-warning/20 bg-warning/10";
 }

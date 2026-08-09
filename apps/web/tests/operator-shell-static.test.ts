@@ -86,10 +86,11 @@ test("operator bottom nav stays limited to daily jobs", () => {
   assert.doesNotMatch(bottomNav, /MAX_VISIBLE_ITEMS/);
   assert.match(settingsMessages, /branchNavStock: "Kho"/);
   assert.match(settingsMessages, /centralNavStock: "Tồn"/);
-  // R04: central residual pad escapes to L0; no `/br` home as daily hub.
+  // R04: central residual pad escapes to Control home `/`; no `/br` daily hub.
   assert.match(bottomNav, /function centralResidualNavItems/);
-  assert.match(bottomNav, /href: "\/inventory"/);
+  assert.match(bottomNav, /href: "\/"/);
   assert.match(bottomNav, /href: "\/inventory\/production"/);
+  assert.doesNotMatch(bottomNav, /href: "\/inventory"/);
   assert.doesNotMatch(bottomNav, /function centralNavItems/);
   assert.match(
     bottomNav,
@@ -113,11 +114,11 @@ test("operator header shows branch context and keeps profile and notifications",
 
   assert.match(
     layout,
-    /homeHref=\{\s*branchKind === "branch"\s*\?\s*`\/br\/\$\{context\.branchId\}`\s*:\s*"\/inventory"\s*\}/,
+    /homeHref=\{\s*branchKind === "branch"\s*\?\s*`\/br\/\$\{context\.branchId\}`\s*:\s*"\/"\s*\}/,
   );
   assert.match(
     layout,
-    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*APP_COPY_VI\.branchHome\s*:\s*APP_COPY_VI\.inventory\s*\}/,
+    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*APP_COPY_VI\.branchHome\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
   );
   assert.match(layout, /subtitle=\{ROLE_LABEL_VI\[claims\.user_role\]\}/);
   assert.match(layout, /subtitleHiddenOnMobile/);
@@ -264,7 +265,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   assert.match(home, /presentation="plain"/);
   assert.match(home, /moduleKey === "pos"/);
   assert.match(home, /moduleKey === "kds"/);
-  assert.doesNotMatch(home, /moduleKey === "runner"/);
+  assert.doesNotMatch(home, /moduleKey === "pickup"/);
   assert.match(home, /claims\.user_role === "owner"/);
   assert.match(home, /resolveOperatorTileIcon/);
   assert.match(home, /getBranchPrimaryHomeGroup/);
@@ -281,7 +282,7 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
   );
   assert.doesNotMatch(
     homeContract,
-    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/runner"/,
+    /BRANCH_MANAGER_HOME_TILE_SUFFIXES[\s\S]*?"\/pickup"/,
   );
   for (const suffix of ["/pos", "/kds"]) {
     assert.ok(homeContract.includes(`"${suffix}"`), suffix);
@@ -309,9 +310,9 @@ test("operator home renders MODULE_ACL-backed capability tiles", () => {
     /<BranchQueueSection[\s\S]*<BranchQuickMenuLimitTrigger[\s\S]*presentation="stations"/,
   );
 
-  // R04: no curated central home on /br — daily hub is L0 `/inventory`.
+  // R04: no curated central home on /br — daily hub is Control home `/`.
   assert.doesNotMatch(homeContract, /CENTRAL_HOME_TILE_SUFFIXES/);
-  assert.match(home, /redirect\("\/inventory"\)/);
+  assert.match(home, /redirect\("\/"\)/);
   assert.match(home, /branchKind !== "branch"/);
   assert.match(
     home,
@@ -557,7 +558,7 @@ test("branch dashboard renders command lanes instead of Owner surface-style KPI 
   ]) {
     assert.match(commandConfig, new RegExp(`moduleKey: "${moduleKey}"`));
   }
-  assert.doesNotMatch(commandConfig, /moduleKey: "runner"/);
+  assert.doesNotMatch(commandConfig, /moduleKey: "pickup"/);
   assert.match(commandConfig, /title: "Bán hàng"/);
   assert.match(commandConfig, /title: "KDS"/);
   assert.match(commandConfig, /title: "Giới hạn bán"/);

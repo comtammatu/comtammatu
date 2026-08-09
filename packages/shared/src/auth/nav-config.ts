@@ -140,10 +140,10 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     hrefTemplate: "/br/{branchId}/close-day",
   },
   {
-    moduleKey: "runner",
+    moduleKey: "pickup",
     icon: "MonitorUp",
-    hrefTemplate: "/br/{branchId}/runner",
-    label: APP_COPY_VI.branchOperationsRunner,
+    hrefTemplate: "/br/{branchId}/pickup",
+    label: APP_COPY_VI.branchOperationsPickup,
   },
 ];
 
@@ -214,11 +214,11 @@ export const OPERATOR_TILE_ITEMS = [
     kinds: ["branch"],
   },
   {
-    moduleKey: "runner",
+    moduleKey: "pickup",
     icon: "MonitorUp",
     group: "sales_kitchen",
-    hrefTemplate: "/br/{branchId}/runner",
-    label: APP_COPY_VI.branchOperationsRunner,
+    hrefTemplate: "/br/{branchId}/pickup",
+    label: APP_COPY_VI.branchOperationsPickup,
     kinds: ["branch"],
   },
   {

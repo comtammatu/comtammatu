@@ -406,7 +406,7 @@ Explicit allowlist (not a precedent). Path → classification:
 
 1. `br/[branchId]/(operator)/shift/page.tsx` → **LANDING** (staff day-flow home).
 2. `br/[branchId]/(operator)/page.tsx` → **LANDING** (branch portal home).
-3. `inventory/page.tsx` → **REDIRECT-SHIM** to `/inventory/stock` (or GRN for accountant).
+3. `inventory/page.tsx` → **LANDING** workflow lanes (ACL-filtered inventory-nav groups).
 4. `inventory/stock/page.tsx` → **LIST** (master half, responsive master-detail).
 5. `inventory/stock/[ingredientId]/page.tsx` → **DETAIL** (detail half).
 6. `notifications/page.tsx` → **LIST** (chronological feed, no `DataTable`).

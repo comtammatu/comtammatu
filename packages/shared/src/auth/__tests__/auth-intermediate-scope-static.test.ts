@@ -162,7 +162,7 @@ test("proxy branch-surface cache fails closed for inactive or missing branches",
   );
   assert.match(proxy, /branchSurface\.isActive === true/);
   assert.match(proxy, /"branch-surface-restricted"/);
-  // Stations (POS/KDS/runner) never relax off branch-kind "branch".
+  // Stations (POS/KDS/pickup) never relax off branch-kind "branch".
   assert.match(proxy, /isStationRoute\s*\?\s*"branch"/);
 });
 

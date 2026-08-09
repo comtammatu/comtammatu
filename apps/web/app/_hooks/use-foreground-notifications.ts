@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   extractClaimsFromAccessToken,
-  isRunnerPublicDisplayPath,
+  isPickupPublicDisplayPath,
   resolveRouteFamilyContract,
 } from "@comtammatu/shared/auth";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -21,7 +21,7 @@ import { messages } from "@lib/messages";
 const SCAN_LIMIT = 10;
 const MAX_POPUPS = 3;
 
-/** Sonner on control surfaces; POS/KDS/runner keep OS popup only. */
+/** Sonner on control surfaces; POS/KDS/pickup keep OS popup only. */
 function shouldShowInAppToast(pathname: string): boolean {
   const family = resolveRouteFamilyContract(pathname);
   if (!family) return false;
@@ -29,7 +29,7 @@ function shouldShowInAppToast(pathname: string): boolean {
     return true;
   }
   if (family.surface === "branch_operation") {
-    return !/^\/br\/\d+\/(pos|kds|runner)(?:\/|$)/.test(pathname);
+    return !/^\/br\/\d+\/(pos|kds|pickup)(?:\/|$)/.test(pathname);
   }
   return false;
 }
@@ -134,7 +134,7 @@ export function useForegroundNotifications(): void {
   navigateRef.current = (url: string) => {
     router.push(url);
   };
-  const disabled = isRunnerPublicDisplayPath(pathname ?? "");
+  const disabled = isPickupPublicDisplayPath(pathname ?? "");
   const showInAppToast = shouldShowInAppToast(pathname ?? "");
 
   useEffect(() => {

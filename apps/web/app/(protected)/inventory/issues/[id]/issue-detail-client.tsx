@@ -82,7 +82,7 @@ import {
   getIssueMaxEntryQuantity,
   getIssueUnitOptions,
 } from "../../_lib/issue-units";
-import type { IngredientRow } from "../../page";
+import type { IngredientRow } from "@lib/inventory/types";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 

@@ -822,7 +822,7 @@ export const APP_ADAPTER_REGISTRY = {
     "PageSpinner",
     "PageSkeleton for stable management layouts",
     "fake board skeleton",
-    "KDS and runner loading",
+    "KDS and pickup loading",
     true,
   ),
   ErrorPanel: adapter(

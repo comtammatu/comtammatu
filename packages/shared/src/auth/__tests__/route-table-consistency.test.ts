@@ -50,7 +50,7 @@ const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
   "/br/[branchId]/dashboard": `/br/${BRANCH_ID}/dashboard`,
   "/br/[branchId]/pos": `/br/${BRANCH_ID}/pos`,
   "/br/[branchId]/kds": `/br/${BRANCH_ID}/kds`,
-  "/br/[branchId]/runner": `/br/${BRANCH_ID}/runner`,
+  "/br/[branchId]/pickup": `/br/${BRANCH_ID}/pickup`,
 };
 
 function substituteBranchId(prefix: string): string {

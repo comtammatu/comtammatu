@@ -5,12 +5,12 @@ import { AppEmptyState } from "@/components/surface";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
-  buildRunnerQueue,
-  formatRunnerOrderLabel,
-  type BuildRunnerQueueInput,
-  type RunnerOrderItemRow,
-  type RunnerQueueItem,
-} from "@comtammatu/shared/runner";
+  buildPickupQueue,
+  formatPickupOrderLabel,
+  type BuildPickupQueueInput,
+  type PickupOrderItemRow,
+  type PickupQueueItem,
+} from "@comtammatu/shared/pickup";
 import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import {
@@ -19,53 +19,53 @@ import {
   uniqueNumbers,
 } from "../kds/_lib/query-helpers";
 import {
-  RunnerOrderBoardClient,
-  type RunnerBoardRow,
-} from "./runner-order-board-client";
-import type { RunnerIdleState } from "./runner-idle-visual";
-import { RunnerRealtimeRefresh } from "./runner-realtime-refresh";
+  PickupOrderBoardClient,
+  type PickupBoardRow,
+} from "./pickup-order-board-client";
+import type { PickupIdleState } from "./pickup-idle-visual";
+import { PickupRealtimeRefresh } from "./pickup-realtime-refresh";
 
-const RUNNER_ERROR_MESSAGE =
+const PICKUP_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
-const RUNNER_ERROR_TITLE = "Màn gọi số chưa sẵn sàng";
-const RUNNER_ERROR_BADGE = "Cần tải lại";
-const RUNNER_TICKET_SELECT =
+const PICKUP_ERROR_TITLE = "Màn gọi số chưa sẵn sàng";
+const PICKUP_ERROR_BADGE = "Cần tải lại";
+const PICKUP_TICKET_SELECT =
   "id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
-const RUNNER_ORDER_SELECT_WITH_PRIORITY =
+const PICKUP_ORDER_SELECT_WITH_PRIORITY =
   "id, order_number, order_type, table_id, status, created_at, is_priority, tables(number)";
-const RUNNER_ORDER_SELECT_BASE =
+const PICKUP_ORDER_SELECT_BASE =
   "id, order_number, order_type, table_id, status, created_at, tables(number)";
-const RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY =
+const PICKUP_ORDER_ITEM_SELECT_WITH_PRIORITY =
   "id, order_id, quantity, is_priority";
-const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
-const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
-const RUNNER_COPY = {
-  eyebrow: MODULE_LABELS_VI.runner,
+const PICKUP_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
+const PICKUP_ACTIVE_STATUSES = ["pending", "preparing"] as const;
+const PICKUP_COPY = {
+  eyebrow: MODULE_LABELS_VI.pickup,
   footer: {
     wifi: "WiFi: Má Tư",
     password: "Mật khẩu: xincamon",
   },
 } as const;
 
-type RunnerTicketSnapshot = BuildRunnerQueueInput["tickets"][number] & {
+type PickupTicketSnapshot = BuildPickupQueueInput["tickets"][number] & {
   order_item_id: number;
 };
 
-type RunnerOrderItemQuantityRow = RunnerOrderItemRow & {
+type PickupOrderItemQuantityRow = PickupOrderItemRow & {
   quantity: number | string | null;
 };
 
-type RunnerListStatus = RunnerBoardRow["status"];
-type RunnerListRow = RunnerBoardRow;
+type PickupListStatus = PickupBoardRow["status"];
+type PickupListRow = PickupBoardRow;
 
-type RunnerSupabase = ReturnType<typeof createServiceClient>;
+type PickupSupabase = ReturnType<typeof createServiceClient>;
 
-type RunnerQueryResult = {
+type PickupQueryResult = {
   data: unknown[] | null;
   error: { message?: string } | null;
 };
 
-type RunnerBranchRow = {
+type PickupBranchRow = {
   id: number;
   tenant_id: number;
   name: string;
@@ -75,14 +75,14 @@ type RunnerBranchRow = {
 
 /**
  * Branch identity (name/kind/active flag) rarely changes but this kiosk
- * screen polls via `RunnerRealtimeRefresh` (3s `router.refresh()`), so an
+ * screen polls via `PickupRealtimeRefresh` (3s `router.refresh()`), so an
  * uncached lookup re-queries `branches` every poll for hours per shift.
  * Tag `"branches-list"` busts via the same tag `branches/actions.ts`
  * mutations already call. 5-minute TTL is a safety net for any mutation
  * path that forgets to call the tag.
  */
-const getCachedRunnerBranch = unstable_cache(
-  async (branchId: number): Promise<RunnerBranchRow | null> => {
+const getCachedPickupBranch = unstable_cache(
+  async (branchId: number): Promise<PickupBranchRow | null> => {
     const sb = createServiceClient();
     const { data, error } = await sb
       .from("branches")
@@ -91,17 +91,17 @@ const getCachedRunnerBranch = unstable_cache(
       .maybeSingle();
 
     if (error) return null;
-    return data as RunnerBranchRow | null;
+    return data as PickupBranchRow | null;
   },
-  ["runner-branch"],
+  ["pickup-branch"],
   {
     revalidate: 300,
     tags: ["branches-list"],
   },
 );
 
-async function fetchRunnerTodayTicketCount(args: {
-  supabase: RunnerSupabase;
+async function fetchPickupTodayTicketCount(args: {
+  supabase: PickupSupabase;
   tenantId: number;
   branchId: number;
   todayStartIso: string;
@@ -128,16 +128,16 @@ function isMissingPriorityColumn(error: { message?: string } | null): boolean {
   return message.includes("is_priority") && message.includes("column");
 }
 
-function isRunnerOperationalBranchKind(branchKind: string | null): boolean {
+function isPickupOperationalBranchKind(branchKind: string | null): boolean {
   return branchKind === "branch";
 }
 
-function normalizeRunnerOrders(
+function normalizePickupOrders(
   rows: unknown[] | null | undefined,
-): BuildRunnerQueueInput["orders"] {
+): BuildPickupQueueInput["orders"] {
   return (
     (rows ?? []) as Array<
-      Omit<BuildRunnerQueueInput["orders"][number], "is_priority"> & {
+      Omit<BuildPickupQueueInput["orders"][number], "is_priority"> & {
         is_priority?: boolean | null;
       }
     >
@@ -147,12 +147,12 @@ function normalizeRunnerOrders(
   }));
 }
 
-function normalizeRunnerOrderItems(
+function normalizePickupOrderItems(
   rows: unknown[] | null | undefined,
-): RunnerOrderItemQuantityRow[] {
+): PickupOrderItemQuantityRow[] {
   return (
     (rows ?? []) as Array<
-      Omit<RunnerOrderItemQuantityRow, "is_priority"> & {
+      Omit<PickupOrderItemQuantityRow, "is_priority"> & {
         is_priority?: boolean | null;
       }
     >
@@ -162,9 +162,9 @@ function normalizeRunnerOrderItems(
   }));
 }
 
-function sortRunnerTicketsNewestFirst(
-  tickets: readonly RunnerTicketSnapshot[],
-): RunnerTicketSnapshot[] {
+function sortPickupTicketsNewestFirst(
+  tickets: readonly PickupTicketSnapshot[],
+): PickupTicketSnapshot[] {
   return [...tickets].sort((a, b) => {
     const timeDelta =
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -173,17 +173,17 @@ function sortRunnerTicketsNewestFirst(
   });
 }
 
-async function fetchRunnerOrdersByIds(args: {
-  supabase: RunnerSupabase;
+async function fetchPickupOrdersByIds(args: {
+  supabase: PickupSupabase;
   tenantId: number;
   branchId: number;
   orderIds: number[];
-}): Promise<{ data: BuildRunnerQueueInput["orders"] | null; error: unknown }> {
+}): Promise<{ data: BuildPickupQueueInput["orders"] | null; error: unknown }> {
   const { supabase, tenantId, branchId, orderIds } = args;
   const result = await fetchChunkedRows<unknown>(orderIds, async (ids) => {
-    let ordersRes: RunnerQueryResult = await supabase
+    let ordersRes: PickupQueryResult = await supabase
       .from("orders")
-      .select(RUNNER_ORDER_SELECT_WITH_PRIORITY)
+      .select(PICKUP_ORDER_SELECT_WITH_PRIORITY)
       .eq("tenant_id", tenantId)
       .eq("branch_id", branchId)
       .in("id", ids);
@@ -191,7 +191,7 @@ async function fetchRunnerOrdersByIds(args: {
     if (isMissingPriorityColumn(ordersRes.error)) {
       ordersRes = await supabase
         .from("orders")
-        .select(RUNNER_ORDER_SELECT_BASE)
+        .select(PICKUP_ORDER_SELECT_BASE)
         .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
         .in("id", ids);
@@ -201,26 +201,26 @@ async function fetchRunnerOrdersByIds(args: {
   });
 
   if (result.error) return { data: null, error: result.error };
-  return { data: normalizeRunnerOrders(result.data), error: null };
+  return { data: normalizePickupOrders(result.data), error: null };
 }
 
-async function fetchRunnerOrderItemsByIds(args: {
-  supabase: RunnerSupabase;
+async function fetchPickupOrderItemsByIds(args: {
+  supabase: PickupSupabase;
   tenantId: number;
   orderItemIds: number[];
-}): Promise<{ data: RunnerOrderItemQuantityRow[] | null; error: unknown }> {
+}): Promise<{ data: PickupOrderItemQuantityRow[] | null; error: unknown }> {
   const { supabase, tenantId, orderItemIds } = args;
   const result = await fetchChunkedRows<unknown>(orderItemIds, async (ids) => {
-    let itemsRes: RunnerQueryResult = await supabase
+    let itemsRes: PickupQueryResult = await supabase
       .from("order_items")
-      .select(RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY)
+      .select(PICKUP_ORDER_ITEM_SELECT_WITH_PRIORITY)
       .eq("tenant_id", tenantId)
       .in("id", ids);
 
     if (isMissingPriorityColumn(itemsRes.error)) {
       itemsRes = await supabase
         .from("order_items")
-        .select(RUNNER_ORDER_ITEM_SELECT_BASE)
+        .select(PICKUP_ORDER_ITEM_SELECT_BASE)
         .eq("tenant_id", tenantId)
         .in("id", ids);
     }
@@ -229,20 +229,20 @@ async function fetchRunnerOrderItemsByIds(args: {
   });
 
   if (result.error) return { data: null, error: result.error };
-  return { data: normalizeRunnerOrderItems(result.data), error: null };
+  return { data: normalizePickupOrderItems(result.data), error: null };
 }
 
-async function fetchRunnerKitchenBatchesByIds(args: {
-  supabase: RunnerSupabase;
+async function fetchPickupKitchenBatchesByIds(args: {
+  supabase: PickupSupabase;
   tenantId: number;
   branchId: number;
   batchIds: number[];
 }): Promise<{
-  data: BuildRunnerQueueInput["kitchenBatches"] | null;
+  data: BuildPickupQueueInput["kitchenBatches"] | null;
   error: unknown;
 }> {
   const { supabase, tenantId, branchId, batchIds } = args;
-  return fetchChunkedRows<BuildRunnerQueueInput["kitchenBatches"][number]>(
+  return fetchChunkedRows<BuildPickupQueueInput["kitchenBatches"][number]>(
     batchIds,
     async (ids) => {
       const { data, error } = await supabase
@@ -255,34 +255,34 @@ async function fetchRunnerKitchenBatchesByIds(args: {
         .in("id", ids);
 
       return {
-        data: (data ?? null) as BuildRunnerQueueInput["kitchenBatches"] | null,
+        data: (data ?? null) as BuildPickupQueueInput["kitchenBatches"] | null,
         error,
       };
     },
   );
 }
 
-async function fetchRunnerVisibleTickets(args: {
-  supabase: RunnerSupabase;
+async function fetchPickupVisibleTickets(args: {
+  supabase: PickupSupabase;
   tenantId: number;
   branchId: number;
   todayStartIso: string;
-}): Promise<{ tickets: RunnerTicketSnapshot[]; error: boolean }> {
+}): Promise<{ tickets: PickupTicketSnapshot[]; error: boolean }> {
   const { supabase, tenantId, branchId, todayStartIso } = args;
-  const activeTicketsResult = await fetchPagedRows<RunnerTicketSnapshot>(
+  const activeTicketsResult = await fetchPagedRows<PickupTicketSnapshot>(
     async (from, to) => {
       const { data, error } = await supabase
         .from("kds_tickets")
-        .select(RUNNER_TICKET_SELECT)
+        .select(PICKUP_TICKET_SELECT)
         .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
-        .in("status", RUNNER_ACTIVE_STATUSES)
+        .in("status", PICKUP_ACTIVE_STATUSES)
         .gte("created_at", todayStartIso)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(from, to);
 
-      return { data: (data ?? null) as RunnerTicketSnapshot[] | null, error };
+      return { data: (data ?? null) as PickupTicketSnapshot[] | null, error };
     },
   );
 
@@ -291,12 +291,12 @@ async function fetchRunnerVisibleTickets(args: {
   }
 
   return {
-    tickets: sortRunnerTicketsNewestFirst(activeTicketsResult.data ?? []),
+    tickets: sortPickupTicketsNewestFirst(activeTicketsResult.data ?? []),
     error: false,
   };
 }
 
-export default async function RunnerPage({
+export default async function PickupPage({
   params,
 }: {
   params: Promise<{ branchId: string }>;
@@ -304,18 +304,18 @@ export default async function RunnerPage({
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
   if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
-    return <RunnerErrorState />;
+    return <PickupErrorState />;
   }
 
   const supabase = createServiceClient();
   const { startIso: todayStartIso, endIso: todayEndIso } =
     getVNDayUtcRange(getVNDateString());
 
-  const branch = await getCachedRunnerBranch(branchIdNum);
+  const branch = await getCachedPickupBranch(branchIdNum);
 
   if (
     !branch ||
-    !isRunnerOperationalBranchKind(branch.branch_kind) ||
+    !isPickupOperationalBranchKind(branch.branch_kind) ||
     branch.is_active !== true
   ) {
     notFound();
@@ -323,7 +323,7 @@ export default async function RunnerPage({
 
   const tenantId = branch.tenant_id;
 
-  const ticketResult = await fetchRunnerVisibleTickets({
+  const ticketResult = await fetchPickupVisibleTickets({
     supabase,
     tenantId,
     branchId: branchIdNum,
@@ -331,7 +331,7 @@ export default async function RunnerPage({
   });
 
   if (ticketResult.error) {
-    return <RunnerErrorState />;
+    return <PickupErrorState />;
   }
 
   const tickets = ticketResult.tickets;
@@ -347,7 +347,7 @@ export default async function RunnerPage({
 
   const [ordersRes, batchesRes, orderItemsRes] = await Promise.all([
     orderIds.length > 0
-      ? fetchRunnerOrdersByIds({
+      ? fetchPickupOrdersByIds({
           supabase,
           tenantId,
           branchId: branchIdNum,
@@ -355,7 +355,7 @@ export default async function RunnerPage({
         })
       : Promise.resolve({ data: [], error: null }),
     batchIds.length > 0
-      ? fetchRunnerKitchenBatchesByIds({
+      ? fetchPickupKitchenBatchesByIds({
           supabase,
           tenantId,
           branchId: branchIdNum,
@@ -363,20 +363,20 @@ export default async function RunnerPage({
         })
       : Promise.resolve({ data: [], error: null }),
     orderItemIds.length > 0
-      ? fetchRunnerOrderItemsByIds({ supabase, tenantId, orderItemIds })
+      ? fetchPickupOrderItemsByIds({ supabase, tenantId, orderItemIds })
       : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (ordersRes.error || batchesRes.error || orderItemsRes.error) {
-    return <RunnerErrorState />;
+    return <PickupErrorState />;
   }
 
-  const orderItems = (orderItemsRes.data ?? []) as RunnerOrderItemQuantityRow[];
-  const queue = buildRunnerQueue({
+  const orderItems = (orderItemsRes.data ?? []) as PickupOrderItemQuantityRow[];
+  const queue = buildPickupQueue({
     tickets,
-    orders: (ordersRes.data ?? []) as BuildRunnerQueueInput["orders"],
+    orders: (ordersRes.data ?? []) as BuildPickupQueueInput["orders"],
     kitchenBatches: (batchesRes.data ??
-      []) as BuildRunnerQueueInput["kitchenBatches"],
+      []) as BuildPickupQueueInput["kitchenBatches"],
     orderItems,
   });
 
@@ -387,16 +387,16 @@ export default async function RunnerPage({
     tickets.map((ticket) => [ticket.id, ticket.order_item_id]),
   );
   const rows = queue.map((item) =>
-    toRunnerListRow({
+    toPickupListRow({
       item,
       orderItemIdByTicketId,
       quantityByOrderItemId,
     }),
   );
-  let idleState: RunnerIdleState | null = null;
+  let idleState: PickupIdleState | null = null;
 
   if (rows.length === 0) {
-    const todayTicketCountResult = await fetchRunnerTodayTicketCount({
+    const todayTicketCountResult = await fetchPickupTodayTicketCount({
       supabase,
       tenantId,
       branchId: branchIdNum,
@@ -405,7 +405,7 @@ export default async function RunnerPage({
     });
 
     if (todayTicketCountResult.error) {
-      return <RunnerErrorState />;
+      return <PickupErrorState />;
     }
 
     idleState = todayTicketCountResult.count > 0 ? "done" : "empty";
@@ -415,68 +415,68 @@ export default async function RunnerPage({
 
   return (
     <>
-      <RunnerRealtimeRefresh />
+      <PickupRealtimeRefresh />
 
       <section
-        aria-label={`${RUNNER_COPY.eyebrow} ${branch.name}`}
+        aria-label={`${PICKUP_COPY.eyebrow} ${branch.name}`}
         className="flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background"
       >
-        <RunnerOrderScreen rows={rows} nowMs={nowMs} idleState={idleState} />
+        <PickupOrderScreen rows={rows} nowMs={nowMs} idleState={idleState} />
       </section>
     </>
   );
 }
 
-function RunnerOrderScreen({
+function PickupOrderScreen({
   rows,
   nowMs,
   idleState,
 }: {
-  rows: RunnerListRow[];
+  rows: PickupListRow[];
   nowMs: number;
-  idleState: RunnerIdleState | null;
+  idleState: PickupIdleState | null;
 }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
-      <RunnerOrderBoardClient rows={rows} nowMs={nowMs} idleState={idleState} />
-      <RunnerFooter />
+      <PickupOrderBoardClient rows={rows} nowMs={nowMs} idleState={idleState} />
+      <PickupFooter />
     </div>
   );
 }
 
-function RunnerFooter() {
+function PickupFooter() {
   return (
     <footer className="shrink-0">
       <div
         aria-hidden="true"
         className="brand-strip brand-pattern-hat-gao w-full"
       />
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/50 px-4 py-2 font-heading text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:py-4">
-        <span>{RUNNER_COPY.footer.wifi}</span>
-        <span>{RUNNER_COPY.footer.password}</span>
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/50 px-4 py-2 font-heading text-pickup-footer font-semibold text-foreground xl:gap-x-16 xl:py-4">
+        <span>{PICKUP_COPY.footer.wifi}</span>
+        <span>{PICKUP_COPY.footer.password}</span>
       </div>
     </footer>
   );
 }
 
-function toRunnerListRow({
+function toPickupListRow({
   item,
   orderItemIdByTicketId,
   quantityByOrderItemId,
 }: {
-  item: RunnerQueueItem;
+  item: PickupQueueItem;
   orderItemIdByTicketId: Map<number, number>;
   quantityByOrderItemId: Map<number, number>;
-}): RunnerListRow {
+}): PickupListRow {
   return {
     key: item.id,
-    orderLabel: formatRunnerOrderLabel(item),
+    orderLabel: formatPickupOrderLabel(item),
     itemQuantity: countItemQuantity({
       item,
       orderItemIdByTicketId,
       quantityByOrderItemId,
     }),
-    status: resolveRunnerListStatus(item),
+    status: resolvePickupListStatus(item),
     sortAt: item.sortAt,
   };
 }
@@ -486,7 +486,7 @@ function countItemQuantity({
   orderItemIdByTicketId,
   quantityByOrderItemId,
 }: {
-  item: RunnerQueueItem;
+  item: PickupQueueItem;
   orderItemIdByTicketId: Map<number, number>;
   quantityByOrderItemId: Map<number, number>;
 }): number {
@@ -506,7 +506,7 @@ function countItemQuantity({
   return total > 0 ? total : item.ticketCount;
 }
 
-function resolveRunnerListStatus(_item: RunnerQueueItem): RunnerListStatus {
+function resolvePickupListStatus(_item: PickupQueueItem): PickupListStatus {
   return "pending";
 }
 
@@ -516,21 +516,21 @@ function normalizeQuantity(value: number | string | null): number {
   return quantity;
 }
 
-function RunnerErrorState() {
+function PickupErrorState() {
   return (
     <section className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-background p-4">
       <AppEmptyState
         mode="error"
-        description={RUNNER_ERROR_MESSAGE}
+        description={PICKUP_ERROR_MESSAGE}
         descriptionClassName="max-w-md text-sm"
         icon={<IconAlertCircle />}
         iconClassName="size-12 border border-border/70 bg-background/80 text-destructive"
-        title={RUNNER_ERROR_TITLE}
+        title={PICKUP_ERROR_TITLE}
         titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
       >
         <Badge variant="destructive">
           <IconAlertCircle className="size-3.5" />
-          <span>{RUNNER_ERROR_BADGE}</span>
+          <span>{PICKUP_ERROR_BADGE}</span>
         </Badge>
       </AppEmptyState>
     </section>

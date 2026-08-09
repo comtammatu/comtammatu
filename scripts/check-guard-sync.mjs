@@ -6,11 +6,12 @@ import path from "node:path";
 // The prod-DB guard is split across files that must agree:
 // docs/agent/rules/database.md owns the Environment Registry (the rule),
 // scripts/guard-prod-db.mjs enforces it (protected refs + guarded-tool regex),
-// .codex/config.toml owns the pinned direct MCP target/read-only transport,
-// and each agent runtime's adapter config decides which tool calls reach the
-// hook (PreToolUse matchers). This check blocks silent drift between them,
-// and replays behavior fixtures so a regex edit that weakens blocking (or
-// closes a read path) fails lint immediately.
+// and optional local agent adapters (`.claude/settings.json`, `.codex/hooks.json`,
+// `.codex/config.toml`) may wire PreToolUse to the same hook when present.
+// Tracked repo no longer requires those adapter files. This check keeps the
+// registry and hook in sync, validates any present adapters, and replays
+// behavior fixtures so a regex edit that weakens blocking (or closes a read
+// path) fails lint immediately.
 
 const REPO_ROOT = process.cwd();
 const HOOK_PATH = "scripts/guard-prod-db.mjs";
@@ -131,13 +132,9 @@ if (
     `${REGISTRY_PATH}: Vercel Production must bind one project ID to the registered Production ref`,
   );
 }
-if (!fs.existsSync(path.join(REPO_ROOT, CODEX_CONFIG_PATH))) {
-  fail(`${CODEX_CONFIG_PATH} does not exist`);
-} else {
-  const codexConfig = fs.readFileSync(
-    path.join(REPO_ROOT, CODEX_CONFIG_PATH),
-    "utf8",
-  );
+const codexConfigPath = path.join(REPO_ROOT, CODEX_CONFIG_PATH);
+if (fs.existsSync(codexConfigPath)) {
+  const codexConfig = fs.readFileSync(codexConfigPath, "utf8");
   const sectionHeaders = [
     ...codexConfig.matchAll(/^\[mcp_servers\.supabase\]\s*$/gm),
   ];
@@ -182,7 +179,7 @@ if (
   )
 ) {
   fail(
-    `${HOOK_PATH}: direct project-less Supabase MCP calls must verify ${CODEX_CONFIG_PATH} at runtime`,
+    `${HOOK_PATH}: direct project-less Supabase MCP calls must verify ${CODEX_CONFIG_PATH} at runtime when that optional adapter exists`,
   );
 }
 
@@ -239,14 +236,15 @@ if (hookMcpPattern) {
   }
 }
 
-// 2. Every adapter wires both matchers to the canonical hook, and each
-// adapter's MCP matcher == the hook's MCP_GUARDED_TOOL regex, so a tool added
-// to one side cannot silently skip the other.
+// 2. When optional local adapters exist, each must wire both matchers to the
+// canonical hook, and each adapter's MCP matcher == the hook's MCP_GUARDED_TOOL
+// regex, so a tool added to one side cannot silently skip the other.
+const presentAdapters = [];
 for (const adapterPath of ADAPTER_PATHS) {
   if (!fs.existsSync(path.join(REPO_ROOT, adapterPath))) {
-    fail(`${adapterPath} does not exist`);
     continue;
   }
+  presentAdapters.push(adapterPath);
   const adapter = JSON.parse(
     fs.readFileSync(path.join(REPO_ROOT, adapterPath), "utf8"),
   );
@@ -1839,8 +1837,8 @@ const FIXTURES = [
     mcp("get_project", { id: PROD }),
   ],
   [
-    "allow: pinned read-only Codex MCP may omit project ref",
-    0,
+    "block: project-less MCP read without pinned Codex binding",
+    2,
     mcp("list_tables", { schemas: ["public"] }),
   ],
   [
@@ -2199,5 +2197,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `[guard-sync] hook, pinned Codex MCP, ${ADAPTER_PATHS.length} adapter configs, Environment Registry, and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs)`,
+  `[guard-sync] hook, Environment Registry, ${presentAdapters.length} optional adapter config(s), and ${FIXTURES.length} behavior fixtures in sync (${hookRefs.length} protected refs)`,
 );

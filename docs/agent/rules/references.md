@@ -18,8 +18,8 @@ HOT — load by default for matching work:
   `docs/spec/page-archetypes.md` (workflow) →
   `docs/ref/screen-context-map.md` (audience/device) → `docs/modules/ui.md`
   (thin implementation map); Product Dual Thesis in
-  `docs/spec/architecture.md`; optional Stitch mirror `.stitch/DESIGN.md`
-  (non-SSOT)
+  `docs/spec/architecture.md`; optional local Stitch mirror `.stitch/DESIGN.md`
+  (non-SSOT, untracked)
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`
@@ -48,8 +48,8 @@ Adapter directories wire tools back to repo authority; they do not own rules.
 
 | Runtime      | Entrypoint                     | MCP config                            | Production DB guard                                                               |
 | ------------ | ------------------------------ | ------------------------------------- | --------------------------------------------------------------------------------- |
-| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | Plugin/runtime config; no tracked file | `.claude/settings.json` → canonical guard                                         |
-| Codex        | `AGENTS.md`                    | `.codex/config.toml`                  | `.codex/hooks.json` → canonical guard                                             |
+| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | Plugin/runtime config; no tracked file | Optional local `.claude/settings.json` → canonical guard                          |
+| Codex        | `AGENTS.md`                    | Optional local `.codex/config.toml`   | Optional local `.codex/hooks.json` → canonical guard                              |
 | Cursor/other | Adapter-local pointer required | Adapter-specific                      | Unregistered: read-only until adapter is added and guard-sync registration exists |
 
 The tracked capability contract and required bundle are
@@ -58,15 +58,14 @@ The tracked capability contract and required bundle are
 `corepack pnpm agent:start` before agent work, and CI verifies the skill bundle
 in `lint`.
 Global skill catalogs, plugin caches, and per-user plugin state are additive only.
-`.claude/settings.json` enables the shared Claude plugin subset;
-`.codex/config.toml` registers Codex MCP servers. Neither adapter can replace or
-alter project policy or the required bundle.
+Local Claude/Codex adapter files are optional and untracked; when present they
+may enable plugins or MCP servers but cannot replace or alter project policy or
+the required bundle.
 
 The production guard contract spans the Environment Registry in `database.md`,
-`scripts/guard-prod-db.mjs`, the pinned Codex MCP binding in
-`.codex/config.toml`, and every adapter registered by
-`scripts/check-guard-sync.mjs`. Project-less direct MCP reads are accepted only
-when that Codex binding is mechanically verified. A runtime without an adapter
+`scripts/guard-prod-db.mjs`, and `scripts/check-guard-sync.mjs`. An optional
+local `.codex/config.toml` may pin a read-only Production MCP binding; when
+absent, project-less direct MCP reads fail closed. A runtime without an adapter
 is unguarded; use only read-only/plan/ask/sandbox review until it is registered.
 Keep secrets, tokens, caches, generated sessions, worktrees, and local state
 untracked.

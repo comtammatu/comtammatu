@@ -18,7 +18,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 | **B** | Owner wrapper — nhúng client Control Surface làm body | fork |
 | **C** | Redirect/shim — trong Branch hoặc sang `/inventory` | keep-shim |
 | **D** | staff-runtime (`plane="branch"`), không Owner LIST | keep |
-| **E** | Station POS/KDS/Runner — shell riêng | station-out-of-scope |
+| **E** | Station POS/KDS/Gọi số — shell riêng | station-out-of-scope |
 
 **Archetype** từ `scripts/page-archetypes.mjs` (có thể `EMBED-WRAPPER` /
 `REDIRECT-SHIM` trong khi class plane A/C/D — ghi cả hai khi fork).
@@ -65,7 +65,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 2. **Wave 3:** waste sheet-per-line → thresholds Branch LIST.
 3. **Wave 4:** feedback inbox + QR Branch touch LIST.
 
-Ngoài scope: redesign POS/KDS/Runner; gỡ production shim; URL-bind ADR 0018
+Ngoài scope: redesign POS/KDS/Gọi số; gỡ production shim; URL-bind ADR 0018
 drawers; gộp menu-limits page↔sheet.
 
 ## Gold mẫu (giữ)
@@ -91,9 +91,9 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers) **A**; `catalog/thresholds` **B fork** |
 | **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
 | **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **B fork**; profile(+payslip) **D** |
-| **station** | 3 | `/pos`, `/kds`, `/runner` → **E** |
+| **station** | 3 | `/pos`, `/kds`, `/pickup` → **E** |
 
-Filesystem: operator dưới `(operator)/`; station `pos/`, `kds/`, `runner/`.
+Filesystem: operator dưới `(operator)/`; station `pos/`, `kds/`, `pickup/`.
 Mọi `entryPath` Branch trong `route-map.ts` có `page.tsx`; leaf phủ bởi
 `matchPrefixes` — không yêu cầu 1:1 entryPath.
 

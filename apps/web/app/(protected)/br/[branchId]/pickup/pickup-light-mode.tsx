@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export function RunnerLightMode() {
+export function PickupLightMode() {
   useEffect(() => {
     const root = document.documentElement;
     const hadLight = root.classList.contains("light");

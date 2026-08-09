@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-const RUNNER_WAIT_TICK_MS = 1_000;
+const PICKUP_WAIT_TICK_MS = 1_000;
 
-export function RunnerWaitTime({
+export function PickupWaitTime({
   startIso,
   initialNowMs,
 }: {
@@ -19,7 +19,7 @@ export function RunnerWaitTime({
     };
     tick();
 
-    const intervalId = window.setInterval(tick, RUNNER_WAIT_TICK_MS);
+    const intervalId = window.setInterval(tick, PICKUP_WAIT_TICK_MS);
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") tick();
@@ -32,10 +32,10 @@ export function RunnerWaitTime({
     };
   }, []);
 
-  return <>{formatRunnerWaitTime(startIso, nowMs)}</>;
+  return <>{formatPickupWaitTime(startIso, nowMs)}</>;
 }
 
-export function formatRunnerWaitTime(startIso: string, nowMs: number): string {
+export function formatPickupWaitTime(startIso: string, nowMs: number): string {
   const startMs = new Date(startIso).getTime();
   if (!Number.isFinite(startMs)) return "0s";
 

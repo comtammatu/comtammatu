@@ -14,8 +14,8 @@ const inventoryNav = readFileSync(
   "app/(protected)/inventory/_lib/inventory-nav.ts",
   "utf8",
 );
-const inventoryHome = readFileSync(
-  "app/(protected)/inventory/_lib/inventory-home.ts",
+const inventoryPage = readFileSync(
+  "app/(protected)/inventory/page.tsx",
   "utf8",
 );
 const stockRequestInbox = readFileSync(
@@ -181,10 +181,9 @@ test("D093 inventory-nav includes one fulfillment hub", () => {
   assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 
-test("D093 inventory L0 landing is a redirect without hub dashboard", () => {
-  assert.match(inventoryHome, /\/inventory\/stock/);
-  assert.match(inventoryHome, /accountant/);
-  assert.match(inventoryHome, /\/inventory\/grn/);
+test("D093 inventory L0 landing is workflow lanes without hub dashboard", () => {
+  assert.match(inventoryPage, /resolveInventoryNav/);
+  assert.doesNotMatch(inventoryPage, /resolveInventoryHomePath|redirect\(/);
   assert.doesNotMatch(inventoryNav, /0 · Nay/);
   assert.doesNotMatch(inventoryNav, /href: "\/inventory",/);
 });

@@ -116,7 +116,7 @@ export {
   PUBLIC_APP_PATHS,
   isOwnerRoutePath,
   isPublicAppPath,
-  isRunnerPublicDisplayPath,
+  isPickupPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 export type {

@@ -120,10 +120,10 @@ export function BranchTable({ branches }: BranchTableProps) {
                   href: `/br/${branch.id}/kds`,
                 },
                 {
-                  key: "runner",
-                  label: copy.openRunner,
+                  key: "pickup",
+                  label: copy.openPickup,
                   icon: <IconMonitorUp data-icon="inline-start" />,
-                  href: `/br/${branch.id}/runner`,
+                  href: `/br/${branch.id}/pickup`,
                 },
               ]
             : []),

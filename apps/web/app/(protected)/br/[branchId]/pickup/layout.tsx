@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
-import { RunnerPwaToolbar } from "../_components/operational-pwa/toolbar";
-import { RunnerLightMode } from "./runner-light-mode";
+import { PickupPwaToolbar } from "../_components/operational-pwa/toolbar";
+import { PickupLightMode } from "./pickup-light-mode";
 
 export async function generateMetadata({
   params,
@@ -11,7 +11,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { branchId } = await params;
   return {
-    manifest: `/br/${branchId}/runner/manifest.webmanifest`,
+    manifest: `/br/${branchId}/pickup/manifest.webmanifest`,
     appleWebApp: {
       capable: true,
       statusBarStyle: "black-translucent",
@@ -20,7 +20,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function RunnerLayout({
+export default async function PickupLayout({
   children,
   params,
 }: {
@@ -35,9 +35,9 @@ export default async function RunnerLayout({
       tabIndex={-1}
       className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
     >
-      <RunnerLightMode />
+      <PickupLightMode />
       <OperationalPwaProvider>
-        <RunnerPwaToolbar branchId={branchId} />
+        <PickupPwaToolbar branchId={branchId} />
         {children}
       </OperationalPwaProvider>
     </main>

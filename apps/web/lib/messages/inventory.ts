@@ -25,6 +25,11 @@ export const inventory = {
     mobileBrand: "Kho Má Tư",
     mobileMode: "Điện thoại",
   },
+  home: {
+    title: "Kho hàng",
+    description: "Chọn nhóm việc để mở danh sách hoặc phiếu.",
+    laneHint: "Mở danh sách và làm tiếp trong mô-đun.",
+  },
   operatorFlow: {
     stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,
     done: "Xong",
@@ -2035,6 +2040,7 @@ export const inventory = {
     modeTitle: "Chế độ kiểm kê",
     warehouseRequired: "Chi nhánh chưa có kho để kiểm kê.",
     blindMode: "Đếm mù",
+    quickMode: "Kiểm nhanh",
     defaultByMode: (state: string) =>
       `Mặc định theo chế độ: ${state}. Thay đổi qua chính sách kiểm kê (có lưu vết).`,
     on: "BẬT",

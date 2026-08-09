@@ -5,6 +5,9 @@ import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Item } from "@comtammatu/ui/components/item";
+import { messages } from "@lib/messages";
+
+const stocktakeCopy = messages.inventory.stocktake;
 
 export type StocktakeMode =
   | "daily"
@@ -119,10 +122,10 @@ export function StocktakeModeSelector({
               <span className="font-medium">{label}</span>
               <div className="ml-auto flex items-center gap-1">
                 {meta.defaultBlind ? (
-                  <Badge variant="warning">Đếm mù</Badge>
+                  <Badge variant="warning">{stocktakeCopy.blindMode}</Badge>
                 ) : null}
                 {meta.unaudited ? (
-                  <Badge variant="secondary">Kiểm nhanh</Badge>
+                  <Badge variant="secondary">{stocktakeCopy.quickMode}</Badge>
                 ) : null}
               </div>
             </div>
