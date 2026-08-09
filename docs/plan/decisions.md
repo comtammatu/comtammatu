@@ -73,7 +73,7 @@ entry.
 **Net effect:** Manual quota and stock availability are distinct sources; NULL capacity fails open; hold tokens prevent double-count. Canonical: `docs/ref/operational-data-contract.md`.
 
 ## D065: One stock-sale-outcome switch
-**Net effect:** Enabling stock outcome also enables the hard availability gate and posting; no negative stock; posting races fail soft; stocktake detects drift.
+**Net effect:** Enabling stock outcome also enables availability signalling and posting; posting races fail soft; stocktake detects drift. The no-negative-at-posting clause is reversed by ADR 0026 (post-and-flag after payment). Pre-order `enforce_branch_stock_availability` stays a hard block for cashiers/floor staff; Branch Manager may reopen the sell path only on the menu-limits page via re-enable and/or a dedicated daily sellable-allowance field (`stock_allowance_quantity` — adds N portions on top of stock-derived remaining; not absolute daily sellable; not ignore-stock; not `Bổ sung tồn kho` ledger replenish; no POS PIN) without skipping posting. Canonical: ADR 0026.
 
 ## D069: Typography and night mode
 **Net effect:** Geist heading/body, Geist Mono for data; warm-dark night mode via cookie; print unaffected. Canonical: `docs/spec/design-system.md`.
