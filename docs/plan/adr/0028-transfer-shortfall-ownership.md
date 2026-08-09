@@ -67,9 +67,9 @@ with no ledger row; free-text-only classification.
 - Receive gains one required choice on a phone-first branch flow, so the option
   set must stay short enough to pick one-handed.
 - The reason vocabulary needed here is shared with stocktake variance and waste
-  (**INV-12, open**): stocktake variance still captures only free text, so it
-  cannot be aggregated or trended. A constrained `reason_code` set spanning
-  transfer shortfall, stocktake variance, and waste remains unresolved.
+  (**INV-12**, ADR 0031): stocktake now stores constrained `reason_code` (same
+  enum as waste) plus optional free-text note; transfer ownership codes stay on
+  `movement_subtype` and are not part of that causal catalog.
 - Whether receive becomes two steps (count, then accept) or stays one step with
   a discrepancy field (**INV-11, open**) is an implementation shape this ADR
   does not fix.

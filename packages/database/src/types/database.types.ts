@@ -9126,6 +9126,7 @@ export type Database = {
           tenant_id: number
           variance: number | null
           variance_reason: string | null
+          reason_code: string | null
         }
         Insert: {
           abc_class?: string | null
@@ -9146,6 +9147,7 @@ export type Database = {
           tenant_id: number
           variance?: number | null
           variance_reason?: string | null
+          reason_code?: string | null
         }
         Update: {
           abc_class?: string | null
@@ -9166,6 +9168,7 @@ export type Database = {
           tenant_id?: number
           variance?: number | null
           variance_reason?: string | null
+          reason_code?: string | null
         }
         Relationships: [
           {

@@ -6,15 +6,17 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
+import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested-order-qty";
+import { suggestedOrderQtyInEntryUnit } from "@lib/inventory/suggested-order-qty";
 import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
 import { purchaseDemandLineProgress } from "@lib/inventory/purchase-demand-progress";
 import { fetchIngredients } from "../ingredient-actions";
 import {
   PurchaseRequestsClient,
-  type PurchaseRequestIngredientOption,
   type PurchaseRequestRow,
 } from "../purchase-requests/purchase-requests-client";
+import type { PurchaseRequestIngredientOption } from "@lib/inventory/purchase-request-model";
 import type { PurchaseOrderSupplier } from "../purchase-requests/purchase-order-drafts";
 import {
   PurchaseOrdersClient,
@@ -389,19 +391,48 @@ export default async function PurchaseOrdersPage({
     };
   });
 
-  const ingredientOptions: PurchaseRequestIngredientOption[] = (
-    (ingredientResult.data ?? []) as IngredientRow[]
-  ).map((ingredient) => ({
-    id: ingredient.id,
-    name: ingredient.name,
-    units: (ingredient.units ?? [])
-      .filter((unit) => unit.is_active)
-      .map((unit) => ({
-        id: unit.unit_id,
-        label: unit.unit_name || unit.unit_code,
-        factor: unit.to_base_factor,
-      })),
-  }));
+  const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
+  const suggestedByIngredient =
+    scope.selectedBranchId == null
+      ? new Map<number, number>()
+      : await loadSuggestedOrderQtyByIngredient({
+          supabase,
+          tenantId: claims.tenant_id,
+          branchId: scope.selectedBranchId,
+          ingredientIds: ingredientRows.map((ingredient) => ingredient.id),
+          minStockByIngredient: new Map(
+            ingredientRows.map((ingredient) => [
+              ingredient.id,
+              ingredient.min_stock_level,
+            ]),
+          ),
+        });
+  const ingredientOptions: PurchaseRequestIngredientOption[] =
+    ingredientRows.map((ingredient) => {
+      const units = (ingredient.units ?? [])
+        .filter((unit) => unit.is_active)
+        .map((unit) => ({
+          id: unit.unit_id,
+          label: unit.unit_name || unit.unit_code,
+          factor: unit.to_base_factor,
+        }));
+      const defaultUnit = units.reduce<
+        (typeof units)[number] | undefined
+      >(
+        (selected, unit) =>
+          selected == null || unit.factor > selected.factor ? unit : selected,
+        undefined,
+      );
+      return {
+        id: ingredient.id,
+        name: ingredient.name,
+        suggestedOrderQty: suggestedOrderQtyInEntryUnit(
+          suggestedByIngredient.get(ingredient.id) ?? 0,
+          defaultUnit?.factor ?? 1,
+        ),
+        units,
+      };
+    });
   const requestBranches =
     claims.user_role === "owner"
       ? branches

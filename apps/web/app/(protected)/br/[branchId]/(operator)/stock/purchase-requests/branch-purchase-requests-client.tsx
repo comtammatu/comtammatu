@@ -377,9 +377,16 @@ export function BranchPurchaseRequestsClient({
 
   function chooseIngredient(line: RequestDraftLine, value: string) {
     const ingredient = ingredients.find((item) => item.id === Number(value));
+    const shouldPrefill =
+      line.quantity.trim() === "" || Number(line.quantity) <= 0;
+    const suggested =
+      ingredient != null && ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : line.quantity;
     patchRequestLine(line.key, {
       ingredientId: value,
       entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
+      ...(shouldPrefill ? { quantity: suggested } : {}),
     });
   }
 

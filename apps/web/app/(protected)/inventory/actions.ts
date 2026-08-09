@@ -24,6 +24,24 @@ const stocktakeLineUpdateSchema = z.object({
   lineId: z.coerce.number().int().positive(),
   countedQuantity: inventoryNonnegativeQuantitySchema,
   varianceReason: z.string().optional(),
+  reasonCode: z
+    .enum([
+      "spoiled",
+      "expired",
+      "dropped",
+      "overcook",
+      "burned",
+      "contaminated",
+      "quality_fail",
+      "found_missing",
+      "theft_suspected",
+      "customer_return",
+      "kds_cancel_mid_cook",
+      "kds_cancel_after_cook",
+      "other",
+    ])
+    .nullable()
+    .optional(),
 });
 
 /* ─── Stocktake Actions ─── */
@@ -338,6 +356,7 @@ export const updateStocktakeLine = withAction(
       .update({
         counted_quantity: data.countedQuantity,
         variance_reason: data.varianceReason ?? null,
+        reason_code: data.reasonCode ?? null,
       })
       .eq("id", data.lineId)
       .eq("tenant_id", claims.tenant_id);
@@ -415,6 +434,13 @@ export async function completeStocktake(
       return {
         success: false,
         error: "Phiên kiểm kê không ở trạng thái đang thực hiện.",
+      };
+    }
+    if (msg.includes("stocktake_reason_code_required")) {
+      return {
+        success: false,
+        error:
+          "Chọn mã lý do cho mọi dòng có chênh lệch trước khi chốt.",
       };
     }
     if (msg.includes("session_not_found")) {

@@ -16,11 +16,13 @@ import {
   type StockRequestEditorLine,
   type StockRequestIngredientOption,
 } from "./stock-request-editor";
+import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested-order-qty";
 
 type IngredientJoin = {
   id: number;
   name: string;
   sku: string | null;
+  min_stock_level: number | null;
   default_fulfill_site_kind: "central_supply" | "central_kitchen" | null;
   ingredient_units: Array<{
     unit_id: number;
@@ -71,7 +73,7 @@ export default async function BranchStockRequestNewPage({
       ? supabase
           .from("ingredients")
           .select(
-            "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            "id, name, sku, min_stock_level, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
           )
           .eq("tenant_id", claims.tenant_id)
           .eq("is_active", true)
@@ -80,7 +82,7 @@ export default async function BranchStockRequestNewPage({
       : supabase
           .from("ingredients")
           .select(
-            "id, name, sku, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+            "id, name, sku, min_stock_level, default_fulfill_site_kind, ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, is_base, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
           )
           .eq("tenant_id", claims.tenant_id)
           .eq("is_active", true)
@@ -120,22 +122,36 @@ export default async function BranchStockRequestNewPage({
     notFound();
   }
 
-  const ingredients: StockRequestIngredientOption[] = (
-    (ingredientRows ?? []) as IngredientJoin[]
-  ).map((ingredient) => ({
-    id: ingredient.id,
-    name: ingredient.name,
-    sku: ingredient.sku,
-    fulfillSiteKind: ingredient.default_fulfill_site_kind ?? "central_supply",
-    units: (ingredient.ingredient_units ?? [])
-      .filter((unit) => unit.is_active)
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((unit) => ({
-        id: unit.unit_id,
-        label: unit.units?.name ?? unit.units?.code ?? "",
-        isBase: unit.is_base,
-      })),
-  }));
+  const ingredientJoins = (ingredientRows ?? []) as IngredientJoin[];
+  const suggestedByIngredient = await loadSuggestedOrderQtyByIngredient({
+    supabase,
+    tenantId: claims.tenant_id,
+    branchId,
+    ingredientIds: ingredientJoins.map((ingredient) => ingredient.id),
+    minStockByIngredient: new Map(
+      ingredientJoins.map((ingredient) => [
+        ingredient.id,
+        ingredient.min_stock_level,
+      ]),
+    ),
+  });
+  const ingredients: StockRequestIngredientOption[] = ingredientJoins.map(
+    (ingredient) => ({
+      id: ingredient.id,
+      name: ingredient.name,
+      sku: ingredient.sku,
+      fulfillSiteKind: ingredient.default_fulfill_site_kind ?? "central_supply",
+      suggestedOrderQty: suggestedByIngredient.get(ingredient.id) ?? 0,
+      units: (ingredient.ingredient_units ?? [])
+        .filter((unit) => unit.is_active)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((unit) => ({
+          id: unit.unit_id,
+          label: unit.units?.name ?? unit.units?.code ?? "",
+          isBase: unit.is_base,
+        })),
+    }),
+  );
 
   const itemsResult =
     sourceRequestId == null

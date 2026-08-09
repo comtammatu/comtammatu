@@ -2138,9 +2138,11 @@ export const inventory = {
       emptyCountDescription: "Kho chưa có dòng tồn nào cần kiểm kê.",
       saved: "Đã lưu",
       countedQtyPlaceholder: "SL thực đếm",
-      reasonPlaceholder: "Lý do",
+      reasonPlaceholder: "Ghi chú thêm (tùy chọn)",
       varianceReason: "Lý do chênh lệch",
-      optionalReasonPlaceholder: "Lý do (tùy chọn)",
+      optionalReasonPlaceholder: "Ghi chú thêm (tùy chọn)",
+      reasonCodeRequired:
+        "Chọn mã lý do cho mọi dòng có chênh lệch trước khi chốt.",
       results: {
         legendTitle: "Chênh lệch:",
         good: "<1% (tốt)",
