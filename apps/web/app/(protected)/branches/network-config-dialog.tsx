@@ -7,6 +7,7 @@ import {
   Shield as IconShield,
   ShieldOff as IconShieldOff,
   AlertTriangle as IconAlertTriangle,
+  Siren as IconSiren,
 } from "lucide-react";
 import {
   Alert,
@@ -26,13 +27,20 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppEmptyState } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { messages } from "@lib/messages";
 import {
+  activateNetworkGateBypass,
+  getNetworkGateBypass,
   listTrustedIps,
+  revokeNetworkGateBypass,
   revokeTrustedIp,
   trustCurrentIp,
+  type NetworkGateBypassDurationKind,
+  type NetworkGateBypassRow,
   type TrustedIpRow,
 } from "./network-config-actions";
 
@@ -46,6 +54,17 @@ interface NetworkConfigDialogProps {
 }
 
 const GRACE_MS = 30 * 60 * 1000;
+
+const DURATION_PRESETS: {
+  kind: NetworkGateBypassDurationKind;
+  label: string;
+}[] = [
+  { kind: "1h", label: messages.settings.network.duration1h },
+  { kind: "2h", label: messages.settings.network.duration2h },
+  { kind: "4h", label: messages.settings.network.duration4h },
+  { kind: "pos_shift", label: messages.settings.network.durationPosShift },
+  { kind: "business_day", label: messages.settings.network.durationBusinessDay },
+];
 
 function formatAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -62,24 +81,53 @@ function isFresh(iso: string): boolean {
   return Date.now() - new Date(iso).getTime() < GRACE_MS;
 }
 
+function durationLabel(kind: NetworkGateBypassDurationKind): string {
+  const preset = DURATION_PRESETS.find((p) => p.kind === kind);
+  return preset?.label ?? kind;
+}
+
+function bypassUntilLabel(row: NetworkGateBypassRow): string {
+  if (row.duration_kind === "pos_shift") {
+    return messages.settings.network.untilPosShiftClose;
+  }
+  if (row.duration_kind === "business_day") {
+    return messages.settings.network.untilBusinessDayEnd(
+      formatVNDateTime(row.expires_at),
+    );
+  }
+  return formatVNDateTime(row.expires_at);
+}
+
 export function NetworkConfigDialog({
   open,
   onOpenChange,
   branch,
 }: NetworkConfigDialogProps) {
   const [rows, setRows] = useState<TrustedIpRow[]>([]);
+  const [bypass, setBypass] = useState<NetworkGateBypassRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [trustPending, startTrustTransition] = useTransition();
+  const [bypassPendingKind, setBypassPendingKind] =
+    useState<NetworkGateBypassDurationKind | null>(null);
+  const [revokeBypassPending, setRevokeBypassPending] = useState(false);
   const [revokePendingId, setRevokePendingId] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const result = await listTrustedIps({ branchId: branch.id });
+    const [ipsResult, bypassResult] = await Promise.all([
+      listTrustedIps({ branchId: branch.id }),
+      getNetworkGateBypass({ branchId: branch.id }),
+    ]);
     setLoading(false);
-    if (result.success && result.data) {
-      setRows(result.data as TrustedIpRow[]);
-    } else if (!result.success) {
-      toast.error(result.error ?? ERRORS_VI.fallback);
+    if (ipsResult.success && ipsResult.data) {
+      setRows(ipsResult.data as TrustedIpRow[]);
+    } else if (!ipsResult.success) {
+      toast.error(ipsResult.error ?? ERRORS_VI.fallback);
+    }
+    if (bypassResult.success) {
+      setBypass((bypassResult.data as NetworkGateBypassRow | null) ?? null);
+    } else if (!bypassResult.success) {
+      toast.error(bypassResult.error ?? ERRORS_VI.fallback);
     }
   }, [branch.id]);
 
@@ -88,6 +136,7 @@ export function NetworkConfigDialog({
       void refresh();
     } else {
       setRows([]);
+      setBypass(null);
     }
   }, [open, refresh]);
 
@@ -121,6 +170,48 @@ export function NetworkConfigDialog({
     })();
   }
 
+  async function handleActivateBypass(kind: NetworkGateBypassDurationKind) {
+    const label = durationLabel(kind);
+    const ok = await confirm({
+      title: messages.settings.network.emergencyConfirmTitle,
+      description: messages.settings.network.emergencyConfirmDescription(label),
+      details: [
+        {
+          label: messages.settings.network.durationDetailLabel,
+          value: label,
+        },
+      ],
+      confirmText: messages.settings.network.emergencyTitle,
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    setBypassPendingKind(kind);
+    const result = await activateNetworkGateBypass({
+      branchId: branch.id,
+      durationKind: kind,
+    });
+    setBypassPendingKind(null);
+    if (result.success) {
+      toast.success(messages.settings.network.emergencyActivated);
+      await refresh();
+    } else {
+      toast.error(result.error ?? ERRORS_VI.fallback);
+    }
+  }
+
+  async function handleRevokeBypass() {
+    setRevokeBypassPending(true);
+    const result = await revokeNetworkGateBypass({ branchId: branch.id });
+    setRevokeBypassPending(false);
+    if (result.success) {
+      toast.success(messages.settings.network.emergencyRevoked);
+      await refresh();
+    } else {
+      toast.error(result.error ?? ERRORS_VI.fallback);
+    }
+  }
+
   const activeRows = rows.filter((r) => r.revoked_at === null);
   const revokedRows = rows.filter((r) => r.revoked_at !== null);
   const hasFreshTrust = activeRows.some((r) => isFresh(r.last_seen_at));
@@ -144,6 +235,67 @@ export function NetworkConfigDialog({
       }
     >
       <div className="flex flex-col gap-4">
+        <Alert className="border-warning/20 bg-warning/10">
+          <IconSiren className="size-4 text-warning" />
+          <AlertTitle>{messages.settings.network.emergencyTitle}</AlertTitle>
+          <AlertDescription>
+            {messages.settings.network.emergencyDescription}
+          </AlertDescription>
+        </Alert>
+
+        {bypass ? (
+          <Item variant="outline" className="sm:flex-nowrap">
+            <ItemContent className="min-w-0">
+              <ItemTitle className="text-sm">
+                {messages.settings.network.emergencyActiveTitle}
+                <Badge
+                  variant="outline"
+                  className="border-warning/20 text-warning"
+                >
+                  {durationLabel(bypass.duration_kind)}
+                </Badge>
+              </ItemTitle>
+              <ItemDescription>
+                {messages.settings.network.emergencyActiveUntil(
+                  bypassUntilLabel(bypass),
+                )}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions className="ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRevokeBypass()}
+                disabled={revokeBypassPending}
+              >
+                {revokeBypassPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconShieldOff />
+                )}
+                {messages.settings.network.emergencyClose}
+              </Button>
+            </ItemActions>
+          </Item>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {DURATION_PRESETS.map((preset) => (
+              <Button
+                key={preset.kind}
+                size="sm"
+                variant="outline"
+                disabled={bypassPendingKind !== null || loading}
+                onClick={() => void handleActivateBypass(preset.kind)}
+              >
+                {bypassPendingKind === preset.kind ? (
+                  <Spinner data-icon="inline-start" />
+                ) : null}
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {!loading && activeRows.length === 0 && (
           <Alert className="border-warning/20 bg-warning/10">
             <IconAlertTriangle className="size-4 text-warning" />

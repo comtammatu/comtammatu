@@ -253,6 +253,26 @@ export const settings = {
     revokedTitle: (count: number) => `Đã thu hồi (${formatCount(count)})`,
     revokedMeta: (age: string) => `Thu hồi ${age}`,
     unknown: "không rõ",
+    emergencyTitle: "Mở POS/KDS khẩn cấp",
+    emergencyDescription:
+      "Khi wifi quán chết, tạm mở POS/KDS cho chi nhánh này từ mọi mạng trong thời hạn chọn. Không đụng cấu hình hệ thống.",
+    emergencyConfirmTitle: "Mở cổng mạng khẩn cấp?",
+    emergencyConfirmDescription: (durationLabel: string) =>
+      `Trong ${durationLabel}, mọi thiết bị được phép của chi nhánh có thể vào POS/KDS từ ngoài wifi cửa hàng. Đóng sớm khi mạng quán ổn.`,
+    emergencyActiveTitle: "Cổng đang tạm mở",
+    emergencyActiveUntil: (untilLabel: string) => `Hết hạn: ${untilLabel}`,
+    emergencyClose: "Đóng cổng ngay",
+    emergencyActivated: "Đã mở POS/KDS khẩn cấp",
+    emergencyRevoked: "Đã đóng bypass khẩn cấp",
+    duration1h: "1 giờ",
+    duration2h: "2 giờ",
+    duration4h: "4 giờ",
+    durationPosShift: "Ca POS",
+    durationBusinessDay: "Ngày",
+    untilPosShiftClose: "đến khi đóng ca POS",
+    untilBusinessDayEnd: (timeLabel: string) =>
+      `đến ${timeLabel} (ngày kinh doanh)`,
+    durationDetailLabel: "Thời hạn",
   },
   kds: {
     addStation: "Thêm trạm",

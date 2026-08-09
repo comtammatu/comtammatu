@@ -1361,6 +1361,91 @@ export type Database = {
           },
         ]
       }
+      branch_network_gate_bypasses: {
+        Row: {
+          activated_at: string
+          activated_by: string
+          bound_pos_session_id: number | null
+          branch_id: number
+          duration_kind: string
+          expires_at: string
+          id: number
+          note: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          tenant_id: number
+        }
+        Insert: {
+          activated_at?: string
+          activated_by: string
+          bound_pos_session_id?: number | null
+          branch_id: number
+          duration_kind: string
+          expires_at: string
+          id?: never
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tenant_id: number
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string
+          bound_pos_session_id?: number | null
+          branch_id?: number
+          duration_kind?: string
+          expires_at?: string
+          id?: never
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_network_gate_bypasses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_bound_pos_session_id_fkey"
+            columns: ["bound_pos_session_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_revenue_targets: {
         Row: {
           branch_id: number
@@ -9126,7 +9211,6 @@ export type Database = {
           tenant_id: number
           variance: number | null
           variance_reason: string | null
-          reason_code: string | null
         }
         Insert: {
           abc_class?: string | null
@@ -9147,7 +9231,6 @@ export type Database = {
           tenant_id: number
           variance?: number | null
           variance_reason?: string | null
-          reason_code?: string | null
         }
         Update: {
           abc_class?: string | null
@@ -9168,7 +9251,6 @@ export type Database = {
           tenant_id?: number
           variance?: number | null
           variance_reason?: string | null
-          reason_code?: string | null
         }
         Relationships: [
           {

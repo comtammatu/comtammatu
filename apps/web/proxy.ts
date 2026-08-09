@@ -388,22 +388,55 @@ export async function proxy(request: NextRequest) {
         }
 
         if (networkGateEnabled) {
-          const clientIp = getClientIp(request.headers);
-          const graceCutoff = new Date(Date.now() - 30 * 60_000).toISOString();
-          let trusted = false;
-          if (clientIp) {
-            const { data: trustRow } = await supabase
-              .from("branch_trusted_egress_ips")
-              .select("id")
-              .eq("branch_id", routeBranchId)
-              .eq("tenant_id", claims.tenant_id)
-              .eq("ip_address", clientIp)
-              .is("revoked_at", null)
-              .gte("last_seen_at", graceCutoff)
-              .maybeSingle();
-            trusted = trustRow !== null;
+          const nowIso = new Date().toISOString();
+          let allowed = false;
+
+          // Per-branch emergency bypass (owner-activated TTL / Ca POS / Ngày).
+          // Checked before trusted-IP deny — never use global POS_NETWORK_GATE
+          // for a single-branch outage.
+          const { data: bypassRow } = await supabase
+            .from("branch_network_gate_bypasses")
+            .select("id, bound_pos_session_id")
+            .eq("branch_id", routeBranchId)
+            .eq("tenant_id", claims.tenant_id)
+            .is("revoked_at", null)
+            .gt("expires_at", nowIso)
+            .maybeSingle();
+
+          if (bypassRow) {
+            if (bypassRow.bound_pos_session_id == null) {
+              allowed = true;
+            } else {
+              const { data: openSession } = await supabase
+                .from("pos_sessions")
+                .select("id")
+                .eq("id", bypassRow.bound_pos_session_id)
+                .eq("status", "open")
+                .maybeSingle();
+              allowed = openSession !== null;
+            }
           }
-          if (!trusted) {
+
+          if (!allowed) {
+            const clientIp = getClientIp(request.headers);
+            const graceCutoff = new Date(
+              Date.now() - 30 * 60_000,
+            ).toISOString();
+            if (clientIp) {
+              const { data: trustRow } = await supabase
+                .from("branch_trusted_egress_ips")
+                .select("id")
+                .eq("branch_id", routeBranchId)
+                .eq("tenant_id", claims.tenant_id)
+                .eq("ip_address", clientIp)
+                .is("revoked_at", null)
+                .gte("last_seen_at", graceCutoff)
+                .maybeSingle();
+              allowed = trustRow !== null;
+            }
+          }
+
+          if (!allowed) {
             return redirectToAccessDenied(
               request,
               response,

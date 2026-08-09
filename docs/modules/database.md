@@ -78,7 +78,7 @@ For columns/constraints: originating migration or `database.types.ts`.
 | Finance        | `tax_invoices`, `expenses`, `accounting_periods` |
 | HR             | employees, contracts, shifts, attendance, payroll |
 | Print agent    | `print_jobs`, `printer_configs` |
-| Branch network | `branch_trusted_egress_ips` (POS/KDS/print gates; not Inventory QC) |
+| Branch network | `branch_trusted_egress_ips` — trusted egress for POS/KDS/print network gates; `branch_network_gate_bypasses` — owner per-branch emergency gate suspension (TTL / Ca POS / Ngày); unrelated to Inventory QC |
 | Notifications  | `notifications`, reads, outbox, `branch_feature_flags` |
 
 ## RLS Pattern
