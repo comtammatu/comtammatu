@@ -10,6 +10,14 @@ export const inventory = {
     currency: (amount: string) => amount,
     currencyCompact: (amount: string) => amount,
   },
+  /** Ops labels: received qty vs invoice-backed WAC (R03). */
+  valuationDisplay: {
+    pendingWac: "Chờ định giá",
+    pendingInvoice: "Chờ HĐ NCC",
+    settled: "Đã định giá",
+    hintReceivedAwaitingInvoice:
+      "Đã nhận hàng. Giá vốn bình quân cập nhật sau khi xác nhận hóa đơn NCC.",
+  },
   shell: {
     brandName: "Cơm Tấm Má Tư",
     moduleName: "Quản lý kho",
@@ -314,10 +322,21 @@ export const inventory = {
       preservationAmbient: "Khô",
       activeOnly: "Đang dùng",
       includeHidden: "Hiện cả đã ẩn",
-      storageAmbient: "Nhiệt độ phòng",
+      readinessAll: "Mọi sẵn sàng",
+      readinessGapsOnly: "Thiếu sẵn sàng",
+      readinessMissingFulfillSite: "Thiếu Nguồn hàng",
+      readinessMissingSupplier: "Thiếu NCC",
+      missingFulfillSite: "Thiếu Nguồn hàng",
+      missingSupplierLink: "Thiếu NCC",
+      readinessHint:
+        "Gán Nguồn hàng và liên kết NCC trước khi CN/kho tạo YCH hoặc YCM.",
+      readinessGapSummary: (gaps: number, active: number) =>
+        `${formatCount(gaps)} / ${formatCount(active)} đang dùng còn thiếu sẵn sàng`,
+      colReadiness: "Sẵn sàng",
       colStorage: "Bảo quản",
       colReferenceCost: "Giá tham chiếu",
       colThresholds: "Ngưỡng tồn",
+      storageAmbient: "Nhiệt độ phòng",
       loadFailed: "Không thể tải danh sách nguyên liệu.",
       reloadFailed: "Không thể tải lại danh sách nguyên liệu.",
       exportLoadFailed: "Không thể tải nguyên liệu.",

@@ -92,6 +92,57 @@ test("central site templates can create, ship, and receive manual transfers", ()
   }
 });
 
+test("R08/R09 branch_manager seed strips retired procurement keys", () => {
+  const fixture = read("apps/web/tests/fixtures/supabase-e2e/tenant.sql");
+  const bmTemplate = fixture.match(
+    /\('branch_manager', 'branch_manager', ARRAY\[([^\]]+)\]\)/,
+  )?.[1];
+  assert.ok(bmTemplate, "branch_manager template");
+
+  for (const key of [
+    "procurement:read",
+    "procurement:supplier_manage",
+    "supplier_return:read",
+    "supplier_return:create",
+    "supplier_return:confirm",
+  ]) {
+    assert.doesNotMatch(bmTemplate, new RegExp(`'${key}'`), key);
+  }
+
+  assert.match(bmTemplate, /'inventory:request_create'/);
+  assert.match(bmTemplate, /'inventory:request_submit'/);
+
+  const accountant = fixture.match(
+    /\('accountant', 'accountant', ARRAY\[([^\]]+)\]\)/,
+  )?.[1];
+  assert.ok(accountant);
+  assert.match(accountant, /'procurement:read'/);
+  assert.match(accountant, /'procurement:po_create'/);
+
+  const owner = fixture.match(/\('owner', 'owner', ARRAY\[([^\]]+)\]\)/)?.[1];
+  assert.ok(owner);
+  assert.match(owner, /'procurement:read'/);
+  assert.match(owner, /'procurement:supplier_manage'/);
+  assert.match(owner, /'procurement:po_create'/);
+});
+
+test("R08/R09 migration strips BM template and live staff_permissions", () => {
+  const migration = read(
+    "supabase/migrations/20260809113024_strip_branch_manager_retired_procurement_grants.sql",
+  );
+  assert.match(migration, /position_code = 'branch_manager'/);
+  assert.match(migration, /DELETE FROM public\.staff_permissions/);
+  for (const key of [
+    "procurement:read",
+    "procurement:supplier_manage",
+    "supplier_return:read",
+    "supplier_return:create",
+    "supplier_return:confirm",
+  ]) {
+    assert.match(migration, new RegExp(`'${key}'`), key);
+  }
+});
+
 test("D091 procurement surfaces are permission-driven", () => {
   const layout = read("apps/web/app/(protected)/layout.tsx");
   assert.doesNotMatch(

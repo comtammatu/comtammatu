@@ -15,6 +15,7 @@ import {
   type UseFormSetValue,
 } from "react-hook-form";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
@@ -36,6 +37,7 @@ import {
   type InventoryUnitOption,
 } from "@lib/inventory/unit-options";
 import type { IngredientUnitRow } from "@lib/inventory/types";
+import type { MenuRecipeCostSignal } from "../_lib/menu-recipe-cost";
 import {
   FORM_VI,
   INVENTORY_VI,
@@ -48,6 +50,21 @@ export interface IngredientLineOption {
   name: string;
   unitLabel: string;
   units?: IngredientUnitRow[];
+  /** Menu-recipe editor: missing Nguồn hàng / Kho gốc WAC. */
+  costSignals?: readonly MenuRecipeCostSignal[];
+}
+
+function costSignalLabel(signal: MenuRecipeCostSignal): string {
+  switch (signal) {
+    case "missing_fulfill_site":
+      return INVENTORY_VI.menuRecipeMissingFulfillSite;
+    case "missing_source_wac":
+      return INVENTORY_VI.menuRecipeMissingSourceWac;
+    default: {
+      const _exhaustive: never = signal;
+      return _exhaustive;
+    }
+  }
 }
 
 function getLineUnitOptions(
@@ -438,6 +455,16 @@ function IngredientLineRow<T extends FieldValues>({
             rowError.entry_unit_id?.message ??
             rowError.unitLabel?.message}
         </p>
+      ) : null}
+      {selectedIngredient?.costSignals &&
+      selectedIngredient.costSignals.length > 0 ? (
+        <div className="flex flex-wrap gap-1 px-3 pb-2">
+          {selectedIngredient.costSignals.map((signal) => (
+            <Badge key={signal} variant="destructive" className="text-xs">
+              {costSignalLabel(signal)}
+            </Badge>
+          ))}
+        </div>
       ) : null}
     </div>
   );

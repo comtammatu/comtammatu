@@ -115,6 +115,8 @@ export async function loadGrnDetailResult(
           units: { code: string } | null;
         }[];
       } | null;
+      cost_pending?: boolean | null;
+      provisional_cost_source?: string | null;
       monetary: {
         unit_price: number | null;
         total_cost: number;
@@ -187,6 +189,8 @@ export async function loadGrnDetailResult(
         fallbackUnit,
       ),
       entryUnitId,
+      costPending: line.cost_pending === true,
+      provisionalCostSource: line.provisional_cost_source ?? null,
       monetary:
         line.monetary == null
           ? null

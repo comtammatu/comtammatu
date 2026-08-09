@@ -311,7 +311,7 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
 
-test("central_supply_ops nav shows PO, GRN and fulfillment while hiding recipes", () => {
+test("central_supply_ops nav soft-hides PO while keeping GRN and fulfillment", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_supply_ops",
@@ -328,13 +328,13 @@ test("central_supply_ops nav shows PO, GRN and fulfillment while hiding recipes"
   assert.equal(visible.has("/inventory/transfers"), true);
   assert.equal(visible.has("/inventory/stock-requests"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
-  assert.equal(visible.has("/inventory/purchase-orders"), true);
+  assert.equal(visible.has("/inventory/purchase-orders"), false);
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("central_kitchen_lead sees PO and production without catalog recipes", () => {
+test("central_kitchen_lead sees production without PO lifecycle or catalog recipes", () => {
   const visible = hrefs(
     resolveInventoryNav({
       userRole: "central_kitchen_lead",
@@ -351,5 +351,5 @@ test("central_kitchen_lead sees PO and production without catalog recipes", () =
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
-  assert.equal(visible.has("/inventory/purchase-orders"), true);
+  assert.equal(visible.has("/inventory/purchase-orders"), false);
 });

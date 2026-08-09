@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ChefHat, Truck } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
 import {
   canAccess,
   resolveOperatorTiles,
@@ -20,7 +19,6 @@ import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
 import { parseOperatorBranchId } from "../_lib/parse-branch-id";
 import {
-  CENTRAL_HOME_TILE_SUFFIXES,
   getBranchHomeTileLimit,
   getBranchPrimaryHomeGroup,
   getOperatorHomeTileHrefs,
@@ -35,27 +33,6 @@ import { BranchRevenueTargetStrip } from "./_components/home/branch-revenue-targ
 import { fetchBranchRevenueTargetProgress } from "@/(protected)/finance/targets/actions";
 
 const homeCopy = messages.operator.home;
-const branchCopy = messages.settings.branch;
-
-const CENTRAL_KITCHEN_HOME_LABELS = [
-  { suffix: "/stock/grn", label: branchCopy.centralKitchenReceiveJob },
-  {
-    suffix: "/stock/production",
-    label: branchCopy.centralKitchenProductionJob,
-  },
-  { suffix: "/stock/transfer", label: branchCopy.centralKitchenDispatchJob },
-  {
-    suffix: "/stock/purchase-requests",
-    label: branchCopy.centralPurchaseRequestsJob,
-  },
-] as const;
-
-function getCentralKitchenHomeLabel(href: string, fallback: string): string {
-  return (
-    CENTRAL_KITCHEN_HOME_LABELS.find(({ suffix }) => href.endsWith(suffix))
-      ?.label ?? fallback
-  );
-}
 
 export default async function OperatorHomePage({
   params,
@@ -72,10 +49,11 @@ export default async function OperatorHomePage({
   if (!context) notFound();
 
   const branchKind = context.branch.branch_kind as BranchKind;
-  const isCentral = branchKind !== "branch";
-  const isCentralSupply = branchKind === "central_supply";
-  const isCentralKitchen = branchKind === "central_kitchen";
-  const basePath = `/br/${context.branchId}`;
+  // R04: central daily hub is L0 `/inventory` — not a second home on /br.
+  if (branchKind !== "branch") {
+    redirect("/inventory");
+  }
+
   const rawGroups = resolveOperatorTiles(
     claims.user_role,
     context.branchId,
@@ -87,7 +65,7 @@ export default async function OperatorHomePage({
     claims.user_role === "chef" ||
     claims.user_role === "branch_staff";
 
-  const workState = isFloorRole && !isCentral ? await getTodayWorkState() : null;
+  const workState = isFloorRole ? await getTodayWorkState() : null;
   const beforeClockIn = workState?.status === "not_started";
 
   // Pre-clock-in tiles stay visible so the operator understands what unlocks.
@@ -101,63 +79,32 @@ export default async function OperatorHomePage({
     : 0;
 
   const isManagerLike =
-    !isCentral &&
-    (claims.user_role === "branch_manager" || claims.user_role === "owner");
+    claims.user_role === "branch_manager" || claims.user_role === "owner";
 
-  const centralSuffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind] ?? null;
-  const centralGroups =
-    isCentral && centralSuffixes
-      ? (() => {
-          const stockTiles = rawGroups
-            .flatMap((group) => (group.id === "stock" ? group.tiles : []))
-            .filter((tile) =>
-              centralSuffixes.some((suffix) => tile.href.endsWith(suffix)),
-            )
-            .sort(
-              (a, b) =>
-                centralSuffixes.findIndex((s) => a.href.endsWith(s)) -
-                centralSuffixes.findIndex((s) => b.href.endsWith(s)),
-            );
-          return stockTiles.length > 0
-            ? [
-                {
-                  id: "central-jobs" as const,
-                  title: isCentralSupply
-                    ? branchCopy.centralSupplyTilesTitle
-                    : branchCopy.centralKitchenTilesTitle,
-                  tiles: stockTiles,
-                },
-              ]
-            : [];
-        })()
-      : null;
-
-  const groups = isCentral
-    ? (centralGroups ?? [])
-    : canManageBranch
-      ? (() => {
-          const managerHomeHrefs = getOperatorHomeTileHrefs(
-            rawGroups,
-            branchKind,
-            claims.user_role,
-          );
-          return rawGroups
-            .map((group) => ({
-              ...group,
-              tiles: group.tiles.filter((tile) =>
-                managerHomeHrefs.has(tile.href),
-              ),
-            }))
-            .filter((group) => group.tiles.length > 0);
-        })()
-      : branchTodayGroup
-        ? [
-            {
-              ...branchTodayGroup,
-              tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
-            },
-          ].filter((group) => group.tiles.length > 0)
-        : [];
+  const groups = canManageBranch
+    ? (() => {
+        const managerHomeHrefs = getOperatorHomeTileHrefs(
+          rawGroups,
+          branchKind,
+          claims.user_role,
+        );
+        return rawGroups
+          .map((group) => ({
+            ...group,
+            tiles: group.tiles.filter((tile) =>
+              managerHomeHrefs.has(tile.href),
+            ),
+          }))
+          .filter((group) => group.tiles.length > 0);
+      })()
+    : branchTodayGroup
+      ? [
+          {
+            ...branchTodayGroup,
+            tiles: branchTodayGroup.tiles.slice(0, branchTodayTileLimit),
+          },
+        ].filter((group) => group.tiles.length > 0)
+      : [];
 
   const ownerLinks =
     claims.user_role === "owner"
@@ -177,15 +124,9 @@ export default async function OperatorHomePage({
   const revenueTarget =
     revenueTargetRes?.success === true ? revenueTargetRes.data : null;
 
-  const pageTitle = isCentralKitchen
-    ? branchCopy.centralKitchenHomeTitle
-    : isCentralSupply
-      ? branchCopy.centralSupplyTilesTitle
-      : APP_COPY_VI.branchHome;
-
   return (
-    <BranchOperatorPage title={pageTitle} hideHeaderOnMobile>
-      {!isCentral && claims.user_role !== "owner" ? (
+    <BranchOperatorPage title={APP_COPY_VI.branchHome} hideHeaderOnMobile>
+      {claims.user_role !== "owner" ? (
         <Suspense fallback={<BranchTodayStatusPending />}>
           <BranchTodayStatus branchId={context.branchId} />
         </Suspense>
@@ -193,31 +134,6 @@ export default async function OperatorHomePage({
 
       {revenueTarget ? (
         <BranchRevenueTargetStrip progress={revenueTarget} />
-      ) : null}
-
-      {isCentral ? (
-        <Button
-          size="touch-lg"
-          className="w-full"
-          render={
-            <Link
-              href={
-                isCentralSupply
-                  ? `${basePath}/stock/grn`
-                  : `${basePath}/stock/production`
-              }
-            />
-          }
-        >
-          {isCentralSupply ? (
-            <Truck data-icon="inline-start" />
-          ) : (
-            <ChefHat data-icon="inline-start" />
-          )}
-          {isCentralSupply
-            ? branchCopy.centralReceiveCta
-            : branchCopy.centralProductionCta}
-        </Button>
       ) : null}
 
       <Suspense fallback={<BranchQueuePending />}>
@@ -228,32 +144,6 @@ export default async function OperatorHomePage({
       </Suspense>
 
       {groups.map((group) => {
-        if (isCentral) {
-          return (
-            <BranchOperatorActionSection
-              key={group.id}
-              title={group.title}
-              description={
-                isCentralSupply
-                  ? branchCopy.centralSupplyTilesDescription
-                  : branchCopy.centralKitchenTilesDescription
-              }
-              links={group.tiles.map((tile) => ({
-                key: `${group.id}-${tile.moduleKey}-${tile.href}`,
-                href: tile.href,
-                icon: resolveOperatorTileIcon(tile.icon),
-                title: isCentralKitchen
-                  ? getCentralKitchenHomeLabel(tile.href, tile.label)
-                  : tile.label,
-              }))}
-              columns={2}
-              mobileColumns={2}
-              wideColumns
-              presentation="plain"
-            />
-          );
-        }
-
         // Home stations: Bán hàng + Quầy Bếp only — runner stays off this surface.
         const stationTiles = group.tiles.filter(
           (tile) => tile.moduleKey === "pos" || tile.moduleKey === "kds",

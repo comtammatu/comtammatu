@@ -34,8 +34,9 @@ export function withInventoryBranchNavScope(
   }));
 }
 
+/** Soft-hide PO lifecycle nav for central ops and branch managers. */
 function canShowPurchaseOrders(role: StaffRole): boolean {
-  return role !== "branch_manager";
+  return role === "owner" || role === "accountant";
 }
 
 /** Menu-item consumption recipes are owner-managed catalog data. */

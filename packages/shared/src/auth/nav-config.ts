@@ -242,6 +242,8 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock",
     label: "Tồn kho",
+    // Store door + residual central pad hub (not L0 primary — R04).
+    kinds: ["branch", "central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -249,7 +251,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
     label: "Giao nhận hàng",
-    // Store branch lands on /stock list — no duplicate “Giao nhận” tile.
+    // Residual `/br` pad only — L0 hub owns daily central shell (R04).
     kinds: ["central_supply", "central_kitchen"],
   },
   {
@@ -282,6 +284,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/stocktake",
     label: "Kiểm kê",
+    kinds: ["branch", "central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -289,7 +292,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/count-assignments",
     label: "Giao đếm",
-    // Store primary IA is 4 doors only — assignments stay inside kiểm kê flow.
+    // Residual pad — assignments stay inside kiểm kê flow on store.
     kinds: ["central_supply", "central_kitchen"],
   },
   {
@@ -298,6 +301,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/waste",
     label: "Hao hụt",
+    kinds: ["branch", "central_supply", "central_kitchen"],
   },
   {
     moduleKey: "branch_stock",
@@ -305,7 +309,7 @@ export const OPERATOR_TILE_ITEMS = [
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/consumption",
     label: "Tiêu hao",
-    // POS auto-deducts sale consumption — hide from store branch Kho.
+    // Residual pad — POS auto-deducts sale consumption on store Kho.
     kinds: ["central_supply", "central_kitchen"],
   },
   {

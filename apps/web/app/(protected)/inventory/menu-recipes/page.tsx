@@ -18,6 +18,7 @@ import {
 import { formatDate } from "@lib/inventory/format";
 import {
   getMenuRecipeLineBaseQuantity,
+  resolveMenuRecipeCostSignals,
   resolveMenuRecipeUnitCost,
   sumMenuRecipeEstimatedCost,
 } from "../_lib/menu-recipe-cost";
@@ -147,6 +148,11 @@ export default async function MenuRecipesPage({
           entryUnitId,
           note: line.note ?? null,
           lineCost: unitCost == null ? null : baseQuantity * unitCost,
+          costSignals: resolveMenuRecipeCostSignals({
+            ingredientId,
+            sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
+            sourceSiteWacMap: wacMap,
+          }),
         };
       });
 
@@ -179,6 +185,11 @@ export default async function MenuRecipesPage({
         name: i.name,
         unitLabel: i.units?.find((u) => u.is_base)?.unit_code ?? "",
         units: i.units,
+        costSignals: resolveMenuRecipeCostSignals({
+          ingredientId: i.id,
+          sourceSiteKind: i.default_fulfill_site_kind,
+          sourceSiteWacMap: wacMap,
+        }),
       }))
     : [];
 

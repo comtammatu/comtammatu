@@ -124,8 +124,16 @@ export default async function OperatorLayout({
           }
           subtitle={ROLE_LABEL_VI[claims.user_role]}
           subtitleHiddenOnMobile
-          homeHref={`/br/${context.branchId}`}
-          homeAriaLabel={APP_COPY_VI.branchHome}
+          homeHref={
+            branchKind === "branch"
+              ? `/br/${context.branchId}`
+              : "/inventory"
+          }
+          homeAriaLabel={
+            branchKind === "branch"
+              ? APP_COPY_VI.branchHome
+              : APP_COPY_VI.inventory
+          }
           showThemeToggle={!usesHeaderOverflow}
           wide
           actions={

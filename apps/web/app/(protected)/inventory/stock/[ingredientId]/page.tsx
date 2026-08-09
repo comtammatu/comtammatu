@@ -35,6 +35,7 @@ import {
   formatQty,
   formatVND,
 } from "@lib/inventory/format";
+import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
   resolveStockDisplayUnit,
@@ -43,6 +44,7 @@ import {
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
+const valuationCopy = messages.inventory.valuationDisplay;
 const detailCopy = stockCopy.detail;
 
 export type UnitRef = { code: string };
@@ -110,8 +112,15 @@ function OwnerStockIngredientDetail({
     ingredient.unit || inventoryCommon.noValue,
   );
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
-  const totalValue = data.valuation?.totalValue ?? 0;
-  const wac = data.valuation?.wac ?? 0;
+  const totalValue = data.valuation?.totalValue ?? null;
+  const wac = data.valuation?.wac ?? null;
+  const valuationKind =
+    data.valuation == null
+      ? null
+      : resolveStockValuationDisplay({
+          quantity: data.totalQty,
+          unitCost: wac,
+        });
   const actionHrefs = {
     receive: `/inventory/grn?branchId=${data.branchId}`,
     transfer: `/inventory/transfers?branchId=${data.branchId}`,
@@ -158,12 +167,21 @@ function OwnerStockIngredientDetail({
             },
             {
               term: stockCopy.table.stockValue,
-              description: formatVND(totalValue),
+              description:
+                valuationKind === "valued" && totalValue != null
+                  ? formatVND(totalValue)
+                  : valuationKind === "pending"
+                    ? valuationCopy.pendingWac
+                    : inventoryCommon.noValue,
             },
             {
               term: stockCopy.table.wacPerUnit(wacUnitLabel),
               description:
-                wac > 0 ? formatVND(wac) : inventoryCommon.noValue,
+                valuationKind === "valued" && wac != null
+                  ? formatVND(wac)
+                  : valuationKind === "pending"
+                    ? valuationCopy.pendingWac
+                    : inventoryCommon.noValue,
             },
             {
               term: stockCopy.table.lastCount,
@@ -197,9 +215,18 @@ function OwnerStockIngredientDetail({
                     ingredient.units,
                     formatQty,
                   );
-                  const stockValue = location.monetary
-                    ? location.qty * (location.monetary.avgUnitCost ?? 0)
-                    : null;
+                  const locationKind =
+                    location.monetary == null
+                      ? null
+                      : resolveStockValuationDisplay({
+                          quantity: location.qty,
+                          unitCost: location.monetary.avgUnitCost,
+                        });
+                  const stockValue =
+                    locationKind === "valued" &&
+                    location.monetary?.avgUnitCost != null
+                      ? location.qty * location.monetary.avgUnitCost
+                      : null;
 
                   return (
                     <Item
@@ -230,13 +257,23 @@ function OwnerStockIngredientDetail({
                             </p>
                           ) : null}
                         </div>
-                        {stockValue != null ? (
+                        {locationKind != null ? (
                           <div className="text-right">
                           <p className="text-xs text-muted-foreground">
                             {stockCopy.table.stockValue}
                           </p>
-                          <p className="font-mono font-semibold tabular-nums">
-                            {formatVND(stockValue)}
+                          <p
+                            className={
+                              locationKind === "pending"
+                                ? "text-sm text-muted-foreground"
+                                : "font-mono font-semibold tabular-nums"
+                            }
+                          >
+                            {locationKind === "valued" && stockValue != null
+                              ? formatVND(stockValue)
+                              : locationKind === "pending"
+                                ? valuationCopy.pendingWac
+                                : inventoryCommon.noValue}
                           </p>
                           </div>
                         ) : null}

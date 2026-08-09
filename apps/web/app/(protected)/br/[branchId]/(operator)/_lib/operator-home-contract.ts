@@ -4,26 +4,10 @@ import type {
 } from "@comtammatu/shared/auth";
 
 /**
- * Curated home job tiles for central sites. Deeper jobs live under the stock
- * hub / More destinations. No recipes tree — production L0 tab owns recipes.
+ * R04: central sites no longer curate a second daily hub on `/br`.
+ * Residual stock pads under `/br/{siteId}/stock/*` keep their own tiles via
+ * `resolveOperatorTiles` + stock hub / bottom-nav — not this home contract.
  */
-/** Central home job tiles only — deeper jobs live under Thêm / on-hand Sheet. */
-export const CENTRAL_HOME_TILE_SUFFIXES: Partial<
-  Record<BranchKind, readonly string[]>
-> = {
-  central_supply: [
-    "/stock/grn",
-    "/stock/on-hand",
-    "/stock/transfer",
-    "/stock/purchase-requests",
-  ],
-  central_kitchen: [
-    "/stock/grn",
-    "/stock/production",
-    "/stock/transfer",
-    "/stock/purchase-requests",
-  ],
-} as const satisfies Partial<Record<BranchKind, readonly string[]>>;
 
 /** Stations + orders. Runner stays off home; pause/limits share the orders row. */
 export const BRANCH_MANAGER_HOME_TILE_SUFFIXES = [
@@ -55,18 +39,9 @@ export function getOperatorHomeTileHrefs(
   branchKind: BranchKind = "branch",
   role?: string,
 ): Set<string> {
+  // Central home redirects to L0 — no curated `/br` home tile set.
   if (branchKind !== "branch") {
-    const suffixes = CENTRAL_HOME_TILE_SUFFIXES[branchKind];
-    if (!suffixes) return new Set();
-    const stockTiles =
-      groups.find((group) => group.id === "stock")?.tiles ?? [];
-    return new Set(
-      stockTiles
-        .filter((tile) =>
-          suffixes.some((suffix) => tile.href.endsWith(suffix)),
-        )
-        .map((tile) => tile.href),
-    );
+    return new Set();
   }
 
   if (role === "branch_manager" || role === "owner") {

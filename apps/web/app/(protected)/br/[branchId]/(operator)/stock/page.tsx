@@ -74,7 +74,7 @@ const CENTRAL_BOTTOM_NAV_SUFFIXES: Partial<
   ],
   central_kitchen: [
     "/stock/grn",
-    "/stock/production",
+    "/inventory/production",
     "/stock/transfer",
     "/stock/requests",
     "/stock/receive",

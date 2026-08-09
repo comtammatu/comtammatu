@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   buildSourceSiteWacMap,
   menuRecipeSourceWacKey,
+  resolveMenuRecipeCostSignals,
   resolveMenuRecipeUnitCost,
   sumMenuRecipeEstimatedCost,
 } from "../app/(protected)/inventory/_lib/menu-recipe-cost";
@@ -109,4 +110,39 @@ test("sumMenuRecipeEstimatedCost stays null until every line is valued", () => {
   assert.equal(sumMenuRecipeEstimatedCost([0.57, 4500]), 4500.57);
   assert.equal(sumMenuRecipeEstimatedCost([0.57, null]), null);
   assert.equal(sumMenuRecipeEstimatedCost([]), null);
+});
+
+test("resolveMenuRecipeCostSignals flags missing Nguồn hàng or Kho gốc WAC", () => {
+  const sourceSiteWacMap = buildSourceSiteWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+  ]);
+
+  assert.deepEqual(
+    resolveMenuRecipeCostSignals({
+      ingredientId: 1,
+      sourceSiteKind: null,
+      sourceSiteWacMap,
+    }),
+    ["missing_fulfill_site"],
+  );
+  assert.deepEqual(
+    resolveMenuRecipeCostSignals({
+      ingredientId: 67,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+    }),
+    ["missing_source_wac"],
+  );
+  assert.deepEqual(
+    resolveMenuRecipeCostSignals({
+      ingredientId: 72,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+    }),
+    [],
+  );
 });

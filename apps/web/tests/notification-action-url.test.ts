@@ -35,6 +35,109 @@ test("Owner keeps Owner links and receives canonical Branch links", () => {
   );
 });
 
+test("R14: L0 shell roles rewrite residual /br stock deep-links to /inventory", () => {
+  const cases: Array<{
+    role: StaffRole;
+    branchId: number | null;
+    actionUrl: string;
+    kind: string;
+    entityId: number;
+    expected: string;
+  }> = [
+    {
+      role: "owner",
+      branchId: null,
+      actionUrl: "/br/20/stock/grn/44",
+      kind: "workflow.grn_pending",
+      entityId: 44,
+      expected: "/inventory/grn/44",
+    },
+    {
+      role: "accountant",
+      branchId: null,
+      actionUrl: "/br/20/stock/grn/44",
+      kind: "workflow.grn_pending",
+      entityId: 44,
+      expected: "/inventory/grn/44",
+    },
+    {
+      role: "central_supply_ops",
+      branchId: 20,
+      actionUrl: "/br/20/stock/on-hand/12",
+      kind: "inventory.stock_low",
+      entityId: 12,
+      expected: "/inventory/stock/12?branchId=20",
+    },
+    {
+      role: "central_kitchen_lead",
+      branchId: 10,
+      actionUrl: "/br/10/stock/receive/34",
+      kind: "workflow.transfer_in_transit",
+      entityId: 34,
+      expected: "/inventory/transfers/34",
+    },
+    {
+      role: "central_supply_ops",
+      branchId: 20,
+      actionUrl: "/br/20/stock/transfer",
+      kind: "inventory.stock_request_submitted",
+      entityId: 9,
+      expected: "/inventory/transfers?branchId=20",
+    },
+    {
+      role: "owner",
+      branchId: null,
+      actionUrl: "/br/20/stock/stocktake/21",
+      kind: "inventory.stocktake_completed",
+      entityId: 21,
+      expected: "/inventory/stocktake/21?branchId=20",
+    },
+    {
+      role: "owner",
+      branchId: null,
+      actionUrl: "/br/20/stock/production",
+      kind: "inventory.production_ready",
+      entityId: 1,
+      expected: "/inventory/production",
+    },
+  ];
+
+  for (const item of cases) {
+    assert.equal(
+      resolveNotificationActionUrl(claims(item.role, item.branchId), {
+        actionUrl: item.actionUrl,
+        entityId: item.entityId,
+        kind: item.kind,
+        targetBranchId: Number(item.actionUrl.match(/^\/br\/(\d+)/)?.[1]),
+      }),
+      item.expected,
+      `${item.role} ${item.actionUrl}`,
+    );
+  }
+});
+
+test("R14: accountant may open tenant-wide inventory links across branches", () => {
+  assert.equal(
+    resolveNotificationActionUrl(claims("accountant", null), {
+      actionUrl:
+        "/inventory/purchase-orders?tab=orders&poId=21&mode=view",
+      entityId: 21,
+      kind: "procurement.po_pending_approval",
+      targetBranchId: null,
+    }),
+    "/inventory/purchase-orders?tab=orders&poId=21&mode=view",
+  );
+  assert.equal(
+    resolveNotificationActionUrl(claims("accountant", null), {
+      actionUrl: "/inventory/grn/44",
+      entityId: 44,
+      kind: "workflow.grn_pending",
+      targetBranchId: 20,
+    }),
+    "/inventory/grn/44",
+  );
+});
+
 test("known notification kinds keep canonical Branch workflow URLs", () => {
   const cases: Array<{
     role: StaffRole;

@@ -59,6 +59,7 @@ import {
   type GrnListFilters,
   type GrnListRow,
 } from "@lib/inventory/grn-list-model";
+import { resolveGrnValuationDisplay } from "@lib/inventory/valuation-display";
 
 const statusLabels: Record<string, string> = {
   draft: "Chờ nhập hàng",
@@ -67,6 +68,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const grnCopy = messages.inventory.grn;
+const valuationCopy = messages.inventory.valuationDisplay;
 const GRN_OVERLAY_KEYS = ["grnId", "mode"] as const;
 
 const comboFilter = (
@@ -186,11 +188,11 @@ export function GrnListClient({
     if (row.status === "confirmed" && canManageSupplierInvoice) {
       actions.push({
         key: "invoice",
-        label: row.monetary?.invoiceId ? "Xem hóa đơn" : "Ghi nhận hóa đơn",
+        label: row.invoiceId ? "Xem hóa đơn" : "Ghi nhận hóa đơn",
         icon: <IconReceipt />,
         href: supplierInvoiceHrefForGrn({
           grnId: row.id,
-          invoiceId: row.monetary?.invoiceId ?? null,
+          invoiceId: row.invoiceId,
         }),
       });
     }
@@ -245,6 +247,12 @@ export function GrnListClient({
               value={row.status}
               label={statusLabels[row.status] ?? grnCopy.unknownStatus}
             />
+            {resolveGrnValuationDisplay({
+              status: row.status,
+              invoiceId: row.invoiceId,
+            }) === "pending_invoice" ? (
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            ) : null}
           </div>
           <div className="font-mono text-xs text-muted-foreground">
             {row.poCode}
@@ -606,6 +614,12 @@ function GrnMobileCard({
             value={row.status}
             label={statusLabels[row.status] ?? grnCopy.unknownStatus}
           />
+          {resolveGrnValuationDisplay({
+            status: row.status,
+            invoiceId: row.invoiceId,
+          }) === "pending_invoice" ? (
+            <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+          ) : null}
         </div>
         <p className="truncate text-xs">{row.supplierName}</p>
         <p className="truncate text-xs text-muted-foreground">

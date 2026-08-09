@@ -159,6 +159,7 @@ export async function loadGrnListPageData(
   return {
     rows: parsed.data.rows.map((row) => ({
       ...row,
+      invoiceId: row.monetary?.invoiceId ?? null,
       monetary: monetaryAccess.purchasePrice ? row.monetary : null,
     })),
     total: parsed.data.total,

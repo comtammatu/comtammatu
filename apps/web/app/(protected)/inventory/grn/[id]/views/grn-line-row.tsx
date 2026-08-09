@@ -20,6 +20,9 @@ import {
 } from "@lib/inventory/grn-detail-model";
 import { formatQty } from "@lib/inventory/format";
 import { deriveGrnQualityStatus } from "@lib/inventory/grn-quality";
+import { messages } from "@lib/messages";
+
+const valuationCopy = messages.inventory.valuationDisplay;
 
 export function LineRow({
   tenantId,
@@ -103,6 +106,9 @@ export function LineRow({
               )}
               {qualityLabel}
             </Badge>
+            {!isDraft && line.costPending ? (
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            ) : null}
             {showAmendAffordance ? (
               <Button
                 type="button"

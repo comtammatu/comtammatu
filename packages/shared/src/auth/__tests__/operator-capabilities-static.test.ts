@@ -163,7 +163,8 @@ test("resolveOperatorTiles -> branch kind keeps GRN/production off the stock hub
   }
 });
 
-test("resolveOperatorTiles -> central kinds expose GRN and fulfill tiles", () => {
+test("resolveOperatorTiles -> central residual /br pad keeps GRN and fulfill tiles", () => {
+  // R04: L0 `/inventory` is primary; these tiles power residual `/br/.../stock` pad only.
   const supply = resolveOperatorTiles(
     "central_supply_ops",
     20,

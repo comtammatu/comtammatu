@@ -515,6 +515,10 @@ export const INVENTORY_VI = {
   menuRecipeColUnitCost: "Giá vốn/phần",
   menuRecipeColStockCapacity: "Phần bán được",
   menuRecipeCostUnavailable: "Chưa có giá vốn",
+  menuRecipeMissingFulfillSite: "Thiếu Nguồn hàng",
+  menuRecipeMissingSourceWac: "Chờ định giá",
+  menuRecipeCostSignalsHint:
+    "Gán Nguồn hàng trên nguyên liệu và xác nhận HĐ NCC tại Kho gốc để có giá vốn/phần.",
   menuRecipeCardSummary: (count: number, cost: string) =>
     `${formatCount(count)} nguyên liệu · ${cost}/phần`,
   menuRecipeCardSummaryNoCost: (count: number) =>

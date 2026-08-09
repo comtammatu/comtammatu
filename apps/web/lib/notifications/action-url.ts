@@ -2,6 +2,7 @@ import {
   getSafeInternalReturnTo,
   resolvePostLoginRedirect,
   type JwtClaims,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 
 interface NotificationActionTarget {
@@ -11,11 +12,115 @@ interface NotificationActionTarget {
   targetBranchId: number | null;
 }
 
-/** D093: branch GRN routes retired — send operators to the fulfillment hub. */
+/** Roles whose inventory daily hub is L0 `/inventory` (R04 / R14). */
+const L0_INVENTORY_SHELL_ROLES: ReadonlySet<StaffRole> = new Set([
+  "owner",
+  "accountant",
+  "central_supply_ops",
+  "central_kitchen_lead",
+]);
+
+/** Tenant-wide roles may open notifications for any `target_branch_id`. */
+const TENANT_WIDE_NOTIFICATION_ROLES: ReadonlySet<StaffRole> = new Set([
+  "owner",
+  "accountant",
+]);
+
+function isL0InventoryShellRole(role: StaffRole): boolean {
+  return L0_INVENTORY_SHELL_ROLES.has(role);
+}
+
+/** D093: branch GRN routes retired — send store operators to the fulfillment hub. */
 function rewriteRetiredBranchGrnPath(url: string): string {
   const match = /^\/br\/(\d+)\/stock\/grn(?:\/\d+)?$/.exec(url);
   if (!match) return url;
   return `/br/${match[1]}/stock/transfer`;
+}
+
+/**
+ * R14: map residual `/br/{site}/stock/*` deep-links onto L0 for Owner / KT /
+ * central. Branch Manager and floor keep the `/br` operator plane (except
+ * retired GRN → transfer above).
+ */
+function rewriteInventoryBranchStockPathForL0(
+  role: StaffRole,
+  url: string,
+): string {
+  if (!isL0InventoryShellRole(role)) return url;
+
+  const parsed = new URL(url, "http://localhost");
+  const match =
+    /^\/br\/(\d+)\/stock(?:\/([^/?#]+))?(?:\/([^/?#]+))?(?:\/(.*))?$/.exec(
+      parsed.pathname,
+    );
+  if (!match) return url;
+
+  const branchId = match[1]!;
+  const seg1 = match[2] ?? null;
+  const seg2 = match[3] ?? null;
+  const rest = match[4] ?? null;
+  const qs = parsed.search;
+  const hash = parsed.hash;
+
+  const withBranch = (path: string): string => {
+    const joiner = path.includes("?") ? "&" : "?";
+    const branchQuery = `branchId=${branchId}`;
+    // Prefer explicit branch scope on L0 list/detail when not already present.
+    if (new URLSearchParams(qs).has("branchId")) {
+      return `${path}${qs}${hash}`;
+    }
+    return `${path}${qs ? `${qs}&${branchQuery}` : `${joiner}${branchQuery}`}${hash}`;
+  };
+
+  if (seg1 == null) {
+    return withBranch("/inventory/stock");
+  }
+
+  switch (seg1) {
+    case "on-hand":
+      return seg2
+        ? withBranch(`/inventory/stock/${seg2}`)
+        : withBranch("/inventory/stock");
+    case "grn":
+      return seg2 ? `/inventory/grn/${seg2}${qs}${hash}` : `/inventory/grn${qs}${hash}`;
+    case "transfer":
+      return seg2
+        ? `/inventory/transfers/${seg2}${qs}${hash}`
+        : withBranch("/inventory/transfers");
+    case "receive":
+      // Receive pad is residual `/br`; L0 lands on transfer detail.
+      return seg2
+        ? `/inventory/transfers/${seg2}${qs}${hash}`
+        : withBranch("/inventory/transfers");
+    case "requests":
+      return seg2
+        ? `/inventory/stock-requests/${seg2}${qs}${hash}`
+        : withBranch("/inventory/transfers");
+    case "purchase-requests":
+      return `/inventory/purchase-requests${qs}${hash}`;
+    case "stocktake":
+      return seg2
+        ? withBranch(`/inventory/stocktake/${seg2}${rest ? `/${rest}` : ""}`)
+        : withBranch("/inventory/stocktake");
+    case "waste-approvals":
+      return withBranch("/inventory/waste/approvals");
+    case "waste":
+      return withBranch("/inventory/waste/approvals");
+    case "consumption":
+      return withBranch("/inventory/consumption");
+    case "production":
+      return `/inventory/production${qs}${hash}`;
+    case "catalog":
+      return `/inventory/ingredients${qs}${hash}`;
+    case "count-slips":
+      // Count approval stays Branch-native even for Owner oversight.
+      return url;
+    case "count":
+    case "count-assignments":
+      return url;
+    default:
+      return withBranch("/inventory/stock");
+  }
 }
 
 /** Legacy Team hub tab deep links → full shift management routes. */
@@ -79,6 +184,15 @@ function rewriteHrPath(
   return url;
 }
 
+function canOpenTargetBranch(
+  claims: JwtClaims,
+  targetBranchId: number | null,
+): boolean {
+  if (targetBranchId == null) return true;
+  if (TENANT_WIDE_NOTIFICATION_ROLES.has(claims.user_role)) return true;
+  return claims.branch_id === targetBranchId;
+}
+
 /** Keep notification links inside the authenticated user's product plane. */
 export function resolveNotificationActionUrl(
   claims: JwtClaims,
@@ -87,20 +201,25 @@ export function resolveNotificationActionUrl(
   const safeActionUrl = getSafeInternalReturnTo(target.actionUrl);
   if (!safeActionUrl) return null;
 
-  const actionUrl = rewriteHrPath(
-    claims,
-    target,
-    rewriteLegacyTeamTabPath(rewriteRetiredBranchGrnPath(safeActionUrl)),
-  );
-
-  if (
-    claims.user_role !== "owner" &&
-    target.targetBranchId !== claims.branch_id
-  ) {
+  if (!canOpenTargetBranch(claims, target.targetBranchId)) {
     return null;
   }
 
-  return resolvePostLoginRedirect(claims, actionUrl) === actionUrl
-    ? actionUrl
+  const rewritten = rewriteHrPath(
+    claims,
+    target,
+    rewriteLegacyTeamTabPath(
+      rewriteInventoryBranchStockPathForL0(
+        claims.user_role,
+        // Branch GRN rewrite only for non-L0 shells (BM / floor).
+        isL0InventoryShellRole(claims.user_role)
+          ? safeActionUrl
+          : rewriteRetiredBranchGrnPath(safeActionUrl),
+      ),
+    ),
+  );
+
+  return resolvePostLoginRedirect(claims, rewritten) === rewritten
+    ? rewritten
     : null;
 }

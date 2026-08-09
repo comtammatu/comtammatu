@@ -96,6 +96,7 @@ export const APP_COPY_VI = {
   branchOperationsRunner: "Màn gọi số",
   branchCommand: "Điều hành chi nhánh",
   branchHome: "Hôm nay",
+  inventory: "Kho hàng",
   operatorRuntimeActions: "Vận hành chi nhánh",
   operatorOpsActions: "Thiết lập chi nhánh",
   operatorShift: "Ca",

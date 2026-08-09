@@ -28,6 +28,9 @@ export type GrnDetailItem = {
   rejectedPhotoUrl: string;
   unit: string;
   entryUnitId: number | null;
+  /** True when line qty is received but WAC awaits supplier invoice settlement. */
+  costPending: boolean;
+  provisionalCostSource: string | null;
   monetary: {
     unitPrice: number | null;
     lineTotal: number;
@@ -184,6 +187,8 @@ export function createEditableGrnLine({
     rejectedPhotoUrl: "",
     unit,
     entryUnitId,
+    costPending: true,
+    provisionalCostSource: "pending",
     monetary: null,
     dirty: false,
   };
