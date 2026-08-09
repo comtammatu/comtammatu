@@ -16,6 +16,9 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   const form = source("app/(protected)/hr/staff/staff-form-dialog.tsx");
   const actions = source("app/(protected)/hr/staff/actions.ts");
   const loader = source("app/(protected)/hr/staff/load-staff-accounts.ts");
+  const grant = source(
+    "app/(protected)/hr/staff/grant-employee-access-button.tsx",
+  );
   const permissions = source(
     "app/(protected)/hr/staff/[id]/permissions/role-bindings-client.tsx",
   );
@@ -27,8 +30,11 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(page, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
   assert.match(hrPage, /loadStaffAccountsData/);
   assert.match(hrPage, /view\?: string/);
+  assert.match(hrPage, /initialView === "accounts" && canManageAccounts/);
   assert.match(hrClient, /paramKey="view"/);
   assert.match(hrClient, /<AppListFrame/);
+  assert.match(hrClient, /GrantEmployeeAccessButton/);
+  assert.match(hrClient, /AddStaffButton/);
   assert.match(filters, /<AppToolbar/);
   assert.match(filters, /variant="inline"/);
   assert.match(filters, /size=\{controlSize\}/);
@@ -36,7 +42,14 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(filters, /view.*accounts/);
   assert.match(table, /\/permissions/);
   assert.match(table, /permissionStatus/);
+  assert.match(table, /employeeId/);
+  assert.match(table, /openProfile/);
+  assert.match(table, /standaloneBadge/);
   assert.match(loader, /auth_role_bindings/);
+  assert.match(loader, /from\("employees"\)/);
+  assert.match(loader, /employeeId/);
+  assert.match(grant, /grantForEmployee/);
+  assert.match(grant, /toggleStaffActive/);
   assert.match(form, /copy\.accountSection/);
   assert.match(
     form,
@@ -59,6 +72,8 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(ownerMessages, /inventory_procurement: "Mua hàng & nhập kho"/);
   assert.match(ownerMessages, /\/\[À-ỹĐđ\]\/u\.test\(description\)/);
   assert.match(ownerMessages, /permissionStatus:/);
+  assert.match(ownerMessages, /grantForEmployee:/);
+  assert.match(ownerMessages, /createAccount: "Tạo tài khoản độc lập"/);
   assert.doesNotMatch(permissionsPage, /defaultValue="permissions"/);
 });
 

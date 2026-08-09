@@ -145,10 +145,10 @@ Company HR (`/hr/*`) = hồ sơ/tài khoản/công/lương/setup tenant. People 
 
 - **Archetype:** `LIST` + tab URL (`view=profile|accounts`).
 - **Actor:** Owner / company HR theo ACL.
-- **Job:** Hồ sơ NLĐ, HĐLĐ, chế độ lương (`Theo công` / `Lương tháng`), site/vị trí; tài khoản & phân quyền = tab peer.
-- **Goal:** Việc cần xử lý + onboard; chuyển **Tài khoản** để cấp quyền theo chức vụ.
-- **Workflow:** Tab hồ sơ (strip Cần xử lý → filter → bảng; **Thêm NV**) → onboard Hồ sơ→Vị trí→HĐ/lương→Tài khoản (`/hr/staff/[id]/permissions`) → tab accounts (`/hr/staff` redirect vào đây).
-- **Ưu tiên data:** Hồ sơ = tên/mã/vị trí/site/lương/HĐ/tình trạng. Tài khoản = tên/chức vụ/site/SĐT/đăng nhập/quyền. **Không:** KPI doanh thu/kho; bảng công tháng (`/hr/attendance`); raw `pay_basis`.
+- **Job:** Tab **Hồ sơ nhân viên** = NLĐ, HĐLĐ, chế độ lương, site/vị trí (không sửa quyền). Tab **Tài khoản & quyền** = đăng nhập, bật/tắt login, phân quyền (không sửa HĐ/lương/hồ sơ NLĐ).
+- **Goal:** Việc cần xử lý + onboard hồ sơ; chuyển **Tài khoản** để cấp quyền theo chức vụ hoặc tạo tài khoản độc lập.
+- **Workflow:** Tab hồ sơ (strip Cần xử lý → filter → bảng; **Thêm NV** gồm bước tạo đăng nhập) → tab accounts: **Cấp quyền cho hồ sơ** hoặc **Tạo tài khoản độc lập** → `/hr/staff/[id]/permissions` (`/hr/staff` redirect vào accounts).
+- **Ưu tiên data:** Hồ sơ = tên/mã/vị trí/site/lương/HĐ/tình trạng. Tài khoản = tên/đăng nhập/quyền/trạng thái login; badge tài khoản độc lập khi chưa gắn `employees`. **Không:** KPI doanh thu/kho; bảng công tháng (`/hr/attendance`); raw `pay_basis`; sửa identity/chức vụ/CN của NV đã gắn hồ sơ từ tab Tài khoản.
 - **UX:** Desktop bảng + dialog; cùng IA mobile. Workspace = deep nav; mode = `AppPageTabs` + URL; short edit = `FormDialog`.
 
 ### 2.8a. Chấm công & ca — `/hr/attendance`

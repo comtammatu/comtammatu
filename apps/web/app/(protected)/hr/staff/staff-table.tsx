@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  FileUser as IconFileUser,
   Key as IconKey,
   Pencil as IconPencil,
   ToggleLeft as IconToggleLeft,
@@ -30,11 +31,13 @@ import {
 } from "@comtammatu/shared/auth";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
-import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import {
   resolveHrBranchScope,
   withHrBranchScope,
+  type HrBranchScope,
 } from "@/lib/hr-scope";
+
 export interface BranchOption {
   id: number;
   name: string;
@@ -58,6 +61,9 @@ export interface StaffRow {
   branch_name: string | null;
   is_active: boolean | null;
   permissionStatus?: PermissionGrantStatus;
+  /** Linked HR employee row; null = standalone login account. */
+  employeeId?: number | null;
+  employeeCode?: string | null;
 }
 
 export interface PositionOption {
@@ -89,45 +95,80 @@ function staffPositionLabel(member: StaffRow): string {
   );
 }
 
+function isLinkedEmployee(member: StaffRow): boolean {
+  return member.employeeId != null;
+}
+
+function profileHref(member: StaffRow, branchScope: HrBranchScope): string {
+  const params = new URLSearchParams();
+  params.set("view", "profile");
+  const query = member.employeeCode?.trim() || member.full_name.trim();
+  if (query) params.set("q", query);
+  return withHrBranchScope(`/hr?${params.toString()}`, branchScope);
+}
+
 function StaffActionsMenu({
   member,
   variant,
+  branchScope,
   onEdit,
   onToggle,
 }: {
   member: StaffRow;
   variant: "card" | "table";
+  branchScope: HrBranchScope;
   onEdit: (member: StaffRow) => void;
   onToggle: (member: StaffRow) => void;
 }) {
   const isActive = member.is_active !== false;
+  const linked = isLinkedEmployee(member);
+  const staffCopy = messages.owner.staffPage;
 
   return (
     <RowActionsMenu
-      label={messages.owner.staffPage.actions}
+      label={staffCopy.actions}
       triggerSize={variant === "card" ? "touch" : "icon-lg"}
       triggerClassName={variant === "card" ? "rounded-full" : undefined}
-      triggerLabel={
-        variant === "card" ? messages.owner.staffPage.actions : undefined
-      }
+      triggerLabel={variant === "card" ? staffCopy.actions : undefined}
       items={[
         {
-          key: "edit",
-          label: messages.owner.staffPage.actionEdit,
-          icon: <IconPencil data-icon="inline-start" />,
-          onSelect: () => onEdit(member),
+          key: "permissions",
+          label: staffCopy.actionPermissions,
+          icon: <IconKey data-icon="inline-start" />,
+          href: withHrBranchScope(
+            `/hr/staff/${member.id}/permissions?tab=permissions`,
+            branchScope,
+          ),
         },
+        ...(linked
+          ? [
+              {
+                key: "open-profile",
+                label: staffCopy.openProfile,
+                icon: <IconFileUser data-icon="inline-start" />,
+                href: profileHref(member, branchScope),
+              },
+            ]
+          : [
+              {
+                key: "edit",
+                label: staffCopy.actionEdit,
+                icon: <IconPencil data-icon="inline-start" />,
+                onSelect: () => onEdit(member),
+              },
+            ]),
         {
           key: isActive ? "deactivate" : "activate",
           label: isActive
-            ? messages.owner.staffPage.actionDeactivate
-            : messages.owner.staffPage.actionActivate,
+            ? staffCopy.actionDeactivate
+            : staffCopy.actionActivate,
           icon: isActive ? (
             <IconToggleLeft data-icon="inline-start" />
           ) : (
             <IconToggleRight data-icon="inline-start" />
           ),
           onSelect: () => onToggle(member),
+          destructive: isActive,
         },
       ]}
     />
@@ -148,11 +189,11 @@ export function StaffTable({
   async function handleToggleActive(member: StaffRow) {
     if (member.is_active !== false) {
       const ok = await confirm({
-        title: "Ngừng kích hoạt nhân viên?",
+        title: "Vô hiệu hóa đăng nhập?",
         description:
-          "Nhân viên sẽ không thể đăng nhập hoặc thao tác cho đến khi được kích hoạt lại.",
+          "Tài khoản sẽ không đăng nhập được cho đến khi được kích hoạt lại. Hồ sơ NLĐ (nếu có) không bị xóa.",
         details: [{ label: STAFF_VI.long, value: member.full_name }],
-        confirmText: "Ngừng kích hoạt",
+        confirmText: staffCopy.actionDeactivate,
         variant: "destructive",
       });
       if (!ok) return;
@@ -170,24 +211,29 @@ export function StaffTable({
       key: "name",
       header: STAFF_VI.long,
       render: (member) => (
-        <Link
-          href={withHrBranchScope(
-            `/hr/staff/${member.id}/permissions`,
-            branchScope,
-          )}
-          className="font-medium hover:underline"
-        >
-          {member.full_name}
-        </Link>
+        <div className="flex flex-col gap-1">
+          <Link
+            href={withHrBranchScope(
+              `/hr/staff/${member.id}/permissions`,
+              branchScope,
+            )}
+            className="font-medium hover:underline"
+          >
+            {member.full_name}
+          </Link>
+          {!isLinkedEmployee(member) ? (
+            <Badge variant="outline" className="w-fit">
+              {staffCopy.standaloneBadge}
+            </Badge>
+          ) : null}
+        </div>
       ),
     },
     {
       key: "role",
       header: STAFF_VI.role,
       render: (member) => (
-        <Badge variant="secondary">
-          {staffPositionLabel(member)}
-        </Badge>
+        <Badge variant="secondary">{staffPositionLabel(member)}</Badge>
       ),
     },
     {
@@ -204,7 +250,7 @@ export function StaffTable({
     },
     {
       key: "status",
-      header: FORM_VI.status,
+      header: staffCopy.loginStatus,
       render: (member) => <StaffActiveBadge active={member.is_active} />,
     },
     {
@@ -243,6 +289,7 @@ export function StaffTable({
         <StaffActionsMenu
           member={member}
           variant="table"
+          branchScope={branchScope}
           onEdit={setEditStaff}
           onToggle={handleToggleActive}
         />
@@ -260,7 +307,7 @@ export function StaffTable({
         emptyTitle={
           hasActiveFilters
             ? staffCopy.emptySearchTitle
-            : "Chưa có nhân viên nào"
+            : "Chưa có tài khoản nào"
         }
         emptyMode={hasActiveFilters ? "no-results" : "no-data"}
         emptyIcon={<IconUsers />}
@@ -285,6 +332,11 @@ export function StaffTable({
                   <p className="text-sm text-muted-foreground">
                     {member.branch_name ?? "—"}
                   </p>
+                  {!isLinkedEmployee(member) ? (
+                    <Badge variant="outline" className="w-fit">
+                      {staffCopy.standaloneBadge}
+                    </Badge>
+                  ) : null}
                 </div>
                 <StaffActiveBadge active={member.is_active} />
               </div>
@@ -320,6 +372,7 @@ export function StaffTable({
               <StaffActionsMenu
                 member={member}
                 variant="card"
+                branchScope={branchScope}
                 onEdit={setEditStaff}
                 onToggle={handleToggleActive}
               />
@@ -328,13 +381,15 @@ export function StaffTable({
         )}
       />
 
-      <StaffFormDialog
-        open={!!editStaff}
-        onOpenChange={(open) => !open && setEditStaff(null)}
-        staff={editStaff}
-        branches={branches}
-        positionOptions={positionOptions}
-      />
+      {editStaff && !isLinkedEmployee(editStaff) ? (
+        <StaffFormDialog
+          open={!!editStaff}
+          onOpenChange={(open) => !open && setEditStaff(null)}
+          staff={editStaff}
+          branches={branches}
+          positionOptions={positionOptions}
+        />
+      ) : null}
     </>
   );
 }

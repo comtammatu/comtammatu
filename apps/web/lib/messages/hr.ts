@@ -8,9 +8,10 @@ import {
 export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
-    ownerTitle: "Hồ sơ",
+    ownerTitle: "Hồ sơ nhân viên",
     branchManagerTitle: "Nhân sự",
-    ownerDescription: "Hồ sơ, HĐLĐ và lương · phân quyền tách riêng.",
+    ownerDescription:
+      "Hồ sơ NLĐ, HĐLĐ và lương · đăng nhập và phân quyền ở tab Tài khoản.",
     branchManagerDescription: "Ca, ngày công, kết ca và nghỉ phép.",
   },
   payBasis: {
@@ -63,9 +64,9 @@ export const hr = {
       setup: "Thiết lập",
     },
     peopleTabs: {
-      profile: "Hồ sơ",
+      profile: "Hồ sơ nhân viên",
       accounts: "Tài khoản & quyền",
-      ariaLabel: "Tab hồ sơ và tài khoản nhân sự",
+      ariaLabel: "Tab hồ sơ nhân viên và tài khoản",
     },
     quickConfig: {
       todayShift: "Ca hôm nay",
@@ -146,13 +147,13 @@ export const hr = {
           "Hợp đồng, mức lương, BHXH và chế độ Theo công / Lương tháng.",
       },
       account: {
-        title: "Bước 4 · Tài khoản",
+        title: "Bước 4 · Tạo đăng nhập",
         description:
-          "Email đăng nhập và mật khẩu. Tinh chỉnh quyền tại Tài khoản & quyền.",
+          "Email và mật khẩu. Phân quyền chi tiết ở tab Tài khoản & quyền.",
       },
       next: "Tiếp",
       back: "Quay lại",
-      staffLink: "Sau khi tạo, tinh chỉnh quyền tại Tài khoản & quyền.",
+      staffLink: "Sau khi tạo, phân quyền chi tiết ở tab Tài khoản & quyền.",
     },
     leavePolicy: {
       standardWorkdaysLabel: "Ngày công chuẩn",

@@ -1,4 +1,7 @@
-import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
+import {
+  staffRoleFromPositionCode,
+  isOwnerPositionCode,
+} from "@comtammatu/shared/auth";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { matchesSearch } from "@lib/search";
 import type { createClient } from "@comtammatu/database/supabase/server";
@@ -87,8 +90,29 @@ export async function loadStaffAccountsData(
   type PositionJoin = { code: string | null; label_vi: string | null } | null;
   type BranchJoin = { name: string } | null;
 
+  const profileIds = (profiles ?? []).map((profile) => profile.id);
+  const employeeByProfileId = new Map<
+    string,
+    { id: number; employee_code: string | null }
+  >();
+  if (profileIds.length > 0) {
+    const { data: employees } = await supabase
+      .from("employees")
+      .select("id, employee_code, profile_id")
+      .in("profile_id", profileIds)
+      .limit(500);
+    for (const employee of employees ?? []) {
+      if (!employee.profile_id) continue;
+      employeeByProfileId.set(employee.profile_id, {
+        id: employee.id,
+        employee_code: employee.employee_code,
+      });
+    }
+  }
+
   const allStaff: StaffRow[] = (profiles ?? []).map((profile) => {
     const positionCode = (profile.positions as PositionJoin)?.code ?? null;
+    const linked = employeeByProfileId.get(profile.id);
     return {
       id: profile.id,
       full_name: profile.full_name,
@@ -99,13 +123,17 @@ export async function loadStaffAccountsData(
       branch_id: profile.branch_id,
       branch_name: (profile.branches as BranchJoin)?.name ?? null,
       is_active: profile.is_active,
+      employeeId: linked?.id ?? null,
+      employeeCode: linked?.employee_code ?? null,
     };
   });
 
   const branchOptions = (branches ?? []) as BranchOption[];
   const positionOptions = (positions ?? []).flatMap((position) => {
-    const bucket = staffRoleFromPositionCode(position.code);
-    if (bucket === "owner" || position.code === "archived_staff") {
+    if (
+      isOwnerPositionCode(position.code) ||
+      position.code === "archived_staff"
+    ) {
       return [];
     }
     return [
@@ -117,7 +145,9 @@ export async function loadStaffAccountsData(
   });
 
   const filteredStaff = allStaff.filter((member) => {
-    if (member.role === "owner") return false;
+    if (isOwnerPositionCode(member.position_code)) {
+      return false;
+    }
     if (
       params.position &&
       positionOptions.some((option) => option.value === params.position) &&
@@ -131,6 +161,7 @@ export async function loadStaffAccountsData(
         member.phone,
         member.position_label ?? member.role,
         member.branch_name,
+        member.employeeCode,
       ],
       params.q,
     );

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import {
   PERMISSION_KEYS,
-  staffRoleFromPositionCode,
+  isOwnerPositionCode,
 } from "@comtammatu/shared/auth";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { getVNDateString } from "@comtammatu/shared/time";
@@ -73,7 +73,8 @@ export default async function HrPage({
     todayAssignmentsResult,
     positionTasksResult,
   ] = await Promise.all([
-    initialView === "profile"
+    initialView === "profile" ||
+    (initialView === "accounts" && canManageAccounts)
       ? fetchEmployees(branchScope)
       : Promise.resolve({ success: true as const, data: [] }),
     initialView === "profile"
@@ -121,8 +122,10 @@ export default async function HrPage({
     ? ((employeesResult.data as EmployeeRow[]) ?? [])
     : [];
   const positionOptions = (positionsResult.data ?? []).flatMap((position) => {
-    const role = staffRoleFromPositionCode(position.code);
-    if (role === "owner" || position.code === "archived_staff") {
+    if (
+      isOwnerPositionCode(position.code) ||
+      position.code === "archived_staff"
+    ) {
       return [];
     }
     return [

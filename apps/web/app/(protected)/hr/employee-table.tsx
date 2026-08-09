@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ClipboardList as IconClipboardList,
   Eye as IconEye,
@@ -121,6 +121,7 @@ export function EmployeeTable({
 }: EmployeeTableProps) {
   const quickCopy = messages.hr.client.quickConfig;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
   const [isPending, startTransition] = useTransition();
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
@@ -129,7 +130,7 @@ export function EmployeeTable({
     useState<EmployeeRow | null>(null);
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [showInactive, setShowInactive] = useState(false);
   const [positionFilter, setPositionFilter] = useState(ALL_FILTER_VALUE);
   const [salaryFilter, setSalaryFilter] = useState(() => {

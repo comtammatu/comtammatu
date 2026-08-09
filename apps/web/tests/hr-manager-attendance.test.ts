@@ -52,8 +52,8 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     hrClientSource,
-    /title=\{workspaceCopy\.ownerTitle\}/,
-    "the employee landing should use the owner HR workspace title",
+    /view === "accounts" \? staffCopy\.title : workspaceCopy\.ownerTitle/,
+    "the employee landing should use the owner HR workspace title (accounts uses staff title)",
   );
   assert.match(
     attendancePageSource,
@@ -67,7 +67,7 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     hrMessagesSource,
-    /ownerTitle:\s*"Hồ sơ"/,
+    /ownerTitle:\s*"Hồ sơ nhân viên"/,
     "Company HR landing should name the employee-record surface precisely",
   );
   assert.match(
