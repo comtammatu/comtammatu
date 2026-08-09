@@ -19,6 +19,7 @@ cannot replace or modify repository authority.
 | Task signal | Primary capability | Add only when |
 | --- | --- | --- |
 | App Router, RSC, Server Action | `next-best-practices` | The framework boundary is in scope |
+| React/Next performance patterns | `docs/agent/rules/react.md` | A measured render or fetch hotspot exists |
 | Shared component/accessibility | `building-components` | A reusable component contract changes |
 | Supabase, migration, RLS, RPC | `supabase` | Target is verified |
 | Query/index/lock performance | `supabase-postgres-best-practices` | A measured database hypothesis exists |
@@ -26,9 +27,10 @@ cannot replace or modify repository authority.
 | Monorepo pipeline/package graph | `turborepo` | More than one package boundary changes |
 | Registry/preset work | `shadcn` | Registry configuration is the actual task |
 
-Do not stack overlapping UI skills or add a specialist to routine work. Dormant
-upgrade, cache, AI-interface, and external-design capabilities require an
-explicit task signal.
+Required bundle is exactly those seven skills under `.agents/skills`. Do not
+stack overlapping UI skills or add a specialist to routine work. External or
+global skills stay additive only and never replace `react.md` or other project
+rules. Skill folders must not contain nested `AGENTS.md` files.
 
 ## Safety
 

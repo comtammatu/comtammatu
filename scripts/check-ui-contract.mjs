@@ -1185,7 +1185,7 @@ for (const file of legacyDocReferenceFiles) {
 }
 
 const docsPathPattern =
-  /docs\/(?:agent|architecture|modules|plan|ref|releases|runbooks|spec|status|user-guides|worklog)\/[A-Za-z0-9_./%#-]+\.md/g;
+  /docs\/(?:agent|architecture|modules|plan|ref|releases|runbooks|spec|status|user-guides)\/[A-Za-z0-9_./%#-]+\.md/g;
 
 function isHistoricalSqlSnapshot(filePath) {
   const relativePath = toPosix(filePath);

@@ -5,25 +5,42 @@ runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 
 ## System Sources
 
+HOT — load by default for matching work:
+
 - Agent entrypoint: `AGENTS.md`
 - Tool/subagent routing: `docs/agent/rules/skills.md`
 - Cross-runtime review: `docs/agent/rules/orchestration.md`
 - Codebase/module index: `docs/CODEBASE_MAP.md`
 - Architecture: `docs/spec/architecture.md`, `docs/architecture/README.md`
-- Auth and ACL: `docs/modules/auth.md`
+- Auth and ACL: `docs/modules/auth.md` (includes ADR 0015 cutover pointer)
 - Database: `docs/modules/database.md`, `docs/spec/database-schema.md`
-- UI: `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`,
-  `docs/modules/ui.md`, `docs/ref/screen-context-map.md`; Product Dual Thesis
-  in `docs/spec/architecture.md`; optional Stitch mirror `.stitch/DESIGN.md`
-  (non-SSOT). Target-only docs under `docs/architecture/target-*` are future.
+- UI (ordered 3+1): `docs/spec/design-system.md` (visual) →
+  `docs/spec/page-archetypes.md` (workflow) →
+  `docs/ref/screen-context-map.md` (audience/device) → `docs/modules/ui.md`
+  (thin implementation map); Product Dual Thesis in
+  `docs/spec/architecture.md`; optional Stitch mirror `.stitch/DESIGN.md`
+  (non-SSOT)
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`
-- Inventory: `docs/ref/inventory.md`
+- Inventory: `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`
 - Infrastructure: `docs/modules/infrastructure.md`
-- Legal/tax/payroll/HĐĐT: `docs/ref/legal-framework-2026.md` first, then
-  `docs/ref/payroll-pit.md`, `docs/ref/einvoice-tax.md`,
-  `docs/ref/labor-contracts.md`, and `docs/ref/business-context.md` as applicable
+- Vocabulary / language: `docs/ref/glossary.md`,
+  `docs/agent/rules/language.md`
+- Operational data: `docs/ref/operational-data-contract.md`
+- Business/domain index: `docs/ref/README.md`
+
+## Warm Sources
+
+On-demand legal/tax/finance deep refs (not default System Sources):
+
+- Legal register: `docs/ref/legal-framework-2026.md`
+- E-invoice / VAT / CIT: `docs/ref/einvoice-tax.md`
+- Assets / VAT / F&B profit ladder: `docs/ref/finance-assets-vat-fnb.md`
+- Accounting books TT133/TT99: `docs/ref/accounting-books-tt133-tt99.md`
+- Payroll PIT / labor contracts: `docs/ref/payroll-pit.md`,
+  `docs/ref/labor-contracts.md`
+- Business boundary: `docs/ref/business-context.md`
 
 ## Agent Entrypoints Per IDE
 
@@ -69,10 +86,6 @@ System Sources above.
 - Regressions: `tasks/regressions.md`
 - Prose-only learning staging: `tasks/lessons.md`
 - Runbooks: `docs/runbooks/README.md`
-- Business/domain index: `docs/ref/README.md`
-- Vocabulary: `docs/ref/glossary.md`
-- Operational data: `docs/ref/operational-data-contract.md`
-- Legal register: `docs/ref/legal-framework-2026.md`
 
 One fact has one owner. Prefer a deterministic guard/test over recurring prose.
 Promote stable contracts to the owning source, park only owner-kept options with

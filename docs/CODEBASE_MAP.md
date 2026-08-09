@@ -1,22 +1,22 @@
 # Codebase Map — Cơm Tấm Má Tư
 
-> **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
-> **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
-> **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
-> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), task tracker chi tiết (xem `tasks/todo.md`)
+> **Audience:** New engineers onboarding, feature owners, sprint planners
+> **Primary goals:** (1) Understand system structure and auth flow, (2) know where to add features, (3) estimate blast radius of changes
+> **Decision milestone:** Sprint planning, onboarding, architecture review
+> **Out of scope:** Business requirements (see `docs/ref/`), detailed task tracker (see `tasks/todo.md`)
 
-## Cách dùng bản đồ
+## How To Use This Map
 
-- Kiến trúc runtime, package graph và quy tắc đặt code hiện hành:
+- Runtime architecture, package graph, and current code-placement rules:
   `docs/spec/architecture.md`.
-- Trạng thái công việc thay đổi theo ngày: `tasks/todo.md`; không sao chép vào
-  tài liệu kiến trúc.
-- Product Dual Thesis có hai nửa: **Quản lý hệ thống**
-  (`control_surface`) và **Vận hành bán hàng**
+- Work status changes daily: `tasks/todo.md`; do not copy it into architecture
+  docs.
+- Product Dual Thesis has two halves: **`Quản lý hệ thống`**
+  (`control_surface`) and **`Vận hành bán hàng`**
   (`branch_surface` + `station_chrome`).
-- Package manifests sở hữu phiên bản framework và dependency chính xác.
+- Package manifests own exact framework and dependency versions.
 
-## Chỉ mục phân hệ
+## Module Index
 
 | Module         | Doc                                            | Purpose                                                 | Risk Level                  |
 | -------------- | ---------------------------------------------- | ------------------------------------------------------- | --------------------------- |
@@ -32,16 +32,14 @@
 
 ## Documentation Index
 
-Khi cần đi sâu hơn theo loại tài liệu:
+When you need deeper navigation by document type:
 
-- [docs/README.md](README.md) — cổng vào chung cho toàn bộ docs
-- [agent/rules/skills.md](agent/rules/skills.md) — routing cho external skills, plugins, MCP/browser tools, và subagents
-- [docs/ref/glossary.md](ref/glossary.md) — glossary chuẩn duy nhất cho toàn repo
-- [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
+- [docs/README.md](README.md) — shared entry for all docs
+- [agent/rules/skills.md](agent/rules/skills.md) — routing for external skills, plugins, MCP/browser tools, and subagents
+- [docs/ref/glossary.md](ref/glossary.md) — single canonical glossary for the repo
+- [docs/architecture/README.md](architecture/README.md) — system architecture and cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
-- [runbooks/README.md](runbooks/README.md) — readiness và smoke gates
-- [worklog/README.md](worklog/README.md) — worklog policy; no historical archive
-
+- [runbooks/README.md](runbooks/README.md) — readiness and smoke gates
 ## Authority And Change Routing
 
 This file answers where code belongs and which files have high blast radius. It
@@ -85,7 +83,7 @@ domain contract.
 
 ## Landing Files (High Blast Radius)
 
-Đây là các file có nhiều chỗ phụ thuộc nhất. Mọi thay đổi ở đây sẽ tác động rộng trong hệ thống.
+These files have the widest downstream dependency. Changes here ripple across the system.
 
 | File                                            | Importers                          | Impact                                                    |
 | ----------------------------------------------- | ---------------------------------- | --------------------------------------------------------- |

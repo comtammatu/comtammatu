@@ -42,28 +42,19 @@ UI Advisor Gate
 
 Decision order:
 
-1. Use `docs/ref/screen-context-map.md` to lock the actor, job, workflow, data
-   priority, and information that must stay out of the surface. If the exact
-   route is absent, use its nearest parent workflow. Update the context map
-   first only when the route introduces a materially different actor, job, or
-   workflow.
-2. Select the archetype and named exemplar in this file. The archetype owns
-   page shape; the context map does not.
-3. Select the closest UI block from `UI_BLOCK_REGISTRY` through
-   `corepack pnpm audit:ui-components --component <block>`. A block is a
-   composition recipe, not an import layer; use `none` when the route has
-   no repeated block. Then look up the adapters named in the block `use` field
-   (for example `InventoryListFrame`, `DocumentFormFrame`, `BranchOperatorPage`)
-   before composing.
-4. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
-   Component Registry. External design output, including Stitch, may advise but
-   cannot select or override the project contract.
-5. If no exact component fits, compose existing primitives behind a
-   route-scoped adapter. If the proposed fallback changes a shared visual role,
-   token, or behavior, update `docs/spec/design-system.md` before adding or
-   changing a shared adapter or primitive.
-6. Do not start implementation while any gate field that affects hierarchy,
-   workflow, state behavior, or component choice is unresolved.
+1. Lock actor/job/workflow/data priority via `docs/ref/screen-context-map.md`
+   (nearest parent if route absent). Update the map first only for a materially
+   different actor, job, or workflow.
+2. Select the archetype and named exemplar here. Archetype owns page shape.
+3. Pick the closest `UI_BLOCK_REGISTRY` block via
+   `corepack pnpm audit:ui-components --component <block>` (`none` if no
+   repeated block), then adapters named in the block `use` field.
+4. Select shared primitives/adapters from `docs/modules/ui.md`. External design
+   (including Stitch) may advise but cannot override the contract.
+5. If no exact fit, compose primitives behind a route-scoped adapter. Shared
+   visual role/token/behavior changes require `design-system.md` first.
+6. Do not implement while hierarchy, workflow, state, or component-choice
+   fields remain unresolved.
 
 ## 0.2 Page Disposition Gate
 
@@ -221,138 +212,94 @@ rather than staying a near-empty category.
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`.
 
-This is the repo's second-largest archetype and its
-hard rules are stricter than the other archetypes because its only job is
-delegation:
+Hard rules — job is delegation only:
 
-- Branch runtime landing pages and landing roots MUST NOT use this archetype. A
-  Branch plane entry such as `/br/[branchId]`, `/br/[branchId]/stock`, or
-  `/br/[branchId]/orders` owns a native operator presentation first, then links
-  into deeper workflow screens. Sharing data loaders is fine; wrapping the
-  control_surface screen as the Branch entry UI is drift.
-- Keep the wrapper delegation-only; its size is a review signal, not a line-count
+- Branch runtime landing/root pages MUST NOT use this archetype. Entries such
+  as `/br/[branchId]`, `/br/[branchId]/stock`, `/br/[branchId]/orders` own a
+  native operator presentation first; sharing loaders is fine, wrapping
+  control_surface as Branch entry UI is drift.
+- Keep the wrapper delegation-only; size is a review signal, not a line-count
   gate.
-- Parse and validate `branchId` from `params`; `notFound()` on a bad id.
-- Render the canonical `*PageContent` export (§ 1) with `routeBranchId`, a
-  branch-scoped `basePath`, and `embedded` (suppresses the chrome the Branch
-  runtime layout already owns — no double `AppPage`/eyebrow).
-- **Forbidden:** any local `fetch`/Server Action call, any JSX beyond the
-  delegation call, importing another family's client component directly
-  (route through the exported `PageContent`, never the client under it).
-- Navigation: the branch-scoped `basePath` this wrapper passes down IS its
-  navigation contract — it does not carry its own `ROUTE_FAMILY_CONTRACTS`
-  entry; the wrapped family's contract still governs back/breadcrumb behavior
-  inside the embedded content.
+- Parse/validate `branchId` from `params`; `notFound()` on a bad id.
+- Render the canonical `*PageContent` (§ 1) with `routeBranchId`, branch-scoped
+  `basePath`, and `embedded` (suppresses chrome Branch layout already owns —
+  no double `AppPage`/eyebrow).
+- **Forbidden:** any local `fetch`/Server Action; any JSX beyond the
+  delegation call; importing another family's client directly (route through
+  exported `PageContent`, never the client under it).
+- Navigation: the branch-scoped `basePath` IS the navigation contract — no own
+  `ROUTE_FAMILY_CONTRACTS` entry; the wrapped family's contract still governs
+  back/breadcrumb inside embedded content.
 
 #### Operator Embedded Presentation Contract
 
-EMBED-WRAPPER re-mounts an control_surface/staff-runtime `PageContent` inside Branch
-runtime chrome (`design-system.md` § Structural Governance § A.2). The
-wrapper itself is delegation-only (above); this contract is what the
-re-mounted `PageContent`'s own `embedded` branch must do so the operator
-plane reads as one coherent V2 operator surface instead of control_surface chrome
-leaking through a branch-scoped shell. It is subordinate to
-`design-system.md` — it does not add tokens, rhythm, or primitives, it only
-clarifies which existing contract choices apply inside an `embedded` branch.
-The fix for every rule below lives **inside the shared `PageContent`/client
-component via the `embedded` branch**, never as a forked operator-only
-component — the same branch benefits both planes, and the control_surface plane
-(`embedded=false`) must stay byte-identical.
+EMBED-WRAPPER re-mounts control_surface/staff-runtime `PageContent` inside Branch
+runtime chrome (`design-system.md` § A.2). Wrapper is delegation-only; this
+contract is what the remounted `PageContent`'s `embedded` branch must do so
+the operator plane reads as one V2 surface. Subordinate to `design-system.md`.
+Fixes live **inside the shared `PageContent`/client via `embedded`**, never a
+forked operator-only component — `embedded=false` stays byte-identical.
 
-- **R1 — No nested page header.** An embedded branch MUST NOT render
-  `AppPageHeader`. The Branch runtime `(operator)/layout.tsx` chrome (title +
-  branch context) already owns the page-header job; a second `AppPageHeader`
-  inside the embedded content is a duplicate header. Gate `AppPageHeader`
-  rendering on `!embedded`, or split it out of the shared `content` block so
-  the embedded return path skips it entirely. Review the rendered operator
-  surface for duplicate context before accepting the composition.
-- **R2 — No nested page shell.** An embedded branch MUST NOT wrap its content
-  in `AppPage` (or an `AppPage`-backed adapter such as
-  `InventoryPageContent`) — the operator layout's own `AppPage
-density="compact"` already owns width/padding. Return a bare flex
-  container (`<div className="flex w-full flex-col gap-3">{content}</div>`)
-  in the shared `PageContent`'s explicit `embedded` return path.
-- **R3 — Touch-safe primary actions on the operator plane.** Primary actions
-  (create/receive/submit CTAs a thumb must hit reliably) need the shared touch
-  target at the rendered viewport. `size="touch"` is the usual primitive recipe;
-  another composition is valid when it proves the same target and hierarchy.
-- **R4 — DataTable, not twin trees.** List/table content inside an embedded
-  branch renders through the shared `DataTable` `mobileCardRender` (Rhythm
-  Contract § List Surface contract), never a hand-maintained
-  `md:hidden`/`hidden md:block` pair. This is the existing repo-wide
-  responsive-composition guard, restated here because an embedded branch is by
-  construction always the narrow-column case.
-- **R5 — Compact filters, no desktop toolbar bar.** An embedded branch must
-  not render the full desktop `AppToolbar` filter row when the operator
-  column is narrower than the toolbar needs. Prefer the existing responsive
-  branch a client already uses for its own compact/mobile layout (e.g.
-  `stock-client.tsx`'s `isCompactLayout`) so filters collapse into the
-  compact/collapsible section instead of the inline desktop bar; do not add
-  a second, operator-only toolbar implementation.
-- **R6 — Back-link and breadcrumb target the operator section root.** Any
-  back link, breadcrumb, or "list" href an embedded branch renders MUST use
-  the branch-scoped `basePath` the wrapper passed down, not an control_surface module
-  path. This is the EMBED-WRAPPER navigation rule above, restated for the
-  presentation layer: the `basePath` prop IS the navigation contract inside
-  `embedded`, so any hand-rolled back/list link must build off `basePath`,
-  never off `ROUTE_FAMILY_CONTRACTS`' control_surface plane `breadcrumbRoot`.
+- **R1 — No nested page header.** MUST NOT render `AppPageHeader` when
+  `embedded`; Branch `(operator)/layout.tsx` already owns title + branch
+  context. Gate on `!embedded` or skip it on the embedded return path.
+- **R2 — No nested page shell.** MUST NOT wrap in `AppPage` (or
+  `AppPage`-backed adapters). Return a bare flex container in the explicit
+  `embedded` path; operator layout's `AppPage density="compact"` owns
+  width/padding.
+- **R3 — Touch-safe primary actions.** Thumb-hit create/receive/submit CTAs
+  need the shared touch target; `size="touch"` is the usual recipe.
+- **R4 — DataTable, not twin trees.** Use `DataTable` `mobileCardRender`; never
+  a hand-maintained `md:hidden`/`hidden md:block` pair.
+- **R5 — Compact filters, no desktop toolbar bar.** Do not render full desktop
+  `AppToolbar` when the operator column is too narrow; reuse the client's
+  existing compact/mobile filter branch (e.g. `isCompactLayout`).
+- **R6 — Back/breadcrumb target operator section root.** Any back, breadcrumb,
+  or "list" href MUST use the wrapper's branch-scoped `basePath`, never
+  control_surface `ROUTE_FAMILY_CONTRACTS` `breadcrumbRoot`.
 
 ### DETAIL
 
 **Exemplar:** `apps/web/app/(protected)/inventory/grn/[id]/page.tsx` +
 `grn-detail-client.tsx`.
 
-- `PageContent` takes a numeric/string id, calls `notFound()` on a miss or a
-  branch-scope mismatch, and fetches `fetchEntityAuditLogs(entity, id)` for
-  the history tab.
+- `PageContent` takes id, `notFound()` on miss/scope mismatch, fetches
+  `fetchEntityAuditLogs(entity, id)` for history.
 - Skeleton: `AppPage` → `AppPageHeader` (title = entity display code,
-  `StatusBadge`, back link to the family's list `basePath`; **no** module-name
-  eyebrow — the back link owns hierarchy) → `DescriptionList`
-  metadata → lines/items via `DataTable` (`desktopFooter`/`mobileFooter` for
-  totals) → a `Lịch sử` tab sourced from `audit_logs` filtered by
-  `entity_type`/`entity_id` → `AppDetailFooter` for stage-transition actions.
-- Status/money/date: per § 1.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
+  `StatusBadge`, back link to family list `basePath`; **no** module-name
+  eyebrow — the back link owns hierarchy) → `DescriptionList` metadata →
+  lines via `DataTable` (`desktopFooter`/`mobileFooter` for totals) → `Lịch sử`
+  tab from `audit_logs` → `AppDetailFooter` for stage actions.
+- Status/money/date: per § 1. Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
 
 ### DOC-WORKFLOW
 
 **Exemplar:** `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`.
 
-- Skeleton: `DocumentFormFrame` (`apps/web/app/components/surface.tsx:476`) —
-  header + scrollable body + footer, composing `AppPage`. **Mandatory for new
-  DOC-WORKFLOW pages.**
-- Form: RHF + Zod line-array form; line editing goes through the `DataTable`
-  inline-edit adapter (`render`/`mobileCardRender` receive `(row, index)` so
-  `patchLine(index)` works without a parallel tree); every line input is
-  controlled so the responsive breakpoint switch can remount safely.
-  Document totals render through `desktopFooter` (TableFooter rows) +
-  `mobileFooter` (block under the card list).
-- Sticky CTA: `sticky bottom-0 chrome-safe-pb` + `shadow-lg` per the Elevation
-  contract's Sticky CTA rung.
-- Branch touch variant: route pages under `/br/[branchId]` use
-  `BranchOperatorPage`; their direct client owner composes
-  `BranchOperatorPanel` sections and a sticky `AppDetailFooter`. The Branch
-  variant uses progressive disclosure on phone, may expand to a two-column
-  touch layout on tablet, keeps controls at least 44px high, and does not
-  import `DocumentFormFrame`, `DataTable`, or an control_surface form presentation.
-- Status/money/date: per § 1.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
-- **Composition note:** control_surface uses the `DocumentFormFrame` recipe;
-  Branch uses the touch recipe above in the route page and its direct client
-  owner. A distinct workflow may compose directly when it preserves its plane,
-  touch behavior, accessibility, and visual hierarchy.
-- `employee/count` folds FORM-PAGE into this archetype: it collects a
-  line-array count slip and is DOC-WORKFLOW in shape even though it does not
-  yet use `DocumentFormFrame`.
+- Skeleton: `DocumentFormFrame` — header + scrollable body + footer composing
+  `AppPage`. **Mandatory for new DOC-WORKFLOW pages.**
+- Form: RHF + Zod line-array; line edit via `DataTable` inline-edit adapter
+  (`render`/`mobileCardRender` receive `(row, index)`); every line input
+  controlled for safe remount. Totals via `desktopFooter` + `mobileFooter`.
+- Sticky CTA: `sticky bottom-0 chrome-safe-pb` + `shadow-lg` per Elevation
+  Sticky CTA rung.
+- Branch touch variant: `/br/[branchId]` uses `BranchOperatorPage` +
+  `BranchOperatorPanel` + sticky `AppDetailFooter`; progressive disclosure on
+  phone, two-column touch on tablet, ≥44px controls; does not import
+  `DocumentFormFrame`, `DataTable`, or control_surface form presentation.
+- Status/money/date: per § 1. Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
+- control_surface uses `DocumentFormFrame`; Branch uses the touch recipe. Distinct
+  workflows may compose directly when plane/touch/a11y/hierarchy hold.
+- `employee/count` folds FORM-PAGE here (line-array count slip) even if it does
+  not yet use `DocumentFormFrame`.
 
 ### REDIRECT-SHIM
 
 **Exemplar:**
 `apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx`.
 
-- A redirect primitive only. No JSX, no data fetch beyond what a guard clause
-  needs.
-- Keep it small — the existing shims in this repo are all ≤ 25 lines.
+- `redirect()`-only. No JSX, no data fetch beyond a guard clause needs.
+- Keep it small — existing shims are all ≤ 25 lines.
 - A selector outside every declared `MODULE_ACL` family must be registered in
   `ROUTE_MANIFEST_SELECTOR_ROUTES` (`scripts/check-ui-contract.mjs`). Selectors
   already inside an ACL family do not need that exception.
@@ -365,51 +312,41 @@ density="compact"` already owns width/padding. Return a bare flex
 - Skeleton: `AppPage width="wide"` → `AppPageHeader` → `AppSection` per group
   → `LinkCardGrid` of `AppLinkCard` (`{title, description, href, icon, tone,
 badge}`).
-- Compact Owner root variant: `/` keeps the same groups and navigation order
-  but uses an asymmetric desktop group grid with `AppSection` → `ItemGroup` of
-  linked `Item` rows. It stays one column on phone and does not add KPI or
-  duplicate module controls.
-- No data tables. No KPI values beyond a small count badge on a link card.
-- Operator variant: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
-  (`buildSettingsLinks`) uses the Branch plane recipe:
-  `BranchOperatorPage` → `BranchOperatorActionSection` from
-  `@lib/branch-operator/components/branch-operator-page`. It does not render
-  `AppPageHeader`, `AppSection`, `AppLinkCard`, or an control_surface `*PageContent`
-  wrapper at the Branch landing/root level.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
+- Compact Owner root (`/`): same groups/nav order; asymmetric desktop group
+  grid with `AppSection` → `ItemGroup` of linked `Item` rows; one column on
+  phone; no KPI or duplicate module controls.
+- No data tables. No KPI beyond a small count badge on a link card.
+- Operator variant: `br/[branchId]/(operator)/settings/page.tsx`
+  (`buildSettingsLinks`): `BranchOperatorPage` →
+  `BranchOperatorActionSection`. No `AppPageHeader`, `AppSection`,
+  `AppLinkCard`, or control_surface `*PageContent` at Branch landing/root.
+- Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
 
 ### REPORT
 
 **Exemplar:** `apps/web/app/(protected)/finance/revenue/page.tsx`.
 
-- control_surface skeleton: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
-  → `KpiRow` summary → chart (`chart-1`..`chart-5` tokens only) → `DataTable`
-  breakdown → export action.
-- Branch operator variant: `BranchOperatorPage` → mobile
-  `BranchOperatorControlBar` → `BranchOperatorPanel` + full-row `ItemGroup`
-  drill-ins. It is a fixed branch/current-period operational signal, not a
-  compact control_surface dashboard: no branch or date picker, KPI aggregation, chart,
-  `DataTable`, export, financial values, or audit history. Every quantity stays
-  paired with the unit of its ingredient; quantities from different ingredients
-  must never be aggregated.
-- Drill-down (where the report has one): a dated child route, e.g.
-  `finance/revenue/[date]/page.tsx`.
-- Status/money/date: per § 1.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
+- control_surface: `AppPage` → `AppPageHeader` → `AppToolbar` (period/branch filters)
+  → `KpiRow` → chart (`chart-1`..`chart-5` only) → `DataTable` breakdown →
+  export.
+- Branch operator: `BranchOperatorPage` → mobile `BranchOperatorControlBar` →
+  `BranchOperatorPanel` + full-row `ItemGroup` drill-ins. Fixed
+  branch/current-period signal — no branch/date picker, KPI aggregation,
+  chart, `DataTable`, export, financial values, or audit history. Quantities
+  stay paired with ingredient units; never aggregate across ingredients.
+- Drill-down: dated child route (e.g. `finance/revenue/[date]/page.tsx`).
+- Status/money/date: per § 1. Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
 
 ### DASHBOARD
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx`.
 
 - Skeleton: `BranchOperatorPage` → unresolved command/readiness lanes →
-  `BranchOperatorPanel size="sm"` for live operations, end-of-day work, and
-  explicit drill-down actions.
-- This Branch command surface is task-first, not an executive dashboard. It
-  MUST NOT render `KpiRow`, `KpiCard`, charts, financial aggregation, or a
-  dashboard-card mosaic. Quantitative signals belong inside the actionable row
-  they qualify and link directly to the owning workflow.
-- Status/money/date: per § 1.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
+  `BranchOperatorPanel size="sm"` for live ops, end-of-day, drill-downs.
+- Task-first Branch command surface — MUST NOT render `KpiRow`, `KpiCard`,
+  charts, financial aggregation, or dashboard-card mosaic. Quantitative
+  signals live inside the actionable row and link to the owning workflow.
+- Status/money/date: per § 1. Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
 
 ### GATE/AUTH
 
@@ -417,182 +354,91 @@ badge}`).
 `AppPage` + `LinkCardGrid`) and `apps/web/app/(public)/access-denied/page.tsx`
 (`?reason=` contract).
 
-- No app chrome (these are Standalone chrome-less surfaces per
-  `design-system.md` § Structural A.4, or pre-context screens that render
-  before any chrome can mount).
+- No app chrome (Standalone chrome-less per `design-system.md` § A.4, or
+  pre-context screens before chrome can mount).
 - One decision, one forward action. No secondary navigation.
 
 ### BOARD
 
 **Exemplar:** `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`.
 
-- station_chrome (no `AppShell`); a realtime channel drives the board.
-- Data display: `OperationalBoardCard` / `OperationalTile`; touch sizes
+- station_chrome (no `AppShell`); realtime channel drives the board.
+- Data: `OperationalBoardCard` / `OperationalTile`; touch sizes
   (`size="touch"` / `"touch-lg"`) on every actionable control.
-- Loading: `PageSpinner` only — fake tickets on an operational screen are
-  forbidden by `design-system.md` § Loading/Error/Not-found.
-- Status: the archetype's own hot-path status config where one exists (e.g.
-  `br/[branchId]/kds/lib/status-config.ts`) — an acknowledged exception to the
-  `StatusBadge` registry lock, documented in `design-system.md` § Status
-  vocabulary.
+- Loading: `PageSpinner` only — fake tickets forbidden
+  (`design-system.md` § Loading/Error/Not-found).
+- Status: archetype hot-path config where one exists (e.g.
+  `br/[branchId]/kds/lib/status-config.ts`) — acknowledged `StatusBadge`
+  registry exception, documented in `design-system.md` § Status vocabulary.
 
 ### PUBLIC-WORKFLOW
 
 **Exemplar:** `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`.
 
-- Standalone, mobile-first customer workflow with no control_surface or Operations
-  chrome. The route token establishes the workflow context; invalid or expired
-  tokens fail closed through `notFound()` or one shared unavailable state.
-- Skeleton: `AppPage mobile` or an equivalent full-height standalone frame;
-  touch-sized controls; one visible primary action per decision step.
-- Data display follows the transaction journey rather than a control_surface list:
-  browse/select → review cart → submit → success or recoverable failure. Reuse
-  `Item`, shared form controls, money/date helpers, and status vocabulary; do
-  not copy control_surface `DataTable`, page header, or shell composition into it.
-- Loading/error/offline behavior must preserve the in-progress transaction and
-  expose an explicit retry or safe exit. Route-local status, formatter, and
-  empty/loading implementations remain forbidden by the shared guards.
+- Standalone, mobile-first customer workflow; no control_surface/Operations chrome.
+  Token establishes context; invalid/expired → `notFound()` or one shared
+  unavailable state.
+- Skeleton: `AppPage mobile` or full-height standalone frame; touch controls;
+  one primary action per decision step.
+- Display follows transaction journey, not control_surface list: browse → cart →
+  submit → success/recoverable failure. Reuse `Item`, form controls,
+  money/date helpers, status vocabulary; do not copy control_surface `DataTable`,
+  page header, or shell composition.
+- Loading/error/offline must preserve in-progress transaction and expose
+  retry or safe exit. Route-local status/formatter/empty/loading remain
+  forbidden.
 
 ### SETTINGS-PANEL
 
 **Exemplar:** `apps/web/app/(protected)/settings/(tenant)/general/page.tsx`.
 
 - Route-scoped settings frame (e.g. `SettingsPageFrame` /
-  `SettingsFormSection`) + RHF + Zod `form/*` wrappers (§ 1 form layer).
-- A list-shaped setting (units, categories, thresholds) renders its list body
-  as a LIST inside the settings frame, with `FormDialog` for CRUD.
-- `employee/clock` folds FORM-PAGE into this archetype: it is a single-action
-  form (punch in/out) even though it is not a settings screen in the domain
-  sense — its shape (one entity, one RHF form, no line array) matches this
-  recipe, not DOC-WORKFLOW's.
-- Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
+  `SettingsFormSection`) + RHF + Zod `form/*` wrappers.
+- List-shaped settings (units, categories, thresholds) render LIST body inside
+  the settings frame with `FormDialog` for CRUD.
+- `employee/clock` folds FORM-PAGE here: single-action punch form (one entity,
+  one RHF form, no line array) — not DOC-WORKFLOW.
+- Navigation: family's `ROUTE_FAMILY_CONTRACTS`.
 
 ## 4. Named Exceptions
 
-These 22 pages do not fit a single archetype cleanly. They are an explicit
-allowlist, not a precedent for stretching another archetype's definition:
+Explicit allowlist (not a precedent). Path → classification:
 
-1. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/page.tsx` — staff
-   day-flow home; a LANDING/DASHBOARD hybrid. Classified **LANDING**.
-2. `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` — branch
-   portal home; the same LANDING/DASHBOARD hybrid inside Branch runtime chrome.
-   Classified **LANDING**.
-3. `apps/web/app/(protected)/inventory/page.tsx` — `REDIRECT-SHIM` to
-   `/inventory/stock` (or `/inventory/grn` for accountant). Not a rendered
-   archetype.
-4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
-   master-detail pair with responsive composition. Classified **LIST**.
-5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —
-   detail half of the same pair. Classified **DETAIL**.
-6. `apps/web/app/(protected)/notifications/page.tsx` — feed list without
-   `DataTable` (a chronological notification feed does not have tabular
-   columns to display). Classified **LIST**.
-7. `apps/web/app/(protected)/settings/printers/jobs/page.tsx` — a LIST
-   living inside the printers SETTINGS-PANEL family with an added `KpiRow`
-   summary. Classified **LIST**.
-8. `apps/web/app/(protected)/inventory/waste/approvals/page.tsx` — 4-eye waste
-   approval queue. A per-issue approve / reject card with a nested waste-line
-   `ItemGroup`, tier badges, photo links, and an inline review-note field; the
-   decision surface is the card, not a row. Classified **LIST** (queue
-   variant); it uses the card decision surface instead of a tabular LIST recipe.
-9. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/transfer/page.tsx`
-   — Branch-runtime transfer queue. It uses `BranchOperatorPage`,
-   `BranchOperatorPanel`, and full-row `Item` links because the supported
-   phone/tablet runtime must keep one touch information architecture in both
-   orientations. Classified **LIST** (Branch touch variant); the control_surface
-   transfer route remains the canonical desktop `DataTable` LIST.
-10. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx`
-    — Branch-runtime on-hand lookup. It shares the stock loader and pure filter
-    model with control_surface but owns a full-row touch list that never changes into a
-    desktop table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); the control_surface stock route retains its responsive management LIST.
-11. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx`
-    — Branch-runtime GRN queue. It shares the GRN list loader and pure filter
-    model with control_surface but orders the operator's drafts before the touch queue,
-    keeps delete as an explicit confirmed action, and never changes into the
-    control_surface table at tablet landscape widths. Classified **LIST** (Branch touch
-    variant); control_surface retains the management `DataTable` LIST.
-12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
-    — Redirect shim. A normal branch continues to Yêu cầu hàng; Kho Tổng and
-    Bếp Trung Tâm continue to Yêu cầu mua. GRN drafts are created only from a
-    sent PO and appear in the GRN queue.
-13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
-    — Compatibility redirect shim with the same destination rules as the
-    parent `/new` route. It never renders a receipt-entry form.
-14. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx`
-    — Branch-runtime GRN review and receipt. It shares the detail loader,
-    model, action hooks, and mutations with control_surface, but owns draft line review
-    through touch sheets and renders confirmed documents as a read-only receipt.
-    Audit history, post-confirm correction, stock correction, invoice linkage,
-    and the control_surface `GRNDetailClient` remain outside the Branch route. Classified
-    **DETAIL** (Branch touch variant).
-15. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/[ingredientId]/page.tsx`
-    — Branch-runtime ingredient lookup. It shares the scoped detail loader and
-    pure stock movement/status model with control_surface, but loads no valuation and
-    owns a touch detail composition for current stock, locations, recent
-    movements, thresholds, and route-scoped actions. The control_surface management
-    detail retains WAC/value, dense desktop controls, and its own presentation.
-    Classified **DETAIL** (Branch touch variant).
-16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
-    — Compatibility redirect shim to `/inventory/production?branchId=...`.
-    Production has one canonical control surface and only accepts Bếp TT scope.
-17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
-    and `/stock/production/[id]/page.tsx` — Compatibility redirect shims to the
-    canonical create/detail routes; detail keeps the run ID and both keep URL scope.
-18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
-    — Branch-runtime waste entry. It preserves the scoped location, tier,
-    evidence, rolling-meter, and submit authority but owns a compact touch
-    document workflow: line summaries in `ItemGroup`, one line editor at a time
-    in a bottom sheet, and a sticky action footer. control_surface retains its desktop
-    `WasteCreateClient`; neither plane imports the other's presenter. Classified
-    **DOC-WORKFLOW** (Branch touch variant).
-19. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste-approvals/page.tsx`
-    — Branch-runtime waste approval queue. It locks review to the route branch,
-    presents one touch row per pending issue, and opens evidence, lines, review
-    note, and approve/reject actions in a bottom sheet. Self-created rows remain
-    readable but cannot mutate; the existing approval action remains the
-    authority. control_surface retains its desktop `WasteApprovalsClient`; neither plane
-    imports the other's presenter. Classified **LIST** (Branch review variant).
-20. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx`
-    and `/stock/consumption/[id]` — Branch-native recorded-consumption list and
-    typed detail. The list separates posted ledger consumption from manual
-    documents, keeps source/status language explicit, and uses full-row touch
-    navigation. Neither route imports the control_surface list/detail presenter.
-    Classified **LIST** and **DETAIL** respectively.
-21. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/count-assignments/page.tsx`
-    and `/stock/count-slips` — Branch-native manager assignment and review
-    queues. Rows remain touch actions at phone and tablet widths; slip review
-    and approve/request-recount actions live in a bottom sheet with a sticky
-    decision footer. Classified **LIST** (assignment/review variants).
-22. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx`
-    — fixed-branch leave review queue with status tabs, full-row touch items,
-    and approve/reject in a bottom sheet. control_surface retains its desktop HR table.
-    Classified **LIST** (Branch review variant).
-23. `apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx`
-    — fixed-branch attendance list using the shared attendance table, without a
-    cross-branch selector. It exposes audited stale-shift closing only when the
-    Branch capability is present. Classified **LIST** (Branch review variant).
+1. `br/[branchId]/(operator)/shift/page.tsx` → **LANDING** (staff day-flow home).
+2. `br/[branchId]/(operator)/page.tsx` → **LANDING** (branch portal home).
+3. `inventory/page.tsx` → **REDIRECT-SHIM** to `/inventory/stock` (or GRN for accountant).
+4. `inventory/stock/page.tsx` → **LIST** (master half, responsive master-detail).
+5. `inventory/stock/[ingredientId]/page.tsx` → **DETAIL** (detail half).
+6. `notifications/page.tsx` → **LIST** (chronological feed, no `DataTable`).
+7. `settings/printers/jobs/page.tsx` → **LIST** (inside printers SETTINGS-PANEL + `KpiRow`).
+8. `inventory/waste/approvals/page.tsx` → **LIST** (4-eye queue; card decision surface).
+9. `br/.../stock/transfer/page.tsx` → **LIST** (Branch touch; control_surface keeps `DataTable`).
+10. `br/.../stock/on-hand/page.tsx` → **LIST** (Branch touch on-hand lookup).
+11. `br/.../stock/grn/page.tsx` → **LIST** (Branch touch GRN queue; drafts first).
+12. `br/.../stock/grn/new/page.tsx` → **REDIRECT-SHIM** (YCH / purchase-request by branch type).
+13. `br/.../stock/grn/new/[supplierId]/page.tsx` → **REDIRECT-SHIM** (compat; same rules as `/new`).
+14. `br/.../stock/grn/[id]/page.tsx` → **DETAIL** (Branch touch GRN review/receipt).
+15. `br/.../stock/on-hand/[ingredientId]/page.tsx` → **DETAIL** (Branch touch ingredient lookup).
+16. `br/.../stock/production/page.tsx` → **REDIRECT-SHIM** to `/inventory/production?branchId=...`.
+17. `br/.../stock/production/new` + `[id]` → **REDIRECT-SHIM** to canonical create/detail.
+18. `br/.../stock/waste/page.tsx` → **DOC-WORKFLOW** (Branch touch waste entry).
+19. `br/.../stock/waste-approvals/page.tsx` → **LIST** (Branch review queue).
+20. `br/.../stock/consumption` + `[id]` → **LIST** / **DETAIL** (Branch-native recorded consumption).
+21. `br/.../stock/count-assignments` + `count-slips` → **LIST** (assignment/review queues).
+22. `br/.../shift/leave-approvals/page.tsx` → **LIST** (Branch leave review).
+23. `br/.../shift/attendance/page.tsx` → **LIST** (Branch attendance; no cross-branch selector).
+
+Paths above are under `apps/web/app/(protected)/` unless noted.
 
 ## 5. Agent Lookup Flow
 
 Before building or changing any `(protected)/**/page.tsx`:
 
-1. Read `docs/agent/rules/ui.md` Guardrails and complete the UI Advisor Gate in
-   § 0.1.
-2. Find the target route's archetype in § 2/§ 4, and read its
-   composition recipe in § 3.
-3. Query the registered block for the plane and job with
-   `corepack pnpm audit:ui-components --component <block>`; use the archetype
-   recipe directly when no block fits.
-4. Read the recipe's named exemplar file(s) in full.
-5. Run `codegraph explore "<adapter name>"` (or MCP `codegraph_explore`) for
-   live usage of the adapters the recipe names (`DataTable`,
-   `DocumentFormFrame`, `KpiCard`, …), or `pnpm audit:ui-components` for a
-   route-family adoption/high-risk report. Query
-   `scripts/ui-component-registry.mjs` for current ownership and usage; never
-   answer "where is X used" from a hand-maintained list.
-6. Build the new page from the exemplar's `PageContent` skeleton: swap the
-   domain fetch/map, keep the shell shape.
-7. Add the new page to the `PAGE_ARCHETYPES` map in
-   `scripts/page-archetypes.mjs` with the correct archetype id. An
-   undeclared page fails CI with a message pointing back at this file.
+1. Read `docs/agent/rules/ui.md` Guardrails; complete UI Advisor Gate (§ 0.1).
+2. Find archetype in § 2/§ 4; read its § 3 recipe and named exemplar(s).
+3. Query block via `corepack pnpm audit:ui-components --component <block>`;
+   use the recipe directly when no block fits.
+4. Explore adapters (`codegraph explore` / `pnpm audit:ui-components` /
+   `scripts/ui-component-registry.mjs`); never invent usage from memory.
+5. Build from the exemplar's `PageContent` skeleton; declare the page in
+   `scripts/page-archetypes.mjs` `PAGE_ARCHETYPES` (undeclared fails CI).

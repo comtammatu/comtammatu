@@ -1,189 +1,133 @@
-# Phân hệ Web App
+# Web App Module
 
-## Tổng quan
+## Overview
 
-Ứng dụng Next.js App Router phục vụ hai plane quản trị/vận hành và một self
-runtime dùng chung domain contract (`docs/spec/architecture.md`, ADR 0012):
+Next.js App Router — two admin/operations planes plus self runtime
+(`docs/spec/architecture.md`, ADR 0012):
 
-1. **Quản lý hệ thống** — `control_surface` (L0 `/…`, `AppShell`, adapters `App*`)
-2. **Vận hành bán hàng** — `branch_surface` + `station_chrome` (`/br/[branchId]/…`)
-3. **Tự phục vụ cá nhân** — `self_surface` (`/me/*`) cho nhân sự không gắn site;
-   Owner bị loại tường minh
+1. **`Quản lý hệ thống`** — `control_surface` (L0 `/…`, `AppShell`, `App*`)
+2. **`Vận hành bán hàng`** — `branch_surface` + `station_chrome` (`/br/[branchId]/…`)
+3. **Personal self-service** — `self_surface` (`/me/*`); Owner explicitly excluded
 
-Plus public/auth. Package manifest sở hữu phiên bản framework; route runtime và
-generated matrix sở hữu danh sách route hiện hành.
+Plus public/auth. Version: package manifest. Route list: runtime + generated matrix.
 
-**Phạm vi sở hữu:** `apps/web/`
+**Scope:** `apps/web/`
 
-## Cấu trúc route
+## Current Route Contract
 
-Route group `(protected)` và `(public)` là URL-neutral. Cây bên dưới tổ chức
-theo runtime surface; file thực tế hiện nằm dưới
-`apps/web/app/(protected)/*` cho các surface app đã đăng nhập và
-`apps/web/app/(public)/*` cho các surface public/auth/return.
+Runtime: `packages/shared/src/auth/route-map.ts`. ACL:
+`packages/shared/src/auth/module-acl.ts`. Role/scope/route:
+`docs/spec/role-route-matrix.md` (`/*` L0 Owner; BM → `/br/[branchId]/*`).
 
-## Route contract hiện tại
+`(protected)` / `(public)` are URL-neutral. Do not store the filesystem tree in this
+doc — use CodeGraph or `rg --files apps/web/app`; regenerate role-route-matrix when
+the contract changes.
 
-Runtime route contract sống ở `packages/shared/src/auth/route-map.ts`, còn
-quyền truy cập vẫn sống ở `packages/shared/src/auth/module-acl.ts`. Khi sửa
-route hoặc shell, cập nhật cả hai nơi liên quan: ACL quyết định ai được vào;
-route-map quyết định route thuộc surface nào, dùng chrome nào, và rời surface
-theo quy tắc nào.
+| Surface | Route family | Entry | Nav / scope |
+| --- | --- | --- | --- |
+| Root | `/` | Single-branch resolver | `getDefaultRedirect`; multi-branch → picker; wrong scope fails closed |
+| Public / auth | `/login`, `/access-denied`, `/br/…/runner`, health/webhooks | `/login` or Runner URL | No app shell; Runner validates branch itself |
+| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
+| Utility | `/notifications/*` | `returnTo` | Not a product plane |
+| Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
+| Staff day | `/br/…/shift/*`, `/profile/*` | `/br/…/shift` | Branch bottom nav; do not mix HR admin hot path |
+| Self | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip` | `/me` | Shared `staff-runtime`; site-pinned → Branch; Owner denied |
 
-Role/scope/route boundary canonical sống ở
-`docs/spec/role-route-matrix.md`: `/*` là L0 Tenant Command cho
-owner; Branch Manager dùng L1 Branch Command dưới
-`/br/[branchId]/*`.
+History: `Link` / `router.push` between pages; `router.replace` only for tab/filter
+on the same page.
 
-| Surface           | Route family                                                                                                       | Entry point                      | Navigation / back contract                                                                                                                                                  | Breadcrumb / scope contract                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Root entry        | `/`                                                                                                                | Single-branch resolver           | `getDefaultRedirect(claims)`: branch-pinned staff → `/br/{branchId}`; Owner → `/`, rồi tự mở khi có đúng một active `branch` kind. Central kinds không phải operator scope. | Nhiều operating branch mới hiện picker; route scope sai fail closed.                                      |
-| Public / auth     | `/login`, `/access-denied`, `/br/[branchId]/runner`, public health/webhook endpoints                               | `/login` hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                                                                                              | Không đọc tenant/branch scope từ UI state. Runner display tự validate branch trong page.                  |
-| control_surface   | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/`                              | `ControlSurfaceShell` → `AppShell` (nav-as-data). `/` là LANDING; Settings và module con dùng deep-nav tương ứng. Actor theo `role-route-matrix`.                           | Breadcrumb root là `Quản trị` (`control_surface`); filter/tab state giữ trong URL, không lưu local state. |
-| Utility           | `/notifications/*`                                                                                                 | Link kèm `returnTo`              | Không là product plane; dùng trang độc lập và quay lại context gọi.                                                                                                         | Không có sidebar riêng.                                                                                   |
-| Branch operations | `/br/[branchId]/*`, gồm landing, dashboard, shift, profile, stock, pos, kds, runner, settings                      | `/br/[branchId]`                 | Branch runtime chrome hoặc operational chrome. POS/KDS ưu tiên hành động trong ca, không quay về Owner. Staff discovery vẫn có thể link sang Runner display public.         | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.                    |
-| Staff day runtime | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                               | `/br/[branchId]/shift`           | Dùng Branch runtime bottom nav và shared Employee components; URL luôn mang `branchId`.                                                                                     | Breadcrumb nhẹ theo task runtime; không trộn HR admin/payroll thành hot path nhân viên.                   |
-| Self runtime      | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip`                                                   | `/me`                            | Wrapper mỏng dùng chung `staff-runtime`; không có control-surface nav. Site-pinned entry redirect về route Branch tương ứng.                                                | Kế toán dùng scope auth với `branch_id = NULL`; Owner luôn bị từ chối.                                    |
+## Main Components
 
-Quy tắc history: thay đổi route đưa người dùng giữa các trang phải dùng
-`Link` / `router.push` thường để nút Back của trình duyệt quay lại route trước.
-Chỉ dùng `router.replace` cho state tab/filter/search-param trong cùng trang,
-nơi Back không nên duyệt qua từng lần chỉnh filter.
+### control_surface shell
 
-Không lưu cây filesystem thủ công trong tài liệu này. Dùng CodeGraph hoặc
-`rg --files apps/web/app`, và regenerate `docs/spec/role-route-matrix.md` khi
-route contract thay đổi.
+`apps/web/app/components/control-surface-shell.tsx` — sole L0 shell
+(nav-as-data): sidebar from `CONTROL_SURFACE_NAV_GROUPS` via
+`resolveControlSurfacePrimaryTabs` + `resolveControlSurfaceDeepNav`. `/` =
+1/2/3-column landing; no KPI without data contract. Nav filters
+`canAccess(role, "owner")` then module capability.
 
-## Thành phần chính
+### Login
 
-### Khung control_surface (`apps/web/app/components/control-surface-shell.tsx`)
+`login-form.tsx` (RHF + Zod) → `login()` action (rate limit `@comtammatu/security`)
+→ `signInWithPassword` → `resolvePostLoginRedirect()`.
 
-Shell L0 duy nhất (nav-as-data) cho admin/menu/hr/orders/inventory/finance; render:
+## Inventory control_surface
 
-- Sidebar Quản trị đọc `CONTROL_SURFACE_NAV_GROUPS` từ `@comtammatu/shared/auth` qua
-  `resolveControlSurfacePrimaryTabs` + `resolveControlSurfaceDeepNav`.
-- `/` mở landing 1/2/3 cột; không thêm KPI khi chưa có data contract.
-- Header với thông tin user và nút đăng xuất
-- Responsive: sidebar thu gọn trên mobile
+### Dual-plane (ADR 0012 / 0018)
 
-Nhóm điều hướng được lọc qua `canAccess(role, "owner")` trước khi
-lọc capability của từng module. Branch Manager/Staff không nhận tenant nav.
+- **control_surface** `/inventory/*` — AppShell; site filter for every `branch_kind`
+- **Branch Stock** `/br/[branchId]/stock/*` — separate shift plane; do not mirror shell/CTA
+- Record Depth may align; IA/nav/chrome **must not** merge
 
-### Form đăng nhập (`apps/web/app/(public)/(auth)/login/login-form.tsx`)
+### Workflow IA
 
-Component "use client". Dùng React Hook Form + Zod validation. Gọi server action `login()`. Hiện error toast qua Sonner khi thất bại.
+`resolveInventoryNav` + `flattenInventoryDeepNav`:
 
-### Server action đăng nhập (`apps/web/app/(public)/(auth)/login/actions.ts`)
+1. Stock control → `Tồn kho` (landing `/inventory`)
+2. Receive/reconcile → GRN, **`Đơn mua hàng`**, consumption, transfers
+3. Production
+4. Catalog & setup
 
-Server action có rate limiting (`loginRateLimit` từ `@comtammatu/security`). Validate bằng Zod, gọi `signInWithPassword()`, trích xuất claims, redirect qua `resolvePostLoginRedirect()`.
+- Exact `/inventory` = `REDIRECT-SHIM`: accountant → `/inventory/grn`, else →
+  `/inventory/stock` (keep `branchId`).
+- Canonical transactions: `/inventory/{grn,purchase-orders,consumption,transfers}`.
+  `/inventory/operations` retired.
+- Sidebar does not advertise stocktake reconciliation / count / reports / supplier invoices;
+  supplier invoices canonical in Finance; `/inventory/supplier-invoices` = shim.
+- Owner PO LIST (ADR 0018 **C1**) for PO from GRN — no direct PO create CTA
+  or GRN-from-PO. Supplier returns outside daily UI.
+- Consumption groups waste/shrinkage/other issues. Transfer only between valid warehouses;
+  no same-branch warehouse↔kitchen. Catalog single door under `Danh mục`.
 
-## Inventory control_surface hiện tại
+### Wired workflows
 
-### Dual-plane IA (ADR 0012 / 0018)
+- PO: LIST read-only detail; price edit/approval by permission
+- Supplier invoices: Finance home; inventory path = shim
+- `grn/[id]`: `confirmGrn`; transfers: `draft → in_transit → … → received`
+- Stocktake daily = open/count/complete; conflicts/escalate outside daily UI
+- `sắp mở` CTA intentional when input/backend missing
 
-- **control_surface** `/inventory/*` — AppShell + short sidebar; site filter mọi
-  `branch_kind` ngang hàng (`branch`, `central_supply`, `central_kitchen`).
-- **Branch Stock** `/br/[branchId]/stock/*` — plane ca riêng; không mirror
-  control_surface shell/tile/primary CTA.
-- Record Depth có thể khớp theo loại chứng từ; IA/nav/chrome **không** gộp.
-
-### IA theo workflow
-
-`resolveInventoryNav` + `flattenInventoryDeepNav` gom điều hướng Kho theo các
-nhóm ổn định (UI sidebar vẫn flatMap một list ngắn):
-
-- `1 · Kiểm soát tồn`: `Tồn kho` (landing mặc định của `/inventory`)
-- `2 · Nhập/Nhận/Đối soát`: `Nhập kho`, **Đơn mua hàng**, `Tiêu hao`, `Điều chuyển`
-- `3 · Sản xuất`
-- `4 · Danh mục & thiết lập`
-
-Các nguyên tắc đang được code phản ánh:
-
-- `/inventory` (exact) là `REDIRECT-SHIM`: `accountant` → `/inventory/grn`, còn lại →
-  `/inventory/stock` (giữ `branchId` nếu có). Không còn hub «Nay/Tổng quan».
-- Canonical giao dịch Owner: `/inventory/grn`, `/inventory/purchase-orders`,
-  `/inventory/consumption`, `/inventory/transfers`. `/inventory/operations` đã
-  rút (không còn shim).
-- Sidebar không quảng bá `Kiểm kê đối chiếu`, `Đếm tồn`, `Báo cáo` hoặc
-  `Hóa đơn NCC`; route non-nav vẫn ACL/deep-link. Hóa đơn NCC canonical tại
-  Finance; `/inventory/supplier-invoices` chỉ `REDIRECT-SHIM`.
-- Supplier returns ngoài daily UI. Owner PO LIST theo ADR 0018 **C1** restore
-  để xử lý PO tạo từ GRN; không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO.
-- Owner Production/GRN/stock theo site đang chọn trên filter (mọi kind);
-  `branch_manager` vẫn Branch Stock + permission/scope riêng.
-- `Tiêu hao` gom tiêu hao vận hành, hao hụt và xuất khác. Transfer có chủ đích
-  chỉ đi giữa warehouse hợp lệ; không có same-branch Kho↔Bếp.
-- `Ingredients / Suppliers / Định mức món bán` một cửa trong `Danh mục`.
-- Prune: xóa helper chết (`receiving`/`expiry`); chuyển AP actions về Finance;
-  rút shim tạm sau khi CTA đã canonical.
-
-### Workflow đã wire thật ở UI
-
-Các detail pages của Inventory không còn chỉ là read-only shells:
-
-- `purchase-orders`: Inventory sidebar LIST **Đơn mua hàng** (ADR 0018 **C1**
-  Owner restore) cho PO tạo từ GRN. Mỗi hàng mở read-only detail; action chỉ sửa
-  giá và duyệt theo quyền, không có CTA tạo PO trực tiếp hoặc tạo GRN từ PO.
-- `supplier-invoices`: Finance home at `/finance/supplier-invoices` with client
-  under `finance/supplier-invoices/` (ADR 0018 Wave 2).
-  `/inventory/supplier-invoices` is a `REDIRECT-SHIM` only.
-- `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
-- `transfers/[id]`: state machine `draft -> in_transit -> confirmed_receive -> received` (ship RPC auto-advances through `confirmed_ship`)
-- `supplier-returns`: không thuộc daily Inventory UI; stock-return/credit-note/AP đi qua quyết định riêng trước khi có CTA
-- `stocktake/conflicts` và `stocktake/[id]/escalate`: conflict/recount/escalation không nằm trong daily UI; current stocktake flow là open/count/complete
-
-Một số CTA vẫn được giữ là `sắp mở` có chủ đích khi chưa có input surface hoặc backend/reporting hoàn chỉnh, để tránh false promise.
-
-## Vòng đời request
+## Request Lifecycle
 
 ```
-Browser request
-  → proxy.ts (auth + ACL)
-    → Next.js route matching
-      → layout.tsx (RSC — trusts the proxy auth invariant)
-        → page.tsx (RSC or client component)
-          → Server Action (if mutation)
-            → Supabase PostgREST (RLS enforced)
+Browser → proxy.ts (auth + ACL) → route → layout (trusts proxy) → page
+  → Server Action (mutation) → PostgREST (RLS)
 ```
 
-## Quy tắc import
+## Import Rules
 
-| File Type                     | Can Import                                                                             |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `page.tsx` (RSC)              | `@comtammatu/database/supabase/server`, `@comtammatu/shared`, `@comtammatu/ui`         |
-| `layout.tsx` (RSC)            | Same as page.tsx                                                                       |
-| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui`         |
-| `actions.ts` (Server Actions) | Explicit server/service database subpath, `@comtammatu/shared`, `@comtammatu/security` |
+| File Type | Can Import |
+| --- | --- |
+| `page.tsx` / `layout.tsx` (RSC) | `@comtammatu/database/supabase/server`, shared, ui |
+| `"use client"` | `@comtammatu/database/supabase/client`, shared, ui |
+| `actions.ts` | Explicit server/service DB subpath, shared, security |
 
-## Thêm một trang quản trị mới
+## Adding A New Admin Page
 
-1. Tạo `apps/web/app/(protected)/{module}/page.tsx`
-2. Thêm `ModuleKey` vào `packages/shared/src/auth/module-acl.ts` với các role được phép
-3. Thêm URL mapping trong `packages/shared/src/auth/route-resolution.ts`
-4. Thêm route family / chrome contract trong `packages/shared/src/auth/route-map.ts`
-5. Thêm nav item trong `packages/shared/src/auth/nav-config.ts`
-6. Xác minh: proxy route đúng, sidebar hiện/ẩn theo role, route family resolve về đúng surface dự kiến
+1. `apps/web/app/(protected)/{module}/page.tsx`
+2. `ModuleKey` + roles in `module-acl.ts`
+3. URL → ModuleKey in `route-resolution.ts`
+4. Surface/chrome in `route-map.ts`
+5. Nav in `nav-config.ts`
+6. Verify: proxy, sidebar by role, correct surface
 
-## Các lỗi thường gặp
+## Common Failures
 
-| Failure                            | Signal                                   | Recovery                                                                                          |
-| ---------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| "use client" barrel import         | Turbopack build crash                    | Use `/supabase/client` import path                                                                |
-| Missing module in route-resolution | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                                                               |
-| Missing nav entry                  | Page exists but unreachable from sidebar | Add to `CONTROL_SURFACE_NAV_GROUPS`, unless the route is an intentional direct-only support route |
-| Layout re-checks auth/ACL          | Double redirect or divergent gate        | Remove the duplicate check; proxy owns protected-route auth                                       |
+| Failure | Signal | Recovery |
+| --- | --- | --- |
+| "use client" barrel import | Turbopack crash | `/supabase/client` |
+| Missing route-resolution | 404 / no ACL | Add URL → ModuleKey |
+| Missing nav | Unreachable from sidebar | Add to `CONTROL_SURFACE_NAV_GROUPS` (or intentional direct-only) |
+| Layout re-checks auth | Double redirect | Remove; proxy owns gate |
 
-## Lý do thiết kế
+## Design Rationale
 
-- **Proxy là cổng auth duy nhất:** Mọi enforcement auth xảy ra trong `proxy.ts`
-  trước khi route code chạy; layout/page đọc invariant, không dựng gate thứ hai.
-- **Mặc định RSC:** Các page là React Server Components. Chỉ phần tử tương tác (form, dropdown) dùng "use client".
-- **control_surface là Owner-only:** giữ các control L0 cho Owner; Branch Manager dùng `/br/[branchId]/*` và workflow Branch-native.
-- **Inventory là surface độc lập:** `/inventory/*` là domain vận hành Inventory
-  canonical; exact `/inventory` redirect vào Tồn (hoặc GRN với kế toán).
-- **Staff runtime dùng chung:** profile, clock, attendance, schedule, leave
-  request và payslip nằm trong Branch cho role gắn site, dưới `/me/*` cho Kế
-  toán. HR control_surface và `/hr/payroll/*` chỉ dành cho Owner; Owner không có
-  self runtime.
-- **Finance mặc định là tài chính vận hành:** doanh thu, giá trị tồn kho, food cost/lãi gộp, chi phí vận hành, tổng kết tiền mặt, và hỗ trợ HĐĐT đã live. Sổ kế toán doanh nghiệp, BCTC và đóng/mở lại kỳ chưa nằm trong app surface hiện tại.
-- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ config danh mục nguyên liệu, đơn vị, một ngưỡng tồn `Min`, và QC; `page.tsx` redirect theo permission về categories/units/qc. Catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/menu-recipes`. `/inventory/recipes` chỉ là redirect tương thích.
+- **Proxy = sole auth gate** — layout/page reads invariant, no second gate
+- **RSC by default** — `"use client"` only for interactive UI
+- **control_surface Owner-only** — BM/Staff on `/br/[branchId]/*`
+- **Inventory surface independent** — exact `/inventory` redirects to stock (or accountant GRN)
+- **Shared staff runtime** — Branch for site-pinned; `/me/*` for accountant;
+  HR/`/hr/payroll` Owner-only; Owner has no self runtime
+- **Finance = operational finance** — not enterprise GL / financial statements / period close
+- **Inventory settings narrow** — categories/units/Min/QC; catalog canonical at
+  `/inventory/{ingredients,suppliers,menu-recipes}`; `/inventory/recipes` = compat redirect

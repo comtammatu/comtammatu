@@ -15,13 +15,8 @@
 The system has these feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. On a visible control-surface route, it is also the transient attention layer for a newly arrived durable notification; the durable row remains the source of truth. Use `toast` from `@comtammatu/ui/components/sonner`.
-- In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
-- Foreground popup: device-level OS notification fired by the open PWA via the
-  `Notification` API for every new unread durable notification the user can see,
-  across `info`, `warning`, and `critical`. A visible control-surface route uses
-  Sonner instead to avoid duplicate foreground alerts. The OS popup links back
-  to `/notifications` or the action URL and fires only while the app is open;
-  there is no closed-app delivery.
+- In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, `Cổng nhân viên`, or an approved bell/entry point.
+- Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for every new unread durable notification the user can see, across `info`, `warning`, and `critical`. A visible control-surface route uses Sonner instead to avoid duplicate foreground alerts. The OS popup links back to `/notifications` or the action URL and fires only while the app is open; there is no closed-app delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 - Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
@@ -36,7 +31,7 @@ Use these sources in order:
 3. Durable feed actions: `apps/web/app/(protected)/notifications/actions.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
 5. Foreground popup runtime: `apps/web/app/_hooks/use-foreground-notifications.ts`, `apps/web/app/_components/notification-popup-control.tsx`, and `apps/web/app/sw.ts` (notificationclick)
-6. Database contract: `supabase/migrations/20260727120000_baseline.sql` (bảng notifications) and forward notification migrations
+6. Database contract: `supabase/migrations/20260727120000_baseline.sql` (notifications tables) and forward notification migrations
 7. External outbox: `public.notification_outbox` and module-specific dispatchers
 8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
@@ -53,7 +48,7 @@ Workflow event
   -> public.notifications row
   -> RLS decides visibility by tenant, role, branch
   -> useNotifications refreshes list + unread count
-  -> /notifications, Cổng nhân viên, shell entry point, or approved bell
+  -> /notifications, `Cổng nhân viên`, shell entry point, or approved bell
 
 Foreground attention (PWA open)
   -> user grants Notification permission
@@ -70,21 +65,9 @@ External delivery
 
 ## PM Scope
 
-MVP acceptance:
+MVP: one clear immediate feedback path per client action (inline / toast / blocking dialog); durable notifications for work that survives navigation or needs another role; feed supports unread, mark-read, deep links, severity, expiry, dedup; shared severity semantics without shared storage; foreground OS popups while PWA open only (no closed-app push); producers auditable by kind, entity, target role/branch, dedup key.
 
-- Every client-side action has one clear immediate feedback path: inline validation for field issues, toast for action-level outcome, or blocking dialog for destructive confirmation.
-- Any workflow event that must survive navigation, involve another role, or require follow-up creates a durable notification.
-- The notification feed supports unread count, mark-read, mark-all-read, entity deep links, severity, expiry, and deduplication.
-- Toasts and notifications share severity semantics and vocabulary, but do not share storage.
-- Android and iOS staff devices can opt in to foreground OS popups while the PWA is open (Notification API); there is no closed-app push.
-- Notification producers can be audited by event kind, entity, target role, target branch, and dedup key.
-
-Out of scope for the current contract:
-
-- Native-app-only APNs/FCM SDK delivery.
-- Native channel SDK delivery.
-- A second visual notification system outside Má Tư DS/Sonner.
-- Per-user notification rows. Targeting stays role/branch based; read state is per user.
+Out of scope: native APNs/FCM or channel SDKs; a second visual system outside Má Tư DS/Sonner; per-user notification rows (targeting stays role/branch; read state is per user).
 
 ## BA Rules
 
@@ -140,34 +123,17 @@ Do not store durable success notifications for routine local actions. They pollu
 
 ## Producer And Kind Contract
 
-Every new or modified producer sets trusted `tenant_id`, appropriate
-`target_branch_id`, `target_roles`, stable `kind`, `severity`, and Vietnamese
-`title`. It adds entity/action metadata only when the target route is safe and
-authorized. Repeated, scheduled, retryable, or state-scanning producers require
-a deterministic `dedup_key`; one-off domain events may use their unique event id
-or omit the key when duplicate rows represent distinct legitimate events.
+Every new or modified producer sets trusted `tenant_id`, appropriate `target_branch_id`, `target_roles`, stable `kind`, `severity`, and Vietnamese `title`. It adds entity/action metadata only when the target route is safe and authorized. Repeated, scheduled, retryable, or state-scanning producers require a deterministic `dedup_key`; one-off domain events may use their unique event id or omit the key when duplicate rows represent distinct legitimate events.
 
-Producer creation happens after the domain state is durable. When correctness
-requires the notification and domain write to commit together, both belong in
-the same RPC transaction. Money, tax, and labor notifications are alert-only;
-they never auto-act. Any LLM formatting layer receives selected structured data,
-has no database/RPC credentials, and may generate prose only.
+Producer creation happens after the domain state is durable. When correctness requires the notification and domain write to commit together, both belong in the same RPC transaction. Money, tax, and labor notifications are alert-only; they never auto-act. Any LLM formatting layer receives selected structured data, has no database/RPC credentials, and may generate prose only.
 
 ### Kind Taxonomy
 
-Use stable namespaced `kind` values:
-
-```text
-<domain>.<event>
-```
-
-Existing runtime values are grandfathered. New values use the full domain name
-when practical and must not create a synonym for an existing event. Runtime
-labels live in `apps/web/lib/messages/notifications.ts`; icon handling lives in
-`apps/web/app/_components/notification-item.tsx`. Every new or modified kind
-must have a user-facing label and intentional icon/fallback behavior.
+Use stable namespaced `kind` values: `<domain>.<event>`. Existing runtime values are grandfathered. New values use the full domain name when practical and must not create a synonym for an existing event. Runtime labels live in `apps/web/lib/messages/notifications.ts`; icon handling lives in `apps/web/app/_components/notification-item.tsx`. Every new or modified kind must have a user-facing label and intentional icon/fallback behavior.
 
 Do not encode branch, role, severity, or status into `kind`; those belong in dedicated fields or `meta`.
+
+Producer pattern pointer: client actions map `ActionResult` to `toast.*`; server actions return safe Vietnamese `ActionResult.error` (never raw DB messages); RPC-critical producers `INSERT` into `public.notifications` inside the same transaction as the domain write.
 
 ## Durable Notification Schema Contract
 
@@ -189,8 +155,7 @@ Conditionally required fields:
 - `expires_at`: required for time-boxed alerts.
 - `meta`: structured details for diagnostics, formatting, or future delivery.
 
-Actionable notifications must set `expires_at` when their entity is resolved or
-deleted; unread attention must not survive after the work item stops existing.
+Actionable notifications must set `expires_at` when their entity is resolved or deleted; unread attention must not survive after the work item stops existing.
 
 Recommended `meta` shape:
 
@@ -254,8 +219,6 @@ Lifecycle rules:
 
 Use `dedup_key` for noisy events.
 
-Recommended patterns:
-
 | Event              | Dedup key                                           |
 | ------------------ | --------------------------------------------------- |
 | Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`   |
@@ -265,9 +228,9 @@ Recommended patterns:
 
 If an event can occur multiple times legitimately, include the domain event id. If repeated rows add no value, keep the dedup key stable and update metadata or rely on `ON CONFLICT`.
 
-## Toast Architecture
+Anti-spam: repeated system checks need `dedup_key`; scheduled alerts rate-limit by entity and period; high-frequency operational events update a live view, not the feed; toasts from rapid clicks use pending state or stable id. Defaults: stock low one active per branch+ingredient until replenished; integration failure one per integration per day (`meta` retry count); SLA one per entity+SLA.
 
-Toast path:
+## Toast Architecture
 
 ```text
 Client event -> local validation / Server Action -> ActionResult -> toast.*
@@ -279,13 +242,10 @@ Rules:
 - Import from `@comtammatu/ui/components/sonner`.
 - Root mounting stays in `apps/web/app/layout.tsx` through `<Toaster />`.
 - Use Sonner variants directly: `toast.success`, `toast.error`, `toast.warning`, `toast.info`, `toast.message`, and `toast.loading`.
-- Keep title to one sentence.
-- Put secondary details in Sonner `description` only when it changes what the user should do next.
-- Avoid stacked duplicate toasts from rapid clicks; disable pending buttons or use a stable toast id.
+- Keep title to one sentence; put secondary details in `description` only when it changes next action.
+- Avoid stacked duplicates; disable pending buttons or use a stable toast id.
 - Do not render custom toast containers or page-local toast systems.
 - Do not use URL flash/search params for non-auth action feedback. Route-level redirects with reasons are reserved for permission, auth, and scope failures such as `/access-denied?reason=...`.
-
-Recommended copy pattern:
 
 | Variant            | Meaning                                                       | Example                                   |
 | ------------------ | ------------------------------------------------------------- | ----------------------------------------- |
@@ -297,36 +257,13 @@ Recommended copy pattern:
 
 ## Toast Copy Rules
 
-Good toast copy:
+Good copy says what happened (not which function ran), uses the business object name when useful, avoids raw exception text, does not blame the user, and gives the next action only when needed.
 
-- Says what happened, not which function ran.
-- Uses the business object name when useful.
-- Avoids raw exception text.
-- Does not blame the user.
-- Gives the next action only when needed.
+Good: `Đã lưu cài đặt`, `Không thể xác nhận thanh toán`, `Chọn nguyên liệu cần xuất`, `Waste auto đã gửi nhưng admin cần xử lý`.
 
-Patterns:
-
-```text
-Đã lưu cài đặt
-Không thể xác nhận thanh toán
-Chọn nguyên liệu cần xuất
-Waste auto đã gửi nhưng admin cần xử lý
-```
-
-Avoid:
-
-```text
-PGRST204
-insert failed
-RPC returned 22023
-Unexpected error
-Success!
-```
+Avoid: `PGRST204`, `insert failed`, `RPC returned 22023`, `Unexpected error`, `Success!`.
 
 ## In-App Notification Architecture
-
-Durable notification path:
 
 ```text
 Domain event / RPC / server action
@@ -336,120 +273,47 @@ Domain event / RPC / server action
   -> NotificationList renders item rows
 ```
 
-Current runtime pieces:
+Runtime: `notifications/actions.ts` (list, unread, mark read/all); `use-notifications.ts` (realtime); `use-notification-badges.ts` (shell/footer counts); `notification-list.tsx` / `notification-item.tsx`; `(protected)/notifications/page.tsx`. Control-surface chrome uses the `AppShell` footer entry; module tabs show grouped unread; full feed remains the reliable source.
 
-- `apps/web/app/(protected)/notifications/actions.ts`: list, unread count, mark one read, mark all read.
-- `apps/web/app/_hooks/use-notifications.ts`: realtime subscription and refetch.
-- `apps/web/app/_hooks/use-notification-badges.ts`: grouped unread counts for shell tabs and footer.
-- `apps/web/app/_components/notification-list.tsx`: feed composition.
-- `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
-- `apps/web/app/(protected)/notifications/page.tsx`: full feed route.
-- Control-surface desktop and drawer chrome use the notification entry in
-  `AppShell` footer. Module and deep-navigation tabs show grouped unread counts;
-  the full feed remains the reliable source.
-
-UI rules:
-
-- Use list/item primitives, not hand-styled fake cards.
-- Notification row click may mark read, then navigate to `action_url`.
-- If `action_url` is absent, row still marks read but should not imply a next action.
-- Severity icon/color must come from semantic tokens and existing Lucide icons.
-- Full feed page should be the reliable source; bell/popover is a shortcut.
+UI rules: use list/item primitives; row click may mark read then navigate `action_url`; absent `action_url` still marks read without implying a next action; severity from semantic tokens and Lucide icons; full feed is source of truth, bell/popover is shortcut.
 
 ## Surface Placement
 
 ### POS
 
-- Toasts are allowed for payment, order creation, print, session open/close, and recoverable cashier errors.
+- Toasts for payment, order creation, print, session open/close, and recoverable cashier errors.
 - Do not show global notification chrome that competes with cart/payment work.
-- Durable notifications are for manager/ follow-up, not cashier confirmation.
+- Durable notifications are for manager follow-up, not cashier confirmation.
 
 ### KDS
 
-- Live queue is the primary notification surface for kitchen work.
-- Use toast only for mutation feedback such as bump/undo/cancel failure.
-- Avoid creating notification rows for every ticket movement unless another station/role needs handoff.
-- New-ticket attention sound/voice is operational audio (`docs/spec/operational-audio-alerts.md`), not a durable notification.
+- Live queue is the primary surface for kitchen work.
+- Toast only for mutation feedback (bump/undo/cancel failure).
+- Avoid notification rows for every ticket movement unless another station/role needs handoff.
+- New-ticket sound/voice is operational audio (`docs/spec/operational-audio-alerts.md`), not a durable notification.
 
 ### Owner
 
-- Full notification feed and badge/entry point are appropriate.
-- The footer badge shows total unread; module and deep-navigation badges show
-  unread work whose kind or action URL belongs to that destination.
+- Full feed and badge/entry point are appropriate.
+- Footer badge shows total unread; module badges show unread whose kind or action URL belongs to that destination.
 - Owner notifications should link to review queues, settings, audit, finance, staff, or inventory exception pages.
 
 ### Inventory
 
-- Durable notifications are expected for stock low, stocktake conflicts,
-  period-close issues, and real approval queues. D091 does not create a
-  price-review obligation from GRN.
-- A submitted branch stock request targets the responsible Kho Tổng or Bếp
-  Trung tâm role. A submitted purchase request targets Owner and Kế toán.
-- Purchase-request and purchase-order notifications open the matching
-  `Nhu cầu mua` or `Đơn mua` queue inside `Mua hàng`.
-- Only GRN work opens `Nhập kho`; an approved purchase order may still target
-  the receiving central-site role without moving its badge to the GRN queue.
+- Durable notifications are expected for stock low, stocktake conflicts, period-close issues, and real approval queues.
+- A submitted branch stock request targets the responsible `Kho Tổng` or `Bếp Trung tâm` role. A submitted purchase request targets Owner and `Kế toán`.
+- Purchase-request and purchase-order notifications open the matching `Nhu cầu mua` or `Đơn mua` queue inside `Mua hàng`.
+- Only GRN work opens `Nhập kho`; an approved purchase order may still target the receiving central-site role without moving its badge to the GRN queue.
 - Toasts confirm the local action only; durable rows carry cross-role obligations.
 
-### Employee
+### Staff (`Cổng nhân viên`)
 
 - Keep notifications task-led and narrow.
 - Do not turn the staff notification feed into an Owner control surface.
 
-## Producer Patterns
-
-### Client Action Pattern
-
-```tsx
-const result = await saveSomething(input);
-if (!result.success) {
-  toast.error(result.error ?? "Không thể lưu dữ liệu");
-  return;
-}
-toast.success("Đã lưu dữ liệu");
-```
-
-### Server Action Pattern
-
-```ts
-if (error) {
-  console.error("saveSomething", error);
-  return { success: false, error: "Không thể lưu dữ liệu" };
-}
-return { success: true };
-```
-
-### RPC-Critical Notification Pattern
-
-```sql
--- Inside the same transaction as the domain state change.
-INSERT INTO public.notifications (
-  tenant_id,
-  target_branch_id,
-  target_roles,
-  kind,
-  severity,
-  title,
-  body,
-  entity_type,
-  entity_id,
-  action_url,
-  dedup_key,
-  meta
-) VALUES (...);
-```
-
-Use RPC when notification creation is part of an atomic workflow. Example:
-finalizing stocktake creates conflicts.
-
 ## External Outbox
 
-`notification_outbox` is for delivery attempts, not unread state.
-
-A workflow may write both:
-
-- `notifications`: what authorized users see in the app.
-- `notification_outbox`: what an external webhook/worker should deliver.
+`notification_outbox` is for delivery attempts, not unread state. A workflow may write both `notifications` (in-app) and `notification_outbox` (external webhook/worker).
 
 Rules:
 
@@ -461,55 +325,11 @@ Rules:
 
 ## Error Handling
 
-Server-side:
+Server-side: log technical details; return safe Vietnamese messages in `ActionResult.error`; never return raw Supabase/Postgres `error.message` to clients.
 
-- Log technical error details server-side.
-- Return safe Vietnamese messages in `ActionResult.error`.
-- Never return raw Supabase/Postgres `error.message` to clients.
+Client-side: inline field errors for specific fields; toast errors for action-level failures; durable notifications only for actual workflow obligations.
 
-Client-side:
-
-- Use inline field errors for specific form fields.
-- Use toast errors for action-level failures.
-- Use durable notifications only for actual workflow obligations.
-
-Database:
-
-- RPC errors intended for UI should be mapped by the server action.
-- Constraint names and SQLSTATE codes should not appear in toast or notification title/body.
-
-## Anti-Spam And Rate Limits
-
-The feed must optimize for actionable work, not event volume.
-
-Rules:
-
-- Repeated system checks need `dedup_key`.
-- Scheduled alerts should rate limit by entity and period.
-- High-frequency operational events should update a live view, not create notifications.
-- Toasts from repeated clicks should be prevented by pending state or stable id.
-- Critical events may bypass normal quieting only when they require immediate action.
-
-Default dedup windows:
-
-- Stock low: one active notification per branch + ingredient until replenished.
-- Integration failure: one per integration per day, with retry count in `meta`.
-- SLA breach: one per entity + SLA.
-
-## Accessibility
-
-Toast:
-
-- Sonner handles live announcements; keep copy concise.
-- Do not require users to click a toast to finish a workflow.
-- Toast duration should not be the only place critical information exists.
-
-Notification feed:
-
-- Notification entry buttons and tab badges need accessible labels and visible unread count.
-- Rows must be keyboard reachable.
-- Unread state must not rely only on color; use font weight, dot, label, or count.
-- `action_url` navigation must be predictable and authorized.
+Database: RPC errors intended for UI must be mapped by the server action; constraint names and SQLSTATE codes must not appear in toast or notification title/body.
 
 ## Security And Privacy
 
@@ -518,89 +338,4 @@ Notification feed:
 - `meta` is still client-readable when the row is visible; treat it as user-facing data.
 - `action_url` must point to routes protected by proxy/ACL.
 - Branch scope must be explicit for branch-local work.
-
-## Observability
-
-Each notification producer should be traceable:
-
-- Log producer failures with producer name and entity id.
-- Use `kind` and `dedup_key` for queryable diagnostics.
-- Include `correlationId` in `meta` when the source workflow already has one.
-- Track external delivery status in outbox rows.
-
-Useful operational questions:
-
-- Which notification kinds are most frequent?
-- Which critical notifications stay unread longest?
-- Which dedup keys are repeatedly updated?
-- Which external channels are failing or skipped?
-
-## QA/QC Verification
-
-Before marking runtime implementation complete:
-
-- `pnpm typecheck && pnpm lint && pnpm build` passes.
-- Toasts are not used for durable workflow obligations.
-- Durable notifications have RLS-covered visibility and do not leak cross-tenant or cross-branch data.
-- Unread count updates after insert, mark-read, mark-all-read, visibility change, and page reload.
-- Module/tab counts group every visible unread notification exactly once per matching destination.
-- `action_url` is authorized by proxy/ACL and lands on the next safe action.
-- Repeated events respect `dedup_key` or rate limits.
-- User-facing copy is Vietnamese, safe, and does not expose raw database messages.
-- Mobile POS/KDS first viewport remains focused on the main operational task.
-
-Documentation-only verification:
-
-- Changed docs match `packages/ui/src/components/sonner.tsx` and existing notification actions.
-- No new runtime behavior is implied without an implementation path.
-
-## Test Matrix
-
-| Area                    | Test                                                                   |
-| ----------------------- | ---------------------------------------------------------------------- |
-| Toast success           | Trigger a known successful action and verify one success toast appears |
-| Toast error             | Force a safe action failure and verify sanitized Vietnamese copy       |
-| Toast duplicate         | Double-click pending action and verify no toast storm                  |
-| Notification visibility | Same tenant role sees row; unrelated role/branch does not              |
-| Notification unread     | New row increments unread count                                        |
-| Mark read               | Clicking item marks it read and optionally navigates                   |
-| Mark all                | Visible unread rows become read for current user only                  |
-| Expiry                  | Expired row no longer counts as unread active work                     |
-| Dedup                   | Repeated event does not create duplicate active rows                   |
-| Outbox skipped          | No webhook configured marks rows skipped                               |
-| Outbox failed           | Non-2xx delivery increments retries and stores safe error metadata     |
-
-## Rollout Plan
-
-1. Keep the existing Sonner root setup as the only toast provider.
-2. Standardize new client actions on `ActionResult -> toast` handling.
-3. Add durable notification producers only at workflow boundaries.
-4. Use RPC-based producers for atomic multi-item workflows.
-5. Keep notification footer and tab badges in control-surface chrome; do not add them to POS/KDS.
-6. Add regression tests around visibility, unread count, and producer dedup for each new notification family.
-
-## Implementation Checklist
-
-For any new toast:
-
-- Is the action local to the current user?
-- Is the message short and safe?
-- Is there a pending state to prevent duplicate toasts?
-- Is field-specific feedback inline instead?
-
-For any new durable notification:
-
-- What role owns the next action?
-- Is the branch target explicit?
-- What business entity does it link to?
-- What `kind` and `dedup_key` make it queryable?
-- Should it expire?
-- Does RLS protect it?
-- Does completing the business task happen outside read state?
-
-For any new external delivery:
-
-- Is the parent transaction allowed to succeed if delivery fails?
-- What is the retry limit?
-- What data is safe to send out?
-- How is skipped/failed status surfaced to admins?
+- Inventory residual `/br/{site}/stock/*` URLs resolve to L0 `/inventory/*` for Owner, Accountant, and central roles at feed hydration (`resolveNotificationActionUrl`); Branch Manager / floor keep the `/br` operator plane.

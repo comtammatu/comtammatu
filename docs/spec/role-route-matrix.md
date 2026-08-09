@@ -52,11 +52,11 @@ reference framing.
 | Branch Command      | `/br/[branchId]/dashboard`                                                                                                                         | L1      | `branch_manager`, owner oversight                                      | Deep branch management surface for one branch: today status, POS/KDS health, staff day flow, pending local tasks, and links to branch setup.                                                                                       |
 | Branch Setup        | `/br/[branchId]/settings/*`                                                                                                                        | L1      | `branch_manager`, owner oversight                                      | Configure tables, POS terminals, KDS stations, printers, POS sessions, and branch-local operating settings.                                                                                                                        |
 | Branch Operations   | `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/orders`, `/br/[branchId]/stock`, `/br/[branchId]/menu-limits`, `/br/[branchId]/runner` | L1      | Store operators and Branch Manager; explicit Owner oversight           | Run service within one URL-scoped branch. Owner may enter a branch explicitly; branch roles cannot cross branch scope.                                                                                                             |
-| Inventory Oversight | `/inventory/*`                                                                                                                                     | L0      | `owner`; `accountant` only for PO/GRN; central roles by explicit grant | Tenant inventory, purchase demand allocation → PO → GRN, stock requests inbox, stocktake, production (central kitchen), consumption, waste, and reports. Branch daily work: `/br/[branchId]/stock/*` (yêu cầu hàng, không GRN/SX). |
+| Inventory Oversight | `/inventory/*`                                                                                                                                     | L0      | `owner`; `accountant` only for PO/GRN; central roles by explicit grant | Tenant inventory, purchase demand allocation → PO → GRN, stock requests inbox, stocktake, production (central kitchen), consumption, waste, and reports. Branch daily work: `/br/[branchId]/stock/*` (stock requests only; no GRN/production). |
 | Orders Oversight    | `/orders/*`                                                                                                                                        | L0      | `owner`                                                                | Tenant order oversight and exception handling. Branch order work stays under `/br/[branchId]/orders`.                                                                                                                              |
 | HR Administration   | `/hr/*`                                                                                                                                            | L0      | `tenant_owner`, `hr_manager` role bindings                             | Tenant-wide staff CRUD, attendance, leave, payroll, labor contracts, compensation, insurance, accounts, and read-only permission state.                                                                                            |
 | Finance             | `/finance/*`                                                                                                                                       | L0      | `owner`, `accountant`                                                  | Operating finance, revenue, expenses, supplier AP, cash summary, inventory value handoff, food-cost signal, tax-support exports, and HĐĐT support.                                                                                 |
-| Ca của tôi / Hồ sơ  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                                                               | L1/self | branch-pinned roles                                                    | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Direct `/me/*` requests canonicalize here.                                                                                         |
+| **`Ca của tôi / Hồ sơ`**  | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`                                                                                               | L1/self | branch-pinned roles                                                    | Personal day-flow and profile surfaces: clock, workday tasks, schedule, leave request, payslip. Direct `/me/*` requests canonicalize here.                                                                                         |
 | Self                | `/me`, `/me/clock`, `/me/schedule`, `/me/schedule/leave`, `/me/profile`, `/me/payslip`                                                             | L0/self | active company members without Branch scope; Owner denied              | Personal attendance/tasks, schedule/leave, profile, and payslip in Control shell. It is account chrome, never an Inventory module or fake Branch.                                                                                  |
 
 ## HR Administration Semantics
@@ -70,9 +70,9 @@ current branch URL and never grant Company HR admission.
 | Add/update/deactivate staff access    | `/hr?view=accounts`                                                         | Company HR provisions accounts and assigns position/workplace. Role binding writes additionally require `security_admin` and AAL2.                         |
 | Employee record, salary profile, HĐLĐ | `/hr`                                                                       | `employees` + active `employment_contracts`; sensitive data requires `hr:view_sensitive_employee`. Branch Manager only reads the branch-safe subset.       |
 | Assignment / position work            | `/hr/setup`                                                                 | Company HR defines leave/workday policy, global shift catalog, and position/employee task templates.                                                       |
-| Ca làm                                | `/hr/setup?tab=shifts`                                                      | Company HR manages the global shift catalog. Branch Manager only assigns catalog shifts under `/br/[branchId]/shift/roster`.                               |
-| Phép nghỉ                             | Branch schedule/approval routes, `/me/schedule`, Owner `/hr` attendance tab | Floor uses Branch Manager approval; central and Accountant use Owner approval. Immutable site/null creation scope and self/cross-scope review fail closed. |
-| Bảng lương                            | `/hr/payroll/*`                                                             | HR and Owner prepare and snapshot payroll with separate capabilities. Payment remains in Finance.                                                          |
+| **`Ca làm`**                                | `/hr/setup?tab=shifts`                                                      | Company HR manages the global shift catalog. Branch Manager only assigns catalog shifts under `/br/[branchId]/shift/roster`.                               |
+| **`Phép nghỉ`**                             | Branch schedule/approval routes, `/me/schedule`, Owner `/hr` attendance tab | Floor uses Branch Manager approval; central and Accountant use Owner approval. Immutable site/null creation scope and self/cross-scope review fail closed. |
+| **`Bảng lương`**                            | `/hr/payroll/*`                                                             | HR and Owner prepare and snapshot payroll with separate capabilities. Payment remains in Finance.                                                          |
 
 ## Role Boundaries
 
@@ -141,37 +141,37 @@ by direct URL or as a redirect target.
 
 | Module key | Route path | Allowed roles | Nav/tile advertisement source |
 | ---------- | ---------- | ------------- | ------------------------------ |
-| `owner` | `/` | Chủ sở hữu | Control surface nav |
-| `menu` | `/menu` | Chủ sở hữu | Control surface nav |
-| `inventory` | `/inventory` | Chủ sở hữu, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT | Control surface nav |
-| `inventory_operations` | `/inventory/stock` | Chủ sở hữu, Quản lý kho Tổng, Bếp trưởng Bếp TT | (not advertised in nav — direct URL / redirect target only) |
-| `orders` | `/orders` | Chủ sở hữu | Control surface nav |
-| `feedback` | `/feedback` | Chủ sở hữu | Control surface nav |
-| `staff` | `/hr/staff` | Chủ sở hữu, Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `hr` | `/hr` | Chủ sở hữu, Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | Control surface nav |
-| `hr_payroll` | `/hr/payroll` | Chủ sở hữu, Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `me` | `/me` | Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `finance` | `/finance` | Chủ sở hữu, Kế toán | Control surface nav |
-| `branches` | `/branches` | Chủ sở hữu | Control surface nav |
-| `settings` | `/settings` | Chủ sở hữu | Control surface nav |
-| `pos` | `/br/*/pos` | Chủ sở hữu, Thu ngân, Quản lý chi nhánh, Nhân sự chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `kds` | `/br/*/kds` | Chủ sở hữu, Bếp, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `runner` | `/br/*/runner` | Chủ sở hữu, Thu ngân, Bếp, Quản lý chi nhánh, Nhân sự chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `branch_home` | `/br/*` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh, Quản lý kho Tổng, Bếp trưởng Bếp TT | Operator tile (my_shift) |
-| `branch_dashboard` | `/br/*/dashboard` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
-| `branch_settings` | `/br/*/settings` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
-| `branch_menu_limits` | `/br/*/menu-limits` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav; Operator tile (sales_kitchen) |
-| `branch_pos_sessions` | `/br/*/pos-sessions` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
-| `branch_close_day` | `/br/*/close-day` | Chủ sở hữu, Quản lý chi nhánh | Branch operation nav |
-| `branch_team` | `/br/*/team` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav; Operator tile (my_shift) |
-| `branch_stock` | `/br/*/stock` | Chủ sở hữu, Quản lý chi nhánh, Quản lý kho Tổng, Bếp trưởng Bếp TT | Operator tile (approvals); Operator tile (stock) |
-| `branch_orders` | `/br/*/orders` | Chủ sở hữu, Quản lý chi nhánh, Thu ngân, Nhân sự chi nhánh | Operator tile (sales_kitchen) |
-| `branch_feedback` | `/br/*/feedback` | Chủ sở hữu, Quản lý chi nhánh | Branch management nav |
-| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `branch_shift_roster` | `/br/*/shift/roster` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `branch_shift_attendance` | `/br/*/shift/attendance` | Chủ sở hữu, Quản lý chi nhánh | (not advertised in nav — direct URL / redirect target only) |
-| `notifications` | `/notifications` | Chủ sở hữu, Nhân viên, Kế toán, Quản lý kho Tổng, Bếp trưởng Bếp TT, Quản lý chi nhánh, Thu ngân, Bếp, Nhân sự chi nhánh | (not advertised in nav — direct URL / redirect target only) |
+| `owner` | `/` | `Chủ sở hữu` | Control surface nav |
+| `menu` | `/menu` | `Chủ sở hữu` | Control surface nav |
+| `inventory` | `/inventory` | `Chủ sở hữu`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Control surface nav |
+| `inventory_operations` | `/inventory/stock` | `Chủ sở hữu`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | (not advertised in nav — direct URL / redirect target only) |
+| `orders` | `/orders` | `Chủ sở hữu` | Control surface nav |
+| `feedback` | `/feedback` | `Chủ sở hữu` | Control surface nav |
+| `staff` | `/hr/staff` | `Chủ sở hữu`, `Nhân viên`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `hr` | `/hr` | `Chủ sở hữu`, `Nhân viên`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh` | Control surface nav |
+| `hr_payroll` | `/hr/payroll` | `Chủ sở hữu`, `Nhân viên`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `me` | `/me` | `Nhân viên`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `finance` | `/finance` | `Chủ sở hữu`, `Kế toán` | Control surface nav |
+| `branches` | `/branches` | `Chủ sở hữu` | Control surface nav |
+| `settings` | `/settings` | `Chủ sở hữu` | Control surface nav |
+| `pos` | `/br/*/pos` | `Chủ sở hữu`, `Thu ngân`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `kds` | `/br/*/kds` | `Chủ sở hữu`, `Bếp`, `Quản lý chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `runner` | `/br/*/runner` | `Chủ sở hữu`, `Thu ngân`, `Bếp`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `branch_home` | `/br/*` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Operator tile (my_shift) |
+| `branch_dashboard` | `/br/*/dashboard` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
+| `branch_settings` | `/br/*/settings` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
+| `branch_menu_limits` | `/br/*/menu-limits` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `branch_pos_sessions` | `/br/*/pos-sessions` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav |
+| `branch_close_day` | `/br/*/close-day` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav |
+| `branch_team` | `/br/*/team` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav; Operator tile (my_shift) |
+| `branch_stock` | `/br/*/stock` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Operator tile (approvals); Operator tile (stock) |
+| `branch_orders` | `/br/*/orders` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Nhân sự chi nhánh` | Operator tile (sales_kitchen) |
+| `branch_feedback` | `/br/*/feedback` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
+| `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `employee_leave_approvals` | `/br/*/shift/leave-approvals` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `branch_shift_roster` | `/br/*/shift/roster` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `branch_shift_attendance` | `/br/*/shift/attendance` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `notifications` | `/notifications` | `Chủ sở hữu`, `Nhân viên`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
 
 ## Route Family Contracts (generated)
 
@@ -222,15 +222,15 @@ no-`returnTo` case — i.e. where a fresh login actually lands.
 
 | Role | Desktop context | Phone / station context | Notes |
 | ---- | ------------------------- | ------------------------ | ----- |
-| Chủ sở hữu (`owner`) | / (Owner overview) | / (Owner overview) | Owner enters the L0 surface directly and opens a branch explicitly when needed. |
-| Nhân viên (`self_service`) | /me | /me | Active company binding grants personal self-service only; live module bindings may expose additional control-surface workspaces. |
-| Kế toán (`accountant`) | /finance | /finance | D076 adapter until ADR 0015; D091 grants only the Inventory GRN/PO slice. |
-| Quản lý kho Tổng (`central_supply_ops`) | /inventory | /inventory | Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me. |
-| Bếp trưởng Bếp TT (`central_kitchen_lead`) | /inventory | /inventory | Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me. |
-| Quản lý chi nhánh (`branch_manager`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
-| Thu ngân (`cashier`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
-| Bếp (`chef`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
-| Nhân sự chi nhánh (`branch_staff`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
+| `Chủ sở hữu` (`owner`) | / (Owner overview) | / (Owner overview) | Owner enters the L0 surface directly and opens a branch explicitly when needed. |
+| `Nhân viên` (`self_service`) | /me | /me | Active company binding grants personal self-service only; live module bindings may expose additional control-surface workspaces. |
+| `Kế toán` (`accountant`) | /finance | /finance | D076 adapter until ADR 0015; D091 grants only the Inventory GRN/PO slice. |
+| `Quản lý kho Tổng` (`central_supply_ops`) | /inventory | /inventory | Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me. |
+| `Bếp trưởng Bếp TT` (`central_kitchen_lead`) | /inventory | /inventory | Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me. |
+| `Quản lý chi nhánh` (`branch_manager`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
+| `Thu ngân` (`cashier`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
+| `Bếp` (`chef`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
+| `Nhân sự chi nhánh` (`branch_staff`) | /br/{branchId} (Branch home for the claimed branch) | /br/{branchId} (Branch home for the claimed branch) | Branch-pinned roles land in the Branch home for their JWT branch_id; missing branch scope fails closed. |
 
 ## Permission Boundary (generated)
 

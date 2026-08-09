@@ -180,7 +180,7 @@ Preview Branch setup: `docs/runbooks/db/preview-branch-setup.md`.
   second authorization layer in UI helpers.
 - Position codes are canonical English `lower_snake_case`. Update
   `POSITION_CODE_TO_STAFF_ROLE` and `private.staff_role_from_position_code`
-  together; unknown codes fail closed. Seed `waiter` (Phục vụ → `branch_staff`);
+  together; unknown codes fail closed. Seed `waiter` (`Phục vụ` → `branch_staff`);
   do not invent a `server` position-code alias.
 - `notifications.target_roles` contains canonical application roles, never HR
   position codes.

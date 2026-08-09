@@ -1,8 +1,9 @@
-# Cơm Tấm Má Tư — Bộ phần mềm quản lý vận hành và bán hàng
+# Cơm Tấm Má Tư — Operations and sales software
 
-Bộ phần mềm cho CTCP Chén Sứ / Cơm Tấm Má Tư, single-tenant và multi-branch.
-Nhiệm vụ: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ
-đúng, và quản lý nhìn được tình trạng vận hành thật theo ngày.
+Software for CTCP Chén Sứ / Cơm Tấm Má Tư: single-tenant, multi-branch.
+Goals: sell correctly, kitchen receives correctly, collect payment correctly,
+print/invoice correctly, stock deducts correctly, and management sees real
+daily operations.
 
 Hierarchy: `Tenant (L0) → Branch (L1)`.
 
@@ -18,6 +19,8 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 | Behavior, review, verification | `workflow.md` |
 | Supabase, migration, RLS, auth, RPC | `database.md` |
 | UI, UX, route surface, copy | `ui.md` |
+| React/Next data-fetch or render performance | `react.md` |
+| English vs Vietnamese language separation | `language.md` |
 | External skill, plugin, browser, subagent | `skills.md`; add `orchestration.md` only for fan-out |
 | Authority or onboarding | `references.md` |
 | Notification, alert, scheduled report | `docs/spec/toast-notification-system.md` |
@@ -45,8 +48,11 @@ use built-in search tools; indexing remains an owner decision.
   `corepack pnpm db:types`.
 - ACL source: `packages/shared/src/auth/module-acl.ts`. RLS/RPC remains final
   enforcement; UI visibility is not authorization.
-- UI source: `docs/spec/design-system.md`. Never create a parallel design
-  system or put agent notes and implementation commentary in product UI.
+- UI source (ordered 3+1): `docs/spec/design-system.md` (visual),
+  `docs/spec/page-archetypes.md` (workflow), `docs/ref/screen-context-map.md`
+  (audience/device); `docs/modules/ui.md` is the thin implementation map.
+  Never create a parallel design system or put agent notes and implementation
+  commentary in product UI.
 - Comments are English and only explain non-obvious constraints. Delete retired
   code/docs cleanly; Git is the archive, so no tombstones or provenance notes.
 - Do not create another agent wiki, task board, memory store, or rule tree.
@@ -57,11 +63,14 @@ use built-in search tools; indexing remains an owner decision.
 
 ## Communication And Git
 
-- Owner-facing chat is Vietnamese. Agent-to-agent text, code, identifiers,
-  comments, and commit subjects are English.
-- New owner/domain docs under `docs/ref/`, `docs/architecture/`, and
-  `docs/plan/` default to Vietnamese. Agent rules, technical specs/modules,
-  ADRs, and `tasks/` default to English. Preserve an existing file's language.
+- Owner-facing chat is Vietnamese. Everything else for agents and engineering
+  is English — see `docs/agent/rules/language.md`.
+- English (required): agent rules/skills, specs, modules, plan/ADR/decisions,
+  architecture notes, tasks, scripts prose, code identifiers, technical
+  comments, commit subjects, APIs, schema, config, infrastructure.
+- Vietnamese (required): product UI copy, end-user/owner business docs under
+  `docs/ref/**`, and glossary `label_vi` terms. Follow `docs/ref/glossary.md`
+  and `corepack pnpm lint:copy`.
 - Do not commit or push unless the owner asks in the current task. Preserve
   unrelated dirty-tree work and stage only task-owned files.
 - `CLAUDE.md` and runtime adapter directories are pointers/wiring, never

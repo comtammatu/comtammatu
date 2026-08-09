@@ -1,1059 +1,210 @@
 # Glossary
 
-Nguồn chuẩn duy nhất cho ngôn ngữ dự án, thuật ngữ nghiệp vụ, và quy tắc đặt
-tên của Cơm Tấm Má Tư.
+Canonical names and one-sentence definitions for Cơm Tấm Má Tư. Detail lives in
+domain `docs/ref/*.md`, metric contracts in `operational-data-contract.md`, and
+runtime ACL in `docs/modules/auth.md`. UI copy ladder: this file → shared
+labels/messages → route dictionaries. Run `pnpm lint:copy` after copy changes.
 
-Glossary này không thay thế module doc hoặc metric contract. Nó khóa nghĩa,
-nhãn, ranh giới, và các cặp thuật ngữ không được lẫn. Công thức card/KPI cụ thể
-phải nằm ở `docs/ref/operational-data-contract.md` hoặc module doc tương ứng.
-Kiến thức nền chi tiết cho Agent nằm ở `docs/ref/domain-encyclopedia.md`.
+## Read rules
 
-## Mục tiêu
+- On meaning/label conflict with older docs, this glossary wins.
+- Code/schema/RPC use English `canonical_term`; UI uses Vietnamese `label_vi`
+  or an approved acronym standing alone — never bilingual labels.
+- Numbers, tax rates, and legal thresholds come from `legal-framework-2026.md`
+  and domain tax/payroll refs, not from memory.
 
-- Thống nhất cách gọi giữa business, architecture, specs, UI copy, và code.
-- Ngăn Agent tự chế `Card`, `Title`, `KPI`, hoặc feature mới bằng thuật ngữ mơ hồ.
-- Làm rõ thuật ngữ F&B, tài chính vận hành, HĐĐT, thuế doanh nghiệp, kho, POS, và HR.
-- Khóa cách hiểu của số liệu: số đó là gì, không phải gì, lấy từ đâu, và khi nào
-  được xem là số tin cậy.
+## Language
 
-## Quy tắc đọc
+Full policy: `docs/agent/rules/language.md`. Gate: `pnpm lint:language-policy`
+plus `pnpm lint:copy` for UI strings.
 
-- Nếu có xung đột giữa glossary này với docs cũ về nghĩa/nhãn, glossary này
-  thắng.
-- Business rules chi tiết vẫn nằm ở `docs/ref/*`; glossary chỉ chốt meaning và
-  naming.
-- Metric/card/title có số liệu phải map sang `contract_key` trong
-  `docs/ref/operational-data-contract.md` hoặc module doc tương ứng.
-- Trong UI có thể dùng label ngắn, nhưng code, schema, type, enum, RPC, file
-  path, và contract key phải ưu tiên canonical English term.
-- Khi cần thêm thuật ngữ mới cho feature mới, cập nhật glossary này trước hoặc
-  cùng PR với feature.
+| Layer | Language |
+| --- | --- |
+| Product UI / interactive copy | Vietnamese (or approved acronym alone) |
+| End-user / owner business docs (`docs/ref/**`) | Vietnamese primary; keep `canonical_term` / `label_vi` columns |
+| Agent rules, skills, specs, modules, plan/ADR, architecture, tasks | English |
+| Code, schema, RPC, paths, config, infra | English identifiers |
+| Technical comments, commits | English |
 
-## Nguyên tắc kiến thức nền cho Agent
+**UI capitalization:** sentence case for body; Title Case only for short nav/
+button labels. Prefer `hoá`/`thoả`/`hoà` spelling in product copy.
 
-Agent phải tự nắm nghĩa chuẩn của thuật ngữ phổ quát trong F&B/Finance trước khi
-thiết kế UI, schema, report, hoặc card. Không hỏi owner để định nghĩa các khái
-niệm ngành như `doanh thu ròng`, `giá vốn`, `lợi nhuận gộp`, `prime cost`,
-`cash variance`, `vòng quay tồn kho`, `AP`, `AR`, `actual vs theoretical food
-cost`, `AOV`, `covers`, `table turnover`, `RevPASH`.
+**English whitelist in UI (standing alone):** `POS`, `KDS`, `PO`, `GRN`, `WAC`,
+`QR`, `HĐĐT`, `GTGT`, `PIT`, `AOV`, `COGS`, `PDF`, `CSV`, `VND`, `NCC`, plus
+approved file extensions.
 
-Chỉ được hỏi owner hoặc kế toán khi câu hỏi là policy riêng của Má Tư hoặc cấu
-hình pháp lý/chứng từ chưa có trong contract, ví dụ:
+### Denylist (do not reintroduce)
 
-- phương pháp thuế/HĐĐT đã đăng ký với CQT/provider;
-- tài khoản/khoản mục chi phí mà kế toán muốn map cho export;
-- ngưỡng vận hành nội bộ như par level, reorder point, target food cost theo món;
-- một KPI chưa nằm trong `operational-data-contract.md` có được đưa lên UI chính
-  hay chỉ là supporting analysis.
-
-Nếu thuật ngữ đã có nghĩa ngành ổn định, agent phải dùng nghĩa chuẩn rồi map dữ
-liệu legacy vào đúng bucket. Không đổi nghĩa thuật ngữ để khớp một field cũ.
-
-## Nguồn khảo cứu 2026-06-19
-
-Glossary này tổng hợp từ tài liệu dự án và nguồn thị trường/chuyên ngành:
-
-- Dự án: `docs/ref/operational-data-contract.md`, `docs/modules/finance.md`,
-  `docs/ref/domain-encyclopedia.md`, `docs/ref/inventory.md`,
-  `docs/ref/einvoice-tax.md`, `docs/ref/legal-framework-2026.md`,
-  `docs/ref/business-context.md`.
-- F&B/restaurant finance: NetSuite restaurant financial metrics,
-  Restaurant365 prime cost, Toast sales/cash drawer docs, Black Box Intelligence,
-  TouchBistro metrics, MarginEdge restaurant accounting, Apicbase restaurant
-  metrics, FIXE bookkeeping glossary, BEP back-office glossary, meez
-  actual-vs-theoretical food cost, BuyersEdge, Epos Now.
-- Doanh nghiệp/thuế/HĐĐT: Cổng thông tin Chính phủ, Cơ quan Thuế, Luật
-  76/2025/QH15, NĐ 168/2025, Luật TNDN 67/2025/QH15, NĐ 320/2025,
-  TT 20/2026, Luật QLT 108/2025, NĐ 252/2026, NĐ 254/2026 và TT 99/2025.
-
-Luật, thuế suất, ngưỡng doanh thu, và biểu thuế là dữ liệu dễ thay đổi. Glossary
-chỉ khóa thuật ngữ; số luật cụ thể phải lấy từ `legal-framework-2026.md` và
-`einvoice-tax.md` tại thời điểm triển khai.
-
-## Quy ước ngôn ngữ
-
-| Lớp                                   | Ngôn ngữ chuẩn      | Quy ước                                                                                          |
-| ------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
-| UI cho người dùng nội bộ              | Tiếng Việt          | Dùng nhãn tiếng Việt hoặc acronym đã duyệt đứng riêng; không dùng label song ngữ                 |
-| Docs nghiệp vụ                        | Tiếng Việt là chính | Nếu cần đối chiếu thuật ngữ, tách cột `canonical_term` và `label_vi`; không viết chung một label |
-| Code, DB schema, type, RPC, file path | Tiếng Anh           | Không đặt identifier bằng tiếng Việt hoặc tiếng Việt không dấu                                   |
-| Comment kỹ thuật                      | Tiếng Anh           | Chỉ ghi constraint không hiển nhiên; không ghi lịch sử thay đổi                                  |
-
-### Viết hoa trên UI
-
-- Nội dung nguồn dùng **sentence case**: chỉ viết hoa chữ đầu câu, tên riêng,
-  tên nhà cung cấp và acronym đã duyệt. Không dùng English Title Case.
-- Tiêu đề, tab, nút, nhãn trường và badge không thêm dấu chấm cuối. Mô tả,
-  trạng thái rỗng, cảnh báo, lỗi và toast viết thành câu đầy đủ, có dấu câu.
-- Không lưu chuỗi tiếng Việt IN HOA TOÀN BỘ trong source để tạo nhấn mạnh. Nếu
-  thiết kế yêu cầu chữ hoa, dùng style của design system. Ngoại lệ là chứng từ
-  in có hợp đồng trình bày riêng.
-- Acronym phải đúng dạng chuẩn: `POS`, `KDS`, `QR`, `HĐĐT`, `GTGT`, `PIT`,
-  `AOV`, `COGS`; không viết `Pos`, `Qr`, `Hđđt`, `Vat`, `Kpi`.
-- Danh từ chung giữa câu viết thường. Role `owner` trong code hiển thị là
-  `chủ sở hữu`; tên khu vực quản trị hiển thị là `Quản trị`.
-
-Persisted identifiers gồm table/column/function/RPC name, enum value, permission
-key, position code, role template name, feature flag key, URL query token,
-payload field, và storage bucket/object contract. Các identifier này dùng
-`lower_snake_case` hoặc route slug ASCII bằng tiếng Anh. Tiếng Việt chỉ nằm ở
-label/copy/user data, ví dụ `label_vi`, seeded branch names, menu item names,
-hoặc nội dung in/hiển thị.
-
-## Quy ước chính tả tiếng Việt
-
-Dự án dùng quy tắc chính tả mới: dấu thanh đặt trên nguyên âm chính, không trên
-nguyên âm phụ.
-
-| Dùng chuẩn                           | Không dùng                           |
-| ------------------------------------ | ------------------------------------ |
-| `hóa đơn`, `chuẩn hóa`, `tối ưu hóa` | `hoá đơn`, `chuẩn hoá`, `tối ưu hoá` |
-| `thỏa thuận`, `thỏa mãn`             | `thoả thuận`, `thoả mãn`             |
-| `hòa giải`, `hòa đồng`               | `hoà giải`, `hoà đồng`               |
-| `lóa mắt`, `tỏa sáng`, `xòa`         | `loá mắt`, `toả sáng`, `xoà`         |
-
-Ngoại lệ: URL, tên file legacy, trích dẫn nguyên văn từ nguồn bên ngoài.
-
-## Tách lớp tiếng Anh và tiếng Việt
-
-`canonical_term` là thuật ngữ tiếng Anh dùng cho code, contract, schema, enum,
-RPC, test, và tài liệu kỹ thuật. `label_vi` là nhãn tiếng Việt dùng cho UI và
-tài liệu vận hành. `acronym` là biến thể hiển thị riêng, chỉ dùng khi đã được
-duyệt.
-
-Không dùng label lai trong UI hoặc copy vận hành:
-
-- Không viết `Doanh thu ròng (Net sales)`, `Hóa đơn điện tử / e-invoice`,
-  `Phiếu nhập kho (GRN)`, `Food cost cảnh báo`.
-- Không nối tiếng Việt và tiếng Anh bằng `/`, `·`, ngoặc đơn, hoặc dấu gạch nối
-  để tạo một label.
-- Nếu cần giải thích trong docs, đặt thuật ngữ ở cột riêng:
-  `canonical_term = net_sales_before_vat`, `label_vi = doanh thu thuần`.
-- UI mặc định dùng `long` hoặc `short` tiếng Việt. `acronym` chỉ dùng ở chỗ
-  cực ngắn: status pill, icon label, chart legend, KPI chip. Không nhúng
-  acronym vào câu/heading/form label (ví dụ dùng `Danh sách phiếu nhập`, không
-  `Danh sách GRN`; dùng `Thiếu đơn đặt hàng`, không `Thiếu PO`).
-- Nếu UI cần cực ngắn và người đọc đã quen vocabulary, được dùng acronym đứng
-  riêng (ví dụ pill `GRN`), không ghép song ngữ `Phiếu nhập (GRN)`.
-
-## Whitelist English được giữ lại
-
-Chỉ giữ English trong một trong các nhóm sau:
-
-- Acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `control_surface`, `tenant`, `ERP`,
-  `PO`, `GRN`, `WAC`, `PIT`, `AOV`, `COGS`. Trên UI vận hành thường, ưu tiên
-  `label_vi`/`short` tiếng Việt; acronym chỉ ở pill/badge/icon label.
-- Tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`,
-  `Tailwind`, `TypeScript`, `VietQR`, `Viettel S-invoice`.
-- Proper noun, code identifier, route, schema, enum, RPC, payload field, HTTP
-  verb, env var.
-- Đuôi/định dạng file khi nói về file: `.xlsx`, `.csv`, `PDF`.
-- Cột `canonical_term`, command, code sample, hoặc nguồn nghiên cứu trong docs.
-
-Nếu không thuộc một trong các nhóm trên thì mặc định phải ưu tiên tiếng Việt.
-`ERP` chỉ dùng khi nói về kiến trúc, bộ tham chiếu, hoặc so sánh phạm vi; entrypoint
-và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán hàng`.
-
-## Denylist drift không được tái đưa vào copy
-
-| Drift term                                       | Dùng thay                                                                                        |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `Employee Portal`                                | `Trang nhân viên`                                                                                |
-| `Owner Shell`                                    | `Khung quản trị` hoặc `nền tảng quản trị` tùy ngữ cảnh                                           |
-| `Owner surface` / `Ops surface` (nhãn UI)        | `Quản trị` (`control_surface`); không dùng `Vận hành` làm nhãn plane L0                          |
-| `Operations chrome` (prose mới)                  | `station_chrome` (POS / KDS / Runner); xem entry glossary                                        |
-| `Dashboard` đứng riêng                           | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh; plane L0 là `control_surface` / `Quản trị`            |
-| `Stock`                                          | `Kho hàng` hoặc `tồn kho` tùy ngữ cảnh                                                           |
-| `Finance`                                        | `Tài chính` hoặc `Kế toán` tùy ngữ cảnh                                                          |
-| `Shipped`                                        | `Hoàn thành`                                                                                     |
-| `Point of Sale`                                  | `POS`                                                                                            |
-| `Kitchen Display System`                         | `KDS` hoặc `màn hình bếp`                                                                        |
-| `Restaurant Management System`                   | `hệ thống quản lý vận hành nhà hàng`                                                             |
-| `Merchant Platform`                              | `bộ phần mềm quản lý vận hành và bán hàng`                                                       |
-| `Báo cáo CEO`                                    | `Báo cáo điều hành`                                                                              |
-| Tên mô hình pháp lý cũ                           | `Công ty cổ phần` hoặc `doanh nghiệp` theo đúng ngữ cảnh hiện hành                              |
-| `financial health`                               | `sức khỏe tài chính` chỉ khi đã định nghĩa bộ metric; nếu không, dùng metric cụ thể              |
-| `food cost` trong UI thường                      | `giá vốn món` hoặc `chi phí nguyên liệu`                                                         |
-| `webhook`, `drill-down`, `hover` trong UI thường | `lỗi đồng bộ`, `xem chi tiết`, `rê chuột` hoặc hướng dẫn thao tác phù hợp                        |
-| `Yield` / `yield` trong UI                       | `tỷ lệ thu hồi`                                                                                  |
-| `template` trong UI                              | `mẫu`                                                                                            |
-| `checklist` trong UI                             | `việc trong ca` hoặc `danh sách việc` theo ngữ cảnh                                              |
-| `inbox` trong UI                                 | Bỏ nếu không mang nghĩa nghiệp vụ; nếu là hàng chờ thì gọi đúng tên hàng chờ                      |
-| `ID` trong UI                                    | `mã` + tên đối tượng, ví dụ `Mã ca`, `Mã món`, `Mã phiếu nhập`                                  |
-| `draft` trong UI                                 | `bản nháp`                                                                                       |
-| `job` trong UI                                   | Tên công việc nghiệp vụ, ví dụ `lệnh in`, `yêu cầu phát hành HĐĐT`                              |
-| `sheet` trong UI                                 | `trang tính` cho file bảng tính; `màn hình` cho panel giao diện                                  |
-| `tenant`, `grant`, `permission key` trong UI     | `hệ thống`, `quyền`, hoặc mô tả phạm vi quyền bằng tiếng Việt theo ngữ cảnh                      |
-| `ad-hoc`                                         | `nhập thẳng` / `không theo đơn` tùy ngữ cảnh                                                     |
-| `Online` / `Offline` trong UI                    | `Đang kết nối` / `Mất kết nối`                                                                   |
-| `Topping`                                        | `Món thêm`                                                                                       |
-| `blind` / `peer cross` trong UI                  | `đếm mù` / `đếm chéo`                                                                            |
-| `GRN` / `PO` nhúng trong câu UI                  | `phiếu nhập` / `đơn đặt hàng` (acronym chỉ pill/badge)                                           |
+| Drift | Use instead |
+| --- | --- |
+| `Employee Portal` | `Trang nhân viên` |
+| `Owner Shell` / `Owner surface` / `Ops surface` | `Quản trị` (`control_surface`) |
+| `Operations chrome` (new prose) | `station_chrome` |
+| Bare `Dashboard` | `Tổng quan` / `buồng lái` as fit |
+| `Stock` / `Finance` as UI labels | `Kho hàng` / `Tài chính` |
+| `Point of Sale` / `Kitchen Display System` | `POS` / `KDS` |
+| `Báo cáo CEO` | `Báo cáo điều hành` |
+| `food cost` in ordinary UI | `giá vốn món` / `chi phí nguyên liệu` |
+| `draft` / `template` / `checklist` / `inbox` / `ID` / `job` / `sheet` in UI | Vietnamese business wording (`bản nháp`, `mẫu`, `việc trong ca`, `mã …`) |
+| `Topping` / `blind` / `peer cross` | `Món thêm` / `đếm mù` / `đếm chéo` |
+| Embedded `GRN`/`PO` in UI sentences | `phiếu nhập` / `đơn đặt hàng` (acronym only as pill/badge) |
 
 ## Product Dual Thesis
 
-Sản phẩm có **hai nửa** (SSOT map: `docs/spec/architecture.md` § Product Dual Thesis):
+SSOT map: `docs/spec/architecture.md`. Role ACL `owner` ≠ product plane.
 
-| Nửa (VI) | Plane | Việc |
-| -------- | ----- | ---- |
-| Quản lý hệ thống | `control_surface` | Oversight, master data, finance/HR/settings L0 |
-| Vận hành bán hàng | `branch_surface` + `station_chrome` | Ca chi nhánh, POS/KDS/Runner, stock ca |
-
-Không dùng `Owner` / `Ops` làm tên nửa sản phẩm. Role ACL `owner` ≠ plane.
-
-### `control_surface` (mặt phẳng L0 / Quản trị)
-
-| Trường               | Giá trị |
-| -------------------- | ------- |
-| `canonical_term`     | `control_surface` |
-| `label_vi`           | `Quản trị` |
-| `definition`         | Nửa **Quản lý hệ thống**: chrome quản trị tenant/site trung tâm qua `ControlSurfaceShell` → `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` (Owner đầy đủ; accountant và central roles chỉ vào slice L0 được cấp). Runtime plane alias: `RouteSurface: "owner"`. |
-| `not_this`           | Role ACL `owner`; `station_chrome` (POS/KDS/Runner); nhãn UI `Vận hành` / `Ops surface`; `branch_surface` |
-| `scope`              | cross-module |
-| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; runtime `ControlSurfaceShell` + DOM `data-owner-shell-scroll` |
-| `allowed_variants`   | Long UI: `Quản trị`; docs EN: `control_surface`; alias nội bộ cũ trong git history: Owner surface / Owner control |
-| `forbidden_synonyms` | `Ops surface`, `Vận hành` (làm nhãn plane), `Owner` (làm tên plane), `Văn phòng` |
-
-### `branch_surface`
-
-| Trường               | Giá trị |
-| -------------------- | ------- |
-| `canonical_term`     | `branch_surface` |
-| `label_vi`           | `Chi nhánh` |
-| `definition`         | Mặt phẳng ca tại `/br/[branchId]/*` dùng Branch runtime chrome (không gồm station full-screen). |
-| `not_this`           | `control_surface`; `station_chrome` |
-| `scope`              | cross-module |
-| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/spec/role-route-matrix.md` |
-
-### `station_chrome`
-
-| Trường               | Giá trị |
-| -------------------- | ------- |
-| `canonical_term`     | `station_chrome` |
-| `label_vi`           | *(không nhãn ô dùm)* — dùng `POS` / `KDS` / `Runner` |
-| `definition`         | Chrome full-screen một việc: POS, KDS, Runner dưới `/br/[branchId]/{pos,kds,runner}`. |
-| `not_this`           | `control_surface`; gọi chung “Vận hành” thay cho tên station |
-| `scope`              | POS |
-| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes |
-| `allowed_variants`   | Alias docs cũ: Operations chrome (chỉ khi đọc lịch sử; prose mới dùng `station_chrome`) |
-
-### `operational_role`
-
-| Trường               | Giá trị |
-| -------------------- | ------- |
-| `canonical_term`     | `operational_role` |
-| `label_vi`           | `vai trò vận hành` |
-| `definition`         | Nhóm role ngoài Owner đầy đủ: `accountant`, `central_supply_ops`, `central_kitchen_lead`, … — quyền theo matrix, không đổi tên plane. |
-| `not_this`           | `control_surface`; `station_chrome`; nhãn plane `Quản trị` |
-| `scope`              | cross-module |
-| `source_of_truth`    | D076; `docs/spec/role-route-matrix.md`; `packages/shared/src/auth/types.ts` |
-
-### Role `owner`
-
-| Trường               | Giá trị |
-| -------------------- | ------- |
-| `canonical_term`     | `owner` |
-| `label_vi`           | `Chủ sở hữu` |
-| `definition`         | Role ACL L0 đầy đủ. Không phải tên mặt phẳng sản phẩm. |
-| `not_this`           | `control_surface` / `Quản trị` (plane) |
-| `scope`              | cross-module |
-| `source_of_truth`    | `packages/shared/src/auth/types.ts`; `docs/spec/role-route-matrix.md` |
-
-**Từ khóa “vận hành”** chỉ dùng cho: tên sản phẩm (`restaurant_operations_system`), metric tài chính vận hành, `operational_role`, và mô tả job — **không** là nhãn `control_surface`.
-
-## Copy source ladder
-
-Mỗi loại copy có đúng một nguồn sở hữu. Khi thêm/sửa copy, cập nhật nguồn đúng
-trước hoặc trong cùng PR, rồi chạy `pnpm lint:copy`.
-
-- Nghĩa business + quy tắc đặt tên: `docs/ref/glossary.md`.
-- Metric/card/title có số liệu: `docs/ref/operational-data-contract.md`.
-- Nhãn tiếng Việt domain dùng chung: `packages/shared/src/labels/vi.ts`.
-- Action/state/error chung: `@comtammatu/shared/messages` hoặc
-  `apps/web/lib/messages/*`.
-- Chuỗi cố định theo luật: `packages/shared/src/labels/legal-fixed.ts`.
-- Adapter route/thuật ngữ Inventory:
-  `apps/web/app/(protected)/inventory/_lib/dictionary.ts`.
-- Adapter route-specific khác: dictionary domain tương ứng.
-
-## Mẫu entry bắt buộc
-
-Thuật ngữ nghiệp vụ mới phải đủ các trường sau khi rủi ro nhầm lẫn cao:
-
-| Trường                 | Ý nghĩa                                                          |
-| ---------------------- | ---------------------------------------------------------------- |
-| `canonical_term`       | English term dùng trong code/docs kỹ thuật                       |
-| `label_vi`             | Nhãn tiếng Việt chuẩn                                            |
-| `definition`           | Nghĩa đúng trong Cơm Tấm Má Tư                                   |
-| `not_this`             | Những thứ không được lẫn                                         |
-| `scope`                | POS, Finance, Inventory, Owner, doanh nghiệp/legal, HR, hoặc cross-module |
-| `source_of_truth`      | Doc/code/schema/RPC sở hữu dữ liệu hoặc rule                     |
-| `allowed_variants`     | Long/short/acronym được phép dùng                                |
-| `forbidden_synonyms`   | Cách gọi bị cấm hoặc chỉ dùng trong context hẹp                  |
-| `related_contract_key` | Bắt buộc nếu term là metric/card số liệu                         |
-
-## Bản đồ số liệu F&B và tài chính
-
-Nguyên tắc nền:
-
-- `Doanh thu thuần` trên bề mặt Owner là giá trị món của đơn đã trả sau
-  discount và chưa VAT: `subtotal_revenue - discount_amount`.
-- VAT/GTGT là khoản thu hộ/nộp lại hoặc nghĩa vụ thuế theo phương pháp GTGT đã đăng ký, không
-  phải lãi của nhà hàng.
-- Mua nguyên liệu không tự động là `food cost`; chỉ là giá vốn khi được ghi nhận
-  là tiêu hao/bán hàng theo contract.
-- `estimated` hoặc `needs_review` không được hiển thị như KPI tin cậy.
-- Nhãn ngắn `Doanh thu` chỉ được dùng cho
-  `finance.revenue.money_collected` trên Finance Basic, với hint nói rõ đây là
-  payment hoàn tất và có thể gồm VAT. Các bề mặt khác không dùng nhãn trần nếu
-  chưa nói rõ metric key, công thức, source, exclusions và confidence.
-
-### Metric vocabulary
-
-| Canonical term           | Nhãn chuẩn                    | Định nghĩa                                                                                                 | Công thức / rule                                                                                 | Không được lẫn với                                                                     | Contract/source                                                     |
-| ------------------------ | ----------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `gross_sales`            | Tổng giá bán trước giảm giá   | Tổng giá menu/list của món bán trước giảm giá, refund, VAT passthrough.                                    | `sum(item_list_price * qty)` theo đơn hợp lệ.                                                    | Tiền đã thu, doanh thu trước VAT, doanh thu tính thuế.                                 | Revenue report; cần contract khi đưa lên KPI.                       |
-| `discount_amount`        | Giảm giá                      | Tổng khuyến mãi, giảm giá, comp làm giảm doanh thu bán hàng.                                               | Tổng discount trên order/item đã đóng.                                                           | Waste, hủy món, hoàn tiền.                                                             | POS/revenue detail.                                                 |
-| `refund_amount`          | Hoàn tiền                     | Tiền trả lại sau khi đơn đã thanh toán.                                                                    | Tổng refund đã approved trong kỳ.                                                                | Hủy món trước thanh toán, giảm giá.                                                    | Finance refund workflow.                                            |
-| `voided_amount`          | Giá trị hủy trước thanh toán  | Giá trị dòng món/đơn bị hủy trước khi paid.                                                                | Tổng void/cancel trước commercial close.                                                         | Refund sau thanh toán, discount.                                                       | POS exception report.                                               |
-| `net_sales_before_vat`   | Doanh thu thuần               | Giá trị món của đơn đã trả sau discount và chưa VAT; là mẫu số margin hiện tại.                            | `subtotal_revenue - discount_amount` trên tập đơn có payment hoàn tất.                           | Tổng payment gồm VAT, tiền mặt trong két, HĐĐT đã phát hành, doanh thu tính thuế.      | `finance.revenue.before_vat_after_discount`.                        |
-| `total_collected`        | Tổng tiền đã thu              | Tổng giá trị payment hoàn tất trong kỳ, có thể gồm VAT.                                                    | Sum `payments.amount` completed tại `paid_at`, bucket theo ngày Việt Nam.                        | Doanh thu thuần, HĐĐT đã phát hành, công nợ, doanh thu tính thuế.                      | `finance.revenue.money_collected`.                                  |
-| `cash_collected`         | Tiền mặt đã thu               | Phần `total_collected` bằng tiền mặt.                                                                      | Sum paid amount method `cash`.                                                                   | Tiền mặt hiện hữu trong két, cash variance.                                            | Payment split.                                                      |
-| `bank_wallet_collected`  | Chuyển khoản đã thu           | Phần `total_collected` qua VietQR hoặc chuyển khoản.                                                       | Sum paid amount method `bank_transfer`/`vietqr`.                                                 | Doanh thu kênh bán, tiền ngân hàng đã settle nếu có delay.                             | Payment split.                                                      |
-| `payment_split`          | Cơ cấu thanh toán             | Tỷ trọng thu theo phương thức thanh toán.                                                                  | `amount_by_method / total_collected`.                                                            | Sales channel mix.                                                                     | Finance/revenue report.                                             |
-| `tax_collected`          | Thuế đã thu/ước tính phải nộp | Phần VAT/GTGT tương ứng doanh thu bán ra theo cấu hình thuế/HĐĐT của doanh nghiệp.                          | Theo `einvoice-tax.md`; không hardcode trong UI.                                                 | Lãi, doanh thu thuần, chi phí.                                                         | HĐĐT/tax module.                                                    |
-| `issued_invoice_revenue` | Doanh thu HĐĐT đã phát hành   | Tổng giá trị HĐĐT trạng thái `issued`.                                                                     | Sum tax invoice amount where `status='issued'`.                                                  | Doanh thu POS nếu chưa/không xuất HĐĐT, tiền đã thu.                                   | HĐĐT report.                                                        |
-| `tax_declared_revenue`   | Doanh thu tính thuế           | Doanh thu dùng để kê khai theo luật và phương pháp thuế doanh nghiệp đã đăng ký.                           | Theo `einvoice-tax.md` và `legal-framework-2026.md`.                                             | Doanh thu POS, HĐĐT đã phát hành, tiền đã thu, doanh thu thuần dùng cho biên lợi nhuận. | Legal/tax SSoT.                                                    |
-| `order_count`            | Số đơn                        | Số đơn bán hợp lệ trong kỳ.                                                                                | Count order completed/paid theo contract.                                                        | Số lượt khách/covers, số bàn.                                                          | Revenue report.                                                     |
-| `average_order_value`    | Giá trị trung bình mỗi đơn    | Doanh thu trung bình mỗi order.                                                                            | `net_sales_before_vat / order_count`.                                                            | Doanh thu/lượt khách nếu chưa có guest count.                                          | Revenue report.                                                     |
-| `covers`                 | Lượt khách                    | Số khách phục vụ thực tế.                                                                                  | Sum `guest_count` nếu POS capture; takeaway dùng order count nếu chưa có khách.                  | Số đơn, số bàn.                                                                        | Future dine-in analytics.                                           |
-| `food_cost`              | Giá vốn món                   | Chi phí nguyên liệu/bao bì trực tiếp đã ghi nhận cho món bán hoặc tiêu hao bếp.                            | Theo consumption/production/approved report.                                                     | Chi phí vận hành, hóa đơn NCC, PO, tiền đã trả NCC.                                    | `finance.food_cost.recorded`.                                       |
-| `theoretical_food_cost`  | Giá vốn định mức              | Giá vốn suy ra từ công thức món và mix bán hàng.                                                           | `sum(recipe_qty * cost * sold_qty)`.                                                             | Giá vốn thực tế nếu chưa đối soát tồn/kiểm kê.                                         | Analysis only, `estimated`.                                         |
-| `actual_food_cost`       | Giá vốn thực tế               | Giá vốn từ biến động kho/tiêu hao thực tế.                                                                 | `begin_inventory + purchases + transfers_in - transfers_out - ending_inventory +/- adjustments`. | Định mức recipe, purchase spend.                                                       | Inventory/Finance when source trusted.                              |
-| `food_cost_percentage`   | Tỷ lệ giá vốn món             | Tỷ lệ giá vốn trên doanh thu trước VAT.                                                                    | `food_cost / net_sales_before_vat`.                                                              | Biên gộp, tỷ lệ giảm giá.                                                              | Finance food-cost report.                                           |
-| `gross_profit`           | Lợi nhuận gộp                 | Phần còn lại sau khi trừ giá vốn món khỏi doanh thu thuần.                                                  | `net_sales_before_vat - food_cost`.                                                              | Kết quả kinh doanh, lợi nhuận ròng, dòng tiền, tiền mặt trong két.                     | `finance.gross_profit.readonly`.                                    |
-| `gross_margin`           | Biên gộp                      | Tỷ lệ lợi nhuận gộp trên doanh thu thuần.                                                                  | `gross_profit / net_sales_before_vat`.                                                           | Tỷ lệ giá vốn món, biên ròng.                                                          | Supporting context.                                                 |
-| `operating_expense`      | Chi phí vận hành              | Chi phí kỳ đã ghi nhận: thuê, điện nước, lương, phần mềm, marketing, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ và phí. | Sum posted expense trong kỳ, loại direct ingredient COGS và nguyên giá tài sản.         | Giá vốn món, công nợ NCC, tiền mua TSCĐ/thiết bị chưa phân bổ.                         | `finance.expense.operating`.                                        |
-| `operating_result`       | Kết quả kinh doanh            | Kết quả sau khi trừ giá vốn món và chi phí vận hành, cộng biến động tồn kho.                               | `gross_profit - operating_expense + (closing - opening inventory)`.                              | Lợi nhuận ròng, dòng tiền, kết quả kê khai thuế.                                       | `finance.operating_result`.                                         |
-| `labor_cost`             | Chi phí nhân công             | Lương, phụ cấp chịu chi phí, bảo hiểm và nghĩa vụ của người sử dụng lao động được ghi nhận cho vận hành.  | Theo payroll/HR contract.                                                                        | Cổ tức, phân phối lợi nhuận, chi cá nhân.                                              | Future/HR-linked finance.                                           |
-| `prime_cost`             | Chi phí chính                 | Chi phí kiểm soát chính trong nhà hàng: giá vốn món + chi phí nhân công.                                   | `food_cost + labor_cost`.                                                                        | Chi phí vận hành tổng, lợi nhuận ròng.                                                 | Chỉ dùng khi cả food cost và labor cost trusted.                    |
-| `net_operating_profit`   | Lợi nhuận vận hành ròng       | Lãi sau khi trừ giá vốn, nhân công, chi phí vận hành, và khoản vận hành khác đã định nghĩa.                | `net_sales_before_vat - food_cost - labor_cost - operating_expense +/- other_operating_items`.   | Lợi nhuận gộp, tiền mặt, lợi nhuận kế toán doanh nghiệp.                               | Không là Finance Basic KPI mặc định.                                |
-| `inventory_value`        | Giá trị tồn kho               | Tiền đang nằm trong tồn kho theo snapshot location/branch.                                                 | `stock_levels.current_quantity * (stock_levels.avg_unit_cost ?? ingredients.unit_cost ?? 0)`.    | Chi phí trong kỳ, tiền mua NCC, profit.                                                | `finance.inventory_value.current`, `inventory.stock_value.current`. |
-| `fixed_asset`            | Tài sản cố định (TSCĐ)        | Tài sản đồng thời có lợi ích kinh tế tương lai, dùng trên một năm và nguyên giá tin cậy từ 30 triệu đồng. | Theo hồ sơ tài sản và chính sách kế toán đã chọn.                                      | Mọi thiết bị, công cụ nhỏ, vật tư tiêu hao.                                            | Chưa có runtime contract.                                           |
-| `tool_equipment`         | Công cụ, dụng cụ              | Thiết bị/vật dụng không đủ toàn bộ tiêu chí TSCĐ; có thể ghi trực tiếp hoặc phân bổ dần.                  | Theo chính sách kế toán, tính trọng yếu và nơi sử dụng.                                | TSCĐ; vật tư tiêu hao dùng hết trong kỳ.                                               | Chưa có runtime contract.                                           |
-| `depreciation_expense`   | Chi phí khấu hao              | Phần nguyên giá TSCĐ được phân bổ có hệ thống vào chi phí của kỳ.                                         | Theo nguyên giá, ngày sử dụng, thời gian và phương pháp khấu hao đã duyệt.             | Tiền mua tài sản, khấu hao lũy kế, giá trị còn lại.                                    | Chưa có runtime contract.                                           |
-| `asset_carrying_value`   | Giá trị còn lại của tài sản   | Nguyên giá trừ khấu hao lũy kế tại thời điểm báo cáo.                                                     | `asset_cost - accumulated_depreciation`.                                               | Giá mua, số tiền đã trả, chi phí khấu hao kỳ.                                          | Chưa có runtime contract.                                           |
-| `stock_on_hand`          | Tồn hiện tại                  | Số lượng thực tế theo ledger tại location.                                                                 | `stock_levels.current_quantity`.                                                                 | Giá trị tồn kho, hàng đã đặt mua.                                                      | `inventory.stock_quantity.current`.                                 |
-| `purchase_spend`         | Giá trị mua hàng              | Giá trị hàng/chi phí đã mua hoặc nhận từ NCC.                                                              | Theo trạng thái PO/GRN/hóa đơn NCC.                                                              | Giá vốn món, giá trị tồn kho, chi phí vận hành.                                        | Procurement report.                                                 |
-| `supplier_payable`       | Phải trả NCC                  | Khoản còn nợ nhà cung cấp.                                                                                 | Invoice total - paid amount.                                                                     | Purchase spend, food cost, cash expense.                                               | Supplier invoice / AP workflow.                                     |
-| `waste_cost`             | Giá trị hao hụt/hủy hỏng      | Chi phí nguyên liệu mất do hư, bỏ, sai món, quá hạn, vỡ.                                                   | `waste_qty * unit_cost`.                                                                         | Discount, comp, refund.                                                                | Inventory exception report.                                         |
-| `stocktake_variance`     | Chênh lệch kiểm kê            | Chênh giữa sổ và đếm thực tế.                                                                              | `counted_qty - book_qty`, value by unit cost.                                                    | Waste đã ghi nhận, transfer chưa nhận.                                                 | Stocktake workflow.                                                 |
-| `inventory_turnover`     | Vòng quay tồn kho             | Tốc độ chuyển tồn kho thành tiêu hao/bán hàng.                                                             | `COGS / average_inventory_value`.                                                                | Doanh thu, stockout.                                                                   | Inventory/Finance analysis.                                         |
-| `expected_cash`          | Tiền mặt dự thu               | Tiền mặt POS đáng lẽ có trong két tại lúc đóng ca theo payment hoàn tất.                                   | `opening_cash + sum(completed cash payments)` trong ca.                                          | Tiền đếm thực tế, tiền mặt tenant-wide theo sổ.                                        | Cash session.                                                       |
-| `counted_cash`           | Tiền mặt kiểm đếm             | Tiền mặt nhân sự/quản lý đếm thực tế.                                                                      | Manual count at close.                                                                           | Expected cash.                                                                         | Cash session.                                                       |
-| `cash_variance`          | Chênh lệch tiền mặt           | Két thừa/thiếu so với kỳ vọng.                                                                             | `counted_cash - expected_cash`.                                                                  | Lợi nhuận, doanh thu, chi phí.                                                         | Cash session reconciliation.                                        |
-| `staff_repaid`           | Nhân viên bù đủ tiền thiếu    | Quản lý đã nhận đủ `abs(cash_variance)` của ca thiếu; giữ nguyên số đếm lúc chốt.                          | Chỉ dùng khi `cash_variance < 0`; settlement bằng toàn bộ khoản thiếu.                           | Điều chỉnh sổ quỹ, sửa số đếm, thu một phần.                                           | `resolve_pos_session_variance`.                                     |
-| `accepted_adjustment`    | Ghi nhận lệch ca              | Quản lý giữ số đếm thực tế và ghi nhận kết quả thừa/thiếu để báo cáo, điều tra.                            | Book delta bằng 0; tổn thất/lợi ích đã kiểm chứng dùng finance adjustment riêng.                 | Nhân viên bù tiền, sửa phương thức thanh toán, tự động đổi số dư theo sổ.              | `resolve_pos_session_variance`.                                     |
-
-### Legacy identifier notes
-
-- `net_revenue` trong database/RPC hiện bị overload, nhưng nghĩa nghiệp vụ không
-  được overload. Trên UI Finance, `net_sales_before_vat` dùng nhãn
-  `Doanh thu thuần`. Nếu source field `net_revenue` đang chứa
-  `sum(orders.total_amount)` gồm VAT/tổng khách trả, adapter phải đổi tên nghĩa
-  sang `total_collected`, không hỏi owner chọn lại định nghĩa.
-- `Lợi nhuận ròng` không thuộc năm KPI Finance Basic hiện hành. Chỉ dùng khi đã
-  có contract cho `net_operating_profit`, đủ source cho food cost/labor/expense,
-  và confidence không phải `estimated`/`needs_review`.
-- `Tiền mặt hiện hữu` chỉ dùng cho cash session/drawer khi có opening/counting
-  contract; không dùng thay `cash_collected`.
-
-## Từ điển kiến thức nền F&B/Finance
-
-Các bảng dưới đây là kiến thức nền để agent dùng khi gặp thuật ngữ chuyên ngành.
-Nếu chưa có source dữ liệu trong hệ thống, agent được phép đánh dấu
-`blocked`/`estimated`, nhưng không được đổi nghĩa thuật ngữ.
-
-### Revenue, sales, và kênh bán
-
-| Term                      | Nhãn chuẩn                       | Nghĩa agent phải biết                                                          | Không được lẫn với             |
-| ------------------------- | -------------------------------- | ------------------------------------------------------------------------------ | ------------------------------ |
-| `sales`                   | doanh số bán hàng                | Tổng hoạt động bán ra theo đơn/dòng món; cần nói rõ gross/net/VAT/payment.     | tiền đã thu, HĐĐT đã phát hành |
-| `gross_sales`             | tổng giá bán trước giảm giá      | Tổng giá list/menu trước discount/refund/VAT passthrough.                      | doanh thu ròng                 |
-| `net_sales`               | doanh thu ròng / doanh thu thuần | Doanh thu sau giảm giá/hoàn tiền, trước VAT nếu dùng cho margin.               | tổng khách trả gồm VAT         |
-| `net_sales_before_vat`    | doanh thu thuần trước VAT        | Canonical của Má Tư cho margin và lợi nhuận gộp.                               | `total_collected`              |
-| `sales_return`            | hàng bán trả lại                 | Giá trị bán bị trả lại sau bán; F&B thường hiếm, gần với refund/void tùy flow. | discount                       |
-| `discount`                | giảm giá                         | Khoản giảm thương mại trước/ở lúc thanh toán.                                  | waste, comp nội bộ             |
-| `comp`                    | món tặng/miễn phí                | Món được miễn phí vì chăm sóc khách/sự cố; vẫn có thể tạo food cost.           | discount tiền, waste           |
-| `void`                    | hủy trước thanh toán             | Xóa/hủy món hoặc đơn trước commercial close.                                   | refund                         |
-| `refund`                  | hoàn tiền                        | Trả lại tiền sau khi paid/completed.                                           | void/cancel trước paid         |
-| `service_charge`          | phí dịch vụ                      | Phí tính thêm cho dịch vụ nếu có chính sách rõ.                                | tip, VAT, doanh thu món        |
-| `tip`                     | tiền tip                         | Tiền khách thưởng nhân viên; không mặc định là doanh thu nhà hàng.             | service charge, revenue        |
-| `sales_channel`           | kênh bán                         | Nguồn phát sinh nhu cầu: dine-in, takeaway, delivery, app/platform.            | payment method                 |
-| `payment_method`          | phương thức thanh toán           | Cách khách trả tiền: cash, bank transfer, VietQR.                              | sales channel                  |
-| `delivery_platform_sales` | doanh thu qua nền tảng giao hàng | Doanh thu đơn đến từ nền tảng giao hàng bên thứ ba nếu tích hợp.               | payout về ngân hàng            |
-| `platform_commission`     | phí nền tảng                     | Phí nền tảng khấu trừ hoặc xuất hóa đơn dịch vụ.                               | food cost, discount            |
-| `net_payout`              | tiền nền tảng thực chuyển        | Tiền về sau khi trừ commission/fee/adjustment.                                 | doanh thu ròng                 |
-| `settlement_lag`          | độ trễ đối soát tiền             | Khoảng thời gian giữa paid/order completed và tiền thực về ngân hàng.          | công nợ xấu                    |
-| `sales_mix`               | cơ cấu doanh thu theo nhóm       | Tỷ trọng doanh thu theo món/nhóm/kênh.                                         | payment split                  |
-| `product_mix`             | cơ cấu món bán                   | Tỷ trọng số lượng hoặc doanh thu từng món.                                     | sales channel mix              |
-
-### Cost, margin, và profit
-
-| Term                          | Nhãn chuẩn               | Nghĩa agent phải biết                                                                                             | Không được lẫn với                |
-| ----------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `cost_of_goods_sold` (`COGS`) | giá vốn hàng bán         | Direct cost của món/hàng đã bán hoặc tiêu hao để tạo doanh thu. Trong F&B thường là food/beverage/packaging cost. | purchase spend, operating expense |
-| `food_cost`                   | giá vốn món              | Phần COGS nguyên liệu/bao bì gắn với món bán hoặc tiêu hao bếp.                                                   | hóa đơn NCC                       |
-| `beverage_cost`               | giá vốn đồ uống          | COGS của đồ uống nếu tách menu.                                                                                   | food cost nếu cần phân tích riêng |
-| `packaging_cost`              | chi phí bao bì trực tiếp | Bao bì đi kèm món mang về/giao hàng; có thể tính vào COGS hoặc direct variable cost theo contract.                | opex văn phòng                    |
-| `theoretical_food_cost`       | giá vốn định mức         | Giá vốn kỳ vọng từ recipe và mix bán hàng.                                                                        | actual food cost                  |
-| `actual_food_cost`            | giá vốn thực tế          | Giá vốn từ tồn đầu + mua/nhận + điều chuyển - tồn cuối +/- điều chỉnh.                                            | recipe estimate                   |
-| `food_cost_variance`          | chênh lệch giá vốn       | Actual food cost - theoretical food cost.                                                                         | stocktake variance riêng lẻ       |
-| `standard_cost`               | giá vốn chuẩn            | Cost định mức dùng để tính nhanh/mô phỏng.                                                                        | WAC/current actual cost           |
-| `actual_cost`                 | giá vốn thực tế          | Cost sau khi ghi nhận mua/tiêu hao/kiểm kê.                                                                       | standard cost                     |
-| `gross_profit`                | lợi nhuận gộp            | Net sales - COGS/food cost.                                                                                       | net profit, cash flow             |
-| `gross_margin`                | biên gộp                 | Lợi nhuận gộp / doanh thu thuần.                                                                                  | tỷ lệ giá vốn món                 |
-| `contribution_margin`         | lãi đóng góp             | Doanh thu món/kênh trừ chi phí biến đổi trực tiếp.                                                                | gross profit toàn kỳ              |
-| `variable_cost`               | chi phí biến đổi         | Chi phí thay đổi theo số đơn/món: nguyên liệu, bao bì, platform fee theo đơn.                                     | fixed cost                        |
-| `fixed_cost`                  | chi phí cố định          | Chi phí ít đổi theo sản lượng ngắn hạn: thuê mặt bằng, phần mềm cố định.                                          | variable cost                     |
-| `labor_cost`                  | chi phí nhân công        | Lương, phụ cấp, bảo hiểm/thuế employer nếu ghi nhận.                                                              | Cổ tức, phân phối lợi nhuận       |
-| `labor_cost_percentage`       | tỷ lệ chi phí nhân công  | Labor cost / net sales.                                                                                           | prime cost %                      |
-| `prime_cost`                  | prime cost               | Food/beverage COGS + labor cost; cost kiểm soát chính của nhà hàng.                                               | total operating expense           |
-| `prime_cost_ratio`            | tỷ lệ chi phí chính      | Chi phí chính / doanh thu ròng.                                                                                   | biên gộp                          |
-| `operating_expense` (`opex`)  | chi phí vận hành         | Rent, utilities, software, repair, marketing, bank/payment fee; không gồm direct COGS nếu đã tách.                | food cost                         |
-| `operating_profit`            | lợi nhuận vận hành       | Lãi sau COGS/labor/opex trong phạm vi vận hành.                                                                   | net income pháp lý                |
-| `net_profit`                  | lợi nhuận sau thuế TNDN  | Bottom-line kế toán sau doanh thu, giá vốn, chi phí, kết quả tài chính/khác và thuế TNDN khi kỳ đã khóa đầy đủ.   | lợi nhuận gộp, kết quả vận hành   |
-| `net_margin`                  | biên lợi nhuận ròng      | Net profit / revenue.                                                                                             | gross margin                      |
-| `ebitda`                      | EBITDA                   | Earnings before interest, tax, depreciation, amortization; không phải KPI mặc định của Finance vận hành.          | cash profit                       |
-| `dividend`                    | cổ tức                   | Phần lợi nhuận được phân phối cho cổ đông theo quyết định hợp lệ.                                                 | expense vận hành, lương           |
-
-### Cash, công nợ, và đối soát
-
-| Term                         | Nhãn chuẩn             | Nghĩa agent phải biết                                                                        | Không được lẫn với                 |
-| ---------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `cash_basis`                 | ghi nhận theo tiền     | Doanh thu/chi phí ghi khi tiền thu/chi.                                                      | accrual basis                      |
-| `accrual_basis`              | ghi nhận dồn tích      | Ghi khi doanh thu phát sinh/chi phí incurred, bất kể tiền đã chuyển chưa.                    | cash basis                         |
-| `cash_flow`                  | dòng tiền              | Tiền vào/ra theo thời gian.                                                                  | profit                             |
-| `cash_inflow`                | dòng tiền vào          | Tiền nhận từ khách/nền tảng/khoản khác.                                                      | revenue nếu chưa earned            |
-| `cash_outflow`               | dòng tiền ra           | Tiền chi cho NCC/nhân sự/expense/chủ rút.                                                    | expense nếu là trả nợ cũ           |
-| `cash_on_hand`               | tiền mặt hiện hữu      | Tiền thực có trong két hoặc quỹ.                                                             | cash collected                     |
-| `bank_opening_balance`       | số dư ngân hàng đầu kỳ | Mốc số dư Owner nhập vì hệ thống không đọc được số dư tài khoản ngân hàng.                   | Tổng giao dịch SePay               |
-| `bank_transaction`           | giao dịch ngân hàng    | Một biến động tiền vào hoặc tiền ra canonical từ SePay, tính đúng một lần theo ID giao dịch. | Webhook delivery, payment, expense |
-| `opening_cash`               | tiền đầu ca            | Tiền mặt trong két khi mở ca.                                                                | doanh thu                          |
-| `closing_cash`               | tiền cuối ca           | Tiền mặt thực đếm khi đóng ca.                                                               | expected cash                      |
-| `cash_over_short`            | thừa/thiếu tiền mặt    | Counted cash - expected cash.                                                                | lãi/lỗ                             |
-| `bank_reconciliation`        | đối soát ngân hàng     | Phân loại giao dịch ngân hàng vào payment/chứng từ; gắn hoặc gỡ không đổi số dư.             | payment split, bank movement       |
-| `accounts_receivable` (`AR`) | phải thu               | Tiền khách/nền tảng/đối tác còn nợ.                                                          | revenue                            |
-| `accounts_payable`           | phải trả               | Tiền còn nợ NCC/đối tác.                                                                     | purchase spend                     |
-| `payable_due_date`           | hạn thanh toán NCC     | Ngày phải trả hóa đơn/khế ước NCC.                                                           | ngày GRN                           |
-| `receivable_aging`           | tuổi nợ phải thu       | Phân nhóm khoản phải thu theo số ngày chưa thu.                                              | doanh thu ngày                     |
-| `payable_aging`              | tuổi nợ phải trả       | Phân nhóm khoản phải trả theo số ngày chưa thanh toán.                                       | chi phí trong kỳ                   |
-| `prepaid_expense`            | chi phí trả trước      | Tiền đã trả nhưng phân bổ cho nhiều kỳ.                                                      | chi phí vận hành kỳ hiện tại       |
-| `accrued_expense`            | chi phí dồn tích       | Chi phí đã phát sinh nhưng chưa trả tiền.                                                    | AP invoice đã nhận nếu có invoice  |
-| `deposit`                    | đặt cọc                | Tiền giữ chỗ/đặt cọc, chưa chắc là revenue.                                                  | payment for completed order        |
-
-### Inventory, procurement, và costing
-
-| Term                      | Nhãn chuẩn               | Nghĩa agent phải biết                                               | Không được lẫn với         |
-| ------------------------- | ------------------------ | ------------------------------------------------------------------- | -------------------------- |
-| `beginning_inventory`     | tồn đầu kỳ               | Giá trị/số lượng tồn tại đầu kỳ.                                    | opening cash               |
-| `ending_inventory`        | tồn cuối kỳ              | Giá trị/số lượng tồn cuối kỳ.                                       | closing cash               |
-| `average_inventory`       | tồn bình quân            | Bình quân tồn trong kỳ, dùng cho turnover.                          | inventory snapshot         |
-| `inventory_turnover`      | vòng quay tồn kho        | COGS / average inventory value.                                     | sales growth               |
-| `days_inventory_on_hand`  | số ngày tồn kho          | Average inventory / daily COGS; ước số ngày tồn đủ dùng.            | shelf life                 |
-| `par_level`               | mức tồn chuẩn            | Tồn mục tiêu để vận hành đủ mà không dư quá.                        | reorder point              |
-| `reorder_point`           | điểm đặt hàng            | Ngưỡng tồn kích hoạt đặt hàng.                                      | par level                  |
-| `lead_time`               | thời gian giao hàng      | Thời gian từ đặt hàng đến nhận hàng.                                | shelf life                 |
-| `safety_stock`            | tồn an toàn              | Phần tồn đệm để tránh stockout.                                     | overstock                  |
-| `stockout`                | hết hàng                 | Tồn không đủ để bán/sản xuất.                                       | low stock                  |
-| `overstock`               | dư tồn                   | Tồn vượt nhu cầu/par, tăng rủi ro hư hỏng/cash tied.                | inventory value cao có lợi |
-| `dead_stock`              | tồn chết                 | Hàng tồn lâu/khó dùng/khó bán.                                      | safety stock               |
-| `shrinkage`               | hao hụt không giải thích | Mất mát do thất thoát/sai đếm/hư hỏng chưa phân loại.               | waste đã ghi nhận          |
-| `spoilage`                | hư hỏng                  | Hàng hỏng/quá hạn không dùng được.                                  | comp/discount              |
-| `waste`                   | hao phí/bỏ đi            | Nguyên liệu/món bị bỏ vì sơ chế, lỗi, hỏng, quá hạn.                | void/refund                |
-| `yield`                   | tỷ lệ thu hồi            | Lượng usable sau sơ chế/chế biến so với lượng mua.                  | recipe qty                 |
-| `trim_loss`               | hao hụt sơ chế           | Phần mất khi làm sạch/cắt tỉa.                                      | cooking loss               |
-| `cooking_loss`            | hao hụt nấu nướng        | Mất trọng lượng/số lượng khi nấu.                                   | trim loss                  |
-| `portion_cost`            | giá vốn khẩu phần        | Cost cho một phần/món theo recipe/yield.                            | menu price                 |
-| `landed_cost`             | giá nhập đủ chi phí      | Giá hàng gồm phí vận chuyển/handling liên quan để đưa hàng vào kho. | unit price trần            |
-| `purchase_variance`       | chênh lệch mua hàng      | Chênh giữa PO, GRN, invoice về lượng/giá.                           | stocktake variance         |
-| `cycle_count`             | kiểm kê luân phiên       | Kiểm kê một phần theo lịch.                                         | stocktake toàn kho         |
-
-### Menu, bàn, và hiệu suất vận hành
-
-| Term                       | Nhãn chuẩn                    | Nghĩa agent phải biết                                                        | Không được lẫn với            |
-| -------------------------- | ----------------------------- | ---------------------------------------------------------------------------- | ----------------------------- |
-| `average_order_value`      | giá trị trung bình mỗi đơn    | Doanh thu ròng / số đơn.                                                     | chi tiêu trung bình mỗi khách |
-| `average_check`            | hóa đơn trung bình            | Tương tự AOV/check average, tùy check/order model.                           | total collected               |
-| `covers`                   | lượt khách                    | Số khách phục vụ; chỉ dùng khi capture guest count.                          | order count                   |
-| `average_spend_per_cover`  | chi tiêu trung bình mỗi khách | Net sales / covers.                                                          | AOV                           |
-| `table_turnover`           | vòng quay bàn                 | Số lượt khách/party mỗi bàn trong kỳ.                                        | inventory turnover            |
-| `seat_occupancy`           | tỷ lệ lấp đầy chỗ ngồi        | Seat-hours used / seat-hours available.                                      | table turnover                |
-| `RevPASH`                  | doanh thu trên ghế-giờ        | Revenue per available seat hour; hữu ích khi dine-in capacity là bottleneck. | AOV                           |
-| `party_size`               | quy mô nhóm khách             | Số khách trong một bàn/party.                                                | covers cả ngày                |
-| `dwell_time`               | thời gian ngồi bàn            | Thời gian khách chiếm bàn.                                                   | prep time                     |
-| `ticket_time`              | thời gian xử lý phiếu         | Thời gian từ gửi bếp đến ready/served.                                       | dwell time                    |
-| `prep_time`                | thời gian chế biến            | Thời gian bếp chuẩn bị món.                                                  | service time                  |
-| `service_time`             | thời gian phục vụ             | Thời gian từ order/ready đến served hoặc close tùy metric.                   | prep time                     |
-| `86_item`                  | món tạm hết                   | Món không bán được vì hết nguyên liệu/sản xuất.                              | deactivated menu item         |
-| `menu_engineering`         | phân tích menu                | Phân loại món theo popularity và contribution margin.                        | báo cáo doanh thu đơn thuần   |
-| `item_popularity`          | độ phổ biến món               | Tỷ trọng món trong product mix.                                              | profitability                 |
-| `item_contribution_margin` | lãi đóng góp theo món         | Net item sales - variable cost của món.                                      | gross profit toàn cửa hàng    |
-| `menu_price`               | giá bán menu                  | Giá niêm yết đã gồm VAT, trước discount; không cộng VAT lần hai tại POS.      | net sales                     |
-
-### Ranh giới thuế doanh nghiệp
-
-| Term                    | Nhãn chuẩn                 | Nghĩa agent phải biết                                  | Không được lẫn với                       |
-| ----------------------- | -------------------------- | ------------------------------------------------------ | ---------------------------------------- |
-| `taxable_revenue`       | doanh thu tính thuế        | Revenue dùng làm căn cứ kê khai theo cấu hình pháp lý. | net sales for margin                     |
-| `invoice_issued_amount` | giá trị HĐĐT đã phát hành  | Tổng tiền trên HĐĐT đã phát hành.                      | doanh thu POS nếu hóa đơn chưa phát hành |
-| `vat_payable`           | GTGT phải nộp              | Nghĩa vụ theo phương pháp khấu trừ bằng GTGT đầu ra trừ GTGT đầu vào được khấu trừ và cộng/trừ điều chỉnh; phương pháp khác có công thức riêng. | VAT đầu ra trên màn HĐĐT |
-| `cit_payable`           | TNDN phải nộp              | Nghĩa vụ thuế TNDN của doanh nghiệp trong kỳ.          | PIT payroll, VAT payable                 |
-| `tax_withholding`       | khấu trừ thuế              | Thuế bị khấu trừ/nộp thay bởi nền tảng/đối tác nếu có. | platform commission                      |
-| `invoice_cancellation`  | hủy HĐĐT                   | Hủy hóa đơn theo trạng thái/provider/luật.             | refund order                             |
-| `invoice_replacement`   | thay thế HĐĐT              | Lập hóa đơn thay thế sau sai sót/hủy theo quy định.    | edit receipt                             |
-| `customer_tax_info`     | thông tin người mua lấy HĐ | MST/tên/địa chỉ người mua khi yêu cầu HĐĐT.            | thông tin khách lẻ bắt buộc              |
+| Term | Label | Definition |
+| --- | --- | --- |
+| `control_surface` | Quản trị | L0 admin plane (`AppShell`): `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. |
+| `branch_surface` | Chi nhánh | `/br/[branchId]/*` branch runtime chrome excluding full-screen stations. |
+| `station_chrome` | POS / KDS / Runner | Full-screen one-job chrome under `/br/[branchId]/{pos,kds,runner}`. |
+| `operational_role` | vai trò vận hành | Non-full-Owner roles in the route matrix; not a plane name. |
+| `owner` | Chủ sở hữu | Full L0 ACL role; never the name of the product plane. |
+| `restaurant_operations_system` | bộ phần mềm quản lý vận hành và bán hàng | Product name for `comtammatu`. |
 
 ## Canonical terms
 
-### Tổ chức và địa điểm vận hành
-
-| Canonical term       | Nhãn chuẩn         | Định nghĩa                                                                | Không dùng                                           |
-| -------------------- | ------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `tenant`              | tenant / hồ sơ doanh nghiệp | Chủ thể doanh nghiệp cấp hệ thống, single-tenant row.                  | branch hoặc cổ đông                                  |
-| `joint_stock_company` | công ty cổ phần             | Loại hình doanh nghiệp hiện hành của Má Tư.                            | nhãn cho một branch                                  |
-| `legal_representative`| người đại diện theo pháp luật | Người đại diện được ghi nhận trong hồ sơ đăng ký doanh nghiệp.       | owner user, chức danh HR                             |
-| `beneficial_owner`    | chủ sở hữu hưởng lợi        | Cá nhân phải được xác định/kê khai khi thuộc trường hợp luật yêu cầu.  | mọi cổ đông hoặc owner user                          |
-| `shareholder`         | cổ đông                     | Người sở hữu cổ phần theo sổ đăng ký cổ đông.                          | người đại diện theo pháp luật                        |
-| `branch`             | chi nhánh          | Site vận hành cấp L1: bán hàng, nhập kho, sản xuất, điều chuyển, kiểm kê. | cửa hàng nếu đang nói entity DB                      |
-| `branch_warehouse`   | kho chi nhánh      | Active warehouse duy nhất nhận/giữ tồn tại chi nhánh.                    | kho con, bếp chi nhánh                               |
-| `site`               | site vận hành      | Specs/technical docs khi cần gom branch/location.                         | dùng thay cho `branch` trong UI                      |
-
-### Bề mặt sản phẩm
-
-| Canonical term                 | Nhãn chuẩn                               | Ghi chú                                                                                                                |
-| ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `restaurant_operations_system` | bộ phần mềm quản lý vận hành và bán hàng | Nhãn chính của `comtammatu`.                                                                                           |
-| `control_surface`              | Quản trị                                 | Mặt phẳng L0 `AppShell`. Alias cũ: Owner surface / Owner control. `admin` là short alias cùng nghĩa.                   |
-| `admin`                        | quản trị                                 | Short alias của `control_surface` (giữ cho nav/copy cũ).                                                               |
-| `admin_overview`               | tổng quan quản trị                       | Bề mặt theo dõi việc cần xử lý trên `control_surface`, không phải finance cockpit.                                     |
-| `branch_surface`               | Chi nhánh                                | `/br/[branchId]/*` Branch runtime (không gồm station).                                                                 |
-| `station_chrome`               | POS / KDS / Runner                       | Full-screen một việc; alias docs cũ: Operations chrome.                                                                |
-| `operational_role`             | vai trò vận hành                         | Nhóm role vận hành trong role matrix; không phải tên plane.                                                            |
-| `finance_basic`                | tài chính vận hành                       | Daily money, stock value, food cost, expenses, HĐĐT, accountant export; không thay sổ kế toán doanh nghiệp.             |
-| `inventory_ops`                | điều hành kho                            | Module kho trên `control_surface`; có thể rút gọn `Kho hàng` trong nav. Không phải tên plane.                          |
-| `point_of_sale`                | POS                                      | Không ép dịch thành `điểm bán` trong UI.                                                                               |
-| `kitchen_display_system`       | KDS                                      | Có thể chú thích `màn hình bếp` ở docs/onboarding.                                                                     |
-| `employee_portal`              | trang nhân viên                          | Legacy code label; route hiện tại là branch staff runtime dưới `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`. |
-| `content_management`           | quản trị nội dung                        | Banner, promo, landing content, media, SEO metadata.                                                                   |
-
-### Bán hàng, POS, và KDS
-
-| Canonical term     | Nhãn chuẩn       | Định nghĩa                                                     | Không dùng                               |
-| ------------------ | ---------------- | -------------------------------------------------------------- | ---------------------------------------- |
-| `order`            | đơn hàng bán     | Đơn phát sinh ở POS.                                           | đơn hàng nếu đang đứng cạnh procurement  |
-| `order_item`       | dòng món         | Một món trong đơn.                                             | item nếu viết user-facing copy           |
-| `portion_quantity` | số phần (`Nx`)   | Tiền tố `Nx` / badge phần = số đĩa/phần của món chính. Ví dụ `4x Sườn`. | nhầm với tổng món kèm trên cả dòng |
-| `side_portion_qty` | SL trên phần (`xN`) | Hậu tố `xN` trên món kèm = số lượng **mỗi phần**, không nhân với số phần. Ví dụ `4x Sườn (Trứng x1)` = 4 đĩa, mỗi đĩa 1 trứng. Cột SL hóa đơn khách vẫn dùng tổng (`side × phần`) để khớp tiền. | `Trứng x4` khi muốn nói 4 trứng trên 1 phần nhưng đang có 4 phần |
-| `menu_item`        | món bán          | Item trong menu.                                               | sản phẩm nếu đang nói F&B order flow     |
-| `table_session`    | phiên bàn        | Lifecycle phục vụ tại bàn.                                     | bàn mở nếu cần phân biệt record          |
-| `takeaway_context` | ngữ cảnh mang về | Context bán mang về; có thể có nhiều order mở như bàn.         | đơn nhanh nếu workflow cần chọn order    |
-| `pos_session`      | ca POS           | Phiên bán mở theo **chi nhánh** (D7): một ca mở/chi nhánh; `terminal_id` chỉ metadata audit khi mở ca. | ca bán hàng (UI); “một máy một ca” |
-| `terminal`         | đăng ký POS      | Bản ghi tối thiểu để cho phép mở ca; không phải bind thiết bị vật lý trừ khi có pairing. | máy thu ngân như device management |
-| `kds_ticket`       | phiếu bếp        | Ticket hiển thị trên KDS.                                      | order bếp                                |
-| `printer`          | máy in           | Thiết bị LAN + `printer_print_types` + (bếp) `printer_menu_categories`. Fleet N máy/chi nhánh. | “3 máy cố định”, `kitchen_1`/`kitchen_2` như topology bắt buộc |
-| `ready`            | sẵn sàng         | Món/phiếu bếp đã xong ở bếp.                                   | hoàn thành đơn                           |
-| `served`           | đã phục vụ       | Marker phục vụ/fulfillment, không phải payment close.          | trả bàn, hoàn tất đơn                    |
-| `completed`        | hoàn thành POS   | Đơn đã thanh toán và đóng ở POS; bàn release nếu dine-in.      | bếp xong                                 |
-| `release_table`    | trả bàn          | Hệ thống release bàn khi đơn POS `completed` hoặc `cancelled`. | nút riêng sau thanh toán                 |
-
-### Branch Ops — CTA verbs (UI)
-
-| Việc | Nhãn chuẩn | Không dùng |
-|------|------------|------------|
-| Vào app POS | **Vào POS** | `Mở POS` khi chỉ navigate |
-| Mở phiên bán | **Mở ca** | `Mở POS`, `mở ca bán hàng` |
-| Vào app bếp | **Vào KDS** | `Mở KDS` |
-| Tile bếp | **Bếp (KDS)** | `Bếp/KDS` |
-| Setup station | **Trạm bếp** | `Trạm KDS` (UI) |
-| Setup POS row | **Đăng ký POS** | Gợi ý bind thiết bị khi chưa có pairing |
-| Điều hướng màn khác | **Vào …** | `Mở …` trừ **Mở ca** / **Mở bán** |
-| Hub setup | **Thiết lập chi nhánh** | `Cấu hình chi nhánh`, `Cài đặt chi nhánh` trên Branch |
-| Hub command | **Điều hành** / **Điều hành chi nhánh** | “Command” trong copy |
-
-### Procurement, kho, và sản xuất
-
-| Canonical term          | Nhãn chuẩn                          | Định nghĩa                                                                                                   | Không dùng                            |
-| ----------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| `stock_request`         | yêu cầu hàng                        | Xin cấp hàng nội bộ từ Kho Tổng/Bếp Trung Tâm về chi nhánh.                                                  | yêu cầu mua NCC                       |
-| `purchase_request`      | yêu cầu mua                         | Nhu cầu mua ngoài do kho trung tâm lập; có thể tạo nhiều PO theo NCC. Mã: `YCM-DDMMYYYY-####`.                | yêu cầu hàng nội bộ                   |
-| `purchase_order`        | đơn đặt hàng NCC                    | Cam kết mua với đúng một NCC, thuộc đúng một Yêu cầu mua. Mã: `PO-DDMMYYYY-####`.                             | đơn hàng bán                          |
-| `goods_received_note`   | phiếu nhập kho                      | Một lần nhận hàng thực tế của đúng một PO. Nháp hiển thị **Chờ nhập hàng**. Mã: `GRN-DDMMYYYY-####`.          | hóa đơn NCC, phiếu nhận nhiều PO      |
-| `supplier_invoice`      | hóa đơn NCC                         | Hóa đơn đầu vào từ NCC.                                                                                      | HĐĐT bán ra, phiếu nhập kho           |
-| `accounts_payable`      | công nợ NCC                         | Số tiền còn phải trả NCC sau thanh toán và phiếu giảm công nợ đã phân bổ.                                    | giá trị tồn, chi phí đã trả           |
-| `po_applied_quantity`   | số lượng tính vào đơn               | Phần nhận hợp lệ dùng hoàn thành số lượng còn lại của dòng PO.                                               | toàn bộ số lượng nhận                 |
-| `excess_quantity`       | dư ngoài đơn                        | Phần nhận hợp lệ vượt số còn lại của PO; nhập tồn với giá `0`.                                               | khuyến mãi                            |
-| `shortage_quantity`     | còn thiếu                           | Phần số lượng PO chưa được hoàn thành sau lần nhận hiện tại.                                                 | số lượng từ chối                      |
-| `supplier_payment`      | thanh toán NCC                      | Giao dịch trả tiền cho nhà cung cấp.                                                                         | food cost, PO, GRN                    |
-| `stock_level`           | tồn kho                             | Snapshot số lượng + WAC tại location.                                                                        | số lượng đặt mua                      |
-| `stock_movement`        | biến động tồn kho                   | Ledger append-only của nhập/xuất/transfer/consumption/adjustment.                                            | giao dịch chung nếu cần rõ movement   |
-| `stock_transfer`        | phiếu điều chuyển nội bộ            | Luân chuyển tồn giữa hai warehouse/site hợp lệ. Mã chứng từ: `DC-DDMMYYYY-####`.                             | tiêu hao, bán hàng, food cost         |
-| `stock_issue`           | phiếu xuất kho                      | Xuất dùng nội bộ khi runtime thật sự dùng chứng từ issue. Mã thủ công: `PXK-DDMMYYYY-####`; hao hụt: `HH-DDMMYYYY-####`. | transfer nếu có location nhận tồn  |
-| `consumption`           | tiêu hao                            | Trừ tồn vì bán hàng, sản xuất, hư hỏng, hoặc sử dụng bếp đã được duyệt.                                      | transfer, PO, hóa đơn NCC             |
-| `stocktake`             | kiểm kê                             | Đếm thực tế và điều chỉnh. Mã phiên: `KK-DDMMYYYY-####`.                                                     | kiểm kho nếu cần term chuẩn           |
-| `inventory_count_slip`  | phiếu đếm                           | Phiếu đếm nguyên liệu theo phân công. Mã: `PD-DDMMYYYY-####`.                                                | phiên kiểm kê                         |
-| `entry_unit_id`         | đơn vị theo chứng từ                | Một đơn vị đang hoạt động của nguyên liệu; PO kế thừa từ YCM, GRN kế thừa từ PO, LSX kế thừa từ công thức. | text unit từ client                   |
-| `base_unit`             | đơn vị chuẩn                        | Dòng `ingredient_units.is_base = true`; ledger, ngưỡng, tồn và WAC lưu theo đây.                          | đơn vị đóng gói                       |
-| `to_base_factor`        | quy đổi về đơn vị chuẩn             | Hệ số snapshot `1 đơn vị chứng từ = N đơn vị chuẩn`; ví dụ `1 chai = 330 ml`.                            | hệ số đảo chiều                       |
-| `purchase_unit_cost`    | đơn giá nhập                        | Giá mua từ dòng Hóa đơn NCC đã xác nhận; PO/GRN không là nguồn giá thương mại.                              | giá vốn BQ, giá do Kho nhập, price-QC |
-| `ingredient_price`      | giá nguyên liệu (cần nói rõ loại)   | Không phải một chỉ số độc lập. UI phải gọi đúng là giá tham chiếu, đơn giá nhập, hoặc giá vốn bình quân.      | giá trị tồn kho, giá vốn món          |
-| `reference_unit_cost`   | giá tham chiếu                      | Giá trên `ingredients.unit_cost` để tham khảo khi chưa có giá vốn bình quân; không thay giá đã ghi sổ.        | đơn giá nhập, giá vốn BQ              |
-| `average_unit_cost`     | giá vốn bình quân gia quyền (`WAC`) | `stock_levels.avg_unit_cost` theo Đơn vị chuẩn; UI tồn kho hiển thị cùng đơn vị này.                           | đơn giá nhập, giá trị tồn, giá vốn món |
-| `inventory_value`       | giá trị tồn kho                     | Tổng giá trị ghi sổ của số lượng còn trong kho theo phạm vi. Khi valuation hoạt động, lấy `book_value`; trước đó là tồn × WAC. | tiền mua/trả NCC, giá vốn món |
-| `movement_unit_cost`    | đơn giá ghi sổ                      | `stock_movements.unit_cost`, snapshot đơn giá dùng cho một movement; không gọi là WAC trên lịch sử movement. | giá vốn BQ hiện tại                   |
-| `raw_material`          | nguyên liệu                         | Item đầu vào.                                                                                                | vật tư nếu không phải ngữ cảnh rộng   |
-| `finished_good`         | thành phẩm                          | Hàng được sản xuất hoặc giữ tồn tại warehouse của site.                                                      | món bán nếu đang nói menu             |
-| `recipe`                | định mức (món bán)                  | Định mức nguyên liệu tiêu hao cho một món bán.                                                               | công thức (production)                |
-| `production_recipe`     | công thức (sản xuất)                | Định mức nguyên liệu (BOM) để sản xuất ra thành phẩm.                                                        | định mức (POS)                        |
-| `production_order`      | lệnh sản xuất                       | Lệnh sản xuất tại site; entity runtime là `production_runs`. Mã: `LSX-DDMMYYYY-####`.                        | work order                            |
-| `three_way_matching`    | đối soát 3 chứng từ                 | Đối chiếu `PO`, `GRN`, `supplier_invoice`.                                                                   | matching chung                        |
-| `weighted_average_cost` | giá vốn bình quân gia quyền (`WAC`) | Phương pháp tính giá vốn bình quân cho tồn hiện có.                                                          | FIFO nếu hệ thống không dùng          |
-
-KDS/POS “bếp” là workflow chế biến, không phải stock location. Inventory current
-contract không có target Bếp trong cùng chi nhánh.
-
-### Thanh toán và tiền mặt
-
-| Canonical term   | Nhãn chuẩn             | Định nghĩa                                                                                                                                           | Không dùng                                                   |
-| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `payment_method` | phương thức thanh toán | Customer payment `payments.method`: `cash`, `vietqr`.                                                                                                | kênh bán                                                     |
-| `cash`           | tiền mặt               | Tiền mặt khách trả.                                                                                                                                  | tiền mặt hiện hữu nếu chưa kiểm đếm két                      |
-| `bank_transfer`  | chuyển khoản           | `supplier_payments.payment_method` cho thanh toán NCC; công nợ cập nhật tại đây, còn số dư ngân hàng chỉ giảm qua canonical `bank_transactions.out`. | VietQR ở payment khách; trừ ngân hàng lần hai từ bản ghi NCC |
-| `vietqr`         | VietQR                 | QR chuyển khoản liên ngân hàng.                                                                                                                      | QR thanh toán chung                                          |
-| `payment_status` | trạng thái thanh toán  | `unpaid` -> `partial` -> `paid`.                                                                                                                     | order status                                                 |
-| `payment_close`  | đóng thanh toán POS    | Event xác nhận thanh toán, chuyển order sang `completed`.                                                                                            | served, ready                                                |
-| `cash_session`   | ca tiền mặt            | Phiên mở/đóng két, kiểm đếm, chênh lệch.                                                                                                             | ca POS nếu không quản lý tiền mặt                            |
-
-### HĐĐT, thuế, và kế toán doanh nghiệp
-
-| Canonical term                 | Nhãn chuẩn                    | Định nghĩa                                                                                | Không dùng                                |
-| ------------------------------ | ----------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `value_added_tax`              | thuế GTGT                     | Thuế GTGT theo phương pháp doanh nghiệp đã đăng ký và luật hiện hành.                     | doanh thu, lợi nhuận                      |
-| `output_vat`                   | GTGT đầu ra                   | VAT trên giao dịch bán ra thuộc kỳ theo hóa đơn hiệu lực và điều chỉnh liên quan.         | doanh thu, lãi, tổng tiền khách trả       |
-| `input_vat_recorded`           | GTGT đầu vào đã ghi nhận      | VAT đúng như hóa đơn NCC đã nhập; chưa kết luận được khấu trừ.                            | GTGT đầu vào được khấu trừ                |
-| `input_vat_pending_review`     | GTGT đầu vào chờ kiểm tra     | VAT đã ghi nhận nhưng chưa đủ kết luận về hồ sơ, mục đích sử dụng, thanh toán hoặc phân bổ. | GTGT đầu vào được khấu trừ              |
-| `input_vat_deductible`         | GTGT đầu vào được khấu trừ    | Phần VAT đầu vào đã đủ hóa đơn, mục đích sử dụng, thanh toán, phân bổ và bằng chứng khác. | toàn bộ VAT trên hóa đơn NCC              |
-| `input_vat_non_deductible`     | GTGT đầu vào không khấu trừ   | Phần VAT bị loại theo kết luận có căn cứ; cách đưa vào nguyên giá/chi phí phải được duyệt. | chi phí tự động                            |
-| `vat_rate`                     | thuế suất GTGT                | Lưu số phần trăm, ví dụ `0.00`, `5.00`, `8.00`, `10.00`; không lưu `0.08`.                 | tỷ lệ TNCN                                |
-| `corporate_income_tax`         | thuế thu nhập doanh nghiệp    | Thuế trên thu nhập tính thuế của doanh nghiệp theo luật TNDN.                             | VAT, TNCN tiền lương                      |
-| `tax_invoice`                  | hóa đơn điện tử bán ra        | Hóa đơn bán ra dạng dữ liệu điện tử, có/không có mã CQT theo luật.                        | receipt POS, hóa đơn NCC                  |
-| `cash_register_invoice`        | HĐĐT từ máy tính tiền         | HĐĐT khởi tạo từ máy tính tiền kết nối dữ liệu với CQT.                                   | receipt tạm tính                          |
-| `supplier_invoice`             | hóa đơn đầu vào / hóa đơn NCC | Chứng từ mua hàng/chi phí từ NCC.                                                         | HĐĐT bán ra                               |
-| `purchase_statement`           | bảng kê mua hàng              | Chứng từ mua hàng dùng trong trường hợp pháp luật thuế/kế toán cho phép.                   | hóa đơn tự chế                            |
-| `cqt_code`                     | mã CQT                        | Mã xác thực HĐĐT sau khi `issued`.                                                        | invoice number                            |
-| `invoice_series`               | ký hiệu hóa đơn               | Ký hiệu do provider/CQT cấp.                                                              | số hóa đơn                                |
-| `invoice_number`               | số hóa đơn                    | Số hóa đơn do provider/CQT cấp.                                                           | mã CQT                                    |
-| `einvoice_provider`            | nhà cung cấp HĐĐT             | Runtime hiện tại: `viettel`.                                                              | CQT                                       |
-| `declared_period`              | kỳ kê khai                    | Format `YYYY-MM` hoặc quý/năm theo luật.                                                  | ngày thanh toán POS                       |
-| `enterprise_accounting_book`   | sổ kế toán doanh nghiệp       | Sổ và dữ liệu kế toán theo chế độ doanh nghiệp đã chọn.                                   | dashboard tài chính vận hành              |
-| `cashbook`                     | sổ thu chi / sổ quỹ           | Sổ vận hành theo dõi thu chi tiền.                                                        | general ledger doanh nghiệp               |
-
-Má Tư vận hành theo mô hình công ty cổ phần. Finance trong sản phẩm hiện là
-bề mặt tài chính vận hành; `input VAT credit`, sổ cái, bảng cân đối và BCTC chỉ
-được coi là số kế toán khi đã có dữ liệu, bút toán và quy trình khóa sổ đầy đủ.
-
-### Nhân sự và tiền lương
-
-| Canonical term               | Nhãn chuẩn              | Định nghĩa                                                 | Không dùng                |
-| ---------------------------- | ----------------------- | ---------------------------------------------------------- | ------------------------- |
-| `employee`                   | nhân viên               | Row `employees`, hồ sơ HR.                                 | user nếu đang nói nhân sự |
-| `employment_contract`        | hợp đồng lao động       | Row `employment_contracts`, source cho bảo hiểm/lương.     | thỏa thuận miệng          |
-| `employer`                   | người sử dụng lao động  | Doanh nghiệp khi thuê và quản lý nhân viên.                | owner user               |
-| `employee_party`             | người lao động          | Phía nhân viên.                                            | staff role                |
-| `social_insurance`           | bảo hiểm xã hội         | Một loại bảo hiểm, không gom cả BHYT/BHTN.                 | bảo hiểm chung            |
-| `health_insurance`           | bảo hiểm y tế           | Một loại bảo hiểm riêng.                                   | BHXH                      |
-| `unemployment_insurance`     | bảo hiểm thất nghiệp    | Một loại bảo hiểm riêng.                                   | BHXH                      |
-| `personal_income_tax_salary` | TNCN tiền lương         | Thuế thu nhập cá nhân từ tiền lương nhân viên.             | thuế TNDN của doanh nghiệp |
-| `gross_salary`               | lương gộp               | Lương thỏa thuận trước BH/PIT.                             | lương thực lĩnh           |
-| `net_salary`                 | lương thực lĩnh         | Lương gộp - bảo hiểm NLĐ - thuế TNCN - khấu trừ + phụ cấp. | lương gộp                 |
-| `insurance_base_salary`      | mức lương đóng bảo hiểm | Căn cứ đóng bảo hiểm, có thể khác gross.                   | gross salary              |
-| `payroll_period`             | kỳ lương                | Tháng/năm tính lương.                                      | kỳ kê khai thuế bán hàng  |
-| `payroll_entry`              | dòng lương              | Một nhân viên x một kỳ.                                    | payslip file              |
-
-Số luật cụ thể như giảm trừ gia cảnh, trần BHXH, bậc PIT nằm ở
-`payroll-pit.md`, `labor-contracts.md`, và `legal-framework-2026.md`. Glossary
-không hardcode các số này.
-
-## Label variants
-
-Mỗi thuật ngữ có tối đa ba dạng hiển thị. Chọn theo bề mặt UI, không theo sở
-thích.
-
-| Dạng      | Dùng ở                                                             | Điều kiện                                               |
-| --------- | ------------------------------------------------------------------ | ------------------------------------------------------- |
-| `long`    | heading, table cell, description, form label, tooltip dài          | Mọi canonical term quan trọng đều có `long`             |
-| `short`   | button, tab, badge, sidebar nav, mobile chip, table header compact | Chỉ thêm khi `long` dài hoặc xuất hiện trong nav/button |
-| `acronym` | KPI card, status pill 2-4 ký tự, icon label, chart legend          | Chỉ dùng khi người đọc đã quen vocabulary; mặc định ưu tiên `short` tiếng Việt |
-
-Nếu `short == long` thì bỏ cột short. `acronym` phải nằm trong whitelist hoặc là
-viết tắt tiếng Việt chính thức. UI chỉ được dùng một biến thể tại một vị trí:
-`long`, `short`, hoặc `acronym`; không ghép nhiều biến thể thành một label.
-Heading, mô tả, form label, placeholder, và empty state dùng tiếng Việt đầy đủ
-hoặc `short`; không nhúng acronym whitelist vào câu.
-
-### Tổ chức và địa điểm
-
-| Term                 | Long          | Short | Acronym |
-| -------------------- | ------------- | ----- | ------- |
-| `tenant`              | Hồ sơ doanh nghiệp | Doanh nghiệp | —      |
-| `joint_stock_company` | Công ty cổ phần    | Công ty     | `CTCP` |
-| `branch`             | Chi nhánh     | CN    | —       |
-| `branch_warehouse`   | Kho chi nhánh | Kho   | —       |
-
-### Finance/F&B metrics
-
-| Term                     | Long                        | Short          | Acronym |
-| ------------------------ | --------------------------- | -------------- | ------- |
-| `gross_sales`            | Tổng giá bán trước giảm giá | Giá bán gốc    | —       |
-| `net_sales_before_vat`   | Doanh thu thuần             | DT thuần       | —       |
-| `total_collected`        | Tổng tiền đã thu            | Đã thu         | —       |
-| `cash_collected`         | Tiền mặt đã thu             | Tiền mặt       | —       |
-| `bank_wallet_collected`  | Chuyển khoản/ví đã thu      | CK/ví          | —       |
-| `issued_invoice_revenue` | Doanh thu HĐĐT đã phát hành | Đã phát hành   | `HĐĐT`  |
-| `tax_declared_revenue`   | Doanh thu tính thuế         | DT tính thuế   | —       |
-| `food_cost`              | Giá vốn món                 | Giá vốn        | —       |
-| `theoretical_food_cost`  | Giá vốn định mức            | Định mức       | —       |
-| `actual_food_cost`       | Giá vốn thực tế             | Thực tế        | —       |
-| `food_cost_percentage`   | Tỷ lệ giá vốn món           | % giá vốn      | —       |
-| `gross_profit`           | Lợi nhuận gộp               | LN gộp         | —       |
-| `gross_margin`           | Biên gộp                    | —              | —       |
-| `operating_expense`      | Chi phí vận hành            | Chi phí VH     | —       |
-| `operating_result`       | Kết quả kinh doanh          | Kết quả KD     | —       |
-| `labor_cost`             | Chi phí nhân công           | Nhân công      | —       |
-| `prime_cost`             | Chi phí chính               | —              | —       |
-| `inventory_value`        | Giá trị tồn kho             | Tiền trong kho | —       |
-| `cash_variance`          | Chênh lệch tiền mặt         | Lệch két       | —       |
-| `average_order_value`    | Giá trị trung bình mỗi đơn  | Trung bình/đơn | `AOV`   |
-
-### POS / KDS / bán hàng
-
-| Term               | Long           | Short    | Acronym |
-| ------------------ | -------------- | -------- | ------- |
-| `order`            | Đơn hàng bán   | Đơn bán  | —       |
-| `order_item`       | Dòng món       | Món      | —       |
-| `menu_item`        | Món bán        | Món      | —       |
-| `kds_ticket`       | Phiếu bếp      | —        | —       |
-| `table_session`    | Phiên bàn      | —        | —       |
-| `takeaway_context` | Mang về        | —        | —       |
-| `pos_session`      | Ca POS         | —        | —       |
-| `pending`          | Chờ xử lý      | Chờ      | —       |
-| `preparing`        | Đang chế biến  | Đang làm | —       |
-| `ready`            | Sẵn sàng       | —        | —       |
-| `served`           | Đã phục vụ     | Phục vụ  | —       |
-| `completed`        | Hoàn thành POS | Xong     | —       |
-| `cancelled`        | Đã hủy         | Hủy      | —       |
-
-### Thanh toán
-
-| Term             | Long                   | Short         | Acronym |
-| ---------------- | ---------------------- | ------------- | ------- |
-| `payment_method` | Phương thức thanh toán | PT thanh toán | —       |
-| `payment_status` | Trạng thái thanh toán  | TT thanh toán | —       |
-| `payment_close`  | Đóng thanh toán POS    | Đóng TT       | —       |
-| `cash`           | Tiền mặt               | —             | —       |
-| `bank_transfer`  | Chuyển khoản ngân hàng | Chuyển khoản  | —       |
-| `vietqr`         | VietQR                 | —             | —       |
-| `unpaid`         | Chưa thanh toán        | Chưa trả      | —       |
-| `partial`        | Thanh toán một phần    | Trả một phần  | —       |
-| `paid`           | Đã thanh toán          | —             | —       |
-
-### Procurement / kho / sản xuất
-
-| Term                    | Long                        | Short            | Acronym              |
-| ----------------------- | --------------------------- | ---------------- | -------------------- |
-| `stock_request`         | Yêu cầu hàng               | Yêu cầu hàng     | —                    |
-| `purchase_request`      | Yêu cầu mua                | Yêu cầu mua      | `YCM`                |
-| `purchase_order`        | Đơn đặt hàng NCC            | Đơn NCC          | `PO`                 |
-| `goods_received_note`   | Phiếu nhập kho              | Phiếu nhập       | `GRN`                |
-| `supplier_invoice`      | Hóa đơn NCC                 | HĐ NCC           | —                    |
-| `supplier_payment`      | Thanh toán NCC              | Trả NCC          | —                    |
-| `stock_level`           | Tồn kho                     | —                | —                    |
-| `stock_movement`        | Biến động tồn kho           | Biến động        | —                    |
-| `stock_transfer`        | Phiếu điều chuyển nội bộ    | Điều chuyển      | —                    |
-| `stock_issue`           | Phiếu xuất kho nội bộ       | Xuất kho         | —                    |
-| `consumption`           | Tiêu hao                    | —                | —                    |
-| `stocktake`             | Kiểm kê                     | —                | —                    |
-| `raw_material`          | Nguyên liệu                 | —                | —                    |
-| `finished_good`         | Thành phẩm                  | —                | —                    |
-| `recipe`                | Định mức món bán            | Định mức         | Công thức (sản xuất) |
-| `production_recipe`     | Công thức sản xuất          | Công thức        | Định mức (POS)       |
-| `production_order`      | Lệnh sản xuất               | Lệnh SX          | —                    |
-| `three_way_matching`    | Đối soát 3 chứng từ         | Đối soát 3 chiều | —                    |
-| `weighted_average_cost` | Giá vốn bình quân gia quyền | Giá vốn BQ       | `WAC`                |
-
-### HĐĐT, thuế, kế toán doanh nghiệp
-
-| Term                           | Long                        | Short            | Acronym |
-| ------------------------------ | --------------------------- | ---------------- | ------- |
-| `value_added_tax`              | Thuế giá trị gia tăng       | Thuế GTGT        | `GTGT`  |
-| `corporate_income_tax`         | Thuế thu nhập doanh nghiệp | Thuế TNDN        | `TNDN`  |
-| `tax_invoice`                  | Hóa đơn điện tử bán ra      | HĐ điện tử       | `HĐĐT`  |
-| `cash_register_invoice`        | HĐĐT từ máy tính tiền       | HĐ máy tính tiền | `HĐĐT`  |
-| `supplier_invoice`             | Hóa đơn nhà cung cấp        | HĐ NCC           | —       |
-| `purchase_statement`           | Bảng kê mua hàng            | Bảng kê          | —       |
-| `cqt_code`                     | Mã Cục Quản lý Thuế         | Mã CQT           | `CQT`   |
-| `invoice_series`               | Ký hiệu hóa đơn             | Ký hiệu HĐ       | —       |
-| `invoice_number`               | Số hóa đơn                  | Số HĐ            | —       |
-| `einvoice_provider`            | Nhà cung cấp HĐĐT           | NCC HĐĐT         | —       |
-| `declared_period`              | Kỳ kê khai                  | —                | —       |
-| `enterprise_accounting_book`   | Sổ kế toán doanh nghiệp     | Sổ kế toán       | —       |
-| `cashbook`                     | Sổ thu chi                  | Sổ quỹ           | —       |
-
-### Nhân sự và tiền lương
-
-| Term                         | Long                    | Short         | Acronym        |
-| ---------------------------- | ----------------------- | ------------- | -------------- |
-| `employee`                   | Nhân viên               | NV            | —              |
-| `employment_contract`        | Hợp đồng lao động       | Hợp đồng      | `HĐLĐ`         |
-| `employer`                   | Người sử dụng lao động  | NSDLĐ         | `NSDLĐ`        |
-| `employee_party`             | Người lao động          | NLĐ           | `NLĐ`          |
-| `social_insurance`           | Bảo hiểm xã hội         | BHXH          | `BHXH`         |
-| `health_insurance`           | Bảo hiểm y tế           | BHYT          | `BHYT`         |
-| `unemployment_insurance`     | Bảo hiểm thất nghiệp    | BHTN          | `BHTN`         |
-| `personal_income_tax_salary` | Thuế TNCN tiền lương    | Thuế TNCN     | `TNCN` / `PIT` |
-| `gross_salary`               | Lương gộp               | —             | —              |
-| `net_salary`                 | Lương thực lĩnh         | Thực lĩnh     | —              |
-| `insurance_base_salary`      | Mức lương đóng bảo hiểm | Lương đóng BH | —              |
-| `payroll_period`             | Kỳ lương                | —             | —              |
-| `payroll_entry`              | Dòng lương              | Lương NV      | —              |
-
-### Bề mặt sản phẩm
-
-| Term                     | Long                 | Short     | Acronym |
-| ------------------------ | -------------------- | --------- | ------- |
-| `control_surface`        | Quản trị             | —         | —       |
-| `admin`                  | Quản trị             | —         | —       |
-| `admin_overview`         | Tổng quan quản trị   | Tổng quan | —       |
-| `branch_surface`         | Chi nhánh            | —         | —       |
-| `station_chrome`         | POS / KDS / Runner   | —         | —       |
-| `operational_role`       | Vai trò vận hành     | —         | —       |
-| `finance_basic`          | Tài chính vận hành   | Tài chính | —       |
-| `inventory_ops`          | Kho hàng             | —         | —       |
-| `content_management`     | Quản trị nội dung    | Nội dung  | `CMS`   |
-| `employee_portal`        | Trang nhân viên      | Nhân viên | —       |
-| `reports`                | Báo cáo              | —         | —       |
-
-## Decision rules cho các cặp dễ drift
-
-### `Tổng tiền đã thu` vs `Doanh thu thuần` vs `HĐĐT`
-
-- `Tổng tiền đã thu` là money collected qua payment đã hoàn tất; dùng trên màn
-  chi tiết doanh thu và phải nói rõ có thể gồm VAT.
-- `Doanh thu thuần` là `subtotal_revenue - discount_amount`, chưa VAT, dùng làm
-  điểm bắt đầu của công thức kết quả theo kỳ.
-- `Doanh thu HĐĐT đã phát hành` là giá trị hóa đơn `issued`.
-- `Doanh thu tính thuế` là số dùng kê khai theo luật và phương pháp thuế doanh nghiệp đã
-  cấu hình.
-- Không suy `Tổng tiền đã thu` hoặc `Doanh thu thuần` thành doanh thu tính thuế
-  hay tiền mặt đang giữ; nếu câu hỏi là hóa đơn, dùng
-  `Doanh thu HĐĐT đã phát hành`.
-
-### `gross_sales` vs `net_sales_before_vat`
-
-- `gross_sales` là giá menu/list trước giảm giá/refund.
-- `net_sales_before_vat` là sau giảm giá/refund và trước VAT.
-- Discount làm giảm net sales; VAT không làm tăng doanh thu vận hành.
-
-### `food_cost` vs `purchase_spend` vs `operating_expense`
-
-- `food_cost` là nguyên liệu/bao bì đã tiêu hao hoặc gắn với món bán.
-- `purchase_spend` là giá trị mua/nhận từ NCC, có thể vẫn nằm trong tồn kho.
-- `operating_expense` là chi phí vận hành không gồm direct ingredient COGS.
-- Hóa đơn NCC nguyên liệu không tự động là food cost cho kỳ bán hàng.
-
-### `inventory_value` vs `profit`
-
-- `inventory_value` là tài sản/tồn hiện tại theo quantity x cost.
-- Lãi/lỗ chỉ xuất hiện khi có revenue và chi phí/giá vốn trong kỳ.
-- Không diễn giải tồn kho cao là lợi nhuận cao.
-
-### `gross_profit` vs `net_operating_profit` vs cash flow
-
-- `gross_profit` = revenue before VAT after discount - food cost.
-- `net_operating_profit` trừ thêm labor/opex/other operating items đủ contract.
-- Cash flow là dòng tiền vào/ra và settlement; không phải profit.
-
-### `cash_collected` vs `cash_on_hand` vs `cash_variance`
-
-- `cash_collected` là payment method tiền mặt đã thu.
-- `cash_on_hand`/`counted_cash` là tiền thực đếm trong két.
-- `cash_variance` là chênh giữa thực đếm và kỳ vọng.
-- Không dùng `tiền mặt hiện hữu` thay cho doanh thu tiền mặt.
-
-### `supplier_invoice` vs `tax_invoice` vs `receipt`
-
-- `supplier_invoice` là hóa đơn đầu vào từ NCC.
-- `tax_invoice`/`HĐĐT` là hóa đơn bán ra.
-- `receipt`/phiếu tạm tính là bản in POS, không có mã CQT, không phải chứng từ
-  thuế.
-- Không dùng `invoice` trần trong specs/code nếu có thể gây nhầm.
-
-### `payment_status` vs `order_status` vs `invoice_status`
-
-- `payment_status` nói về tiền đã trả/chưa trả.
-- `order_status` nói về vòng đời đơn POS.
-- `invoice_status` nói về HĐĐT draft/submitted/issued/cancelled/replaced.
-- Một đơn có thể paid nhưng HĐĐT chưa issued; một phiếu bếp có thể served nhưng
-  đơn chưa completed.
-
-### `stock_transfer` vs `stock_issue` vs `consumption`
-
-- `stock_transfer` giữ hàng trong hệ thống tồn kho nhưng đổi site/location stock-bearing.
-- `stock_issue` là bảng chứng từ kỹ thuật cho phiếu tiêu hao (`consumption`) hoặc
-  hao hụt (`writeoff`). Không còn loại `other`.
-- `consumption` (movement) là tiêu hao làm giảm tồn; subtype `sale_consumption`
-  vào giá vốn món, `writeoff` vào waste.
-- `stock_transfer` chỉ chuyển tồn giữa hai warehouse/site hợp lệ; không tạo
-  target Bếp trong cùng chi nhánh.
-- UI: tạo tiêu hao qua surface tiêu hao; tạo hao hụt qua `/waste` — không chọn
-  “loại phiếu xuất”.
-
-### `order` vs `purchase_order`
-
-- `order` là đơn bán phát sinh ở POS.
-- `purchase_order` là đơn đặt hàng NCC.
-- Không dùng label ngắn `Đơn hàng` cho cả sales và procurement trong cùng một
-  surface.
-
-### `completed` vs `served`
-
-- `completed` là commercial close: đơn đã thanh toán, bàn release.
-- `served` là fulfillment signal: món/đơn đã lên bàn.
-- Thanh toán không force KDS ticket sang terminal; bếp vẫn có thể hoàn tất sau
-  khi đơn POS đã paid.
-
-### `Thuế TNDN` vs `TNCN tiền lương`
-
-- `Thuế TNDN` là nghĩa vụ của doanh nghiệp trên thu nhập tính thuế.
-- `TNCN tiền lương` là thuế khấu trừ từ thu nhập nhân viên.
-- Không dùng chung một công thức, bảng lương, hoặc label nếu không nói rõ nguồn
-  thu nhập.
-
-## Quy tắc theo bề mặt
-
-### Owner Tổng Quan
-
-Owner Tổng Quan không phải finance cockpit. Nó chỉ hiển thị:
-
-1. Tình trạng vận hành cần chú ý: lỗi HĐĐT, print-agent offline, payment mismatch,
-   stock alert, cash variance.
-2. Công việc chờ xử lý: phiếu, duyệt, đối soát, thiết lập còn thiếu.
-3. Lối vào module: Finance, Inventory, HR, POS/KDS settings, Reports.
-
-Card Owner có số tiền hoặc tính toán tài chính phải dùng `finance.*`. Card Owner
-có tồn kho hoặc phiếu kho phải dùng `inventory.*`. Nếu chỉ là link điều hướng,
-không đặt title như một KPI.
-
-### Finance
-
-Finance Basic hiện có hai dòng kết quả theo kỳ theo
-`docs/modules/finance.md`:
-
-- `finance.revenue.before_vat_after_discount`
-- `finance.food_cost.recorded`
-- `finance.gross_profit.readonly`
-- `finance.expense.operating`
-- biến động tồn (`finance.inventory_value.current` − `finance.inventory_value.opening`)
-- `finance.operating_result`
-
-`finance.revenue.money_collected` thuộc báo cáo doanh thu chi tiết. Số dư hiện
-có và `finance.inventory_value.current` (số tuyệt đối cuối kỳ) là section tách
-khỏi công thức kết quả. `net_operating_profit`, `prime_cost`, `labor_cost`, AP aging, cash variance
-và HĐĐT recovery là supporting workflow hoặc analysis.
-
-### Inventory
-
-Inventory là workflow-first: phiếu, việc cần xử lý, ngoại lệ, tồn thật, WAC, và
-kiểm kê. Analytics phụ trợ không được che mất việc vận hành. Supplier payable
-và payment NCC là Finance handoff; Inventory không gọi đó là điều kiện đóng ngày
-kho nếu PO/GRN/WAC/stock ledger đã đúng.
-
-### Reports
-
-Reports dùng để drilldown/đối chiếu, không phải chỗ tạo thuật ngữ mới. Mọi chart
-label phải dùng canonical metric vocabulary và nêu rõ denominator/scope.
-
-## Quan hệ với các nguồn chuẩn khác
-
-- Metric/card contract: [operational-data-contract.md](operational-data-contract.md)
-- Bách khoa nghiệp vụ: [domain-encyclopedia.md](domain-encyclopedia.md)
-- Business context doanh nghiệp: [business-context.md](business-context.md)
-- Finance module: [../modules/finance.md](../modules/finance.md)
-- Inventory semantics: [inventory.md](inventory.md)
-- HĐĐT & thuế GTGT: [einvoice-tax.md](einvoice-tax.md)
-- Legal framework register: [legal-framework-2026.md](legal-framework-2026.md)
-- Thuế TNCN & lương: [payroll-pit.md](payroll-pit.md)
-- HĐLĐ, BHXH: [labor-contracts.md](labor-contracts.md)
-- Kiến trúc hệ thống: [../spec/architecture.md](../spec/architecture.md)
-- Schema và enum: [../spec/database-schema.md](../spec/database-schema.md)
-- Inventory UI labels:
-  [../../apps/web/app/(protected)/inventory/\_lib/dictionary.ts](<../../apps/web/app/(protected)/inventory/_lib/dictionary.ts>)
-- Module/site/nav labels chung:
-  [../../packages/shared/src/labels/vi.ts](../../packages/shared/src/labels/vi.ts)
-- Regression rules: [../../tasks/regressions.md](../../tasks/regressions.md)
-
-## Nguồn bên ngoài đã dùng
-
-- NetSuite, restaurant financial metrics:
-  <https://www.netsuite.com/portal/resource/articles/accounting/restaurant-financial-metrics.shtml>
-- TouchBistro, restaurant metrics:
-  <https://www.touchbistro.com/blog/21-restaurant-metrics-and-how-to-calculate-them/>
-- MarginEdge, restaurant accounting:
-  <https://www.marginedge.com/blog/restaurant-accounting-101>
-- Apicbase, restaurant metrics and actual/theoretical food cost:
-  <https://get.apicbase.com/essential-restaurant-metrics/>
-- FIXE, restaurant bookkeeping glossary:
-  <https://www.getmyfixe.com/fixe-restaurant-bookkeeping-glossary/>
-- BEP Back Owner control, restaurant back-office glossary:
-  <https://bepbackoffice.com/glossary/>
-- Restaurant365, prime cost / COGS / labor:
-  <https://www.restaurant365.com/blog/how-to-calculate-prime-cost-in-a-restaurant/>
-- Toast, sales summary and cash drawer reporting:
-  <https://support.toasttab.com/en/article/Sales-Summary-FAQ>,
-  <https://support.toasttab.com/en/article/Cash-Drawer-Reports-Overview>
-- Black Box Intelligence, RevPASH:
-  <https://blackboxintelligence.com/resources/restaurant-glossary/revenue-per-available-seat-hour/>
-- meez, actual vs theoretical food cost:
-  <https://www.getmeez.com/blog/actual-vs-theoretical-food-costs>
-- Chính phủ, NĐ 168/2025 về đăng ký doanh nghiệp:
-  <https://xaydungchinhsach.chinhphu.vn/toan-van-nghi-dinh-168-2025-nd-cp-ve-dang-ky-doanh-nghiep-119250702175708554.htm>
-- Quốc hội/Chính phủ, Luật TNDN 67/2025, NĐ 320/2025 và TT 20/2026:
-  <https://vanban.chinhphu.vn/?docid=214607&pageid=27160&typegroupid=3>,
-  <https://vanban.chinhphu.vn/?docid=216219&pageid=27160&typegroupid=4>,
-  <https://vanban.chinhphu.vn/?docid=217191&pageid=27160>
-- HĐĐT/chứng từ điện tử hiện hành từ 01/07/2026:
-  <https://vanban.chinhphu.vn/?docid=218689&pageid=27160>
-- Thuế TNCN hiện hành từ 01/07/2026:
-  <https://vanban.chinhphu.vn/?classid=1&docid=218684&pageid=27160&typegroupid=4>,
-  <https://vanban.chinhphu.vn/?docid=218772&pageid=27160>
-- TT 99/2025 kế toán doanh nghiệp:
-  <https://congbao.chinhphu.vn/van-ban/thong-tu-so-99-2025-tt-btc-46529/59634.htm>
-
-## Khi thêm thuật ngữ mới
-
-Thêm vào glossary này trước hoặc cùng lúc với feature nếu thuật ngữ mới thuộc
-một trong các nhóm sau:
-
-- Mở thêm bounded context mới.
-- Thêm workflow mới có chứng từ/trạng thái mới.
-- Thêm label dễ drift giữa UI, business docs, và code.
-- Thêm acronym mới cần dùng lặp lại nhiều nơi.
-- Thêm metric/card/title có số liệu hoặc chart/report summary.
-
-Quy trình tối thiểu:
-
-1. Thêm glossary entry đủ `definition`, `not_this`, `scope`, `source_of_truth`.
-2. Nếu là số liệu, thêm/tái dùng `contract_key` ở
-   `operational-data-contract.md`.
-3. Cập nhật dictionary/copy owner đúng tầng.
-4. Thêm test/lint guard nếu term có nguy cơ bị Agent tái dùng sai.
+Format: `canonical_term` — **label** — one-sentence definition. Detail → linked
+domain doc.
+
+### Organization
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `tenant` | hồ sơ doanh nghiệp | Single-tenant system subject row. |
+| `joint_stock_company` | công ty cổ phần | Current legal form of Má Tư. Detail: `business-context.md`. |
+| `legal_representative` | người đại diện theo pháp luật | Registered legal representative; not HR title or owner user. |
+| `beneficial_owner` | chủ sở hữu hưởng lợi | Beneficial owner when law requires disclosure. |
+| `shareholder` | cổ đông | Share register owner. |
+| `branch` | chi nhánh | L1 operational site (sell, stock, transfer, count). |
+| `branch_warehouse` | kho chi nhánh | Sole active warehouse at a branch site. |
+| `site` | site vận hành | Technical umbrella for branch/location kinds. |
+| `tax_registration` | đăng ký thuế | Legal MST/name/address registration; not brand display name. |
+
+### Surfaces & modules
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `admin` / `admin_overview` | quản trị / tổng quan quản trị | Short alias of `control_surface` / attention landing on it. |
+| `finance_basic` | tài chính vận hành | Daily money, stock value, food cost, expenses, HĐĐT — not full GL. |
+| `inventory_ops` | điều hành kho | Inventory module on `control_surface`. |
+| `point_of_sale` / `kitchen_display_system` | POS / KDS | Order capture / kitchen display stations. |
+| `employee_portal` | trang nhân viên | Legacy label; personal work is `/me/*` or Branch staff routes. |
+
+### Sales / POS / KDS
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `order` | đơn hàng bán | POS sale order. |
+| `order_item` | dòng món | Line on a sale order. |
+| `menu_item` | món bán | Sellable menu item. |
+| `modifier` | tùy chọn món | Add/remove choice on a menu item; not a separate sellable side. |
+| `combo` | combo | Bundled sellable set under one price/promo. |
+| `portion_quantity` | số phần (`Nx`) | Leading `Nx` = number of main portions. |
+| `side_portion_qty` | SL trên phần (`xN`) | Trailing `xN` = qty per portion, not multiplied across portions. |
+| `table_session` | phiên bàn | Dine-in table service lifecycle. |
+| `takeaway_context` | ngữ cảnh mang về | Takeaway context that may hold multiple open orders. |
+| `pos_session` | ca POS | Open sales session per branch (D7). |
+| `terminal` | đăng ký POS | Minimal register record to open a session. |
+| `kds_ticket` | phiếu bếp | Kitchen display ticket. |
+| `printer` | máy in | LAN printer fleet bindings for a branch. |
+| `ready` / `served` / `completed` | sẵn sàng / đã phục vụ / hoàn thành POS | Kitchen done / fulfillment marker / paid+closed POS. |
+| `release_table` | trả bàn | Auto table release on POS completed/cancelled. |
+| `covers` | lượt khách | Guest count only when POS captures it. |
+| `party_size` | quy mô nhóm khách | Guests in one table/party. |
+
+Branch Ops CTA verbs: **Vào POS**, **Mở ca**, **Vào KDS**, **Bếp (KDS)**,
+**Trạm bếp**, **Đăng ký POS**, **Thiết lập chi nhánh**, **Điều hành**.
+
+### Inventory / procurement
+
+Detail: `inventory.md`, `inventory-sop.md`.
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `stock_request` | yêu cầu hàng | Internal replenishment request from central sites to a branch. |
+| `purchase_request` | yêu cầu mua | Central purchase need that may spawn POs per supplier. |
+| `purchase_order` | đơn đặt hàng NCC | Commitment to one supplier under one purchase request. |
+| `goods_received_note` | phiếu nhập kho | One physical receipt against one PO. |
+| `supplier_invoice` | hóa đơn NCC | Supplier input invoice; commercial price authority. |
+| `accounts_payable` | công nợ NCC | Amount still owed after payments/credits. |
+| `po_applied_quantity` / `excess_quantity` / `shortage_quantity` | số lượng tính vào đơn / dư ngoài đơn / còn thiếu | PO apply / over-receipt at cost 0 / remaining PO qty. |
+| `supplier_payment` | thanh toán NCC | Payment to a supplier. |
+| `stock_level` / `stock_movement` | tồn kho / biến động tồn kho | On-hand snapshot+WAC / append-only ledger. |
+| `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move / internal issue or write-off document. |
+| `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
+| `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm | Count session / assigned count slip. |
+| `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |
+| `purchase_unit_cost` / `average_unit_cost` / `weighted_average_cost` | đơn giá nhập / giá vốn BQ (`WAC`) | Confirmed supplier-invoice unit price / on-hand WAC method. |
+| `reference_unit_cost` / `movement_unit_cost` / `inventory_value` | giá tham chiếu / đơn giá ghi sổ / giá trị tồn | Catalog hint cost / movement snapshot cost / book value of on-hand. |
+| `raw_material` / `finished_good` | nguyên liệu / thành phẩm | Input stock / produced or held finished stock. |
+| `recipe` / `production_recipe` / `production_order` | định mức món bán / công thức sản xuất / lệnh sản xuất | POS consumption BOM / FG BOM / production run. |
+| `three_way_matching` | đối soát 3 chứng từ | Match PO + GRN + supplier invoice. |
+
+### Payments & cash
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `payment_method` | phương thức thanh toán | Customer method on `payments.method` (`cash`, `vietqr`). |
+| `cash` / `vietqr` / `bank_transfer` | tiền mặt / VietQR / chuyển khoản | Customer cash / customer QR / supplier payout method. |
+| `payment_status` / `payment_close` | trạng thái thanh toán / đóng thanh toán POS | unpaid→partial→paid / event that completes the POS order. |
+| `cash_session` | ca tiền mặt | Drawer open/count/variance session. |
+
+### Tax / e-invoice / accounting
+
+Detail: `einvoice-tax.md`, `legal-framework-2026.md`, `finance-assets-vat-fnb.md`,
+`accounting-books-tt133-tt99.md`.
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `value_added_tax` / `output_vat` | thuế GTGT / GTGT đầu ra | VAT per registered method / output VAT for the period. |
+| `input_vat_recorded` / `input_vat_pending_review` / `input_vat_deductible` / `input_vat_non_deductible` | GTGT đầu vào đã ghi nhận / chờ kiểm tra / được khấu trừ / không khấu trừ | Input VAT lifecycle states. |
+| `vat_rate` | thuế suất GTGT | Percent points (e.g. `8.00`), not fraction `0.08`. |
+| `corporate_income_tax` | thuế TNDN | Corporate income tax; not salary PIT. |
+| `tax_invoice` / `cash_register_invoice` | hóa đơn điện tử bán ra / HĐĐT từ máy tính tiền | Output e-invoice / cash-register e-invoice. |
+| `receipt` | phiếu tạm tính | POS printout without CQT code; not a legal e-invoice. |
+| `cqt_code` / `invoice_series` / `invoice_number` | mã CQT / ký hiệu hóa đơn / số hóa đơn | Authority code / series / number after issue. |
+| `einvoice_provider` / `declared_period` | nhà cung cấp HĐĐT / kỳ kê khai | Current runtime provider (`viettel`) / declaration period. |
+| `enterprise_accounting_book` / `cashbook` | sổ kế toán doanh nghiệp / sổ quỹ | Statutory books vs operational cash book. |
+
+### HR / payroll
+
+Detail: `payroll-pit.md`, `labor-contracts.md`, `modules/auth.md` HR contract.
+
+| Term | Label | Definition |
+| --- | --- | --- |
+| `employee` / `employment_contract` | nhân viên / hợp đồng lao động | HR employee row / labor contract row. |
+| `employer` / `employee_party` | người sử dụng lao động / người lao động | Company as employer / employee party. |
+| `position` | chức vụ | HR job label; never permission by itself. |
+| `permission_key` | khóa quyền | System action permission string. |
+| `probation` / `fixed_term_contract` / `indefinite_contract` | thử việc / HĐ xác định thời hạn / HĐ không xác định thời hạn | Contract tenure kinds. |
+| `attendance` / `shift` / `timesheet` | chấm công / ca làm / bảng công | Work presence / shift window / period attendance summary. |
+| `social_insurance` / `health_insurance` / `unemployment_insurance` | BHXH / BHYT / BHTN | Distinct insurance types. |
+| `personal_income_tax_salary` | TNCN tiền lương | Salary PIT; not corporate CIT. |
+| `gross_salary` / `net_salary` / `insurance_base_salary` | lương gộp / lương thực lĩnh / mức lương đóng bảo hiểm | Pre-deduction / take-home / insurance base. |
+| `payroll_period` / `payroll_entry` | kỳ lương / dòng lương | Pay period / one employee×period line. |
+
+## Easy-to-confuse pairs
+
+| Pair | Rule |
+| --- | --- |
+| Collected cash vs net sales vs issued HĐĐT | Money in ≠ margin revenue ≠ invoiced revenue. |
+| `gross_sales` vs `net_sales_before_vat` | Gross before discounts; net sales before VAT is default margin revenue. |
+| `food_cost` vs purchase spend vs opex | Food cost is consumption/waste per contract, not every purchase. |
+| `inventory_value` vs profit | Stock book value is not profit. |
+| Gross/operating/net profit vs cash flow | Profit ladder ≠ bank/cash movement. |
+| `supplier_invoice` vs `tax_invoice` vs `receipt` | Input invoice ≠ output e-invoice ≠ POS temp slip. |
+| `payment_status` vs `order_status` vs `invoice_status` | Pay state ≠ kitchen/POS state ≠ e-invoice state. |
+| `stock_transfer` vs `stock_issue` vs `consumption` | Move vs issue doc vs approved usage decrease. |
+| `order` vs `purchase_order` | Sale order ≠ supplier PO. |
+| `completed` vs `served` | Commercial close ≠ fulfillment served. |
+| CIT vs salary PIT | Company tax ≠ employee wage tax. |
+
+## Related docs
+
+- Metrics/cards: `operational-data-contract.md`
+- Inventory: `inventory.md`, `inventory-sop.md`
+- Tax/legal: `legal-framework-2026.md`, `einvoice-tax.md`, `payroll-pit.md`,
+  `labor-contracts.md`
+- Business boundary: `business-context.md`
+- Screen audience: `screen-context-map.md`

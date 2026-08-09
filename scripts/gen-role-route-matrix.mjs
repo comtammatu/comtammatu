@@ -388,7 +388,9 @@ function renderModuleAclTable(moduleAcl, roleLabels, navSources) {
   const rows = moduleAcl.map((entry) => {
     const roles =
       entry.allowedRoles.length > 0
-        ? entry.allowedRoles.map((r) => roleLabels[r] ?? r).join(", ")
+        ? entry.allowedRoles
+            .map((r) => `\`${roleLabels[r] ?? r}\``)
+            .join(", ")
         : "(none — retired)";
     const sources = navSources[entry.key]
       ? [...navSources[entry.key]].sort().join("; ")
@@ -416,7 +418,7 @@ function renderPostLoginHomeTable(rows, roleLabels) {
     "| ---- | ------------------------- | ------------------------ | ----- |";
   const body = rows.map(
     (r) =>
-      `| ${roleLabels[r.role] ?? r.role} (\`${r.role}\`) | ${r.desktop} | ${r.phone} | ${r.note || "—"} |`,
+      `| \`${roleLabels[r.role] ?? r.role}\` (\`${r.role}\`) | ${r.desktop} | ${r.phone} | ${r.note || "—"} |`,
   );
   return [header, ...body].join("\n");
 }

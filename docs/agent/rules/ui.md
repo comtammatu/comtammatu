@@ -12,8 +12,8 @@ Read in order:
    visual state and motion recipes.
 2. `docs/spec/page-archetypes.md` — page/workflow composition and UI Advisor Gate.
 3. `docs/ref/screen-context-map.md` — audience, device, route context.
-4. `docs/modules/ui.md` and `packages/ui/src/components/*` — Base behavior,
-   adapters and implementation map.
+4. `docs/modules/ui.md` and `packages/ui/src/components/*` — thin
+   implementation map (Base behavior and adapters).
 5. Target route/component and targeted `tasks/regressions.md` rows.
 
 Do not restate exact class strings, typography scales, theme storage, shared-component
