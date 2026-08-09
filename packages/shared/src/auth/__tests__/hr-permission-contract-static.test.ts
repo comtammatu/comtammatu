@@ -36,6 +36,10 @@ test("HR route ACL is a candidate gate and live capabilities decide access", () 
   assert.match(proxy, /PERMISSION_KEYS\.HR_PAYROLL_PREPARE/);
   assert.match(proxy, /PERMISSION_KEYS\.AUTH_BINDING_READ/);
   assert.match(proxy, /"has_permission"/);
+  assert.match(
+    proxy,
+    /pathname === "\/"[\s\S]*user_role !== "self_service"[\s\S]*HR_VIEW_EMPLOYEE/,
+  );
   assert.doesNotMatch(
     proxy.slice(
       proxy.indexOf('if (pathname === "/hr"'),

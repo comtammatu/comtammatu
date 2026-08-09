@@ -267,9 +267,14 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Control home (`/`): JWT roles in MODULE_ACL.owner, plus HR Control
-  // bindings that already pass hr:view_employee (same gate as `/hr`).
+  // Control home (`/`): MODULE_ACL.owner JWT roles, plus HR Control bindings.
+  // HR Control = JWT `self_service` + tenant `hr:view_employee` (same as login).
+  // Branch-floor roles also hold `hr:view_employee` for `/br/.../team`, so the
+  // capability alone must never keep them on `/` (role-route-matrix L1).
   if (pathname === "/" && !canAccess(claims.user_role, "owner")) {
+    if (claims.user_role !== "self_service") {
+      return redirectToDefaultLanding(request, response, claims);
+    }
     const { data: canOpenHrHome, error: hrHomeError } = await supabase.rpc(
       "has_permission",
       {
@@ -298,6 +303,7 @@ export async function proxy(request: NextRequest) {
     const homeHrBypass =
       pathname === "/" &&
       moduleKey === "owner" &&
+      claims.user_role === "self_service" &&
       !canAccess(claims.user_role, "owner");
     if (!canAccess(claims.user_role, moduleKey) && !homeHrBypass) {
       if (isOwnerRoutePath(pathname)) {

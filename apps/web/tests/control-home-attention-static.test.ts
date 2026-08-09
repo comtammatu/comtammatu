@@ -35,3 +35,20 @@ test("MODULE_ACL owner home includes Control L0 adapters", () => {
   assert.match(acl, /central_kitchen_lead/);
   assert.match(login, /canAccess\(claims\.user_role, "owner"\)/);
 });
+
+test("proxy keeps branch-floor roles off Control home `/`", () => {
+  const proxy = readFileSync("../../apps/web/proxy.ts", "utf8");
+  const homeGateStart = proxy.indexOf('pathname === "/" && !canAccess');
+  assert.ok(homeGateStart > 0, "expected Control home proxy gate");
+  const homeGate = proxy.slice(
+    homeGateStart,
+    proxy.indexOf("// Owner-plane routes", homeGateStart),
+  );
+  assert.match(homeGate, /user_role !== "self_service"/);
+  assert.match(homeGate, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(homeGate, /redirectToDefaultLanding/);
+  assert.match(
+    proxy,
+    /homeHrBypass[\s\S]*user_role === "self_service"/,
+  );
+});

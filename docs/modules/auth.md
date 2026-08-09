@@ -240,7 +240,7 @@ Defined in `blocked-state.ts`:
 ### POS/KDS network gate (defense-in-depth)
 
 - Proxy (`apps/web/proxy.ts`) enforces trusted egress IPs for POS/KDS in production for non-owner roles.
-- **Per-branch emergency bypass** (`branch_network_gate_bypasses`): owner activates from Branches → Cổng mạng POS/KDS for presets `1h` / `2h` / `4h` / `pos_shift` / `business_day`. Auto-revokes when the bound POS session closes (`pos_shift`) or when `expires_at` passes. Early revoke via the same dialog.
+- **Per-branch emergency bypass** (`branch_network_gate_bypasses`): owner activates from Branches → POS/KDS network gate for presets `1h` / `2h` / `4h` / `pos_shift` / `business_day`. Auto-revokes when the bound POS session closes (`pos_shift`) or when `expires_at` passes. Early revoke via the same dialog.
 - **Engineering kill-switch** `POS_NETWORK_GATE=off` opens the perimeter for *all* branches. Use only for platform incidents — never as the ops path for a single store Wi‑Fi outage.
 
 Unknown reason → `DEFAULT_BLOCKED_STATE_COPY`. Canonical redirect helper:

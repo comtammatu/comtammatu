@@ -64,8 +64,9 @@ async function redirectAfterAuthenticatedSession(): Promise<LoginState> {
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  // HR Control bindings (JWT often self_service) land on Control home when
-  // they pass the same hr:view_employee gate used by `/hr` and proxy `/`.
+  // HR Control bindings (JWT self_service + tenant hr:view_employee) land on
+  // Control home — same gate as proxy `/`. Branch-floor roles keep /br/[id]
+  // even when they also hold hr:view_employee for branch team surfaces.
   if (claims.user_role === "self_service") {
     const { data: canOpenHrHome } = await supabase.rpc("has_permission", {
       p_branch_id: null as unknown as number,

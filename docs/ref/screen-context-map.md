@@ -65,7 +65,7 @@ Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** ·
 ### 2.4. control_surface — `/`
 
 - **Archetype:** `LANDING`.
-- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (qua `hr:view_employee`).
+- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (JWT `self_service` + `hr:view_employee`). Role chi nhánh giữ `/br/...`.
 - **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
 - **Goal:** Một cửa → xử lý việc hôm nay hoặc chọn đúng mô-đun.
 - **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`.

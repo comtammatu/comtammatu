@@ -49,7 +49,9 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   owner: {
     path: "/",
     // Control home («Hôm nay»): Owner + L0 ops adapters. HR Control bindings
-    // reach `/` via the proxy HR capability gate (not a JWT role).
+    // (JWT self_service + tenant hr:view_employee) reach `/` via proxy/login —
+    // not via this JWT allow-list. Branch roles with the same capability stay
+    // on `/br/[id]`.
     allowedRoles: [
       "owner",
       "accountant",
