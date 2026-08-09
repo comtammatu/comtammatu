@@ -6,7 +6,7 @@ Authentication and authorization for staff/operator surfaces. Protected requests
 pass through this module before feature code. Chain: Supabase Auth (identity) →
 JWT custom claims hook (position + application role) → `proxy.ts` (route ACL) →
 RLS with `has_permission()` (row gate). Public customer surfaces such as
-`/br/[branchId]/runner` bypass staff login by design.
+`/br/[branchId]/pickup` bypass staff login by design.
 
 **Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` +
 `supabase/migrations/20260727120000_baseline.sql` + active auth forwards.
@@ -52,7 +52,7 @@ Discovery: `CONTROL_SURFACE_NAV_GROUPS` then Company HR by Tenant capability.
 
 ```
 owner                          ← governance + tenant oversight, operations + catalog NL, procurement
-├── accountant                 ← /finance + Inventory GRN/PO (D076/D091; temp until ADR 0015)
+├── accountant                 ← Control home `/` + Finance + Inventory GRN/PO (D076/D091; temp until ADR 0015)
 ├── central_supply_ops         ← central warehouse (`Kho Tổng`) / GRN draft (D076/D091; temp until ADR 0015)
 ├── central_kitchen_lead       ← central kitchen (`Bếp TT`) production + GRN draft (D076/D091; temp until ADR 0015)
 ├── branch_manager             ← single branch ops (no purchase-price — D091)
@@ -146,10 +146,15 @@ oversight: `/br/[branchId]/team`, `/br/[branchId]/shift/*`. Company personal:
 ## Auth Flow
 
 1. Credentials at `/login` → `signInWithPassword()`.
-2. `custom_access_token_hook()` injects exactly
+2. Owner-only optional MFA: verified TOTP + session still `aal1` → login returns
+   `mfaRequired`; browser `challengeAndVerify` before redirect
+   (`/settings/security`, helpers in `apps/web/lib/auth/mfa.ts`). Staff and
+   Owners without MFA stay AAL1. Role-binding reads stay AAL1; writes need
+   `aal === aal2` (`errorCode: "aal2_required"` + step-up dialog).
+3. `custom_access_token_hook()` injects exactly
    `{tenant_id, branch_id, user_role, position_code}` into JWT `app_metadata`.
-3. Cookies via `@supabase/ssr`.
-4. Each request: proxy `updateSession()` →
+4. Cookies via `@supabase/ssr`.
+5. Each request: proxy `updateSession()` →
    `extractClaimsFromAccessToken` → `canAccess` (route). RLS →
    `has_permission*` (row).
 
@@ -171,7 +176,7 @@ re-check ACL. Missing invariant = proxy gap.
 `proxy(request)` order:
 
 1. **Public bypass:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`,
-   exact `/br/[branchId]/runner`, plus `/r` and `/api/feedback` (guest feedback).
+   exact `/br/[branchId]/pickup`, plus `/r` and `/api/feedback` (guest feedback).
 2. **Login:** authenticated → `resolvePostLoginRedirect`; else form.
 3. **Unauthenticated → `/login`**.
 4. **Claims:** null → `/access-denied?reason=missing-auth-context`. No fabricated claims.
@@ -180,12 +185,11 @@ re-check ACL. Missing invariant = proxy gap.
 7. **Self canonicalization:** company staff keep `/me/*`; Branch roles map to
    `/br/[branchId]/*`. Owner / inactive `self:access` / invalid claims fail closed.
 8. **Branch scope:** mismatch → `branch-scope-mismatch`. POS/KDS reject
-   missing/inactive/non-operational branches in proxy. Public Runner validates
+   missing/inactive/non-operational branches in proxy. Public pickup display validates
    in page (no staff claims).
 
-`resolvePostLoginRedirect` in `scope.ts` is the single post-login destination.
-Tests: `packages/shared/src/auth/__tests__/scope.test.ts`. Root `/` uses the
-same default resolver. Branch Manager default: `/br/{branchId}`.
+`resolvePostLoginRedirect` in `scope.ts` is the single post-login destination
+(tests in `scope.test.ts`). Root `/` and Branch Manager `/br/{branchId}` use it.
 
 ### Invariant
 

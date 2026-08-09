@@ -133,6 +133,7 @@ export default async function StaffPermissionsPage({
         bindings={bindings}
         branches={branchesResult.data ?? []}
         canManage={canManage}
+        canOpenSecuritySettings={ctx.claims.user_role === "owner"}
       />
     </AppPage>
   );

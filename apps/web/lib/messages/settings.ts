@@ -46,8 +46,12 @@ export const settings = {
     settingsHomeLink: "Tất cả cài đặt",
     openSettings: "Mở cài đặt",
     tenantSettingsTitle: "Doanh nghiệp và thu tiền",
+    accountSecurityTitle: "Tài khoản của bạn",
     printSettingsTitle: "Thiết bị và in ấn",
     generalTitle: "Doanh nghiệp",
+    securityTitle: "Bảo mật đăng nhập",
+    securityDescription:
+      "Bật MFA (TOTP) tùy chọn cho tài khoản Chủ sở hữu.",
     generalDescription:
       "Tên pháp lý, mã số thuế, địa chỉ và người đại diện in trên hóa đơn.",
     kdsTitle: "Trạm bếp (KDS)",
@@ -480,7 +484,7 @@ export const settings = {
     setupLaneDescription: "",
     commandPosDescription: "",
     commandKdsDescription: "",
-    commandRunnerDescription: "",
+    commandPickupDescription: "",
     commandPosSessionsTitle: "Đối soát ca POS",
     commandPosSessionsDescription: "",
     commandOrdersDescription: "",
@@ -591,7 +595,7 @@ export const settings = {
       `${formatCount(count)} yêu cầu hàng đang theo dõi`,
     centralSupplyTilesTitle: "Kho Tổng",
     centralSupplyTilesDescription:
-      "Tồn kho, nhập hàng, giao nhận và kiểm kê — không POS/KDS/Runner.",
+      "Tồn kho, nhập hàng, giao nhận và kiểm kê — không POS/KDS/Gọi số.",
     centralKitchenHomeTitle: "Bếp Trung Tâm",
     centralKitchenTilesTitle: "Vận hành Bếp",
     centralKitchenTilesDescription:
@@ -674,7 +678,7 @@ export const settings = {
     openInventory: { long: "Mở kho hàng", short: "Kho hàng" },
     openPos: "Vào POS",
     openKds: "Vào KDS",
-    openRunner: "Mở màn gọi số",
+    openPickup: "Vào Gọi số",
   },
   posSessions: {
     branchSharedSession: "Ca chung của chi nhánh",

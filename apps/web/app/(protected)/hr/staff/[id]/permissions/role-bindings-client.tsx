@@ -2,10 +2,11 @@
 
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: security role binding surface */
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Trash2 } from "lucide-react";
 import { z } from "zod";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -15,7 +16,12 @@ import {
 } from "@/components/data-table/data-table";
 import { AppDialog, FormDialog, SelectField } from "@/components/form";
 import { AppSection } from "@/components/surface";
-import { setRoleBindingAction } from "./actions";
+import { getVerifiedTotpFactorId } from "@lib/auth/mfa";
+import { MfaStepUpDialog } from "@lib/auth/mfa-step-up-dialog";
+import {
+  ROLE_BINDING_ERROR_CODES,
+  setRoleBindingAction,
+} from "./actions";
 
 export type AccessRole = {
   code: string;
@@ -38,6 +44,8 @@ type Props = {
   bindings: RoleBinding[];
   branches: Branch[];
   canManage: boolean;
+  /** Owner may open /settings/security to enroll MFA (V1 Owner-only). */
+  canOpenSecuritySettings: boolean;
 };
 
 const formSchema = z.object({
@@ -53,11 +61,15 @@ export function RoleBindingsClient({
   bindings,
   branches,
   canManage,
+  canOpenSecuritySettings,
 }: Props) {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [revoking, setRevoking] = useState<RoleBinding | null>(null);
   const [isRevoking, startRevoke] = useTransition();
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [stepUpFactorId, setStepUpFactorId] = useState<string | null>(null);
+  const stepUpResolverRef = useRef<((ok: boolean) => void) | null>(null);
   const roleByCode = useMemo(
     () => new Map(roles.map((role) => [role.code, role])),
     [roles],
@@ -66,6 +78,48 @@ export function RoleBindingsClient({
     () => new Map(branches.map((branch) => [branch.id, branch.name])),
     [branches],
   );
+
+  async function requestAal2StepUp(): Promise<boolean> {
+    const verified = await getVerifiedTotpFactorId();
+    if (!verified.success) {
+      toast.error(verified.error);
+      return false;
+    }
+    setStepUpFactorId(verified.data);
+    setStepUpOpen(true);
+    return await new Promise<boolean>((resolve) => {
+      stepUpResolverRef.current = resolve;
+    });
+  }
+
+  function resolveStepUp(ok: boolean) {
+    const resolve = stepUpResolverRef.current;
+    stepUpResolverRef.current = null;
+    setStepUpOpen(false);
+    setStepUpFactorId(null);
+    resolve?.(ok);
+  }
+
+  async function runBindingMutation(
+    input: Parameters<typeof setRoleBindingAction>[0],
+  ): Promise<ActionResult> {
+    let result = await setRoleBindingAction(input);
+    if (
+      !result.success &&
+      result.errorCode === ROLE_BINDING_ERROR_CODES.AAL2_REQUIRED
+    ) {
+      const steppedUp = await requestAal2StepUp();
+      if (!steppedUp) {
+        return {
+          success: false,
+          error: result.error ?? "Cần xác thực AAL2 trước khi thay đổi phân quyền.",
+          errorCode: ROLE_BINDING_ERROR_CODES.AAL2_REQUIRED,
+        };
+      }
+      result = await setRoleBindingAction(input);
+    }
+    return result;
+  }
 
   async function submit(values: FormValues) {
     const role = roleByCode.get(values.roleCode);
@@ -78,7 +132,7 @@ export function RoleBindingsClient({
     ) {
       return { success: false, error: "Chọn chi nhánh cho vai trò này." };
     }
-    const result = await setRoleBindingAction({
+    const result = await runBindingMutation({
       targetUserId,
       roleCode: role.code,
       branchId,
@@ -91,7 +145,7 @@ export function RoleBindingsClient({
   function revoke() {
     if (!revoking) return;
     startRevoke(async () => {
-      const result = await setRoleBindingAction({
+      const result = await runBindingMutation({
         targetUserId,
         roleCode: revoking.roleCode,
         branchId: revoking.branchId,
@@ -250,6 +304,18 @@ export function RoleBindingsClient({
             </Button>
           </div>
         }
+      />
+
+      <MfaStepUpDialog
+        open={stepUpOpen}
+        factorId={stepUpFactorId}
+        canOpenSecuritySettings={canOpenSecuritySettings}
+        onOpenChange={(open) => {
+          if (!open) resolveStepUp(false);
+        }}
+        onVerified={async () => {
+          resolveStepUp(true);
+        }}
       />
     </>
   );

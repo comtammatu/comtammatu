@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useActionState, useState } from "react";
+import { type ChangeEvent, useActionState, useState, useTransition } from "react";
 import {
   CircleAlert as IconAlertCircle,
   LockKeyhole as IconLockKeyhole,
@@ -22,7 +22,9 @@ import {
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { ACTIONS_VI, AUTH_VI } from "@comtammatu/shared/messages";
 import { useFormControlSize } from "@/components/form/control-size";
-import { login } from "./actions";
+import { MfaChallengeForm } from "@lib/auth/mfa-challenge-form";
+import { messages } from "@lib/messages";
+import { completeLoginAfterMfa, login } from "./actions";
 
 type LoginField = "email" | "password";
 
@@ -34,6 +36,7 @@ interface LoginValues {
 const LOGIN_ERROR_ID = "login-form-error";
 const EMAIL_ERROR_ID = "login-email-error";
 const PASSWORD_ERROR_ID = "login-password-error";
+const mfaCopy = messages.auth.mfa;
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, null);
@@ -44,6 +47,8 @@ export function LoginForm() {
   });
   const [lastSubmittedValues, setLastSubmittedValues] =
     useState<LoginValues | null>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [isFinishingMfa, startFinishMfa] = useTransition();
 
   const feedbackMatchesCurrentValues =
     !!lastSubmittedValues &&
@@ -55,6 +60,8 @@ export function LoginForm() {
   const passwordError = showFeedback ? state?.fieldErrors?.password : undefined;
   const emailInvalid = !!emailError || !!actionError;
   const passwordInvalid = !!passwordError || !!actionError;
+  const mfaRequired = Boolean(state?.mfaRequired && state.factorId);
+  const factorId = state?.factorId ?? null;
 
   function updateValue(field: LoginField) {
     return (event: ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +70,41 @@ export function LoginForm() {
         [field]: event.target.value,
       }));
     };
+  }
+
+  if (mfaRequired && factorId) {
+    return (
+      <div className="flex flex-col gap-4" aria-busy={isFinishingMfa}>
+        <div className="grid gap-1">
+          <h2 className="text-base font-semibold">{mfaCopy.loginChallengeTitle}</h2>
+          <p className="text-sm text-muted-foreground">
+            {mfaCopy.loginChallengeDescription}
+          </p>
+        </div>
+
+        {mfaError ? (
+          <Alert variant="destructive">
+            <IconAlertCircle />
+            <AlertDescription>{mfaError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <MfaChallengeForm
+          factorId={factorId}
+          description={mfaCopy.challengeDescription}
+          submitLabel={ACTIONS_VI.signIn}
+          onVerified={() => {
+            startFinishMfa(async () => {
+              setMfaError(null);
+              const result = await completeLoginAfterMfa();
+              if (result?.error) {
+                setMfaError(result.error);
+              }
+            });
+          }}
+        />
+      </div>
+    );
   }
 
   return (

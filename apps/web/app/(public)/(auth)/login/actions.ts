@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
@@ -26,6 +27,8 @@ type LoginField = keyof z.infer<typeof loginSchema>;
 export interface LoginState {
   error?: string;
   fieldErrors?: Partial<Record<LoginField, string>>;
+  mfaRequired?: boolean;
+  factorId?: string;
 }
 
 function getFieldErrors(error: z.ZodError): LoginState["fieldErrors"] {
@@ -39,6 +42,41 @@ function getFieldErrors(error: z.ZodError): LoginState["fieldErrors"] {
   }
 
   return fieldErrors;
+}
+
+async function redirectAfterAuthenticatedSession(): Promise<LoginState> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return { error: GENERIC_LOGIN_ERROR };
+  }
+
+  const claims = extractClaimsFromAccessToken(session.access_token);
+  if (!claims) {
+    console.error("auth.login.claims_missing", {
+      user_id: session.user.id,
+      ts: new Date().toISOString(),
+    });
+    await supabase.auth.signOut();
+    return { error: GENERIC_LOGIN_ERROR };
+  }
+
+  // HR Control bindings (JWT often self_service) land on Control home when
+  // they pass the same hr:view_employee gate used by `/hr` and proxy `/`.
+  if (claims.user_role === "self_service") {
+    const { data: canOpenHrHome } = await supabase.rpc("has_permission", {
+      p_branch_id: null as unknown as number,
+      p_key: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+    });
+    if (canOpenHrHome === true) {
+      redirect("/");
+    }
+  }
+
+  redirect(resolvePostLoginRedirect(claims, null));
 }
 
 export async function login(
@@ -130,5 +168,26 @@ export async function login(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
+  // V1: MFA challenge is Owner-only. Staff keep password-only login even if a
+  // leftover factor exists from an earlier experiment.
+  if (claims.user_role === "owner") {
+    const [{ data: aal }, { data: factors }] = await Promise.all([
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+      supabase.auth.mfa.listFactors(),
+    ]);
+    const verifiedTotp = factors?.totp?.[0];
+    if (verifiedTotp && aal?.currentLevel !== "aal2") {
+      return {
+        mfaRequired: true,
+        factorId: verifiedTotp.id,
+      };
+    }
+  }
+
   redirect(resolvePostLoginRedirect(claims, null));
+}
+
+/** Complete login after the browser client verifies TOTP and refreshes the session. */
+export async function completeLoginAfterMfa(): Promise<LoginState> {
+  return redirectAfterAuthenticatedSession();
 }
