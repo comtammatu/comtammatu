@@ -58,9 +58,9 @@ Reuse `/br/[branchId]/menu-limits` (`branch_menu_limits`, D064,
 - **1C:** dedicated daily field `stock_allowance_quantity` (nullable integer,
   `CHECK >= 0`) on `branch_menu_item_daily_limits` — per menu item, not per
   ingredient.
-- **1B rejected:** do not reuse `replenishMenuItemStock` /
-  `add_menu_item_stock_exception` (`Bổ sung tồn kho`) — that books warehouse
-  movements.
+- **1B rejected:** the former `add_menu_item_stock_exception` /
+  `Bổ sung tồn kho` (+1/+2 ledger replenish) path is retired and must not
+  return — it booked warehouse movements; override is allowance-only.
 - **2A:** override UI is menu-limits page / hub sheet only; no POS manager PIN.
 
 ### 4. Cost fallback ladder

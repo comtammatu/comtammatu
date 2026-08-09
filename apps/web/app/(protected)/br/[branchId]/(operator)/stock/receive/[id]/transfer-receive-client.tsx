@@ -125,6 +125,9 @@ export function TransferReceiveClient({
   });
   const [confirmed, setConfirmed] = useState<Set<number>>(() => new Set());
   const [notes, setNotes] = useState<Record<number, string>>(() => ({}));
+  const [shortfallClass, setShortfallClass] = useState<
+    Record<number, "source_variance" | "transit_loss">
+  >(() => ({}));
   const [sheetId, setSheetId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isStarting, setIsStarting] = useState(() =>
@@ -213,7 +216,10 @@ export function TransferReceiveClient({
       toast.error(messages.inventory.stockRequests.journey.offlineMutation);
       return;
     }
-    const payload: Record<string, { qty: number; note?: string }> = {};
+    const payload: Record<
+      string,
+      { qty: number; note?: string; shortfall_class?: string }
+    > = {};
     for (const item of items) {
       const qty = values[item.ingredientId] ?? item.qty;
       if (!Number.isFinite(qty) || qty < 0 || qty > item.qty) {
@@ -226,8 +232,16 @@ export function TransferReceiveClient({
         toast.error(copy.shortageNoteMinLength);
         return;
       }
+      const classification =
+        shortfallClass[item.ingredientId] ?? "source_variance";
+      if (qty < item.qty && !classification) {
+        toast.error(copy.shortfallClassRequired);
+        return;
+      }
       payload[String(item.ingredientId)] =
-        qty < item.qty ? { qty, note } : { qty };
+        qty < item.qty
+          ? { qty, note, shortfall_class: classification }
+          : { qty };
     }
     startTransition(async () => {
       if (canStartReceive) {
@@ -428,6 +442,56 @@ export function TransferReceiveClient({
                   <span className="text-xs font-medium text-destructive">
                     {copy.shortageNoteTitle}
                   </span>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-medium">
+                      {copy.shortfallClassTitle}
+                    </span>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          (shortfallClass[item.ingredientId] ??
+                            "source_variance") === "source_variance"
+                            ? "default"
+                            : "outline"
+                        }
+                        disabled={isPending || !isOnline}
+                        onClick={() =>
+                          setShortfallClass((current) => ({
+                            ...current,
+                            [item.ingredientId]: "source_variance",
+                          }))
+                        }
+                      >
+                        {copy.shortfallClassSourceVariance}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          shortfallClass[item.ingredientId] === "transit_loss"
+                            ? "default"
+                            : "outline"
+                        }
+                        disabled={isPending || !isOnline}
+                        onClick={() =>
+                          setShortfallClass((current) => ({
+                            ...current,
+                            [item.ingredientId]: "transit_loss",
+                          }))
+                        }
+                      >
+                        {copy.shortfallClassTransitLoss}
+                      </Button>
+                    </div>
+                    <p className="text-2xs text-muted-foreground">
+                      {(shortfallClass[item.ingredientId] ??
+                        "source_variance") === "transit_loss"
+                        ? copy.shortfallClassTransitLossHint
+                        : copy.shortfallClassSourceVarianceHint}
+                    </p>
+                  </div>
                   <Textarea
                     value={notes[item.ingredientId] ?? ""}
                     onChange={(event) =>

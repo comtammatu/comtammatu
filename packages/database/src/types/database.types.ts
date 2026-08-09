@@ -1297,6 +1297,7 @@ export type Database = {
           limit_quantity: number | null
           menu_item_id: number
           sold_today: number
+          stock_allowance_quantity: number | null
           stock_capacity: number | null
           tenant_id: number
           updated_at: string
@@ -1310,6 +1311,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id: number
           sold_today?: number
+          stock_allowance_quantity?: number | null
           stock_capacity?: number | null
           tenant_id: number
           updated_at?: string
@@ -1323,6 +1325,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id?: number
           sold_today?: number
+          stock_allowance_quantity?: number | null
           stock_capacity?: number | null
           tenant_id?: number
           updated_at?: string
@@ -11667,15 +11670,6 @@ export type Database = {
         Returns: Json
       }
       activate_invoice_profile: { Args: never; Returns: number }
-      add_menu_item_stock_exception: {
-        Args: {
-          p_branch_id: number
-          p_extra_portions: number
-          p_menu_item_id: number
-          p_reason: string
-        }
-        Returns: Json
-      }
       adjust_stock_exception:
         | {
             Args: {
@@ -11882,6 +11876,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -12652,6 +12647,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -13236,6 +13232,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -14166,6 +14163,14 @@ export type Database = {
           p_is_disabled: boolean
           p_limit_quantity: number
           p_menu_item_id: number
+        }
+        Returns: Json
+      }
+      set_branch_menu_stock_allowance: {
+        Args: {
+          p_branch_id: number
+          p_menu_item_id: number
+          p_stock_allowance_quantity: number
         }
         Returns: Json
       }

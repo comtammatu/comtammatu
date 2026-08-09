@@ -31,6 +31,8 @@ export interface MenuItemDailyLimit {
   sold_today: number;
   /** Manual daily cap set by the manager; null = no manual limit. */
   manual_limit_quantity: number | null;
+  /** ADR 0026: supplemental portions added on top of stock-derived remaining. */
+  stock_allowance_quantity: number | null;
   /** Server-computed remaining quota; null = unlimited. */
   available_to_sell: number | null;
 }

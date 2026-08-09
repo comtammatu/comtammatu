@@ -85,6 +85,7 @@ export function StockRequestEditor({
   initialStatus,
   initialNeededAt,
   initialNotes,
+  copyFromRequestId = null,
   returnHref,
 }: {
   branchId: number;
@@ -94,6 +95,7 @@ export function StockRequestEditor({
   initialStatus: string | null;
   initialNeededAt: string | null;
   initialNotes: string | null;
+  copyFromRequestId?: number | null;
   returnHref?: string;
 }) {
   const router = useRouter();
@@ -187,6 +189,11 @@ export function StockRequestEditor({
 
   return (
     <>
+      {copyFromRequestId != null ? (
+        <Item variant="muted" size="sm">
+          {messages.inventory.stockRequests.branch.copyToNewBanner}
+        </Item>
+      ) : null}
       <AppSection title={copy.itemsTitle} description={copy.itemsDescription}>
         <div className="flex flex-col gap-3">
           {lines.map((line) => {

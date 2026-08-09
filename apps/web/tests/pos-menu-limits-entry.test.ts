@@ -91,11 +91,29 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(managerActionsSource, /list_branch_menu_daily_limits/);
   assert.match(managerActionsSource, /set_branch_menu_daily_limit/);
   assert.match(managerActionsSource, /clear_branch_menu_daily_limit/);
-  assert.match(managerActionsSource, /add_menu_item_stock_exception/);
-  assert.match(managerTableSource, /replenishStockTitle/);
-  assert.match(managerTableSource, /handleReplenishStock\(1\)/);
-  assert.match(managerTableSource, /handleReplenishStock\(2\)/);
+  assert.match(managerActionsSource, /set_branch_menu_stock_allowance/);
+  assert.doesNotMatch(managerActionsSource, /add_menu_item_stock_exception/);
+  assert.doesNotMatch(managerActionsSource, /replenishMenuItemStock/);
+  assert.match(managerTableSource, /stockAllowanceLabel/);
+  assert.doesNotMatch(managerTableSource, /replenishStockTitle/);
+  assert.doesNotMatch(managerTableSource, /handleReplenishStock/);
   assert.match(managerPageSource, /MenuLimitsClient/);
+
+  const dropMigration = readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migrations/20260810013620_drop_menu_item_stock_exception_rpc.sql",
+    ),
+    "utf8",
+  );
+  assert.match(
+    dropMigration,
+    /DROP FUNCTION IF EXISTS public\.add_menu_item_stock_exception/,
+  );
+  assert.match(
+    dropMigration,
+    /DROP FUNCTION IF EXISTS public\.add_menu_item_kitchen_stock_exception/,
+  );
 });
 
 test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives", () => {
@@ -104,7 +122,6 @@ test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives
   assert.match(managerTableSource, /DrawerDescription/);
   assert.match(managerTableSource, /FieldGroup/);
   assert.match(managerTableSource, /FieldLabel/);
-  assert.match(managerTableSource, /SectionLabel/);
   assert.match(managerTableSource, /size="touch"/);
 });
 

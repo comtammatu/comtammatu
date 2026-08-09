@@ -36,7 +36,7 @@ export default async function BranchStockRequestNewPage({
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ requestId?: string }>;
+  searchParams: Promise<{ requestId?: string; copyFromId?: string }>;
 }) {
   const [{ branchId: raw }, query] = await Promise.all([params, searchParams]);
   const branchId = parseOperatorBranchId(raw);
@@ -55,8 +55,16 @@ export default async function BranchStockRequestNewPage({
   }
 
   const requestId = Number(query.requestId);
+  const copyFromIdRaw = Number(query.copyFromId);
   const editing =
     Number.isInteger(requestId) && requestId > 0 ? requestId : null;
+  const copyFromId =
+    editing == null &&
+    Number.isInteger(copyFromIdRaw) &&
+    copyFromIdRaw > 0
+      ? copyFromIdRaw
+      : null;
+  const sourceRequestId = editing ?? copyFromId;
 
   const ingredientsQuery =
     kind === "central_kitchen"
@@ -81,14 +89,14 @@ export default async function BranchStockRequestNewPage({
 
   const [ingredientsResult, requestResult] = await Promise.all([
     ingredientsQuery,
-    editing == null
+    sourceRequestId == null
       ? Promise.resolve({ data: null, error: null })
       : supabase
           .from("stock_requests")
           .select("id, status, needed_at, notes")
           .eq("tenant_id", claims.tenant_id)
           .eq("branch_id", branchId)
-          .eq("id", editing)
+          .eq("id", sourceRequestId)
           .maybeSingle(),
   ]);
   if (ingredientsResult.error || requestResult.error) {
@@ -106,6 +114,9 @@ export default async function BranchStockRequestNewPage({
     editing != null &&
     (!request || !["draft", "submitted"].includes(request.status))
   ) {
+    notFound();
+  }
+  if (copyFromId != null && !request) {
     notFound();
   }
 
@@ -127,38 +138,57 @@ export default async function BranchStockRequestNewPage({
   }));
 
   const itemsResult =
-    editing == null
+    sourceRequestId == null
       ? { data: [], error: null }
       : await supabase
           .from("stock_request_items")
           .select("id, ingredient_id, entry_unit_id, quantity, status")
           .eq("tenant_id", claims.tenant_id)
-          .eq("request_id", editing)
+          .eq("request_id", sourceRequestId)
           .order("id");
   if (itemsResult.error) {
     throw new Error("inventory.stock_request_editor.load_failed");
   }
-  const itemRows = itemsResult.data;
-  if ((itemRows ?? []).some((item) => item.status !== "pending")) {
+  const itemRows = itemsResult.data ?? [];
+  if (editing != null && itemRows.some((item) => item.status !== "pending")) {
     notFound();
   }
-  const lines: StockRequestEditorLine[] = (itemRows ?? []).map((item) => ({
-    id: item.id,
+  if (
+    copyFromId != null &&
+    !itemRows.some((item) => item.status === "rejected")
+  ) {
+    notFound();
+  }
+  const lines: StockRequestEditorLine[] = (
+    copyFromId != null
+      ? itemRows.filter(
+          (item) =>
+            item.status === "rejected" || item.status === "pending",
+        )
+      : itemRows
+  ).map((item) => ({
+    ...(editing != null ? { id: item.id } : {}),
     ingredientId: item.ingredient_id,
     entryUnitId: item.entry_unit_id,
     quantity: Number(item.quantity),
   }));
 
   const journeyCopy = messages.inventory.stockRequests.journey;
+  const branchCopy = messages.inventory.stockRequests.branch;
   const isCentralKitchen = kind === "central_kitchen";
   const pageTitle = isCentralKitchen
     ? journeyCopy.centralSupplyRequestAction
-    : editing == null
-      ? "Yêu cầu hàng"
-      : "Sửa yêu cầu hàng";
-  const pageDescription = isCentralKitchen
-    ? journeyCopy.centralSupplyRequestDescription(branchContext.branch.name)
-    : "Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu.";
+    : copyFromId != null
+      ? "Yêu cầu hàng mới"
+      : editing == null
+        ? "Yêu cầu hàng"
+        : "Sửa yêu cầu hàng";
+  const pageDescription =
+    copyFromId != null
+      ? branchCopy.copyToNewBanner
+      : isCentralKitchen
+        ? journeyCopy.centralSupplyRequestDescription(branchContext.branch.name)
+        : "Kho Tổng hoặc Bếp Trung Tâm tiếp nhận theo từng nguyên liệu.";
   const backHref =
     kind === "branch"
       ? `/br/${branchId}/stock`
@@ -190,9 +220,14 @@ export default async function BranchStockRequestNewPage({
         requestId={editing}
         ingredients={ingredients}
         initialLines={lines}
-        initialStatus={request?.status ?? null}
+        initialStatus={editing != null ? (request?.status ?? null) : null}
         initialNeededAt={request?.needed_at ?? null}
-        initialNotes={request?.notes ?? null}
+        initialNotes={
+          copyFromId != null
+            ? null
+            : (request?.notes ?? null)
+        }
+        copyFromRequestId={copyFromId}
         returnHref={
           isCentralKitchen
             ? `/br/${branchId}/stock/transfer?requestId=:requestId`

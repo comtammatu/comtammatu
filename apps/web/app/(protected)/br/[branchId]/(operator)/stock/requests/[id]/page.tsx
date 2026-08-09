@@ -33,6 +33,8 @@ export default async function BranchStockRequestDetailPage({
   const editable =
     ["draft", "submitted"].includes(data.status) &&
     data.items.every((item) => item.status === "pending");
+  const canCopyToNew =
+    !editable && data.items.some((item) => item.status === "rejected");
 
   return (
     <StockRequestDetailView
@@ -43,6 +45,7 @@ export default async function BranchStockRequestDetailPage({
           branchId={branchId}
           requestId={requestId}
           editable={editable}
+          canCopyToNew={canCopyToNew}
         />
       }
     />

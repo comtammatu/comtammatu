@@ -161,6 +161,8 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `supplier_payment` | thanh toán NCC | Payment to a supplier. |
 | `stock_level` / `stock_movement` | tồn kho / biến động tồn kho | On-hand snapshot+WAC / append-only ledger. |
 | `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move document (chrome short: Điều chuyển) / internal issue or write-off document. Fulfillment workspace chrome that also covers `stock_request` is `Giao nhận`, not a synonym for this document. |
+| `transfer_source_variance` | thiếu do nơi xuất | ADR 0028 default short-receive class: shipping site owns the shortfall as preparation/shipping variance. |
+| `transfer_transit_loss` / `Nhận thiếu` | nhận thiếu | ADR 0028 exception: in-transit damage, breakage, or loss — operator label `Nhận thiếu`; stored code `transfer_transit_loss`. |
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm | Count session / assigned count slip. |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |

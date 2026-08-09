@@ -32,53 +32,18 @@ Blocker: Authenticated live smoke needs an owner-delegated Production Owner/Bran
 
 - [ ] Run authenticated Owner/Branch Inventory smoke at `390`, `768`, and `1280`, then remove this outcome when every Exit item is evidenced.
 
-## Post POS sale consumption per ingredient with follow-up flags
+## Pilot POS stock post-and-flag on one Production branch
 
 State: ready
-Kind: defect
+Kind: qa
 Tier: T3
 Lane: inventory/pos-posting
-Exit: A completed order with one short ingredient posts `stock_movements` for every recipe line, creates any missing `stock_levels` row, books cost through the ADR 0026 fallback ladder with the rung recorded, returns `consumed: true` only when no line was skipped, and emits one branch-reachable follow-up work item; no shortfall path aborts payment completion. Cashier/floor stock-exhausted inserts still hard-block until Branch Manager sets re-enable and/or a dedicated daily sellable-allowance field on the menu-limits page (`/br/[branchId]/menu-limits`, `Giới hạn bán`); override never skips posting, never books warehouse replenish, and never uses a POS manager PIN challenge.
-Evidence: ADR 0026 (decision locked, Owner 2026-08-10; pre-order hybrid + BM override 1C/2A locked same day; 1C grain locked per menu item same day); SQL acceptance test for short, missing-row, unknown-WAC, and BM-override-then-post-and-flag cases; notification handoff matrix test; repository gates.
+Exit: On one Production branch with `pos_stock_outcome_posting` enabled, a stock-exhausted cashier insert hard-blocks; Branch Manager `Cho phép bán thêm` reopens sell without ledger replenish; payment still completes and posts per-ingredient consumption (negative on-hand allowed) with a branch-reachable follow-up when short; short receive requires classification and attributes shortfall to the shipping site.
+Evidence: Branch flag inventory (Production 2026-08-10: only `Nguyễn Hữu Thọ` id=3 has `pos_stock_outcome_posting` on — pilot branch); authenticated POS + menu-limits + transfer-receive smoke notes; ADR 0026/0028.
 
-- [ ] Restructure `post_pos_sale_consumption_if_ready` from all-or-nothing early return to per-ingredient posting with `INSERT … ON CONFLICT … DO UPDATE`.
-- [ ] Replace the unconditional `COALESCE(sl.avg_unit_cost, 0)` with the ADR 0026 Decision 4 cost ladder and record which rung was used.
-- [ ] Emit a durable branch-targeted follow-up carrying `target_branch_id` and a branch-reachable URL, replacing the emitterless `pos.payment_stock_failed` kind.
-- [ ] Keep `enforce_branch_stock_availability` hard-blocking cashiers/floor staff (non-BM). Add a dedicated daily sellable-allowance field **per menu item** on the menu-item / branch daily-limits plane (schema TBD — field name only; ACL likely `branch_menu_limits`; grain locked Owner 2026-08-10 — not per ingredient) that the gate and availability RPCs honor; UI only on menu-limits page/hub sheet; do not reuse `replenishMenuItemStock` / stock-exception (`Bổ sung tồn kho`); do not invent a POS PIN override; post-and-flag after payment stays unchanged.
-
-## Make the first stock movement per location concurrency-safe
-
-State: ready
-Kind: defect
-Tier: T3
-Lane: inventory/ledger
-Exit: Two concurrent first movements for the same `(ingredient_id, branch_id, location_id, tenant_id)` both succeed; neither raises a unique violation nor aborts the host transaction of GRN confirm, transfer receive, or POS payment.
-Evidence: Concurrent-insert SQL test against the `stock_levels` unique key; repository gates.
-
-- [ ] Replace the `stock_levels` AFTER INSERT trigger update-then-insert sequence with a single `INSERT … ON CONFLICT … DO UPDATE` (`supabase/migrations/20260802162900_baseline.sql:63193-63203`; unique key at `:74155`).
-
-## Route inventory notifications to reachable surfaces
-
-State: ready
-Kind: defect
-Tier: T2
-Lane: inventory/notifications
-Exit: `inventory.stock_request_rejected` and `inventory.waste_pending_approval` resolve to `/br/[branchId]/stock?work=receive` and `/br/[branchId]/stock/waste-approvals` when `v_branch_kind = 'branch'`; the critical valuation-drift notification points at an existing route; no inventory notification targets a path `module-acl.ts` denies to its own `target_roles`.
-Evidence: Notification handoff matrix test; `apps/web/tests/inventory-valuation-ui-static.test.ts` still asserts `/finance/cost-close` is absent; repository gates.
-
-- [ ] Add the `v_branch_kind = 'branch'` arms to the notification URL normalizer (`supabase/migrations/20260809160855_notification_handoff_matrix_harden.sql:1524-1527`) so branch-targeted rows stop pointing at `/inventory/*`, which `module-acl.ts` denies to `branch_manager`.
-- [ ] Repoint the critical valuation-drift link away from `/finance/cost-close`, a route the repository deliberately does not have (`…20260809160855….sql:547`, `apps/web/app/lib/shell-primitives.ts:42`).
-
-## Correct branch stock route documentation
-
-State: ready
-Kind: docs
-Tier: T1
-Lane: inventory/docs
-Exit: `docs/ref/branch-route-inventory.md` matches the shipped redirects and hub shape; no reader is sent to a target the code does not produce.
-Evidence: Redirect targets read from the branch stock route sources; `corepack pnpm lint:docs-budget`.
-
-- [ ] Update `docs/ref/branch-route-inventory.md:57-58`: `/stock/requests` and `/stock/receive` redirect to `/br/[id]/stock` and `/br/[id]/stock?work=receive`, not to `/stock/transfer`; the hub renders four doors with `Giao nhận` folded into the fulfillment hub.
+- [ ] Smoke cashier hard-block → BM `Cho phép bán thêm` → sell → post-and-flag / follow-up on Branch 3 (`Nguyễn Hữu Thọ`).
+- [ ] Smoke short transfer receive with `source_variance` and `Nhận thiếu` (`transit_loss`) classification.
+- [ ] Smoke copy-to-new-draft on a rejected stock or cancelled purchase request.
 
 ## Retire legacy inventory RPC grants
 
@@ -112,29 +77,6 @@ Open questions for the workshop:
 - Reconciliation only iterates tenants that already have a cutover row, and its results have no screen (INV-14). Does the output need a surface, or does it reach the owner through an existing notification?
 
 - [ ] Hold the owner workshop, then record the answers in `docs/ref/inventory.md` / `docs/modules/finance.md` or a design ADR and delete this entry.
-
-## Attribute transfer shortfall to the shipping site
-
-State: ready
-Kind: defect
-Tier: T3
-Lane: inventory/transfer
-Exit: A short receive without transit classification writes a source-side `stock_movements` row equal to the difference; a `Nhận thiếu` receive writes a transit-loss movement with a mandatory reason; no transfer reaches `received` with an unrecorded difference.
-Evidence: ADR 0028 (decision locked, Owner 2026-08-10); SQL test covering short receive with and without transit classification; repository gates.
-
-- [ ] Write the source-side shortfall movement on non-transit short receive instead of closing the transfer with the difference unrecorded (`supabase/migrations/20260802162900_baseline.sql:59935-60101`, `:5680-5760`).
-- [ ] Add the explicit receive classification step with its mandatory reason, and register the stored English reason code plus its `Nhận thiếu` operator label in `docs/ref/glossary.md`.
-
-## Let operators replace a rejected request with a new voucher
-
-State: ready
-Kind: feature
-Tier: T2
-Lane: inventory/requests
-Exit: A rejected stock or purchase request stays rejected and uneditable, and its detail surface offers a copy action that opens a new draft prefilled from its lines, clearly marked as a new document rather than a resubmission.
-Evidence: ADR 0030 (decision locked, Owner 2026-08-10); request lifecycle test asserting a rejected voucher cannot re-enter approval; repository gates.
-
-- [ ] Add the copy-to-new-draft action on rejected `Yêu cầu hàng` and `Yêu cầu mua` detail surfaces, keeping the rejected voucher read-only.
 
 ## Remove compatibility payment writes
 

@@ -71,4 +71,26 @@ test("dead kinds are retired from copy and shell maps", () => {
   assert.doesNotMatch(shell, /workflow\.stocktake_submitted/);
   assert.match(shell, /inventory\.waste_pending_approval/);
   assert.match(shell, /inventory\.stock_request_rejected/);
+  assert.match(
+    shell,
+    /inventory\.valuation_reconciliation_failed": "\/finance\/food-cost"/,
+  );
+  assert.doesNotMatch(shell, /\/finance\/cost-close/);
+});
+
+test("branch inventory notification routing migration is present", () => {
+  const routing = read(
+    "supabase/migrations/20260810011047_inventory_notification_branch_routing.sql",
+  );
+  assert.match(routing, /\/br\/%s\/stock\?work=receive/);
+  assert.match(routing, /\/br\/%s\/stock\/waste-approvals/);
+  assert.match(routing, /\/finance\/food-cost\?year=/);
+  assert.doesNotMatch(
+    routing,
+    /action_url[\s\S]{0,80}\/finance\/cost-close\?year=/,
+  );
+  assert.match(
+    routing,
+    /replace\(action_url, '\/finance\/cost-close\?', '\/finance\/food-cost\?'\)/,
+  );
 });

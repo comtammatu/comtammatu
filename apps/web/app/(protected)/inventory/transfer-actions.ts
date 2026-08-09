@@ -679,9 +679,14 @@ export async function transferConfirmReceive(
   return { success: true };
 }
 
+const SHORTFALL_CLASSES = new Set(["source_variance", "transit_loss"]);
+
 export async function transferReceive(
   transferId: number,
-  items: Record<string, number | { qty: number; note?: string }> | null,
+  items: Record<
+    string,
+    number | { qty: number; note?: string; shortfall_class?: string }
+  > | null,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success)
@@ -693,6 +698,12 @@ export async function transferReceive(
       if (typeof val === "object" && val !== null) {
         if (typeof val.qty !== "number" || val.qty < 0) {
           return { success: false, error: "Số lượng nhận không hợp lệ." };
+        }
+        if (
+          val.shortfall_class != null &&
+          !SHORTFALL_CLASSES.has(val.shortfall_class)
+        ) {
+          return { success: false, error: "Phân loại thiếu hụt không hợp lệ." };
         }
       } else if (typeof val !== "number" || val < 0) {
         return { success: false, error: "Số lượng nhận không hợp lệ." };

@@ -65,6 +65,7 @@ export const notifications = {
     "inventory.count_slip_approved": "Phiếu đếm tồn đã duyệt",
     "inventory.count_slip_recount": "Phiếu đếm tồn cần đếm lại",
     "inventory.stock_low": "Tồn kho thấp",
+    "inventory.pos_stock_shortfall": "Trừ tồn bán hàng cần đối soát",
     "inventory.valuation_variance": "Chênh lệch giá mua",
     "inventory.valuation_reconciliation_failed": "Lệch sổ giá trị tồn kho",
     "system.test": "Thông báo thử",

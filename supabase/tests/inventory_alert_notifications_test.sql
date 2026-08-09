@@ -110,6 +110,28 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'create_expiry_writeoff_quarantine_acl_drift';
   END IF;
+
+  SELECT pg_get_functiondef('private.canonicalize_notification()'::regprocedure)
+  INTO v_definition;
+  IF position(
+       'format(''/br/%s/stock?work=receive'', NEW.target_branch_id)'
+       IN v_definition
+     ) = 0
+     OR position(
+       'format(''/br/%s/stock/waste-approvals'', NEW.target_branch_id)'
+       IN v_definition
+     ) = 0 THEN
+    RAISE EXCEPTION 'inventory_notification_branch_routing_drift';
+  END IF;
+
+  SELECT pg_get_functiondef(
+    'public.run_inventory_valuation_reconciliation()'::regprocedure
+  )
+  INTO v_definition;
+  IF position('/finance/food-cost?year=' IN v_definition) = 0
+     OR position('/finance/cost-close' IN v_definition) > 0 THEN
+    RAISE EXCEPTION 'valuation_reconciliation_url_drift';
+  END IF;
 END;
 $$;
 

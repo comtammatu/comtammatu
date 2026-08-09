@@ -54,8 +54,8 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | URL | Target |
 | --- | --- |
-| `/stock/requests` | → `/stock/transfer` |
-| `/stock/receive` | → `/stock/transfer?work=receive` |
+| `/stock/requests` | → `/br/[id]/stock` |
+| `/stock/receive` | → `/br/[id]/stock?work=receive` |
 | `/stock/grn/new` (+ `/[supplierId]`) | → requests/new hoặc purchase-requests |
 | `/stock/production` (+ `/new`, `/[id]`) | → `/inventory/production…?branchId=` |
 

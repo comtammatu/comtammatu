@@ -508,6 +508,9 @@ export const inventory = {
       cancelSuccess: "Đã hủy yêu cầu hàng.",
       cancelAction: "Hủy yêu cầu",
       editAction: "Sửa yêu cầu",
+      copyToNewAction: "Chép sang phiếu mới",
+      copyToNewBanner:
+        "Đang tạo phiếu mới từ phiếu bị từ chối. Phiếu cũ giữ nguyên, không sửa được.",
       cancelTitle: "Hủy yêu cầu hàng?",
       cancelDescription: "Chỉ hủy được khi chưa phát sinh chuyến giao.",
       cancelReasonLabel: "Lý do",
@@ -641,6 +644,9 @@ export const inventory = {
     missingSupplierShort: "Chưa có NCC",
     requestChangesAction: "Gửi lại Kho",
     rejectAction: "Từ chối mua",
+    copyToNewAction: "Chép sang phiếu mới",
+    copyToNewBanner:
+      "Đang tạo phiếu mới từ phiếu bị từ chối/hủy. Phiếu cũ giữ nguyên, không sửa được.",
     saveAllocationAction: "Lưu phân bổ",
     approveAllocationAction: "Duyệt & tạo đơn mua",
     noActiveSuppliers: "Chưa có NCC đang hoạt động.",
@@ -1584,6 +1590,14 @@ export const inventory = {
       `${formatCount(count)} mặt hàng thiếu so với phiếu xuất. Ghi chú tối thiểu 5 ký tự.`,
     shortageNotePlaceholder: "Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ...",
     shortageNoteMinLength: "Ghi chú cần ít nhất 5 ký tự.",
+    shortfallClassTitle: "Phân loại thiếu hụt",
+    shortfallClassRequired: "Chọn phân loại thiếu hụt trước khi xác nhận.",
+    shortfallClassSourceVariance: "Thiếu do nơi xuất (mặc định)",
+    shortfallClassSourceVarianceHint:
+      "Nơi xuất chịu phần thiếu — chuẩn bị/đóng gói chưa đủ.",
+    shortfallClassTransitLoss: "Nhận thiếu",
+    shortfallClassTransitLossHint:
+      "Hư hỏng, rơi vỡ hoặc mất trên đường vận chuyển.",
     printSlip: "In phiếu",
     completedSlip: "Đã hoàn tất",
     steps: {
