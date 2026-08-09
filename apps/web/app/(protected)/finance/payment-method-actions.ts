@@ -103,7 +103,7 @@ export async function correctPaymentMethod(
       return {
         success: false,
         error:
-          "Thanh toán đang gắn bằng chứng ngân hàng. Bỏ khớp tại Đối soát ngân hàng trước khi đổi sang Tiền mặt.",
+          "Thanh toán đang gắn bằng chứng ngân hàng. Bỏ khớp tại Đối soát NH trước khi đổi sang Tiền mặt.",
       };
     }
     return { success: false, error: "Không thể sửa phương thức thanh toán." };

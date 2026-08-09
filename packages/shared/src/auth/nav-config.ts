@@ -1,6 +1,6 @@
 import type { ModuleKey } from "./module-acl";
 import type { BranchKind } from "./types";
-import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
+import { APP_COPY_VI, MODULE_LABELS_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
@@ -29,7 +29,7 @@ export type BranchManagementNavItemConfig = BranchScopedNavItemConfig;
 export type BranchOperationNavItemConfig = BranchScopedNavItemConfig;
 
 export const SELF_SERVICE_ITEMS: readonly NavItemConfig[] = [
-  { moduleKey: "me", icon: "ListChecks", label: "Việc trong ca" },
+  { moduleKey: "me", icon: "ListChecks", label: APP_COPY_VI.employeePortal },
 ];
 
 export type OperatorTileGroupId =
@@ -55,17 +55,17 @@ export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
         icon: "LayoutDashboard",
         label: APP_COPY_VI.ownerTitle,
       },
-      { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
-      { moduleKey: "orders", icon: "ClipboardList", label: "Đơn hàng" },
+      { moduleKey: "finance", icon: "Wallet", label: MODULE_LABELS_VI.finance },
+      { moduleKey: "orders", icon: "ClipboardList", label: MODULE_LABELS_VI.orders },
       {
         moduleKey: "feedback",
         icon: "MessageSquareHeart",
-        label: "Phản hồi",
+        label: MODULE_LABELS_VI.feedback,
       },
-      { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
-      { moduleKey: "menu", icon: "Utensils", label: "Thực đơn" },
+      { moduleKey: "inventory", icon: "Package", label: MODULE_LABELS_VI.inventory },
+      { moduleKey: "menu", icon: "Utensils", label: MODULE_LABELS_VI.menu },
       { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
-      { moduleKey: "branches", icon: "Building2", label: "Chi nhánh" },
+      { moduleKey: "branches", icon: "Building2", label: MODULE_LABELS_VI.branches },
     ],
   },
   {
@@ -174,7 +174,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "ListChecks",
     group: "my_shift",
     hrefTemplate: "/me",
-    label: "Việc trong ca",
+    label: APP_COPY_VI.employeePortal,
   },
   {
     moduleKey: "branch_team",
@@ -210,7 +210,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "ChefHat",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/kds",
-    label: "Quầy Bếp",
+    label: APP_COPY_VI.branchOperationsKds,
     kinds: ["branch"],
   },
   {
@@ -233,7 +233,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "ClipboardList",
     group: "sales_kitchen",
     hrefTemplate: "/br/{branchId}/orders",
-    label: "Đơn hàng",
+    label: MODULE_LABELS_VI.branch_orders,
     kinds: ["branch"],
   },
   {
@@ -250,7 +250,7 @@ export const OPERATOR_TILE_ITEMS = [
     icon: "Package",
     group: "stock",
     hrefTemplate: "/br/{branchId}/stock/transfer",
-    label: "Giao nhận hàng",
+    label: "Giao nhận",
     // Residual `/br` pad only — L0 hub owns daily central shell (R04).
     kinds: ["central_supply", "central_kitchen"],
   },

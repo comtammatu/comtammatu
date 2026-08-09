@@ -163,7 +163,7 @@ test("operator team board exposes a real status filter", () => {
   assert.doesNotMatch(teamBoardSource, /filteredGroupedRows/);
   assert.doesNotMatch(teamBoardSource, /renderTable\(group\.rows\)/);
   assert.match(operatorMessagesSource, /label:\s*"Theo dõi ca hôm nay"/);
-  assert.match(operatorMessagesSource, /label:\s*"Nhân viên chi nhánh"/);
+  assert.match(operatorMessagesSource, /label:\s*"Nhân viên"/);
   assert.doesNotMatch(operatorMessagesSource, /label:\s*"Phân công"/);
   assert.match(operatorMessagesSource, /all:\s*"Tất cả ca"/);
   assert.match(operatorMessagesSource, /shiftGroupCount/);

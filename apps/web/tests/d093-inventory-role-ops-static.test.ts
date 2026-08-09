@@ -159,7 +159,7 @@ test("D093 nav-config exposes one branch fulfillment hub", () => {
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
-  assert.match(navConfig, /label: "Giao nhận hàng"/);
+  assert.match(navConfig, /label: "Giao nhận"/);
   assert.doesNotMatch(
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/,
@@ -177,7 +177,7 @@ test("D093 branch GRN list route keeps branch redirect; central mounts list", ()
 
 test("D093 inventory-nav includes one fulfillment hub", () => {
   assert.match(inventoryNav, /href: "\/inventory\/transfers"/);
-  assert.match(inventoryNav, /label: "Giao nhận hàng"/);
+  assert.match(inventoryNav, /tNav\("transfers"/);
   assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 

@@ -68,7 +68,7 @@ const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([
 ]);
 
 const CHECKS = [
-  { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
+  { pattern: /\bEmployee Portal\b/g, replacement: "Ca của tôi" },
   { pattern: /\bAdmin Shell\b/g, replacement: "Khung quản trị" },
   { pattern: /\bProject Status\b/g, replacement: "Trạng thái dự án" },
   {
@@ -162,6 +162,49 @@ const UI_ONLY_CHECKS = [
   {
     pattern: /["']Offline["']/g,
     replacement: '"Mất kết nối"',
+  },
+  // Chrome vocabulary platform — glossary short ladder (docs/ref/glossary.md).
+  {
+    pattern: /["']Quầy Bếp["']/g,
+    replacement: '"KDS"',
+  },
+  {
+    pattern: /["']Công việc của tôi["']/g,
+    replacement: '"Ca của tôi"',
+  },
+  {
+    pattern: /["']Quản lý kho["']/g,
+    replacement: '"Kho hàng" (role title "Quản lý kho Tổng" stays)',
+  },
+  {
+    pattern: /["']Bản điều hành kho["']/g,
+    replacement: '"Kho hàng"',
+  },
+  {
+    pattern: /["']Trung tâm quản trị["']/g,
+    replacement: '"Quản trị"',
+  },
+  {
+    pattern: /["']Nay["']/g,
+    replacement: '"Hôm nay"',
+  },
+  {
+    pattern: /["']Giao nhận hàng["']/g,
+    replacement: '"Giao nhận" (workspace chrome); document type stays "Điều chuyển"',
+  },
+  {
+    pattern: /["']Điều chuyển nội bộ["']/g,
+    replacement:
+      'workspace chrome "Giao nhận"; document short "Điều chuyển"',
+  },
+  {
+    pattern: /(?:title|label|eyebrow|orders)\s*:\s*["']Đơn hàng["']/g,
+    replacement: 'chrome short "Đơn bán"',
+  },
+  {
+    pattern: /["']Đơn hàng bán["']/g,
+    replacement: 'chrome short "Đơn bán"; keep ORDER_VI.long only in domain.ts',
+    allowedPaths: new Set(["packages/shared/src/messages/domain.ts"]),
   },
 ];
 
@@ -429,6 +472,7 @@ async function main() {
 
     if (isUiCopyPath(relPath)) {
       for (const check of UI_ONLY_CHECKS) {
+        if (check.allowedPaths?.has(relPath)) continue;
         const matches = [...text.matchAll(check.pattern)];
         for (const match of matches) {
           const index = match.index ?? 0;

@@ -5,7 +5,7 @@
 // must not introduce synonyms for the canonical terms.
 
 // POS sale order — distinct from procurement purchase order (PO).
-// glossary §"Bán hàng": canonical "Đơn hàng bán" / short "Đơn bán".
+// glossary: formal long "Đơn hàng bán"; chrome/nav short "Đơn bán".
 export const ORDER_VI = {
   long: "Đơn hàng bán",
   short: "Đơn bán",

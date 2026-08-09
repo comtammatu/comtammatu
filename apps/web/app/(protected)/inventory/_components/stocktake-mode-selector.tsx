@@ -119,10 +119,10 @@ export function StocktakeModeSelector({
               <span className="font-medium">{label}</span>
               <div className="ml-auto flex items-center gap-1">
                 {meta.defaultBlind ? (
-                  <Badge variant="warning">Blind</Badge>
+                  <Badge variant="warning">Đếm mù</Badge>
                 ) : null}
                 {meta.unaudited ? (
-                  <Badge variant="secondary">Unaudited</Badge>
+                  <Badge variant="secondary">Kiểm nhanh</Badge>
                 ) : null}
               </div>
             </div>

@@ -199,10 +199,10 @@ test("operator home label is today, not an old branch title", () => {
 
   assert.match(labels, /branchHome: "Hôm nay"/);
   assert.match(labels, /inventory: "Kho hàng"/);
-  assert.match(labels, /branch_home: "Nay"/);
-  assert.match(labels, /operatorOpsActions: "Thiết lập chi nhánh"/);
-  assert.match(labels, /branch_settings: "Thiết lập chi nhánh"/);
-  assert.match(labels, /branchOperationsKds: "Quầy Bếp"/);
+  assert.match(labels, /branch_home: "Hôm nay"/);
+  assert.match(labels, /operatorOpsActions: "Thiết lập"/);
+  assert.match(labels, /branch_settings: "Thiết lập"/);
+  assert.match(labels, /branchOperationsKds: "KDS"/);
   assert.doesNotMatch(labels, /branchHome: "Branch home"/);
   assert.doesNotMatch(labels, /Branch Runtime|Branch Ops/);
 });
@@ -402,7 +402,7 @@ test("branch home owns branch workflow entry tiles", () => {
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
-  assert.match(operatorTiles, /label: "Giao nhận hàng"/);
+  assert.match(operatorTiles, /label: "Giao nhận"/);
   assert.doesNotMatch(
     operatorTiles,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/,
@@ -559,8 +559,9 @@ test("branch dashboard renders command lanes instead of Owner surface-style KPI 
   }
   assert.doesNotMatch(commandConfig, /moduleKey: "runner"/);
   assert.match(commandConfig, /title: "Bán hàng"/);
-  assert.match(commandConfig, /title: "Quầy Bếp"/);
+  assert.match(commandConfig, /title: "KDS"/);
   assert.match(commandConfig, /title: "Giới hạn bán"/);
+  assert.match(commandConfig, /title: "Đơn bán"/);
 });
 
 test("branch settings landing stays a setup-only Branch operator surface", () => {
@@ -596,7 +597,7 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
     /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
   );
 
-  assert.match(settingsMessages, /landingTitle: "Thiết lập chi nhánh"/);
+  assert.match(settingsMessages, /landingTitle: "Thiết lập"/);
   assert.match(
     settingsMessages,
     /landingDescription: \(_branchName: string\) => ""/,

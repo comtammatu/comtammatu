@@ -100,7 +100,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   me: {
     path: "/me",
     allowedRoles: STAFF_ROLES.filter((role) => role !== "owner"),
-    label: "Công việc của tôi",
+    label: "Ca của tôi",
   },
   finance: {
     path: "/finance",

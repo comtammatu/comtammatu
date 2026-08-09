@@ -37,7 +37,7 @@ approved file extensions.
 
 | Drift | Use instead |
 | --- | --- |
-| `Employee Portal` | `Trang nhân viên` |
+| `Employee Portal` | `Ca của tôi` (`employee_portal` / `/me`) |
 | `Owner Shell` / `Owner surface` / `Ops surface` | `Quản trị` (`control_surface`) |
 | `Operations chrome` (new prose) | `station_chrome` |
 | Bare `Dashboard` | `Tổng quan` / `buồng lái` as fit |
@@ -48,6 +48,32 @@ approved file extensions.
 | `draft` / `template` / `checklist` / `inbox` / `ID` / `job` / `sheet` in UI | Vietnamese business wording (`bản nháp`, `mẫu`, `việc trong ca`, `mã …`) |
 | `Topping` / `blind` / `peer cross` | `Món thêm` / `đếm mù` / `đếm chéo` |
 | Embedded `GRN`/`PO` in UI sentences | `phiếu nhập` / `đơn đặt hàng` (acronym only as pill/badge) |
+| `Quầy Bếp` (chrome) | `KDS` |
+| `Quản lý kho` / `Bản điều hành kho` (module chrome) | `Kho hàng` (role title `Quản lý kho Tổng` stays) |
+| `Đơn hàng` / `Đơn hàng bán` as module/nav chrome | `Đơn bán` (long `Đơn hàng bán` only via `ORDER_VI.long`) |
+| `Công việc của tôi` | `Ca của tôi` |
+| Bare `Nay` as home/nav/filter chrome | `Hôm nay` |
+| `Trung tâm quản trị` as page chrome | `Quản trị` |
+| `Điều chuyển nội bộ` / `Giao nhận hàng` as nav short | workspace `Giao nhận`; document `Điều chuyển` |
+
+### UI chrome short ladder (product vocabulary platform)
+
+Nav, tiles, tabs, badges, and page chrome must use these shorts from
+`packages/shared/src/labels/**` + `packages/shared/src/messages/domain.ts`.
+Modules may specialize body copy; they must not invent a third name for the
+same concept.
+
+| Concept | Chrome short | Formal / document | Source |
+| --- | --- | --- | --- |
+| Sale order module | `Đơn bán` | `Đơn hàng bán` | `ORDER_VI` / `MODULE_LABELS_VI.orders` |
+| Inventory module | `Kho hàng` | — | `MODULE_LABELS_VI.inventory` |
+| Kitchen display | `KDS` | — | `MODULE_LABELS_VI.kds` |
+| Personal work surface | `Ca của tôi` | — | `APP_COPY_VI.employeePortal` |
+| Branch home / today chip | `Hôm nay` | — | `MODULE_LABELS_VI.branch_home` |
+| Stock fulfillment workspace | `Giao nhận` | covers YCH + nhận/giao | inventory dictionary `transfers` |
+| Stock transfer document | `Điều chuyển` | `Phiếu điều chuyển` | glossary `stock_transfer` |
+| Control surface | `Quản trị` | — | `APP_COPY_VI.ownerSurface` |
+| Shift checklist items | `Việc trong ca` | — | not the `/me` portal name |
 
 ## Product Dual Thesis
 
@@ -89,13 +115,13 @@ domain doc.
 | `finance_basic` | tài chính vận hành | Daily money, stock value, food cost, expenses, HĐĐT — not full GL. |
 | `inventory_ops` | điều hành kho | Inventory module on `control_surface`. |
 | `point_of_sale` / `kitchen_display_system` | POS / KDS | Order capture / kitchen display stations. |
-| `employee_portal` | trang nhân viên | Legacy label; personal work is `/me/*` or Branch staff routes. |
+| `employee_portal` | Ca của tôi | Personal day-flow surface (`/me/*`, Branch shift/profile). Not the shift checklist label `Việc trong ca`. |
 
 ### Sales / POS / KDS
 
 | Term | Label | Definition |
 | --- | --- | --- |
-| `order` | đơn hàng bán | POS sale order. |
+| `order` | đơn hàng bán (chrome: Đơn bán) | POS sale order. Chrome/nav uses short `Đơn bán`; formal long stays `Đơn hàng bán`. |
 | `order_item` | dòng món | Line on a sale order. |
 | `menu_item` | món bán | Sellable menu item. |
 | `modifier` | tùy chọn món | Add/remove choice on a menu item; not a separate sellable side. |
@@ -131,7 +157,7 @@ Detail: `inventory.md`, `inventory-sop.md`.
 | `po_applied_quantity` / `excess_quantity` / `shortage_quantity` | số lượng tính vào đơn / dư ngoài đơn / còn thiếu | PO apply / over-receipt at cost 0 / remaining PO qty. |
 | `supplier_payment` | thanh toán NCC | Payment to a supplier. |
 | `stock_level` / `stock_movement` | tồn kho / biến động tồn kho | On-hand snapshot+WAC / append-only ledger. |
-| `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move / internal issue or write-off document. |
+| `stock_transfer` / `stock_issue` | phiếu điều chuyển / phiếu xuất kho | Inter-site move document (chrome short: Điều chuyển) / internal issue or write-off document. Fulfillment workspace chrome that also covers `stock_request` is `Giao nhận`, not a synonym for this document. |
 | `consumption` | tiêu hao | Stock decrease from sale, production, waste, or approved use. |
 | `stocktake` / `inventory_count_slip` | kiểm kê / phiếu đếm | Count session / assigned count slip. |
 | `base_unit` / `entry_unit_id` / `to_base_factor` | đơn vị chuẩn / đơn vị chứng từ / quy đổi | Ledger unit / document unit / snapshot factor to base. |

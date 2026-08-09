@@ -968,7 +968,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.doesNotMatch(page, /outgoingMoneyReviewTransactions/);
   assert.match(messages, /Lọc đối soát/);
   assert.match(messages, /label: "Lọc"/);
-  assert.match(messages, /Đối soát ngân hàng/);
+  assert.match(messages, /Đối soát NH/);
   assert.match(messages, /Thanh toán #\$\{id\}/);
   assert.match(messages, /linkTitle: "Khớp giao dịch tiền vào"/);
 

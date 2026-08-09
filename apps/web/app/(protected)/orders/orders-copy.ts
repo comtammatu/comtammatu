@@ -1,14 +1,14 @@
 // Page-local copy for the orders route. Co-located because these strings are
 // specific to this page's header/tabs; the canonical order entity term comes
-// from ORDERS_VI in @comtammatu/shared/messages.
-import { ORDERS_VI } from "@comtammatu/shared/messages";
+// from ORDER_VI / ORDERS_VI in @comtammatu/shared/messages.
+import { ORDER_VI, ORDERS_VI } from "@comtammatu/shared/messages";
 
 export const ORDERS_COPY = {
-  eyebrow: "Điều phối giao dịch",
-  description: "Theo dõi đơn bán và hoàn tiền trong cùng một nơi.",
+  eyebrow: ORDER_VI.short,
+  description: `${ORDER_VI.short} và hoàn tiền.`,
   operatorDescription: "Ưu tiên đơn đang xử lý; tra cứu ở tab Gần đây.",
   reportsAction: "Báo cáo",
-  tabOrders: "Danh sách đơn",
+  tabOrders: ORDER_VI.inline,
   tabRefunds: "Hoàn tiền",
   refundCreateAction: "Ghi nhận đã hoàn tiền",
   refundCreateTitle: "Ghi nhận tiền đã trả cho khách",

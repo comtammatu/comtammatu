@@ -18,7 +18,7 @@ async function expectHub(
     await page.setViewportSize(viewport);
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole("heading", { name: "Giao nhận hàng" }),
+      page.getByRole("heading", { name: "Giao nhận" }),
     ).toBeVisible();
     await expect(
       page.getByRole("combobox", { name: "Phân loại" }),

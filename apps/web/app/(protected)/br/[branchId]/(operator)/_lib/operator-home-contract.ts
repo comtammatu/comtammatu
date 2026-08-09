@@ -30,7 +30,7 @@ export function getBranchPrimaryHomeGroup(
 export function getBranchHomeTileLimit(
   groupId: ResolvedOperatorTileGroup["id"],
 ): number {
-  // Home stations: Bán hàng + Quầy Bếp only.
+  // Home stations: Bán hàng + KDS only.
   return groupId === "sales_kitchen" ? 2 : 4;
 }
 

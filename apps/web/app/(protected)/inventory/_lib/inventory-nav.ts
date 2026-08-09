@@ -76,13 +76,13 @@ export function resolveInventoryNav({
             items: [
               {
                 href: "/inventory/purchase-orders",
-                label: "Mua hàng",
+                label: tNav("purchaseOrders", "navigation"),
                 icon: IconShoppingCart,
                 matchPrefixes: ["/inventory/purchase-requests"],
               },
               {
                 href: "/inventory/grn",
-                label: "Nhập kho",
+                label: tNav("grn", "navigation"),
                 icon: IconPackagePlus,
               },
             ],
@@ -108,7 +108,7 @@ export function resolveInventoryNav({
   if (showProcurement && canShowPurchaseOrders(userRole)) {
     inboundItems.push({
       href: "/inventory/purchase-orders",
-      label: "Mua hàng",
+      label: tNav("purchaseOrders", "navigation"),
       icon: IconShoppingCart,
       matchPrefixes: ["/inventory/purchase-requests"],
     });
@@ -116,13 +116,13 @@ export function resolveInventoryNav({
   if (showProcurement) {
     inboundItems.push({
       href: "/inventory/grn",
-      label: "Nhập kho",
+      label: tNav("grn", "navigation"),
       icon: IconPackagePlus,
     });
   }
   inboundItems.push({
     href: "/inventory/consumption",
-    label: "Tiêu hao",
+    label: tNav("consumption", "navigation"),
     icon: IconCircleMinus,
     matchPrefixes: [
       "/inventory/consumption/",
@@ -133,7 +133,7 @@ export function resolveInventoryNav({
   if (showStockRequestInbox || userRole === "owner") {
     inboundItems.push({
       href: "/inventory/transfers",
-      label: "Giao nhận hàng",
+      label: tNav("transfers", "navigation"),
       icon: IconArrowRightLeft,
       matchPrefixes: ["/inventory/transfers/", "/inventory/stock-requests"],
     });
@@ -150,7 +150,7 @@ export function resolveInventoryNav({
       items: [
         {
           href: "/inventory/production",
-          label: "Sản xuất",
+          label: tNav("production", "navigation"),
           icon: IconToolsKitchen,
           matchPrefixes: [
             "/inventory/production/new",

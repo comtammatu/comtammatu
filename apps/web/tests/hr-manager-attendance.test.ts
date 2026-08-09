@@ -67,12 +67,12 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     hrMessagesSource,
-    /ownerTitle:\s*"Hồ sơ nhân viên"/,
+    /ownerTitle:\s*"Hồ sơ"/,
     "Company HR landing should name the employee-record surface precisely",
   );
   assert.match(
     hrMessagesSource,
-    /attendance:\s*"Chấm công & ca làm"/,
+    /attendance:\s*"Chấm công"/,
     "HR attendance hub should name its job precisely",
   );
   assert.match(

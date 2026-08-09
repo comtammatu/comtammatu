@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { formatCount } from "@comtammatu/shared/format";
+import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNClockTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -83,7 +84,7 @@ export async function StaffCheckoutApprovalsPageContent({
   const homeLink =
     routeBranchId == null
       ? { href: ownerHomeHref ?? "/", label: "Chấm công" }
-      : { href: `/br/${routeBranchId}`, label: "Nay" };
+      : { href: `/br/${routeBranchId}`, label: MODULE_LABELS_VI.branch_home };
   const canUseApprovalRoute = CHECKOUT_APPROVER_ROLES.includes(
     claims.user_role,
   );

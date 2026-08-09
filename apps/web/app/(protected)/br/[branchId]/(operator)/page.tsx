@@ -144,7 +144,7 @@ export default async function OperatorHomePage({
       </Suspense>
 
       {groups.map((group) => {
-        // Home stations: Bán hàng + Quầy Bếp only — runner stays off this surface.
+        // Home stations: Bán hàng + KDS only — runner stays off this surface.
         const stationTiles = group.tiles.filter(
           (tile) => tile.moduleKey === "pos" || tile.moduleKey === "kds",
         );

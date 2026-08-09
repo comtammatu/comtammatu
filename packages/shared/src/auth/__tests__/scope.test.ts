@@ -186,7 +186,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("self_service"), {
-    label: "Công việc của tôi",
+    label: "Ca của tôi",
     href: "/me",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {

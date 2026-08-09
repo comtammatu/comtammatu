@@ -277,7 +277,7 @@ export function StockFulfillmentHubClient({
     </span>
   ) : (
     <span className="font-mono">
-      {selectedRequest?.data.requestNumber ?? "Giao nhận hàng"}
+      {selectedRequest?.data.requestNumber ?? "Giao nhận"}
     </span>
   );
   const dialogDescription = selectedTransfer

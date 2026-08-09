@@ -227,9 +227,9 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(cell, /href="\/finance\/expenses"/);
   assert.match(
     financeMessages,
-    /matchExpensePlaceholder: "Khớp Chi phí vận hành"/,
+    /matchExpensePlaceholder: "Khớp chi phí"/,
   );
-  assert.match(financeMessages, /openExpenses: "Mở Chi phí vận hành"/);
+  assert.match(financeMessages, /openExpenses: "Mở chi phí"/);
   assert.match(financeMessages, /matchedExpenseCount/);
   assert.doesNotMatch(cell, /\bmatchedEventId\b/);
   assert.match(actions, /matchedEventIds/);
