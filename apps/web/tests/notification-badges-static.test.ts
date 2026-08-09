@@ -104,12 +104,14 @@ test("notification shell uses one realtime summary for footer and tab badges", (
     /<UnreadBadge count=\{notificationSummary\.unreadCount\}/,
   );
   assert.match(hook, /event: "\*"[\s\S]*table: "notifications"/);
+  assert.match(hook, /table: "notification_reads"/);
   assert.match(hook, /status === "SUBSCRIBED"[\s\S]*refreshRef\.current/);
   assert.doesNotMatch(hook, /target_branch_id/);
   assert.match(foreground, /showInAppToast[\s\S]*toast\.info/);
   assert.match(foreground, /action:[\s\S]*openCtaLabel|options\.action/);
   assert.match(foreground, /document\.visibilityState === "visible"/);
   assert.doesNotMatch(foreground, /target_branch_id/);
+  assert.match(foreground, /shouldShowInAppToast|branch_management/);
 });
 
 test("notification feed uses RowActionsMenu and ContextMenu from one RowActionItem array", () => {

@@ -52,18 +52,23 @@ function iconFor(kind: string) {
     case "procurement.purchase_request_submitted":
     case "procurement.po_pending_approval":
     case "inventory.waste.weekly_report":
+    case "inventory.waste_pending_approval":
       return IconClipboardList;
     case "workflow.transfer_in_transit":
       return IconTruck;
     case "inventory.stock_request_submitted":
+    case "inventory.stock_request_rejected":
       return IconPackageExport;
-    case "workflow.stocktake_submitted":
     case "inventory.stocktake_completed":
       return IconCircleCheck;
     case "hr.leave_approved":
+    case "hr.checkout_approved":
     case "hr.payroll_period_ready":
+    case "pos.void_resolved":
       return IconCircleCheck;
     case "hr.leave_rejected":
+    case "hr.checkout_rejected":
+    case "pos.void_rejected":
       return IconAlertTriangle;
     case "hr.leave_requested":
     case "hr.checkout_requested":
@@ -78,11 +83,9 @@ function iconFor(kind: string) {
     case "inventory.stocktake_conflict":
       return IconAlertTriangle;
     case "inventory.stock_low":
-    case "inventory.expiry_soon":
     case "inventory.valuation_variance":
     case "inventory.valuation_reconciliation_failed":
     case "pos.kds_out_of_stock":
-    case "pos.payment_stock_failed":
     case "pos.shift_variance":
     case "system.cron_failed":
       return IconAlertTriangle;

@@ -246,10 +246,10 @@ test("known notification kinds keep canonical Branch workflow URLs", () => {
     },
     {
       role: "branch_manager",
-      actionUrl: "/br/3/orders",
+      actionUrl: "/br/3/pos?orderId=12",
       entityId: 12,
-      kind: "pos.payment_stock_failed",
-      expected: "/br/3/orders",
+      kind: "pos.void_resolved",
+      expected: "/br/3/pos?orderId=12",
     },
   ];
 

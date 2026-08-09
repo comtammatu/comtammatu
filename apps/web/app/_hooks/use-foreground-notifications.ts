@@ -21,6 +21,19 @@ import { messages } from "@lib/messages";
 const SCAN_LIMIT = 10;
 const MAX_POPUPS = 3;
 
+/** Sonner on control surfaces; POS/KDS/runner keep OS popup only. */
+function shouldShowInAppToast(pathname: string): boolean {
+  const family = resolveRouteFamilyContract(pathname);
+  if (!family) return false;
+  if (family.surface === "owner" || family.surface === "branch_management") {
+    return true;
+  }
+  if (family.surface === "branch_operation") {
+    return !/^\/br\/\d+\/(pos|kds|runner)(?:\/|$)/.test(pathname);
+  }
+  return false;
+}
+
 function openCtaLabel(kind: string): string {
   return (
     messages.notifications.ctaByKind[kind] ?? messages.notifications.openAction
@@ -122,8 +135,7 @@ export function useForegroundNotifications(): void {
     router.push(url);
   };
   const disabled = isRunnerPublicDisplayPath(pathname ?? "");
-  const showInAppToast =
-    resolveRouteFamilyContract(pathname ?? "")?.surface === "owner";
+  const showInAppToast = shouldShowInAppToast(pathname ?? "");
 
   useEffect(() => {
     if (disabled) {

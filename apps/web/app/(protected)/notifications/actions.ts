@@ -125,7 +125,7 @@ export async function getUnreadCount(): Promise<
 export async function getNotificationBadgeSummary(): Promise<
   ActionResult<NotificationBadgeSummary>
 > {
-  const { supabase } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
   const { data, error } = await supabase.rpc(
     "count_unread_notifications_by_target" as never,
     {} as never,
@@ -141,7 +141,12 @@ export async function getNotificationBadgeSummary(): Promise<
 
   const targets = parsed.data.map((row) => ({
     kind: row.kind,
-    actionUrl: row.action_url,
+    actionUrl: resolveNotificationActionUrl(claims, {
+      actionUrl: row.action_url,
+      entityId: null,
+      kind: row.kind,
+      targetBranchId: null,
+    }),
     unreadCount: row.unread_count,
   }));
 
