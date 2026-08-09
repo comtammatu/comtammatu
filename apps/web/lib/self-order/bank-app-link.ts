@@ -14,8 +14,6 @@ export interface VietQrBankApp {
   monthlyInstall: number;
 }
 
-export type BankAppHandoffKind = "qr_emv" | "open_app";
-
 interface BankNativeOpenTarget {
   iosScheme: string;
   androidScheme: string;
@@ -530,10 +528,6 @@ function buildEmvHandoffUrl(
       return `${template.scheme}://ZaloPay/${encoded}`;
     }
   }
-}
-
-export function getBankAppHandoffKind(appId: string): BankAppHandoffKind {
-  return BANK_QR_EMV[appId.trim().toLowerCase()] ? "qr_emv" : "open_app";
 }
 
 /**

@@ -8,7 +8,7 @@ const repoRoot = resolve(process.cwd(), "../..");
 const directFormImportFiles = [
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
-  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+  "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",

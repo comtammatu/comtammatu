@@ -15,7 +15,6 @@ export {
   STAFF_VI,
   TABLE_VI,
   PRODUCT_VI,
-  CUSTOMER_VI,
 } from "./domain";
 export type {
   OrderKey,
@@ -23,7 +22,6 @@ export type {
   StaffKey,
   TableKey,
   ProductKey,
-  CustomerKey,
 } from "./domain";
 export { INVENTORY_VI } from "./inventory";
 export type { InventoryKey } from "./inventory";

@@ -361,11 +361,6 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
   notFound,
 ];
 
-export const grnConfirmRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể chốt nhập kho.",
-  errorCode: INVENTORY_ERROR_CODES.GRN_CONFIRM_FAILED,
-};
-
 /* ─── Stock request ─── */
 
 export const stockRequestRpcMappings: readonly RpcErrorMapping[] = [
@@ -534,11 +529,6 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
   privilege,
   notFound,
 ];
-
-export const procurementRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể xử lý chứng từ mua hàng.",
-  errorCode: INVENTORY_ERROR_CODES.PROCUREMENT_FAILED,
-};
 
 /* ─── Production ─── */
 

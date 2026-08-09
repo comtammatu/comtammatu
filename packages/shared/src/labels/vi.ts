@@ -266,10 +266,6 @@ export function getModuleLabelVi(moduleKey: string): string {
   return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? UNKNOWN_LABEL_VI;
 }
 
-export function getInventorySiteLabelVi(site: SiteLike): string {
-  return getInventorySiteKindLabelVi(resolveSiteKind(site));
-}
-
 export function normalizeInventoryLocationNameVi(
   name: string | null | undefined,
 ): string {
@@ -396,14 +392,6 @@ export const PAYMENT_METHOD_LABELS_VI = {
   bank_transfer: "Chuyển khoản",
 } as const;
 
-/** Long form for shift-close / accounting reports where ambiguity must be
- * eliminated (kế toán đọc cần phân biệt rõ kênh tiền). */
-export const PAYMENT_METHOD_LABELS_FULL_VI = {
-  ...PAYMENT_METHOD_LABELS_VI,
-  vietqr: "Chuyển khoản (VietQR)",
-  unknown: "Khác",
-} as const;
-
 /** orders.status (DB orders_status_check) — full Owner vocabulary.
  * POS cashier view intentionally collapses these states
  * (apps/web pos/_lib/order-status-display.ts). */
@@ -473,15 +461,6 @@ export const PRINT_JOB_STATUS_LABELS_VI = {
   printed: "Đã in",
   failed: "Lỗi",
   expired: "Hết hạn",
-  cancelled: "Đã hủy",
-} as const;
-
-/** kds_tickets.status (DB kds_tickets_status_check). */
-export const KDS_TICKET_STATUS_LABELS_VI = {
-  pending: "Chờ",
-  preparing: "Đang chuẩn bị",
-  ready: "Sẵn sàng",
-  served: "Đã phục vụ",
   cancelled: "Đã hủy",
 } as const;
 

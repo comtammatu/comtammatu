@@ -93,20 +93,13 @@ test("central site templates can create, ship, and receive manual transfers", ()
 });
 
 test("D091 procurement surfaces are permission-driven", () => {
-  const files = [
-    "apps/web/app/(protected)/layout.tsx",
-    "apps/web/lib/inventory/grn-source-data.ts",
-    "apps/web/lib/inventory/grn-create-data.ts",
-  ];
-  for (const file of files) {
-    const source = read(file);
-    assert.doesNotMatch(
-      source,
-      /canAccess\(claims\.user_role,\s*"branch_stock"\)/,
-    );
-  }
+  const layout = read("apps/web/app/(protected)/layout.tsx");
+  assert.doesNotMatch(
+    layout,
+    /canAccess\(claims\.user_role,\s*"branch_stock"\)/,
+  );
   assert.match(
-    read("apps/web/app/(protected)/layout.tsx"),
+    layout,
     /currentUserHasPermissionAny\(PERMISSION_KEYS\.PROCUREMENT_READ\)/,
   );
 });

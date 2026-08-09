@@ -105,7 +105,6 @@ test("stock UI promotes compact qty and aligns WAC to that pack", () => {
 test("active inventory runtime does not carry catalog unit roles", () => {
   const runtime = [
     "apps/web/lib/inventory/types.ts",
-    "apps/web/lib/inventory/grn-create-data.ts",
     "apps/web/lib/inventory/stock-on-hand-data.ts",
     "apps/web/lib/inventory/stock-on-hand-detail-data.ts",
     "apps/web/lib/inventory/transfer-create-data.ts",

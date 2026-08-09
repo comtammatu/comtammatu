@@ -2,38 +2,23 @@
 
 BEGIN;
 
+-- Retired revoke-locked bulk PO RPCs were dropped (zero app callers).
 DO $$
 DECLARE
-  v_signature constant text :=
-    'public.create_purchase_orders_from_request(bigint,jsonb)';
+  v_signatures constant text[] := ARRAY[
+    'public.create_purchase_orders_from_request(bigint,jsonb)',
+    'public.save_purchase_orders_from_request(bigint,jsonb,boolean,uuid)',
+    'public.save_purchase_order(bigint,date,text,jsonb,boolean)',
+    'public.approve_purchase_order(bigint)',
+    'public.create_purchase_order_from_grn(bigint)'
+  ];
+  v_signature text;
 BEGIN
-  IF to_regprocedure(v_signature) IS NULL THEN
-    RAISE EXCEPTION 'PURCHASE ORDER RPC: bulk function missing';
-  END IF;
-
-  IF has_function_privilege('anon', v_signature, 'EXECUTE')
-     OR has_function_privilege(
-       'authenticated',
-       v_signature,
-       'EXECUTE'
-     )
-     OR has_function_privilege(
-       'service_role',
-       v_signature,
-       'EXECUTE'
-     ) THEN
-    RAISE EXCEPTION 'PURCHASE ORDER RPC: grants invalid';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_catalog.pg_proc AS procedure
-    WHERE procedure.oid = to_regprocedure(v_signature)
-      AND procedure.prosecdef IS TRUE
-      AND procedure.proconfig @> ARRAY['search_path=""']::text[]
-  ) THEN
-    RAISE EXCEPTION 'PURCHASE ORDER RPC: security contract invalid';
-  END IF;
+  FOREACH v_signature IN ARRAY v_signatures LOOP
+    IF to_regprocedure(v_signature) IS NOT NULL THEN
+      RAISE EXCEPTION 'PURCHASE ORDER RPC: retired function still present: %', v_signature;
+    END IF;
+  END LOOP;
 END;
 $$;
 

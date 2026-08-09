@@ -11676,15 +11676,6 @@ export type Database = {
         }
         Returns: Json
       }
-      add_stock_request_line: {
-        Args: {
-          p_entry_unit_id: number
-          p_ingredient_id: number
-          p_quantity: number
-          p_request_id: number
-        }
-        Returns: Json
-      }
       adjust_stock_exception:
         | {
             Args: {
@@ -11793,7 +11784,6 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: undefined
       }
-      approve_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       approve_waste: {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined
@@ -11908,7 +11898,6 @@ export type Database = {
         Args: { p_groups: Json }
         Returns: Json
       }
-      bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
       cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
@@ -12112,19 +12101,6 @@ export type Database = {
             Returns: Json
           }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
-      confirm_goods_receipt_note_legacy: {
-        Args: { p_grn_id: number }
-        Returns: Json
-      }
-      confirm_payment_and_post: {
-        Args: {
-          p_branch_id: number
-          p_payment_id: number
-          p_provider_ref?: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       confirm_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -12307,10 +12283,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_purchase_order_from_grn: {
-        Args: { p_grn_id: number }
-        Returns: Json
-      }
       create_purchase_order_from_request: {
         Args: {
           p_expected_delivery_date: string
@@ -12323,10 +12295,6 @@ export type Database = {
       }
       create_purchase_orders_from_grn: {
         Args: { p_grn_id: number }
-        Returns: Json
-      }
-      create_purchase_orders_from_request: {
-        Args: { p_orders: Json; p_request_id: number }
         Returns: Json
       }
       create_refund: {
@@ -12353,10 +12321,6 @@ export type Database = {
           p_provider_ref: string
           p_tenant_id: number
         }
-        Returns: Json
-      }
-      create_stock_request_draft: {
-        Args: { p_branch_id: number; p_notes?: string }
         Returns: Json
       }
       create_stock_transfer_draft: {
@@ -12916,26 +12880,6 @@ export type Database = {
       get_order_operational_trace: {
         Args: { p_order_id: number }
         Returns: Json
-      }
-      get_orders_for_day: {
-        Args: { p_branch_id: number; p_date: string }
-        Returns: {
-          branch_id: number
-          branch_name: string
-          discount_amount: number
-          invoice_number: string
-          invoice_status: string
-          item_count: number
-          order_id: number
-          order_number: string
-          order_type: string
-          paid_at: string
-          paid_hour: number
-          payment_method: string
-          subtotal: number
-          tax_amount: number
-          total_amount: number
-        }[]
       }
       get_orders_for_day_v2: {
         Args: { p_branch_id: number; p_date: string }
@@ -13996,16 +13940,6 @@ export type Database = {
         }
         Returns: Json
       }
-      save_purchase_order: {
-        Args: {
-          p_expected_delivery_date: string
-          p_lines: Json
-          p_notes: string
-          p_po_id: number
-          p_send?: boolean
-        }
-        Returns: Json
-      }
       save_purchase_order_group: {
         Args: {
           p_branch_id: number
@@ -14015,15 +13949,6 @@ export type Database = {
           p_lines: Json
           p_notes: string
           p_submit?: boolean
-        }
-        Returns: Json
-      }
-      save_purchase_orders_from_request: {
-        Args: {
-          p_idempotency_key?: string
-          p_orders: Json
-          p_request_id: number
-          p_send?: boolean
         }
         Returns: Json
       }
@@ -14400,7 +14325,6 @@ export type Database = {
         }
         Returns: number
       }
-      submit_stock_request: { Args: { p_request_id: number }; Returns: Json }
       sync_insurance_base: {
         Args: { p_employee_id: number }
         Returns: undefined

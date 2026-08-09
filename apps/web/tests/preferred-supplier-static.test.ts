@@ -21,9 +21,8 @@ test("preferred supplier migration adds is_preferred and setter RPC", () => {
 
 test("GRN create auto-selects preferred supplier when multiple mappings", () => {
   const model = read("apps/web/lib/inventory/grn-create-model.ts");
-  const data = read("apps/web/lib/inventory/grn-create-data.ts");
-  const controller = read(
-    "apps/web/lib/inventory/use-grn-create-controller.ts",
+  const editor = read(
+    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
   const actions = read(
     "apps/web/app/(protected)/inventory/suppliers/[id]/items/actions.ts",
@@ -34,9 +33,8 @@ test("GRN create auto-selects preferred supplier when multiple mappings", () => 
 
   assert.match(model, /function resolveDefaultGrnSupplier/);
   assert.match(model, /supplier\.isPreferred === true/);
-  assert.match(data, /is_preferred/);
-  assert.match(data, /isPreferred: item\.is_preferred === true/);
-  assert.match(controller, /resolveDefaultGrnSupplier/);
+  assert.match(editor, /resolveDefaultGrnSupplier/);
+  assert.match(editor, /supplier\.isPreferred/);
   assert.match(actions, /set_supplier_item_preferred/);
   assert.match(actions, /bulk_create_supplier_items/);
   assert.match(bulkMigration, /NOT EXISTS \(/);

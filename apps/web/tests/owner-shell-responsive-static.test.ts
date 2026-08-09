@@ -310,7 +310,6 @@ test("Owner page-header actions use named button sizes", () => {
     "apps/web/app/(protected)/hr/setup/page.tsx",
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
-    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
     "apps/web/app/(protected)/inventory/inventory-value-panel.tsx",
     "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   ];
@@ -364,15 +363,6 @@ test("Owner page-header actions use named button sizes", () => {
     );
   }
 
-  const grnCreate = read(
-    "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-  );
-  const grnActionsStart = grnCreate.indexOf("actions={");
-  const grnActionBlock = grnCreate.slice(
-    grnActionsStart,
-    grnActionsStart + 600,
-  );
-  assert.doesNotMatch(grnActionBlock, /\bh-8\b/);
 });
 
 test("mobile sidebar closes after link navigation", () => {

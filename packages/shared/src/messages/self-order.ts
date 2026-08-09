@@ -159,7 +159,7 @@ export const SELF_ORDER_VI = {
   openBankApp: "Mở ứng dụng",
   chooseBankAppTitle: "Chọn ứng dụng",
   chooseBankAppDescription:
-    "Ứng dụng hỗ trợ sẽ điền sẵn mã QR. Còn lại mở app rồi quét QR trên màn hình này.",
+    "Ứng dụng hỗ trợ sẽ điền sẵn mã QR. Còn lại mở ứng dụng rồi quét QR trên màn hình này.",
   bankAppsLoading: "Đang tải danh sách ứng dụng...",
   bankAppsLoadFailed: "Không tải được danh sách ứng dụng.",
   saveVietQr: "Lưu QR",

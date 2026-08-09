@@ -83,7 +83,6 @@ test("draft cancellation does not infer eligibility from receipt quantities", ()
 
 test("existing GRN drafts always resume on canonical DETAIL", () => {
   const model = read("apps/web/lib/inventory/grn-list-model.ts");
-  const createData = read("apps/web/lib/inventory/grn-create-data.ts");
   const ownerCreateRoute = read(
     "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
   );
@@ -104,11 +103,6 @@ test("existing GRN drafts always resume on canonical DETAIL", () => {
     /const href = `\$\{basePath\}\/\$\{draft\.grnId\}`;/,
   );
   assert.doesNotMatch(branchList, /grnSourceSupplierHref/);
-  assert.match(
-    createData,
-    /if \(draftRow\?\.id\) \{\s*redirect\(`\$\{grnBasePath\}\/\$\{draftRow\.id\}`\);\s*\}/,
-  );
-  assert.doesNotMatch(createData, /fetchGrnDetail|existingDraft/);
   assert.match(ownerCreateRoute, /redirect\("\/inventory\/grn"\)/);
   assert.match(
     branchCreateRoute,
@@ -117,13 +111,14 @@ test("existing GRN drafts always resume on canonical DETAIL", () => {
 });
 
 test("GRN detail derives mutation and supplier-invoice authority", () => {
+  const model = read("apps/web/lib/inventory/grn-detail-model.ts");
   const data = read("apps/web/lib/inventory/grn-detail-data.ts");
   const page = read("apps/web/app/(protected)/inventory/grn/[id]/page.tsx");
   const client = read(
     "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
 
-  assert.match(data, /canManageSupplierInvoice: boolean/);
+  assert.match(model, /canManageSupplierInvoice: boolean/);
   assert.match(data, /PERMISSION_KEYS\.PROCUREMENT_INVOICE_CREATE/);
   assert.match(
     data,

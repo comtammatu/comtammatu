@@ -12,7 +12,6 @@ function readRepo(path: string): string {
 const grnActions = readRepo(
   "apps/web/app/(protected)/inventory/grn-actions.ts",
 );
-const grnCreateData = readRepo("apps/web/lib/inventory/grn-create-data.ts");
 const grnListClient = readRepo(
   "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
 );
@@ -36,10 +35,6 @@ test("GRN drafts are looked up in the selected receiving branch", () => {
   assert.match(
     grnActions,
     /branchId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
-  );
-  assert.match(
-    grnCreateData,
-    /loadActiveGrnDraft\(\{\s*branchId: defaultBranchId,\s*\}\)/,
   );
 
   const loadStart = grnActions.indexOf("export const loadActiveGrnDraft");
@@ -79,8 +74,8 @@ test("GRN free drafts and PO-linked drafts do not share the same unique slot", (
     multiSupplierMigration,
     /ON public\.goods_received_notes \(tenant_id, created_by, branch_id\)/,
   );
-  assert.match(grnListClient, /function detailHref\(row: GrnListRow\)/);
-  assert.match(grnListClient, /grnId: String\(row\.id\)/);
+  assert.match(grnListClient, /useDocumentOverlayUrl/);
+  assert.match(grnListClient, /grnId:\s*row\.id/);
   assert.match(grnListModel, /return `\$\{basePath\}\/\$\{draft\.grnId\}`;/);
   assert.match(grnListModel, /export function grnDraftHref/);
   assert.match(grnListModel, /export function newGrnSupplierHref/);

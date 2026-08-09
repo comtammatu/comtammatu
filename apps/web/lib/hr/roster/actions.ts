@@ -276,30 +276,6 @@ function revalidateRosterPaths(branchId: number | null) {
   }
 }
 
-export const fetchRosterWeek = withAction(
-  {
-    roles: ROSTER_ROLES,
-    schema: weekSchema,
-    permission: PERMISSION_KEYS.HR_ASSIGN_SHIFT,
-    permissionBranchId: (data) => data.branchId,
-    requireBranchScope: true,
-  },
-  async (data, { claims }) => {
-    const scopeError = assertBranchManagerScope(claims, data.branchId);
-    if (scopeError) return { success: false, error: scopeError };
-
-    const payload = await loadRosterWeekData(
-      claims.tenant_id,
-      data.branchId,
-      data.weekStart,
-    );
-    if ("error" in payload) {
-      return { success: false, error: payload.error };
-    }
-    return { success: true, data: payload };
-  },
-);
-
 export const reconcileShiftAssignmentsWeek = withAction(
   {
     roles: ROSTER_ROLES,

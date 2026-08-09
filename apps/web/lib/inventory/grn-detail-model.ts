@@ -6,7 +6,6 @@ import {
 } from "./grn-create-model";
 
 export const GRN_DETAIL_COPY = messages.inventory.grn;
-export const INVENTORY_COMMON_COPY = messages.inventory.common;
 
 export type GrnDetailItem = {
   lineId: number;

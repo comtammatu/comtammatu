@@ -143,15 +143,6 @@ export const selfOrderSubmitActionResponseSchema = z
   })
   .strict();
 
-export const selfOrderRequestActionResponseSchema = z
-  .object({
-    ok: z.literal(true),
-    status: selfOrderRequestStatusSchema,
-    orderId: z.number().int().positive().nullable().optional(),
-    idempotent: z.boolean().optional(),
-  })
-  .strict();
-
 export const selfOrderPaymentActionResponseSchema =
   publicSelfOrderPaymentRequestSchema
     .extend({

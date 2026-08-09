@@ -62,6 +62,10 @@ const FOOD_DELIVERY_VENDOR_SOURCE_PATHS = new Set([
   "docs/runbooks/README.md",
   "docs/runbooks/food-delivery-platform-onboarding.md",
 ]);
+/** Native bank / wallet deeplink scheme paths (EMV QR handoff literals). */
+const PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS = new Set([
+  "apps/web/lib/self-order/bank-app-link.ts",
+]);
 
 const CHECKS = [
   { pattern: /\bEmployee Portal\b/g, replacement: "Cổng nhân viên" },
@@ -105,7 +109,10 @@ const CHECKS = [
     pattern:
       /\b(Ahamove|GrabFood|ShopeeFood|Baemin|ZaloPay|Zalo ZNS|SpeedSMS)\b/g,
     replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành",
-    allowedPaths: FOOD_DELIVERY_VENDOR_SOURCE_PATHS,
+    allowedPaths: new Set([
+      ...FOOD_DELIVERY_VENDOR_SOURCE_PATHS,
+      ...PAYMENT_VENDOR_DEEPLINK_SOURCE_PATHS,
+    ]),
   },
   { pattern: /\b(QR Self-Order|Advanced Analytics|Delivery dispatch)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },
   { pattern: /\b(Loyalty|Vouchers)\b/g, replacement: "chỉ ghi khi có D0xx/source-of-truth hiện hành" },

@@ -40,21 +40,6 @@ function writeUrl(
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-/** Build a shareable href for deep links (full navigation when pathname differs). */
-export function buildOverlayHref(
-  pathname: string,
-  currentSearch: string | URLSearchParams,
-  patch: DocumentOverlayPatch,
-): string {
-  const base =
-    typeof currentSearch === "string"
-      ? new URLSearchParams(currentSearch)
-      : new URLSearchParams(currentSearch.toString());
-  const next = applyPatch(base, patch);
-  const q = next.toString();
-  return `${pathname}${q ? `?${q}` : ""}`;
-}
-
 function snapshotKeys(
   params: URLSearchParams,
   keys: readonly string[],
