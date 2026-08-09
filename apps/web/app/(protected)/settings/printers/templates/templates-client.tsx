@@ -21,7 +21,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
   ItemActions,

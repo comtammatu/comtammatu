@@ -20,7 +20,7 @@ import {
 import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime, getVNMinutesOfDay } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";

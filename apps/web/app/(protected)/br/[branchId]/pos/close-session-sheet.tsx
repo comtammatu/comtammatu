@@ -26,9 +26,9 @@ import { Progress } from "@comtammatu/ui/components/progress";
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppSection } from "@/components/surface";
 import { CircleCheck as IconCircleCheck } from "lucide-react";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
+import { StationSection } from "@/components/surface";
 import { closePosSession } from "./actions";
 import {
   DenominationInput,
@@ -223,7 +223,7 @@ export function CloseSessionSheet({
                   </Button>
                 </div>
                 {countMode === "total" ? (
-                  <AppSection
+                  <StationSection
                     size="sm"
                     contentClassName="gap-2"
                     title="Tổng tiền mặt đếm được"
@@ -243,7 +243,7 @@ export function CloseSessionSheet({
                       Nhanh nhất: nhập một tổng. Chuyển “Theo mệnh giá” nếu cần
                       phân loại từng tờ để kiểm toán.
                     </p>
-                  </AppSection>
+                  </StationSection>
                 ) : (
                   <DenominationInput
                     counts={counts}
@@ -276,7 +276,7 @@ export function CloseSessionSheet({
 
             {step === "reconcile" && summary && (
               <div className="flex flex-col gap-4">
-                <AppSection size="sm" contentClassName="gap-3 text-base">
+                <StationSection size="sm" contentClassName="gap-3 text-base">
                   <>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
@@ -317,7 +317,7 @@ export function CloseSessionSheet({
                       </span>
                     </div>
                   </>
-                </AppSection>
+                </StationSection>
 
                 <Alert
                   className={cn(

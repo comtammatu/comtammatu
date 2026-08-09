@@ -1,23 +1,41 @@
 # UI, UX, Route Surface, And Copy Rules
 
 Read this file before UI, UX, route surface, styling, component, or copy changes.
-It controls agent workflow. Má Tư visual contract, Base UI behavior and route
-workflow have separate owners; do not use one to overrule another concern.
+It controls agent workflow only. The Má Tư Design System SSOT, Base UI behavior,
+and route workflow have separate owners; do not use one to overrule another.
 
 ## Authority
 
 Read in order:
 
-1. `docs/spec/design-system.md` — Má Tư tokens, typography, density, theme,
-   visual state and motion recipes.
+1. `docs/spec/design-system.md` — the Má Tư Design System SSOT: artifact ladder,
+   Naming Standard, Base UI rule, tokens, typography, rhythm, elevation, motion,
+   and Structural Governance.
 2. `docs/spec/page-archetypes.md` — page/workflow composition and UI Advisor Gate.
 3. `docs/ref/screen-context-map.md` — audience, device, route context.
-4. `docs/modules/ui.md` and `packages/ui/src/components/*` — Base behavior,
-   adapters and implementation map.
+4. `docs/modules/ui.md` and `packages/ui/src/components/*` — adapters and the
+   implementation map.
 5. Target route/component and targeted `tasks/regressions.md` rows.
 
-Do not restate exact class strings, typography scales, theme storage, shared-component
-APIs, or page-archetype contracts here. Update their owner when runtime changes.
+Do not restate class strings, typography scales, token values, theme storage,
+shared-component APIs, or page-archetype contracts here. Update their owner when
+runtime changes.
+
+## Non-negotiable System Facts
+
+- One system name: **Má Tư Design System**. One token set, one CSS entry
+  (`packages/ui/src/styles/globals.css`). No second theme product, no version
+  badge, no external design mirror.
+- Base UI is the only headless layer. Only `packages/ui` imports
+  `@base-ui/react`; app code imports `@comtammatu/ui`. Exceptions are the closed
+  list in the SSOT § Base UI Rule — adding one is a contract change.
+- Naming: semantic `--kebab-case` tokens, `kebab-case.tsx` ↔ PascalCase export,
+  adapter prefixes `App*` / `BranchOperator*` / `Employee*`. `Frame` is the inset
+  primitive; `AppListFrame` / `DocumentFormFrame` stay legal `App*` adapters.
+  Forbidden: `Owner*`, `Ops*`, `Ds*`, `Matu*`, importable `*Block`, root
+  `DESIGN.md`.
+- Dual Thesis differs by density and chrome only — never by tokens, fonts, or
+  status vocabulary.
 
 ## Scope And UI Advisor Gate
 

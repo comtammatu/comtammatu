@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 test("root route renders the Owner overview", () => {
   const rootPage = read("apps/web/app/(protected)/page.tsx");
   const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
-  const overview = read("apps/web/app/_components/owner-overview.tsx");
+  const overview = read("apps/web/app/_components/control-surface-overview.tsx");
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const controlSurfaceShell = read(
     "apps/web/app/components/control-surface-shell.tsx",
@@ -19,7 +19,7 @@ test("root route renders the Owner overview", () => {
   assert.doesNotMatch(rootPage, /loadAuthState|ControlSurfaceShell/);
   assert.match(protectedLayout, /loadAuthState/);
   assert.match(protectedLayout, /<ControlSurfaceShell/);
-  assert.match(rootPage, /<OwnerOverview/);
+  assert.match(rootPage, /<ControlSurfaceOverview/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
   assert.equal((overview.match(/headingLevel="h2"/g) ?? []).length, 2);

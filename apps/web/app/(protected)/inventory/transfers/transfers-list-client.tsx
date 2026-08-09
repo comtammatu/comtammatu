@@ -52,7 +52,7 @@ import {
 } from "./transfer-list-model";
 import {
   inventoryListFilterSelectWideClassName,
-} from "../_components/inventory-list-frame";
+} from "../_components/inventory-list-filters";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer };

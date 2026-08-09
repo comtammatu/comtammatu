@@ -14,7 +14,7 @@ import { formatCount } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {

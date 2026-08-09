@@ -70,7 +70,7 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
   inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+} from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,

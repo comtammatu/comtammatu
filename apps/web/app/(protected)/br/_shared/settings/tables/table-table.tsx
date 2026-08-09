@@ -22,7 +22,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   createTableSelfOrderQr,
   deleteTable,

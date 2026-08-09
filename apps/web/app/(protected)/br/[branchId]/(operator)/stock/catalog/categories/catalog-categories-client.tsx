@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { FormDialog, NumberField, TextField } from "@/components/form";
 import { messages } from "@lib/messages";

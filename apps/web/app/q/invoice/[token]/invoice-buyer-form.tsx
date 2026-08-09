@@ -13,7 +13,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { AppSection } from "@/components/surface";
+import { PublicSection } from "@/components/surface";
 import {
   isBusinessTaxCode,
   lookupBusinessTaxCode,
@@ -195,7 +195,7 @@ export function InvoiceBuyerForm({
               : null;
 
   return (
-    <AppSection
+    <PublicSection
       title={invoiceBuyer.sectionTitle}
       description={invoiceBuyer.sectionDescription(formatVNDateTime(expiresAt))}
       icon={<IconReceipt />}
@@ -386,6 +386,6 @@ export function InvoiceBuyerForm({
           {invoiceBuyer.submitAction}
         </Button>
       </form>
-    </AppSection>
+    </PublicSection>
   );
 }

@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction, TransitionStartFunction } from "react";
 import { useRouter } from "next/navigation";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { m, messages } from "@lib/messages";
 import {

@@ -12,7 +12,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { useFormControlSize } from "@/components/form/control-size";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,

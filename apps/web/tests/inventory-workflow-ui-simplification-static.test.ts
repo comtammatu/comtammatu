@@ -301,7 +301,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     "app/(protected)/inventory/settings/thresholds/page.tsx",
   );
   const frame = read(
-    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+    "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
 
   assert.match(
@@ -344,14 +344,15 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     stock,
     /isFirstLoadEmpty \?[\s\S]{0,40}firstLoadEmptyState[\s\S]{0,40}<DataTable/,
   );
-  assert.match(frame, /<AppListFrame \{\.\.\.props\}>/);
+  assert.match(frame, /inventoryListFilterSelectClassName = "w-44 shrink-0"/);
+  assert.doesNotMatch(frame, /function InventoryListFrame|AppListFrame/);
   assert.doesNotMatch(purchaseOrders, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /recipes\.length === 0/);
 });
 
 test("AppToolbar inline shares card surface without muted fill", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-toolbar.tsx");
   assert.match(
     surface,
     /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-2 overflow-visible border-b border-border px-3 py-2"/,
@@ -395,9 +396,14 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
 
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
   const select = read("../../packages/ui/src/components/select.tsx");
-  const surface = read("app/components/surface.tsx");
+  const surface = [
+    "app/components/surface/app-list-frame.tsx",
+    "app/components/surface/app-toolbar.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
   const frame = read(
-    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+    "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
   const dataTable = read("app/components/data-table/data-table.tsx");
   const stock = read("app/(protected)/inventory/stock/stock-client.tsx");

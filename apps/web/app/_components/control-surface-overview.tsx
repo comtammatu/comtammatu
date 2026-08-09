@@ -23,16 +23,16 @@ import {
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 
-type OwnerModuleLink = {
+type ControlSurfaceModuleLink = {
   href: string;
   title: string;
   description: string;
   icon: LucideIcon;
 };
 
-const copy = messages.owner.dashboard;
+const copy = messages.controlSurface.dashboard;
 
-const operationsModules: OwnerModuleLink[] = [
+const operationsModules: ControlSurfaceModuleLink[] = [
   {
     href: MODULE_ACL.finance.path,
     title: MODULE_ACL.finance.label,
@@ -65,7 +65,7 @@ const operationsModules: OwnerModuleLink[] = [
   },
 ];
 
-const foundationModules: OwnerModuleLink[] = [
+const foundationModules: ControlSurfaceModuleLink[] = [
   {
     href: MODULE_ACL.branches.path,
     title: MODULE_ACL.branches.label,
@@ -84,7 +84,7 @@ function ModuleLinks({
   modules,
   className,
 }: {
-  modules: OwnerModuleLink[];
+  modules: ControlSurfaceModuleLink[];
   className?: string;
 }) {
   return (
@@ -122,7 +122,7 @@ function ModuleLinks({
   );
 }
 
-export function OwnerOverview() {
+export function ControlSurfaceOverview() {
   return (
     <AppPage density="compact" width="wide">
       <AppPageHeader

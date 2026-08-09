@@ -43,7 +43,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Item,
   ItemContent,

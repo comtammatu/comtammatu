@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Label } from "@comtammatu/ui/components/label";
 import { FormattedNumberInput } from "@/components/form";
-import { AppSection } from "@/components/surface";
+import { StationSection } from "@/components/surface";
 
 const DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000,
@@ -50,7 +50,7 @@ export function DenominationInput({
   const total = sumDenominations(counts);
 
   return (
-    <AppSection
+    <StationSection
       size="sm"
       title="Đếm tiền mặt theo mệnh giá"
       headerHint="Enter để sang dòng kế"
@@ -102,6 +102,6 @@ export function DenominationInput({
           );
         })}
       </>
-    </AppSection>
+    </StationSection>
   );
 }

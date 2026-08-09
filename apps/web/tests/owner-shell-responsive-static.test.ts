@@ -46,7 +46,10 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
     source,
     /<Avatar>[\s\S]*?bg-primary font-semibold text-primary-foreground/,
   );
-  assert.match(source, /<nav aria-label=\{ownerCopy\.nav\.ariaLabel\}>/);
+  assert.match(
+    source,
+    /<nav aria-label=\{controlSurfaceCopy\.nav\.ariaLabel\}>/,
+  );
   assert.match(
     source,
     /data-active:bg-primary data-active:text-primary-foreground/,
@@ -76,7 +79,7 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     source,
     /flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4/,
   );
-  assert.match(source, /data-owner-shell-scroll=""/);
+  assert.match(source, /data-control-surface-scroll=""/);
   assert.match(source, /showBottomNav \? "pb-24 lg:pb-0" : "pb-3 md:pb-4"/);
   assert.match(source, /<AppShellPaddingBoundary>/);
   assert.match(
@@ -85,7 +88,15 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
     "Owner shell content fills scrollport for docked sticky footers",
   );
 
-  const surface = read("apps/web/app/components/surface.tsx");
+  const surface = [
+    "apps/web/app/components/surface/app-page.tsx",
+    "apps/web/app/components/surface/app-page-header.tsx",
+    "apps/web/app/components/surface/app-sticky-filter-chrome.tsx",
+    "apps/web/app/components/surface/app-list-frame.tsx",
+    "apps/web/app/components/surface/app-toolbar.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
   // Page header scrolls with content — freezing it outside the scrollport
   // reserved empty body chrome and crushed dashboard aesthetics.
   assert.doesNotMatch(
@@ -103,7 +114,7 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.match(surface, /APP_PAGE_STICKY_FILTER_CLASSNAME/);
   assert.match(surface, /APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME/);
   assert.match(surface, /function AppStickyFilterChrome\(/);
-  assert.match(surface, /function AppPageStickyChrome\(/);
+  assert.doesNotMatch(surface, /function AppPageStickyChrome\(/);
   assert.match(surface, /function AppListFrame\([\s\S]*?AppStickyFilterChrome/);
   assert.match(surface, /data-stuck/);
   // Negative top cancels Owner shell pt-3/md:pt-4 so stuck filters flush to
@@ -211,7 +222,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
 
   const filterSlotToolbar = /<AppToolbar\b[\s\S]{0,400}?\b(?:filters|search)=/;
   const stickyToolbar = /<AppToolbar\b[^>]*\bsticky\b|<AppToolbar\s+sticky\b/;
-  const listFrame = /\b(?:AppListFrame|InventoryListFrame)\b/;
+  const listFrame = /\bAppListFrame\b/;
   const toolbarSlot = /\btoolbar=\{/;
 
   for (const abs of files) {
@@ -257,11 +268,11 @@ test("Owner AppPageHeader tabs slot must not embed full AppPageTabs bodies", () 
 test("Owner shell scroll invariant is documented", () => {
   const designSystem = read("docs/spec/design-system.md");
   const uiModule = read("docs/modules/ui.md");
-  assert.match(designSystem, /data-owner-shell-scroll/);
+  assert.match(designSystem, /data-control-surface-scroll/);
   assert.match(designSystem, /AppPageHeader` scrolls with page\s+content/);
-  assert.match(uiModule, /data-owner-shell-scroll/);
+  assert.match(uiModule, /data-control-surface-scroll/);
   assert.match(uiModule, /AppStickyFilterChrome/);
-  assert.match(
+  assert.doesNotMatch(
     uiModule,
     /AppPageStickyChrome.*compatib|compatib.*AppPageStickyChrome|compatibility alias/i,
   );
@@ -376,7 +387,7 @@ test("Owner page-header actions use named button sizes", () => {
 });
 
 test("mobile sidebar closes after link navigation", () => {
-  const source = read("packages/ui/src/components/sidebar.tsx");
+  const source = read("apps/web/app/components/sidebar.tsx");
 
   assert.match(source, /\.closest\("a\[href\]"\)/);
   assert.match(source, /setOpenMobile\(false\)/);

@@ -29,7 +29,7 @@ import {
   FormattedNumberInput,
   MoneyVndInput,
 } from "@/components/form";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,

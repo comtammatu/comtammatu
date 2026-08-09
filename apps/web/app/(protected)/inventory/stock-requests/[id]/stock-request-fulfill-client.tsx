@@ -16,7 +16,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Label } from "@comtammatu/ui/components/label";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Item,
   ItemActions,

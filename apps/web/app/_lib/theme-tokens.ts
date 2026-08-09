@@ -1,16 +1,16 @@
-export type MatuThemeMode = "light" | "night";
+export { THEME_COOKIE_NAME } from "@comtammatu/ui/lib/theme-cookie";
 
-export const MATU_THEME_COOKIE_NAME = "matu-theme";
+export type ThemeMode = "light" | "night";
 
 // Exact sRGB of the `--background` token per theme (packages/ui/src/styles/globals.css).
 // design-token-contrast-static.test.ts asserts the equality.
-export const BROWSER_CHROME_THEME_COLORS: Record<MatuThemeMode, string> = {
+export const BROWSER_CHROME_THEME_COLORS: Record<ThemeMode, string> = {
   light: "#fff6ee",
   night: "#120a06",
 };
 
 export const GLOBAL_ERROR_PALETTE: Record<
-  MatuThemeMode,
+  ThemeMode,
   {
     background: string;
     foreground: string;
@@ -35,8 +35,8 @@ export const GLOBAL_ERROR_PALETTE: Record<
   },
 };
 
-export function resolveMatuThemeMode(
+export function resolveThemeMode(
   value: string | null | undefined,
-): MatuThemeMode | null {
+): ThemeMode | null {
   return value === "light" || value === "night" ? value : null;
 }

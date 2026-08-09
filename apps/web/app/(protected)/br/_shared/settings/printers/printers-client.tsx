@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import { deletePrinter, testPrintPrinter, upsertPrinter } from "./actions";

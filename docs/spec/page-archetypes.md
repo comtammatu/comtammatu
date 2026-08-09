@@ -53,11 +53,11 @@ Decision order:
    `corepack pnpm audit:ui-components --component <block>`. A block is a
    composition recipe, not an import layer; use `none` when the route has
    no repeated block. Then look up the adapters named in the block `use` field
-   (for example `InventoryListFrame`, `DocumentFormFrame`, `BranchOperatorPage`)
+   (for example `AppListFrame`, `DocumentFormFrame`, `BranchOperatorPage`)
    before composing.
 4. Select shared primitives and adapters from `docs/modules/ui.md` § Shared
-   Component Registry. External design output, including Stitch, may advise but
-   cannot select or override the project contract.
+   Component Layer / § App Surface Adapters. External design output may advise
+   but cannot select or override the project contract.
 5. If no exact component fits, compose existing primitives behind a
    route-scoped adapter. If the proposed fallback changes a shared visual role,
    token, or behavior, update `docs/spec/design-system.md` before adding or
@@ -277,8 +277,9 @@ density="compact"` already owns width/padding. Return a bare flex
   target at the rendered viewport. `size="touch"` is the usual primitive recipe;
   another composition is valid when it proves the same target and hierarchy.
 - **R4 — DataTable, not twin trees.** List/table content inside an embedded
-  branch renders through the shared `DataTable` `mobileCardRender` (Rhythm
-  Contract § List Surface contract), never a hand-maintained
+  branch renders through the shared `DataTable` `mobileCardRender`
+  (`design-system.md` § Component Authority → List surface and the table
+  system), never a hand-maintained
   `md:hidden`/`hidden md:block` pair. This is the existing repo-wide
   responsive-composition guard, restated here because an embedded branch is by
   construction always the narrow-column case.
@@ -318,7 +319,8 @@ density="compact"` already owns width/padding. Return a bare flex
 
 **Exemplar:** `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`.
 
-- Skeleton: `DocumentFormFrame` (`apps/web/app/components/surface.tsx:476`) —
+- Skeleton: `DocumentFormFrame`
+  (`apps/web/app/components/surface/document-form-frame.tsx`) —
   header + scrollable body + footer, composing `AppPage`. **Mandatory for new
   DOC-WORKFLOW pages.**
 - Form: RHF + Zod line-array form; line editing goes through the `DataTable`
@@ -418,7 +420,7 @@ badge}`).
 (`?reason=` contract).
 
 - No app chrome (these are Standalone chrome-less surfaces per
-  `design-system.md` § Structural A.4, or pre-context screens that render
+  `design-system.md` § Structural Governance § A.4, or pre-context screens that render
   before any chrome can mount).
 - One decision, one forward action. No secondary navigation.
 

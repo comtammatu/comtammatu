@@ -3,6 +3,9 @@
 // docs/spec/page-archetypes.md. Pure data — the enforcement gate lives in
 // scripts/check-ui-contract.mjs, which imports this map.
 export const PAGE_ARCHETYPES = {
+  // Internal design-system lab: a dev-only catalogue surface, not a product
+  // route. LANDING is the closest archetype (index of sections, no fetch).
+  "apps/web/app/(dev)/ds-lab/page.tsx": "LANDING",
   "apps/web/app/(protected)/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",

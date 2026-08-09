@@ -29,7 +29,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
 - **Web runtime:** Node.js 24.x · Next.js 16 App Router · React 19 · Turbopack
 - **Language and validation:** TypeScript 6 strict · Zod 4
-- **UI:** Tailwind CSS 4 · Com Tam Ma Tu Custom Theme · `@comtammatu/ui`
+- **UI:** Tailwind CSS 4 · Má Tư Design System · `@comtammatu/ui`
 - **Data and auth:** Supabase Cloud (Postgres, PostgREST, Auth, RLS, Realtime, Storage)
 - **PWA:** Serwist service worker and per-branch installable manifests
 - **Infrastructure:** Vercel (`sin1`) · Upstash Redis · GitHub Actions
@@ -129,7 +129,7 @@ corepack pnpm --filter @comtammatu/web guides:capture:list # List guide scenario
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Legacy decision index; no backlog             |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                           |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                     |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Má Tư Design System contract |
 | [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model         |
 | [`docs/ref/setup.md`](docs/ref/setup.md)                       | Minimal local project setup                   |
 | [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor |

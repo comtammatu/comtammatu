@@ -3,6 +3,7 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
+import { ACTIONS_VI, UI_VI } from "@comtammatu/shared/messages";
 
 import { cn } from "../lib/utils";
 import { Button } from "./button";
@@ -35,7 +36,7 @@ function Pagination({
 
   return (
     <nav
-      aria-label="Phân trang"
+      aria-label={UI_VI.paginationNav}
       className={cn("flex flex-wrap items-center gap-1.5", className)}
       {...props}
     >
@@ -45,7 +46,7 @@ function Pagination({
         size="icon-sm"
         onClick={() => goToPage(safePage - 1)}
         disabled={safePage <= 1}
-        aria-label="Trang trước"
+        aria-label={ACTIONS_VI.prevPage}
       >
         <IconChevronLeft className="size-3.5" />
       </Button>
@@ -78,7 +79,7 @@ function Pagination({
         size="icon-sm"
         onClick={() => goToPage(safePage + 1)}
         disabled={safePage >= safeCount}
-        aria-label="Trang sau"
+        aria-label={ACTIONS_VI.nextPage}
       >
         <IconChevronRight className="size-3.5" />
       </Button>

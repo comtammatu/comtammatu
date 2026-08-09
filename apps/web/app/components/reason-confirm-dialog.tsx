@@ -10,9 +10,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./alert-dialog";
-import { Field, FieldGroup, FieldLabel } from "./field";
-import { Textarea } from "./textarea";
+} from "@comtammatu/ui/components/alert-dialog";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 
 interface ReasonConfirmDialogProps {
   open: boolean;

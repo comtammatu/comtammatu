@@ -2,7 +2,7 @@
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import {
   Select,

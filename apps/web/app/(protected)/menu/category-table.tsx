@@ -22,7 +22,7 @@ import {
 import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { getCategoryTypeLabelVi } from "./category-labels";
 import {
   DataTable,

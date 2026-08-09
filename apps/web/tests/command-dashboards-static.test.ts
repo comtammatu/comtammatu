@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
+const ADMIN_COPY = "apps/web/lib/messages/control-surface.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_COCKPIT =
   "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts";

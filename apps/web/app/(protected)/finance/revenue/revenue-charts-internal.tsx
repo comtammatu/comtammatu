@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
   type ChartConfig,
-} from "@comtammatu/ui/components/chart";
+} from "@/components/chart";
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { ChartCard } from "../components/chart-card";

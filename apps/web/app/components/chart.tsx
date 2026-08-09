@@ -4,7 +4,7 @@ import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
 
-import { cn } from "../lib/utils";
+import { cn } from "@comtammatu/ui";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -373,10 +373,8 @@ export {
   ChartStyle,
 };
 
-// Re-export Recharts primitives so consumers in apps/web can compose
-// charts (Line, Bar, Area, Pie...) without adding `recharts` as a
-// direct dependency. Keeps the lib pinned to one version inside
-// packages/ui.
+// Re-export Recharts primitives so route code can compose charts (Line, Bar,
+// Area, Pie...) through this app adapter instead of importing recharts directly.
 export {
   Area,
   AreaChart,

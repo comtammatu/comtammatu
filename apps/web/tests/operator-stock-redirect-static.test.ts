@@ -33,7 +33,7 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
   );
-  const appSurface = read("apps/web/app/components/surface.tsx");
+  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
 
   assert.deepEqual(rawStickyCallSites, []);
   assert.deepEqual(redundantBottomNavPadding, []);
@@ -257,9 +257,8 @@ test("operator stock on-hand list forks Branch presentation over the shared load
     /<div role="list" className="flex flex-col">/,
   );
   assert.match(branchClientSource, /StockTouchRow/);
-  assert.match(branchClientSource, /StockRiskBadge/);
-  assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /isStockReorderRisk/);
+  assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /MultiSelectCombobox/);
   assert.match(branchClientSource, /ToggleGroup/);
   assert.match(branchClientSource, /SheetContent[\s\S]*side="bottom"/);
@@ -356,8 +355,9 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchDetailSource,
-    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|OwnerStockIngredientDetail|embedded/,
+    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|embedded/,
   );
+  assert.doesNotMatch(branchDetailSource, /\bStockIngredientDetail\b/);
   assert.doesNotMatch(branchDetailSource, /\$\{stockBasePath\}\/receive/);
   assert.match(stockPageSource, /loadStockOnHandPageData/);
   assert.match(stockPageSource, /queryBranchId: params\.branchId/);
@@ -367,7 +367,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   );
   assert.match(stockDataSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /loadStockIngredientDetailData/);
-  assert.match(stockDetailPageSource, /OwnerStockIngredientDetail/);
+  assert.match(stockDetailPageSource, /\bStockIngredientDetail\b/);
   assert.match(stockDetailPageSource, /formatVND/);
   assert.doesNotMatch(
     stockDetailPageSource,
@@ -579,7 +579,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   const reportsClient = read(
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
-  const appSurface = read("apps/web/app/components/surface.tsx");
+  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
   const formDialog = read("apps/web/app/components/form/form-dialog.tsx");
   const formCombobox = read("apps/web/app/components/form/combobox.tsx");
   const sharedCombobox = read("packages/ui/src/components/combobox.tsx");
@@ -687,7 +687,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
     /basePath\.startsWith\("\/br\/"\)|OperatorFlowSteps|embedded/,
   );
   assert.match(grnListData, /import "server-only"/);
-  assert.match(grnListClient, /href=\{detailHref\(row\)\}/);
+  assert.match(grnListClient, /onRowClick=\{\(row\) => openDetail\(row\)\}/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
   assert.match(grnDetailClient, /embedded\?: boolean/);

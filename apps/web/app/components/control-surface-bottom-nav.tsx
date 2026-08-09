@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid as IconLayoutGrid } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { useSidebar } from "@comtammatu/ui/components/sidebar";
+import { useSidebar } from "@/components/sidebar";
 import { m, messages } from "@lib/messages";
 import {
   AppBottomNav,
@@ -16,7 +16,7 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 
-const copy = messages.owner.nav;
+const copy = messages.controlSurface.nav;
 const MAX_VISIBLE_ITEMS = 4;
 
 function flattenNavGroups(navGroups: ShellNavGroup[]): ShellNavItem[] {

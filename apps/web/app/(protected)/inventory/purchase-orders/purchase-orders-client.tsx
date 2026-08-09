@@ -17,7 +17,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Item } from "@comtammatu/ui/components/item";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Select,
   SelectContent,

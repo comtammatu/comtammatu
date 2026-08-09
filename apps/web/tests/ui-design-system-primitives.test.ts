@@ -39,9 +39,7 @@ test("Má Tư DS primitive parity files are present in the shared UI package", (
     "packages/ui/src/components/combobox.tsx",
     "packages/ui/src/components/date-picker.tsx",
     "packages/ui/src/components/pagination.tsx",
-    "packages/ui/src/components/resizable.tsx",
     "packages/ui/src/components/slider.tsx",
-    "packages/ui/src/components/tag-input.tsx",
     "packages/ui/src/components/toolbar.tsx",
   ]) {
     assert.equal(exists(path), true, `${path} should exist`);
@@ -78,7 +76,12 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
 });
 
 test("AppSection and AppPageHeader clamp secondary description copy", () => {
-  const surface = read("apps/web/app/components/surface.tsx");
+  const surface = [
+    "apps/web/app/components/surface/app-section.tsx",
+    "apps/web/app/components/surface/app-page-header.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
   const compareChip = read("apps/web/app/components/kpi/compare-chip.tsx");
   const card = read("packages/ui/src/components/card.tsx");
 
@@ -108,9 +111,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const itemSource = read("packages/ui/src/components/item.tsx");
   const accordionSource = read("packages/ui/src/components/accordion.tsx");
   const alertDialogSource = read("packages/ui/src/components/alert-dialog.tsx");
-  const confirmDialogSource = read(
-    "packages/ui/src/components/confirm-dialog.tsx",
-  );
   const avatarSource = read("packages/ui/src/components/avatar.tsx");
   const breadcrumbSource = read("packages/ui/src/components/breadcrumb.tsx");
   const checkboxSource = read("packages/ui/src/components/checkbox.tsx");
@@ -124,12 +124,10 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const popoverSource = read("packages/ui/src/components/popover.tsx");
   const radioGroupSource = read("packages/ui/src/components/radio-group.tsx");
   const selectSource = read("packages/ui/src/components/select.tsx");
-  const sidebarSource = read("packages/ui/src/components/sidebar.tsx");
   const scrollAreaSource = read("packages/ui/src/components/scroll-area.tsx");
   const switchSource = read("packages/ui/src/components/switch.tsx");
   const sheetSource = read("packages/ui/src/components/sheet.tsx");
   const tabsSource = read("packages/ui/src/components/tabs.tsx");
-  const tagInputSource = read("packages/ui/src/components/tag-input.tsx");
   const toggleSource = read("packages/ui/src/components/toggle.tsx");
   const toggleGroupSource = read("packages/ui/src/components/toggle-group.tsx");
   const tooltipSource = read("packages/ui/src/components/tooltip.tsx");
@@ -165,7 +163,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(alertDialogSource, /max-w-\[calc\(100%-2rem\)\]/);
   assert.match(alertDialogSource, /max-h-\[calc\(100dvh-2rem\)\]/);
   assert.match(alertDialogSource, /overscroll-contain/);
-  assert.equal(confirmDialogSource.match(/size="touch"/g)?.length, 2);
   assert.match(avatarSource, /@base-ui\/react\/avatar/);
   assert.doesNotMatch(avatarSource, /radix-ui/);
   assert.match(breadcrumbSource, /@base-ui\/react\/use-render/);
@@ -179,8 +176,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(comboboxSource, /@base-ui\/react\/combobox/);
   assert.match(comboboxSource, /BaseCombobox\.List/);
   assert.doesNotMatch(comboboxSource, /cmdk|radix-ui|\.\/command/);
-  assert.match(tagInputSource, /@base-ui\/react\/combobox/);
-  assert.match(tagInputSource, /BaseCombobox\.Chips/);
   assert.equal(
     exists("packages/ui/src/components/command.tsx"),
     false,
@@ -221,9 +216,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(scrollAreaSource, /ScrollAreaPrimitive\.Viewport/);
   assert.doesNotMatch(scrollAreaSource, /ScrollAreaPrimitive\.Content/);
   assert.doesNotMatch(scrollAreaSource, /radix-ui/);
-  assert.match(sidebarSource, /@base-ui\/react\/use-render/);
-  assert.match(sidebarSource, /useRender\.ComponentProps<"button">/);
-  assert.doesNotMatch(sidebarSource, /radix-ui|Slot|asChild/);
   assert.match(switchSource, /@base-ui\/react\/switch/);
   assert.doesNotMatch(switchSource, /radix-ui/);
   assert.match(sheetSource, /@base-ui\/react\/dialog/);
@@ -257,7 +249,9 @@ test("shared primitives use Base UI behavior without Radix", () => {
 });
 
 test("confirm dialog settles every request exactly once", () => {
-  const source = read("packages/ui/src/components/confirm-dialog.tsx");
+  const source = read("apps/web/app/components/confirm-dialog.tsx");
+
+  assert.equal(source.match(/size="touch"/g)?.length, 2);
 
   // The awaited resolver lives in a ref that is cleared before it is called, so
   // a request can never resolve twice and callers cannot be left pending.
@@ -326,7 +320,6 @@ test("Base floating layers stack above app chrome and Select resolves labels", (
     read("packages/ui/src/components/dropdown-menu.tsx"),
     read("packages/ui/src/components/popover.tsx"),
     read("packages/ui/src/components/select.tsx"),
-    read("packages/ui/src/components/tag-input.tsx"),
     read("packages/ui/src/components/tooltip.tsx"),
   ];
 

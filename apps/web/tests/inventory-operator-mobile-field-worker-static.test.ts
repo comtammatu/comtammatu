@@ -80,7 +80,7 @@ test("transfer receive server action advances valid state machine steps only", (
 test("stocktake list uses styled confirm dialog instead of browser confirm", () => {
   assert.match(
     stocktakeListSource,
-    /@comtammatu\/ui\/components\/confirm-dialog/,
+    /@\/components\/confirm-dialog/,
   );
   assert.match(stocktakeListSource, /const ok = await confirm\(\{/);
   assert.doesNotMatch(stocktakeListSource, /confirm\("/);

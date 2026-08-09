@@ -1,8 +1,9 @@
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { toast, type ExternalToast } from "sonner";
 
 export type NotifyOptions = ExternalToast;
 
-const FALLBACK_ERROR = "Có lỗi xảy ra, vui lòng thử lại";
+const FALLBACK_ERROR = ERRORS_VI.fallback;
 
 export const notify = {
   success(msg: string, opts?: NotifyOptions) {

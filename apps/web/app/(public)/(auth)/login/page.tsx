@@ -1,6 +1,6 @@
 import { BRAND_NAME, BrandLockup, BrandMascot } from "@/components/brand";
 import { LoginForm } from "./login-form";
-import { AppSection } from "@/components/surface";
+import { PublicSection } from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -40,13 +40,13 @@ export default function LoginPage() {
               className="shrink-0 scale-50 drop-shadow-lg"
             />
           </div>
-          <AppSection
+          <PublicSection
             title={ACTIONS_VI.signIn}
             description="Nhập tài khoản nhân viên được cấp để tiếp tục."
             className="bg-card/50 shadow-effect-card-resting backdrop-blur-md transition-[background-color,border-color] border-border/20 hover:border-border/30"
           >
             <LoginForm />
-          </AppSection>
+          </PublicSection>
         </div>
       </section>
     </main>

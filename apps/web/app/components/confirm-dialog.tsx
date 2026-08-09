@@ -11,7 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "./alert-dialog";
+} from "@comtammatu/ui/components/alert-dialog";
 
 export interface ConfirmOptions {
   title: string;

@@ -461,7 +461,9 @@ const formatterGuards = [
       "App UI formats money and counts through shared helpers, not page-local Intl.NumberFormat/toLocaleString formatters.",
     roots: uiRuntimeRoots([".ts", ".tsx"]),
     pattern: /\b(?:new\s+)?Intl\.NumberFormat\b|\.toLocaleString\(/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/components/chart.tsx": 1,
+    },
   },
   {
     id: "vnd-format-ssot",
@@ -470,7 +472,9 @@ const formatterGuards = [
     roots: uiRuntimeRoots([".ts", ".tsx"]),
     pattern:
       /toLocaleString\(\s*(?:"vi-VN"|'vi-VN')|Intl\.NumberFormat\(\s*(?:"vi-VN"|'vi-VN')|\b(?:function|const)\s+formatVND\b/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/components/chart.tsx": 1,
+    },
   },
   {
     id: "percent-format-ssot",
@@ -495,185 +499,8 @@ const formatterGuards = [
   },
 ];
 
-// `.stitch/DESIGN.md` is the agent/Stitch mirror of the runtime token SSoT
-// (`packages/ui/src/styles/globals.css`); the mirror never leads
-// (regressions invariant RUNTIME-TOKEN-LAYERED-OVERRIDE). Expectations are
-// derived from the runtime CSS at check time — never hardcoded a second time.
-const STITCH_GLOBALS_CSS_PATH = "packages/ui/src/styles/globals.css";
-const STITCH_DESIGN_MD_PATH = ".stitch/DESIGN.md";
-
-// The mirror records runtime font variables as their resolved family names.
-const STITCH_FONT_VAR_FAMILIES = {
-  "var(--font-geist-sans)": "Geist",
-  "var(--font-geist-mono)": "Geist Mono",
-};
-
-function extractCssVarFromBlocks(css, blockHeaderRe, varName) {
-  let value = null;
-  for (const header of css.matchAll(blockHeaderRe)) {
-    const open = css.indexOf("{", header.index);
-    if (open === -1) continue;
-    let depth = 0;
-    let close = -1;
-    for (let index = open; index < css.length; index += 1) {
-      const char = css.charAt(index);
-      if (char === "{") depth += 1;
-      if (char === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          close = index;
-          break;
-        }
-      }
-    }
-    if (close === -1) continue;
-    const body = css.slice(open + 1, close);
-    const declaration = new RegExp(
-      `(?<![A-Za-z0-9-])${varName}\\s*:\\s*([^;]+);`,
-    ).exec(body);
-    if (declaration?.[1]) value = declaration[1].trim();
-  }
-  return value;
-}
-
-// Simple indentation/string parsing for the `.stitch/DESIGN.md` frontmatter —
-// returns dotted-path keys ("colors.primary", "typography.page-title.fontFamily").
-function parseStitchDesignFrontmatter(content) {
-  const lines = content.split("\n");
-  if ((lines[0] ?? "").trim() !== "---") return null;
-  let end = -1;
-  for (let index = 1; index < lines.length; index += 1) {
-    if ((lines[index] ?? "").trim() === "---") {
-      end = index;
-      break;
-    }
-  }
-  if (end === -1) return null;
-
-  const fields = new Map();
-  let section = null;
-  let entry = null;
-  for (const rawLine of lines.slice(1, end)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const colon = line.indexOf(":");
-    if (colon === -1) continue;
-    const indent = rawLine.length - rawLine.trimStart().length;
-    const key = line.slice(0, colon).trim();
-    const value = line.slice(colon + 1).trim().replace(/^"(.*)"$/, "$1");
-    if (indent === 0) {
-      section = key;
-      entry = null;
-      if (value) fields.set(key, value);
-    } else if (indent <= 2) {
-      entry = value ? null : key;
-      if (value) fields.set(`${section}.${key}`, value);
-    } else if (entry) {
-      fields.set(`${section}.${entry}.${key}`, value);
-    }
-  }
-  return fields;
-}
-
-function stitchMirrorRuntimeTokenSyncErrors(css, mirrorContent) {
-  const runtimeLightPrimary = extractCssVarFromBlocks(
-    css,
-    /:root\b[^{]*\{/g,
-    "--primary",
-  );
-  const runtimeNightPrimary = extractCssVarFromBlocks(
-    css,
-    /\.dark\s*\{/g,
-    "--primary",
-  );
-  const runtimeFontHeading = extractCssVarFromBlocks(
-    css,
-    /@theme\s+inline\s*\{/g,
-    "--font-heading",
-  );
-  const runtimeHeadingFont =
-    STITCH_FONT_VAR_FAMILIES[runtimeFontHeading] ?? runtimeFontHeading;
-
-  const fields = parseStitchDesignFrontmatter(mirrorContent);
-  if (!fields) {
-    return [
-      `stitch-mirror-runtime-token-sync: ${STITCH_DESIGN_MD_PATH} has no parseable frontmatter; the mirror must carry the runtime tokens.`,
-    ];
-  }
-
-  const pairs = [
-    {
-      mirrorKey: "colors.primary",
-      runtime: runtimeLightPrimary,
-      runtimeLabel: ":root --primary",
-    },
-    {
-      mirrorKey: "colors.night-primary",
-      runtime: runtimeNightPrimary,
-      runtimeLabel: ".dark --primary",
-    },
-    {
-      mirrorKey: "typography.page-title.fontFamily",
-      runtime: runtimeHeadingFont,
-      runtimeLabel: "@theme inline --font-heading",
-    },
-    {
-      mirrorKey: "typography.section-title.fontFamily",
-      runtime: runtimeHeadingFont,
-      runtimeLabel: "@theme inline --font-heading",
-    },
-  ];
-
-  const errors = [];
-  for (const pair of pairs) {
-    if (!pair.runtime) {
-      errors.push(
-        `stitch-mirror-runtime-token-sync: runtime ${STITCH_GLOBALS_CSS_PATH} ${pair.runtimeLabel} is missing; cannot verify the mirror.`,
-      );
-      continue;
-    }
-    const mirrorValue = fields.get(pair.mirrorKey);
-    if (mirrorValue !== pair.runtime) {
-      errors.push(
-        `stitch-mirror-runtime-token-sync: ${pair.mirrorKey} mismatch — runtime ${STITCH_GLOBALS_CSS_PATH} ${pair.runtimeLabel} is "${pair.runtime}" but the ${STITCH_DESIGN_MD_PATH} mirror is "${mirrorValue ?? "(missing)"}"; update the mirror to the runtime value (runtime is SSoT).`,
-      );
-    }
-  }
-  return errors;
-}
-
-const stitchMirrorRuntimeTokenSyncCheck = {
-  id: "stitch-mirror-runtime-token-sync",
-  description:
-    ".stitch/DESIGN.md mirrors the runtime token SSoT in packages/ui/src/styles/globals.css; the runtime values always win.",
-  allowlist: {},
-  custom() {
-    const cssPath = path.join(REPO_ROOT, STITCH_GLOBALS_CSS_PATH);
-    const mirrorPath = path.join(REPO_ROOT, STITCH_DESIGN_MD_PATH);
-    if (!fs.existsSync(cssPath)) {
-      failures.push(
-        `stitch-mirror-runtime-token-sync: ${STITCH_GLOBALS_CSS_PATH} is missing`,
-      );
-      return;
-    }
-    if (!fs.existsSync(mirrorPath)) {
-      failures.push(
-        `stitch-mirror-runtime-token-sync: ${STITCH_DESIGN_MD_PATH} is missing`,
-      );
-      return;
-    }
-    failures.push(
-      ...stitchMirrorRuntimeTokenSyncErrors(
-        fs.readFileSync(cssPath, "utf8"),
-        fs.readFileSync(mirrorPath, "utf8"),
-      ),
-    );
-  },
-};
-
 const checks = [
   rawInputFixedHeightCheck,
-  stitchMirrorRuntimeTokenSyncCheck,
   {
     id: "print-format-ssot",
     description:
@@ -705,6 +532,7 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/pos/order-reads.ts": 1,
       "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 1,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
+      "apps/web/app/components/sidebar.tsx": 1,
     },
   },
   {
@@ -873,7 +701,7 @@ const checks = [
   {
     id: "no-native-dialog",
     description:
-      "Use confirm() from @comtammatu/ui/components/confirm-dialog and Sonner toasts; native window.confirm/alert are forbidden.",
+      "Use confirm() from @/components/confirm-dialog and Sonner toasts; native window.confirm/alert are forbidden.",
     roots: uiRuntimeRoots([".ts", ".tsx"]),
     pattern: /window\.(?:confirm|alert)\(/g,
     allowlist: {},
@@ -1025,12 +853,15 @@ failures.push(
   ),
 );
 
+const RELOCATED_UI_COMPOSITE_ADAPTERS = new Set([
+  "apps/web/app/components/sidebar.tsx",
+]);
+
 if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
   failures.push("legacy-docs: docs/archive must not exist");
 }
 
-// Root DESIGN.md is blocked. Allowed Stitch/agent mirror: `.stitch/DESIGN.md`
-// (seeded from docs/spec/design-system.md; never a second product SSOT).
+// Root DESIGN.md is blocked; visual SSOT is docs/spec/design-system.md.
 const blockedRootContextFiles = new Map([
   ["PRODUCT.md", "use docs/ref/business-context.md"],
   ["DESIGN.md", "use docs/spec/design-system.md"],
@@ -1137,6 +968,7 @@ for (const file of [
   }
   if (
     relativePath.startsWith("apps/web/") &&
+    !RELOCATED_UI_COMPOSITE_ADAPTERS.has(relativePath) &&
     /from\s+["']class-variance-authority["']/.test(content)
   ) {
     failures.push(
@@ -1145,6 +977,7 @@ for (const file of [
   }
   if (
     !relativePath.startsWith("packages/ui/") &&
+    !RELOCATED_UI_COMPOSITE_ADAPTERS.has(relativePath) &&
     /from\s+["']@base-ui\/react(?:\/[^"']*)?["']/.test(content)
   ) {
     failures.push(
@@ -1274,7 +1107,7 @@ const textChecks = [
   },
   {
     id: "app-page-header-eyebrow-contract",
-    file: "apps/web/app/components/surface.tsx",
+    file: "apps/web/app/components/surface/app-page-header.tsx",
     includes: [
       "text-xs font-medium uppercase tracking-wide text-muted-foreground",
     ],
@@ -1301,7 +1134,7 @@ const textChecks = [
   },
   {
     id: "app-section-icon-size-contract",
-    file: "apps/web/app/components/surface.tsx",
+    file: "apps/web/app/components/surface/app-section.tsx",
     includes: ['"inline-flex shrink-0 [&_svg]:size-5"'],
   },
   {
@@ -1359,7 +1192,7 @@ const textChecks = [
   {
     id: "readme-design-system-contract-pointer",
     file: "README.md",
-    includes: ["UI design-system SSOT / Custom Theme contract"],
+    includes: ["UI design-system SSOT / Má Tư Design System contract"],
   },
   {
     id: "theme-baseline-runtime-current",
@@ -1419,7 +1252,7 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<CardContent\b[^\n]*\bclassName=/g,
     allowlist: {
-      "apps/web/app/components/surface.tsx": 1,
+      "apps/web/app/components/surface/app-link-card.tsx": 1,
     },
   },
   {
@@ -1430,8 +1263,11 @@ const perFileCountBudgets = [
     pattern:
       /(?<!drop-)(?<!hover:)(?<!focus:)(?<!focus-visible:)(?<!active:)(?<!data-\[state=open\]:)\bshadow-(?:sm|md|lg|xl|2xl)\b/g,
     allowlist: {
-      "apps/web/app/components/surface.tsx": 2,
+      "apps/web/app/components/surface/app-detail-footer.tsx": 1,
+      "apps/web/app/components/surface/app-sticky-filter-chrome.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 1,
+      "apps/web/app/components/chart.tsx": 1,
+      "apps/web/app/components/sidebar.tsx": 2,
     },
   },
   {
@@ -1458,7 +1294,9 @@ const perFileCountBudgets = [
       "Gap values outside the documented app scale are frozen per file until they are normalized.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/components/sidebar.tsx": 1,
+    },
   },
   {
     id: "inline-chrome-baseline",
@@ -1467,7 +1305,10 @@ const perFileCountBudgets = [
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
       /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*(?<!ring-\S*)\bborder\b)[^'"]*['"]/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/components/chart.tsx": 1,
+      "apps/web/app/components/confirm-dialog.tsx": 1,
+    },
   },
   {
     id: "radius-tier-baseline",
@@ -1542,10 +1383,13 @@ const frozenPrimitiveImportBaselines = [
     component: "card",
     label: "Card",
     replacement:
-      "an app card role: AppSection, AppLinkCard, KpiCard for metrics only, InteractiveCard, OperationalBoardCard, or a route-scoped adapter",
+      "an app card role: AppSection, StationSection, PublicSection, AppLinkCard, KpiCard for metrics only, InteractiveCard, OperationalBoardCard, or a route-scoped adapter",
     allowlist: {
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
-      "apps/web/app/components/surface.tsx": 1,
+      "apps/web/app/components/surface/app-link-card.tsx": 1,
+      "apps/web/app/components/surface/app-section.tsx": 1,
+      "apps/web/app/components/surface/app-toolbar.tsx": 1,
+      "apps/web/app/components/surface/operational.tsx": 1,
     },
   },
   {
@@ -1575,7 +1419,10 @@ const frozenPrimitiveImportBaselines = [
     label: "AlertDialog",
     replacement:
       "confirm(), FormDialog with reason input, or an approved destructive flow",
-    allowlist: {},
+    allowlist: {
+      "apps/web/app/components/confirm-dialog.tsx": 1,
+      "apps/web/app/components/reason-confirm-dialog.tsx": 1,
+    },
   },
 ];
 
@@ -1797,105 +1644,6 @@ function runLegacyDebtBudgetSelfTest() {
   ) {
     throw new Error(
       "historical SQL snapshot filter self-test did not enforce scope",
-    );
-  }
-
-  const stitchSyncRuntimeCss = [
-    ":root,",
-    ".theme-light-only {",
-    "  --primary: oklch(0.52 0.18 33);",
-    "}",
-    ".dark {",
-    "  --primary: oklch(0.63 0.155 36);",
-    "}",
-    "@theme inline {",
-    "  --font-heading: var(--font-geist-sans);",
-    "}",
-  ].join("\n");
-  const stitchSyncMirror = [
-    "---",
-    "name: Fixture",
-    "colors:",
-    '  primary: "oklch(0.52 0.18 33)"',
-    '  night-primary: "oklch(0.63 0.155 36)"',
-    "typography:",
-    "  page-title:",
-    "    fontFamily: Geist",
-    "  section-title:",
-    "    fontFamily: Geist",
-    "---",
-  ].join("\n");
-
-  // (1) match — mirror equals the runtime tokens.
-  if (
-    stitchMirrorRuntimeTokenSyncErrors(stitchSyncRuntimeCss, stitchSyncMirror)
-      .length !== 0
-  ) {
-    throw new Error(
-      "stitch mirror sync self-test did not accept a matching mirror",
-    );
-  }
-
-  // (2) light primary mismatch.
-  const stitchSyncLightMismatch = stitchMirrorRuntimeTokenSyncErrors(
-    stitchSyncRuntimeCss,
-    stitchSyncMirror.replace(
-      'primary: "oklch(0.52 0.18 33)"',
-      'primary: "oklch(0.56 0.18 33)"',
-    ),
-  );
-  if (
-    stitchSyncLightMismatch.length !== 1 ||
-    !stitchSyncLightMismatch[0]?.includes("colors.primary")
-  ) {
-    throw new Error(
-      "stitch mirror sync self-test did not catch the light primary mismatch",
-    );
-  }
-
-  // (3) night primary mismatch.
-  const stitchSyncNightMismatch = stitchMirrorRuntimeTokenSyncErrors(
-    stitchSyncRuntimeCss,
-    stitchSyncMirror.replace(
-      'night-primary: "oklch(0.63 0.155 36)"',
-      'night-primary: "oklch(0.5 0.155 36)"',
-    ),
-  );
-  if (
-    stitchSyncNightMismatch.length !== 1 ||
-    !stitchSyncNightMismatch[0]?.includes("colors.night-primary")
-  ) {
-    throw new Error(
-      "stitch mirror sync self-test did not catch the night primary mismatch",
-    );
-  }
-
-  // (4) heading font mismatch.
-  const stitchSyncFontMismatch = stitchMirrorRuntimeTokenSyncErrors(
-    stitchSyncRuntimeCss,
-    stitchSyncMirror.replace("fontFamily: Geist", "fontFamily: Be Vietnam Pro"),
-  );
-  if (
-    stitchSyncFontMismatch.length !== 1 ||
-    !stitchSyncFontMismatch[0]?.includes("typography.page-title.fontFamily")
-  ) {
-    throw new Error(
-      "stitch mirror sync self-test did not catch the heading font mismatch",
-    );
-  }
-
-  // (5) missing mirror field fails closed.
-  const stitchSyncMissingField = stitchMirrorRuntimeTokenSyncErrors(
-    stitchSyncRuntimeCss,
-    stitchSyncMirror.replace('  night-primary: "oklch(0.63 0.155 36)"\n', ""),
-  );
-  if (
-    stitchSyncMissingField.length !== 1 ||
-    !stitchSyncMissingField[0]?.includes("colors.night-primary") ||
-    !stitchSyncMissingField[0]?.includes("(missing)")
-  ) {
-    throw new Error(
-      "stitch mirror sync self-test did not fail closed on the missing field",
     );
   }
 
@@ -2386,6 +2134,7 @@ const BUTTON_HEIGHT_TOKEN =
   /\b(?:h-(?:10|11|12|14|16|20|24|28|32|36|40|44)|min-h-(?:12|14|16|20|24))\b/;
 const NATIVE_INTERACTIVE_EXCEPTIONS = new Set([
   "apps/web/app/global-error.tsx",
+  "apps/web/app/components/sidebar.tsx",
 ]);
 for (const filePath of walkUiRuntimeFiles([".tsx"])) {
   const normalized = toPosix(filePath);

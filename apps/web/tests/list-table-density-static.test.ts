@@ -22,7 +22,7 @@ test("TableHead uses dense control_surface row height", () => {
 });
 
 test("AppListFrame flushes Card vertical pad so toolbar/table own edge rhythm", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-list-frame.tsx");
   assert.match(
     surface,
     /function AppListFrame\([\s\S]*?hasHeader \? "pb-0" : "py-0"/,
@@ -42,10 +42,9 @@ test("AppListFrame flushes Card vertical pad so toolbar/table own edge rhythm", 
 });
 
 test("stuck LIST filter chrome overrides resting card-corner radius", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-sticky-filter-chrome.tsx");
   const stickyFn = surface.slice(
     surface.indexOf("export function AppStickyFilterChrome"),
-    surface.indexOf("export type AppPageHeaderProps"),
   );
   assert.match(
     stickyFn,
@@ -54,7 +53,7 @@ test("stuck LIST filter chrome overrides resting card-corner radius", () => {
 });
 
 test("inline LIST toolbar and pagination use compact vertical pad", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-toolbar.tsx");
   const pagination = read(
     "app/components/data-table/data-table-pagination.tsx",
   );

@@ -16,7 +16,7 @@ import {
 import { messages } from "@lib/messages";
 import {
   getStaffPermissionLabelVi,
-} from "@lib/messages/owner";
+} from "@lib/messages/control-surface";
 import { PermissionAuditTable } from "./permission-audit-table";
 import {
   PermissionAuditFilters,
@@ -133,8 +133,8 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
-  const copy = messages.owner.staffAudit;
-  const permissionCopy = messages.owner.staffPermissions;
+  const copy = messages.controlSurface.staffAudit;
+  const permissionCopy = messages.controlSurface.staffPermissions;
   const permissionMetaByKey = new Map(
     (permissionKeysResult.data ?? []).map((permission) => [
       permission.key,

@@ -1,7 +1,7 @@
 import { interpolate } from "@comtammatu/shared/messages";
 
 import { auth } from "./auth";
-import { owner } from "./owner";
+import { controlSurface } from "./control-surface";
 import { catalog } from "./catalog";
 import { common } from "./common";
 import { employee } from "./employee";
@@ -20,7 +20,7 @@ import { pos } from "./pos";
 import { settings } from "./settings";
 
 export const messages = {
-  owner,
+  controlSurface,
   catalog,
   common,
   auth,

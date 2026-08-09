@@ -13,7 +13,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { cancelStocktake } from "../actions";
 import { toast } from "@comtammatu/ui/components/sonner";
 
@@ -54,7 +54,7 @@ import {
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import {
   inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+} from "../_components/inventory-list-filters";
 
 export interface StocktakeSessionRow {
   id: number;

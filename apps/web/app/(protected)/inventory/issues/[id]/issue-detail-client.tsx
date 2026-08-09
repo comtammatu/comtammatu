@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {

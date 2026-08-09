@@ -84,8 +84,8 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
             type="search"
             name="q"
             autoComplete="off"
-            aria-label={messages.owner.staffPage.searchPlaceholder}
-            placeholder={messages.owner.staffPage.searchPlaceholder}
+            aria-label={messages.controlSurface.staffPage.searchPlaceholder}
+            placeholder={messages.controlSurface.staffPage.searchPlaceholder}
             value={search}
             onChange={(event) => {
               const next = event.target.value;
@@ -159,7 +159,7 @@ export function StaffFilters({ positionOptions }: StaffFiltersProps) {
             }}
             disabled={isPending}
           >
-            {messages.owner.staffPage.resetFilters}
+            {messages.controlSurface.staffPage.resetFilters}
           </Button>
         ) : null
       }

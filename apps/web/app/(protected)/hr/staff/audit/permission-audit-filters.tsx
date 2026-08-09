@@ -50,7 +50,7 @@ export function PermissionAuditFilters({
   const controlSize = useFormControlSize();
   const optionSize = controlSize === "touch" ? "touch" : "default";
   const actionSize = controlSize === "touch" ? "touch" : "sm";
-  const copy = messages.owner.staffAudit;
+  const copy = messages.controlSurface.staffAudit;
   const filterIdPrefix = useId();
   const actionFilterId = `${filterIdPrefix}-action`;
   const targetFilterId = `${filterIdPrefix}-target`;

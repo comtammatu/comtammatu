@@ -1,24 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { mergeProps } from "@base-ui/react/merge-props";
-import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
+import { mergeProps, useRender } from "@comtammatu/ui/lib/render";
+import { cva, type VariantProps } from "@comtammatu/ui/lib/cva";
 
-import { useIsMobile } from "../hooks/use-mobile";
-import { cn } from "../lib/utils";
-import { Button } from "./button";
-import { Input } from "./input";
-import { Separator } from "./separator";
+import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "./sheet";
-import { Skeleton } from "./skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+} from "@comtammatu/ui/components/sheet";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@comtammatu/ui/components/tooltip";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { PanelLeftClose as IconLayoutSidebarLeftCollapse } from "lucide-react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";

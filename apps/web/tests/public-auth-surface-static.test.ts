@@ -10,7 +10,7 @@ test("public auth surfaces preserve responsive input density and a visible page 
   const loginForm = read("app/(public)/(auth)/login/login-form.tsx");
   const loginPage = read("app/(public)/(auth)/login/page.tsx");
   const accessDenied = read("app/(public)/access-denied/page.tsx");
-  const appSection = read("app/components/surface.tsx");
+  const appSection = read("app/components/surface/app-section.tsx");
   const card = read("../../packages/ui/src/components/card.tsx");
 
   assert.match(loginForm, /useFormControlSize\(\)/);

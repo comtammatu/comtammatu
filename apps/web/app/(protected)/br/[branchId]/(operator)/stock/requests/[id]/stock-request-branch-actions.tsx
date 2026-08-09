@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter } from "@/components/surface";

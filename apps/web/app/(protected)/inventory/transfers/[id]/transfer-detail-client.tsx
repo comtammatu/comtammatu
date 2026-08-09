@@ -13,7 +13,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { QuantityInput } from "@/components/form/domain-number-inputs";

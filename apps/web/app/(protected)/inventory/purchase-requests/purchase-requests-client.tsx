@@ -25,14 +25,14 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Combobox } from "@comtammatu/ui/components/combobox";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Select,
   SelectContent,

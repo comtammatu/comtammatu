@@ -37,7 +37,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-} from "@comtammatu/ui/components/sidebar";
+} from "@/components/sidebar";
 import {
   findActivePrimaryNavItem,
   getNavNotificationCount,
@@ -201,7 +201,7 @@ export function AppShell({
   const pathname = usePathname();
   const isTouchLayout = useIsMobile(1024);
   const copy = messages.common;
-  const ownerCopy = messages.owner;
+  const controlSurfaceCopy = messages.controlSurface;
   const notificationSummary = useNotificationBadges();
   const tier1WithBadges = useMemo(
     () =>
@@ -257,7 +257,7 @@ export function AppShell({
                 {copy.brandShortName}
               </p>
               <p className="mt-0.5 truncate text-xs text-sidebar-foreground/70">
-                {ownerCopy.dashboard.title}
+                {controlSurfaceCopy.dashboard.title}
               </p>
             </div>
           </div>
@@ -269,7 +269,7 @@ export function AppShell({
         <SidebarContent className="px-2 py-3">
           <SidebarGroup className="px-0 py-0">
             <SidebarGroupContent>
-              <nav aria-label={ownerCopy.nav.ariaLabel}>
+              <nav aria-label={controlSurfaceCopy.nav.ariaLabel}>
                 <SidebarMenu className="gap-1">
                   {tier1WithBadges.map((item) => {
                     const Icon = item.icon;
@@ -404,7 +404,7 @@ export function AppShell({
           </div>
         ) : null}
         <div
-          data-owner-shell-scroll=""
+          data-control-surface-scroll=""
           className={cn(
             // flex-col + child flex-1: short DETAIL pages fill the scrollport
             // so AppPage footer (mt-auto) docks to the panel bottom. Desktop

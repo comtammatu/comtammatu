@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { THEME_COOKIE_NAME } from "../lib/theme-cookie";
+
 export type ThemeMode = "light" | "night";
 
 export type ThemeContextValue = {
@@ -20,7 +22,7 @@ export type ThemeContextValue = {
   toggleTheme: () => void;
 };
 
-const STORAGE_KEY = "matu-theme";
+const STORAGE_KEY = THEME_COOKIE_NAME;
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);

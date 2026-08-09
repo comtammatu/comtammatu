@@ -4,7 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -25,7 +25,8 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import { Frame } from "@comtammatu/ui/components/frame";
+import { AppEmptyState } from "@/components/surface";
 import {
   calcItemDiscountAmount,
   calcItemNetSubtotal,
@@ -526,7 +527,7 @@ function CartPaneComponent({
               </p>
             </div>
 
-            <AppSection size="sm">
+            <Frame className="flex flex-col gap-3 p-3">
               <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <SectionLabel>
@@ -594,7 +595,7 @@ function CartPaneComponent({
                     </p>
                   )}
               </div>
-            </AppSection>
+            </Frame>
           </div>
         </>
       )}

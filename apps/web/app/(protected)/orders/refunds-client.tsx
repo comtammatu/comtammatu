@@ -20,8 +20,8 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import {

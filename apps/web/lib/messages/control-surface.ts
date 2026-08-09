@@ -1,7 +1,7 @@
 import { formatCount } from "@comtammatu/shared/format";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
-export const owner = {
+export const controlSurface = {
   dashboard: {
     eyebrow: "Toàn hệ thống",
     title: "Trung tâm quản trị",
@@ -199,7 +199,7 @@ export function getStaffPermissionLabelVi(
   description: string,
 ): string {
   return (
-    owner.staffPermissions.permissionLabels[key] ??
+    controlSurface.staffPermissions.permissionLabels[key] ??
     (/[À-ỹĐđ]/u.test(description) ? description : UNKNOWN_LABEL_VI)
   );
 }

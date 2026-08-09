@@ -9,7 +9,7 @@ import { test } from "node:test";
  * Section/callout boxes use AppSection (or Alert/NoteCallout for tinted
  * callouts). Frame remains only as the layout-free inset primitive.
  * Waste approvals stay the ADR 0018 D0 queue exception (AppPage + AppSection
- * decision cards — never InventoryListFrame / DataTable LIST recipe).
+ * decision cards — never AppListFrame / DataTable LIST recipe).
  */
 
 function read(path: string): string {
@@ -53,7 +53,7 @@ test("Wave D waste approvals D0 queue uses AppSection cards, not LIST frame", ()
   );
   assert.doesNotMatch(
     client,
-    /InventoryListFrame|AppListFrame/,
+    /AppListFrame/,
     "waste approvals: ADR D0 exception — not LIST frame",
   );
   assert.doesNotMatch(

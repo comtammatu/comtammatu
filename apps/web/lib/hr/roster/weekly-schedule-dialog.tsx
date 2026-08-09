@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormDialog, SelectField, TextField } from "@/components/form";
 import { messages } from "@lib/messages";

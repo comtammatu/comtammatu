@@ -26,7 +26,7 @@ import { toggleItemActive } from "./actions";
 import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import type { CategoryRow } from "./category-table";
 import {
   DataTable,

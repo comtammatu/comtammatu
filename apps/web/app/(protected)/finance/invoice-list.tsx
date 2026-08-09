@@ -14,7 +14,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   ToggleGroup,

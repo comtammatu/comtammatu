@@ -57,7 +57,7 @@ export function PermissionAuditTable({
 }: {
   rows: PermissionAuditDisplayRow[];
 }) {
-  const copy = messages.owner.staffAudit;
+  const copy = messages.controlSurface.staffAudit;
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const columns: DataTableColumn<PermissionAuditDisplayRow>[] = [
     {

@@ -40,7 +40,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";

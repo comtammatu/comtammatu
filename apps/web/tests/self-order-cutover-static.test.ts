@@ -39,7 +39,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   const cart = read("app/q/[token]/self-order/cart-sheet.tsx");
   const menu = read("app/q/[token]/self-order/menu-panel.tsx");
   const hooks = read("app/q/[token]/self-order/hooks.ts");
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-page.tsx");
 
   assert.match(client, /SELF_ORDER_VI\.tableLabel/);
   assert.match(client, /padded=\{false\}/);

@@ -29,12 +29,12 @@ export function HistoryTab({
   const logs: AuditLogRow[] = entries.map((entry) => {
     const branchLabel =
       entry.branchId === null
-        ? messages.owner.staffPermissions.tenantWide
+        ? messages.controlSurface.staffPermissions.tenantWide
         : (branchNameById.get(entry.branchId) ??
-          messages.owner.staffPermissions.branchFallback(entry.branchId));
+          messages.controlSurface.staffPermissions.branchFallback(entry.branchId));
     return {
       id: entry.id,
-      action: `${messages.owner.staffAudit.actionLabels[entry.action] ?? UNKNOWN_LABEL_VI} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
+      action: `${messages.controlSurface.staffAudit.actionLabels[entry.action] ?? UNKNOWN_LABEL_VI} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
       entityType: "permission",
       entityId: entry.actorUserId,
       userId: entry.actorUserId,
@@ -45,7 +45,7 @@ export function HistoryTab({
 
   return (
     <AppSection
-      title={messages.owner.staffPermissions.historyTitle(entries.length)}
+      title={messages.controlSurface.staffPermissions.historyTitle(entries.length)}
     >
       <AuditHistoryList logs={logs} />
     </AppSection>

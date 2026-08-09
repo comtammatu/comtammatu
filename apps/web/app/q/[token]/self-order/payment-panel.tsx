@@ -27,7 +27,7 @@ import {
   DrawerTrigger,
 } from "@comtammatu/ui/components/drawer";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppSection } from "@/components/surface";
+import { PublicSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import {
   buildVietQrBankAppUrl,
@@ -215,7 +215,7 @@ export function PaymentPanel({
 }: PaymentPanelProps) {
   if (!activeOrder) {
     return (
-      <AppSection
+      <PublicSection
         title={SELF_ORDER_VI.billEmptyTitle}
         description={SELF_ORDER_VI.billEmptyDescription}
         icon={<IconReceipt />}
@@ -224,7 +224,7 @@ export function PaymentPanel({
         <p className="text-sm text-muted-foreground">
           {SELF_ORDER_VI.cartEmpty}
         </p>
-      </AppSection>
+      </PublicSection>
     );
   }
 
@@ -243,7 +243,7 @@ export function PaymentPanel({
         </Alert>
       ) : null}
 
-      <AppSection
+      <PublicSection
         title={SELF_ORDER_VI.paymentTitle}
         description={SELF_ORDER_VI.paymentDescription}
         icon={<IconReceipt />}
@@ -370,7 +370,7 @@ export function PaymentPanel({
             </div>
           )}
         </>
-      </AppSection>
+      </PublicSection>
       {activePaymentRequest ? null : (
         <Button
           type="button"

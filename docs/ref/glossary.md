@@ -210,7 +210,7 @@ Không dùng `Owner` / `Ops` làm tên nửa sản phẩm. Role ACL `owner` ≠ 
 | `definition`         | Nửa **Quản lý hệ thống**: chrome quản trị tenant/site trung tâm qua `ControlSurfaceShell` → `AppShell`: `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback`. Actor theo `role-route-matrix` (Owner đầy đủ; accountant và central roles chỉ vào slice L0 được cấp). Runtime plane alias: `RouteSurface: "owner"`. |
 | `not_this`           | Role ACL `owner`; `station_chrome` (POS/KDS/Runner); nhãn UI `Vận hành` / `Ops surface`; `branch_surface` |
 | `scope`              | cross-module |
-| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; runtime `ControlSurfaceShell` + DOM `data-owner-shell-scroll` |
+| `source_of_truth`    | `docs/spec/design-system.md` § Chrome Archetypes; `docs/modules/ui.md` § control_surface Shell Structure; runtime `ControlSurfaceShell` + DOM `data-control-surface-scroll` |
 | `allowed_variants`   | Long UI: `Quản trị`; docs EN: `control_surface`; alias nội bộ cũ trong git history: Owner surface / Owner control |
 | `forbidden_synonyms` | `Ops surface`, `Vận hành` (làm nhãn plane), `Owner` (làm tên plane), `Văn phòng` |
 

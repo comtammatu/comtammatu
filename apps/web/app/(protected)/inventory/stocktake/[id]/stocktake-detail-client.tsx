@@ -14,7 +14,7 @@ import { formatVNDateTime } from "@comtammatu/shared/time";
 import { formatPercent } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";

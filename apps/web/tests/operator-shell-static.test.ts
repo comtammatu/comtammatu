@@ -211,7 +211,7 @@ test("operator home keeps visible mobile identity while detail pages may compact
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  const surface = read("apps/web/app/components/surface.tsx");
+  const surface = read("apps/web/app/components/surface/app-page-header.tsx");
 
   assert.match(adapter, /hideHeaderOnMobile\?: boolean/);
   assert.match(adapter, /compactOnMobile=\{hideHeaderOnMobile\}/);

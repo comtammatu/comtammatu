@@ -51,7 +51,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   DataTable,

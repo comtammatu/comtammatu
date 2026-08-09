@@ -11,7 +11,7 @@ import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,

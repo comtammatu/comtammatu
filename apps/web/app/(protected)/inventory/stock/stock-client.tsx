@@ -75,7 +75,7 @@ import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
-import { inventoryListFilterSelectClassName } from "../_components/inventory-list-frame";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,

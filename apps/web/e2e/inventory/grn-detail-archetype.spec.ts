@@ -145,7 +145,7 @@ test.describe("GRN list-first document dialog", () => {
 
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
-      await expect(page.locator("[data-owner-shell-scroll]")).toBeVisible();
+      await expect(page.locator("[data-control-surface-scroll]")).toBeVisible();
 
       await page.reload();
       await expect(page.getByRole("dialog")).toBeVisible();

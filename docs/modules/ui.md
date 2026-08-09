@@ -2,11 +2,11 @@
 
 ## Overview
 
-UI của repo là **Má Tư Design System** (Custom Theme runtime) chạy trên
-shared components trong `@comtammatu/ui`. Base UI là
-behavioral primitive layer; lucide, Tailwind và CVA là implementation
-dependencies, không phải visual authority.
-Không còn helper layer hay theme system riêng theo route/surface.
+UI của repo là **Má Tư Design System**, chạy trên shared components trong
+`@comtammatu/ui`. Base UI là headless layer duy nhất; lucide, Tailwind và CVA là
+implementation dependencies, không phải visual authority. Chỉ có một CSS entry
+(`packages/ui/src/styles/globals.css`); không có helper layer hay theme system
+riêng theo route/surface.
 
 File này là implementation guide: cách áp dụng visual contract vào app code,
 forms, keyboard shortcut, overlay, feedback và migration flow. Không dùng file
@@ -20,8 +20,9 @@ Visual change đọc `design-system.md`; behavior/accessibility đọc Base UI v
 shared component implementation;
 workflow đọc archetype và route. Role split:
 
-- `docs/spec/design-system.md`: Má Tư visual authority; owns token, typography,
-  density, brand, states, elevation và motion recipe.
+- `docs/spec/design-system.md`: SSOT của Má Tư Design System; owns artifact
+  ladder, Naming Standard, Base UI rule (kèm exception list), token, typography,
+  density, brand, states, elevation, motion và Structural Governance.
 - `packages/ui/src/components/*`: shared styled components; Base UI behavior và
   accessibility contract được tích hợp ở đây.
 - `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
@@ -87,7 +88,6 @@ dùng các component này qua `@comtammatu/ui`:
 - `button`
 - `accordion`
 - `card`
-- `sidebar`
 - `badge`
 - `table`
 - `dialog`
@@ -98,9 +98,7 @@ dùng các component này qua `@comtammatu/ui`:
 - `combobox`
 - `date-picker`
 - `slider`
-- `tag-input`
 - `pagination`
-- `resizable`
 - `toolbar`
 - `empty` — tất cả empty-state UI (no-data, no-results, error, inline)
 - `field` + `field-group` — form field composition (label, control, error, description)
@@ -116,7 +114,9 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 
 ## App Surface Adapters
 
-`apps/web/app/components/surface.tsx` là adapter layer duy nhất cho các pattern lặp lại ở app level:
+`apps/web/app/components/surface.tsx` là adapter layer duy nhất cho các pattern lặp lại ở app level.
+Import luôn qua `@/components/surface`; file này chỉ re-export, phần triển khai
+nằm trong `apps/web/app/components/surface/*.tsx` (mỗi adapter một file):
 
 - `AppPage` cho content container/width/scroll rhythm.
 - `AppPageHeader` cho page heading, description, badge, action. Description
@@ -139,15 +139,11 @@ spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 - `AppToolbar` đứng trước `DataTable` khi filter, sort, branch, kỳ hoặc action
   là URL/server state của trang. Inline toolbar của `DataTable` chỉ dành cho
   state local của chính bảng; không dựng hai toolbar cho cùng một control.
-- Owner LIST dùng `AppListFrame` (`AppSection` + `contentFlush` + slot
+- control_surface LIST dùng `AppListFrame` (`AppSection` + `contentFlush` + slot
   `toolbar`):
   `AppPage` → `AppPageHeader` → `AppListFrame toolbar={<AppToolbar variant="inline" />}`
-  → `DataTable`. Prefer `AppListFrame` (`AppSection` + `contentFlush` + slot
-  `toolbar`):
-  `AppPage` → `AppPageHeader` → `AppListFrame toolbar={<AppToolbar variant="inline" />}`
-  → `DataTable`. `InventoryListFrame` remains a compatibility alias (re-export cùng
-  recipe + constant độ rộng filter). Tra cứu: `audit:ui-components --component AppListFrame`
-  hoặc `--component InventoryListFrame` / `--component management-list`.
+  → `DataTable`. Tra cứu: `audit:ui-components --component AppListFrame`
+  hoặc `--component management-list`.
   Inline toolbar không tô nền riêng (`bg-muted/*`); cùng bề mặt card với bảng.
   `AppListFrame` untitled flush dọc (`py-0`); titled giữ pad trên header
   và `pb-0` để bảng sát đáy. Toolbar + body nằm trong một cột; cạnh flush
@@ -204,7 +200,6 @@ corepack pnpm audit:ui-components --component Card
 corepack pnpm audit:ui-components --component KpiCard
 corepack pnpm audit:ui-components --component InteractiveCard
 corepack pnpm audit:ui-components --component AppListFrame
-corepack pnpm audit:ui-components --component InventoryListFrame
 corepack pnpm audit:ui-components --component DocumentFormFrame
 corepack pnpm audit:ui-components --component BranchOperatorPage
 corepack pnpm audit:ui-components --component branch-touch-list
@@ -228,8 +223,9 @@ actor/job → archetype → UI block (recipe) → adapter/component → route
 
 - Archetype sở hữu shape và state model của cả page.
 - UI block đặt tên cho một composition cụ thể theo plane, ví dụ
-  `management-list`, `branch-touch-list`, `realtime-board`.
-- Adapter/component là code được import (`AppListFrame`, `InventoryListFrame`,
+  `management-list`, `branch-touch-list`, `realtime-board`, `runner-board`,
+  `pos-board`, `employee-self-service`, `public-transaction`, `public-feedback`.
+- Adapter/component là code được import (`AppListFrame`,
   `DocumentFormFrame`, `BranchOperatorPage`, shared components…).
 - Route gắn data, authority, copy và mutation thật.
 
@@ -243,48 +239,26 @@ hiện có), rồi cập nhật trường `use` của block recipe trỏ vào ad
 nâng recipe thành import layer. Nếu không có block phù hợp, dùng archetype +
 route-scoped composition từ adapter hiện có.
 
-Owner LIST canonical:
+control_surface LIST canonical (Inventory dùng cùng recipe):
 
 ```text
 AppPage → AppPageHeader → AppListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
 ```
 
-Owner Inventory LIST: prefer `AppListFrame`; `InventoryListFrame` is a compatibility alias with the same recipe:
+control_surface DOC-WORKFLOW canonical: `DocumentFormFrame` (+ line `DataTable` /
+form fields). Branch LIST canonical: `BranchOperatorPage` + panel/controls +
+`ItemGroup` (không mang `DocumentFormFrame` / `DataTable` control_surface sang
+branch).
 
-```text
-AppPage → AppPageHeader → AppListFrame toolbar={<AppToolbar variant="inline" />} → DataTable
-```
+## External Design Output
 
-Owner DOC-WORKFLOW canonical: `DocumentFormFrame` (+ line `DataTable` / form
-fields). Branch LIST canonical: `BranchOperatorPage` + panel/controls +
-`ItemGroup` (không mang `DocumentFormFrame` / Owner `DataTable` sang branch).
-
-## Stitch Adapter Workflow
-
-Stitch là sandbox thiết kế và mirror tùy chọn, không phải visual authority.
-File mirror agent/Stitch: **`.stitch/DESIGN.md`** (Má Tư Design System). Root
-`DESIGN.md` bị guard chặn. External stitch-skills (không vào `.agents/skills`
-bundle) theo allowlist trong `docs/agent/rules/skills.md`.
-
-Luồng dùng Stitch:
-
-1. Khóa actor, job, information order, archetype, plane và UI block trong UI
-   Advisor Gate (Product Dual Thesis: Hệ thống vs Vận hành).
-2. Nạp guideline từ visual contract hiện hành / `.stitch/DESIGN.md`; không lấy
-   theme cũ trên Stitch làm nguồn ngược vào repo.
-3. Yêu cầu prototype đúng một screen/state hoặc một bounded flow; dùng dữ liệu
-   giả an toàn, không đưa secrets hay dữ liệu khách hàng/nhân sự/Production.
-4. Review hierarchy, touch target, responsive IA, loading/empty/error/blocked
-   state và accessibility trước khi chấp nhận.
-5. Implement lại bằng adapter/component đã đăng ký. Không copy generated token,
-   font, component API hoặc business behavior vào runtime.
-6. Verify trên browser/runtime; chỉ update contract khi finding thật sự dùng
-   chung.
-
-Khi visual contract đổi, repo đổi trước rồi mới sync mirror Stitch. Khi chỉ có
-Stitch output đổi, runtime và docs không tự động thay đổi.
-
-Cấu hình Google Stitch MCP Server được khai báo tại `.mcp.json` / `.codex/config.toml` thông qua `@_davideast/stitch-mcp` (`npx -y @_davideast/stitch-mcp proxy`).
+Bất kỳ prototype hay design output từ ngoài repo đều là tài liệu tham khảo, không
+phải visual authority và không tạo mirror file riêng. Root `DESIGN.md` bị guard
+chặn. Cách dùng: khóa actor/job/archetype/plane trong UI Advisor Gate trước, chỉ
+lấy prototype để đối chiếu hierarchy, touch target, responsive IA và state
+coverage, rồi implement lại bằng adapter/component đã đăng ký. Không copy token,
+font, component API hoặc business behavior sinh ra bên ngoài vào runtime; chỉ
+update contract khi finding thật sự dùng chung.
 
 ## Branch Operator Landing
 
@@ -305,7 +279,10 @@ control_surface và không gọi trực tiếp vocabulary Employee ở các rout
   hai plane; presentation không được dùng chung nếu control_surface component tạo cảm
   giác desktop thu nhỏ trong Branch. Khi cần tách, Branch route dùng native
   `BranchOperator*` component và giữ control_surface route cho oversight/dense table.
-- POS, KDS, Runner là station apps riêng dưới `/br/[branchId]/*`; không bọc vào
+- POS, KDS, Runner là station apps riêng dưới `/br/[branchId]/*`. Section card
+  trên station dùng `StationSection` (không `AppSection`); inset đơn giản dùng
+  `Frame`. KDS ticket cards dùng `OperationalBoardCard` (`realtime-board`);
+  Runner dùng recipe `runner-board`. Không bọc vào
   Branch home bottom-nav và không dùng control_surface shell.
 
 - landing và màn chi tiết dùng `BranchOperatorPage`, `BranchOperatorPanel`,
@@ -321,7 +298,12 @@ control_surface và không gọi trực tiếp vocabulary Employee ở các rout
 - operator/operations/staff-runtime không import hoặc render control_surface
   chrome; guard `operator-owner-shell-boundary` bắt mọi đường tắt qua
   `AppShell`, `ControlSurfaceShell`, hoặc các tên shell L0 đã gỡ
-  (`OwnerModuleShell` / `FinanceShell` / `InventoryShell`).
+  (`OwnerModuleShell` / `FinanceShell` / `InventoryShell`). Staff-runtime dùng
+  `EmployeePage` / `EmployeePanel` (recipe `employee-self-service`); không
+  import `AppSection` trực tiếp ngoài adapter.
+- Public/guest (`/q`, `/r`, login, access-denied): `AppPage` / `AppEmptyState`
+  được phép; card section dùng `PublicSection` (không `AppSection`). Recipes:
+  `public-transaction`, `public-feedback`, `system-gate`.
 - màn chi tiết giữ một primary action trong panel chính, không đặt CTA vận hành
   vào page header.
 - staff-runtime wrapper chỉ đổi href/scope sang `/br/[branchId]/*`; workflow
@@ -501,7 +483,7 @@ Branch stock workflow áp dụng cùng ranh giới này:
 ## control_surface Shell Structure
 
 `control_surface` chrome (`apps/web/app/components/app-shell.tsx`; code IDs lịch
-sử `ControlSurfaceShell` / `data-owner-shell-scroll`) render một sidebar trong một
+sử `ControlSurfaceShell` / `data-control-surface-scroll`) render một sidebar trong một
 `SidebarProvider`:
 
 - Tab chính = mô-đun L0, single-sourced bởi `resolveControlSurfacePrimaryTabs`.
@@ -527,13 +509,13 @@ riêng.
 Scroll model (inset panel): `SidebarProvider` khóa viewport (`h-svh overflow-hidden`);
 `SidebarInset` giữ khung card cố định (`overflow-hidden`, desktop `max-h` bù
 margin inset); chỉ vùng nội dung trong panel cuộn (`overflow-y-auto
-overscroll-contain`, `data-owner-shell-scroll`). `AppPageHeader` cuộn cùng nội dung
+overscroll-contain`, `data-control-surface-scroll`). `AppPageHeader` cuộn cùng nội dung
 — không sticky/freeze ngoài scrollport (sẽ chiếm chiều cao cố định và tạo khoảng
 trống / cuộn thừa trên dashboard). Filter LIST freeze ở đỉnh shell scrollport qua:
 (1) `AppListFrame` toolbar slot (tự sticky + stuck-state
 shell bleed), hoặc (2) `AppToolbar sticky`, hoặc (3) `AppStickyFilterChrome` /
 `APP_PAGE_STICKY_FILTER_CLASSNAME` cho filter bar tùy
-biến (`AppPageStickyChrome` là compatibility alias của `AppStickyFilterChrome`). Sticky `top` âm hủy pad dọc shell (`pt-3 md:pt-4`) để filter flush mép trên
+biến. Sticky `top` âm hủy pad dọc shell (`pt-3 md:pt-4`) để filter flush mép trên
 panel (tránh hàng list lộ trong khe pad). Khi stuck, filter hủy thêm pad ngang
 shell (`px-3 md:px-4`) để flush mép trái/phải; khi cuộn về đỉnh, trở lại bề mặt
 Card. Không sticky filter nằm trên KPI/dashboard cards (ví dụ Finance
@@ -683,14 +665,17 @@ list RSC does not refetch. Scope keys that change the server dataset
 `router.push` / `router.replace`.
 
 `Popover` never renders a record view or a multi-step workflow. `Drawer` is a
-touch-plane frame, not a second Owner overlay tier.
+touch-plane frame, not a second control_surface overlay tier.
 
 ### AppPage width defaults
 
-Owner management LIST and DETAIL default to `AppPage width="xwide"` (optionally
-`density="compact"`). DOC-WORKFLOW defaults to `width="wide"`. Deviation is
-allowed when the UI Advisor Gate states the reading task that motivates it.
-`AppPage` is nesting-aware — set width once per page.
+control_surface management LIST and DETAIL default to `AppPage width="xwide"`
+(optionally `density="compact"`), recipe `management-list` /
+`management-detail`. DOC-WORKFLOW defaults to `width="wide"`
+(`management-document`). Inventory LIST filter Select widths live in
+`inventory/_components/inventory-list-filters.ts` — not a Frame alias.
+Deviation is allowed when the UI Advisor Gate states the reading task that
+motivates it. `AppPage` is nesting-aware — set width once per page.
 
 ### Audit And Permission Decision
 
@@ -710,7 +695,7 @@ Cho phép:
 Không cho phép:
 
 - helper class kiểu `app-*`
-- custom theme layer
+- theme layer riêng ngoài `globals.css`
 - parallel compatibility layer
 - wrapper override visual contract của shared component
 - module tự tạo lại page/header/section/toolbar/empty/link-card thay vì delegate về `apps/web/app/components/surface.tsx`

@@ -17,7 +17,7 @@ import { messages } from "@lib/messages";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
 import {
   DataTable,
@@ -104,24 +104,24 @@ function StaffActionsMenu({
 
   return (
     <RowActionsMenu
-      label={messages.owner.staffPage.actions}
+      label={messages.controlSurface.staffPage.actions}
       triggerSize={variant === "card" ? "touch" : "icon-lg"}
       triggerClassName={variant === "card" ? "rounded-full" : undefined}
       triggerLabel={
-        variant === "card" ? messages.owner.staffPage.actions : undefined
+        variant === "card" ? messages.controlSurface.staffPage.actions : undefined
       }
       items={[
         {
           key: "edit",
-          label: messages.owner.staffPage.actionEdit,
+          label: messages.controlSurface.staffPage.actionEdit,
           icon: <IconPencil data-icon="inline-start" />,
           onSelect: () => onEdit(member),
         },
         {
           key: isActive ? "deactivate" : "activate",
           label: isActive
-            ? messages.owner.staffPage.actionDeactivate
-            : messages.owner.staffPage.actionActivate,
+            ? messages.controlSurface.staffPage.actionDeactivate
+            : messages.controlSurface.staffPage.actionActivate,
           icon: isActive ? (
             <IconToggleLeft data-icon="inline-start" />
           ) : (
@@ -143,7 +143,7 @@ export function StaffTable({
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
 
   async function handleToggleActive(member: StaffRow) {
     if (member.is_active !== false) {

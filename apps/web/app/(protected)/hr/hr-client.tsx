@@ -76,7 +76,7 @@ export function HrClient({
   const searchParams = useSearchParams();
   const copy = messages.hr.client;
   const workspaceCopy = messages.hr.workspace;
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
   const branchScope = resolveHrBranchScope(initialScope, branches);
   const requestedView = searchParams.get("view");
   const view: PeopleView =

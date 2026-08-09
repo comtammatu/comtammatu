@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import {
   ChartContainer,
   type ChartConfig,
-} from "@comtammatu/ui/components/chart";
+} from "@/components/chart";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";

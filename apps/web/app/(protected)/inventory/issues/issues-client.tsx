@@ -53,7 +53,7 @@ import { formatVND } from "@lib/inventory/format";
 import { tNav } from "../_lib/dictionary";
 import {
   inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+} from "../_components/inventory-list-filters";
 import { createStockIssueDraft } from "../issue-actions";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 

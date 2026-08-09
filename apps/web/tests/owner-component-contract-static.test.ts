@@ -9,7 +9,9 @@ const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
-const SURFACE = "apps/web/app/components/surface.tsx";
+const SURFACE_TOOLBAR = "apps/web/app/components/surface/app-toolbar.tsx";
+const SURFACE_PAGE_HEADER =
+  "apps/web/app/components/surface/app-page-header.tsx";
 const PACKAGE_JSON = "package.json";
 const UI_AUDIT = "scripts/audit-ui-components.mjs";
 const UI_CONTRACT = "scripts/check-ui-contract.mjs";
@@ -140,7 +142,7 @@ function hasUiContractGuard(source: string, guardId: string): boolean {
 
 test("DataTable renders the toolbar contract it exposes", () => {
   const dataTable = read(DATA_TABLE);
-  const surface = read(SURFACE);
+  const surface = read(SURFACE_TOOLBAR);
 
   assert.match(dataTable, /@comtammatu\/ui\/components\/input-group/);
   assert.match(
@@ -183,10 +185,10 @@ test("Input variants own height and InputGroup owns child chrome", () => {
 });
 
 test("shared recovery navigation owns touch targets and focus visibility", () => {
-  const surface = read(SURFACE);
+  const surface = read(SURFACE_PAGE_HEADER);
   const globalError = read(GLOBAL_ERROR);
   const backLinkStart = surface.indexOf("export function AppBackLink");
-  const backLinkEnd = surface.indexOf("type AppSectionTone", backLinkStart);
+  const backLinkEnd = surface.length;
   const backLink = surface.slice(backLinkStart, backLinkEnd);
 
   assert.match(backLink, /<Button/);
@@ -316,10 +318,10 @@ test("UI contract guard protects Má Tư outcomes and the Base UI boundary", () 
     );
   }
 
-  assert.match(designSystem, /High-level shared-component import governance/);
+  assert.match(designSystem, /Machine-owned enforcement and discovery/);
   assert.match(
     designSystem,
-    /Shadcn and Web Interface Guidelines are explicit comparison inputs/,
+    /Shadcn and the Web Interface Guidelines are\s+comparison inputs/,
   );
   assert.match(designSystem, /scripts\/check-ui-contract\.mjs/);
   assert.match(designSystem, /scripts\/ui-component-registry\.mjs/);
@@ -691,7 +693,6 @@ test("UI component registry classifies and explains every shared component and a
     "AppPage",
     "DataTable",
     "DocumentFormFrame",
-    "InventoryListFrame",
     "FormDialog",
     "ReasonConfirmDialog",
     "PwaInstallHelpDialog",
@@ -708,12 +709,6 @@ test("UI component registry classifies and explains every shared component and a
   );
   assert.deepEqual(
     registryModule.findComponentGuidance("KpiCard").map((entry) => entry.layer),
-    ["app-adapter"],
-  );
-  assert.deepEqual(
-    registryModule
-      .findComponentGuidance("InventoryListFrame")
-      .map((entry) => entry.layer),
     ["app-adapter"],
   );
   assert.deepEqual(
@@ -736,7 +731,7 @@ test("UI component registry classifies and explains every shared component and a
   );
   assert.match(
     registryModule.findComponentGuidance("management-list")[0]?.use ?? "",
-    /InventoryListFrame/,
+    /AppListFrame/,
   );
   assert.deepEqual(
     registryModule

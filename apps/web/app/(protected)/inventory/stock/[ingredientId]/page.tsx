@@ -73,7 +73,7 @@ interface StockIngredientDetailPageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
 }
 
-function OwnerStockIngredientDetail({
+function StockIngredientDetail({
   data,
 }: {
   data: StockIngredientDetailData;
@@ -431,7 +431,7 @@ export async function StockIngredientDetailPageContent({
     queryBranchId: params.branchId,
   });
 
-  return <OwnerStockIngredientDetail data={data} />;
+  return <StockIngredientDetail data={data} />;
 }
 
 export default async function StockIngredientDetailPage({

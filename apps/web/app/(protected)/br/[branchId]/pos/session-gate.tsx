@@ -18,7 +18,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppHeaderBrand } from "@/components/app-header";
 import { WholeVndInput } from "@/components/form";
-import { AppSection } from "@/components/surface";
+import { StationSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { BranchRuntimeBackControl } from "../branch-runtime-back-control";
@@ -83,7 +83,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
       />
 
       <div className="mx-auto flex w-full max-w-xl flex-1 items-center">
-        <AppSection
+        <StationSection
           className="w-full"
           title={messages.pos.sessionGate.title}
           badge={{
@@ -144,7 +144,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
               </FieldDescription>
             </Field>
           </FieldGroup>
-        </AppSection>
+        </StationSection>
       </div>
     </div>
   );

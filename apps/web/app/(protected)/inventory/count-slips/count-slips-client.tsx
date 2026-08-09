@@ -11,7 +11,7 @@ import {
   RotateCcw as IconRecount,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,

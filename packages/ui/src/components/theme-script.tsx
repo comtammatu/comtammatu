@@ -1,3 +1,5 @@
+import { THEME_COOKIE_NAME } from "../lib/theme-cookie";
+
 export type ThemeMode = "light" | "night";
 
 type ThemeScriptOptions = {
@@ -6,11 +8,11 @@ type ThemeScriptOptions = {
 };
 
 // Inline pre-hydration script. Resolves the theme before first paint to avoid
-// FOUC. Priority: (1) `matu-theme` cookie override, (2) shift-aware fallback
+// FOUC. Priority: (1) theme cookie override, (2) shift-aware fallback
 // (night for 18:00–06:00 local hour), (3) default. Shift-aware is
 // OS-preference-independent and timezone-stable (see design-system.md).
 export function getThemeScriptHtml(options: ThemeScriptOptions = {}) {
-  const storageKey = options.storageKey ?? "matu-theme";
+  const storageKey = options.storageKey ?? THEME_COOKIE_NAME;
   const defaultTheme: ThemeMode = options.defaultTheme ?? "light";
 
   return (

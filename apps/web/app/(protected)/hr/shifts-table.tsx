@@ -12,7 +12,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   Drawer,
   DrawerContent,

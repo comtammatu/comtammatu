@@ -42,7 +42,7 @@ import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppEmptyState } from "@/components/surface";
 import { RowActionsMenu } from "@/components/row-actions-menu";

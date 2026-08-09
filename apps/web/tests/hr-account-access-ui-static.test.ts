@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { getStaffPermissionLabelVi } from "../lib/messages/owner";
+import { getStaffPermissionLabelVi } from "../lib/messages/control-surface";
 
 function source(relativePath: string): string {
   return readFileSync(relativePath, "utf8");
@@ -22,7 +22,7 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   const permissionsPage = source(
     "app/(protected)/hr/staff/[id]/permissions/page.tsx",
   );
-  const ownerMessages = source("lib/messages/owner.ts");
+  const controlSurfaceMessages = source("lib/messages/control-surface.ts");
 
   assert.match(page, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
   assert.match(hrPage, /loadStaffAccountsData/);
@@ -55,10 +55,10 @@ test("HR account access keeps the approved list and permission hierarchy", () =>
   assert.match(permissionsPage, /auth_role_bindings/);
   assert.match(permissionsPage, /auth_access_roles/);
   assert.match(permissionsPage, /\/hr\?view=accounts/);
-  assert.match(ownerMessages, /"inventory:request_create": "Tạo yêu cầu hàng"/);
-  assert.match(ownerMessages, /inventory_procurement: "Mua hàng & nhập kho"/);
-  assert.match(ownerMessages, /\/\[À-ỹĐđ\]\/u\.test\(description\)/);
-  assert.match(ownerMessages, /permissionStatus:/);
+  assert.match(controlSurfaceMessages, /"inventory:request_create": "Tạo yêu cầu hàng"/);
+  assert.match(controlSurfaceMessages, /inventory_procurement: "Mua hàng & nhập kho"/);
+  assert.match(controlSurfaceMessages, /\/\[À-ỹĐđ\]\/u\.test\(description\)/);
+  assert.match(controlSurfaceMessages, /permissionStatus:/);
   assert.doesNotMatch(permissionsPage, /defaultValue="permissions"/);
 });
 

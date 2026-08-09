@@ -6,7 +6,7 @@ const read = (path: string) =>
   readFileSync(new URL(path, import.meta.url), "utf8");
 
 test("page tab panels stay outside the semantic page header", () => {
-  const surface = read("../app/components/surface.tsx");
+  const surface = read("../app/components/surface/app-page-header.tsx");
 
   assert.match(surface, /<\/header>\s*\{tabs \? <div>\{tabs\}<\/div> : null\}/);
 });
