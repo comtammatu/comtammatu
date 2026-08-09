@@ -45,17 +45,39 @@ Evidence: Branch flag inventory (Production 2026-08-10: only `Nguyễn Hữu Th�
 - [ ] Smoke short transfer receive with `source_variance` and `Nhận thiếu` (`transit_loss`) classification.
 - [ ] Smoke copy-to-new-draft on a rejected stock or cancelled purchase request.
 
-## Retire legacy inventory RPC grants
+## Ship INV-10 suggested editable request quantity
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: inventory/requests
+Exit: Choosing an ingredient on stock-request and purchase-request editors prefills an editable quantity from `max(0, min_stock_level - current_quantity)` (base unit for stock requests; default pack for purchase requests).
+Evidence: `suggested-order-qty.ts`, request/purchase loaders, editor `chooseIngredient` prefill, unit test.
+
+- [ ] Smoke prefill on Branch 3 stock request and one purchase-request editor after login.
+
+## Close INV-12 stocktake reason codes
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/stocktake
+Exit: Stocktake variance lines store constrained `reason_code` (waste enum); complete requires code when adjustment ≠ 0; ADR 0031 accepted direction.
+Evidence: Production apply `20260810022059_stocktake_variance_reason_code.sql` (2026-08-10); catalog `stocktake_lines.reason_code`; `db:types`; stocktake UI dropdown; ADR 0031.
+
+- [ ] Smoke complete-with-variance requiring `reason_code` on Branch or central stocktake.
+
+## Accept INV-9 consolidation design (ADR 0032)
 
 State: blocked
-Kind: release
-Tier: T3
-Lane: inventory/cleanup
-Exit: The `*_legacy` transfer and GRN RPCs and the orphan `consume_stock_for_order*` functions are absent from the Production catalog; generated types show no diff; advisors and repository gates pass.
-Evidence: Production catalog check for the dropped routines, generated-type no-diff, database advisors, and explicit owner-delegated apply evidence.
-Blocker: Owner-only — dropping routines is a Production mutation and needs explicit owner delegation per `docs/agent/rules/database.md`; confirm no caller remains before the drop.
+Kind: qa
+Tier: T2
+Lane: inventory/procurement
+Exit: Owner Accepts or revises ADR 0032 so INV-9 build can start; no consolidation code ships before Accept.
+Evidence: `docs/plan/adr/0032-purchase-demand-consolidation-design.md`; ADR 0029 pointer.
+Blocker: Owner decision on junction naming and short-delivery rule.
 
-- [ ] Confirm zero remaining callers of the `*_legacy` transfer/GRN RPCs and `consume_stock_for_order*`, then drop them and revoke their grants through the owner-operated path.
+- [ ] Owner Accept / revise ADR 0032; only then open an INV-9 implementation outcome.
 
 ## Decide inventory valuation cutover and POS stock flag go-live
 

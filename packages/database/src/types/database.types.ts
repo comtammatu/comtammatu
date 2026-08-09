@@ -9205,6 +9205,7 @@ export type Database = {
           is_final: boolean
           needs_recount: boolean
           offline_created_at: string | null
+          reason_code: string | null
           round_no: number
           session_id: number
           system_quantity: number
@@ -9225,6 +9226,7 @@ export type Database = {
           is_final?: boolean
           needs_recount?: boolean
           offline_created_at?: string | null
+          reason_code?: string | null
           round_no?: number
           session_id: number
           system_quantity: number
@@ -9245,6 +9247,7 @@ export type Database = {
           is_final?: boolean
           needs_recount?: boolean
           offline_created_at?: string | null
+          reason_code?: string | null
           round_no?: number
           session_id?: number
           system_quantity?: number
@@ -12207,11 +12210,6 @@ export type Database = {
         Returns: Json
       }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
-      consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
-      consume_stock_for_order_service: {
-        Args: { p_actor_id?: string; p_order_id: number }
-        Returns: Json
-      }
       copy_shift_assignments_week: {
         Args: {
           p_branch_id: number
@@ -14353,10 +14351,6 @@ export type Database = {
         Args: { p_transfer_id: number }
         Returns: Json
       }
-      stock_transfer_confirm_ship_legacy: {
-        Args: { p_transfer_id: number }
-        Returns: Json
-      }
       stock_transfer_list_branches: {
         Args: never
         Returns: {
@@ -14371,10 +14365,6 @@ export type Database = {
         Returns: Json
       }
       stock_transfer_receive: {
-        Args: { p_items?: Json; p_transfer_id: number }
-        Returns: Json
-      }
-      stock_transfer_receive_legacy: {
         Args: { p_items?: Json; p_transfer_id: number }
         Returns: Json
       }

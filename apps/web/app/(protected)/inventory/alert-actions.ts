@@ -3,6 +3,7 @@
 import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
+import { suggestedOrderQtyBase } from "@lib/inventory/suggested-order-qty";
 import { getAuthContext } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
@@ -72,9 +73,9 @@ export async function fetchReorderAlerts(
         }[];
         min_stock_level: number;
       };
-      const suggestedQty = Math.max(
-        0,
-        ing.min_stock_level - sl.current_quantity,
+      const suggestedQty = suggestedOrderQtyBase(
+        ing.min_stock_level,
+        sl.current_quantity,
       );
 
       return {
