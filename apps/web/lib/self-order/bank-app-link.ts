@@ -9,7 +9,7 @@ export interface VietQrBankApp {
   id: string;
   name: string;
   logoUrl: string | null;
-  /** Catalog hint only — does not mean the app accepts a QR payload today. */
+  /** True when we ship an EMV QR native handoff and/or VietQR catalog marks autofill. */
   autofill: boolean;
   monthlyInstall: number;
 }
@@ -301,11 +301,16 @@ export function parseVietQrBankApps(payload: unknown): VietQrBankApp[] {
       continue;
     }
     seen.add(id);
+    const normalizedId = id.toLowerCase();
     apps.push({
       id,
       name,
       logoUrl: parseBankAppLogoUrl(record.appLogo),
-      autofill: record.autofill === 1 || record.autofill === true,
+      // Prefer our shipped EMV handoff over VietQR's aspirational catalog flag.
+      autofill:
+        Boolean(BANK_QR_EMV[normalizedId]) ||
+        record.autofill === 1 ||
+        record.autofill === true,
       monthlyInstall: readNonNegativeInt(record.monthlyInstall),
     });
   }
@@ -321,8 +326,11 @@ export function parseVietQrBankApps(payload: unknown): VietQrBankApp[] {
     .slice(0, 80);
 }
 
-function buildAndroidIntentUrl(target: BankNativeOpenTarget): string {
-  const path = target.androidPath?.replace(/^\/+/, "") ?? "";
+function buildAndroidIntentUrl(
+  target: BankNativeOpenTarget,
+  pathAndQuery?: string,
+): string {
+  const path = (pathAndQuery ?? target.androidPath ?? "").replace(/^\/+/, "");
   // Match VietQR's harvested Location format exactly (do not URI-encode scheme/package).
   return `intent://${path}#Intent;scheme=${target.androidScheme};package=${target.androidPackage};end`;
 }
@@ -331,21 +339,206 @@ function buildIosOpenUrl(target: BankNativeOpenTarget): string {
   return `${target.iosScheme}://`;
 }
 
-/** MB Bank is the only proven EMV QR payload handoff so far. */
-function buildMbQrEmvUrl(qrData: string): string {
-  const url = new URL("mbbank://applink");
-  url.searchParams.set("targetPage", "QRPay");
-  url.searchParams.set("qrContent", qrData);
-  return url.toString();
+/**
+ * Native EMV QR handoff templates keyed by VietQR catalog `appId`.
+ * Patterns harvested from community bank-launcher registries that pass the
+ * full EMV payload (STK / amount / nội dung) into the bank app — not from
+ * dl.vietqr.io, which strips params and only opens a bare scheme.
+ */
+type BankQrEmvTemplate =
+  | {
+      kind: "applink_qrpay";
+      scheme: string;
+      androidPackage: string;
+      /** Default `QRPay`. VPBank community samples also use `DLPay`. */
+      targetPage?: string;
+    }
+  | {
+      kind: "host_path_qrpay";
+      scheme: string;
+      /** e.g. `host.qrTransfer` for VietinBank iPay. */
+      hostPath: string;
+      androidPackage: string;
+    }
+  | {
+      kind: "path_query";
+      scheme: string;
+      path: string;
+      qrParam: string;
+      androidPackage: string;
+    }
+  | {
+      kind: "zalopay_path";
+      scheme: string;
+      androidPackage: string;
+    };
+
+const BANK_QR_EMV: Readonly<Record<string, BankQrEmvTemplate>> = {
+  // Proven in production (Má Tư Self-Order).
+  mb: {
+    kind: "applink_qrpay",
+    scheme: "mbbank",
+    androidPackage: "com.mbmobile",
+  },
+  // Community-documented applink / QRPay family.
+  icb: {
+    kind: "host_path_qrpay",
+    scheme: "vietinbankipay",
+    hostPath: "host.qrTransfer",
+    androidPackage: "com.vietinbank.ipay",
+  },
+  bidv: {
+    kind: "applink_qrpay",
+    scheme: "dl.bidvsmartbanking.vn",
+    androidPackage: "com.vnpay.bidv",
+  },
+  tcb: {
+    kind: "applink_qrpay",
+    scheme: "tcb",
+    androidPackage: "vn.com.techcombank.bb.app",
+  },
+  vpb: {
+    kind: "applink_qrpay",
+    scheme: "vpbankneo",
+    androidPackage: "com.vnpay.vpbankonline",
+  },
+  cake: {
+    kind: "applink_qrpay",
+    scheme: "cake.vn",
+    androidPackage: "xyz.be.cake",
+  },
+  ocb: {
+    kind: "applink_qrpay",
+    scheme: "newomni-app",
+    androidPackage: "com.ocb.omniextra",
+  },
+  vcb: {
+    kind: "applink_qrpay",
+    scheme: "vietcombankmobile",
+    androidPackage: "com.VCB",
+  },
+  hdb: {
+    kind: "applink_qrpay",
+    scheme: "hdbankmobile",
+    androidPackage: "com.vnpay.hdbank",
+  },
+  lpb: {
+    kind: "applink_qrpay",
+    scheme: "lv24h",
+    androidPackage: "vn.com.lpb.lienviet24h",
+  },
+  abb: {
+    kind: "applink_qrpay",
+    scheme: "abbankmobile",
+    androidPackage: "com.vnpay.abbank",
+  },
+  vab: {
+    kind: "applink_qrpay",
+    scheme: "vabmobilebanking",
+    androidPackage: "phn.com.vn.mb",
+  },
+  wvn: {
+    kind: "applink_qrpay",
+    scheme: "wvbs",
+    androidPackage: "vn.com.woori.smart",
+  },
+  "vib-2": {
+    kind: "applink_qrpay",
+    scheme: "myvib2",
+    androidPackage: "com.vib.myvib2",
+  },
+  vib: {
+    kind: "applink_qrpay",
+    scheme: "myvib",
+    androidPackage: "com.vn.vib.mobileapp",
+  },
+  pvcb: {
+    kind: "applink_qrpay",
+    scheme: "pvcombankapp",
+    androidPackage: "com.vsii.pvcombank",
+  },
+  // Path / query variants (ZaloPay-style or bank-specific hosts).
+  acb: {
+    kind: "path_query",
+    scheme: "acbone",
+    path: "ZaloPay/external/transactions/v1/qrcode",
+    qrParam: "qrCode",
+    androidPackage: "mobile.acb.com.vn",
+  },
+  nab: {
+    kind: "path_query",
+    scheme: "nabqrtransfermoney",
+    path: "ops.namabank.com.vn/",
+    qrParam: "qr_data",
+    androidPackage: "ops.namabank.com.vn",
+  },
+  tpb: {
+    kind: "zalopay_path",
+    scheme: "hydro",
+    androidPackage: "com.tpb.mb.gprsandroid",
+  },
+  eib: {
+    kind: "zalopay_path",
+    scheme: "eximbankmobile",
+    androidPackage: "com.vnpay.eximbankomnimobile",
+  },
+};
+
+function buildQueryString(params: Record<string, string>): string {
+  return new URLSearchParams(params).toString();
+}
+
+function buildEmvHandoffUrl(
+  template: BankQrEmvTemplate,
+  qrData: string,
+  platform: BankAppPlatform,
+): string {
+  switch (template.kind) {
+    case "applink_qrpay": {
+      const query = buildQueryString({
+        targetPage: template.targetPage ?? "QRPay",
+        qrContent: qrData,
+      });
+      if (platform === "android") {
+        return `intent://applink?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
+      }
+      return `${template.scheme}://applink?${query}`;
+    }
+    case "host_path_qrpay": {
+      const query = buildQueryString({
+        targetPage: "QRPay",
+        qrContent: qrData,
+      });
+      if (platform === "android") {
+        return `intent://${template.hostPath}?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
+      }
+      return `${template.scheme}://${template.hostPath}?${query}`;
+    }
+    case "path_query": {
+      const query = buildQueryString({ [template.qrParam]: qrData });
+      const path = template.path.replace(/^\/+/, "");
+      if (platform === "android") {
+        return `intent://${path}?${query}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
+      }
+      return `${template.scheme}://${path}?${query}`;
+    }
+    case "zalopay_path": {
+      const encoded = encodeURIComponent(qrData);
+      if (platform === "android") {
+        return `intent://ZaloPay/${encoded}#Intent;scheme=${template.scheme};package=${template.androidPackage};end`;
+      }
+      return `${template.scheme}://ZaloPay/${encoded}`;
+    }
+  }
 }
 
 export function getBankAppHandoffKind(appId: string): BankAppHandoffKind {
-  return appId.trim().toLowerCase() === "mb" ? "qr_emv" : "open_app";
+  return BANK_QR_EMV[appId.trim().toLowerCase()] ? "qr_emv" : "open_app";
 }
 
 /**
  * Build a bank-app handoff URL.
- * - MB: native `mbbank://applink` with full EMV QR (autofill).
+ * - Known EMV templates: native scheme / Android intent carrying full QR payload.
  * - Other known apps: native scheme / Android intent (open app only).
  * - Unknown appId: VietQR aggregator fallback (open app only).
  */
@@ -376,10 +569,11 @@ export function buildVietQrBankAppUrl(input: {
   }
 
   const normalizedId = appId.toLowerCase();
-  if (normalizedId === "mb") {
-    const qrData = input.qrData?.trim();
-    if (!qrData?.startsWith("000201")) return null;
-    return buildMbQrEmvUrl(qrData);
+  const qrData = input.qrData?.trim() ?? "";
+  const emvTemplate = BANK_QR_EMV[normalizedId];
+  if (emvTemplate) {
+    if (!qrData.startsWith("000201")) return null;
+    return buildEmvHandoffUrl(emvTemplate, qrData, platform);
   }
 
   const native = BANK_NATIVE_OPEN[normalizedId];
