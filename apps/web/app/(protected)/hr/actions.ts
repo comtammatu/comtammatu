@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
+  isOwnerPositionCode,
   requiredBranchKindForPositionCode,
   staffRoleFromPositionCode,
   type StaffRole,
@@ -297,7 +298,16 @@ export async function fetchEmployees(
     return { success: false, error: hrActionCopy.fetchEmployeesFailed };
   }
 
-  return { success: true, data: data ?? [] };
+  // Owner is tenant identity, not an HR-managed employee subject.
+  const employees = (
+    (data ?? []) as Array<{
+      profiles?: {
+        positions?: { code?: string | null } | null;
+      } | null;
+    }>
+  ).filter((row) => !isOwnerPositionCode(row.profiles?.positions?.code));
+
+  return { success: true, data: employees };
 }
 
 // One-step onboarding: create the login account (profile auto-created by the
@@ -313,7 +323,7 @@ export const createEmployeeAccount = withAction(
   },
   async (data, { claims, supabase, user }) => {
     const role = staffRoleFromPositionCode(data.positionCode);
-    if (role === "owner") {
+    if (isOwnerPositionCode(data.positionCode)) {
       return {
         success: false,
         error: "Chức vụ không hợp lệ.",
@@ -599,6 +609,17 @@ export const updateEmployee = withAction(
       return { success: false, error: "Không tìm thấy hồ sơ nhân viên." };
     }
 
+    const currentPositionCode = employee.profiles?.positions?.code ?? null;
+    if (
+      isOwnerPositionCode(currentPositionCode) ||
+      isOwnerPositionCode(data.positionCode)
+    ) {
+      return {
+        success: false,
+        error: "Không có quyền chỉnh sửa chủ sở hữu",
+      };
+    }
+
     const employeeBranchId = employee.profiles?.branch_id ?? null;
     const finalBranchId =
       data.branchId !== undefined ? data.branchId : employeeBranchId;
@@ -630,7 +651,6 @@ export const updateEmployee = withAction(
       data.isActive !== undefined;
 
     if (isProfileModified) {
-      const currentPositionCode = employee.profiles?.positions?.code ?? null;
       const finalPositionCode =
         data.positionCode !== undefined
           ? data.positionCode

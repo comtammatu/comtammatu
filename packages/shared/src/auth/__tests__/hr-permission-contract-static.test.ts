@@ -202,6 +202,31 @@ test("HR branch-manager employee payload stays branch-safe", () => {
   );
 });
 
+test("Company HR excludes Owner from lifecycle list and mutations", () => {
+  const hrActions = read("apps/web/app/(protected)/hr/actions.ts");
+  const staffActions = read("apps/web/app/(protected)/hr/staff/actions.ts");
+  const staffLoader = read(
+    "apps/web/app/(protected)/hr/staff/load-staff-accounts.ts",
+  );
+  const authTypes = read("packages/shared/src/auth/types.ts");
+  const permissionsPage = read(
+    "apps/web/app/(protected)/hr/staff/[id]/permissions/page.tsx",
+  );
+
+  assert.match(authTypes, /export function isOwnerPositionCode/);
+  assert.match(
+    hrActions,
+    /isOwnerPositionCode\(row\.profiles\?\.positions\?\.code\)/,
+  );
+  assert.match(hrActions, /isOwnerPositionCode\(currentPositionCode\)/);
+  assert.match(hrActions, /isOwnerPositionCode\(data\.positionCode\)/);
+  assert.match(staffActions, /isOwnerPositionCode\(position_code\)/);
+  assert.match(staffActions, /isOwnerPositionCode\(targetPosition\?\.code\)/);
+  assert.match(staffLoader, /isOwnerPositionCode\(member\.position_code\)/);
+  assert.match(permissionsPage, /isOwnerPositionCode\(position\?\.code\)/);
+  assert.match(permissionsPage, /notFound\(\)/);
+});
+
 test("Owner HR administration and branch approval authority fail closed below the application ACL", () => {
   const migration = read(
     "supabase/migration-archive/20260718174604_canonical_auth_role_position_cleanup.sql",
@@ -356,12 +381,13 @@ test("auth docs define the HR permission contract layers", () => {
 
   for (const expected of [
     "## HR Permission Contract",
-    "Staff account lifecycle",
+    "Staff lifecycle",
     "Role binding",
-    "Employee record, salary, HĐLĐ",
-    "Shift and task setup",
+    "Employee / salary / HĐLĐ",
+    "Shift / task setup",
     "Payroll",
-    "Branch people and shifts",
+    "Branch people / shifts",
+    "is excluded from HR list/create/update/deactivate",
   ]) {
     assert.ok(
       authDoc.includes(expected) || routeMatrix.includes(expected),

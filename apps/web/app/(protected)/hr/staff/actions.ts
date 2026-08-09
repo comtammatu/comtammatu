@@ -6,8 +6,8 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
+  isOwnerPositionCode,
   requiredBranchKindForPositionCode,
-  staffRoleFromPositionCode,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -163,8 +163,7 @@ export async function createStaff(
   }
 
   const { email, password, full_name, position_code, branch_id } = parsed.data;
-  const role = staffRoleFromPositionCode(position_code);
-  if (role === "owner") {
+  if (isOwnerPositionCode(position_code)) {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
   const effectiveBranchId = branch_id;
@@ -276,8 +275,7 @@ export async function updateStaff(
   }
 
   const { id, full_name, phone, position_code, branch_id } = parsed.data;
-  const role = staffRoleFromPositionCode(position_code);
-  if (role === "owner") {
+  if (isOwnerPositionCode(position_code)) {
     return { success: false, error: "Chức vụ không hợp lệ" };
   }
   const effectiveBranchId = branch_id;
@@ -290,6 +288,23 @@ export async function updateStaff(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  const { data: targetProfile, error: targetError } = await supabase
+    .from("profiles")
+    .select("id, positions(code)")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", id)
+    .maybeSingle();
+  if (targetError || !targetProfile) {
+    return { success: false, error: "Không tìm thấy tài khoản" };
+  }
+  const targetPosition = targetProfile.positions as
+    | { code?: string | null }
+    | null
+    | undefined;
+  if (isOwnerPositionCode(targetPosition?.code)) {
+    return { success: false, error: "Không có quyền chỉnh sửa chủ sở hữu" };
+  }
 
   const siteError = await validatePositionSite(
     supabase,
@@ -331,7 +346,24 @@ export async function toggleStaffActive(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  const { data: targetProfile, error: targetError } = await supabase
+    .from("profiles")
+    .select("id, positions(code)")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", parsedId.data)
+    .maybeSingle();
+  if (targetError || !targetProfile) {
+    return { success: false, error: "Không tìm thấy tài khoản" };
+  }
+  const targetPosition = targetProfile.positions as
+    | { code?: string | null }
+    | null
+    | undefined;
+  if (isOwnerPositionCode(targetPosition?.code)) {
+    return { success: false, error: "Không có quyền chỉnh sửa chủ sở hữu" };
+  }
 
   const { error } = await supabase.rpc("toggle_profile_active", {
     p_target_id: parsedId.data,

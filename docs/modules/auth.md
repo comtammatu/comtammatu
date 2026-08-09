@@ -133,8 +133,8 @@ oversight: `/br/[branchId]/team`, `/br/[branchId]/shift/*`. Company personal:
 
 | HR operation | Route | Gate | Boundary |
 | ------------ | ----- | ---- | -------- |
-| Staff lifecycle | `/hr?view=accounts` | `staff:provision`, `staff:assign_position`, `hr:manage_employee` | Position/workplace ≠ role bindings |
-| Role binding | `/hr/staff/[id]/permissions` | read `auth:binding_read`; write `auth:binding_manage` + AAL2 | Binding + immutable audit |
+| Staff lifecycle | `/hr?view=accounts` | `staff:provision`, `staff:assign_position`, `hr:manage_employee` | Position/workplace ≠ role bindings. `positions.code='owner'` is excluded from HR list/create/update/deactivate — Owner is tenant identity, not an HR-managed subject |
+| Role binding | `/hr/staff/[id]/permissions` | read `auth:binding_read`; write `auth:binding_manage` + AAL2 | Binding + immutable audit. Owner profiles are not an HR binding target on this route |
 | Employee / salary / HĐLĐ | `/hr` | `hr:view_employee`, `hr:view_sensitive_employee`, `hr:manage_employee` | Tenant employee/contract RLS |
 | Attendance / leave | `/hr/attendance` | attendance/leave caps by op | Company scope revalidated server-side |
 | Shift / task setup | `/hr/setup` | `hr:manage_shift_catalog`, `hr:manage_position_tasks` | Global shifts; position defaults + one employee override |

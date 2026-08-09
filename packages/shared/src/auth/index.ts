@@ -13,6 +13,7 @@ export {
   requiredBranchKindForPositionCode,
   requiredOperatorBranchKindForRole,
   staffRoleFromPositionCode,
+  isOwnerPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess } from "./module-acl";
