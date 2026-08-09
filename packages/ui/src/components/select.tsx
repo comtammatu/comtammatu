@@ -139,7 +139,7 @@ function SelectContent({
           data-slot="select-content"
           data-align-trigger={position === "item-aligned"}
           className={cn(
-            "relative z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-effect-popover duration-[var(--motion-fast)] data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95",
+            "relative z-50 max-h-(--available-height) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-effect-popover transition-[opacity,transform] duration-[var(--motion-fast)] ease-[var(--ease-move)] data-[align-trigger=true]:transition-none data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[align-trigger=true]:data-[starting-style]:scale-100 data-[align-trigger=true]:data-[starting-style]:opacity-100 data-[align-trigger=true]:data-[ending-style]:scale-100 data-[align-trigger=true]:data-[ending-style]:opacity-100",
             position === "popper" &&
               "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
             className,

@@ -28,10 +28,10 @@ export const GLOBAL_ERROR_PALETTE: Record<
   },
   night: {
     background: BROWSER_CHROME_THEME_COLORS.night,
-    foreground: "#f5ebd9",
-    muted: "#c9b896",
-    border: "#3a2f24",
-    surface: "#2a2218",
+    foreground: "#f8f1e6",
+    muted: "#d0c1b1",
+    border: "#5c4f42",
+    surface: "#362b25",
   },
 };
 

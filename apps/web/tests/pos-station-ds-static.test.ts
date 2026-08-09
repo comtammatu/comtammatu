@@ -71,4 +71,22 @@ test("StationSection is registered as a station_chrome app adapter", async () =>
     /station_chrome/i,
     "registry need string must scope StationSection to station_chrome",
   );
+  assert.match(
+    guidance[0]?.exemplar ?? "",
+    /\/pos\/session-gate\.tsx$/,
+    "StationSection exemplar must stay the POS session-gate gold path",
+  );
+});
+
+test("pos-board block locks StationSection composition and session-gate exemplar", async () => {
+  const registryModule = await import(
+    "../../../scripts/ui-component-registry.mjs"
+  );
+  const pos = registryModule.findComponentGuidance("pos-board");
+  assert.equal(pos[0]?.layer, "ui-block");
+  assert.deepEqual(pos[0]?.planes ?? [], ["station"]);
+  assert.match(pos[0]?.use ?? "", /StationSection/);
+  assert.match(pos[0]?.forbidden ?? "", /AppSection/);
+  assert.match(pos[0]?.forbidden ?? "", /raw Card/);
+  assert.match(pos[0]?.exemplar ?? "", /\/pos\/session-gate\.tsx$/);
 });

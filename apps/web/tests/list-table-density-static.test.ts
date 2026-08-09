@@ -75,5 +75,5 @@ test("DataTable stack relies on borders, not outer gap-3 chrome", () => {
     dataTable,
     /className=\{cn\("flex flex-col gap-3", className\)\}/,
   );
-  assert.match(dataTable, /flex flex-col gap-2/);
+  assert.match(dataTable, /flex flex-col gap-2 px-3 py-3/);
 });

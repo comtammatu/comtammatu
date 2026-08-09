@@ -17,6 +17,7 @@
 - [Elevation / Shadow](#elevation--shadow)
 - [Component Authority](#component-authority)
 - [Surface Contracts](#surface-contracts)
+- [Layout UI/UX Frame](#layout-uiux-frame)
 - [Structural Governance](#structural-governance)
 - [Loading / Error / Not-found Frame](#loading--error--not-found-frame)
 - [Copy Contract](#copy-contract)
@@ -386,6 +387,7 @@ use which. A module that needs to deviate updates this contract, not one page.
 | Page outer padding | `p-4` default, `p-3` compact | `AppPage` |
 | Card inner | `p-4` default, `p-3` at `size="sm"` | `Card` |
 | LIST flush card | `py-0` (untitled) / `pb-0` (titled); edges `rounded-t-lg` / `rounded-b-lg` | `AppListFrame` (Card stays `overflow-visible` for sticky bleed / Select) |
+| Item-row LIST inset | `px-3 py-3` + `gap-2` between rows | Dual Thesis: table/grid stays flush; Item cards inset under toolbar (`DataTable` mobile stack, or bare `ItemGroup` with the same pad) |
 | Toolbar inner | `px-3 py-2` inline; Card `size="sm"` pad otherwise | `AppToolbar` |
 | Table column header height | `h-8` | `TableHead` |
 | DataTable pagination | `px-3 py-2` | `DataTablePagination` |
@@ -795,12 +797,70 @@ false`). Prefer one clear toolbar per workflow, keep search/filters/counts/bulk
 actions together, and never repeat the same workflow state in header, rail,
 sidebar, gate, and board.
 
+## Layout UI/UX Frame
+
+Agent-operable composition ladder for every new or rebuilt screen. It does not
+replace Product Dual Thesis prefixes, page archetypes, or UI block recipes — it
+orders them. Frame law stays intact: `Frame` is the inset primitive only;
+`AppListFrame` / `DocumentFormFrame` remain legal `App*` adapters.
+
+```text
+1. Shell chrome     → § Structural Governance A (exactly one approved family)
+2. Page rhythm      → AppPage (+ AppPageHeader): width, padding, scroll, density
+3. Section / panel  → plane-correct card region (see Naming Standard prefixes)
+4. Toolbar / footer → AppToolbar · AppListFrame toolbar · AppStickyFilterChrome
+                      · AppDetailFooter · DocumentFormFrame footer slot
+5. Content density  → Dual Thesis density only (same tokens / type / status)
+```
+
+Resolve plane → archetype → block → exemplar before composing (Decision Ladder
+in `docs/agent/rules/ui.md`; Gate in `docs/spec/page-archetypes.md` § 0.1).
+Visible recipes: `/ds-lab` (dev-only). Implementation map + gold paths:
+`docs/modules/ui.md`.
+
+### Page rhythm
+
+- `AppPage` owns outer padding, max-width, section gap, and optional footer
+  dock. Nesting and shell pad ownership: § Structural Governance E.
+- `AppPageHeader` is the page H1 band; it scrolls with content — never a second
+  sticky header competing with shell chrome.
+- Default gaps/pads: § Rhythm Contract A. Dense management uses
+  `density="compact"` (and usually `width="xwide"` on LIST/REPORT); do not invent
+  `*-dense` / `*-tight` utility families (§ Rhythm F).
+
+### IA slots (ordered)
+
+One workflow keeps one ordered slot stack. Desktop may densify; it must not
+reorder or duplicate slots.
+
+| Slot | Owner | Rule |
+| --- | --- | --- |
+| Shell nav | Approved chrome family | Sidebar / header / bottom-nav from nav-config — not route-local |
+| Page header | `AppPageHeader` | One H1; no module-name eyebrow on `control_surface` |
+| Sticky filters | `AppListFrame` toolbar / `AppToolbar sticky` / `AppStickyFilterChrome` | Stick inside shell scrollport only; never above KPI mosaics |
+| Body regions | Section / Panel / board cards | Plane-correct prefix; one primary action per state |
+| Sticky / docked footer | `AppDetailFooter` / `DocumentFormFrame` / `AppPage footer` | Primary stage action lives here on DETAIL/DOC — not in the header |
+
+### Density by plane
+
+| Plane | Density default | Section / list chrome |
+| --- | --- | --- |
+| `control_surface` | Compact + `xwide` on management LIST/REPORT | `AppSection` / `AppListFrame` + `DataTable` |
+| `branch` (operator) | Touch-first comfortable | `BranchOperator*` panels; no `AppListFrame` / `DataTable` on touch queues |
+| `station_chrome` | Board density; full-screen | `StationSection` + `Frame` / `OperationalBoardCard` — no `AppSection` / `AppListFrame` |
+| `public` / system-gate | Comfortable, chrome-less | `PublicSection`; `AppPage` / `AppEmptyState` allowed |
+| `staff` | Narrow task portal | `EmployeePage` / `EmployeePanel` |
+
+Cross-links: Dual Thesis (§ Product Dual Thesis) · chrome families
+(§ Structural Governance A) · archetypes (`page-archetypes.md`) · UI blocks
+(`scripts/ui-component-registry.mjs`) · exemplars (`docs/modules/ui.md`).
+
 ## Structural Governance
 
-Everything above governs how a surface looks; this section governs how it is
-assembled — which chrome shell it mounts, where its route lives, where
-navigation comes from, and who owns page padding. Route IA ownership and role
-gating live in `docs/spec/role-route-matrix.md`; navigation data is
+Everything above governs how a surface looks and how agents compose page
+rhythm; this section governs which chrome shell mounts, where the route lives,
+where navigation comes from, and who owns page padding. Route IA ownership and
+role gating live in `docs/spec/role-route-matrix.md`; navigation data is
 single-sourced in `packages/shared/src/auth/nav-config.ts`.
 
 ### A. Chrome Archetypes (approved families)

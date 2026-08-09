@@ -107,20 +107,31 @@ test("Runner station routes do not import control_surface chrome", () => {
   );
 });
 
-test("realtime-board and runner-board UI blocks stay registered for station", async () => {
+test("realtime-board, runner-board, and pos-board UI blocks stay registered for station", async () => {
   const registryModule = await import(
     "../../../scripts/ui-component-registry.mjs"
   );
   const kds = registryModule.findComponentGuidance("realtime-board");
   const runner = registryModule.findComponentGuidance("runner-board");
+  const pos = registryModule.findComponentGuidance("pos-board");
   assert.equal(kds[0]?.layer, "ui-block");
   assert.equal(runner[0]?.layer, "ui-block");
+  assert.equal(pos[0]?.layer, "ui-block");
   assert.deepEqual(kds[0]?.planes ?? [], ["station"]);
   assert.deepEqual(runner[0]?.planes ?? [], ["station"]);
+  assert.deepEqual(pos[0]?.planes ?? [], ["station"]);
   assert.match(kds[0]?.use ?? "", /OperationalBoardCard/);
   assert.match(runner[0]?.use ?? "", /Runner station chrome/);
+  assert.match(pos[0]?.use ?? "", /StationSection/);
   assert.match(kds[0]?.forbidden ?? "", /AppSection/);
   assert.match(runner[0]?.forbidden ?? "", /AppSection/);
+  assert.match(pos[0]?.forbidden ?? "", /AppSection/);
+  assert.match(kds[0]?.forbidden ?? "", /raw Card/);
+  assert.match(runner[0]?.forbidden ?? "", /raw Card/);
+  assert.match(pos[0]?.forbidden ?? "", /raw Card/);
+  assert.match(kds[0]?.exemplar ?? "", /\/kds\/page\.tsx$/);
+  assert.match(runner[0]?.exemplar ?? "", /\/runner\/page\.tsx$/);
+  assert.match(pos[0]?.exemplar ?? "", /\/pos\/session-gate\.tsx$/);
 });
 
 test("audit route family maps /app/r/ to public-feedback, not runner", () => {

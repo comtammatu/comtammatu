@@ -92,7 +92,7 @@ function TabsContent({
     <TabsPrimitive.Panel
       data-slot="tabs-content"
       className={cn(
-        "mt-4 flex-1 text-xs/relaxed outline-none data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:duration-200",
+        "mt-4 flex-1 text-xs/relaxed outline-none transition-opacity duration-[var(--motion-overlay)] ease-[var(--ease-move)] data-[starting-style]:opacity-0",
         className,
       )}
       {...props}

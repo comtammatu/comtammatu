@@ -115,3 +115,15 @@ on the rebuild branch.
   constants live in `inventory-list-filters.ts` only).
 - Registry `management-list` Dual Thesis: prefer `AppPage xwide/compact` +
   `AppListFrame`; forbid raw Card/Table and resurrected InventoryListFrame.
+
+## P3 execution notes (2026-08-09)
+
+- Document the agent-operable **Layout UI/UX Frame** in
+  `docs/spec/design-system.md`: shell → page → section/panel → toolbar/footer →
+  density, with IA slots and density-by-plane pointers (no parallel DS; Frame
+  law unchanged).
+- Cross-link from Decision Ladder (`docs/agent/rules/ui.md`), Gate
+  (`docs/spec/page-archetypes.md` § 0.1), and `docs/modules/ui.md` exemplar
+  matrix.
+- `/ds-lab` mirrors plane recipes (control_surface LIST chrome, StationSection,
+  PublicSection, density samples); production still 404s.

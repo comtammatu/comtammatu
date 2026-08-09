@@ -20,12 +20,62 @@ Khi lập UI Advisor Gate, tài liệu này sở hữu actor, job, workflow và 
 thông tin; `docs/spec/page-archetypes.md` sở hữu cấu trúc trang, exemplar và
 fallback. Không dùng Screen Context Map để tự tạo layout hoặc primitive mới.
 
+**Product UX spine (lớp mỏng trước khi compose UI):** khóa *gia đình route*
+(actor × việc × plane) ở §1A trước khi chọn archetype/block. Plane và Dual
+Thesis lấy từ `docs/spec/architecture.md` + `docs/spec/design-system.md`; ACL
+từ `packages/shared/src/auth/module-acl.ts` và `docs/spec/role-route-matrix.md`.
+Tài liệu này **không** thay `DESIGN.md`, không nhân bản token/primitive, và
+không invent second design system.
+
+---
+
+## 1A. Product UX spine — gia đình route
+
+Mục đích: agent biết *màn hình thuộc việc gì* trước khi chọn chrome / density /
+archetype. Chỉ dựa Dual Thesis + ACL hiện có — không thêm persona nghiên cứu giả.
+
+### Persona × việc × plane
+
+| Persona (ACL) | Việc chính | Plane |
+| --- | --- | --- |
+| Chủ sở hữu (`owner`) | Oversight L0: tài chính, HR, kho tổng, menu, đơn hàng, settings | `control_surface` |
+| Kế toán (`accountant`) | Slice Finance (+ `/me` cá nhân khi không gắn CN) | `control_surface` (+ employee trên `/me`) |
+| Kho Tổng / Bếp TT | Inventory L0 + stock site trung tâm | `control_surface` + `branch_surface` (site) |
+| Quản lý chi nhánh (`branch_manager`) | Ca CN, đội, kho CN, settings CN, ngoại lệ trong ngày | `branch_surface` |
+| Thu ngân / Bếp / Runner | Bán hàng · chế biến · giao món | `station_chrome` |
+| NV ngoài Branch (Kế toán / Kho / Văn phòng) | Chấm công, lịch, phép, hồ sơ, phiếu lương | employee (`/me/*`) |
+| Khách / hệ thống auth | Self-order, HĐĐT, feedback QR, đăng nhập / từ chối truy cập | `public` |
+
+Owner **không** dùng `/me`. Role ACL `owner` ≠ tên plane; UI gọi nửa L0 là
+**Quản trị** / `control_surface`.
+
+### Chỉ mục gia đình route (parent)
+
+Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được trỏ. Khi compose UI:
+đọc hàng này → khóa plane → mở § chi tiết → rồi `page-archetypes.md` / UI block.
+
+| Gia đình | Actor chính | Việc (job) | Entry → success → recovery | Show / hide (tóm tắt) | Archetype / exemplar |
+| --- | --- | --- | --- | --- | --- |
+| **Inventory** `/inventory/*` (+ stock CN ở Branch) | Owner, Kế toán (PO/GRN), Kho Tổng, Bếp TT; BM trên `/br/…/stock` | Quyết định tồn, chứng từ mua/nhập/SX/DC/kiểm/hao — không dashboard bán hàng | Vào hub/list đúng plane → hoàn thành phiếu (nháp→chốt) → lỗi recoverable qua retry/confirm; lệch tồn qua stocktake/waste | Hiện tồn, trạng thái phiếu, ngoại lệ; ẩn doanh thu POS, lương, giá mua trên mặt Kho (giá thuộc Finance) | Parent §2.5–2.6; LIST/DOC `management-list` / `DocumentFormFrame`; Branch touch `branch-touch-list`. Exemplar GRN: `/inventory/grn/[id]`; stock home CN: `/br/[branchId]/stock` |
+| **Finance** `/finance/*` | Owner, Kế toán | Kết quả KD theo kỳ, AP/NCC, chi phí, ngân hàng, chỉ tiêu | Chọn kỳ/phạm vi → đọc công thức / xử lý ngoại lệ → drill `/revenue` `/expenses` `/bank-transactions` `/supplier-invoices` `/targets`; thiếu coverage → không bịa số | Hiện KPI công thức, tiền mặt, AP; ẩn POS/KDS, bảng công, tạo order | Parent §2.9 + §2.7; DASHBOARD `/finance`; REPORT exemplar `finance/revenue/page.tsx`; LIST AP §2.7 |
+| **HR** `/hr/*` | Owner (admin HR L0) | Hồ sơ · thời gian · lương · quy tắc · phân quyền | `/hr` strip việc cần xử lý → tab/profile → attendance/payroll/setup; blocker preflight trước khi chốt lương | Hiện hồ sơ/công/lương tiếng Việt; ẩn KPI bán hàng/kho, raw `pay_basis` | Parent §2.8–2.8d; LIST + SETTINGS-PANEL. Exemplar hồ sơ: `/hr` client |
+| **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4 / §2.4A; LANDING hub + DASHBOARD command. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; dashboard: `…/dashboard/page.tsx` |
+| **Station** POS / KDS / Runner | Cashier / chef / runner (+ BM hỗ trợ) | Một việc realtime: bán · bump · served | Mở station → queue/cart sống → success bump/pay/serve → recall/retry khi lỡ | Hiện món/bàn/thời gian; ẩn giá (KDS/Runner), lương, tồn kho, báo cáo tháng | Parent §2.1–2.3; BOARD + blocks `pos-board` / `realtime-board` / `runner-board`. Exemplar: `pos/session-gate.tsx`, `kds/page.tsx`, `runner/page.tsx` |
+| **Public** `/login`, `/access-denied`, `/q/*`, `/r/*` | Khách hoặc người chưa vào đúng surface | Auth gate, gọi món token, HĐĐT, feedback QR | Token/URL → một CTA chính → xong hoặc fail-closed; hết hạn → trạng thái rõ, không sửa tiếp | Hiện bước giao dịch khách; ẩn shell Quản trị/CN, DataTable, dữ liệu nội bộ | Parent §2.10–2.12; `PUBLIC-WORKFLOW` / GATE. Blocks `public-transaction`, `public-feedback`, `system-gate`. Exemplar self-order: `q/[token]/page.tsx` |
+| **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Ngày làm việc cá nhân trong Control shell | Avatar → `/me` → clock/schedule/leave/profile/payslip → success punch | Hiện ca của mình; ẩn chọn NV/CN, duyệt đội, module L0 không được cấp | Parent §2.4B; block `employee-self-service` (`EmployeePage` / `EmployeePanel`) |
+| **Settings** `/settings/*` (+ `/br/…/settings`) | Owner (L0); BM trên settings CN | Cấu hình ít đụng hàng ngày — không phải việc ca | LANDING settings → panel general/payments/printers; CN: bàn/POS/KDS/máy in | Hiện form cấu hình; ẩn KPI vận hành, queue bán hàng, tồn kho sống | Parent §2.11; LANDING + SETTINGS-PANEL. Exemplar L0: `settings/(tenant)/general/page.tsx`; printers LANDING: `settings/printers/page.tsx`; CN: `br/…/settings/page.tsx` |
+
+Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2.
+
 ---
 
 ## 2. Chi tiết các màn hình cốt lõi
 
 ### 2.1. Màn hình Bán hàng (POS) — `/br/[branchId]/pos`
 
+- **Gia đình:** Station (spine §1A); block `pos-board`. Entry mở ca/session-gate
+  → chọn món → thanh toán/in → success; recovery: lịch sử đơn (không sửa cart
+  đã gửi), đóng ca khi lệch tiền.
 - **Archetype:** `BOARD`.
 - **Đối tượng sử dụng chính:** Thu ngân (`cashier`), Quản lý chi nhánh (`branch_manager`) (khi hỗ trợ).
 - **Mục tiêu Nghiệp vụ (Why?):**
@@ -49,6 +99,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.2. Màn hình Bếp (KDS) — `/br/[branchId]/kds`
 
+- **Gia đình:** Station (spine §1A); block `realtime-board`. Entry ticket realtime
+  → bump ready → success; recovery: recall khi bump nhầm (không skeleton giả).
 - **Archetype:** `BOARD`.
 - **Đối tượng sử dụng chính:** Đầu bếp (`chef`), Nhân viên bếp.
 - **Mục tiêu Nghiệp vụ (Why?):**
@@ -71,6 +123,8 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.3. Màn hình Điều phối (Runner) — `/br/[branchId]/runner`
 
+- **Gia đình:** Station (spine §1A); block `runner-board`. Entry món ready →
+  giao đúng bàn → served; recovery: chỉ giữ cửa sổ ngắn vừa giao, không lịch sử dài.
 - **Archetype:** `BOARD`.
 - **Đối tượng sử dụng chính:** Nhân viên chạy bàn (`runner`), Nhân viên điều phối ra món.
 - **Mục tiêu Nghiệp vụ (Why?):**
@@ -128,6 +182,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
+- **Gia đình:** Branch operator (spine §1A). Entry hub → chọn tab/trạm/workflow
+  → hoàn thành duyệt hoặc việc kho; recovery = quay đúng owning route (không
+  nhảy L0 Finance/HR).
 - **Archetype:** `/br/[branchId]` dùng `LANDING`; `/shift` là màn ngày làm việc cá nhân; `/team` là `LIST` hub 2 tab peer (`Ca hôm nay` · `Nhân viên`) tối ưu phone. Phân ca / Chấm công / Duyệt kết ca / Duyệt nghỉ phép là full route dưới `/shift/*` (mở từ strip công cụ trên board hoặc deep link); không còn peer-tab trên Đội. **Entry** Phân công đếm + Phiếu đếm từ strip công cụ Đội (việc trong ca); route vẫn `/stock/count-assignments` và `/stock/count-slips` (không tạo peer-tab Đội mới).
 - **Đối tượng sử dụng chính:** Nhân viên trong ca, Quản lý chi nhánh (`branch_manager`) và Chủ cửa hàng (`owner`) theo đúng phạm vi từng tab.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho người vận hành đi từ việc cần xử lý đến đúng trạm hoặc đúng workspace trong một viewport ngắn.
@@ -147,6 +204,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.4B. Công việc cá nhân — `/me/*`
 
+- **Gia đình:** Employee (spine §1A). Entry Avatar/`/me` → CTA adaptive clock →
+  success punch hoặc mở lịch/phép/hồ sơ/lương; recovery: camera từ chối,
+  offline, submitting lỗi — copy + đường thử lại rõ (không cấp module L0 giả).
 - **Archetype:** `EMBED-WRAPPER` mỏng vào shared staff-runtime; nội dung là cổng
   ngày làm việc cá nhân, không phải dashboard hay mô-đun L0.
 - **Đối tượng sử dụng chính:** Kế toán, Kho Tổng, Bếp Trung Tâm và nhân viên
@@ -186,6 +246,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
 
+- **Gia đình:** Inventory (spine §1A). Entry → success → recovery ở mức phiếu:
+  mở list/hub đúng plane → nháp/kiểm nhận → chốt chứng từ; lệch/hủy qua dialog
+  xác nhận hoặc vòng kiểm kê/hao hụt — không sửa tồn bằng UPDATE thô.
 - **Planes (ADR 0012 / 0018):** Owner/Accountant/Kho Tổng/Bếp TT dùng
   `/inventory/*` (control_surface); operator stock của chi nhánh dùng
   `/br/[branchId]/stock/*`. Central roles bị khóa site theo JWT `branch_id` và
@@ -319,6 +382,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.8. Hồ sơ nhân sự — `/hr`
 
+- **Gia đình:** HR (spine §1A). Entry → strip **Cần xử lý** / Thêm NV → success
+  onboard hoặc chuyển Thời gian/Lương/Quy tắc; recovery qua tab URL và deep
+  link hồ sơ thiếu (không sửa lương tại attendance).
 - **Archetype:** `LIST` + tab URL (`view=profile|accounts`).
 - **Đối tượng sử dụng chính:** Chủ sở hữu (`owner`) — admin HR duy nhất trên control surface.
 - **Mục tiêu Nghiệp vụ (Why?):** Quản lý hồ sơ NLĐ, HĐLĐ, chế độ lương (`Theo công` / `Lương tháng`), site/vị trí; cổng vào Thời gian / Lương / Quy tắc; tài khoản đăng nhập & phân quyền là tab phụ trên cùng màn.
@@ -392,6 +458,9 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
 
 ### 2.9. Báo cáo Doanh thu & Chi phí — `/finance`
 
+- **Gia đình:** Finance (spine §1A). Sibling oversight cùng plane: `/finance/revenue`
+  (REPORT), `/finance/expenses`, `/finance/bank-transactions`, `/finance/targets`,
+  và AP `/finance/supplier-invoices` (§2.7). Không dựng dashboard bán hàng/POS.
 - **Archetype:** `DASHBOARD`.
 - **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
 - **Mục tiêu Nghiệp vụ (Why?):**
@@ -432,3 +501,79 @@ fallback. Không dùng Screen Context Map để tự tạo layout hoặc primiti
   - **Nên hiển thị:** Chi nhánh, mã đơn, thời hạn, MST, tên đơn vị và địa chỉ do API trả về, email nhận HĐĐT, trạng thái tra cứu và kết quả xác nhận.
   - **KHÔNG hiển thị:** Thao tác thanh toán, dữ liệu POS/Self-Order, mã nội bộ, dữ liệu nhà cung cấp HĐĐT hoặc khả năng sửa sau khi yêu cầu đã đóng.
 - **Quy chuẩn UX/UI:** Mobile-first, một hành động chính, control kích thước chạm, hỗ trợ bàn phím và thông báo lỗi/tra cứu bằng ngữ nghĩa truy cập được.
+
+---
+
+### 2.11. Cài đặt hệ thống & Chi nhánh — `/settings/*` & `/br/[branchId]/settings/*`
+
+- **Gia đình / plane:** Settings thuộc Product UX spine §1A. L0 = `control_surface`;
+  settings CN = `branch_surface` (cùng việc cấu hình, khác chrome).
+- **Archetype:** L0 hub và printers group dùng `LANDING`; form tenant
+  (`general`, `payments`, …) và nhiều panel CN dùng `SETTINGS-PANEL`; jobs máy
+  in có thể là `LIST` trong family printers.
+- **Đối tượng sử dụng chính:** Owner trên `/settings/*`; `branch_manager` (và
+  Owner khi vào shell CN) trên `/br/[branchId]/settings/*`.
+- **Mục tiêu Nghiệp vụ (Why?):** Đổi cấu hình ít thay đổi (thanh toán, máy in,
+  bàn, trạm POS/KDS) mà không trộn vào việc bán hàng hay oversight tài chính
+  trong ngày.
+- **Mục tiêu Người dùng (Goal):** Tìm đúng nhóm cấu hình trong một đến hai
+  chạm, lưu an toàn, quay lại việc ca / Quản trị.
+- **Luồng Entry → success → recovery:**
+  1. **Entry:** Owner từ `/` nhóm Nền tảng → `/settings`; BM từ overflow / hub
+     CN → `/br/[id]/settings`.
+  2. **Success:** Chọn card/panel → sửa → lưu (RHF+Zod) → toast/confirm rõ.
+  3. **Recovery:** Validation inline; lỗi server không lộ raw Postgres; Back về
+     LANDING settings, không đẩy user vào POS/Finance.
+- **Thông tin hiển thị:**
+  - **Nên hiển thị:** Nhóm cấu hình, trạng thái máy in/jobs khi đúng panel,
+    form từng entity.
+  - **KHÔNG hiển thị:** KPI doanh thu, queue KDS, tồn kho sống, bảng lương,
+    tạo đơn hàng.
+- **Quy chuẩn UX/UI:**
+  - Exemplar L0 panel: `apps/web/app/(protected)/settings/(tenant)/general/page.tsx`.
+  - Exemplar L0 LANDING: `apps/web/app/(protected)/settings/printers/page.tsx`
+    và `apps/web/app/(protected)/settings/page.tsx`.
+  - Exemplar CN LANDING: `apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx`
+    (`BranchOperatorPage` + action links — không `AppSection` / `AppLinkCard`).
+  - Inventory master data (`/inventory/settings/*`) thuộc gia đình Inventory,
+    không phải Settings tenant.
+
+---
+
+### 2.12. Public / khách & cổng hệ thống — `/login`, `/access-denied`, `/q/*`, `/r/*`
+
+- **Gia đình / plane:** Public trong spine §1A; plane `public` (utility
+  `/access-denied` / auth không phải nửa Quản trị hay Vận hành).
+- **Archetype:** Self-order và HĐĐT = `PUBLIC-WORKFLOW`; login / access-denied
+  = `GATE/AUTH` (chrome-less). Feedback QR khách = public workflow / block
+  `public-feedback` (không nhầm với Runner station).
+- **Đối tượng sử dụng chính:** Khách (token bàn / hóa đơn / QR góp ý); nhân sự
+  chưa đăng nhập hoặc bị từ chối đúng surface.
+- **Mục tiêu Nghiệp vụ (Why?):** Cho khách hoàn thành một giao dịch hẹp không
+  cần tài khoản nội bộ; cho hệ thống fail-closed khi session/ACL không đủ.
+- **Mục tiêu Người dùng (Goal):** Một CTA rõ mỗi bước; xong thì dừng; lỗi thì
+  hiểu và thoát an toàn.
+- **Luồng Entry → success → recovery (theo nhánh):**
+  1. **Login:** `/login` → xác thực → `login-destination` đúng role (Owner `/`,
+     central `/inventory` hoặc `/finance`, CN `/br/[id]`, zero-module `/me`).
+     Sai → message; không vào shell giả.
+  2. **Access denied:** `/access-denied?reason=` → một giải thích + đường thoát
+     (đăng nhập lại / về surface được phép).
+  3. **Self-order:** `/q/[token]` → chọn món → giỏ → gửi → success; token hết
+     hạn / invalid → `notFound` hoặc unavailable chung; offline/retry giữ
+     giao dịch dở (`public-transaction`).
+  4. **HĐĐT:** §2.10 — quét QR → MST/email → xác nhận một lần.
+  5. **Feedback QR:** `/r/[token]` → gửi góp ý → xong; không mount Runner
+     `station_chrome`.
+- **Thông tin hiển thị:**
+  - **Nên hiển thị:** Bước hiện tại, lỗi/tra cứu có ngữ nghĩa, trạng thái hết
+    hạn.
+  - **KHÔNG hiển thị:** `AppShell` / bottom-nav CN, `DataTable` Quản trị, giá
+    vốn, phân quyền staff, dữ liệu chi nhánh khác.
+- **Quy chuẩn UX/UI:**
+  - Exemplar self-order: `apps/web/app/q/[token]/page.tsx` + `self-order-client.tsx`.
+  - Exemplar HĐĐT: §2.10 / `apps/web/app/q/invoice/[token]/…`.
+  - Exemplar gate: `apps/web/app/(public)/access-denied/page.tsx`; login:
+    `apps/web/app/(public)/(auth)/login/page.tsx`.
+  - Card section dùng `PublicSection`; không import chrome `control_surface`
+    hay `BranchOperator*`.

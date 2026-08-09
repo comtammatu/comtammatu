@@ -247,56 +247,55 @@
 .dark {
   /* Night mode — warm-dark "gạo cháy" palette (hue ~50 warm brown rice, not
      navy), tuned for the F&B evening shift. See design-system.md → Token
-     Contract → Theme runtime. Card/popover keep a ΔL lift over the background
-     for WCAG 1.4.11 hierarchy. Status lightness is raised ~10% so badges and
-     callouts read on the warm surface, with dark foregrounds on the lighter
-     fills. Shadow/scrim alpha is raised so overlays float visibly — the day
-     navy rgba would read flat here. */
+     Contract → Theme runtime + Contrast Targets. Card/popover lift over the
+     background; borders use cream-on-night alpha ≥40% so hairlines clear
+     WCAG 1.4.11 (≥3:1). Muted text is brighter so secondary copy stays AA on
+     both background and card. Status lightness stays raised for badge fills. */
   --background: oklch(0.155 0.016 50);
-  --foreground: oklch(0.94 0.018 75);
-  --card: oklch(0.23 0.018 48);
-  --card-foreground: oklch(0.94 0.018 75);
-  --popover: oklch(0.23 0.018 48);
-  --popover-foreground: oklch(0.94 0.018 75);
-  --primary: oklch(0.63 0.155 36);
+  --foreground: oklch(0.96 0.016 75);
+  --card: oklch(0.3 0.02 48);
+  --card-foreground: oklch(0.96 0.016 75);
+  --popover: oklch(0.3 0.02 48);
+  --popover-foreground: oklch(0.96 0.016 75);
+  --primary: oklch(0.66 0.155 36);
   --primary-foreground: oklch(0.155 0.016 50);
-  --secondary: oklch(0.265 0.018 48);
-  --secondary-foreground: oklch(0.94 0.018 75);
-  --muted: oklch(0.245 0.018 48);
-  --muted-foreground: oklch(0.74 0.028 70);
-  --accent: oklch(0.305 0.028 55);
-  --accent-foreground: oklch(0.94 0.018 75);
-  --destructive: oklch(0.625 0.165 25);
+  --secondary: oklch(0.34 0.02 48);
+  --secondary-foreground: oklch(0.96 0.016 75);
+  --muted: oklch(0.32 0.02 48);
+  --muted-foreground: oklch(0.82 0.028 70);
+  --accent: oklch(0.38 0.03 55);
+  --accent-foreground: oklch(0.96 0.016 75);
+  --destructive: oklch(0.66 0.165 25);
   --destructive-foreground: oklch(0.155 0.016 50);
-  --success: oklch(0.67 0.1 140);
+  --success: oklch(0.7 0.1 140);
   --success-foreground: oklch(0.155 0.016 50);
-  --warning: oklch(0.845 0.145 80);
+  --warning: oklch(0.86 0.145 80);
   --warning-foreground: oklch(0.155 0.016 50);
-  --info: oklch(0.72 0.09 250);
+  --info: oklch(0.74 0.09 250);
   --info-foreground: oklch(0.155 0.016 50);
-  --tier-elite: oklch(0.78 0.14 305);
+  --tier-elite: oklch(0.8 0.14 305);
   --tier-elite-foreground: oklch(0.155 0.016 50);
-  --tier-note: oklch(0.78 0.13 50);
+  --tier-note: oklch(0.8 0.13 50);
   --tier-note-foreground: oklch(0.155 0.016 50);
-  --border: oklch(0.94 0.02 75 / 16%);
-  --input: oklch(0.94 0.02 75 / 18%);
-  --ring: oklch(0.845 0.145 80);
-  --chart-1: oklch(0.845 0.145 80);
-  --chart-2: oklch(0.605 0.155 36);
-  --chart-3: oklch(0.67 0.1 140);
-  --chart-4: oklch(0.94 0.018 75);
-  --chart-5: oklch(0.74 0.028 70);
-  --sidebar: oklch(0.23 0.018 48);
-  --sidebar-foreground: oklch(0.94 0.018 75);
-  --sidebar-primary: oklch(0.63 0.155 36);
+  --border: oklch(0.94 0.02 75 / 40%);
+  --input: oklch(0.94 0.02 75 / 42%);
+  --ring: oklch(0.86 0.145 80);
+  --chart-1: oklch(0.86 0.145 80);
+  --chart-2: oklch(0.66 0.155 36);
+  --chart-3: oklch(0.7 0.1 140);
+  --chart-4: oklch(0.96 0.016 75);
+  --chart-5: oklch(0.82 0.028 70);
+  --sidebar: oklch(0.3 0.02 48);
+  --sidebar-foreground: oklch(0.96 0.016 75);
+  --sidebar-primary: oklch(0.66 0.155 36);
   --sidebar-primary-foreground: oklch(0.155 0.016 50);
-  --sidebar-accent: oklch(0.305 0.028 55);
-  --sidebar-accent-foreground: oklch(0.94 0.018 75);
-  --sidebar-border: oklch(0.94 0.02 75 / 16%);
-  --sidebar-ring: oklch(0.845 0.145 80);
+  --sidebar-accent: oklch(0.38 0.03 55);
+  --sidebar-accent-foreground: oklch(0.96 0.016 75);
+  --sidebar-border: oklch(0.94 0.02 75 / 40%);
+  --sidebar-ring: oklch(0.86 0.145 80);
   --effect-scrim: rgba(10, 6, 0, 0.72);
   --effect-drawer-blur: blur(3px);
-  --effect-ring-hairline: inset 0 0 0 1px rgba(245, 235, 217, 0.12);
+  --effect-ring-hairline: inset 0 0 0 1px rgba(245, 235, 217, 0.22);
   --effect-ring-border: inset 0 0 0 1px var(--border);
   --effect-card-resting:
     var(--effect-ring-hairline), 0 1px 3px rgba(0, 0, 0, 0.24),

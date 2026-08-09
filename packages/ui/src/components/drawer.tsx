@@ -42,7 +42,7 @@ function DrawerOverlay({
     <DrawerPrimitive.Backdrop
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 z-50 drawer-scrim data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[ending-style]:animate-out data-[ending-style]:fade-out-0",
+        "fixed inset-0 z-50 drawer-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         className,
       )}
       {...props}

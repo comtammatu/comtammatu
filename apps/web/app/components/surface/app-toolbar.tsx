@@ -57,14 +57,16 @@ export function AppToolbar({
       ) : null}
       {bulk ? (
         <>
-          <Separator orientation="vertical" className="h-6" />
+          {/* Vertical Separator defaults to self-stretch; do not set h-* or it
+              pins to cross-start and floats above the bottom border. */}
+          <Separator orientation="vertical" />
           <ToolbarGroup className="relative z-10 gap-2">{bulk}</ToolbarGroup>
         </>
       ) : null}
       {actions ? (
         <>
           {search || filters || bulk ? (
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" />
           ) : null}
           <ToolbarGroup className="relative z-10 gap-2">{actions}</ToolbarGroup>
         </>

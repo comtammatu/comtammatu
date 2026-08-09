@@ -13,8 +13,10 @@ runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 - Auth and ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`, `docs/spec/database-schema.md`
 - UI: `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`,
-  `docs/modules/ui.md`, `docs/ref/screen-context-map.md`; Product Dual Thesis
-  in `docs/spec/architecture.md`. Target-only docs under `docs/architecture/target-*` are future.
+  `docs/modules/ui.md`; Product Dual Thesis in `docs/spec/architecture.md`.
+  Product UX spine (actor × job × plane per route family, before compose):
+  `docs/ref/screen-context-map.md` §1A — not a parallel DS or `DESIGN.md`.
+  Target-only docs under `docs/architecture/target-*` are future.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`

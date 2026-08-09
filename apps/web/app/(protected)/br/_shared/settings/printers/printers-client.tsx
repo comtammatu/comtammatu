@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AppSection } from "@/components/surface";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { AppDialog } from "@/components/form";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -183,7 +183,7 @@ export function PrintersClient(props: {
           .toSorted((a, b) => a.name.localeCompare(b.name, "vi"));
         const agent = agentByBranch.get(branch.id);
         return (
-          <AppSection
+          <BranchOperatorPanel
             key={branch.id}
             title={branch.name}
             badge={{
@@ -296,7 +296,7 @@ export function PrintersClient(props: {
                 {PRINTER_COPY.addPrinter}
               </Button>
             </ItemGroup>
-          </AppSection>
+          </BranchOperatorPanel>
         );
       })}
 

@@ -22,7 +22,8 @@ workflow đọc archetype và route. Role split:
 
 - `docs/spec/design-system.md`: SSOT của Má Tư Design System; owns artifact
   ladder, Naming Standard, Base UI rule (kèm exception list), token, typography,
-  density, brand, states, elevation, motion và Structural Governance.
+  density, brand, states, elevation, motion, Layout UI/UX Frame và Structural
+  Governance.
 - `packages/ui/src/components/*`: shared styled components; Base UI behavior và
   accessibility contract được tích hợp ở đây.
 - `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
@@ -112,6 +113,53 @@ Không fork shared component theo surface.
 `contentScroll` cho cùng vai trò. Một surface có workflow riêng có thể compose
 spacing hoặc overflow tương đương khi không tạo chrome cạnh tranh.
 
+## Layout UI/UX Frame
+
+SSOT composition ladder: `docs/spec/design-system.md` § Layout UI/UX Frame.
+Gate + Decision Ladder: `docs/spec/page-archetypes.md` § 0.1 /
+`docs/agent/rules/ui.md`. Không fork ladder tại đây.
+
+```text
+Shell chrome → AppPage (+ AppPageHeader) → Section/Panel (đúng plane)
+→ Toolbar/Footer → Content density (Dual Thesis)
+```
+
+- `control_surface`: `AppPage` → `AppPageHeader` → `AppListFrame` /
+  `AppSection` / `DocumentFormFrame` → `AppToolbar` / `AppDetailFooter`.
+- Branch operator: `BranchOperator*` — không mang `AppListFrame` /
+  `DataTable` control_surface sang touch queue.
+- Station: `StationSection` + `Frame` / `OperationalBoardCard` — không
+  `AppSection` / `AppListFrame`.
+- Public / system-gate: `AppPage` + `PublicSection` / `AppEmptyState`.
+- Staff: `EmployeePage` / `EmployeePanel`.
+
+Lab nội bộ (dev-only, production 404): `/ds-lab` — tokens, primitives, Item
+system, LIST chrome, plane recipes (`AppSection` / `BranchOperatorPanel` /
+`StationSection` / `PublicSection` / `EmployeePanel`), density, states.
+
+### Exemplar matrix (layout gold)
+
+Tra cứu đầy đủ qua `audit:ui-components`. Bảng dưới là gold path theo plane —
+giữ sạch hơn rewrite rộng. Station/Branch chi tiết thêm ở mục Dual Thesis bên
+dưới.
+
+| Block / recipe | Plane | Exemplar |
+| --- | --- | --- |
+| `management-list` | control_surface | `apps/web/app/(protected)/inventory/grn/page.tsx` |
+| `management-detail` | control_surface | `apps/web/app/(protected)/inventory/grn/[id]/page.tsx` |
+| `management-document` | control_surface | `apps/web/app/(protected)/inventory/transfers/new/page.tsx` |
+| `pos-board` | station | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx` |
+| `realtime-board` | station | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx` |
+| `runner-board` | station | `apps/web/app/(protected)/br/[branchId]/runner/page.tsx` |
+| `branch-action-home` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` |
+| `branch-touch-list` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx` |
+| `branch-touch-detail` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |
+| `branch-touch-document` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx` |
+| `employee-self-service` | staff | `apps/web/lib/staff-runtime/page.tsx` |
+| `public-transaction` | public | `apps/web/app/q/[token]/page.tsx` |
+| `system-gate` | public | `apps/web/app/(public)/access-denied/page.tsx` |
+| Layout lab | (dev) | `apps/web/app/(dev)/ds-lab/ds-lab-client.tsx` |
+
 ## App Surface Adapters
 
 `apps/web/app/components/surface.tsx` là adapter layer duy nhất cho các pattern lặp lại ở app level.
@@ -148,7 +196,9 @@ nằm trong `apps/web/app/components/surface/*.tsx` (mỗi adapter một file):
   `AppListFrame` untitled flush dọc (`py-0`); titled giữ pad trên header
   và `pb-0` để bảng sát đáy. Toolbar + body nằm trong một cột; cạnh flush
   bo `rounded-t-lg` / `rounded-b-lg` khớp Card (Card giữ `overflow-visible`
-  cho sticky bleed / Select). Tách bằng `border-b` / `border-t`. Inline
+  cho sticky bleed / Select). Dual Thesis: table/grid body edge-flush;
+  Item-row body inset `px-3 py-3` + `gap-2` (`DataTable` mobile stack, hoặc
+  bare `ItemGroup` cùng pad). Tách bằng `border-b` / `border-t`. Inline
   toolbar dùng `px-3 py-2` (không `p-3`).
   Desktop empty luôn qua `DataTable` (`TableHeader` + `TableEmptyStateRow`),
   không swap sang `AppEmptyState` thay cả bảng (trừ error/load-failed). Desktop
@@ -284,6 +334,26 @@ control_surface và không gọi trực tiếp vocabulary Employee ở các rout
   `Frame`. KDS ticket cards dùng `OperationalBoardCard` (`realtime-board`);
   Runner dùng recipe `runner-board`. Không bọc vào
   Branch home bottom-nav và không dùng control_surface shell.
+
+### Station + Branch exemplar gold (contract lock)
+
+Tra cứu đầy đủ qua `scripts/ui-component-registry.mjs` / `audit:ui-components`.
+Đường exemplar dưới đây là gold path để lock contract — ưu tiên giữ sạch hơn
+việc rewrite rộng:
+
+| Block | Plane | Exemplar |
+| --- | --- | --- |
+| `pos-board` | station | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx` |
+| `realtime-board` | station | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx` |
+| `runner-board` | station | `apps/web/app/(protected)/br/[branchId]/runner/page.tsx` |
+| `branch-action-home` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` |
+| `branch-touch-list` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx` |
+| `branch-touch-detail` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |
+| `branch-touch-document` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx` |
+
+Station: không `AppSection` / raw `Card` / `AppShell` / `AppListFrame`.
+Branch touch LIST/DETAIL/DOC: `BranchOperator*` + `ItemGroup`; không mang
+`DocumentFormFrame` / `DataTable` / `AppListFrame` control_surface sang queue.
 
 - landing và màn chi tiết dùng `BranchOperatorPage`, `BranchOperatorPanel`,
   `BranchOperatorActionSection`, và các Branch operator adapter tương ứng
@@ -721,11 +791,13 @@ Quy tắc review:
 
 ## UI Rebuild Gate
 
-`docs/spec/page-archetypes.md` § 0.1 UI Advisor Gate là contract duy nhất cho
-quyết định trước khi sửa surface. Không duy trì một checklist thứ hai tại đây.
-Gate phải nối được screen context → actor/job/workflow → information order →
-archetype/exemplar → component/fallback → state/responsive/browser QA trước khi
-implementation bắt đầu.
+`docs/agent/rules/ui.md` Decision Ladder + `docs/spec/page-archetypes.md` § 0.1
+là contract duy nhất cho quyết định trước khi sửa surface. Không duy trì
+checklist thứ hai tại đây. T2/T3 phải khóa `plane` + `archetype` + `block` (hoặc
+`none` + lý do) + `exemplar` path trước khi compose. Gate phải nối được screen
+context → actor/job/workflow → information order → archetype/exemplar →
+component/fallback → state/responsive/browser QA trước khi implementation bắt
+đầu.
 
 Nếu không có component khớp hoàn toàn, đi theo thứ tự fallback đã khóa trong
 gate: composition từ shared component hiện có → route-scoped adapter → cập nhật

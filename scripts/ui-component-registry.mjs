@@ -906,8 +906,10 @@ export const DOMAIN_ADAPTER_FAMILIES = {
     prefix: "BranchOperator",
     need: "touch-first Branch runtime composition",
     fallback: "shared canonical PageContent with explicit embedded mode",
-    forbidden: "Management shell or AppPageHeader inside the operator plane",
-    exemplar: "branch stock, orders, and team workflows",
+    forbidden:
+      "AppShell, AppListFrame, DocumentFormFrame, DataTable on Branch touch queues, or AppPageHeader inside the operator plane",
+    exemplar:
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
     exports: [
       "BranchOperatorPage",
       "BranchOperatorPanel",
@@ -1032,7 +1034,7 @@ export const UI_BLOCK_REGISTRY = {
     "surface the next safe branch action and live work",
     "BranchOperatorPage + primary action + live queue + curated action sections",
     "BranchOperatorActionSection for a simple job group",
-    "Owner shell, KPI mosaic, or duplicated bottom-nav destinations",
+    "AppShell, AppListFrame, DocumentFormFrame, DataTable, KPI mosaic, raw Card, or duplicated bottom-nav destinations",
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   ),
   "branch-touch-list": block(
@@ -1040,8 +1042,8 @@ export const UI_BLOCK_REGISTRY = {
     ["branch"],
     "scan and act on a fixed-branch work queue",
     "BranchOperatorPage + BranchOperatorPanel/controls + ItemGroup full-row actions",
-    "DataTable only on the Owner management plane",
-    "desktop table at tablet width, DocumentFormFrame, control_surface LIST adapters, or inventing a *Block import",
+    "BranchOperatorInlineState / AppEmptyState when the queue is empty or blocked",
+    "AppShell, AppListFrame, DocumentFormFrame, DataTable, desktop table at tablet width, control_surface LIST adapters, raw Card, or inventing a *Block import",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx",
   ),
   "branch-touch-detail": block(
@@ -1050,7 +1052,7 @@ export const UI_BLOCK_REGISTRY = {
     "review one branch entity and perform its next permitted action",
     "BranchOperatorPage + BranchOperatorPanel + ItemGroup + AppDetailFooter",
     "bottom Sheet for a focused edit or decision",
-    "Owner detail presenter, audit chrome, or multiple primary actions",
+    "AppShell, AppListFrame, DocumentFormFrame, DataTable, control_surface detail presenter, audit chrome, raw Card, or multiple primary actions",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx",
   ),
   "branch-touch-document": block(
@@ -1059,7 +1061,7 @@ export const UI_BLOCK_REGISTRY = {
     "complete a line workflow on phone or tablet",
     "BranchOperatorPage + BranchOperatorPanel + touch line editor + AppDetailFooter",
     "bottom Sheet for one line at a time",
-    "DocumentFormFrame, DataTable, or desktop side editor",
+    "AppShell, AppListFrame, DocumentFormFrame, DataTable, desktop side editor, or raw Card",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
   ),
   "embedded-workflow": block(
@@ -1077,7 +1079,7 @@ export const UI_BLOCK_REGISTRY = {
     "operate a live kitchen queue from a dedicated station surface",
     "KDS station chrome + OperationalBoardCard + touch bump/recall controls",
     "PageSpinner / AppEmptyState while real queue data is unavailable",
-    "AppSection, AppShell, fake ticket skeleton, dashboard grid, or hover-only action",
+    "AppSection, AppShell, AppListFrame, BranchOperatorPage, fake ticket skeleton, dashboard grid, raw Card, or hover-only action",
     "apps/web/app/(protected)/br/[branchId]/kds/page.tsx",
   ),
   "runner-board": block(
@@ -1086,7 +1088,7 @@ export const UI_BLOCK_REGISTRY = {
     "call ready orders on a dedicated runner / pickup display",
     "Runner station chrome + touch-first order columns + AppEmptyState for idle/error",
     "PageSpinner while real queue data is unavailable",
-    "AppSection, AppShell, control_surface LIST adapters, raw Card, or dashboard grid",
+    "AppSection, AppShell, AppListFrame, BranchOperatorPage, control_surface LIST adapters, raw Card, or dashboard grid",
     "apps/web/app/(protected)/br/[branchId]/runner/page.tsx",
   ),
   "pos-board": block(
@@ -1095,8 +1097,8 @@ export const UI_BLOCK_REGISTRY = {
     "take orders, build a cart, and complete checkout on a full-screen POS station",
     "PosDesktopShell + OperationalTile + StationSection/Frame sections + touch controls",
     "AppEmptyState for session gate or empty cart",
-    "AppSection, AppShell, control_surface LIST adapters, raw Card, or dashboard grid",
-    "apps/web/app/(protected)/br/[branchId]/pos/page.tsx",
+    "AppSection, AppShell, AppListFrame, BranchOperatorPage, control_surface LIST adapters, raw Card, or dashboard grid",
+    "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx",
   ),
   "employee-self-service": block(
     ["LANDING"],

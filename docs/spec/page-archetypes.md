@@ -27,15 +27,31 @@ the task plan, task note, or owner-facing work summary. A pull request may
 carry the same gate when one exists; a PR is not required. T1 typo-only changes
 may skip it with the skip reason.
 
+Agent operating order is the Decision Ladder in `docs/agent/rules/ui.md`
+(plane → archetype → block → compose → verify). Compose follows the Layout
+UI/UX Frame in `docs/spec/design-system.md` (shell → page → section/panel →
+toolbar/footer → density). For T2/T3 UI work, these four fields are mandatory
+and must be resolved **before compose**:
+
+| Field | Required value |
+| --- | --- |
+| `plane` | `branch` / `control_surface` / `station_chrome` / `public` / `staff` (or chrome family equivalent) |
+| `archetype` | id from § 2 / § 4 |
+| `block` | `UI_BLOCK_REGISTRY` id, or `none` + one-line reason |
+| `exemplar` | concrete repo path (prefer the block's `exemplar` field) |
+
+Do not start layout or adapter composition while any of the four is unresolved.
+Lookup: `corepack pnpm audit:ui-components --component <block|adapter>`.
+
 ```text
 UI Advisor Gate
-- Surface: <route>; route family: <id>; plane: <branch_surface | control_surface | station_chrome | public>; change: <visual | flow | copy | behavior>
+- Surface: <route>; route family: <id>; plane: <branch | control_surface | station_chrome | public | staff>; change: <visual | flow | copy | behavior>
 - Context: <screen-context-map entry or nearest parent workflow>; actor: <role>; job: <outcome>
 - Journey: <entry state> -> <decision> -> <primary action> -> <success>; recovery: <safe retry/undo/exit>
 - Information order: 1) <first viewport> 2) <decision context> 3) <secondary detail>; exclude: <out-of-scope data>
 - Pattern: <archetype>; exemplar: <path>; data display: <table | board | document | detail | ...>
 - States: <loading | empty | error | success | partial | blocked | permission | offline, as applicable>
-- Block: <registered UI block or none>; components: <shared primitives/adapters>; fallback: <next approved composition if no exact match>
+- Block: <registered UI block or none + reason>; components: <shared primitives/adapters>; fallback: <next approved composition if no exact match>
 - Responsive/accessibility: <same-IA viewport changes>; input: <touch | keyboard | mixed>; risks: <focus/label/contrast/target>
 - Verification: <routes, viewports, states, and browser evidence for meaningful runtime UI changes>
 ```
@@ -579,8 +595,9 @@ allowlist, not a precedent for stretching another archetype's definition:
 
 Before building or changing any `(protected)/**/page.tsx`:
 
-1. Read `docs/agent/rules/ui.md` Guardrails and complete the UI Advisor Gate in
-   § 0.1.
+1. Read `docs/agent/rules/ui.md` Decision Ladder and complete the UI Advisor
+   Gate in § 0.1 (plane + archetype + block/none+reason + exemplar before
+   compose).
 2. Find the target route's archetype in § 2/§ 4, and read its
    composition recipe in § 3.
 3. Query the registered block for the plane and job with

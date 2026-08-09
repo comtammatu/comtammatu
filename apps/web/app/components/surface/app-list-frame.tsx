@@ -14,7 +14,12 @@ export type AppListFrameProps = Omit<
   toolbar?: ReactNode;
 };
 
-/** Owner LIST card: optional inline toolbar + flush table/content. */
+/**
+ * Owner LIST card: optional inline toolbar + flush card chrome for tables.
+ * Dual Thesis — table/grid body stays edge-flush under the toolbar; Item-row
+ * bodies own horizontal inset (`DataTable` mobile `px-3 py-3`, or bare
+ * `ItemGroup` with the same pad + `gap-2`). Do not pad the Frame for tables.
+ */
 export function AppListFrame({
   children,
   className,

@@ -34,7 +34,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-effect-scrim duration-[var(--motion-fast)] supports-backdrop-filter:backdrop-blur-xs data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[ending-style]:animate-out data-[ending-style]:fade-out-0",
+        "fixed inset-0 z-50 bg-effect-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] supports-backdrop-filter:backdrop-blur-xs data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         className,
       )}
       {...props}
@@ -56,7 +56,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto overscroll-contain rounded-lg bg-popover p-4 text-popover-foreground shadow-effect-dialog duration-[var(--motion-overlay)] outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-64 data-[size=default]:sm:max-w-sm data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto overscroll-contain rounded-lg bg-popover p-4 text-popover-foreground shadow-effect-dialog outline-none transition-[opacity,transform] duration-[var(--motion-overlay)] ease-[var(--ease-move)] data-[size=default]:max-w-xs data-[size=sm]:max-w-64 data-[size=default]:sm:max-w-sm data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-95 data-[ending-style]:opacity-0",
           className,
         )}
         {...props}

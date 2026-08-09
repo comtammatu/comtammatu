@@ -37,18 +37,57 @@ runtime changes.
 - Dual Thesis differs by density and chrome only — never by tokens, fonts, or
   status vocabulary.
 
+## Decision Ladder (pointer)
+
+One ladder before compose. Do not invent a parallel DS, root `DESIGN.md`, or
+agent wiki. Follow pointers; do not paste token tables into the task note.
+
+```text
+1. Plane     → design-system.md § Structural Governance (control_surface |
+               branch | station_chrome | public | staff)
+2. Archetype → page-archetypes.md (§ 2/§ 4) + named exemplar path
+3. Block     → `pnpm audit:ui-components --component <block>`
+               (or `none` + one-line reason when no repeated recipe)
+4. Compose   → Layout UI/UX Frame (shell → page → section → toolbar/footer
+               → density) then adapters in the block `use` field
+               (modules/ui.md + packages/ui); never invent *Block imports
+5. Verify    → lint:ui-contract + plane static guards + primary viewport
+```
+
+SSOT owners (read, do not fork):
+
+| Concern | Owner |
+| --- | --- |
+| Tokens, Base UI, Frame law, Dual Thesis, chrome families, Layout UI/UX Frame | `docs/spec/design-system.md` |
+| Archetypes, UI Advisor Gate template, disposition | `docs/spec/page-archetypes.md` |
+| Adapter/block recipes (`need`/`use`/`forbidden`/`exemplar`) | `scripts/ui-component-registry.mjs` |
+| Implementation map + exemplar matrix | `docs/modules/ui.md` |
+| Actor / device / route context | `docs/ref/screen-context-map.md` |
+| Dev layout recipes (non-product) | `/ds-lab` (production 404) |
+
+Station gold blocks: `pos-board`, `realtime-board`, `runner-board`.
+Branch gold blocks: `branch-action-home`, `branch-touch-list`,
+`branch-touch-detail`, `branch-touch-document`.
+
 ## Scope And UI Advisor Gate
 
 Before editing, declare the surface, user job, device/viewport, route family,
 change type, and authority granted by the task. Complete
 `page-archetypes.md` § 0.1 before external design advice.
 
-- If the archetype and visual contract already decide the shape, implement them.
-- If a real hierarchy/interaction choice remains, use the smallest set of
-  independent design reviewers that can add distinct evidence; their output is
-  advisory.
-- A typo/editorial copy change may be T1. Layout, hierarchy, state, navigation,
-  interaction, or multi-surface changes follow `workflow.md` T2/T3.
+**T2/T3 UI work (layout, hierarchy, state, navigation, interaction, or
+multi-surface) must declare all four before compose:**
+
+1. `plane` — product plane / chrome family
+2. `archetype` — page-archetypes id
+3. `block` — registered UI block id, or `none` plus a one-line reason
+4. `exemplar` — concrete repo path from the block/`page-archetypes` exemplar
+
+Skip only for T1 typo/editorial copy with an explicit skip reason. If the
+archetype and visual contract already decide the shape, implement them. If a
+real hierarchy/interaction choice remains, use the smallest set of independent
+design reviewers that can add distinct evidence; their output is advisory and
+cannot override the SSOT owners above.
 
 ## Operational UI Invariants
 

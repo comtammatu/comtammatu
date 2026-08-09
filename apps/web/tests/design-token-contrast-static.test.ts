@@ -148,6 +148,53 @@ test("both themes: body and muted text clear AA", () => {
   }
 });
 
+test("night theme: muted text still clears AA on card", () => {
+  const card = token("dark", "card");
+  const muted = token("dark", "muted-foreground");
+  const r = ratio(muted, card);
+  assert.ok(r >= AA_TEXT, `dark muted-foreground on card: ${r.toFixed(2)}`);
+});
+
+test("night theme: border and input hairlines clear non-text contrast on background", () => {
+  // Borders are cream-on-night with alpha: oklch(L C h / NN%). Contrast is
+  // between the blended hairline and the adjacent background (WCAG 1.4.11).
+  const dark = SCOPE.dark;
+  const borderMatch = dark.match(
+    /--border:\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)%\s*\)/,
+  );
+  const inputMatch = dark.match(
+    /--input:\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)%\s*\)/,
+  );
+  assert.ok(borderMatch, "dark --border must use cream alpha syntax");
+  assert.ok(inputMatch, "dark --input must use cream alpha syntax");
+  const bg = token("dark", "background");
+  const bgRgb = srgb(bg);
+
+  function hairlineContrast(
+    match: RegExpMatchArray,
+    label: string,
+  ): void {
+    const tint = [
+      Number(match[1]),
+      Number(match[2]),
+      Number(match[3]),
+    ] as const;
+    const alpha = Number(match[4]) / 100;
+    const tintRgb = srgb(tint);
+    const blended = tintRgb.map((c, i) =>
+      clamp01(c * alpha + (bgRgb[i] ?? 0) * (1 - alpha)),
+    ) as [number, number, number];
+    const r = contrast(luminance(blended), luminance(bgRgb));
+    assert.ok(
+      r >= NON_TEXT,
+      `dark ${label}/${match[4]}% on background: ${r.toFixed(2)}`,
+    );
+  }
+
+  hairlineContrast(borderMatch!, "border");
+  hairlineContrast(inputMatch!, "input");
+});
+
 function toHex(t: Oklch): string {
   return `#${srgb(t)
     .map((c) => Math.round(c * 255).toString(16).padStart(2, "0"))
