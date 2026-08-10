@@ -76,8 +76,8 @@ function assertSuccess(result, label) {
 
 function serviceRoleSql(body) {
   return `
-    SET LOCAL request.jwt.claim.role = 'service_role';
-    SET LOCAL request.jwt.claims = '{"role":"service_role"}';
+    SELECT set_config('request.jwt.claim.role', 'service_role', true);
+    SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
     ${body}
   `;
 }
@@ -272,9 +272,15 @@ function createFixture(label, paidAtSql) {
   return { jobId, invoiceId, orderId, orderNumber, paymentId, tokenHash };
 }
 
-async function waitForAdvisoryLock(lockKey) {
+async function waitForAdvisoryLock(lockKey, holder = null) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    if (holder?.child.exitCode != null) {
+      const result = await holder.done;
+      throw new Error(
+        `holder exited before advisory lock ${lockKey}\n${result.stdout.trim()}\n${result.stderr.trim()}`,
+      );
+    }
     const result = runDatabase(`
       SELECT count(*)
       FROM pg_locks
@@ -286,6 +292,17 @@ async function waitForAdvisoryLock(lockKey) {
     assertSuccess(result, "advisory lock probe");
     if (result.stdout.trim() === "1") return;
     await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (holder) {
+    holder.child.kill("SIGKILL");
+    const result = await holder.done.catch(() => ({
+      status: null,
+      stdout: "",
+      stderr: "holder kill failed",
+    }));
+    throw new Error(
+      `timed out waiting for advisory lock ${lockKey}\n${result.stdout.trim()}\n${result.stderr.trim()}`,
+    );
   }
   throw new Error(`timed out waiting for advisory lock ${lockKey}`);
 }
@@ -421,7 +438,7 @@ try {
   const submitHolder = startDatabase(
     submitSql(submitFixture.tokenHash, "Buyer A", lockSeed),
   );
-  await waitForAdvisoryLock(lockSeed);
+  await waitForAdvisoryLock(lockSeed, submitHolder);
   const submitContender = startDatabase(
     submitSql(submitFixture.tokenHash, "Buyer B"),
   );
@@ -451,7 +468,7 @@ try {
   }
 
   const claimHolder = startDatabase(claimSql(expiryFixture.jobId, lockSeed + 1));
-  await waitForAdvisoryLock(lockSeed + 1);
+  await waitForAdvisoryLock(lockSeed + 1, claimHolder);
   const claimContender = runDatabase(claimSql(expiryFixture.jobId));
   assertSuccess(claimContender, "claim contender");
   if (claimContender.stdout.trim() !== "0") {
@@ -482,7 +499,7 @@ try {
     SELECT pg_sleep(2);
     COMMIT;
   `);
-  await waitForAdvisoryLock(lockSeed + 2);
+  await waitForAdvisoryLock(lockSeed + 2, expiryHolder);
   const expiryContender = startDatabase(
     submitSql(expiryFixture.tokenHash, "Too Late"),
   );
