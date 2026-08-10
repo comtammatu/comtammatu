@@ -5,6 +5,20 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const readDemandModule = () =>
+  [
+    "purchase-requests-client.tsx",
+    "purchase-requests-list.tsx",
+    "purchase-request-form-dialog.tsx",
+    "purchase-request-view-dialog.tsx",
+    "purchase-request-allocate-dialog.tsx",
+  ]
+    .map((file) =>
+      read(
+        `apps/web/app/(protected)/inventory/purchase-requests/${file}`,
+      ),
+    )
+    .join("\n");
 
 test("purchase demand review atomically creates supplier POs and GRN drafts", () => {
   const purchaseActions = read(
@@ -64,9 +78,7 @@ test("Owner and Ops keep procurement documents in URL-addressable AppDialogs", (
 });
 
 test("warehouse can submit missing suppliers but accountant cannot approve incomplete allocation", () => {
-  const demandClient = read(
-    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
-  );
+  const demandClient = readDemandModule();
   const purchaseActions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
@@ -85,9 +97,7 @@ test("warehouse can submit missing suppliers but accountant cannot approve incom
 });
 
 test("submitted demands remain allocatable during cutover", () => {
-  const demandClient = read(
-    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
-  );
+  const demandClient = readDemandModule();
   const purchaseActions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );

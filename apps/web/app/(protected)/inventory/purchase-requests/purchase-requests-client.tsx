@@ -7,62 +7,14 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  ClipboardList as IconClipboardList,
-  Pencil as IconPencil,
-  Plus as IconPlus,
-  Search as IconSearch,
-  Trash as IconTrash,
-} from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import {
-  formatVNDate,
-  formatVNDateTime,
-  getVNDateString,
-} from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { confirm } from "@/components/confirm-dialog";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
-import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
-import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  AppDialog,
-  BusinessDatePicker,
-  Combobox,
-  QuantityInput,
-} from "@/components/form";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
-import {
-  AppListFrame,
-  AppToolbar,
-  DescriptionList,
-} from "@/components/surface";
-import {
-  RowActionsMenu,
-  type RowActionItem,
-} from "@/components/row-actions-menu";
-import {
   defaultPurchaseRequestUnit,
-  purchaseRequestStatusVariant,
   type PurchaseRequestIngredientOption,
   type PurchaseRequestRow,
 } from "@lib/inventory/purchase-request-model";
@@ -85,6 +37,18 @@ import {
   type PurchaseOrderDraftLine,
   type PurchaseOrderSupplier,
 } from "./purchase-order-drafts";
+import { PurchaseRequestAllocateDialog } from "./purchase-request-allocate-dialog";
+import {
+  blankRequestLine,
+  type ReasonAction,
+  type RequestDraftLine,
+} from "./purchase-request-draft-types";
+import { PurchaseRequestFormDialog } from "./purchase-request-form-dialog";
+import { PurchaseRequestViewDialog } from "./purchase-request-view-dialog";
+import {
+  buildCreateDraftState,
+  PurchaseRequestsList,
+} from "./purchase-requests-list";
 
 export type {
   PurchaseRequestItemRow,
@@ -102,27 +66,6 @@ const DEMAND_OVERLAY_KEYS = [
   "needsSite",
   "needsPage",
 ] as const;
-
-type RequestDraftLine = {
-  key: string;
-  ingredientId: string;
-  quantity: string;
-  entryUnitId: string;
-};
-
-type ReasonAction = {
-  kind: "cancel" | "close" | "request_changes" | "reject";
-  row: PurchaseRequestRow;
-};
-
-function blankRequestLine(): RequestDraftLine {
-  return {
-    key: crypto.randomUUID(),
-    ingredientId: "",
-    quantity: "",
-    entryUnitId: "",
-  };
-}
 
 export function PurchaseRequestsClient({
   rows,
@@ -597,273 +540,6 @@ export function PurchaseRequestsClient({
     });
   }
 
-  function rowActions(row: PurchaseRequestRow): RowActionItem[] {
-    const actions: RowActionItem[] = [
-      {
-        key: "view",
-        label: ACTIONS_VI.view,
-        onSelect: () => updateUrl(row.id, "view"),
-      },
-    ];
-    if (
-      canCreateRequest &&
-      (row.status === "draft" ||
-        row.status === "changes_requested" ||
-        row.status === "pending_allocation")
-    ) {
-      actions.push({
-        key: "edit",
-        label: ACTIONS_VI.edit,
-        icon: <IconPencil data-icon="inline-start" />,
-        onSelect: () => updateUrl(row.id, "edit"),
-      });
-    }
-    if (
-      canCreateRequest &&
-      (row.status === "draft" || row.status === "changes_requested")
-    ) {
-      actions.push({
-        key: "cancel",
-        label: "Bỏ phiếu",
-        icon: <IconTrash data-icon="inline-start" />,
-        disabled: isPending || pendingId === row.id,
-        onSelect: () => setReasonAction({ kind: "cancel", row }),
-      });
-    }
-    if (
-      canAllocate &&
-      (row.status === "submitted" ||
-        row.status === "pending_allocation" ||
-        row.status === "partially_ordered")
-    ) {
-      actions.push({
-        key: "allocate",
-        label:
-          buildAutomaticPurchaseDemandAllocations(row.items, suppliers) == null
-            ? copy.allocateAction
-            : copy.approveAllocationAction,
-        disabled: isPending || pendingId === row.id,
-        onSelect: () => handleSupplierDecision(row),
-      });
-    }
-    if (row.status === "partially_ordered" && canAllocate) {
-      actions.push({
-        key: "close",
-        label: "Đóng phần còn lại",
-        onSelect: () => setReasonAction({ kind: "close", row }),
-      });
-    }
-    return actions;
-  }
-
-  const columns: DataTableColumn<PurchaseRequestRow>[] = [
-    {
-      key: "code",
-      header: copy.codeColumn,
-      render: (row) => (
-        <span className="font-mono font-medium">{row.code}</span>
-      ),
-    },
-    {
-      key: "branch",
-      header: copy.branchColumn,
-      render: (row) => row.branchName,
-    },
-    {
-      key: "status",
-      header: copy.statusColumn,
-      render: (row) => (
-        <Badge variant={purchaseRequestStatusVariant(row.status)}>
-          {copy.statusLabel(row.status)}
-        </Badge>
-      ),
-    },
-    {
-      key: "needed",
-      header: copy.neededByColumn,
-      render: (row) => (row.neededBy ? formatVNDate(row.neededBy) : "—"),
-    },
-    {
-      key: "progress",
-      header: copy.progressColumn,
-      render: (row) =>
-        copy.orderedProgress(row.orderedLineCount, row.lineCount),
-    },
-    {
-      key: "updated",
-      header: copy.updatedColumn,
-      render: (row) => formatVNDateTime(row.updatedAt),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (row) => (
-        <div
-          className="flex justify-end"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          <RowActionsMenu items={rowActions(row)} label={row.code} />
-        </div>
-      ),
-    },
-  ];
-
-  const toolbar = (
-    <AppToolbar
-      variant="inline"
-      search={
-        <InputGroup className="min-w-0 flex-1 sm:min-w-72">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            type="search"
-            value={search}
-            onChange={(event) => {
-              const value = event.target.value;
-              setSearch(value);
-              overlay.patchOverlay(
-                {
-                  needsQ: value || null,
-                  needsPage: null,
-                },
-                "replace",
-              );
-            }}
-            placeholder={copy.searchPlaceholder}
-            aria-label={copy.searchPlaceholder}
-          />
-        </InputGroup>
-      }
-      filters={
-        <>
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => {
-              overlay.patchOverlay(
-                {
-                  needsStatus: value === "all" ? null : value,
-                  needsPage: null,
-                },
-                "replace",
-              );
-            }}
-          >
-            <SelectTrigger size="field" aria-label={copy.statusFilterAria}>
-              <SelectValue placeholder={copy.statusFilterPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{copy.allStatuses}</SelectItem>
-              {[...new Set(rows.map((row) => row.status))].map((status) => (
-                <SelectItem key={status} value={status}>
-                  {copy.statusLabel(status)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {branches.length > 1 ? (
-            <Select
-              value={siteFilter}
-              onValueChange={(value) => {
-                overlay.patchOverlay(
-                  {
-                    needsSite: value === "all" ? null : value,
-                    needsPage: null,
-                  },
-                  "replace",
-                );
-              }}
-            >
-              <SelectTrigger size="field" aria-label={copy.warehouseFilterAria}>
-                <SelectValue placeholder={copy.warehouseFilterPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{copy.allWarehouses}</SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-        </>
-      }
-      actions={
-        canCreateRequest ? (
-          <Button
-            type="button"
-            onClick={() => {
-              const nextBranchId = String(branches[0]?.id ?? "");
-              const nextNeededBy = getVNDateString();
-              const nextLines = [blankRequestLine()];
-              setBranchId(nextBranchId);
-              setNeededBy(nextNeededBy);
-              setRequestLines(nextLines);
-              setRequestBaseline(
-                JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
-              );
-              setCopyFromRequestId(null);
-              updateUrl(null, "create");
-            }}
-          >
-            <IconPlus data-icon="inline-start" />
-            {copy.createAction}
-          </Button>
-        ) : null
-      }
-    />
-  );
-
-  const list = (
-    <AppListFrame toolbar={toolbar}>
-      <DataTable
-        columns={columns}
-        data={filtered}
-        getRowKey={(row) => row.id}
-        pageSize={50}
-        currentPage={currentPage}
-        onPageChange={(page) => {
-          overlay.patchOverlay(
-            { needsPage: page <= 1 ? null : page },
-            "replace",
-          );
-        }}
-        onRowClick={(row) => updateUrl(row.id, "view")}
-        emptyTitle={copy.emptyTitle}
-        emptyDescription={copy.emptyDescription}
-        emptyIcon={
-          <IconClipboardList className="size-8 text-muted-foreground" />
-        }
-        mobileCardRender={(row) => (
-          <InteractiveCard
-            minHeight="mobile"
-            padding="default"
-            className="w-full flex-col items-stretch gap-2 text-left"
-            render={<button type="button" />}
-            onClick={() => updateUrl(row.id, "view")}
-          >
-            <span className="flex items-center justify-between gap-2">
-              <span className="font-mono font-semibold">{row.code}</span>
-              <Badge variant={purchaseRequestStatusVariant(row.status)}>
-                {copy.statusLabel(row.status)}
-              </Badge>
-            </span>
-            <span className="text-sm">{row.branchName}</span>
-            <span className="text-xs text-muted-foreground">
-              {copy.lineCount(row.lineCount)} ·{" "}
-              {copy.orderedProgress(row.orderedLineCount, row.lineCount)}
-            </span>
-          </InteractiveCard>
-        )}
-      />
-    </AppListFrame>
-  );
-
-  const content = list;
-
   const totals = allocationTotals();
   const missingSupplierItems =
     selected == null
@@ -888,513 +564,145 @@ export function PurchaseRequestsClient({
 
   return (
     <>
-      {content}
+      <PurchaseRequestsList
+        rows={rows}
+        branches={branches}
+        filtered={filtered}
+        search={search}
+        statusFilter={statusFilter}
+        siteFilter={siteFilter}
+        currentPage={currentPage}
+        suppliers={suppliers}
+        canCreateRequest={canCreateRequest}
+        canAllocate={canAllocate}
+        isPending={isPending}
+        pendingId={pendingId}
+        onSearchChange={(value) => {
+          setSearch(value);
+          overlay.patchOverlay(
+            { needsQ: value || null, needsPage: null },
+            "replace",
+          );
+        }}
+        onStatusFilterChange={(value) => {
+          overlay.patchOverlay(
+            {
+              needsStatus: value === "all" ? null : value,
+              needsPage: null,
+            },
+            "replace",
+          );
+        }}
+        onSiteFilterChange={(value) => {
+          overlay.patchOverlay(
+            {
+              needsSite: value === "all" ? null : value,
+              needsPage: null,
+            },
+            "replace",
+          );
+        }}
+        onPageChange={(page) => {
+          overlay.patchOverlay(
+            { needsPage: page <= 1 ? null : page },
+            "replace",
+          );
+        }}
+        onOpenCreate={() => {
+          const draft = buildCreateDraftState(branches);
+          setBranchId(draft.branchId);
+          setNeededBy(draft.neededBy);
+          setRequestLines(draft.requestLines);
+          setRequestBaseline(draft.baseline);
+          setCopyFromRequestId(null);
+          updateUrl(null, "create");
+        }}
+        onOpenView={(rowId) => updateUrl(rowId, "view")}
+        onOpenEdit={(rowId) => updateUrl(rowId, "edit")}
+        onCancelRow={(row) => setReasonAction({ kind: "cancel", row })}
+        onCloseRow={(row) => setReasonAction({ kind: "close", row })}
+        onSupplierDecision={handleSupplierDecision}
+      />
 
-      <AppDialog
+      <PurchaseRequestFormDialog
         open={createOpen}
+        mode={mode}
+        selected={selected}
+        copyFromRequestId={copyFromRequestId}
+        editingPendingDemand={editingPendingDemand}
+        branchId={branchId}
+        neededBy={neededBy}
+        requestLines={requestLines}
+        branches={branches}
+        ingredients={ingredients}
+        ingredientOptions={ingredientOptions}
+        mappedIngredientIds={mappedIngredientIds}
+        isPending={isPending}
         onOpenChange={(open) => {
           if (!open) void closeRequestForm();
         }}
-        variant="document"
-        title={
-          mode === "edit" && selected
-            ? selected.code
-            : copyFromRequestId != null
-              ? copy.copyToNewAction
-              : copy.createTitle
+        onBranchIdChange={setBranchId}
+        onNeededByChange={setNeededBy}
+        onChooseIngredient={chooseIngredient}
+        onPatchRequestLine={patchRequestLine}
+        onRemoveLine={(key) =>
+          setRequestLines((current) => current.filter((item) => item.key !== key))
         }
-        description={
-          mode === "edit" && selected
-            ? copy.statusLabel(selected.status)
-            : copyFromRequestId != null
-              ? copy.copyToNewBanner
-              : copy.description
+        onAddLine={() =>
+          setRequestLines((current) => [...current, blankRequestLine()])
         }
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void closeRequestForm()}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            {editingPendingDemand ? (
-              <Button
-                type="button"
-                disabled={isPending}
-                onClick={() => saveRequest(true)}
-              >
-                {ACTIONS_VI.saveChanges}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={isPending}
-                  onClick={() => saveRequest(false)}
-                >
-                  {copy.saveDraft}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => saveRequest(true)}
-                >
-                  {copy.submitAction}
-                </Button>
-              </>
-            )}
-          </>
-        }
-      >
-        {createOpen ? (
-          <>
-            {copyFromRequestId != null ? (
-              <Item variant="muted" size="sm">
-                {copy.copyToNewBanner}
-              </Item>
-            ) : null}
-            {selected?.status === "changes_requested" &&
-            selected.statusReason ? (
-              <Item variant="muted" size="sm">
-                <span className="font-medium">{copy.returnedReasonLabel}</span>{" "}
-                {selected.statusReason}
-              </Item>
-            ) : null}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger
-                  size="field"
-                  className="w-full"
-                  aria-label={copy.branchRequired}
-                >
-                  <SelectValue placeholder={copy.branchRequired} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <BusinessDatePicker
-                value={neededBy}
-                onValueChange={setNeededBy}
-                aria-label={copy.neededBy}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              {requestLines.map((line) => {
-                const ingredient = ingredients.find(
-                  (item) => item.id === Number(line.ingredientId),
-                );
-                const hasSupplier = mappedIngredientIds.includes(
-                  Number(line.ingredientId),
-                );
-                return (
-                  <Item
-                    key={line.key}
-                    variant="outline"
-                    size="sm"
-                    className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
-                  >
-                    <div className="min-w-0">
-                      <Combobox
-                        size="field"
-                        value={line.ingredientId}
-                        onValueChange={(value) =>
-                          chooseIngredient(line, value)
-                        }
-                        options={ingredientOptions}
-                        placeholder={copy.ingredient}
-                        searchPlaceholder={copy.searchPlaceholder}
-                      />
-                      {line.ingredientId && !hasSupplier ? (
-                        <span className="mt-1 block text-xs text-warning-foreground">
-                          {copy.missingSupplierShort}
-                        </span>
-                      ) : null}
-                    </div>
-                    <QuantityInput
-                      controlSize="field"
-                      value={line.quantity}
-                      onValueChange={(value) =>
-                        patchRequestLine(line.key, { quantity: value })
-                      }
-                      maxFractionDigits={3}
-                      placeholder={copy.quantity}
-                      aria-label={copy.quantity}
-                    />
-                    <Select
-                      value={line.entryUnitId}
-                      onValueChange={(value) =>
-                        patchRequestLine(line.key, { entryUnitId: value })
-                      }
-                    >
-                      <SelectTrigger
-                        size="field"
-                        className="w-full"
-                        aria-label={copy.unit}
-                      >
-                        <SelectValue placeholder={copy.unit} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(ingredient?.units ?? []).map((unit) => (
-                          <SelectItem key={unit.id} value={String(unit.id)}>
-                            {unit.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-lg"
-                      disabled={requestLines.length === 1}
-                      onClick={() =>
-                        setRequestLines((current) =>
-                          current.filter((item) => item.key !== line.key),
-                        )
-                      }
-                      aria-label={ACTIONS_VI.delete}
-                    >
-                      <IconTrash />
-                    </Button>
-                  </Item>
-                );
-              })}
-              <Button
-                type="button"
-                variant="outline"
-                className="self-start"
-                onClick={() =>
-                  setRequestLines((current) => [
-                    ...current,
-                    blankRequestLine(),
-                  ])
-                }
-              >
-                <IconPlus data-icon="inline-start" />
-                {copy.addLine}
-              </Button>
-            </div>
-          </>
-        ) : null}
-      </AppDialog>
+        onClose={() => void closeRequestForm()}
+        onSaveDraft={() => saveRequest(false)}
+        onSaveSubmit={() => saveRequest(true)}
+      />
 
-      <AppDialog
+      <PurchaseRequestViewDialog
         open={selected != null && mode === "view"}
+        selected={selected}
+        canCreateRequest={canCreateRequest}
+        canAllocate={canAllocate}
+        canReviewSelected={canReviewSelected}
+        isPending={isPending}
+        pendingId={pendingId}
+        suppliers={suppliers}
         onOpenChange={(open) => {
           if (!open) updateUrl(null, null, "replace");
         }}
-        variant="document"
-        title={selected?.code ?? copy.title}
-        description={selected?.branchName}
-        footer={
-          selected ? (
-            <>
-              {canReviewSelected ? (
-                <div className="mr-auto flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isPending}
-                    onClick={() =>
-                      setReasonAction({
-                        kind: "request_changes",
-                        row: selected,
-                      })
-                    }
-                  >
-                    {copy.requestChangesAction}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    disabled={isPending}
-                    onClick={() =>
-                      setReasonAction({ kind: "reject", row: selected })
-                    }
-                  >
-                    {copy.rejectAction}
-                  </Button>
-                </div>
-              ) : null}
-              {canCreateRequest &&
-              (selected.status === "draft" ||
-                selected.status === "changes_requested" ||
-                selected.status === "pending_allocation") ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => updateUrl(selected.id, "edit", "replace")}
-                >
-                  {ACTIONS_VI.edit}
-                </Button>
-              ) : null}
-              {canCreateRequest && selected.status === "cancelled" ? (
-                <Button type="button" onClick={openCopyFromSelected}>
-                  {copy.copyToNewAction}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => updateUrl(null, null, "replace")}
-              >
-                {ACTIONS_VI.close}
-              </Button>
-              {canAllocate &&
-              (selected.status === "submitted" ||
-                selected.status === "pending_allocation" ||
-                selected.status === "partially_ordered") ? (
-                <Button
-                  type="button"
-                  disabled={isPending || pendingId === selected.id}
-                  onClick={() => handleSupplierDecision(selected)}
-                >
-                  {buildAutomaticPurchaseDemandAllocations(
-                    selected.items,
-                    suppliers,
-                  ) == null
-                    ? copy.allocateAction
-                    : copy.approveAllocationAction}
-                </Button>
-              ) : null}
-            </>
-          ) : null
+        onEdit={() => selected && updateUrl(selected.id, "edit", "replace")}
+        onClose={() => updateUrl(null, null, "replace")}
+        onCopyFromSelected={openCopyFromSelected}
+        onRequestChanges={() =>
+          selected &&
+          setReasonAction({ kind: "request_changes", row: selected })
         }
-      >
-        {selected ? (
-          <div className="flex flex-col gap-4">
-            {selected.statusReason ? (
-              <Item variant="muted" size="sm">
-                {selected.statusReason}
-              </Item>
-            ) : null}
-            <DescriptionList
-              className="sm:grid sm:grid-cols-3 sm:gap-4"
-              items={[
-                {
-                  term: copy.statusColumn,
-                  description: copy.statusLabel(selected.status),
-                },
-                {
-                  term: copy.neededBy,
-                  description: selected.neededBy
-                    ? formatVNDate(selected.neededBy)
-                    : "—",
-                },
-                {
-                  term: copy.progressColumn,
-                  description: copy.orderedProgress(
-                    selected.orderedLineCount,
-                    selected.lineCount,
-                  ),
-                },
-              ]}
-            />
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">{copy.linesTitle}</p>
-              {selected.items.map((item) => (
-                <Item
-                  key={item.id}
-                  variant="outline"
-                  size="sm"
-                  className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
-                >
-                  <span>{item.ingredientName}</span>
-                  <span className="font-mono tabular-nums">
-                    {item.orderedQuantity}/{item.quantity} {item.unitLabel}
-                  </span>
-                </Item>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">{copy.purchaseOrdersTitle}</p>
-              {selected.purchaseOrders.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {copy.noPurchaseOrders}
-                </p>
-              ) : (
-                selected.purchaseOrders.map((po) => (
-                  <Button
-                    key={po.id}
-                    type="button"
-                    variant="outline"
-                    className="justify-between"
-                    render={
-                      <Link
-                        href={`/inventory/purchase-orders?tab=orders&poId=${po.id}&mode=view`}
-                      />
-                    }
-                  >
-                    <span className="font-mono">{po.code}</span>
-                    <span>{po.supplierName}</span>
-                  </Button>
-                ))
-              )}
-            </div>
-          </div>
-        ) : null}
-      </AppDialog>
+        onReject={() =>
+          selected && setReasonAction({ kind: "reject", row: selected })
+        }
+        onSupplierDecision={() => selected && handleSupplierDecision(selected)}
+      />
 
-      <AppDialog
+      <PurchaseRequestAllocateDialog
         open={allocateOpen}
+        selected={selected}
+        allocationDrafts={allocationDrafts}
+        missingSupplierItems={missingSupplierItems}
+        allocationComplete={allocationComplete}
+        totals={totals}
+        isPending={isPending}
         onOpenChange={(open) => {
           if (!open) void closeAllocation();
         }}
-        variant="document"
-        title={copy.allocateTitle}
-        description={
-          selected
-            ? `${selected.code} · ${selected.branchName}${
-                selected.neededBy
-                  ? ` · Cần ${formatVNDate(selected.neededBy)}`
-                  : ""
-              }`
-            : undefined
+        onRequestChanges={() =>
+          selected &&
+          setReasonAction({ kind: "request_changes", row: selected })
         }
-        footer={
-          <>
-            <div className="mr-auto flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isPending}
-                onClick={() =>
-                  selected &&
-                  setReasonAction({
-                    kind: "request_changes",
-                    row: selected,
-                  })
-                }
-              >
-                {copy.requestChangesAction}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={isPending}
-                onClick={() =>
-                  selected && setReasonAction({ kind: "reject", row: selected })
-                }
-              >
-                {copy.rejectAction}
-              </Button>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isPending}
-              onClick={() => saveAllocations(false)}
-            >
-              {copy.saveAllocationAction}
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending || !allocationComplete}
-              onClick={() => saveAllocations(true)}
-            >
-              {copy.approveAllocationAction}
-            </Button>
-          </>
+        onReject={() =>
+          selected && setReasonAction({ kind: "reject", row: selected })
         }
-      >
-        {missingSupplierItems.length > 0 ? (
-          <Item
-            variant="muted"
-            size="sm"
-            className="items-start flex-col sm:flex-row"
-          >
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <p className="font-medium">{copy.missingSupplierMappingsTitle}</p>
-              <p className="text-sm text-muted-foreground">
-                {missingSupplierItems
-                  .map((item) => item.ingredientName)
-                  .join(", ")}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              render={<Link href="/inventory/suppliers" />}
-            >
-              {copy.manageSuppliersAction}
-            </Button>
-          </Item>
-        ) : null}
-        <div className="flex flex-col gap-3">
-          {selected?.items.map((item) => {
-            const supplierDrafts = allocationDrafts
-              .map((draft) => ({
-                ...draft,
-                lines: draft.lines.filter(
-                  (line) => line.requestItemId === item.id,
-                ),
-              }))
-              .filter((draft) => draft.lines.length > 0);
-            const allocated = totals.get(item.id) ?? 0;
-            const remaining = item.remainingQuantity - allocated;
-            return (
-              <Item key={item.id} variant="outline" className="items-stretch">
-                <ItemHeader>
-                  <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
-                  <Badge
-                    variant={
-                      Math.abs(remaining) <= 0.0005 ? "success" : "warning"
-                    }
-                  >
-                    {allocated}/{item.remainingQuantity} {item.unitLabel}
-                  </Badge>
-                </ItemHeader>
-                <div className="flex basis-full flex-col gap-2">
-                  {supplierDrafts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {copy.noActiveSuppliers}
-                    </p>
-                  ) : (
-                    supplierDrafts.map((draft) => {
-                      const line = draft.lines[0];
-                      if (!line) return null;
-                      return (
-                        <div
-                          key={draft.supplierId}
-                          className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]"
-                        >
-                          <span className="text-sm">{draft.supplierName}</span>
-                          <QuantityInput
-                            controlSize="field"
-                            value={line.quantity}
-                            onValueChange={(value) =>
-                              patchAllocation(draft.supplierId, line.key, {
-                                quantity: value,
-                              })
-                            }
-                            maxFractionDigits={3}
-                            placeholder={copy.quantity}
-                            aria-label={`${draft.supplierName}: ${copy.quantity}`}
-                          />
-                        </div>
-                      );
-                    })
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {copy.allocationProgress(
-                      allocated,
-                      remaining,
-                      item.unitLabel,
-                    )}
-                  </p>
-                </div>
-              </Item>
-            );
-          })}
-        </div>
-      </AppDialog>
+        onSaveDraft={() => saveAllocations(false)}
+        onApprove={() => saveAllocations(true)}
+        onPatchAllocation={patchAllocation}
+      />
 
       <ReasonConfirmDialog
         open={reasonAction != null}

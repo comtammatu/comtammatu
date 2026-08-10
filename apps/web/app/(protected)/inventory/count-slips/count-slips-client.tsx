@@ -157,7 +157,11 @@ export function CountSlipsClient({
   const [, startTransition] = useTransition();
   const controlSize = useFormControlSize("responsive");
   const [rows, setRows] = useState(initial);
-  const [queueView, setQueueView] = useState<QueueView>("pending");
+  const rawQueue = searchParams.get("queue");
+  const queueView: QueueView =
+    rawQueue === "history" || rawQueue === "all" || rawQueue === "pending"
+      ? rawQueue
+      : "pending";
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSlipId,
   );
@@ -166,11 +170,20 @@ export function CountSlipsClient({
     setRows(initial);
   }, [initial]);
 
-  const replaceSlipId = useCallback(
-    (slipId: number | null) => {
+  const replaceListParams = useCallback(
+    (patch: { slipId?: number | null; queue?: QueueView | null }) => {
       const next = new URLSearchParams(searchParams.toString());
-      if (slipId == null) next.delete("slipId");
-      else next.set("slipId", String(slipId));
+      if (patch.slipId !== undefined) {
+        if (patch.slipId == null) next.delete("slipId");
+        else next.set("slipId", String(patch.slipId));
+      }
+      if (patch.queue !== undefined) {
+        if (patch.queue == null || patch.queue === "pending") {
+          next.delete("queue");
+        } else {
+          next.set("queue", patch.queue);
+        }
+      }
       const query = next.toString();
       startTransition(() => {
         router.replace(query ? `${pathname}?${query}` : pathname, {
@@ -179,6 +192,20 @@ export function CountSlipsClient({
       });
     },
     [pathname, router, searchParams, startTransition],
+  );
+
+  const replaceSlipId = useCallback(
+    (slipId: number | null) => {
+      replaceListParams({ slipId });
+    },
+    [replaceListParams],
+  );
+
+  const setQueueView = useCallback(
+    (value: QueueView) => {
+      replaceListParams({ queue: value });
+    },
+    [replaceListParams],
   );
 
   useEffect(() => {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRightToLine as IconArrowBarRight,
   Ban as IconBan,
@@ -151,12 +151,41 @@ export function StocktakeListClient({
 }) {
   const controlSize = useFormControlSize("responsive");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState(initial);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const statusFilter = searchParams.get("status") || "all";
+  const search = searchParams.get("q") ?? "";
+  const [searchDraft, setSearchDraft] = useState(search);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
   const [isPending, startTransition] = useTransition();
+
+  const replaceListFilters = useCallback(
+    (patch: { status?: string; q?: string | null }) => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (patch.status !== undefined) {
+        if (!patch.status || patch.status === "all") next.delete("status");
+        else next.set("status", patch.status);
+      }
+      if (patch.q !== undefined) {
+        const trimmed = patch.q?.trim() ?? "";
+        if (!trimmed) next.delete("q");
+        else next.set("q", trimmed);
+      }
+      const query = next.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams, startTransition],
+  );
+
+  useEffect(() => {
+    setSearchDraft(search);
+  }, [search]);
 
   async function handleCancelSession(id: number) {
     const ok = await confirm({
@@ -320,14 +349,24 @@ export function StocktakeListClient({
                   type="search"
                   aria-label={messages.inventory.stocktake.searchPlaceholder}
                   placeholder={messages.inventory.stocktake.searchPlaceholder}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchDraft}
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      replaceListFilters({ q: searchDraft });
+                    }
+                  }}
+                  onBlur={() => replaceListFilters({ q: searchDraft })}
                   inputMode="search"
                 />
               </InputGroup>
             }
             filters={
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => replaceListFilters({ status: value })}
+              >
                 <SelectTrigger
                   size={controlSize}
                   className={inventoryListFilterSelectClassName}

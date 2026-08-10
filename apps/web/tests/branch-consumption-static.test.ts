@@ -28,6 +28,10 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   const ownerList = read(
     "apps/web/app/(protected)/inventory/issues/issues-client.tsx",
   );
+  const ownerIssueCreateDialog = read(
+    "apps/web/app/(protected)/inventory/issues/issue-create-dialog.tsx",
+  );
+  const ownerListCreateUi = ownerList + ownerIssueCreateDialog;
   const nav = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(listRoute, /loadBranchConsumptionListData/);
@@ -72,8 +76,8 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.match(ownerList, /\$\{createHref\}\?branchId=\$\{defaultBranchId\}/);
   assert.match(ownerList, /createHref/);
   assert.match(ownerList, /value: "waste"/);
-  assert.match(ownerList, /option\.value === "consumption"/);
-  assert.match(ownerList, /option\.value !== "writeoff"/);
+  assert.match(ownerListCreateUi, /option\.value === "consumption"/);
+  assert.match(ownerListCreateUi, /option\.value !== "writeoff"/);
   assert.match(issueData, /photo_urls/);
   assert.match(issueActions, /photoUrls: z\.array\(z\.string\(\)\.url\(\)\)\.max\(1\)\.optional\(\)/);
   assert.match(issueActions, /photo_urls: d\.photoUrls/);

@@ -118,6 +118,8 @@ test("Branch purchase requests own a Sheet presenter", () => {
   );
   const owner = read(
     "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  ) + read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-list.tsx",
   );
 
   assert.match(page, /BranchPurchaseRequestsClient/);
