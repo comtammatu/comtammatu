@@ -348,7 +348,7 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
     actionSource,
     /invoiceId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
   );
-  assert.match(actionSource, /query = query\.eq\("id", invoiceId\)/);
+  assert.match(actionSource, /listQuery = listQuery\.eq\("id", invoiceId\)/);
   assert.match(actionSource, /\.eq\("tenant_id", claims\.tenant_id\)/);
   assert.match(
     actionSource,

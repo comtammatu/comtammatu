@@ -116,7 +116,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);
-  assert.match(copy, /không gồm giá vốn món/);
+  assert.match(copy, /Không gồm giá vốn món/);
   assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);

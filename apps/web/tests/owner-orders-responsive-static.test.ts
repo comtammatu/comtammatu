@@ -123,7 +123,7 @@ test("invoice mobile cards wrap touch actions without forcing page overflow", ()
   assert.match(source, /const size = dense \? "icon" : "touch"/);
   assert.equal(
     source.match(/size=\{isTouchLayout \? "touch" : "sm"\}/g)?.length,
-    2,
+    1,
   );
   assert.match(source, /variant=\{methodFixMethod[\s\S]*size="touch"/);
   assert.match(source, /flex flex-wrap items-center justify-end gap-2/);

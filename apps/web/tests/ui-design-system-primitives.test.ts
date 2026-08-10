@@ -75,7 +75,7 @@ test("every shared primitive has an importer", () => {
       ],
       { cwd: repoRoot, encoding: "utf8" },
     );
-    return importers.stdout.trim().length === 0;
+    return (importers.stdout ?? "").trim().length === 0;
   });
 
   assert.deepEqual(

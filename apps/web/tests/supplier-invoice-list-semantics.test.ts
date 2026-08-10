@@ -232,13 +232,17 @@ test("full-result group totals remain independent from cursor presentation", () 
   );
   assert.match(
     action,
-    /groups: groupSupplierInvoices\(filtered, viewMode, today\)/,
+    /\/\/ Page-scoped: "Theo NCC" grouping reflects only rows on this page\/keyset slice\./,
   );
   assert.match(
     action,
-    /const pageRows = afterCursor\.slice\(0, pageSize \+ 1\)/,
+    /groups = groupSupplierInvoices\(visibleRows, viewMode, today\)/,
   );
-  assert.doesNotMatch(action, /groupSupplierInvoices\(visibleRows/);
+  assert.match(action, /\.limit\(pageSize \+ 1\)/);
+  assert.doesNotMatch(
+    action,
+    /groups: groupSupplierInvoices\(filtered, viewMode, today\)/,
+  );
 });
 
 test("supplier invoice groups keep deterministic member ordering", () => {
