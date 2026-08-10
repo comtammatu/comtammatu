@@ -48,7 +48,11 @@ test("stuck LIST filter chrome overrides resting card-corner radius", () => {
   );
   assert.match(
     stickyFn,
-    /"bg-card transition-\[margin,width,border-radius,box-shadow\][\s\S]*className,\s*\/\/ Stuck overrides[\s\S]*stuck\s*\?[\s\S]*"overflow-visible rounded-none shadow-lg"/,
+    /"bg-card"[\s\S]*className,\s*\/\/ Stuck overrides[\s\S]*stuck\s*\?[\s\S]*"overflow-visible rounded-none shadow-lg"/,
+  );
+  assert.doesNotMatch(
+    stickyFn,
+    /transition-\[margin,width,border-radius,box-shadow\]/,
   );
 });
 

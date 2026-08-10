@@ -76,7 +76,9 @@ export function AppStickyFilterChrome({
         className={cn(
           APP_PAGE_STICKY_FILTER_CLASSNAME,
           // Match the LIST card surface when covering scrolling rows.
-          "bg-card transition-[margin,width,border-radius,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-move)]",
+          // No transition: stuck width/margin bleed is layout; animating it
+          // inflates the DataTable toolbar on scroll (forbidden on hot paths).
+          "bg-card",
           className,
           // Stuck overrides caller radius / clip (flush LIST passes
           // overflow-hidden rounded-t-lg at rest so bg follows Card corners).
