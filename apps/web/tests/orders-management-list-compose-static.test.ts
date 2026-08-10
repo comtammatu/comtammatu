@@ -28,4 +28,16 @@ test("Orders Owner LIST uses AppListFrame + inline toolbar after KpiRow", () => 
   assert.doesNotMatch(client, /<AppToolbar\s+sticky\b/);
   assert.match(client, /orderId/);
   assert.match(client, /selectOrder/);
+  assert.match(client, /dateFrom/);
+  assert.match(client, /writeListFilterParam|searchParams\.get\("dateFrom"\)/);
+  assert.doesNotMatch(client, /\bfetchOrders\b/);
+});
+
+test("Orders Owner page binds list filters from URL searchParams", () => {
+  const page = read("app/(protected)/orders/page.tsx");
+  assert.match(page, /dateFrom/);
+  assert.match(page, /dateTo/);
+  assert.match(page, /status/);
+  assert.match(page, /listFilters/);
+  assert.match(page, /fetchOrders\(/);
 });

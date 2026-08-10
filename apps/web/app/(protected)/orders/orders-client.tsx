@@ -40,10 +40,9 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { fetchOrders } from "./actions";
 import { OrderDetailContent, OrderDetailSheet } from "./order-detail-sheet";
 import { useIsXlUp } from "./_hooks/use-is-xl-up";
-import type { OrderRow, OrdersSummary, FetchOrdersFilters } from "./actions";
+import type { OrderRow, OrdersSummary } from "./actions";
 import {
   computeOrderWaitInfo,
   getOrderAlertBadgeProps,
@@ -223,11 +222,17 @@ export function OrdersClient({
   const isXlUp = useIsXlUp();
   const controlSize = useFormControlSize();
 
-  // Filter state
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [status, setStatus] = useState<string>("");
-  const [branchId, setBranchId] = useState<string>("");
+  // Draft filter controls; Apply writes URL searchParams (RSC reloads the list).
+  const [dateFrom, setDateFrom] = useState(
+    () => searchParams.get("dateFrom") ?? "",
+  );
+  const [dateTo, setDateTo] = useState(() => searchParams.get("dateTo") ?? "");
+  const [status, setStatus] = useState(
+    () => searchParams.get("status") ?? "",
+  );
+  const [branchId, setBranchId] = useState(
+    () => searchParams.get("branchId") ?? "",
+  );
   const alertFilter = parseAlertFilter(searchParams.get("alert"));
   const notifiedRef = useRef<Set<string>>(new Set());
 
@@ -243,6 +248,13 @@ export function OrdersClient({
     [pathname, router, searchParams],
   );
 
+  useEffect(() => {
+    setDateFrom(searchParams.get("dateFrom") ?? "");
+    setDateTo(searchParams.get("dateTo") ?? "");
+    setStatus(searchParams.get("status") ?? "");
+    setBranchId(searchParams.get("branchId") ?? "");
+  }, [searchParams]);
+
   const setAlertFilter = useCallback(
     (next: AlertFilter) => {
       replaceSearchParams((nextParams) => {
@@ -252,6 +264,15 @@ export function OrdersClient({
     },
     [replaceSearchParams],
   );
+
+  function writeListFilterParam(
+    nextParams: URLSearchParams,
+    key: string,
+    value: string,
+  ) {
+    if (value) nextParams.set(key, value);
+    else nextParams.delete(key);
+  }
 
   const selectOrder = useCallback(
     (order: OrderRow | null) => {
@@ -381,18 +402,11 @@ export function OrdersClient({
   }, [router]);
 
   function handleFilter() {
-    const filters: FetchOrdersFilters = {};
-    if (status) filters.status = status;
-    if (branchId) filters.branchId = Number(branchId);
-    if (dateFrom) filters.dateFrom = dateFrom;
-    if (dateTo) filters.dateTo = dateTo;
-
-    startTransition(async () => {
-      const result = await fetchOrders(filters);
-      if (result.success && result.data) {
-        setOrders(result.data.orders);
-        setSummary(result.data.summary);
-      }
+    replaceSearchParams((nextParams) => {
+      writeListFilterParam(nextParams, "dateFrom", dateFrom);
+      writeListFilterParam(nextParams, "dateTo", dateTo);
+      writeListFilterParam(nextParams, "status", status);
+      writeListFilterParam(nextParams, "branchId", branchId);
     });
   }
 
@@ -401,13 +415,12 @@ export function OrdersClient({
     setDateTo("");
     setStatus("");
     setBranchId("");
-    setAlertFilter("all");
-    startTransition(async () => {
-      const result = await fetchOrders();
-      if (result.success && result.data) {
-        setOrders(result.data.orders);
-        setSummary(result.data.summary);
-      }
+    replaceSearchParams((nextParams) => {
+      nextParams.delete("dateFrom");
+      nextParams.delete("dateTo");
+      nextParams.delete("status");
+      nextParams.delete("branchId");
+      nextParams.delete("alert");
     });
   }
 

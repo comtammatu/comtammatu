@@ -2367,6 +2367,75 @@ for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
   }
 }
 
+/** Collect .tsx files reachable from a LIST page via relative imports. */
+function collectListTreeFiles(pageFile) {
+  const absPage = path.join(REPO_ROOT, pageFile);
+  const seen = new Set();
+  const out = [];
+  const queue = [absPage];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (!file || seen.has(file)) continue;
+    seen.add(file);
+    if (!fs.existsSync(file) || !file.endsWith(".tsx")) continue;
+    out.push(file);
+    const content = fs.readFileSync(file, "utf8");
+    for (const match of content.matchAll(RELATIVE_TSX_IMPORT_RE)) {
+      const resolved = resolveRelativeTsxImport(file, match[1]);
+      if (resolved) queue.push(resolved);
+    }
+  }
+  return out;
+}
+
+// LIST create CTA must live on AppPageHeader.actions — not AppSection.action only.
+const LIST_SECTION_CREATE_RE =
+  /<AppSection\b[\s\S]{0,1200}?action=\{[\s\S]{0,500}?(?:href=["'][^"']*\/new(?:["'?/#]|")|>\s*Tạo\s)/;
+
+for (const file of controlSurfacePages) {
+  if (CONTROL_SURFACE_COMPOSE[file] !== "LIST") continue;
+  for (const treeFile of collectListTreeFiles(file)) {
+    const content = fs.readFileSync(treeFile, "utf8");
+    if (!LIST_SECTION_CREATE_RE.test(content)) continue;
+    failures.push(
+      `control-surface-compose: LIST ${toPosix(path.relative(REPO_ROOT, treeFile))} hosts a create CTA on AppSection.action (forbidden — use AppPageHeader.actions; page-archetypes.md § 1.1).`,
+    );
+  }
+}
+
+// D1 row-open must address via ?{entity}Id= (or FormDialog task CRUD). Ephemeral setState is banned.
+const ROW_CLICK_SETSTATE_RE =
+  /onRowClick=\{(?:\([^)]*\)\s*=>\s*\{?|\(\)\s*=>\s*)\s*set[A-Z]\w*\s*\(|onRowClick=\{\([^)]*\)\s*=>\s*set[A-Z]\w*\s*\(/;
+const URL_ENTITY_OPEN_RE =
+  /(?:patchOverlay|useDocumentOverlayUrl|replaceSearchParams)|(?:searchParams\.get\(\s*["'][a-zA-Z]*Id["']\s*\))|(?:\?[a-zA-Z]*Id=)|(?:\.(?:set|get)\(\s*["'][a-zA-Z]*Id["'])/;
+
+for (const file of controlSurfacePages) {
+  if (CONTROL_SURFACE_COMPOSE[file] !== "LIST") continue;
+  for (const treeFile of collectListTreeFiles(file)) {
+    const content = fs.readFileSync(treeFile, "utf8");
+    if (!ROW_CLICK_SETSTATE_RE.test(content)) continue;
+    if (content.includes("FormDialog")) continue;
+    if (URL_ENTITY_OPEN_RE.test(content)) continue;
+    failures.push(
+      `control-surface-compose: LIST ${toPosix(path.relative(REPO_ROOT, treeFile))} opens a row via onRowClick setState without ?entityId= / overlay URL (or FormDialog). See page-archetypes.md § 1.1.`,
+    );
+  }
+}
+
+// Twin responsive list trees: md:hidden + hidden md:(block|flex|grid) in one file.
+for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (normalized.includes("/(protected)/br/")) continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  const hasMobileOnly = /(?:^|["'`\s])md:hidden\b/.test(content);
+  const hasDesktopOnly = /\bhidden\s+md:(?:block|flex|grid)\b/.test(content);
+  if (hasMobileOnly && hasDesktopOnly) {
+    failures.push(
+      `control-surface-compose: ${normalized} keeps twin md:hidden / hidden md:* list trees (use DataTable mobileCardRender — page-archetypes.md § 1.1).`,
+    );
+  }
+}
+
 if (failures.length > 0) {
   console.error("UI contract check failed:");
   for (const failure of failures) {

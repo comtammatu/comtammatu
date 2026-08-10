@@ -202,8 +202,9 @@ the shared shell (not management LIST).
 
 Census: every control_surface `page.tsx` declares `composeShape` in
 `scripts/page-archetypes.mjs` (`CONTROL_SURFACE_COMPOSE`). CI enforces LIST
-frame presence and the sticky-above-KPI ban (§ 4 allowlist remains for named
-exceptions).
+frame presence, sticky-above-KPI ban, LIST create-not-on-`AppSection.action`,
+D1 row-open via `?{entity}Id=` (FormDialog task CRUD exempt), and twin
+`md:hidden` list trees (§ 4 allowlist remains for named exceptions).
 
 Gold LIST exemplar: `apps/web/app/(protected)/inventory/grn/page.tsx` +
 `grn-list-client.tsx`.

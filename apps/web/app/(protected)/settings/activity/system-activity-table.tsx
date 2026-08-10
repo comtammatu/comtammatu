@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -31,11 +31,14 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import type {
   TenantAuditLogDetail,
   TenantAuditLogRow,
 } from "@/_lib/audit";
 import { getSystemActivityDetail } from "./actions";
+
+const ACTIVITY_LOG_OVERLAY_KEYS = ["logId"] as const;
 
 function documentLabel(row: Pick<TenantAuditLogRow, "entityType" | "entityLabel">): string {
   const typeLabel = formatAuditEntityTypeLabel(row.entityType);
@@ -55,7 +58,19 @@ function sameDocumentHref(row: TenantAuditLogRow): string | null {
 export function SystemActivityTable({ rows }: { rows: TenantAuditLogRow[] }) {
   const router = useRouter();
   const copy = messages.settings.activity;
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const { get, patchOverlay, clearOverlay } = useDocumentOverlayUrl(
+    ACTIVITY_LOG_OVERLAY_KEYS,
+  );
+  const rawLogId = get("logId");
+  const selectedId =
+    rawLogId && /^\d+$/.test(rawLogId) ? Number(rawLogId) : null;
+  const setSelectedId = useCallback(
+    (id: number | null) => {
+      if (id == null) clearOverlay(["logId"], "replace");
+      else patchOverlay({ logId: id }, "push");
+    },
+    [clearOverlay, patchOverlay],
+  );
   const [detail, setDetail] = useState<TenantAuditLogDetail | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [isPending, startTransition] = useTransition();
