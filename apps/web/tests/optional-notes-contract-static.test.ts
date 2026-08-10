@@ -33,8 +33,8 @@ test("rejections and audit-sensitive changes require a reason at both boundaries
     "app/(protected)/inventory/waste/approvals/waste-approvals-client.tsx",
   );
   const expenseActions = read("app/(protected)/finance/expense-actions.ts");
-  const expenseClient = read(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
+  const expenseFormSchema = read(
+    "app/(protected)/finance/expenses/expense-form-schema.ts",
   );
   const payrollActions = read("app/(protected)/hr/payroll-actions.ts");
   const payrollClient = read(
@@ -48,8 +48,8 @@ test("rejections and audit-sensitive changes require a reason at both boundaries
   const creditActions = read(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const creditClient = read(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const creditFormSchema = read(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-form-schema.ts",
   );
 
   assert.match(wasteActions, /data\.decision === "rejected"/);
@@ -59,12 +59,12 @@ test("rejections and audit-sensitive changes require a reason at both boundaries
 
   for (const source of [
     expenseActions,
-    expenseClient,
+    expenseFormSchema,
     payrollActions,
     payrollClient,
     attendanceActions,
     creditActions,
-    creditClient,
+    creditFormSchema,
   ]) {
     assert.match(source, /\.min\(5,/);
   }

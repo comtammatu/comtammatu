@@ -15,6 +15,11 @@ import {
   type SupplierInvoiceRow,
 } from "../app/(protected)/finance/supplier-invoices/supplier-invoice-row";
 
+import {
+  readSupplierInvoiceModules,
+  readSupplierInvoiceShell,
+} from "./helpers/supplier-invoice-module-sources";
+
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
@@ -294,9 +299,8 @@ test("VAT-evidence blocker is filterable from the list, not only from the record
   const action = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(financePage, /vatEvidence: filters\.vatEvidence \?\? undefined/);
   assert.match(
@@ -305,9 +309,9 @@ test("VAT-evidence blocker is filterable from the list, not only from the record
   );
   assert.match(action, /vatEvidence: vatEvidence \?\? null/);
   assert.match(
-    client,
+    modules,
     /replaceListParam\("vat", showOnlyMissingVat \? null : "missing"\)/,
   );
-  assert.match(client, /copy\.vatMissingGroupSummary\(group\.missingVatCount\)/);
-  assert.match(client, /isSupplierInvoiceMissingVatEvidence\(invoice\)/);
+  assert.match(modules, /copy\.vatMissingGroupSummary\(group\.missingVatCount\)/);
+  assert.match(modules, /isSupplierInvoiceMissingVatEvidence\(invoice\)/);
 });

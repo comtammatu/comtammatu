@@ -10,6 +10,10 @@ import {
   type SupplierInvoiceRow,
 } from "../app/(protected)/finance/supplier-invoices/supplier-invoice-row";
 import { normalizePgDumpSql } from "./sql-test-utils";
+import {
+  readSupplierInvoiceModules,
+  readSupplierInvoiceShell,
+} from "./helpers/supplier-invoice-module-sources";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -172,9 +176,8 @@ test("supplier invoice payment action allows Finance roles but keeps advances Ow
 
 test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   const source = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(source, /attachSupplierInvoiceVatEvidence/);
   assert.match(
@@ -183,21 +186,21 @@ test("supplier invoice VAT attach action aligns with RPC permission OR", () => {
   );
   assert.match(client, /pendingCreateVatFile/);
   assert.match(client, /uploadAndAttachVatEvidence/);
-  assert.match(client, /copy\.invoiceLines/);
-  assert.doesNotMatch(client, /invoiceCountHeader/);
+  assert.match(modules, /copy\.invoiceLines/);
+  assert.doesNotMatch(modules, /invoiceCountHeader/);
   assert.doesNotMatch(client, /invoiceCodesPreview/);
-  assert.match(client, /RowActionsMenu/);
+  assert.match(modules, /RowActionsMenu/);
   assert.match(
-    client,
+    modules,
     /viewMode === "po"[\s\S]*key: "invoiceCount"[\s\S]*relatedInvoicesHeader/,
   );
   assert.doesNotMatch(client, /key:\s*"aging"[\s\S]*header:\s*copy\.aging/);
   assert.doesNotMatch(client, /analyzingShort : copy\.groupDetailAction/);
-  assert.match(client, /selectInvoiceInGroup/);
-  assert.match(client, /groupByLabel/);
-  assert.match(client, /selectedGroup\.invoices/);
-  assert.match(client, /uploadIsPrimary/);
-  assert.match(client, /payIsPrimary/);
+  assert.match(modules, /selectInvoiceInGroup/);
+  assert.match(modules, /groupByLabel/);
+  assert.match(modules, /invoicesInSelectedGroup/);
+  assert.match(modules, /uploadIsPrimary/);
+  assert.match(modules, /payIsPrimary/);
   assert.doesNotMatch(client, /className="contents"/);
 });
 
@@ -230,12 +233,8 @@ test("supplier invoice number is removed without weakening draft or valuation fl
 });
 
 test("supplier invoice material lines follow the accounting entry order", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
-  const entryForm = source.slice(
-    source.indexOf("function SupplierInvoiceCreateFields"),
-    source.indexOf("function SupplierPaymentFields"),
+  const entryForm = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx",
   );
   const labels = [
     "copy.unitPriceLabel",
@@ -258,29 +257,28 @@ test("supplier invoice material lines follow the accounting entry order", () => 
 });
 
 test("supplier invoice tax rate applies to every line and recalculates VAT", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const createFields = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx",
   );
 
-  assert.match(source, /invoiceVatRate:/);
-  assert.match(source, /copy\.invoiceTaxRateLabel/);
+  assert.match(createFields, /watch\("invoiceVatRate"\)/);
+  assert.match(createFields, /copy\.invoiceTaxRateLabel/);
   assert.match(
-    source,
+    createFields,
     /function applyInvoiceVatRate[\s\S]*?\.map\([\s\S]*?vatRate: rate[\s\S]*?vatMode: "auto"/,
   );
-  assert.doesNotMatch(source, /copy\.recalculateVat/);
-  assert.match(source, /value=\{line\.vatAmount\}[\s\S]*?readOnly/);
+  assert.doesNotMatch(createFields, /copy\.recalculateVat/);
+  assert.match(createFields, /value=\{line\.vatAmount\}[\s\S]*?readOnly/);
 });
 
 test("supplier invoice client exposes payment only behind server permission", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const source = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(source, /canPaySupplier/);
   assert.match(source, /canAttachVatEvidence/);
   assert.match(
-    source,
+    modules,
     /canShowPayAction\s*=[\s\S]*selectedInvoice\.matchStatus === "matched"[\s\S]*selectedOutstandingAmount > 0/,
   );
   assert.match(source, /recordSupplierPayment/);
@@ -292,8 +290,8 @@ test("supplier invoice client exposes payment only behind server permission", ()
     source,
     /try\s*\{[\s\S]*recordSupplierPayment[\s\S]*catch\s*\{[\s\S]*paymentRetrySameIntent/,
   );
-  assert.match(source, /formatVNDate/);
-  assert.doesNotMatch(source, /formatVNBusinessDate/);
+  assert.match(modules, /formatVNDate/);
+  assert.doesNotMatch(modules, /formatVNBusinessDate/);
 });
 
 test("supplier invoice payment visibility follows the AP payment grant", () => {
@@ -323,9 +321,8 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
   const actionSource = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const clientSource = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const clientSource = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(financePage, /requestedInvoiceId/);
   assert.match(
@@ -372,8 +369,8 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
     clientSource,
     /mode:\s*"view"[\s\S]*invoiceId:\s*String\(invoiceId\)/,
   );
-  assert.match(clientSource, /<Sheet[\s\S]*open=\{detailOpen\}/);
-  assert.match(clientSource, /SheetContent[\s\S]*side="right"/);
+  assert.match(modules, /<Sheet[\s\S]*open=\{open\}/);
+  assert.match(modules, /SheetContent[\s\S]*side="right"/);
   assert.doesNotMatch(
     clientSource,
     /xl:grid-cols-\[minmax\(0,1\.6fr\)_minmax\(320px,1fr\)\]/,
@@ -381,9 +378,7 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
 });
 
 test("supplier invoice URL modes keep business overlays sequential", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const source = readSupplierInvoiceShell();
 
   assert.match(source, /const invoiceMode:\s*SupplierInvoiceMode \| null =/);
   assert.match(source, /const detailOpen =[\s\S]*invoiceMode === "view"/);
@@ -425,9 +420,8 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
   const listModel = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-list-model.ts",
   );
@@ -441,11 +435,11 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
   assert.match(mapper, /poCode/);
   assert.match(mapper, /lastPayment/);
   assert.match(client, /SupplierInvoiceViewMode/);
-  assert.match(client, /viewBySupplier/);
-  assert.match(client, /viewByPo/);
+  assert.match(modules, /viewBySupplier/);
+  assert.match(modules, /viewByPo/);
   assert.match(client, /invoiceGroups/);
-  assert.match(client, /outstandingAmount/);
-  assert.match(client, /RowActionsMenu/);
+  assert.match(modules, /outstandingAmount/);
+  assert.match(modules, /RowActionsMenu/);
   assert.doesNotMatch(client, /overdueAmount/);
   assert.match(listModel, /overdueAmount/);
   assert.match(listModel, /creditAppliedAmount: number/);
@@ -454,47 +448,40 @@ test("supplier invoice client groups payable review by supplier and PO", () => {
     listModel,
     /group\.creditAppliedAmount \+= invoice\.creditAppliedAmount/,
   );
-  assert.equal(client.match(/group\.creditAppliedAmount > 0/g)?.length, 2);
+  assert.equal(modules.match(/group\.creditAppliedAmount > 0/g)?.length, 2);
   assert.equal(
-    client.match(/formatVND\(group\.creditAppliedAmount\)/g)?.length,
+    modules.match(/formatVND\(group\.creditAppliedAmount\)/g)?.length,
     2,
   );
-  assert.equal(client.match(/copy\.supplierCredit/g)?.length, 3);
-  assert.match(client, /lastPaymentSummary/);
+  assert.equal(modules.match(/copy\.supplierCredit/g)?.length, 3);
+  assert.match(modules, /lastPaymentSummary/);
 
   const inventoryMessages = readWeb("lib/messages/inventory.ts");
   assert.match(inventoryMessages, /supplierCredit: "Bù trừ NCC"/);
 });
 
 test("supplier invoice detail opens in a right Sheet instead of a pinned pane", () => {
-  const source = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const shell = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
-  assert.match(source, /AppListFrame/);
-  assert.match(
-    source,
-    /<AppListFrame\s+toolbar=\{\s*<AppToolbar[\s\S]*?filters=\{\s*<>\s*\{viewModeTabs\}\s*\{filterPopover\}\s*<\/>/,
-  );
-  assert.doesNotMatch(source, /<AppListFrame[\s\S]{0,400}title=\{viewMode/);
-  assert.doesNotMatch(
-    source,
-    /<AppListFrame[\s\S]{0,400}action=\{viewModeTabs\}/,
-  );
-  assert.match(source, /SheetFooter/);
-  assert.match(source, /sm:max-w-xl/);
-  assert.match(source, /outstandingPayable/);
-  assert.match(source, /ItemGroup className="grid grid-cols-2 gap-2"/);
-  assert.match(source, /function DetailFact/);
-  assert.doesNotMatch(source, /AppSection/);
-  assert.doesNotMatch(source, /payableFormula/);
-  assert.doesNotMatch(source, /safeTitle/);
-  assert.doesNotMatch(source, /key:\s*"supplier"/);
-  assert.doesNotMatch(source, /key:\s*"remaining"/);
-  assert.doesNotMatch(source, /sm:grid-cols-3/);
-  assert.doesNotMatch(source, /<KpiCard/);
-  assert.doesNotMatch(source, /DescriptionList/);
-  assert.doesNotMatch(source, /from "@comtammatu\/ui\/components\/card"/);
+  assert.match(shell, /AppListFrame/);
+  assert.match(shell, /toolbar=\{listToolbar\}/);
+  assert.doesNotMatch(shell, /<AppListFrame[\s\S]{0,400}title=\{viewMode/);
+  assert.doesNotMatch(shell, /<AppListFrame[\s\S]{0,400}action=\{viewModeTabs\}/);
+  assert.match(modules, /SheetFooter/);
+  assert.match(modules, /sm:max-w-xl/);
+  assert.match(modules, /outstandingPayable/);
+  assert.match(modules, /ItemGroup className="grid grid-cols-2 gap-2"/);
+  assert.match(modules, /function DetailFact/);
+  assert.doesNotMatch(modules, /AppSection/);
+  assert.doesNotMatch(modules, /payableFormula/);
+  assert.doesNotMatch(modules, /safeTitle/);
+  assert.doesNotMatch(modules, /key:\s*"supplier"/);
+  assert.doesNotMatch(modules, /key:\s*"remaining"/);
+  assert.doesNotMatch(modules, /sm:grid-cols-3/);
+  assert.doesNotMatch(modules, /<KpiCard/);
+  assert.doesNotMatch(modules, /DescriptionList/);
+  assert.doesNotMatch(modules, /from "@comtammatu\/ui\/components\/card"/);
 });
 
 test("baseline keeps supplier payment ledger and invoice status together", () => {
@@ -608,9 +595,8 @@ test("supplier invoice matching separates goods receipts from service verificati
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(migration, /private\.apply_supplier_invoice_matching/);
   assert.match(migration, /v_invoice\.invoice_kind = 'service'/);
@@ -619,15 +605,14 @@ test("supplier invoice matching separates goods receipts from service verificati
   assert.match(migration, /pg_catalog\.abs\(v_difference\) <= 1/);
   assert.match(mapper, /invoiceKind: row\.invoice_kind === "service"/);
   assert.doesNotMatch(mapper, /variance_pct/);
-  assert.match(client, /missingGrnTitle/);
-  assert.match(client, /serviceVerificationRequired/);
-  assert.match(client, /getDisplayMatchStatus/);
+  assert.match(modules, /missingGrnTitle/);
+  assert.match(modules, /serviceVerificationRequired/);
+  assert.match(modules, /getDisplayMatchStatus/);
 });
 
 test("supplier invoice form supports goods, services, multiple GRNs and line VAT", () => {
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceModules();
+  const shell = readSupplierInvoiceShell();
   const page = readWeb("app/(protected)/finance/supplier-invoices/page.tsx");
   const grnActions = readWeb("app/(protected)/inventory/grn-actions.ts");
   const messages = readWeb("lib/messages/inventory.ts");
@@ -693,9 +678,8 @@ test("supplier invoice payment exposes visible append-only advance allocation", 
     "supabase/migration-archive/20260730110000_supplier_invoice_ap_stability.sql",
   );
   const action = readWeb("app/(protected)/finance/supplier-invoice-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
+  const modules = readSupplierInvoiceModules();
 
   assert.match(
     migration,
@@ -706,9 +690,9 @@ test("supplier invoice payment exposes visible append-only advance allocation", 
   assert.match(action, /export const allocateSupplierAdvance/);
   assert.match(action, /allocatedAmount/);
   assert.match(action, /advanceAmount/);
-  assert.match(client, /paymentAdvancePreview/);
+  assert.match(modules, /paymentAdvancePreview/);
   assert.match(client, /invoiceMode === "advance"/);
-  assert.match(client, /allocateAdvanceAction/);
+  assert.match(modules, /allocateAdvanceAction/);
 });
 
 test("confirmed GRN surfaces link into supplier invoice create or view", () => {

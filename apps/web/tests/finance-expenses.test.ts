@@ -15,6 +15,17 @@ import { parseExpenseListState } from "../app/(protected)/finance/expenses/expen
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
+const EXPENSE_CLIENT_PATHS = [
+  "app/(protected)/finance/expenses/expenses-client.tsx",
+  "app/(protected)/finance/expenses/expense-form-schema.ts",
+  "app/(protected)/finance/expenses/expense-form-fields.tsx",
+  "app/(protected)/finance/expenses/expense-view-dialog.tsx",
+] as const;
+
+function readExpenseClientBundle(): string {
+  return EXPENSE_CLIENT_PATHS.map(readWeb).join("\n");
+}
+
 test("expense payment state separates paid, unpaid, and bank-matched transfer rows", () => {
   assert.equal(
     classifyExpensePaymentState({
@@ -168,9 +179,7 @@ test("bank deposits stay out of operating expense totals", () => {
 });
 
 test("hospitality is selectable and accepted across expense boundaries", () => {
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
   const migration = readFileSync(
     resolve(
@@ -338,9 +347,7 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
 
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
@@ -370,9 +377,7 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
 
 test("expense edit keeps payment evidence immutable and audits the locked RPC write", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
@@ -442,12 +447,13 @@ test("expense list opens form-shaped document from row click", () => {
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const bundle = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
 
   assert.match(client, /onRowClick=\{openExpenseDocument\}/);
   assert.match(client, /copy\.form\.openAria/);
-  assert.match(client, /function ExpenseViewDialog/);
-  assert.match(client, /expenseToFormValues/);
+  assert.match(bundle, /function ExpenseViewDialog/);
+  assert.match(bundle, /expenseToFormValues/);
   assert.match(client, /editingPaymentState === "unpaid"/);
   assert.match(client, /onPayCash\(editingExpense\)/);
   assert.match(client, /onPayTransfer\(editingExpense\)/);
@@ -511,6 +517,7 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const bundle = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
   const columns = client.slice(
     client.indexOf("const columns: DataTableColumn<ExpenseRow>[] = ["),
@@ -524,7 +531,7 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   assert.match(messages, /branch: "Nơi chi"/);
   assert.match(messages, /category: "Khoản chi"/);
   assert.match(messages, /branchTenantLevel: "Công ty"/);
-  assert.match(client, /className="grid gap-4 md:grid-cols-2"/);
-  assert.match(client, /className="md:col-span-2"/);
+  assert.match(bundle, /className="grid gap-4 md:grid-cols-2"/);
+  assert.match(bundle, /className="md:col-span-2"/);
   assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
 });

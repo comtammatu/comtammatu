@@ -39,6 +39,14 @@ const actions = read("apps/web/app/(protected)/finance/expense-actions.ts");
 const expenseClient = read(
   "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
 );
+const expenseClientBundle = [
+  "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
+  "apps/web/app/(protected)/finance/expenses/expense-form-schema.ts",
+  "apps/web/app/(protected)/finance/expenses/expense-form-fields.tsx",
+  "apps/web/app/(protected)/finance/expenses/expense-view-dialog.tsx",
+]
+  .map(read)
+  .join("\n");
 const cell = read(
   "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
 );
@@ -246,8 +254,8 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /missingBankWebhookPayments/);
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
-  assert.match(expenseClient, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
-  assert.match(expenseClient, /expenseCategoryGroups\(category\)/);
+  assert.match(expenseClientBundle, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(expenseClientBundle, /expenseCategoryGroups\(category\)/);
   assert.match(expenseClient, /getExpenseRowActions/);
   assert.match(expenseClient, /paymentState === "transfer_matched"/);
   assert.match(expenseClient, /<RowActionsMenu/);
@@ -295,13 +303,13 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
     expenseOptionsLoader,
     /payment_method\.eq\.unpaid,payment_method\.eq\.transfer,transfer_content\.not\.is\.null/,
   );
-  assert.match(expenseClient, /copy\.transferInstruction\.copy/);
-  assert.match(expenseClient, /<AppDialog/);
+  assert.match(expenseClientBundle, /copy\.transferInstruction\.copy/);
+  assert.match(expenseClientBundle, /<AppDialog/);
   assert.match(expenseClient, /triggerSize="icon-touch"/);
-  assert.match(expenseClient, /font-mono text-base font-semibold tabular-nums/);
-  assert.match(expenseClient, /row\.transfer_content == null/);
+  assert.match(expenseClientBundle, /font-mono text-base font-semibold tabular-nums/);
+  assert.match(expenseClientBundle, /row\.transfer_content == null/);
   assert.match(
-    expenseClient,
+    expenseClientBundle,
     /return row\.transfer_content \? "transfer" : row\.payment_method/,
   );
   assert.match(financeMessages, /Nội dung CK:/);
