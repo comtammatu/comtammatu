@@ -92,6 +92,32 @@ test("customer invoice QR keeps buyer writes private and before issuance claim",
   );
 });
 
+test("buyer request submit close_reason matches queue_submitted constraint", () => {
+  const submitMigration = readRepo(
+    "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
+  );
+  const closeStateMigration = readRepo(
+    "supabase/migrations/20260811030705_hddt_buyer_request_queue_submitted_close_reason.sql",
+  );
+
+  assert.match(
+    submitMigration,
+    /submit_invoice_buyer_request_as_system[\s\S]*close_reason = 'queue_submitted'/,
+  );
+  assert.match(
+    closeStateMigration,
+    /DROP CONSTRAINT tax_invoice_buyer_requests_close_state_check/,
+  );
+  assert.match(
+    closeStateMigration,
+    /status = 'submitted'[\s\S]*close_reason = 'queue_submitted'/,
+  );
+  assert.match(
+    closeStateMigration,
+    /WHERE status = 'submitted'\s+AND close_reason = 'customer_submitted'/,
+  );
+});
+
 test("POS and Self-Order defer buyer details to the receipt QR", () => {
   const bill = readRepo(
     "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx",
