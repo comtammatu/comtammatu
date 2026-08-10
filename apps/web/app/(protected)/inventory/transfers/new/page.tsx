@@ -10,11 +10,12 @@ const copy = messages.inventory.stockRequests.journey;
 export default async function NewTransferPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
   const data = await loadTransferCreatePageData({
     queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
 
   return (

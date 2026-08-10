@@ -158,8 +158,33 @@ export function StocktakeListClient({
   const search = searchParams.get("q") ?? "";
   const [searchDraft, setSearchDraft] = useState(search);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
-  const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+  const branchQuery =
+    userBranchId != null
+      ? `?branch=${userBranchId}&branchId=${userBranchId}`
+      : "";
+  const writeRequiresSitePick = userBranchId == null;
   const [isPending, startTransition] = useTransition();
+
+  const stocktakeAction = writeRequiresSitePick ? (
+    <Button
+      type="button"
+      size="lg"
+      disabled
+      title={messages.controlSurface.scopeControl.pickSite}
+    >
+      <IconClipboardCheck className="size-4" />
+      {messages.inventory.stocktake.openSession}
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      size="lg"
+      render={<Link href={`${routeBase}/new${branchQuery}`} />}
+    >
+      <IconClipboardCheck className="size-4" />
+      {messages.inventory.stocktake.openSession}
+    </Button>
+  );
 
   const replaceListFilters = useCallback(
     (patch: { status?: string; q?: string | null }) => {
@@ -318,17 +343,6 @@ export function StocktakeListClient({
       },
     },
   ];
-
-  const stocktakeAction = (
-    <Button
-      type="button"
-      size="lg"
-      render={<Link href={`${routeBase}/new${branchQuery}`} />}
-    >
-      <IconClipboardCheck className="size-4" />
-      {messages.inventory.stocktake.openSession}
-    </Button>
-  );
 
   return (
     <AppPage width="xwide" density="compact">

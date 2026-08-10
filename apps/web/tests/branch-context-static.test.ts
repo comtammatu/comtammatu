@@ -132,7 +132,21 @@ test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
     [1, 2, 10, 20],
   );
   assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "site");
   assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.defaultBranchId, 1);
+});
+
+test("selectBranchScope -> requestAll sets scopeMode all for tenant-wide roles", () => {
+  const scope = selectBranchScope(
+    claims("owner", 1),
+    BRANCHES,
+    null,
+    ["owner"],
+    { requestAll: true },
+  );
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.defaultBranchId, 1);
 });
 
@@ -220,6 +234,7 @@ test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non
   assert.equal(parseBranchIdParam("-1"), null);
   assert.equal(parseBranchIdParam("abc"), null);
   assert.equal(parseBranchIdParam("1.5"), null);
+  assert.equal(parseBranchIdParam("all"), null);
 });
 
 test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {

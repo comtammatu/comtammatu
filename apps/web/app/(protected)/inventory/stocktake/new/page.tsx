@@ -12,7 +12,7 @@ import { messages } from "@lib/messages";
 export const dynamic = "force-dynamic";
 
 interface NewStocktakeSessionPageContentProps {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
 }
@@ -31,6 +31,7 @@ export async function NewStocktakeSessionPageContent({
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId: sp.branchId,
+    queryBranch: sp.branch,
   });
   if (scope.outOfScope) notFound();
 
@@ -91,7 +92,7 @@ export async function NewStocktakeSessionPageContent({
 export default async function NewStocktakeSessionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
 }) {
   return <NewStocktakeSessionPageContent searchParams={searchParams} />;
 }

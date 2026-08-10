@@ -476,8 +476,7 @@ export default async function FinancePage({
         params={params}
         branches={cockpit.branches}
         basePath="/finance"
-        locationFilter
-        hide={["granularity", "compare"]}
+        hide={["branch", "granularity", "compare"]}
       />
 
       <AppSection size="sm" title={financeCopy.basic.sections.periodResult}>

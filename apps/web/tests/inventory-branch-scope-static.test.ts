@@ -168,6 +168,7 @@ test("adapter -> owner sees every active branch kind and can select all", async 
     "allowedBranches",
     "canSelectAll",
     "defaultBranchId",
+    "scopeMode",
     "selectedBranchId",
   ]);
   assert.deepEqual(
@@ -175,7 +176,21 @@ test("adapter -> owner sees every active branch kind and can select all", async 
     [1, 2, 10],
   );
   assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "site");
   assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.defaultBranchId, 1);
+});
+
+test("adapter -> requestAll yields scopeMode all with null selection for tenant-wide roles", async () => {
+  const scope = await resolveInventoryBranchScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    null,
+    { requestAll: true },
+  );
+  assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.defaultBranchId, 1);
 });
 
@@ -287,15 +302,27 @@ test("list scope -> office ?branchId= never triggers outOfScope, only clamps the
   assert.equal(scope.outOfScope, false);
 });
 
-test("list scope -> malformed query branchId parses to null and falls back to default", async () => {
+test("list scope -> malformed query branchId falls back to all for tenant-wide roles", async () => {
   const scope = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", null),
     { queryBranchId: "not-a-number" },
   );
 
-  assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
+  assert.equal(scope.defaultBranchId, 1);
   assert.equal(scope.outOfScope, false);
+});
+
+test("list scope -> explicit branch=all aggregates for tenant-wide roles", async () => {
+  const scope = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    { queryBranch: "all" },
+  );
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
 });
 
 test("list scope -> branch-scoped role with null branch_id (unassigned) yields empty scope", async () => {

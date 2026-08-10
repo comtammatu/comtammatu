@@ -36,8 +36,13 @@ test("root route renders the Control home", () => {
   assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
   assert.match(
     controlSurfaceShell,
-    /sidebarHeaderAccessory=\{sidebarHeaderAccessory\}/,
+    /sidebarHeaderAccessory=\{scopeAccessory\}/,
   );
+  assert.match(controlSurfaceShell, /ControlSurfaceScopeControl/);
   assert.match(controlSurfaceShell, /InventoryBranchFilter/);
+  assert.match(controlSurfaceShell, /mobileScopeAccessory=\{scopeAccessory\}/);
+  assert.match(controlSurfaceShell, /canSelectAll/);
+  assert.match(appShell, /mobileScopeAccessory/);
+  assert.match(appShell, /sticky top-0/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });

@@ -299,7 +299,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.range}
               size={controlSize}
-              className="w-full sm:w-32"
+              className="w-full max-w-[9.5rem] sm:w-32"
             >
               <SelectValue />
             </SelectTrigger>
@@ -323,7 +323,7 @@ export function FilterBar({
             placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
             max={today.start}
             disabled={isPending}
-            className="w-full sm:w-64"
+            className="w-full max-w-[14rem] sm:w-64"
             onSelectionChange={handlePeriodSelectionChange}
           />
         ) : null}
@@ -339,7 +339,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.granularity}
               size={controlSize}
-              className="w-full sm:w-36"
+              className="w-full max-w-[9rem] sm:w-36"
             >
               <SelectValue />
             </SelectTrigger>
@@ -370,7 +370,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.compare}
               size={controlSize}
-              className="w-full sm:w-44"
+              className="w-full max-w-[11rem] sm:w-44"
             >
               <SelectValue />
             </SelectTrigger>

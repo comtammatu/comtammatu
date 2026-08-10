@@ -630,8 +630,7 @@ export function ExpensesClient({
             params={params}
             branches={branches}
             basePath="/finance/expenses"
-            locationFilter
-            hide={["compare", "granularity"]}
+            hide={["branch", "compare", "granularity"]}
           />
         }
       >

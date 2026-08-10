@@ -17,16 +17,19 @@ import type { PendingWasteRow } from "./waste-approval-model";
 type LoadWasteApprovalsOptions = {
   routeBranchId?: number;
   queryBranchId?: string;
+  queryBranch?: string | string[];
 };
 
 export async function loadWasteApprovalsData({
   routeBranchId,
   queryBranchId,
+  queryBranch,
 }: LoadWasteApprovalsOptions = {}) {
   const { supabase, claims, session } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId,
+    queryBranch,
   });
   if (scope.outOfScope) notFound();
 

@@ -319,14 +319,18 @@ test("Owner shell scroll invariant is documented", () => {
 });
 
 test("Inventory branch selector keeps touch targets through tablet widths", () => {
-  const source = read(
+  const filter = read(
     "apps/web/app/(protected)/inventory/_components/inventory-branch-filter.tsx",
   );
+  const scopeControl = read(
+    "apps/web/app/components/control-surface-scope-control.tsx",
+  );
 
-  assert.match(source, /useIsMobile\(1024\)/);
-  assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
+  assert.match(filter, /ControlSurfaceScopeControl/);
+  assert.match(scopeControl, /useIsMobile\(1024\)/);
+  assert.match(scopeControl, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(
-    source,
+    scopeControl,
     /className=\{isTouchLayout \? "min-h-12 text-sm" : undefined\}/,
   );
 });

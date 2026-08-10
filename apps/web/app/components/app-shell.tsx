@@ -62,6 +62,8 @@ export interface AppShellProps {
   /** Sub-tabs for the active primary tab. */
   tier2: ShellNavGroup[];
   sidebarHeaderAccessory?: ReactNode;
+  /** Touch (&lt;lg): sticky Phạm vi above the scroll content. */
+  mobileScopeAccessory?: ReactNode;
   personalHref?: string;
   mobileHeaderTitle?: string;
   /**
@@ -194,6 +196,7 @@ export function AppShell({
   tier1,
   tier2,
   sidebarHeaderAccessory,
+  mobileScopeAccessory,
   personalHref,
   mobileHeaderTitle,
   bottomNav = true,
@@ -401,6 +404,11 @@ export function AppShell({
               personalHref={personalHref}
               variant="mobile"
             />
+          </div>
+        ) : null}
+        {mobileScopeAccessory ? (
+          <div className="sticky top-0 z-20 shrink-0 border-b border-border/70 bg-background px-3 py-2 lg:hidden">
+            {mobileScopeAccessory}
           </div>
         ) : null}
         <div

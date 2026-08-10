@@ -285,7 +285,7 @@ test("expense location filter keeps company and branch scopes distinct", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
 
   assert.match(page, /fetchExpenses\(\{[\s\S]*?location: params\.location/);
-  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
+  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
   assert.match(actions, /fetchExpensesSchema\.safeParse\(params\)/);
   assert.match(
     actions,
@@ -293,7 +293,7 @@ test("expense location filter keeps company and branch scopes distinct", () => {
   );
   assert.match(
     actions,
-    /parsed\.data\.location === "branches"[\s\S]*?query = query\.not\("branch_id", "is", null\)/,
+    /parsed\.data\.location === "branches"[\s\S]*?fetchSalesBranchIds/,
   );
 });
 
@@ -533,5 +533,5 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   assert.match(messages, /branchTenantLevel: "Công ty"/);
   assert.match(bundle, /className="grid gap-4 md:grid-cols-2"/);
   assert.match(bundle, /className="md:col-span-2"/);
-  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
+  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
 });

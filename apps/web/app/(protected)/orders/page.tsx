@@ -28,6 +28,7 @@ function parseDateParam(raw: string | undefined): string | undefined {
 
 interface OrdersPageContentProps {
   searchParams?: Promise<{
+    branch?: string | string[];
     branchId?: string | string[];
     orderId?: string | string[];
     dateFrom?: string | string[];
@@ -61,6 +62,7 @@ export async function OrdersPageContent({
     const scope = await resolveListScope(supabase, claims, branches, {
       routeBranchId,
       queryBranchId: params.branchId,
+      queryBranch: params.branch,
       tenantWideRoles: ["owner"],
     });
     if (scope.outOfScope) notFound();

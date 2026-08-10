@@ -29,6 +29,10 @@ import type {
 import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
 import { isOperatingExpenseCategory } from "./expense-categories";
+import {
+  applySalesBranchesFilter,
+  fetchSalesBranchIds,
+} from "./finance-sales-branches";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -294,7 +298,8 @@ export async function fetchOperatingExpenseSummary({
   if (location === "company") {
     query = query.is("branch_id", null);
   } else if (location === "branches") {
-    query = query.not("branch_id", "is", null);
+    const salesBranchIds = await fetchSalesBranchIds(supabase as never, tenantId);
+    query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
   } else if (location === "branch" && branchId != null) {
     query = query.eq("branch_id", branchId);
   }
@@ -342,6 +347,13 @@ async function fetchFinanceVatSummary({
     .lt("invoice_date", endIso);
   if (location === "company") {
     supplierInvoiceQuery = supplierInvoiceQuery.is("grn_id", null);
+  } else if (location === "branches") {
+    const salesBranchIds = await fetchSalesBranchIds(supabase as never, tenantId);
+    supplierInvoiceQuery = applySalesBranchesFilter(
+      supplierInvoiceQuery,
+      "goods_received_notes.branch_id",
+      salesBranchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     supplierInvoiceQuery = supplierInvoiceQuery.eq(
       "goods_received_notes.branch_id",
@@ -358,7 +370,12 @@ async function fetchFinanceVatSummary({
   if (location === "company") {
     expenseQuery = expenseQuery.is("branch_id", null);
   } else if (location === "branches") {
-    expenseQuery = expenseQuery.not("branch_id", "is", null);
+    const salesBranchIds = await fetchSalesBranchIds(supabase as never, tenantId);
+    expenseQuery = applySalesBranchesFilter(
+      expenseQuery,
+      "branch_id",
+      salesBranchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     expenseQuery = expenseQuery.eq("branch_id", branchId);
   }
@@ -373,7 +390,12 @@ async function fetchFinanceVatSummary({
   if (location === "company") {
     outputInvoiceQuery = outputInvoiceQuery.is("branch_id", null);
   } else if (location === "branches") {
-    outputInvoiceQuery = outputInvoiceQuery.not("branch_id", "is", null);
+    const salesBranchIds = await fetchSalesBranchIds(supabase as never, tenantId);
+    outputInvoiceQuery = applySalesBranchesFilter(
+      outputInvoiceQuery,
+      "branch_id",
+      salesBranchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     outputInvoiceQuery = outputInvoiceQuery.eq("branch_id", branchId);
   }

@@ -1,6 +1,8 @@
 import { formatCount } from "@comtammatu/shared/format";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
+
 export const controlSurface = {
   dashboard: {
     eyebrow: "Toàn hệ thống",
@@ -42,6 +44,18 @@ export const controlSurface = {
     inventory: "Kho hàng",
     finance: "Tài chính",
     modules: "Mô-đun",
+  },
+  scopeControl: {
+    label: "Phạm vi",
+    ariaLabel: "Phạm vi xem",
+    all: "Tất cả",
+    allSalesBranches: BRANCH_VI.selectAll,
+    company: "Công ty",
+    office: "Văn phòng",
+    pickSite: "Chọn nơi làm việc",
+    groupBranch: "Chi nhánh",
+    groupCentralSupply: "Kho Tổng",
+    groupCentralKitchen: "Bếp Trung Tâm",
   },
   printTemplates: {
     loadErrorTitle: "Không thể tải mẫu phiếu in",

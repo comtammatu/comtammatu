@@ -138,6 +138,7 @@ export default async function PurchaseOrdersPage({
 }: {
   searchParams: Promise<{
     tab?: string | string[];
+    branch?: string | string[];
     branchId?: string | string[];
   }>;
 }) {
@@ -145,6 +146,7 @@ export default async function PurchaseOrdersPage({
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
 

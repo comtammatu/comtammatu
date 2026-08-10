@@ -17,7 +17,7 @@ import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 interface ProductionPageProps {
-  searchParams?: Promise<{ branchId?: string | string[]; tab?: string }>;
+  searchParams?: Promise<{ branch?: string | string[]; branchId?: string | string[]; tab?: string }>;
   routeBranchId?: number;
 }
 
@@ -30,6 +30,7 @@ export async function ProductionPageContent({
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
 
   if (scope.outOfScope) notFound();
@@ -114,7 +115,7 @@ export async function ProductionPageContent({
 export default async function ProductionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[]; tab?: string }>;
+  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[]; tab?: string }>;
 }) {
   return <ProductionPageContent searchParams={searchParams} />;
 }

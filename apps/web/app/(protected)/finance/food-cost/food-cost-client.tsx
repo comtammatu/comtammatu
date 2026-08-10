@@ -159,7 +159,7 @@ export function FoodCostClient({
         params={params}
         branches={branches}
         basePath="/finance/food-cost"
-        hide={["compare", "granularity"]}
+        hide={["branch", "compare", "granularity"]}
         trailing={
           <FinanceExportActions
             filename={csvFilename}

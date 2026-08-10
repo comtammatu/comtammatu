@@ -27,7 +27,6 @@ import {
   type PositionOption,
   type StaffRow,
 } from "./staff/staff-table";
-import { HrScopeSelector } from "./hr-scope-selector";
 import { resolveHrBranchScope, type HrBranchScope } from "@/lib/hr-scope";
 
 type PeopleView = "profile" | "accounts";
@@ -107,7 +106,6 @@ export function HrClient({
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={branchScope} />
             {view === "accounts" && canManageAccounts ? (
               <>
                 <GrantEmployeeAccessButton

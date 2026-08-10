@@ -366,7 +366,7 @@ export function IssueDetailClient({
           line.baseUnit !== line.unit &&
           line.toBaseFactor !== 1;
         return (
-          <div className="flex flex-col items-end gap-0.5">
+          <div className="flex flex-col items-end gap-1">
             <span>{formatQty(entryQty)}</span>
             {showBaseHint ? (
               <span className="text-xs text-muted-foreground">

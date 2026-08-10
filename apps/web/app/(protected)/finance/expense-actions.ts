@@ -32,6 +32,10 @@ import {
 } from "./_lib/expense-categories";
 import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
 import {
+  applySalesBranchesFilter,
+  fetchSalesBranchIds,
+} from "./_lib/finance-sales-branches";
+import {
   expenseGrossFromBreakdown,
   expenseVatLineSchema,
   refineExpenseVatBreakdown,
@@ -474,7 +478,11 @@ export async function fetchExpenses(params: {
     if (parsed.data.location === "company") {
       query = query.is("branch_id", null);
     } else if (parsed.data.location === "branches") {
-      query = query.not("branch_id", "is", null);
+      const salesBranchIds = await fetchSalesBranchIds(
+        supabase as never,
+        claims.tenant_id,
+      );
+      query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
     } else if (
       parsed.data.location === "branch" &&
       parsed.data.branchId != null

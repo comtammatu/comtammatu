@@ -38,6 +38,7 @@ import {
   INVENTORY_VI,
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 import { IssueCreateDialog } from "./issue-create-dialog";
 import {
   buildIssuesExportCsv,
@@ -78,6 +79,7 @@ export function IssuesClient({
   canViewMonetary,
   branches,
   defaultBranchId,
+  writeRequiresSitePick = false,
   recordedBranchId: initialRecordedBranchId,
   recordedEndDate: initialRecordedEndDate,
   recordedIsLimited,
@@ -95,6 +97,8 @@ export function IssuesClient({
   canViewMonetary: boolean;
   branches: IssueBranchOption[];
   defaultBranchId: number | null;
+  /** When true, create CTAs must not invent a default site under scope=all. */
+  writeRequiresSitePick?: boolean;
   recordedBranchId: number | null;
   recordedEndDate: string;
   recordedIsLimited: boolean;
@@ -397,9 +401,11 @@ export function IssuesClient({
   }
 
   const resolvedCreateHref =
-    createHref && defaultBranchId
-      ? `${createHref}?branchId=${defaultBranchId}`
-      : createHref;
+    createHref && defaultBranchId != null
+      ? `${createHref}?branch=${defaultBranchId}&branchId=${defaultBranchId}`
+      : writeRequiresSitePick
+        ? undefined
+        : createHref;
 
   const issueActions =
     resolvedView === "waste" && resolvedCreateHref ? (
@@ -407,8 +413,27 @@ export function IssuesClient({
         <IconPlus className="size-4" />
         {INVENTORY_VI.createWasteTitle}
       </Button>
-    ) : resolvedView === "manual" && allowedCreateIssueTypes.length > 0 ? (
+    ) : resolvedView === "waste" && writeRequiresSitePick ? (
+      <Button size="lg" type="button" disabled title={messages.controlSurface.scopeControl.pickSite}>
+        <IconPlus className="size-4" />
+        {INVENTORY_VI.createWasteTitle}
+      </Button>
+    ) : resolvedView === "manual" &&
+      allowedCreateIssueTypes.length > 0 &&
+      !writeRequiresSitePick ? (
       <Button type="button" size="lg" onClick={() => setCreateOpen(true)}>
+        <IconPlus className="size-4" />
+        {INVENTORY_VI.manualConsumptionCreateAction}
+      </Button>
+    ) : resolvedView === "manual" &&
+      allowedCreateIssueTypes.length > 0 &&
+      writeRequiresSitePick ? (
+      <Button
+        type="button"
+        size="lg"
+        disabled
+        title={messages.controlSurface.scopeControl.pickSite}
+      >
         <IconPlus className="size-4" />
         {INVENTORY_VI.manualConsumptionCreateAction}
       </Button>
@@ -565,9 +590,15 @@ export function IssuesClient({
         paramKey="view"
         ariaLabel={pageTitle ?? tNav("consumption", "navigation")}
         queryKeysByValue={{
-          recorded: ["branchId", "startDate", "endDate", "recordedOrderId"],
-          manual: ["status", "type", "q"],
-          waste: ["status", "type", "q"],
+          recorded: [
+            "branch",
+            "branchId",
+            "startDate",
+            "endDate",
+            "recordedOrderId",
+          ],
+          manual: ["branch", "branchId", "status", "type", "q"],
+          waste: ["branch", "branchId", "status", "type", "q"],
         }}
       >
         {showsRecordedConsumption ? (

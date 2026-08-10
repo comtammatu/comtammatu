@@ -5,7 +5,6 @@ import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
 import { PayrollListClient } from "./payroll-list-client";
-import { HrScopeSelector } from "../hr-scope-selector";
 import {
   getHrScopeBranchId,
   resolveHrBranchScope,
@@ -101,10 +100,6 @@ export default async function PayrollPage({
         description={copy.live.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector
-              branches={branches}
-              value={branchScope}
-            />
             <Button
               variant="outline"
               size="touch"

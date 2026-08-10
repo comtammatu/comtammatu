@@ -37,6 +37,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { cn } from "@comtammatu/ui";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import {
@@ -158,7 +159,10 @@ function StockQtyCell({
 }
 
 function branchHref(branchId: number, path: string): string {
-  return `${path}?branchId=${branchId}`;
+  return withControlSurfaceBranchScope(path, String(branchId) as `${number}`, {
+    prefixes: ["/inventory"],
+    dualInventoryBranchId: true,
+  });
 }
 
 function stockValue(item: StockIngredient): number | null {

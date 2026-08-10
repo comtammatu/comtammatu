@@ -1,6 +1,6 @@
 import "server-only";
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getInventoryValueVisibility,
   PERMISSION_KEYS,
@@ -12,6 +12,7 @@ import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { formatDate } from "@lib/inventory/format";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "@/(protected)/inventory/_lib/stock-bearing-locations";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 import {
   computeStockStatus,
@@ -64,6 +65,7 @@ type StockIngredientRow = {
 interface LoadStockOnHandPageDataOptions {
   includeValuation?: boolean;
   queryBranchId?: string | string[];
+  queryBranch?: string | string[];
   routeBranchId?: number;
 }
 
@@ -98,18 +100,32 @@ function storageTemp(type: string | null): string | null {
 export async function loadStockOnHandPageData({
   includeValuation = true,
   queryBranchId,
+  queryBranch,
   routeBranchId,
 }: LoadStockOnHandPageDataOptions = {}): Promise<StockOnHandPageData> {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
     queryBranchId,
+    queryBranch,
   });
   if (scope.outOfScope) notFound();
 
   const branchId = scope.selectedBranchId;
-  // No active branch in scope — cannot land on stock (avoids /inventory ↔ stock loop).
-  if (!branchId) notFound();
+  // On-hand is site-scoped (locations/WAC). Aggregate `all` cannot render a
+  // coherent stock board — pin to the default operable site and keep URL sync.
+  if (!branchId) {
+    if (scope.canSelectAll && scope.defaultBranchId != null) {
+      redirect(
+        withControlSurfaceBranchScope(
+          "/inventory/stock",
+          String(scope.defaultBranchId) as `${number}`,
+          { prefixes: ["/inventory"], dualInventoryBranchId: true },
+        ),
+      );
+    }
+    notFound();
+  }
 
   const monetaryAccess = await loadInventoryMonetaryAccess(claims.user_role);
   const stockReadClient = monetaryAccess.valuation

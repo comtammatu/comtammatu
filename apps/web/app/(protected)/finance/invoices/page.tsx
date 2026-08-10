@@ -64,7 +64,7 @@ export default async function InvoicesPage({
             params={params}
             branches={branches}
             basePath="/finance/invoices"
-            hide={["range", "granularity", "compare"]}
+            hide={["branch", "range", "granularity", "compare"]}
           />
         }
       >

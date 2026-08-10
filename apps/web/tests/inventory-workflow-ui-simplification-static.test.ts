@@ -98,12 +98,16 @@ test("consumption list separates POS ledger, manual slips, and waste via tabs", 
   assert.match(issues, /const showsWasteTab =/);
   assert.match(issues, /<AppPageTabs/);
   assert.match(issues, /paramKey="view"/);
+  assert.match(issues, /queryKeysByValue=\{\{/);
+  assert.match(issues, /recorded: \[[\s\S]*?"branch"[\s\S]*?"branchId"[\s\S]*?"startDate"/);
   assert.match(
     issues,
-    /queryKeysByValue=\{\{\s+recorded: \["branchId", "startDate", "endDate", "recordedOrderId"\]/,
+    /manual: \["branch", "branchId", "status", "type", "q"\]/,
   );
-  assert.match(issues, /manual: \["status", "type", "q"\]/);
-  assert.match(issues, /waste: \["status", "type", "q"\]/);
+  assert.match(
+    issues,
+    /waste: \["branch", "branchId", "status", "type", "q"\]/,
+  );
   assert.match(issues, /<TabsContent value="recorded"/);
   assert.match(issues, /<TabsContent value="manual"/);
   assert.match(issues, /<TabsContent value="waste"/);

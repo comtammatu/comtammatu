@@ -11,25 +11,25 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { tNav } from "./dictionary";
-
-function appendBranchId(href: string, branchId: number): string {
-  const [path, query = ""] = href.split("?");
-  const params = new URLSearchParams(query);
-  params.set("branchId", String(branchId));
-  return `${path}?${params.toString()}`;
-}
 
 export function withInventoryBranchNavScope(
   groups: ShellNavGroup[],
   branchId: number | null,
+  options?: { scopeAll?: boolean },
 ): ShellNavGroup[] {
-  if (branchId == null) return groups;
+  const scope =
+    branchId != null ? String(branchId) : options?.scopeAll ? "all" : null;
+  if (scope == null) return groups;
   return groups.map((group) => ({
     ...group,
     items: group.items.map((item) => ({
       ...item,
-      linkHref: appendBranchId(item.href, branchId),
+      linkHref: withControlSurfaceBranchScope(item.href, scope as `${number}` | "all", {
+        prefixes: ["/inventory"],
+        dualInventoryBranchId: true,
+      }),
     })),
   }));
 }
