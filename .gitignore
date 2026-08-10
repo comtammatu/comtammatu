@@ -62,6 +62,7 @@ supabase/.branches/
 .claude/settings.local.json
 .claude/skills/gstack/
 .claude/worktrees/
+.worktrees/
 .claude/.cache/
 .claude/cache/
 .claude/logs/
