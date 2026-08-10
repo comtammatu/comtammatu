@@ -23,6 +23,7 @@ const VI_DICTIONARY = {
   navigation: {
     stock: { long: "Tồn kho" },
     purchaseOrders: { long: "Mua hàng" },
+    purchaseRequests: { long: "Yêu cầu mua" },
     grn: { short: "Nhập kho", long: "Phiếu nhập kho" },
     supplierInvoices: { short: "HĐ NCC", long: "Hóa đơn NCC" },
     transfers: { short: "Giao nhận", long: "Giao nhận" },

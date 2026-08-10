@@ -34,9 +34,17 @@ export function withInventoryBranchNavScope(
   }));
 }
 
-/** Soft-hide PO lifecycle nav for central ops and branch managers. */
+/** Full Mua hàng workspace (PO lifecycle) — Owner / Kế toán only. */
 function canShowPurchaseOrders(role: StaffRole): boolean {
   return role === "owner" || role === "accountant";
+}
+
+/**
+ * Central sites create Yêu cầu mua; they must not own PO pricing/send.
+ * Same `/inventory/purchase-orders` workspace defaults to the needs tab.
+ */
+function canShowPurchaseRequests(role: StaffRole): boolean {
+  return role === "central_supply_ops" || role === "central_kitchen_lead";
 }
 
 /** Menu-item consumption recipes are owner-managed catalog data. */
@@ -109,6 +117,13 @@ export function resolveInventoryNav({
     inboundItems.push({
       href: "/inventory/purchase-orders",
       label: tNav("purchaseOrders", "navigation"),
+      icon: IconShoppingCart,
+      matchPrefixes: ["/inventory/purchase-requests"],
+    });
+  } else if (showProcurement && canShowPurchaseRequests(userRole)) {
+    inboundItems.push({
+      href: "/inventory/purchase-orders",
+      label: tNav("purchaseRequests", "navigation"),
       icon: IconShoppingCart,
       matchPrefixes: ["/inventory/purchase-requests"],
     });
