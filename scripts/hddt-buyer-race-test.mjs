@@ -75,9 +75,12 @@ function assertSuccess(result, label) {
 }
 
 function serviceRoleSql(body) {
+  // Use PERFORM so JWT claim setup does not emit tuple rows into -qAt stdout.
   return `
-    SELECT set_config('request.jwt.claim.role', 'service_role', true);
-    SELECT set_config('request.jwt.claims', '{"role":"service_role"}', true);
+    DO $service_role$ BEGIN
+      PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+      PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+    END $service_role$;
     ${body}
   `;
 }
