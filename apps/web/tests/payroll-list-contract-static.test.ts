@@ -10,6 +10,13 @@ const client = readFileSync(
   ),
   "utf8",
 );
+const calendarDialog = readFileSync(
+  join(
+    import.meta.dirname,
+    "../app/(protected)/hr/payroll/payroll-calendar-dialog.tsx",
+  ),
+  "utf8",
+);
 const page = readFileSync(
   join(import.meta.dirname, "../app/(protected)/hr/payroll/page.tsx"),
   "utf8",
@@ -83,11 +90,15 @@ test("payroll filters keep the selected salary state in the URL", () => {
 
 test("payroll calendar keeps the selected employee in the URL and reuses the attendance calendar", () => {
   assert.match(page, /calendar\?: string/);
+  assert.match(page, /day\?: string/);
   assert.match(page, /function parseCalendarTarget/);
+  assert.match(page, /function resolveCalendarDay/);
   assert.match(client, /calendarTarget: "all" \| number \| null/);
+  assert.match(client, /selectedCalendarDay: string \| null/);
   assert.match(client, /params\.set\("calendar", String\(nextCalendarTarget\)\)/);
+  assert.match(client, /params\.set\("day", nextCalendarDay\)/);
   assert.match(client, /onRowClick=\{openCalendar\}/);
-  assert.match(client, /AttendanceCalendar/);
+  assert.match(calendarDialog, /AttendanceCalendar/);
   assert.match(client, /copy\.compactPosition\(entry\.positionLabel\)/);
   assert.match(actions, /workHoursByEmployee/);
   assert.match(actions, /monthlyLeaveBalance/);
@@ -95,12 +106,24 @@ test("payroll calendar keeps the selected employee in the URL and reuses the att
   assert.match(actions, /const calendar = \{/);
 });
 
+test("payroll calendar day deep links stay in owned payroll URL keys", () => {
+  assert.match(client, /function selectCalendarDay/);
+  assert.match(client, /function closeCalendar/);
+  assert.match(client, /if \(nextCalendarTarget != null && nextCalendarDay != null\)/);
+  assert.match(client, /params\.set\("day", nextCalendarDay\)/);
+  assert.match(
+    client,
+    /replaceFilters\(\{ calendarTarget: null, calendarDay: null \}\)/,
+  );
+  assert.match(page, /selectedCalendarDay=\{/);
+});
+
 test("payroll calendar exposes read-only detail for a selected day", () => {
   assert.match(client, /const calendarDayEntries =/);
-  assert.match(client, /formatVNBusinessDate\(selectedCalendarDate\)/);
-  assert.match(client, /formatVNTime\(record\.check_in\)/);
-  assert.match(client, /calendarDetailRef\.current\?\.scrollIntoView/);
-  assert.match(client, /attendanceCopy\.calendarDetailTitle/);
+  assert.match(calendarDialog, /formatVNBusinessDate\(selectedCalendarDay\)/);
+  assert.match(calendarDialog, /formatVNTime\(record\.check_in\)/);
+  assert.match(calendarDialog, /calendarDetailRef\.current\?\.scrollIntoView/);
+  assert.match(calendarDialog, /attendanceCopy\.calendarDetailTitle/);
 });
 
 test("snapshot remains the period action rather than a competing toolbar action", () => {

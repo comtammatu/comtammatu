@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
@@ -41,7 +42,7 @@ test("rejections and audit-sensitive changes require a reason at both boundaries
     "app/(protected)/hr/payroll/payroll-list-client.tsx",
   );
   const attendanceActions = read("app/(protected)/hr/actions.ts");
-  const attendanceTable = read("app/(protected)/hr/attendance/attendance-table.tsx");
+  const attendanceTable = readAttendanceTableModules();
   const teamBoard = read(
     "app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
   );

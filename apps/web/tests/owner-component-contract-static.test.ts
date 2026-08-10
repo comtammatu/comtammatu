@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -36,7 +37,8 @@ const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/page.tsx";
 const STAFF_AUDIT_TABLE =
   "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx";
 const HR_DATA_TABLE_FILES = [
-  "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
+  "apps/web/app/(protected)/hr/attendance/attendance-detail-view.tsx",
+  "apps/web/app/(protected)/hr/attendance/attendance-list-chrome.tsx",
   "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   "apps/web/app/(protected)/hr/employee-table.tsx",
   "apps/web/app/(protected)/hr/shifts-table.tsx",
@@ -811,13 +813,21 @@ test("HR list surfaces use DataTable and shared status badge domains", () => {
   }
 
   for (const file of [
-    "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   ]) {
     const source = read(file);
     assert.match(source, /@\/components\/status-badge/);
     assert.doesNotMatch(source, /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*/);
   }
+
+  const attendanceModules = readAttendanceTableModules(
+    resolve(repoRoot, "apps/web"),
+  );
+  assert.match(attendanceModules, /@\/components\/status-badge/);
+  assert.doesNotMatch(
+    attendanceModules,
+    /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*/,
+  );
 
   const payrollList = read(
     "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",

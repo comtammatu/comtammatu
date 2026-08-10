@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 function read(relativePath: string) {
   return readFileSync(join(process.cwd(), relativePath), "utf8");
@@ -14,7 +15,7 @@ const auditFiltersSource = read(
   "app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
 );
 const leaveSource = read("app/(protected)/hr/leave-requests-table.tsx");
-const attendanceSource = read("app/(protected)/hr/attendance/attendance-table.tsx");
+const attendanceSource = readAttendanceTableModules();
 
 test("HR permission and audit selects expose persistent accessible names", () => {
   assert.match(

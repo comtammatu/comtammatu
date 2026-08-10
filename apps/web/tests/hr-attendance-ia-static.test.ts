@@ -1,15 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const pageSource = readFileSync(
   new URL("../app/(protected)/hr/attendance/page.tsx", import.meta.url),
   "utf8",
 );
-const tableSource = readFileSync(
-  new URL("../app/(protected)/hr/attendance/attendance-table.tsx", import.meta.url),
-  "utf8",
-);
+const tableSource = readAttendanceTableModules();
 const leaveTableSource = readFileSync(
   new URL("../app/(protected)/hr/leave-requests-table.tsx", import.meta.url),
   "utf8",

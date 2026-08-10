@@ -42,13 +42,17 @@ test("Wave 4 Finance LIST pages use xwide+compact AppPage shells", () => {
   const supplierClient = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
+  const supplierListUi = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx",
+  );
+  const supplierSurface = `${supplierClient}\n${supplierListUi}`;
   assert.match(
     supplierClient,
     /<AppPage width="xwide" density="compact"/,
   );
-  assert.match(supplierClient, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
+  assert.match(supplierSurface, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
   assert.match(
-    supplierClient,
+    supplierSurface,
     /<(?:AppToolbar|FilterBar)[\s\S]{0,160}variant="inline"/,
   );
 });

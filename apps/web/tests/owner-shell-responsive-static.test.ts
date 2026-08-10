@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
-const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 test("Owner bottom nav fits one module action and four destinations", () => {
   const source = read("apps/web/app/components/control-surface-bottom-nav.tsx");
@@ -127,40 +129,61 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.match(surface, /const applyInnerScroll = scroll && !nesting\.padded/);
 });
 
-test("Owner sibling LIST filter bars opt into sticky stack", () => {
-  const wired = [
-    [
-      "apps/web/app/(protected)/orders/orders-client.tsx",
-      /<AppToolbar sticky className="items-end">/,
-    ],
-    [
-      "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
-      /<AppToolbar\s+sticky/,
-    ],
-    [
-      "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
-      /<AppToolbar\s+sticky/,
-    ],
-    [
-      "apps/web/app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
-      /<AppToolbar\s+sticky/,
-    ],
-    [
-      "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
-      /<AppToolbar\s+sticky\b/,
-    ],
+test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () => {
+  const framedInline = [
+    "apps/web/app/(protected)/orders/orders-client.tsx",
+    "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
   ] as const;
 
-  for (const [path, pattern] of wired) {
+  for (const path of framedInline) {
+    const source = read(path);
     assert.match(
-      read(path),
-      pattern,
-      `${path} must sticky its page filter bar`,
+      source,
+      /\bAppListFrame\b[\s\S]*?toolbar=\{[\s\S]*?<AppToolbar[\s\S]*?variant="inline"/,
+      `${path} must wrap inline filters in AppListFrame toolbar slot`,
+    );
+    assert.doesNotMatch(
+      source,
+      /<AppToolbar\s+sticky/,
+      `${path} must not use AppToolbar sticky — frame owns sticky stack`,
     );
   }
 
+  const attendanceSource = readAttendanceTableModules(
+    join(repoRoot, "apps/web"),
+  );
+  assert.match(
+    attendanceSource,
+    /\bAppListFrame\b[\s\S]*?toolbar=\{[\s\S]*?<AppToolbar[\s\S]*?variant="inline"/,
+    "attendance LIST modules must wrap inline filters in AppListFrame toolbar slot",
+  );
+  assert.doesNotMatch(
+    attendanceSource,
+    /<AppToolbar\s+sticky/,
+    "attendance modules must not use AppToolbar sticky — frame owns sticky stack",
+  );
+
+  const auditClient = read(
+    "apps/web/app/(protected)/hr/staff/audit/permission-audit-client.tsx",
+  );
+  assert.match(
+    auditClient,
+    /<AppListFrame[\s\S]*?toolbar=\{[\s\S]*?<PermissionAuditFilters/,
+    "permission audit LIST must frame its filter toolbar",
+  );
+  assert.doesNotMatch(
+    read("apps/web/app/(protected)/hr/staff/audit/permission-audit-filters.tsx"),
+    /<AppToolbar\s+sticky/,
+  );
+
+  // Stock still passes a sibling sticky toolbar into AppListFrame until migrated.
+  assert.match(
+    read("apps/web/app/(protected)/inventory/stock/stock-client.tsx"),
+    /<AppToolbar\s+sticky\b/,
+  );
+
   // Finance FilterBar sits above KPI/dashboard cards — sticky crushes the
-  // next section while scrolling. LIST pages use AppListFrame toolbar sticky.
+  // next section while scrolling. LIST pages use AppListFrame sticky chrome.
   assert.doesNotMatch(
     read("apps/web/app/(protected)/finance/components/filter-bar.tsx"),
     /<AppToolbar\s+sticky/,
@@ -187,8 +210,24 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
       "rendered only inside AppListFrame toolbar on hr-client accounts tab",
     ],
     [
+      "apps/web/app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
+      "rendered only inside AppListFrame toolbar on permission-audit-client",
+    ],
+    [
       "apps/web/app/(protected)/finance/components/filter-bar.tsx",
       "dashboard/KPI pages — sticky would crush sections below",
+    ],
+    [
+      "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx",
+      "listToolbar hook consumed by supplier-invoices-client AppListFrame toolbar",
+    ],
+    [
+      "apps/web/app/(protected)/inventory/issues/issue-list-chrome.tsx",
+      "list chrome hook consumed by issues-client AppListFrame toolbar slots",
+    ],
+    [
+      "apps/web/app/(protected)/hr/attendance/attendance-calendar-host.tsx",
+      "calendar REPORT mosaic — non-sticky card toolbar above AppSection",
     ],
     [
       "apps/web/app/(protected)/br/_shared/settings/pos/terminals-client.tsx",
@@ -204,7 +243,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
     ],
   ]);
 
-  const protectedRoot = resolve(repoRoot, "apps/web/app/(protected)");
+  const protectedRoot = join(repoRoot, "apps/web/app/(protected)");
   const files: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
@@ -396,7 +435,7 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   const branches = read("apps/web/app/(protected)/branches/branch-table.tsx");
   assert.match(
     branches,
-    /grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3/,
+    /grid grid-cols-1 gap-3 p-3 md:grid-cols-2 xl:grid-cols-3/,
   );
   assert.match(branches, /grid grid-cols-2 gap-2 border-t pt-3/);
   assert.match(branches, /href=\{`\/br\/\$\{branch\.id\}\/settings\/tables`\}/);

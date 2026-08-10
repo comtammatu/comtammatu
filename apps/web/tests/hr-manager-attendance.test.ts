@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const hrPageSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/page.tsx"),
@@ -19,10 +20,7 @@ const hrMessagesSource = readFileSync(
   join(process.cwd(), "lib/messages/hr.ts"),
   "utf8",
 );
-const attendanceTableSource = readFileSync(
-  join(process.cwd(), "app/(protected)/hr/attendance/attendance-table.tsx"),
-  "utf8",
-);
+const attendanceTableSource = readAttendanceTableModules();
 const attendanceCalendarSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/attendance-calendar.tsx"),
   "utf8",
@@ -267,7 +265,7 @@ test("calendar attention scope uses the stale-shift predicate and pending leave 
   );
   assert.match(
     attendanceTableSource,
-    /type CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*syncAttendanceUrl\([\s\S]*scope/,
+    /CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*syncAttendanceUrl\([\s\S]*scope/,
     "attention scope should be recoverable through the calendar URL",
   );
   assert.match(
@@ -300,7 +298,7 @@ test("calendar attention scope uses the stale-shift predicate and pending leave 
 test("calendar controls preserve a compact, non-scrolling mobile presentation", () => {
   assert.match(
     attendanceTableSource,
-    /const toolbarClassName =\s*"items-stretch[^"]*\[&>\[data-slot=toolbar-group\]\]:w-full[^"]*"[\s\S]*const toolbarFilters =[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
+    /ATTENDANCE_TOOLBAR_CLASSNAME[\s\S]*AttendanceToolbarFilters[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
     "calendar filters should form a compact two-column control group on phones",
   );
   assert.match(
@@ -343,7 +341,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*selectCalendarDay\(null\)/,
+    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*onSelectCalendarDay\(null\)/,
     "selected calendar days should open in an accessible Sheet that can close safely",
   );
   assert.match(
@@ -358,7 +356,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<DetailView[\s\S]*data=\{selectedDayRecords\}[\s\S]*compact[\s\S]*function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
+    /<DetailView[\s\S]*data=\{selectedDayRecords\}[\s\S]*compact[\s\S]*export function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
     "the calendar detail should keep responsive cards inside the desktop review panel",
   );
   assert.match(

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ClipboardList as IconClipboardList,
   Eye as IconEye,
@@ -121,6 +121,7 @@ export function EmployeeTable({
 }: EmployeeTableProps) {
   const quickCopy = messages.hr.client.quickConfig;
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const controlSize = useFormControlSize();
   const [isPending, startTransition] = useTransition();
@@ -131,15 +132,103 @@ export function EmployeeTable({
   const [pendingPlacement, setPendingPlacement] =
     useState<PendingPlacement | null>(null);
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [showInactive, setShowInactive] = useState(false);
-  const [positionFilter, setPositionFilter] = useState(ALL_FILTER_VALUE);
+  const [showInactive, setShowInactive] = useState(
+    () => searchParams.get("inactive") === "1",
+  );
+  const [positionFilter, setPositionFilter] = useState(
+    () => searchParams.get("position") ?? ALL_FILTER_VALUE,
+  );
   const [salaryFilter, setSalaryFilter] = useState(() => {
     if (initialSalaryFilter === "missing") return SALARY_MISSING_FILTER_VALUE;
     if (initialSalaryFilter === "recorded") return SALARY_RECORDED_FILTER_VALUE;
+    const fromUrl = searchParams.get("salary");
+    if (fromUrl === "missing") return SALARY_MISSING_FILTER_VALUE;
+    if (fromUrl === "recorded") return SALARY_RECORDED_FILTER_VALUE;
     return ALL_FILTER_VALUE;
   });
-  const [contractTypeFilter, setContractTypeFilter] =
-    useState(ALL_FILTER_VALUE);
+  const [contractTypeFilter, setContractTypeFilter] = useState(
+    () => searchParams.get("contract") ?? ALL_FILTER_VALUE,
+  );
+
+  const replacePeopleFilters = useCallback(
+    (patch: {
+      q?: string | null;
+      position?: string;
+      salary?: string;
+      contract?: string;
+      inactive?: boolean;
+    }) => {
+      const next = new URLSearchParams(searchParams.toString());
+      const nextQ = patch.q !== undefined ? patch.q : search;
+      const nextPosition =
+        patch.position !== undefined ? patch.position : positionFilter;
+      const nextSalary =
+        patch.salary !== undefined ? patch.salary : salaryFilter;
+      const nextContract =
+        patch.contract !== undefined ? patch.contract : contractTypeFilter;
+      const nextInactive =
+        patch.inactive !== undefined ? patch.inactive : showInactive;
+
+      const trimmedQ = nextQ?.trim() ?? "";
+      if (trimmedQ) next.set("q", trimmedQ);
+      else next.delete("q");
+
+      if (!nextPosition || nextPosition === ALL_FILTER_VALUE) {
+        next.delete("position");
+      } else {
+        next.set("position", nextPosition);
+      }
+
+      if (nextSalary === SALARY_MISSING_FILTER_VALUE) next.set("salary", "missing");
+      else if (nextSalary === SALARY_RECORDED_FILTER_VALUE) {
+        next.set("salary", "recorded");
+      } else next.delete("salary");
+
+      if (!nextContract || nextContract === ALL_FILTER_VALUE) {
+        next.delete("contract");
+      } else {
+        next.set("contract", nextContract);
+      }
+
+      if (nextInactive) next.set("inactive", "1");
+      else next.delete("inactive");
+
+      const query = next.toString();
+      const current = searchParams.toString();
+      if (query === current) return;
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [
+      contractTypeFilter,
+      pathname,
+      positionFilter,
+      router,
+      salaryFilter,
+      search,
+      searchParams,
+      showInactive,
+      startTransition,
+    ],
+  );
+
+  useEffect(() => {
+    setSearch(searchParams.get("q") ?? "");
+    setPositionFilter(searchParams.get("position") ?? ALL_FILTER_VALUE);
+    const salary = searchParams.get("salary");
+    setSalaryFilter(
+      salary === "missing"
+        ? SALARY_MISSING_FILTER_VALUE
+        : salary === "recorded"
+          ? SALARY_RECORDED_FILTER_VALUE
+          : ALL_FILTER_VALUE,
+    );
+    setContractTypeFilter(searchParams.get("contract") ?? ALL_FILTER_VALUE);
+    setShowInactive(searchParams.get("inactive") === "1");
+  }, [searchParams]);
   const assignmentByEmployee = useMemo(
     () =>
       new Map(
@@ -604,6 +693,13 @@ export function EmployeeTable({
                   aria-label={messages.hr.client.employeeSearch}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      replacePeopleFilters({ q: search });
+                    }
+                  }}
+                  onBlur={() => replacePeopleFilters({ q: search })}
                   placeholder={messages.hr.client.employeeSearch}
                 />
               </InputGroup>
@@ -612,7 +708,10 @@ export function EmployeeTable({
               <>
                 <Select
                   value={positionFilter}
-                  onValueChange={setPositionFilter}
+                  onValueChange={(value) => {
+                    setPositionFilter(value);
+                    replacePeopleFilters({ position: value });
+                  }}
                 >
                   <SelectTrigger
                     size={controlSize}
@@ -636,7 +735,13 @@ export function EmployeeTable({
                   </SelectContent>
                 </Select>
                 {canManage ? (
-                  <Select value={salaryFilter} onValueChange={setSalaryFilter}>
+                  <Select
+                    value={salaryFilter}
+                    onValueChange={(value) => {
+                      setSalaryFilter(value);
+                      replacePeopleFilters({ salary: value });
+                    }}
+                  >
                     <SelectTrigger
                       size={controlSize}
                       className="min-w-36"
@@ -660,7 +765,10 @@ export function EmployeeTable({
                 {canManage ? (
                   <Select
                     value={contractTypeFilter}
-                    onValueChange={setContractTypeFilter}
+                    onValueChange={(value) => {
+                      setContractTypeFilter(value);
+                      replacePeopleFilters({ contract: value });
+                    }}
                   >
                     <SelectTrigger
                       size={controlSize}
@@ -687,7 +795,11 @@ export function EmployeeTable({
               <Button
                 variant="outline"
                 size={controlSize}
-                onClick={() => setShowInactive((current) => !current)}
+                onClick={() => {
+                  const next = !showInactive;
+                  setShowInactive(next);
+                  replacePeopleFilters({ inactive: next });
+                }}
               >
                 {showInactive ? (
                   <IconEyeOff data-icon="inline-start" />

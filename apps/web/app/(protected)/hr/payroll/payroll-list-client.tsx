@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { formatDecimal, formatVND } from "@comtammatu/shared/format";
-import { formatVNBusinessDate, formatVNTime } from "@comtammatu/shared/time";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -36,7 +35,6 @@ import {
   Search as IconSearch,
   Trash2 as IconTrash,
 } from "lucide-react";
-import { AppDialog } from "@/components/form/form-dialog";
 import {
   FormattedNumberInput,
   FormDialog,
@@ -52,13 +50,11 @@ import {
   AppListFrame,
   AppSection,
   AppToolbar,
-  KpiRow,
 } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { AttendanceCalendar } from "../attendance-calendar";
+import { PayrollCalendarDialog } from "./payroll-calendar-dialog";
 import {
   removePayrollAdjustment,
   savePayrollAdjustment,
@@ -76,8 +72,6 @@ import {
 
 const payrollCopy = messages.hr.payroll;
 const copy = payrollCopy.live;
-const attendanceCopy = messages.employee.hrAttendance;
-const scheduleCopy = messages.employee.schedule;
 const ALL_SALARY_STATUSES = "all";
 const CALCULABLE_SALARY_STATUS = "calculable";
 const MISSING_SALARY_STATUS = "missing";
@@ -113,6 +107,7 @@ interface Props {
   officeOnly: boolean;
   selectedSalaryStatus: string | undefined;
   calendarTarget: "all" | number | null;
+  selectedCalendarDay: string | null;
 }
 
 function monthValue(year: number, month: number): string {
@@ -154,11 +149,6 @@ function decimalCell(value: number): string {
 
 function moneyCell(entry: PayrollPreviewEntry, value: number): string {
   return canCalculate(entry) ? formatVND(value) : "—";
-}
-
-function estimatedCalendarSalary(entry: PayrollPreviewEntry): number {
-  if (entry.monthlySalary <= 0 || entry.standardDays <= 0) return 0;
-  return (workingDaysValue(entry) * entry.monthlySalary) / entry.standardDays;
 }
 
 function normalizeSalaryStatus(value: string | undefined): SalaryStatusFilter {
@@ -217,6 +207,7 @@ export function PayrollListClient({
   officeOnly,
   selectedSalaryStatus,
   calendarTarget,
+  selectedCalendarDay,
 }: Props) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -240,16 +231,6 @@ export function PayrollListClient({
     () => setStandardDays(String(preview.standardDays)),
     [preview.standardDays],
   );
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<
-    string | null
-  >(null);
-  const calendarDetailRef = useRef<HTMLElement>(null);
-  useEffect(() => setSelectedCalendarDate(null), [calendarTarget]);
-  useEffect(() => {
-    if (selectedCalendarDate) {
-      calendarDetailRef.current?.scrollIntoView({ block: "nearest" });
-    }
-  }, [selectedCalendarDate]);
 
   const salaryStatus = normalizeSalaryStatus(selectedSalaryStatus);
   const hasPreflightBlockers = preview.preflight.blockers.length > 0;
@@ -307,18 +288,18 @@ export function PayrollListClient({
       )
     : preview.calendar.leaves;
   const calendarDayEntries =
-    selectedCalendarDate == null
+    selectedCalendarDay == null
       ? []
       : Array.from(
           new Set([
             ...calendarRecords
-              .filter((record) => record.date === selectedCalendarDate)
+              .filter((record) => record.date === selectedCalendarDay)
               .map((record) => record.employeeId),
             ...calendarLeaves
               .filter(
                 (leave) =>
-                  leave.start_date <= selectedCalendarDate &&
-                  leave.end_date >= selectedCalendarDate,
+                  leave.start_date <= selectedCalendarDay &&
+                  leave.end_date >= selectedCalendarDay,
               )
               .map((leave) => leave.employeeId),
           ]),
@@ -330,13 +311,13 @@ export function PayrollListClient({
           records: calendarRecords.filter(
             (record) =>
               record.employeeId === employeeId &&
-              record.date === selectedCalendarDate,
+              record.date === selectedCalendarDay,
           ),
           leave: calendarLeaves.find(
             (leave) =>
               leave.employeeId === employeeId &&
-              leave.start_date <= selectedCalendarDate &&
-              leave.end_date >= selectedCalendarDate,
+              leave.start_date <= selectedCalendarDay &&
+              leave.end_date >= selectedCalendarDay,
           ),
         }));
 
@@ -345,6 +326,7 @@ export function PayrollListClient({
     salaryStatus?: SalaryStatusFilter;
     standardDays?: string;
     calendarTarget?: "all" | number | null;
+    calendarDay?: string | null;
   }) {
     const params = new URLSearchParams();
     params.set(
@@ -369,7 +351,24 @@ export function PayrollListClient({
     if (nextCalendarTarget != null) {
       params.set("calendar", String(nextCalendarTarget));
     }
+    const nextCalendarDay =
+      nextValues.calendarDay === undefined
+        ? selectedCalendarDay
+        : nextValues.calendarDay;
+    if (nextCalendarTarget != null && nextCalendarDay != null) {
+      params.set("day", nextCalendarDay);
+    }
     router.replace(`/hr/payroll?${params.toString()}`);
+  }
+
+  function selectCalendarDay(date: string) {
+    replaceFilters({
+      calendarDay: date === selectedCalendarDay ? null : date,
+    });
+  }
+
+  function closeCalendar() {
+    replaceFilters({ calendarTarget: null, calendarDay: null });
   }
 
   function updateStandardDays(value = standardDays) {
@@ -387,7 +386,7 @@ export function PayrollListClient({
   }
 
   function openCalendar(entry: PayrollPreviewEntry) {
-    replaceFilters({ calendarTarget: entry.employeeId });
+    replaceFilters({ calendarTarget: entry.employeeId, calendarDay: null });
   }
 
   async function submitAdjustment(
@@ -727,7 +726,9 @@ export function PayrollListClient({
               <Button
                 variant="outline"
                 size="touch"
-                onClick={() => replaceFilters({ calendarTarget: "all" })}
+                onClick={() =>
+                  replaceFilters({ calendarTarget: "all", calendarDay: null })
+                }
               >
                 <IconCalendarDays data-icon="inline-start" />
                 {copy.calendar}
@@ -855,126 +856,19 @@ export function PayrollListClient({
         />
       </AppListFrame>
 
-      <AppDialog
+      <PayrollCalendarDialog
         open={isCalendarOpen}
         onOpenChange={(open) => {
-          if (!open) replaceFilters({ calendarTarget: null });
+          if (!open) closeCalendar();
         }}
-        title={
-          calendarEntry
-            ? copy.calendarEmployeeTitle(calendarEntry.employeeName)
-            : copy.calendarAllTitle
-        }
-        description={copy.calendarDescription}
-        contentClassName="sm:max-w-4xl"
-        bodyClassName="min-w-0"
-      >
-        {calendarEntry ? (
-          <KpiRow density="compact">
-            <KpiCard
-              density="compact"
-              label={copy.workdays}
-              value={decimalCell(workingDaysValue(calendarEntry))}
-            />
-            <KpiCard
-              density="compact"
-              label={copy.estimatedSalary}
-              value={moneyCell(
-                calendarEntry,
-                estimatedCalendarSalary(calendarEntry),
-              )}
-            />
-            <KpiCard
-              density="compact"
-              label={copy.monthlyLeave}
-              value={`${decimalCell(calendarEntry.monthlyLeaveBalance.remainingDays)}/${decimalCell(calendarEntry.monthlyLeaveBalance.entitlementDays)}`}
-            />
-            <KpiCard
-              density="compact"
-              label={copy.annualLeave}
-              value={
-                calendarEntry.annualLeaveBalance
-                  ? `${decimalCell(calendarEntry.annualLeaveBalance.remainingDays)}/${decimalCell(calendarEntry.annualLeaveBalance.entitlementDays)}`
-                  : "—"
-              }
-            />
-          </KpiRow>
-        ) : null}
-        <AttendanceCalendar
-          month={monthValue(preview.year, preview.month)}
-          records={calendarRecords}
-          leaves={calendarLeaves}
-          selectedDate={selectedCalendarDate}
-          onSelectDate={setSelectedCalendarDate}
-        />
-        {selectedCalendarDate ? (
-          <section
-            ref={calendarDetailRef}
-            aria-live="polite"
-            className="flex scroll-mt-4 flex-col gap-2"
-          >
-            <h3 className="font-heading text-sm font-semibold">
-              {attendanceCopy.calendarDetailTitle(
-                formatVNBusinessDate(selectedCalendarDate),
-              )}
-            </h3>
-            {calendarDayEntries.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {calendarDayEntries.map((dayEntry) => (
-                  <Item key={dayEntry.employeeId} variant="outline">
-                    <ItemContent>
-                      <ItemTitle>
-                        {dayEntry.employee?.employeeName ?? "—"}
-                      </ItemTitle>
-                      {dayEntry.employee?.branchName ? (
-                        <ItemDescription>
-                          {dayEntry.employee.branchName}
-                        </ItemDescription>
-                      ) : null}
-                      <div className="flex flex-col gap-1 text-xs/relaxed text-muted-foreground">
-                        {dayEntry.records.map((record) => (
-                          <p key={record.id}>
-                            <span className="font-medium text-foreground">
-                              {record.shifts?.name ?? scheduleCopy.rowShift}
-                            </span>
-                            {` · ${attendanceCopy.checkIn} ${formatVNTime(record.check_in)} · ${attendanceCopy.checkOut} ${formatVNTime(record.check_out)}`}
-                          </p>
-                        ))}
-                        {dayEntry.leave ? (
-                          <p>
-                            {dayEntry.leave.status === "approved"
-                              ? scheduleCopy.leaveApproved
-                              : scheduleCopy.leavePending}
-                          </p>
-                        ) : null}
-                      </div>
-                    </ItemContent>
-                    {dayEntry.records.length > 0 ? (
-                      <ItemActions>
-                        <Badge
-                          variant={
-                            dayEntry.records.every((record) => record.check_out)
-                              ? "success"
-                              : "warning"
-                          }
-                        >
-                          {dayEntry.records.every((record) => record.check_out)
-                            ? attendanceCopy.checkedOut
-                            : attendanceCopy.inShift}
-                        </Badge>
-                      </ItemActions>
-                    ) : null}
-                  </Item>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {attendanceCopy.detailEmptyDescription}
-              </p>
-            )}
-          </section>
-        ) : null}
-      </AppDialog>
+        preview={preview}
+        calendarEntry={calendarEntry}
+        calendarRecords={calendarRecords}
+        calendarLeaves={calendarLeaves}
+        selectedCalendarDay={selectedCalendarDay}
+        onSelectCalendarDay={selectCalendarDay}
+        calendarDayEntries={calendarDayEntries}
+      />
 
       {selectedEntry ? (
         <FormDialog
