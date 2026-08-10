@@ -595,7 +595,7 @@ test("supplier invoice matching separates goods receipts from service verificati
   const mapper = readWeb(
     "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
-  const client = readSupplierInvoiceShell();
+  const _client = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
   assert.match(migration, /private\.apply_supplier_invoice_matching/);
@@ -612,7 +612,7 @@ test("supplier invoice matching separates goods receipts from service verificati
 
 test("supplier invoice form supports goods, services, multiple GRNs and line VAT", () => {
   const client = readSupplierInvoiceModules();
-  const shell = readSupplierInvoiceShell();
+  const _shell = readSupplierInvoiceShell();
   const page = readWeb("app/(protected)/finance/supplier-invoices/page.tsx");
   const grnActions = readWeb("app/(protected)/inventory/grn-actions.ts");
   const messages = readWeb("lib/messages/inventory.ts");

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { AppDialog } from "@/components/form";

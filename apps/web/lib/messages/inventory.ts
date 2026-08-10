@@ -614,6 +614,14 @@ export const inventory = {
       history: "Lịch sử",
       offlineMutation:
         "Đang mất kết nối. Kết nối lại rồi thử thao tác lần nữa.",
+      hubSearchPlaceholder: "Tìm mã phiếu hoặc điểm vận hành",
+      hubWorkKindAria: "Phân loại",
+      hubWorkKindPlaceholder: "Phân loại",
+      hubWorkRequest: "Yêu cầu",
+      hubWorkDispatch: "Cần giao",
+      hubWorkReceive: "Cần nhận",
+      hubStateCompleted: "Hoàn tất",
+      hubStateCancelled: "Đã hủy",
     },
   },
   purchaseRequests: {

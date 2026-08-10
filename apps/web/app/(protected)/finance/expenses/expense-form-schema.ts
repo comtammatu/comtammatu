@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { formatPercent } from "@comtammatu/shared/format";
 import {
-  addMoney,
   hasMaximumScale,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,

@@ -8,6 +8,7 @@ import {
   Search as IconSearch,
 } from "lucide-react";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -59,6 +60,7 @@ const LIFECYCLE_LABELS = {
   cancelled: "Đã hủy",
 } as const;
 const copy = messages.inventory.stockRequests.journey;
+const inventoryCommon = messages.inventory.common;
 
 function rowTitle(row: StockFulfillmentRow): string {
   return row.kind === "request"
@@ -310,10 +312,10 @@ export function StockFulfillmentHubClient({
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            aria-label="Tìm mã phiếu hoặc điểm vận hành"
+            aria-label={copy.hubSearchPlaceholder}
             value={search}
             onChange={(event) => replaceParam("q", event.target.value, "")}
-            placeholder="Tìm mã phiếu hoặc điểm vận hành"
+            placeholder={copy.hubSearchPlaceholder}
           />
         </InputGroup>
       }
@@ -326,15 +328,15 @@ export function StockFulfillmentHubClient({
             <SelectTrigger
               size="field"
               className={inventoryListFilterSelectClassName}
-              aria-label="Phân loại"
+              aria-label={copy.hubWorkKindAria}
             >
-              <SelectValue placeholder="Phân loại" />
+              <SelectValue placeholder={copy.hubWorkKindPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="request">Yêu cầu</SelectItem>
-              <SelectItem value="dispatch">Cần giao</SelectItem>
-              <SelectItem value="receive">Cần nhận</SelectItem>
+              <SelectItem value="all">{inventoryCommon.all}</SelectItem>
+              <SelectItem value="request">{copy.hubWorkRequest}</SelectItem>
+              <SelectItem value="dispatch">{copy.hubWorkDispatch}</SelectItem>
+              <SelectItem value="receive">{copy.hubWorkReceive}</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -344,15 +346,15 @@ export function StockFulfillmentHubClient({
             <SelectTrigger
               size="field"
               className={inventoryListFilterSelectClassName}
-              aria-label="Trạng thái"
+              aria-label={FORM_VI.status}
             >
-              <SelectValue placeholder="Trạng thái" />
+              <SelectValue placeholder={FORM_VI.status} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="active">Đang xử lý</SelectItem>
-              <SelectItem value="completed">Hoàn tất</SelectItem>
-              <SelectItem value="cancelled">Đã hủy</SelectItem>
+              <SelectItem value="all">{inventoryCommon.all}</SelectItem>
+              <SelectItem value="active">{copy.active}</SelectItem>
+              <SelectItem value="completed">{copy.hubStateCompleted}</SelectItem>
+              <SelectItem value="cancelled">{copy.hubStateCancelled}</SelectItem>
             </SelectContent>
           </Select>
         </>

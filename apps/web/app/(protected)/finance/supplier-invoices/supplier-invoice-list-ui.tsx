@@ -47,7 +47,6 @@ import {
   getSupplierInvoiceGroupId,
   SUPPLIER_INVOICE_MATCH_STATUSES,
   SUPPLIER_INVOICE_PAYMENT_STATUSES,
-  type SupplierInvoiceListFilters,
   type SupplierInvoiceViewMode,
 } from "./supplier-invoice-list-model";
 import {

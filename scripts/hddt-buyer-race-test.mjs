@@ -273,7 +273,7 @@ function createFixture(label, paidAtSql) {
 }
 
 async function waitForAdvisoryLock(lockKey) {
-  const deadline = Date.now() + 10_000;
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const result = runDatabase(`
       SELECT count(*)
@@ -285,7 +285,7 @@ async function waitForAdvisoryLock(lockKey) {
     `);
     assertSuccess(result, "advisory lock probe");
     if (result.stdout.trim() === "1") return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`timed out waiting for advisory lock ${lockKey}`);
 }

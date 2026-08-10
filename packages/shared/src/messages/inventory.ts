@@ -34,6 +34,7 @@ export const INVENTORY_VI = {
   productionOrdersCardDescription:
     "Theo dõi lệnh từ nháp, bắt đầu sản xuất đến khi nhập thành phẩm tại Bếp Trung Tâm.",
   productionOrdersMetricLabel: "lệnh",
+  productionOrdersSearchPlaceholder: "Tìm số lệnh, thành phẩm, chi nhánh…",
   productionOpenOrders: "Mở lệnh sản xuất",
   productionDraftBadge: (count: number) => `${formatCount(count)} lệnh nháp`,
   productionRecipesCardDescription:

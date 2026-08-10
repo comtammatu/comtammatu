@@ -270,7 +270,7 @@ test("table empty rows render inline content instead of a dashed sub-card", () =
 
 test("operations table columns do not override table typography role", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
-  const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const _issues = read("app/(protected)/inventory/issues/issues-client.tsx");
   const issueListChrome = read(
     "app/(protected)/inventory/issues/issue-list-chrome.tsx",
   );

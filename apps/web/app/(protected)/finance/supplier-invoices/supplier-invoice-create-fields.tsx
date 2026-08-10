@@ -13,12 +13,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
+import { Item } from "@comtammatu/ui/components/item";
 import {
   BusinessDateField,
   MoneyVndField,
@@ -33,7 +28,6 @@ import {
   calculateSupplierInvoiceNetLineTotal,
   resolveSupplierInvoiceVatAmount,
   summarizeSupplierInvoiceMoney,
-  type SupplierInvoiceVatMode,
   type SupplierInvoiceVatRate,
 } from "../_lib/supplier-invoice-money";
 import {

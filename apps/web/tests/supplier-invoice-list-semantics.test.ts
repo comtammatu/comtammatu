@@ -299,7 +299,7 @@ test("VAT-evidence blocker is filterable from the list, not only from the record
   const action = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const client = readSupplierInvoiceShell();
+  const _client = readSupplierInvoiceShell();
   const modules = readSupplierInvoiceModules();
 
   assert.match(financePage, /vatEvidence: filters\.vatEvidence \?\? undefined/);

@@ -47,7 +47,6 @@ import { getSupplierInvoiceOutstandingAmount, type SupplierInvoiceRow } from "./
 import { DetailFact } from "./supplier-invoice-detail-fact";
 import {
   formatSupplierInvoiceDate,
-  getInvoiceAgingLabel,
   getPaymentMethodLabel,
 } from "./supplier-invoice-form-schema";
 

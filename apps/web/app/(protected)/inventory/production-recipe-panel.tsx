@@ -38,7 +38,6 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { messages } from "@lib/messages";
 import {
   DataTable,
   type DataTableColumn,

@@ -78,7 +78,7 @@ export function AttendanceToolbarFilters({
           <SelectTrigger
             size={controlSize}
             className="w-full sm:w-40"
-            aria-label="Tháng chấm công"
+            aria-label={attendanceCopy.attendanceMonthAria}
           >
             <SelectValue />
           </SelectTrigger>
@@ -226,7 +226,7 @@ export function SummaryView({
     },
     {
       key: "employee",
-      header: "Họ tên",
+      header: attendanceCopy.fullName,
       render: (row) => (
         <div className="flex flex-col gap-1">
           <span className="font-medium">{row.full_name || "—"}</span>
@@ -238,13 +238,13 @@ export function SummaryView({
     },
     {
       key: "workdays",
-      header: "Số ngày công",
+      header: attendanceCopy.summaryWorkdaysCountHeader,
       className: "text-right font-mono tabular-nums",
       render: (row) => formatQuantity(row.workdays),
     },
     {
       key: "work_hours",
-      header: "Số giờ công",
+      header: attendanceCopy.summaryWorkHoursCountHeader,
       className: "text-right font-mono tabular-nums",
       render: (row) => formatQuantity(row.work_hours),
     },
@@ -272,11 +272,15 @@ export function SummaryView({
                 <div>{index + 1}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Ngày công</div>
+                <div className="text-xs text-muted-foreground">
+                  {attendanceCopy.summaryWorkdays}
+                </div>
                 <div>{formatQuantity(row.workdays)}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Giờ công</div>
+                <div className="text-xs text-muted-foreground">
+                  {attendanceCopy.summaryWorkHours}
+                </div>
                 <div>{formatQuantity(row.work_hours)}</div>
               </div>
             </div>

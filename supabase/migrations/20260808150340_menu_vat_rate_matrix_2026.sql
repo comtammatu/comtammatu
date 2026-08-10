@@ -15,7 +15,7 @@ BEGIN
   ORDER BY id
   LIMIT 1;
 
-  -- Data migration: no-op on empty greenfield / Preview / e2e before seeds.
+  -- Data migration: no-op on empty install / Preview / e2e before seeds.
   -- Production already applied this version against a populated tenant.
   IF v_tenant_id IS NULL THEN
     RAISE NOTICE 'menu_vat_matrix_tenant_missing; skip';

@@ -143,10 +143,10 @@ export function ProductionRunsClient({
           </InputGroupAddon>
           <InputGroupInput
             type="search"
-            aria-label="Tìm số lệnh, thành phẩm, chi nhánh…"
+            aria-label={INVENTORY_VI.productionOrdersSearchPlaceholder}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm số lệnh, thành phẩm, chi nhánh…"
+            placeholder={INVENTORY_VI.productionOrdersSearchPlaceholder}
           />
         </InputGroup>
       }
@@ -160,7 +160,9 @@ export function ProductionRunsClient({
             <SelectValue placeholder={FORM_VI.status} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_STATUS_VALUE}>Tất cả trạng thái</SelectItem>
+            <SelectItem value={ALL_STATUS_VALUE}>
+              {INVENTORY_VI.allStatusesOption}
+            </SelectItem>
             {statusOptions.map((status) => (
               <SelectItem key={status} value={status}>
                 {statusLabel(status)}

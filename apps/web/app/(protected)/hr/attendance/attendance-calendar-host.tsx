@@ -39,7 +39,7 @@ export function AttendanceCalendarHost({
   view,
   selectedMonth,
   monthOptions,
-  selectedBranch,
+  selectedBranch: _selectedBranch,
   selectedEmployeeId,
   calendarScope,
   calendarEmployees,
