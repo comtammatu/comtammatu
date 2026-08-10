@@ -24,13 +24,13 @@ import {
 } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Combobox } from "@comtammatu/ui/components/combobox";
 import { confirm } from "@/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
@@ -44,17 +44,15 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AppDialog,
   BusinessDatePicker,
+  Combobox,
   QuantityInput,
 } from "@/components/form";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   AppListFrame,
-  AppPage,
-  AppPageHeader,
   AppToolbar,
   DescriptionList,
 } from "@/components/surface";
@@ -104,10 +102,6 @@ const DEMAND_OVERLAY_KEYS = [
   "needsSite",
   "needsPage",
 ] as const;
-const comboFilter = (
-  option: { label: string; keywords?: string[] },
-  query: string,
-) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
 
 type RequestDraftLine = {
   key: string;
@@ -138,7 +132,6 @@ export function PurchaseRequestsClient({
   mappedIngredientIds,
   canCreateRequest,
   canAllocate,
-  embedded = false,
 }: {
   rows: PurchaseRequestRow[];
   branches: Array<{ id: number; name: string }>;
@@ -147,7 +140,6 @@ export function PurchaseRequestsClient({
   mappedIngredientIds: number[];
   canCreateRequest: boolean;
   canAllocate: boolean;
-  embedded?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -835,14 +827,7 @@ export function PurchaseRequestsClient({
     </AppListFrame>
   );
 
-  const content = embedded ? (
-    list
-  ) : (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader title={copy.title} description={copy.description} />
-      {list}
-    </AppPage>
-  );
+  const content = list;
 
   const totals = allocationTotals();
   const missingSupplierItems =
@@ -970,7 +955,6 @@ export function PurchaseRequestsClient({
                   >
                     <div className="min-w-0">
                       <Combobox
-                        filter={comboFilter}
                         size="field"
                         value={line.ingredientId}
                         onValueChange={(value) =>

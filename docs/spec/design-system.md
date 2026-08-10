@@ -166,11 +166,14 @@ equivalent primitive, not because hand-rolling was convenient:
 | --- | --- |
 | `sonner.tsx` | Base UI has no toast primitive; Sonner owns toast behavior. Guest/preset CSS stays an app concern. |
 | `calendar.tsx` | DayPicker is a third-party domain widget, not a headless gap. |
-| `date-picker.tsx` | Native `<input type="date">` while Base UI ships no date primitive. Do not build a parallel calendar headless layer. |
-| `pagination.tsx` | Composite of page math (`lib/pagination.ts`) + `Button`; no missing headless behavior. |
 
-`slider.tsx` uses the Base UI Slider. `resizable.tsx` and `tag-input.tsx` were
-retired (zero runtime consumers) via registry + primitives-test change set.
+`slider.tsx` uses the Base UI Slider. A primitive with zero runtime consumers is
+drift, not coverage: `resizable.tsx`, `tag-input.tsx`, `stat.tsx`,
+`accordion.tsx`, `date-picker.tsx`, and `pagination.tsx` (with
+`lib/pagination.ts`) are retired. `Collapsible`, `Calendar` +
+`BusinessDateField`, `KpiCard`, and `DataTablePagination` own those jobs. The
+gate that keeps this true is the orphan-primitive check in
+`apps/web/tests/ui-design-system-primitives.test.ts`.
 
 Adding an exception requires a row in the table above in the same change set.
 
@@ -361,6 +364,8 @@ those variables into Tailwind utilities.
 - `globals.css` binds `--font-sans` and `--font-heading` to `--font-geist-sans`,
   and `--font-mono` to `--font-geist-mono`. App code consumes only the three
   utilities.
+- Root rem baseline: `html { font-size: 17px }` in `globals.css` `@layer base`
+  (intentional runtime; all rem-derived type and spacing scale from this).
 - Route/page headings, card, dialog, sheet, and section titles, and brand lockup
   text use `font-heading` unless a shared component already applies it.
 - `font-mono` is for tabular operational data: IDs, codes, order/receipt
@@ -581,10 +586,10 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 | --- | --- |
 | command/action | `Button`, `Toggle`, `ToggleGroup` |
 | business state label | `StatusBadge`; `Badge` for generic metadata |
-| framed section/panel | `AppSection` (`BranchOperatorPanel` on the operator plane) |
+| framed section/panel | `AppSection` / `StationSection` / `PublicSection` by plane (`BranchOperatorPanel` on operator) |
 | navigation card | `AppLinkCard` |
 | selectable card-shaped row | `InteractiveCard` with a semantic render target |
-| disclosure | `Accordion` or `Collapsible` |
+| disclosure | `Collapsible` |
 | searchable responsive data | `DataTable`; raw `Table` only inside an approved adapter |
 | segmented view | `Tabs` |
 | standard app form field | helpers from `@/components/form` |
@@ -599,8 +604,7 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 | route context | `Sidebar`, `Breadcrumb`, `Separator` |
 | keyboard hint | `Kbd`, `KbdGroup` |
 | transient feedback | `Sonner` |
-| table navigation | `Pagination` |
-| split pane | `Resizable` |
+| table navigation | `DataTablePagination` |
 | filter/action row | `AppToolbar` or `DataTable` toolbar slots |
 | metric block | `KpiCard` (numeric/stat values only) |
 
@@ -896,15 +900,18 @@ contract change; route-local chrome outside this list is drift.
    import `AppSection`, `AppListFrame`, or other `control_surface` chrome.
    Board recipes: `pos-board`, `realtime-board` (KDS), `runner-board`. Guest
    feedback at `/r/[token]` is `public`, not runner station.
-4. **Public / employee** — guest token workflows and staff self-service stay
-   outside `control_surface` chrome. Employee uses `Employee*`
-   (`employee-self-service`). Public card sections use `PublicSection`;
-   recipes `public-transaction`, `public-feedback`, `system-gate`.
-5. **control_surface dense tables** — finance/inventory LIST/REPORT use
+4. **Public** — guest token workflows stay outside `control_surface` chrome.
+   Public card sections use `PublicSection`; recipes `public-transaction`,
+   `public-feedback`, `system-gate`.
+5. **Employee self-service** — `/me/*` is a personal peer route that renders
+   inside `control_surface` chrome, with `ControlSurfaceShell` resolving `me` as
+   its own module. Content uses `Employee*` (`employee-self-service`); the shell
+   is shared, so employee routes never build a second navigation source.
+6. **control_surface dense tables** — finance/inventory LIST/REPORT use
    `management-list` / `management-report` (`AppPage` `xwide` + `compact`,
    `AppListFrame` or `AppSection contentFlush`, `DataTable`). Do not revive
    `InventoryListFrame` or `AppPageStickyChrome` aliases.
-6. **Standalone chrome-less surfaces** — a named, closed exception:
+7. **Standalone chrome-less surfaces** — a named, closed exception:
    `/notifications` and `/br` (the branch picker). Both are reachable from more
    than one plane, so they mount no sidebar, header lockup, or bottom nav; they
    render `AppPage` / `AppPageHeader` only and rely on an explicit in-page back
@@ -921,10 +928,13 @@ are the reference implementations, not a frozen filename registry.
   another shared chrome composition only when its job cannot be expressed by an
   existing frame and its navigation owner is explicit.
 - Branch runtime, station, and employee surfaces MUST NOT import or render
-  `control_surface` chrome (`AppShell`, `ControlSurfaceShell`,
+  `control_surface` chrome themselves (`AppShell`, `ControlSurfaceShell`,
   `resolveControlSurface*`, `control-surface-nav`). They use the approved
   operator chrome, shared `AppHeader` / `AppBottomNav`, `EmployeePage`, or an
-  `embedded` branch of the canonical `PageContent`.
+  `embedded` branch of the canonical `PageContent`. `/me/*` is the one surface
+  that sits under the shared `(protected)` layout (§ A.5): the layout owns the
+  chrome, the route contributes `Employee*` content only and never imports a
+  shell.
 - File naming and the use of `<main>` or `SidebarProvider` are implementation
   details, not CI policy. Verify the rendered navigation source, responsive IA,
   and plane boundary instead.
@@ -987,9 +997,16 @@ record and may use different frames at that depth. A depth mismatch is drift.
 The Branch home — the only branch home kind — uses one ordered recipe: primary
 CTA (the single next safe action) → live queue panel → curated job tiles. The
 recipe varies only in which slots and data populate it, never in structure.
-Numbers appear as badges on tiles or sections only; there are no KPI or stat
-cards on operator surfaces. A landing that opens with a stat-card mosaic instead
-of that order is drift.
+Numbers appear as badges on tiles or sections only; `KpiCard`, `KpiRow`, and
+stat-card mosaics never render on an operator surface. A landing that opens with
+a stat-card mosaic instead of that order is drift.
+
+One named exception: the manager-only revenue-target strip
+(`branch-revenue-target-strip.tsx`) sits between shift status and the queue as a
+`BranchOperatorPanel`, not a card mosaic, and is hidden from cashier, chef, and
+branch staff. Audience and placement are owned by `docs/ref/screen-context-map.md`
+§ 2.4; this section owns only the component role. A new exception needs a row
+here in the same change set.
 
 ### D. Navigation single-source
 

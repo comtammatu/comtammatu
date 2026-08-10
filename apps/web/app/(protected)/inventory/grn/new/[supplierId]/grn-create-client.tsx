@@ -16,6 +16,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -46,7 +47,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty } from "@lib/inventory/format";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
 import type {

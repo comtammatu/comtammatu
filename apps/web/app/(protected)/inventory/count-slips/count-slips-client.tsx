@@ -22,6 +22,13 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -37,10 +44,12 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppListFrame,
   AppPage,
   AppPageHeader,
+  AppToolbar,
 } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import type {
@@ -49,7 +58,10 @@ import type {
   CountSlipStatus,
 } from "@lib/inventory/count-slip-model";
 import { formatQty } from "@lib/inventory/format";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { approveCountSlip, requestCountRecount } from "./actions";
+
+type QueueView = "pending" | "history" | "all";
 
 function formatVariance(value: number | null): string {
   if (value === null) return "—";
@@ -143,7 +155,9 @@ export function CountSlipsClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const controlSize = useFormControlSize("responsive");
   const [rows, setRows] = useState(initial);
+  const [queueView, setQueueView] = useState<QueueView>("pending");
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSlipId,
   );
@@ -210,6 +224,13 @@ export function CountSlipsClient({
     }
     return { pending: pendingRows, history: historyRows };
   }, [rows]);
+
+  const visibleRows = useMemo(() => {
+    if (queueView === "pending") return pending;
+    if (queueView === "history") return history;
+    return rows;
+  }, [history, pending, queueView, rows]);
+
   const selectedRow =
     selectedSlipId === null
       ? null
@@ -308,34 +329,14 @@ export function CountSlipsClient({
     },
   ];
 
-  function renderTable(data: CountSlipRow[], historyTable = false) {
-    return (
-      <DataTable
-        columns={columns}
-        data={data}
-        pageSize={50}
-        getRowKey={(row) => row.id}
-        onRowClick={(row) => openSlip(row.id)}
-        getRowAriaLabel={(row) =>
-          `Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`
-        }
-        emptyTitle={
-          historyTable
-            ? "Chưa có lịch sử phiếu đếm"
-            : INVENTORY_VI.countSlipEmptyTitle
-        }
-        emptyDescription={
-          historyTable
-            ? "Phiếu đã duyệt hoặc yêu cầu đếm lại sẽ xuất hiện tại đây."
-            : INVENTORY_VI.countSlipEmptyDescription
-        }
-        emptyIcon={<IconClipboardCheck />}
-        mobileCardRender={(row) =>
-          renderSlipMobileRow(row, () => openSlip(row.id))
-        }
-      />
-    );
-  }
+  const emptyTitle =
+    queueView === "history"
+      ? "Chưa có lịch sử phiếu đếm"
+      : INVENTORY_VI.countSlipEmptyTitle;
+  const emptyDescription =
+    queueView === "history"
+      ? "Phiếu đã duyệt hoặc yêu cầu đếm lại sẽ xuất hiện tại đây."
+      : INVENTORY_VI.countSlipEmptyDescription;
 
   return (
     <AppPage width="xwide" density="compact">
@@ -358,15 +359,53 @@ export function CountSlipsClient({
         }}
       />
 
-      <AppListFrame title="Chờ duyệt">
-        {renderTable(pending)}
+      <AppListFrame
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            filters={
+              <Select
+                value={queueView}
+                onValueChange={(value) => setQueueView(value as QueueView)}
+              >
+                <SelectTrigger
+                  size={controlSize}
+                  className={inventoryListFilterSelectClassName}
+                  aria-label="Lọc hàng đợi phiếu đếm"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">
+                    Chờ duyệt ({pending.length})
+                  </SelectItem>
+                  <SelectItem value="history">
+                    {INVENTORY_VI.countSlipHistoryTitle} ({history.length})
+                  </SelectItem>
+                  <SelectItem value="all">Tất cả ({rows.length})</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+          />
+        }
+      >
+        <DataTable
+          columns={columns}
+          data={visibleRows}
+          pageSize={50}
+          getRowKey={(row) => row.id}
+          onRowClick={(row) => openSlip(row.id)}
+          getRowAriaLabel={(row) =>
+            `Xem phiếu đếm ${row.slipNumber} của ${row.employeeName}`
+          }
+          emptyTitle={emptyTitle}
+          emptyDescription={emptyDescription}
+          emptyIcon={<IconClipboardCheck />}
+          mobileCardRender={(row) =>
+            renderSlipMobileRow(row, () => openSlip(row.id))
+          }
+        />
       </AppListFrame>
-
-      {history.length > 0 ? (
-        <AppListFrame title={INVENTORY_VI.countSlipHistoryTitle}>
-          {renderTable(history, true)}
-        </AppListFrame>
-      ) : null}
 
       <CountSlipReviewDialog
         row={selectedRow}

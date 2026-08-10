@@ -119,30 +119,6 @@
   --animate-cotlet-waiting: cotlet-waiting 1.1s steps(6) infinite;
   --animate-cotlet-waving: cotlet-waving 800ms steps(4) infinite;
 
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(
-        --accordion-panel-height,
-        auto
-      );
-    }
-  }
-
-  @keyframes accordion-up {
-    from {
-      height: var(
-        --accordion-panel-height,
-        auto
-      );
-    }
-    to {
-      height: 0;
-    }
-  }
-
   @keyframes cotlet-idle {
     to {
       background-position: -1152px 0;
@@ -318,8 +294,9 @@
  * codes) where digit alignment matters. Turbopack dev does not honor
  * `@theme inline` for Tailwind's default --font-sans/--font-mono keys (it
  * emits a self-referential `var(--font-sans)`); this unlayered :root override
- * wins the cascade and restores the mapping. Inert in `next build`, which
- * inlines the value into utilities directly.
+ * wins the cascade and restores the mapping (including --font-heading for the
+ * same Geist Sans face). Inert in `next build`, which inlines the value into
+ * utilities directly.
  *
  * Motion: durations, easing curves, and the press offset are scalars, not
  * colors, so they are the second documented exception to the OKLCH-only rule.
@@ -329,6 +306,7 @@
  * --ease-* utility namespace. All consumption stays compatible with the
  * prefers-reduced-motion backstop in zone 4 (never add !important). */
 :root {
+  --font-heading: var(--font-geist-sans);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --motion-fast: 120ms;

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Controller,
@@ -11,7 +10,6 @@ import {
 } from "react-hook-form";
 import { z } from "zod";
 import {
-  ArrowLeft as IconArrowLeft,
   Ban as IconBan,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
@@ -69,7 +67,6 @@ import {
   QuickRawIngredientDialog,
 } from "./production-quick-create-dialogs";
 import { ProductionRecipeImportExportMenu } from "./production-recipe-import-export-menu";
-import { OperatorFlowSteps } from "./_components/operator-flow-steps";
 import {
   badgeVariantFromTone,
   sortFinishedGoods,
@@ -216,8 +213,6 @@ interface ProductionRecipePanelProps {
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
-  backHref?: string;
-  embedded?: boolean;
 }
 
 function RecipeDialogFields({
@@ -485,8 +480,6 @@ export function ProductionRecipePanel({
   unitOptions,
   ingredients,
   recipes,
-  backHref,
-  embedded = false,
 }: ProductionRecipePanelProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -613,15 +606,6 @@ export function ProductionRecipePanel({
   );
 
   const finishedGoodLocked = pendingFinishedGoodId != null;
-  const operatorFlow = messages.inventory.operatorFlow;
-  const recipeStep =
-    finishedGoodsOptions.length === 0
-      ? 1
-      : rawIngredientsOptions.length === 0
-        ? 2
-        : groupedRecipes.length === 0
-          ? 3
-          : 4;
 
   function openRecipeDialog(finishedGoodId?: number) {
     const group =
@@ -823,28 +807,6 @@ export function ProductionRecipePanel({
 
   return (
     <section className="flex flex-col gap-3">
-      {embedded && backHref ? (
-        <Button
-          variant="ghost"
-          size="touch"
-          className="self-start px-2"
-          render={<Link href={backHref} />}
-        >
-          <IconArrowLeft data-icon="inline-start" />
-          {INVENTORY_VI.productionBackToHub}
-        </Button>
-      ) : null}
-
-      {embedded ? (
-        <OperatorFlowSteps
-          title={operatorFlow.productionRecipeTitle}
-          description={operatorFlow.productionRecipeDescription}
-          steps={operatorFlow.productionRecipeSteps}
-          currentStep={recipeStep}
-          tone={recipeStep >= 4 ? "success" : "default"}
-        />
-      ) : null}
-
       <AppListFrame
         title={INVENTORY_VI.productionRecipesTab}
         description={INVENTORY_VI.productionRecipesCardDescription}
@@ -868,8 +830,6 @@ export function ProductionRecipePanel({
               <Button
                 type="button"
                 variant="outline"
-                size={embedded ? "touch" : "default"}
-                className={embedded ? "w-full sm:w-auto" : undefined}
                 onClick={() => openRecipeDialog()}
               >
                 <IconPlus data-icon="inline-start" />
@@ -981,7 +941,6 @@ export function ProductionRecipePanel({
             : INVENTORY_VI.productionRecipeSave
         }
         cancelLabel={ACTIONS_VI.cancel}
-        actionSize={embedded ? "touch" : "default"}
         contentClassName="sm:max-w-5xl"
       >
         {(form) => (

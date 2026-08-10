@@ -31,7 +31,6 @@ import {
   getModeMeta,
   type StocktakeMode,
 } from "../../_components/stocktake-mode-selector";
-import { OperatorFlowSteps } from "../../_components/operator-flow-steps";
 import { startStocktake } from "../../stocktake-actions";
 import { messages } from "@lib/messages";
 
@@ -54,7 +53,6 @@ interface Props {
   locations: LocationOpt[];
   defaultBranchId: number | null;
   routeBase?: string;
-  embedded?: boolean;
   loadFailed?: boolean;
   loadFailedTitle?: string;
 }
@@ -64,7 +62,6 @@ export function NewStocktakeSessionClient({
   locations,
   defaultBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
   loadFailed = false,
   loadFailedTitle = messages.inventory.stocktake.startLoadFailed,
 }: Props) {
@@ -91,8 +88,6 @@ export function NewStocktakeSessionClient({
       null,
     [branchLocations],
   );
-  const operatorFlow = messages.inventory.operatorFlow;
-
   function submit() {
     if (!branchId) {
       toast.error(messages.inventory.stocktake.selectBranchFirst);
@@ -129,7 +124,6 @@ export function NewStocktakeSessionClient({
   const startButton = (
     <Button
       type="button"
-      size={embedded ? "touch-lg" : "default"}
       className="w-full"
       onClick={submit}
       disabled={pending || !branchId}
@@ -148,34 +142,18 @@ export function NewStocktakeSessionClient({
   );
 
   if (loadFailed) {
-    const errorState = (
-      <AppEmptyState compact mode="error" title={loadFailedTitle} />
-    );
-    return embedded ? (
-      errorState
-    ) : (
-      <DocumentFormFrame header={header}>{errorState}</DocumentFormFrame>
+    return (
+      <DocumentFormFrame header={header}>
+        <AppEmptyState compact mode="error" title={loadFailedTitle} />
+      </DocumentFormFrame>
     );
   }
 
   const content = (
-    <>
-      {embedded ? (
-        <OperatorFlowSteps
-          title={operatorFlow.stocktakeListTitle}
-          description={operatorFlow.stocktakeListDescription}
-          steps={operatorFlow.stocktakeSteps}
-          currentStep={1}
-        />
-      ) : null}
-      <div
-        className={
-          embedded ? "flex flex-col gap-4" : "grid gap-4 lg:grid-cols-3"
-        }
-      >
+    <div className="grid gap-4 lg:grid-cols-3">
         <AppSection
           title={messages.inventory.stocktake.modeTitle}
-          className={embedded ? undefined : "lg:col-span-2"}
+          className="lg:col-span-2"
           contentClassName="gap-4"
         >
           <StocktakeModeSelector value={mode} onChange={setMode} />
@@ -197,7 +175,7 @@ export function NewStocktakeSessionClient({
               >
                 <SelectTrigger
                   id="stocktake-branch"
-                  size={embedded ? "touch" : "field"}
+                  size="field"
                   className="w-full"
                   aria-required
                 >
@@ -273,25 +251,16 @@ export function NewStocktakeSessionClient({
               {selectedWarehouse?.name ?? "—"}
             </span>
           </div>
-          {embedded ? null : startButton}
         </AppSection>
-        {embedded ? (
-          <AppDetailFooter
-            sticky
-            className="lg:col-span-3"
-            trailing={startButton}
-          />
-        ) : null}
-      </div>
-    </>
+    </div>
   );
 
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
-
   return (
-    <DocumentFormFrame header={header} scroll>
+    <DocumentFormFrame
+      header={header}
+      scroll
+      footer={<AppDetailFooter trailing={startButton} />}
+    >
       {content}
     </DocumentFormFrame>
   );

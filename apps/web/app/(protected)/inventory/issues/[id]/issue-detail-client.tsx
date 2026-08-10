@@ -60,7 +60,7 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";

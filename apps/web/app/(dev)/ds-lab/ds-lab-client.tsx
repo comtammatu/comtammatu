@@ -179,8 +179,8 @@ const MOTION_TOKENS = [
 
 const UX_PERSONA_ROWS = [
   {
-    persona: "Owner",
-    job: "Oversight L0 (finance, HR, kho, menu)",
+    persona: "Chủ tiệm",
+    job: "Giám sát L0 (tài chính, nhân sự, kho, thực đơn)",
     plane: "control_surface",
   },
   {
@@ -209,8 +209,8 @@ const UX_PERSONA_ROWS = [
     plane: "staff (/me)",
   },
   {
-    persona: "Khách / auth",
-    job: "Self-order, HĐĐT, login",
+    persona: "Khách / đăng nhập",
+    job: "Tự đặt món, HĐĐT, đăng nhập",
     plane: "public",
   },
 ] as const;
@@ -218,7 +218,7 @@ const UX_PERSONA_ROWS = [
 const UX_FAMILY_RECIPES = [
   {
     family: "Station POS",
-    entry: "Mở ca / session-gate",
+    entry: "Mở ca đầu phiên",
     success: "Cart → pay / bump",
     recovery: "Recall / retry khi lỡ",
     density: "Board full-screen; hide giá trên KDS/Runner",
@@ -228,7 +228,7 @@ const UX_FAMILY_RECIPES = [
     family: "Branch operator",
     entry: "/br/[id] hub → tab/workflow",
     success: "Duyệt / hoàn thành việc ca",
-    recovery: "Deep link về owning route",
+    recovery: "Quay lại tuyến sở hữu",
     density: "Touch comfortable; no DataTable on phone queues",
     exemplar:
       "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
@@ -257,7 +257,7 @@ function Caption({ children }: { children: string }) {
   return <p className="text-2xs text-muted-foreground">{children}</p>;
 }
 
-export function DsLabClient() {
+export function DesignLabClient() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [enterDemoKey, setEnterDemoKey] = useState(0);
@@ -886,13 +886,14 @@ export function DsLabClient() {
         <AppSection
           title="10 · UX · screen recipes"
           headingLevel="h2"
-          description="Product UX spine — persona × job × plane, then entry → success → recovery. Grounded in screen-context-map §1A + Layout UI/UX Frame + Decision Ladder (ui.md)."
+          description="Trục UX sản phẩm: vai trò, việc cần làm, mặt phẳng; rồi lối vào, kết quả, lối lùi. Nguồn: screen-context-map §1A, Layout UI/UX Frame, Decision Ladder."
         >
           <div className="flex flex-col gap-4">
+            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: dev-only design lab annotation, never shipped to product surfaces */}
             <Caption>
-              Không invent research giả. Khóa gia đình route trước khi chọn
-              archetype/block. Decision Ladder: Plane → Archetype → Block →
-              Compose → Verify.
+              Không bịa nghiên cứu. Khóa nhóm tuyến trước khi chọn kiểu trang và
+              khối. Thang quyết định: mặt phẳng, kiểu trang, khối, ghép, kiểm
+              chứng.
             </Caption>
 
             <ItemGroup className="gap-2">
@@ -946,12 +947,12 @@ export function DsLabClient() {
               </div>
             </div>
 
+            {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: dev-only design lab annotation, never shipped to product surfaces */}
             <Caption>
-              Show/hide notes: Station ẩn giá (KDS/Runner) và báo cáo tháng;
-              Branch touch ẩn mosaic KPI L0 / DataTable control_surface trên
-              phone; control_surface LIST hiện queue+filter URL, ẩn station
-              board chrome. Full spine:
-              docs/ref/screen-context-map.md §1A.
+              Quy tắc ẩn/hiện: trạm bếp ẩn giá và báo cáo tháng; chi nhánh cảm
+              ứng ẩn lưới chỉ số cấp tổng và bảng dữ liệu dày trên điện thoại;
+              danh sách cấp tổng hiện hàng chờ và bộ lọc trên đường dẫn, ẩn
+              khung bảng trạm. Trục đầy đủ: docs/ref/screen-context-map.md §1A.
             </Caption>
           </div>
         </AppSection>
@@ -1003,7 +1004,7 @@ export function DsLabClient() {
                     <ItemContent>
                       <ItemTitle>Item link hover</ItemTitle>
                       <ItemDescription>
-                        transition-colors duration-100
+                        transition-colors duration-[var(--motion-fast)]
                       </ItemDescription>
                     </ItemContent>
                   </Item>

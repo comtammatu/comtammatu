@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
+import {
+  NIGHT_SHIFT_END_HOUR,
+  NIGHT_SHIFT_START_HOUR,
+  readThemeCookie,
+  resolveThemeMode,
+  shiftAwareThemeMode,
+  themeClassName,
+} from "@comtammatu/ui/lib/theme-cookie";
 
 const THEME_PROVIDER_SOURCE = readFileSync(
   join(
@@ -52,11 +60,38 @@ test("theme bootstrap maps night to the .dark class", () => {
 
 test("theme provider preserves the bootstrap class through hydration", () => {
   assert.match(THEME_PROVIDER_SOURCE, /if \(!mountedRef\.current\)/);
-  assert.match(
-    THEME_PROVIDER_SOURCE,
-    /setThemeState\(readCookieTheme\(\) \?\? shiftAwareFallback\(\)\);\s+return;/,
-  );
+  // The provider must resolve through the same reader the bootstrap script
+  // uses; a second local copy is how the two drift apart.
+  assert.match(THEME_PROVIDER_SOURCE, /setThemeState\(resolveClientThemeMode\(\)\);/);
   assert.match(ROOT_LAYOUT_SOURCE, /defaultTheme=\{resolvedCookie\}/);
+});
+
+test("theme mode resolution lives in one shared module", () => {
+  assert.equal(resolveThemeMode("night"), "night");
+  assert.equal(resolveThemeMode("dark"), null);
+  assert.equal(resolveThemeMode(undefined), null);
+
+  assert.equal(shiftAwareThemeMode(NIGHT_SHIFT_START_HOUR), "night");
+  assert.equal(shiftAwareThemeMode(NIGHT_SHIFT_END_HOUR - 1), "night");
+  assert.equal(shiftAwareThemeMode(NIGHT_SHIFT_END_HOUR), "light");
+  assert.equal(shiftAwareThemeMode(NIGHT_SHIFT_START_HOUR - 1), "light");
+
+  assert.equal(readThemeCookie("a=1; matu-theme=night; b=2"), "night");
+  assert.equal(readThemeCookie("matu-theme=sepia"), null);
+  assert.equal(readThemeCookie(""), null);
+
+  assert.equal(themeClassName("night"), "dark");
+  assert.equal(themeClassName("light"), "light");
+});
+
+test("browser chrome follows the shift-aware fallback, not just the cookie", () => {
+  // generateViewport only sees the cookie, so a first visit during the night
+  // shift would keep light chrome unless the bootstrap corrects the meta tag.
+  const script = getThemeScriptHtml({
+    chromeColors: { light: "#fff6ee", night: "#120a06" },
+  });
+  assert.match(script, /meta\[name="theme-color"\]/);
+  assert.match(script, /setAttribute\('content',colors\[t\]\)/);
 });
 
 test("theme changes can disable transient color transitions", () => {

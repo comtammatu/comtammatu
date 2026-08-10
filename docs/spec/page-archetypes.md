@@ -42,6 +42,9 @@ and must be resolved **before compose**:
 
 Do not start layout or adapter composition while any of the four is unresolved.
 Lookup: `corepack pnpm audit:ui-components --component <block|adapter>`.
+PR review for T2/T3 UI work uses the **UI Review Checklist** in
+`docs/agent/rules/ui.md` (Gate fields stay owned here; the checklist does not
+duplicate this template).
 
 ```text
 UI Advisor Gate
@@ -204,8 +207,7 @@ rather than staying a near-empty category.
   rendered surface with the reading task that motivates it.
 - Data display: `DataTable` with `mobileCardRender` for the phone card list
   and the `Table` primitive for desktop — same fields, status colors, and
-  actions at both breakpoints. Cursor pagination through the shared
-  `Pagination` primitive.
+  actions at both breakpoints. Page navigation through `DataTablePagination`.
 - States: `TableEmptyStateRow` / `AppEmptyState` for empty/no-results;
   `PageSkeleton` loading; `ErrorPanel` error.
 - Status/money/date: per § 1 shared vocabulary.
@@ -301,11 +303,11 @@ density="compact"` already owns width/padding. Return a bare flex
   construction always the narrow-column case.
 - **R5 — Compact filters, no desktop toolbar bar.** An embedded branch must
   not render the full desktop `AppToolbar` filter row when the operator
-  column is narrower than the toolbar needs. Prefer the existing responsive
-  branch a client already uses for its own compact/mobile layout (e.g.
-  `stock-client.tsx`'s `isCompactLayout`) so filters collapse into the
-  compact/collapsible section instead of the inline desktop bar; do not add
-  a second, operator-only toolbar implementation.
+  column is narrower than the toolbar needs.   Prefer the Branch touch LIST controls
+  (`BranchOperatorPanel` + sheet/toggle filters on
+  `branch-stock-on-hand-client.tsx`) or the shared `DataTable`
+  `mobileCardRender` path on Owner management lists; do not add a second,
+  operator-only toolbar implementation.
 - **R6 — Back-link and breadcrumb target the operator section root.** Any
   back link, breadcrumb, or "list" href an embedded branch renders MUST use
   the branch-scoped `basePath` the wrapper passed down, not an control_surface module
@@ -431,12 +433,11 @@ badge}`).
 
 ### GATE/AUTH
 
-**Exemplars:** `apps/web/app/(protected)/page.tsx` (work-location picker:
-`AppPage` + `LinkCardGrid`) and `apps/web/app/(public)/access-denied/page.tsx`
-(`?reason=` contract).
+**Exemplars:** `apps/web/app/(public)/(auth)/login/page.tsx` and
+`apps/web/app/(public)/access-denied/page.tsx` (`?reason=` contract).
 
 - No app chrome (these are Standalone chrome-less surfaces per
-  `design-system.md` § Structural Governance § A.4, or pre-context screens that render
+  `design-system.md` § Structural Governance § A.7, or pre-context screens that render
   before any chrome can mount).
 - One decision, one forward action. No secondary navigation.
 
@@ -595,9 +596,10 @@ allowlist, not a precedent for stretching another archetype's definition:
 
 Before building or changing any `(protected)/**/page.tsx`:
 
-1. Read `docs/agent/rules/ui.md` Decision Ladder and complete the UI Advisor
+1. Read `docs/agent/rules/ui.md` Decision Ladder, complete the UI Advisor
    Gate in § 0.1 (plane + archetype + block/none+reason + exemplar before
-   compose).
+   compose), and keep the UI Review Checklist in that file for T2/T3 PR
+   close-out.
 2. Find the target route's archetype in § 2/§ 4, and read its
    composition recipe in § 3.
 3. Query the registered block for the plane and job with

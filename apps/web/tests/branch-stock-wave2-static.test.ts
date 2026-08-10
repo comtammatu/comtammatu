@@ -66,7 +66,7 @@ test("Branch stock landing is four doors then fulfillment list", () => {
   assert.match(landing, /branchDoorOnHand/);
   assert.match(landing, /branchDoorWaste/);
   assert.match(landing, /grid grid-cols-2/);
-  assert.match(landing, /pb-20 sm:pb-0/);
+  assert.match(landing, /pb-\[5rem\] sm:pb-0/);
   assert.doesNotMatch(landing, /BranchStockWorkPanel/);
   assert.doesNotMatch(landing, /key: "consumption"/);
   assert.doesNotMatch(landing, /ItemGroup className="grid/);

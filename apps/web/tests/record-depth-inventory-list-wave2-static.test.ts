@@ -56,7 +56,7 @@ test("Wave 2 Inventory LIST clients do not import Popover as a record view", () 
     "app/(protected)/inventory/issues/issues-client.tsx",
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
     "app/(protected)/inventory/production/production-runs-client.tsx",
     "app/(protected)/inventory/suppliers/suppliers-client.tsx",
     "app/(protected)/inventory/menu-recipes/menu-recipes-client.tsx",

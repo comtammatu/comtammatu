@@ -47,17 +47,9 @@ test("long press cards preserve vertical scrolling and composed swipe cards keep
   }
 
   for (const path of [
-    "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
-  ]) {
-    const source = read(path);
-    assert.match(source, /<InteractiveCard\s+render=\{<Link href=/);
-    assert.doesNotMatch(source, /useLongPress/);
-    assert.doesNotMatch(source, /<Drawer/);
-  }
-
-  for (const path of [
     "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx",
     "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
+    "apps/web/app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   ]) {
     const source = read(path);
     assert.doesNotMatch(source, /useLongPress/);

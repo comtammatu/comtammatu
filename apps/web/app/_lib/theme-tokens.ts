@@ -1,6 +1,12 @@
-export { THEME_COOKIE_NAME } from "@comtammatu/ui/lib/theme-cookie";
+export {
+  THEME_COOKIE_NAME,
+  resolveThemeMode,
+  shiftAwareThemeMode,
+  readThemeCookie,
+  type ThemeMode,
+} from "@comtammatu/ui/lib/theme-cookie";
 
-export type ThemeMode = "light" | "night";
+import type { ThemeMode } from "@comtammatu/ui/lib/theme-cookie";
 
 // Exact sRGB of the `--background` token per theme (packages/ui/src/styles/globals.css).
 // design-token-contrast-static.test.ts asserts the equality.
@@ -9,6 +15,9 @@ export const BROWSER_CHROME_THEME_COLORS: Record<ThemeMode, string> = {
   night: "#120a06",
 };
 
+// global-error.tsx renders outside globals.css, so it cannot read tokens at
+// runtime. These mirror the light/night semantic tokens of the same name and
+// design-token-contrast-static.test.ts asserts the parity.
 export const GLOBAL_ERROR_PALETTE: Record<
   ThemeMode,
   {
@@ -21,22 +30,16 @@ export const GLOBAL_ERROR_PALETTE: Record<
 > = {
   light: {
     background: BROWSER_CHROME_THEME_COLORS.light,
-    foreground: "#1a2238",
-    muted: "#6b5b47",
-    border: "#e8dcc8",
+    foreground: "#0d1b2a",
+    muted: "#8b5a2b",
+    border: "#dccfc0",
     surface: "#ffffff",
   },
   night: {
     background: BROWSER_CHROME_THEME_COLORS.night,
     foreground: "#f8f1e6",
     muted: "#d0c1b1",
-    border: "#5c4f42",
+    border: "#82776f",
     surface: "#362b25",
   },
 };
-
-export function resolveThemeMode(
-  value: string | null | undefined,
-): ThemeMode | null {
-  return value === "light" || value === "night" ? value : null;
-}

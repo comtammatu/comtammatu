@@ -50,6 +50,8 @@ function filesImportingControlSurfaceChrome(dir: string): string[] {
       /\bAppShell\b/.test(source) ||
       /\bControlSurfaceShell\b/.test(source) ||
       /\bAppListFrame\b/.test(source) ||
+      /\bBranchOperatorPage\b/.test(source) ||
+      /\bDataTable\b/.test(source) ||
       source.includes("control-surface-nav") ||
       source.includes("resolveControlSurface");
     return hits ? [relativeFromApp(file)] : [];
@@ -58,6 +60,10 @@ function filesImportingControlSurfaceChrome(dir: string): string[] {
 
 const kdsDir = join(process.cwd(), "app/(protected)/br/[branchId]/kds");
 const runnerDir = join(process.cwd(), "app/(protected)/br/[branchId]/runner");
+const operationalAdapter = join(
+  process.cwd(),
+  "app/components/surface/operational.tsx",
+);
 
 test("KDS station routes do not import control_surface AppSection", () => {
   assert.deepEqual(
@@ -79,7 +85,7 @@ test("KDS station routes do not import control_surface chrome", () => {
   assert.deepEqual(
     filesImportingControlSurfaceChrome(kdsDir),
     [],
-    "KDS must not import AppShell / ControlSurfaceShell / AppListFrame",
+    "KDS must not import AppShell / ControlSurfaceShell / AppListFrame / BranchOperatorPage / DataTable",
   );
 });
 
@@ -103,8 +109,32 @@ test("Runner station routes do not import control_surface chrome", () => {
   assert.deepEqual(
     filesImportingControlSurfaceChrome(runnerDir),
     [],
-    "Runner must not import AppShell / ControlSurfaceShell / AppListFrame",
+    "Runner must not import AppShell / ControlSurfaceShell / AppListFrame / BranchOperatorPage / DataTable",
   );
+});
+
+test("KDS and Runner loading stay PageSpinner (no fake ticket skeleton)", () => {
+  const kdsLoading = readFileSync(join(kdsDir, "loading.tsx"), "utf8");
+  const runnerLoading = readFileSync(join(runnerDir, "loading.tsx"), "utf8");
+  assert.match(kdsLoading, /PageSpinner/);
+  assert.match(runnerLoading, /PageSpinner/);
+  assert.doesNotMatch(kdsLoading, /\bSkeleton\b/);
+  assert.doesNotMatch(runnerLoading, /\bSkeleton\b/);
+});
+
+test("OperationalBoardCard uses named motion tokens, not bare transition", () => {
+  const source = readFileSync(operationalAdapter, "utf8");
+  assert.match(
+    source,
+    /transition-\[background-color,box-shadow,opacity\]/,
+  );
+  assert.match(source, /duration-\[var\(--motion-base\)\]/);
+  assert.match(source, /ease-\[var\(--ease-move\)\]/);
+  assert.doesNotMatch(
+    source,
+    /className=\{cn\(\s*"transition"/,
+  );
+  assert.doesNotMatch(source, /transition-all/);
 });
 
 test("realtime-board, runner-board, and pos-board UI blocks stay registered for station", async () => {
@@ -126,6 +156,9 @@ test("realtime-board, runner-board, and pos-board UI blocks stay registered for 
   assert.match(kds[0]?.forbidden ?? "", /AppSection/);
   assert.match(runner[0]?.forbidden ?? "", /AppSection/);
   assert.match(pos[0]?.forbidden ?? "", /AppSection/);
+  assert.match(kds[0]?.forbidden ?? "", /BranchOperatorPage/);
+  assert.match(runner[0]?.forbidden ?? "", /BranchOperatorPage/);
+  assert.match(pos[0]?.forbidden ?? "", /BranchOperatorPage/);
   assert.match(kds[0]?.forbidden ?? "", /raw Card/);
   assert.match(runner[0]?.forbidden ?? "", /raw Card/);
   assert.match(pos[0]?.forbidden ?? "", /raw Card/);

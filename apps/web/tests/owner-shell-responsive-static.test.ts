@@ -147,7 +147,7 @@ test("Owner sibling LIST filter bars opt into sticky stack", () => {
     ],
     [
       "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
-      /<AppToolbar\s+sticky=\{isCompactLayout\}/,
+      /<AppToolbar\s+sticky\b/,
     ],
   ] as const;
 
@@ -276,7 +276,7 @@ test("Owner shell scroll invariant is documented", () => {
     uiModule,
     /AppPageStickyChrome.*compatib|compatib.*AppPageStickyChrome|compatibility alias/i,
   );
-  assert.match(uiModule, /AppPageHeader` cuộn cùng nội dung/);
+  assert.match(uiModule, /`AppPageHeader` scrolls with content/);
 });
 
 test("Inventory branch selector keeps touch targets through tablet widths", () => {

@@ -16,10 +16,10 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { matchesSearch, normalizeSearch } from "@lib/search";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState } from "@/components/surface";
 import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { createSupplier } from "../../procurement-actions";

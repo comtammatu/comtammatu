@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   Ban as IconBan,
   Check as IconCheck,
@@ -27,7 +26,6 @@ import {
   AppPageHeader,
   AppSection,
   DescriptionList,
-  AppDetailFooter,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
@@ -35,7 +33,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -52,7 +50,6 @@ import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 const stocktakeCopy = messages.inventory.stocktake;
 const stocktakeDetailCopy = stocktakeCopy.detail;
-import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 const inventoryCommon = messages.inventory.common;
 
 const historySectionTitle = "Lịch sử chỉnh sửa";
@@ -99,7 +96,6 @@ export function StocktakeDetailClient({
   lines: initialLines,
   routeBase = "/inventory/stocktake",
   reportsBasePath = "/inventory/reports",
-  embedded = false,
   auditLogs = [],
 }: {
   session: StocktakeSession;
@@ -107,7 +103,6 @@ export function StocktakeDetailClient({
   routeBase?: string;
   inventoryBasePath?: string;
   reportsBasePath?: string;
-  embedded?: boolean;
   auditLogs?: AuditLogRow[];
 }) {
   const [isPending, startTransition] = useTransition();
@@ -243,7 +238,6 @@ export function StocktakeDetailClient({
       <>
         <Button
           variant="outline"
-          size={embedded ? "touch" : "default"}
           onClick={handleCancel}
           disabled={isPending}
         >
@@ -251,7 +245,6 @@ export function StocktakeDetailClient({
           {stocktakeDetailCopy.cancelAction}
         </Button>
         <Button
-          size={embedded ? "touch" : "default"}
           onClick={handleComplete}
           disabled={isPending}
         >
@@ -363,12 +356,7 @@ export function StocktakeDetailClient({
         <ResultsPhase
           lines={lines}
           varianceCount={varianceCount}
-          reviewHref={
-            embedded
-              ? reportsBasePath
-              : `${reportsBasePath}?branchId=${session.branch_id}`
-          }
-          embedded={embedded}
+          reviewHref={`${reportsBasePath}?branchId=${session.branch_id}`}
         />
       )}
     </div>
@@ -400,63 +388,16 @@ export function StocktakeDetailClient({
         },
       ]}
       defaultValue="document"
-      stickyList={!embedded}
+      stickyList
     >
       <TabsContent value="document" className="mt-4">
-        {embedded ? (
-          <>
-            {summarySection}
-            {mainContent}
-          </>
-        ) : (
-          documentPane
-        )}
+        {documentPane}
       </TabsContent>
       <TabsContent value="history" className="mt-4">
         {historyPane}
       </TabsContent>
     </AppPageTabs>
   );
-
-  if (embedded) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0"
-            render={
-              <Link
-                href={`${routeBase}?branchId=${session.branch_id}`}
-                aria-label={ACTIONS_VI.back}
-              />
-            }
-          >
-            <IconArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              {stocktakeCode(session)}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {headerDescription}
-            </p>
-          </div>
-          <Badge variant={statusBadge.variant} className="shrink-0">
-            {statusLabel}
-          </Badge>
-        </div>
-        {tabs}
-        {stocktakeActions ? (
-          <AppDetailFooter
-            sticky
-            trailing={<div className="flex gap-2">{stocktakeActions}</div>}
-          />
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <AppPage width="xwide" density="compact">
@@ -629,12 +570,10 @@ function ResultsPhase({
   lines,
   varianceCount,
   reviewHref,
-  embedded = false,
 }: {
   lines: StocktakeLine[];
   varianceCount: number;
   reviewHref: string;
-  embedded?: boolean;
 }) {
   const resultColumns: DataTableColumn<StocktakeLine>[] = [
     {
@@ -741,7 +680,7 @@ function ResultsPhase({
         </p>
       </div>
       <Button
-        size={embedded ? "touch" : "sm"}
+        size="sm"
         render={<Link href={reviewHref} />}
       >
         {stocktakeDetailCopy.results.nextActionCta}
@@ -749,71 +688,6 @@ function ResultsPhase({
       </Button>
     </AppSection>
   );
-
-  if (embedded) {
-    return (
-      <div className="flex flex-col gap-3">
-        {legend}
-        {nextAction}
-        <ItemGroup className="gap-2">
-          {lines.map((line) => {
-            const varianceColor = getVarianceColor(line);
-            const variance = line.variance ?? 0;
-            const varianceBg = getVarianceBg(line);
-            return (
-              <Item
-                key={line.id}
-                variant="outline"
-                className={cn(
-                  "flex-col items-stretch gap-1.5 bg-card p-3",
-                  varianceBg,
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-foreground">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                  </span>
-                  {line.counted_quantity == null ? (
-                    <span className="font-mono text-sm text-muted-foreground">
-                      —
-                    </span>
-                  ) : (
-                    <span
-                      className={cn(
-                        "font-mono text-sm font-semibold tabular-nums",
-                        varianceColor,
-                      )}
-                    >
-                      {variance > 0 && "+"}
-                      {variance}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>
-                    {stocktakeDetailCopy.results.systemShort}:{" "}
-                    <span className="font-mono text-foreground font-medium">
-                      {line.system_quantity}
-                    </span>
-                    {" · "}
-                    {stocktakeDetailCopy.results.countedShort}:{" "}
-                    <span className="font-mono text-foreground font-medium">
-                      {line.counted_quantity ?? "—"}
-                    </span>
-                  </span>
-                  {line.variance_reason ? (
-                    <span className="truncate italic">
-                      {line.variance_reason}
-                    </span>
-                  ) : null}
-                </div>
-              </Item>
-            );
-          })}
-        </ItemGroup>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-3">

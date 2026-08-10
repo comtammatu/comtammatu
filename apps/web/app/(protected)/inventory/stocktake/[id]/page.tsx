@@ -14,7 +14,6 @@ interface StocktakeDetailPageContentProps {
   routeBranchId?: number;
   routeBase?: string;
   reportsBasePath?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakeDetailPageContent({
@@ -23,7 +22,6 @@ export async function StocktakeDetailPageContent({
   routeBranchId,
   routeBase = "/inventory/stocktake",
   reportsBasePath = "/inventory/reports",
-  embedded = false,
 }: StocktakeDetailPageContentProps) {
   const sessionId = stocktakeId;
 
@@ -99,7 +97,6 @@ export async function StocktakeDetailPageContent({
       routeBase={routeBase}
       reportsBasePath={reportsBasePath}
       auditLogs={auditLogs}
-      embedded={embedded}
     />
   );
 }

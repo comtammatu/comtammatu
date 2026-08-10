@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2 as IconCheckCircle, Circle as IconCircle } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
@@ -14,7 +15,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppDetailFooter } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
 import { messages } from "@lib/messages";

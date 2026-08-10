@@ -45,6 +45,8 @@ interface FilterBarProps {
   branchLabel?: string;
   branchPlaceholder?: string;
   allBranchesLabel?: string;
+  /** Prefer `inline` inside AppListFrame toolbar; default card for REPORT siblings. */
+  variant?: "card" | "inline";
 }
 
 type FilterBarControl = "branch" | "range" | "granularity" | "compare";
@@ -113,6 +115,7 @@ export function FilterBar({
   branchLabel = filterCopy.branch,
   branchPlaceholder = filterCopy.branchPlaceholder,
   allBranchesLabel = messages.finance.common.allBranches,
+  variant = "card",
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -214,6 +217,7 @@ export function FilterBar({
 
   return (
     <AppToolbar
+      variant={variant}
       className={cn(
         "flex-col items-stretch gap-2 lg:flex-row lg:flex-nowrap lg:items-center",
         className,

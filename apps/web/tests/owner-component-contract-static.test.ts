@@ -772,7 +772,7 @@ test("UI component registry classifies and explains every shared component and a
   assert.equal(cardGuidance.status, 0, cardGuidance.stderr);
   assert.match(cardGuidance.stdout, /# UI Artifact Guidance/);
   assert.match(cardGuidance.stdout, /surface framing internals/);
-  assert.match(cardGuidance.stdout, /AppSection, AppLinkCard, KpiCard/);
+  assert.match(cardGuidance.stdout, /AppSection, StationSection, PublicSection/);
 
   const inputGuidance = spawnSync(
     process.execPath,

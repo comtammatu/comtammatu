@@ -94,7 +94,7 @@ export function HrClient({
   ];
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={workspaceCopy.ownerTitle}
         description={

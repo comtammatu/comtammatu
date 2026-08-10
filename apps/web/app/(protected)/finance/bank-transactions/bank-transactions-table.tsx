@@ -47,7 +47,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection } from "@/components/surface";
+import { AppListFrame } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
@@ -798,59 +798,57 @@ export function BankTransactionsTable({
   );
 
   return (
-    <>
-      <FilterBar
-        params={params}
-        branches={[]}
-        basePath="/finance/bank-transactions"
-        hide={["branch", "granularity", "compare"]}
-        trailing={
-          <>
-            <span className="text-xs font-medium text-muted-foreground">
-              {copy.filters.label}
-            </span>
-            <Select
-              value={filter}
-              disabled={isFilterPending}
-              onValueChange={(value) => {
-                if (isBankReconciliationFilter(value)) setFilter(value);
-              }}
-            >
-              <SelectTrigger
-                size={controlSize}
-                className="min-w-36"
-                aria-label={copy.filters.label}
+    <AppListFrame
+      toolbar={
+        <FilterBar
+          variant="inline"
+          params={params}
+          branches={[]}
+          basePath="/finance/bank-transactions"
+          hide={["branch", "granularity", "compare"]}
+          trailing={
+            <>
+              <span className="text-xs font-medium text-muted-foreground">
+                {copy.filters.label}
+              </span>
+              <Select
+                value={filter}
+                disabled={isFilterPending}
+                onValueChange={(value) => {
+                  if (isBankReconciliationFilter(value)) setFilter(value);
+                }}
               >
-                <SelectValue placeholder={copy.filters.placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.map(([value, label]) => (
-                  <SelectItem
-                    key={value}
-                    value={value}
-                    size={controlSize === "touch" ? "touch" : "default"}
-                  >
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Badge
-              variant={openQueueCount > 0 ? "warning" : "success"}
-              className="font-mono"
-            >
-              {copy.queueCount(formatCount(openQueueCount))}
-            </Badge>
-          </>
-        }
-      />
-      {isTouchLayout ? (
-        table
-      ) : (
-        <AppSection className="overflow-hidden" contentFlush>
-          {table}
-        </AppSection>
-      )}
-    </>
+                <SelectTrigger
+                  size={controlSize}
+                  className="min-w-36"
+                  aria-label={copy.filters.label}
+                >
+                  <SelectValue placeholder={copy.filters.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filterOptions.map(([value, label]) => (
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge
+                variant={openQueueCount > 0 ? "warning" : "success"}
+                className="font-mono"
+              >
+                {copy.queueCount(formatCount(openQueueCount))}
+              </Badge>
+            </>
+          }
+        />
+      }
+    >
+      {table}
+    </AppListFrame>
   );
 }

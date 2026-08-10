@@ -13,14 +13,12 @@ interface StocktakePageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakePageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: StocktakePageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -53,7 +51,6 @@ export async function StocktakePageContent({
       userRole={claims.user_role}
       userBranchId={scope?.selectedBranchId ?? null}
       routeBase={routeBase}
-      embedded={embedded}
     />
   );
 }

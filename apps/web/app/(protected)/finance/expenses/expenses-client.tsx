@@ -51,7 +51,7 @@ import {
 } from "@/components/row-actions-menu";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppSection, KpiRow } from "@/components/surface";
+import { AppListFrame, AppToolbar, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -1038,36 +1038,40 @@ export function ExpensesClient({
         />
       </KpiRow>
 
-      <AppSection
+      <AppListFrame
         title={copy.listTitle}
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size={isTouchLayout ? "touch" : "default"}
-              variant={showOnlyNeedsAction ? "default" : "outline"}
-              onClick={toggleNeedsActionFilter}
-              aria-pressed={showOnlyNeedsAction}
-            >
-              <IconAlertTriangle data-icon="inline-start" />
-              {copy.needsActionFilter}
-            </Button>
-            {canManageExpenses ? (
-              <Button
-                size={isTouchLayout ? "touch" : "default"}
-                onClick={() => {
-                  setEditingExpense(null);
-                  setDialogOpen(true);
-                }}
-              >
-                <IconPlus data-icon="inline-start" />
-                {copy.add}
-              </Button>
-            ) : null}
-          </div>
-        }
-        contentFlush
         contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            actions={
+              <>
+                <Button
+                  type="button"
+                  size={isTouchLayout ? "touch" : "default"}
+                  variant={showOnlyNeedsAction ? "default" : "outline"}
+                  onClick={toggleNeedsActionFilter}
+                  aria-pressed={showOnlyNeedsAction}
+                >
+                  <IconAlertTriangle data-icon="inline-start" />
+                  {copy.needsActionFilter}
+                </Button>
+                {canManageExpenses ? (
+                  <Button
+                    size={isTouchLayout ? "touch" : "default"}
+                    onClick={() => {
+                      setEditingExpense(null);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <IconPlus data-icon="inline-start" />
+                    {copy.add}
+                  </Button>
+                ) : null}
+              </>
+            }
+          />
+        }
       >
         <DataTable
           columns={columns}
@@ -1148,7 +1152,7 @@ export function ExpensesClient({
             );
           }}
         />
-      </AppSection>
+      </AppListFrame>
 
       {canManageExpenses ? (
         <FormDialog

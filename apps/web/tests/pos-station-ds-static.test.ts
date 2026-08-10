@@ -18,20 +18,50 @@ function walkFiles(dir: string): string[] {
   return files;
 }
 
-const posDir = join(process.cwd(), "app/(protected)/br/[branchId]/pos");
+function relativeFromApp(file: string): string {
+  return file.slice(process.cwd().length + 1);
+}
 
-test("POS station routes do not import control_surface AppSection", () => {
-  const offenders = walkFiles(posDir).flatMap((file) => {
+function filesImportingAppSection(dir: string): string[] {
+  return walkFiles(dir).flatMap((file) => {
     const source = readFileSync(file, "utf8");
     const importsAppSection =
       /\bAppSection\b/.test(source) &&
-      (source.includes('@/components/surface') ||
+      (source.includes("@/components/surface") ||
         source.includes("@/components/surface/app-section"));
-    return importsAppSection
-      ? [file.slice(process.cwd().length + 1)]
+    return importsAppSection ? [relativeFromApp(file)] : [];
+  });
+}
+
+function filesImportingRawCard(dir: string): string[] {
+  return walkFiles(dir).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    return source.includes('@comtammatu/ui/components/card"') ||
+      source.includes("@comtammatu/ui/components/card'")
+      ? [relativeFromApp(file)]
       : [];
   });
+}
 
+function filesImportingControlSurfaceChrome(dir: string): string[] {
+  return walkFiles(dir).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    const hits =
+      /\bAppShell\b/.test(source) ||
+      /\bControlSurfaceShell\b/.test(source) ||
+      /\bAppListFrame\b/.test(source) ||
+      /\bBranchOperatorPage\b/.test(source) ||
+      /\bDataTable\b/.test(source) ||
+      source.includes("control-surface-nav") ||
+      source.includes("resolveControlSurface");
+    return hits ? [relativeFromApp(file)] : [];
+  });
+}
+
+const posDir = join(process.cwd(), "app/(protected)/br/[branchId]/pos");
+
+test("POS station routes do not import control_surface AppSection", () => {
+  const offenders = filesImportingAppSection(posDir);
   assert.deepEqual(
     offenders,
     [],
@@ -40,18 +70,20 @@ test("POS station routes do not import control_surface AppSection", () => {
 });
 
 test("POS station routes do not import raw Card primitive", () => {
-  const offenders = walkFiles(posDir).flatMap((file) => {
-    const source = readFileSync(file, "utf8");
-    return source.includes('@comtammatu/ui/components/card"') ||
-      source.includes("@comtammatu/ui/components/card'")
-      ? [file.slice(process.cwd().length + 1)]
-      : [];
-  });
-
+  const offenders = filesImportingRawCard(posDir);
   assert.deepEqual(
     offenders,
     [],
     `POS station_chrome must use StationSection/Frame, not raw Card: ${offenders.join(", ")}`,
+  );
+});
+
+test("POS station routes do not import control_surface chrome", () => {
+  const offenders = filesImportingControlSurfaceChrome(posDir);
+  assert.deepEqual(
+    offenders,
+    [],
+    `POS must not import AppShell / ControlSurfaceShell / AppListFrame / BranchOperatorPage / DataTable: ${offenders.join(", ")}`,
   );
 });
 
@@ -87,6 +119,7 @@ test("pos-board block locks StationSection composition and session-gate exemplar
   assert.deepEqual(pos[0]?.planes ?? [], ["station"]);
   assert.match(pos[0]?.use ?? "", /StationSection/);
   assert.match(pos[0]?.forbidden ?? "", /AppSection/);
+  assert.match(pos[0]?.forbidden ?? "", /BranchOperatorPage/);
   assert.match(pos[0]?.forbidden ?? "", /raw Card/);
   assert.match(pos[0]?.exemplar ?? "", /\/pos\/session-gate\.tsx$/);
 });

@@ -48,7 +48,12 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import {
+  AppListFrame,
+  AppSection,
+  AppToolbar,
+  KpiRow,
+} from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
@@ -592,90 +597,6 @@ export function PayrollListClient({
 
   return (
     <>
-      <AppToolbar
-        sticky
-        className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
-        search={
-          <InputGroup size={controlSize} className="w-full sm:w-64">
-            <InputGroupAddon>
-              <IconSearch aria-hidden />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={copy.search}
-              aria-label={copy.search}
-            />
-          </InputGroup>
-        }
-        filters={
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <Input
-              type="month"
-              controlSize={controlSize}
-              value={monthValue(preview.year, preview.month)}
-              onChange={(event) =>
-                replaceFilters({ month: event.target.value })
-              }
-              aria-label={copy.month}
-              className="w-full sm:w-36"
-            />
-            <Select
-              value={salaryStatus}
-              onValueChange={(value) =>
-                replaceFilters({
-                  salaryStatus: normalizeSalaryStatus(value),
-                })
-              }
-            >
-              <SelectTrigger
-                size={controlSize}
-                className="w-full sm:w-44"
-                aria-label={copy.salaryStatus}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_SALARY_STATUSES}>
-                  {copy.salaryStatusAll}
-                </SelectItem>
-                <SelectItem value={CALCULABLE_SALARY_STATUS}>
-                  {copy.salaryStatusCalculable}
-                </SelectItem>
-                <SelectItem value={MISSING_SALARY_STATUS}>
-                  {copy.salaryStatusMissing}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <FormattedNumberInput
-              value={standardDays}
-              onValueChange={setStandardDays}
-              onValueBlur={(value) => {
-                setStandardDays(value);
-                updateStandardDays(value);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") updateStandardDays();
-              }}
-              maxFractionDigits={2}
-              className="w-full text-right font-mono tabular-nums sm:w-28"
-              aria-label={copy.standardDays}
-              title={copy.standardDays}
-            />
-          </div>
-        }
-        actions={
-          <Button
-            variant="outline"
-            size="touch"
-            onClick={() => replaceFilters({ calendarTarget: "all" })}
-          >
-            <IconCalendarDays data-icon="inline-start" />
-            {copy.calendar}
-          </Button>
-        }
-      />
-
       {!isLocked && hasPreflightBlockers ? (
         <AppSection
           tone="warning"
@@ -714,7 +635,7 @@ export function PayrollListClient({
         </AppSection>
       ) : null}
 
-      <AppSection
+      <AppListFrame
         title={copy.periodName(preview.month, preview.year)}
         description={
           isLocked
@@ -728,8 +649,92 @@ export function PayrollListClient({
         headerHint={isLocked ? copy.snapshotLocked : copy.snapshotOpen}
         action={snapshotAction}
         className="motion-safe:animate-in motion-safe:fade-in"
-        contentFlush
         contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
+            search={
+              <InputGroup size={controlSize} className="w-full sm:w-64">
+                <InputGroupAddon>
+                  <IconSearch aria-hidden />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={copy.search}
+                  aria-label={copy.search}
+                />
+              </InputGroup>
+            }
+            filters={
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+                <Input
+                  type="month"
+                  controlSize={controlSize}
+                  value={monthValue(preview.year, preview.month)}
+                  onChange={(event) =>
+                    replaceFilters({ month: event.target.value })
+                  }
+                  aria-label={copy.month}
+                  className="w-full sm:w-36"
+                />
+                <Select
+                  value={salaryStatus}
+                  onValueChange={(value) =>
+                    replaceFilters({
+                      salaryStatus: normalizeSalaryStatus(value),
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className="w-full sm:w-44"
+                    aria-label={copy.salaryStatus}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_SALARY_STATUSES}>
+                      {copy.salaryStatusAll}
+                    </SelectItem>
+                    <SelectItem value={CALCULABLE_SALARY_STATUS}>
+                      {copy.salaryStatusCalculable}
+                    </SelectItem>
+                    <SelectItem value={MISSING_SALARY_STATUS}>
+                      {copy.salaryStatusMissing}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormattedNumberInput
+                  value={standardDays}
+                  onValueChange={setStandardDays}
+                  onValueBlur={(value) => {
+                    setStandardDays(value);
+                    updateStandardDays(value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") updateStandardDays();
+                  }}
+                  maxFractionDigits={2}
+                  className="w-full text-right font-mono tabular-nums sm:w-28"
+                  aria-label={copy.standardDays}
+                  title={copy.standardDays}
+                />
+              </div>
+            }
+            actions={
+              <Button
+                variant="outline"
+                size="touch"
+                onClick={() => replaceFilters({ calendarTarget: "all" })}
+              >
+                <IconCalendarDays data-icon="inline-start" />
+                {copy.calendar}
+              </Button>
+            }
+          />
+        }
       >
         <DataTable
           columns={columns}
@@ -848,7 +853,7 @@ export function PayrollListClient({
             </Item>
           )}
         />
-      </AppSection>
+      </AppListFrame>
 
       <AppDialog
         open={isCalendarOpen}

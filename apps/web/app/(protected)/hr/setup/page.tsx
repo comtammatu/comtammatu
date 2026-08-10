@@ -77,7 +77,7 @@ export default async function HrSetupPage({
   const branchScope = resolveHrBranchScope(params.branch, branches);
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.tabs.setup}
         description={copy.setupDescription}

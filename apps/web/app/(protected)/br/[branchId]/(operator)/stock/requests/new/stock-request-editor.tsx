@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Combobox } from "@comtammatu/ui/components/combobox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Item, ItemContent, ItemTitle } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
@@ -18,14 +17,13 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { QuantityInput } from "@/components/form";
+import { Combobox, QuantityInput } from "@/components/form";
 import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter } from "@/components/surface";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { saveStockRequest } from "@/(protected)/inventory/stock-request-actions";
 import { messages } from "@lib/messages";
 import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
-import { matchesSearch } from "@lib/search";
 
 const copy = messages.inventory.stockRequests.editor;
 
@@ -57,11 +55,6 @@ const emptyLine = (): DraftLine => ({
   entryUnitId: "",
   quantity: "",
 });
-const ingredientFilter = (
-  option: { label: string; keywords?: string[] },
-  query: string,
-) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
-
 function fulfillSiteLabel(
   kind: StockRequestIngredientOption["fulfillSiteKind"],
 ): string {
@@ -223,7 +216,6 @@ export function StockRequestEditor({
                   placeholder={copy.chooseIngredient}
                   searchPlaceholder={copy.searchIngredient}
                   emptyMessage={copy.ingredientNotFound}
-                  filter={ingredientFilter}
                 />
                 {ingredient ? (
                   <Badge variant="secondary" className="w-fit">

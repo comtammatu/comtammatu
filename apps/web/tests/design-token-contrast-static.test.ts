@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { BROWSER_CHROME_THEME_COLORS } from "../app/_lib/theme-tokens";
+import {
+  BROWSER_CHROME_THEME_COLORS,
+  GLOBAL_ERROR_PALETTE,
+} from "../app/_lib/theme-tokens";
 
 // The className-pattern gates in scripts/check-ui-contract.mjs cannot see token
 // VALUES, so a palette retune can silently strand a status pair below WCAG.
@@ -201,12 +204,65 @@ function toHex(t: Oklch): string {
     .join("")}`;
 }
 
+function tokenAlpha(scope: "light" | "dark", name: string): number {
+  const re = new RegExp(
+    `--${name}:\\s*oklch\\([^)]*?/\\s*([\\d.]+)%\\s*\\)`,
+  );
+  const match = SCOPE[scope].match(re);
+  return match ? Number(match[1]) / 100 : 1;
+}
+
+// Browsers composite sRGB alpha in gamma space, so the 0-255 channels blend
+// directly.
+function compositeHex(top: Oklch, alpha: number, under: Oklch): string {
+  const [t, u] = [srgb(top), srgb(under)];
+  return `#${t
+    .map((c, i) =>
+      Math.round((c * alpha + u[i]! * (1 - alpha)) * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
 // The browser-chrome-theme-color-source gate single-sources the hex STRING but
 // cannot tell whether it still equals the token it claims to mirror, and the
 // static manifest sits outside every guard root.
 test("browser chrome colors equal the --background token of their theme", () => {
   assert.equal(toHex(token("light", "background")), BROWSER_CHROME_THEME_COLORS.light);
   assert.equal(toHex(token("dark", "background")), BROWSER_CHROME_THEME_COLORS.night);
+});
+
+// global-error.tsx renders without globals.css, so its palette is a hand-copied
+// mirror. Only --background was covered before, which let the other four drift.
+test("global-error palette mirrors the semantic tokens it claims", () => {
+  const MIRROR = {
+    background: "background",
+    foreground: "foreground",
+    muted: "muted-foreground",
+    border: "border",
+    surface: "card",
+  } as const;
+
+  for (const [mode, scope] of [
+    ["light", "light"],
+    ["night", "dark"],
+  ] as const) {
+    for (const [field, tokenName] of Object.entries(MIRROR)) {
+      // A translucent token only reads as its composite over the surface it
+      // sits on, which is what a flat hex mirror has to carry.
+      const alpha = tokenAlpha(scope, tokenName);
+      const expected =
+        alpha === 1
+          ? toHex(token(scope, tokenName))
+          : compositeHex(token(scope, tokenName), alpha, token(scope, "card"));
+      assert.equal(
+        GLOBAL_ERROR_PALETTE[mode][field as keyof typeof MIRROR],
+        expected,
+        `${mode}.${field} must equal --${tokenName}`,
+      );
+    }
+  }
 });
 
 test("static PWA manifest colors track the light chrome color", () => {

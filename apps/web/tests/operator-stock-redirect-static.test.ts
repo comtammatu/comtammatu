@@ -291,8 +291,9 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(stockClientSource, /if \(coreDataLoadFailed\)/);
   assert.match(
     stockClientSource,
-    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
+    /return \(\s*<AppPage[\s\S]*width="xwide"[\s\S]*density="compact"[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
   );
+  assert.doesNotMatch(stockClientSource, /isCompactLayout|useStockCompactLayout/);
   assert.doesNotMatch(stockClientSource, /InventoryPageContent/);
 });
 
@@ -638,12 +639,12 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(branchReportsModel, /getBranchStockMovementHighlights/);
   assert.doesNotMatch(branchReportsModel, /totalQuantity|movementTotals/);
 
-  assert.match(issuesPage, /embedded\?: boolean/);
-  assert.match(issuesPage, /embedded=\{embedded\}/);
+  assert.doesNotMatch(issuesPage, /embedded\?: boolean/);
+  assert.doesNotMatch(issuesPage, /embedded=\{embedded\}/);
   assert.match(issuesPage, /scope\.outOfScope/);
   assert.match(issuesPage, /listBasePath\?: InventoryRouteKey/);
-  assert.match(issuesClient, /embedded\?: boolean/);
-  assert.match(issuesClient, embeddedContentWrapperPattern);
+  assert.doesNotMatch(issuesClient, /embedded\?: boolean/);
+  assert.doesNotMatch(issuesClient, embeddedContentWrapperPattern);
   assert.match(issuesClient, /listBasePath = "\/inventory\/consumption"/);
   assert.match(issuesClient, /detailBasePath = listBasePath/);
   assert.match(
@@ -690,9 +691,10 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(grnListClient, /onRowClick=\{\(row\) => openDetail\(row\)\}/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
-  assert.match(grnDetailClient, /embedded\?: boolean/);
-  assert.match(grnDetailClient, /embedded = false/);
-  assert.match(grnDetailClient, embeddedContentWrapperPattern);
+  assert.doesNotMatch(grnDetailClient, /embedded\?: boolean/);
+  assert.doesNotMatch(grnDetailClient, /\bembedded\b/);
+  assert.match(grnDetailClient, /presentation\?: "page" \| "dialog"/);
+  assert.match(grnDetailClient, /presentation === "dialog"/);
 
   assert.match(reportsPage, /export async function ReportsPageContent\(\)/);
   assert.match(reportsPage, /fetchApAging\(\)/);

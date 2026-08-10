@@ -126,7 +126,6 @@ interface IssuesPageContentProps {
   listBasePath?: InventoryRouteKey;
   detailBasePath?: string;
   scope?: IssuesScope;
-  embedded?: boolean;
 }
 
 export async function IssuesPageContent({
@@ -134,7 +133,6 @@ export async function IssuesPageContent({
   listBasePath = "/inventory/consumption",
   detailBasePath = listBasePath,
   scope: scopeVariant = "consumption",
-  embedded = false,
 }: IssuesPageContentProps) {
   const scopeConfig = SCOPE_CONFIG[scopeVariant];
   const params = searchParams ? await searchParams : {};
@@ -310,7 +308,6 @@ export async function IssuesPageContent({
         ? { createHref: scopeConfig.createHref }
         : {})}
       pageTitle={pageTitle}
-      embedded={embedded}
     />
   );
 }

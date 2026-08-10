@@ -49,7 +49,7 @@ test("Branch transfer creation stays central-site only with Branch DOC presenter
       "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
     ),
     read(
-      "apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx",
+      "apps/web/app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
     ),
   ]) {
     assert.doesNotMatch(

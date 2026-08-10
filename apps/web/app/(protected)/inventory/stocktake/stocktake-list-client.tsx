@@ -22,6 +22,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
   Select,
   SelectContent,
@@ -38,13 +39,11 @@ import {
   AppPageHeader,
   AppToolbar,
 } from "@/components/surface";
-import { OperatorFlowSteps } from "../_components/operator-flow-steps";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -143,16 +142,14 @@ export function StocktakeListClient({
   userRole: _userRole,
   userBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: {
   initial: StocktakeSessionRow[];
   branches: BranchOption[];
   userRole: StaffRole;
   userBranchId: number | null;
   routeBase?: string;
-  embedded?: boolean;
 }) {
-  const controlSize = useFormControlSize(embedded ? "touch" : "responsive");
+  const controlSize = useFormControlSize("responsive");
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
@@ -242,7 +239,6 @@ export function StocktakeListClient({
   }, [rows, search, statusFilter]);
 
   const isFiltered = Boolean(search) || statusFilter !== "all";
-  const operatorFlow = messages.inventory.operatorFlow;
 
   const columns: DataTableColumn<StocktakeSessionRow>[] = [
     {
@@ -297,7 +293,7 @@ export function StocktakeListClient({
   const stocktakeAction = (
     <Button
       type="button"
-      size={embedded ? "touch" : "lg"}
+      size="lg"
       render={<Link href={`${routeBase}/new${branchQuery}`} />}
     >
       <IconClipboardCheck className="size-4" />
@@ -305,25 +301,12 @@ export function StocktakeListClient({
     </Button>
   );
 
-  const content = (
-    <>
-      {embedded ? (
-        <OperatorFlowSteps
-          title={operatorFlow.stocktakeListTitle}
-          description={operatorFlow.stocktakeListDescription}
-          steps={operatorFlow.stocktakeSteps}
-          currentStep={1}
-        />
-      ) : null}
-
-      {embedded ? (
-        stocktakeAction
-      ) : (
-        <AppPageHeader
-          title={messages.inventory.stocktake.title}
-          actions={stocktakeAction}
-        />
-      )}
+  return (
+    <AppPage width="xwide" density="compact">
+      <AppPageHeader
+        title={messages.inventory.stocktake.title}
+        actions={stocktakeAction}
+      />
       <AppListFrame
         toolbar={
           <AppToolbar
@@ -347,11 +330,7 @@ export function StocktakeListClient({
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger
                   size={controlSize}
-                  className={
-                    controlSize === "touch"
-                      ? "w-full"
-                      : inventoryListFilterSelectClassName
-                  }
+                  className={inventoryListFilterSelectClassName}
                 >
                   <SelectValue
                     placeholder={messages.inventory.stocktake.statusPlaceholder}
@@ -422,16 +401,6 @@ export function StocktakeListClient({
           )}
         />
       </AppListFrame>
-    </>
-  );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
-
-  return (
-    <AppPage width="xwide" density="compact">
-      {content}
     </AppPage>
   );
 }

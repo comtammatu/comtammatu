@@ -430,7 +430,6 @@ export default async function PurchaseOrdersPage({
       mappedIngredientIds={mappedIngredientIds}
       canCreateRequest={canCreateRequest && requestBranches.length > 0}
       canAllocate={canAllocate}
-      embedded
     />
   );
   const ordersContent = (
@@ -439,7 +438,6 @@ export default async function PurchaseOrdersPage({
       branches={branches}
       canManage={canManagePo || canAllocate}
       canReceive={canReceive}
-      embedded
     />
   );
 

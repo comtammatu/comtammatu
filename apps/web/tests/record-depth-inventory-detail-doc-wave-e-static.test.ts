@@ -44,8 +44,13 @@ test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", ()
 
   assert.match(
     client,
-    /stickyList=\{!embedded && presentation !== "dialog"\}/,
+    /stickyList=\{presentation !== "dialog"\}/,
     "dialog tabs must not use the Owner shell sticky offset",
+  );
+  assert.doesNotMatch(
+    client,
+    /\bembedded\b/,
+    "GRN DETAIL burns Owner embedded dual presenter; dialog uses presentation",
   );
   assert.match(
     client,

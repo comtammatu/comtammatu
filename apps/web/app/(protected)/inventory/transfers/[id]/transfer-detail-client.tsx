@@ -37,7 +37,7 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { tRoute, tTerm } from "../../_lib/dictionary";

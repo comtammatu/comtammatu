@@ -32,8 +32,8 @@ runtime changes.
 - Naming: semantic `--kebab-case` tokens, `kebab-case.tsx` ↔ PascalCase export,
   adapter prefixes `App*` / `BranchOperator*` / `Employee*`. `Frame` is the inset
   primitive; `AppListFrame` / `DocumentFormFrame` stay legal `App*` adapters.
-  Forbidden: `Owner*`, `Ops*`, `Ds*`, `Matu*`, importable `*Block`, root
-  `DESIGN.md`.
+  Forbidden: `Owner*`, `Ops*`, `Management*`, `Ds*`, `Matu*`, importable
+  `*Block`, root `DESIGN.md`.
 - Dual Thesis differs by density and chrome only — never by tokens, fonts, or
   status vocabulary.
 
@@ -87,7 +87,8 @@ Skip only for T1 typo/editorial copy with an explicit skip reason. If the
 archetype and visual contract already decide the shape, implement them. If a
 real hierarchy/interaction choice remains, use the smallest set of independent
 design reviewers that can add distinct evidence; their output is advisory and
-cannot override the SSOT owners above.
+cannot override the SSOT owners above. Before calling T2/T3 UI work complete,
+walk the **UI Review Checklist** below.
 
 ## Operational UI Invariants
 
@@ -133,12 +134,78 @@ cannot override the SSOT owners above.
 - Never expose raw database errors, SQLSTATE, secrets, or internal identifiers as
   user-facing copy.
 
-## Verification
+## UI Review Checklist
 
-- Run `corepack pnpm lint:ui-contract` plus the repository hard gates.
-- Inspect the changed route at its primary mobile viewport and the relevant
-  desktop/tablet viewport when layout changes.
-- Verify action, loading, empty, error, disabled, destructive, keyboard, and
-  navigation states touched by the diff.
-- Treat each authority owner as scoped to its concern. Guards and browser
-  evidence prove outcomes; they do not create a competing visual contract.
+Durable review habit for **T2/T3 UI PRs** (layout, hierarchy, state, navigation,
+interaction, or multi-surface). T1 typo/editorial copy may skip with an
+explicit skip reason. Do not paste token tables here — owners stay in
+`design-system.md` / `page-archetypes.md` / the registry.
+
+### 1. Decision Ladder / UI Advisor Gate
+
+Before compose, the PR or task note must carry the four Gate fields from
+`page-archetypes.md` § 0.1 (do not fork a second template):
+
+- [ ] `plane` — product plane / chrome family
+- [ ] `archetype` — id from page-archetypes § 2 / § 4
+- [ ] `block` — `UI_BLOCK_REGISTRY` id, or `none` + one-line reason
+- [ ] `exemplar` — concrete repo path (prefer the block's `exemplar`)
+
+Also confirm Dual Thesis / chrome family fit: density and chrome may differ by
+plane; tokens, fonts, and status vocabulary must not. No parallel DS, root
+`DESIGN.md`, inventable `*Block` imports, or `App*` chrome on `station_chrome`.
+
+### 2. Foundations
+
+Check only what the diff touches; evidence beats restating the SSOT.
+
+- [ ] Contrast — text/icon/status remain readable in the themes the change
+      affects (see design-system Contrast Targets)
+- [ ] Rhythm / density — page and control density match the plane; no arbitrary
+      gap/padding scale drift
+- [ ] Typography — shared type roles; no ad-hoc display scale
+- [ ] Motion — shared motion tokens only; honor
+      `prefers-reduced-motion` (globals reset). **Route-local motion:** flag
+      ad-hoc transition/stagger/animation that bypasses tokens; do not invent
+      page-transition or list-stagger recipes in review
+
+### 3. Station plane (`station_chrome` — POS / KDS / runner)
+
+When the diff touches station routes or shared station adapters:
+
+- [ ] Primary viewport = next action or live queue (not dashboard chrome)
+- [ ] One vocabulary with the paired POS/KDS workflow state
+- [ ] No `AppShell` / control_surface `App*` chrome leakage into the station
+      plane; use station gold blocks (`pos-board`, `realtime-board`,
+      `runner-board`) or an approved station adapter
+- [ ] **Touch density on POS sheets** — Sheet/Drawer controls meet touch /
+      `touch-lg` targets at the primary station viewport; review density only,
+      do not redesign POS/KDS in the review pass
+- [ ] **Browser contrast / density** — when station or sheet chrome changes,
+      spot-check light + dark and touch density at the primary viewport
+      (browser evidence when the change is meaningful)
+
+### 4. Copy And Product Surface
+
+- [ ] Vietnamese product copy follows glossary / shared dictionaries; one
+      concept keeps one name
+- [ ] No agent notes, implementation commentary, or dev history in product UI
+- [ ] Loading / empty / error / permission / recovery states are explicit where
+      the workflow requires them
+- [ ] No raw Supabase/Postgres/`SQLSTATE` text, secrets, or internal ids as
+      user-facing copy
+
+### 5. Verification Pointers
+
+- [ ] `corepack pnpm lint:ui-contract` (plus plane static guards the route
+      family already has)
+- [ ] Primary mobile viewport, and desktop/tablet when layout changes
+- [ ] Action, loading, empty, error, disabled, destructive, keyboard, and
+      navigation states touched by the diff
+- [ ] `/ds-lab` when shared layout recipes, plane chrome, or foundation demos
+      change (dev-only; production 404)
+- [ ] Treat each authority owner as scoped to its concern — guards and browser
+      evidence prove outcomes; they do not create a competing visual contract
+
+W10+ token tweaks stay optional and only when a review or audit proves need;
+passing this checklist is the default stop for a DS hygiene wave.

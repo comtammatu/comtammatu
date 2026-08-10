@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
 import {
   Field,
@@ -35,7 +36,6 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {

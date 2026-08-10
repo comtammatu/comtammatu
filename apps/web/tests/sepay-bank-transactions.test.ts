@@ -890,10 +890,9 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /sticky left-44/);
   assert.equal(table.match(/bg-card/g)?.length, 3);
   assert.doesNotMatch(table, /bg-background/);
-  assert.match(
-    table,
-    /\{isTouchLayout \? \(\s*table\s*\) : \(\s*<AppSection className="overflow-hidden" contentFlush>/,
-  );
+  assert.match(table, /<AppListFrame[\s\S]*?toolbar=\{/);
+  assert.match(table, /variant="inline"/);
+  assert.doesNotMatch(table, /<AppSection/);
   assert.doesNotMatch(table, /rounded-lg border bg-card/);
   assert.match(table, /copy\.matchedPayment\(tx\.paymentId\)/);
   assert.match(table, /function displayBankContent/);

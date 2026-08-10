@@ -26,10 +26,12 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "matu-ds-runtime-contract",
       "owner-page-header-no-module-eyebrow-design-system",
       "owner-page-header-no-module-eyebrow-docs",
-      "owner-page-header-no-module-eyebrow-module-doc",
       "readme-design-system-contract-pointer",
       "readme-ui-runtime-current",
       "theme-baseline-runtime-current",
+      "ui-advisor-gate-four-fields",
+      "ui-review-checklist-agent-rule",
+      "ui-review-checklist-module-pointer",
     ],
   },
   "preventive-pattern": {

@@ -285,17 +285,17 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/consumption/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -315,12 +315,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/grn/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -345,7 +345,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -355,12 +355,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/production/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -400,7 +400,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stocktake/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -410,7 +410,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -425,7 +425,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/transfers/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -457,7 +457,27 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": {
-    status: "tune",
+    // Gate exception: ADR 0018 D0 decision-card queue — not management-list DataTable.
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/finance/page.tsx": {
+    // Gate exception: DASHBOARD reading task stays width=wide (not LIST xwide).
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/finance/targets/page.tsx": {
+    // Gate exception: SETTINGS-PANEL list-like editor stays width=wide.
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx": {
+    // Gate exception: EMBED-WRAPPER shared staff-runtime body; Owner tab embeds
+    // intentionally; branch uses native /shift/checkout-approvals.
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -494,7 +514,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },

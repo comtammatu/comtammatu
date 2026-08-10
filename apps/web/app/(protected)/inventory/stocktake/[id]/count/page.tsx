@@ -16,7 +16,6 @@ interface StocktakeCountPageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakeCountPageContent({
@@ -24,7 +23,6 @@ export async function StocktakeCountPageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: StocktakeCountPageContentProps) {
   const sessionId = stocktakeId;
   if (!Number.isFinite(sessionId) || sessionId <= 0) notFound();
@@ -111,7 +109,6 @@ export async function StocktakeCountPageContent({
       initialLines={linesRes.data}
       unitOptionsByIngredient={unitOptionsByIngredient}
       routeBase={routeBase}
-      embedded={embedded}
     />
   );
 }

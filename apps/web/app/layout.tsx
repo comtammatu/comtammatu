@@ -17,6 +17,7 @@ import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
+import { themeClassName } from "@comtammatu/ui/lib/theme-cookie";
 import {
   BROWSER_CHROME_THEME_COLORS,
   THEME_COOKIE_NAME,
@@ -70,7 +71,7 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const cookieTheme = cookieStore.get(THEME_COOKIE_NAME)?.value;
   const resolvedCookie = resolveThemeMode(cookieTheme) ?? "light";
-  const initialThemeClass = resolvedCookie === "night" ? "dark" : "light";
+  const initialThemeClass = themeClassName(resolvedCookie);
   return (
     <html
       lang="vi"
@@ -80,7 +81,7 @@ export default async function RootLayout({
         initialThemeClass,
         "font-sans",
       )}
-      style={{ colorScheme: resolvedCookie === "night" ? "dark" : "light" }}
+      style={{ colorScheme: initialThemeClass }}
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
@@ -88,7 +89,9 @@ export default async function RootLayout({
           id="theme-bootstrap"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: getThemeScriptHtml(),
+            __html: getThemeScriptHtml({
+              chromeColors: BROWSER_CHROME_THEME_COLORS,
+            }),
           }}
         />
         <a

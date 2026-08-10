@@ -67,7 +67,7 @@ export function OperationalBoardCard({
   return (
     <Card
       className={cn(
-        "transition",
+        "transition-[background-color,box-shadow,opacity] duration-[var(--motion-base)] ease-[var(--ease-move)]",
         interactive && "hover:shadow-effect-card-hover",
         current && OPERATIONAL_BOARD_CURRENT_CLASSNAME[currentTone],
         className,

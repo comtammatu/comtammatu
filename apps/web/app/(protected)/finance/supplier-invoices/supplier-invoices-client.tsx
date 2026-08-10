@@ -35,6 +35,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Popover,
@@ -57,7 +58,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { cn } from "@comtammatu/ui";
 import {
   BusinessDateField,
@@ -2653,7 +2653,7 @@ export function SupplierInvoicesClient({
       : null;
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
         description={description}

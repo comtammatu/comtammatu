@@ -189,18 +189,18 @@ test("production create redirects to the created run detail", () => {
 test("operations tabs use the same sectioned list chrome", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issues, fulfillmentHub]) {
     assert.match(source, /<AppListFrame/);
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
     assert.match(source, /<AppToolbar[\s\S]{0,500}search=\{/);
     assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
   }
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issues, fulfillmentHub]) {
     assert.doesNotMatch(
       source,
       /<div className="flex flex-wrap items-center justify-end gap-2">/,
@@ -209,34 +209,34 @@ test("operations tabs use the same sectioned list chrome", () => {
 
   assert.match(grn, /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/);
   assert.match(grn, /loadFailed/);
-  assert.match(issues, /actions=\{embedded \? issueActions : null\}/);
-  assert.match(transfers, /actions=\{embedded \? desktopCreateAction : null\}/);
+  assert.doesNotMatch(issues, /\bembedded\b/);
+  assert.doesNotMatch(grn, /\bwithinOwnerTabs\b/);
+  assert.match(fulfillmentHub, /<AppListFrame toolbar=\{toolbar\}>/);
+  assert.doesNotMatch(fulfillmentHub, /searchable/);
 
   assert.doesNotMatch(grn, /paramKey=\{embedded \? "grnTab" : undefined\}/);
-  assert.doesNotMatch(transfers, /@comtammatu\/ui\/components\/tabs/);
-  assert.doesNotMatch(transfers, /variant="card"/);
+  assert.doesNotMatch(fulfillmentHub, /@comtammatu\/ui\/components\/tabs/);
+  assert.doesNotMatch(fulfillmentHub, /variant="card"/);
 });
 
-test("operations embedded lists keep management density instead of touch sizing", () => {
+test("operations management lists keep dense control sizing", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
 
   assert.doesNotMatch(grn, /basePath\.startsWith\("\/br\/"\)/);
-  assert.match(issues, /listBasePath\.startsWith\("\/br\/"\)/);
-  assert.doesNotMatch(transfers, /basePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(issues, /listBasePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(fulfillmentHub, /basePath\.startsWith\("\/br\/"\)/);
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issues, fulfillmentHub]) {
     assert.doesNotMatch(source, /size=\{embedded \? "touch"/);
     assert.doesNotMatch(source, /embedded \|\| isOperator/);
   }
 
-  assert.match(
-    transfers,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
+  assert.match(issues, /useFormControlSize\("responsive"\)/);
+  assert.match(fulfillmentHub, /size="field"/);
 });
 
 test("table empty rows render inline content instead of a dashed sub-card", () => {
@@ -253,14 +253,10 @@ test("table empty rows render inline content instead of a dashed sub-card", () =
 test("operations table columns do not override table typography role", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
-  );
 
   for (const block of [
     between(grn, "const grnColumns", "const filtered"),
     between(issues, "const issueColumns", "const renderIssueCard"),
-    between(transfers, "const columns", "const desktopCreateAction"),
   ]) {
     assert.doesNotMatch(block, /className:\s*"[^"]*\btext-sm\b/);
     assert.doesNotMatch(block, /className="[^"]*\btext-sm\b/);
@@ -282,8 +278,8 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
   );
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
@@ -304,10 +300,8 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
 
-  assert.match(
-    stock,
-    /width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]{0,80}density="compact"/,
-  );
+  assert.match(stock, /<AppPage width="xwide" density="compact"/);
+  assert.doesNotMatch(stock, /isCompactLayout|useStockCompactLayout/);
 
   for (const source of [suppliers, ingredients, recipes]) {
     assert.match(source, /<AppPage width="xwide" density="compact"/);
@@ -321,7 +315,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     purchaseOrders,
     grn,
     issues,
-    transfers,
+    fulfillmentHub,
     stocktake,
     production,
     categories,
@@ -331,15 +325,12 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     assert.match(source, /<AppListFrame/);
   }
 
-  for (const source of [suppliers, ingredients]) {
+  for (const source of [suppliers, ingredients, production, stocktake]) {
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   }
+  assert.doesNotMatch(production, /searchable/);
 
   assert.match(stock, /variant="inline"/);
-  assert.doesNotMatch(
-    stock,
-    /variant=\{isCompactLayout \? "card" : "inline"\}/,
-  );
   assert.doesNotMatch(
     stock,
     /isFirstLoadEmpty \?[\s\S]{0,40}firstLoadEmptyState[\s\S]{0,40}<DataTable/,
@@ -390,8 +381,12 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
     grn,
     /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/,
   );
-  assert.match(countSlips, /<AppListFrame title=/);
-  assert.match(countAssignments, /<AppListFrame>/);
+  assert.match(countSlips, /<AppListFrame[\s\S]{0,200}toolbar=\{/);
+  assert.match(countSlips, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.doesNotMatch(countSlips, /<AppListFrame title=/);
+  assert.match(countAssignments, /<AppListFrame[\s\S]{0,200}toolbar=\{/);
+  assert.match(countAssignments, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.doesNotMatch(countAssignments, /<DataTable[\s\S]{0,200}searchable/);
 });
 
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
@@ -412,8 +407,8 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   );
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
@@ -455,35 +450,23 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   assert.match(stock, /search=\{searchControl\}/);
   assert.match(
     stock,
-    /filters=\{\s*isCompactLayout \? undefined : \(\s*<>\s*\{filterControls\}/,
+    /filters=\{\s*<>\s*\{filterControls\}/,
   );
-  assert.doesNotMatch(
-    stock,
-    /search=\{\s*isCompactLayout \? \(\s*searchControl/,
-  );
+  assert.doesNotMatch(stock, /isCompactLayout|useStockCompactLayout/);
 
   for (const source of [stock, ingredients, issues, stocktake]) {
     assert.match(source, /inventoryListFilterSelectClassName/);
   }
   assert.match(grn, /className="w-44"/);
-  assert.match(transfers, /inventoryListFilterSelectWideClassName/);
+  assert.match(fulfillmentHub, /inventoryListFilterSelectClassName/);
   assert.match(stock, /useFormControlSize\(\)/);
   assert.match(stock, /size=\{controlSize\}/);
   assert.match(ingredients, /useFormControlSize\(\)/);
-  assert.match(
-    issues,
-    /useFormControlSize\(isOperator \? "touch" : "responsive"\)/,
-  );
-  assert.match(
-    transfers,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
+  assert.match(issues, /useFormControlSize\("responsive"\)/);
+  assert.match(fulfillmentHub, /size="field"/);
   assert.match(invoices, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
-  assert.match(
-    stocktake,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
-  assert.match(stocktake, /size=\{embedded \? "touch" : "lg"\}/);
+  assert.match(stocktake, /useFormControlSize\("responsive"\)/);
+  assert.match(stocktake, /size="lg"/);
   assert.match(orders, /useFormControlSize\(\)/);
   assert.match(employeeTable, /useFormControlSize\(\)/);
   assert.match(

@@ -72,7 +72,7 @@ const D1_TASK_LISTS = [
 ] as const;
 
 const C4_ZERO_ACTION_LISTS = [
-  "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   "app/(protected)/inventory/production/production-runs-client.tsx",
   "app/(protected)/inventory/settings/thresholds/thresholds-client.tsx",
 ] as const;
@@ -274,8 +274,9 @@ test("Wave 5 purchase-orders uses one query-addressed document view", () => {
   const client = read(
     "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
-  assert.match(client, /params\.set\("mode", nextMode\)/);
+  assert.match(client, /overlay\.patchOverlay/);
+  assert.match(client, /poId,/);
+  assert.match(client, /mode: nextMode/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);
 });

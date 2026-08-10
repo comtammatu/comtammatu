@@ -82,7 +82,7 @@ export function PermissionAuditFilters({
 
   return (
     <AppToolbar
-      sticky
+      variant="inline"
       filters={
         <>
           <div className="grid gap-1.5">

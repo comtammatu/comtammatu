@@ -9,9 +9,9 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   AppEmptyState,
+  AppListFrame,
   AppPage,
   AppPageHeader,
-  AppSection,
 } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
@@ -205,7 +205,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   });
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
         description={copy.description}
@@ -229,48 +229,52 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         }
       />
 
-      <PermissionAuditFilters
-        value={{
-          action: params.action ?? null,
-          target: params.target ?? null,
-          since: params.since ?? null,
-        }}
-        targetOptions={targetOptions}
-        branchScope={branchScope}
-      />
-
-      {auditDisplayRows.length === 0 ? (
-        <AppEmptyState
-          mode={hasFilters ? "no-results" : "no-data"}
-          title={hasFilters ? copy.emptyFiltered : copy.empty}
-          description={hasFilters ? copy.emptyFilteredHint : undefined}
-          icon={<IconHistory />}
-        >
-          {hasFilters ? null : (
-            <Button
-              variant="outline"
-              size="touch"
-              render={
-                <Link
-                  href={withHrBranchScope(
-                    "/hr?view=accounts",
-                    branchScope,
-                  )}
-                />
-              }
-            >
-              {copy.emptyAction}
-            </Button>
-          )}
-        </AppEmptyState>
-      ) : (
-        <AppSection
-          title={copy.recentItems(auditDisplayRows.length)}
-          contentFlush
-        >
+      <AppListFrame
+        title={
+          auditDisplayRows.length > 0
+            ? copy.recentItems(auditDisplayRows.length)
+            : undefined
+        }
+        toolbar={
+          <PermissionAuditFilters
+            value={{
+              action: params.action ?? null,
+              target: params.target ?? null,
+              since: params.since ?? null,
+            }}
+            targetOptions={targetOptions}
+            branchScope={branchScope}
+          />
+        }
+      >
+        {auditDisplayRows.length === 0 ? (
+          <AppEmptyState
+            mode={hasFilters ? "no-results" : "no-data"}
+            title={hasFilters ? copy.emptyFiltered : copy.empty}
+            description={hasFilters ? copy.emptyFilteredHint : undefined}
+            icon={<IconHistory />}
+          >
+            {hasFilters ? null : (
+              <Button
+                variant="outline"
+                size="touch"
+                render={
+                  <Link
+                    href={withHrBranchScope(
+                      "/hr?view=accounts",
+                      branchScope,
+                    )}
+                  />
+                }
+              >
+                {copy.emptyAction}
+              </Button>
+            )}
+          </AppEmptyState>
+        ) : (
           <PermissionAuditTable rows={auditDisplayRows} />
-        </AppSection>
-      )}
+        )}
+      </AppListFrame>
     </AppPage>
   );
 }

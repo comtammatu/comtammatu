@@ -44,8 +44,8 @@ import {
 // to a dynamic chunk so KPI cards + work queue strip render before the
 // chart code arrives. ssr:false matches the trend-sparkline pattern —
 // Recharts uses ResizeObserver/useState which mismatch hydration.
-const RevenueChartsBlock = dynamic(
-  () => import("./revenue-charts-internal").then((m) => m.RevenueChartsBlock),
+const RevenueCharts = dynamic(
+  () => import("./revenue-charts-internal").then((m) => m.RevenueCharts),
   {
     ssr: false,
     loading: () => <Skeleton className="h-44 w-full rounded-lg" />,
@@ -581,7 +581,7 @@ export function RevenueClient({
           {showTargetMonth && targetRows.length > 1 ? (
             <BranchTargetCompetition rows={targetRows} params={params} />
           ) : null}
-          <RevenueChartsBlock
+          <RevenueCharts
             trendData={trendData}
             resolvedStart={resolvedStart}
             resolvedEnd={resolvedEnd}

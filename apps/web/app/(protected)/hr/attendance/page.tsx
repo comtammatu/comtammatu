@@ -169,7 +169,7 @@ export default async function HrAttendancePage({
       : null;
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}

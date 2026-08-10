@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChevronRight as IconChevronRight } from "lucide-react";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 
 export interface TeamMemberTileProps {
   /** Heading line — typically the employee full name. */

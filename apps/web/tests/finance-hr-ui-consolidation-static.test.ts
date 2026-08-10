@@ -42,7 +42,8 @@ test("Finance analysis routes use compact Design System composition", () => {
     "apps/web/app/(protected)/finance/components/work-queue-strip.tsx",
   );
 
-  assert.match(expenses, /<AppSection[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(expenses, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(expenses, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   assert.match(expenses, /<DataTable/);
   assert.match(expenses, /<KpiRow density="compact">/);
   // Period total + the actionable "cần xử lý" counterpart. Nothing else on a
@@ -117,7 +118,7 @@ test("HR long screens preserve hierarchy and LIST viewport width", () => {
   assert.match(staff, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
   assert.match(audit, /getStaffPermissionLabelVi/);
   assert.match(audit, /\/hr\?view=accounts/);
-  assert.match(audit, /<AppPage width="xwide">/);
+  assert.match(audit, /<AppPage width="xwide" density="compact">/);
   assert.doesNotMatch(permissions, /tabs=\{/);
   assert.ok(
     permissions.indexOf("<AppPageHeader") <

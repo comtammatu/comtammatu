@@ -28,13 +28,6 @@ const workflowOnly = (...args) => decision("workflow-only", ...args);
 const internal = (...args) => decision("internal", ...args);
 
 export const SHARED_COMPONENT_REGISTRY = {
-  "accordion.tsx": direct(
-    "multi-panel disclosure",
-    "Accordion",
-    "Collapsible for one disclosure",
-    "route-local disclosure markup and chevron state",
-    "grouped settings sections",
-  ),
   "alert-dialog.tsx": adapterOnly(
     "destructive confirmation internals",
     "confirm() or ReasonConfirmDialog",
@@ -79,7 +72,7 @@ export const SHARED_COMPONENT_REGISTRY = {
   ),
   "calendar.tsx": adapterOnly(
     "calendar selection internals",
-    "DatePicker or BusinessDateField",
+    "BusinessDateField or BusinessDatePicker",
     "native date input only where the contract explicitly permits it",
     "route-authored Calendar popover",
     "business-date form fields",
@@ -118,13 +111,6 @@ export const SHARED_COMPONENT_REGISTRY = {
     "RowActionsMenu for visible click actions",
     "using context menu as the only path to a required action",
     "advanced data-row actions",
-  ),
-  "date-picker.tsx": adapterOnly(
-    "date selection",
-    "BusinessDateField or DatePicker through the form layer",
-    "Calendar only inside an approved date adapter",
-    "route-local calendar and formatting logic",
-    "business-date forms",
   ),
   "dialog.tsx": adapterOnly(
     "modal overlay internals",
@@ -216,13 +202,6 @@ export const SHARED_COMPONENT_REGISTRY = {
     "Alert for semantic alert content",
     "raw tinted bordered note",
     "document and form guidance",
-  ),
-  "pagination.tsx": workflowOnly(
-    "page navigation",
-    "DataTable pagination or Pagination",
-    "load-more action for an incremental feed",
-    "custom page-number button row",
-    "large list navigation",
   ),
   "popover.tsx": workflowOnly(
     "small anchored contextual surface",
@@ -765,7 +744,7 @@ export const APP_ADAPTER_REGISTRY = {
     "apps/web/app/components/form/business-date-field.tsx",
     "Vietnam business date",
     "BusinessDateField",
-    "DatePicker for non-form composition",
+    "BusinessDatePicker for non-form composition",
     "route-local date formatting",
     "finance and inventory forms",
   ),

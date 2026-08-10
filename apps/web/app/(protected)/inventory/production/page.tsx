@@ -19,13 +19,11 @@ import { messages } from "@lib/messages";
 interface ProductionPageProps {
   searchParams?: Promise<{ branchId?: string | string[]; tab?: string }>;
   routeBranchId?: number;
-  embedded?: boolean;
 }
 
 export async function ProductionPageContent({
   searchParams,
   routeBranchId,
-  embedded = false,
 }: ProductionPageProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -50,9 +48,7 @@ export async function ProductionPageContent({
   const runsContent = (
     <ProductionRunsClient
       initial={rows}
-      branchId={scope.selectedBranchId ?? undefined}
       basePath="/inventory/production"
-      embedded={embedded}
     />
   );
 
@@ -70,13 +66,8 @@ export async function ProductionPageContent({
       unitOptions={surfaceData.unitOptions}
       ingredients={surfaceData.ingredients}
       recipes={surfaceData.recipes}
-      embedded={embedded}
     />
   );
-
-  if (embedded) {
-    return activeTab === "recipes" ? recipesContent : runsContent;
-  }
 
   const tabsList = [
     { value: "runs", label: INVENTORY_VI.productionOrdersTab },

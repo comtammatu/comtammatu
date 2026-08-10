@@ -18,6 +18,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
   Select,
   SelectContent,
@@ -42,7 +43,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -172,7 +172,6 @@ export function IssuesClient({
   defaultIssueType = "consumption",
   createHref,
   pageTitle,
-  embedded = false,
 }: {
   issues: IssueRow[];
   recordedConsumptions: RecordedConsumptionRow[];
@@ -190,7 +189,6 @@ export function IssuesClient({
   defaultIssueType?: string;
   createHref?: string;
   pageTitle?: string;
-  embedded?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -209,9 +207,8 @@ export function IssuesClient({
   const [recordedSearch, setRecordedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
-  const isOperator = listBasePath.startsWith("/br/");
-  const controlSize = useFormControlSize(isOperator ? "touch" : "responsive");
-  const compactActionSize = isOperator ? "touch" : "sm";
+  const controlSize = useFormControlSize("responsive");
+  const compactActionSize = "sm";
   const createIssueDefaultValues = useMemo<CreateIssueValues>(
     () => ({
       branchId: defaultBranchId ? String(defaultBranchId) : "",
@@ -524,7 +521,7 @@ export function IssuesClient({
   const issueActions =
     resolvedView === "waste" && resolvedCreateHref ? (
       <Button
-        size={embedded ? controlSize : "lg"}
+        size="lg"
         render={<Link href={resolvedCreateHref} />}
       >
         <IconPlus className="size-4" />
@@ -533,7 +530,7 @@ export function IssuesClient({
     ) : resolvedView === "manual" && allowedCreateIssueTypes.length > 0 ? (
       <Button
         type="button"
-        size={embedded ? controlSize : "lg"}
+        size="lg"
         onClick={() => setCreateOpen(true)}
       >
         <IconPlus className="size-4" />
@@ -565,11 +562,7 @@ export function IssuesClient({
           <Select value={activeStatus} onValueChange={setActiveStatus}>
             <SelectTrigger
               size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
+              className={inventoryListFilterSelectClassName}
             >
               <SelectValue placeholder={INVENTORY_VI.allStatusesOption} />
             </SelectTrigger>
@@ -589,11 +582,7 @@ export function IssuesClient({
             <Select value={activeType} onValueChange={setActiveType}>
               <SelectTrigger
                 size={controlSize}
-                className={
-                  controlSize === "touch"
-                    ? "w-full"
-                    : inventoryListFilterSelectClassName
-                }
+                className={inventoryListFilterSelectClassName}
               >
                 <SelectValue placeholder={INVENTORY_VI.issueTypeFilterAll} />
               </SelectTrigger>
@@ -608,7 +597,6 @@ export function IssuesClient({
           ) : null}
         </>
       }
-      actions={embedded ? issueActions : null}
       reset={
         hasActiveFilters ? (
           <Button
@@ -668,11 +656,7 @@ export function IssuesClient({
             <SelectTrigger
               size={controlSize}
               aria-label={BRANCH_VI.select}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
+              className={inventoryListFilterSelectClassName}
             >
               <SelectValue placeholder={BRANCH_VI.select} />
             </SelectTrigger>
@@ -686,10 +670,7 @@ export function IssuesClient({
           </Select>
           <InputGroup
             size={controlSize}
-            className={cn(
-              "bg-background",
-              isOperator ? "w-full sm:w-52" : "w-52 shrink-0",
-            )}
+            className={cn("bg-background", "w-52 shrink-0")}
           >
             <InputGroupAddon>
               <InputGroupText>{FORM_VI.fromDate}</InputGroupText>
@@ -704,10 +685,7 @@ export function IssuesClient({
           </InputGroup>
           <InputGroup
             size={controlSize}
-            className={cn(
-              "bg-background",
-              isOperator ? "w-full sm:w-52" : "w-52 shrink-0",
-            )}
+            className={cn("bg-background", "w-52 shrink-0")}
           >
             <InputGroupAddon>
               <InputGroupText>{FORM_VI.toDate}</InputGroupText>
@@ -727,7 +705,6 @@ export function IssuesClient({
           type="button"
           variant="outline"
           size={controlSize}
-          className={isOperator ? "w-full sm:w-auto" : undefined}
           onClick={applyRecordedDateFilter}
         >
           {ACTIONS_VI.filter}
@@ -985,12 +962,10 @@ export function IssuesClient({
 
   const content = (
     <>
-      {embedded ? null : (
-        <AppPageHeader
-          title={pageTitle ?? tNav("consumption", "navigation")}
-          actions={issueActions}
-        />
-      )}
+      <AppPageHeader
+        title={pageTitle ?? tNav("consumption", "navigation")}
+        actions={issueActions}
+      />
 
       <AppPageTabs
         items={tabsItems}
@@ -1019,7 +994,6 @@ export function IssuesClient({
                   {INVENTORY_VI.exportCsvAction}
                 </Button>
               }
-              size={embedded ? "sm" : "default"}
               toolbar={recordedConsumptionFilterBar}
             >
               <DataTable
@@ -1057,7 +1031,6 @@ export function IssuesClient({
                   </Button>
                 ) : null
               }
-              size={embedded ? "sm" : "default"}
               toolbar={filterBar}
             >
               <DataTable
@@ -1110,7 +1083,6 @@ export function IssuesClient({
                   </Button>
                 ) : null
               }
-              size={embedded ? "sm" : "default"}
               toolbar={filterBar}
             >
               <DataTable
@@ -1207,10 +1179,6 @@ export function IssuesClient({
       </FormDialog>
     </>
   );
-
-  if (embedded) {
-    return <div className="flex w-full flex-col gap-3">{content}</div>;
-  }
 
   return (
     <AppPage width="xwide" density="compact">

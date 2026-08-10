@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -24,7 +25,6 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { useIsOnline } from "@/components/pwa-runtime";
 import { AppDetailFooter, AppEmptyState } from "@/components/surface";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";

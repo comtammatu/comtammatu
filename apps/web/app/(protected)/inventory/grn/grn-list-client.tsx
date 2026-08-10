@@ -14,13 +14,13 @@ import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Combobox } from "@comtammatu/ui/components/combobox";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Input } from "@comtammatu/ui/components/input";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
   Select,
   SelectContent,
@@ -30,7 +30,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDialog } from "@/components/form";
+import { AppDialog, Combobox } from "@/components/form";
 import {
   AppEmptyState,
   AppListFrame,
@@ -42,7 +42,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -51,7 +50,6 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { messages } from "@lib/messages";
-import { matchesSearch } from "@lib/search";
 import { discardGrnDraft } from "../grn-actions";
 import {
   hasGrnListFilters,
@@ -69,11 +67,6 @@ const statusLabels: Record<string, string> = {
 const grnCopy = messages.inventory.grn;
 const GRN_OVERLAY_KEYS = ["grnId", "mode"] as const;
 
-const comboFilter = (
-  option: { label: string; keywords?: string[] },
-  query: string,
-) => matchesSearch([option.label, ...(option.keywords ?? [])], query);
-
 export type { GrnListRow } from "@lib/inventory/grn-list-model";
 
 export function GrnListClient({
@@ -85,7 +78,6 @@ export function GrnListClient({
   basePath = "/inventory/grn",
   canManageSupplierInvoice,
   loadFailed,
-  withinOwnerTabs = false,
 }: {
   rows: GrnListRow[];
   total: number;
@@ -95,7 +87,6 @@ export function GrnListClient({
   basePath?: string;
   canManageSupplierInvoice: boolean;
   loadFailed: boolean;
-  withinOwnerTabs?: boolean;
 }) {
   const router = useRouter();
   const overlay = useDocumentOverlayUrl(GRN_OVERLAY_KEYS);
@@ -364,7 +355,6 @@ export function GrnListClient({
             value={supplierId}
             onValueChange={setSupplierId}
             options={options.suppliers}
-            filter={comboFilter}
             placeholder={grnCopy.supplierFilter}
             searchPlaceholder={grnCopy.supplierSearchPlaceholder}
             className="w-44"
@@ -401,7 +391,6 @@ export function GrnListClient({
             value={poId}
             onValueChange={setPoId}
             options={options.purchaseOrders}
-            filter={comboFilter}
             placeholder={grnCopy.purchaseOrderFilter}
             searchPlaceholder={grnCopy.purchaseOrderSearchPlaceholder}
             className="w-40"
@@ -487,27 +476,17 @@ export function GrnListClient({
     />
   );
 
-  const list = (
-    <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
-      {table}
-    </AppListFrame>
-  );
-
-  const content = withinOwnerTabs ? (
-    list
-  ) : (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={grnCopy.listTitle}
-        description={grnCopy.listDescription}
-      />
-      {list}
-    </AppPage>
-  );
-
   return (
     <>
-      {content}
+      <AppPage width="xwide" density="compact">
+        <AppPageHeader
+          title={grnCopy.listTitle}
+          description={grnCopy.listDescription}
+        />
+        <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
+          {table}
+        </AppListFrame>
+      </AppPage>
       <AppDialog
         open={cancelRow != null}
         onOpenChange={(open) => {

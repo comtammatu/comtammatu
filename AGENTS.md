@@ -45,8 +45,11 @@ use built-in search tools; indexing remains an owner decision.
   `corepack pnpm db:types`.
 - ACL source: `packages/shared/src/auth/module-acl.ts`. RLS/RPC remains final
   enforcement; UI visibility is not authorization.
-- UI source: `docs/spec/design-system.md`. Never create a parallel design
-  system or put agent notes and implementation commentary in product UI.
+- UI source (ordered 3+1): `docs/spec/design-system.md` (visual),
+  `docs/spec/page-archetypes.md` (workflow), `docs/ref/screen-context-map.md`
+  (audience/device); `docs/modules/ui.md` is the thin implementation map.
+  Never create a parallel design system or put agent notes and implementation
+  commentary in product UI.
 - Comments are English and only explain non-obvious constraints. Delete retired
   code/docs cleanly; Git is the archive, so no tombstones or provenance notes.
 - Do not create another agent wiki, task board, memory store, or rule tree.

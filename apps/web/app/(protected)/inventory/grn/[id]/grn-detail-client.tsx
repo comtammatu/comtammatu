@@ -20,7 +20,6 @@ import {
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
-  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
   Receipt as IconReceipt,
@@ -43,7 +42,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { getStatusBadgeMeta } from "@/components/status-badge";
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { formatQty } from "@lib/inventory/format";
@@ -89,9 +88,7 @@ export function GRNDetailClient({
   receivingLocationOptions = [],
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
-  grnMobileBackPath = "/inventory/grn/new",
   supplierInvoicesBasePath = "/finance/supplier-invoices",
-  embedded = false,
   presentation = "page",
 }: {
   grn: GRNDetail;
@@ -104,17 +101,11 @@ export function GRNDetailClient({
   receivingLocationOptions?: ReceivingLocationOption[];
   auditLogs?: AuditLogRow[];
   grnListBasePath?: string;
-  grnMobileBackPath?: string;
   supplierInvoicesBasePath?: string;
-  embedded?: boolean;
   presentation?: "page" | "dialog";
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  // Device-derived, not param-derived: the old `?m=1` flag had no setter
-  // anywhere in the codebase, so the mobile post-confirm navigation and
-  // back-link paths below never activated for phone receivers.
-  const isMobile = embedded;
   const isDesktopLineEdit = !useIsMobile(DESK_LINE_EDIT_BREAKPOINT);
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
@@ -161,14 +152,13 @@ export function GRNDetailClient({
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnLineActions({
       grn,
-      isMobile,
+      isMobile: false,
       lines,
       dirtyLines,
       setLines,
       startSave,
       startConfirm,
       grnListBasePath,
-      grnMobileBackPath,
       onConfirmed: presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
 
@@ -191,7 +181,7 @@ export function GRNDetailClient({
     });
   }
 
-  const backHref = isMobile ? grnMobileBackPath : grnListBasePath;
+  const backHref = grnListBasePath;
   const editingIdx =
     editingLineId == null
       ? -1
@@ -418,14 +408,14 @@ export function GRNDetailClient({
       sticky
       leading={
         <>
-          {/* Back lives in AppPageHeader / embedded chrome — not duplicated here. */}
+          {/* Back lives in AppPageHeader — not duplicated here. */}
           {isDraft ? (
             <>
               {canMutateDraft ? (
                 <Button
                   type="button"
                   variant="destructive"
-                  size={isMobile ? "touch" : "default"}
+                  size="default"
                   disabled={isCancelling}
                   onClick={() => setCancelOpen(true)}
                 >
@@ -460,7 +450,7 @@ export function GRNDetailClient({
           {!isDraft && canManageSupplierInvoice ? (
             <Button
               variant="outline"
-              size={isMobile ? "touch" : "default"}
+              size="default"
               render={
                 <Link
                   href={supplierInvoiceHrefForGrn({
@@ -482,7 +472,7 @@ export function GRNDetailClient({
           canMutateDraft && dirtyLines.length > 0 ? (
             <Button
               type="button"
-              size={isMobile ? "touch-lg" : "default"}
+              size="default"
               onClick={handleSave}
               disabled={isSaving}
             >
@@ -492,7 +482,7 @@ export function GRNDetailClient({
           ) : (
             <Button
               type="button"
-              size={isMobile ? "touch-lg" : "default"}
+              size="default"
               className="sm:min-w-80"
               disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
               aria-disabled={
@@ -575,7 +565,7 @@ export function GRNDetailClient({
           grnCode={grn.code}
           currentLocationId={grn.locationId}
           locationOptions={receivingLocationOptions}
-          buttonSize={isMobile ? "touch" : "default"}
+          buttonSize="default"
           disabledReason={
             dirtyLines.length > 0
               ? grnCopy.draftReceiving.saveBeforeSwitch
@@ -596,7 +586,7 @@ export function GRNDetailClient({
           <Button
             type="button"
             variant="outline"
-            size={isMobile ? "touch" : "default"}
+            size="default"
             onClick={() => setAddDialogOpen(true)}
           >
             <IconPlus className="size-4" />
@@ -841,7 +831,7 @@ export function GRNDetailClient({
         },
       ]}
       defaultValue="document"
-      stickyList={!embedded && presentation !== "dialog"}
+      stickyList={presentation !== "dialog"}
     >
       <TabsContent value="document" className="mt-4">
         {documentBody}
@@ -853,37 +843,6 @@ export function GRNDetailClient({
       </TabsContent>
     </AppPageTabs>
   );
-
-  if (embedded) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0"
-            render={<Link href={grnMobileBackPath} aria-label={grnCopy.back} />}
-          >
-            <IconArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-mono text-sm font-semibold">
-              {grn.code}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {grn.supplier} • {grn.poCode || "—"} • {grn.branchName}
-            </p>
-          </div>
-          <Badge variant={statusBadge.variant} className="shrink-0">
-            {statusBadge.label}
-          </Badge>
-        </div>
-        {tabs}
-        {footer}
-        {dialogs}
-      </div>
-    );
-  }
 
   if (presentation === "dialog") {
     const closeDialog = async () => {
@@ -931,7 +890,7 @@ export function GRNDetailClient({
           }}
           breadcrumb={
             <AppBackLink href={backHref}>
-              {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
+              {tRoute("/inventory/grn", "heading")}
             </AppBackLink>
           }
         />

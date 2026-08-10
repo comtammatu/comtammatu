@@ -15,14 +15,12 @@ interface NewStocktakeSessionPageContentProps {
   searchParams?: Promise<{ branchId?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function NewStocktakeSessionPageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: NewStocktakeSessionPageContentProps) {
   const sp = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -84,7 +82,6 @@ export async function NewStocktakeSessionPageContent({
       locations={locations}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
       routeBase={routeBase}
-      embedded={embedded}
       loadFailed={locationsRes.error !== null}
       loadFailedTitle={messages.inventory.stocktake.startLoadFailed}
     />

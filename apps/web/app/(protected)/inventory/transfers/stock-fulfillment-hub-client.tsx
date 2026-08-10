@@ -5,10 +5,16 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
+  Search as IconSearch,
 } from "lucide-react";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemContent,
@@ -16,11 +22,19 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppListFrame } from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import { AppDialog } from "@/components/form";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { StockRequestDetailView } from "@/components/stock-request-detail-view";
 import { matchesSearch } from "@lib/search";
 import type { StockFulfillmentRow } from "@lib/inventory/stock-fulfillment-data";
@@ -165,7 +179,7 @@ export function StockFulfillmentHubClient({
         ? row.kind === "request"
         : row.workKinds.includes(work));
     const matchesState = state === "all" || row.lifecycle === state;
-    const searchable =
+    const searchValues =
       row.kind === "request"
         ? [
             row.documentNumber,
@@ -176,7 +190,7 @@ export function StockFulfillmentHubClient({
             ]),
           ]
         : [row.documentNumber, row.fromSite.name, row.toSite.name];
-    return matchesWork && matchesState && matchesSearch(searchable, search);
+    return matchesWork && matchesState && matchesSearch(searchValues, search);
   });
 
   const columns: DataTableColumn<StockFulfillmentRow>[] = [
@@ -286,9 +300,69 @@ export function StockFulfillmentHubClient({
       ? `${selectedRequest.data.branchName} · ${messages.inventory.stockRequests.statusLabel(selectedRequest.data.status)}${selectedRequest.data.neededAt ? ` · Cần trước ${formatVNDate(selectedRequest.data.neededAt)}` : ""}`
       : undefined;
 
+  const toolbar = (
+    <AppToolbar
+      variant="inline"
+      search={
+        <InputGroup size="field" className="min-w-0 flex-1 sm:min-w-72">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            aria-label="Tìm mã phiếu hoặc điểm vận hành"
+            value={search}
+            onChange={(event) => replaceParam("q", event.target.value, "")}
+            placeholder="Tìm mã phiếu hoặc điểm vận hành"
+          />
+        </InputGroup>
+      }
+      filters={
+        <>
+          <Select
+            value={work}
+            onValueChange={(value) => replaceParam("work", value, "all")}
+          >
+            <SelectTrigger
+              size="field"
+              className={inventoryListFilterSelectClassName}
+              aria-label="Phân loại"
+            >
+              <SelectValue placeholder="Phân loại" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="request">Yêu cầu</SelectItem>
+              <SelectItem value="dispatch">Cần giao</SelectItem>
+              <SelectItem value="receive">Cần nhận</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={state}
+            onValueChange={(value) => replaceParam("state", value, "all")}
+          >
+            <SelectTrigger
+              size="field"
+              className={inventoryListFilterSelectClassName}
+              aria-label="Trạng thái"
+            >
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="active">Đang xử lý</SelectItem>
+              <SelectItem value="completed">Hoàn tất</SelectItem>
+              <SelectItem value="cancelled">Đã hủy</SelectItem>
+            </SelectContent>
+          </Select>
+        </>
+      }
+    />
+  );
+
   return (
     <>
-      <AppListFrame>
+      <AppListFrame toolbar={toolbar}>
         <DataTable
           columns={columns}
           data={filtered}
@@ -297,36 +371,6 @@ export function StockFulfillmentHubClient({
               ? `request-${row.requestId}`
               : `transfer-${row.transferId}`
           }
-          searchable
-          searchPlaceholder="Tìm mã phiếu hoặc điểm vận hành"
-          searchValue={search}
-          onSearchChange={(value) => replaceParam("q", value, "")}
-          filters={[
-            {
-              key: "work",
-              label: "Phân loại",
-              placeholder: "Phân loại",
-              options: [
-                { value: "all", label: "Tất cả" },
-                { value: "request", label: "Yêu cầu" },
-                { value: "dispatch", label: "Cần giao" },
-                { value: "receive", label: "Cần nhận" },
-              ],
-            },
-            {
-              key: "state",
-              label: "Trạng thái",
-              placeholder: "Trạng thái",
-              options: [
-                { value: "all", label: "Tất cả" },
-                { value: "active", label: "Đang xử lý" },
-                { value: "completed", label: "Hoàn tất" },
-                { value: "cancelled", label: "Đã hủy" },
-              ],
-            },
-          ]}
-          filterValues={{ work, state }}
-          onFilterChange={(key, value) => replaceParam(key, value, "all")}
           pageSize={50}
           currentPage={currentPage}
           onPageChange={(page) =>
@@ -352,6 +396,11 @@ export function StockFulfillmentHubClient({
             mode === "branch"
               ? "Tạo yêu cầu hàng khi điểm vận hành cần bổ sung nguyên liệu."
               : "Thử thay đổi phân loại, trạng thái hoặc từ khóa tìm kiếm."
+          }
+          emptyMode={
+            search || work !== "all" || state !== "all"
+              ? "no-results"
+              : "no-data"
           }
           mobileCardRender={(row) => {
             const linkedTransfers = linkedTransferNumbers(row);

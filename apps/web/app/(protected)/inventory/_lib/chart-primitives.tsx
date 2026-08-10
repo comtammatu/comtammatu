@@ -96,7 +96,9 @@ export function SimpleBarChart({
   );
 }
 
-export function TrendSparkline({
+// Target-line variant: pure SVG, no Recharts. Distinct from the shared
+// `@/components/kpi/trend-sparkline` adapter, which has no target threshold.
+export function TargetTrendSparkline({
   data,
   ariaLabel,
   formatValue = String,

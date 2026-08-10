@@ -73,7 +73,7 @@ export default async function PayrollPage({
   });
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.live.title}
         description={copy.live.description}

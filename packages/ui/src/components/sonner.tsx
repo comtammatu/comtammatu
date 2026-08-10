@@ -4,10 +4,10 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
-  LoaderCircle as IconLoader2,
   OctagonAlert as IconAlertOctagon,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
+import { Spinner } from "./spinner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
@@ -19,7 +19,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         info: <IconInfoCircle className="size-4" />,
         warning: <IconAlertTriangle className="size-4" />,
         error: <IconAlertOctagon className="size-4" />,
-        loading: <IconLoader2 className="size-4 animate-spin" />,
+        loading: <Spinner />,
       }}
       style={
         {

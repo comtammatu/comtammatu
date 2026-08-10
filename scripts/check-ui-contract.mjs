@@ -1128,11 +1128,6 @@ const textChecks = [
     ],
   },
   {
-    id: "owner-page-header-no-module-eyebrow-module-doc",
-    file: "docs/modules/ui.md",
-    includes: ["không** dùng `eyebrow` để lặp tên module"],
-  },
-  {
     id: "app-section-icon-size-contract",
     file: "apps/web/app/components/surface/app-section.tsx",
     includes: ['"inline-flex shrink-0 [&_svg]:size-5"'],
@@ -1165,8 +1160,8 @@ const textChecks = [
     id: "card-content-layout-props-module-doc",
     file: "docs/modules/ui.md",
     includes: [
-      "`flush` cho table-edge/list-edge alignment",
-      "`scroll` cho horizontal table",
+      "`flush` for table/list edge alignment",
+      "`scroll` for horizontal table scroll",
     ],
   },
   {
@@ -1180,9 +1175,44 @@ const textChecks = [
     includes: ["Use Má Tư DS shared components and approved surface adapters"],
   },
   {
+    id: "ui-review-checklist-agent-rule",
+    file: "docs/agent/rules/ui.md",
+    includes: [
+      "## UI Review Checklist",
+      "`plane` — product plane / chrome family",
+      "`archetype` — id from page-archetypes",
+      "`block` — `UI_BLOCK_REGISTRY` id, or `none`",
+      "`exemplar` — concrete repo path",
+      "Touch density on POS sheets",
+      "Route-local motion",
+      "Browser contrast / density",
+      "corepack pnpm lint:ui-contract",
+      "`/ds-lab` when shared layout recipes",
+    ],
+  },
+  {
+    id: "ui-advisor-gate-four-fields",
+    file: "docs/spec/page-archetypes.md",
+    includes: [
+      "## 0.1 UI Advisor Gate",
+      "| `plane` |",
+      "| `archetype` |",
+      "| `block` |",
+      "| `exemplar` |",
+      "UI Review Checklist",
+    ],
+  },
+  {
     id: "matu-ds-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["Runtime hiện tại: Má Tư DS shared components"],
+    includes: ["Thin implementation map for the Má Tư Design System"],
+  },
+  {
+    id: "ui-review-checklist-module-pointer",
+    file: "docs/modules/ui.md",
+    includes: [
+      "Agent guardrails, Decision Ladder, UI Review Checklist",
+    ],
   },
   {
     id: "readme-ui-runtime-current",

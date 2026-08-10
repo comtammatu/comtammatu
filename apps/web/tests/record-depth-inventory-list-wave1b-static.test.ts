@@ -29,30 +29,16 @@ test("Wave 1 batch B ingredients wires three doors from getIngredientRowActions"
   assert.doesNotMatch(source, /DropdownMenuTrigger/);
 });
 
-test("Wave 1 batch B transfers is C4 zero-action with onRowClick detail path", () => {
+test("Wave 1 batch B transfers hub is C4 zero-action with onRowClick detail path", () => {
   const source = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
 
-  assert.match(source, /onRowClick=\{openTransferDetail\}/);
-  assert.match(
-    source,
-    /router\.push\(detailHref\(row\.id\), \{ scroll: false \}\)/,
-  );
-  assert.match(
-    source,
-    /MobileTransferCard[\s\S]*render=\{<Link href=\{href\}/,
-  );
-
+  assert.match(source, /onRowClick=\{/);
   assert.doesNotMatch(source, /key:\s*"open"/);
   assert.doesNotMatch(source, /key:\s*"actions"/);
-  assert.doesNotMatch(source, /IconChevronRight/);
   assert.doesNotMatch(source, /<RowActionsMenu/);
   assert.doesNotMatch(source, /renderRowContextMenu/);
-  assert.doesNotMatch(
-    source,
-    /render=\{<Link href=\{detailHref\([^)]*\)\} \/>\}[\s\S]{0,80}<IconArrowRight/,
-  );
 });
 
 test("Wave 1 batch B production is C4 zero-action with onRowClick detail path", () => {

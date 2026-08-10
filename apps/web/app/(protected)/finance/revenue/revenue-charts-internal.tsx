@@ -22,7 +22,7 @@ export interface TrendPoint {
   pace?: number | null;
 }
 
-interface RevenueChartsBlockProps {
+interface RevenueChartsProps {
   trendData: TrendPoint[];
   resolvedStart: string;
   resolvedEnd: string;
@@ -30,13 +30,13 @@ interface RevenueChartsBlockProps {
   showPace?: boolean;
 }
 
-export function RevenueChartsBlock({
+export function RevenueCharts({
   trendData,
   resolvedStart,
   resolvedEnd,
   granularityLabel,
   showPace = false,
-}: RevenueChartsBlockProps) {
+}: RevenueChartsProps) {
   const hasPace = showPace && trendData.some((point) => point.pace != null);
   return (
     <ChartCard

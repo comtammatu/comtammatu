@@ -1,6 +1,11 @@
 import { AlertTriangle as IconAlert } from "lucide-react";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppPage,
+  AppPageHeader,
+} from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { messages } from "@lib/messages";
 import {
@@ -52,36 +57,42 @@ export default async function InvoicesPage({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader title={copy.title} description={copy.description} />
-      <FilterBar
-        params={params}
-        branches={branches}
-        basePath="/finance/invoices"
-        hide={["range", "granularity", "compare"]}
-      />
-      {res.success ? (
-        <InvoiceList
-          initialInvoices={(res.data?.items ?? []) as InvoiceRow[]}
-          initialHasMore={res.data?.hasMore ?? false}
-          initialNextCursor={
-            (res.data?.nextCursor ?? null) as TaxInvoiceCursor | null
-          }
-          branchId={branchId}
-          queue={queue}
-          canManageInvoices={canManageInvoices}
-          canIssueInvoices={canIssueInvoices}
-          branches={branches}
-          initialIssueAttention={
-            attentionRes.success ? (attentionRes.data ?? []) : []
-          }
-        />
-      ) : (
-        <AppEmptyState
-          mode="error"
-          icon={<IconAlert />}
-          title={copy.loadError}
-          description={res.error ?? undefined}
-        />
-      )}
+      <AppListFrame
+        toolbar={
+          <FilterBar
+            variant="inline"
+            params={params}
+            branches={branches}
+            basePath="/finance/invoices"
+            hide={["range", "granularity", "compare"]}
+          />
+        }
+      >
+        {res.success ? (
+          <InvoiceList
+            initialInvoices={(res.data?.items ?? []) as InvoiceRow[]}
+            initialHasMore={res.data?.hasMore ?? false}
+            initialNextCursor={
+              (res.data?.nextCursor ?? null) as TaxInvoiceCursor | null
+            }
+            branchId={branchId}
+            queue={queue}
+            canManageInvoices={canManageInvoices}
+            canIssueInvoices={canIssueInvoices}
+            branches={branches}
+            initialIssueAttention={
+              attentionRes.success ? (attentionRes.data ?? []) : []
+            }
+          />
+        ) : (
+          <AppEmptyState
+            mode="error"
+            icon={<IconAlert />}
+            title={copy.loadError}
+            description={res.error ?? undefined}
+          />
+        )}
+      </AppListFrame>
     </AppPage>
   );
 }
