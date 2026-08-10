@@ -135,6 +135,11 @@ export const owner = {
     filterReset: "Xóa lọc",
     emptyFiltered: "Không có kết quả phù hợp",
     emptyFilteredHint: "Thử đổi hành động, đối tượng hoặc mốc thời gian.",
+    openRowHint: "Bấm hàng để xem chi tiết",
+    detailTitle: "Chi tiết thao tác quyền",
+    detailClose: "Đóng",
+    openPermissions: "Mở hồ sơ quyền",
+    filterSameTarget: "Lọc cùng đối tượng",
   },
   staffPermissions: {
     backToList: "Quay lại danh sách",

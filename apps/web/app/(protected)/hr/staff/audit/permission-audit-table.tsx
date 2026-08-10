@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
   ItemContent,
@@ -10,6 +12,14 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
@@ -52,13 +62,56 @@ function UserLabel({ name }: { name: string | null }) {
   return name ?? UNKNOWN_LABEL_VI;
 }
 
+function actionLabel(
+  copy: typeof messages.owner.staffAudit,
+  action: string,
+): string {
+  return copy.actionLabels[action] ?? UNKNOWN_LABEL_VI;
+}
+
+function permissionsHref(
+  targetUserId: string,
+  branchScope: ReturnType<typeof resolveHrBranchScope>,
+): string {
+  return withHrBranchScope(
+    `/hr/staff/${targetUserId}/permissions`,
+    branchScope,
+  );
+}
+
+function sameTargetHref(
+  targetUserId: string,
+  branchScope: ReturnType<typeof resolveHrBranchScope>,
+): string {
+  const usp = new URLSearchParams();
+  usp.set("branch", branchScope);
+  usp.set("target", targetUserId);
+  return `/hr/staff/audit?${usp.toString()}`;
+}
+
+function branchLabel(
+  row: PermissionAuditDisplayRow,
+  copy: typeof messages.owner.staffAudit,
+): string {
+  if (row.branchId === null) return copy.tenantWide;
+  return row.branchName ?? UNKNOWN_LABEL_VI;
+}
+
 export function PermissionAuditTable({
   rows,
 }: {
   rows: PermissionAuditDisplayRow[];
 }) {
+  const router = useRouter();
   const copy = messages.owner.staffAudit;
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const sheetRow =
+    selectedId == null
+      ? null
+      : (rows.find((row) => row.id === selectedId) ?? null);
+  const open = selectedId != null;
+
   // Contract order: Thời gian → Hành động → Đối tượng → Người thao tác → phụ.
   const columns: DataTableColumn<PermissionAuditDisplayRow>[] = [
     {
@@ -72,7 +125,7 @@ export function PermissionAuditTable({
       header: copy.action,
       render: (row) => (
         <Badge variant={getActionVariant(row.action)}>
-          {copy.actionLabels[row.action] ?? UNKNOWN_LABEL_VI}
+          {actionLabel(copy, row.action)}
         </Badge>
       ),
     },
@@ -82,11 +135,9 @@ export function PermissionAuditTable({
       className: "text-sm",
       render: (row) => (
         <Link
-          href={withHrBranchScope(
-            `/hr/staff/${row.targetUserId}/permissions`,
-            branchScope,
-          )}
+          href={permissionsHref(row.targetUserId, branchScope)}
           className="hover:underline"
+          onClick={(event) => event.stopPropagation()}
         >
           <UserLabel name={row.targetName} />
         </Link>
@@ -121,10 +172,7 @@ export function PermissionAuditTable({
       key: "branch",
       header: BRANCH_VI.long,
       className: "text-sm text-muted-foreground",
-      render: (row) =>
-        row.branchId === null
-          ? copy.tenantWide
-          : (row.branchName ?? UNKNOWN_LABEL_VI),
+      render: (row) => branchLabel(row, copy),
     },
     {
       key: "expires",
@@ -136,58 +184,179 @@ export function PermissionAuditTable({
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      data={rows}
-      getRowKey={(row) => row.id}
-      pageSize={50}
-      emptyTitle={copy.empty}
-      mobileCardRender={(row) => (
-        <Item variant="outline">
-          <ItemHeader>
-            <ItemTitle>{formatVNDateTime(row.at)}</ItemTitle>
-            <Badge variant={getActionVariant(row.action)}>
-              {copy.actionLabels[row.action] ?? UNKNOWN_LABEL_VI}
-            </Badge>
-          </ItemHeader>
-          <ItemContent>
-            <ItemDescription>
-              {copy.target}:{" "}
-              <Link
-                href={withHrBranchScope(
-                  `/hr/staff/${row.targetUserId}/permissions`,
-                  branchScope,
-                )}
-                className="hover:underline"
-              >
-                <UserLabel name={row.targetName} />
-              </Link>
-            </ItemDescription>
-            <ItemDescription>
-              {copy.actor}: <UserLabel name={row.actorName} />
-            </ItemDescription>
-            <ItemDescription>{row.permissionLabel}</ItemDescription>
-            <ItemDescription>
-              {copy.workGroup}: {row.workGroup}
-            </ItemDescription>
-            {row.action === "apply_template" ? (
+    <>
+      <p className="mb-2 text-xs text-muted-foreground">{copy.openRowHint}</p>
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowKey={(row) => row.id}
+        pageSize={50}
+        emptyTitle={copy.empty}
+        onRowClick={(row) => setSelectedId(row.id)}
+        getRowAriaLabel={(row) =>
+          `${actionLabel(copy, row.action)} · ${row.targetName ?? UNKNOWN_LABEL_VI}`
+        }
+        mobileCardRender={(row) => (
+          <Item
+            variant="outline"
+            className="cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelectedId(row.id)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedId(row.id);
+              }
+            }}
+          >
+            <ItemHeader>
+              <ItemTitle>{formatVNDateTime(row.at)}</ItemTitle>
+              <Badge variant={getActionVariant(row.action)}>
+                {actionLabel(copy, row.action)}
+              </Badge>
+            </ItemHeader>
+            <ItemContent>
               <ItemDescription>
-                {copy.template}: {row.templateLabel ?? UNKNOWN_LABEL_VI}
+                {copy.target}:{" "}
+                <Link
+                  href={permissionsHref(row.targetUserId, branchScope)}
+                  className="hover:underline"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <UserLabel name={row.targetName} />
+                </Link>
               </ItemDescription>
+              <ItemDescription>
+                {copy.actor}: <UserLabel name={row.actorName} />
+              </ItemDescription>
+              <ItemDescription>{row.permissionLabel}</ItemDescription>
+              <ItemDescription>
+                {copy.workGroup}: {row.workGroup}
+              </ItemDescription>
+              {row.action === "apply_template" ? (
+                <ItemDescription>
+                  {copy.template}: {row.templateLabel ?? UNKNOWN_LABEL_VI}
+                </ItemDescription>
+              ) : null}
+              <ItemDescription>
+                {BRANCH_VI.long}: {branchLabel(row, copy)}
+              </ItemDescription>
+              <ItemDescription>
+                {copy.expires}:{" "}
+                {row.validUntil ? formatVNDate(row.validUntil) : copy.forever}
+              </ItemDescription>
+            </ItemContent>
+          </Item>
+        )}
+      />
+
+      <Sheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) setSelectedId(null);
+        }}
+      >
+        <SheetContent side="right" size="md" className="overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{copy.detailTitle}</SheetTitle>
+            <SheetDescription>
+              {sheetRow
+                ? actionLabel(copy, sheetRow.action)
+                : copy.openRowHint}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex flex-col gap-4 px-4 pb-4">
+            {sheetRow ? (
+              <dl className="grid gap-3 text-sm">
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.time}</dt>
+                  <dd>{formatVNDateTime(sheetRow.at)}</dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.action}</dt>
+                  <dd>
+                    <Badge variant={getActionVariant(sheetRow.action)}>
+                      {actionLabel(copy, sheetRow.action)}
+                    </Badge>
+                  </dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.target}</dt>
+                  <dd>
+                    <UserLabel name={sheetRow.targetName} />
+                  </dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.actor}</dt>
+                  <dd>
+                    <UserLabel name={sheetRow.actorName} />
+                  </dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.permission}</dt>
+                  <dd>{sheetRow.permissionLabel}</dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.workGroup}</dt>
+                  <dd>{sheetRow.workGroup}</dd>
+                </div>
+                {sheetRow.action === "apply_template" ? (
+                  <div className="grid gap-1">
+                    <dt className="text-muted-foreground">{copy.template}</dt>
+                    <dd>{sheetRow.templateLabel ?? UNKNOWN_LABEL_VI}</dd>
+                  </div>
+                ) : null}
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{BRANCH_VI.long}</dt>
+                  <dd>{branchLabel(sheetRow, copy)}</dd>
+                </div>
+                <div className="grid gap-1">
+                  <dt className="text-muted-foreground">{copy.expires}</dt>
+                  <dd>
+                    {sheetRow.validUntil
+                      ? formatVNDate(sheetRow.validUntil)
+                      : copy.forever}
+                  </dd>
+                </div>
+              </dl>
             ) : null}
-            <ItemDescription>
-              {BRANCH_VI.long}:{" "}
-              {row.branchId === null
-                ? copy.tenantWide
-                : (row.branchName ?? UNKNOWN_LABEL_VI)}
-            </ItemDescription>
-            <ItemDescription>
-              {copy.expires}:{" "}
-              {row.validUntil ? formatVNDate(row.validUntil) : copy.forever}
-            </ItemDescription>
-          </ItemContent>
-        </Item>
-      )}
-    />
+          </div>
+
+          <SheetFooter className="gap-2 sm:flex-col">
+            {sheetRow ? (
+              <Button
+                render={
+                  <Link
+                    href={permissionsHref(sheetRow.targetUserId, branchScope)}
+                  />
+                }
+              >
+                {copy.openPermissions}
+              </Button>
+            ) : null}
+            {sheetRow ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const href = sameTargetHref(
+                    sheetRow.targetUserId,
+                    branchScope,
+                  );
+                  setSelectedId(null);
+                  router.push(href);
+                }}
+              >
+                {copy.filterSameTarget}
+              </Button>
+            ) : null}
+            <Button variant="ghost" onClick={() => setSelectedId(null)}>
+              {copy.detailClose}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

@@ -72,6 +72,23 @@ test("permission audit table follows shared column contract order", () => {
   assert.match(table, /\{copy\.target\}:[\s\S]*\{copy\.actor\}:/);
 });
 
+test("permission audit table opens evidence sheet from list rows", () => {
+  const table = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(table, /onRowClick/);
+  assert.match(table, /<Sheet[\s\S]*side="right"/);
+  assert.match(table, /size="md"/);
+  assert.match(table, /openPermissions|Mở hồ sơ quyền/);
+  assert.match(table, /filterSameTarget|Lọc cùng đối tượng/);
+  assert.match(table, /sameTargetHref/);
+  assert.doesNotMatch(table, /JSON\.stringify|\.metadata\b/);
+});
+
 test("settings home links to ops tracking hub for owners", () => {
   const home = readFileSync(
     join(root, "apps/web/app/(protected)/settings/page.tsx"),
