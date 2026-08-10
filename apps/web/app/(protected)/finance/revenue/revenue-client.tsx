@@ -507,6 +507,7 @@ export function RevenueClient({
         }
       />
 
+      {/* DASHBOARD_REPORT: non-sticky FilterBar above KPI — never wrap cockpit in AppListFrame. */}
       <FilterBar
         params={params}
         branches={branches}

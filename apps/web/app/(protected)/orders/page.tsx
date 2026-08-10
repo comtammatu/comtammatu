@@ -61,7 +61,7 @@ export async function OrdersPageContent({
 
   if (!ordersResult.success || !ordersResult.data) {
     return (
-      <AppPage width="wide">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader title={ORDER_VI.long} />
         <AppEmptyState
           mode="error"

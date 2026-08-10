@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { loadTransferCreatePageData } from "@lib/inventory/transfer-create-data";
 import { messages } from "@lib/messages";
 import { CreateTransferForm } from "../create-transfer-dialog";
@@ -18,17 +18,24 @@ export default async function NewTransferPage({
   });
 
   return (
-    <AppPage width="wide">
-      <AppPageHeader
-        title={copy.manualTransferAction}
-        description={copy.manualTransferDescription}
-        actions={
-          <Button variant="ghost" render={<Link href="/inventory/transfers" />}>
-            {copy.back}
-          </Button>
-        }
-      />
+    <DocumentFormFrame
+      width="wide"
+      header={
+        <AppPageHeader
+          title={copy.manualTransferAction}
+          description={copy.manualTransferDescription}
+          actions={
+            <Button
+              variant="ghost"
+              render={<Link href="/inventory/transfers" />}
+            >
+              {copy.back}
+            </Button>
+          }
+        />
+      }
+    >
       <CreateTransferForm {...data} />
-    </AppPage>
+    </DocumentFormFrame>
   );
 }

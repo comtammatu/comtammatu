@@ -72,7 +72,7 @@ export function OrdersPageBody({
   }
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={ORDER_VI.long}
         description={ORDERS_COPY.description}

@@ -78,7 +78,7 @@ test("Branch attendance summary drills into employee month days via URL", () => 
 
 test("Owner attendance table keeps its desktop presenter", () => {
   const ownerTable = read(
-    "apps/web/app/(protected)/hr/attendance-table.tsx",
+    "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
   );
   assert.match(ownerTable, /export function AttendanceTable/);
   assert.match(ownerTable, /DataTable/);

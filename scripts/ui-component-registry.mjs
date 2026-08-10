@@ -1039,7 +1039,7 @@ export const UI_BLOCK_REGISTRY = {
     "BranchOperatorPage + BranchOperatorPanel + touch line editor + AppDetailFooter",
     "bottom Sheet for one line at a time",
     "AppShell, AppListFrame, DocumentFormFrame, DataTable, desktop side editor, or raw Card",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
   ),
   "embedded-workflow": block(
     ["EMBED-WRAPPER"],
@@ -1066,7 +1066,7 @@ export const UI_BLOCK_REGISTRY = {
     "Runner station chrome + touch-first order columns + AppEmptyState for idle/error",
     "PageSpinner while real queue data is unavailable",
     "AppSection, AppShell, AppListFrame, BranchOperatorPage, control_surface LIST adapters, raw Card, or dashboard grid",
-    "apps/web/app/(protected)/br/[branchId]/runner/page.tsx",
+    "apps/web/app/(protected)/br/[branchId]/pickup/page.tsx",
   ),
   "pos-board": block(
     ["BOARD"],

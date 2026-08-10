@@ -154,6 +154,7 @@ export function FoodCostClient({
 
   return (
     <>
+      {/* DASHBOARD_REPORT: non-sticky FilterBar above KPI; breakdown stays AppSection, not AppListFrame. */}
       <FilterBar
         params={params}
         branches={branches}

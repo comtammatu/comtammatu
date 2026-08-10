@@ -43,7 +43,7 @@ test("Finance analysis routes use compact Design System composition", () => {
   );
 
   assert.match(expenses, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
-  assert.match(expenses, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.match(expenses, /<FilterBar[\s\S]{0,120}variant="inline"/);
   assert.match(expenses, /<DataTable/);
   assert.match(expenses, /<KpiRow density="compact">/);
   // Period total + the actionable "cần xử lý" counterpart. Nothing else on a

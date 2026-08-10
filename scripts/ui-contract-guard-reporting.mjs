@@ -91,6 +91,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
     reason:
       "Repository, shell, route, archetype, and boundary invariants are existence or ownership checks rather than per-file risk scores.",
     guardIds: [
+      "control-surface-compose",
       "dead-doc-reference",
       "external-design-context",
       "legacy-doc-references",

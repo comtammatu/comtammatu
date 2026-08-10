@@ -71,8 +71,9 @@ test("Wave 3 Branch count/waste stay branch-touch (no DataTable leakage)", () =>
 });
 
 test("Wave 3 burns dead Owner DETAIL/DOC embedded dual presenters", () => {
+  // GRN keeps ADR 0018 `embedded` + `presentation="dialog"` for list-first
+  // overlays; other DETAIL/DOC dual presenters must not resurrect `embedded`.
   const burned = [
-    "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
     "app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
     "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
     "app/(protected)/inventory/stocktake/new/new-session-client.tsx",
@@ -87,6 +88,7 @@ test("Wave 3 burns dead Owner DETAIL/DOC embedded dual presenters", () => {
 
   const grn = read("app/(protected)/inventory/grn/[id]/grn-detail-client.tsx");
   assert.match(grn, /presentation === "dialog"/);
+  assert.match(grn, /\bembedded\b/, "GRN keeps ADR 0018 overlay embed");
 
   const hub = read(
     "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",

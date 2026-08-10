@@ -53,7 +53,12 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection, AppToolbar, KpiRow } from "@/components/surface";
+import {
+  AppListFrame,
+  AppSection,
+  AppToolbar,
+  KpiRow,
+} from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 
 type AlertFilter = "all" | "warning" | "critical";
@@ -226,17 +231,37 @@ export function OrdersClient({
   const alertFilter = parseAlertFilter(searchParams.get("alert"));
   const notifiedRef = useRef<Set<string>>(new Set());
 
-  const setAlertFilter = useCallback(
-    (next: AlertFilter) => {
+  const replaceSearchParams = useCallback(
+    (mutate: (next: URLSearchParams) => void) => {
       const nextParams = new URLSearchParams(searchParams.toString());
-      if (next === "all") nextParams.delete("alert");
-      else nextParams.set("alert", next);
+      mutate(nextParams);
       const q = nextParams.toString();
       startTransition(() => {
         router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
       });
     },
     [pathname, router, searchParams],
+  );
+
+  const setAlertFilter = useCallback(
+    (next: AlertFilter) => {
+      replaceSearchParams((nextParams) => {
+        if (next === "all") nextParams.delete("alert");
+        else nextParams.set("alert", next);
+      });
+    },
+    [replaceSearchParams],
+  );
+
+  const selectOrder = useCallback(
+    (order: OrderRow | null) => {
+      setSelectedOrder(order);
+      replaceSearchParams((nextParams) => {
+        if (order) nextParams.set("orderId", String(order.id));
+        else nextParams.delete("orderId");
+      });
+    },
+    [replaceSearchParams],
   );
 
   // Sync prop-to-state for router.refresh() updates
@@ -247,6 +272,10 @@ export function OrdersClient({
   useEffect(() => {
     setSummary(initialSummary);
   }, [initialSummary]);
+
+  useEffect(() => {
+    setSelectedOrder(initialSelectedOrder);
+  }, [initialSelectedOrder]);
 
   const routeBranchId = params?.branchId ? Number(params.branchId) : null;
   const currentBranchId =
@@ -443,169 +472,171 @@ export function OrdersClient({
         />
       </KpiRow>
 
-      {/* ─── Filter bar ─── */}
-      <AppToolbar sticky className="items-end">
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="date-from" className="text-xs">
-            {FORM_VI.fromDate}
-          </Label>
-          <InputGroup
-            size={controlSize}
-            className="w-full sm:w-36"
-          >
-            <InputGroupInput
-              id="date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </InputGroup>
-        </div>
-
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="date-to" className="text-xs">
-            {FORM_VI.toDate}
-          </Label>
-          <InputGroup
-            size={controlSize}
-            className="w-full sm:w-36"
-          >
-            <InputGroupInput
-              id="date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </InputGroup>
-        </div>
-
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="status-filter" className="text-xs">
-            {FORM_VI.status}
-          </Label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger
-              id="status-filter"
-              size={controlSize}
-              className="w-full sm:w-40"
-            >
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(ORDER_STATUS_LABELS_VI).map(([value, label]) => (
-                <SelectItem
-                  key={value}
-                  value={value}
-                  size={controlSize === "touch" ? "touch" : "default"}
-                >
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="alert-filter" className="text-xs">
-            {ORDERS_PAGE_COPY.alertFilterLabel}
-          </Label>
-          <Select
-            value={alertFilter}
-            onValueChange={(val) => setAlertFilter(parseAlertFilter(val))}
-          >
-            <SelectTrigger
-              id="alert-filter"
-              size={controlSize}
-              className="w-full sm:w-44"
-            >
-              <SelectValue placeholder={ORDERS_PAGE_COPY.alertFilterAll} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {ORDERS_PAGE_COPY.alertFilterAll} ({orders.length})
-              </SelectItem>
-              <SelectItem value="warning">
-                {ORDERS_PAGE_COPY.alertFilterWarning} ({delayStats.warningCount})
-              </SelectItem>
-              <SelectItem value="critical">
-                {ORDERS_PAGE_COPY.alertFilterCritical} ({delayStats.criticalCount})
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {showBranchFilter && branches.length > 0 && (
-          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
-            <Label htmlFor="branch-filter" className="text-xs">
-              {BRANCH_VI.long}
-            </Label>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger
-                id="branch-filter"
-                size={controlSize}
-                className="w-full sm:w-44"
-              >
-                <SelectValue placeholder={BRANCH_VI.selectAll} />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem
-                    key={b.id}
-                    value={String(b.id)}
-                    size={controlSize === "touch" ? "touch" : "default"}
-                  >
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="flex w-full items-end gap-2 sm:w-auto">
-          <Button
-            onClick={handleFilter}
-            disabled={isPending}
-            size={controlSize}
-            className="flex-1 sm:flex-none"
-          >
-            {isPending && <Spinner className="mr-1.5 size-3.5" />}
-            Lọc
-          </Button>
-          {hasFilters && (
-            <Button
-              onClick={handleReset}
-              disabled={isPending}
-              variant="outline"
-              size={controlSize}
-              className="flex-1 sm:flex-none"
-            >
-              Xóa bộ lọc
-            </Button>
-          )}
-        </div>
-      </AppToolbar>
-
-      <AppToolbar className="justify-between">
-        <p className="text-sm text-muted-foreground">
-          {ORDERS_COPY.listCountNote(displayOrders.length, summary.totalCount)}
-        </p>
-        {hasFilters && <Badge variant="info">Bộ lọc đang áp dụng</Badge>}
-      </AppToolbar>
-
-      {/* ─── Table ─── */}
-      <AppSection
-        title="Danh sách đơn"
-        description="Trạng thái, thanh toán và tổng tiền từng đơn."
-        contentFlush
+      <AppListFrame
         contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            filters={
+              <>
+                <div className="flex w-full flex-col gap-1.5 sm:w-36 sm:flex-none">
+                  <Label htmlFor="date-from" className="text-xs">
+                    {FORM_VI.fromDate}
+                  </Label>
+                  <InputGroup size={controlSize} className="w-full sm:w-36">
+                    <InputGroupInput
+                      id="date-from"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                    />
+                  </InputGroup>
+                </div>
+                <div className="flex w-full flex-col gap-1.5 sm:w-36 sm:flex-none">
+                  <Label htmlFor="date-to" className="text-xs">
+                    {FORM_VI.toDate}
+                  </Label>
+                  <InputGroup size={controlSize} className="w-full sm:w-36">
+                    <InputGroupInput
+                      id="date-to"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                    />
+                  </InputGroup>
+                </div>
+                <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
+                  <SelectTrigger
+                    id="status-filter"
+                    size={controlSize}
+                    className="w-full sm:w-40"
+                    aria-label={FORM_VI.status}
+                  >
+                    <SelectValue placeholder="Tất cả" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value="all"
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
+                      Tất cả
+                    </SelectItem>
+                    {Object.entries(ORDER_STATUS_LABELS_VI).map(
+                      ([value, label]) => (
+                        <SelectItem
+                          key={value}
+                          value={value}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={alertFilter}
+                  onValueChange={(val) => setAlertFilter(parseAlertFilter(val))}
+                >
+                  <SelectTrigger
+                    id="alert-filter"
+                    size={controlSize}
+                    className="w-full sm:w-44"
+                    aria-label={ORDERS_PAGE_COPY.alertFilterLabel}
+                  >
+                    <SelectValue
+                      placeholder={ORDERS_PAGE_COPY.alertFilterAll}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {ORDERS_PAGE_COPY.alertFilterAll} ({orders.length})
+                    </SelectItem>
+                    <SelectItem value="warning">
+                      {ORDERS_PAGE_COPY.alertFilterWarning} (
+                      {delayStats.warningCount})
+                    </SelectItem>
+                    <SelectItem value="critical">
+                      {ORDERS_PAGE_COPY.alertFilterCritical} (
+                      {delayStats.criticalCount})
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {showBranchFilter && branches.length > 0 ? (
+                  <Select
+                    value={branchId || "all"}
+                    onValueChange={(value) =>
+                      setBranchId(value === "all" ? "" : value)
+                    }
+                  >
+                    <SelectTrigger
+                      id="branch-filter"
+                      size={controlSize}
+                      className="w-full sm:w-44"
+                      aria-label={BRANCH_VI.long}
+                    >
+                      <SelectValue placeholder={BRANCH_VI.selectAll} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem
+                        value="all"
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
+                        {BRANCH_VI.selectAll}
+                      </SelectItem>
+                      {branches.map((b) => (
+                        <SelectItem
+                          key={b.id}
+                          value={String(b.id)}
+                          size={controlSize === "touch" ? "touch" : "default"}
+                        >
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </>
+            }
+            actions={
+              <>
+                <Button
+                  onClick={handleFilter}
+                  disabled={isPending}
+                  size={controlSize}
+                >
+                  {isPending ? <Spinner className="mr-1.5 size-3.5" /> : null}
+                  Lọc
+                </Button>
+                {hasFilters ? (
+                  <Button
+                    onClick={handleReset}
+                    disabled={isPending}
+                    variant="outline"
+                    size={controlSize}
+                  >
+                    Xóa bộ lọc
+                  </Button>
+                ) : null}
+              </>
+            }
+            reset={
+              <p className="text-sm text-muted-foreground">
+                {ORDERS_COPY.listCountNote(
+                  displayOrders.length,
+                  summary.totalCount,
+                )}
+              </p>
+            }
+          />
+        }
       >
         <DataTable
           columns={ORDER_COLUMNS}
           data={displayOrders}
           getRowKey={(order) => order.id}
           pageSize={50}
-          onRowClick={setSelectedOrder}
+          onRowClick={selectOrder}
           emptyTitle="Không có đơn hàng nào"
           emptyDescription={
             hasFilters
@@ -619,7 +650,7 @@ export function OrdersClient({
               variant="outline"
               className="cursor-pointer text-left"
               render={
-                <button type="button" onClick={() => setSelectedOrder(order)} />
+                <button type="button" onClick={() => selectOrder(order)} />
               }
             >
               <ItemHeader>
@@ -654,7 +685,7 @@ export function OrdersClient({
             </Item>
           )}
         />
-      </AppSection>
+      </AppListFrame>
     </>
   );
 
@@ -672,7 +703,7 @@ export function OrdersClient({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Đóng chi tiết đơn"
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => selectOrder(null)}
               >
                 <IconX />
               </Button>
@@ -691,7 +722,9 @@ export function OrdersClient({
         <OrderDetailSheet
           order={selectedOrder}
           open={!!selectedOrder}
-          onOpenChange={(open) => !open && setSelectedOrder(null)}
+          onOpenChange={(open) => {
+            if (!open) selectOrder(null);
+          }}
         />
       )}
     </>

@@ -14,7 +14,7 @@ export default async function BranchesPage() {
 
   if (error) {
     return (
-      <AppPage width="wide">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader title={messages.settings.pages.branchesTitle} />
         <AppEmptyState
           mode="error"
@@ -25,7 +25,7 @@ export default async function BranchesPage() {
   }
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={messages.settings.pages.branchesTitle}
         description={messages.settings.pages.branchCount(branches?.length ?? 0)}

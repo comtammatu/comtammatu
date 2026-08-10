@@ -132,7 +132,7 @@ test("growth lists opted in", () => {
   for (const [rel, pageSize] of [
     ["../app/(protected)/finance/expenses/expenses-client.tsx", 50],
     ["../app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx", 50],
-    ["../app/(protected)/hr/attendance-table.tsx", 50],
+    ["../app/(protected)/hr/attendance/attendance-table.tsx", 50],
     ["../app/(protected)/hr/employee-table.tsx", 25],
     ["../app/(protected)/hr/leave-requests-table.tsx", 25],
     ["../app/(protected)/hr/staff/staff-table.tsx", 25],

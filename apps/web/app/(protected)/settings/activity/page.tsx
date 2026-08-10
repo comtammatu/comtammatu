@@ -7,9 +7,6 @@ import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { formatAuditEntityTypeLabel } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  AppSection,
-} from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchTenantAuditLogs } from "@/_lib/audit";
 import { messages } from "@lib/messages";
@@ -127,27 +124,21 @@ export default async function SystemActivityPage({ searchParams }: Props) {
         </div>
       }
     >
-      <AppSection
-        title={copy.recentItems(rows.length)}
-        description={messages.settings.pages.systemActivityDescription}
-        contentFlush
-      >
-        <SystemActivityClient
-          rows={rows}
-          filterValue={{
-            entityType,
-            entityId: entityId != null ? String(entityId) : null,
-            actor,
-            since,
-            q,
-          }}
-          actorOptions={[...actorOptionById.values()].sort((a, b) =>
-            a.label.localeCompare(b.label, "vi"),
-          )}
-          entityOptions={entityOptions}
-          pagesHomeLink="/settings"
-        />
-      </AppSection>
+      <SystemActivityClient
+        rows={rows}
+        filterValue={{
+          entityType,
+          entityId: entityId != null ? String(entityId) : null,
+          actor,
+          since,
+          q,
+        }}
+        actorOptions={[...actorOptionById.values()].sort((a, b) =>
+          a.label.localeCompare(b.label, "vi"),
+        )}
+        entityOptions={entityOptions}
+        pagesHomeLink="/settings"
+      />
     </SettingsPageFrame>
   );
 }

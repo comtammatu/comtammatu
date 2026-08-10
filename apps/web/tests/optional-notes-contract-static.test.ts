@@ -41,7 +41,7 @@ test("rejections and audit-sensitive changes require a reason at both boundaries
     "app/(protected)/hr/payroll/payroll-list-client.tsx",
   );
   const attendanceActions = read("app/(protected)/hr/actions.ts");
-  const attendanceTable = read("app/(protected)/hr/attendance-table.tsx");
+  const attendanceTable = read("app/(protected)/hr/attendance/attendance-table.tsx");
   const teamBoard = read(
     "app/(protected)/br/[branchId]/(operator)/team/team-board-client.tsx",
   );

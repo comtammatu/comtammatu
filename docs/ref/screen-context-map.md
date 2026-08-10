@@ -242,7 +242,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - Branch `/br/[branchId]/stock/requests` — phiếu yêu cầu hàng (LIST/DOC);
     Bếp TT dùng cùng route để yêu cầu Kho Tổng.
   - On-hand CN “Cần bổ sung” CTA → Yêu cầu hàng (không mở GRN).
-  - Chi tiết phân vai: `docs/ref/inventory-role-ops.md`.
+  - Chi tiết phân vai: `docs/ref/inventory.md`.
   - `/br/[branchId]/stock` là **stock home** CN: 4 cửa hàng hóa (tồn / YCH / kiểm kê phiên / hao) **trên**, list phiếu fulfillment **dưới**. Không đặt Phân công đếm / Phiếu đếm làm cửa Kho (entry từ Đội). `/stock/transfer` store → redirect `/stock`. Pad nhận `/receive/[id]` tự mở phiên kiểm nhận khi `in_transit` (hiện danh sách đếm ngay, không splash CTA). YCH CN: tiến độ 4 bước (Gửi yêu cầu → Đã duyệt → Giao hàng → Xác nhận); không hiện chuẩn bị Kho Tổng/Bếp TT; chi tiết thao tác chỉ bước 1 và 4.
   - `/br/[branchId]/stock/on-hand` là LIST tồn touch-first. Attention theo `branch_kind`. Không Tiêu Hao SX trên primary CN.
   - `/br/[branchId]/stock/on-hand/[ingredientId]` là `DETAIL` touch-native: tồn/trạng thái → vị trí → biến động → ngưỡng; primary CTA kind-aware trên sticky footer; secondary trong `DropdownMenu`; back → on-hand. Không WAC/audit/control_surface chrome. `/stock/receive` chỉ dành cho phiếu chuyển nội bộ.

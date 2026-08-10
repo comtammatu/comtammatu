@@ -9,10 +9,16 @@ import {
   SlidersHorizontal as IconSettings2,
   Utensils as IconToolsKitchen,
   Image as IconImage,
+  Search as IconSearch,
 } from "lucide-react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -22,6 +28,13 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { toggleItemActive } from "./actions";
 import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
@@ -33,6 +46,8 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { RowActionsMenu } from "@/components/row-actions-menu";
+import { AppListFrame, AppToolbar } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   filterAndSortItems,
   type ItemFilterValues,
@@ -69,6 +84,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
     status: "all",
     sort: "menu_order",
   });
+  const controlSize = useFormControlSize();
   const visibleItems = useMemo(
     () => filterAndSortItems(items, searchValue, filterValues),
     [items, searchValue, filterValues],
@@ -221,89 +237,158 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={visibleItems}
-        pageSize={25}
-        getRowKey={(item) => item.id}
-        searchable
-        searchPlaceholder={MENU_VI.itemSearchPlaceholder}
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        filters={[
-          {
-            key: "category",
-            label: FORM_VI.category,
-            placeholder: MENU_VI.allCategories,
-            options: [
-              { value: "all", label: MENU_VI.allCategories },
-              ...categories.map((category) => ({
-                value: category.id.toString(),
-                label: category.name,
-              })),
-            ],
-          },
-          {
-            key: "status",
-            label: FORM_VI.status,
-            placeholder: MENU_VI.allStatuses,
-            options: [
-              { value: "all", label: MENU_VI.allStatuses },
-              { value: "active", label: ACTIVE_STATE_LABELS_VI.active },
-              { value: "inactive", label: ACTIVE_STATE_LABELS_VI.inactive },
-            ],
-          },
-          {
-            key: "sort",
-            label: MENU_VI.sortBy,
-            placeholder: MENU_VI.menuOrder,
-            options: [
-              { value: "menu_order", label: MENU_VI.menuOrder },
-              { value: "name_asc", label: MENU_VI.nameAscending },
-              { value: "price_asc", label: MENU_VI.priceAscending },
-              { value: "price_desc", label: MENU_VI.priceDescending },
-            ],
-          },
-        ]}
-        filterValues={filterValues}
-        onFilterChange={(key, value) =>
-          setFilterValues((current) => ({ ...current, [key]: value }))
+      <AppListFrame
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            search={
+              <InputGroup size={controlSize} className="min-w-0 flex-1 sm:min-w-64">
+                <InputGroupAddon>
+                  <IconSearch aria-hidden />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="search"
+                  aria-label={MENU_VI.itemSearchPlaceholder}
+                  placeholder={MENU_VI.itemSearchPlaceholder}
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  inputMode="search"
+                />
+              </InputGroup>
+            }
+            filters={
+              <>
+                <Select
+                  value={filterValues.category}
+                  onValueChange={(value) =>
+                    setFilterValues((current) => ({
+                      ...current,
+                      category: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className="min-w-36"
+                    aria-label={FORM_VI.category}
+                  >
+                    <SelectValue placeholder={MENU_VI.allCategories} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{MENU_VI.allCategories}</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem
+                        key={category.id}
+                        value={category.id.toString()}
+                      >
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filterValues.status}
+                  onValueChange={(value) =>
+                    setFilterValues((current) => ({
+                      ...current,
+                      status: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className="min-w-36"
+                    aria-label={FORM_VI.status}
+                  >
+                    <SelectValue placeholder={MENU_VI.allStatuses} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{MENU_VI.allStatuses}</SelectItem>
+                    <SelectItem value="active">
+                      {ACTIVE_STATE_LABELS_VI.active}
+                    </SelectItem>
+                    <SelectItem value="inactive">
+                      {ACTIVE_STATE_LABELS_VI.inactive}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filterValues.sort}
+                  onValueChange={(value) =>
+                    setFilterValues((current) => ({
+                      ...current,
+                      sort: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    size={controlSize}
+                    className="min-w-36"
+                    aria-label={MENU_VI.sortBy}
+                  >
+                    <SelectValue placeholder={MENU_VI.menuOrder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="menu_order">
+                      {MENU_VI.menuOrder}
+                    </SelectItem>
+                    <SelectItem value="name_asc">
+                      {MENU_VI.nameAscending}
+                    </SelectItem>
+                    <SelectItem value="price_asc">
+                      {MENU_VI.priceAscending}
+                    </SelectItem>
+                    <SelectItem value="price_desc">
+                      {MENU_VI.priceDescending}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            }
+          />
         }
-        emptyTitle={
-          hasActiveFilter ? MENU_VI.noMatchingItems : "Chưa có món ăn nào"
-        }
-        emptyMode={hasActiveFilter ? "no-results" : "no-data"}
-        emptyIcon={
-          <IconToolsKitchen className="size-8 text-muted-foreground" />
-        }
-        rowClassName={() => (isPending ? "opacity-60" : undefined)}
-        mobileCardRender={(item) => (
-          <Item variant="outline">
-            <ItemMedia variant="image">{renderImage(item)}</ItemMedia>
-            <ItemContent>
-              <ItemTitle>{item.name}</ItemTitle>
-              <ItemDescription>
-                {item.category_name} ·{" "}
-                {MENU_VI.vatInclusivePriceSummary(
-                  formatVND(item.base_price),
-                  formatPercent(item.vat_rate),
-                )}
-              </ItemDescription>
-              {item.description ? (
-                <ItemDescription>{item.description}</ItemDescription>
-              ) : null}
-            </ItemContent>
-            <ItemFooter>
-              <Badge variant={item.is_active ? "default" : "outline"}>
-                {item.is_active
-                  ? ACTIVE_STATE_LABELS_VI.active
-                  : ACTIVE_STATE_LABELS_VI.inactive}
-              </Badge>
-              <ItemActions>{renderActions(item, true)}</ItemActions>
-            </ItemFooter>
-          </Item>
-        )}
-      />
+      >
+        <DataTable
+          columns={columns}
+          data={visibleItems}
+          pageSize={25}
+          getRowKey={(item) => item.id}
+          emptyTitle={
+            hasActiveFilter ? MENU_VI.noMatchingItems : "Chưa có món ăn nào"
+          }
+          emptyMode={hasActiveFilter ? "no-results" : "no-data"}
+          emptyIcon={
+            <IconToolsKitchen className="size-8 text-muted-foreground" />
+          }
+          rowClassName={() => (isPending ? "opacity-60" : undefined)}
+          mobileCardRender={(item) => (
+            <Item variant="outline">
+              <ItemMedia variant="image">{renderImage(item)}</ItemMedia>
+              <ItemContent>
+                <ItemTitle>{item.name}</ItemTitle>
+                <ItemDescription>
+                  {item.category_name} ·{" "}
+                  {MENU_VI.vatInclusivePriceSummary(
+                    formatVND(item.base_price),
+                    formatPercent(item.vat_rate),
+                  )}
+                </ItemDescription>
+                {item.description ? (
+                  <ItemDescription>{item.description}</ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemFooter>
+                <Badge variant={item.is_active ? "default" : "outline"}>
+                  {item.is_active
+                    ? ACTIVE_STATE_LABELS_VI.active
+                    : ACTIVE_STATE_LABELS_VI.inactive}
+                </Badge>
+                <ItemActions>{renderActions(item, true)}</ItemActions>
+              </ItemFooter>
+            </Item>
+          )}
+        />
+      </AppListFrame>
 
       <ItemFormDialog
         open={!!editItem}

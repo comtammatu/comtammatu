@@ -7,7 +7,7 @@ import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppListFrame } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { AuditExportButton } from "@/_components/audit-export-button";
@@ -36,12 +36,14 @@ export function PermissionAuditClient({
   targetOptions,
   branchScope,
   hasServerFilters,
+  listTitle,
 }: {
   rows: PermissionAuditDisplayRow[];
   filterValue: PermissionAuditFilterValue;
   targetOptions: PermissionAuditTargetOption[];
   branchScope: HrBranchScope;
   hasServerFilters: boolean;
+  listTitle?: string;
 }) {
   const copy = messages.controlSurface.staffAudit;
   const q = filterValue.q?.trim() || null;
@@ -109,32 +111,35 @@ export function PermissionAuditClient({
   ]);
 
   return (
-    <>
-      <PermissionAuditFilters
-        value={filterValue}
-        targetOptions={targetOptions}
-        branchScope={branchScope}
-        trailing={
-          <AuditExportButton
-            filename={copy.exportFilename}
-            label={copy.exportCsv}
-            signatureLines={signatureLines}
-            header={[
-              copy.time,
-              copy.action,
-              copy.target,
-              copy.actor,
-              copy.permission,
-              copy.workGroup,
-              copy.template,
-              BRANCH_VI.long,
-              copy.expires,
-            ]}
-            rows={exportRows}
-          />
-        }
-      />
-
+    <AppListFrame
+      title={listTitle}
+      toolbar={
+        <PermissionAuditFilters
+          value={filterValue}
+          targetOptions={targetOptions}
+          branchScope={branchScope}
+          trailing={
+            <AuditExportButton
+              filename={copy.exportFilename}
+              label={copy.exportCsv}
+              signatureLines={signatureLines}
+              header={[
+                copy.time,
+                copy.action,
+                copy.target,
+                copy.actor,
+                copy.permission,
+                copy.workGroup,
+                copy.template,
+                BRANCH_VI.long,
+                copy.expires,
+              ]}
+              rows={exportRows}
+            />
+          }
+        />
+      }
+    >
       {showEmpty ? (
         <AppEmptyState
           mode={hasFilters ? "no-results" : "no-data"}
@@ -159,6 +164,6 @@ export function PermissionAuditClient({
       ) : (
         <PermissionAuditTable rows={filteredRows} />
       )}
-    </>
+    </AppListFrame>
   );
 }

@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PAGE_ARCHETYPES, PAGE_DISPOSITIONS } from "./page-archetypes.mjs";
+import {
+  CONTROL_SURFACE_COMPOSE,
+  CONTROL_SURFACE_COMPOSE_SHAPES,
+  PAGE_ARCHETYPES,
+  PAGE_DISPOSITIONS,
+} from "./page-archetypes.mjs";
 import { validateUiComponentRegistry } from "./ui-component-registry.mjs";
 import {
   buildUiContractGuardReporting,
@@ -779,6 +784,10 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx": 1,
+      // Compatibility redirects / bottom-nav door to canonical Owner production.
+      "apps/web/app/(protected)/br/[branchId]/(operator)/operator-bottom-nav.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/page.tsx": 1,
     },
   },
   {
@@ -2223,6 +2232,137 @@ for (const filePath of walkUiRuntimeFiles([".tsx"])) {
   if (count > 0) {
     failures.push(
       `button-height-on-button: ${normalized} has ${count} action raw height(s). Use a Button size variant; non-action heights are out of scope (design-system.md § Enforcement Status / D030).`,
+    );
+  }
+}
+
+// Control Surface Canonical Compose (page-archetypes.md § 1.1)
+const VALID_COMPOSE_SHAPES = new Set(CONTROL_SURFACE_COMPOSE_SHAPES);
+const controlSurfacePages = allPageFiles.filter(
+  (file) =>
+    file.startsWith("apps/web/app/(protected)/") &&
+    !file.includes("/(protected)/br/"),
+);
+
+for (const file of controlSurfacePages) {
+  const shape = CONTROL_SURFACE_COMPOSE[file];
+  if (!shape) {
+    failures.push(
+      `control-surface-compose: ${file} has no CONTROL_SURFACE_COMPOSE entry. Pick LIST|DETAIL|DOC|DASHBOARD_REPORT|REDIRECT|STAFF_EMBED (page-archetypes.md § 1.1).`,
+    );
+    continue;
+  }
+  if (!VALID_COMPOSE_SHAPES.has(shape)) {
+    failures.push(
+      `control-surface-compose: ${file} declares unknown compose shape "${shape}".`,
+    );
+  }
+}
+
+for (const file of Object.keys(CONTROL_SURFACE_COMPOSE)) {
+  if (!controlSurfacePages.includes(file)) {
+    failures.push(
+      `control-surface-compose: CONTROL_SURFACE_COMPOSE has a dead entry for ${file}.`,
+    );
+  }
+}
+
+const RELATIVE_TSX_IMPORT_RE = /from\s+["'](\.[^"']+)["']/g;
+
+/** Resolve a relative import to an on-disk .tsx file, if any. */
+function resolveRelativeTsxImport(fromFile, spec) {
+  const base = path.resolve(path.dirname(fromFile), spec);
+  const candidates = [
+    base,
+    `${base}.tsx`,
+    path.join(base, "index.tsx"),
+    path.join(base, "page.tsx"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return candidate.endsWith(".tsx") ? candidate : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Walk a page directory (+ nested _components) and follow relative .tsx
+ * imports for a marker string. Lets LIST pages that delegate to a sibling
+ * shared client (e.g. consumption → issues/issues-client) satisfy compose.
+ */
+function dirTreeHasMarker(pageFile, marker) {
+  const pageAbs = path.join(REPO_ROOT, pageFile);
+  const pageDir = path.dirname(pageAbs);
+  const queue = [];
+  const seen = new Set();
+
+  const enqueueDir = (dir) => {
+    if (!dir || !fs.existsSync(dir)) return;
+    const stack = [dir];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current || !fs.existsSync(current)) continue;
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        if (entry.name === "node_modules" || entry.name === ".next") continue;
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(full);
+          continue;
+        }
+        if (entry.isFile() && entry.name.endsWith(".tsx")) queue.push(full);
+      }
+    }
+  };
+
+  enqueueDir(pageDir);
+  if (fs.existsSync(pageAbs)) queue.push(pageAbs);
+
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (!file || seen.has(file)) continue;
+    seen.add(file);
+    if (!fs.existsSync(file) || !file.endsWith(".tsx")) continue;
+    const content = fs.readFileSync(file, "utf8");
+    if (content.includes(marker)) return true;
+    for (const match of content.matchAll(RELATIVE_TSX_IMPORT_RE)) {
+      const resolved = resolveRelativeTsxImport(file, match[1]);
+      if (resolved) queue.push(resolved);
+    }
+  }
+  return false;
+}
+
+// Named §4 / settings-frame / migration allowlist for LIST without AppListFrame.
+// Shrink this set as compose migrations land — do not grow it.
+// waste/approvals: ADR 0018 D0 decision-card queue (AppSection, not LIST frame).
+const LIST_WITHOUT_APP_LIST_FRAME_ALLOWLIST = new Set([
+  "apps/web/app/(protected)/inventory/waste/approvals/page.tsx",
+]);
+
+for (const file of controlSurfacePages) {
+  if (CONTROL_SURFACE_COMPOSE[file] !== "LIST") continue;
+  if (LIST_WITHOUT_APP_LIST_FRAME_ALLOWLIST.has(file)) continue;
+  if (!dirTreeHasMarker(file, "AppListFrame")) {
+    failures.push(
+      `control-surface-compose: LIST ${file} must render AppListFrame (or sit on the §4 allowlist). See page-archetypes.md § 1.1.`,
+    );
+  }
+}
+
+// Ban sticky AppToolbar above KpiRow in the same file (Layout Frame law).
+for (const filePath of walkFiles("apps/web/app/(protected)", [".tsx"])) {
+  const normalized = toPosix(filePath);
+  if (normalized.includes("/(protected)/br/")) continue;
+  const content = fs.readFileSync(filePath, "utf8");
+  if (!content.includes("KpiRow") || !/AppToolbar[^>]*\bsticky\b/.test(content)) {
+    continue;
+  }
+  const kpiIdx = content.search(/<\s*KpiRow\b/);
+  const stickyIdx = content.search(/<\s*AppToolbar[^>]*\bsticky\b/);
+  if (kpiIdx >= 0 && stickyIdx > kpiIdx) {
+    failures.push(
+      `control-surface-compose: ${normalized} places sticky AppToolbar after KpiRow (forbidden — page-archetypes.md § 1.1).`,
     );
   }
 }

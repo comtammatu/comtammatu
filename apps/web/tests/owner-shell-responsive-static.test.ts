@@ -138,7 +138,7 @@ test("Owner sibling LIST filter bars opt into sticky stack", () => {
       /<AppToolbar\s+sticky/,
     ],
     [
-      "apps/web/app/(protected)/hr/attendance-table.tsx",
+      "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
       /<AppToolbar\s+sticky/,
     ],
     [

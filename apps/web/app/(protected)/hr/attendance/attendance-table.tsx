@@ -66,12 +66,17 @@ import {
   correctAttendanceRecord,
   type AttendanceCalendarEmployee,
   type AttendanceCalendarLeave,
-} from "./actions";
-import { AttendanceCalendar } from "./attendance-calendar";
-import { calculateAttendanceWorkHours } from "./attendance-summary";
-import type { BranchOption } from "./_types";
+} from "../actions";
+import { AttendanceCalendar } from "../attendance-calendar";
+import { calculateAttendanceWorkHours } from "../attendance-summary";
+import type { BranchOption } from "../_types";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppSection,
+  AppToolbar,
+} from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppDialog,
@@ -88,7 +93,7 @@ import {
   CHECKLIST_PHASE_LABELS,
   CHECKLIST_PHASES,
   type ChecklistPhase,
-} from "./checklist-types";
+} from "../checklist-types";
 import { resolveHrBranchScope } from "@/lib/hr-scope";
 
 const attendanceCopy = messages.employee.hrAttendance;
@@ -452,282 +457,282 @@ export function AttendanceTable({
     (employee) => employee.id === selectedEmployeeId,
   );
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
+  const listTitle = routePath.startsWith("/br/")
+    ? undefined
+    : messages.hr.client.attendanceTitle;
+
+  const toolbarClassName =
+    "items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block";
+
+  const toolbarFilters = (
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      {todayMode ? null : (
+        <Select
+          value={selectedMonth}
+          onValueChange={(value) =>
+            loadData(
+              selectedBranch,
+              value,
+              view,
+              null,
+              view === "calendar" ? selectedEmployeeId : null,
+            )
+          }
+        >
+          <SelectTrigger
+            size={controlSize}
+            className="w-full sm:w-40"
+            aria-label="Tháng chấm công"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((month) => (
+              <SelectItem key={month} value={month}>
+                {month}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {!todayMode && view === "calendar" ? (
+        <>
+          <Combobox
+            value={selectedEmployeeId?.toString() ?? "all"}
+            onValueChange={(value) =>
+              selectCalendarEmployee(value === "all" ? null : Number(value))
+            }
+            options={[
+              {
+                value: "all",
+                label: attendanceCopy.calendarAllEmployees,
+              },
+              ...calendarEmployees.map((employee) => ({
+                value: String(employee.id),
+                label:
+                  employee.full_name ||
+                  employee.employee_code ||
+                  attendanceCopy.employeeCode,
+                hint: employee.employee_code || undefined,
+              })),
+            ]}
+            placeholder={attendanceCopy.calendarEmployeeLabel}
+            searchPlaceholder={attendanceCopy.calendarEmployeeSearch}
+            emptyMessage={attendanceCopy.calendarEmployeeEmpty}
+            aria-label={attendanceCopy.calendarEmployeeLabel}
+            triggerClassName="col-span-2 w-full sm:w-64"
+          />
+          <Select
+            value={calendarScope}
+            onValueChange={(value) => {
+              if (value === "all" || value === "attention") {
+                selectCalendarScope(value);
+              }
+            }}
+          >
+            <SelectTrigger
+              size={controlSize}
+              className="col-span-2 w-full sm:w-44"
+              aria-label={attendanceCopy.calendarScopeLabel}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {attendanceCopy.calendarScopeAll}
+              </SelectItem>
+              <SelectItem value="attention">
+                {attendanceCopy.calendarScopeAttention}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </>
+      ) : null}
+    </div>
+  );
+
+  const toolbarActions = (
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      {todayMode ? null : (
+        <ToggleGroup
+          type="single"
+          size="touch"
+          value={view}
+          onValueChange={(value) => {
+            if (
+              value === "clock" ||
+              value === "summary" ||
+              value === "calendar"
+            ) {
+              selectView(value);
+            }
+          }}
+          aria-label={attendanceCopy.viewSwitcher}
+        >
+          <ToggleGroupItem value="summary">
+            {attendanceCopy.summaryView}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="calendar">
+            {attendanceCopy.calendarView}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="clock">
+            {attendanceCopy.clockView}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      )}
+      {isPending ? <Spinner /> : null}
+    </div>
+  );
+
+  // Calendar mosaic is REPORT-like: non-sticky filters above AppSection.
+  // Summary/clock LIST modes own AppListFrame + inline toolbar (sticky via frame).
+  if (view === "calendar") {
+    return (
+      <div className="flex flex-col gap-4">
         <AppToolbar
-          sticky
-          className="items-stretch [&>[data-slot=toolbar-group]]:w-full [&>[data-slot=separator]]:hidden sm:items-center sm:[&>[data-slot=toolbar-group]]:w-auto sm:[&>[data-slot=separator]]:block"
-          filters={
-            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-              {todayMode ? null : (
-                <Select
-                  value={selectedMonth}
-                  onValueChange={(value) =>
-                    loadData(
-                      selectedBranch,
-                      value,
-                      view,
-                      null,
-                      view === "calendar" ? selectedEmployeeId : null,
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    size={controlSize}
-                    className="w-full sm:w-40"
-                    aria-label="Tháng chấm công"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {monthOptions.map((month) => (
-                      <SelectItem key={month} value={month}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {!todayMode && view === "calendar" ? (
-                <>
-                  <Combobox
-                    value={selectedEmployeeId?.toString() ?? "all"}
-                    onValueChange={(value) =>
-                      selectCalendarEmployee(
-                        value === "all" ? null : Number(value),
-                      )
-                    }
-                    options={[
-                      {
-                        value: "all",
-                        label: attendanceCopy.calendarAllEmployees,
-                      },
-                      ...calendarEmployees.map((employee) => ({
-                        value: String(employee.id),
-                        label:
-                          employee.full_name ||
-                          employee.employee_code ||
-                          attendanceCopy.employeeCode,
-                        hint: employee.employee_code || undefined,
-                      })),
-                    ]}
-                    placeholder={attendanceCopy.calendarEmployeeLabel}
-                    searchPlaceholder={attendanceCopy.calendarEmployeeSearch}
-                    emptyMessage={attendanceCopy.calendarEmployeeEmpty}
-                    aria-label={attendanceCopy.calendarEmployeeLabel}
-                    triggerClassName="col-span-2 w-full sm:w-64"
-                  />
-                  <Select
-                    value={calendarScope}
-                    onValueChange={(value) => {
-                      if (value === "all" || value === "attention") {
-                        selectCalendarScope(value);
-                      }
-                    }}
-                  >
-                    <SelectTrigger
-                      size={controlSize}
-                      className="col-span-2 w-full sm:w-44"
-                      aria-label={attendanceCopy.calendarScopeLabel}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">
-                        {attendanceCopy.calendarScopeAll}
-                      </SelectItem>
-                      <SelectItem value="attention">
-                        {attendanceCopy.calendarScopeAttention}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </>
-              ) : null}
-            </div>
-          }
-          actions={
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-              {todayMode ? null : (
-                <ToggleGroup
-                  type="single"
-                  size="touch"
-                  value={view}
-                  onValueChange={(value) => {
-                    if (
-                      value === "clock" ||
-                      value === "summary" ||
-                      value === "calendar"
-                    ) {
-                      selectView(value);
-                    }
-                  }}
-                  aria-label={attendanceCopy.viewSwitcher}
-                >
-                  <ToggleGroupItem value="summary">
-                    {attendanceCopy.summaryView}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="calendar">
-                    {attendanceCopy.calendarView}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="clock">
-                    {attendanceCopy.clockView}
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-              {isPending ? <Spinner /> : null}
-            </div>
-          }
+          variant="card"
+          className={toolbarClassName}
+          filters={toolbarFilters}
+          actions={toolbarActions}
         />
         {todayMode ? null : (
           <p className="text-sm text-muted-foreground">
             {attendanceCopy.workdayRule}
           </p>
         )}
-      </div>
-
-      {view === "summary" ? (
         <AppSection
-          title={
-            routePath.startsWith("/br/")
-              ? undefined
-              : messages.hr.client.attendanceTitle
+          title={attendanceCopy.calendarTitle}
+          description={
+            calendarScope === "attention"
+              ? attendanceCopy.calendarAttentionDescription
+              : attendanceCopy.calendarDescription
           }
-          contentFlush
-          contentScroll
         >
-          <SummaryView data={summary} loading={!hasLoaded || isPending} />
-        </AppSection>
-      ) : view === "clock" ? (
-        <AppSection
-          title={
-            routePath.startsWith("/br/")
-              ? undefined
-              : messages.hr.client.attendanceTitle
-          }
-          contentFlush
-          contentScroll
-        >
-          <DetailView
-            branchId={
-              Number(selectedBranch) > 0 ? Number(selectedBranch) : null
-            }
-            data={records}
-            compact={todayMode}
-            todayColumns={todayMode}
-            loading={!hasLoaded || isPending}
-            canForceClose={canForceClose}
-            canCorrect={canCorrect}
-            onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
+          <AttendanceCalendar
+            month={selectedMonth}
+            records={calendarRecords}
+            leaves={employeeLeaves}
+            selectedDate={selectedDay}
+            onSelectDate={selectCalendarDay}
+            showShiftNames={selectedEmployeeId !== null}
+            attentionOnly={calendarScope === "attention"}
+            staleOpenDates={staleOpenDates}
           />
         </AppSection>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <AppSection
-            title={attendanceCopy.calendarTitle}
-            description={
-              calendarScope === "attention"
-                ? attendanceCopy.calendarAttentionDescription
-                : attendanceCopy.calendarDescription
-            }
+        <Sheet
+          open={selectedDay !== null}
+          onOpenChange={(open) => {
+            if (!open) selectCalendarDay(null);
+          }}
+        >
+          <SheetContent
+            side={isCalendarDetailTouch ? "bottom" : "right"}
+            className="max-h-dvh-95 overflow-hidden bg-background p-0 data-[side=right]:lg:w-1/2 data-[side=right]:lg:max-w-none"
           >
-            <AttendanceCalendar
-              month={selectedMonth}
-              records={calendarRecords}
-              leaves={employeeLeaves}
-              selectedDate={selectedDay}
-              onSelectDate={selectCalendarDay}
-              showShiftNames={selectedEmployeeId !== null}
-              attentionOnly={calendarScope === "attention"}
-              staleOpenDates={staleOpenDates}
-            />
-          </AppSection>
-          <Sheet
-            open={selectedDay !== null}
-            onOpenChange={(open) => {
-              if (!open) selectCalendarDay(null);
-            }}
-          >
-            <SheetContent
-              side={isCalendarDetailTouch ? "bottom" : "right"}
-              className="max-h-dvh-95 overflow-hidden bg-background p-0 data-[side=right]:lg:w-1/2 data-[side=right]:lg:max-w-none"
-            >
-              {selectedDay ? (
-                <>
-                  <SheetHeader>
-                    <SheetTitle>
-                      {attendanceCopy.calendarDetailTitle(
-                        formatVNBusinessDate(selectedDay),
-                      )}
-                    </SheetTitle>
-                    <SheetDescription>
-                      {selectedCalendarEmployee
-                        ? `${selectedCalendarEmployee.full_name || selectedCalendarEmployee.employee_code} · ${attendanceCopy.calendarDetailDescription}`
-                        : attendanceCopy.calendarDetailDescription}
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
-                    <div className="flex flex-col gap-3">
-                      <Frame className="flex flex-wrap items-center gap-2 px-3 py-2">
-                        <Badge variant="outline">
-                          {attendanceCopy.calendarActualSummary(
-                            selectedDayClosedShifts,
-                            countCompletedShiftWorkdays(
-                              selectedDayClosedShifts,
-                            ),
-                            selectedDayWorkHours,
-                          )}
+            {selectedDay ? (
+              <>
+                <SheetHeader>
+                  <SheetTitle>
+                    {attendanceCopy.calendarDetailTitle(
+                      formatVNBusinessDate(selectedDay),
+                    )}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {selectedCalendarEmployee
+                      ? `${selectedCalendarEmployee.full_name || selectedCalendarEmployee.employee_code} · ${attendanceCopy.calendarDetailDescription}`
+                      : attendanceCopy.calendarDetailDescription}
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+                  <div className="flex flex-col gap-3">
+                    <Frame className="flex flex-wrap items-center gap-2 px-3 py-2">
+                      <Badge variant="outline">
+                        {attendanceCopy.calendarActualSummary(
+                          selectedDayClosedShifts,
+                          countCompletedShiftWorkdays(selectedDayClosedShifts),
+                          selectedDayWorkHours,
+                        )}
+                      </Badge>
+                      {selectedDayOpenShifts > 0 ? (
+                        <Badge variant="warning">
+                          {attendanceCopy.openShiftCount(selectedDayOpenShifts)}
                         </Badge>
-                        {selectedDayOpenShifts > 0 ? (
-                          <Badge variant="warning">
-                            {attendanceCopy.openShiftCount(
-                              selectedDayOpenShifts,
-                            )}
-                          </Badge>
-                        ) : null}
-                        {selectedDayLeave ? (
-                          <Badge
-                            variant={
-                              selectedDayLeave.status === "approved"
-                                ? "info"
-                                : "warning"
-                            }
-                          >
-                            {selectedDayLeave.status === "approved"
-                              ? scheduleCopy.leaveApproved
-                              : scheduleCopy.leavePending}
-                          </Badge>
-                        ) : null}
-                      </Frame>
-                      <DetailView
-                        branchId={
-                          Number(selectedBranch) > 0
-                            ? Number(selectedBranch)
-                            : null
-                        }
-                        data={selectedDayRecords}
-                        compact
-                        canForceClose={canForceClose}
-                        canCorrect={canCorrect}
-                        onMutated={() =>
-                          loadData(
-                            selectedBranch,
-                            selectedMonth,
-                            "calendar",
-                            selectedDay,
-                            selectedEmployeeId,
-                          )
-                        }
-                      />
-                    </div>
+                      ) : null}
+                      {selectedDayLeave ? (
+                        <Badge
+                          variant={
+                            selectedDayLeave.status === "approved"
+                              ? "info"
+                              : "warning"
+                          }
+                        >
+                          {selectedDayLeave.status === "approved"
+                            ? scheduleCopy.leaveApproved
+                            : scheduleCopy.leavePending}
+                        </Badge>
+                      ) : null}
+                    </Frame>
+                    <DetailView
+                      branchId={
+                        Number(selectedBranch) > 0
+                          ? Number(selectedBranch)
+                          : null
+                      }
+                      data={selectedDayRecords}
+                      compact
+                      canForceClose={canForceClose}
+                      canCorrect={canCorrect}
+                      onMutated={() =>
+                        loadData(
+                          selectedBranch,
+                          selectedMonth,
+                          "calendar",
+                          selectedDay,
+                          selectedEmployeeId,
+                        )
+                      }
+                    />
                   </div>
-                </>
-              ) : null}
-            </SheetContent>
-          </Sheet>
-        </div>
+                </div>
+              </>
+            ) : null}
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
+
+  return (
+    <AppListFrame
+      title={listTitle}
+      description={todayMode ? undefined : attendanceCopy.workdayRule}
+      contentScroll
+      toolbar={
+        <AppToolbar
+          variant="inline"
+          className={toolbarClassName}
+          filters={toolbarFilters}
+          actions={toolbarActions}
+        />
+      }
+    >
+      {view === "summary" ? (
+        <SummaryView data={summary} loading={!hasLoaded || isPending} />
+      ) : (
+        <DetailView
+          branchId={
+            Number(selectedBranch) > 0 ? Number(selectedBranch) : null
+          }
+          data={records}
+          compact={todayMode}
+          todayColumns={todayMode}
+          loading={!hasLoaded || isPending}
+          canForceClose={canForceClose}
+          canCorrect={canCorrect}
+          onMutated={() => loadData(selectedBranch, selectedMonth, "clock")}
+        />
       )}
-    </div>
+    </AppListFrame>
   );
 }
 

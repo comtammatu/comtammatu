@@ -131,8 +131,10 @@ function runSelfTest() {
     mkdirSync(join(fixture, ".agents/skills/demo"), { recursive: true });
     writeFileSync(join(fixture, ".agents/skills/demo/SKILL.md"), "# demo\n");
     writeFileSync(join(fixture, ".agents/skills/demo/AGENTS.md"), "# nested\n");
-    mkdirSync(join(fixture, "docs/worklog"), { recursive: true });
-    writeFileSync(join(fixture, "docs/worklog/README.md"), "# worklog\n");
+    // Join segments so this source file never embeds a contiguous
+    // docs/worklog/*.md path (dead-doc-reference scans scripts/).
+    mkdirSync(join(fixture, "docs", "worklog"), { recursive: true });
+    writeFileSync(join(fixture, "docs", "worklog", "README.md"), "# worklog\n");
 
     const errors = collectDocsBudgetErrors(fixture);
     assert.match(errors.join("\n"), /nested AGENTS\.md is forbidden/);

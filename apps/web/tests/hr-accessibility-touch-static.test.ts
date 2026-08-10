@@ -14,7 +14,7 @@ const auditFiltersSource = read(
   "app/(protected)/hr/staff/audit/permission-audit-filters.tsx",
 );
 const leaveSource = read("app/(protected)/hr/leave-requests-table.tsx");
-const attendanceSource = read("app/(protected)/hr/attendance-table.tsx");
+const attendanceSource = read("app/(protected)/hr/attendance/attendance-table.tsx");
 
 test("HR permission and audit selects expose persistent accessible names", () => {
   assert.match(

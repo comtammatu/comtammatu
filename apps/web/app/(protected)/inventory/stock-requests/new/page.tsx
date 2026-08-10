@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { STOCK_REQUEST_ROLES } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
@@ -161,23 +161,30 @@ export default async function CentralKitchenStockRequestNewPage({
   );
 
   return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        title={
-          messages.inventory.stockRequests.journey.centralSupplyRequestAction
-        }
-        description={messages.inventory.stockRequests.journey.centralSupplyRequestDescription(
-          branchResult.data.name,
-        )}
-        actions={
-          <Button
-            variant="ghost"
-            render={<Link href={`/inventory/transfers?branchId=${branchId}`} />}
-          >
-            {messages.inventory.stockRequests.journey.back}
-          </Button>
-        }
-      />
+    <DocumentFormFrame
+      width="wide"
+      density="compact"
+      header={
+        <AppPageHeader
+          title={
+            messages.inventory.stockRequests.journey.centralSupplyRequestAction
+          }
+          description={messages.inventory.stockRequests.journey.centralSupplyRequestDescription(
+            branchResult.data.name,
+          )}
+          actions={
+            <Button
+              variant="ghost"
+              render={
+                <Link href={`/inventory/transfers?branchId=${branchId}`} />
+              }
+            >
+              {messages.inventory.stockRequests.journey.back}
+            </Button>
+          }
+        />
+      }
+    >
       <StockRequestEditor
         branchId={branchId}
         requestId={requestId}
@@ -188,6 +195,6 @@ export default async function CentralKitchenStockRequestNewPage({
         initialNotes={request?.notes ?? null}
         returnHref={`/inventory/transfers?branchId=${branchId}&requestId=:requestId`}
       />
-    </AppPage>
+    </DocumentFormFrame>
   );
 }

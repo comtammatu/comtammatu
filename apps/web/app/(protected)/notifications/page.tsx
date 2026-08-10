@@ -4,6 +4,9 @@ import { loadAuthState } from "@/_lib/auth";
 import { NotificationsClient } from "./notifications-client";
 import { AppPage } from "@/components/surface";
 
+// LIST feed (no DataTable): AppListFrame wraps the feed in NotificationsClient.
+// See page-archetypes.md § 4 named feed exception.
+
 export const metadata = {
   title: "Thông báo — Cơm Tấm Má Tư",
 };

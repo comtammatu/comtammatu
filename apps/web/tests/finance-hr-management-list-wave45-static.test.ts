@@ -47,7 +47,10 @@ test("Wave 4 Finance LIST pages use xwide+compact AppPage shells", () => {
     /<AppPage width="xwide" density="compact"/,
   );
   assert.match(supplierClient, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
-  assert.match(supplierClient, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.match(
+    supplierClient,
+    /<(?:AppToolbar|FilterBar)[\s\S]{0,160}variant="inline"/,
+  );
 });
 
 test("Wave 4 Finance LIST bodies use AppListFrame + inline toolbar", () => {
@@ -55,7 +58,8 @@ test("Wave 4 Finance LIST bodies use AppListFrame + inline toolbar", () => {
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
   assert.match(expenses, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
-  assert.match(expenses, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  // Finance domain FilterBar adapts AppToolbar variant="inline".
+  assert.match(expenses, /<FilterBar[\s\S]{0,160}variant="inline"/);
   assert.match(expenses, /<DataTable/);
   assert.doesNotMatch(expenses, /<AppSection[\s\S]*title=\{copy\.listTitle\}/);
 
@@ -102,8 +106,10 @@ test("Wave 5 HR LIST pages use xwide+compact density", () => {
     );
   }
 
-  const audit = readWeb("app/(protected)/hr/staff/audit/page.tsx");
-  assert.match(audit, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
+  const auditClient = readWeb(
+    "app/(protected)/hr/staff/audit/permission-audit-client.tsx",
+  );
+  assert.match(auditClient, /<AppListFrame[\s\S]{0,240}toolbar=\{/);
   assert.match(
     readWeb("app/(protected)/hr/staff/audit/permission-audit-filters.tsx"),
     /variant="inline"/,

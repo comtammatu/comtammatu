@@ -471,6 +471,7 @@ export default async function FinancePage({
         }
       />
 
+      {/* DASHBOARD_REPORT: non-sticky FilterBar above KPI mosaic — never AppListFrame. */}
       <FilterBar
         params={params}
         branches={cockpit.branches}

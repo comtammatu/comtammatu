@@ -13,7 +13,7 @@ import {
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
-import { AttendanceTable } from "../attendance-table";
+import { AttendanceTable } from "./attendance-table";
 import {
   AttendanceTabSync,
   type AttendanceTab,

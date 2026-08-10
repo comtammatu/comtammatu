@@ -127,11 +127,27 @@ block.
 | `branch-action-home` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` |
 | `branch-touch-list` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx` |
 | `branch-touch-detail` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |
-| `branch-touch-document` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx` |
+| `branch-touch-document` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx` |
 | `employee-self-service` | staff | `apps/web/lib/staff-runtime/page.tsx` |
 | `public-transaction` | public | `apps/web/app/q/[token]/page.tsx` |
 | `system-gate` | public | `apps/web/app/(public)/access-denied/page.tsx` |
 | Layout lab | dev | `apps/web/app/(dev)/ds-lab/ds-lab-client.tsx` |
+
+## Control Surface Canonical Compose
+
+Owner: `docs/spec/page-archetypes.md` § 1.1. control_surface pages
+(`apps/web/app/(protected)/**` excluding `br/**`) compose through one of five
+shapes — LIST, DETAIL, DOC, DASHBOARD_REPORT, REDIRECT — plus `STAFF_EMBED`
+for `/me/*`. Census: `CONTROL_SURFACE_COMPOSE` in
+`scripts/page-archetypes.mjs`.
+
+| Shape | Adapters (thin pointer) |
+| --- | --- |
+| LIST | `AppPage xwide+compact` → `AppPageHeader` → `AppListFrame` + inline `AppToolbar` → `DataTable` |
+| DETAIL | `AppPage` → `AppPageHeader` → `DescriptionList` + lines → `AppDetailFooter` |
+| DOC | `DocumentFormFrame` (or LIST host + document `AppDialog`) |
+| DASHBOARD_REPORT | Non-sticky filters → optional `KpiRow` → charts/breakdown; hubs use link cards |
+| REDIRECT | `redirect()` only |
 
 ## control_surface LIST Runtime
 
@@ -223,8 +239,7 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/stock/on-hand` | LIST | `loadStockOnHandPageData` + filter model; `Item` separator rows, `ToggleGroup` status, filter `Sheet`. |
 | `/stock/on-hand/[ingredientId]` | DETAIL | `loadStockIngredientDetailData` with `includeValuation: false`. Supplier receiving links to `/stock/grn/new`, never `/stock/receive`. |
 | `/stock/grn` | LIST | `loadGrnListPageData`; own drafts first, then queue. Row shows code, supplier, date, status only. |
-| `/stock/grn/new` | LIST | `loadGrnSourcePageData`; supplier search and permitted supplier creation. No PO door. |
-| `/stock/grn/new/[supplierId]` | DOC-WORKFLOW | `loadGrnCreatePageData` + `useGrnCreateController` + `GrnLineEditSheet`. Supplier/warehouse context precedes lines. Tablet landscape widens the panel grid only. |
+| `/stock/grn/new`, `/stock/grn/new/[supplierId]` | REDIRECT-SHIM | Compatibility redirects: store → Yêu cầu hàng; Kho Tổng/Bếp TT → Yêu cầu mua. No live create UI. |
 | `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on `/inventory/grn/[id]`. |
 | `/stock/stocktake` | LIST | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips. |
 | `/stock/stocktake/new` | DOC-WORKFLOW | Mode + location only, then open the session and enter count. |
@@ -241,9 +256,9 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/shift/leave-approvals` | LIST | Status tabs plus full-row items; approve/reject in a bottom `Sheet`. |
 
 control_surface counterparts keep their own management presenters
-(`StockClient`, `GrnListClient`, `GrnCreateClient`, `ReportsPageContent`,
-`LeaveRequestsTable`, …) and no longer carry an `embedded` mode or `/br/`
-route branching.
+(`StockClient`, `GrnListClient`, `ReportsPageContent`, `LeaveRequestsTable`,
+…) and no longer carry an `embedded` mode or `/br/` route branching. Owner GRN
+create clients are retired — list-first GRN from PO only.
 
 `EMBED-WRAPPER` is a transition archetype only. Once a route has native Branch
 presentation, update `scripts/page-archetypes.mjs` so the guard prevents a

@@ -4,11 +4,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  AppListFrame,
-  AppPage,
-  AppPageHeader,
-} from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   getStaffPermissionLabelVi,
@@ -224,26 +220,23 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         }
       />
 
-      <AppListFrame
-        title={
+      <PermissionAuditClient
+        rows={auditDisplayRows}
+        filterValue={{
+          action: params.action ?? null,
+          target: params.target ?? null,
+          since: params.since ?? null,
+          q,
+        }}
+        targetOptions={targetOptions}
+        branchScope={branchScope}
+        hasServerFilters={hasServerFilters}
+        listTitle={
           auditDisplayRows.length > 0
             ? copy.recentItems(auditDisplayRows.length)
             : undefined
         }
-      >
-        <PermissionAuditClient
-          rows={auditDisplayRows}
-          filterValue={{
-            action: params.action ?? null,
-            target: params.target ?? null,
-            since: params.since ?? null,
-            q,
-          }}
-          targetOptions={targetOptions}
-          branchScope={branchScope}
-          hasServerFilters={hasServerFilters}
-        />
-      </AppListFrame>
+      />
     </AppPage>
   );
 }

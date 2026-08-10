@@ -142,7 +142,7 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   those routes share loaders/models/actions and own a touch-native composition.
 - Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
   `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
-  `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`,
+  `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
   `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
   (`ClockPageContent` from `apps/web/lib/staff-runtime/clock/page.tsx`).
 
@@ -167,6 +167,46 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   never repeats the actual `backBehavior` / `breadcrumbRoot` values, because
   those are per-family facts owned by that file, and a page can drift from a
   restated copy here.
+
+## 1.1 Control Surface Canonical Compose
+
+`control_surface` routes under `apps/web/app/(protected)/**` (excluding
+`br/**`) must compose through **exactly one** of five shapes. Archetype ids in
+§ 2 still classify the page; this section binds adapters + runtime laws so
+LIST/DETAIL/DOC/REPORT/DASHBOARD pages do not invent per-route chrome, data
+lifetime, or row-open patterns.
+
+| Compose shape | Folded archetypes | Required adapters |
+| --- | --- | --- |
+| **LIST** | LIST (management) | `AppPage width="xwide" density="compact"` → `AppPageHeader` (primary create **only** in `actions`) → `AppListFrame` + `AppToolbar variant="inline"` → `DataTable` + `mobileCardRender` |
+| **DETAIL** | DETAIL | `AppPage` → `AppPageHeader` (code + `StatusBadge` + back) → `DescriptionList` + lines `DataTable` → history → stage actions in `AppDetailFooter` |
+| **DOC** | DOC-WORKFLOW | Authoring: `DocumentFormFrame`. List-first D1 docs: LIST host + addressable `AppDialog variant="document"` |
+| **DASHBOARD_REPORT** | DASHBOARD, REPORT, LANDING hub | Non-sticky period `AppToolbar` / `FilterBar` → optional `KpiRow` → charts / breakdown. Hubs (`/`, printers root): `AppSection` + link cards, **no** KPI mosaic. Never wrap a cockpit in `AppListFrame` |
+| **REDIRECT** | REDIRECT-SHIM | Redirect primitive only (≤ ~25 lines) |
+
+Folds: SETTINGS-PANEL list body → LIST inside `SettingsPageFrame`; SETTINGS
+single form → thin DETAIL; `/me/*` EMBED-WRAPPER stays staff plane content in
+the shared shell (not management LIST).
+
+**Runtime laws (LIST)**
+
+- Data: RSC loads the list; page-level filters bind URL `searchParams`; after
+  mutation prefer URL change or `revalidatePath` — not a silent client refetch
+  loop that reimplements SWR.
+- Row open is **exactly one** Record Depth path: D2 `router.push("{base}/{id}")`
+  · D1 `?{entity}Id=` + Sheet/`AppDialog` · D1 document `AppDialog
+  variant="document"` · D1 task `FormDialog` (no URL).
+- Forbidden: sticky `AppToolbar` above a `KpiRow` / KPI mosaic; create CTA only
+  on `AppSection.action`; twin `md:hidden` / `sm:hidden` list trees; inventing a
+  second filter chrome outside the frame toolbar.
+
+Census: every control_surface `page.tsx` declares `composeShape` in
+`scripts/page-archetypes.mjs` (`CONTROL_SURFACE_COMPOSE`). CI enforces LIST
+frame presence and the sticky-above-KPI ban (§ 4 allowlist remains for named
+exceptions).
+
+Gold LIST exemplar: `apps/web/app/(protected)/inventory/grn/page.tsx` +
+`grn-list-client.tsx`.
 
 ## 2. Archetype Taxonomy
 
@@ -335,7 +375,11 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### DOC-WORKFLOW
 
-**Exemplar:** `apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx`.
+**Exemplar:** `apps/web/app/(protected)/inventory/transfers/new/page.tsx`.
+
+Owner GRN create routes (`/inventory/grn/new`, `/inventory/grn/new/[supplierId]`)
+are **REDIRECT-SHIM** only (list-first GRN from PO). Do not use them as DOC
+exemplars.
 
 - Skeleton: `DocumentFormFrame`
   (`apps/web/app/components/surface/document-form-frame.tsx`) —
@@ -496,9 +540,9 @@ allowlist, not a precedent for stretching another archetype's definition:
 2. `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` — branch
    portal home; the same LANDING/DASHBOARD hybrid inside Branch runtime chrome.
    Classified **LANDING**.
-3. `apps/web/app/(protected)/inventory/page.tsx` — `REDIRECT-SHIM` to
-   `/inventory/stock` (or `/inventory/grn` for accountant). Not a rendered
-   archetype.
+3. `apps/web/app/(protected)/inventory/page.tsx` — inventory capability hub
+   (`LANDING` / compose `DASHBOARD_REPORT` hub variant): link groups into stock
+   modules. Not a management LIST.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
    master-detail pair with responsive composition. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —

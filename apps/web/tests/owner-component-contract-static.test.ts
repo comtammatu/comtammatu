@@ -36,7 +36,7 @@ const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/page.tsx";
 const STAFF_AUDIT_TABLE =
   "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx";
 const HR_DATA_TABLE_FILES = [
-  "apps/web/app/(protected)/hr/attendance-table.tsx",
+  "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
   "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   "apps/web/app/(protected)/hr/employee-table.tsx",
   "apps/web/app/(protected)/hr/shifts-table.tsx",
@@ -811,7 +811,7 @@ test("HR list surfaces use DataTable and shared status badge domains", () => {
   }
 
   for (const file of [
-    "apps/web/app/(protected)/hr/attendance-table.tsx",
+    "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   ]) {
     const source = read(file);

@@ -10,7 +10,7 @@ import {
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppListFrame } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import type { TenantAuditLogRow } from "@/_lib/audit";
@@ -107,28 +107,32 @@ export function SystemActivityClient({
   ]);
 
   return (
-    <>
-      <SystemActivityFilters
-        value={filterValue}
-        actorOptions={actorOptions}
-        entityOptions={entityOptions}
-        trailing={
-          <AuditExportButton
-            filename={copy.exportFilename}
-            label={copy.exportCsv}
-            signatureLines={signatureLines}
-            header={[
-              copy.time,
-              copy.action,
-              copy.entity,
-              copy.actor,
-              copy.scope,
-            ]}
-            rows={exportRows}
-          />
-        }
-      />
-
+    <AppListFrame
+      title={copy.recentItems(rows.length)}
+      description={pages.systemActivityDescription}
+      toolbar={
+        <SystemActivityFilters
+          value={filterValue}
+          actorOptions={actorOptions}
+          entityOptions={entityOptions}
+          trailing={
+            <AuditExportButton
+              filename={copy.exportFilename}
+              label={copy.exportCsv}
+              signatureLines={signatureLines}
+              header={[
+                copy.time,
+                copy.action,
+                copy.entity,
+                copy.actor,
+                copy.scope,
+              ]}
+              rows={exportRows}
+            />
+          }
+        />
+      }
+    >
       {showEmpty ? (
         <AppEmptyState
           mode={hasFilters ? "no-results" : "no-data"}
@@ -145,6 +149,6 @@ export function SystemActivityClient({
       ) : (
         <SystemActivityTable rows={filteredRows} />
       )}
-    </>
+    </AppListFrame>
   );
 }
