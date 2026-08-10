@@ -64,7 +64,7 @@ import {
   REFUND_PAYOUT_METHODS,
   type RefundPayoutMethod,
 } from "@lib/refund-payout";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 /* ─── Props ─── */
 
 interface RefundsClientProps {

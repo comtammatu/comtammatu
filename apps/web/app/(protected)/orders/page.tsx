@@ -7,7 +7,7 @@ import { OrdersPageBody } from "./orders-page-body";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 
 function firstParam(
   value: string | string[] | undefined,

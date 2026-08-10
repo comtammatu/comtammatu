@@ -1,10 +1,6 @@
-// Page-local copy for the orders route. Canonical owner for new strings is
-// @comtammatu/shared/messages or @lib/messages — do not grow this as a parallel
-// catalog. Co-located leftovers stay for this page's header/tabs; ORDER_VI /
-// ORDERS_VI remain the entity terms.
 import { ORDER_VI, ORDERS_VI } from "@comtammatu/shared/messages";
 
-export const ORDERS_COPY = {
+export const orders = {
   eyebrow: ORDER_VI.short,
   description: `${ORDER_VI.short} và hoàn tiền.`,
   operatorDescription: "Ưu tiên đơn đang xử lý; tra cứu ở tab Gần đây.",

@@ -47,7 +47,7 @@ import {
   computeOrderWaitInfo,
   getOrderAlertBadgeProps,
 } from "./_lib/order-wait-time";
-import { ORDERS_COPY as ORDERS_PAGE_COPY } from "./orders-copy";
+import { orders as ORDERS_PAGE_COPY } from "@lib/messages/orders";
 import {
   DataTable,
   type DataTableColumn,

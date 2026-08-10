@@ -47,7 +47,7 @@ import {
   computeOrderWaitInfo,
   getOrderAlertBadgeProps,
 } from "./_lib/order-wait-time";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 
 /* ─── Helpers ─── */
 

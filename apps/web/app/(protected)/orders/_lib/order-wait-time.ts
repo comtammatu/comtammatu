@@ -1,4 +1,4 @@
-import { ORDERS_COPY } from "../orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 
 export type OrderAlertLevel = "normal" | "warning" | "critical";
 

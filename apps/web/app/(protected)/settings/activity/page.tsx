@@ -103,7 +103,7 @@ export default async function SystemActivityPage({ searchParams }: Props) {
     <SettingsPageFrame
       title={copy.title}
       description={copy.description}
-      width="wide"
+      width="xwide"
       actions={
         <div className="flex flex-wrap gap-2">
           <Button
@@ -137,7 +137,6 @@ export default async function SystemActivityPage({ searchParams }: Props) {
           a.label.localeCompare(b.label, "vi"),
         )}
         entityOptions={entityOptions}
-        pagesHomeLink="/settings"
       />
     </SettingsPageFrame>
   );

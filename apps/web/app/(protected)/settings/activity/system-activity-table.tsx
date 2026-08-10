@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -55,7 +55,19 @@ function sameDocumentHref(row: TenantAuditLogRow): string | null {
   return `/settings/activity?${params.toString()}`;
 }
 
-export function SystemActivityTable({ rows }: { rows: TenantAuditLogRow[] }) {
+export function SystemActivityTable({
+  rows,
+  emptyTitle,
+  emptyDescription,
+  emptyMode,
+  emptyIcon,
+}: {
+  rows: TenantAuditLogRow[];
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyMode?: "no-data" | "no-results";
+  emptyIcon?: ReactNode;
+}) {
   const router = useRouter();
   const copy = messages.settings.activity;
   const { get, patchOverlay, clearOverlay } = useDocumentOverlayUrl(
@@ -145,6 +157,10 @@ export function SystemActivityTable({ rows }: { rows: TenantAuditLogRow[] }) {
       <DataTable
         columns={columns}
         data={rows}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
+        emptyMode={emptyMode}
+        emptyIcon={emptyIcon}
         getRowKey={(row) => String(row.id)}
         onRowClick={(row) => setSelectedId(row.id)}
         getRowAriaLabel={(row) =>
