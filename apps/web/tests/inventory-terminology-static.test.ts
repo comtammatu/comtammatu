@@ -15,6 +15,7 @@ test("inventory messages use the standardized cost and value terms", () => {
   assert.match(source, /wac: "Giá vốn bình quân"/);
   assert.match(source, /movementUnitCost: "Đơn giá ghi sổ"/);
   assert.match(source, /unitCostWac: "Đơn giá ghi sổ"/);
+  assert.match(source, /unitCostWacPerUnit:/);
   assert.match(source, /wacCost: "Đơn giá ghi sổ"/);
   assert.doesNotMatch(source, /Đơn giá \(WAC\)/);
   assert.doesNotMatch(source, /Giá WAC/);

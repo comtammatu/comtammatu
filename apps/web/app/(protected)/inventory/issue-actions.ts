@@ -8,7 +8,10 @@ import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { messages } from "@lib/messages";
 import { resolveEntryUnitCode } from "./_lib/entry-unit-code";
-import { getIssueBaseQuantity } from "./_lib/issue-units";
+import {
+  computeIssueLineTotal,
+  getIssueBaseQuantity,
+} from "./_lib/issue-units";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import type { TenantSupabase } from "@lib/inventory/types";
 import { allocateInventoryDocNumber } from "./_lib/inventory-doc-number";
@@ -238,16 +241,18 @@ export async function fetchStockIssueDetail(
   if (claims.branch_id) {
     issueQuery = issueQuery.eq("branch_id", claims.branch_id);
   }
+  const ingredientUnitsSelect =
+    "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code, name))";
   const linesQuery = monetary.valuation
     ? lineReadClient
         .from("stock_issue_items")
         .select(
-          "id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+          `id, ingredient_id, quantity, entry_unit_id, unit_cost, total_cost, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ${ingredientUnitsSelect} )`,
         )
     : lineReadClient
         .from("stock_issue_items")
         .select(
-          "id, ingredient_id, quantity, entry_unit_id, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+          `id, ingredient_id, quantity, entry_unit_id, reason, photo_urls, unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name), ingredients ( id, name, ${ingredientUnitsSelect} )`,
         );
 
   const [issueRes, linesRes] = await Promise.all([
@@ -277,23 +282,59 @@ export async function fetchStockIssueDetail(
     const ingredient = line.ingredients as {
       id: number;
       name: string;
+      ingredient_units?: Array<{
+        unit_id: number;
+        to_base_factor: number | string;
+        is_base: boolean;
+        units?: unknown;
+      }> | null;
     } | null;
+    const entryUnitId =
+      line.entry_unit_id == null ? null : Number(line.entry_unit_id);
+    const ingredientUnits = Array.isArray(ingredient?.ingredient_units)
+      ? ingredient.ingredient_units
+      : [];
+    const entryUnitRow =
+      entryUnitId == null
+        ? null
+        : (ingredientUnits.find((row) => Number(row.unit_id) === entryUnitId) ??
+          null);
+    const baseUnitRow =
+      ingredientUnits.find((row) => row.is_base === true) ?? null;
+    const toBaseFactor = Number(entryUnitRow?.to_base_factor ?? 1);
     const unit =
       getEmbeddedUnitDisplayName(line.unit_obj) ??
       getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ??
       "";
+    const baseUnit =
+      getEmbeddedUnitDisplayName(baseUnitRow?.units) ??
+      getEmbeddedIngredientBaseUnitDisplayName(line.ingredients) ??
+      unit;
+    const entryQuantity = Number(line.quantity ?? 0);
+    const unitCost =
+      monetary.valuation && "unit_cost" in line
+        ? Number(line.unit_cost ?? 0)
+        : 0;
+    const { total: correctedTotalCost } = computeIssueLineTotal({
+      entryQuantity,
+      baseUnitCost: unitCost,
+      toBaseFactor: Number.isFinite(toBaseFactor) ? toBaseFactor : 1,
+    });
     return {
       ...line,
-      monetary:
-        monetary.valuation && "unit_cost" in line && "total_cost" in line
-          ? {
-              unitCost: Number(line.unit_cost ?? 0),
-              totalCost: Number(line.total_cost ?? 0),
-            }
-          : null,
+      monetary: monetary.valuation
+        ? {
+            unitCost,
+            totalCost: correctedTotalCost,
+          }
+        : null,
       unit_cost: undefined,
       total_cost: undefined,
       unit,
+      baseUnit,
+      toBaseFactor: Number.isFinite(toBaseFactor) && toBaseFactor > 0
+        ? toBaseFactor
+        : 1,
       ingredients: ingredient
         ? {
             id: ingredient.id,

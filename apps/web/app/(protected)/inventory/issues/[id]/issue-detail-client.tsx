@@ -116,6 +116,8 @@ type IssueLine = {
   ingredient_id: number;
   quantity: number;
   unit: string;
+  baseUnit: string;
+  toBaseFactor: number;
   entry_unit_id: number | null;
   monetary: { unitCost: number; totalCost: number } | null;
   reason: string | null;
@@ -353,7 +355,32 @@ export function IssueDetailClient({
       key: "qty",
       header: FORM_VI.quantity,
       className: "text-right",
-      render: (line) => formatQty(Number(line.quantity ?? 0)),
+      render: (line) => {
+        const entryQty = Number(line.quantity ?? 0);
+        const baseQty = getIssueBaseQuantity(entryQty, {
+          toBaseFactor: line.toBaseFactor,
+        });
+        const showBaseHint =
+          Boolean(line.baseUnit) &&
+          Boolean(line.unit) &&
+          line.baseUnit !== line.unit &&
+          line.toBaseFactor !== 1;
+        return (
+          <div className="flex flex-col items-end gap-0.5">
+            <span>{formatQty(entryQty)}</span>
+            {showBaseHint ? (
+              <span className="text-xs text-muted-foreground">
+                {ISSUES_VI.entryBaseQtyHint(
+                  formatQty(entryQty),
+                  line.unit,
+                  formatQty(baseQty),
+                  line.baseUnit,
+                )}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "unit",
@@ -370,8 +397,13 @@ export function IssueDetailClient({
             key: "unitCost",
             header: ISSUES_VI.unitCostWac,
             className: "text-right font-medium",
-            render: (line: IssueLine) =>
-              formatVND(Number(line.monetary?.unitCost ?? 0)),
+            render: (line: IssueLine) => {
+              const cost = Number(line.monetary?.unitCost ?? 0);
+              const baseLabel = line.baseUnit || line.unit;
+              return baseLabel
+                ? `${formatVND(cost)}/${baseLabel}`
+                : formatVND(cost);
+            },
           },
           {
             key: "total",
@@ -931,13 +963,33 @@ function AddIssueLineDialog({
                 </Field>
               )}
             </div>
+            {selectedIngredient &&
+            selectedIssueUnit &&
+            !selectedIssueUnit.isBase &&
+            quantity > 0 &&
+            baseQuantity > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {ISSUES_VI.entryBaseQtyHint(
+                  formatQty(quantity),
+                  selectedIssueUnit.label,
+                  formatQty(baseQuantity),
+                  getWarehouseUnit(selectedIngredient),
+                )}
+              </p>
+            ) : null}
 
             <Frame className="border-border/60 bg-muted/30 p-3">
               <div className="grid gap-2 text-sm sm:grid-cols-3">
                 {canViewMonetary ? (
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      {ISSUES_VI.unitCostWac}
+                      {selectedIngredient
+                        ? ISSUES_VI.unitCostWacPerUnit(
+                            getWarehouseUnit(selectedIngredient) ||
+                              selectedIssueUnit?.label ||
+                              "",
+                          )
+                        : ISSUES_VI.unitCostWac}
                     </p>
                     <p className="font-mono font-semibold tabular-nums">
                       {wac > 0 ? formatVND(wac) : inventoryCommon.noValue}
@@ -949,10 +1001,25 @@ function AddIssueLineDialog({
                     {stockCopy.table.availableStock}
                   </p>
                   <p className="font-mono font-semibold tabular-nums">
-                    {selectedIngredient
-                      ? `${formatQty(availableQuantity)} ${getWarehouseUnit(selectedIngredient)}`
-                      : inventoryCommon.noValue}
+                    {selectedIngredient && selectedIssueUnit
+                      ? `${formatQty(maxEntryQuantity)} ${selectedIssueUnit.label}`
+                      : selectedIngredient
+                        ? `${formatQty(availableQuantity)} ${getWarehouseUnit(selectedIngredient)}`
+                        : inventoryCommon.noValue}
                   </p>
+                  {selectedIngredient &&
+                  selectedIssueUnit &&
+                  !selectedIssueUnit.isBase &&
+                  selectedIssueUnit.toBaseFactor !== 1 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {ISSUES_VI.entryBaseQtyHint(
+                        formatQty(maxEntryQuantity),
+                        selectedIssueUnit.label,
+                        formatQty(availableQuantity),
+                        getWarehouseUnit(selectedIngredient),
+                      )}
+                    </p>
+                  ) : null}
                 </div>
                 {canViewMonetary ? (
                   <div>
@@ -1060,8 +1127,25 @@ function IssueLineMobileCard({
           <div>
             <p className="text-muted-foreground">{FORM_VI.quantity}</p>
             <p className="font-semibold">
-              {formatQty(Number(item.quantity ?? 0))}
+              {formatQty(Number(item.quantity ?? 0))} {item.unit}
             </p>
+            {item.baseUnit &&
+            item.unit &&
+            item.baseUnit !== item.unit &&
+            item.toBaseFactor !== 1 ? (
+              <p className="text-xs text-muted-foreground">
+                {ISSUES_VI.entryBaseQtyHint(
+                  formatQty(Number(item.quantity ?? 0)),
+                  item.unit,
+                  formatQty(
+                    getIssueBaseQuantity(Number(item.quantity ?? 0), {
+                      toBaseFactor: item.toBaseFactor,
+                    }),
+                  ),
+                  item.baseUnit,
+                )}
+              </p>
+            ) : null}
           </div>
           <div>
             <p className="text-muted-foreground">{FORM_VI.unit}</p>
@@ -1070,7 +1154,11 @@ function IssueLineMobileCard({
             </p>
           </div>
           {canViewMonetary ? <div>
-            <p className="text-muted-foreground">{ISSUES_VI.unitCostWac}</p>
+            <p className="text-muted-foreground">
+              {item.baseUnit
+                ? ISSUES_VI.unitCostWacPerUnit(item.baseUnit)
+                : ISSUES_VI.unitCostWac}
+            </p>
             <p className="font-semibold">
               {formatVND(Number(item.monetary?.unitCost ?? 0))}
             </p>

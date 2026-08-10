@@ -1343,6 +1343,13 @@ export const inventory = {
     cancelFailed: "Không thể hủy phiếu xuất.",
     cancelOk: "Đã hủy phiếu xuất.",
     unitCostWac: "Đơn giá ghi sổ",
+    unitCostWacPerUnit: (unit: string) => `Đơn giá ghi sổ / ${unit}`,
+    entryBaseQtyHint: (
+      entryQty: string,
+      entryUnit: string,
+      baseQty: string,
+      baseUnit: string,
+    ) => `${entryQty} ${entryUnit} = ${baseQty} ${baseUnit}`,
     headerMeta: (label: string, branch: string, date: string) =>
       `${label} tại ${branch} • ${date}`,
     branchRef: (id: number) => `Chi nhánh #${id}`,

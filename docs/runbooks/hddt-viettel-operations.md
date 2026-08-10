@@ -27,8 +27,9 @@ SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 quyết định môi trường thực tế. Không commit secret.
 
 MST người bán, mẫu số và ký hiệu nằm trong `invoice_profiles`, được snapshot
-vào hóa đơn trước khi gọi Viettel. Profile đăng ký hiện tại là `1/001` /
-`C26TCS`; chỉ kích hoạt sau khi hồ sơ pháp nhân Tenant đầy đủ và MST khớp.
+vào hóa đơn trước khi gọi Viettel. Profile đăng ký hiện tại là `1/002`
+(Hóa đơn GTGT từ MTT) / `C26MCS`; chỉ kích hoạt sau khi hồ sơ pháp nhân
+Tenant đầy đủ và MST khớp.
 
 ## Smoke Hóa Đơn Theo Đơn
 

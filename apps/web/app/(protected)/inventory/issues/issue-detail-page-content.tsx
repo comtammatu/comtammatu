@@ -52,6 +52,8 @@ export async function IssueDetailPageContent({
       ingredient_id: number;
       quantity: number;
       unit: string;
+      baseUnit: string;
+      toBaseFactor: number;
       entry_unit_id: number | null;
       monetary: { unitCost: number; totalCost: number } | null;
       reason: string | null;

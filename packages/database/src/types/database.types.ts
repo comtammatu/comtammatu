@@ -8341,7 +8341,7 @@ export type Database = {
           reason_code: string | null
           rolling_15min_sum: number | null
           tenant_id: number
-          total_cost: number | null
+          total_cost: number
           unit_cost: number
           waste_tier: number | null
         }
@@ -8361,7 +8361,7 @@ export type Database = {
           reason_code?: string | null
           rolling_15min_sum?: number | null
           tenant_id: number
-          total_cost?: number | null
+          total_cost?: number
           unit_cost?: number
           waste_tier?: number | null
         }
@@ -8381,7 +8381,7 @@ export type Database = {
           reason_code?: string | null
           rolling_15min_sum?: number | null
           tenant_id?: number
-          total_cost?: number | null
+          total_cost?: number
           unit_cost?: number
           waste_tier?: number | null
         }
