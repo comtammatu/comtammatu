@@ -80,12 +80,12 @@ test("Wave 4 Finance LIST bodies use AppListFrame + inline toolbar", () => {
   assert.match(invoices, /variant="inline"/);
 });
 
-test("Wave 4 keeps Finance dashboard/targets Gate width exceptions", () => {
+test("Wave 4 keeps Finance dashboard Gate width exception", () => {
   const dashboard = readWeb("app/(protected)/finance/page.tsx");
   assert.match(dashboard, /<AppPage width="wide" density="compact"/);
 
   const targets = readWeb("app/(protected)/finance/targets/page.tsx");
-  assert.match(targets, /<AppPage width="wide" density="compact"/);
+  assert.match(targets, /<AppPage width="xwide" density="compact"/);
   assert.match(
     readWeb("app/(protected)/finance/targets/targets-client.tsx"),
     /<AppListFrame[\s\S]{0,80}toolbar=\{/,

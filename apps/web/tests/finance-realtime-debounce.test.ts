@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { computeRefreshWaitMs } from "../app/(protected)/finance/use-finance-realtime-refresh";
+import {
+  computeRefreshWaitMs,
+  resolveFinanceRealtimeEvents,
+} from "../app/(protected)/finance/use-finance-realtime-refresh";
 
 const DEBOUNCE_MS = 2500;
 const MIN_INTERVAL_MS = 15000;
@@ -73,4 +76,40 @@ test("finance realtime refresh listens for SePay bank webhooks", () => {
 
   assert.match(source, /table: "webhook_events"/);
   assert.match(source, /filter: "provider=eq\.sepay"/);
+});
+
+test("finance hub refreshes on payment and sepay events only", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance"), [
+    "payment",
+    "sepay",
+  ]);
+});
+
+test("bank transactions refresh on sepay and payment match scope", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance/bank-transactions"), [
+    "sepay",
+    "payment",
+  ]);
+});
+
+test("expenses list skips sepay-only refresh scope", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance/expenses"), [
+    "payment",
+  ]);
+});
+
+test("food-cost report skips finance realtime refresh", () => {
+  assert.deepEqual(resolveFinanceRealtimeEvents("/finance/food-cost"), []);
+});
+
+test("finance realtime skips refresh while tab is hidden", () => {
+  const source = readFileSync(
+    new URL(
+      "../app/(protected)/finance/use-finance-realtime-refresh.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(source, /document\.visibilityState === "hidden"/);
 });

@@ -122,9 +122,6 @@ test("warehouse cannot submit demand lines without an active supplier", () => {
 
 test("warehouse can edit an unallocated pending demand without reopening draft", () => {
   const client = readDemandModule();
-  const actions = read(
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
-  );
   const migration = read(
     "supabase/migration-archive/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );

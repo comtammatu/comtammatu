@@ -47,6 +47,7 @@ const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
 const BUSINESS_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_EXPENSE_MINOR_UNITS = 999_999_999_999_999n;
+const EXPENSE_LIST_PAGE_SIZE = 100;
 const fetchExpensesSchema = z
   .object({
     location: z.enum(FINANCE_LOCATIONS),
@@ -456,75 +457,67 @@ export async function fetchExpenses(params: {
   if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
 
   const { supabase, claims } = ctx;
-  const pageSize = 500;
+
+  let query = supabase
+    .from("expenses")
+    .select(
+      "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+    .gte("expense_date", parsed.data.startDate)
+    .lte("expense_date", parsed.data.endDate)
+    .order("expense_date", { ascending: false })
+    .order("id", { ascending: false })
+    .range(0, EXPENSE_LIST_PAGE_SIZE - 1);
+
+  if (parsed.data.location === "company") {
+    query = query.is("branch_id", null);
+  } else if (parsed.data.location === "branches") {
+    const salesBranchIds = await fetchSalesBranchIds(
+      supabase as never,
+      claims.tenant_id,
+    );
+    query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
+  } else if (
+    parsed.data.location === "branch" &&
+    parsed.data.branchId != null
+  ) {
+    query = query.eq("branch_id", parsed.data.branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return { success: false, error: "Không tải được danh sách chi phí." };
+  }
+
   const rows: Array<
     Omit<ExpenseRow, "matchedEventIds" | "matchedBankTransactionIds">
-  > = [];
-
-  for (let offset = 0; ; offset += pageSize) {
-    let query = supabase
-      .from("expenses")
-      .select(
-        "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
-      .gte("expense_date", parsed.data.startDate)
-      .lte("expense_date", parsed.data.endDate)
-      .order("expense_date", { ascending: false })
-      .order("id", { ascending: false })
-      .range(offset, offset + pageSize - 1);
-
-    if (parsed.data.location === "company") {
-      query = query.is("branch_id", null);
-    } else if (parsed.data.location === "branches") {
-      const salesBranchIds = await fetchSalesBranchIds(
-        supabase as never,
-        claims.tenant_id,
-      );
-      query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
-    } else if (
-      parsed.data.location === "branch" &&
-      parsed.data.branchId != null
-    ) {
-      query = query.eq("branch_id", parsed.data.branchId);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      return { success: false, error: "Không tải được danh sách chi phí." };
-    }
-
-    rows.push(
-      ...(data ?? []).map((row) => {
-        const amount = Number(row.amount);
-        const subtotal = Number(row.subtotal ?? amount);
-        const vatAmount = Number(row.vat_amount ?? 0);
-        return {
-          id: row.id,
-          branch_id: row.branch_id,
-          expense_date: row.expense_date,
-          category: row.category,
-          amount,
-          subtotal,
-          vat_amount: vatAmount,
-          vat_breakdown: mapExpenseVatBreakdown(row.vat_breakdown, {
-            subtotal,
-            vatAmount,
-          }),
-          payment_method: row.payment_method,
-          paid_at: row.paid_at,
-          transfer_content: row.transfer_content,
-          vendor_name: row.vendor_name,
-          note: row.note,
-          invoice_attachment_url: row.invoice_attachment_url ?? null,
-          created_at: row.created_at,
-        };
+  > = (data ?? []).map((row) => {
+    const amount = Number(row.amount);
+    const subtotal = Number(row.subtotal ?? amount);
+    const vatAmount = Number(row.vat_amount ?? 0);
+    return {
+      id: row.id,
+      branch_id: row.branch_id,
+      expense_date: row.expense_date,
+      category: row.category,
+      amount,
+      subtotal,
+      vat_amount: vatAmount,
+      vat_breakdown: mapExpenseVatBreakdown(row.vat_breakdown, {
+        subtotal,
+        vatAmount,
       }),
-    );
-
-    if ((data?.length ?? 0) < pageSize) break;
-  }
+      payment_method: row.payment_method,
+      paid_at: row.paid_at,
+      transfer_content: row.transfer_content,
+      vendor_name: row.vendor_name,
+      note: row.note,
+      invoice_attachment_url: row.invoice_attachment_url ?? null,
+      created_at: row.created_at,
+    };
+  });
   const expenseIds = rows.map((row) => row.id);
   const [matchedByExpense, matchedByBankTransaction] = await Promise.all([
     fetchExpenseMatchMap(supabase, claims.tenant_id, expenseIds),

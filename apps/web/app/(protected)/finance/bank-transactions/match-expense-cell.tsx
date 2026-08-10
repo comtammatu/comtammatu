@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight as IconChevronRight } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Alert,
+  AlertDescription,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -133,11 +137,16 @@ export function MatchExpenseCell({
   const [selectedRefundsById, setSelectedRefundsById] = React.useState<
     Record<number, SepayRefundMatchOption>
   >({});
+  const [matchError, setMatchError] = React.useState<string | null>(null);
   const matchKey = bankTransactionId ?? eventId;
 
   React.useEffect(() => {
     setSelectedIds(expenseIds);
   }, [expenseIds]);
+
+  React.useEffect(() => {
+    if (open) setMatchError(null);
+  }, [open]);
 
   // When the match sheet opens on a clean slate (no saved or user-picked match),
   // pre-select a single exact-amount expense candidate so the common case — one
@@ -440,12 +449,14 @@ export function MatchExpenseCell({
       });
 
       if (!res.success) {
-        toast.error(res.error || copy.matchError);
-      } else {
-        toast.success(copy.matchSuccess);
-        setOpen(false);
-        router.refresh();
+        setMatchError(res.error || copy.matchError);
+        return;
       }
+
+      setMatchError(null);
+      toast.success(copy.matchSuccess);
+      setOpen(false);
+      router.refresh();
     });
   };
 
@@ -482,6 +493,11 @@ export function MatchExpenseCell({
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+            {matchError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{matchError}</AlertDescription>
+              </Alert>
+            ) : null}
             <NoteCallout label={copy.bankEvidenceTitle}>
               <div className="grid gap-1.5">
                 <div className="flex items-center justify-between gap-3">

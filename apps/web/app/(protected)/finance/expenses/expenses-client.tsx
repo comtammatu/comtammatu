@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Banknote as IconBanknote,
@@ -12,14 +13,19 @@ import {
   Trash2 as IconTrash,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import {
-  formatCount,
-  formatAccountingVND,
-  formatCompactVND,
-} from "@comtammatu/shared/format";
+import { formatAccountingVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { EXPENSE_PAYMENT_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@comtammatu/ui/components/sheet";
+import { cn } from "@comtammatu/ui/lib/utils";
 import {
   Item,
   ItemActions,
@@ -39,9 +45,9 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppListFrame, AppPageHeader, KpiRow } from "@/components/surface";
+import { AppListFrame, AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 import {
   DataTable,
   type DataTableColumn,
@@ -86,6 +92,8 @@ import {
 import { ExpenseViewDialog } from "./expense-view-dialog";
 
 const EXPENSE_OVERLAY_KEYS = ["expenseId", "mode"] as const;
+const commonCopy = messages.finance.common;
+const linkCopy = messages.finance.links;
 
 interface Branch {
   id: number;
@@ -507,20 +515,6 @@ export function ExpensesClient({
       render: (row) => methodLabel(row),
     },
     {
-      key: "subtotal",
-      header: moneyLabels.subtotalExVat,
-      className: "text-right",
-      render: (row) => (
-        <FinanceAmountCell amount={row.subtotal} basis="exVat" />
-      ),
-    },
-    {
-      key: "vat",
-      header: copy.table.vat,
-      className: "text-right",
-      render: (row) => <FinanceAmountCell amount={row.vat_amount} />,
-    },
-    {
       key: "amount",
       header: moneyLabels.totalInclVat,
       className: "text-right",
@@ -570,56 +564,78 @@ export function ExpensesClient({
       : []),
   ];
 
+  const listSummaryMeta = (
+    <span className="text-xs text-muted-foreground">
+      {copy.totalLabel}: {formatAccountingVND(summary.operatingTotal)}
+      {" · "}
+      {copy.needsActionLabel}: {formatAccountingVND(summary.needsActionTotal)}
+    </span>
+  );
+
+  const needsActionFilterButton = (
+    <Button
+      type="button"
+      size={isTouchLayout ? "touch" : "default"}
+      variant={showOnlyNeedsAction ? "default" : "outline"}
+      onClick={toggleNeedsActionFilter}
+      aria-pressed={showOnlyNeedsAction}
+    >
+      <IconAlertTriangle data-icon="inline-start" />
+      {copy.needsActionFilter}
+    </Button>
+  );
+
   return (
     <>
       <AppPageHeader
         title={copy.page.title}
-        description={copy.page.description}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size={isTouchLayout ? "touch" : "default"}
-              variant={showOnlyNeedsAction ? "default" : "outline"}
-              onClick={toggleNeedsActionFilter}
-              aria-pressed={showOnlyNeedsAction}
-            >
-              <IconAlertTriangle data-icon="inline-start" />
-              {copy.needsActionFilter}
-            </Button>
-            {canManageExpenses ? (
-              <Button
-                size={isTouchLayout ? "touch" : "default"}
-                onClick={openCreateExpense}
-              >
-                <IconPlus data-icon="inline-start" />
-                {copy.add}
-              </Button>
+        description={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>{copy.page.description}</span>
+            {copy.page.detailExplanation ? (
+              <Sheet>
+                <SheetTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs font-medium"
+                    >
+                      {commonCopy.detailLink}
+                    </Button>
+                  }
+                />
+                <SheetContent side="right" className="sm:max-w-md">
+                  <SheetHeader>
+                    <SheetTitle>{copy.page.title}</SheetTitle>
+                    <SheetDescription>
+                      {copy.page.detailExplanation}
+                    </SheetDescription>
+                  </SheetHeader>
+                </SheetContent>
+              </Sheet>
             ) : null}
-          </div>
+            <Link
+              href="/finance/supplier-invoices"
+              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {linkCopy.supplierInvoices.label} →
+            </Link>
+          </span>
+        }
+        actions={
+          canManageExpenses ? (
+            <Button
+              size={isTouchLayout ? "touch" : "default"}
+              onClick={openCreateExpense}
+            >
+              <IconPlus data-icon="inline-start" />
+              {copy.add}
+            </Button>
+          ) : undefined
         }
       />
-
-      <KpiRow density="compact">
-        <KpiCard
-          label={copy.totalLabel}
-          value={formatAccountingVND(summary.operatingTotal)}
-          shortValue={formatCompactVND(summary.operatingTotal)}
-          valueLabel={`${copy.totalLabel}: ${formatAccountingVND(summary.operatingTotal)}`}
-          hint={copy.totalHint(formatCount(summary.operatingCount))}
-          tone="primary"
-          density="compact"
-        />
-        <KpiCard
-          label={copy.needsActionLabel}
-          value={formatAccountingVND(summary.needsActionTotal)}
-          shortValue={formatCompactVND(summary.needsActionTotal)}
-          valueLabel={`${copy.needsActionLabel}: ${formatAccountingVND(summary.needsActionTotal)}`}
-          hint={copy.needsActionHint(formatCount(summary.needsActionCount))}
-          tone={summary.needsActionCount > 0 ? "warning" : "neutral"}
-          density="compact"
-        />
-      </KpiRow>
 
       <AppListFrame
         title={copy.listTitle}
@@ -631,6 +647,12 @@ export function ExpensesClient({
             branches={branches}
             basePath="/finance/expenses"
             hide={["branch", "compare", "granularity"]}
+            trailing={
+              <>
+                {listSummaryMeta}
+                {needsActionFilterButton}
+              </>
+            }
           />
         }
       >
@@ -645,6 +667,9 @@ export function ExpensesClient({
           }
           getRowDataState={(row) =>
             row.id === expenseId ? "selected" : undefined
+          }
+          rowClassName={(row) =>
+            expenseNeedsAction(row) ? "border-l-2 border-l-warning" : undefined
           }
           renderRowContextMenu={(row) => {
             if (!canManageExpenses) return null;
@@ -671,7 +696,10 @@ export function ExpensesClient({
                 role="button"
                 tabIndex={0}
                 aria-label={copy.form.openAria(categoryLabel(row.category))}
-                className="cursor-pointer"
+                className={cn(
+                  "cursor-pointer",
+                  expenseNeedsAction(row) && "border-l-2 border-l-warning",
+                )}
                 onClick={() => openExpenseDocument(row)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {

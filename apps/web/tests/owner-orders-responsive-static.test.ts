@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const ORDERS_CLIENT = "apps/web/app/(protected)/orders/orders-client.tsx";
 const REFUNDS_CLIENT = "apps/web/app/(protected)/orders/refunds-client.tsx";
-const ORDER_SURFACES = [ORDERS_CLIENT, REFUNDS_CLIENT];
+const _ORDER_SURFACES = [ORDERS_CLIENT, REFUNDS_CLIENT];
 
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const CURRENT_FUNDS =

@@ -78,6 +78,19 @@ export const finance = {
     open: "Mở",
     backToFinance: "Quay lại Tài chính",
     reportError: "Lỗi tạo báo cáo.",
+    /** Shared LIST status / filter labels — use everywhere on finance lists. */
+    status: {
+      needsAction: "Cần xử lý",
+      unmatched: "Chưa khớp",
+      matched: "Đã khớp",
+      unpaid: "Chưa trả",
+      paid: "Đã trả",
+      partial: "Trả một phần",
+    },
+    detailLink: "Chi tiết",
+    retry: "Thử lại",
+    errorWhereWhatNext: (where: string, what: string, next: string) =>
+      `${where}: ${what}. ${next}`,
   },
   /** Layer A VAT-core labels — use across expenses, HĐ NCC, bank match. */
   moneyLabels: {
@@ -274,8 +287,9 @@ export const finance = {
   revenueTargets: {
     page: {
       title: "Chỉ tiêu tháng",
-      description:
-        "Một chỉ tiêu/tháng theo chi nhánh · Doanh thu thuần (sau giảm giá, chưa GTGT).",
+      description: "Một chỉ tiêu/tháng theo chi nhánh · Doanh thu thuần.",
+      detailExplanation:
+        "Doanh thu thuần sau giảm giá, chưa gồm GTGT. Chỉ tiêu theo từng chi nhánh trong tháng.",
     },
     monthLabel: "Tháng",
     applyMonth: "Áp dụng",
@@ -371,18 +385,21 @@ export const finance = {
     page: {
       eyebrow: "Tài chính",
       title: "Chi phí",
-      description: "Không ghi mua thiết bị/TSCĐ vào đây.",
+      description: "Chi vận hành trong kỳ · không ghi mua TSCĐ.",
+      detailExplanation:
+        "Chỉ ghi chi phí vận hành. Không ghi mua thiết bị/TSCĐ vào đây — dùng luồng tài sản cố định.",
     },
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí",
-    totalLabel: "Tổng chi phí trong kỳ",
-    totalHint: (count: string) => `${count} khoản · chưa thuế GTGT`,
+    totalLabel: "Tổng chi trong kỳ",
+    totalHint: (count: string) => `${count} khoản · đã gồm GTGT`,
     needsActionLabel: "Cần xử lý",
     needsActionHint: (count: string) =>
       `${count} khoản chưa trả hoặc chờ khớp NH`,
     needsActionFilter: "Cần xử lý",
-    loadErrorTitle: "Không thể tải sổ chi phí",
-    loadErrorDescription: "Không tải được số liệu kỳ này. Thử tải lại.",
+    loadErrorTitle: "Không tải được sổ chi phí",
+    loadErrorDescription:
+      "Sổ chi phí: không tải được số liệu kỳ này. Thử tải lại trang.",
     tenantLevel: "Công ty",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
@@ -503,11 +520,14 @@ export const finance = {
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
     title: "GTGT đầu vào & NCC",
-    description: "GTGT theo chứng từ · chưa mặc định được khấu trừ.",
+    description: "Hóa đơn NCC · công nợ · GTGT đầu vào.",
+    detailExplanation:
+      "GTGT theo chứng từ mua vào; chưa mặc định được khấu trừ thuế. Theo dõi công nợ và thanh toán NCC tại đây.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription: "Cần quyền xem đơn mua và NCC.",
-    loadErrorTitle: "Không thể tải hóa đơn NCC",
-    loadErrorDescription: "Không tải được hóa đơn/công nợ. Thử tải lại.",
+    loadErrorTitle: "Không tải được hóa đơn NCC",
+    loadErrorDescription:
+      "Hóa đơn NCC: không tải được chứng từ/công nợ. Thử tải lại trang.",
     notFoundTitle: "Không tìm thấy hóa đơn NCC",
     notFoundDescription: "Hóa đơn không tồn tại hoặc ngoài phạm vi chi nhánh.",
   },
@@ -600,7 +620,9 @@ export const finance = {
   bankTransactions: {
     eyebrow: "Tài chính",
     title: "Đối soát NH",
-    description: "Sao kê SePay và VietQR thiếu bằng chứng NH.",
+    description: "Sao kê SePay · khớp / chưa khớp / thiếu bằng chứng.",
+    detailExplanation:
+      "Đối chiếu sao kê SePay với thanh toán VietQR, khoản chi và trả NCC. Giao dịch đã có không bị nhập trùng.",
     importAction: "Nhập file SePay",
     importTitle: "Nhập lịch sử giao dịch SePay",
     importDescription: "CSV từ SePay. Giao dịch đã có không bị cộng lại.",
@@ -610,23 +632,29 @@ export const finance = {
     importPending: "Đang nhập",
     importSuccess: (inserted: number, existing: number) =>
       `Đã thêm ${inserted} giao dịch; ${existing} giao dịch đã có.`,
+    importRowError: (row: number, reason: string) =>
+      `Dòng ${row}: ${reason}. Sửa CSV rồi nhập lại.`,
+    loadErrorTitle: "Không tải được đối soát NH",
+    loadErrorDescription:
+      "Đối soát NH: không tải được sao kê kỳ này. Thử tải lại trang.",
     reconciliation: {
       matched: "Đã khớp",
       matchedHint:
         "Đã nối vào đơn hàng, khoản chi, khoản trả NCC hoặc hoàn tiền.",
-      needsReview: "Cần rà soát",
+      needsReview: "Cần xử lý",
       needsReviewHint: (
         amount: string,
         bankCount: string,
         paymentCount: string,
       ) => `${amount} · ${bankCount} giao dịch NH + ${paymentCount} thanh toán`,
-      unmatchedMoneyIn: "Tiền vào chưa gắn đơn",
-      unmatchedMoneyInHint: (count: string) => `${count} giao dịch chưa khớp`,
-      missingBankWebhook: "Chưa có bằng chứng ngân hàng",
+      unmatchedMoneyIn: "Chưa khớp",
+      unmatchedMoneyInHint: (count: string) => `${count} tiền vào chưa gắn đơn`,
+      missingBankWebhook: "Thiếu bằng chứng NH",
       missingBankWebhookHint: (count: string, checked: string, open: string) =>
         `${open} cần xử lý · ${count}/${checked} thiếu sao kê`,
-      unmatchedMoneyOut: "Chưa gắn chứng từ",
-      unmatchedMoneyOutHint: (count: string) => `${count} giao dịch chưa khớp`,
+      unmatchedMoneyOut: "Chưa khớp",
+      unmatchedMoneyOutHint: (count: string) =>
+        `${count} tiền ra chưa gắn chứng từ`,
     },
     table: {
       time: "Thời gian",
@@ -1076,28 +1104,40 @@ export const finance = {
   invoicesPage: {
     eyebrow: "Tài chính",
     title: "HĐĐT & GTGT đầu ra",
-    description: "HĐĐT bán ra, hủy, điều chỉnh · chưa phải GTGT phải nộp.",
-    loadError: "Không thể tải danh sách hóa đơn điện tử",
+    description: "HĐĐT bán ra · hủy · điều chỉnh.",
+    detailExplanation:
+      "Theo dõi hóa đơn điện tử bán ra, hủy và điều chỉnh. Chưa phải số liệu GTGT phải nộp cuối kỳ.",
+    loadError: "HĐĐT: không tải được danh sách. Thử tải lại trang.",
   },
   links: {
     revenue: {
       label: "Báo cáo doanh thu",
-      description: "Tiền thu và doanh thu thuần theo kỳ / chi nhánh / PTTT.",
+      description: "Tiền thu và doanh thu thuần theo kỳ.",
     },
     foodCost: {
       label: "Giá vốn món",
-      description:
-        "Định mức theo công thức và giá vốn bình quân hiện tại; đối chiếu tiêu hao đã ghi nhận.",
+      description: "Định mức công thức · giá vốn bình quân · tiêu hao.",
     },
     overview: {
       label: "Tổng quan tài chính",
-      description: "Màn hình chính tài chính vận hành.",
+      description: "Hub tài chính vận hành trong ngày.",
+    },
+    expenses: {
+      label: "Chi phí",
+      description: "Chi vận hành · khớp ngân hàng.",
+    },
+    supplierInvoices: {
+      label: "Hóa đơn NCC",
+      description: "Công nợ và GTGT đầu vào.",
+    },
+    bankTransactions: {
+      label: "Đối soát NH",
+      description: "Sao kê SePay và khớp chứng từ.",
     },
   },
   foodCost: {
     eyebrow: "Tài chính",
-    description:
-      "Định mức theo công thức và giá vốn bình quân hiện tại; thực tế từ phân bổ định giá kho.",
+    description: "Định mức công thức · giá vốn bình quân · tiêu hao đã ghi nhận.",
     actualFoodCost: "Giá vốn thực tế",
     actualFoodCostHint:
       "Tổng phân bổ giá vốn món trong kỳ · khác định mức theo món.",

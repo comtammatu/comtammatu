@@ -110,6 +110,11 @@ const SEPAY_BANK_LEDGER_SELECT =
 
 const SEPAY_DATA_API_PAGE_SIZE = 1000;
 const SEPAY_DATA_API_IN_CHUNK_SIZE = 200;
+export const SEPAY_LIST_PAGE_SIZE = 100;
+
+export interface FetchSepayBankTransactionsOptions {
+  maxRows?: number;
+}
 
 export async function fetchSepayDataApiRows<T>(
   fetchPage: (
@@ -171,87 +176,89 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
-async function fetchSepayWebhookRows(
+function buildSepayWebhookQuery(
   supabase: SupabaseClient,
   tenantId: number,
   range?: SepayDateRange,
-): Promise<SepayWebhookRow[]> {
-  const { data, error } = await fetchSepayDataApiRows<SepayWebhookRow>(
-    async (from, to) => {
-      const query = supabase
-        .from("webhook_events")
-        .select(SEPAY_BANK_WEBHOOK_SELECT)
-        .eq("tenant_id", tenantId)
-        .in("provider", ["sepay", "manual"])
-        .eq("signature_valid", true);
-      const rangedQuery = range
-        ? query
-            .gte("created_at", getVNDayUtcRange(range.start).startIso)
-            .lt("created_at", getVNDayUtcRange(range.end).endIso)
-        : query;
-      const result = await rangedQuery
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-      return {
-        data: (result.data ?? null) as unknown as SepayWebhookRow[] | null,
-        error: result.error,
-      };
-    },
-  );
+) {
+  const query = supabase
+    .from("webhook_events")
+    .select(SEPAY_BANK_WEBHOOK_SELECT)
+    .eq("tenant_id", tenantId)
+    .in("provider", ["sepay", "manual"])
+    .eq("signature_valid", true);
+  return range
+    ? query
+        .gte("created_at", getVNDayUtcRange(range.start).startIso)
+        .lt("created_at", getVNDayUtcRange(range.end).endIso)
+    : query;
+}
 
-  if (error) {
+async function fetchSepayWebhookRowsPage(
+  supabase: SupabaseClient,
+  tenantId: number,
+  range: SepayDateRange | undefined,
+  maxRows: number,
+): Promise<SepayWebhookRow[]> {
+  const limit = Math.max(1, Math.floor(maxRows));
+  const result = await buildSepayWebhookQuery(supabase, tenantId, range)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(0, limit - 1);
+
+  if (result.error) {
     console.error(
       "[finance:sepay-bank] failed to load webhook_events",
-      error.code,
+      result.error.code,
     );
     throw new Error("Unable to load SePay webhook events");
   }
 
-  return (data ?? []) as unknown as SepayWebhookRow[];
+  return (result.data ?? []) as unknown as SepayWebhookRow[];
 }
 
 function isBankLedgerSchemaMissing(code: string | undefined): boolean {
   return code === "PGRST205" || code === "42P01";
 }
 
-async function fetchSepayBankLedgerRows(
+function buildSepayBankLedgerQuery(
   supabase: SupabaseClient,
   tenantId: number,
   range?: SepayDateRange,
-): Promise<SepayBankLedgerRow[] | null> {
-  const { data, error } = await fetchSepayDataApiRows<SepayBankLedgerRow>(
-    async (from, to) => {
-      const query = supabase
-        .from("bank_transactions")
-        .select(SEPAY_BANK_LEDGER_SELECT)
-        .eq("tenant_id", tenantId);
-      const rangedQuery = range
-        ? query
-            .gte("occurred_at", getVNDayUtcRange(range.start).startIso)
-            .lt("occurred_at", getVNDayUtcRange(range.end).endIso)
-        : query;
-      const result = await rangedQuery
-        .order("occurred_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-      return {
-        data: (result.data ?? null) as unknown as SepayBankLedgerRow[] | null,
-        error: result.error,
-      };
-    },
-  );
+) {
+  const query = supabase
+    .from("bank_transactions")
+    .select(SEPAY_BANK_LEDGER_SELECT)
+    .eq("tenant_id", tenantId);
+  return range
+    ? query
+        .gte("occurred_at", getVNDayUtcRange(range.start).startIso)
+        .lt("occurred_at", getVNDayUtcRange(range.end).endIso)
+    : query;
+}
 
-  if (error) {
-    if (isBankLedgerSchemaMissing(error.code)) return null;
+async function fetchSepayBankLedgerRowsPage(
+  supabase: SupabaseClient,
+  tenantId: number,
+  range: SepayDateRange | undefined,
+  maxRows: number,
+): Promise<SepayBankLedgerRow[] | null> {
+  const limit = Math.max(1, Math.floor(maxRows));
+  const result = await buildSepayBankLedgerQuery(supabase, tenantId, range)
+    .order("occurred_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(0, limit - 1);
+
+  if (result.error) {
+    if (isBankLedgerSchemaMissing(result.error.code)) return null;
     console.error(
       "[finance:sepay-bank] failed to load bank_transactions",
-      error.code,
+      result.error.code,
     );
     throw new Error("Unable to load SePay bank transactions");
   }
 
-  return data ?? [];
+  return (result.data ?? []) as unknown as SepayBankLedgerRow[];
 }
 
 async function fetchSepayWebhookRowsByIds(
@@ -410,45 +417,93 @@ async function fetchBankReconciliationMatches(
   return data ?? [];
 }
 
-async function fetchSupplierPaymentMatches(
+async function fetchSupplierPaymentMatchesForPage(
   supabase: SupabaseClient,
   tenantId: number,
-  range?: SepayDateRange,
+  supplierPaymentIds: number[],
+  webhookEventIds: number[],
 ): Promise<SepaySupplierPaymentMatch[]> {
-  const { data, error } = await fetchSepayDataApiRows<SupplierPaymentRow>(
-    async (from, to) => {
-      const query = supabase
-        .from("supplier_payments")
-        .select(
-          "id, supplier_invoice_id, amount, payment_date, reference_note, webhook_event_id, supplier_invoices ( suppliers ( name ) )",
-        )
-        .eq("tenant_id", tenantId)
-        .eq("payment_method", "bank_transfer");
-      const rangedQuery = range
-        ? query
-            .gte("payment_date", getVNDayUtcRange(range.start).startIso)
-            .lt("payment_date", getVNDayUtcRange(range.end).endIso)
-        : query;
-      const result = await rangedQuery
-        .order("payment_date", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-      return {
-        data: (result.data ?? null) as unknown as SupplierPaymentRow[] | null,
-        error: result.error,
-      };
-    },
-  );
+  const ids = [...new Set(supplierPaymentIds)].filter(Number.isFinite);
+  const eventIds = [...new Set(webhookEventIds)].filter(Number.isFinite);
+  if (ids.length === 0 && eventIds.length === 0) return [];
 
-  if (error) {
-    console.error(
-      "[finance:sepay-bank] failed to load supplier_payments",
-      error.code,
+  const select =
+    "id, supplier_invoice_id, amount, payment_date, reference_note, webhook_event_id, supplier_invoices ( suppliers ( name ) )";
+  const rowsById = new Map<number, SupplierPaymentRow>();
+
+  if (ids.length > 0) {
+    const { data, error } = await fetchSepayChunkedDataApiRows<SupplierPaymentRow>(
+      ids,
+      async (chunkIds, from, to) => {
+        const result = await supabase
+          .from("supplier_payments")
+          .select(select)
+          .eq("tenant_id", tenantId)
+          .eq("payment_method", "bank_transfer")
+          .in("id", chunkIds)
+          .order("id", { ascending: true })
+          .range(from, to);
+        return {
+          data: (result.data ?? null) as unknown as SupplierPaymentRow[] | null,
+          error: result.error,
+        };
+      },
     );
-    throw new Error("Unable to load SePay supplier payment matches");
+
+    if (error) {
+      console.error(
+        "[finance:sepay-bank] failed to load supplier_payments",
+        error.code,
+      );
+      throw new Error("Unable to load SePay supplier payment matches");
+    }
+
+    for (const row of (data ?? []) as unknown as SupplierPaymentRow[]) {
+      rowsById.set(row.id, row);
+    }
   }
 
-  return ((data ?? []) as unknown as SupplierPaymentRow[]).map((row) => {
+  const uncoveredEventIds = eventIds.filter(
+    (eventId) =>
+      ![...rowsById.values()].some(
+        (row) => row.webhook_event_id === eventId,
+      ),
+  );
+
+  if (uncoveredEventIds.length > 0) {
+    const { data, error } = await fetchSepayChunkedDataApiRows<SupplierPaymentRow>(
+      uncoveredEventIds,
+      async (chunkIds, from, to) => {
+        const result = await supabase
+          .from("supplier_payments")
+          .select(select)
+          .eq("tenant_id", tenantId)
+          .eq("payment_method", "bank_transfer")
+          .in("webhook_event_id", chunkIds)
+          .order("webhook_event_id", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        return {
+          data: (result.data ?? null) as unknown as SupplierPaymentRow[] | null,
+          error: result.error,
+        };
+      },
+    );
+
+    if (error) {
+      console.error(
+        "[finance:sepay-bank] failed to load supplier_payments",
+        error.code,
+      );
+      throw new Error("Unable to load SePay supplier payment matches");
+    }
+
+    for (const row of (data ?? []) as unknown as SupplierPaymentRow[]) {
+      rowsById.set(row.id, row);
+    }
+  }
+
+  return [...rowsById.values()].map((row) => {
     const invoice = firstRelation(row.supplier_invoices);
     const supplier = firstRelation(invoice?.suppliers);
     return {
@@ -724,20 +779,24 @@ export async function fetchSepayBankMovementSince(
 
 export async function fetchSepayBankTransactions(
   range?: SepayDateRange,
+  options: FetchSepayBankTransactionsOptions = {},
 ): Promise<SepayBankTransaction[]> {
+  const maxRows = options.maxRows ?? SEPAY_LIST_PAGE_SIZE;
   const { supabase, claims } = await loadAuthState();
-  const ledgerRows = await fetchSepayBankLedgerRows(
+  const ledgerRows = await fetchSepayBankLedgerRowsPage(
     supabase,
     claims.tenant_id,
     range,
+    maxRows,
   );
   let transactions: SepayBankTransaction[];
 
   if (ledgerRows == null) {
-    const rows = await fetchSepayWebhookRows(
+    const rows = await fetchSepayWebhookRowsPage(
       supabase,
       claims.tenant_id,
       range,
+      maxRows,
     );
     transactions = rows
       .map(mapSepayWebhookRow)
@@ -769,11 +828,8 @@ export async function fetchSepayBankTransactions(
   const bankTransactionIds = scopedTransactions
     .map((tx) => tx.bankTransactionId)
     .filter((id): id is number => id != null);
-  const [matches, supplierPaymentRows, webhookRefundMatches, canonicalMatches] =
-    await Promise.all([
+  const [matches, canonicalMatches] = await Promise.all([
     fetchSepayExpenseMatches(supabase, claims.tenant_id, eventIds),
-    fetchSupplierPaymentMatches(supabase, claims.tenant_id, range),
-    fetchConfirmedRefundMatches(supabase, claims.tenant_id, eventIds),
     fetchBankReconciliationMatches(
       supabase,
       claims.tenant_id,
@@ -787,12 +843,14 @@ export async function fetchSepayBankTransactions(
   >();
   const supplierBankTransactionById = new Map<number, number>();
   const refundBankTransactionById = new Map<number, number>();
+  const supplierPaymentIds: number[] = [];
   for (const match of canonicalMatches) {
     const current =
       canonicalMatchesByBankTransaction.get(match.bank_transaction_id) ?? [];
     current.push(match);
     canonicalMatchesByBankTransaction.set(match.bank_transaction_id, current);
     if (match.supplier_payment_id != null) {
+      supplierPaymentIds.push(match.supplier_payment_id);
       supplierBankTransactionById.set(
         match.supplier_payment_id,
         match.bank_transaction_id,
@@ -803,11 +861,21 @@ export async function fetchSepayBankTransactions(
     }
   }
 
-  const canonicalRefundRows = await fetchRefundMatchesByIds(
-    supabase,
-    claims.tenant_id,
-    Array.from(refundBankTransactionById.keys()),
-  );
+  const [supplierPaymentRows, webhookRefundMatches, canonicalRefundRows] =
+    await Promise.all([
+      fetchSupplierPaymentMatchesForPage(
+        supabase,
+        claims.tenant_id,
+        supplierPaymentIds,
+        eventIds,
+      ),
+      fetchConfirmedRefundMatches(supabase, claims.tenant_id, eventIds),
+      fetchRefundMatchesByIds(
+        supabase,
+        claims.tenant_id,
+        Array.from(refundBankTransactionById.keys()),
+      ),
+    ]);
   const refundMatches = Array.from(
     new Map(
       [...webhookRefundMatches, ...canonicalRefundRows].map((refund) => [

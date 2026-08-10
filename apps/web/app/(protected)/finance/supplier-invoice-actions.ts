@@ -892,7 +892,6 @@ const supplierInvoiceSelect = (branchId?: number) => {
 };
 
 const SUPPLIER_INVOICE_PAGE_SIZE = 50;
-const SUPPLIER_INVOICE_SCAN_PAGE_SIZE = 500;
 
 export interface SupplierInvoiceCursor {
   invoiceDate: string;
@@ -942,9 +941,9 @@ const fetchSupplierInvoicesPaginatedSchema = z.object({
 });
 
 /**
- * Server-filtered supplier-invoice list. The tenant/branch result is scanned
- * with an internal keyset so search and aggregate truth cover unloaded rows;
- * the public cursor only controls which matching rows are presented next.
+ * Keyset-paginated supplier-invoice list (invoice_date desc, id desc tiebreaker).
+ * PostgREST filters run before limit; query/overdue/vatEvidence stay client-side.
+ * groups/totalCount use the same SQL filters — groups are built from the current page only.
  */
 export async function fetchSupplierInvoicesPage(
   input: z.input<typeof fetchSupplierInvoicesPaginatedSchema> = {},
@@ -983,53 +982,62 @@ export async function fetchSupplierInvoicesPage(
   if (!monetary.purchasePrice || !monetary.client) {
     return { success: false, error: "Không có quyền" };
   }
-  const fetched: Array<{
+
+  let listQuery = monetary.client
+    .from("supplier_invoices")
+    .select(supplierInvoiceSelect(branchId))
+    .eq("tenant_id", claims.tenant_id);
+
+  if (branchId != null) {
+    listQuery = listQuery.eq("goods_received_notes.branch_id", branchId);
+  }
+  if (invoiceId != null) {
+    listQuery = listQuery.eq("id", invoiceId);
+  }
+  if (supplierId != null) {
+    listQuery = listQuery.eq("supplier_id", supplierId);
+  }
+  if (paymentStatus != null) {
+    listQuery = listQuery.eq("payment_status", paymentStatus);
+  }
+  if (matchStatus === "pending") {
+    listQuery = listQuery.or(
+      "matching_status.eq.pending,and(matching_status.eq.matched,grn_id.is.null)",
+    );
+  } else if (matchStatus === "matched") {
+    listQuery = listQuery
+      .eq("matching_status", "matched")
+      .not("grn_id", "is", null);
+  } else if (matchStatus != null) {
+    listQuery = listQuery.eq("matching_status", matchStatus);
+  }
+
+  if (before) {
+    listQuery = listQuery.or(
+      `invoice_date.lt.${before.invoiceDate},and(invoice_date.eq.${before.invoiceDate},id.lt.${String(before.id)})`,
+    );
+  }
+
+  const { data, error } = await listQuery
+    .order("invoice_date", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(pageSize + 1);
+
+  if (error) {
+    return {
+      success: false,
+      error: messages.inventory.supplierInvoices.loadFailed,
+    };
+  }
+
+  const fetched = (data ?? []) as unknown as Array<{
     id: number;
     invoice_date: string;
+    supplier_id: number;
     [k: string]: unknown;
-  }> = [];
-  let scanBefore: SupplierInvoiceCursor | null = null;
-
-  while (true) {
-    let query = monetary.client
-      .from("supplier_invoices")
-      .select(supplierInvoiceSelect(branchId))
-      .eq("tenant_id", claims.tenant_id);
-
-    if (branchId != null) {
-      query = query.eq("goods_received_notes.branch_id", branchId);
-    }
-
-    if (invoiceId != null) {
-      query = query.eq("id", invoiceId);
-    }
-
-    if (scanBefore) {
-      query = query.or(
-        `invoice_date.lt.${scanBefore.invoiceDate},and(invoice_date.eq.${scanBefore.invoiceDate},id.lt.${String(scanBefore.id)})`,
-      );
-    }
-
-    const { data, error } = await query
-      .order("invoice_date", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(SUPPLIER_INVOICE_SCAN_PAGE_SIZE);
-
-    if (error) {
-      return {
-        success: false,
-        error: messages.inventory.supplierInvoices.loadFailed,
-      };
-    }
-
-    const batch = (data ?? []) as unknown as typeof fetched;
-    fetched.push(...batch);
-    if (batch.length < SUPPLIER_INVOICE_SCAN_PAGE_SIZE) break;
-
-    const last = batch.at(-1);
-    if (!last) break;
-    scanBefore = { invoiceDate: last.invoice_date, id: last.id };
-  }
+  }>;
+  const sqlHasMore = fetched.length > pageSize;
+  const sqlRows = sqlHasMore ? fetched.slice(0, pageSize) : fetched;
 
   const filters: SupplierInvoiceListFilters = {
     query: queryText,
@@ -1041,47 +1049,91 @@ export async function fetchSupplierInvoicesPage(
     viewMode,
   };
   const today = getVNDateString();
-  const mapped = fetched.map(mapSupplierInvoiceRow);
-  const filtered =
+  const mapped = sqlRows.map(mapSupplierInvoiceRow);
+  const visibleRows =
     invoiceId != null ? mapped : filterSupplierInvoices(mapped, filters, today);
-  const afterCursor = before
-    ? filtered.filter((invoice) => {
-        const invoiceDate = invoice.invoiceDate;
-        if (invoiceDate == null) return false;
-        return (
-          invoiceDate < before.invoiceDate ||
-          (invoiceDate === before.invoiceDate && invoice.id < before.id)
-        );
-      })
-    : filtered;
-  const pageRows = afterCursor.slice(0, pageSize + 1);
-  const hasMore = pageRows.length > pageSize;
-  const visibleRows = hasMore ? pageRows.slice(0, pageSize) : pageRows;
-  const rawById = new Map(fetched.map((row) => [row.id, row]));
+
+  const rawById = new Map(sqlRows.map((row) => [row.id, row]));
   const items = visibleRows.flatMap((row) => {
     const raw = rawById.get(row.id);
     return raw ? [raw] : [];
   });
-  const last = visibleRows.at(-1);
+  const lastSqlRow = sqlRows.at(-1);
   const nextCursor =
-    hasMore && last?.invoiceDate != null
-      ? { invoiceDate: last.invoiceDate, id: last.id }
+    sqlHasMore && lastSqlRow?.invoice_date != null
+      ? { invoiceDate: lastSqlRow.invoice_date, id: lastSqlRow.id }
       : null;
-  const { data: paymentRows, error: paymentError } = await monetary.client
-    .from("supplier_payments")
-    .select(
-      "id, supplier_id, amount, payment_date, reference_note, supplier_payment_allocations ( amount )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("payment_date", { ascending: false });
-  if (paymentError) {
-    return {
-      success: false,
-      error: messages.inventory.supplierInvoices.loadFailed,
-    };
+
+  let totalCount = visibleRows.length;
+  const hasClientOnlyFilters =
+    queryText.length > 0 || overdueOnly || vatEvidence != null;
+  if (invoiceId == null && !hasClientOnlyFilters) {
+    let countQuery = monetary.client
+      .from("supplier_invoices")
+      .select(
+        branchId != null
+          ? "id, goods_received_notes!inner ( branch_id )"
+          : "id",
+        { count: "exact", head: true },
+      )
+      .eq("tenant_id", claims.tenant_id);
+
+    if (branchId != null) {
+      countQuery = countQuery.eq("goods_received_notes.branch_id", branchId);
+    }
+    if (supplierId != null) {
+      countQuery = countQuery.eq("supplier_id", supplierId);
+    }
+    if (paymentStatus != null) {
+      countQuery = countQuery.eq("payment_status", paymentStatus);
+    }
+    if (matchStatus === "pending") {
+      countQuery = countQuery.or(
+        "matching_status.eq.pending,and(matching_status.eq.matched,grn_id.is.null)",
+      );
+    } else if (matchStatus === "matched") {
+      countQuery = countQuery
+        .eq("matching_status", "matched")
+        .not("grn_id", "is", null);
+    } else if (matchStatus != null) {
+      countQuery = countQuery.eq("matching_status", matchStatus);
+    }
+
+    const { count, error: countError } = await countQuery;
+    if (countError) {
+      return {
+        success: false,
+        error: messages.inventory.supplierInvoices.loadFailed,
+      };
+    }
+    totalCount = count ?? visibleRows.length;
   }
-  const advances: SupplierAdvanceSummary[] = (paymentRows ?? []).flatMap(
-    (payment) => {
+
+  const supplierIds = Array.from(
+    new Set(
+      visibleRows
+        .map((row) => row.supplierId)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+
+  let advances: SupplierAdvanceSummary[] = [];
+  if (supplierIds.length > 0) {
+    const { data: paymentRows, error: paymentError } = await monetary.client
+      .from("supplier_payments")
+      .select(
+        "id, supplier_id, amount, payment_date, reference_note, supplier_payment_allocations ( amount )",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("supplier_id", supplierIds)
+      .order("payment_date", { ascending: false });
+    if (paymentError) {
+      return {
+        success: false,
+        error: messages.inventory.supplierInvoices.loadFailed,
+      };
+    }
+    advances = (paymentRows ?? []).flatMap((payment) => {
       const allocated = Array.isArray(payment.supplier_payment_allocations)
         ? addMoney(
             payment.supplier_payment_allocations.map((allocation) =>
@@ -1109,17 +1161,20 @@ export async function fetchSupplierInvoicesPage(
             },
           ]
         : [];
-    },
-  );
+    });
+  }
+
+  // Page-scoped: "Theo NCC" grouping reflects only rows on this page/keyset slice.
+  const groups = groupSupplierInvoices(visibleRows, viewMode, today);
 
   return {
     success: true,
     data: {
       items,
-      hasMore,
+      hasMore: sqlHasMore,
       nextCursor,
-      totalCount: filtered.length,
-      groups: groupSupplierInvoices(filtered, viewMode, today),
+      totalCount,
+      groups,
       advances,
     },
   };

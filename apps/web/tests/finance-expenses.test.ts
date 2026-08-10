@@ -207,15 +207,19 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
   assert.match(migration, /hospitality_expense_category_boundary_not_found/);
 });
 
-test("expense period totals load every row and fail closed on missing evidence", () => {
+test("expense LIST loader bounds first paint and fails closed on missing evidence", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
+  assert.match(actions, /EXPENSE_LIST_PAGE_SIZE\s*=\s*100/);
   assert.match(
     actions,
-    /for \(let offset = 0; ; offset \+= pageSize\)[\s\S]*?\.range\(offset, offset \+ pageSize - 1\)[\s\S]*?if \(\(data\?\.length \?\? 0\) < pageSize\) break/,
+    /export async function fetchExpenses[\s\S]*?\.range\(0, EXPENSE_LIST_PAGE_SIZE - 1\)/,
   );
-  assert.doesNotMatch(actions, /fetchExpenses[\s\S]*?\.limit\(500\)/);
+  assert.doesNotMatch(
+    actions,
+    /export async function fetchExpenses[\s\S]{0,2500}for\s*\(\s*let\s+offset\s*=\s*0;\s*;/,
+  );
   assert.match(
     page,
     /!branchesRes\.success \|\| !expensesRes\.success[\s\S]*<AppEmptyState[\s\S]*mode="error"/,
@@ -250,10 +254,11 @@ test("expense list separates its KPI summary from the data table", () => {
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
   const successPage = page.slice(page.indexOf("const todayBusinessDate"));
 
-  assert.match(
-    client,
-    /<KpiRow density="compact">[\s\S]*?<KpiCard[\s\S]*?label=\{copy\.totalLabel\}[\s\S]*?hint=\{copy\.totalHint\(formatCount\(summary\.operatingCount\)\)\}/,
-  );
+  assert.doesNotMatch(client, /<KpiRow|<KpiCard/);
+  assert.match(client, /listSummaryMeta/);
+  assert.match(client, /copy\.totalLabel/);
+  assert.match(client, /copy\.needsActionLabel/);
+  assert.match(client, /trailing=\{/);
   assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
   assert.doesNotMatch(successPage, /meta=/);
 });
@@ -268,7 +273,7 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
     page,
     /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[[\s\S]*?String\(row\.subtotal\),?[\s\S]*?\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
   );
-  assert.match(cockpit, /\.select\("subtotal, category"\)/);
+  assert.match(cockpit, /\.select\("subtotal, vat_amount, category"\)/);
   assert.match(cockpit, /String\(row\.subtotal\)/);
   assert.match(
     page,
@@ -525,9 +530,11 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   );
 
   assert.doesNotMatch(columns, /key: "(?:payment_state|attachment)"/);
-  assert.match(columns, /key: "vat"/);
+  assert.doesNotMatch(columns, /key: "(?:subtotal|vat)"/);
+  assert.match(columns, /key: "amount"/);
   assert.match(columns, /key: "paymentState"/);
-  assert.match(columns, /key: "subtotal"/);
+  assert.match(client, /rowClassName=\{/);
+  assert.match(client, /expenseNeedsAction\(row\)/);
   assert.match(messages, /branch: "Nơi chi"/);
   assert.match(messages, /category: "Khoản chi"/);
   assert.match(messages, /branchTenantLevel: "Công ty"/);

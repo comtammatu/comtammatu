@@ -86,11 +86,12 @@ function isStocktakeSessionPath(pathname: string | null): boolean {
   return segment !== "new" && segment !== "conflicts";
 }
 
-function FinanceRealtimeBridge() {
+function FinanceRealtimeBridge({ pathname }: { pathname: string | null }) {
   const searchParams = useSearchParams();
   const scope = resolveScopeFromSearchParams(searchParams, { fallback: "all" });
   useFinanceRealtimeRefresh({
     branchId: getControlSurfaceScopeBranchId(scope),
+    pathname,
   });
   return null;
 }
@@ -299,7 +300,9 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
         activeModule === "me" ? MODULE_ACL.me.label : undefined
       }
     >
-      {activeModule === "finance" ? <FinanceRealtimeBridge /> : null}
+      {activeModule === "finance" ? (
+        <FinanceRealtimeBridge pathname={pathname} />
+      ) : null}
       {children}
     </AppShell>
   );

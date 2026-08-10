@@ -33,7 +33,6 @@ import {
   fetchFinanceCockpit,
   type FinanceException,
 } from "./_lib/finance-cockpit";
-import { fetchCashSummary } from "./_lib/cash-cockpit";
 import type { FinanceOverviewSearchParams } from "./_lib/finance-overview-types";
 import { CurrentFundsSection } from "./components/current-funds-section";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -120,11 +119,14 @@ export default async function FinancePage({
   const rawParams = searchParams ? await searchParams : {};
   const params = parseFinanceParams(rawParams);
   const resolved = resolveFinanceRange(params);
-  const [cockpit, cash, canManageTargets] = await Promise.all([
-    fetchFinanceCockpit(params, resolved),
-    fetchCashSummary(),
+  const [cockpit, canManageTargets] = await Promise.all([
+    fetchFinanceCockpit(params, resolved, { includeCash: true }),
     currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
   ]);
+  if (!cockpit.cash) {
+    throw new Error("Finance hub requires current funds");
+  }
+  const cash = cockpit.cash;
   const showTargetProgress = isSingleCalendarMonth(
     resolved.start,
     resolved.end,

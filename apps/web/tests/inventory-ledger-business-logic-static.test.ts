@@ -150,7 +150,7 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
   );
   const operatingExpense = sliceBetween(
     finance,
-    "export async function fetchOperatingExpenseSummary",
+    "function summarizeOperatingExpenses",
     "async function fetchUnpaidSupplierInvoiceRisk",
   );
   const actualFoodCost = sliceBetween(

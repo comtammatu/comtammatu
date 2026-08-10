@@ -84,6 +84,7 @@ import { displayBankContent } from "../_lib/display-bank-content";
 export { displayBankContent };
 
 const copy = messages.finance.bankTransactions;
+const statusCopy = messages.finance.common.status;
 const REVIEW_PENDING_VALUE = "pending";
 function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
   label: string;
@@ -98,7 +99,7 @@ function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
       variant: "destructive",
     };
   }
-  return { label: copy.reconciliationStateLabels[state], variant: "warning" };
+  return { label: statusCopy.unmatched, variant: "warning" };
 }
 
 interface BankTransactionsTableProps {
@@ -247,6 +248,14 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   );
 }
 
+function bankRowNeedsHighlight(row: BankReconciliationRow): boolean {
+  if (row.kind === "missing_webhook") {
+    return isOpenSepayBankWebhookReview(row.payment.bankWebhookReviewStatus);
+  }
+  const state = classifySepayReconciliationState(row.tx);
+  return state === "needs_review" || state === "webhook_error";
+}
+
 function RowContentCell({ row }: { row: BankReconciliationRow }) {
   if (row.kind === "missing_webhook") {
     const content = `${copy.missingWebhookTable.payment} ${formatPaymentId(
@@ -255,17 +264,17 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     const occurredAt = formatVNDateTime(row.payment.paidAt);
     const reference = formatProviderRef(row.payment.providerRef);
     return (
-      <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+      <div className="flex min-w-0 flex-col gap-1">
+        <div className="text-xs tabular-nums text-muted-foreground">
           {occurredAt}
-        </span>
-        <span
-          className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
-          title={reference}
-        >
-          {reference}
-        </span>
-        <span className="min-w-0 truncate font-medium">{content}</span>
+          {reference !== "—" ? (
+            <>
+              {" · "}
+              <span className="font-mono">{reference}</span>
+            </>
+          ) : null}
+        </div>
+        <p className="line-clamp-2 text-sm font-medium">{content}</p>
       </div>
     );
   }
@@ -275,31 +284,27 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
   const reference = referenceCode(row.tx);
   const isLongContent = content.length > 80;
   const contentLabel = (
-    <span className="min-w-0 truncate font-medium">{content}</span>
+    <p className="line-clamp-2 text-sm font-medium">{content}</p>
   );
 
   return (
-    <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="text-xs tabular-nums text-muted-foreground">
         {occurredAt}
-      </span>
-      <span
-        className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
-        title={reference}
-      >
-        {reference}
-      </span>
+        {" · "}
+        <span className="font-mono">{reference}</span>
+      </div>
       {isLongContent ? (
         <Tooltip>
           <TooltipTrigger
             render={
               <span
-                className="min-w-0 truncate font-medium outline-none focus-visible:ring-1 focus-visible:ring-foreground"
+                className="min-w-0 outline-none focus-visible:ring-1 focus-visible:ring-foreground"
                 tabIndex={0}
               />
             }
           >
-            {content}
+            {contentLabel}
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-sm whitespace-normal">
             <p className="break-words font-medium">{content}</p>
@@ -740,6 +745,9 @@ export function BankTransactionsTable({
             )}`
           : `missing-${row.payment.paymentId}`
       }
+      rowClassName={(row) =>
+        bankRowNeedsHighlight(row) ? "border-l-2 border-l-warning" : undefined
+      }
       emptyTitle={
         !hasRows
           ? copy.emptyTitle
@@ -758,7 +766,12 @@ export function BankTransactionsTable({
       className="[&_table]:table-fixed"
       mobileBreakpoint={1024}
       mobileCardRender={(row) => (
-        <Item variant="outline">
+        <Item
+          variant="outline"
+          className={cn(
+            bankRowNeedsHighlight(row) && "border-l-2 border-l-warning",
+          )}
+        >
           <ItemContent className="min-w-0 gap-3">
             <RowContentCell row={row} />
             <div className="flex items-start justify-between gap-3">

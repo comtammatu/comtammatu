@@ -19,7 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   formatAccountingVND as formatVND,
   formatPercent,
@@ -36,7 +45,7 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
+import { AppEmptyState, AppListFrame, AppPageHeader, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   DataTable,
@@ -56,6 +65,7 @@ import {
 } from "../_lib/revenue-target";
 
 const copy = messages.finance.revenueTargets;
+const commonCopy = messages.finance.common;
 
 type EditableRewardTier = {
   id: string;
@@ -119,6 +129,7 @@ export function RevenueTargetsClient({
   initialRows: RevenueTargetSetupRow[];
 }) {
   const controlSize = useFormControlSize();
+  const isTouchLayout = useIsMobile(1024);
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((row) => ({
       ...row,
@@ -387,6 +398,12 @@ export function RevenueTargetsClient({
     [pending],
   );
 
+  function openAddTarget() {
+    const row = rows.find((item) => item.targetAmount == null);
+    if (row) openEditor(row.branchId);
+    else toast.error(copy.allConfigured);
+  }
+
   const toolbar = (
     <form method="get">
       <AppToolbar
@@ -412,32 +429,9 @@ export function RevenueTargetsClient({
           </>
         }
         actions={
-          <>
-            <Button type="submit" variant="outline" size={controlSize}>
-              {copy.applyMonth}
-            </Button>
-            <Button
-              type="button"
-              size={controlSize}
-              render={<Link href="/finance/revenue" />}
-              variant="ghost"
-            >
-              {messages.finance.nav.items.revenue}
-            </Button>
-            <Button
-              type="button"
-              size={controlSize}
-              disabled={pending || !hasUnconfigured}
-              onClick={() => {
-                const row = rows.find((item) => item.targetAmount == null);
-                if (row) openEditor(row.branchId);
-                else toast.error(copy.allConfigured);
-              }}
-            >
-              <Plus data-icon="inline-start" />
-              {copy.add}
-            </Button>
-          </>
+          <Button type="submit" variant="outline" size={controlSize}>
+            {copy.applyMonth}
+          </Button>
         }
       />
     </form>
@@ -445,6 +439,56 @@ export function RevenueTargetsClient({
 
   return (
     <>
+      <AppPageHeader
+        title={copy.page.title}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>{copy.page.description}</span>
+            {copy.page.detailExplanation ? (
+              <Sheet>
+                <SheetTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs font-medium"
+                    >
+                      {commonCopy.detailLink}
+                    </Button>
+                  }
+                />
+                <SheetContent side="right" className="sm:max-w-md">
+                  <SheetHeader>
+                    <SheetTitle>{copy.page.title}</SheetTitle>
+                    <SheetDescription>
+                      {copy.page.detailExplanation}
+                    </SheetDescription>
+                  </SheetHeader>
+                </SheetContent>
+              </Sheet>
+            ) : null}
+            <Link
+              href="/finance/revenue"
+              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {messages.finance.nav.items.revenue} →
+            </Link>
+          </span>
+        }
+        actions={
+          <Button
+            type="button"
+            size={isTouchLayout ? "touch" : "default"}
+            disabled={pending || !hasUnconfigured}
+            onClick={openAddTarget}
+          >
+            <Plus data-icon="inline-start" />
+            {copy.add}
+          </Button>
+        }
+      />
+
       <AppListFrame toolbar={toolbar}>
         {rows.length === 0 ? (
           <AppEmptyState mode="no-data" title={copy.empty} />

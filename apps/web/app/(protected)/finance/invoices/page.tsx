@@ -19,6 +19,7 @@ import type { InvoiceRow } from "../_lib/finance-types";
 import { parseFinanceParams } from "../_lib/finance-params";
 import { FilterBar } from "../components/filter-bar";
 import { InvoiceList } from "../invoice-list";
+import { InvoicePageHeaderActions } from "../invoice-page-header-actions";
 
 const copy = messages.finance.invoicesPage;
 
@@ -56,7 +57,20 @@ export default async function InvoicesPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader title={copy.title} description={copy.description} />
+      <AppPageHeader
+        title={copy.title}
+        description={copy.description}
+        actions={
+          canIssueInvoices ? (
+            <InvoicePageHeaderActions
+              canIssueInvoices={canIssueInvoices}
+              branches={branches}
+              defaultBranchId={branchId}
+              issueLabel={messages.finance.invoiceList.manualIssue.button}
+            />
+          ) : undefined
+        }
+      />
       <AppListFrame
         toolbar={
           <FilterBar
@@ -78,8 +92,6 @@ export default async function InvoicesPage({
             branchId={branchId}
             queue={queue}
             canManageInvoices={canManageInvoices}
-            canIssueInvoices={canIssueInvoices}
-            branches={branches}
             initialIssueAttention={
               attentionRes.success ? (attentionRes.data ?? []) : []
             }

@@ -24,7 +24,7 @@ test("finance landing presents immutable book funds", () => {
   );
   const copy = read("apps/web/lib/messages/finance.ts");
 
-  assert.match(page, /fetchCashSummary\(\)/);
+  assert.match(page, /includeCash:\s*true/);
   assert.match(page, /CurrentFundsSection cash=\{cash\}/);
   assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.cashOnHand/);
   assert.match(currentFunds, /cash\.hasOpening[\s\S]*cash\.bankOnHand/);

@@ -79,9 +79,6 @@ test("Owner and Ops keep procurement documents in URL-addressable AppDialogs", (
 
 test("warehouse can submit missing suppliers but accountant cannot approve incomplete allocation", () => {
   const demandClient = readDemandModule();
-  const purchaseActions = read(
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
-  );
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
 
   assert.match(demandClient, /copy\.missingSupplierShort/);

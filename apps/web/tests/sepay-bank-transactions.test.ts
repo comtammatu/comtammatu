@@ -781,29 +781,36 @@ test("SePay conflict hardening gates automatic settlement and Owner recovery", (
   assert.doesNotMatch(migration, /corrected_from_cash/);
 });
 
-test("SePay reconciliation reads a complete pilot window without exposing review codes", () => {
+test("SePay reconciliation LIST loader bounds first paint without exhaust scan", () => {
   const loader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
   );
   const table = read(
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
+  const page = read(
+    "apps/web/app/(protected)/finance/bank-transactions/page.tsx",
+  );
   const messages = read("apps/web/lib/messages/finance.ts");
 
+  assert.match(loader, /SEPAY_LIST_PAGE_SIZE\s*=\s*100/);
+  assert.match(loader, /fetchSepayBankLedgerRowsPage/);
+  assert.match(loader, /fetchSupplierPaymentMatchesForPage/);
+  assert.match(
+    loader,
+    /fetchSepayBankTransactions[\s\S]*?maxRows\s*\?\?\s*SEPAY_LIST_PAGE_SIZE/,
+  );
+  assert.match(page, /maxRows:\s*SEPAY_LIST_PAGE_SIZE/);
   assert.match(loader, /SEPAY_DATA_API_PAGE_SIZE = 1000/);
   assert.match(loader, /SEPAY_DATA_API_IN_CHUNK_SIZE = 200/);
   assert.match(loader, /fetchSepayChunkedDataApiRows/);
   assert.match(
     loader,
-    /\.order\("created_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
+    /fetchSepayBankLedgerRowsPage[\s\S]*?\.range\(0, limit - 1\)/,
   );
   assert.match(
     loader,
     /\.order\("paid_at", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
-  );
-  assert.match(
-    loader,
-    /\.order\("payment_date", \{ ascending: false \}\)[\s\S]*\.order\("id", \{ ascending: false \}\)[\s\S]*\.range\(from, to\)/,
   );
   assert.doesNotMatch(
     loader,
@@ -994,7 +1001,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(matchCell, /FinanceMoneySummary/);
   assert.match(matchCell, /ToggleGroup/);
   assert.match(messages, /Hoàn tiền \$\{order\}/);
-  assert.match(messages, /Chưa có bằng chứng ngân hàng/);
+  assert.match(messages, /Thiếu bằng chứng NH/);
   assert.match(messages, /Nộp tiền mặt vào tài khoản/);
   assert.match(messages, /Không còn việc đối soát cần xử lý/);
 });

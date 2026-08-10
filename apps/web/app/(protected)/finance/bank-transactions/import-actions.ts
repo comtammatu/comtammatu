@@ -22,7 +22,11 @@ const importResultSchema = z.object({
 
 export type SepayImportState =
   | { status: "idle" }
-  | { status: "error"; message: string }
+  | {
+      status: "error";
+      message: string;
+      rowErrors?: Array<{ row: number; reason: string }>;
+    }
   | {
       status: "success";
       processedCount: number;
@@ -63,7 +67,11 @@ export async function importSepayBankTransactions(
 
   const parsedRows = parseSepayExportRows(sheet.headers, sheet.rows);
   if (!parsedRows.success) {
-    return { status: "error", message: parsedRows.error };
+    return {
+      status: "error",
+      message: parsedRows.error,
+      ...(parsedRows.rowErrors ? { rowErrors: parsedRows.rowErrors } : {}),
+    };
   }
 
   const rpcRows: Json[] = parsedRows.rows.map((row) => ({

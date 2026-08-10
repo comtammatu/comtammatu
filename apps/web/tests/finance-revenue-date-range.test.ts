@@ -153,7 +153,7 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(categories, /cogs_manual: "materials"/);
   assert.match(categories, /bank_deposit: "transfer"/);
   assert.match(categories, /isOperatingExpenseCategory/);
-  assert.match(cockpit, /select\("subtotal, category"\)/);
+  assert.match(cockpit, /select\("subtotal, vat_amount, category"\)/);
   assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
   assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
   assert.match(expenseFormSchema, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
