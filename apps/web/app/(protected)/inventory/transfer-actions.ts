@@ -303,6 +303,8 @@ export async function fetchStockTransferDetail(
           : (unitLabelByKey.get(
               `${line.ingredient_id}:${line.entry_unit_id}`,
             ) ?? null),
+      base_unit_label:
+        baseUnitLabelByIngredient.get(Number(line.ingredient_id)) ?? null,
     };
   });
 

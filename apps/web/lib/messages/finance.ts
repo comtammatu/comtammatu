@@ -527,7 +527,12 @@ export const finance = {
       cashOut: string,
       adjustments: string,
     ) =>
-      `Tiền mặt: ${opening} + thu ${cashIn} − chi ${cashOut} + điều chỉnh ${adjustments}`,
+      [
+        `Số dư đầu: ${opening}`,
+        `+ Thu: ${cashIn}`,
+        `− Chi: ${cashOut}`,
+        `+ Điều chỉnh: ${adjustments}`,
+      ].join("\n"),
     bankTitle: "Ngân hàng cả quán",
     bankTransactionsAction: "Giao dịch",
     bankBreakdown: (
@@ -536,7 +541,12 @@ export const finance = {
       bankOut: string,
       adjustments: string,
     ) =>
-      `Tài khoản: ${opening} + vào ${bankIn} − ra ${bankOut} + điều chỉnh ${adjustments}`,
+      [
+        `Số dư đầu: ${opening}`,
+        `+ Vào: ${bankIn}`,
+        `− Ra: ${bankOut}`,
+        `+ Điều chỉnh: ${adjustments}`,
+      ].join("\n"),
     openingTitle: "Nhập số dư đầu",
     openingDescription:
       "Chỉ ghi một lần. Sau này chỉ điều chỉnh, không sửa số này.",

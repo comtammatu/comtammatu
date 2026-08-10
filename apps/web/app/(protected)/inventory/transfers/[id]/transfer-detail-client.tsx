@@ -316,8 +316,13 @@ export function TransferDetailClient({
             key: "cost",
             header: copy.wacCost,
             className: "text-right font-mono tabular-nums",
-            render: (item: TransferLineItem) =>
-              formatVND(item.monetary?.cost ?? 0),
+            render: (item: TransferLineItem) => {
+              const cost = item.monetary?.cost ?? 0;
+              const baseLabel = item.baseUnit || item.unit;
+              return baseLabel
+                ? `${formatVND(cost)}/${baseLabel}`
+                : formatVND(cost);
+            },
           },
           {
             key: "amount",
@@ -906,7 +911,11 @@ function TransferLineMobileCard({
         </div>
         {item.monetary ? (
           <div>
-            <p className="text-muted-foreground">{copy.wacCost}</p>
+            <p className="text-muted-foreground">
+              {item.baseUnit
+                ? copy.wacCostPerUnit(item.baseUnit)
+                : copy.wacCost}
+            </p>
             <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
           </div>
         ) : null}

@@ -48,6 +48,28 @@ export function getIssueBaseQuantity(
   return snapNearIntegerQuantity(quantity * factor);
 }
 
+/**
+ * Multi-unit-safe line total: entry qty × to_base_factor × per-base WAC.
+ * Matches stock_issue_items.total_cost after the base-units maintenance trigger.
+ */
+export function computeIssueLineTotal(input: {
+  entryQuantity: number;
+  baseUnitCost: number;
+  toBaseFactor: number | null | undefined;
+}): { baseQuantity: number; total: number } {
+  const baseQuantity = getIssueBaseQuantity(input.entryQuantity, {
+    toBaseFactor: input.toBaseFactor ?? 1,
+  });
+  const unitCost = Number(input.baseUnitCost);
+  return {
+    baseQuantity,
+    total:
+      baseQuantity > 0 && Number.isFinite(unitCost) && unitCost >= 0
+        ? baseQuantity * unitCost
+        : 0,
+  };
+}
+
 export function getIssueMaxEntryQuantity(
   baseQuantity: number,
   issueUnit: IssueUnitFactor,

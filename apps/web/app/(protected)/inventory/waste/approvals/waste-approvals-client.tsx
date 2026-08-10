@@ -10,6 +10,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Check as IconCheck, X as IconX } from "lucide-react";
 import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
+import { getIssueBaseQuantity } from "@/(protected)/inventory/_lib/issue-units";
 import { approveWaste } from "@/(protected)/inventory/waste-actions";
 import {
   formatPercent,
@@ -190,10 +191,29 @@ function WasteApprovalCard({
                   <span className="text-muted-foreground">
                     — {formatQuantity(it.quantity)} {it.unit}
                     {it.monetary?.unitCost != null
-                      ? ` × ${formatVND(it.monetary.unitCost)}`
+                      ? ` × ${formatVND(it.monetary.unitCost)}${
+                          it.baseUnit ? `/${it.baseUnit}` : ""
+                        }`
                       : ""}
                   </span>
                 </div>
+                {it.baseUnit &&
+                it.unit &&
+                it.baseUnit !== it.unit &&
+                it.toBaseFactor !== 1 ? (
+                  <div className="text-xs text-muted-foreground">
+                    {messages.inventory.issues.entryBaseQtyHint(
+                      formatQuantity(it.quantity),
+                      it.unit,
+                      formatQuantity(
+                        getIssueBaseQuantity(it.quantity, {
+                          toBaseFactor: it.toBaseFactor,
+                        }),
+                      ),
+                      it.baseUnit,
+                    )}
+                  </div>
+                ) : null}
                 <div className="text-xs text-muted-foreground">
                   {copy.reason(getWasteReasonLabelVi(it.reasonCode))}
                   {typeof it.monetary?.qtyRatio === "number" &&

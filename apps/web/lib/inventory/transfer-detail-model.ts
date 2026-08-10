@@ -27,6 +27,9 @@ export interface TransferDetail {
     sku: string;
     qty: number;
     unit: string;
+    /** Base/warehouse unit for per-base WAC labels. */
+    baseUnit: string;
+    toBaseFactor: number | null;
     monetary: { cost: number; total: number } | null;
     received: number | null;
   }>;

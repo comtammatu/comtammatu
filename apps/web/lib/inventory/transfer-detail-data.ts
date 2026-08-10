@@ -87,6 +87,7 @@ export async function loadTransferDetailPageData({
       entry_unit_id: number | null;
       to_base_factor: number | null;
       unit_label: string | null;
+      base_unit_label: string | null;
       ingredients: {
         id: number;
         name: string;
@@ -126,6 +127,8 @@ export async function loadTransferDetailPageData({
       sku: "",
       qty: quantity,
       unit: line.unit_label ?? "",
+      baseUnit: line.base_unit_label ?? line.unit_label ?? "",
+      toBaseFactor: line.to_base_factor ?? null,
       monetary: cost == null || total == null ? null : { cost, total },
       received:
         line.quantity_received != null ? Number(line.quantity_received) : null,
