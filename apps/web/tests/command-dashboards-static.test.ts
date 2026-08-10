@@ -6,7 +6,7 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const ADMIN_COPY = "apps/web/lib/messages/owner.ts";
+const ADMIN_COPY = "apps/web/lib/messages/control-surface.ts";
 const FINANCE_PAGE = "apps/web/app/(protected)/finance/page.tsx";
 const FINANCE_COCKPIT =
   "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts";
@@ -116,8 +116,8 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(copy, /netProfit: "Lợi nhuận ròng"/);
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);
-  assert.match(copy, /không gồm giá vốn món/);
-  assert.match(copy, /bankReconciliationLabel: "Đối soát NH"/);
+  assert.match(copy, /Không gồm giá vốn món/);
+  assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
 });
@@ -196,8 +196,11 @@ test("finance subroutes share the compact surface and operational vocabulary", (
   }
   assert.doesNotMatch(copy, literalWith(String.raw`\bpayment\b`));
   assert.doesNotMatch(copy, literalWith(String.raw`\bwebhook\b`));
-  assert.match(bankTable, /gap-2 overflow-hidden whitespace-nowrap sm:gap-3/);
-  assert.match(bankTable, /max-w-36 truncate font-mono/);
+  assert.match(bankTable, /copy\.matchAction/);
+  assert.match(bankTable, /key: "date"/);
+  assert.match(bankTable, /key: "action"/);
+  assert.match(copy, /title: "Giao dịch"/);
+  assert.doesNotMatch(copy, /Đối soát NH/);
 });
 
 test("inventory copy uses Vietnamese operational labels on active surfaces", () => {
@@ -251,7 +254,7 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
   assert.match(
     client,
-    /value:\s*PRINT_JOB_ATTENTION_STATUS[\s\S]{0,100}?label:\s*PRINT_JOBS_COPY\.attentionStatus/,
+    /value=\{PRINT_JOB_ATTENTION_STATUS\}[\s\S]{0,120}?\{PRINT_JOBS_COPY\.attentionStatus\}/,
   );
 });
 

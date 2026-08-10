@@ -23,7 +23,7 @@ import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
   ItemActions,
@@ -41,7 +41,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppEmptyState } from "@/components/surface";
 import {

@@ -22,7 +22,7 @@ test("TableHead uses dense control_surface row height", () => {
 });
 
 test("AppListFrame flushes Card vertical pad so toolbar/table own edge rhythm", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-list-frame.tsx");
   assert.match(
     surface,
     /function AppListFrame\([\s\S]*?hasHeader \? "pb-0" : "py-0"/,
@@ -42,19 +42,22 @@ test("AppListFrame flushes Card vertical pad so toolbar/table own edge rhythm", 
 });
 
 test("stuck LIST filter chrome overrides resting card-corner radius", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-sticky-filter-chrome.tsx");
   const stickyFn = surface.slice(
     surface.indexOf("export function AppStickyFilterChrome"),
-    surface.indexOf("export type AppPageHeaderProps"),
   );
   assert.match(
     stickyFn,
-    /"bg-card transition-\[margin,width,border-radius,box-shadow\][\s\S]*className,\s*\/\/ Stuck overrides[\s\S]*stuck\s*\?[\s\S]*"overflow-visible rounded-none shadow-lg"/,
+    /"bg-card"[\s\S]*className,\s*\/\/ Stuck overrides[\s\S]*stuck\s*\?[\s\S]*"overflow-visible rounded-none shadow-lg"/,
+  );
+  assert.doesNotMatch(
+    stickyFn,
+    /transition-\[margin,width,border-radius,box-shadow\]/,
   );
 });
 
 test("inline LIST toolbar and pagination use compact vertical pad", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-toolbar.tsx");
   const pagination = read(
     "app/components/data-table/data-table-pagination.tsx",
   );
@@ -76,5 +79,5 @@ test("DataTable stack relies on borders, not outer gap-3 chrome", () => {
     dataTable,
     /className=\{cn\("flex flex-col gap-3", className\)\}/,
   );
-  assert.match(dataTable, /flex flex-col gap-2/);
+  assert.match(dataTable, /flex flex-col gap-2 px-3 py-3/);
 });

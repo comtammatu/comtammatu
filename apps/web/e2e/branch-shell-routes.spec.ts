@@ -358,7 +358,7 @@ test.describe("branch route shell ownership", () => {
     await page.setViewportSize(DESKTOP);
 
     for (const path of [
-      `/inventory/count-assignments?branchId=${branchId}`,
+      `/inventory/count-assignments?branch=${branchId}`,
       "/inventory/count-slips",
     ]) {
       await page.goto(path, { waitUntil: "domcontentloaded" });

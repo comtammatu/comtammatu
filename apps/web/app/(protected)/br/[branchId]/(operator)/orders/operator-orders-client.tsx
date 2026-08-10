@@ -24,7 +24,7 @@ import { AppEmptyState } from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { OrderDetailSheet } from "@/(protected)/orders/order-detail-sheet";
 import type { OrderRow } from "@/(protected)/orders/actions";
-import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 
 import {
   computeOrderWaitInfo,

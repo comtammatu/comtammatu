@@ -26,11 +26,12 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "matu-ds-runtime-contract",
       "owner-page-header-no-module-eyebrow-design-system",
       "owner-page-header-no-module-eyebrow-docs",
-      "owner-page-header-no-module-eyebrow-module-doc",
       "readme-design-system-contract-pointer",
       "readme-ui-runtime-current",
-      "stitch-mirror-runtime-token-sync",
       "theme-baseline-runtime-current",
+      "ui-advisor-gate-four-fields",
+      "ui-review-checklist-agent-rule",
+      "ui-review-checklist-module-pointer",
     ],
   },
   "preventive-pattern": {
@@ -90,6 +91,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
     reason:
       "Repository, shell, route, archetype, and boundary invariants are existence or ownership checks rather than per-file risk scores.",
     guardIds: [
+      "control-surface-compose",
       "dead-doc-reference",
       "external-design-context",
       "legacy-doc-references",

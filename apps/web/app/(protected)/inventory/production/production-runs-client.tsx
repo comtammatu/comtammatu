@@ -1,17 +1,10 @@
 "use client";
 
-import { AppListFrame } from "@/components/surface";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ListChecks as IconListChecks,
-  Plus as IconPlus,
-} from "lucide-react";
+import { Search as IconSearch } from "lucide-react";
 import { formatCount, formatQuantity } from "@comtammatu/shared/format";
-import { formatVNDate } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import {
   BRANCH_VI,
@@ -19,13 +12,29 @@ import {
   INVENTORY_VI,
   PRODUCT_VI,
 } from "@comtammatu/shared/messages";
+import { formatVNDate } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import type { ProductionRunRow } from "../production-run-actions";
 
 const ALL_STATUS_VALUE = "_all";
@@ -33,16 +42,12 @@ const STATUS_LABELS: Record<string, string> = INVENTORY_STATUS_LABELS_VI;
 
 interface ProductionRunsClientProps {
   initial: ProductionRunRow[];
-  branchId?: number;
   basePath: string;
-  embedded?: boolean;
 }
 
 export function ProductionRunsClient({
   initial,
-  branchId,
   basePath,
-  embedded,
 }: ProductionRunsClientProps) {
   const router = useRouter();
   const [items] = useState<ProductionRunRow[]>(initial);
@@ -128,89 +133,80 @@ export function ProductionRunsClient({
     ];
   }, []);
 
-  const table = (
-    <DataTable
-      data={filteredItems}
-      columns={columns}
-      pageSize={50}
-      getRowKey={(row) => row.id.toString()}
-      searchable
-      searchPlaceholder="Tìm số lệnh, thành phẩm, chi nhánh…"
-      searchValue={search}
-      onSearchChange={setSearch}
-      actions={
-        embedded ? null : (
-          <Badge variant="secondary">
-            {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
-          </Badge>
-        )
+  const toolbar = (
+    <AppToolbar
+      variant="inline"
+      search={
+        <InputGroup size="field" className="min-w-0 flex-1 sm:min-w-72">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.productionOrdersSearchPlaceholder}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={INVENTORY_VI.productionOrdersSearchPlaceholder}
+          />
+        </InputGroup>
       }
-      filters={[
-        {
-          key: "status",
-          placeholder: FORM_VI.status,
-          options: [
-            { value: ALL_STATUS_VALUE, label: "Tất cả trạng thái" },
-            ...statusOptions.map((status) => ({
-              value: status,
-              label: statusLabel(status),
-            })),
-          ],
-        },
-      ]}
-      filterValues={{ status: statusFilter }}
-      onFilterChange={(_key, value) => setStatusFilter(value)}
-      emptyTitle={
-        search || statusFilter !== ALL_STATUS_VALUE
-          ? "Không tìm thấy lệnh phù hợp"
-          : INVENTORY_VI.productionOrdersEmptyTitle
+      filters={
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger
+            size="field"
+            className={inventoryListFilterSelectClassName}
+            aria-label={FORM_VI.status}
+          >
+            <SelectValue placeholder={FORM_VI.status} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_STATUS_VALUE}>
+              {INVENTORY_VI.allStatusesOption}
+            </SelectItem>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {statusLabel(status)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       }
-      emptyDescription={
-        search || statusFilter !== ALL_STATUS_VALUE
-          ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
-          : INVENTORY_VI.productionOrdersEmptyDescription
+      reset={
+        <Badge variant="secondary">
+          {`${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`}
+        </Badge>
       }
-      emptyMode={
-        search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
-      }
-      onRowClick={openProductionDetail}
-      getRowAriaLabel={(row) =>
-        `${INVENTORY_VI.productionNumber} ${row.production_number}`
-      }
-      mobileCardRender={(row) => (
-        <ProductionRunCard row={row} href={detailHref(row)} />
-      )}
     />
   );
 
-  if (!embedded) {
-    return <AppListFrame>{table}</AppListFrame>;
-  }
-
   return (
-    <AppListFrame
-      icon={<IconListChecks />}
-      title={INVENTORY_VI.productionOrdersTab}
-      description={INVENTORY_VI.productionOrdersCardDescription}
-      badge={{
-        children: `${formatCount(filteredItems.length)} / ${formatCount(items.length)} ${INVENTORY_VI.productionOrdersMetricLabel}`,
-        variant: "secondary",
-      }}
-      action={
-        <Button
-          size="touch"
-          render={
-            <Link
-              href={`${basePath}/new${branchId ? `?branchId=${branchId}` : ""}`}
-            />
-          }
-        >
-          <IconPlus data-icon="inline-start" />
-          {INVENTORY_VI.createOrderShort}
-        </Button>
-      }
-    >
-      {table}
+    <AppListFrame toolbar={toolbar}>
+      <DataTable
+        data={filteredItems}
+        columns={columns}
+        pageSize={50}
+        getRowKey={(row) => row.id.toString()}
+        emptyTitle={
+          search || statusFilter !== ALL_STATUS_VALUE
+            ? "Không tìm thấy lệnh phù hợp"
+            : INVENTORY_VI.productionOrdersEmptyTitle
+        }
+        emptyDescription={
+          search || statusFilter !== ALL_STATUS_VALUE
+            ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
+            : INVENTORY_VI.productionOrdersEmptyDescription
+        }
+        emptyMode={
+          search || statusFilter !== ALL_STATUS_VALUE ? "no-results" : "no-data"
+        }
+        onRowClick={openProductionDetail}
+        getRowAriaLabel={(row) =>
+          `${INVENTORY_VI.productionNumber} ${row.production_number}`
+        }
+        mobileCardRender={(row) => (
+          <ProductionRunCard row={row} href={detailHref(row)} />
+        )}
+      />
     </AppListFrame>
   );
 }

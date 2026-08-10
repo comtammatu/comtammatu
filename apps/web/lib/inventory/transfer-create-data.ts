@@ -15,7 +15,7 @@ import {
 
 interface LoadTransferCreatePageDataOptions {
   routeBranchId?: number;
-  queryBranchId?: string | string[];
+  queryBranch?: string | string[];
 }
 
 export interface TransferCreatePageData {
@@ -41,7 +41,7 @@ function toTransferIngredientOption(
 
 export async function loadTransferCreatePageData({
   routeBranchId,
-  queryBranchId,
+  queryBranch,
 }: LoadTransferCreatePageDataOptions = {}): Promise<TransferCreatePageData> {
   const { supabase, claims } = await loadAuthState();
   if (
@@ -53,7 +53,7 @@ export async function loadTransferCreatePageData({
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
+    queryBranch,
   });
   const userBranchId = scope.selectedBranchId;
   if (scope.outOfScope) notFound();

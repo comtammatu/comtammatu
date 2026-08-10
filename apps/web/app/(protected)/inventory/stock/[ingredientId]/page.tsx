@@ -41,6 +41,7 @@ import {
   resolveStockDisplayUnit,
   stockUnitLabel,
 } from "../../_lib/stock-unit-format";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
@@ -72,16 +73,16 @@ export type IngredientRow = {
 
 interface StockIngredientDetailPageContentProps {
   ingredientId: number;
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
 }
 
-function OwnerStockIngredientDetail({
+function StockIngredientDetail({
   data,
 }: {
   data: StockIngredientDetailData;
 }) {
   const { ingredient } = data;
-  const listHref = `/inventory/stock?branchId=${data.branchId}`;
+  const listHref = `/inventory/stock?branch=${data.branchId}`;
 
   if (data.coreDataLoadFailed) {
     return (
@@ -122,11 +123,15 @@ function OwnerStockIngredientDetail({
           unitCost: wac,
         });
   const actionHrefs = {
-    receive: `/inventory/grn?branchId=${data.branchId}`,
-    transfer: `/inventory/transfers?branchId=${data.branchId}`,
-    stocktake: `/inventory/stocktake?branchId=${data.branchId}`,
+    receive: `/inventory/grn?branch=${data.branchId}`,
+    transfer: `/inventory/transfers?branch=${data.branchId}`,
+    stocktake: `/inventory/stocktake?branch=${data.branchId}`,
     issues: "/inventory/consumption",
-    waste: `/inventory/waste/new?branchId=${data.branchId}`,
+    waste: withControlSurfaceBranchScope(
+      "/inventory/waste/new",
+      String(data.branchId) as `${number}`,
+      { prefixes: ["/inventory"] },
+    ),
   };
 
   return (
@@ -465,10 +470,10 @@ export async function StockIngredientDetailPageContent({
   const params = searchParams ? await searchParams : {};
   const data = await loadStockIngredientDetailData({
     ingredientId,
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
 
-  return <OwnerStockIngredientDetail data={data} />;
+  return <StockIngredientDetail data={data} />;
 }
 
 export default async function StockIngredientDetailPage({
@@ -476,7 +481,7 @@ export default async function StockIngredientDetailPage({
   searchParams,
 }: {
   params: Promise<{ ingredientId: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { ingredientId: rawIngredientId } = await params;
   const ingredientId = Number(rawIngredientId);

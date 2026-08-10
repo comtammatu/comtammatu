@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const page = readFileSync("app/(protected)/page.tsx", "utf8");
-const overview = readFileSync("app/_components/owner-overview.tsx", "utf8");
+const overview = readFileSync(
+  "app/_components/control-surface-overview.tsx",
+  "utf8",
+);
 const attention = readFileSync("app/_lib/control-home-attention.ts", "utf8");
 const acl = readFileSync(
   "../../packages/shared/src/auth/module-acl.ts",
@@ -16,7 +19,7 @@ const login = readFileSync(
 
 test("Control home page loads ACL-gated attention and role-aware overview", () => {
   assert.match(page, /loadControlHomeAttention/);
-  assert.match(page, /OwnerOverview/);
+  assert.match(page, /ControlSurfaceOverview/);
   assert.match(overview, /AttentionQueue|attentionTitle/);
   assert.match(overview, /canAccess\(role/);
   assert.doesNotMatch(overview, /KpiCard|KpiRow/);

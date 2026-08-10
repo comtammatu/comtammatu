@@ -22,7 +22,11 @@ const importResultSchema = z.object({
 
 export type SepayImportState =
   | { status: "idle" }
-  | { status: "error"; message: string }
+  | {
+      status: "error";
+      message: string;
+      rowErrors?: Array<{ row: number; reason: string }>;
+    }
   | {
       status: "success";
       processedCount: number;
@@ -58,12 +62,16 @@ export async function importSepayBankTransactions(
   }
 
   if (!sheet) {
-    return { status: "error", message: "File SePay không có dữ liệu." };
+    return { status: "error", message: "Tệp SePay không có dữ liệu." };
   }
 
   const parsedRows = parseSepayExportRows(sheet.headers, sheet.rows);
   if (!parsedRows.success) {
-    return { status: "error", message: parsedRows.error };
+    return {
+      status: "error",
+      message: parsedRows.error,
+      ...(parsedRows.rowErrors ? { rowErrors: parsedRows.rowErrors } : {}),
+    };
   }
 
   const rpcRows: Json[] = parsedRows.rows.map((row) => ({
@@ -89,7 +97,7 @@ export async function importSepayBankTransactions(
       status: "error",
       message:
         error.code === "23505"
-          ? "File có giao dịch trùng mã nhưng khác số tiền, loại hoặc thời gian."
+          ? "Tệp có giao dịch trùng mã nhưng khác số tiền, loại hoặc thời gian."
           : "Không thể nhập giao dịch SePay.",
     };
   }

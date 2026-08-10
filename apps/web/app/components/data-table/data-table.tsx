@@ -288,7 +288,7 @@ export function DataTable<T>({
             icon={emptyIcon}
           />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 px-3 py-3">
             {pagedData.map((row, index) => (
               <div key={getRowKey(row)}>
                 {mobileCardRender(row, index + pageOffset)}

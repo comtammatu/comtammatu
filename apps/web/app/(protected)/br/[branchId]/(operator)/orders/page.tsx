@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ORDER_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
 import { fetchOrders } from "@/(protected)/orders/actions";
-import { ORDERS_COPY } from "@/(protected)/orders/orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
 import { OperatorOrdersClient } from "./operator-orders-client";

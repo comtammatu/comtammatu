@@ -1,5 +1,4 @@
-import { AppPage, AppPageHeader } from "@/components/surface";
-import { messages } from "@lib/messages";
+import { AppPage } from "@/components/surface";
 import {
   currentVnMonthStart,
   monthStartFromIsoDate,
@@ -9,8 +8,6 @@ import {
   listBranchRevenueTargets,
 } from "./actions";
 import { RevenueTargetsClient } from "./targets-client";
-
-const copy = messages.finance.revenueTargets;
 
 export default async function FinanceRevenueTargetsPage({
   searchParams,
@@ -45,12 +42,7 @@ export default async function FinanceRevenueTargetsPage({
   });
 
   return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        title={copy.page.title}
-        description={copy.page.description}
-      />
-
+    <AppPage width="xwide" density="compact">
       {!result.success ? (
         <p className="text-sm text-destructive">{result.error}</p>
       ) : (

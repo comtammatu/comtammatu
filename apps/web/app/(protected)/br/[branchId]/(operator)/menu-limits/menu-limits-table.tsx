@@ -12,10 +12,10 @@ import {
 } from "lucide-react";
 import {
   AppEmptyState,
-  AppSection,
   AppToolbar,
   DescriptionList,
 } from "@/components/surface";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
@@ -574,7 +574,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
       <div className="flex flex-col gap-3">
         {grouped.map((group) => (
-          <AppSection
+          <BranchOperatorPanel
             key={group.categoryId}
             title={group.categoryName}
             size="sm"
@@ -598,7 +598,7 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                 />
               ))}
             </ItemGroup>
-          </AppSection>
+          </BranchOperatorPanel>
         ))}
       </div>
 

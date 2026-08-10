@@ -22,13 +22,14 @@ import {
 import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { getCategoryTypeLabelVi } from "./category-labels";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { RowActionsMenu } from "@/components/row-actions-menu";
+import { AppListFrame } from "@/components/surface";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface CategoryRow {
@@ -152,33 +153,37 @@ export function CategoryTable({ categories }: CategoryTableProps) {
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={categories}
-        getRowKey={(cat) => cat.id}
-        emptyTitle="Chưa có danh mục nào"
-        emptyIcon={<IconFolderOpen className="size-8 text-muted-foreground" />}
-        rowClassName={() => (isPending ? "opacity-60" : undefined)}
-        mobileCardRender={(cat) => (
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle>{cat.name}</ItemTitle>
-              <ItemDescription>
-                {getCategoryTypeLabelVi(cat.type)} · Thứ tự{" "}
-                {cat.sort_order}
-              </ItemDescription>
-            </ItemContent>
-            <ItemFooter>
-              <Badge variant={cat.is_active ? "default" : "outline"}>
-                {cat.is_active
-                  ? ACTIVE_STATE_LABELS_VI.active
-                  : ACTIVE_STATE_LABELS_VI.inactive}
-              </Badge>
-              <ItemActions>{renderActions(cat, true)}</ItemActions>
-            </ItemFooter>
-          </Item>
-        )}
-      />
+      <AppListFrame>
+        <DataTable
+          columns={columns}
+          data={categories}
+          getRowKey={(cat) => cat.id}
+          emptyTitle="Chưa có danh mục nào"
+          emptyIcon={
+            <IconFolderOpen className="size-8 text-muted-foreground" />
+          }
+          rowClassName={() => (isPending ? "opacity-60" : undefined)}
+          mobileCardRender={(cat) => (
+            <Item variant="outline">
+              <ItemContent>
+                <ItemTitle>{cat.name}</ItemTitle>
+                <ItemDescription>
+                  {getCategoryTypeLabelVi(cat.type)} · Thứ tự{" "}
+                  {cat.sort_order}
+                </ItemDescription>
+              </ItemContent>
+              <ItemFooter>
+                <Badge variant={cat.is_active ? "default" : "outline"}>
+                  {cat.is_active
+                    ? ACTIVE_STATE_LABELS_VI.active
+                    : ACTIVE_STATE_LABELS_VI.inactive}
+                </Badge>
+                <ItemActions>{renderActions(cat, true)}</ItemActions>
+              </ItemFooter>
+            </Item>
+          )}
+        />
+      </AppListFrame>
 
       <CategoryFormDialog
         open={!!editCategory}

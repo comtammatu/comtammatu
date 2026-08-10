@@ -15,6 +15,17 @@ import { parseExpenseListState } from "../app/(protected)/finance/expenses/expen
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
+const EXPENSE_CLIENT_PATHS = [
+  "app/(protected)/finance/expenses/expenses-client.tsx",
+  "app/(protected)/finance/expenses/expense-form-schema.ts",
+  "app/(protected)/finance/expenses/expense-form-fields.tsx",
+  "app/(protected)/finance/expenses/expense-view-dialog.tsx",
+] as const;
+
+function readExpenseClientBundle(): string {
+  return EXPENSE_CLIENT_PATHS.map(readWeb).join("\n");
+}
+
 test("expense payment state separates paid, unpaid, and bank-matched transfer rows", () => {
   assert.equal(
     classifyExpensePaymentState({
@@ -168,9 +179,7 @@ test("bank deposits stay out of operating expense totals", () => {
 });
 
 test("hospitality is selectable and accepted across expense boundaries", () => {
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
   const migration = readFileSync(
     resolve(
@@ -198,15 +207,19 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
   assert.match(migration, /hospitality_expense_category_boundary_not_found/);
 });
 
-test("expense period totals load every row and fail closed on missing evidence", () => {
+test("expense LIST loader bounds first paint and fails closed on missing evidence", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
 
+  assert.match(actions, /EXPENSE_LIST_PAGE_SIZE\s*=\s*100/);
   assert.match(
     actions,
-    /for \(let offset = 0; ; offset \+= pageSize\)[\s\S]*?\.range\(offset, offset \+ pageSize - 1\)[\s\S]*?if \(\(data\?\.length \?\? 0\) < pageSize\) break/,
+    /export async function fetchExpenses[\s\S]*?\.range\(0, EXPENSE_LIST_PAGE_SIZE - 1\)/,
   );
-  assert.doesNotMatch(actions, /fetchExpenses[\s\S]*?\.limit\(500\)/);
+  assert.doesNotMatch(
+    actions,
+    /export async function fetchExpenses[\s\S]{0,2500}for\s*\(\s*let\s+offset\s*=\s*0;\s*;/,
+  );
   assert.match(
     page,
     /!branchesRes\.success \|\| !expensesRes\.success[\s\S]*<AppEmptyState[\s\S]*mode="error"/,
@@ -241,10 +254,11 @@ test("expense list separates its KPI summary from the data table", () => {
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
   const successPage = page.slice(page.indexOf("const todayBusinessDate"));
 
-  assert.match(
-    client,
-    /<KpiRow density="compact">[\s\S]*?<KpiCard[\s\S]*?label=\{copy\.totalLabel\}[\s\S]*?hint=\{copy\.totalHint\(formatCount\(summary\.operatingCount\)\)\}/,
-  );
+  assert.doesNotMatch(client, /<KpiRow|<KpiCard/);
+  assert.match(client, /listSummaryMeta/);
+  assert.match(client, /copy\.totalLabel/);
+  assert.match(client, /copy\.needsActionLabel/);
+  assert.match(client, /trailing=\{/);
   assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
   assert.doesNotMatch(successPage, /meta=/);
 });
@@ -259,7 +273,7 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
     page,
     /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[[\s\S]*?String\(row\.subtotal\),?[\s\S]*?\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
   );
-  assert.match(cockpit, /\.select\("subtotal, category"\)/);
+  assert.match(cockpit, /\.select\("subtotal, vat_amount, category"\)/);
   assert.match(cockpit, /String\(row\.subtotal\)/);
   assert.match(
     page,
@@ -276,7 +290,7 @@ test("expense location filter keeps company and branch scopes distinct", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
 
   assert.match(page, /fetchExpenses\(\{[\s\S]*?location: params\.location/);
-  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
+  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
   assert.match(actions, /fetchExpensesSchema\.safeParse\(params\)/);
   assert.match(
     actions,
@@ -284,7 +298,7 @@ test("expense location filter keeps company and branch scopes distinct", () => {
   );
   assert.match(
     actions,
-    /parsed\.data\.location === "branches"[\s\S]*?query = query\.not\("branch_id", "is", null\)/,
+    /parsed\.data\.location === "branches"[\s\S]*?fetchSalesBranchIds/,
   );
 });
 
@@ -338,9 +352,7 @@ test("expense triage filter shares one needs-action definition with its KPI", ()
 
 test("expense create captures immutable multi-rate VAT and optional attachment", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
@@ -370,9 +382,7 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
 
 test("expense edit keeps payment evidence immutable and audits the locked RPC write", () => {
   const actions = readWeb("app/(protected)/finance/expense-actions.ts");
-  const client = readWeb(
-    "app/(protected)/finance/expenses/expenses-client.tsx",
-  );
+  const client = readExpenseClientBundle();
   const migration = readFileSync(
     resolve(
       import.meta.dirname,
@@ -442,12 +452,13 @@ test("expense list opens form-shaped document from row click", () => {
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const bundle = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
 
   assert.match(client, /onRowClick=\{openExpenseDocument\}/);
   assert.match(client, /copy\.form\.openAria/);
-  assert.match(client, /function ExpenseViewDialog/);
-  assert.match(client, /expenseToFormValues/);
+  assert.match(bundle, /function ExpenseViewDialog/);
+  assert.match(bundle, /expenseToFormValues/);
   assert.match(client, /editingPaymentState === "unpaid"/);
   assert.match(client, /onPayCash\(editingExpense\)/);
   assert.match(client, /onPayTransfer\(editingExpense\)/);
@@ -511,6 +522,7 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const bundle = readExpenseClientBundle();
   const messages = readWeb("lib/messages/finance.ts");
   const columns = client.slice(
     client.indexOf("const columns: DataTableColumn<ExpenseRow>[] = ["),
@@ -518,13 +530,15 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
   );
 
   assert.doesNotMatch(columns, /key: "(?:payment_state|attachment)"/);
-  assert.match(columns, /key: "vat"/);
+  assert.doesNotMatch(columns, /key: "(?:subtotal|vat)"/);
+  assert.match(columns, /key: "amount"/);
   assert.match(columns, /key: "paymentState"/);
-  assert.match(columns, /key: "subtotal"/);
+  assert.match(client, /rowClassName=\{/);
+  assert.match(client, /expenseNeedsAction\(row\)/);
   assert.match(messages, /branch: "Nơi chi"/);
   assert.match(messages, /category: "Khoản chi"/);
   assert.match(messages, /branchTenantLevel: "Công ty"/);
-  assert.match(client, /className="grid gap-4 md:grid-cols-2"/);
-  assert.match(client, /className="md:col-span-2"/);
-  assert.match(client, /<FilterBar[\s\S]*?locationFilter/);
+  assert.match(bundle, /className="grid gap-4 md:grid-cols-2"/);
+  assert.match(bundle, /className="md:col-span-2"/);
+  assert.match(client, /<FilterBar[\s\S]*?hide=\{\["branch"/);
 });

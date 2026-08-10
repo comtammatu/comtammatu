@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import {
   AppDetailFooter,
@@ -232,7 +232,7 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
         <AppSection
           title="Thành phẩm đã ở Bếp Trung Tâm"
           description="Nếu cần giao về chi nhánh, tạo chứng từ Điều chuyển riêng."
-          action={<Button render={<Link href={`/inventory/transfers/new?branchId=${run.branch_id}`} />}>Tạo Điều chuyển</Button>}
+          action={<Button render={<Link href={`/inventory/transfers/new?branch=${run.branch_id}`} />}>Tạo Điều chuyển</Button>}
         >
           <div />
         </AppSection>

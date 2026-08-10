@@ -6,7 +6,7 @@ import { TabsContent } from "@comtammatu/ui/components/tabs";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs } from "@/components/app-page-tabs";
 import { ORDER_VI } from "@comtammatu/shared/messages";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
 import type { OrderRow, OrdersSummary } from "./actions";
@@ -72,7 +72,7 @@ export function OrdersPageBody({
   }
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={ORDER_VI.long}
         description={ORDERS_COPY.description}

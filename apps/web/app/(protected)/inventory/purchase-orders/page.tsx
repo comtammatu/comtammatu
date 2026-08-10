@@ -138,13 +138,13 @@ export default async function PurchaseOrdersPage({
 }: {
   searchParams: Promise<{
     tab?: string | string[];
-    branchId?: string | string[];
+    branch?: string | string[];
   }>;
 }) {
   const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
 
@@ -461,7 +461,6 @@ export default async function PurchaseOrdersPage({
       mappedIngredientIds={mappedIngredientIds}
       canCreateRequest={canCreateRequest && requestBranches.length > 0}
       canAllocate={canAllocate}
-      embedded
     />
   );
   const ordersContent = (
@@ -470,7 +469,6 @@ export default async function PurchaseOrdersPage({
       branches={branches}
       canManage={canManagePo || canAllocate}
       canReceive={canReceive}
-      embedded
     />
   );
 

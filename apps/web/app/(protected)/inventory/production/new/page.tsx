@@ -4,11 +4,11 @@ import { ProductionNewClient } from "./production-new-client";
 export default async function ProductionNewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string }>;
+  searchParams: Promise<{ branch?: string }>;
 }) {
   const params = await searchParams;
-  const routeBranchId = params.branchId
-    ? Number.parseInt(params.branchId, 10)
+  const routeBranchId = params.branch
+    ? Number.parseInt(params.branch, 10)
     : undefined;
 
   const {

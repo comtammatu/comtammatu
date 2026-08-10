@@ -2,26 +2,29 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import {
+  readSupplierInvoiceFormModules,
+  readSupplierInvoiceModules,
+  readSupplierInvoiceShell,
+} from "./helpers/supplier-invoice-module-sources";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
 
 test("supplier invoice lines expose a fixed NET-price entry set with additive VAT", () => {
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const modules = readSupplierInvoiceModules();
   const copy = readWeb("lib/messages/inventory.ts");
 
   assert.doesNotMatch(
-    client,
+    modules,
     /pricingMode: z\.enum\(\["gross_total", "unit_price"\]\)/,
   );
-  assert.match(client, /unitPrice: optionalMoneySchema/);
-  assert.match(client, /grossLineTotal: optionalMoneySchema/);
-  assert.match(client, /resolveSupplierInvoiceVatAmount/);
-  assert.match(client, /calculateSupplierInvoiceNetLineTotal/);
-  assert.match(client, /calculateSupplierInvoiceGrossLineTotal/);
-  assert.doesNotMatch(client, /deriveSupplierInvoiceGrossUnitPrice/);
+  assert.match(modules, /unitPrice: optionalMoneySchema/);
+  assert.match(modules, /grossLineTotal: optionalMoneySchema/);
+  assert.match(modules, /resolveSupplierInvoiceVatAmount/);
+  assert.match(modules, /calculateSupplierInvoiceNetLineTotal/);
+  assert.match(modules, /calculateSupplierInvoiceGrossLineTotal/);
+  assert.doesNotMatch(modules, /deriveSupplierInvoiceGrossUnitPrice/);
   assert.doesNotMatch(copy, /pricingModes:/);
   assert.doesNotMatch(copy, /pricingModeLabel/);
   assert.match(copy, /unitPriceLabel/);
@@ -29,9 +32,7 @@ test("supplier invoice lines expose a fixed NET-price entry set with additive VA
 });
 
 test("supplier invoice create payload derives additive VAT from the net line total", () => {
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceShell();
 
   assert.match(client, /netLineTotal,/);
   assert.match(client, /grossLineTotal,/);
@@ -42,17 +43,15 @@ test("supplier invoice create payload derives additive VAT from the net line tot
 });
 
 test("supplier invoice editor uses the document dialog without compressing line fields", () => {
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const formModules = readSupplierInvoiceFormModules();
   const formDialog = readWeb("app/components/form/form-dialog.tsx");
 
   assert.match(
-    client,
+    formModules,
     /<FormDialog[\s\S]*?variant="document"[\s\S]*?schema=\{supplierInvoiceSchema\}/,
   );
-  assert.doesNotMatch(client, /contentClassName="sm:max-w-2xl"/);
-  assert.match(client, /grid gap-3 md:grid-cols-2 xl:grid-cols-/);
+  assert.doesNotMatch(formModules, /contentClassName="sm:max-w-2xl"/);
+  assert.match(formModules, /grid gap-3 md:grid-cols-2 xl:grid-cols-/);
   assert.match(formDialog, /variant\?: "default" \| "document"/);
   assert.match(
     formDialog,
@@ -61,12 +60,12 @@ test("supplier invoice editor uses the document dialog without compressing line 
 });
 
 test("supplier invoice line renders a fixed column set without a pricing-mode selector", () => {
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const createFields = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx",
   );
-  const lineEditor = client.slice(
-    client.indexOf("invoiceLines.map"),
-    client.indexOf("function SupplierPaymentFields"),
+  const lineEditor = createFields.slice(
+    createFields.indexOf("invoiceLines.map"),
+    createFields.indexOf("function SupplierPaymentFields"),
   );
 
   assert.doesNotMatch(lineEditor, /<Select\s+value=\{line\.pricingMode\}/);

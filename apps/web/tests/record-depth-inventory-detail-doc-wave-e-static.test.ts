@@ -40,7 +40,7 @@ test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", ()
   const client = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-detail-footer.tsx");
 
   assert.match(
     client,
@@ -49,7 +49,12 @@ test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", ()
   );
   assert.match(
     client,
-    /title=\{grn\.code\}[\s\S]*description=\{statusBadge\.label\}/,
+    /presentation\?: "page" \| "dialog"/,
+    "GRN DETAIL supports page and dialog presenters",
+  );
+  assert.match(
+    client,
+    /title=\{grn\.code\}[\s\S]*description=\{[\s\S]*statusBadge\.label/,
     "dialog header must not repeat supplier and receiving warehouse metadata",
   );
   assert.match(
@@ -68,7 +73,13 @@ test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () 
   const client = read(
     "app/(protected)/inventory/grn/[id]/grn-detail-client.tsx",
   );
-  const surface = read("app/components/surface.tsx");
+  const surface = [
+    "app/components/surface/app-page.tsx",
+    "app/components/surface/app-detail-footer.tsx",
+    "app/components/surface/document-form-frame.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
 
   assert.match(client, /DataTable/, "grn detail: DataTable");
   assert.match(client, /footerLineSummary/, "grn detail: line-count footer");
@@ -115,12 +126,12 @@ test("Wave E GRN DETAIL confirmed lines use DataTable + physical-QC footer", () 
   );
   assert.match(
     surface,
-    /in-\[\[data-owner-shell-scroll\]\]:-mx-3/,
+    /in-\[\[data-control-surface-scroll\]\]:-mx-3/,
     "AppDetailFooter sticky: horizontal shell bleed",
   );
   assert.match(
     surface,
-    /in-\[\[data-owner-shell-scroll\]\]:w-\[calc\(100%\+1\.5rem\)\]/,
+    /in-\[\[data-control-surface-scroll\]\]:w-\[calc\(100%\+1\.5rem\)\]/,
     "AppDetailFooter sticky: widen border box (w-full + -mx does not bleed)",
   );
   assert.match(

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback } from "react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -28,10 +28,13 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { messages } from "@lib/messages";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import {
   resolveHrBranchScope,
   withHrBranchScope,
 } from "@/lib/hr-scope";
+
+const AUDIT_LOG_OVERLAY_KEYS = ["logId"] as const;
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
 
@@ -63,7 +66,7 @@ function UserLabel({ name }: { name: string | null }) {
 }
 
 function actionLabel(
-  copy: typeof messages.owner.staffAudit,
+  copy: typeof messages.controlSurface.staffAudit,
   action: string,
 ): string {
   return copy.actionLabels[action] ?? UNKNOWN_LABEL_VI;
@@ -91,7 +94,7 @@ function sameTargetHref(
 
 function branchLabel(
   row: PermissionAuditDisplayRow,
-  copy: typeof messages.owner.staffAudit,
+  copy: typeof messages.controlSurface.staffAudit,
 ): string {
   if (row.branchId === null) return copy.tenantWide;
   return row.branchName ?? UNKNOWN_LABEL_VI;
@@ -103,9 +106,21 @@ export function PermissionAuditTable({
   rows: PermissionAuditDisplayRow[];
 }) {
   const router = useRouter();
-  const copy = messages.owner.staffAudit;
+  const copy = messages.controlSurface.staffAudit;
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const { get, patchOverlay, clearOverlay } = useDocumentOverlayUrl(
+    AUDIT_LOG_OVERLAY_KEYS,
+  );
+  const rawLogId = get("logId");
+  const selectedId =
+    rawLogId && /^\d+$/.test(rawLogId) ? Number(rawLogId) : null;
+  const setSelectedId = useCallback(
+    (id: number | null) => {
+      if (id == null) clearOverlay(["logId"], "replace");
+      else patchOverlay({ logId: id }, "push");
+    },
+    [clearOverlay, patchOverlay],
+  );
   const sheetRow =
     selectedId == null
       ? null

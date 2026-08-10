@@ -39,7 +39,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   const cart = read("app/q/[token]/self-order/cart-sheet.tsx");
   const menu = read("app/q/[token]/self-order/menu-panel.tsx");
   const hooks = read("app/q/[token]/self-order/hooks.ts");
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-page.tsx");
 
   assert.match(client, /SELF_ORDER_VI\.tableLabel/);
   assert.match(client, /padded=\{false\}/);
@@ -250,8 +250,9 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(contracts, /available_to_sell/);
   assert.match(contracts, /manual_limit_quantity/);
   assert.match(guestUi, /branch_menu_limit_availability/);
-  assert.match(guestUi, /primary \(terracotta\)/);
-  assert.match(guestUi, /no\s+per-item category eyebrow/);
+  assert.match(guestUi, /primary `Hoá đơn` \(terracotta/);
+  assert.match(guestUi, /sticky category pills/);
+  assert.match(guestUi, /\*\*No Tabs\*\*/);
   assert.doesNotMatch(guestUi, /fixed lower-right/);
 });
 

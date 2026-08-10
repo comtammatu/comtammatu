@@ -135,7 +135,7 @@ test("HR per-position editor exposes the consumption task kind", () => {
   );
   assert.match(
     positionTasksActionsSource,
-    /staffRoleFromPositionCode\(position\.code\)[\s\S]*bucket === "owner" \|\| position\.code === "archived_staff"/,
+    /isOwnerPositionCode\(position\.code\) \|\|[\s\S]*position\.code === "archived_staff"/,
     "HR position-task editor should exclude Owner and archived positions",
   );
   assert.doesNotMatch(

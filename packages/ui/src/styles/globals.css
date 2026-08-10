@@ -2,15 +2,23 @@
 @import "tw-animate-css";
 
 /* ============================================================
- * THEME — packages/ui/src/styles/globals.css
- * Runtime implementation: Com Tam Ma Tu Custom Theme token values on top of
- * the Má Tư Design System primitive runtime.
+ * MÁ TƯ DESIGN SYSTEM — packages/ui/src/styles/globals.css
+ * The single CSS entry for the whole product. There is no second stylesheet,
+ * no route theme file, and no parallel token set.
  *
- * Override governance:
- *   1. Change global semantic tokens here only; never add route theme files.
- *   2. OKLCH only — no hex/rgb/hsl in any token.
- *   3. Light + dark BOTH required — every custom token defines :root AND .dark.
- *   4. Documented — each override group has an Override: <reason> comment.
+ * Zones (in source order):
+ *   1. tokens          — @theme surface + light/night semantic values
+ *   2. base            — element defaults
+ *   3. utilities       — data variants, @utility set, brand/mascot decoration
+ *   4. app-exceptions  — third-party skins, print mode, reduced-motion backstop
+ *
+ * Rules:
+ *   1. Semantic tokens change here only; never add a route-level theme file.
+ *   2. OKLCH only for color. Depth and motion scalars are the documented
+ *      exceptions and say so at their group.
+ *   3. Light + night BOTH required — every color token defines the
+ *      `:root, .theme-light-only` scope AND `.dark`.
+ *   4. No parallel aliases. One semantic name per role.
  *   5. No raw Tailwind palette outside this file — code MUST NOT use
  *      bg-{color}-{n}, text-{color}-{n}, border-{color}-{n} (purple-50, green-100…);
  *      use semantic tokens (bg-success/10, text-warning, border-destructive).
@@ -23,352 +31,86 @@
 @source "../**/*.{ts,tsx}";
 
 /* ============================================================
- * ZONE A — PRESET TOKEN SURFACE + MÁ TƯ DESIGN SYSTEM SEMANTIC TOKENS
- * Keep the primitive token surface stable; the Custom Theme owns semantic values.
+ * ZONE 1 — TOKENS
  * ============================================================ */
 
+/* The whole @theme surface: color roles, radius tiers, type scale, fonts, and
+ * animation registrations. Status hues (success / warning / info) exist because
+ * POS/Inventory toasts, alerts, badges, and zone locks need distinct
+ * operational states; tier hues (elite / note) cover the Trust / Variance /
+ * Waste grade ladders that success–destructive cannot express. */
 @theme inline {
   --font-heading: var(--font-geist-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-:root,
-.theme-light-only {
-  color-scheme: light;
-  --background: oklch(0.978 0.014 64.3);
-  --foreground: oklch(0.218 0.036 251.3);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.218 0.036 251.3);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.218 0.036 251.3);
-  /* Override: Dual Thesis contrast — slightly deeper primary for
-     primary-on-cream headroom; stronger border/input/ring for WCAG 1.4.11. */
-  --primary: oklch(0.52 0.18 33);
-  --primary-foreground: oklch(0.978 0.014 64.3);
-  --secondary: oklch(0.945 0.014 64.7);
-  --secondary-foreground: oklch(0.218 0.036 251.3);
-  --muted: oklch(0.935 0.012 67.7);
-  --muted-foreground: oklch(0.512 0.09 62.2);
-  --accent: oklch(0.936 0.018 70.2);
-  --accent-foreground: oklch(0.218 0.036 251.3);
-  --destructive: oklch(0.466 0.147 33.3);
-  --border: oklch(0.86 0.025 72);
-  --input: oklch(0.86 0.025 72);
-  --ring: oklch(0.62 0.14 55);
-  --chart-1: oklch(0.52 0.18 33);
-  --chart-2: oklch(0.62 0.14 55);
-  --chart-3: oklch(0.609 0.086 137);
-  --chart-4: oklch(0.218 0.036 251.3);
-  --chart-5: oklch(0.512 0.09 62.2);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.994 0.006 84.6);
-  --sidebar-foreground: oklch(0.218 0.036 251.3);
-  --sidebar-primary: oklch(0.52 0.18 33);
-  --sidebar-primary-foreground: oklch(0.978 0.014 64.3);
-  --sidebar-accent: oklch(0.956 0.014 67.7);
-  --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
-  --sidebar-border: oklch(0.86 0.025 72);
-  --sidebar-ring: oklch(0.62 0.14 55);
-}
-
-.dark {
-  /* Night mode — warm-dark "gạo cháy" palette (hue ~50 warm brown rice, not navy).
-     See design-system.md → Token Contract → Theme runtime. */
-  --background: oklch(0.155 0.016 50);
-  --foreground: oklch(0.94 0.018 75);
-  /* Override: Dual Thesis night surface lift — card/popover ΔL vs background
-     for WCAG 1.4.11 hierarchy (warm-dark gạo cháy). */
-  --card: oklch(0.23 0.018 48);
-  --card-foreground: oklch(0.94 0.018 75);
-  --popover: oklch(0.23 0.018 48);
-  --popover-foreground: oklch(0.94 0.018 75);
-  --primary: oklch(0.63 0.155 36);
-  --primary-foreground: oklch(0.155 0.016 50);
-  --secondary: oklch(0.265 0.018 48);
-  --secondary-foreground: oklch(0.94 0.018 75);
-  --muted: oklch(0.245 0.018 48);
-  --muted-foreground: oklch(0.74 0.028 70);
-  --accent: oklch(0.305 0.028 55);
-  --accent-foreground: oklch(0.94 0.018 75);
-  --destructive: oklch(0.625 0.165 25);
-  --border: oklch(0.94 0.02 75 / 16%);
-  --input: oklch(0.94 0.02 75 / 18%);
-  --ring: oklch(0.845 0.145 80);
-  --chart-1: oklch(0.845 0.145 80);
-  --chart-2: oklch(0.605 0.155 36);
-  --chart-3: oklch(0.67 0.1 140);
-  --chart-4: oklch(0.94 0.018 75);
-  --chart-5: oklch(0.74 0.028 70);
-  --sidebar: oklch(0.23 0.018 48);
-  --sidebar-foreground: oklch(0.94 0.018 75);
-  --sidebar-primary: oklch(0.63 0.155 36);
-  --sidebar-primary-foreground: oklch(0.155 0.016 50);
-  --sidebar-accent: oklch(0.305 0.028 55);
-  --sidebar-accent-foreground: oklch(0.94 0.018 75);
-  --sidebar-border: oklch(0.94 0.02 75 / 16%);
-  --sidebar-ring: oklch(0.845 0.145 80);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
-}
-
-/* ============================================================
- * ZONE B — CTMT OVERRIDES (additive only)
- * ============================================================ */
-
-/* Override: status semantics — preset only ships primary/destructive,
- * but POS/Inventory toasts, alerts, badges, zone-locks need 4 distinct
- * status hues. Reused for: Trusted=success, Bootstrap=info, At-risk=destructive,
- * variance T1/waste T1/low-stock=warning, negative_stock/out_of_stock=destructive/warning. */
-
-/* Override: tier semantics — Trust/Variance/Waste tier badges need 2 hues
- * not present in success/warning/info/destructive: Elite (purple, rare grade) and
- * Note (orange-mid, between warning and destructive in 3-tier ladders). */
-
-@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-tier-elite: var(--tier-elite);
   --color-tier-elite-foreground: var(--tier-elite-foreground);
   --color-tier-note: var(--tier-note);
   --color-tier-note-foreground: var(--tier-note-foreground);
-}
-
-:root,
-.theme-light-only {
-  /* Status hues are dark enough to serve as ink on cream (WCAG AA 4.5:1 as
-     text, including over their own /10 and /15 tints). `*-foreground` means
-     "text on the solid fill" — never text on a tint. The brand gold stays on
-     --ring / --chart-2. */
-  --success: oklch(0.48 0.09 137);
-  --success-foreground: oklch(0.978 0.014 64.3);
-  --warning: oklch(0.5 0.13 73.2);
-  --warning-foreground: oklch(0.978 0.014 64.3);
-  --info: oklch(0.218 0.036 251.3);
-  --info-foreground: oklch(0.978 0.014 64.3);
-  --destructive-foreground: oklch(0.978 0.014 64.3);
-  --tier-elite: oklch(0.55 0.18 305);
-  --tier-elite-foreground: oklch(0.985 0.001 106.423);
-  --tier-note: oklch(0.72 0.16 50);
-  --tier-note-foreground: oklch(0.214 0.009 43.1);
-}
-
-.dark {
-  /* Night mode status tokens — lightness raised ~10% so badges/callouts read
-     clearly on the warm-dark gạo cháy surface. Foreground stays dark for
-     contrast on the lighter status fills. */
-  --success: oklch(0.67 0.1 140);
-  --success-foreground: oklch(0.155 0.016 50);
-  --warning: oklch(0.845 0.145 80);
-  --warning-foreground: oklch(0.155 0.016 50);
-  --info: oklch(0.72 0.09 250);
-  --info-foreground: oklch(0.155 0.016 50);
-  --destructive-foreground: oklch(0.155 0.016 50);
-  --tier-elite: oklch(0.78 0.14 305);
-  --tier-elite-foreground: oklch(0.155 0.016 50);
-  --tier-note: oklch(0.78 0.13 50);
-  --tier-note-foreground: oklch(0.155 0.016 50);
-}
-
-/* Override: effect / depth tokens — adopt the Má Tư Design System --effect-*
- * elevation family (rings, scrim, quiet float shadows). EXCEPTION to ZONE rule
- * #2 (OKLCH-only): these are compositing / depth values (box-shadow + scrim),
- * NOT semantic colors, so they are authored as rgba by design. Border-first
- * stays the resting default — only floating / overlay surfaces consume an effect
- * shadow. --effect-ring-border theme-flips automatically via var(--border).
- * The float / overlay / scrim rungs are consumed through the shadow-effect-*
- * @utility set + bg-effect-scrim + drawer-scrim (ZONE C). */
-@theme inline {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --color-effect-scrim: var(--effect-scrim);
-}
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-:root,
-.theme-light-only {
-  --effect-scrim: rgba(13, 27, 42, 0.45);
-  --effect-drawer-blur: blur(2px);
-  --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
-  --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-card-resting:
-    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.04),
-    0 2px 8px rgba(13, 27, 42, 0.02);
-  --effect-card-hover:
-    var(--effect-ring-hairline), 0 2px 8px rgba(13, 27, 42, 0.08),
-    0 4px 16px rgba(13, 27, 42, 0.04);
-  --effect-popover:
-    var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
-  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
-  --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
-  --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
-  --effect-tooltip: 0 4px 14px rgba(13, 27, 42, 0.22);
-}
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
 
-.dark {
-  /* Night mode uses the `.dark` selector; warm-dark palette tuned for the F&B
-   * evening shift. Alpha raised on shadow/scrim rungs so overlays float visibly
-   * over the warm gạo cháy surface (the :root navy rgba would read flat here). */
-  --effect-scrim: rgba(10, 6, 0, 0.72);
-  --effect-drawer-blur: blur(3px);
-  --effect-ring-hairline: inset 0 0 0 1px rgba(245, 235, 217, 0.12);
-  --effect-ring-border: inset 0 0 0 1px var(--border);
-  --effect-card-resting:
-    var(--effect-ring-hairline), 0 1px 3px rgba(0, 0, 0, 0.24),
-    0 2px 8px rgba(0, 0, 0, 0.16);
-  --effect-card-hover:
-    var(--effect-ring-hairline), 0 2px 8px rgba(0, 0, 0, 0.32),
-    0 4px 16px rgba(0, 0, 0, 0.2);
-  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(0, 0, 0, 0.48);
-  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(0, 0, 0, 0.5);
-  --effect-dialog: 0 16px 48px rgba(0, 0, 0, 0.6);
-  --effect-drawer: 0 0 48px rgba(0, 0, 0, 0.6);
-  --effect-tooltip: 0 4px 14px rgba(0, 0, 0, 0.5);
-}
-
-/* Sonner operational preset: keep the dismiss target inside the toast. */
-[data-sonner-toast][data-styled="true"].cn-toast {
-  padding-inline-end: 2.75rem;
-  box-shadow: var(--effect-toast);
-}
-
-/* Guest `/q/*` toaster: Sonner defaults to 13px on a near-white warning fill;
- * bump type and keep description readable on the dark richColors surface. */
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest {
-  font-size: 1rem;
-  gap: 0.625rem;
-  padding-block: 0.875rem;
-  padding-inline: 1rem;
-  padding-inline-end: 2.75rem;
-}
-
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
-  .cn-toast-guest-title,
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest [data-title] {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
-  .cn-toast-guest-description,
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
-  [data-description] {
-  font-size: 0.875rem;
-  line-height: 1.4;
-  font-weight: 400;
-  color: inherit;
-  opacity: 0.92;
-}
-
-[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
-  .cn-toast-guest-action {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-[data-sonner-toast][data-styled="true"] .cn-toast-close {
-  top: 0.5rem;
-  right: 0.5rem;
-  left: auto;
-  width: 2rem;
-  height: 2rem;
-  transform: none;
-  border-color: var(--border);
-  background: var(--background);
-  color: var(--foreground);
-}
-
-[data-sonner-toast][data-styled="true"] .cn-toast-close:hover {
-  background: var(--muted);
-  border-color: var(--border);
-}
-
-/* ============================================================
- * ZONE C — APP UTILITIES (variants, font, base)
- * Má Tư DS utility layer for Tailwind data variants and shared keyframes.
- * to avoid adding the CLI as a runtime dep just for one CSS file.
- * Update here only through the design-system contract.
- * ============================================================ */
-
-/* Geist for headings + body, Geist Mono for data. Geist is
- * loaded via the `geist` package (full Vietnamese glyph coverage, self-hosted,
- * offline) and exposes `--font-geist-sans` / `--font-geist-mono`. `font-mono`
- * (Geist Mono) stays mandatory for tabular use cases (price columns, IDs,
- * stock movements, codes) where digit alignment matters. */
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-}
-
-/* Turbopack dev does not honor `@theme inline` for Tailwind's default
- * --font-sans/--font-mono keys (emits a self-referential `var(--font-sans)`);
- * this unlayered :root override wins the cascade and restores the mapping.
- * Inert in `next build`, which inlines the value into utilities directly. */
-:root {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-/* Override: micro text sizes for compact labels (uppercase tracking-wider helpers
- * in mobile chrome + admin metadata badges). Replaces text-[10px] / text-[11px]
- * arbitrary classes scattered across the app. */
-@theme inline {
+  /* Micro text sizes for compact labels (uppercase tracking-wider helpers in
+   * mobile chrome + admin metadata badges) — replaces arbitrary text-[10px] /
+   * text-[11px] classes. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
   --text-3xs: 0.625rem;
   --text-3xs--line-height: 0.875rem;
-}
 
-/* Override: Pickup/KDS customer-facing board rows need large scan sizes that
- * adapt to desktop display height without reintroducing forbidden app-surface
- * text-4xl, arbitrary text values, or viewport-width typography. */
-@theme inline {
+  /* Runner + Pickup/KDS customer-facing board rows need large scan sizes that
+   * adapt to desktop display height without app-surface text-4xl, arbitrary
+   * text values, or viewport-width typography. */
+  --text-runner-header: clamp(1.25rem, 3.2dvh, 2.875rem);
+  --text-runner-header--line-height: 1.12;
+  --text-runner-board: clamp(1.625rem, 3.8dvh, 3.75rem);
+  --text-runner-board--line-height: 1.12;
+  --text-runner-empty-secondary: clamp(1.25rem, 3dvh, 2.75rem);
+  --text-runner-empty-secondary--line-height: 1.12;
+  --text-runner-footer: clamp(1.125rem, 2.4dvh, 2.25rem);
+  --text-runner-footer--line-height: 1.12;
   --text-pickup-header: clamp(1.25rem, 3.2dvh, 2.875rem);
   --text-pickup-header--line-height: 1.12;
   --text-pickup-board: clamp(1.625rem, 3.8dvh, 3.75rem);
@@ -377,55 +119,8 @@
   --text-pickup-empty-secondary--line-height: 1.12;
   --text-pickup-footer: clamp(1.125rem, 2.4dvh, 2.25rem);
   --text-pickup-footer--line-height: 1.12;
-}
 
-@theme inline {
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(
-        --accordion-panel-height,
-        auto
-      );
-    }
-  }
-
-  @keyframes accordion-up {
-    from {
-      height: var(
-        --accordion-panel-height,
-        auto
-      );
-    }
-    to {
-      height: 0;
-    }
-  }
-}
-
-/* Override: motion / easing tokens — adopt the Má Tư Design System --motion-* /
- * --ease-* family. EXCEPTION to ZONE rule #2 (OKLCH-only): durations, easing
- * curves, and the press offset are motion scalars, not colors. Mode-independent
- * (no .dark mirror needed). App surfaces still author only duration-150 / 300
- * (== --motion-base / --motion-progress); the packages/ui primitive layer
- * consumes the finer rungs via duration-[var(--motion-*)] (Tailwind v4 has no
- * --duration-* / --ease-* utility namespace). All consumption stays compatible
- * with the prefers-reduced-motion backstop (never add !important). The
- * --animate-spin rebind retimes the global spinner to the DS 700ms. */
-:root {
-  --motion-fast: 120ms;
-  --motion-base: 150ms;
-  --motion-overlay: 200ms;
-  --motion-drawer: 240ms;
-  --motion-progress: 300ms;
-  --motion-spinner: 700ms;
-  --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-linear: linear;
-}
-
-@theme inline {
+  /* The --animate-spin rebind retimes the global spinner to the DS 700ms. */
   --animate-spin: spin var(--motion-spinner) var(--ease-linear) infinite;
   /* Cot Let pickup mascot — Codex Pet Atlas rows with exact frame counts. */
   --animate-cotlet-idle: cotlet-idle 1s steps(6) infinite;
@@ -456,6 +151,226 @@
     }
   }
 }
+
+/* Day palette (cream + brick). Dual Thesis contrast: the primary sits deeper
+ * for primary-on-cream headroom, and border/input/ring are stronger for WCAG
+ * 1.4.11. Status hues are dark enough to serve as ink on cream (AA 4.5:1 as
+ * text, including over their own /10 and /15 tints); `*-foreground` means
+ * "text on the solid fill" — never text on a tint. The brand gold stays on
+ * --ring / --chart-2.
+ *
+ * The --effect-* depth family is the documented exception to the OKLCH-only
+ * rule: these are compositing values (box-shadow + scrim), not semantic
+ * colors, so they are authored as rgba. Border-first stays the resting
+ * default — only floating / overlay surfaces consume an effect shadow, via
+ * the shadow-effect-* utilities, bg-effect-scrim, and drawer-scrim. */
+:root,
+.theme-light-only {
+  color-scheme: light;
+  --background: oklch(0.978 0.014 64.3);
+  --foreground: oklch(0.218 0.036 251.3);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.218 0.036 251.3);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.218 0.036 251.3);
+  --primary: oklch(0.52 0.18 33);
+  --primary-foreground: oklch(0.978 0.014 64.3);
+  --secondary: oklch(0.945 0.014 64.7);
+  --secondary-foreground: oklch(0.218 0.036 251.3);
+  --muted: oklch(0.935 0.012 67.7);
+  --muted-foreground: oklch(0.512 0.09 62.2);
+  --accent: oklch(0.936 0.018 70.2);
+  --accent-foreground: oklch(0.218 0.036 251.3);
+  --destructive: oklch(0.466 0.147 33.3);
+  --destructive-foreground: oklch(0.978 0.014 64.3);
+  --success: oklch(0.48 0.09 137);
+  --success-foreground: oklch(0.978 0.014 64.3);
+  --warning: oklch(0.5 0.13 73.2);
+  --warning-foreground: oklch(0.978 0.014 64.3);
+  --info: oklch(0.218 0.036 251.3);
+  --info-foreground: oklch(0.978 0.014 64.3);
+  --tier-elite: oklch(0.55 0.18 305);
+  --tier-elite-foreground: oklch(0.985 0.001 106.423);
+  --tier-note: oklch(0.72 0.16 50);
+  --tier-note-foreground: oklch(0.214 0.009 43.1);
+  --border: oklch(0.86 0.025 72);
+  --input: oklch(0.86 0.025 72);
+  --ring: oklch(0.62 0.14 55);
+  --chart-1: oklch(0.52 0.18 33);
+  --chart-2: oklch(0.62 0.14 55);
+  --chart-3: oklch(0.609 0.086 137);
+  --chart-4: oklch(0.218 0.036 251.3);
+  --chart-5: oklch(0.512 0.09 62.2);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.994 0.006 84.6);
+  --sidebar-foreground: oklch(0.218 0.036 251.3);
+  --sidebar-primary: oklch(0.52 0.18 33);
+  --sidebar-primary-foreground: oklch(0.978 0.014 64.3);
+  --sidebar-accent: oklch(0.956 0.014 67.7);
+  --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
+  --sidebar-border: oklch(0.86 0.025 72);
+  --sidebar-ring: oklch(0.62 0.14 55);
+  --effect-scrim: rgba(13, 27, 42, 0.45);
+  --effect-drawer-blur: blur(2px);
+  --effect-ring-hairline: inset 0 0 0 1px rgba(13, 27, 42, 0.1);
+  --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-card-resting:
+    var(--effect-ring-hairline), 0 1px 3px rgba(13, 27, 42, 0.04),
+    0 2px 8px rgba(13, 27, 42, 0.02);
+  --effect-card-hover:
+    var(--effect-ring-hairline), 0 2px 8px rgba(13, 27, 42, 0.08),
+    0 4px 16px rgba(13, 27, 42, 0.04);
+  --effect-popover:
+    var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.16);
+  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(13, 27, 42, 0.18);
+  --effect-dialog: 0 16px 48px rgba(13, 27, 42, 0.3);
+  --effect-drawer: 0 0 48px rgba(13, 27, 42, 0.3);
+  --effect-tooltip: 0 4px 14px rgba(13, 27, 42, 0.22);
+}
+
+.dark {
+  /* Night mode — warm-dark "gạo cháy" palette (hue ~50 warm brown rice, not
+     navy), tuned for the F&B evening shift. See design-system.md → Token
+     Contract → Theme runtime + Contrast Targets. Card/popover lift over the
+     background; borders use cream-on-night alpha ≥40% so hairlines clear
+     WCAG 1.4.11 (≥3:1). Muted text is brighter so secondary copy stays AA on
+     both background and card. Status lightness stays raised for badge fills. */
+  --background: oklch(0.155 0.016 50);
+  --foreground: oklch(0.96 0.016 75);
+  --card: oklch(0.3 0.02 48);
+  --card-foreground: oklch(0.96 0.016 75);
+  --popover: oklch(0.3 0.02 48);
+  --popover-foreground: oklch(0.96 0.016 75);
+  --primary: oklch(0.66 0.155 36);
+  --primary-foreground: oklch(0.155 0.016 50);
+  --secondary: oklch(0.34 0.02 48);
+  --secondary-foreground: oklch(0.96 0.016 75);
+  --muted: oklch(0.32 0.02 48);
+  --muted-foreground: oklch(0.82 0.028 70);
+  --accent: oklch(0.38 0.03 55);
+  --accent-foreground: oklch(0.96 0.016 75);
+  --destructive: oklch(0.66 0.165 25);
+  --destructive-foreground: oklch(0.155 0.016 50);
+  --success: oklch(0.7 0.1 140);
+  --success-foreground: oklch(0.155 0.016 50);
+  --warning: oklch(0.86 0.145 80);
+  --warning-foreground: oklch(0.155 0.016 50);
+  --info: oklch(0.74 0.09 250);
+  --info-foreground: oklch(0.155 0.016 50);
+  --tier-elite: oklch(0.8 0.14 305);
+  --tier-elite-foreground: oklch(0.155 0.016 50);
+  --tier-note: oklch(0.8 0.13 50);
+  --tier-note-foreground: oklch(0.155 0.016 50);
+  --border: oklch(0.94 0.02 75 / 40%);
+  --input: oklch(0.94 0.02 75 / 42%);
+  --ring: oklch(0.86 0.145 80);
+  --chart-1: oklch(0.86 0.145 80);
+  --chart-2: oklch(0.66 0.155 36);
+  --chart-3: oklch(0.7 0.1 140);
+  --chart-4: oklch(0.96 0.016 75);
+  --chart-5: oklch(0.82 0.028 70);
+  --sidebar: oklch(0.3 0.02 48);
+  --sidebar-foreground: oklch(0.96 0.016 75);
+  --sidebar-primary: oklch(0.66 0.155 36);
+  --sidebar-primary-foreground: oklch(0.155 0.016 50);
+  --sidebar-accent: oklch(0.38 0.03 55);
+  --sidebar-accent-foreground: oklch(0.96 0.016 75);
+  --sidebar-border: oklch(0.94 0.02 75 / 40%);
+  --sidebar-ring: oklch(0.86 0.145 80);
+  --effect-scrim: rgba(10, 6, 0, 0.72);
+  --effect-drawer-blur: blur(3px);
+  --effect-ring-hairline: inset 0 0 0 1px rgba(245, 235, 217, 0.22);
+  --effect-ring-border: inset 0 0 0 1px var(--border);
+  --effect-card-resting:
+    var(--effect-ring-hairline), 0 1px 3px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.16);
+  --effect-card-hover:
+    var(--effect-ring-hairline), 0 2px 8px rgba(0, 0, 0, 0.32),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+  --effect-popover: var(--effect-ring-border), 0 8px 24px rgba(0, 0, 0, 0.48);
+  --effect-toast: var(--effect-ring-border), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --effect-dialog: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --effect-drawer: 0 0 48px rgba(0, 0, 0, 0.6);
+  --effect-tooltip: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Mode-independent runtime scalars.
+ *
+ * Fonts: Geist for headings + body, Geist Mono for data, loaded via the `geist`
+ * package (full Vietnamese glyph coverage, self-hosted, offline). `font-mono`
+ * stays mandatory for tabular use cases (price columns, IDs, stock movements,
+ * codes) where digit alignment matters. Turbopack dev does not honor
+ * `@theme inline` for Tailwind's default --font-sans/--font-mono keys (it
+ * emits a self-referential `var(--font-sans)`); this unlayered :root override
+ * wins the cascade and restores the mapping (including --font-heading for the
+ * same Geist Sans face). Inert in `next build`, which inlines the value into
+ * utilities directly.
+ *
+ * Motion: durations, easing curves, and the press offset are scalars, not
+ * colors, so they are the second documented exception to the OKLCH-only rule.
+ * App surfaces author only duration-150 / 300 (== --motion-base /
+ * --motion-progress); the packages/ui primitive layer consumes the finer rungs
+ * via duration-[var(--motion-*)] because Tailwind v4 has no --duration-* /
+ * --ease-* utility namespace. All consumption stays compatible with the
+ * prefers-reduced-motion backstop in zone 4 (never add !important). */
+:root {
+  --font-heading: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --motion-fast: 120ms;
+  --motion-base: 150ms;
+  --motion-overlay: 200ms;
+  --motion-drawer: 240ms;
+  --motion-progress: 300ms;
+  --motion-spinner: 700ms;
+  --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+}
+
+/* ============================================================
+ * ZONE 2 — BASE
+ * ============================================================ */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    font-size: 17px;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+
+  /* Prevent text selection and context callouts on mobile touch targets */
+  @media (pointer: coarse) {
+    button,
+    a,
+    [role="button"],
+    .chrome-tap,
+    [data-slot="button"] {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+  }
+}
+
+/* ============================================================
+ * ZONE 3 — UTILITIES
+ * ============================================================ */
 
 @custom-variant data-open {
   &:where([data-state="open"]),
@@ -526,36 +441,36 @@
   }
 }
 
-/* Override: 95% of dynamic viewport for bottom sheets — leaves a 5% strip
- * so iOS Safari URL bar / Android nav bar overlap doesn't eat the dialog. */
+/* 95% of dynamic viewport for bottom sheets — leaves a 5% strip so iOS Safari
+ * URL bar / Android nav bar overlap doesn't eat the dialog. */
 @utility max-h-dvh-95 {
   max-height: 95dvh;
 }
 
-/* Override: 80% of dynamic viewport for short bottom sheets (item action
- * picker, quick reason chips) — keep underlying menu visible while the
- * sheet is open so cashier doesn't lose context. */
+/* 80% of dynamic viewport for short bottom sheets (item action picker, quick
+ * reason chips) — keep the underlying menu visible while the sheet is open so
+ * the cashier doesn't lose context. */
 @utility max-h-dvh-80 {
   max-height: 80dvh;
 }
 
-/* Override: drop-shadow for white text overlaid on POS menu item images.
- * The default Tailwind drop-shadow utilities are too light (opacity 5–7%)
- * to maintain WCAG contrast against the wide range of food photos a tenant
- * can upload, so we pin a stronger 60% black for legibility. Filter rather
- * than `text-shadow` so it composes with the element's existing transforms. */
+/* Drop-shadow for white text overlaid on POS menu item images. The default
+ * Tailwind drop-shadow utilities are too light (opacity 5–7%) to hold WCAG
+ * contrast against the range of food photos a tenant can upload, so we pin a
+ * stronger 60% black. Filter rather than `text-shadow` so it composes with the
+ * element's existing transforms. */
 @utility pos-text-overlay {
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6));
 }
 
-/* Override: iOS + Android safe-area handling for POS floating bars.
- * iOS home indicator (~34pt) and Android gesture/3-button nav sit inside
+/* iOS + Android safe-area handling for POS floating bars. The iOS home
+ * indicator (~34pt) and Android gesture/3-button nav sit inside
  * `inset-x-3 bottom-3` floating action bars under PWA standalone mode
- * (viewport-fit:cover loses the URL bar / extends under system chrome),
- * so cashier taps land on home gesture instead of "Giỏ đơn mới".
- * `max(...)` keeps the original spacing on non-notched devices while
- * clearing the system bar on iPhone X+ / Android with gesture nav.
- * Names prefixed `pos-` to avoid collision with the retired-helper rule. */
+ * (viewport-fit:cover loses the URL bar / extends under system chrome), so
+ * cashier taps land on the home gesture instead of "Giỏ đơn mới". `max(...)`
+ * keeps the original spacing on non-notched devices while clearing the system
+ * bar on iPhone X+ / Android with gesture nav. Prefixed `pos-` to avoid
+ * collision with the retired-helper rule. */
 @utility pos-safe-bottom {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
@@ -569,14 +484,14 @@
   padding-top: max(0.5rem, env(safe-area-inset-top));
 }
 
-/* Override: safe-area for app-shell chrome (shell roots, BottomNav, sticky toolbars)
- * when the PWA runs standalone on Android — viewport-fit:cover lets the
- * system gesture/3-button nav bar overlap fixed-bottom UI. `max(...)`
- * preserves the original chrome padding on non-gesture devices.
- * `chrome-safe-pt` shifts a full-height shell below translucent status chrome
- * without adding spacing on zero-inset viewports.
- * `chrome-safe-pb` replaces `pb-2`-style chrome padding on fixed or sticky
- * `bottom-0` shells. Prefixed `chrome-` to avoid retired helper names. */
+/* Safe-area for app-shell chrome (shell roots, BottomNav, sticky toolbars)
+ * when the PWA runs standalone on Android — viewport-fit:cover lets the system
+ * gesture/3-button nav bar overlap fixed-bottom UI. `max(...)` preserves the
+ * original chrome padding on non-gesture devices. `chrome-safe-pt` shifts a
+ * full-height shell below translucent status chrome without adding spacing on
+ * zero-inset viewports. `chrome-safe-pb` replaces `pb-2`-style chrome padding
+ * on fixed or sticky `bottom-0` shells. Prefixed `chrome-` to avoid retired
+ * helper names. */
 @utility chrome-safe-pt {
   padding-top: env(safe-area-inset-top);
 }
@@ -591,17 +506,47 @@
  * callout and tap-highlight flash on app CHROME (nav, tiles, headers,
  * buttons) so the installed operator PWA doesn't read as a website. Do NOT
  * apply to data content (tables, detail text, copyable IDs) — those must
- * stay selectable for accessibility/usability. Prefixed `chrome-` to group
- * with the other chrome-* PWA-shell utilities above. */
+ * stay selectable for accessibility/usability. */
 @utility chrome-tap {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }
 
-/* Brand decoration: the three Má Tư identity patterns as seamless,
- * tileable SVG (art in /brand/patterns). Use only as decorative footer
- * strips, packaging trim, or section separators — never as a background
- * behind body text. `brand-strip` is a ready-made 40px divider band. */
+/* Named float-shadow utilities backed by the --effect-* depth family.
+ * Deterministic box-shadow (no Tailwind shadow-color substitution on the
+ * multi-layer inset values). Resting surfaces stay border-first — these apply
+ * ONLY to floating / overlay primitives. */
+@utility shadow-effect-popover {
+  box-shadow: var(--effect-popover);
+}
+@utility shadow-effect-dialog {
+  box-shadow: var(--effect-dialog);
+}
+@utility shadow-effect-drawer {
+  box-shadow: var(--effect-drawer);
+}
+@utility shadow-effect-tooltip {
+  box-shadow: var(--effect-tooltip);
+}
+@utility shadow-effect-card-resting {
+  box-shadow: var(--effect-card-resting);
+}
+@utility shadow-effect-card-hover {
+  box-shadow: var(--effect-card-hover);
+}
+
+/* Modal / drawer backdrop: scrim + 2px backdrop blur bundled so Dialog, Sheet,
+ * and Drawer overlays share one tuned affordance. Dialog/Sheet use
+ * bg-effect-scrim alone; Drawer uses the full scrim + blur. */
+@utility drawer-scrim {
+  background: var(--effect-scrim);
+  backdrop-filter: var(--effect-drawer-blur);
+}
+
+/* Brand decoration: the three Má Tư identity patterns as seamless, tileable
+ * SVG (art in /brand/patterns). Use only as decorative footer strips,
+ * packaging trim, or section separators — never as a background behind body
+ * text. `brand-strip` is a ready-made 40px divider band. */
 @utility brand-pattern-caro {
   background-image: url("/brand/patterns/ke-caro.svg");
   background-repeat: repeat;
@@ -622,39 +567,8 @@
   border-radius: var(--radius-md);
 }
 
-/* Effect / depth: named float-shadow utilities backed by the --effect-* token
- * family (ZONE B). Deterministic box-shadow (no Tailwind shadow-color
- * substitution on the multi-layer inset values). Resting surfaces stay
- * border-first — these apply ONLY to floating / overlay primitives. */
-@utility shadow-effect-popover {
-  box-shadow: var(--effect-popover);
-}
-@utility shadow-effect-dialog {
-  box-shadow: var(--effect-dialog);
-}
-@utility shadow-effect-drawer {
-  box-shadow: var(--effect-drawer);
-}
-@utility shadow-effect-tooltip {
-  box-shadow: var(--effect-tooltip);
-}
-@utility shadow-effect-card-resting {
-  box-shadow: var(--effect-card-resting);
-}
-@utility shadow-effect-card-hover {
-  box-shadow: var(--effect-card-hover);
-}
-
-/* Modal / drawer backdrop: navy scrim + 2px backdrop blur bundled so
- * Dialog/Sheet/Drawer overlays share one tuned affordance. Dialog/Sheet use
- * bg-effect-scrim alone; Drawer uses the full scrim + blur. */
-@utility drawer-scrim {
-  background: var(--effect-scrim);
-  backdrop-filter: var(--effect-drawer-blur);
-}
-
-/* Cot Let pickup mascot — Codex Pet Atlas (8 cols x 9 rows, 192x208 per
- * frame). The pickup idle board is the documented full-screen idle-visual
+/* Cot Let runner/pickup mascot — Codex Pet Atlas (8 cols x 9 rows, 192x208 per
+ * frame). The idle board is the documented full-screen idle-visual
  * exception (§G Motion); sprite loops apply via motion-safe utilities and
  * collapse under the global prefers-reduced-motion backstop. */
 @utility mascot-cotlet {
@@ -678,38 +592,79 @@
   background-position: 0 -624px;
 }
 
-@layer base {
-  html {
-    @apply font-sans;
-    font-size: 17px;
-  }
+/* ============================================================
+ * ZONE 4 — APP EXCEPTIONS
+ * Third-party skins and mode overrides that cannot be expressed as tokens or
+ * utilities. Nothing here is a second design system.
+ * ============================================================ */
 
-  ::selection {
-    background: color-mix(in oklch, var(--primary) 30%, transparent);
-  }
-
-  /* Prevent text selection and context callouts on mobile touch targets */
-  @media (pointer: coarse) {
-    button,
-    a,
-    [role="button"],
-    .chrome-tap,
-    [data-slot="button"] {
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
-  }
+/* Sonner operational preset: keep the dismiss target inside the toast. */
+[data-sonner-toast][data-styled="true"].cn-toast {
+  padding-inline-end: 2.75rem;
+  box-shadow: var(--effect-toast);
 }
 
-/* Override: print mode for POS bill receipt — force black-ink-on-white-paper
- * regardless of host theme. Without this, dark mode prints as white text on
- * black bg = unreadable receipt + ribbon-burning ink waste on thermal printers.
- * Also neutralize any inherited line-clamp / overflow:hidden / max-width:
- * legal text (branch.address, order.note) MUST print in full — silent clipping
- * on 80mm thermal paper = e-invoice mismatch + service failure. See named
- * regression NO-CLAMP-ON-RECEIPT-LEGAL-FIELDS (tasks/regressions.md).
- * Container = `#pos-receipt` in bill-receipt-summary.tsx. */
+/* Guest `/q/*` toaster: Sonner defaults to 13px on a near-white warning fill;
+ * bump type and keep description readable on the dark richColors surface. */
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest {
+  font-size: 1rem;
+  gap: 0.625rem;
+  padding-block: 0.875rem;
+  padding-inline: 1rem;
+  padding-inline-end: 2.75rem;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-title,
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest [data-title] {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-description,
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  [data-description] {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 400;
+  color: inherit;
+  opacity: 0.92;
+}
+
+[data-sonner-toast][data-styled="true"].cn-toast.cn-toast-guest
+  .cn-toast-guest-action {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+[data-sonner-toast][data-styled="true"] .cn-toast-close {
+  top: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+  width: 2rem;
+  height: 2rem;
+  transform: none;
+  border-color: var(--border);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+[data-sonner-toast][data-styled="true"] .cn-toast-close:hover {
+  background: var(--muted);
+  border-color: var(--border);
+}
+
+/* Print mode for the POS bill receipt — force black ink on white paper
+ * regardless of host theme. Without this, night mode prints white text on a
+ * black background = unreadable receipt + ribbon-burning ink waste on thermal
+ * printers. Also neutralize any inherited line-clamp / overflow:hidden /
+ * max-width: legal text (branch.address, order.note) MUST print in full —
+ * silent clipping on 80mm thermal paper = e-invoice mismatch + service
+ * failure. See named regression NO-CLAMP-ON-RECEIPT-LEGAL-FIELDS
+ * (tasks/regressions.md). Container = `#pos-receipt` in
+ * bill-receipt-summary.tsx. */
 @media print {
   :root {
     color-scheme: light;

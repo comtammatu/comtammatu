@@ -35,6 +35,7 @@ test("notification feed groups rows by day and demotes device settings", () => {
   assert.match(clientSource, /messages\.notifications\.deviceToggle/);
   assert.match(clientSource, /Collapsible/);
   assert.match(clientSource, /NotificationPopupControl compact/);
+  assert.doesNotMatch(clientSource, /DataTable/);
 });
 
 test("notification rows surface severity rail, kind badge, and CTA", () => {

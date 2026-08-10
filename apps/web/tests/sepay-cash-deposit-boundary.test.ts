@@ -48,7 +48,11 @@ test("cash deposit is a matched internal transfer, not customer money-in", () =>
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
   );
   assert.match(cell, /transferType === "in" && expenseIds\.length > 0/);
-  assert.match(cell, /copy\.matchedCashDeposit/);
+  assert.match(cell, /if \(transferType === "in"\) \{\s*return null;/);
+  assert.match(
+    read("apps/web/lib/messages/finance.ts"),
+    /matchedCashDeposit: "Nộp tiền mặt vào tài khoản"/,
+  );
 });
 
 test("cash deposit has one verified atomic write boundary", () => {

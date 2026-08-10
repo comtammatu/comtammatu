@@ -82,7 +82,7 @@ export function withTransferBranchQuery(
   path: string,
   branchId: number | null,
 ): string {
-  return branchId == null ? path : `${path}?branchId=${branchId}`;
+  return branchId == null ? path : `${path}?branch=${branchId}`;
 }
 
 export function isTransferSourceKind(kind: string | null | undefined): boolean {

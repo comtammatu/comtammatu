@@ -22,7 +22,7 @@ import {
 import { AppDialog } from "@/components/form";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { EmployeeRow } from "../_types";
 import { toggleStaffActive } from "./actions";
@@ -46,7 +46,7 @@ export function GrantEmployeeAccessButton({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
 
   const loginActiveByProfileId = useMemo(() => {
     const map = new Map<string, boolean>();

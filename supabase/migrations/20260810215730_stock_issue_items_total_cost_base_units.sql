@@ -26,7 +26,8 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.stock_issue_items_set_total_cost() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.stock_issue_items_set_total_cost()
+  FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.stock_issue_items_set_total_cost()
   TO postgres, service_role;
 

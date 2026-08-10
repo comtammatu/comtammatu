@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
   type ChartConfig,
-} from "@comtammatu/ui/components/chart";
+} from "@/components/chart";
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 import { ChartCard } from "../components/chart-card";
@@ -22,7 +22,7 @@ export interface TrendPoint {
   pace?: number | null;
 }
 
-interface RevenueChartsBlockProps {
+interface RevenueChartsProps {
   trendData: TrendPoint[];
   resolvedStart: string;
   resolvedEnd: string;
@@ -30,13 +30,13 @@ interface RevenueChartsBlockProps {
   showPace?: boolean;
 }
 
-export function RevenueChartsBlock({
+export function RevenueCharts({
   trendData,
   resolvedStart,
   resolvedEnd,
   granularityLabel,
   showPace = false,
-}: RevenueChartsBlockProps) {
+}: RevenueChartsProps) {
   const hasPace = showPace && trendData.some((point) => point.pace != null);
   return (
     <ChartCard

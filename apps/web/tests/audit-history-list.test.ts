@@ -47,9 +47,8 @@ test("formatAuditActionLabel never surfaces raw codes or Không xác định", (
 
 test("AuditHistoryList renders Vietnamese action and actor without UUIDs or raw codes", async () => {
   (globalThis as typeof globalThis & { React: typeof React }).React = React;
-  const { AuditHistoryList } = await import(
-    "../app/(protected)/inventory/_components/audit-history-list"
-  );
+  const { AuditHistoryList } =
+    await import("../app/components/audit-history-list");
   const userId = "50f3d810-a3a1-4013-8300-95af5223dee7";
   const html = renderToStaticMarkup(
     React.createElement(AuditHistoryList, {

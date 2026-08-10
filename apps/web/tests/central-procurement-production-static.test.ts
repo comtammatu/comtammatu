@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readSupplierInvoiceModules } from "./helpers/supplier-invoice-module-sources";
 
 const readWeb = (path: string) =>
   readFileSync(resolve(import.meta.dirname, "..", path), "utf8");
@@ -67,9 +68,7 @@ test("supplier payment action maps vat_invoice_attachment_required", () => {
   const action = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const client = readSupplierInvoiceModules();
 
   assert.match(action, /vat_invoice_attachment_required/);
   assert.match(action, /attach_supplier_invoice_vat_evidence/);

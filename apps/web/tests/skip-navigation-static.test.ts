@@ -80,7 +80,7 @@ test("global skip navigation lands in every primary route plane", () => {
     "Every self-order state must keep a programmatically focusable skip target",
   );
   assert.match(
-    read("apps/web/app/components/surface.tsx"),
+    read("apps/web/app/components/surface/app-page.tsx"),
     /tabIndex\?: -1/,
     "AppPage must accept the focus-only target contract",
   );

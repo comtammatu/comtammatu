@@ -16,6 +16,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
   Select,
   SelectContent,
@@ -37,7 +38,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatVND } from "@lib/inventory/format";
 import {
@@ -76,7 +76,7 @@ import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
 import {
   inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-frame";
+} from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,

@@ -5,6 +5,7 @@ import { messages } from "@lib/messages";
 import {
   fetchSepayBankTransactions,
   fetchSepayPaymentWebhookSummary,
+  SEPAY_LIST_PAGE_SIZE,
 } from "../_lib/sepay-bank-transactions";
 import { loadExpenseMatchOptions } from "../_lib/expense-match-options";
 import {
@@ -37,7 +38,7 @@ export default async function BankTransactionsPage({
   const [canLinkPayments, transactions, paymentWebhookSummary] =
     await Promise.all([
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_VIEW),
-      fetchSepayBankTransactions(range),
+      fetchSepayBankTransactions(range, { maxRows: SEPAY_LIST_PAGE_SIZE }),
       fetchSepayPaymentWebhookSummary(range),
     ]);
   const expenseOptions = await loadExpenseMatchOptions(
@@ -47,7 +48,6 @@ export default async function BankTransactionsPage({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
-        description={copy.description}
         actions={canLinkPayments ? <SepayImportDialog /> : undefined}
       />
       <BankTransactionsTable

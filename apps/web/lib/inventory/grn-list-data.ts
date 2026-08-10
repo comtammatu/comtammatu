@@ -63,6 +63,7 @@ export type GrnListSearchParams = {
   dateTo?: string | string[];
   poId?: string | string[];
   requestId?: string | string[];
+  branch?: string | string[];
   branchId?: string | string[];
   page?: string | string[];
   grnId?: string | string[];
@@ -96,7 +97,7 @@ export async function loadGrnListPageData(
   const { supabase, claims } = auth;
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId: params.routeBranchId,
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
 

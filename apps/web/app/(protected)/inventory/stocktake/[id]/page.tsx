@@ -7,14 +7,13 @@ import { StocktakeDetailClient } from "./stocktake-detail-client";
 interface StocktakeDetailPageContentProps {
   stocktakeId: number;
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     error?: string;
     view?: string;
   }>;
   routeBranchId?: number;
   routeBase?: string;
   reportsBasePath?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakeDetailPageContent({
@@ -23,7 +22,6 @@ export async function StocktakeDetailPageContent({
   routeBranchId,
   routeBase = "/inventory/stocktake",
   reportsBasePath = "/inventory/reports",
-  embedded = false,
 }: StocktakeDetailPageContentProps) {
   const sessionId = stocktakeId;
 
@@ -67,7 +65,7 @@ export async function StocktakeDetailPageContent({
     }>;
   };
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
   const sessionBranchId = stocktakeSession.branch_id;
   const isDetailView =
     sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";
@@ -79,12 +77,12 @@ export async function StocktakeDetailPageContent({
 
   if (requestedBranchId !== sessionBranchId) {
     redirect(
-      `${routeBase}/${sessionId}?branchId=${sessionBranchId}${detailViewParam}`,
+      `${routeBase}/${sessionId}?branch=${sessionBranchId}${detailViewParam}`,
     );
   }
 
   if (stocktakeSession.status === "in_progress" && !isDetailView) {
-    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
+    redirect(`${routeBase}/${sessionId}/count?branch=${sessionBranchId}`);
   }
 
   const auditLogs = await fetchEntityAuditLogs(
@@ -100,7 +98,6 @@ export async function StocktakeDetailPageContent({
       routeBase={routeBase}
       reportsBasePath={reportsBasePath}
       auditLogs={auditLogs}
-      embedded={embedded}
     />
   );
 }
@@ -111,7 +108,7 @@ export default async function StocktakeDetailPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     error?: string;
     view?: string;
   }>;

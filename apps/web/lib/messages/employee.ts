@@ -259,6 +259,9 @@ export const employee = {
     summaryOpenShifts: "Ca mở",
     summaryWorkdays: "Ngày công",
     summaryWorkHours: "Giờ công",
+    summaryWorkdaysCountHeader: "Số ngày công",
+    summaryWorkHoursCountHeader: "Số giờ công",
+    attendanceMonthAria: "Tháng chấm công",
     employeeMonthTitle: "Công trong tháng",
     employeeMonthEmptyTitle: "Chưa có lượt chấm trong tháng",
     employeeMonthEmptyDescription:

@@ -32,7 +32,11 @@ export interface SepayExportImportRow {
 
 export type ParseSepayExportResult =
   | { success: true; rows: SepayExportImportRow[] }
-  | { success: false; error: string };
+  | {
+      success: false;
+      error: string;
+      rowErrors?: Array<{ row: number; reason: string }>;
+    };
 
 function normalizeText(value: string): string {
   return value
@@ -122,20 +126,22 @@ export function parseSepayExportRows(
   if (missingHeaders.length > 0) {
     return {
       success: false,
-      error: `File SePay thiếu cột: ${missingHeaders.join(", ")}`,
+      error: `Tệp SePay thiếu cột: ${missingHeaders.join(", ")}`,
     };
   }
   if (rawRows.length === 0) {
-    return { success: false, error: "File SePay không có giao dịch." };
+    return { success: false, error: "Tệp SePay không có giao dịch." };
   }
 
   const rows: SepayExportImportRow[] = [];
   for (let index = 0; index < rawRows.length; index += 1) {
     const parsed = sepayExportRowSchema.safeParse(rawRows[index]);
     if (!parsed.success) {
+      const row = index + 2;
       return {
         success: false,
-        error: `Dòng ${String(index + 2)} không đúng định dạng SePay.`,
+        error: `Dòng ${String(row)} không đúng định dạng SePay.`,
+        rowErrors: [{ row, reason: "Không đúng định dạng SePay" }],
       };
     }
 
@@ -153,9 +159,13 @@ export function parseSepayExportRows(
       rawAmount === 0 ||
       (parsed.data["Luỹ kế"] && balanceAfter == null)
     ) {
+      const row = index + 2;
       return {
         success: false,
-        error: `Dòng ${String(index + 2)} có ngày, loại hoặc số tiền không hợp lệ.`,
+        error: `Dòng ${String(row)} có ngày, loại hoặc số tiền không hợp lệ.`,
+        rowErrors: [
+          { row, reason: "Ngày, loại hoặc số tiền không hợp lệ" },
+        ],
       };
     }
 

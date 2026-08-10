@@ -45,6 +45,8 @@ interface FilterBarProps {
   branchLabel?: string;
   branchPlaceholder?: string;
   allBranchesLabel?: string;
+  /** Prefer `inline` inside AppListFrame toolbar; default card for REPORT siblings. */
+  variant?: "card" | "inline";
   /** Stick at Owner scrollport top when not already inside AppListFrame toolbar. */
   sticky?: boolean;
 }
@@ -115,6 +117,7 @@ export function FilterBar({
   branchLabel = filterCopy.branch,
   branchPlaceholder = filterCopy.branchPlaceholder,
   allBranchesLabel = messages.finance.common.allBranches,
+  variant = "card",
   sticky = false,
 }: FilterBarProps) {
   const router = useRouter();
@@ -217,6 +220,7 @@ export function FilterBar({
 
   return (
     <AppToolbar
+      variant={variant}
       sticky={sticky}
       className={cn(
         "flex-col items-stretch gap-2 lg:flex-row lg:flex-nowrap lg:items-center",
@@ -295,7 +299,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.range}
               size={controlSize}
-              className="w-full sm:w-32"
+              className="w-full max-w-[9.5rem] sm:w-32"
             >
               <SelectValue />
             </SelectTrigger>
@@ -319,7 +323,7 @@ export function FilterBar({
             placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
             max={today.start}
             disabled={isPending}
-            className="w-full sm:w-64"
+            className="w-full max-w-[14rem] sm:w-64"
             onSelectionChange={handlePeriodSelectionChange}
           />
         ) : null}
@@ -335,7 +339,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.granularity}
               size={controlSize}
-              className="w-full sm:w-36"
+              className="w-full max-w-[9rem] sm:w-36"
             >
               <SelectValue />
             </SelectTrigger>
@@ -366,7 +370,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.compare}
               size={controlSize}
-              className="w-full sm:w-44"
+              className="w-full max-w-[11rem] sm:w-44"
             >
               <SelectValue />
             </SelectTrigger>

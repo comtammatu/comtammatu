@@ -23,7 +23,7 @@ export const auth = {
     cancelEnroll: "Hủy",
     enrollSuccess: "Đã bật xác thực hai lớp.",
     defaultFactorName: "Ứng dụng xác thực",
-    totpFactorHint: "TOTP · mã 6 số từ ứng dụng xác thực",
+    totpFactorHint: "Mã 6 số từ ứng dụng xác thực (TOTP).",
     unenrollAria: "Tắt MFA",
     unenrollTitle: "Tắt xác thực hai lớp?",
     unenrollDescription:

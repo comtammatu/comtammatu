@@ -4,6 +4,10 @@ export type PendingWasteItem = {
   ingredientName: string;
   quantity: number;
   unit: string;
+  /** Base/warehouse unit label for per-base WAC display. */
+  baseUnit: string;
+  /** ingredient_units.to_base_factor for the entry unit (1 when entry is base). */
+  toBaseFactor: number;
   monetary: {
     unitCost: number | null;
     totalCost: number;

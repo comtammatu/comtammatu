@@ -15,7 +15,7 @@ test("waste form exposes photo upload for DB-enforced photo gates", () => {
   );
 
   assert.match(client, /<WastePhotoUpload/);
-  assert.match(client, /result\.errorCode === "waste_evidence_required"/);
+  assert.match(client, /applied\.errorCode === INVENTORY_ERROR_CODES\.WASTE_EVIDENCE_REQUIRED/);
   assert.match(client, /setEvidenceRequired\(true\)/);
   assert.doesNotMatch(client, /previewWasteTier|unit_cost|total_cost/);
 });

@@ -7,6 +7,7 @@ import {
   ChevronDown as IconSelector,
   Plus as IconPlus,
 } from "lucide-react";
+import { UI_VI } from "@comtammatu/shared/messages";
 
 import { cn } from "../lib/utils";
 import { fieldTriggerChrome } from "../lib/field-trigger";
@@ -51,9 +52,9 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
       value,
       onValueChange,
       options,
-      placeholder = "Chọn...",
-      searchPlaceholder = "Tìm...",
-      emptyMessage = "Không tìm thấy.",
+      placeholder = UI_VI.selectPlaceholder,
+      searchPlaceholder = UI_VI.searchPlaceholder,
+      emptyMessage = UI_VI.emptyMessage,
       contentClassName,
       triggerClassName,
       filter,
@@ -217,11 +218,11 @@ function MultiSelectCombobox({
   onConfirm,
   triggerLabel,
   confirmLabel,
-  searchPlaceholder = "Tìm...",
-  emptyMessage = "Không tìm thấy.",
-  alreadyAppliedHint = "Đã có",
-  pickHint = "Tích để chọn",
-  pendingHint = (count: number) => `${count} đang chọn`,
+  searchPlaceholder = UI_VI.searchPlaceholder,
+  emptyMessage = UI_VI.emptyMessage,
+  alreadyAppliedHint = UI_VI.alreadyAppliedHint,
+  pickHint = UI_VI.pickHint,
+  pendingHint = UI_VI.pendingSelected,
   disabled,
   triggerClassName,
   filter,

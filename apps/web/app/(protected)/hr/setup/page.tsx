@@ -12,7 +12,6 @@ import type { ShiftRow } from "../_types";
 import { HrSetupClient } from "./setup-client";
 import { fetchHrLeavePolicy } from "./leave-policy-actions";
 import { loadAuthState } from "@/_lib/auth";
-import { HrScopeSelector } from "../hr-scope-selector";
 import type { BranchOption } from "../_types";
 import { resolveHrBranchScope, withHrBranchScope } from "@/lib/hr-scope";
 
@@ -77,13 +76,12 @@ export default async function HrSetupPage({
   const branchScope = resolveHrBranchScope(params.branch, branches);
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.tabs.setup}
         description={copy.setupDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={branchScope} />
             <Button
               variant="outline"
               size="touch"

@@ -122,7 +122,7 @@ flowchart TB
     app["Execution Plane<br/>apps/web App Router + Server Actions"]
     domain["Domain Plane<br/>packages/shared"]
     data["Data Plane<br/>packages/database + supabase/*"]
-    ui["UI Plane<br/>Custom Theme contract + packages/ui primitives"]
+    ui["UI Plane<br/>Má Tư Design System + packages/ui primitives"]
     edge["Branch Edge Plane<br/>apps/print-agent"]
     verify["Verification Plane<br/>Playwright, SQL tests, runbooks"]
 
@@ -145,7 +145,7 @@ flowchart TB
 | Execution   | Route behavior, Server Actions, realtime UI flows          | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
 | Domain      | Business rules shared across routes/providers              | `packages/shared/src/**`                                                                                                                           |
 | Data        | Schema, RLS, RPCs, generated types, Supabase clients       | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
-| UI          | Custom Theme contract, reusable primitives, surface rhythm | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
+| UI          | Má Tư Design System, reusable primitives, surface rhythm   | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
 | Branch Edge | Local print daemon and branch print/QR behavior            | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
 | Docs/Ops    | Current source-of-truth, runbooks, active work state       | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
 
@@ -165,14 +165,17 @@ Two product halves — structure, naming, chrome, and adapters must make both ob
 | Product half (VI)               | Job                                                                     | Plane ID          | Route root                                                                                      | Shell                    | Adapter prefix    |
 | ------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------ | ----------------- |
 | **`Quản lý hệ thống`**            | Tenant/branch oversight, menu, central inventory, finance, HR, settings | `control_surface` | `/`, `/menu`, `/orders`, `/inventory`, `/finance`, `/hr`, `/branches`, `/settings`, `/feedback` | `AppShell` (nav-as-data) | `App*`            |
-| **`Vận hành bán hàng (ca)`**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome   | `BranchOperator*` |
-| **`Vận hành bán hàng (station)`** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome           | station adapters  |
-| **Public / guest**              | Auth, guest order, pickup display                                       | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                     | —                 |
+| **`Vận hành bán hàng` (ca)**      | Shift work, branch stock, team, branch settings                         | `branch_surface`  | `/br/[branchId]/*` (excl. stations)                                                             | Branch operator chrome   | `BranchOperator*` |
+| **`Vận hành bán hàng` (station)** | Sell / kitchen / pickup queue                                           | `station_chrome`  | `/br/[branchId]/{pos,kds,pickup}`                                                               | Station chrome           | station adapters  |
+| **Public / `khách`**              | Auth, guest order, feedback QR, pickup display                          | `public`          | `/login`, `/q`, `/r`, …                                                                         | none                     | —                 |
 
-- L0 copy: **`Quản trị`** / **`Hệ thống`**. ACL `owner` ≠ plane name.
-- Runtime `RouteSurface: "owner"` / `data-owner-shell-scroll` alias **`control_surface`**; chrome = `ControlSurfaceShell`.
-- Dual-plane inventory: `/inventory/*` vs `/br/.../stock/*` — share impl, do not merge URLs.
-- Vocabulary: `docs/ref/glossary.md`. Chrome: `docs/spec/design-system.md`. Routes: `docs/modules/web-app.md`, `docs/spec/role-route-matrix.md`.
+- UI copy for the L0 half: **`Quản trị`** / **`Hệ thống`**. Role ACL `owner` is not a plane name.
+- Runtime plane id `RouteSurface: "owner"` remains a technical alias of
+  **`control_surface`**. DOM scrollport is `data-control-surface-scroll`.
+  Chrome component is `ControlSurfaceShell`. New docs/UI copy use
+  `control_surface` / `Quản trị`.
+- Dual-plane inventory keeps **two jobs** (`/inventory/*` oversight vs `/br/.../stock/*` shift work). Share implementation; do not merge URLs.
+- Vocabulary detail: `docs/ref/glossary.md`. Chrome: `docs/spec/design-system.md`. Routes: `docs/modules/web-app.md`, `docs/spec/role-route-matrix.md`.
 
 ### Folder placement (Dual Thesis)
 

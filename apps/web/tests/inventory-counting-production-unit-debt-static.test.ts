@@ -54,24 +54,18 @@ test("inventory unit option helpers delegate to one shared implementation", () =
   assert.doesNotMatch(purchaseUnitsSource, /\.reduce</);
 });
 
-test("stocktake wizard commits or rejects the active buffer before row navigation", () => {
-  assert.match(stocktakeWizardSource, /const commitActiveBuffer = useCallback/);
-  assert.match(stocktakeWizardSource, /parseVietnameseNumericInput/);
-  assert.match(stocktakeWizardSource, /parsed\.state !== "valid"/);
+test("stocktake wizard opens NumberPadSheet per line and commits on confirm", () => {
+  assert.match(stocktakeWizardSource, /NumberPadSheet/);
+  assert.match(stocktakeWizardSource, /setSheetIngredientId\(line\.ingredientId\)/);
+  assert.match(stocktakeWizardSource, /function handleSheetConfirm\(value: number\)/);
   assert.match(
     stocktakeWizardSource,
-    /onCountChange\(activeLine\.ingredientId, parsed\.value\)/,
+    /onCountChange\(sheetLine\.ingredientId, value\)/,
   );
-  assert.doesNotMatch(stocktakeWizardSource, /Number\(raw\)/);
-  assert.match(stocktakeWizardSource, /const moveActiveIndex = useCallback/);
-  assert.match(
-    stocktakeWizardSource,
-    /moveActiveIndex\(\(prev\) => \(prev > 0 \? prev - 1 : prev\)\)/,
-  );
-  assert.match(
-    stocktakeWizardSource,
-    /moveActiveIndex\(\(prev\) => \(prev < total - 1 \? prev \+ 1 : prev\)\)/,
-  );
+  assert.match(stocktakeWizardSource, /onConfirm=\{handleSheetConfirm\}/);
+  assert.match(stocktakeWizardSource, /allowDecimal/);
+  assert.doesNotMatch(stocktakeWizardSource, /NumberPadGrid/);
+  assert.match(stocktakeWizardSource, /AppDetailFooter[\s\S]*sticky/);
 });
 
 test("stocktake count respects session blind mode", () => {

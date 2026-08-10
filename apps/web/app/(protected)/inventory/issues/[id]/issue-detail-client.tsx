@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
@@ -60,7 +60,7 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -366,7 +366,7 @@ export function IssueDetailClient({
           line.baseUnit !== line.unit &&
           line.toBaseFactor !== 1;
         return (
-          <div className="flex flex-col items-end gap-0.5">
+          <div className="flex flex-col items-end gap-1">
             <span>{formatQty(entryQty)}</span>
             {showBaseHint ? (
               <span className="text-xs text-muted-foreground">

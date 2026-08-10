@@ -123,6 +123,16 @@ BEGIN
      ) = 0 THEN
     RAISE EXCEPTION 'inventory_notification_branch_routing_drift';
   END IF;
+  IF position('/inventory/stock?branchId=' IN v_definition) > 0
+     OR position('/inventory/stocktake/%s?branchId=' IN v_definition) > 0
+     OR position(
+       '/inventory/waste/approvals?branchId=' IN v_definition
+     ) > 0 THEN
+    RAISE EXCEPTION 'inventory_notification_legacy_branchId_query_drift';
+  END IF;
+  IF position('/inventory/stock?branch=' IN v_definition) = 0 THEN
+    RAISE EXCEPTION 'inventory_notification_unified_branch_query_drift';
+  END IF;
 
   SELECT pg_get_functiondef(
     'public.run_inventory_valuation_reconciliation()'::regprocedure

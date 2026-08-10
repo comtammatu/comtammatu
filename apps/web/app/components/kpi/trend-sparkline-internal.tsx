@@ -9,7 +9,7 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-} from "@comtammatu/ui/components/chart";
+} from "@/components/chart";
 import type { TrendPoint } from "./trend-sparkline";
 
 interface SparklineChartProps {

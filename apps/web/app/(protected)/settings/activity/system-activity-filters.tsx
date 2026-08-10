@@ -100,8 +100,8 @@ export function SystemActivityFilters({
   );
 
   return (
-    <AppToolbar>
-      <div className="flex flex-wrap items-end gap-3">
+    <AppToolbar variant="inline">
+      <div className="flex flex-wrap items-end gap-3 px-0.5">
         <div className="grid gap-1.5">
           <Label htmlFor={entityFilterId}>{copy.entity}</Label>
           <Select

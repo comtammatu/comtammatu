@@ -5,6 +5,10 @@ import {
   type JwtClaims,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import {
+  getControlSurfaceScopeBranchId,
+  parseControlSurfaceBranchScope,
+} from "@/lib/control-surface-scope";
 
 export interface OperatorBranchOption {
   id: number;
@@ -15,6 +19,8 @@ export interface OperatorBranchOption {
 export interface BranchScope {
   allowedBranches: OperatorBranchOption[];
   canSelectAll: boolean;
+  /** `all` only when tenant-wide role requested explicit all-sites scope. */
+  scopeMode: "all" | "site";
   selectedBranchId: number | null;
   defaultBranchId: number | null;
 }
@@ -80,14 +86,16 @@ function pickDefaultBranchId(
 /**
  * Single branch-scope engine shared by operator and inventory scoping.
  * Tenant-wide roles see every provided branch; other roles are locked to
- * `claims.branch_id`. The requested branch wins only when allowed; the
- * default is the user's own branch when allowed, else the first allowed.
+ * `claims.branch_id`. Explicit `requestAll` (URL `branch=all`) yields
+ * `scopeMode: "all"` with `selectedBranchId: null` for list/report reads.
+ * Missing request still defaults to a concrete site — never silent-all.
  */
 export function selectBranchScope(
   claims: JwtClaims,
   branches: readonly OperatorBranchOption[],
   requestedBranchId: number | null,
   tenantWideRoles: readonly StaffRole[],
+  options?: { requestAll?: boolean },
 ): BranchScope {
   const canSelectAll = tenantWideRoles.includes(claims.user_role);
   const allowedBranches = canSelectAll
@@ -97,6 +105,17 @@ export function selectBranchScope(
     allowedBranches,
     claims.branch_id,
   );
+
+  if (options?.requestAll && canSelectAll) {
+    return {
+      allowedBranches,
+      canSelectAll,
+      scopeMode: "all",
+      selectedBranchId: null,
+      defaultBranchId,
+    };
+  }
+
   const selectedBranchId =
     requestedBranchId != null &&
     allowedBranches.some((branch) => branch.id === requestedBranchId)
@@ -106,6 +125,7 @@ export function selectBranchScope(
   return {
     allowedBranches,
     canSelectAll,
+    scopeMode: "site",
     selectedBranchId,
     defaultBranchId,
   };
@@ -153,15 +173,15 @@ export const fetchActiveBranches = cache(async function fetchActiveBranches(
 });
 
 /**
- * Parse a raw `branchId` query-param value. Returns null for missing or
- * malformed values (non-numeric, <=0).
+ * Parse a raw `branchId` query-param value. Returns null for missing,
+ * malformed, or explicit aggregate tokens (`all`).
  */
 export function parseBranchIdParam(
   raw: string | string[] | undefined,
 ): number | null {
   if (raw == null) return null;
   const value = Array.isArray(raw) ? raw[0] : raw;
-  if (!value) return null;
+  if (!value || value === "all") return null;
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) return null;
   return n;
@@ -178,10 +198,10 @@ export interface ListScopeResolution extends BranchScope {
  * surfaces (D058 W3b). Embedded callers pass the validated `routeBranchId`
  * from the URL segment; it always wins, and a mismatch against the
  * resolved scope means the branch is not allowed for this user — the
- * caller must `notFound()`. Owner surface callers pass the raw `?branchId=` query
- * value instead; it survives ONLY as a display filter/default — never as
- * write authority. Writes MUST re-derive their own scope from
- * claims/RLS/RPC permission checks, not from this resolution.
+ * caller must `notFound()`. Owner surface callers pass raw `?branch=`
+ * query values; they survive ONLY as a display filter/default — never as
+ * write authority. Writes MUST re-derive their own scope from claims/RLS/RPC
+ * permission checks, not from this resolution.
  */
 export async function resolveListScope(
   supabase: unknown,
@@ -189,24 +209,48 @@ export async function resolveListScope(
   branches: readonly OperatorBranchOption[],
   options: {
     routeBranchId?: number;
-    queryBranchId?: string | string[] | undefined;
+    /** Unified Control Surface `?branch=`. */
+    queryBranch?: string | string[] | undefined;
     tenantWideRoles: readonly StaffRole[];
   },
 ): Promise<ListScopeResolution> {
-  const requestedBranchId =
-    options.routeBranchId ?? parseBranchIdParam(options.queryBranchId);
+  void supabase;
+  if (options.routeBranchId != null) {
+    const scope = selectBranchScope(
+      claims,
+      branches,
+      options.routeBranchId,
+      options.tenantWideRoles,
+    );
+    return {
+      ...scope,
+      outOfScope: scope.selectedBranchId !== options.routeBranchId,
+    };
+  }
+
+  const token = parseControlSurfaceBranchScope(options.queryBranch, {
+    allowedIds: branches.map((branch) => branch.id),
+    fallback: "all",
+  });
+  // Inventory list engine only distinguishes all vs concrete site.
+  // office/company/branches aggregate tokens map to all-sites read.
+  const requestAll =
+    token === "all" ||
+    token === "office" ||
+    token === "company" ||
+    token === "branches";
+  const requestedBranchId = getControlSurfaceScopeBranchId(token);
   const scope = selectBranchScope(
     claims,
     branches,
     requestedBranchId,
     options.tenantWideRoles,
+    { requestAll },
   );
 
   return {
     ...scope,
-    outOfScope:
-      options.routeBranchId != null &&
-      scope.selectedBranchId !== options.routeBranchId,
+    outOfScope: false,
   };
 }
 

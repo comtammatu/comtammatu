@@ -6,5 +6,5 @@ export default async function BranchProductionRedirect({
   params: Promise<{ branchId: string }>;
 }) {
   const { branchId } = await params;
-  redirect(`/inventory/production?branchId=${encodeURIComponent(branchId)}`);
+  redirect(`/inventory/production?branch=${encodeURIComponent(branchId)}`);
 }

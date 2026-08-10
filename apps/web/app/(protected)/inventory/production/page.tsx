@@ -17,21 +17,19 @@ import { INVENTORY_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 
 interface ProductionPageProps {
-  searchParams?: Promise<{ branchId?: string | string[]; tab?: string }>;
+  searchParams?: Promise<{ branch?: string | string[]; tab?: string }>;
   routeBranchId?: number;
-  embedded?: boolean;
 }
 
 export async function ProductionPageContent({
   searchParams,
   routeBranchId,
-  embedded = false,
 }: ProductionPageProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
 
   if (scope.outOfScope) notFound();
@@ -50,9 +48,7 @@ export async function ProductionPageContent({
   const runsContent = (
     <ProductionRunsClient
       initial={rows}
-      branchId={scope.selectedBranchId ?? undefined}
       basePath="/inventory/production"
-      embedded={embedded}
     />
   );
 
@@ -70,13 +66,8 @@ export async function ProductionPageContent({
       unitOptions={surfaceData.unitOptions}
       ingredients={surfaceData.ingredients}
       recipes={surfaceData.recipes}
-      embedded={embedded}
     />
   );
-
-  if (embedded) {
-    return activeTab === "recipes" ? recipesContent : runsContent;
-  }
 
   const tabsList = [
     { value: "runs", label: INVENTORY_VI.productionOrdersTab },
@@ -96,7 +87,7 @@ export async function ProductionPageContent({
                 <Link
                   href={`/inventory/production/new${
                     scope.selectedBranchId
-                      ? `?branchId=${scope.selectedBranchId}`
+                      ? `?branch=${scope.selectedBranchId}`
                       : ""
                   }`}
                 />
@@ -123,7 +114,7 @@ export async function ProductionPageContent({
 export default async function ProductionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[]; tab?: string }>;
+  searchParams: Promise<{ branch?: string | string[]; tab?: string }>;
 }) {
   return <ProductionPageContent searchParams={searchParams} />;
 }

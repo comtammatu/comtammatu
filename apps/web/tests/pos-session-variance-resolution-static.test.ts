@@ -101,7 +101,7 @@ test("payment-method correction synchronizes POS cash and protects bank evidence
   assert.match(guardMigration, /payment_has_bank_evidence/);
   assert.match(guardMigration, /bank_transaction_reconciliation_matches/);
   assert.match(guardMigration, /webhook_events/);
-  assert.match(action, /Bỏ khớp tại Đối soát NH/);
+  assert.match(action, /Bỏ khớp tại Giao dịch/);
 });
 
 test("Finance attention deep-links to the exact unresolved POS session", () => {

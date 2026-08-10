@@ -8,13 +8,11 @@ import { GrnDocumentDialogHost } from "./grn-document-dialog-host";
 interface GRNListPageContentProps {
   searchParams: Promise<GrnListSearchParams>;
   basePath?: string;
-  embedded?: boolean;
 }
 
 export async function GRNListPageContent({
   searchParams,
   basePath = "/inventory/grn",
-  embedded = false,
 }: GRNListPageContentProps) {
   const params = await searchParams;
   const data = await loadGrnListPageData(params);
@@ -30,7 +28,6 @@ export async function GRNListPageContent({
         basePath={basePath}
         canManageSupplierInvoice={data.canManageSupplierInvoice}
         loadFailed={data.loadFailed}
-        withinOwnerTabs={embedded}
       />
       <GrnDocumentDialogHost basePath={basePath} />
     </>

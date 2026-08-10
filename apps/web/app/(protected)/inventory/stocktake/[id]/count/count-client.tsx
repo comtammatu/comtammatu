@@ -24,7 +24,6 @@ import {
 } from "../../../_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
 import { formatQty } from "@lib/inventory/format";
-import { StocktakeCountWizard } from "./stocktake-count-wizard";
 import { messages } from "@lib/messages";
 import { applyInventoryActionError } from "@lib/inventory/apply-inventory-action-error";
 import {
@@ -39,8 +38,6 @@ import {
 const toastNoCountsInput = "Chưa nhập số đếm nào";
 const toastSubmitRoundFailed = "Không thể gửi kết quả đếm";
 const toastSavedCounts = (count: number) => `Đã lưu ${count} dòng đếm`;
-const labelWizardQuick = "Nhập nhanh từng món";
-const labelSwitchTable = "Nhập theo bảng";
 
 function buildCountUnitPreview({
   quantity,
@@ -79,7 +76,6 @@ interface Props {
   initialLines: StocktakeLineBlind[];
   unitOptionsByIngredient: Record<number, CountUnitOption[]>;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export function StocktakeCountClient({
@@ -91,7 +87,6 @@ export function StocktakeCountClient({
   initialLines,
   unitOptionsByIngredient,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: Props) {
   const router = useRouter();
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
@@ -113,8 +108,6 @@ export function StocktakeCountClient({
     "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
   >("idle");
   const [pending, startTransition] = useTransition();
-  const [preferTableMode, setPreferTableMode] = useState<boolean>(false);
-
   const canCount = status === "in_progress";
   const editable = canCount && lockState === "held";
 
@@ -139,17 +132,6 @@ export function StocktakeCountClient({
   // Label of the unit each count is actually recorded in (entry_unit_id), so the
   // native wizard displays the SAME unit it submits — never the purchase unit
   // while recording the base unit.
-  const unitLabelByIngredient = useMemo(() => {
-    const map: Record<number, string> = {};
-    for (const [idStr, options] of Object.entries(unitOptionsByIngredient)) {
-      const id = Number(idStr);
-      const selected =
-        options.find((o) => o.unitId === unitByIngredient[id]) ??
-        pickDefaultCountUnit(options);
-      if (selected) map[id] = selected.label;
-    }
-    return map;
-  }, [unitOptionsByIngredient, unitByIngredient]);
 
   const unitPreviewByIngredient = useMemo(() => {
     const map: Record<number, string> = {};
@@ -278,23 +260,13 @@ export function StocktakeCountClient({
           submitting={pending}
           canSubmit={editable && Object.keys(counts).length > 0}
         >
-          {embedded ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={() => setPreferTableMode(false)}
-            >
-              {labelWizardQuick}
-            </Button>
-          ) : null}
           <Button
             type="button"
             variant="outline"
-            size={embedded ? "touch" : "sm"}
+            size="sm"
             render={
               <Link
-                href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
+                href={`${routeBase}/${sessionId}?branch=${branchId}&view=detail`}
               />
             }
           >
@@ -311,37 +283,6 @@ export function StocktakeCountClient({
       </AppSection>
     </>
   );
-
-  const showWizard = embedded && !preferTableMode;
-
-  if (showWizard) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-end px-1">
-          <Button
-            type="button"
-            variant="outline"
-            size={embedded ? "touch" : "sm"}
-            onClick={() => setPreferTableMode(true)}
-          >
-            {labelSwitchTable}
-          </Button>
-        </div>
-        <StocktakeCountWizard
-          lines={currentRoundLines}
-          counts={counts}
-          onCountChange={onCountChange}
-          onSubmit={submit}
-          submitting={pending}
-          editable={editable}
-          currentRound={currentRound}
-          unitLabelByIngredient={unitLabelByIngredient}
-          unitPreviewByIngredient={unitPreviewByIngredient}
-          chrome={safetyChrome}
-        />
-      </div>
-    );
-  }
 
   return (
     <DocumentFormFrame header={header} scroll>

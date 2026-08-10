@@ -3,8 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight as IconChevronRight } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Alert,
+  AlertDescription,
+} from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -91,10 +94,6 @@ function sameIds(a: number[], b: number[]): boolean {
   return b.every((id) => left.has(id));
 }
 
-function supplierInvoiceHref(invoiceId: number): string {
-  return `/finance/supplier-invoices?invoiceId=${invoiceId}`;
-}
-
 export function MatchExpenseCell({
   bankTransactionId,
   eventId,
@@ -133,11 +132,16 @@ export function MatchExpenseCell({
   const [selectedRefundsById, setSelectedRefundsById] = React.useState<
     Record<number, SepayRefundMatchOption>
   >({});
+  const [matchError, setMatchError] = React.useState<string | null>(null);
   const matchKey = bankTransactionId ?? eventId;
 
   React.useEffect(() => {
     setSelectedIds(expenseIds);
   }, [expenseIds]);
+
+  React.useEffect(() => {
+    if (open) setMatchError(null);
+  }, [open]);
 
   // When the match sheet opens on a clean slate (no saved or user-picked match),
   // pre-select a single exact-amount expense candidate so the common case — one
@@ -256,99 +260,47 @@ export function MatchExpenseCell({
   );
 
   if (paymentId != null) {
-    return (
-      <Badge variant="outline" className="text-success font-normal">
-        {copy.matchedPayment(paymentId)}
-      </Badge>
-    );
+    return null;
   }
 
   if (supplierPaymentMatchConfirmed && supplierPaymentMatches.length > 0) {
     return (
-      <div className="flex flex-col gap-1">
-        {supplierPaymentMatches.map((match) => (
-          <Button
-            key={match.id}
-            variant="outline"
-            size="touch"
-            className="w-fit text-success font-normal"
-            render={<Link href={supplierInvoiceHref(match.invoiceId)} />}
-          >
-            {copy.openSupplierInvoice}
-          </Button>
-        ))}
-        <span className="truncate text-xs text-muted-foreground">
-          {copy.matchedSupplierPaymentDetail(
-            supplierPaymentMatches[0]?.supplierName ?? "—",
-            formatVND(supplierPaymentMatches[0]?.amount ?? 0),
-          )}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="touch"
-          disabled={isPending}
-          onClick={() => handleSupplierPaymentMatch([])}
-        >
-          {copy.clearSupplierPaymentMatch}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size={touch ? "touch" : "sm"}
+        disabled={isPending}
+        onClick={() => handleSupplierPaymentMatch([])}
+      >
+        {copy.clearSupplierPaymentMatch}
+      </Button>
     );
   }
 
   if (refundMatchConfirmed && refundMatches.length > 0) {
     return (
-      <div className="flex flex-col items-end gap-1">
-        {refundMatches.map((refund) => (
-          <Badge
-            key={refund.id}
-            variant="outline"
-            className="w-fit text-success font-normal"
-          >
-            {copy.matchedRefund(refund.orderNumber)}
-          </Badge>
-        ))}
-        <Button
-          type="button"
-          variant="ghost"
-          size="touch"
-          disabled={isPending}
-          onClick={() => handleRefundMatch([])}
-        >
-          {copy.clearRefundMatch}
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size={touch ? "touch" : "sm"}
+        disabled={isPending}
+        onClick={() => handleRefundMatch([])}
+      >
+        {copy.clearRefundMatch}
+      </Button>
     );
   }
 
   if (transferType === "in" && expenseIds.length > 0) {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <Badge variant="outline" className="text-success font-normal">
-          {copy.matchedCashDeposit}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {copy.internalCashMovement}
-        </span>
-      </div>
-    );
+    return null;
   }
 
   if (transferType === "in") {
-    return <span className="text-muted-foreground">—</span>;
+    return null;
   }
 
   if (matchedPersistedIntent) {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <Badge variant="outline" className="text-success font-normal">
-          {copy.matchedTransferIntent}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {copy.matchedTransferIntentDetail}
-        </span>
-      </div>
-    );
+    return null;
   }
 
   const selectedSet = new Set(selectedIds);
@@ -403,15 +355,7 @@ export function MatchExpenseCell({
     selectedRefundIds.length,
   );
 
-  const triggerLabel = !touch
-    ? copy.unmatchedMoneyInTable.linkAction
-    : selectedIds.length > 0
-      ? `${copy.matchedExpenseCount(formatCount(selectedIds.length))}${
-          selectedExpenses.length > 0 ? ` · -${formatVND(selectedTotal)}` : ""
-        }`
-      : supplierPaymentMatches.length > 0
-        ? copy.supplierPaymentSuggestion
-        : copy.matchExpensePlaceholder;
+  const triggerLabel = copy.matchAction;
 
   const toggleExpense = (expense: ExpenseMatchOption) => {
     setSelectedIds((current) =>
@@ -440,12 +384,14 @@ export function MatchExpenseCell({
       });
 
       if (!res.success) {
-        toast.error(res.error || copy.matchError);
-      } else {
-        toast.success(copy.matchSuccess);
-        setOpen(false);
-        router.refresh();
+        setMatchError(res.error || copy.matchError);
+        return;
       }
+
+      setMatchError(null);
+      toast.success(copy.matchSuccess);
+      setOpen(false);
+      router.refresh();
     });
   };
 
@@ -465,13 +411,9 @@ export function MatchExpenseCell({
           <Button
             variant="outline"
             size={touch ? "touch" : "sm"}
-            className={cn(
-              "justify-between gap-2",
-              touch ? "w-full max-w-64" : "shrink-0",
-            )}
+            className="shrink-0"
           >
-            <span className="truncate">{triggerLabel}</span>
-            <IconChevronRight className="size-3.5 shrink-0" aria-hidden />
+            {triggerLabel}
           </Button>
         }
       />
@@ -482,6 +424,11 @@ export function MatchExpenseCell({
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+            {matchError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{matchError}</AlertDescription>
+              </Alert>
+            ) : null}
             <NoteCallout label={copy.bankEvidenceTitle}>
               <div className="grid gap-1.5">
                 <div className="flex items-center justify-between gap-3">

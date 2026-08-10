@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -78,10 +79,13 @@ test("Branch attendance summary drills into employee month days via URL", () => 
 
 test("Owner attendance table keeps its desktop presenter", () => {
   const ownerTable = read(
-    "apps/web/app/(protected)/hr/attendance-table.tsx",
+    "apps/web/app/(protected)/hr/attendance/attendance-table.tsx",
+  );
+  const attendanceModules = readAttendanceTableModules(
+    resolve(repoRoot, "apps/web"),
   );
   assert.match(ownerTable, /export function AttendanceTable/);
-  assert.match(ownerTable, /DataTable/);
+  assert.match(attendanceModules, /DataTable/);
   assert.match(ownerTable, /isStaleOpenAttendanceRecord/);
   assert.match(
     ownerTable,

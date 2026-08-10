@@ -13,10 +13,9 @@ export const dynamic = "force-dynamic";
 
 interface StocktakeCountPageContentProps {
   stocktakeId: number;
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakeCountPageContent({
@@ -24,7 +23,6 @@ export async function StocktakeCountPageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: StocktakeCountPageContentProps) {
   const sessionId = stocktakeId;
   if (!Number.isFinite(sessionId) || sessionId <= 0) notFound();
@@ -41,12 +39,12 @@ export async function StocktakeCountPageContent({
   if (!sessionRow) notFound();
   const sessionBranchId = sessionRow.branch_id as number;
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
   if (routeBranchId != null && routeBranchId !== sessionBranchId) {
     notFound();
   }
   if (requestedBranchId !== sessionBranchId) {
-    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
+    redirect(`${routeBase}/${sessionId}/count?branch=${sessionBranchId}`);
   }
 
   // Feature flag gate — route the counter to the pre-redesign detail screen when the flag is off.
@@ -57,7 +55,7 @@ export async function StocktakeCountPageContent({
   );
   if (!flagEnabled) {
     redirect(
-      `${routeBase}/${sessionId}?branchId=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
+      `${routeBase}/${sessionId}?branch=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
     );
   }
 
@@ -111,7 +109,6 @@ export async function StocktakeCountPageContent({
       initialLines={linesRes.data}
       unitOptionsByIngredient={unitOptionsByIngredient}
       routeBase={routeBase}
-      embedded={embedded}
     />
   );
 }
@@ -121,7 +118,7 @@ export default async function StocktakeCountPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { id } = await params;
   return (

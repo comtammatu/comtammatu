@@ -13,7 +13,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
@@ -46,11 +46,13 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppEmptyState,
   AppListFrame,
   AppPage,
   AppPageHeader,
+  AppToolbar,
 } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import type {
@@ -59,6 +61,7 @@ import type {
   CountAssignmentLocation,
   CountAssignmentShift,
 } from "@lib/inventory/count-assignment-model";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { setCountAssignments } from "./actions";
 
 type EmployeeRow = CountAssignmentEmployee;
@@ -105,7 +108,7 @@ function buildShiftScopeHref({
   assignmentId?: number | null;
 }) {
   const params = new URLSearchParams();
-  if (branchId !== null) params.set("branchId", String(branchId));
+  if (branchId !== null) params.set("branch", String(branchId));
   if (locationId !== null) params.set("locationId", String(locationId));
   if (shiftId !== null) params.set("shiftId", String(shiftId));
   if (assignmentId != null) params.set("assignmentId", String(assignmentId));
@@ -154,6 +157,7 @@ export function CountAssignmentsClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const controlSize = useFormControlSize("responsive");
   const [isPending, startTransition] = useTransition();
   const [activeEmployeeId, setActiveEmployeeId] = useState<number | null>(
     initialAssignmentId,
@@ -487,55 +491,6 @@ export function CountAssignmentsClient({
         }
       />
 
-      {showLocationPicker || showShiftPicker ? (
-        <div className="grid max-w-3xl gap-3 sm:grid-cols-2">
-          {showLocationPicker ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="count-assignment-location">
-                {INVENTORY_VI.warehouseShort}
-              </Label>
-              <Select
-                value={String(selectedLocationId)}
-                onValueChange={changeLocationScope}
-              >
-                <SelectTrigger id="count-assignment-location">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {locationOptions.map((location) => (
-                    <SelectItem key={location.id} value={String(location.id)}>
-                      {location.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          {showShiftPicker ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="count-assignment-shift">Ca đếm tồn</Label>
-              <Select value={shiftSelectValue} onValueChange={changeShiftScope}>
-                <SelectTrigger id="count-assignment-shift">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_SHIFTS_VALUE}>
-                    Áp dụng mọi ca
-                  </SelectItem>
-                  {shiftOptions.map((shift) => (
-                    <SelectItem key={shift.id} value={String(shift.id)}>
-                      {shift.name} · {formatVNClockTime(shift.startTime)}-
-                      {formatVNClockTime(shift.endTime)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
       {!scopeReady ? (
         <AppListFrame>
           <AppEmptyState
@@ -546,15 +501,90 @@ export function CountAssignmentsClient({
           />
         </AppListFrame>
       ) : (
-        <AppListFrame>
+        <AppListFrame
+          toolbar={
+            <AppToolbar
+              variant="inline"
+              search={
+                <InputGroup size={controlSize} className="min-w-0 flex-1">
+                  <InputGroupAddon>
+                    <IconSearch aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    type="search"
+                    aria-label="Tìm nhân viên…"
+                    value={employeeSearch}
+                    onChange={(event) => setEmployeeSearch(event.target.value)}
+                    placeholder="Tìm nhân viên…"
+                    inputMode="search"
+                  />
+                </InputGroup>
+              }
+              filters={
+                showLocationPicker || showShiftPicker ? (
+                  <>
+                    {showLocationPicker ? (
+                      <Select
+                        value={String(selectedLocationId)}
+                        onValueChange={changeLocationScope}
+                      >
+                        <SelectTrigger
+                          id="count-assignment-location"
+                          size={controlSize}
+                          className={inventoryListFilterSelectClassName}
+                          aria-label={INVENTORY_VI.warehouseShort}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locationOptions.map((location) => (
+                            <SelectItem
+                              key={location.id}
+                              value={String(location.id)}
+                            >
+                              {location.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : null}
+                    {showShiftPicker ? (
+                      <Select
+                        value={shiftSelectValue}
+                        onValueChange={changeShiftScope}
+                      >
+                        <SelectTrigger
+                          id="count-assignment-shift"
+                          size={controlSize}
+                          className={inventoryListFilterSelectClassName}
+                          aria-label="Ca đếm tồn"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_SHIFTS_VALUE}>
+                            Áp dụng mọi ca
+                          </SelectItem>
+                          {shiftOptions.map((shift) => (
+                            <SelectItem key={shift.id} value={String(shift.id)}>
+                              {shift.name} ·{" "}
+                              {formatVNClockTime(shift.startTime)}-
+                              {formatVNClockTime(shift.endTime)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : null}
+                  </>
+                ) : undefined
+              }
+            />
+          }
+        >
           <DataTable
             columns={columns}
             data={visibleEmployees}
             getRowKey={(employee) => employee.id}
-            searchable
-            searchValue={employeeSearch}
-            onSearchChange={setEmployeeSearch}
-            searchPlaceholder="Tìm nhân viên…"
             emptyMode={employeeSearch.trim() ? "no-results" : "no-data"}
             emptyTitle={INVENTORY_VI.countAssignNoEmployeesTitle}
             emptyDescription={INVENTORY_VI.countAssignNoEmployeesDescription}

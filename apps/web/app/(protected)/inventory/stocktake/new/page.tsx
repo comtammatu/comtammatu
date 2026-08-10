@@ -12,17 +12,15 @@ import { messages } from "@lib/messages";
 export const dynamic = "force-dynamic";
 
 interface NewStocktakeSessionPageContentProps {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function NewStocktakeSessionPageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: NewStocktakeSessionPageContentProps) {
   const sp = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -32,7 +30,7 @@ export async function NewStocktakeSessionPageContent({
   // branch-scoped roles it collapses to claims.branch_id.
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId: sp.branchId,
+    queryBranch: sp.branch,
   });
   if (scope.outOfScope) notFound();
 
@@ -46,7 +44,7 @@ export async function NewStocktakeSessionPageContent({
     );
     if (!flagEnabled) {
       redirect(
-        `${routeBase}?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
+        `${routeBase}?branch=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
       );
     }
   }
@@ -84,7 +82,6 @@ export async function NewStocktakeSessionPageContent({
       locations={locations}
       defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
       routeBase={routeBase}
-      embedded={embedded}
       loadFailed={locationsRes.error !== null}
       loadFailedTitle={messages.inventory.stocktake.startLoadFailed}
     />
@@ -94,7 +91,7 @@ export async function NewStocktakeSessionPageContent({
 export default async function NewStocktakeSessionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   return <NewStocktakeSessionPageContent searchParams={searchParams} />;
 }

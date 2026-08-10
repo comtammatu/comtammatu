@@ -12,8 +12,8 @@ test("supplier invoice confirmation exposes valuation settlement", () => {
   const actions = readWeb(
     "app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const client = readWeb(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const detailSheet = readWeb(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-detail-sheet.tsx",
   );
 
   assert.match(actions, /get_supplier_invoice_valuation_summary/);
@@ -23,10 +23,10 @@ test("supplier invoice confirmation exposes valuation settlement", () => {
     /provisionalValue: z\.coerce\.number\(\)\.default\(0\)/,
   );
   assert.match(actions, /warning: z\.boolean\(\)\.default\(false\)/);
-  assert.match(client, /productionInventoryAdjustment/);
-  assert.match(client, /foodCostVariance/);
-  assert.match(client, /wasteVariance/);
-  assert.match(client, /valuation\?\.warning/);
+  assert.match(detailSheet, /productionInventoryAdjustment/);
+  assert.match(detailSheet, /foodCostVariance/);
+  assert.match(detailSheet, /wasteVariance/);
+  assert.match(detailSheet, /valuationSummary\.warning/);
 });
 
 test("inventory valuation has no period-close management surface", () => {

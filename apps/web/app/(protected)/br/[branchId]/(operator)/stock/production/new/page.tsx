@@ -7,6 +7,6 @@ export default async function BranchProductionNewRedirect({
 }) {
   const { branchId } = await params;
   redirect(
-    `/inventory/production/new?branchId=${encodeURIComponent(branchId)}`,
+    `/inventory/production/new?branch=${encodeURIComponent(branchId)}`,
   );
 }

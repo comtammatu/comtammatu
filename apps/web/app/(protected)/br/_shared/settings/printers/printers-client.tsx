@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AppSection } from "@/components/surface";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { AppDialog } from "@/components/form";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import { deletePrinter, testPrintPrinter, upsertPrinter } from "./actions";
@@ -183,11 +183,11 @@ export function PrintersClient(props: {
           .toSorted((a, b) => a.name.localeCompare(b.name, "vi"));
         const agent = agentByBranch.get(branch.id);
         return (
-          <AppSection
+          <BranchOperatorPanel
             key={branch.id}
             title={branch.name}
             badge={{
-              children: `Agent: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
+              children: `Dịch vụ in: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
               variant: agent?.is_online ? "default" : "outline",
             }}
           >
@@ -296,7 +296,7 @@ export function PrintersClient(props: {
                 {PRINTER_COPY.addPrinter}
               </Button>
             </ItemGroup>
-          </AppSection>
+          </BranchOperatorPanel>
         );
       })}
 

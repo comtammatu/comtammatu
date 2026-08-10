@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { createElement } from "react";
@@ -24,10 +25,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {
-  getPaginationItems,
-  PAGINATION_ELLIPSIS,
-} from "@comtammatu/ui/lib/pagination";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
@@ -35,13 +32,8 @@ const exists = (path: string) => existsSync(resolve(repoRoot, path));
 
 test("Má Tư DS primitive parity files are present in the shared UI package", () => {
   for (const path of [
-    "packages/ui/src/components/accordion.tsx",
     "packages/ui/src/components/combobox.tsx",
-    "packages/ui/src/components/date-picker.tsx",
-    "packages/ui/src/components/pagination.tsx",
-    "packages/ui/src/components/resizable.tsx",
     "packages/ui/src/components/slider.tsx",
-    "packages/ui/src/components/tag-input.tsx",
     "packages/ui/src/components/toolbar.tsx",
   ]) {
     assert.equal(exists(path), true, `${path} should exist`);
@@ -50,7 +42,88 @@ test("Má Tư DS primitive parity files are present in the shared UI package", (
   const designSystem = read("docs/spec/design-system.md");
   assert.match(designSystem, /BrandSymbol/);
   assert.match(designSystem, /Combobox/);
-  assert.match(designSystem, /Pagination/);
+});
+
+// A primitive with no consumer is drift, not coverage: the DS ships only what
+// routes actually compose. Without this gate a primitive can sit unimported for
+// months while docs, registry, and tests keep asserting it exists.
+test("every shared primitive has an importer", () => {
+  const uiSourceRoot = resolve(repoRoot, "packages/ui/src");
+  const primitives = [
+    ...readdirSync(resolve(uiSourceRoot, "components"))
+      .filter((name) => name.endsWith(".tsx"))
+      .map((name) => ({ dir: "components", name, stem: name.slice(0, -4) })),
+    ...readdirSync(resolve(uiSourceRoot, "lib"))
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => ({ dir: "lib", name, stem: name.slice(0, -3) })),
+  ];
+
+  const filesWithImport = (stem: string, dir: string): string => {
+    const pattern = `from ["'][^"']*/${stem}["']`;
+    const exclude = `packages/ui/src/${dir}/${stem}.*`;
+    const rg = spawnSync(
+      "rg",
+      [
+        "--files-with-matches",
+        "--glob",
+        "!node_modules",
+        "--glob",
+        "!.next",
+        "--glob",
+        `!${exclude}`,
+        pattern,
+        "apps",
+        "packages",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    // rg status 0 = matches, 1 = none; missing binary or other errors must not
+    // look like "no importers" (CI runners often lack ripgrep on PATH).
+    if (!rg.error && (rg.status === 0 || rg.status === 1)) {
+      return (rg.stdout ?? "").trim();
+    }
+
+    const git = spawnSync(
+      "git",
+      [
+        "grep",
+        "-l",
+        "-E",
+        "--untracked",
+        pattern,
+        "--",
+        "apps",
+        "packages",
+        `:(exclude)${exclude}`,
+        ":(exclude)*/node_modules/*",
+        ":(exclude)*/.next/*",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    if (!git.error && (git.status === 0 || git.status === 1)) {
+      return (git.stdout ?? "").trim();
+    }
+
+    throw new Error(
+      `importer search failed for ${stem}: ${
+        rg.error?.message ??
+        rg.stderr ??
+        git.error?.message ??
+        git.stderr ??
+        "unknown search failure"
+      }`,
+    );
+  };
+
+  const orphans = primitives.filter(
+    ({ dir, stem }) => filesWithImport(stem, dir).length === 0,
+  );
+
+  assert.deepEqual(
+    orphans.map(({ dir, name }) => `packages/ui/src/${dir}/${name}`),
+    [],
+    "retire the primitive or wire it into a route; the DS is not a parts catalogue",
+  );
 });
 
 test("app metrics use KpiCard without the retired Stat primitive", () => {
@@ -78,7 +151,12 @@ test("linked KpiCard applies hover feedback to its full card surface", () => {
 });
 
 test("AppSection and AppPageHeader clamp secondary description copy", () => {
-  const surface = read("apps/web/app/components/surface.tsx");
+  const surface = [
+    "apps/web/app/components/surface/app-section.tsx",
+    "apps/web/app/components/surface/app-page-header.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
   const compareChip = read("apps/web/app/components/kpi/compare-chip.tsx");
   const card = read("packages/ui/src/components/card.tsx");
 
@@ -106,11 +184,7 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const badgeSource = read("packages/ui/src/components/badge.tsx");
   const buttonSource = read("packages/ui/src/components/button.tsx");
   const itemSource = read("packages/ui/src/components/item.tsx");
-  const accordionSource = read("packages/ui/src/components/accordion.tsx");
   const alertDialogSource = read("packages/ui/src/components/alert-dialog.tsx");
-  const confirmDialogSource = read(
-    "packages/ui/src/components/confirm-dialog.tsx",
-  );
   const avatarSource = read("packages/ui/src/components/avatar.tsx");
   const breadcrumbSource = read("packages/ui/src/components/breadcrumb.tsx");
   const checkboxSource = read("packages/ui/src/components/checkbox.tsx");
@@ -124,12 +198,10 @@ test("shared primitives use Base UI behavior without Radix", () => {
   const popoverSource = read("packages/ui/src/components/popover.tsx");
   const radioGroupSource = read("packages/ui/src/components/radio-group.tsx");
   const selectSource = read("packages/ui/src/components/select.tsx");
-  const sidebarSource = read("packages/ui/src/components/sidebar.tsx");
   const scrollAreaSource = read("packages/ui/src/components/scroll-area.tsx");
   const switchSource = read("packages/ui/src/components/switch.tsx");
   const sheetSource = read("packages/ui/src/components/sheet.tsx");
   const tabsSource = read("packages/ui/src/components/tabs.tsx");
-  const tagInputSource = read("packages/ui/src/components/tag-input.tsx");
   const toggleSource = read("packages/ui/src/components/toggle.tsx");
   const toggleGroupSource = read("packages/ui/src/components/toggle-group.tsx");
   const tooltipSource = read("packages/ui/src/components/tooltip.tsx");
@@ -152,9 +224,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(itemSource, /useRender\.ComponentProps<"div">/);
   assert.match(itemSource, /defaultTagName: "div"/);
   assert.doesNotMatch(itemSource, /radix-ui|Slot|asChild/);
-  assert.match(accordionSource, /@base-ui\/react\/accordion/);
-  assert.match(accordionSource, /AccordionPrimitive\.Panel/);
-  assert.doesNotMatch(accordionSource, /radix-ui/);
   assert.match(alertDialogSource, /@base-ui\/react\/alert-dialog/);
   assert.match(alertDialogSource, /AlertDialogPrimitive\.Backdrop/);
   assert.match(alertDialogSource, /AlertDialogPrimitive\.Popup/);
@@ -165,7 +234,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(alertDialogSource, /max-w-\[calc\(100%-2rem\)\]/);
   assert.match(alertDialogSource, /max-h-\[calc\(100dvh-2rem\)\]/);
   assert.match(alertDialogSource, /overscroll-contain/);
-  assert.equal(confirmDialogSource.match(/size="touch"/g)?.length, 2);
   assert.match(avatarSource, /@base-ui\/react\/avatar/);
   assert.doesNotMatch(avatarSource, /radix-ui/);
   assert.match(breadcrumbSource, /@base-ui\/react\/use-render/);
@@ -179,8 +247,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(comboboxSource, /@base-ui\/react\/combobox/);
   assert.match(comboboxSource, /BaseCombobox\.List/);
   assert.doesNotMatch(comboboxSource, /cmdk|radix-ui|\.\/command/);
-  assert.match(tagInputSource, /@base-ui\/react\/combobox/);
-  assert.match(tagInputSource, /BaseCombobox\.Chips/);
   assert.equal(
     exists("packages/ui/src/components/command.tsx"),
     false,
@@ -221,9 +287,6 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(scrollAreaSource, /ScrollAreaPrimitive\.Viewport/);
   assert.doesNotMatch(scrollAreaSource, /ScrollAreaPrimitive\.Content/);
   assert.doesNotMatch(scrollAreaSource, /radix-ui/);
-  assert.match(sidebarSource, /@base-ui\/react\/use-render/);
-  assert.match(sidebarSource, /useRender\.ComponentProps<"button">/);
-  assert.doesNotMatch(sidebarSource, /radix-ui|Slot|asChild/);
   assert.match(switchSource, /@base-ui\/react\/switch/);
   assert.doesNotMatch(switchSource, /radix-ui/);
   assert.match(sheetSource, /@base-ui\/react\/dialog/);
@@ -251,13 +314,38 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(tooltipSource, /TooltipPrimitive\.Positioner/);
   assert.match(tooltipSource, /--transform-origin/);
   assert.doesNotMatch(tooltipSource, /radix-ui|--radix-tooltip|asChild/);
-  assert.match(globals, /--accordion-panel-height/);
-  assert.doesNotMatch(globals, /--radix-accordion-content-height/);
+  assert.doesNotMatch(globals, /--radix-/);
   assert.match(uiPackage, /"@base-ui\/react": "1\.6\.0"/);
 });
 
+test("foundations bind typography/motion and gate looping Spinner/Skeleton motion", () => {
+  const globals = read("packages/ui/src/styles/globals.css");
+  const spinner = read("packages/ui/src/components/spinner.tsx");
+  const skeleton = read("packages/ui/src/components/skeleton.tsx");
+  const sonner = read("packages/ui/src/components/sonner.tsx");
+  const designSystem = read("docs/spec/design-system.md");
+
+  assert.match(
+    globals,
+    /:root\s*\{[^}]*--font-heading:\s*var\(--font-geist-sans\)/,
+  );
+  assert.match(globals, /html\s*\{[^}]*font-size:\s*17px/);
+  assert.match(designSystem, /html \{ font-size: 17px \}/);
+  assert.match(globals, /--motion-fast:\s*120ms/);
+  assert.match(globals, /--ease-move:\s*cubic-bezier/);
+  assert.match(globals, /@media \(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(spinner, /motion-safe:animate-spin/);
+  assert.doesNotMatch(spinner, /(?<!motion-safe:)animate-spin/);
+  assert.match(skeleton, /motion-safe:animate-pulse/);
+  assert.doesNotMatch(skeleton, /(?<!motion-safe:)animate-pulse/);
+  assert.match(sonner, /from ["']\.\/spinner["']/);
+  assert.doesNotMatch(sonner, /animate-spin/);
+});
+
 test("confirm dialog settles every request exactly once", () => {
-  const source = read("packages/ui/src/components/confirm-dialog.tsx");
+  const source = read("apps/web/app/components/confirm-dialog.tsx");
+
+  assert.equal(source.match(/size="touch"/g)?.length, 2);
 
   // The awaited resolver lives in a ref that is cleared before it is called, so
   // a request can never resolve twice and callers cannot be left pending.
@@ -326,7 +414,6 @@ test("Base floating layers stack above app chrome and Select resolves labels", (
     read("packages/ui/src/components/dropdown-menu.tsx"),
     read("packages/ui/src/components/popover.tsx"),
     read("packages/ui/src/components/select.tsx"),
-    read("packages/ui/src/components/tag-input.tsx"),
     read("packages/ui/src/components/tooltip.tsx"),
   ];
 
@@ -480,7 +567,15 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   assert.match(drawerSource, /fixed inset-x-0 bottom-0/);
   assert.match(drawerSource, /max-h-dvh-80/);
   assert.match(drawerSource, /overscroll-contain/);
-  assert.match(drawerSource, /motion-reduce:animate-none/);
+  assert.match(
+    drawerSource,
+    /transition-\[opacity,transform\] duration-\[var\(--motion-drawer\)\] ease-\[var\(--ease-move\)\]/,
+  );
+  assert.match(
+    drawerSource,
+    /data-\[starting-style\]:translate-y-full data-\[starting-style\]:opacity-0/,
+  );
+  assert.doesNotMatch(drawerSource, /motion-reduce:/);
   assert.match(drawerSource, /responsiveFullscreen = false/);
   assert.match(drawerSource, /pt-\[env\(safe-area-inset-top\)\]/);
   assert.match(drawerSource, /pb-\[env\(safe-area-inset-bottom\)\]/);
@@ -508,20 +603,6 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
     checkoutApprovalsSource,
     /setRejectTarget\(detailsTarget\);\s*setDetailsTarget\(null\);/,
   );
-});
-
-test("pagination items keep stable ellipsis windows", () => {
-  assert.deepEqual(getPaginationItems(1, 4), [1, 2, 3, 4]);
-  assert.deepEqual(getPaginationItems(5, 10), [
-    1,
-    PAGINATION_ELLIPSIS,
-    4,
-    5,
-    6,
-    PAGINATION_ELLIPSIS,
-    10,
-  ]);
-  assert.deepEqual(getPaginationItems(99, 10), [1, PAGINATION_ELLIPSIS, 9, 10]);
 });
 
 test("InputGroup controls fill their owning field and touch variants stay named", () => {

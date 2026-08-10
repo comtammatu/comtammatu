@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 test("root route renders the Control home", () => {
   const rootPage = read("apps/web/app/(protected)/page.tsx");
   const protectedLayout = read("apps/web/app/(protected)/layout.tsx");
-  const overview = read("apps/web/app/_components/owner-overview.tsx");
+  const overview = read("apps/web/app/_components/control-surface-overview.tsx");
   const appShell = read("apps/web/app/components/app-shell.tsx");
   const controlSurfaceShell = read(
     "apps/web/app/components/control-surface-shell.tsx",
@@ -20,7 +20,7 @@ test("root route renders the Control home", () => {
   assert.match(rootPage, /loadAuthState/);
   assert.match(protectedLayout, /loadAuthState/);
   assert.match(protectedLayout, /<ControlSurfaceShell/);
-  assert.match(rootPage, /<OwnerOverview/);
+  assert.match(rootPage, /<ControlSurfaceOverview/);
   assert.match(rootPage, /loadControlHomeAttention/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
@@ -36,8 +36,13 @@ test("root route renders the Control home", () => {
   assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
   assert.match(
     controlSurfaceShell,
-    /sidebarHeaderAccessory=\{sidebarHeaderAccessory\}/,
+    /sidebarHeaderAccessory=\{scopeAccessory\}/,
   );
+  assert.match(controlSurfaceShell, /ControlSurfaceScopeControl/);
   assert.match(controlSurfaceShell, /InventoryBranchFilter/);
+  assert.match(controlSurfaceShell, /mobileScopeAccessory=\{scopeAccessory\}/);
+  assert.match(controlSurfaceShell, /canSelectAll/);
+  assert.match(appShell, /mobileScopeAccessory/);
+  assert.match(appShell, /sticky top-0/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });

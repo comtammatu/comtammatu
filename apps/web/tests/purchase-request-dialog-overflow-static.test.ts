@@ -3,14 +3,20 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
+const demandModuleRoot =
+  "app/(protected)/inventory/purchase-requests";
+
 test("purchase request dialog keeps its actions visible with many lines", () => {
-  const requestSource = readFileSync(
-    join(
-      process.cwd(),
-      "app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
-    ),
-    "utf8",
-  );
+  const requestSource = [
+    "purchase-requests-client.tsx",
+    "purchase-request-form-dialog.tsx",
+    "purchase-request-view-dialog.tsx",
+    "purchase-request-allocate-dialog.tsx",
+  ]
+    .map((file) =>
+      readFileSync(join(process.cwd(), demandModuleRoot, file), "utf8"),
+    )
+    .join("\n");
   const frameSource = readFileSync(
     join(process.cwd(), "app/components/form/form-dialog.tsx"),
     "utf8",

@@ -101,7 +101,7 @@ test("branch and central operators see only their fulfillment workspace", async 
       path: () => "/inventory/transfers",
       actionLabel: /Điều chuyển thủ công/,
       cta: (branchId: number) =>
-        new RegExp(`^/inventory/transfers/new\\?branchId=${branchId}$`),
+        new RegExp(`^/inventory/transfers/new\\?branch=${branchId}$`),
     },
     {
       code: "central_kitchen_lead",
@@ -110,7 +110,7 @@ test("branch and central operators see only their fulfillment workspace", async 
       actionLabel: /Yêu cầu Kho Tổng/,
       cta: (branchId: number) =>
         new RegExp(
-          `^/inventory/stock-requests/new\\?branchId=${branchId}$`,
+          `^/inventory/stock-requests/new\\?branch=${branchId}$`,
         ),
     },
   ] as const;

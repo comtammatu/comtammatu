@@ -36,7 +36,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import { ConfirmDialog } from "@comtammatu/ui/components/confirm-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,

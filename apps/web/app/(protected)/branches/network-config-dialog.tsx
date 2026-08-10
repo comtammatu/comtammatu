@@ -30,7 +30,7 @@ import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppEmptyState } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { messages } from "@lib/messages";
 import {
   activateNetworkGateBypass,

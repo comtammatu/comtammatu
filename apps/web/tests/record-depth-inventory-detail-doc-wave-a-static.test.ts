@@ -80,10 +80,11 @@ test("Wave A production/new page delegates chrome to DocumentFormFrame client", 
     /<DocumentFormFrame[\s\S]*footer=\{footer\}/,
     "production/new client: DocumentFormFrame footer slot",
   );
-  assert.match(
+  assert.match(client, /AppDetailFooter/, "production/new client: AppDetailFooter");
+  assert.doesNotMatch(
     client,
-    /embedded[\s\S]*AppDetailFooter|AppDetailFooter[\s\S]*sticky=\{embedded\}/,
-    "production/new client: Branch embedded keeps sticky footer without DocumentFormFrame",
+    /\bembedded\b/,
+    "production/new client: no dead embedded dual presenter",
   );
 });
 

@@ -29,11 +29,11 @@ export function HistoryTab({
   const logs: AuditLogRow[] = entries.map((entry) => {
     const branchLabel =
       entry.branchId === null
-        ? messages.owner.staffPermissions.tenantWide
+        ? messages.controlSurface.staffPermissions.tenantWide
         : (branchNameById.get(entry.branchId) ??
-          messages.owner.staffPermissions.branchFallback(entry.branchId));
+          messages.controlSurface.staffPermissions.branchFallback(entry.branchId));
     const actionLabel =
-      messages.owner.staffAudit.actionLabels[entry.action] ??
+      messages.controlSurface.staffAudit.actionLabels[entry.action] ??
       "Cập nhật phân quyền";
     return {
       id: entry.id,
@@ -49,7 +49,7 @@ export function HistoryTab({
 
   return (
     <AppSection
-      title={messages.owner.staffPermissions.historyTitle(entries.length)}
+      title={messages.controlSurface.staffPermissions.historyTitle(entries.length)}
     >
       <AuditHistoryList logs={logs} />
     </AppSection>

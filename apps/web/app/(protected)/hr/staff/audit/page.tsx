@@ -4,15 +4,11 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  AppPage,
-  AppPageHeader,
-  AppSection,
-} from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   getStaffPermissionLabelVi,
-} from "@lib/messages/owner";
+} from "@lib/messages/control-surface";
 import { PermissionAuditClient } from "./permission-audit-client";
 import type { PermissionAuditTargetOption } from "./permission-audit-filters";
 import {
@@ -127,8 +123,8 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
-  const copy = messages.owner.staffAudit;
-  const permissionCopy = messages.owner.staffPermissions;
+  const copy = messages.controlSurface.staffAudit;
+  const permissionCopy = messages.controlSurface.staffPermissions;
   const permissionMetaByKey = new Map(
     (permissionKeysResult.data ?? []).map((permission) => [
       permission.key,
@@ -200,7 +196,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   });
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
         description={copy.description}
@@ -224,23 +220,23 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         }
       />
 
-      <AppSection
-        title={copy.recentItems(auditDisplayRows.length)}
-        contentFlush
-      >
-        <PermissionAuditClient
-          rows={auditDisplayRows}
-          filterValue={{
-            action: params.action ?? null,
-            target: params.target ?? null,
-            since: params.since ?? null,
-            q,
-          }}
-          targetOptions={targetOptions}
-          branchScope={branchScope}
-          hasServerFilters={hasServerFilters}
-        />
-      </AppSection>
+      <PermissionAuditClient
+        rows={auditDisplayRows}
+        filterValue={{
+          action: params.action ?? null,
+          target: params.target ?? null,
+          since: params.since ?? null,
+          q,
+        }}
+        targetOptions={targetOptions}
+        branchScope={branchScope}
+        hasServerFilters={hasServerFilters}
+        listTitle={
+          auditDisplayRows.length > 0
+            ? copy.recentItems(auditDisplayRows.length)
+            : undefined
+        }
+      />
     </AppPage>
   );
 }

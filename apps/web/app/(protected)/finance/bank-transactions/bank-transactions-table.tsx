@@ -11,10 +11,10 @@ import {
   formatAccountingVND as formatVND,
   formatCount,
 } from "@comtammatu/shared/format";
-import { formatVNDateTime } from "@comtammatu/shared/time";
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupInput,
@@ -47,7 +47,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppSection } from "@/components/surface";
+import { AppListFrame } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
@@ -84,6 +84,7 @@ import { displayBankContent } from "../_lib/display-bank-content";
 export { displayBankContent };
 
 const copy = messages.finance.bankTransactions;
+const statusCopy = messages.finance.common.status;
 const REVIEW_PENDING_VALUE = "pending";
 function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
   label: string;
@@ -98,7 +99,7 @@ function reconciliationStateBadgeMeta(state: SepayReconciliationState): {
       variant: "destructive",
     };
   }
-  return { label: copy.reconciliationStateLabels[state], variant: "warning" };
+  return { label: statusCopy.unmatched, variant: "warning" };
 }
 
 interface BankTransactionsTableProps {
@@ -178,25 +179,10 @@ function reasonLabel(reason: SepayUnmatchedMoneyInReason): string {
   return copy.unmatchedMoneyInTable.reasonLabels[reason];
 }
 
-function ReconciliationStateBadge({ tx }: { tx: SepayBankTransaction }) {
-  const state = classifySepayReconciliationState(tx);
-  const meta = reconciliationStateBadgeMeta(state);
-
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
-}
-
 function reviewStatusLabel(
   status: SepayBankWebhookReviewStatus | typeof REVIEW_PENDING_VALUE,
 ): string {
   return copy.missingWebhookTable.reviewStatusLabels[status];
-}
-
-function missingWebhookBadge(payment: SepayMissingBankWebhookPayment) {
-  const status = payment.bankWebhookReviewStatus ?? REVIEW_PENDING_VALUE;
-  const variant =
-    status === "resolved" || status === "ignored" ? "secondary" : "warning";
-
-  return <Badge variant={variant}>{reviewStatusLabel(status)}</Badge>;
 }
 
 function MissingWebhookStatusCell({
@@ -204,14 +190,17 @@ function MissingWebhookStatusCell({
 }: {
   payment: SepayMissingBankWebhookPayment;
 }) {
-  return missingWebhookBadge(payment);
+  const status = payment.bankWebhookReviewStatus ?? REVIEW_PENDING_VALUE;
+  const variant =
+    status === "resolved" || status === "ignored" ? "secondary" : "warning";
+
+  return <Badge variant={variant}>{reviewStatusLabel(status)}</Badge>;
 }
 
 function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   const state = classifySepayReconciliationState(tx);
-  if (state === "matched" && tx.paymentId != null) {
-    return <Badge variant="success">{copy.matchedPayment(tx.paymentId)}</Badge>;
-  }
+  const meta = reconciliationStateBadgeMeta(state);
+  const badge = <Badge variant={meta.variant}>{meta.label}</Badge>;
 
   const hasPaymentConflictDetail =
     tx.transferType === "in" && isSepayPaymentConflictReviewCode(tx.errorCode);
@@ -219,31 +208,71 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
     hasPaymentConflictDetail && tx.orderId != null
       ? { id: tx.orderId, number: tx.orderNumber }
       : null;
-  const detail =
-    tx.transferType === "in" && state !== "matched"
-      ? hasPaymentConflictDetail
-        ? null
-        : reasonLabel(classifySepayUnmatchedMoneyIn(tx))
-      : state !== "matched"
-        ? copy.reconciliation.unmatchedMoneyOut
-        : null;
+
+  let tip: string | null = null;
+  if (state === "matched" && tx.paymentId != null) {
+    tip = copy.matchedPayment(tx.paymentId);
+  } else if (state === "matched" && tx.expenseIds.length > 0) {
+    tip = copy.matchedExpenseCount(formatCount(tx.expenseIds.length));
+  } else if (tx.transferType === "in" && state !== "matched") {
+    tip = hasPaymentConflictDetail
+      ? null
+      : reasonLabel(classifySepayUnmatchedMoneyIn(tx));
+  }
 
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <ReconciliationStateBadge tx={tx} />
-      {detail ? (
-        <span className="truncate text-xs text-muted-foreground">{detail}</span>
-      ) : null}
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      {tip ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex outline-none focus-visible:ring-1 focus-visible:ring-foreground" />
+            }
+          >
+            {badge}
+          </TooltipTrigger>
+          <TooltipContent side="top">{tip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        badge
+      )}
       {conflictOrder ? (
         <Link
           href={`/orders?orderId=${String(conflictOrder.id)}`}
           className="truncate font-mono text-xs font-medium text-primary underline-offset-2 hover:underline"
         >
-          {copy.unmatchedMoneyInTable.conflictOrder}:{" "}
           {conflictOrder.number ?? copy.unmatchedMoneyInTable.openConflictOrder}
         </Link>
       ) : null}
     </div>
+  );
+}
+
+function bankRowNeedsHighlight(row: BankReconciliationRow): boolean {
+  if (row.kind === "missing_webhook") {
+    return isOpenSepayBankWebhookReview(row.payment.bankWebhookReviewStatus);
+  }
+  const state = classifySepayReconciliationState(row.tx);
+  return state === "needs_review" || state === "webhook_error";
+}
+
+function rowOccurredAt(row: BankReconciliationRow): string | null {
+  if (row.kind === "missing_webhook") {
+    return row.payment.paidAt;
+  }
+  return resolveSepayTransactionInstant(row.tx);
+}
+
+function DateCell({ row }: { row: BankReconciliationRow }) {
+  const instant = rowOccurredAt(row);
+  return (
+    <time
+      dateTime={instant ?? undefined}
+      className="font-mono text-sm tabular-nums text-muted-foreground"
+      title={formatVNDateTime(instant)}
+    >
+      {formatVNDate(instant)}
+    </time>
   );
 }
 
@@ -252,54 +281,39 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     const content = `${copy.missingWebhookTable.payment} ${formatPaymentId(
       row.payment.paymentId,
     )}`;
-    const occurredAt = formatVNDateTime(row.payment.paidAt);
     const reference = formatProviderRef(row.payment.providerRef);
     return (
-      <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {occurredAt}
-        </span>
-        <span
-          className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
-          title={reference}
-        >
-          {reference}
-        </span>
-        <span className="min-w-0 truncate font-medium">{content}</span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="line-clamp-2 text-sm font-medium">{content}</p>
+        {reference !== "—" ? (
+          <span className="truncate font-mono text-xs text-muted-foreground">
+            {reference}
+          </span>
+        ) : null}
       </div>
     );
   }
 
   const content = displayBankContent(row.tx.content);
-  const occurredAt = formatVNDateTime(resolveSepayTransactionInstant(row.tx));
   const reference = referenceCode(row.tx);
   const isLongContent = content.length > 80;
   const contentLabel = (
-    <span className="min-w-0 truncate font-medium">{content}</span>
+    <p className="line-clamp-2 text-sm font-medium">{content}</p>
   );
 
   return (
-    <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap sm:gap-3">
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-        {occurredAt}
-      </span>
-      <span
-        className="min-w-0 max-w-36 truncate font-mono text-xs text-muted-foreground sm:max-w-48"
-        title={reference}
-      >
-        {reference}
-      </span>
+    <div className="flex min-w-0 flex-col gap-1">
       {isLongContent ? (
         <Tooltip>
           <TooltipTrigger
             render={
               <span
-                className="min-w-0 truncate font-medium outline-none focus-visible:ring-1 focus-visible:ring-foreground"
+                className="min-w-0 outline-none focus-visible:ring-1 focus-visible:ring-foreground"
                 tabIndex={0}
               />
             }
           >
-            {content}
+            {contentLabel}
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-sm whitespace-normal">
             <p className="break-words font-medium">{content}</p>
@@ -308,6 +322,9 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
       ) : (
         contentLabel
       )}
+      <span className="truncate font-mono text-xs text-muted-foreground">
+        {reference}
+      </span>
     </div>
   );
 }
@@ -322,11 +339,7 @@ function MatchCell({
   touch: boolean;
 }) {
   if (tx.bankTransactionId == null && tx.eventId == null) {
-    return (
-      <span className="text-muted-foreground">
-        {copy.reconciliation.unmatchedMoneyOut}
-      </span>
-    );
+    return <span className="text-muted-foreground">—</span>;
   }
 
   return (
@@ -439,7 +452,7 @@ function LinkPaymentCell({
       <SheetTrigger
         render={
           <Button variant="outline" size={touch ? "touch" : "sm"}>
-            {table.linkAction}
+            {copy.matchAction}
           </Button>
         }
       />
@@ -535,7 +548,7 @@ function ReviewStatusSelect({
 
   return (
     <Select value={value} onValueChange={handleChange} disabled={isPending}>
-      <SelectTrigger size={touch ? "touch" : "sm"} className="w-44">
+      <SelectTrigger size={touch ? "touch" : "sm"} className="w-36">
         <SelectValue placeholder={table.reviewStatusPlaceholder} />
       </SelectTrigger>
       <SelectContent align="end">
@@ -680,16 +693,15 @@ export function BankTransactionsTable({
   ] as const;
   const columns: DataTableColumn<BankReconciliationRow>[] = [
     {
-      key: "index",
-      header: "#",
-      className:
-        "sticky left-0 z-10 w-12 bg-card text-right font-mono tabular-nums",
-      render: (_, index) => index + 1,
+      key: "date",
+      header: copy.table.date,
+      className: "w-28 font-mono tabular-nums",
+      render: (row) => <DateCell row={row} />,
     },
     {
       key: "amount",
       header: copy.table.amount,
-      className: "sticky left-12 z-10 w-32 bg-card text-right",
+      className: "w-32 text-right",
       render: (row) =>
         row.kind === "bank" ? (
           <AmountCell tx={row.tx} />
@@ -698,34 +710,37 @@ export function BankTransactionsTable({
         ),
     },
     {
+      key: "content",
+      header: copy.table.content,
+      className: "min-w-48 whitespace-normal",
+      render: (row) => <RowContentCell row={row} />,
+    },
+    {
       key: "status",
       header: copy.table.status,
-      className: "sticky left-44 z-10 w-80 bg-card",
+      className: "w-36",
       render: (row) =>
         row.kind === "bank" ? (
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <ReconciliationStatusCell tx={row.tx} />
-            </div>
-            <ReconciliationActionCell
-              tx={row.tx}
-              expenseOptions={expenseOptions}
-              canLinkPayments={canLinkPayments}
-              touch={isTouchLayout}
-            />
-          </div>
+          <ReconciliationStatusCell tx={row.tx} />
         ) : (
-          <div className="flex min-w-0 items-center gap-2">
-            <MissingWebhookStatusCell payment={row.payment} />
-            <ReviewStatusSelect payment={row.payment} touch={isTouchLayout} />
-          </div>
+          <MissingWebhookStatusCell payment={row.payment} />
         ),
     },
     {
-      key: "content",
-      header: copy.table.content,
-      className: "min-w-64 whitespace-normal",
-      render: (row) => <RowContentCell row={row} />,
+      key: "action",
+      header: copy.table.action,
+      className: "w-28",
+      render: (row) =>
+        row.kind === "bank" ? (
+          <ReconciliationActionCell
+            tx={row.tx}
+            expenseOptions={expenseOptions}
+            canLinkPayments={canLinkPayments}
+            touch={isTouchLayout}
+          />
+        ) : (
+          <ReviewStatusSelect payment={row.payment} touch={isTouchLayout} />
+        ),
     },
   ];
 
@@ -739,6 +754,9 @@ export function BankTransactionsTable({
               row.tx.bankTransactionId ?? row.tx.eventId ?? row.tx.requestId,
             )}`
           : `missing-${row.payment.paymentId}`
+      }
+      rowClassName={(row) =>
+        bankRowNeedsHighlight(row) ? "border-l-2 border-l-warning" : undefined
       }
       emptyTitle={
         !hasRows
@@ -758,36 +776,41 @@ export function BankTransactionsTable({
       className="[&_table]:table-fixed"
       mobileBreakpoint={1024}
       mobileCardRender={(row) => (
-        <Item variant="outline">
+        <Item
+          variant="outline"
+          className={cn(
+            bankRowNeedsHighlight(row) && "border-l-2 border-l-warning",
+          )}
+        >
           <ItemContent className="min-w-0 gap-3">
-            <RowContentCell row={row} />
             <div className="flex items-start justify-between gap-3">
+              <DateCell row={row} />
               {row.kind === "bank" ? (
                 <AmountCell tx={row.tx} />
               ) : (
                 <PaymentAmountCell payment={row.payment} />
               )}
-              <div className="flex min-w-0 flex-col items-end gap-2">
-                {row.kind === "bank" ? (
-                  <>
-                    <ReconciliationStatusCell tx={row.tx} />
-                    <ReconciliationActionCell
-                      tx={row.tx}
-                      expenseOptions={expenseOptions}
-                      canLinkPayments={canLinkPayments}
-                      touch={isTouchLayout}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <MissingWebhookStatusCell payment={row.payment} />
-                    <ReviewStatusSelect
-                      payment={row.payment}
-                      touch={isTouchLayout}
-                    />
-                  </>
-                )}
-              </div>
+            </div>
+            <RowContentCell row={row} />
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              {row.kind === "bank" ? (
+                <ReconciliationStatusCell tx={row.tx} />
+              ) : (
+                <MissingWebhookStatusCell payment={row.payment} />
+              )}
+              {row.kind === "bank" ? (
+                <ReconciliationActionCell
+                  tx={row.tx}
+                  expenseOptions={expenseOptions}
+                  canLinkPayments={canLinkPayments}
+                  touch={isTouchLayout}
+                />
+              ) : (
+                <ReviewStatusSelect
+                  payment={row.payment}
+                  touch={isTouchLayout}
+                />
+              )}
             </div>
           </ItemContent>
         </Item>
@@ -796,60 +819,57 @@ export function BankTransactionsTable({
   );
 
   return (
-    <>
-      <FilterBar
-        params={params}
-        branches={[]}
-        basePath="/finance/bank-transactions"
-        sticky
-        hide={["branch", "granularity", "compare"]}
-        trailing={
-          <>
-            <span className="text-xs font-medium text-muted-foreground">
-              {copy.filters.label}
-            </span>
-            <Select
-              value={filter}
-              disabled={isFilterPending}
-              onValueChange={(value) => {
-                if (isBankReconciliationFilter(value)) setFilter(value);
-              }}
-            >
-              <SelectTrigger
-                size={controlSize}
-                className="min-w-36"
-                aria-label={copy.filters.label}
+    <AppListFrame
+      toolbar={
+        <FilterBar
+          variant="inline"
+          params={params}
+          branches={[]}
+          basePath="/finance/bank-transactions"
+          hide={["branch", "granularity", "compare"]}
+          trailing={
+            <>
+              <span className="text-xs font-medium text-muted-foreground">
+                {copy.filters.label}
+              </span>
+              <Select
+                value={filter}
+                disabled={isFilterPending}
+                onValueChange={(value) => {
+                  if (isBankReconciliationFilter(value)) setFilter(value);
+                }}
               >
-                <SelectValue placeholder={copy.filters.placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {filterOptions.map(([value, label]) => (
-                  <SelectItem
-                    key={value}
-                    value={value}
-                    size={controlSize === "touch" ? "touch" : "default"}
-                  >
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Badge
-              variant={openQueueCount > 0 ? "warning" : "success"}
-              className="font-mono"
-            >
-              {copy.queueCount(formatCount(openQueueCount))}
-            </Badge>
-          </>
-        }
-      />
-      {isTouchLayout ? (
-        table
-      ) : (
-        <AppSection className="overflow-hidden" contentFlush>
-          {table}
-        </AppSection>
-      )}
-    </>
+                <SelectTrigger
+                  size={controlSize}
+                  className="min-w-36"
+                  aria-label={copy.filters.label}
+                >
+                  <SelectValue placeholder={copy.filters.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filterOptions.map(([value, label]) => (
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      size={controlSize === "touch" ? "touch" : "default"}
+                    >
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge
+                variant={openQueueCount > 0 ? "warning" : "success"}
+                className="font-mono"
+              >
+                {copy.queueCount(formatCount(openQueueCount))}
+              </Badge>
+            </>
+          }
+        />
+      }
+    >
+      {table}
+    </AppListFrame>
   );
 }

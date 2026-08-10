@@ -20,7 +20,8 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
+import { StationSection } from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
@@ -40,7 +41,6 @@ import {
   Receipt as IconReceipt,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
-import { AppSection } from "@/components/surface";
 import { AppDialog } from "@/components/form/form-dialog";
 import { WholeVndInput } from "@/components/form";
 import { messages } from "@lib/messages";
@@ -195,7 +195,7 @@ function PaymentPendingPreview() {
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
       </div>
-      <AppSection size="sm" contentClassName="gap-3">
+      <StationSection size="sm" contentClassName="gap-3">
         <>
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-10 w-full" />
@@ -206,7 +206,7 @@ function PaymentPendingPreview() {
             <Skeleton className="h-10 w-full" />
           </div>
         </>
-      </AppSection>
+      </StationSection>
     </div>
   );
 }
@@ -241,7 +241,7 @@ function PaymentLoadingFixture() {
           {PAYMENT_LOADING_TEXT.qr}
         </Button>
       </div>
-      <AppSection size="sm" contentClassName="gap-3">
+      <StationSection size="sm" contentClassName="gap-3">
         <>
           <InputGroup className="h-10">
             <InputGroupAddon>{PAYMENT_LOADING_TEXT.received}</InputGroupAddon>
@@ -259,7 +259,7 @@ function PaymentLoadingFixture() {
             ))}
           </div>
         </>
-      </AppSection>
+      </StationSection>
     </div>
   );
 }
@@ -1071,7 +1071,7 @@ export function BillReceipt({
       ) : (
         <>
           <div className="flex flex-col gap-4">
-            <AppSection
+            <StationSection
               title={messages.pos.payment.stepTitle}
               icon={<IconCreditCard />}
               size="sm"
@@ -1289,7 +1289,7 @@ export function BillReceipt({
                   </div>
                 )}
               </>
-            </AppSection>
+            </StationSection>
           </div>
 
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">

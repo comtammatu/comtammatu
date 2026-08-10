@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
 import {
   Field,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   formatAccountingVND as formatVND,
   formatPercent,
@@ -29,14 +30,13 @@ import {
   FormattedNumberInput,
   MoneyVndInput,
 } from "@/components/form";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
-import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
+import { AppEmptyState, AppListFrame, AppPageHeader, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   DataTable,
@@ -119,6 +119,7 @@ export function RevenueTargetsClient({
   initialRows: RevenueTargetSetupRow[];
 }) {
   const controlSize = useFormControlSize();
+  const isTouchLayout = useIsMobile(1024);
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((row) => ({
       ...row,
@@ -387,6 +388,12 @@ export function RevenueTargetsClient({
     [pending],
   );
 
+  function openAddTarget() {
+    const row = rows.find((item) => item.targetAmount == null);
+    if (row) openEditor(row.branchId);
+    else toast.error(copy.allConfigured);
+  }
+
   const toolbar = (
     <form method="get">
       <AppToolbar
@@ -412,32 +419,9 @@ export function RevenueTargetsClient({
           </>
         }
         actions={
-          <>
-            <Button type="submit" variant="outline" size={controlSize}>
-              {copy.applyMonth}
-            </Button>
-            <Button
-              type="button"
-              size={controlSize}
-              render={<Link href="/finance/revenue" />}
-              variant="ghost"
-            >
-              {messages.finance.nav.items.revenue}
-            </Button>
-            <Button
-              type="button"
-              size={controlSize}
-              disabled={pending || !hasUnconfigured}
-              onClick={() => {
-                const row = rows.find((item) => item.targetAmount == null);
-                if (row) openEditor(row.branchId);
-                else toast.error(copy.allConfigured);
-              }}
-            >
-              <Plus data-icon="inline-start" />
-              {copy.add}
-            </Button>
-          </>
+          <Button type="submit" variant="outline" size={controlSize}>
+            {copy.applyMonth}
+          </Button>
         }
       />
     </form>
@@ -445,6 +429,21 @@ export function RevenueTargetsClient({
 
   return (
     <>
+      <AppPageHeader
+        title={copy.page.title}
+        actions={
+          <Button
+            type="button"
+            size={isTouchLayout ? "touch" : "default"}
+            disabled={pending || !hasUnconfigured}
+            onClick={openAddTarget}
+          >
+            <Plus data-icon="inline-start" />
+            {copy.add}
+          </Button>
+        }
+      />
+
       <AppListFrame toolbar={toolbar}>
         {rows.length === 0 ? (
           <AppEmptyState mode="no-data" title={copy.empty} />

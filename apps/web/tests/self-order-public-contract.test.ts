@@ -12,7 +12,7 @@ import {
 const publicSnapshot = {
   ok: true as const,
   state: "unopened" as const,
-  branch: { name: "Chi nhánh thử nghiệm" },
+  branch: { name: "Chi nhánh thử nghiệm", phone: null, googleReviewUrl: null },
   table: { id: 4, number: 4 },
   openOrderCount: 0,
   order: null,

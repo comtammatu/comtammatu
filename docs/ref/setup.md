@@ -26,11 +26,11 @@ Sao chép env template cho web app:
 cp .env.example apps/web/.env.local
 ```
 
-Điền các biến tối thiểu:
+Điền các biến tối thiểu (khớp `.env.example`):
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 UPSTASH_REDIS_REST_URL=https://YOUR_REDIS.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
@@ -43,13 +43,14 @@ truyền đúng `SUPABASE_PROJECT_ID`:
 SUPABASE_PROJECT_ID=enloyfnuerqgaqderbwb corepack pnpm db:types
 ```
 
-## Database
+## Database (Supabase)
 
 - Migration production là owner-gated. Agent viết migration file; owner apply
   production trừ khi owner ủy quyền rõ trong chính session hiện tại.
 - Kiểm migration trên Preview Branch throwaway có parent là Production trước
   khi apply Production. Xem `docs/agent/rules/database.md`.
 - Không chạy `supabase db push` vào production.
+- Layout: [`supabase/README.md`](../../supabase/README.md).
 
 JWT Custom Claims Hook trong Supabase Dashboard:
 
@@ -93,27 +94,31 @@ corepack pnpm lint
 corepack pnpm build
 ```
 
-Slice cấp release dùng:
+Slice cấp release:
 
 ```bash
 corepack pnpm verify
 ```
 
-## Env Vercel
+## Env Vercel (Production)
 
-Thiết lập các biến sau trong Vercel cho Production:
+Project: `comtammatu` · region `sin1` · domain `web.comtammatu.com` · chỉ deploy
+từ `main` (`apps/web/vercel.json`). Topology:
+[`docs/modules/infrastructure.md`](../modules/infrastructure.md).
+
+Thiết lập các biến sau trên Vercel **Production** (và Production only):
 
 | Biến | Nguồn |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase API |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase API |
 | `UPSTASH_REDIS_REST_URL` | Upstash console |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash console |
 
 Không set `VERCEL_URL` thủ công; Vercel tự inject biến này.
 
-Vercel Preview hiện bị vô hiệu hóa và không được nhận Supabase env.
+Vercel Preview hiện bị vô hiệu hóa và **không** được nhận Supabase env.
 `scripts/check-preview-supabase-env.mjs` chặn build Preview theo nguyên tắc
 fail-closed.
 

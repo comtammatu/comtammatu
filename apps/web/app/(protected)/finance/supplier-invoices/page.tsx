@@ -19,7 +19,6 @@ export default async function FinanceSupplierInvoicesPage({
 }: {
   searchParams: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     invoiceId?: string | string[];
     grnId?: string | string[];
     mode?: string | string[];
@@ -35,7 +34,7 @@ export default async function FinanceSupplierInvoicesPage({
   const copy = messages.finance.supplierInvoicesPage;
   const renderMissingInvoice = () => (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader title={copy.title} description={copy.description} />
+      <AppPageHeader title={copy.title} />
       <AppEmptyState
         mode="no-data"
         title={copy.notFoundTitle}
@@ -62,7 +61,7 @@ export default async function FinanceSupplierInvoicesPage({
   if (!canReadProcurement) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader title={copy.title} description={copy.description} />
+        <AppPageHeader title={copy.title} />
         <AppEmptyState
           mode="no-access"
           title={copy.noAccessTitle}
@@ -74,8 +73,7 @@ export default async function FinanceSupplierInvoicesPage({
 
   const params = await searchParams;
   const branchFilter =
-    (await resolveRequestedBranchId(params.branchId ?? params.branch)) ??
-    undefined;
+    (await resolveRequestedBranchId(params.branch)) ?? undefined;
   const filters = parseSupplierInvoiceListFilters(params);
   const rawInvoiceId = Array.isArray(params.invoiceId)
     ? params.invoiceId[0]
@@ -133,7 +131,7 @@ export default async function FinanceSupplierInvoicesPage({
   ) {
     return (
       <AppPage width="xwide" density="compact">
-        <AppPageHeader title={copy.title} description={copy.description} />
+        <AppPageHeader title={copy.title} />
         <AppEmptyState
           mode="error"
           title={copy.loadErrorTitle}
@@ -238,7 +236,6 @@ export default async function FinanceSupplierInvoicesPage({
       canPaySupplier={hasPayPermission}
       canAttachVatEvidence={canAttachVatEvidence}
       canAcceptDiscrepancy={hasInvoiceMatchPermission}
-      description={copy.description}
     />
   );
 }

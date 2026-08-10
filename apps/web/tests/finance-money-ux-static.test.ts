@@ -11,6 +11,19 @@ import { finance } from "../lib/messages/finance";
 
 const root = join(import.meta.dirname, "..");
 
+const EXPENSE_CLIENT_PATHS = [
+  "app/(protected)/finance/expenses/expenses-client.tsx",
+  "app/(protected)/finance/expenses/expense-form-schema.ts",
+  "app/(protected)/finance/expenses/expense-form-fields.tsx",
+  "app/(protected)/finance/expenses/expense-view-dialog.tsx",
+] as const;
+
+function readExpenseClientBundle(): string {
+  return EXPENSE_CLIENT_PATHS.map((path) =>
+    readFileSync(join(root, path), "utf8"),
+  ).join("\n");
+}
+
 test("finance moneyLabels expose Layer A vocabulary", () => {
   assert.equal(finance.moneyLabels.unitPrice, "Đơn giá");
   assert.equal(finance.moneyLabels.vatRate, "Thuế suất");
@@ -45,19 +58,20 @@ test("expense net-first auto VAT and manual override remain authoritative", () =
 });
 
 test("expenses client captures taxable-first and addressable overlay", () => {
-  const source = readFileSync(
+  const shell = readFileSync(
     join(root, "app/(protected)/finance/expenses/expenses-client.tsx"),
     "utf8",
   );
-  assert.match(source, /taxableAmount/);
-  assert.match(source, /resolveExpenseVatAmount/);
-  assert.doesNotMatch(source, /resolveExpenseVatAmountFromGross/);
-  assert.match(source, /useDocumentOverlayUrl/);
-  assert.match(source, /expenseId/);
-  assert.match(source, /AppListFrame/);
-  assert.match(source, /FinanceMoneyBlockFields/);
-  assert.match(source, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
-  assert.match(source, /renderRowContextMenu/);
+  const bundle = readExpenseClientBundle();
+  assert.match(bundle, /taxableAmount/);
+  assert.match(bundle, /resolveExpenseVatAmount/);
+  assert.doesNotMatch(bundle, /resolveExpenseVatAmountFromGross/);
+  assert.match(shell, /useDocumentOverlayUrl/);
+  assert.match(shell, /expenseId/);
+  assert.match(shell, /AppListFrame/);
+  assert.match(bundle, /FinanceMoneyBlockFields/);
+  assert.match(bundle, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(shell, /renderRowContextMenu/);
 });
 
 test("bank match sheet uses stacked money summary and ToggleGroup", () => {

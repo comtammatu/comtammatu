@@ -132,7 +132,7 @@ test("growth lists opted in", () => {
   for (const [rel, pageSize] of [
     ["../app/(protected)/finance/expenses/expenses-client.tsx", 50],
     ["../app/(protected)/finance/revenue/[date]/revenue-drill-tabs.tsx", 50],
-    ["../app/(protected)/hr/attendance-table.tsx", 50],
+    ["../app/(protected)/hr/attendance/attendance-detail-view.tsx", 50],
     ["../app/(protected)/hr/employee-table.tsx", 25],
     ["../app/(protected)/hr/leave-requests-table.tsx", 25],
     ["../app/(protected)/hr/staff/staff-table.tsx", 25],
@@ -142,7 +142,10 @@ test("growth lists opted in", () => {
     ["../app/(protected)/inventory/stock/stock-client.tsx", 25],
     ["../app/(protected)/inventory/stocktake/stocktake-list-client.tsx", 50],
     ["../app/(protected)/inventory/suppliers/suppliers-client.tsx", 25],
-    ["../app/(protected)/inventory/transfers/transfers-list-client.tsx", 50],
+    [
+      "../app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
+      50,
+    ],
     ["../app/(protected)/menu/item-table.tsx", 25],
   ] as const) {
     const client = readFileSync(join(import.meta.dirname, rel), "utf8");
@@ -156,5 +159,5 @@ test("growth lists opted in", () => {
     ),
     "utf8",
   );
-  assert.equal(issues.match(/pageSize=\{50\}/g)?.length, 3);
+  assert.equal(issues.match(/pageSize=\{50\}/g)?.length, 2);
 });

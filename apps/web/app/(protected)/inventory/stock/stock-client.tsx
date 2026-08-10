@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import {
@@ -35,7 +35,9 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { cn } from "@comtammatu/ui";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import {
@@ -55,7 +57,6 @@ import {
   AppListFrame,
   AppPage,
   AppPageHeader,
-  AppSection,
   AppToolbar,
 } from "@/components/surface";
 import {
@@ -63,7 +64,6 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import { formatQty, formatVND } from "@lib/inventory/format";
 import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
@@ -76,7 +76,7 @@ import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
 import { StockLocationBreakdownLine } from "./stock-location-breakdown";
-import { inventoryListFilterSelectClassName } from "../_components/inventory-list-frame";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -158,32 +158,10 @@ function StockQtyCell({
   );
 }
 
-const STOCK_COMPACT_QUERY = "(max-width: 1023px)";
-
-function subscribeStockCompactLayout(callback: () => void) {
-  const media = window.matchMedia(STOCK_COMPACT_QUERY);
-  media.addEventListener("change", callback);
-  return () => media.removeEventListener("change", callback);
-}
-
-function getStockCompactLayoutSnapshot() {
-  return window.matchMedia(STOCK_COMPACT_QUERY).matches;
-}
-
-function getStockCompactLayoutServerSnapshot() {
-  return false;
-}
-
-function useStockCompactLayout() {
-  return useSyncExternalStore(
-    subscribeStockCompactLayout,
-    getStockCompactLayoutSnapshot,
-    getStockCompactLayoutServerSnapshot,
-  );
-}
-
 function branchHref(branchId: number, path: string): string {
-  return `${path}?branchId=${branchId}`;
+  return withControlSurfaceBranchScope(path, String(branchId) as `${number}`, {
+    prefixes: ["/inventory"],
+  });
 }
 
 function stockValue(item: StockIngredient): number | null {
@@ -279,7 +257,6 @@ export function StockClient({
 }) {
   const router = useRouter();
   const canViewMonetary = branchValue != null;
-  const isCompactLayout = useStockCompactLayout();
   const controlSize = useFormControlSize();
   const [activeCategory, setActiveCategory] = useState(
     STOCK_ALL_CATEGORY_VALUE,
@@ -317,11 +294,7 @@ export function StockClient({
 
   if (coreDataLoadFailed) {
     return (
-      <AppPage
-        width={isCompactLayout ? "narrow" : "xwide"}
-        density="compact"
-        scroll
-      >
+      <AppPage width="xwide" density="compact" scroll>
         <AppPageHeader title={stockCopy.title} />
         <AppEmptyState
           mode="error"
@@ -873,34 +846,16 @@ export function StockClient({
 
   const stockToolbar = (
     <AppToolbar
-      sticky={isCompactLayout}
+      sticky
       variant="inline"
       search={searchControl}
       filters={
-        isCompactLayout ? undefined : (
-          <>
-            {filterControls}
-            {underThresholdButton}
-          </>
-        )
+        <>
+          {filterControls}
+          {underThresholdButton}
+        </>
       }
     />
-  );
-
-  const firstLoadEmptyState = (
-    <AppEmptyState
-      compact={!isCompactLayout}
-      title={stockCopy.empty.firstLoadTitle}
-      description={stockCopy.empty.firstLoadHint}
-      symbol="riceGrain"
-    >
-      {actionPermissions.canCreateStockRequest ? (
-        <Button size="sm" render={<Link href={actionHrefs.request} />}>
-          <IconReceipt className="size-4" />
-          {stockCopy.actions.receiveGrn}
-        </Button>
-      ) : null}
-    </AppEmptyState>
   );
 
   const content = (
@@ -937,92 +892,49 @@ export function StockClient({
         }
       />
 
-      {isCompactLayout ? (
-        <>
-          {stockToolbar}
-          <AppSection
-            title={stockCopy.filters.controlsTitle}
-            badge={{
-              children: `${filtered.length}/${ingredients.length}`,
-              variant: "outline",
-            }}
-            size="sm"
-            collapsible
-            defaultOpen={false}
-          >
-            {underThresholdButton}
-            {filterControls}
-          </AppSection>
-          {isFirstLoadEmpty ? (
-            firstLoadEmptyState
-          ) : (
-            <div className="flex flex-col gap-2">
-              {filtered.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  title={
-                    searchQuery.trim()
-                      ? stockCopy.empty.search
-                      : stockCopy.empty.noData
-                  }
-                  description={
-                    searchQuery.trim()
-                      ? stockCopy.empty.searchDescription
-                      : stockCopy.empty.noDataDescription
-                  }
-                  symbol="riceGrain"
-                />
-              ) : (
-                filtered.map((item) => renderStockMobileCard(item))
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <AppListFrame
-          title={PRODUCT_VI.rawIngredient}
-          badge={
+      <AppListFrame
+        title={PRODUCT_VI.rawIngredient}
+        badge={
+          isFirstLoadEmpty
+            ? undefined
+            : {
+                children: `${filtered.length}/${ingredients.length}`,
+                variant: "outline",
+              }
+        }
+        toolbar={stockToolbar}
+      >
+        <DataTable
+          columns={stockColumns}
+          data={filtered}
+          pageSize={25}
+          getRowKey={(item) => item.id}
+          emptyTitle={
             isFirstLoadEmpty
-              ? undefined
-              : {
-                  children: `${filtered.length}/${ingredients.length}`,
-                  variant: "outline",
-                }
+              ? stockCopy.empty.firstLoadTitle
+              : searchQuery.trim()
+                ? stockCopy.empty.search
+                : stockCopy.empty.noData
           }
-          toolbar={stockToolbar}
-        >
-          <DataTable
-            columns={stockColumns}
-            data={filtered}
-            pageSize={25}
-            getRowKey={(item) => item.id}
-            emptyTitle={
-              isFirstLoadEmpty
-                ? stockCopy.empty.firstLoadTitle
-                : searchQuery.trim()
-                  ? stockCopy.empty.search
-                  : stockCopy.empty.noData
-            }
-            emptyDescription={
-              isFirstLoadEmpty
-                ? stockCopy.empty.firstLoadHint
-                : searchQuery.trim()
-                  ? stockCopy.empty.searchDescription
-                  : stockCopy.empty.noDataDescription
-            }
-            emptyMode={
-              isFirstLoadEmpty || !searchQuery.trim() ? "no-data" : "no-results"
-            }
-            renderRowContextMenu={(item) => (
-              <RowActionsContextMenuItems items={getStockRowActions(item)} />
-            )}
-            getRowDataState={(item) =>
-              openActionRowId === item.id ? "selected" : undefined
-            }
-            mobileCardRender={(item) => renderStockMobileCard(item)}
-          />
-        </AppListFrame>
-      )}
+          emptyDescription={
+            isFirstLoadEmpty
+              ? stockCopy.empty.firstLoadHint
+              : searchQuery.trim()
+                ? stockCopy.empty.searchDescription
+                : stockCopy.empty.noDataDescription
+          }
+          emptyMode={
+            isFirstLoadEmpty || !searchQuery.trim() ? "no-data" : "no-results"
+          }
+          renderRowContextMenu={(item) => (
+            <RowActionsContextMenuItems items={getStockRowActions(item)} />
+          )}
+          getRowDataState={(item) =>
+            openActionRowId === item.id ? "selected" : undefined
+          }
+          mobileCardRender={(item) => renderStockMobileCard(item)}
+        />
+      </AppListFrame>
 
       {adjustTarget ? (
         <AdjustStockDialog
@@ -1055,11 +967,7 @@ export function StockClient({
   );
 
   return (
-    <AppPage
-      width={isCompactLayout ? "narrow" : "xwide"}
-      density="compact"
-      scroll
-    >
+    <AppPage width="xwide" density="compact" scroll>
       {content}
     </AppPage>
   );

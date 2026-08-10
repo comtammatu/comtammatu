@@ -42,17 +42,16 @@ test("Finance analysis routes use compact Design System composition", () => {
     "apps/web/app/(protected)/finance/components/work-queue-strip.tsx",
   );
 
-  assert.match(expenses, /<AppSection[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(expenses, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(expenses, /<FilterBar[\s\S]{0,120}variant="inline"/);
   assert.match(expenses, /<DataTable/);
-  assert.match(expenses, /<KpiRow density="compact">/);
-  // Period total + the actionable "cần xử lý" counterpart. Nothing else on a
-  // LIST route earns KPI real estate.
-  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 2);
-  assert.match(expenses, /label=\{copy\.needsActionLabel\}/);
+  assert.doesNotMatch(expenses, /<KpiRow|<KpiCard/);
+  assert.match(expenses, /copy\.needsActionLabel/);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
 
-  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 2);
+  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 3);
   assert.match(foodCost, /title=\{foodCopy\.tableTitle\}/);
+  assert.match(foodCost, /foodCopy\.unitSellingPriceCurrency/);
   assert.match(foodCost, /foodCopy\.revenueCurrency/);
   assert.match(foodCost, /<DataTable/);
 
@@ -117,7 +116,7 @@ test("HR long screens preserve hierarchy and LIST viewport width", () => {
   assert.match(staff, /redirect\(`\/hr\?\$\{next\.toString\(\)\}`\)/);
   assert.match(audit, /getStaffPermissionLabelVi/);
   assert.match(audit, /\/hr\?view=accounts/);
-  assert.match(audit, /<AppPage width="xwide">/);
+  assert.match(audit, /<AppPage width="xwide" density="compact">/);
   assert.doesNotMatch(permissions, /tabs=\{/);
   assert.ok(
     permissions.indexOf("<AppPageHeader") <

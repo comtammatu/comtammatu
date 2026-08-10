@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const hrPageSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/page.tsx"),
@@ -19,10 +20,7 @@ const hrMessagesSource = readFileSync(
   join(process.cwd(), "lib/messages/hr.ts"),
   "utf8",
 );
-const attendanceTableSource = readFileSync(
-  join(process.cwd(), "app/(protected)/hr/attendance-table.tsx"),
-  "utf8",
-);
+const attendanceTableSource = readAttendanceTableModules();
 const attendanceCalendarSource = readFileSync(
   join(process.cwd(), "app/(protected)/hr/attendance-calendar.tsx"),
   "utf8",
@@ -77,8 +75,8 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     attendanceTableSource,
-    /<AppToolbar[\s\S]*<ToggleGroup[\s\S]*attendanceCopy\.summaryView[\s\S]*attendanceCopy\.clockView/,
-    "attendance filters and view selection must use the shared toolbar and button group",
+    /const toolbarActions =[\s\S]*<ToggleGroup[\s\S]*attendanceCopy\.summaryView[\s\S]*attendanceCopy\.clockView[\s\S]*<AppListFrame[\s\S]*variant="inline"[\s\S]*actions=\{toolbarActions\}/,
+    "attendance filters and view selection must use AppListFrame + inline toolbar",
   );
   assert.match(
     attendanceTableSource,
@@ -168,14 +166,14 @@ test("attendance and leave approval data stay in their respective tabs", () => {
     /<AppSection title=\{copy\.attendanceTitle\}/,
   );
   assert.ok(
-    attendanceTableSource.indexOf("<AppToolbar") <
+    attendanceTableSource.indexOf("<AppListFrame") <
       attendanceTableSource.indexOf("<SummaryView data={summary}"),
-    "the filter toolbar must precede the data table",
+    "the LIST frame must precede the data table",
   );
   assert.match(
     attendanceTableSource,
-    /title=\{\s*routePath\.startsWith\("\/br\/"\)\s*\?[\s\S]*messages\.hr\.client\.attendanceTitle[\s\S]*\}[\s\S]*<SummaryView data=\{summary\} loading=\{!hasLoaded \|\| isPending\} \/>/,
-    "attendance data must render in its own section",
+    /const listTitle = routePath\.startsWith\("\/br\/"\)[\s\S]*messages\.hr\.client\.attendanceTitle[\s\S]*<AppListFrame[\s\S]*title=\{listTitle\}[\s\S]*<SummaryView data=\{summary\} loading=\{!hasLoaded \|\| isPending\} \/>/,
+    "attendance data must render inside AppListFrame",
   );
   assert.doesNotMatch(
     attendanceTableSource,
@@ -214,7 +212,7 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     attendanceTableSource,
-    /key: "index",\s*header: "#"[\s\S]*key: "employee",\s*header: "Họ tên"[\s\S]*key: "workdays",\s*header: "Số ngày công"[\s\S]*key: "work_hours",\s*header: "Số giờ công"/,
+    /key: "index",\s*header: "#"[\s\S]*key: "employee",\s*header: attendanceCopy\.fullName[\s\S]*key: "workdays",\s*header: attendanceCopy\.summaryWorkdaysCountHeader[\s\S]*key: "work_hours",\s*header: attendanceCopy\.summaryWorkHoursCountHeader/,
   );
   assert.match(
     attendanceTableSource,
@@ -254,12 +252,20 @@ test("individual calendar reads only branch-scoped attendance and leave state", 
 test("calendar attention scope uses the stale-shift predicate and pending leave only", () => {
   assert.match(
     attendanceTableSource,
-    /function isStaleOpenAttendanceRecord[\s\S]*isShiftEndedForBusinessDate/,
+    /import \{ isStaleOpenAttendanceRecord \} from "@lib\/hr\/branch-attendance-model"/,
     "calendar attention must share the stale open-shift predicate used by force-close",
   );
   assert.match(
+    readFileSync(
+      join(process.cwd(), "lib/hr/branch-attendance-model.ts"),
+      "utf8",
+    ),
+    /export function isStaleOpenAttendanceRecord[\s\S]*isShiftEndedForBusinessDate/,
+    "shared stale-open predicate must use scheduled shift-end",
+  );
+  assert.match(
     attendanceTableSource,
-    /type CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*syncAttendanceUrl\([\s\S]*scope/,
+    /CalendarScope = "all" \| "attention"[\s\S]*function selectCalendarScope\(scope: CalendarScope\)[\s\S]*syncAttendanceUrl\([\s\S]*scope/,
     "attention scope should be recoverable through the calendar URL",
   );
   assert.match(
@@ -292,7 +298,7 @@ test("calendar attention scope uses the stale-shift predicate and pending leave 
 test("calendar controls preserve a compact, non-scrolling mobile presentation", () => {
   assert.match(
     attendanceTableSource,
-    /<AppToolbar[\s\S]*className="items-stretch[^"]*\[&>\[data-slot=toolbar-group\]\]:w-full[^"]*"[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
+    /ATTENDANCE_TOOLBAR_CLASSNAME[\s\S]*AttendanceToolbarFilters[\s\S]*<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">/,
     "calendar filters should form a compact two-column control group on phones",
   );
   assert.match(
@@ -335,7 +341,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*selectCalendarDay\(null\)/,
+    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*onSelectCalendarDay\(null\)/,
     "selected calendar days should open in an accessible Sheet that can close safely",
   );
   assert.match(
@@ -350,7 +356,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<DetailView[\s\S]*data=\{selectedDayRecords\}[\s\S]*compact[\s\S]*function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
+    /<DetailView[\s\S]*data=\{selectedDayRecords\}[\s\S]*compact[\s\S]*export function DetailView\([\s\S]*compact = false[\s\S]*mobileBreakpoint=\{compact \? 10_000 : undefined\}/,
     "the calendar detail should keep responsive cards inside the desktop review panel",
   );
   assert.match(

@@ -29,6 +29,8 @@ type HrSearchParams = {
   branch?: string;
   status?: string;
   q?: string;
+  contract?: string;
+  inactive?: string;
 };
 
 export default async function HrPage({

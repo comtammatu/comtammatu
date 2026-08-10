@@ -164,13 +164,18 @@ test("inventory nav click targets preserve branch URL scope", () => {
     .find((item) => item.href === "/inventory/stock");
 
   assert.equal(stockItem?.href, "/inventory/stock");
-  assert.equal(stockItem?.linkHref, "/inventory/stock?branchId=3");
+  assert.equal(stockItem?.linkHref, "/inventory/stock?branch=3");
   assert.match(
     appShellSource,
     /href=\{\s*subItem\.linkHref\s*\?\?\s*subItem\.href\s*\}/,
   );
   assert.match(ownerBottomNavSource, /href: item\.linkHref \?\? item\.href/);
   assert.equal(withInventoryBranchNavScope(groups, null), groups);
+  const allScoped = withInventoryBranchNavScope(groups, null, { scopeAll: true });
+  const allStock = allScoped
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/inventory/stock");
+  assert.equal(allStock?.linkHref, "/inventory/stock?branch=all");
 });
 
 test("owner inventory nav excludes /inventory/drafts (folded into GRN list drafts tab)", () => {

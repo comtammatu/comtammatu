@@ -72,7 +72,7 @@ const D1_TASK_LISTS = [
 ] as const;
 
 const C4_ZERO_ACTION_LISTS = [
-  "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   "app/(protected)/inventory/production/production-runs-client.tsx",
   "app/(protected)/inventory/settings/thresholds/thresholds-client.tsx",
 ] as const;
@@ -101,6 +101,12 @@ const BRANCH_D1_VIEW_LISTS = [
 
 const FINANCE_INVOICE_LIST =
   "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx";
+const FINANCE_INVOICE_LIST_UI =
+  "app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx";
+
+function readFinanceInvoiceListModule(): string {
+  return `${read(FINANCE_INVOICE_LIST)}\n${read(FINANCE_INVOICE_LIST_UI)}`;
+}
 
 const THREE_DOOR_LISTS = [
   "app/(protected)/inventory/grn/grn-list-client.tsx",
@@ -235,28 +241,36 @@ test("Wave 4 Branch D1 count views: Sheet dual-plane carve-out (same depth as Ow
 });
 
 test("Wave 4 Finance invoice LIST: Sheet D1 view with filter Popover", () => {
-  const source = read(FINANCE_INVOICE_LIST);
+  const source = readFinanceInvoiceListModule();
   assert.doesNotMatch(
-    source,
+    read(FINANCE_INVOICE_LIST),
     /from "@comtammatu\/ui\/components\/drawer"|<Drawer[\s>]/,
   );
-  assert.doesNotMatch(source, /useLongPress|onOpenDrawer|setDrawerRow/);
+  assert.doesNotMatch(read(FINANCE_INVOICE_LIST), /useLongPress|onOpenDrawer|setDrawerRow/);
   assert.match(source, /const filterPopover = \(\s*<Popover>/);
   assert.match(source, /filters=\{[\s\S]*\{filterPopover\}[\s\S]*\}/);
   assert.match(
-    source,
-    /from "@comtammatu\/ui\/components\/sheet"/,
+    read(FINANCE_INVOICE_LIST),
+    /SupplierInvoiceDetailSheet/,
     "supplier-invoices: Sheet D1 view",
   );
-  assert.match(source, /<Sheet[\s>]/, "supplier-invoices: <Sheet");
-  assert.match(source, /onRowClick=\{/, "supplier-invoices: onRowClick");
+  assert.match(read(FINANCE_INVOICE_LIST), /onRowClick=\{/, "supplier-invoices: onRowClick");
 });
 
 test("Wave 4 three-door LISTs keep one RowActionItem[] wiring (no sole ContextMenu path)", () => {
   for (const path of THREE_DOOR_LISTS) {
-    const source = read(path);
+    const source =
+      path === FINANCE_INVOICE_LIST ? readFinanceInvoiceListModule() : read(path);
     assert.match(source, /onRowClick=\{/, `${path}: door 1 onRowClick`);
-    assert.match(source, /<RowActionsMenu/, `${path}: door 2 RowActionsMenu`);
+    if (path.includes("issues/issues-client")) {
+      assert.match(
+        source,
+        /actions=\{getIssueRowActions\(item\)\}/,
+        `${path}: door 2 IssueRowCard actions`,
+      );
+    } else {
+      assert.match(source, /<RowActionsMenu/, `${path}: door 2 RowActionsMenu`);
+    }
     assert.match(
       source,
       /renderRowContextMenu=\{/,
@@ -274,8 +288,9 @@ test("Wave 5 purchase-orders uses one query-addressed document view", () => {
   const client = read(
     "app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
   );
-  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
-  assert.match(client, /params\.set\("mode", nextMode\)/);
+  assert.match(client, /overlay\.patchOverlay/);
+  assert.match(client, /poId,/);
+  assert.match(client, /mode: nextMode/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);
 });

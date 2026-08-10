@@ -27,23 +27,10 @@ Kind: qa
 Tier: T3
 Lane: inventory/topology
 Exit: Every active site has exactly one active warehouse; GRN remains central-only, Branch receives transfer, and the authenticated Owner/Branch Inventory journeys pass at `390`, `768`, and `1280`.
-Evidence: Migrations, database types, Inventory contract tests, Production catalog checks, repository gates; topology sites = Kho Tổng + Bếp Trung Tâm + NHT (one selling branch).
+Evidence: Migrations, database types, Inventory contract tests, Production catalog checks, repository gates; topology sites = `Kho Tổng` + `Bếp Trung Tâm` + NHT (one selling branch).
 Blocker: Authenticated live smoke at `390` / `768` / `1280` needs an owner-delegated Production Owner or Branch Manager credential (ephemeral QA accounts deleted 2026-08-10).
 
 - [ ] Run authenticated Owner/Branch Inventory smoke at `390`, `768`, and `1280`, then remove this outcome when every Exit item is evidenced.
-
-## Pilot POS stock post-and-flag on one Production branch
-
-State: done
-Kind: qa
-Tier: T3
-Lane: inventory/pos-posting
-Exit: On one Production branch with `pos_stock_outcome_posting` enabled, a stock-exhausted cashier insert hard-blocks; Branch Manager `Cho phép bán thêm` reopens sell without ledger replenish; payment still completes and posts per-ingredient consumption (negative on-hand allowed) with a branch-reachable follow-up when short; short receive requires classification and attributes shortfall to the shipping site.
-Evidence: Sole selling branch is NHT (`branch_kind=branch` id=3); Kho Tổng / Bếp Trung Tâm are not POS surfaces. Flag ON only on NHT. ADR 0026/0028/0030; hard-block → allowance → paid order post+followup; valuation shortfall migration; short receive source_variance + transit_loss; copy-to-new-draft UI; QA data purged + sales sequences reset 2026-08-10.
-
-- [x] Re-smoke post-and-flag / follow-up after valuation conflict is resolved.
-- [x] Smoke short transfer receive with `source_variance` and `Nhận thiếu` (`transit_loss`) classification.
-- [x] Smoke copy-to-new-draft on a rejected stock or cancelled purchase request.
 
 ## Ship INV-10 suggested editable request quantity
 
@@ -52,36 +39,9 @@ Kind: feature
 Tier: T2
 Lane: inventory/requests
 Exit: Choosing an ingredient on stock-request and purchase-request editors prefills an editable quantity from `max(0, min_stock_level - current_quantity)` (base unit for stock requests; default pack for purchase requests).
-Evidence: `suggested-order-qty.ts`, request/purchase loaders, editor `chooseIngredient` prefill, unit test; Branch 3 YCH smoke (Gạo prefill then cancel) during `[QA-SMOKE-20260810]`.
+Evidence: `suggested-order-qty.ts`, request/purchase loaders, editor `chooseIngredient` prefill, unit test; Branch 3 YCH smoke (`Gạo` prefill then cancel) during `[QA-SMOKE-20260810]`.
 
-- [x] Smoke prefill on Branch 3 stock request editor after login.
 - [ ] Smoke prefill on one purchase-request editor after login (needs Production credential; ephemeral QA accounts deleted).
-
-## Close INV-12 stocktake reason codes
-
-State: done
-Kind: feature
-Tier: T3
-Lane: inventory/stocktake
-Exit: Stocktake variance lines store constrained `reason_code` (waste enum); complete requires code when adjustment ≠ 0; ADR 0031 accepted direction.
-Evidence: Production apply `20260810022059_stocktake_variance_reason_code.sql` (2026-08-10); catalog `stocktake_lines.reason_code`; stocktake UI dropdown; ADR 0031; Branch 3 session 19 smoke completed with gate `stocktake_reason_code_required` then `found_missing`; session purged with QA cleanup.
-
-- [x] Smoke complete-with-variance requiring `reason_code` on Branch or central stocktake.
-
-## Production QA smoke (owner-delegated 2026-08-10)
-
-State: done
-Kind: qa
-Tier: T3
-Lane: inventory/pos-posting
-Exit: Branch 3 INV-10/12 + pilot post-and-flag smoke evidenced; QA drafts cancelled; ephemeral QA accounts deleted; baselines match pre-session for open drafts/stocktakes.
-Evidence: Marker `[QA-SMOKE-20260810]`; smoke outcomes closed; hard purge 2026-08-10 removed order 11, transfers 90–92, stocktake 19, YC 0003–0005, movements/valuation events, notifications, and BM/cashier/ops accounts; stock_levels restored (Tiêu Kho Tổng 95000, Branch 3 Tiêu 0 / NL#26 5). Script: `scripts/qa-smoke-cleanup-20260810.mjs`.
-
-- [x] Fix / decide valuation vs post-and-flag conflict, then re-smoke KDS-ready posting + follow-up notification.
-- [x] Short transfer receive classification smoke.
-- [x] INV-12 stocktake reason_code smoke.
-- [x] Delete ephemeral accounts after remaining smokes.
-- [x] Hard-purge all `[QA-SMOKE-20260810]` Production data.
 
 ## Accept INV-9 consolidation design (ADR 0032)
 

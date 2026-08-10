@@ -33,7 +33,7 @@ test("operator stock sticky action bars route through AppDetailFooter", () => {
   const nestedFooterCallSites = stockFiles.filter((path) =>
     /<AppDetailFooter\s+sticky\s+trailing=\{footer\}/.test(read(path)),
   );
-  const appSurface = read("apps/web/app/components/surface.tsx");
+  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
 
   assert.deepEqual(rawStickyCallSites, []);
   assert.deepEqual(redundantBottomNavPadding, []);
@@ -257,9 +257,8 @@ test("operator stock on-hand list forks Branch presentation over the shared load
     /<div role="list" className="flex flex-col">/,
   );
   assert.match(branchClientSource, /StockTouchRow/);
-  assert.match(branchClientSource, /StockRiskBadge/);
-  assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /isStockReorderRisk/);
+  assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /MultiSelectCombobox/);
   assert.match(branchClientSource, /ToggleGroup/);
   assert.match(branchClientSource, /SheetContent[\s\S]*side="bottom"/);
@@ -292,8 +291,9 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(stockClientSource, /if \(coreDataLoadFailed\)/);
   assert.match(
     stockClientSource,
-    /return \(\s*<AppPage[\s\S]*width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
+    /return \(\s*<AppPage[\s\S]*width="xwide"[\s\S]*density="compact"[\s\S]*scroll[\s\S]*>\s*\{content\}\s*<\/AppPage>\s*\);/,
   );
+  assert.doesNotMatch(stockClientSource, /isCompactLayout|useStockCompactLayout/);
   assert.doesNotMatch(stockClientSource, /InventoryPageContent/);
 });
 
@@ -356,18 +356,19 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.match(branchDetailSource, /\$\{stockBasePath\}\/waste/);
   assert.doesNotMatch(
     branchDetailSource,
-    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|OwnerStockIngredientDetail|embedded/,
+    /formatVND|DataTable|AppPageHeader|StockIngredientDetailPageContent|embedded/,
   );
+  assert.doesNotMatch(branchDetailSource, /\bStockIngredientDetail\b/);
   assert.doesNotMatch(branchDetailSource, /\$\{stockBasePath\}\/receive/);
   assert.match(stockPageSource, /loadStockOnHandPageData/);
-  assert.match(stockPageSource, /queryBranchId: params\.branchId/);
+  assert.match(stockPageSource, /queryBranch: params.branch/);
   assert.doesNotMatch(
     stockPageSource,
     /routeBranchId\?: number|branchStockBasePath|embedded/,
   );
   assert.match(stockDataSource, /scope\.outOfScope/);
   assert.match(stockDetailPageSource, /loadStockIngredientDetailData/);
-  assert.match(stockDetailPageSource, /OwnerStockIngredientDetail/);
+  assert.match(stockDetailPageSource, /\bStockIngredientDetail\b/);
   assert.match(stockDetailPageSource, /formatVND/);
   assert.doesNotMatch(
     stockDetailPageSource,
@@ -579,7 +580,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   const reportsClient = read(
     "apps/web/app/(protected)/inventory/reports/reports-client.tsx",
   );
-  const appSurface = read("apps/web/app/components/surface.tsx");
+  const appSurface = read("apps/web/app/components/surface/app-detail-footer.tsx");
   const formDialog = read("apps/web/app/components/form/form-dialog.tsx");
   const formCombobox = read("apps/web/app/components/form/combobox.tsx");
   const sharedCombobox = read("packages/ui/src/components/combobox.tsx");
@@ -638,12 +639,12 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(branchReportsModel, /getBranchStockMovementHighlights/);
   assert.doesNotMatch(branchReportsModel, /totalQuantity|movementTotals/);
 
-  assert.match(issuesPage, /embedded\?: boolean/);
-  assert.match(issuesPage, /embedded=\{embedded\}/);
+  assert.doesNotMatch(issuesPage, /embedded\?: boolean/);
+  assert.doesNotMatch(issuesPage, /embedded=\{embedded\}/);
   assert.match(issuesPage, /scope\.outOfScope/);
   assert.match(issuesPage, /listBasePath\?: InventoryRouteKey/);
-  assert.match(issuesClient, /embedded\?: boolean/);
-  assert.match(issuesClient, embeddedContentWrapperPattern);
+  assert.doesNotMatch(issuesClient, /embedded\?: boolean/);
+  assert.doesNotMatch(issuesClient, embeddedContentWrapperPattern);
   assert.match(issuesClient, /listBasePath = "\/inventory\/consumption"/);
   assert.match(issuesClient, /detailBasePath = listBasePath/);
   assert.match(
@@ -687,12 +688,13 @@ test("operator stock branch-native extensions keep issue and report actions in t
     /basePath\.startsWith\("\/br\/"\)|OperatorFlowSteps|embedded/,
   );
   assert.match(grnListData, /import "server-only"/);
-  assert.match(grnListClient, /href=\{detailHref\(row\)\}/);
+  assert.match(grnListClient, /onRowClick=\{\(row\) => openDetail\(row\)\}/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
   assert.match(grnDetailClient, /embedded\?: boolean/);
-  assert.match(grnDetailClient, /embedded = false/);
-  assert.match(grnDetailClient, embeddedContentWrapperPattern);
+  assert.match(grnDetailClient, /presentation\?: "page" \| "dialog"/);
+  assert.match(grnDetailClient, /presentation\?: "page" \| "dialog"/);
+  assert.match(grnDetailClient, /presentation === "dialog"/);
 
   assert.match(reportsPage, /export async function ReportsPageContent\(\)/);
   assert.match(reportsPage, /fetchApAging\(\)/);
@@ -1083,8 +1085,8 @@ test("branch production routes redirect to the canonical production surface", ()
   );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
-  assert.match(route, /redirect\(`\/inventory\/production\?branchId=/);
-  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branchId=/);
+  assert.match(route, /redirect\(`\/inventory\/production\?branch=/);
+  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branch=/);
   assert.match(detailRoute, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
 
   assert.match(

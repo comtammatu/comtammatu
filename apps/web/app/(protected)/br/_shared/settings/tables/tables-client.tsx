@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Plus as IconPlus,

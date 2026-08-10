@@ -20,8 +20,8 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import {
@@ -64,7 +64,7 @@ import {
   REFUND_PAYOUT_METHODS,
   type RefundPayoutMethod,
 } from "@lib/refund-payout";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
 /* ─── Props ─── */
 
 interface RefundsClientProps {
@@ -276,7 +276,7 @@ export function RefundsClient({
     },
     {
       key: "bank_evidence",
-      header: "Đối soát NH",
+      header: "Khớp sao kê",
       className: "text-sm",
       render: bankReconciliationLabel,
     },
@@ -624,7 +624,7 @@ export function RefundsClient({
               </ItemFooter>
               <ItemFooter>
                 <span className="text-xs text-muted-foreground">
-                  Đối soát NH
+                  Khớp sao kê
                 </span>
                 <span className="text-sm">
                   {bankReconciliationLabel(refund)}

@@ -15,6 +15,7 @@ export type InventoryBranchOption = OperatorBranchOption;
 export type InventoryBranchScope = {
   allowedBranches: InventoryBranchOption[];
   canSelectAll: boolean;
+  scopeMode: "all" | "site";
   selectedBranchId: number | null;
   defaultBranchId: number | null;
 };
@@ -24,10 +25,8 @@ export type InventoryListScope = ListScopeResolution;
 /**
  * Single scope-read path for shared inventory `*PageContent` list/report
  * surfaces (D058 W3b). `routeBranchId` (validated URL segment, embedded
- * runtime) always wins over `queryBranchId` (raw `?branchId=`, Owner surface
- * display filter). Callers apply exactly one guard:
- * `if (scope.outOfScope) notFound();` — no more hand-rolled
- * `routeBranchId ?? resolveRequestedBranchId(...)` branching per page.
+ * runtime) always wins over query `?branch=`. Callers apply exactly one
+ * guard: `if (scope.outOfScope) notFound();`.
  */
 export const resolveInventoryListScope = cache(
   async (
@@ -35,7 +34,7 @@ export const resolveInventoryListScope = cache(
     claims: JwtClaims,
     options: {
       routeBranchId?: number;
-      queryBranchId?: string | string[] | undefined;
+      queryBranch?: string | string[] | undefined;
     },
   ): Promise<InventoryListScope> => {
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);
@@ -48,18 +47,15 @@ export const resolveInventoryListScope = cache(
 
 /**
  * Resolve scope from a single already-known branch id (no
- * `routeBranchId`/`?branchId=` pair to reconcile). Used by id-derived
- * detail pages, Server Actions, and the layout, which each already have
- * their own requested branch id and only need the allowed-branches /
- * default-selection lookup. List/report `*PageContent` surfaces that face
- * both an embedded segment and an Owner surface query param use
- * `resolveInventoryListScope` instead.
+ * `routeBranchId`/`?branch=` pair to reconcile). Used by id-derived
+ * detail pages, Server Actions, and the layout.
  */
 export const resolveInventoryBranchScope = cache(
   async (
     supabase: TenantSupabase,
     claims: JwtClaims,
     requestedBranchId: number | null,
+    options?: { requestAll?: boolean },
   ): Promise<InventoryBranchScope> => {
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);
     return selectBranchScope(
@@ -67,6 +63,7 @@ export const resolveInventoryBranchScope = cache(
       branches,
       requestedBranchId,
       TENANT_LEVEL_ROLES,
+      options,
     );
   },
 );
@@ -75,9 +72,8 @@ export { parseBranchIdParam };
 
 /**
  * Async wrapper over `parseBranchIdParam` for call sites written before it
- * was exported synchronously from `@/_lib/branch-context`. Resolves the
- * requested branch id from URL only; inventory scope must not be
- * persisted in cookies/localStorage/context.
+ * was exported synchronously from `@/_lib/branch-context`. Resolves a
+ * concrete site id from URL only; aggregate tokens yield null.
  */
 export async function resolveRequestedBranchId(
   raw: string | string[] | undefined,

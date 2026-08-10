@@ -30,7 +30,7 @@ test("Company HR uses one URL-owned branch scope across every workspace", () => 
   const employeeTable = read("employee-table.tsx");
   const staffFilters = read("staff/staff-filters.tsx");
   const attendancePage = read("attendance/page.tsx");
-  const attendanceTable = read("attendance-table.tsx");
+  const attendanceTable = read("attendance/attendance-table.tsx");
   const leaveRequests = read("leave-requests-table.tsx");
   const payroll = read("payroll/payroll-list-client.tsx");
   const setupTasks = read("position-tasks-client.tsx");
@@ -45,7 +45,8 @@ test("Company HR uses one URL-owned branch scope across every workspace", () => 
   assert.doesNotMatch(leaveRequests, /setSelectedBranchId/);
   assert.doesNotMatch(payroll, /branchScope:\s*value/);
   assert.doesNotMatch(setupTasks, /key:\s*"branch"/);
-  assert.match(setupPage, /<HrScopeSelector branches=\{branches\} value=\{branchScope\} \/>/);
+  assert.doesNotMatch(setupPage, /HrScopeSelector/);
+  assert.doesNotMatch(people, /HrScopeSelector/);
   assert.match(people, /queryKeysByValue/);
   assert.match(attendancePage, /queryKeysByValue/);
   assert.match(
@@ -63,9 +64,12 @@ test("HR navigation preserves the canonical branch scope", () => {
   const attendancePage = read("attendance/page.tsx");
 
   assert.match(shell, /withHrBranchScope/);
+  assert.match(shell, /ControlSurfaceScopeControl/);
+  assert.match(shell, /\["all", "office"\]/);
   assert.match(attendancePage, /resolveHrBranchScope/);
   assert.match(attendancePage, /return "today"/);
   assert.doesNotMatch(attendancePage, /pendingApprovals > 0 \? "approvals"/);
+  assert.doesNotMatch(attendancePage, /HrScopeSelector/);
 });
 
 test("Company roster never maps a central site to the office scope", () => {

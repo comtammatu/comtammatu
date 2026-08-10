@@ -25,7 +25,7 @@
 | Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
 | Inventory      | [inventory.md](ref/inventory.md)               | Procurement, site inventory, production, and transfers  | **High** — stock integrity  |
 | Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shared components, surfaces   | Low                         |
+| UI             | [ui.md](modules/ui.md)                         | Má Tư DS application, shared components, surfaces       | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 | Feedback       | [feedback.md](modules/feedback.md)             | Operator feedback capture and review boundary           | Medium                      |

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { CANCEL_ORDER_PRESETS } from "../quick-reason-presets";
 import { QuickReasonChips } from "../quick-reason-chips";
 

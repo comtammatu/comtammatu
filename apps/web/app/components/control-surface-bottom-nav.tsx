@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid as IconLayoutGrid } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { useSidebar } from "@comtammatu/ui/components/sidebar";
+import { useSidebar } from "@/components/sidebar";
 import { m, messages } from "@lib/messages";
 import {
   AppBottomNav,
@@ -16,7 +16,7 @@ import {
   type ShellNavItem,
 } from "@/lib/shell-primitives";
 
-const copy = messages.owner.nav;
+const copy = messages.controlSurface.nav;
 const MAX_VISIBLE_ITEMS = 4;
 
 function flattenNavGroups(navGroups: ShellNavGroup[]): ShellNavItem[] {
@@ -51,7 +51,7 @@ function selectBottomNavItems(
 /**
  * Mobile bottom navbar for control_surface (Quản trị) routes. Bar destinations are the
  * active module's deep nav (tier-2), falling back to primary modules when no
- * deep nav exists. The leading "Mô-đun" tab opens the single sidebar drawer.
+ * deep nav exists. The leading "Phân hệ" tab opens the single sidebar drawer.
  * Must render inside `SidebarProvider` (AppShell does this).
  */
 export function ControlSurfaceBottomNav({

@@ -62,11 +62,11 @@ plane (ADR 0012); prune dead helpers, keep bookmark shims until retargeted.
 | YCH, Transfer | D1 Document Owner/Ops; D2 Branch | One fulfillment journey; Branch keeps DETAIL |
 | Issue/consumption, stocktake session, production, stock card | D2 | DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
-| Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet` |
-| Waste approvals | D0 queue | Decision cards — never `InventoryListFrame`/`DataTable` |
-| Waste create, GRN create, stocktake new/count | D3 | Document / counting grid |
-| Ingredients, units, categories, supplier edit | D1 task | `FormDialog` |
-| Recipes | D1 task | Escalate when BOM **> 12** |
+| Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet`; Wave 3 `?slipId=` / `?assignmentId=` |
+| Waste approvals | D0 queue | Card decision surface (named LIST exception): Owner `AppPage` + `AppSection` decision cards — never `AppListFrame` / `DataTable` |
+| Waste create, GRN create, stocktake new/count | D3 | `DocumentFormFrame` / counting grid. Owner GRN create DOC: context (`Kho nhận`) → lines table + `Thêm mặt hàng` → progressive editor → sticky footer (catalog picker is overlay, not a second page section). |
+| Ingredients, units, categories, supplier edit | D1 task | `FormDialog` (no URL) |
+| Recipes | D1 task | `FormDialog` until BOM lines **> 12**, then escalate to D2/Sheet/Page |
 | Supplier items | D2 child LIST | `/suppliers/[id]/items` |
 
 ### Owner amendment (2026-07-29)

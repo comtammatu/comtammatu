@@ -79,6 +79,16 @@ BEGIN
   )
   RETURNING id INTO v_ingredient;
 
+  INSERT INTO public.ingredient_units (
+    tenant_id,
+    ingredient_id,
+    unit_id,
+    to_base_factor,
+    is_base,
+    is_active
+  )
+  VALUES (v_tenant, v_ingredient, v_unit, 1, true, true);
+
   -- Two sequential first movements for a never-seen (ingredient, location)
   -- must both succeed and accumulate quantity. The ON CONFLICT body is what
   -- makes the same outcome safe under true concurrency.

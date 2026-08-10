@@ -4,7 +4,7 @@ export default async function IssuesPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
@@ -12,7 +12,13 @@ export default async function IssuesPage({
   const params = await searchParams;
   const qParams = new URLSearchParams();
   qParams.set("view", "waste");
-  for (const key of ["branchId", "startDate", "endDate"] as const) {
+
+  const branch = Array.isArray(params.branch)
+    ? params.branch[0]
+    : params.branch;
+  if (branch) qParams.set("branch", branch);
+
+  for (const key of ["startDate", "endDate"] as const) {
     const value = params[key];
     if (!value) continue;
     if (Array.isArray(value)) {

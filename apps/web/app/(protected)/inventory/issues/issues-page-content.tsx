@@ -117,14 +117,13 @@ const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
 
 interface IssuesPageContentProps {
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
   listBasePath?: InventoryRouteKey;
   detailBasePath?: string;
   scope?: IssuesScope;
-  embedded?: boolean;
 }
 
 export async function IssuesPageContent({
@@ -132,7 +131,6 @@ export async function IssuesPageContent({
   listBasePath = "/inventory/consumption",
   detailBasePath = listBasePath,
   scope: scopeVariant = "consumption",
-  embedded = false,
 }: IssuesPageContentProps) {
   const scopeConfig = SCOPE_CONFIG[scopeVariant];
   const params = searchParams ? await searchParams : {};
@@ -141,7 +139,7 @@ export async function IssuesPageContent({
   const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
@@ -318,7 +316,12 @@ export async function IssuesPageContent({
       showRecordedConsumptions={showRecordedConsumptions}
       canViewMonetary={monetary.valuation}
       branches={branches}
-      defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
+      defaultBranchId={
+        scope.scopeMode === "all"
+          ? null
+          : (scope.selectedBranchId ?? scope.defaultBranchId)
+      }
+      writeRequiresSitePick={scope.scopeMode === "all"}
       recordedBranchId={requestedRecordedBranchId}
       recordedEndDate={endDate ?? ""}
       recordedIsLimited={!hasRecordedDateFilter}
@@ -331,7 +334,6 @@ export async function IssuesPageContent({
         ? { createHref: scopeConfig.createHref }
         : {})}
       pageTitle={pageTitle}
-      embedded={embedded}
     />
   );
 }

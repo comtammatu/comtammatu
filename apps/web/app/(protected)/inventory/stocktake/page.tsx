@@ -10,17 +10,15 @@ import { StocktakeListClient } from "./stocktake-list-client";
 import { getBranchSiteDisplayName } from "../_lib/branch-site-labels";
 
 interface StocktakePageContentProps {
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
-  embedded?: boolean;
 }
 
 export async function StocktakePageContent({
   searchParams,
   routeBranchId,
   routeBase = "/inventory/stocktake",
-  embedded = false,
 }: StocktakePageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
@@ -29,7 +27,7 @@ export async function StocktakePageContent({
   // role-gated filters). Collapses to claims.branch_id for branch-scoped roles.
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
   const branchFilter = scope.selectedBranchId ?? undefined;
@@ -53,7 +51,6 @@ export async function StocktakePageContent({
       userRole={claims.user_role}
       userBranchId={scope?.selectedBranchId ?? null}
       routeBase={routeBase}
-      embedded={embedded}
     />
   );
 }
@@ -61,7 +58,7 @@ export async function StocktakePageContent({
 export default async function StocktakePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   return <StocktakePageContent searchParams={searchParams} />;
 }

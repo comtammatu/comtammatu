@@ -13,7 +13,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
@@ -37,7 +37,7 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { getStatusBadgeMeta } from "@/components/status-badge";
 
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -129,7 +129,7 @@ export function TransferDetailClient({
   const transferListHref =
     listHref ??
     (userBranchId != null
-      ? `/inventory/transfers?branchId=${userBranchId}`
+      ? `/inventory/transfers?branch=${userBranchId}`
       : "/inventory/transfers");
   const shortLines = useMemo(() => {
     if (!isReceiveMode) return 0;
@@ -316,8 +316,13 @@ export function TransferDetailClient({
             key: "cost",
             header: copy.wacCost,
             className: "text-right font-mono tabular-nums",
-            render: (item: TransferLineItem) =>
-              formatVND(item.monetary?.cost ?? 0),
+            render: (item: TransferLineItem) => {
+              const cost = item.monetary?.cost ?? 0;
+              const baseLabel = item.baseUnit || item.unit;
+              return baseLabel
+                ? `${formatVND(cost)}/${baseLabel}`
+                : formatVND(cost);
+            },
           },
           {
             key: "amount",
@@ -906,7 +911,11 @@ function TransferLineMobileCard({
         </div>
         {item.monetary ? (
           <div>
-            <p className="text-muted-foreground">{copy.wacCost}</p>
+            <p className="text-muted-foreground">
+              {item.baseUnit
+                ? copy.wacCostPerUnit(item.baseUnit)
+                : copy.wacCost}
+            </p>
             <p className="font-semibold">{formatVND(item.monetary.cost)}</p>
           </div>
         ) : null}

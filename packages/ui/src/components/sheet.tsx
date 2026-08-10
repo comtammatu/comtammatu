@@ -37,7 +37,7 @@ function SheetOverlay({
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-effect-scrim duration-[var(--motion-fast)] supports-backdrop-filter:backdrop-blur-sm data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[ending-style]:animate-out data-[ending-style]:fade-out-0",
+        "fixed inset-0 z-50 bg-effect-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] supports-backdrop-filter:backdrop-blur-sm data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         className,
       )}
       {...props}
@@ -70,7 +70,7 @@ function SheetContent({
         data-close-button={showCloseButton ? "true" : "false"}
         data-fullscreen={fullscreen ? "true" : "false"}
         className={cn(
-          "group/sheet fixed z-50 flex flex-col overscroll-contain bg-popover bg-clip-padding text-xs/relaxed text-popover-foreground shadow-effect-drawer transition duration-[var(--motion-drawer)] ease-[var(--ease-move)] data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-full data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-full data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:border-b data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[side=bottom]:data-[starting-style]:slide-in-from-bottom-10 data-[side=left]:data-[starting-style]:slide-in-from-left-10 data-[side=right]:data-[starting-style]:slide-in-from-right-10 data-[side=top]:data-[starting-style]:slide-in-from-top-10 data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[side=bottom]:data-[ending-style]:slide-out-to-bottom-10 data-[side=left]:data-[ending-style]:slide-out-to-left-10 data-[side=right]:data-[ending-style]:slide-out-to-right-10 data-[side=top]:data-[ending-style]:slide-out-to-top-10",
+          "group/sheet fixed z-50 flex flex-col overscroll-contain bg-popover bg-clip-padding text-xs/relaxed text-popover-foreground shadow-effect-drawer transition-[opacity,transform] duration-[var(--motion-drawer)] ease-[var(--ease-move)] data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-full data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-full data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:border-b data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 data-[side=bottom]:data-[starting-style]:translate-y-full data-[side=bottom]:data-[ending-style]:translate-y-full data-[side=left]:data-[starting-style]:-translate-x-full data-[side=left]:data-[ending-style]:-translate-x-full data-[side=right]:data-[starting-style]:translate-x-full data-[side=right]:data-[ending-style]:translate-x-full data-[side=top]:data-[starting-style]:-translate-y-full data-[side=top]:data-[ending-style]:-translate-y-full",
           fullscreen
             ? "data-[side=bottom]:h-dvh data-[side=bottom]:max-h-dvh data-[side=top]:h-dvh data-[side=top]:max-h-dvh"
             : "data-[side=bottom]:h-auto data-[side=bottom]:max-h-dvh-95 data-[side=top]:h-auto data-[side=top]:max-h-dvh-95",

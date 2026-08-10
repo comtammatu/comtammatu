@@ -6,22 +6,27 @@ import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
+import { computeIssueLineTotal } from "@/(protected)/inventory/_lib/issue-units";
+import {
+  getEmbeddedIngredientBaseUnitDisplayName,
+  getEmbeddedUnitDisplayName,
+} from "@/(protected)/inventory/_lib/unit-display";
 import { loadInventoryMonetaryAccess } from "./monetary-access";
 import type { PendingWasteRow } from "./waste-approval-model";
 
 type LoadWasteApprovalsOptions = {
   routeBranchId?: number;
-  queryBranchId?: string;
+  queryBranch?: string | string[];
 };
 
 export async function loadWasteApprovalsData({
   routeBranchId,
-  queryBranchId,
+  queryBranch,
 }: LoadWasteApprovalsOptions = {}) {
   const { supabase, claims, session } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
+    queryBranch,
   });
   if (scope.outOfScope) notFound();
 
@@ -101,12 +106,15 @@ export async function loadWasteApprovalsData({
         .filter(Boolean) as string[],
     ),
   );
+  const ingredientUnitsSelect =
+    "ingredient_units!ingredient_units_ingredient_tenant_fkey(unit_id, to_base_factor, is_base, units!ingredient_units_unit_tenant_fkey(code, name))";
   const itemsQuery = monetaryAccess.valuation
     ? itemReadClient.from("stock_issue_items").select(`
         id,
         issue_id,
         ingredient_id,
         quantity,
+        entry_unit_id,
         unit_cost,
         total_cost,
         reason_code,
@@ -114,18 +122,19 @@ export async function loadWasteApprovalsData({
         waste_tier,
         qty_ratio,
         rolling_15min_sum,
-        ingredient:ingredients(id, name),
-        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
+        ingredient:ingredients(id, name, ${ingredientUnitsSelect}),
+        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name)
       `)
     : itemReadClient.from("stock_issue_items").select(`
         id,
         issue_id,
         ingredient_id,
         quantity,
+        entry_unit_id,
         reason_code,
         photo_urls,
-        ingredient:ingredients(id, name),
-        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code)
+        ingredient:ingredients(id, name, ${ingredientUnitsSelect}),
+        unit_obj:units!stock_issue_items_entry_unit_id_fkey(code, name)
       `);
   const [itemsRes, branchesRes, creatorsRes] = await Promise.all([
     issueIds.length > 0
@@ -159,12 +168,24 @@ export async function loadWasteApprovalsData({
   }
 
   type ItemRow = NonNullable<typeof itemsRes.data>[number];
-  type UnitCodeJoin = { code: string };
-  type ItemRowWithUnit = ItemRow & {
-    unit_obj?: UnitCodeJoin | UnitCodeJoin[] | null;
+  type IngredientUnitJoin = {
+    unit_id: number;
+    to_base_factor: number | string;
+    is_base: boolean;
+    units?: unknown;
   };
-  const itemsByIssue = new Map<number, ItemRow[]>();
-  for (const item of (itemsRes.data ?? []) as ItemRow[]) {
+  type IngredientJoin = {
+    id: number;
+    name: string;
+    ingredient_units?: IngredientUnitJoin[] | null;
+  };
+  type UnitJoin = { code: string; name?: string | null };
+  type ItemRowWithJoins = ItemRow & {
+    unit_obj?: UnitJoin | UnitJoin[] | null;
+    ingredient?: IngredientJoin | IngredientJoin[] | null;
+  };
+  const itemsByIssue = new Map<number, ItemRowWithJoins[]>();
+  for (const item of (itemsRes.data ?? []) as ItemRowWithJoins[]) {
     const items = itemsByIssue.get(item.issue_id) ?? [];
     items.push(item);
     itemsByIssue.set(item.issue_id, items);
@@ -172,9 +193,89 @@ export async function loadWasteApprovalsData({
 
   const rows: PendingWasteRow[] = (issues ?? []).map((issue) => {
     const items = itemsByIssue.get(issue.id) ?? [];
-    const totalValue = items.reduce(
-      (sum, item) =>
-        sum + Number("total_cost" in item ? item.total_cost ?? 0 : 0),
+    const mappedItems = items.map((item) => {
+      const ingredient = Array.isArray(item.ingredient)
+        ? (item.ingredient[0] ?? null)
+        : (item.ingredient ?? null);
+      const unitObj = Array.isArray(item.unit_obj)
+        ? (item.unit_obj[0] ?? null)
+        : (item.unit_obj ?? null);
+      const entryUnitId =
+        item.entry_unit_id == null ? null : Number(item.entry_unit_id);
+      const ingredientUnits = Array.isArray(ingredient?.ingredient_units)
+        ? ingredient.ingredient_units
+        : [];
+      const entryUnitRow =
+        entryUnitId == null
+          ? null
+          : (ingredientUnits.find(
+              (row) => Number(row.unit_id) === entryUnitId,
+            ) ?? null);
+      const baseUnitRow =
+        ingredientUnits.find((row) => row.is_base === true) ?? null;
+      const toBaseFactorRaw = Number(entryUnitRow?.to_base_factor ?? 1);
+      const toBaseFactor =
+        Number.isFinite(toBaseFactorRaw) && toBaseFactorRaw > 0
+          ? toBaseFactorRaw
+          : 1;
+      const unit =
+        getEmbeddedUnitDisplayName(unitObj) ??
+        getEmbeddedIngredientBaseUnitDisplayName(ingredient) ??
+        "";
+      const baseUnit =
+        getEmbeddedUnitDisplayName(baseUnitRow?.units) ??
+        getEmbeddedIngredientBaseUnitDisplayName(ingredient) ??
+        unit;
+      const entryQuantity = Number(item.quantity);
+      const unitCost =
+        monetaryAccess.valuation && "unit_cost" in item
+          ? item.unit_cost === null
+            ? null
+            : Number(item.unit_cost)
+          : null;
+      const correctedTotal =
+        unitCost == null
+          ? 0
+          : computeIssueLineTotal({
+              entryQuantity,
+              baseUnitCost: unitCost,
+              toBaseFactor,
+            }).total;
+
+      return {
+        itemId: item.id,
+        ingredientId: item.ingredient_id,
+        ingredientName: ingredient?.name ?? `#${item.ingredient_id}`,
+        quantity: entryQuantity,
+        unit,
+        baseUnit,
+        toBaseFactor,
+        monetary:
+          monetaryAccess.valuation && unitCost != null
+            ? {
+                unitCost,
+                totalCost: correctedTotal,
+                qtyRatio:
+                  "qty_ratio" in item && item.qty_ratio !== null
+                    ? Number(item.qty_ratio)
+                    : null,
+                rolling15MinSum:
+                  "rolling_15min_sum" in item &&
+                  item.rolling_15min_sum !== null
+                    ? Number(item.rolling_15min_sum)
+                    : null,
+              }
+            : null,
+        reasonCode: item.reason_code ?? "",
+        photoUrls: (item.photo_urls ?? []) as string[],
+        wasteTier:
+          monetaryAccess.valuation && "waste_tier" in item
+            ? item.waste_tier
+            : null,
+      };
+    });
+    const totalValue = mappedItems.reduce(
+      (sum, item) => sum + (item.monetary?.totalCost ?? 0),
       0,
     );
     const creatorId = issue.created_by ?? "";
@@ -192,48 +293,7 @@ export async function loadWasteApprovalsData({
       isSelfCreated: creatorId === session.user.id,
       monetary: monetaryAccess.valuation ? { totalValue } : null,
       notes: issue.notes ?? null,
-      items: items.map((item) => {
-        const ingredient = Array.isArray(item.ingredient)
-          ? item.ingredient[0]
-          : item.ingredient;
-        const itemWithUnit = item as ItemRowWithUnit;
-        const unitObj = Array.isArray(itemWithUnit.unit_obj)
-          ? itemWithUnit.unit_obj[0]
-          : itemWithUnit.unit_obj;
-        return {
-          itemId: item.id,
-          ingredientId: item.ingredient_id,
-          ingredientName: ingredient?.name ?? `#${item.ingredient_id}`,
-          quantity: Number(item.quantity),
-          unit: unitObj?.code ?? "",
-          monetary:
-            monetaryAccess.valuation &&
-            "unit_cost" in item &&
-            "total_cost" in item
-              ? {
-                  unitCost:
-                    item.unit_cost === null ? null : Number(item.unit_cost),
-                  totalCost:
-                    item.total_cost === null ? 0 : Number(item.total_cost),
-                  qtyRatio:
-                    "qty_ratio" in item && item.qty_ratio !== null
-                      ? Number(item.qty_ratio)
-                      : null,
-                  rolling15MinSum:
-                    "rolling_15min_sum" in item &&
-                    item.rolling_15min_sum !== null
-                      ? Number(item.rolling_15min_sum)
-                      : null,
-                }
-              : null,
-          reasonCode: item.reason_code ?? "",
-          photoUrls: (item.photo_urls ?? []) as string[],
-          wasteTier:
-            monetaryAccess.valuation && "waste_tier" in item
-              ? item.waste_tier
-              : null,
-        };
-      }),
+      items: mappedItems,
     };
   });
 

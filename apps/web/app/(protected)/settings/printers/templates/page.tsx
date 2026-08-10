@@ -54,11 +54,11 @@ export default async function PrintTemplatesPage() {
       >
         <AppEmptyState
           mode="error"
-          title={messages.owner.printTemplates.loadErrorTitle}
+          title={messages.controlSurface.printTemplates.loadErrorTitle}
           description={
             templatesRes.error
-              ? messages.owner.printTemplates.loadErrorTemplates
-              : messages.owner.printTemplates.loadErrorBranches
+              ? messages.controlSurface.printTemplates.loadErrorTemplates
+              : messages.controlSurface.printTemplates.loadErrorBranches
           }
         />
       </SettingsPageFrame>

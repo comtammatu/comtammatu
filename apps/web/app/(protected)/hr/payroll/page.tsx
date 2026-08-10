@@ -5,7 +5,6 @@ import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
 import { PayrollListClient } from "./payroll-list-client";
-import { HrScopeSelector } from "../hr-scope-selector";
 import {
   getHrScopeBranchId,
   resolveHrBranchScope,
@@ -19,7 +18,23 @@ type SearchParams = {
   salaryStatus?: string;
   standardDays?: string;
   calendar?: string;
+  day?: string;
 };
+
+function monthValue(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function resolveCalendarDay(value: string | undefined, month: string) {
+  if (!value?.startsWith(`${month}-`)) return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const date = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  return date.toISOString().slice(0, 10) === value ? value : null;
+}
 
 function parseMonth(value: string | undefined) {
   const fallback = getVNMonthYear();
@@ -57,7 +72,13 @@ export default async function PayrollPage({
 }) {
   const params = await searchParams;
   const { month, year } = parseMonth(params.month);
+  const monthKey = monthValue(year, month);
   const standardDays = parseStandardDays(params.standardDays);
+  const calendarTarget = parseCalendarTarget(params.calendar);
+  const selectedCalendarDay =
+    calendarTarget != null
+      ? resolveCalendarDay(params.day, monthKey)
+      : null;
   const copy = messages.hr.payroll;
   const branchesResult = await fetchPayrollBranches();
   const branches = branchesResult.success ? (branchesResult.data ?? []) : [];
@@ -73,16 +94,12 @@ export default async function PayrollPage({
   });
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.live.title}
         description={copy.live.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector
-              branches={branches}
-              value={branchScope}
-            />
             <Button
               variant="outline"
               size="touch"
@@ -100,7 +117,8 @@ export default async function PayrollPage({
           selectedBranchId={branchId}
           officeOnly={officeOnly}
           selectedSalaryStatus={params.salaryStatus}
-          calendarTarget={parseCalendarTarget(params.calendar)}
+          calendarTarget={calendarTarget}
+          selectedCalendarDay={selectedCalendarDay}
         />
       ) : (
         <AppSection

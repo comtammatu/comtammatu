@@ -20,7 +20,7 @@ import { WasteCreateClient } from "./waste-create-client";
 export const dynamic = "force-dynamic";
 
 interface WasteNewPageContentProps {
-  searchParams?: Promise<{ branchId?: string }>;
+  searchParams?: Promise<{ branch?: string }>;
 }
 
 function renderWasteUnavailable({
@@ -44,7 +44,7 @@ export async function WasteNewPageContent({
   searchParams,
 }: WasteNewPageContentProps) {
   const params = searchParams ? await searchParams : {};
-  const branchId = parseBranchIdParam(params.branchId);
+  const branchId = parseBranchIdParam(params.branch);
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
@@ -60,7 +60,7 @@ export async function WasteNewPageContent({
       description: INVENTORY_VI.branchRequiredWasteHint,
     });
   }
-  const fallbackHref = `/inventory/consumption?view=waste&branchId=${branchId}`;
+  const fallbackHref = `/inventory/consumption?view=waste&branch=${branchId}`;
 
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,
@@ -173,7 +173,7 @@ export async function WasteNewPageContent({
 export default async function WasteNewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string }>;
+  searchParams: Promise<{ branch?: string }>;
 }) {
   return <WasteNewPageContent searchParams={searchParams} />;
 }

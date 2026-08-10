@@ -12,12 +12,13 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { useFormControlSize } from "@/components/form/control-size";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
@@ -32,7 +33,6 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,

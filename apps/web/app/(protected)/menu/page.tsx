@@ -1,7 +1,6 @@
 import {
   AppPage,
   AppPageHeader,
-  AppSection,
   AppEmptyState,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
@@ -34,7 +33,7 @@ export default async function MenuPage() {
 
   if (categoriesRes.error) {
     return (
-      <AppPage width="wide">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader title={MENU_VI.title} />
         <AppEmptyState mode="error" description={ERRORS_VI.loadFailed} />
       </AppPage>
@@ -42,7 +41,7 @@ export default async function MenuPage() {
   }
   if (itemsRes.error) {
     return (
-      <AppPage width="wide">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader title={MENU_VI.title} />
         <AppEmptyState mode="error" description={MENU_VI.loadItemsFailed} />
       </AppPage>
@@ -65,10 +64,19 @@ export default async function MenuPage() {
   }));
 
   return (
-    <AppPage width="wide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={MENU_VI.title}
-        actions={<MenuImportExportMenu />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <MenuImportExportMenu />
+            <AddCategoryButton />
+            <AddItemButton
+              categories={categories}
+              tenantId={claims.tenant_id}
+            />
+          </div>
+        }
       />
       <AppPageTabs
         defaultValue="items"
@@ -82,27 +90,15 @@ export default async function MenuPage() {
         ]}
       >
         <TabsContent value="items" className="flex flex-col gap-4">
-          <AppSection
-            contentFlush
-            action={
-              <AddItemButton
-                categories={categories}
-                tenantId={claims.tenant_id}
-              />
-            }
-          >
-            <ItemTable
-              items={items}
-              categories={categories}
-              tenantId={claims.tenant_id}
-            />
-          </AppSection>
+          <ItemTable
+            items={items}
+            categories={categories}
+            tenantId={claims.tenant_id}
+          />
         </TabsContent>
 
         <TabsContent value="categories" className="flex flex-col gap-4">
-          <AppSection contentFlush action={<AddCategoryButton />}>
-            <CategoryTable categories={categories} />
-          </AppSection>
+          <CategoryTable categories={categories} />
         </TabsContent>
       </AppPageTabs>
     </AppPage>

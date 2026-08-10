@@ -71,7 +71,8 @@ BEGIN
     AND conname = 'tax_invoice_buyer_requests_close_state_check';
 
   IF v_constraint_definition IS NULL
-    OR v_constraint_definition NOT ILIKE '%customer_submitted%'
+    OR v_constraint_definition NOT ILIKE '%queue_submitted%'
+    OR v_constraint_definition ILIKE '%customer_submitted%'
     OR v_constraint_definition NOT ILIKE '%deadline_elapsed%' THEN
     RAISE EXCEPTION
       'TEST FAILED: terminal buyer request state constraint is missing';

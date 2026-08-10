@@ -5,8 +5,11 @@ import {
   type ThresholdRow,
 } from "@/(protected)/inventory/settings/thresholds/thresholds-client";
 import { messages } from "@lib/messages";
-import { AppEmptyState, AppSection } from "@/components/surface";
-import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
+import { AppEmptyState } from "@/components/surface";
+import {
+  BranchOperatorPage,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
 import { CatalogBackControl } from "../catalog-back-header";
 
@@ -56,9 +59,9 @@ export default async function OperatorCatalogThresholdsPage({
       {rows.length === 0 ? (
         <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
       ) : (
-        <AppSection contentFlush>
+        <BranchOperatorPanel contentFlush>
           <ThresholdsClient rows={rows} />
-        </AppSection>
+        </BranchOperatorPanel>
       )}
     </BranchOperatorPage>
   );

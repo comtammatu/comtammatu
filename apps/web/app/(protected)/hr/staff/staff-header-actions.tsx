@@ -19,7 +19,7 @@ export function StaffHeaderOverflow() {
       render={<Link href={withHrBranchScope("/hr/staff/audit", scope)} />}
     >
       <IconScrollText data-icon="inline-start" />
-      {messages.owner.staffAudit.linkLabel}
+      {messages.controlSurface.staffAudit.linkLabel}
     </Button>
   );
 }

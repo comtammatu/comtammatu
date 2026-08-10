@@ -18,7 +18,7 @@ import {
 } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
-import { AppSection } from "@/components/surface";
+import { PublicSection } from "@/components/surface";
 import { AppHeader } from "@/components/app-header";
 import { BRAND_NAME } from "@/components/brand";
 
@@ -66,7 +66,7 @@ export default async function AccessDeniedPage({
     <div className="flex w-full max-w-xl flex-col gap-4">
       <AppHeader title={BRAND_NAME} className="static" />
 
-      <AppSection
+      <PublicSection
         title={copy.title}
         headingLevel="h1"
         description={copy.description}
@@ -109,7 +109,7 @@ export default async function AccessDeniedPage({
             </Button>
           </form>
         </div>
-      </AppSection>
+      </PublicSection>
     </div>
   );
 }

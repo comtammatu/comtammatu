@@ -5,7 +5,7 @@ import { GeistMono } from "geist/font/mono";
 import { cookies } from "next/headers";
 
 import Script from "next/script";
-import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
+import { ConfirmDialogProvider } from "@/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
@@ -17,10 +17,11 @@ import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
+import { themeClassName } from "@comtammatu/ui/lib/theme-cookie";
 import {
   BROWSER_CHROME_THEME_COLORS,
-  MATU_THEME_COOKIE_NAME,
-  resolveMatuThemeMode,
+  THEME_COOKIE_NAME,
+  resolveThemeMode,
 } from "./_lib/theme-tokens";
 
 export const metadata: Metadata = {
@@ -52,8 +53,8 @@ export const metadata: Metadata = {
 // matches the resolved theme from the very first SSR render (no flash).
 export async function generateViewport(): Promise<Viewport> {
   const cookieStore = await cookies();
-  const theme = cookieStore.get(MATU_THEME_COOKIE_NAME)?.value;
-  const resolved = resolveMatuThemeMode(theme) ?? "light";
+  const theme = cookieStore.get(THEME_COOKIE_NAME)?.value;
+  const resolved = resolveThemeMode(theme) ?? "light";
   return {
     width: "device-width",
     initialScale: 1,
@@ -68,9 +69,9 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   const cookieStore = await cookies();
-  const cookieTheme = cookieStore.get(MATU_THEME_COOKIE_NAME)?.value;
-  const resolvedCookie = resolveMatuThemeMode(cookieTheme) ?? "light";
-  const initialThemeClass = resolvedCookie === "night" ? "dark" : "light";
+  const cookieTheme = cookieStore.get(THEME_COOKIE_NAME)?.value;
+  const resolvedCookie = resolveThemeMode(cookieTheme) ?? "light";
+  const initialThemeClass = themeClassName(resolvedCookie);
   return (
     <html
       lang="vi"
@@ -80,7 +81,7 @@ export default async function RootLayout({
         initialThemeClass,
         "font-sans",
       )}
-      style={{ colorScheme: resolvedCookie === "night" ? "dark" : "light" }}
+      style={{ colorScheme: initialThemeClass }}
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
@@ -88,7 +89,9 @@ export default async function RootLayout({
           id="theme-bootstrap"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: getThemeScriptHtml(),
+            __html: getThemeScriptHtml({
+              chromeColors: BROWSER_CHROME_THEME_COLORS,
+            }),
           }}
         />
         <a

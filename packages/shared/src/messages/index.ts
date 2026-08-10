@@ -7,6 +7,8 @@ export type { ErrorKey } from "./errors";
 export { interpolate } from "./interpolate";
 export { FORM_VI } from "./form";
 export type { FormKey } from "./form";
+export { UI_VI } from "./ui";
+export type { UiKey } from "./ui";
 export { VALIDATION_VI } from "./validation";
 export type { ValidationKey } from "./validation";
 export {

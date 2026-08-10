@@ -168,6 +168,7 @@ test("adapter -> owner sees every active branch kind and can select all", async 
     "allowedBranches",
     "canSelectAll",
     "defaultBranchId",
+    "scopeMode",
     "selectedBranchId",
   ]);
   assert.deepEqual(
@@ -175,7 +176,21 @@ test("adapter -> owner sees every active branch kind and can select all", async 
     [1, 2, 10],
   );
   assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "site");
   assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.defaultBranchId, 1);
+});
+
+test("adapter -> requestAll yields scopeMode all with null selection for tenant-wide roles", async () => {
+  const scope = await resolveInventoryBranchScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    null,
+    { requestAll: true },
+  );
+  assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.defaultBranchId, 1);
 });
 
@@ -229,9 +244,9 @@ test("adapter -> query error degrades to empty scope, canSelectAll intact", asyn
 
 /* ─── resolveInventoryListScope (D058 W3b — one engine for both scope-read paths) ─── */
 
-test("list scope -> embedded routeBranchId and office ?branchId= resolve through the identical selectBranchScope call", async () => {
+test("list scope -> embedded routeBranchId and office ?branch= resolve through the identical selectBranchScope call", async () => {
   // Same owner claims requesting the same branch (2) two ways: as a
-  // validated URL segment (embedded/br runtime) and as a raw ?branchId=
+  // validated URL segment (embedded/br runtime) and as a raw ?branch=
   // query string (office plane). Both must land on the exact same
   // selection — proving there is one engine, not two parallel readers.
   const embedded = await resolveInventoryListScope(
@@ -242,7 +257,7 @@ test("list scope -> embedded routeBranchId and office ?branchId= resolve through
   const office = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", 1),
-    { queryBranchId: "2" },
+    { queryBranch: "2" },
   );
 
   assert.deepEqual(
@@ -258,7 +273,7 @@ test("list scope -> routeBranchId always wins over a conflicting query value", (
   return resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", 1),
-    { routeBranchId: 2, queryBranchId: "10" },
+    { routeBranchId: 2, queryBranch: "10" },
   ).then((scope) => {
     assert.equal(scope.selectedBranchId, 2);
     assert.equal(scope.outOfScope, false);
@@ -276,26 +291,38 @@ test("list scope -> embedded branch outside the caller's allowed set flags outOf
   assert.equal(scope.outOfScope, true);
 });
 
-test("list scope -> office ?branchId= never triggers outOfScope, only clamps the selection", async () => {
+test("list scope -> office ?branch= never triggers outOfScope, only clamps the selection", async () => {
   const scope = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("cashier", 2),
-    { queryBranchId: "1" },
+    { queryBranch: "1" },
   );
 
   assert.equal(scope.selectedBranchId, 2);
   assert.equal(scope.outOfScope, false);
 });
 
-test("list scope -> malformed query branchId parses to null and falls back to default", async () => {
+test("list scope -> malformed query branch falls back to all for tenant-wide roles", async () => {
   const scope = await resolveInventoryListScope(
     fakeSupabase(BRANCHES, null).supabase,
     claims("owner", null),
-    { queryBranchId: "not-a-number" },
+    { queryBranch: "not-a-number" },
   );
 
-  assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
+  assert.equal(scope.defaultBranchId, 1);
   assert.equal(scope.outOfScope, false);
+});
+
+test("list scope -> explicit branch=all aggregates for tenant-wide roles", async () => {
+  const scope = await resolveInventoryListScope(
+    fakeSupabase(BRANCHES, null).supabase,
+    claims("owner", 1),
+    { queryBranch: "all" },
+  );
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
 });
 
 test("list scope -> branch-scoped role with null branch_id (unassigned) yields empty scope", async () => {

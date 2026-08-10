@@ -18,13 +18,13 @@ import { z } from "zod";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   FormDialog,
   AppDialog,

@@ -16,7 +16,7 @@ import type { TransferDetail } from "./transfer-detail-model";
 interface LoadTransferDetailPageDataOptions {
   transferId: number;
   routeBranchId?: number;
-  queryBranchId?: string | string[];
+  queryBranch?: string | string[];
   includeAudit?: boolean;
   includeCorrections?: boolean;
 }
@@ -32,7 +32,7 @@ export interface TransferDetailPageData {
 export async function loadTransferDetailPageData({
   transferId,
   routeBranchId,
-  queryBranchId,
+  queryBranch,
   includeAudit = true,
   includeCorrections = true,
 }: LoadTransferDetailPageDataOptions): Promise<TransferDetailPageData> {
@@ -47,7 +47,7 @@ export async function loadTransferDetailPageData({
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
+    queryBranch,
   });
   const scopedBranchId = scope.selectedBranchId;
   if (scope.outOfScope) notFound();
@@ -87,6 +87,7 @@ export async function loadTransferDetailPageData({
       entry_unit_id: number | null;
       to_base_factor: number | null;
       unit_label: string | null;
+      base_unit_label: string | null;
       ingredients: {
         id: number;
         name: string;
@@ -126,6 +127,8 @@ export async function loadTransferDetailPageData({
       sku: "",
       qty: quantity,
       unit: line.unit_label ?? "",
+      baseUnit: line.base_unit_label ?? line.unit_label ?? "",
+      toBaseFactor: line.to_base_factor ?? null,
       monetary: cost == null || total == null ? null : { cost, total },
       received:
         line.quantity_received != null ? Number(line.quantity_received) : null,

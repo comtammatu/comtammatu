@@ -61,7 +61,7 @@ test("operator transfer receive auto-starts inspection and requires shortage not
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
   assert.match(receiveClientSource, /qty < item\.qty && note\.length < 5/);
   assert.match(receiveClientSource, /copy\.shortageNoteMinLength/);
-  assert.match(receiveClientSource, /note \}/);
+  assert.match(receiveClientSource, /shortfall_class: classification/);
   assert.match(receiveClientSource, /<Textarea/);
 });
 
@@ -80,7 +80,7 @@ test("transfer receive server action advances valid state machine steps only", (
 test("stocktake list uses styled confirm dialog instead of browser confirm", () => {
   assert.match(
     stocktakeListSource,
-    /@comtammatu\/ui\/components\/confirm-dialog/,
+    /@\/components\/confirm-dialog/,
   );
   assert.match(stocktakeListSource, /const ok = await confirm\(\{/);
   assert.doesNotMatch(stocktakeListSource, /confirm\("/);

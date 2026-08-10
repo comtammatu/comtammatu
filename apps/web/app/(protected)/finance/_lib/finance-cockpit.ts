@@ -29,6 +29,14 @@ import type {
 import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
 import { isOperatingExpenseCategory } from "./expense-categories";
+import {
+  applySalesBranchesFilter,
+  fetchSalesBranchIds,
+} from "./finance-sales-branches";
+import {
+  fetchCashSummary,
+  type CashSummary,
+} from "./cash-cockpit";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -89,9 +97,15 @@ interface FinanceReconciliationAttention {
   missing_vietqr_amount: number | string;
 }
 
-interface BranchOption {
-  id: number;
-  name: string;
+interface PeriodExpenseRow {
+  subtotal: number | string | null;
+  vat_amount: number | string | null;
+  category: string | null;
+}
+
+interface FinanceCockpitOptions {
+  /** Hub page only — loads tenant-wide current funds once via cash-cockpit. */
+  includeCash?: boolean;
 }
 
 interface FinanceCockpitKpis {
@@ -139,6 +153,12 @@ export interface FinanceCockpitData {
   > | null;
   exceptions: FinanceException[];
   dashboardSummary: FinanceDashboardSummary | null;
+  cash?: CashSummary;
+}
+
+interface BranchOption {
+  id: number;
+  name: string;
 }
 
 async function fetchCashVarianceActionTarget({
@@ -269,13 +289,28 @@ function buildKpis({
   };
 }
 
-export async function fetchOperatingExpenseSummary({
+function summarizeOperatingExpenses(
+  rows: PeriodExpenseRow[],
+): OperatingExpenseSummary {
+  const operatingRows = rows.filter(
+    (row): row is PeriodExpenseRow & { category: string } =>
+      row.category != null && isOperatingExpenseCategory(row.category),
+  );
+
+  return {
+    total: toNumber(addMoney(operatingRows.map((row) => String(row.subtotal)))),
+    recorded: operatingRows.length > 0,
+  };
+}
+
+async function fetchPeriodExpenseRows({
   supabase,
   tenantId,
   location,
   branchId,
   startDate,
   endDate,
+  salesBranchIds,
 }: {
   supabase: SupabaseClient;
   tenantId: number;
@@ -283,10 +318,11 @@ export async function fetchOperatingExpenseSummary({
   branchId: number | null;
   startDate: string;
   endDate: string;
-}): Promise<OperatingExpenseSummary> {
+  salesBranchIds?: number[] | null;
+}): Promise<PeriodExpenseRow[]> {
   let query = supabase
     .from("expenses")
-    .select("subtotal, category")
+    .select("subtotal, vat_amount, category")
     .eq("tenant_id", tenantId)
     .gte("expense_date", startDate)
     .lte("expense_date", endDate);
@@ -294,22 +330,51 @@ export async function fetchOperatingExpenseSummary({
   if (location === "company") {
     query = query.is("branch_id", null);
   } else if (location === "branches") {
-    query = query.not("branch_id", "is", null);
+    const branchIds =
+      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
+    query = applySalesBranchesFilter(query, "branch_id", branchIds);
   } else if (location === "branch" && branchId != null) {
     query = query.eq("branch_id", branchId);
   }
 
   const { data, error } = await query;
-  if (error) return { total: 0, recorded: false };
+  if (error) return [];
+  return (data ?? []) as PeriodExpenseRow[];
+}
 
-  const operatingRows = (data ?? []).filter((row) =>
-    isOperatingExpenseCategory(row.category),
-  );
+export async function fetchOperatingExpenseSummary({
+  supabase,
+  tenantId,
+  location,
+  branchId,
+  startDate,
+  endDate,
+  salesBranchIds,
+  expenseRows,
+}: {
+  supabase: SupabaseClient;
+  tenantId: number;
+  location: FinanceLocation;
+  branchId: number | null;
+  startDate: string;
+  endDate: string;
+  salesBranchIds?: number[] | null;
+  expenseRows?: PeriodExpenseRow[];
+}): Promise<OperatingExpenseSummary> {
+  if (expenseRows) {
+    return summarizeOperatingExpenses(expenseRows);
+  }
 
-  return {
-    total: toNumber(addMoney(operatingRows.map((row) => String(row.subtotal)))),
-    recorded: operatingRows.length > 0,
-  };
+  const rows = await fetchPeriodExpenseRows({
+    supabase,
+    tenantId,
+    location,
+    branchId,
+    startDate,
+    endDate,
+    salesBranchIds,
+  });
+  return summarizeOperatingExpenses(rows);
 }
 
 async function fetchFinanceVatSummary({
@@ -319,6 +384,8 @@ async function fetchFinanceVatSummary({
   branchId,
   startDate,
   endDate,
+  salesBranchIds,
+  periodExpenseRows,
 }: {
   supabase: SupabaseClient;
   tenantId: number;
@@ -326,6 +393,8 @@ async function fetchFinanceVatSummary({
   branchId: number | null;
   startDate: string;
   endDate: string;
+  salesBranchIds?: number[] | null;
+  periodExpenseRows?: PeriodExpenseRow[];
 }): Promise<FinanceVatSummary> {
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
   const supplierInvoiceSelect =
@@ -342,25 +411,19 @@ async function fetchFinanceVatSummary({
     .lt("invoice_date", endIso);
   if (location === "company") {
     supplierInvoiceQuery = supplierInvoiceQuery.is("grn_id", null);
+  } else if (location === "branches") {
+    const branchIds =
+      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
+    supplierInvoiceQuery = applySalesBranchesFilter(
+      supplierInvoiceQuery,
+      "goods_received_notes.branch_id",
+      branchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     supplierInvoiceQuery = supplierInvoiceQuery.eq(
       "goods_received_notes.branch_id",
       branchId,
     );
-  }
-
-  let expenseQuery = supabase
-    .from("expenses")
-    .select("vat_amount, category")
-    .eq("tenant_id", tenantId)
-    .gte("expense_date", startDate)
-    .lte("expense_date", endDate);
-  if (location === "company") {
-    expenseQuery = expenseQuery.is("branch_id", null);
-  } else if (location === "branches") {
-    expenseQuery = expenseQuery.not("branch_id", "is", null);
-  } else if (location === "branch" && branchId != null) {
-    expenseQuery = expenseQuery.eq("branch_id", branchId);
   }
 
   let outputInvoiceQuery = supabase
@@ -373,21 +436,39 @@ async function fetchFinanceVatSummary({
   if (location === "company") {
     outputInvoiceQuery = outputInvoiceQuery.is("branch_id", null);
   } else if (location === "branches") {
-    outputInvoiceQuery = outputInvoiceQuery.not("branch_id", "is", null);
+    const branchIds =
+      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
+    outputInvoiceQuery = applySalesBranchesFilter(
+      outputInvoiceQuery,
+      "branch_id",
+      branchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     outputInvoiceQuery = outputInvoiceQuery.eq("branch_id", branchId);
   }
 
+  const expensePromise: Promise<{ data: PeriodExpenseRow[]; error: null }> =
+    periodExpenseRows != null
+      ? Promise.resolve({ data: periodExpenseRows, error: null })
+      : fetchPeriodExpenseRows({
+          supabase,
+          tenantId,
+          location,
+          branchId,
+          startDate,
+          endDate,
+          salesBranchIds,
+        }).then((rows) => ({ data: rows, error: null }));
+
   const [supplierInvoices, expenses, outputInvoices] = await Promise.all([
     supplierInvoiceQuery,
-    expenseQuery,
+    expensePromise,
     outputInvoiceQuery,
   ]);
 
-  if (supplierInvoices.error || expenses.error) {
+  if (supplierInvoices.error) {
     console.error("[finance:vat-input] summary query failed", {
-      supplierCode: supplierInvoices.error?.code,
-      expenseCode: expenses.error?.code,
+      supplierCode: supplierInvoices.error.code,
     });
   }
   if (outputInvoices.error) {
@@ -407,18 +488,21 @@ async function fetchFinanceVatSummary({
       }),
     );
 
+  const expenseRows = (expenses.data ?? []) as PeriodExpenseRow[];
+
   return {
-    inputRecorded:
-      supplierInvoices.error || expenses.error
-        ? null
-        : addMoney([
-            sumVat(supplierInvoices.data as unknown[] | null),
-            sumVat(
-              (expenses.data ?? []).filter((row) =>
+    inputRecorded: supplierInvoices.error
+      ? null
+      : addMoney([
+          sumVat(supplierInvoices.data as unknown[] | null),
+          sumVat(
+            expenseRows.filter(
+              (row): row is PeriodExpenseRow & { category: string } =>
+                row.category != null &&
                 isOperatingExpenseCategory(row.category),
-              ),
             ),
-          ]),
+          ),
+        ]),
     outputIssued: outputInvoices.error
       ? null
       : sumVat(outputInvoices.data as unknown[] | null),
@@ -430,12 +514,19 @@ async function fetchUnpaidSupplierInvoiceRisk({
   tenantId,
   location,
   branchId,
+  startDate,
+  endDate,
+  salesBranchIds,
 }: {
   supabase: SupabaseClient;
   tenantId: number;
   location: FinanceLocation;
   branchId: number | null;
+  startDate: string;
+  endDate: string;
+  salesBranchIds?: number[] | null;
 }): Promise<{ count: number; amount: number }> {
+  const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
   const select =
     location === "branches" || location === "branch"
       ? "total_amount, paid_amount, credit_applied_amount, payment_status, goods_received_notes!inner(branch_id)"
@@ -445,10 +536,20 @@ async function fetchUnpaidSupplierInvoiceRisk({
     .from("supplier_invoices")
     .select(select)
     .eq("tenant_id", tenantId)
-    .neq("payment_status", "paid");
+    .neq("payment_status", "paid")
+    .gte("invoice_date", startIso)
+    .lt("invoice_date", endIso);
 
   if (location === "company") {
     query = query.is("grn_id", null);
+  } else if (location === "branches") {
+    const branchIds =
+      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
+    query = applySalesBranchesFilter(
+      query,
+      "goods_received_notes.branch_id",
+      branchIds,
+    );
   } else if (location === "branch" && branchId != null) {
     query = query.eq("goods_received_notes.branch_id", branchId);
   }
@@ -522,17 +623,21 @@ async function fetchActualFoodCostSnapshot({
   branchId,
   startDate,
   endDate,
+  valuationActive,
 }: {
   supabase: SupabaseClient | null;
   tenantId: number;
   branchId: number | null;
   startDate: string;
   endDate: string;
+  valuationActive?: boolean;
 }): Promise<ActualFoodCostSnapshot> {
   if (!supabase) return { rows: [], orderCount: 0 };
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
-  const valuationActive = await isInventoryValuationActive(supabase, tenantId);
-  if (!valuationActive) {
+  const cutoverActive =
+    valuationActive ??
+    (await isInventoryValuationActive(supabase, tenantId));
+  if (!cutoverActive) {
     console.error(
       "[finance:food-cost] inventory valuation cutover is not active",
     );
@@ -815,6 +920,7 @@ function buildExceptions({
 export async function fetchFinanceCockpit(
   params: FinanceParams,
   resolved: ResolvedFinanceRange,
+  options?: FinanceCockpitOptions,
 ): Promise<FinanceCockpitData> {
   const { supabase, claims } = await loadAuthState();
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
@@ -827,6 +933,22 @@ export async function fetchFinanceCockpit(
       (await canAccessBranch(supabase, claims, params.branch)));
   const monetaryClient = canReadRequestedValuation ? monetary.client : null;
 
+  const [salesBranchIds, valuationActive] = await Promise.all([
+    params.location === "branches"
+      ? fetchSalesBranchIds(supabase as never, claims.tenant_id)
+      : Promise.resolve(null),
+    includesBranchData && monetaryClient
+      ? isInventoryValuationActive(monetaryClient, claims.tenant_id)
+      : Promise.resolve(false),
+  ]);
+
+  // Hub loader keys (distinct fetches, max 18 when compare + cash):
+  // prefetch: salesBranchIds, valuationActive (2, before parallel batch)
+  // parallel (max 17): branches, revenueKpis, compareRevenueKpis, foodCost,
+  // actualFoodCost, compareActualFoodCost, inventoryByBranch, inventoryPeriod,
+  // cashVariance, cashVarianceTarget, reconciliation, dashboardSummary,
+  // periodExpenses, comparePeriodExpenses, unpaidAp, paymentDesync, currentFunds.
+  // sequential (1): vatSummary (reuses periodExpenses rows).
   const [
     branchesRes,
     kpisRes,
@@ -840,11 +962,11 @@ export async function fetchFinanceCockpit(
     cashVarianceTarget,
     reconciliationAttention,
     dashboardSummaryRes,
-    operatingExpenseSummary,
-    compareOperatingExpenseSummary,
+    periodExpenseRows,
+    comparePeriodExpenseRows,
     unpaidSupplierInvoices,
     paymentDesync,
-    vat,
+    cash,
   ] = await Promise.all([
     fetchAccessibleBranches(),
     includesBranchData
@@ -871,6 +993,7 @@ export async function fetchFinanceCockpit(
           branchId: params.branch,
           startDate: resolved.start,
           endDate: resolved.end,
+          valuationActive,
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
     includesBranchData && resolved.compare
@@ -880,6 +1003,7 @@ export async function fetchFinanceCockpit(
           branchId: params.branch,
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
+          valuationActive,
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
     canReadRequestedValuation && includesBranchData
@@ -917,29 +1041,34 @@ export async function fetchFinanceCockpit(
           resolved.end,
         )
       : Promise.resolve({ success: true as const, data: null }),
-    fetchOperatingExpenseSummary({
+    fetchPeriodExpenseRows({
       supabase,
       tenantId: claims.tenant_id,
       location: params.location,
       branchId: params.branch,
       startDate: resolved.start,
       endDate: resolved.end,
+      salesBranchIds,
     }),
     resolved.compare
-      ? fetchOperatingExpenseSummary({
+      ? fetchPeriodExpenseRows({
           supabase,
           tenantId: claims.tenant_id,
           location: params.location,
           branchId: params.branch,
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
+          salesBranchIds,
         })
-      : Promise.resolve({ total: 0, recorded: false }),
+      : Promise.resolve([]),
     fetchUnpaidSupplierInvoiceRisk({
       supabase,
       tenantId: claims.tenant_id,
       location: params.location,
       branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
+      salesBranchIds,
     }),
     includesBranchData
       ? fetchPaymentOrderDesync({
@@ -949,15 +1078,26 @@ export async function fetchFinanceCockpit(
           endDate: resolved.end,
         })
       : Promise.resolve({ count: 0, amount: 0 }),
-    fetchFinanceVatSummary({
-      supabase,
-      tenantId: claims.tenant_id,
-      location: params.location,
-      branchId: params.branch,
-      startDate: resolved.start,
-      endDate: resolved.end,
-    }),
+    options?.includeCash
+      ? fetchCashSummary(supabase)
+      : Promise.resolve(undefined),
   ]);
+
+  const operatingExpenseSummary = summarizeOperatingExpenses(periodExpenseRows);
+  const compareOperatingExpenseSummary = resolved.compare
+    ? summarizeOperatingExpenses(comparePeriodExpenseRows)
+    : { total: 0, recorded: false };
+
+  const vat = await fetchFinanceVatSummary({
+    supabase,
+    tenantId: claims.tenant_id,
+    location: params.location,
+    branchId: params.branch,
+    startDate: resolved.start,
+    endDate: resolved.end,
+    salesBranchIds,
+    periodExpenseRows,
+  });
 
   const branches = (
     branchesRes.success ? (branchesRes.data ?? []) : []
@@ -1056,5 +1196,6 @@ export async function fetchFinanceCockpit(
       reconciliationAttention,
       reconciliationHref,
     }),
+    ...(cash != null ? { cash } : {}),
   };
 }

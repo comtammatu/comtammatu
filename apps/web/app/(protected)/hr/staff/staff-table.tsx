@@ -18,7 +18,7 @@ import { messages } from "@lib/messages";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
 import {
   DataTable,
@@ -122,7 +122,7 @@ function StaffActionsMenu({
 }) {
   const isActive = member.is_active !== false;
   const linked = isLinkedEmployee(member);
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
 
   return (
     <RowActionsMenu
@@ -184,7 +184,7 @@ export function StaffTable({
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
 
   async function handleToggleActive(member: StaffRow) {
     if (member.is_active !== false) {

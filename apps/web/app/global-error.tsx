@@ -2,40 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import {
-  GLOBAL_ERROR_PALETTE,
-  MATU_THEME_COOKIE_NAME,
-  resolveMatuThemeMode,
-  type MatuThemeMode,
-} from "./_lib/theme-tokens";
+import { resolveClientThemeMode } from "@comtammatu/ui/lib/theme-cookie";
+import { GLOBAL_ERROR_PALETTE, type ThemeMode } from "./_lib/theme-tokens";
 
 // global-error.tsx is the named inline-style exception (design-system.md
-// § Token Contract). It renders its own bare <html><body> outside ThemeProvider,
-// so it resolves the `matu-theme` cookie itself and picks warm Má Tư
-// Design System values for either mode (never neutral greys).
-function readMode(): MatuThemeMode {
-  if (typeof document === "undefined") return "light";
-  const match = document.cookie.match(
-    new RegExp(`(^|;)\\s*${MATU_THEME_COOKIE_NAME}\\s*=\\s*([^;]+)`),
-  );
-  const value = match
-    ? decodeURIComponent(match.pop()!.split("=").pop()!)
-    : "";
-  const resolvedMode = resolveMatuThemeMode(value);
-  if (resolvedMode) return resolvedMode;
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 6 ? "night" : "light";
-}
-
+// § Token Contract). It renders its own bare <html><body> outside ThemeProvider
+// and without globals.css, so it resolves the theme through the shared reader
+// and picks warm Má Tư Design System values for either mode (never neutral greys).
 export default function GlobalError({
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const [mode, setMode] = useState<MatuThemeMode>("light");
+  const [mode, setMode] = useState<ThemeMode>("light");
   useEffect(() => {
-    setMode(readMode());
+    setMode(resolveClientThemeMode());
   }, []);
 
   const colors = GLOBAL_ERROR_PALETTE[mode];

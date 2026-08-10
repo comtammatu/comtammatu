@@ -6,18 +6,18 @@ export default async function TransferDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
   const data = await loadTransferDetailPageData({
     transferId: Number(id),
-    queryBranchId: query.branchId,
+    queryBranch: query.branch,
   });
   const listHref =
     data.userBranchId == null
       ? "/inventory/transfers"
-      : `/inventory/transfers?branchId=${data.userBranchId}`;
+      : `/inventory/transfers?branch=${data.userBranchId}`;
 
   return (
     <TransferDetailClient

@@ -55,11 +55,8 @@ test("Branch keeps separate roles; Owner hubs consumption and waste as tabs", ()
   assert.match(branchIssueData, /isBranchInternalIssueType/);
   assert.match(ownerConsumption, /scope="hub"/);
   assert.match(ownerConsumption, /detailBasePath="\/inventory\/consumption"/);
-  assert.match(
-    dictionary,
-    /issues: \{ short: "Hao hụt", long: "Hao hụt" \}/,
-  );
-  assert.match(dictionary, /stocktake: \{ long: "Kiểm kê đối chiếu" \}/);
+  assert.match(dictionary, /issues: \{ long: "Hao hụt" \}/);
+  assert.match(dictionary, /stocktake: \{ short: "Kiểm kê", long: "Kiểm kê đối chiếu" \}/);
 });
 
 test("Owner surface stock quick issue stays on consumption while Branch lookup stays read-only", () => {
@@ -90,6 +87,10 @@ test("Owner surface stock quick issue stays on consumption while Branch lookup s
 
 test("consumption list separates POS ledger, manual slips, and waste via tabs", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const issueCreateDialog = read(
+    "app/(protected)/inventory/issues/issue-create-dialog.tsx",
+  );
+  const issuesCreateUi = issues + issueCreateDialog;
   const messages = read("../../packages/shared/src/messages/inventory.ts");
 
   assert.match(issues, /const isHubScope =/);
@@ -97,20 +98,28 @@ test("consumption list separates POS ledger, manual slips, and waste via tabs", 
   assert.match(issues, /const showsWasteTab =/);
   assert.match(issues, /<AppPageTabs/);
   assert.match(issues, /paramKey="view"/);
+  assert.match(issues, /queryKeysByValue=\{\{/);
+  assert.match(issues, /recorded: \[[\s\S]*?"branch"[\s\S]*?"branchId"[\s\S]*?"startDate"/);
   assert.match(
     issues,
-    /queryKeysByValue=\{\{\s+recorded: \["branchId", "startDate", "endDate"\]/,
+    /manual: \["branch", "branchId", "status", "type", "q"\]/,
   );
-  assert.match(issues, /waste: \[\]/);
+  assert.match(
+    issues,
+    /waste: \["branch", "branchId", "status", "type", "q"\]/,
+  );
   assert.match(issues, /<TabsContent value="recorded"/);
   assert.match(issues, /<TabsContent value="manual"/);
   assert.match(issues, /<TabsContent value="waste"/);
   assert.match(issues, /title=\{INVENTORY_VI\.recordedConsumptionTitle\}/);
-  assert.match(issues, /title=\{INVENTORY_VI\.manualConsumptionSlipsTitle\}/);
-  assert.match(issues, /title=\{INVENTORY_VI\.writeoffSlipsTitle\}/);
-  assert.match(issues, /title=\{INVENTORY_VI\.manualConsumptionCreateAction\}/);
+  assert.match(issues, /INVENTORY_VI\.manualConsumptionSlipsTitle/);
+  assert.match(issues, /INVENTORY_VI\.writeoffSlipsTitle/);
   assert.match(
-    issues,
+    issuesCreateUi,
+    /title=\{INVENTORY_VI\.manualConsumptionCreateAction\}/,
+  );
+  assert.match(
+    issuesCreateUi,
     /submitLabel=\{INVENTORY_VI\.manualConsumptionCreateAction\}/,
   );
 
@@ -136,39 +145,48 @@ test("consumption list separates POS ledger, manual slips, and waste via tabs", 
 
 test("recorded consumption toolbar keeps one baseline and separate slots", () => {
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const issueListChrome = read(
+    "app/(protected)/inventory/issues/issue-list-chrome.tsx",
+  );
+  const recordedFilterSource = issueListChrome;
 
   assert.match(
-    issues,
-    /const recordedConsumptionFilterBar = \(\s*<AppToolbar\s+variant="inline"\s+className="items-center"/,
+    recordedFilterSource,
+    /export function RecordedConsumptionFilterBar/,
+  );
+  assert.match(
+    recordedFilterSource,
+    /<AppToolbar\s+variant="inline"\s+className="items-center"/,
   );
   assert.doesNotMatch(
-    issues,
-    /recordedConsumptionFilterBar[\s\S]{0,200}items-stretch/,
+    recordedFilterSource,
+    /RecordedConsumptionFilterBar[\s\S]{0,200}items-stretch/,
   );
   assert.match(
-    issues,
-    /recordedConsumptionFilterBar[\s\S]*?search=\{\s*<InputGroup size=\{controlSize\} className="min-w-0 flex-1"/,
+    recordedFilterSource,
+    /RecordedConsumptionFilterBar[\s\S]*?search=\{\s*<InputGroup size=\{controlSize\} className="min-w-0 flex-1"/,
   );
   assert.match(
-    issues,
-    /recordedConsumptionFilterBar[\s\S]*?filters=\{\s*<>[\s\S]*?Select[\s\S]*?items=\{recordedBranchSelectItems\}/,
+    recordedFilterSource,
+    /RecordedConsumptionFilterBar[\s\S]*?filters=\{\s*<>[\s\S]*?Select[\s\S]*?items=\{recordedBranchSelectItems\}/,
   );
   assert.match(
-    issues,
+    recordedFilterSource,
     /id="recorded-start-date"[\s\S]*?aria-label=\{FORM_VI\.fromDate\}/,
   );
   assert.match(
-    issues,
+    recordedFilterSource,
     /id="recorded-end-date"[\s\S]*?aria-label=\{FORM_VI\.toDate\}/,
   );
   assert.doesNotMatch(
-    issues,
+    recordedFilterSource,
     /htmlFor="recorded-start-date"|htmlFor="recorded-end-date"/,
   );
   assert.doesNotMatch(
-    issues,
-    /recordedConsumptionFilterBar[\s\S]*?search=\{\s*<>[\s\S]*?<Select/,
+    recordedFilterSource,
+    /RecordedConsumptionFilterBar[\s\S]*?search=\{\s*<>[\s\S]*?<Select/,
   );
+  assert.match(issues, /<RecordedConsumptionFilterBar/);
 });
 
 test("production create redirects to the created run detail", () => {
@@ -189,18 +207,22 @@ test("production create redirects to the created run detail", () => {
 test("operations tabs use the same sectioned list chrome", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const issueListChrome = read(
+    "app/(protected)/inventory/issues/issue-list-chrome.tsx",
+  );
+  const issuesSurface = issues + issueListChrome;
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issuesSurface, fulfillmentHub]) {
     assert.match(source, /<AppListFrame/);
-    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
-    assert.match(source, /<AppToolbar[\s\S]{0,500}search=\{/);
-    assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
+    assert.match(source, /variant="inline"/);
+    assert.match(source, /<AppToolbar[\s\S]*search=\{/);
+    assert.match(source, /<AppToolbar[\s\S]*filters=\{/);
   }
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issuesSurface, fulfillmentHub]) {
     assert.doesNotMatch(
       source,
       /<div className="flex flex-wrap items-center justify-end gap-2">/,
@@ -209,34 +231,34 @@ test("operations tabs use the same sectioned list chrome", () => {
 
   assert.match(grn, /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/);
   assert.match(grn, /loadFailed/);
-  assert.match(issues, /actions=\{embedded \? issueActions : null\}/);
-  assert.match(transfers, /actions=\{embedded \? desktopCreateAction : null\}/);
+  assert.doesNotMatch(issues, /\bembedded\b/);
+  assert.doesNotMatch(grn, /\bwithinOwnerTabs\b/);
+  assert.match(fulfillmentHub, /<AppListFrame toolbar=\{toolbar\}>/);
+  assert.doesNotMatch(fulfillmentHub, /searchable/);
 
   assert.doesNotMatch(grn, /paramKey=\{embedded \? "grnTab" : undefined\}/);
-  assert.doesNotMatch(transfers, /@comtammatu\/ui\/components\/tabs/);
-  assert.doesNotMatch(transfers, /variant="card"/);
+  assert.doesNotMatch(fulfillmentHub, /@comtammatu\/ui\/components\/tabs/);
+  assert.doesNotMatch(fulfillmentHub, /variant="card"/);
 });
 
-test("operations embedded lists keep management density instead of touch sizing", () => {
+test("operations management lists keep dense control sizing", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
 
   assert.doesNotMatch(grn, /basePath\.startsWith\("\/br\/"\)/);
-  assert.match(issues, /listBasePath\.startsWith\("\/br\/"\)/);
-  assert.doesNotMatch(transfers, /basePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(issues, /listBasePath\.startsWith\("\/br\/"\)/);
+  assert.doesNotMatch(fulfillmentHub, /basePath\.startsWith\("\/br\/"\)/);
 
-  for (const source of [grn, issues, transfers]) {
+  for (const source of [grn, issues, fulfillmentHub]) {
     assert.doesNotMatch(source, /size=\{embedded \? "touch"/);
     assert.doesNotMatch(source, /embedded \|\| isOperator/);
   }
 
-  assert.match(
-    transfers,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
+  assert.match(issues, /useFormControlSize\("responsive"\)/);
+  assert.match(fulfillmentHub, /size="field"/);
 });
 
 test("table empty rows render inline content instead of a dashed sub-card", () => {
@@ -252,15 +274,14 @@ test("table empty rows render inline content instead of a dashed sub-card", () =
 
 test("operations table columns do not override table typography role", () => {
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
-  const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const _issues = read("app/(protected)/inventory/issues/issues-client.tsx");
+  const issueListChrome = read(
+    "app/(protected)/inventory/issues/issue-list-chrome.tsx",
   );
 
   for (const block of [
     between(grn, "const grnColumns", "const filtered"),
-    between(issues, "const issueColumns", "const renderIssueCard"),
-    between(transfers, "const columns", "const desktopCreateAction"),
+    between(issueListChrome, "export function buildIssueColumns", "export function buildRecordedConsumptionColumns"),
   ]) {
     assert.doesNotMatch(block, /className:\s*"[^"]*\btext-sm\b/);
     assert.doesNotMatch(block, /className="[^"]*\btext-sm\b/);
@@ -282,8 +303,8 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
   );
   const grn = read("app/(protected)/inventory/grn/grn-list-client.tsx");
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
@@ -301,13 +322,11 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     "app/(protected)/inventory/settings/thresholds/page.tsx",
   );
   const frame = read(
-    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+    "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
 
-  assert.match(
-    stock,
-    /width=\{isCompactLayout \? "narrow" : "xwide"\}[\s\S]{0,80}density="compact"/,
-  );
+  assert.match(stock, /<AppPage width="xwide" density="compact"/);
+  assert.doesNotMatch(stock, /isCompactLayout|useStockCompactLayout/);
 
   for (const source of [suppliers, ingredients, recipes]) {
     assert.match(source, /<AppPage width="xwide" density="compact"/);
@@ -321,7 +340,7 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     purchaseOrders,
     grn,
     issues,
-    transfers,
+    fulfillmentHub,
     stocktake,
     production,
     categories,
@@ -331,27 +350,25 @@ test("Owner inventory lists share one frame for toolbar, table header, and empty
     assert.match(source, /<AppListFrame/);
   }
 
-  for (const source of [suppliers, ingredients]) {
+  for (const source of [suppliers, ingredients, production, stocktake]) {
     assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
   }
+  assert.doesNotMatch(production, /searchable/);
 
   assert.match(stock, /variant="inline"/);
   assert.doesNotMatch(
     stock,
-    /variant=\{isCompactLayout \? "card" : "inline"\}/,
-  );
-  assert.doesNotMatch(
-    stock,
     /isFirstLoadEmpty \?[\s\S]{0,40}firstLoadEmptyState[\s\S]{0,40}<DataTable/,
   );
-  assert.match(frame, /<AppListFrame \{\.\.\.props\}>/);
+  assert.match(frame, /inventoryListFilterSelectClassName = "w-44 shrink-0"/);
+  assert.doesNotMatch(frame, /function InventoryListFrame|AppListFrame/);
   assert.doesNotMatch(purchaseOrders, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /<DataTable[\s\S]{0,500}searchable/);
   assert.doesNotMatch(recipes, /recipes\.length === 0/);
 });
 
 test("AppToolbar inline shares card surface without muted fill", () => {
-  const surface = read("app/components/surface.tsx");
+  const surface = read("app/components/surface/app-toolbar.tsx");
   assert.match(
     surface,
     /if \(variant === "inline"\) \{[\s\S]{0,200}<Toolbar[\s\S]{0,80}className=\{cn\(\s*"gap-2 overflow-visible border-b border-border px-3 py-2"/,
@@ -363,9 +380,10 @@ test("AppToolbar inline shares card surface without muted fill", () => {
 });
 
 test("migrated inventory lists use AppListFrame toolbar slot", () => {
-  const invoices = read(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const invoices = [
+    read("app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx"),
+    read("app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx"),
+  ].join("\n");
   const supplierItems = read(
     "app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
   );
@@ -382,22 +400,31 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
 
   for (const source of [invoices, supplierItems, thresholdsClient]) {
     assert.match(source, /<AppListFrame[\s\S]{0,800}toolbar=\{/);
-    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+    assert.match(source, /variant="inline"/);
   }
 
   assert.match(
     grn,
     /<AppListFrame toolbar=\{loadFailed \? undefined : toolbar\}>/,
   );
-  assert.match(countSlips, /<AppListFrame title=/);
-  assert.match(countAssignments, /<AppListFrame>/);
+  assert.match(countSlips, /<AppListFrame[\s\S]{0,200}toolbar=\{/);
+  assert.match(countSlips, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.doesNotMatch(countSlips, /<AppListFrame title=/);
+  assert.match(countAssignments, /<AppListFrame[\s\S]{0,200}toolbar=\{/);
+  assert.match(countAssignments, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+  assert.doesNotMatch(countAssignments, /<DataTable[\s\S]{0,200}searchable/);
 });
 
 test("SelectContent defaults to popper and Inventory LIST filters share field width", () => {
   const select = read("../../packages/ui/src/components/select.tsx");
-  const surface = read("app/components/surface.tsx");
+  const surface = [
+    "app/components/surface/app-list-frame.tsx",
+    "app/components/surface/app-toolbar.tsx",
+  ]
+    .map((path) => read(path))
+    .join("\n");
   const frame = read(
-    "app/(protected)/inventory/_components/inventory-list-frame.tsx",
+    "app/(protected)/inventory/_components/inventory-list-filters.ts",
   );
   const dataTable = read("app/components/data-table/data-table.tsx");
   const stock = read("app/(protected)/inventory/stock/stock-client.tsx");
@@ -406,14 +433,24 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   );
   const issues = read("app/(protected)/inventory/issues/issues-client.tsx");
-  const transfers = read(
-    "app/(protected)/inventory/transfers/transfers-list-client.tsx",
+  const issueListChrome = read(
+    "app/(protected)/inventory/issues/issue-list-chrome.tsx",
+  );
+  const issuesSurface = issues + issueListChrome;
+  const fulfillmentHub = read(
+    "app/(protected)/inventory/transfers/stock-fulfillment-hub-client.tsx",
   );
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   );
-  const invoices = read(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const invoicesListUi = read(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx",
+  );
+  const financeInvoicesPage = read(
+    "app/(protected)/finance/invoices/page.tsx",
+  );
+  const financeFilterBar = read(
+    "app/(protected)/finance/components/filter-bar.tsx",
   );
   const orders = read("app/(protected)/orders/orders-client.tsx");
   const employeeTable = read("app/(protected)/hr/employee-table.tsx");
@@ -449,35 +486,25 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   assert.match(stock, /search=\{searchControl\}/);
   assert.match(
     stock,
-    /filters=\{\s*isCompactLayout \? undefined : \(\s*<>\s*\{filterControls\}/,
+    /filters=\{\s*<>\s*\{filterControls\}/,
   );
-  assert.doesNotMatch(
-    stock,
-    /search=\{\s*isCompactLayout \? \(\s*searchControl/,
-  );
+  assert.doesNotMatch(stock, /isCompactLayout|useStockCompactLayout/);
 
-  for (const source of [stock, ingredients, issues, stocktake]) {
+  for (const source of [stock, ingredients, issuesSurface, stocktake]) {
     assert.match(source, /inventoryListFilterSelectClassName/);
   }
   assert.match(grn, /className="w-44"/);
-  assert.match(transfers, /inventoryListFilterSelectWideClassName/);
+  assert.match(fulfillmentHub, /inventoryListFilterSelectClassName/);
   assert.match(stock, /useFormControlSize\(\)/);
   assert.match(stock, /size=\{controlSize\}/);
   assert.match(ingredients, /useFormControlSize\(\)/);
-  assert.match(
-    issues,
-    /useFormControlSize\(isOperator \? "touch" : "responsive"\)/,
-  );
-  assert.match(
-    transfers,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
-  assert.match(invoices, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
-  assert.match(
-    stocktake,
-    /useFormControlSize\(embedded \? "touch" : "responsive"\)/,
-  );
-  assert.match(stocktake, /size=\{embedded \? "touch" : "lg"\}/);
+  assert.match(issues, /useFormControlSize\("responsive"\)/);
+  assert.match(fulfillmentHub, /size="field"/);
+  assert.match(invoicesListUi, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
+  assert.match(financeInvoicesPage, /variant="inline"/);
+  assert.match(financeFilterBar, /className="w-full sm:w-44"/);
+  assert.match(stocktake, /useFormControlSize\("responsive"\)/);
+  assert.match(stocktake, /size="lg"/);
   assert.match(orders, /useFormControlSize\(\)/);
   assert.match(employeeTable, /useFormControlSize\(\)/);
   assert.match(

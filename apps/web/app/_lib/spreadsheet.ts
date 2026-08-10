@@ -178,10 +178,10 @@ export async function parseSpreadsheetFile(
   options: ParseOptions = {},
 ): Promise<{ sheets: ParsedSheet[]; format: "xlsx" | "csv" }> {
   if (file.size === 0) {
-    throw new Error("File rỗng");
+    throw new Error("Tệp rỗng");
   }
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`File quá lớn. Tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
+    throw new Error(`Tệp quá lớn. Tối đa ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
   }
 
   const name = file.name.toLowerCase();

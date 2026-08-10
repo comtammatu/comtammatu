@@ -2,7 +2,7 @@
 
 import { Button } from "@comtammatu/ui/components/button";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { REDUCE_ITEM_PRESETS } from "../quick-reason-presets";
 import { QuickReasonChips } from "../quick-reason-chips";

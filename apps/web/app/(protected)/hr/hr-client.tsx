@@ -27,7 +27,6 @@ import {
   type PositionOption,
   type StaffRow,
 } from "./staff/staff-table";
-import { HrScopeSelector } from "./hr-scope-selector";
 import { resolveHrBranchScope, type HrBranchScope } from "@/lib/hr-scope";
 
 type PeopleView = "profile" | "accounts";
@@ -77,7 +76,7 @@ export function HrClient({
   const searchParams = useSearchParams();
   const copy = messages.hr.client;
   const workspaceCopy = messages.hr.workspace;
-  const staffCopy = messages.owner.staffPage;
+  const staffCopy = messages.controlSurface.staffPage;
   const branchScope = resolveHrBranchScope(initialScope, branches);
   const requestedView = searchParams.get("view");
   const view: PeopleView =
@@ -95,7 +94,7 @@ export function HrClient({
   ];
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={
           view === "accounts" ? staffCopy.title : workspaceCopy.ownerTitle
@@ -107,7 +106,6 @@ export function HrClient({
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={branchScope} />
             {view === "accounts" && canManageAccounts ? (
               <>
                 <GrantEmployeeAccessButton

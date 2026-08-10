@@ -1,6 +1,6 @@
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 
-export default function OwnerCheckoutApprovalsPage({
+export default function CheckoutApprovalsPage({
   searchParams,
 }: {
   searchParams: Promise<{ attendanceId?: string }>;

@@ -19,7 +19,7 @@ import {
   AppPageHeader,
   AppSection,
 } from "@/components/surface";
-import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
+import { SimpleBarChart, TargetTrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "@lib/inventory/format";
 import {
   resolveInventoryColorValue,
@@ -273,7 +273,7 @@ export function ReportsClient({
         >
           {foodCostTrendAvailable ? (
             <>
-              <TrendSparkline
+              <TargetTrendSparkline
                 data={foodCostTrend}
                 ariaLabel={messages.inventory.reports.foodCostTrend}
                 formatValue={formatPercent}

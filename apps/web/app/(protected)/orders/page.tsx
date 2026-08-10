@@ -1,18 +1,43 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchActiveBranches, resolveListScope } from "@/_lib/branch-context";
+import {
+  getControlSurfaceScopeBranchId,
+  parseControlSurfaceBranchScope,
+} from "@/lib/control-surface-scope";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersPageBody } from "./orders-page-body";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
-import { ORDERS_COPY } from "./orders-copy";
+import { orders as ORDERS_COPY } from "@lib/messages/orders";
+
+function firstParam(
+  value: string | string[] | undefined,
+): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+function parsePositiveInt(raw: string | undefined): number | undefined {
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  return Number(raw);
+}
+
+function parseDateParam(raw: string | undefined): string | undefined {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  return raw;
+}
 
 interface OrdersPageContentProps {
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     orderId?: string | string[];
+    dateFrom?: string | string[];
+    dateTo?: string | string[];
+    status?: string | string[];
+    alert?: string | string[];
   }>;
   routeBranchId?: number;
   embedded?: boolean;
@@ -25,13 +50,10 @@ export async function OrdersPageContent({
 }: OrdersPageContentProps) {
   const params = searchParams ? await searchParams : {};
   const { supabase, claims } = await loadAuthState();
-  const rawOrderId = Array.isArray(params.orderId)
-    ? params.orderId[0]
-    : params.orderId;
-  const requestedOrderId =
-    typeof rawOrderId === "string" && /^\d+$/.test(rawOrderId)
-      ? Number(rawOrderId)
-      : null;
+  const requestedOrderId = parsePositiveInt(firstParam(params.orderId)) ?? null;
+  const dateFrom = parseDateParam(firstParam(params.dateFrom));
+  const dateTo = parseDateParam(firstParam(params.dateTo));
+  const status = firstParam(params.status)?.trim() || undefined;
 
   // Scope resolution only applies to embedded (routeBranchId) callers: the
   // engine always resolves a concrete default branch, which would narrow the
@@ -41,15 +63,31 @@ export async function OrdersPageContent({
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);
     const scope = await resolveListScope(supabase, claims, branches, {
       routeBranchId,
-      queryBranchId: params.branchId,
+      queryBranch: params.branch,
       tenantWideRoles: ["owner"],
     });
     if (scope.outOfScope) notFound();
     branchFilter = scope.selectedBranchId ?? undefined;
+  } else {
+    branchFilter =
+      getControlSurfaceScopeBranchId(
+        parseControlSurfaceBranchScope(params.branch, {
+          fallback: "all",
+        }),
+      ) ?? undefined;
   }
 
+  const listFilters = {
+    ...(branchFilter != null ? { branchId: branchFilter } : {}),
+    ...(status ? { status } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
+  };
+
   const [ordersResult, refundsResult, selectedOrderResult] = await Promise.all([
-    fetchOrders(branchFilter != null ? { branchId: branchFilter } : undefined),
+    fetchOrders(
+      Object.keys(listFilters).length > 0 ? listFilters : undefined,
+    ),
     fetchRefunds(),
     requestedOrderId != null
       ? fetchOrders({
@@ -61,7 +99,7 @@ export async function OrdersPageContent({
 
   if (!ordersResult.success || !ordersResult.data) {
     return (
-      <AppPage width="wide">
+      <AppPage width="xwide" density="compact">
         <AppPageHeader title={ORDER_VI.long} />
         <AppEmptyState
           mode="error"
@@ -102,8 +140,12 @@ export default async function OrdersPage({
   searchParams,
 }: {
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     orderId?: string | string[];
+    dateFrom?: string | string[];
+    dateTo?: string | string[];
+    status?: string | string[];
+    alert?: string | string[];
   }>;
 }) {
   return <OrdersPageContent searchParams={searchParams} />;

@@ -1,6 +1,8 @@
 import type { Json } from "@comtammatu/database";
 import { loadAuthState } from "@/_lib/auth";
 
+type FundsSupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
+
 export interface CashSummary {
   hasOpening: boolean;
   openingEntryId: number | null;
@@ -62,9 +64,11 @@ function requireNumber(
   return parsed;
 }
 
-export async function fetchCashSummary(): Promise<CashSummary> {
-  const { supabase } = await loadAuthState();
-  const { data, error } = await supabase.rpc("get_finance_current_funds");
+export async function fetchCashSummary(
+  supabase?: FundsSupabaseClient,
+): Promise<CashSummary> {
+  const client = supabase ?? (await loadAuthState()).supabase;
+  const { data, error } = await client.rpc("get_finance_current_funds");
 
   if (error) {
     console.error("[finance:funds] failed to load current funds", error.code);

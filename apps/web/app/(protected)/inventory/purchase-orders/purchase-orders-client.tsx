@@ -16,8 +16,9 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -31,15 +32,12 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
 import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import {
   AppListFrame,
-  AppPage,
-  AppPageHeader,
   AppToolbar,
   DescriptionList,
 } from "@/components/surface";
@@ -111,13 +109,11 @@ export function PurchaseOrdersClient({
   branches,
   canManage,
   canReceive,
-  embedded = false,
 }: {
   rows: PurchaseOrderRow[];
   branches: Array<{ id: number; name: string }>;
   canManage: boolean;
   canReceive: boolean;
-  embedded?: boolean;
 }) {
   const router = useRouter();
   const overlay = useDocumentOverlayUrl(ORDER_OVERLAY_KEYS);
@@ -479,18 +475,9 @@ export function PurchaseOrdersClient({
     </AppListFrame>
   );
 
-  const content = embedded ? (
-    list
-  ) : (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader title={copy.pageTitle} description={copy.pageDescription} />
-      {list}
-    </AppPage>
-  );
-
   return (
     <>
-      {content}
+      {list}
       <AppDialog
         open={viewOpen}
         onOpenChange={(open) => {

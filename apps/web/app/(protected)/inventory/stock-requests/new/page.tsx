@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { STOCK_REQUEST_ROLES } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { resolveInventoryListScope } from "../../_lib/inventory-scope";
@@ -32,7 +32,7 @@ export default async function CentralKitchenStockRequestNewPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     requestId?: string | string[];
   }>;
 }) {
@@ -46,7 +46,7 @@ export default async function CentralKitchenStockRequestNewPage({
     redirect("/inventory");
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: query.branchId,
+    queryBranch: query.branch,
   });
   const branchId = scope.selectedBranchId;
   if (branchId == null || scope.outOfScope) notFound();
@@ -91,7 +91,7 @@ export default async function CentralKitchenStockRequestNewPage({
   }
   if (branchResult.data?.branch_kind !== "central_kitchen") {
     redirect(
-      `/inventory/transfers${branchId == null ? "" : `?branchId=${branchId}`}`,
+      `/inventory/transfers${branchId == null ? "" : `?branch=${branchId}`}`,
     );
   }
   const request = requestResult.data as {
@@ -161,23 +161,30 @@ export default async function CentralKitchenStockRequestNewPage({
   );
 
   return (
-    <AppPage width="wide" density="compact">
-      <AppPageHeader
-        title={
-          messages.inventory.stockRequests.journey.centralSupplyRequestAction
-        }
-        description={messages.inventory.stockRequests.journey.centralSupplyRequestDescription(
-          branchResult.data.name,
-        )}
-        actions={
-          <Button
-            variant="ghost"
-            render={<Link href={`/inventory/transfers?branchId=${branchId}`} />}
-          >
-            {messages.inventory.stockRequests.journey.back}
-          </Button>
-        }
-      />
+    <DocumentFormFrame
+      width="wide"
+      density="compact"
+      header={
+        <AppPageHeader
+          title={
+            messages.inventory.stockRequests.journey.centralSupplyRequestAction
+          }
+          description={messages.inventory.stockRequests.journey.centralSupplyRequestDescription(
+            branchResult.data.name,
+          )}
+          actions={
+            <Button
+              variant="ghost"
+              render={
+                <Link href={`/inventory/transfers?branch=${branchId}`} />
+              }
+            >
+              {messages.inventory.stockRequests.journey.back}
+            </Button>
+          }
+        />
+      }
+    >
       <StockRequestEditor
         branchId={branchId}
         requestId={requestId}
@@ -186,8 +193,8 @@ export default async function CentralKitchenStockRequestNewPage({
         initialStatus={request?.status ?? null}
         initialNeededAt={request?.needed_at ?? null}
         initialNotes={request?.notes ?? null}
-        returnHref={`/inventory/transfers?branchId=${branchId}&requestId=:requestId`}
+        returnHref={`/inventory/transfers?branch=${branchId}&requestId=:requestId`}
       />
-    </AppPage>
+    </DocumentFormFrame>
   );
 }

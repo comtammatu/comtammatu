@@ -1,27 +1,53 @@
--- pgTAP-style smoke checks for WP-C/D/E migrations (static SQL assertions via file presence).
+-- Static SQL assertions for WP-C/D/E migrations.
 -- Runtime verification belongs on a Preview Branch after apply.
 
+\set ON_ERROR_STOP on
 BEGIN;
 
-SELECT plan(6);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'shift_assignments'
+      AND column_name = 'is_shift_leader'
+  ) THEN
+    RAISE EXCEPTION 'TEST FAILED: shift_assignments has is_shift_leader';
+  END IF;
 
-SELECT has_column('public', 'shift_assignments', 'is_shift_leader',
-  'shift_assignments has is_shift_leader');
+  IF to_regclass('public.pos_void_requests') IS NULL THEN
+    RAISE EXCEPTION 'TEST FAILED: pos_void_requests queue table exists';
+  END IF;
 
-SELECT has_table('public', 'pos_void_requests',
-  'pos_void_requests queue table exists');
+  IF to_regprocedure('public.request_pos_void_after_paid(bigint,text,text)') IS NULL THEN
+    RAISE EXCEPTION 'TEST FAILED: request_pos_void_after_paid exists';
+  END IF;
 
-SELECT has_function('public', 'request_pos_void_after_paid',
-  'request_pos_void_after_paid exists');
+  IF to_regprocedure('public.resolve_pos_void_request(bigint,text,text)') IS NULL THEN
+    RAISE EXCEPTION 'TEST FAILED: resolve_pos_void_request exists';
+  END IF;
 
-SELECT has_function('public', 'resolve_pos_void_request',
-  'resolve_pos_void_request exists');
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'position_shift_tasks'
+      AND column_name = 'allows_photo'
+  ) THEN
+    RAISE EXCEPTION 'TEST FAILED: position_shift_tasks.allows_photo exists';
+  END IF;
 
-SELECT has_column('public', 'position_shift_tasks', 'allows_photo',
-  'position_shift_tasks.allows_photo exists');
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'attendance_checklist_items'
+      AND column_name = 'photo_path'
+  ) THEN
+    RAISE EXCEPTION 'TEST FAILED: attendance_checklist_items.photo_path exists';
+  END IF;
+END;
+$$;
 
-SELECT has_column('public', 'attendance_checklist_items', 'photo_path',
-  'attendance_checklist_items.photo_path exists');
-
-SELECT * FROM finish();
 ROLLBACK;

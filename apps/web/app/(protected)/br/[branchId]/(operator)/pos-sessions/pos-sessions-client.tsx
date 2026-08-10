@@ -13,10 +13,11 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
-import { AppEmptyState, AppSection } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorControlBar,
   BranchOperatorFrame,
+  BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
 import {
   Drawer,
@@ -43,7 +44,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Item,
   ItemContent,
@@ -431,7 +432,7 @@ function SessionHistoryPanel({
   scrollable?: boolean;
 }) {
   return (
-    <AppSection
+    <BranchOperatorPanel
       size="sm"
       title={messages.settings.posSessions.sessionHistory}
       description={messages.settings.posSessions.sessionHistoryDescription(
@@ -498,7 +499,7 @@ function SessionHistoryPanel({
           </Button>
         );
       })}
-    </AppSection>
+    </BranchOperatorPanel>
   );
 }
 
@@ -575,7 +576,7 @@ function SessionBillsPanel({
   scrollable?: boolean;
 }) {
   return (
-    <AppSection
+    <BranchOperatorPanel
       size="sm"
       title={messages.settings.posSessions.billsInSession(orders.length)}
       className={cn("min-h-0", scrollable && "flex-1", className)}
@@ -630,7 +631,7 @@ function SessionBillsPanel({
           />
         )}
       </div>
-    </AppSection>
+    </BranchOperatorPanel>
   );
 }
 
@@ -701,7 +702,7 @@ function SessionSettlementPanel({
   }
 
   return (
-    <AppSection title={messages.settings.posSessions.settlementTitle}>
+    <BranchOperatorPanel title={messages.settings.posSessions.settlementTitle}>
       {breached ? (
         <Alert
           variant={resolved ? "default" : "destructive"}
@@ -959,7 +960,7 @@ function SessionSettlementPanel({
           {session.note}
         </NoteCallout>
       ) : null}
-    </AppSection>
+    </BranchOperatorPanel>
   );
 }
 
@@ -993,7 +994,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
   );
 
   return (
-    <AppSection
+    <BranchOperatorPanel
       title={messages.settings.posSessions.reportTitle}
       description={messages.settings.posSessions.reportDescription}
       contentClassName="gap-4"
@@ -1167,7 +1168,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           </ItemGroup>
         </div>
       ) : null}
-    </AppSection>
+    </BranchOperatorPanel>
   );
 }
 

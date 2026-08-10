@@ -12,7 +12,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   Drawer,
   DrawerContent,
@@ -20,7 +20,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@comtammatu/ui/components/drawer";
-import { InteractiveCard } from "@/components/data-table/interactive-card";
+import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift } from "./actions";
 import type { ShiftRow } from "./_types";

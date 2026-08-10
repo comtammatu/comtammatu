@@ -13,7 +13,7 @@ import {
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
-import { AttendanceTable } from "../attendance-table";
+import { AttendanceTable } from "./attendance-table";
 import {
   AttendanceTabSync,
   type AttendanceTab,
@@ -22,7 +22,6 @@ import { LeaveRequestsTable } from "../leave-requests-table";
 import type { BranchOption } from "../_types";
 import { loadOwnerRosterPanelData } from "@lib/hr/roster/load-owner-roster-data";
 import { RosterWeekClient } from "@lib/hr/roster/roster-week-client";
-import { HrScopeSelector } from "../hr-scope-selector";
 import {
   getHrScopeBranchId,
   resolveHrBranchScope,
@@ -169,13 +168,12 @@ export default async function HrAttendancePage({
       : null;
 
   return (
-    <AppPage width="xwide">
+    <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <HrScopeSelector branches={branches} value={branchScope} />
             <Button
               variant="outline"
               size="touch"

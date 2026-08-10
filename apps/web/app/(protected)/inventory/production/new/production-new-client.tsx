@@ -45,7 +45,6 @@ interface ProductionNewClientProps {
   finishedGoods: FinishedGoodOption[];
   initialBranchId?: number;
   basePath: string;
-  embedded?: boolean;
 }
 
 const productionCopy = messages.inventory.operatorFlow;
@@ -73,7 +72,6 @@ export function ProductionNewClient({
   finishedGoods,
   initialBranchId,
   basePath,
-  embedded = false,
 }: ProductionNewClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -352,7 +350,6 @@ export function ProductionNewClient({
 
   const footer = (
     <AppDetailFooter
-      sticky={embedded}
       trailing={
         <>
           <Button variant="outline" onClick={() => router.push(basePath)}>
@@ -369,13 +366,11 @@ export function ProductionNewClient({
   return (
     <DocumentFormFrame
       header={
-        embedded ? null : (
-          <AppPageHeader
-            title="Tạo Lệnh sản xuất"
-            description="Tạo lệnh nháp từ một công thức đã duyệt."
-            breadcrumb={<AppBackLink href={basePath}>Quay lại</AppBackLink>}
-          />
-        )
+        <AppPageHeader
+          title="Tạo Lệnh sản xuất"
+          description="Tạo lệnh nháp từ một công thức đã duyệt."
+          breadcrumb={<AppBackLink href={basePath}>Quay lại</AppBackLink>}
+        />
       }
       footer={footer}
     >

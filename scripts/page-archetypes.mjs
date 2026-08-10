@@ -3,6 +3,9 @@
 // docs/spec/page-archetypes.md. Pure data — the enforcement gate lives in
 // scripts/check-ui-contract.mjs, which imports this map.
 export const PAGE_ARCHETYPES = {
+  // Internal design-system lab: a dev-only catalogue surface, not a product
+  // route. LANDING is the closest archetype (index of sections, no fetch).
+  "apps/web/app/(dev)/ds-lab/page.tsx": "LANDING",
   "apps/web/app/(protected)/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx":
     "SETTINGS-PANEL",
@@ -81,9 +84,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx":
-    "DOC-WORKFLOW",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx":
-    "LIST",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-requests/page.tsx":
@@ -285,17 +288,17 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/consumption/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -315,12 +318,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/grn/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/ingredients/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -345,7 +348,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -355,12 +358,12 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/production/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -400,7 +403,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stocktake/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -410,7 +413,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/suppliers/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -425,7 +428,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/transfers/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -457,7 +460,27 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": {
-    status: "tune",
+    // Gate exception: ADR 0018 D0 decision-card queue — not management-list DataTable.
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/finance/page.tsx": {
+    // Gate exception: DASHBOARD reading task stays width=wide (not LIST xwide).
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/finance/targets/page.tsx": {
+    // Gate exception: SETTINGS-PANEL list-like editor stays width=wide.
+    status: "keep",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx": {
+    // Gate exception: EMBED-WRAPPER shared staff-runtime body; Owner tab embeds
+    // intentionally; branch uses native /shift/checkout-approvals.
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -494,7 +517,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -530,3 +553,102 @@ export const PAGE_DISPOSITIONS = Object.fromEntries(
     },
   ]),
 );
+
+/**
+ * Control Surface Canonical Compose (page-archetypes.md § 1.1).
+ * Every control_surface page.tsx maps to exactly one compose shape.
+ * STAFF_EMBED covers /me/* and HR checkout-approvals embeds — not a
+ * management LIST/DETAIL/DOC shape.
+ */
+export const CONTROL_SURFACE_COMPOSE = {
+  "apps/web/app/(protected)/branches/page.tsx": "LIST",
+  "apps/web/app/(protected)/feedback/page.tsx": "LIST",
+  "apps/web/app/(protected)/feedback/qr/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/bank-transactions/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/expenses/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/food-cost/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/finance/invoices/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/finance/revenue/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/finance/supplier-invoices/page.tsx": "LIST",
+  "apps/web/app/(protected)/finance/targets/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/hr/attendance/checkout-approvals/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/hr/attendance/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/payroll/[periodId]/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/hr/payroll/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/setup/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/hr/staff/[id]/permissions/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/hr/staff/audit/page.tsx": "LIST",
+  "apps/web/app/(protected)/hr/staff/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/consumption/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/grn/new/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/ingredients/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/inventory/production/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/recipes/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/reports/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/inventory/settings/categories/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/settings/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/settings/thresholds/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/settings/units/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx": "DOC",
+  "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stocktake/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/inventory/stocktake/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/supplier-invoices/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/suppliers/[id]/items/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/suppliers/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/transfers/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/inventory/transfers/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/waste/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/me/clock/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/payslip/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/profile/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/schedule/leave/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/schedule/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/menu/page.tsx": "LIST",
+  "apps/web/app/(protected)/notifications/page.tsx": "LIST",
+  "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/settings/(tenant)/general/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/settings/activity/page.tsx": "LIST",
+  "apps/web/app/(protected)/settings/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/settings/printers/jobs/page.tsx": "LIST",
+  "apps/web/app/(protected)/settings/printers/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/settings/printers/templates/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/settings/security/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/settings/tracking/page.tsx": "DASHBOARD_REPORT",
+};
+
+export const CONTROL_SURFACE_COMPOSE_SHAPES = [
+  "LIST",
+  "DETAIL",
+  "DOC",
+  "DASHBOARD_REPORT",
+  "REDIRECT",
+  "STAFF_EMBED",
+];

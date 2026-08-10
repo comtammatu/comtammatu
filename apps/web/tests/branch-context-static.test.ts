@@ -132,7 +132,21 @@ test("selectBranchScope -> tenant-wide roles see every branch kind", () => {
     [1, 2, 10, 20],
   );
   assert.equal(scope.canSelectAll, true);
+  assert.equal(scope.scopeMode, "site");
   assert.equal(scope.selectedBranchId, 1);
+  assert.equal(scope.defaultBranchId, 1);
+});
+
+test("selectBranchScope -> requestAll sets scopeMode all for tenant-wide roles", () => {
+  const scope = selectBranchScope(
+    claims("owner", 1),
+    BRANCHES,
+    null,
+    ["owner"],
+    { requestAll: true },
+  );
+  assert.equal(scope.scopeMode, "all");
+  assert.equal(scope.selectedBranchId, null);
   assert.equal(scope.defaultBranchId, 1);
 });
 
@@ -220,9 +234,10 @@ test("parseBranchIdParam -> parses a single numeric value, rejects malformed/non
   assert.equal(parseBranchIdParam("-1"), null);
   assert.equal(parseBranchIdParam("abc"), null);
   assert.equal(parseBranchIdParam("1.5"), null);
+  assert.equal(parseBranchIdParam("all"), null);
 });
 
-test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) requesting the same branch resolve identically", () => {
+test("resolveListScope -> routeBranchId (embedded) and queryBranch (office) requesting the same branch resolve identically", () => {
   const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
   const embedded = resolveListScope({}, claims("owner", 1), BRANCHES, {
@@ -230,7 +245,7 @@ test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) re
     tenantWideRoles,
   });
   const office = resolveListScope({}, claims("owner", 1), BRANCHES, {
-    queryBranchId: "2",
+    queryBranch: "2",
     tenantWideRoles,
   });
 
@@ -251,7 +266,7 @@ test("resolveListScope -> routeBranchId (embedded) and queryBranchId (office) re
   );
 });
 
-test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope; queryBranchId never does", async () => {
+test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope; queryBranch never does", async () => {
   const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
   const embedded = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
@@ -262,19 +277,19 @@ test("resolveListScope -> routeBranchId outside the allowed set flags outOfScope
   assert.equal(embedded.outOfScope, true);
 
   const office = await resolveListScope({}, claims("cashier", 2), BRANCHES, {
-    queryBranchId: "1",
+    queryBranch: "1",
     tenantWideRoles,
   });
   assert.equal(office.selectedBranchId, 2);
   assert.equal(office.outOfScope, false);
 });
 
-test("resolveListScope -> routeBranchId always wins over a simultaneously-present queryBranchId", async () => {
+test("resolveListScope -> routeBranchId always wins over a simultaneously-present queryBranch", async () => {
   const tenantWideRoles: readonly JwtClaims["user_role"][] = ["owner"];
 
   const scope = await resolveListScope({}, claims("owner", null), BRANCHES, {
     routeBranchId: 10,
-    queryBranchId: "2",
+    queryBranch: "2",
     tenantWideRoles,
   });
 

@@ -36,9 +36,10 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   const invoiceActions = read(
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const invoiceClient = read(
-    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const invoiceClient = [
+    read("apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx"),
+    read("apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx"),
+  ].join("\n");
   const invoiceRow = read(
     "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );
@@ -47,7 +48,10 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
     "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
-  assert.match(financeCopy, /GTGT đầu vào & NCC/);
+  assert.match(financeCopy, /HĐ đầu vào/);
+  assert.match(financeCopy, /HĐ đầu ra/);
+  assert.doesNotMatch(financeCopy, /GTGT đầu vào & NCC/);
+  assert.doesNotMatch(financeCopy, /HĐĐT & GTGT đầu ra/);
   assert.match(financeCopy, /chưa mặc định được khấu trừ/);
   assert.match(invoiceClient, /recordSupplierPayment/);
   assert.match(invoiceClient, /copy\.invoiceLines/);

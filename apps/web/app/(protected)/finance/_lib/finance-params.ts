@@ -66,15 +66,6 @@ export type FinancePayment = (typeof FINANCE_PAYMENTS)[number];
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-const branchSchema = z
-  .string()
-  .optional()
-  .transform((v): number | null => {
-    if (!v || v === "all") return null;
-    const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  });
-
 const FINANCE_DEFAULTS = {
   location: "all" as FinanceLocation,
   range: "mtd" as FinanceRange,
@@ -83,9 +74,11 @@ const FINANCE_DEFAULTS = {
   payment: "all" as FinancePayment,
 } as const;
 
+const FINANCE_AGGREGATE_BRANCH = new Set(["all", "company", "branches"]);
+
 const financeParamsSchema = z.object({
-  location: z.enum(FINANCE_LOCATIONS).default(FINANCE_DEFAULTS.location),
-  branch: branchSchema,
+  location: z.enum(FINANCE_LOCATIONS).optional(),
+  branch: z.string().optional(),
   range: z.enum(FINANCE_RANGES).default(FINANCE_DEFAULTS.range),
   period: z.enum(FINANCE_CALENDAR_PERIODS).optional(),
   from: isoDate.optional(),
@@ -119,6 +112,32 @@ function pickFirst(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+function resolveFinanceLocationAndBranch(
+  rawBranch: string | undefined,
+  rawLocation: FinanceLocation | undefined,
+): { location: FinanceLocation; branch: number | null } {
+  // Unified Control Surface `?branch=` wins over legacy `location=`.
+  if (rawBranch && FINANCE_AGGREGATE_BRANCH.has(rawBranch)) {
+    return {
+      location: rawBranch as "all" | "company" | "branches",
+      branch: null,
+    };
+  }
+  if (rawBranch) {
+    const n = Number(rawBranch);
+    if (Number.isFinite(n) && n > 0) {
+      return { location: "branch", branch: n };
+    }
+  }
+  if (rawLocation === "company" || rawLocation === "branches") {
+    return { location: rawLocation, branch: null };
+  }
+  if (rawLocation === "branch") {
+    return { location: FINANCE_DEFAULTS.location, branch: null };
+  }
+  return { location: FINANCE_DEFAULTS.location, branch: null };
+}
+
 // Server Component & Client both call this — gives a typed object even
 // when the URL is mangled or empty. Falls back to defaults; never throws.
 export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
@@ -149,14 +168,12 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
       cashier: null,
     };
   }
-  const branch = parsed.data.branch;
+  const { location, branch } = resolveFinanceLocationAndBranch(
+    parsed.data.branch,
+    parsed.data.location,
+  );
   return {
-    location:
-      branch != null
-        ? "branch"
-        : parsed.data.location === "branch"
-          ? FINANCE_DEFAULTS.location
-          : parsed.data.location,
+    location,
     branch,
     range: parsed.data.range,
     period: parsed.data.period ?? null,
@@ -169,16 +186,31 @@ export function parseFinanceParams(input: FinanceParamsInput): FinanceParams {
   };
 }
 
+/** Map Finance params to unified Control Surface `?branch=` token. */
+export function financeParamsToBranchScope(
+  params: Pick<FinanceParams, "location" | "branch">,
+): "all" | "company" | "branches" | `${number}` {
+  if (params.location === "branch" && params.branch != null) {
+    return String(params.branch) as `${number}`;
+  }
+  if (params.location === "company" || params.location === "branches") {
+    return params.location;
+  }
+  return "all";
+}
+
 // Serialize back to URLSearchParams. Defaults are stripped so the URL
 // stays minimal — same input through parse→serialize→parse is idempotent
 // at the semantic level even if the literal string differs.
 export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
   const usp = new URLSearchParams();
-  if (p.location !== FINANCE_DEFAULTS.location && p.location !== "branch") {
-    usp.set("location", p.location);
-  }
+  // Prefer unified `branch=` token; keep `location=` only for company/branches
+  // during dual-read so older bookmarks still round-trip.
   if (p.location === "branch" && p.branch != null) {
     usp.set("branch", String(p.branch));
+  } else if (p.location === "company" || p.location === "branches") {
+    usp.set("branch", p.location);
+    usp.set("location", p.location);
   }
   if (p.range !== FINANCE_DEFAULTS.range) usp.set("range", p.range);
   if (p.range === "custom") {

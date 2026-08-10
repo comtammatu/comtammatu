@@ -4,12 +4,15 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
 const DATA_TABLE = "apps/web/app/components/data-table/data-table.tsx";
-const SURFACE = "apps/web/app/components/surface.tsx";
+const SURFACE_TOOLBAR = "apps/web/app/components/surface/app-toolbar.tsx";
+const SURFACE_PAGE_HEADER =
+  "apps/web/app/components/surface/app-page-header.tsx";
 const PACKAGE_JSON = "package.json";
 const UI_AUDIT = "scripts/audit-ui-components.mjs";
 const UI_CONTRACT = "scripts/check-ui-contract.mjs";
@@ -30,11 +33,12 @@ const BRANCHES_PAGE = "apps/web/app/(protected)/branches/page.tsx";
 const BRANCH_TABLE = "apps/web/app/(protected)/branches/branch-table.tsx";
 const PRINT_JOBS =
   "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
-const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/page.tsx";
+const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/permission-audit-client.tsx";
 const STAFF_AUDIT_TABLE =
   "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx";
 const HR_DATA_TABLE_FILES = [
-  "apps/web/app/(protected)/hr/attendance-table.tsx",
+  "apps/web/app/(protected)/hr/attendance/attendance-detail-view.tsx",
+  "apps/web/app/(protected)/hr/attendance/attendance-list-chrome.tsx",
   "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   "apps/web/app/(protected)/hr/employee-table.tsx",
   "apps/web/app/(protected)/hr/shifts-table.tsx",
@@ -140,7 +144,7 @@ function hasUiContractGuard(source: string, guardId: string): boolean {
 
 test("DataTable renders the toolbar contract it exposes", () => {
   const dataTable = read(DATA_TABLE);
-  const surface = read(SURFACE);
+  const surface = read(SURFACE_TOOLBAR);
 
   assert.match(dataTable, /@comtammatu\/ui\/components\/input-group/);
   assert.match(
@@ -183,10 +187,10 @@ test("Input variants own height and InputGroup owns child chrome", () => {
 });
 
 test("shared recovery navigation owns touch targets and focus visibility", () => {
-  const surface = read(SURFACE);
+  const surface = read(SURFACE_PAGE_HEADER);
   const globalError = read(GLOBAL_ERROR);
   const backLinkStart = surface.indexOf("export function AppBackLink");
-  const backLinkEnd = surface.indexOf("type AppSectionTone", backLinkStart);
+  const backLinkEnd = surface.length;
   const backLink = surface.slice(backLinkStart, backLinkEnd);
 
   assert.match(backLink, /<Button/);
@@ -209,14 +213,14 @@ test("Owner monitors use DataTable while the branch launcher keeps a responsive,
   assert.match(branchLauncher, /filtered\.map\(\(branch\) =>/);
   assert.match(
     branchLauncher,
-    /grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3/,
+    /grid grid-cols-1 gap-3(?: p-3)? md:grid-cols-2 xl:grid-cols-3/,
   );
   assert.match(branchLauncher, /resolveSiteKind\(branch\)/);
   assert.match(branchLauncher, /\.\.\.\(isActive && isBranchSite/);
   assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}\/dashboard`\}/);
   assert.match(
     branchLauncher,
-    /href=\{`\/inventory\?branchId=\$\{branch\.id\}`\}/,
+    /href=\{`\/inventory\?branch=\$\{branch\.id\}`\}/,
   );
   assert.match(branchLauncher, /copy\.openBranch\.short/);
   assert.match(branchLauncher, /copy\.openBranch\.long/);
@@ -242,9 +246,7 @@ test("Print job monitor keeps owner recovery filter through DataTable filters", 
   const source = read(PRINT_JOBS);
 
   assert.match(source, /PRINT_JOB_ATTENTION_STATUS = "needs_attention"/);
-  assert.match(source, /filters=\{filters\}/);
-  assert.match(source, /filterValues=\{\{/);
-  assert.match(source, /onFilterChange=\{\(key, value\) =>/);
+  assert.match(source, /filters=\{filterSelects\}/);
   assert.match(source, /retryJobFromMonitor/);
 });
 
@@ -316,10 +318,10 @@ test("UI contract guard protects Má Tư outcomes and the Base UI boundary", () 
     );
   }
 
-  assert.match(designSystem, /High-level shared-component import governance/);
+  assert.match(designSystem, /Machine-owned enforcement and discovery/);
   assert.match(
     designSystem,
-    /Shadcn and Web Interface Guidelines are explicit comparison inputs/,
+    /Shadcn and the Web Interface Guidelines are\s+comparison inputs/,
   );
   assert.match(designSystem, /scripts\/check-ui-contract\.mjs/);
   assert.match(designSystem, /scripts\/ui-component-registry\.mjs/);
@@ -691,7 +693,6 @@ test("UI component registry classifies and explains every shared component and a
     "AppPage",
     "DataTable",
     "DocumentFormFrame",
-    "InventoryListFrame",
     "FormDialog",
     "ReasonConfirmDialog",
     "PwaInstallHelpDialog",
@@ -708,12 +709,6 @@ test("UI component registry classifies and explains every shared component and a
   );
   assert.deepEqual(
     registryModule.findComponentGuidance("KpiCard").map((entry) => entry.layer),
-    ["app-adapter"],
-  );
-  assert.deepEqual(
-    registryModule
-      .findComponentGuidance("InventoryListFrame")
-      .map((entry) => entry.layer),
     ["app-adapter"],
   );
   assert.deepEqual(
@@ -736,7 +731,7 @@ test("UI component registry classifies and explains every shared component and a
   );
   assert.match(
     registryModule.findComponentGuidance("management-list")[0]?.use ?? "",
-    /InventoryListFrame/,
+    /AppListFrame/,
   );
   assert.deepEqual(
     registryModule
@@ -777,7 +772,7 @@ test("UI component registry classifies and explains every shared component and a
   assert.equal(cardGuidance.status, 0, cardGuidance.stderr);
   assert.match(cardGuidance.stdout, /# UI Artifact Guidance/);
   assert.match(cardGuidance.stdout, /surface framing internals/);
-  assert.match(cardGuidance.stdout, /AppSection, AppLinkCard, KpiCard/);
+  assert.match(cardGuidance.stdout, /AppSection, StationSection, PublicSection/);
 
   const inputGuidance = spawnSync(
     process.execPath,
@@ -816,13 +811,21 @@ test("HR list surfaces use DataTable and shared status badge domains", () => {
   }
 
   for (const file of [
-    "apps/web/app/(protected)/hr/attendance-table.tsx",
     "apps/web/app/(protected)/hr/leave-requests-table.tsx",
   ]) {
     const source = read(file);
     assert.match(source, /@\/components\/status-badge/);
     assert.doesNotMatch(source, /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*/);
   }
+
+  const attendanceModules = readAttendanceTableModules(
+    resolve(repoRoot, "apps/web"),
+  );
+  assert.match(attendanceModules, /@\/components\/status-badge/);
+  assert.doesNotMatch(
+    attendanceModules,
+    /\bconst\s+[A-Z0-9_]*STATUS[A-Z0-9_]*/,
+  );
 
   const payrollList = read(
     "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",

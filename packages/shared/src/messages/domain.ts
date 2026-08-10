@@ -21,8 +21,10 @@ export const BRANCH_VI = {
   long: "Chi nhánh",
   acronym: "CN",
   select: "Chọn chi nhánh",
+  selectScope: "Chọn phạm vi",
   selectAll: "Tất cả chi nhánh",
-  scope: "Phạm vi chi nhánh",
+  selectAllSites: "Tất cả",
+  scope: "Phạm vi",
 } as const;
 export type BranchKey = keyof typeof BRANCH_VI;
 

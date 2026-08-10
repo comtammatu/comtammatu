@@ -27,7 +27,11 @@ const BATCH_A = [
 
 test("Wave 1 batch A inventory LIST surfaces wire three doors from one RowActionItem[]", () => {
   for (const surface of BATCH_A) {
-    const source = read(surface.path);
+    const source =
+      surface.name === "issues"
+        ? read(surface.path) +
+          read("app/(protected)/inventory/issues/issue-list-chrome.tsx")
+        : read(surface.path);
 
     assert.match(
       source,

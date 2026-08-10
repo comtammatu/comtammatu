@@ -95,9 +95,9 @@ export function KpiCard({
       >
         {label}
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-sm whitespace-normal">
+      <TooltipContent side="top" className="max-w-sm whitespace-pre-line">
         {typeof labelTooltip === "string" ? (
-          <p className="break-words">{labelTooltip}</p>
+          <p className="whitespace-pre-line break-words">{labelTooltip}</p>
         ) : (
           labelTooltip
         )}

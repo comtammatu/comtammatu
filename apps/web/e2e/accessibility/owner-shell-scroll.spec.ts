@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /**
  * Owner inset scroll contract (design-system Structural Governance):
- * document/body stay viewport-bounded; only `[data-owner-shell-scroll]` scrolls;
+ * document/body stay viewport-bounded; only `[data-control-surface-scroll]` scrolls;
  * AppPageHeader (and LIST filter chrome) sticks inside that scrollport.
  */
 
@@ -29,7 +29,7 @@ async function settle(page: Page) {
     );
   }
 
-  await page.locator("[data-owner-shell-scroll]").waitFor({
+  await page.locator("[data-control-surface-scroll]").waitFor({
     state: "visible",
     timeout: 15_000,
   });
@@ -55,7 +55,7 @@ test.describe("Owner shell inset scroll model", () => {
 
       const metrics = await page.evaluate(() => {
         const scrollport = document.querySelector(
-          "[data-owner-shell-scroll]",
+          "[data-control-surface-scroll]",
         ) as HTMLElement | null;
         const doc = document.documentElement;
         return {
@@ -94,12 +94,12 @@ test.describe("Owner shell inset scroll model", () => {
       expect(metrics.headerSticky).toBe(true);
 
       if (metrics.scrollportScrollHeight > metrics.scrollportClientHeight + 8) {
-        await page.locator("[data-owner-shell-scroll]").evaluate((el) => {
+        await page.locator("[data-control-surface-scroll]").evaluate((el) => {
           el.scrollTop = Math.min(240, el.scrollHeight);
         });
         const after = await page.evaluate(() => {
           const scrollport = document.querySelector(
-            "[data-owner-shell-scroll]",
+            "[data-control-surface-scroll]",
           ) as HTMLElement;
           return {
             scrollportScrollTop: scrollport.scrollTop,
@@ -122,7 +122,7 @@ test.describe("Owner shell inset scroll model", () => {
 
       const metrics = await page.evaluate(() => {
         const scrollport = document.querySelector(
-          "[data-owner-shell-scroll]",
+          "[data-control-surface-scroll]",
         ) as HTMLElement | null;
         const h1 = document.querySelector("#main-content h1");
         if (!scrollport || !h1) {

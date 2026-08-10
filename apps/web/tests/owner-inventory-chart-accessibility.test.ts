@@ -6,7 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   SimpleBarChart,
-  TrendSparkline,
+  TargetTrendSparkline,
 } from "../app/(protected)/inventory/_lib/chart-primitives";
 
 const root = process.cwd();
@@ -43,7 +43,7 @@ test("inventory bar chart exposes its name and labeled values", () => {
 
 test("inventory trend chart describes every labeled point and its target", () => {
   const markup = renderToStaticMarkup(
-    createElement(TrendSparkline, {
+    createElement(TargetTrendSparkline, {
       ariaLabel: "Xu hướng giá vốn món",
       formatValue: (value: number) => `${value}%`,
       data: [
@@ -80,7 +80,7 @@ test("owner inventory reports supply meaningful chart labels and formatters", ()
   );
   assert.match(
     client,
-    /<TrendSparkline[\s\S]*ariaLabel=\{messages\.inventory\.reports\.foodCostTrend\}[\s\S]*formatValue=\{formatPercent\}[\s\S]*targetDescription=\{messages\.inventory\.reports\.foodCostTarget\}/,
+    /<TargetTrendSparkline[\s\S]*ariaLabel=\{messages\.inventory\.reports\.foodCostTrend\}[\s\S]*formatValue=\{formatPercent\}[\s\S]*targetDescription=\{messages\.inventory\.reports\.foodCostTarget\}/,
   );
   assert.match(
     page,

@@ -16,7 +16,7 @@ const DEFAULT_LIMIT = 60;
 const ROUTE_FAMILIES = [
   ["self-service", (file) => file.includes("/(protected)/me/")],
   [
-    "owner",
+    "control_surface",
     (file) =>
       file === "apps/web/app/(protected)/page.tsx" ||
       file.includes("/(protected)/settings/") ||
@@ -62,7 +62,8 @@ const ROUTE_FAMILIES = [
   ["orders", (file) => file.includes("/(protected)/orders/")],
   ["public", (file) => file.includes("/(public)/")],
   ["self-order", (file) => file.includes("/app/q/")],
-  ["runner-display", (file) => file.includes("/app/r/")],
+  // Guest feedback QR tokens live at /r/[token] (public), not runner station.
+  ["public-feedback", (file) => file.includes("/app/r/")],
   [
     "public-system",
     (file) =>
@@ -73,6 +74,7 @@ const ROUTE_FAMILIES = [
       file === "apps/web/app/loading.tsx" ||
       file === "apps/web/app/not-found.tsx",
   ],
+  ["ds-lab", (file) => file.includes("/app/(dev)/ds-lab/")],
   ["shared-components", (file) => file.includes("/app/components/")],
   [
     "shared-app",

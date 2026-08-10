@@ -82,9 +82,10 @@ function rewriteInventoryBranchStockPathForL0(
 
   const withBranch = (path: string): string => {
     const joiner = path.includes("?") ? "&" : "?";
-    const branchQuery = `branchId=${branchId}`;
+    const branchQuery = `branch=${branchId}`;
     // Prefer explicit branch scope on L0 list/detail when not already present.
-    if (new URLSearchParams(qs).has("branchId")) {
+    const existing = new URLSearchParams(qs);
+    if (existing.has("branch") || existing.has("branchId")) {
       return `${path}${qs}${hash}`;
     }
     return `${path}${qs ? `${qs}&${branchQuery}` : `${joiner}${branchQuery}`}${hash}`;

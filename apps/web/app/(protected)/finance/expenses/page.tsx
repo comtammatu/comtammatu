@@ -49,7 +49,6 @@ export default async function ExpensesPage({
       <AppPage width="xwide" density="compact">
         <AppPageHeader
           title={copy.page.title}
-          description={copy.page.description}
           meta={messages.finance.basic.periodMeta(resolved.start, resolved.end)}
         />
         <AppEmptyState

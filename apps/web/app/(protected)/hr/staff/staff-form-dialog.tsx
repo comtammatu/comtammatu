@@ -85,7 +85,7 @@ export function StaffFormDialog({
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const schema = useMemo(() => staffSchemaForMode(isEdit), [isEdit]);
   const defaultValues = useMemo(() => toFormValues(staff), [staff]);
-  const copy = messages.owner.staffForm;
+  const copy = messages.controlSurface.staffForm;
 
   async function handleSubmit(values: StaffFormValues) {
     const requiredBranchKind = requiredBranchKindForPositionCode(
@@ -177,7 +177,7 @@ export function StaffFormDialog({
                   name="password"
                   label="Mật khẩu"
                   type="password"
-                  placeholder={messages.owner.staffForm.passwordPlaceholder}
+                  placeholder={messages.controlSurface.staffForm.passwordPlaceholder}
                   required
                 />
               </FieldSet>
@@ -189,7 +189,7 @@ export function StaffFormDialog({
                 control={form.control}
                 name="full_name"
                 label="Họ tên"
-                placeholder={messages.owner.staffForm.fullNamePlaceholder}
+                placeholder={messages.controlSurface.staffForm.fullNamePlaceholder}
                 required
               />
 
@@ -206,7 +206,7 @@ export function StaffFormDialog({
                 name="position_code"
                 label="Chức vụ"
                 options={positionOptions}
-                placeholder={messages.owner.staffForm.rolePlaceholder}
+                placeholder={messages.controlSurface.staffForm.rolePlaceholder}
                 required
               />
 
@@ -217,13 +217,13 @@ export function StaffFormDialog({
                 options={branchOptions}
                 placeholder={
                   isSiteOptional
-                    ? messages.owner.staffForm.branchNotApplicable
-                    : messages.owner.staffForm.branchPlaceholder
+                    ? messages.controlSurface.staffForm.branchNotApplicable
+                    : messages.controlSurface.staffForm.branchPlaceholder
                 }
                 disabled={isSiteOptional}
                 description={
                   !isSiteOptional
-                    ? messages.owner.staffForm.branchDescription
+                    ? messages.controlSurface.staffForm.branchDescription
                     : undefined
                 }
               />

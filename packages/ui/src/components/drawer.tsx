@@ -42,7 +42,7 @@ function DrawerOverlay({
     <DrawerPrimitive.Backdrop
       data-slot="drawer-overlay"
       className={cn(
-        "fixed inset-0 z-50 drawer-scrim data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[ending-style]:animate-out data-[ending-style]:fade-out-0",
+        "fixed inset-0 z-50 drawer-scrim transition-opacity duration-[var(--motion-fast)] ease-[var(--ease-move)] data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
         className,
       )}
       {...props}
@@ -67,7 +67,7 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            "group/drawer-content fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-dvh-80 flex-col overflow-hidden overscroll-contain bg-transparent p-2 text-xs/relaxed text-popover-foreground before:pointer-events-none before:absolute before:inset-2 before:bottom-0 before:-z-10 before:rounded-t-lg before:rounded-b-none before:border before:border-border before:bg-popover before:shadow-effect-drawer motion-reduce:animate-none motion-reduce:transition-none",
+            "group/drawer-content fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-dvh-80 flex-col overflow-hidden overscroll-contain bg-transparent p-2 text-xs/relaxed text-popover-foreground before:pointer-events-none before:absolute before:inset-2 before:bottom-0 before:-z-10 before:rounded-t-lg before:rounded-b-none before:border before:border-border before:bg-popover before:shadow-effect-drawer transition-[opacity,transform] duration-[var(--motion-drawer)] ease-[var(--ease-move)] data-[starting-style]:translate-y-full data-[starting-style]:opacity-0 data-[ending-style]:translate-y-full data-[ending-style]:opacity-0",
             responsiveFullscreen &&
               "mt-0 h-dvh max-h-dvh p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-t-lg sm:before:rounded-b-none sm:before:border sm:before:bg-popover",
             className,

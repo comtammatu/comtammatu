@@ -11,7 +11,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppSection } from "@/components/surface";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { setBranchStockOutcomePosting } from "./actions";
 
@@ -77,8 +77,8 @@ export function StockControlCard({
   if (embedded) return content;
 
   return (
-    <AppSection title={copy.stockControlTitle} size="sm">
+    <BranchOperatorPanel title={copy.stockControlTitle} size="sm">
       {content}
-    </AppSection>
+    </BranchOperatorPanel>
   );
 }

@@ -32,7 +32,7 @@ export const finance = {
     methodFix: "Sửa phương thức",
     methodFixDialogTitle: "Sửa phương thức thanh toán",
     methodFixWarning:
-      "Đồng bộ thanh toán, đơn và dự thu ca. Đổi sang VietQR phải đối soát NH; đã có bằng chứng NH thì không đổi sang tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
+      "Đồng bộ thanh toán, đơn và dự thu ca. Đổi sang VietQR phải khớp trên Giao dịch; đã có bằng chứng NH thì không đổi sang tiền mặt. Không ảnh hưởng HĐĐT đã phát hành.",
     methodFixNewLabel: "Phương thức đúng",
     methodFixReasonLabel: (min: number) => `Lý do sửa (tối thiểu ${min} ký tự)`,
     methodFixReasonPlaceholder:
@@ -78,6 +78,19 @@ export const finance = {
     open: "Mở",
     backToFinance: "Quay lại Tài chính",
     reportError: "Lỗi tạo báo cáo.",
+    /** Shared LIST status / filter labels — use everywhere on finance lists. */
+    status: {
+      needsAction: "Cần xử lý",
+      unmatched: "Chưa khớp",
+      matched: "Đã khớp",
+      unpaid: "Chưa trả",
+      paid: "Đã trả",
+      partial: "Trả một phần",
+    },
+    detailLink: "Chi tiết",
+    retry: "Thử lại",
+    errorWhereWhatNext: (where: string, what: string, next: string) =>
+      `${where}: ${what}. ${next}`,
   },
   /** Layer A VAT-core labels — use across expenses, HĐ NCC, bank match. */
   moneyLabels: {
@@ -116,7 +129,7 @@ export const finance = {
     inventoryCashTitle: "Giá trị tồn kho",
     inventoryCashDescription: "Tồn hiện tại và nguyên liệu giữ nhiều vốn.",
     expenseTitle: "Chi phí",
-    expenseDescription: "Chi phí đã ghi trong kỳ · không gồm giá vốn món.",
+    expenseDescription: "Chi phí đã ghi trong kỳ. Không gồm giá vốn món.",
     stageTitle: "Mức báo cáo đang dùng",
     inventoryTitle: "Tiền đang nằm trong kho",
     inventoryDescription: "Nguyên liệu giữ nhiều vốn nhất theo tồn hiện tại.",
@@ -171,7 +184,7 @@ export const finance = {
       cashVarianceLabel: "Lệch tiền mặt",
       cashVarianceClosedSessions: (count: string) => `${count} ca chưa xử lý`,
       cashVarianceNoClosedSession: "Không còn ca lệch cần xử lý",
-      bankReconciliationLabel: "Đối soát NH",
+      bankReconciliationLabel: "Giao dịch",
       bankReconciliationValue: (items: string) => `${items} việc`,
       bankReconciliationHint: (
         transactions: string,
@@ -219,7 +232,7 @@ export const finance = {
     },
     kpis: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá · chưa thuế GTGT",
+      netRevenueHint: "Giá món trừ giảm giá. Chưa gồm thuế GTGT.",
       ingredientCost: "Giá vốn món",
       ingredientCostHint: (covered: string, total: string) =>
         `${covered}/${total} đơn có giá vốn`,
@@ -228,20 +241,21 @@ export const finance = {
       grossProfitHint: (margin: string) => `Biên gộp ${margin}`,
       grossProfitMissingHint: "Cần đủ giá vốn món",
       operatingExpense: "Chi phí",
-      operatingExpenseHint: "Thuê, điện, lương… · chưa thuế GTGT",
+      operatingExpenseHint: "Thuê, điện, lương… Chưa gồm thuế GTGT.",
       inventoryChange: "Biến động tồn kho",
-      inventoryChangeHint: "Tồn cuối kỳ − tồn đầu kỳ",
+      inventoryChangeHint: "Tồn cuối kỳ trừ tồn đầu kỳ.",
       operatingResult: "Kết quả kinh doanh",
       operatingResultHint:
-        "Lợi nhuận gộp − chi vận hành + biến động tồn kho",
-      operatingResultHintWithoutInventory: "Lợi nhuận gộp − chi phí vận hành",
+        "Lợi nhuận gộp trừ chi vận hành, cộng biến động tồn kho.",
+      operatingResultHintWithoutInventory: "Lợi nhuận gộp trừ chi phí vận hành.",
       notCalculated: "Chưa tính",
       notRecorded: "Chưa ghi nhận",
       inventoryClosingValue: "Giá trị tồn kho cuối kỳ",
       inventoryValueHint: (opening: string) => `Đầu kỳ ${opening}`,
       inventoryOpeningCompare: "so với tồn đầu kỳ",
       vatInput: "Đầu vào",
-      vatInputHint: "Hóa đơn NCC + chi vận hành · chưa mặc định được khấu trừ.",
+      vatInputHint:
+        "Hóa đơn NCC và chi vận hành. Chưa mặc định được khấu trừ thuế.",
       vatOutput: "Đầu ra",
       vatUnavailable: "Không tải được dữ liệu",
       cashOnHand: "Tiền mặt",
@@ -263,10 +277,10 @@ export const finance = {
       finance: "Tài chính",
       todayMoney: "Tổng quan",
       revenue: "Doanh thu",
-      bankTransactions: "Đối soát NH",
+      bankTransactions: "Giao dịch",
       expenses: "Chi phí",
-      supplierPayables: "GTGT đầu vào",
-      invoices: "HĐĐT",
+      supplierPayables: "HĐ đầu vào",
+      invoices: "HĐ đầu ra",
       foodCost: "Giá vốn món",
       revenueTargets: "Chỉ tiêu",
     },
@@ -274,8 +288,9 @@ export const finance = {
   revenueTargets: {
     page: {
       title: "Chỉ tiêu tháng",
-      description:
-        "Một chỉ tiêu/tháng theo chi nhánh · Doanh thu thuần (sau giảm giá, chưa GTGT).",
+      description: "Một chỉ tiêu mỗi tháng theo chi nhánh. Theo doanh thu thuần.",
+      detailExplanation:
+        "Doanh thu thuần sau giảm giá, chưa gồm GTGT. Chỉ tiêu theo từng chi nhánh trong tháng.",
     },
     monthLabel: "Tháng",
     applyMonth: "Áp dụng",
@@ -360,7 +375,7 @@ export const finance = {
       rank: "Hạng",
       paceChartTitle: "Nhịp chỉ tiêu trong tháng",
       paceChartDescription:
-        "Doanh thu thuần lũy kế so với nhịp chỉ tiêu tuyến tính.",
+        "Doanh thu thuần đã cộng dồn so với mức chỉ tiêu theo ngày trong tháng.",
       paceActual: "Thực tế lũy kế",
       paceTarget: "Nhịp chỉ tiêu",
       netRevenueProgressHint: (pctLabel: string) =>
@@ -371,18 +386,21 @@ export const finance = {
     page: {
       eyebrow: "Tài chính",
       title: "Chi phí",
-      description: "Không ghi mua thiết bị/TSCĐ vào đây.",
+      description: "Chi vận hành trong kỳ. Không ghi mua TSCĐ vào đây.",
+      detailExplanation:
+        "Chỉ ghi chi phí vận hành. Không ghi mua thiết bị/TSCĐ vào đây — dùng luồng tài sản cố định.",
     },
     add: "Thêm khoản chi",
     listTitle: "Sổ chi phí",
-    totalLabel: "Tổng chi phí trong kỳ",
-    totalHint: (count: string) => `${count} khoản · chưa thuế GTGT`,
+    totalLabel: "Tổng chi trong kỳ",
+    totalHint: (count: string) => `${count} khoản, đã gồm GTGT`,
     needsActionLabel: "Cần xử lý",
     needsActionHint: (count: string) =>
       `${count} khoản chưa trả hoặc chờ khớp NH`,
     needsActionFilter: "Cần xử lý",
-    loadErrorTitle: "Không thể tải sổ chi phí",
-    loadErrorDescription: "Không tải được số liệu kỳ này. Thử tải lại.",
+    loadErrorTitle: "Không tải được sổ chi phí",
+    loadErrorDescription:
+      "Sổ chi phí: không tải được số liệu kỳ này. Thử tải lại trang.",
     tenantLevel: "Công ty",
     empty: {
       title: "Chưa có khoản chi trong kỳ",
@@ -488,7 +506,7 @@ export const finance = {
       cogs_manual: "Điều chỉnh giá vốn món",
       supplies: "Vật tư tiêu hao / công cụ nhỏ",
       repair: "Sửa chữa / bảo trì",
-      marketing: "Marketing / khuyến mãi",
+      marketing: "Quảng cáo / khuyến mãi",
       fees_tax: "Phí ngân hàng / thuế",
       hospitality: "Tiếp khách",
       bank_deposit: "Nộp tiền mặt vào NH",
@@ -502,12 +520,15 @@ export const finance = {
   },
   supplierInvoicesPage: {
     eyebrow: "Tài chính",
-    title: "GTGT đầu vào & NCC",
-    description: "GTGT theo chứng từ · chưa mặc định được khấu trừ.",
+    title: "HĐ đầu vào",
+    description: "Hóa đơn NCC, công nợ và thuế GTGT.",
+    detailExplanation:
+      "Thuế GTGT theo chứng từ mua vào; chưa mặc định được khấu trừ. Theo dõi công nợ và thanh toán NCC tại đây.",
     noAccessTitle: "Không có quyền xem hóa đơn NCC",
     noAccessDescription: "Cần quyền xem đơn mua và NCC.",
-    loadErrorTitle: "Không thể tải hóa đơn NCC",
-    loadErrorDescription: "Không tải được hóa đơn/công nợ. Thử tải lại.",
+    loadErrorTitle: "Không tải được hóa đơn NCC",
+    loadErrorDescription:
+      "Hóa đơn NCC: không tải được chứng từ/công nợ. Thử tải lại trang.",
     notFoundTitle: "Không tìm thấy hóa đơn NCC",
     notFoundDescription: "Hóa đơn không tồn tại hoặc ngoài phạm vi chi nhánh.",
   },
@@ -527,7 +548,12 @@ export const finance = {
       cashOut: string,
       adjustments: string,
     ) =>
-      `Tiền mặt: ${opening} + thu ${cashIn} − chi ${cashOut} + điều chỉnh ${adjustments}`,
+      [
+        `Số dư đầu: ${opening}`,
+        `+ Thu: ${cashIn}`,
+        `− Chi: ${cashOut}`,
+        `+ Điều chỉnh: ${adjustments}`,
+      ].join("\n"),
     bankTitle: "Ngân hàng cả quán",
     bankTransactionsAction: "Giao dịch",
     bankBreakdown: (
@@ -536,7 +562,12 @@ export const finance = {
       bankOut: string,
       adjustments: string,
     ) =>
-      `Tài khoản: ${opening} + vào ${bankIn} − ra ${bankOut} + điều chỉnh ${adjustments}`,
+      [
+        `Số dư đầu: ${opening}`,
+        `+ Vào: ${bankIn}`,
+        `− Ra: ${bankOut}`,
+        `+ Điều chỉnh: ${adjustments}`,
+      ].join("\n"),
     openingTitle: "Nhập số dư đầu",
     openingDescription:
       "Chỉ ghi một lần. Sau này chỉ điều chỉnh, không sửa số này.",
@@ -589,37 +620,45 @@ export const finance = {
   },
   bankTransactions: {
     eyebrow: "Tài chính",
-    title: "Đối soát NH",
-    description: "Sao kê SePay và VietQR thiếu bằng chứng NH.",
+    title: "Giao dịch",
+    description: "Sao kê SePay. Khớp với chứng từ thanh toán và chi.",
+    detailExplanation:
+      "Đối chiếu sao kê với VietQR, chi phí và trả NCC. Giao dịch đã có không bị nhập trùng.",
     importAction: "Nhập file SePay",
     importTitle: "Nhập lịch sử giao dịch SePay",
-    importDescription: "CSV từ SePay. Giao dịch đã có không bị cộng lại.",
-    importFileLabel: "File CSV SePay",
+    importDescription: "Tệp CSV từ SePay. Giao dịch đã có không bị cộng lại.",
+    importFileLabel: "Tệp CSV SePay",
     importHint: "Tối đa 5.000 giao dịch mỗi lần nhập.",
     importSubmit: "Nhập giao dịch",
     importPending: "Đang nhập",
     importSuccess: (inserted: number, existing: number) =>
       `Đã thêm ${inserted} giao dịch; ${existing} giao dịch đã có.`,
+    importRowError: (row: number, reason: string) =>
+      `Dòng ${row}: ${reason}. Sửa CSV rồi nhập lại.`,
+    loadErrorTitle: "Không tải được giao dịch",
+    loadErrorDescription:
+      "Giao dịch: không tải được sao kê kỳ này. Thử tải lại trang.",
     reconciliation: {
       matched: "Đã khớp",
       matchedHint:
         "Đã nối vào đơn hàng, khoản chi, khoản trả NCC hoặc hoàn tiền.",
-      needsReview: "Cần rà soát",
+      needsReview: "Cần xử lý",
       needsReviewHint: (
         amount: string,
         bankCount: string,
         paymentCount: string,
       ) => `${amount} · ${bankCount} giao dịch NH + ${paymentCount} thanh toán`,
-      unmatchedMoneyIn: "Tiền vào chưa gắn đơn",
-      unmatchedMoneyInHint: (count: string) => `${count} giao dịch chưa khớp`,
-      missingBankWebhook: "Chưa có bằng chứng ngân hàng",
+      unmatchedMoneyIn: "Chưa khớp",
+      unmatchedMoneyInHint: (count: string) => `${count} tiền vào chưa gắn đơn`,
+      missingBankWebhook: "Thiếu bằng chứng NH",
       missingBankWebhookHint: (count: string, checked: string, open: string) =>
         `${open} cần xử lý · ${count}/${checked} thiếu sao kê`,
-      unmatchedMoneyOut: "Chưa gắn chứng từ",
-      unmatchedMoneyOutHint: (count: string) => `${count} giao dịch chưa khớp`,
+      unmatchedMoneyOut: "Chưa khớp",
+      unmatchedMoneyOutHint: (count: string) =>
+        `${count} tiền ra chưa gắn chứng từ`,
     },
     table: {
-      time: "Thời gian",
+      date: "Ngày",
       amount: "Số tiền",
       status: "Trạng thái",
       content: "Nội dung",
@@ -628,7 +667,7 @@ export const finance = {
     },
     filters: {
       label: "Lọc",
-      placeholder: "Lọc đối soát",
+      placeholder: "Lọc giao dịch",
       all: "Tất cả",
       needsReview: "Cần xử lý",
       moneyInReview: "Tiền vào",
@@ -638,7 +677,7 @@ export const finance = {
       webhookError: "Lỗi đồng bộ",
     },
     queueCount: (count: string) => `${count} cần xử lý`,
-    queueEmptyTitle: "Không còn việc đối soát cần xử lý",
+    queueEmptyTitle: "Không còn việc cần xử lý",
     queueEmptyDescription:
       "Mở Tất cả để xem lịch sử hoặc Lỗi đồng bộ để kiểm tra sự cố.",
     filteredEmptyTitle: "Không có giao dịch theo bộ lọc",
@@ -690,7 +729,7 @@ export const finance = {
       linkError: "Không thể gắn giao dịch với thanh toán VietQR.",
       cashDepositTitle: "Nộp tiền mặt vào tài khoản",
       cashDepositDescription:
-        "Sao kê này là tiền mặt nộp vào NH · không phải chi phí vận hành.",
+        "Sao kê này là tiền mặt nộp vào ngân hàng. Không phải chi phí vận hành.",
       cashDepositAction: "Nộp tiền mặt",
       cashDepositPending: "Đang ghi nhận",
       cashDepositConfirmTitle: "Xác nhận nộp tiền mặt?",
@@ -723,9 +762,9 @@ export const finance = {
       emptyTitle: "Không còn thanh toán thiếu bằng chứng",
       emptyDescription: "Trống khi mọi VietQR gần nhất đã có sao kê NH.",
     },
-    listTitle: "Đối soát NH",
-    emptyTitle: "Chưa có dữ liệu đối soát",
-    emptyDescription: "Sao kê SePay và VietQR thiếu bằng chứng hiện ở đây.",
+    listTitle: "Giao dịch",
+    emptyTitle: "Chưa có dữ liệu giao dịch",
+    emptyDescription: "Nhập sao kê SePay hoặc đợi VietQR thiếu bằng chứng.",
     reconciliationStatus: "Trạng thái",
     reconciliationStateLabels: {
       matched: "Đã khớp",
@@ -947,7 +986,7 @@ export const finance = {
     },
     kpi: {
       netRevenue: "Doanh thu thuần",
-      netRevenueHint: "Giá món − giảm giá · chưa thuế GTGT",
+      netRevenueHint: "Giá món trừ giảm giá. Chưa gồm thuế GTGT.",
       orderCount: "Số đơn hoàn thành",
       orderCountHint: "Đơn đã thanh toán trong kỳ",
       aovOrder: "Bình quân/đơn",
@@ -992,7 +1031,7 @@ export const finance = {
     },
     cashierTable: {
       title: "Năng suất thu ngân",
-      description: "Thu ngân có doanh thu thuần cao nhất · đối chiếu lệch quỹ.",
+      description: "Thu ngân có doanh thu thuần cao nhất. Đối chiếu lệch quỹ.",
       tooLargeRange: "Khoảng > 90 ngày — chọn nhỏ hơn để xem theo thu ngân.",
       empty: "Chưa có dữ liệu thu ngân.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem theo thu ngân.",
@@ -1065,41 +1104,59 @@ export const finance = {
   },
   invoicesPage: {
     eyebrow: "Tài chính",
-    title: "HĐĐT & GTGT đầu ra",
-    description: "HĐĐT bán ra, hủy, điều chỉnh · chưa phải GTGT phải nộp.",
-    loadError: "Không thể tải danh sách hóa đơn điện tử",
+    title: "HĐ đầu ra",
+    description: "HĐĐT bán ra trong kỳ.",
+    detailExplanation:
+      "Theo dõi hóa đơn điện tử bán ra, hủy và điều chỉnh. Chưa phải số liệu GTGT phải nộp cuối kỳ.",
+    loadError: "HĐ đầu ra: không tải được danh sách. Thử tải lại trang.",
   },
   links: {
     revenue: {
       label: "Báo cáo doanh thu",
-      description: "Tiền thu và doanh thu thuần theo kỳ / chi nhánh / PTTT.",
+      description: "Tiền thu và doanh thu thuần theo kỳ.",
     },
     foodCost: {
       label: "Giá vốn món",
       description:
-        "Định mức theo công thức và giá vốn bình quân hiện tại; đối chiếu tiêu hao đã ghi nhận.",
+        "Giá vốn định mức theo phần bán, giá vốn thực tế và tiêu hao vận hành.",
     },
     overview: {
       label: "Tổng quan tài chính",
-      description: "Màn hình chính tài chính vận hành.",
+      description: "Tổng quan tài chính vận hành trong ngày.",
+    },
+    expenses: {
+      label: "Chi phí",
+      description: "Chi vận hành và đối soát ngân hàng.",
+    },
+    supplierInvoices: {
+      label: "HĐ đầu vào",
+      description: "Công nợ và thuế GTGT đầu vào.",
+    },
+    bankTransactions: {
+      label: "Giao dịch",
+      description: "Sao kê SePay và khớp chứng từ.",
     },
   },
   foodCost: {
     eyebrow: "Tài chính",
     description:
-      "Định mức theo công thức và giá vốn bình quân hiện tại; thực tế từ phân bổ định giá kho.",
+      "Giá vốn theo phần bán. Đối chiếu tiêu hao bán với tiêu hao vận hành.",
     actualFoodCost: "Giá vốn thực tế",
     actualFoodCostHint:
-      "Tổng phân bổ giá vốn món trong kỳ · khác định mức theo món.",
+      "Nguyên liệu đã trừ kho theo đơn đã thanh toán. Khác giá vốn định mức theo món.",
+    operatingConsumption: "Tiêu hao vận hành",
+    operatingConsumptionHint:
+      "Phiếu tiêu hao ghi tay, không gắn đơn bán. Vẫn tính vào giá vốn món.",
     coverage: "Độ phủ",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,
-    coverageHint: "Đơn đã thanh toán và đủ tiêu hao kho.",
-    tableTitle: "Giá vốn theo món",
+    coverageHint: "Số đơn đã thanh toán và đã trừ đủ nguyên liệu kho.",
+    tableTitle: "Giá vốn món theo phần bán",
     itemCount: (count: string) => `${count} món`,
     quantitySold: "SL bán",
     revenueCurrency: "Doanh thu thuần",
-    unitFoodCostCurrency: "Định mức/món",
+    unitSellingPriceCurrency: "Giá bán/phần",
+    unitFoodCostCurrency: "Định mức/phần",
     foodCostCurrency: "Định mức",
     grossProfitCurrency: "Lợi nhuận gộp",
     grossMargin: "Biên gộp",

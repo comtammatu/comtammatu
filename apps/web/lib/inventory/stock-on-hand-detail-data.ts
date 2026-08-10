@@ -77,7 +77,7 @@ interface LoadStockIngredientDetailDataOptions {
   ingredientId: number;
   includeValuation?: boolean;
   movementLimit?: number;
-  queryBranchId?: string | string[];
+  queryBranch?: string | string[];
   routeBranchId?: number;
 }
 
@@ -139,7 +139,7 @@ export async function loadStockIngredientDetailData({
   ingredientId,
   includeValuation = true,
   movementLimit = 30,
-  queryBranchId,
+  queryBranch,
   routeBranchId,
 }: LoadStockIngredientDetailDataOptions): Promise<StockIngredientDetailData> {
   if (!Number.isInteger(ingredientId) || ingredientId <= 0) notFound();
@@ -147,7 +147,7 @@ export async function loadStockIngredientDetailData({
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
+    queryBranch,
   });
   if (scope.outOfScope) notFound();
 

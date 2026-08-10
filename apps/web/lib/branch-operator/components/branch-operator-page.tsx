@@ -103,6 +103,9 @@ export interface BranchOperatorPanelProps {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  /** Table/list edge alignment — pass through to AppSection via this adapter only. */
+  contentFlush?: boolean;
+  contentScroll?: boolean;
   size?: "default" | "sm";
   headingLevel?: "h2" | "h3" | "h4";
 }
@@ -118,6 +121,8 @@ export function BranchOperatorPanel({
   children,
   className,
   contentClassName,
+  contentFlush = false,
+  contentScroll = false,
   size,
   headingLevel,
 }: BranchOperatorPanelProps) {
@@ -140,6 +145,8 @@ export function BranchOperatorPanel({
       action={action}
       className={className}
       contentClassName={contentClassName}
+      contentFlush={contentFlush}
+      contentScroll={contentScroll}
       size={size}
       tone={toneSectionVariant[tone]}
     >

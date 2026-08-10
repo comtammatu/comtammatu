@@ -5,14 +5,26 @@ import { test } from "node:test";
 
 const repoRoot = resolve(process.cwd(), "../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const readDemandModule = () =>
+  [
+    "purchase-requests-client.tsx",
+    "purchase-requests-list.tsx",
+    "purchase-request-form-dialog.tsx",
+    "purchase-request-view-dialog.tsx",
+    "purchase-request-allocate-dialog.tsx",
+  ]
+    .map((file) =>
+      read(
+        `apps/web/app/(protected)/inventory/purchase-requests/${file}`,
+      ),
+    )
+    .join("\n");
 
 test("warehouse creates demand and accountant allocation creates POs with GRN drafts", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
-  const demandClient = read(
-    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
-  );
+  const demandClient = readDemandModule();
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const nav = read("apps/web/app/(protected)/inventory/_lib/inventory-nav.ts");
   const migration =
@@ -32,7 +44,7 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   );
   assert.match(nav, /\/inventory\/purchase-orders/);
   assert.doesNotMatch(nav, /href: "\/inventory\/purchase-requests"/);
-  assert.match(nav, /label: "Mua hàng"/);
+  assert.match(nav, /tNav\("purchaseOrders", "navigation"\)/);
   assert.match(actions, /savePurchaseDemand/);
   assert.match(actions, /savePurchaseDemandAllocations/);
   assert.match(actions, /reviewPurchaseDemand/);
@@ -55,23 +67,18 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
 });
 
 test("demand review keeps approve, return, and reject in one action", () => {
-  const client = read(
-    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
+  const client = readDemandModule();
+  const viewDialog = read(
+    "apps/web/app/(protected)/inventory/purchase-requests/purchase-request-view-dialog.tsx",
   );
   const actions = read(
     "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
   );
-  const viewStart = client.indexOf(
-    'open={selected != null && mode === "view"}',
-  );
-  const allocationStart = client.indexOf("open={allocateOpen}", viewStart);
-  const viewDialog = client.slice(viewStart, allocationStart);
 
-  assert.ok(viewStart >= 0 && allocationStart > viewStart);
   assert.match(client, /reviewPurchaseDemand/);
   assert.match(client, /action: "approve"/);
-  assert.match(viewDialog, /kind: "request_changes"/);
-  assert.match(viewDialog, /kind: "reject"/);
+  assert.match(viewDialog, /onRequestChanges/);
+  assert.match(viewDialog, /onReject/);
   assert.match(viewDialog, /copy\.allocateAction/);
   assert.match(viewDialog, /canAllocate/);
   assert.match(actions, /PROCUREMENT_PO_APPROVE/);
@@ -114,12 +121,7 @@ test("warehouse cannot submit demand lines without an active supplier", () => {
 });
 
 test("warehouse can edit an unallocated pending demand without reopening draft", () => {
-  const client = read(
-    "apps/web/app/(protected)/inventory/purchase-requests/purchase-requests-client.tsx",
-  );
-  const actions = read(
-    "apps/web/app/(protected)/inventory/purchase-order-actions.ts",
-  );
+  const client = readDemandModule();
   const migration = read(
     "supabase/migration-archive/20260730121028_allow_pending_demand_edit_before_allocation.sql",
   );
@@ -133,8 +135,9 @@ test("warehouse can edit an unallocated pending demand without reopening draft",
     /\(row\.status === "draft" \|\| row\.status === "changes_requested"\)[\s\S]*key: "cancel"/,
   );
   assert.match(client, /editingPendingDemand/);
-  assert.match(client, /editingPendingDemand[\s\S]*ACTIONS_VI\.saveChanges/);
-  assert.match(actions, /purchase_demand_allocation_started/);
+  assert.match(client, /ACTIONS_VI\.saveChanges/);
+  const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
+  assert.match(rpcErrors, /purchase_demand_allocation_started/);
   assert.match(
     migration,
     /status NOT IN \([\s\S]*?'draft',[\s\S]*?'submitted',[\s\S]*?'pending_allocation'[\s\S]*?\)/,
@@ -191,8 +194,9 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     client,
     /<span className="font-mono font-medium">\{row\.code\}<\/span>/,
   );
-  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
-  assert.match(client, /params\.set\("mode", nextMode\)/);
+  assert.match(client, /overlay\.patchOverlay/);
+  assert.match(client, /poId,/);
+  assert.match(client, /mode: nextMode/);
   assert.match(client, /<AppDialog/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);

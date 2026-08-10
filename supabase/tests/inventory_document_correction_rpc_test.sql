@@ -196,7 +196,7 @@ BEGIN
   ) VALUES (
     v_tenant, v_branch_a,
     '__DOC-ISSUE-' || pg_catalog.gen_random_uuid()::text,
-    'other', 'confirmed', v_owner, v_location_a
+    'writeoff', 'confirmed', v_owner, v_location_a
   ) RETURNING id INTO v_issue;
   INSERT INTO public.stock_issue_items (
     tenant_id, issue_id, ingredient_id, quantity, entry_unit_id, unit_cost

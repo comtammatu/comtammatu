@@ -7,11 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function WasteApprovalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const params = await searchParams;
   const data = await loadWasteApprovalsData({
-    queryBranchId: params.branchId,
+    queryBranch: params.branch,
   });
   if (!data.canApproveWaste) redirect("/");
 

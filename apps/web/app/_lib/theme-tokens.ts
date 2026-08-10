@@ -1,16 +1,25 @@
-export type MatuThemeMode = "light" | "night";
+export {
+  THEME_COOKIE_NAME,
+  resolveThemeMode,
+  shiftAwareThemeMode,
+  readThemeCookie,
+  type ThemeMode,
+} from "@comtammatu/ui/lib/theme-cookie";
 
-export const MATU_THEME_COOKIE_NAME = "matu-theme";
+import type { ThemeMode } from "@comtammatu/ui/lib/theme-cookie";
 
 // Exact sRGB of the `--background` token per theme (packages/ui/src/styles/globals.css).
 // design-token-contrast-static.test.ts asserts the equality.
-export const BROWSER_CHROME_THEME_COLORS: Record<MatuThemeMode, string> = {
+export const BROWSER_CHROME_THEME_COLORS: Record<ThemeMode, string> = {
   light: "#fff6ee",
   night: "#120a06",
 };
 
+// global-error.tsx renders outside globals.css, so it cannot read tokens at
+// runtime. These mirror the light/night semantic tokens of the same name and
+// design-token-contrast-static.test.ts asserts the parity.
 export const GLOBAL_ERROR_PALETTE: Record<
-  MatuThemeMode,
+  ThemeMode,
   {
     background: string;
     foreground: string;
@@ -21,22 +30,16 @@ export const GLOBAL_ERROR_PALETTE: Record<
 > = {
   light: {
     background: BROWSER_CHROME_THEME_COLORS.light,
-    foreground: "#1a2238",
-    muted: "#6b5b47",
-    border: "#e8dcc8",
+    foreground: "#0d1b2a",
+    muted: "#8b5a2b",
+    border: "#dccfc0",
     surface: "#ffffff",
   },
   night: {
     background: BROWSER_CHROME_THEME_COLORS.night,
-    foreground: "#f5ebd9",
-    muted: "#c9b896",
-    border: "#3a2f24",
-    surface: "#2a2218",
+    foreground: "#f8f1e6",
+    muted: "#d0c1b1",
+    border: "#82776f",
+    surface: "#362b25",
   },
 };
-
-export function resolveMatuThemeMode(
-  value: string | null | undefined,
-): MatuThemeMode | null {
-  return value === "light" || value === "night" ? value : null;
-}

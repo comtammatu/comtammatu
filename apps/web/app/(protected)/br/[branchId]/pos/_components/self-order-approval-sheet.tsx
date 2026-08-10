@@ -12,7 +12,7 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import {
   FieldLabel,
   FieldLegend,

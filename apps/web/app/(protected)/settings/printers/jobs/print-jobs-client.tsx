@@ -16,11 +16,19 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import {
   RefreshCw as IconRefresh,
   RotateCcw as IconRotate,
@@ -190,107 +198,135 @@ export function PrintJobsClient({
     },
   ];
 
-  const filters = [
-    ...(!currentBranchLocked && branches.length > 1
-      ? [
-          {
-            key: "branch",
-            placeholder: BRANCH_VI.selectAll,
-            options: [
-              { value: "all", label: BRANCH_VI.selectAll },
-              ...branches.map((branch) => ({
-                value: String(branch.id),
-                label: branch.name,
-              })),
-            ],
-          },
-        ]
-      : []),
-    {
-      key: "status",
-      placeholder: PRINT_JOBS_COPY.statusPlaceholder,
-      options: [
-        { value: "all", label: PRINT_JOBS_COPY.allStatuses },
-        {
-          value: PRINT_JOB_ATTENTION_STATUS,
-          label: PRINT_JOBS_COPY.attentionStatus,
-        },
-        ...Object.entries(PRINT_JOB_STATUS_LABELS_VI).map(([value, label]) => ({
-          value,
-          label,
-        })),
-      ],
-    },
-    {
-      key: "job_type",
-      placeholder: PRINT_JOBS_COPY.jobTypePlaceholder,
-      options: [
-        { value: "all", label: PRINT_JOBS_COPY.allJobTypes },
-        ...Object.entries(PRINT_JOBS_COPY.jobTypes).map(([value, label]) => ({
-          value,
-          label,
-        })),
-      ],
-    },
-  ];
+  const filterSelects = (
+    <>
+      {!currentBranchLocked && branches.length > 1 ? (
+        <Select
+          value={filterBranch != null ? String(filterBranch) : "all"}
+          onValueChange={(value) =>
+            updateParam("branch", value === "all" ? null : value)
+          }
+        >
+          <SelectTrigger size="field" className="min-w-36" aria-label={BRANCH_VI.selectAll}>
+            <SelectValue placeholder={BRANCH_VI.selectAll} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+            {branches.map((branch) => (
+              <SelectItem key={branch.id} value={String(branch.id)}>
+                {branch.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+      <Select
+        value={filterStatus ?? "all"}
+        onValueChange={(value) =>
+          updateParam("status", value === "all" ? null : value)
+        }
+      >
+        <SelectTrigger
+          size="field"
+          className="min-w-36"
+          aria-label={PRINT_JOBS_COPY.statusPlaceholder}
+        >
+          <SelectValue placeholder={PRINT_JOBS_COPY.statusPlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{PRINT_JOBS_COPY.allStatuses}</SelectItem>
+          <SelectItem value={PRINT_JOB_ATTENTION_STATUS}>
+            {PRINT_JOBS_COPY.attentionStatus}
+          </SelectItem>
+          {Object.entries(PRINT_JOB_STATUS_LABELS_VI).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={filterJobType ?? "all"}
+        onValueChange={(value) =>
+          updateParam("job_type", value === "all" ? null : value)
+        }
+      >
+        <SelectTrigger
+          size="field"
+          className="min-w-36"
+          aria-label={PRINT_JOBS_COPY.jobTypePlaceholder}
+        >
+          <SelectValue placeholder={PRINT_JOBS_COPY.jobTypePlaceholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{PRINT_JOBS_COPY.allJobTypes}</SelectItem>
+          {Object.entries(PRINT_JOBS_COPY.jobTypes).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
 
   return (
-    <DataTable
-      columns={columns}
-      data={jobs}
-      getRowKey={(job) => job.id}
-      pageSize={50}
-      filters={filters}
-      filterValues={{
-        branch: filterBranch != null ? String(filterBranch) : "all",
-        status: filterStatus ?? "all",
-        job_type: filterJobType ?? "all",
-      }}
-      onFilterChange={(key, value) =>
-        updateParam(key, value === "all" ? null : value)
+    <AppListFrame
+      toolbar={
+        <AppToolbar
+          variant="inline"
+          filters={filterSelects}
+          actions={
+            <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+              <IconRefresh className="size-3.5" />
+              {ACTIONS_VI.refresh}
+            </Button>
+          }
+        />
       }
-      actions={
-        <Button variant="outline" size="sm" onClick={() => router.refresh()}>
-          <IconRefresh className="size-3.5" />
-          {ACTIONS_VI.refresh}
-        </Button>
-      }
-      emptyTitle={PRINT_JOBS_COPY.emptyJobs}
-      mobileCardRender={(job) => (
-        <Item variant="outline">
-          <ItemHeader>
-            <ItemTitle>#{job.id}</ItemTitle>
-            <StatusBadge domain="print-job" value={job.status} />
-          </ItemHeader>
-          <ItemContent>
-            <ItemDescription>{getJobTypeLabel(job.job_type)}</ItemDescription>
-            <ItemDescription>
-              {job.printer_name ?? `#${job.printer_id}`}
-              {job.printer_role ? ` · ${job.printer_role}` : ""}
-            </ItemDescription>
-            <ItemDescription>
-              {PRINT_JOBS_COPY.createdAtColumn}: {formatTime(job.created_at)}
-            </ItemDescription>
-            <ItemDescription>
-              {PRINT_JOBS_COPY.printedAtColumn}: {formatTime(job.printed_at)}
-            </ItemDescription>
-            {job.last_error ? (
-              <ItemDescription className="text-destructive">
-                {job.last_error}
+    >
+      <DataTable
+        columns={columns}
+        data={jobs}
+        getRowKey={(job) => job.id}
+        pageSize={50}
+        emptyTitle={PRINT_JOBS_COPY.emptyJobs}
+        mobileCardRender={(job) => (
+          <Item variant="outline">
+            <ItemHeader>
+              <ItemTitle>#{job.id}</ItemTitle>
+              <StatusBadge domain="print-job" value={job.status} />
+            </ItemHeader>
+            <ItemContent>
+              <ItemDescription>{getJobTypeLabel(job.job_type)}</ItemDescription>
+              <ItemDescription>
+                {job.printer_name ?? `#${job.printer_id}`}
+                {job.printer_role ? ` · ${job.printer_role}` : ""}
               </ItemDescription>
-            ) : null}
-          </ItemContent>
-          <ItemFooter>
-            <span className="font-mono text-xs text-muted-foreground">
-              {PRINT_JOBS_COPY.attemptsColumn}: {job.attempts}
-              {job.retry_count > 0 ? ` (+${job.retry_count})` : ""}
-            </span>
-            <ItemActions>
-              <RetryAction job={job} />
-            </ItemActions>
-          </ItemFooter>
-        </Item>
-      )}
-    />
+              <ItemDescription>
+                {PRINT_JOBS_COPY.createdAtColumn}: {formatTime(job.created_at)}
+              </ItemDescription>
+              <ItemDescription>
+                {PRINT_JOBS_COPY.printedAtColumn}: {formatTime(job.printed_at)}
+              </ItemDescription>
+              {job.last_error ? (
+                <ItemDescription className="text-destructive">
+                  {job.last_error}
+                </ItemDescription>
+              ) : null}
+            </ItemContent>
+            <ItemFooter>
+              <span className="font-mono text-xs text-muted-foreground">
+                {PRINT_JOBS_COPY.attemptsColumn}: {job.attempts}
+                {job.retry_count > 0 ? ` (+${job.retry_count})` : ""}
+              </span>
+              <ItemActions>
+                <RetryAction job={job} />
+              </ItemActions>
+            </ItemFooter>
+          </Item>
+        )}
+      />
+    </AppListFrame>
   );
 }

@@ -46,7 +46,8 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
   assert.match(grnLineEditor, /<FormField[\s\S]*?controlId="grn-line-unit"/);
   assert.match(productionRecipe, /<ComboboxField/);
   assert.match(newStocktake, /controlId="stocktake-branch"/);
-  assert.match(newStocktake, /size=\{embedded \? "touch" : "field"\}/);
+  assert.match(newStocktake, /size="field"/);
+  assert.doesNotMatch(newStocktake, /\bembedded\b/);
   assert.match(recipeDialog, /<SelectField[\s\S]*?id="menu-recipe-menu-item"/);
   assert.match(
     transferDialog,

@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { BROWSER_CHROME_THEME_COLORS } from "../app/_lib/theme-tokens";
+import {
+  BROWSER_CHROME_THEME_COLORS,
+  GLOBAL_ERROR_PALETTE,
+} from "../app/_lib/theme-tokens";
 
 // The className-pattern gates in scripts/check-ui-contract.mjs cannot see token
 // VALUES, so a palette retune can silently strand a status pair below WCAG.
@@ -148,9 +151,77 @@ test("both themes: body and muted text clear AA", () => {
   }
 });
 
+test("night theme: muted text still clears AA on card", () => {
+  const card = token("dark", "card");
+  const muted = token("dark", "muted-foreground");
+  const r = ratio(muted, card);
+  assert.ok(r >= AA_TEXT, `dark muted-foreground on card: ${r.toFixed(2)}`);
+});
+
+test("night theme: border and input hairlines clear non-text contrast on background", () => {
+  // Borders are cream-on-night with alpha: oklch(L C h / NN%). Contrast is
+  // between the blended hairline and the adjacent background (WCAG 1.4.11).
+  const dark = SCOPE.dark;
+  const borderMatch = dark.match(
+    /--border:\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)%\s*\)/,
+  );
+  const inputMatch = dark.match(
+    /--input:\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)%\s*\)/,
+  );
+  assert.ok(borderMatch, "dark --border must use cream alpha syntax");
+  assert.ok(inputMatch, "dark --input must use cream alpha syntax");
+  const bg = token("dark", "background");
+  const bgRgb = srgb(bg);
+
+  function hairlineContrast(
+    match: RegExpMatchArray,
+    label: string,
+  ): void {
+    const tint = [
+      Number(match[1]),
+      Number(match[2]),
+      Number(match[3]),
+    ] as const;
+    const alpha = Number(match[4]) / 100;
+    const tintRgb = srgb(tint);
+    const blended = tintRgb.map((c, i) =>
+      clamp01(c * alpha + (bgRgb[i] ?? 0) * (1 - alpha)),
+    ) as [number, number, number];
+    const r = contrast(luminance(blended), luminance(bgRgb));
+    assert.ok(
+      r >= NON_TEXT,
+      `dark ${label}/${match[4]}% on background: ${r.toFixed(2)}`,
+    );
+  }
+
+  hairlineContrast(borderMatch!, "border");
+  hairlineContrast(inputMatch!, "input");
+});
+
 function toHex(t: Oklch): string {
   return `#${srgb(t)
     .map((c) => Math.round(c * 255).toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+function tokenAlpha(scope: "light" | "dark", name: string): number {
+  const re = new RegExp(
+    `--${name}:\\s*oklch\\([^)]*?/\\s*([\\d.]+)%\\s*\\)`,
+  );
+  const match = SCOPE[scope].match(re);
+  return match ? Number(match[1]) / 100 : 1;
+}
+
+// Browsers composite sRGB alpha in gamma space, so the 0-255 channels blend
+// directly.
+function compositeHex(top: Oklch, alpha: number, under: Oklch): string {
+  const [t, u] = [srgb(top), srgb(under)];
+  return `#${t
+    .map((c, i) =>
+      Math.round((c * alpha + u[i]! * (1 - alpha)) * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
     .join("")}`;
 }
 
@@ -160,6 +231,38 @@ function toHex(t: Oklch): string {
 test("browser chrome colors equal the --background token of their theme", () => {
   assert.equal(toHex(token("light", "background")), BROWSER_CHROME_THEME_COLORS.light);
   assert.equal(toHex(token("dark", "background")), BROWSER_CHROME_THEME_COLORS.night);
+});
+
+// global-error.tsx renders without globals.css, so its palette is a hand-copied
+// mirror. Only --background was covered before, which let the other four drift.
+test("global-error palette mirrors the semantic tokens it claims", () => {
+  const MIRROR = {
+    background: "background",
+    foreground: "foreground",
+    muted: "muted-foreground",
+    border: "border",
+    surface: "card",
+  } as const;
+
+  for (const [mode, scope] of [
+    ["light", "light"],
+    ["night", "dark"],
+  ] as const) {
+    for (const [field, tokenName] of Object.entries(MIRROR)) {
+      // A translucent token only reads as its composite over the surface it
+      // sits on, which is what a flat hex mirror has to carry.
+      const alpha = tokenAlpha(scope, tokenName);
+      const expected =
+        alpha === 1
+          ? toHex(token(scope, tokenName))
+          : compositeHex(token(scope, tokenName), alpha, token(scope, "card"));
+      assert.equal(
+        GLOBAL_ERROR_PALETTE[mode][field as keyof typeof MIRROR],
+        expected,
+        `${mode}.${field} must equal --${tokenName}`,
+      );
+    }
+  }
 });
 
 test("static PWA manifest colors track the light chrome color", () => {

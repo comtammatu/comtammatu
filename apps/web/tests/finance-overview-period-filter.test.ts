@@ -36,17 +36,22 @@ describe("Finance overview period filter", () => {
       serializeFinanceParams(
         parseFinanceParams({ location: "company" }),
       ).toString(),
-      "location=company",
+      "branch=company&location=company",
     );
     assert.equal(
       serializeFinanceParams(
         parseFinanceParams({ location: "branches" }),
       ).toString(),
-      "location=branches",
+      "branch=branches&location=branches",
     );
     assert.equal(
       serializeFinanceParams(parseFinanceParams({ branch: "12" })).toString(),
       "branch=12",
+    );
+    assert.equal(parseFinanceParams({ branch: "company" }).location, "company");
+    assert.equal(
+      parseFinanceParams({ branch: "branches" }).location,
+      "branches",
     );
 
     const page = readFileSync(
@@ -67,7 +72,12 @@ describe("Finance overview period filter", () => {
       ),
       "utf8",
     );
-    assert.match(page, /locationFilter/);
+    const shell = readFileSync(
+      new URL("../app/components/control-surface-shell.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(page, /hide=\{\["branch", "granularity", "compare"\]\}/);
+    assert.match(shell, /ControlSurfaceScopeControl/);
     assert.match(
       filterBar,
       /LOCATION_SCOPE_ORDER = \["all", "company", "branches"\]/,
@@ -79,7 +89,7 @@ describe("Finance overview period filter", () => {
       /locationFilter && params\.location === "branch"/,
     );
     assert.match(cockpit, /query = query\.is\("branch_id", null\)/);
-    assert.match(cockpit, /query = query\.not\("branch_id", "is", null\)/);
+    assert.match(cockpit, /fetchSalesBranchIds/);
     assert.match(
       cockpit,
       /supplierInvoiceQuery = supplierInvoiceQuery\.is\("grn_id", null\)/,
@@ -107,7 +117,7 @@ describe("Finance overview period filter", () => {
       ),
       "utf8",
     );
-    assert.match(page, /<FilterBar[\s\S]*?locationFilter/);
+    assert.match(page, /<FilterBar[\s\S]*?hide=\{\["branch"/);
     assert.match(filterBar, /FINANCE_OVERVIEW_PERIODS\.map/);
     assert.match(filterBar, /lg:flex-row lg:flex-nowrap lg:items-center/);
     assert.match(filterBar, /<FinanceCalendarPeriodPicker/);

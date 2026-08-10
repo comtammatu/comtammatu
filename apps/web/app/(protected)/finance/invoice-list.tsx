@@ -14,7 +14,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Label } from "@comtammatu/ui/components/label";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   ToggleGroup,
@@ -40,7 +40,6 @@ import {
 import type { TaxInvoiceCursor } from "./actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
 import { correctPaymentMethod } from "./payment-method-actions";
-import { ManualIssueInvoiceDialog } from "./manual-issue-invoice-dialog";
 import type { InvoiceRow } from "./_lib/finance-types";
 import {
   DataTable,
@@ -87,8 +86,6 @@ interface InvoiceListProps {
   branchId?: number;
   queue?: "attention";
   canManageInvoices: boolean;
-  canIssueInvoices?: boolean;
-  branches?: { id: number; name: string }[];
   initialIssueAttention?: TaxInvoiceIssueAttention[];
 }
 
@@ -195,13 +192,10 @@ export function InvoiceList({
   branchId,
   queue,
   canManageInvoices,
-  canIssueInvoices = false,
-  branches = [],
   initialIssueAttention = [],
 }: InvoiceListProps) {
   const isTouchLayout = useIsMobile(1024);
   const [invoices, setInvoices] = useState(initialInvoices);
-  const [manualIssueOpen, setManualIssueOpen] = useState(false);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextCursor, setNextCursor] = useState<TaxInvoiceCursor | null>(
     initialNextCursor,
@@ -692,21 +686,6 @@ export function InvoiceList({
             ))}
           </Item>
         ) : null}
-        {canIssueInvoices || canManageInvoices ? (
-          <div className="flex flex-wrap justify-end gap-2">
-            {canIssueInvoices ? (
-              <Button
-                variant="outline"
-                size={isTouchLayout ? "touch" : "sm"}
-                onClick={() => setManualIssueOpen(true)}
-                disabled={isPending}
-              >
-                <IconReceipt className="size-4" />
-                {messages.finance.invoiceList.manualIssue.button}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
         <DataTable
           columns={columns}
           data={invoices}
@@ -1027,16 +1006,6 @@ export function InvoiceList({
           </>
         )}
       </FormDialog>
-
-      {canIssueInvoices ? (
-        <ManualIssueInvoiceDialog
-          open={manualIssueOpen}
-          onOpenChange={setManualIssueOpen}
-          branches={branches}
-          defaultBranchId={branchId}
-          onIssued={() => setTimeout(() => window.location.reload(), 1200)}
-        />
-      ) : null}
     </>
   );
 }

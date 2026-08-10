@@ -16,10 +16,12 @@ HOT — load by default for matching work:
 - Database: `docs/modules/database.md`, `docs/spec/database-schema.md`
 - UI (ordered 3+1): `docs/spec/design-system.md` (visual) →
   `docs/spec/page-archetypes.md` (workflow) →
-  `docs/ref/screen-context-map.md` (audience/device) → `docs/modules/ui.md`
-  (thin implementation map); Product Dual Thesis in
-  `docs/spec/architecture.md`; optional local Stitch mirror `.stitch/DESIGN.md`
-  (non-SSOT, untracked)
+  `docs/ref/screen-context-map.md` (audience/device; Product UX spine §1A
+  actor x job x plane per route family, before compose) ->
+  `docs/modules/ui.md` (thin implementation map). Product Dual Thesis in
+  `docs/spec/architecture.md`. Not a parallel DS or root `DESIGN.md`; optional
+  local Stitch mirror `.stitch/DESIGN.md` (non-SSOT, untracked). Target-only
+  docs under `docs/architecture/target-*` are future.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`

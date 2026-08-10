@@ -133,7 +133,7 @@ test.describe("GRN list-first document dialog", () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await requireOwnerSession(
         page,
-        `/inventory/grn?branchId=${centralSupplyId}`,
+        `/inventory/grn?branch=${centralSupplyId}`,
       );
 
       const rowCode = page.getByText(/^GRN-/).first();
@@ -145,7 +145,7 @@ test.describe("GRN list-first document dialog", () => {
 
       const dialog = page.getByRole("dialog");
       await expect(dialog).toBeVisible();
-      await expect(page.locator("[data-owner-shell-scroll]")).toBeVisible();
+      await expect(page.locator("[data-control-surface-scroll]")).toBeVisible();
 
       await page.reload();
       await expect(page.getByRole("dialog")).toBeVisible();
@@ -158,7 +158,7 @@ test.describe("GRN list-first document dialog", () => {
 
       await page.goBack();
       await expect(page).toHaveURL(
-        `/inventory/grn?branchId=${centralSupplyId}`,
+        `/inventory/grn?branch=${centralSupplyId}`,
       );
       await expect(page.getByRole("dialog")).toBeHidden();
       await expect(rowCode).toBeVisible();

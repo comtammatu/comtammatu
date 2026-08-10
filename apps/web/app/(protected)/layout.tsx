@@ -11,6 +11,7 @@ import {
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
 import { ControlSurfaceShell } from "@/components/control-surface-shell";
+import { fetchActiveBranches } from "@/_lib/branch-context";
 import {
   CATALOG_MANAGE_PERMISSIONS,
   CATALOG_READ_PERMISSIONS,
@@ -43,6 +44,7 @@ export default async function ProtectedLayout({
 
   const [
     inventoryScope,
+    activeBranches,
     hasProcurementRead,
     canManageCatalog,
     canReadCatalog,
@@ -57,6 +59,7 @@ export default async function ProtectedLayout({
     canOpenInventory
       ? resolveInventoryBranchScope(supabase, claims, null)
       : Promise.resolve(null),
+    fetchActiveBranches(supabase, claims.tenant_id),
     isOwner
       ? granted
       : canOpenInventory
@@ -104,6 +107,12 @@ export default async function ProtectedLayout({
   const isCentralCatalogViewer =
     role === "central_supply_ops" || role === "central_kitchen_lead";
   const showCatalogManagement = isOwner && canManageCatalog;
+  const salesBranches = activeBranches.filter(
+    (branch) => branch.branch_kind === "branch",
+  );
+  const hrBranches = isOwner
+    ? activeBranches
+    : activeBranches.filter((branch) => branch.id === claims.branch_id);
 
   return (
     <ControlSurfaceShell
@@ -125,14 +134,24 @@ export default async function ProtectedLayout({
           !showCatalogManagement && isCentralCatalogViewer && canReadCatalog,
         showSettings: isOwner || canOpenInventorySettings,
         allowedBranches: inventoryScope?.allowedBranches ?? [],
-        defaultBranchId: inventoryScope?.selectedBranchId ?? claims.branch_id,
+        defaultBranchId: inventoryScope?.defaultBranchId ?? claims.branch_id,
+        canSelectAll: inventoryScope?.canSelectAll ?? false,
       }}
       finance={{
         showInvoices,
         showSupplierPayables,
         showRevenueTargets: isOwner,
+        branches: isOwner
+          ? salesBranches
+          : salesBranches.filter((branch) => branch.id === claims.branch_id),
+        canSelectAll: isOwner,
       }}
-      hr={{ canOpen: canOpenHr, canOpenPayroll: canOpenHrPayroll }}
+      hr={{
+        canOpen: canOpenHr,
+        canOpenPayroll: canOpenHrPayroll,
+        branches: hrBranches,
+        canSelectAll: isOwner,
+      }}
     >
       {children}
     </ControlSurfaceShell>

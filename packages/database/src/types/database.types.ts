@@ -12050,9 +12050,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: undefined
       }
-      cancel_stock_request:
-        | { Args: { p_request_id: number }; Returns: Json }
-        | { Args: { p_reason: string; p_request_id: number }; Returns: Json }
+      cancel_stock_request: {
+        Args: { p_reason: string; p_request_id: number }
+        Returns: Json
+      }
       cancel_stock_transfer: {
         Args: { p_reason: string; p_transfer_id: number }
         Returns: Json

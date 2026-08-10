@@ -32,7 +32,7 @@ export type ControlHomeAttentionItem = {
   tone?: "warning" | "destructive";
 };
 
-const copy = messages.owner.dashboard;
+const copy = messages.controlSurface.dashboard;
 
 async function settledCount(
   promise: Promise<number>,

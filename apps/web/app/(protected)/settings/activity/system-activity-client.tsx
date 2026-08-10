@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 import { History as IconHistory } from "lucide-react";
 import {
@@ -9,8 +8,7 @@ import {
 } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { Button } from "@comtammatu/ui/components/button";
-import { AppEmptyState } from "@/components/surface";
+import { AppListFrame } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import type { TenantAuditLogRow } from "@/_lib/audit";
@@ -34,13 +32,11 @@ export function SystemActivityClient({
   filterValue,
   actorOptions,
   entityOptions,
-  pagesHomeLink,
 }: {
   rows: TenantAuditLogRow[];
   filterValue: SystemActivityFilterValue & { q: string | null };
   actorOptions: SystemActivityActorOption[];
   entityOptions: SystemActivityEntityOption[];
-  pagesHomeLink: string;
 }) {
   const copy = messages.settings.activity;
   const pages = messages.settings.pages;
@@ -70,7 +66,6 @@ export function SystemActivityClient({
       filterValue.since,
   );
   const hasFilters = hasStructuredFilters || Boolean(q);
-  const showEmpty = filteredRows.length === 0;
 
   const actorLabel =
     filterValue.actor == null
@@ -107,44 +102,39 @@ export function SystemActivityClient({
   ]);
 
   return (
-    <>
-      <SystemActivityFilters
-        value={filterValue}
-        actorOptions={actorOptions}
-        entityOptions={entityOptions}
-        trailing={
-          <AuditExportButton
-            filename={copy.exportFilename}
-            label={copy.exportCsv}
-            signatureLines={signatureLines}
-            header={[
-              copy.time,
-              copy.action,
-              copy.entity,
-              copy.actor,
-              copy.scope,
-            ]}
-            rows={exportRows}
-          />
-        }
+    <AppListFrame
+      title={copy.recentItems(rows.length)}
+      description={pages.systemActivityDescription}
+      toolbar={
+        <SystemActivityFilters
+          value={filterValue}
+          actorOptions={actorOptions}
+          entityOptions={entityOptions}
+          trailing={
+            <AuditExportButton
+              filename={copy.exportFilename}
+              label={copy.exportCsv}
+              signatureLines={signatureLines}
+              header={[
+                copy.time,
+                copy.action,
+                copy.entity,
+                copy.actor,
+                copy.scope,
+              ]}
+              rows={exportRows}
+            />
+          }
+        />
+      }
+    >
+      <SystemActivityTable
+        rows={filteredRows}
+        emptyTitle={hasFilters ? copy.emptyFiltered : copy.empty}
+        emptyDescription={hasFilters ? copy.emptyFilteredHint : undefined}
+        emptyMode={hasFilters ? "no-results" : "no-data"}
+        emptyIcon={<IconHistory />}
       />
-
-      {showEmpty ? (
-        <AppEmptyState
-          mode={hasFilters ? "no-results" : "no-data"}
-          title={hasFilters ? copy.emptyFiltered : copy.empty}
-          description={hasFilters ? copy.emptyFilteredHint : undefined}
-          icon={<IconHistory />}
-        >
-          {hasFilters ? null : (
-            <Button variant="outline" render={<Link href={pagesHomeLink} />}>
-              {pages.settingsHomeLink}
-            </Button>
-          )}
-        </AppEmptyState>
-      ) : (
-        <SystemActivityTable rows={filteredRows} />
-      )}
-    </>
+    </AppListFrame>
   );
 }

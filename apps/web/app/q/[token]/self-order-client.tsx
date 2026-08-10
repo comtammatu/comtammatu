@@ -13,7 +13,7 @@ import dynamic from "next/dynamic";
 import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDialog } from "@/components/form";
 import {

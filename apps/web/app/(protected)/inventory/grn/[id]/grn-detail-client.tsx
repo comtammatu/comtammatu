@@ -6,8 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@comtammatu/ui/components/confirm-dialog";
-import { ReasonConfirmDialog } from "@comtammatu/ui/components/reason-confirm-dialog";
+import { confirm } from "@/components/confirm-dialog";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDialog } from "@/components/form";
 import {
@@ -43,7 +43,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/data-table";
 import { getStatusBadgeMeta } from "@/components/status-badge";
-import { AuditHistoryList } from "../../_components/audit-history-list";
+import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { formatQty } from "@lib/inventory/format";
@@ -116,9 +116,6 @@ export function GRNDetailClient({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  // Device-derived, not param-derived: the old `?m=1` flag had no setter
-  // anywhere in the codebase, so the mobile post-confirm navigation and
-  // back-link paths below never activated for phone receivers.
   const isMobile = embedded;
   const isDesktopLineEdit = !useIsMobile(DESK_LINE_EDIT_BREAKPOINT);
   const [isConfirming, startConfirm] = useTransition();
@@ -178,7 +175,6 @@ export function GRNDetailClient({
       startSave,
       startConfirm,
       grnListBasePath,
-      grnMobileBackPath,
       onConfirmed: presentation === "dialog" ? closeOwnerDialogUrl : undefined,
     });
 
@@ -201,7 +197,7 @@ export function GRNDetailClient({
     });
   }
 
-  const backHref = isMobile ? grnMobileBackPath : grnListBasePath;
+  const backHref = grnListBasePath;
   const editingIdx =
     editingLineId == null
       ? -1
@@ -457,14 +453,14 @@ export function GRNDetailClient({
       sticky
       leading={
         <>
-          {/* Back lives in AppPageHeader / embedded chrome — not duplicated here. */}
+          {/* Back lives in AppPageHeader — not duplicated here. */}
           {isDraft ? (
             <>
               {canMutateDraft ? (
                 <Button
                   type="button"
                   variant="destructive"
-                  size={isMobile ? "touch" : "default"}
+                  size="default"
                   disabled={isCancelling}
                   onClick={() => setCancelOpen(true)}
                 >
@@ -499,7 +495,7 @@ export function GRNDetailClient({
           {!isDraft && canManageSupplierInvoice ? (
             <Button
               variant="outline"
-              size={isMobile ? "touch" : "default"}
+              size="default"
               render={
                 <Link
                   href={supplierInvoiceHrefForGrn({
@@ -521,7 +517,7 @@ export function GRNDetailClient({
           canMutateDraft && dirtyLines.length > 0 ? (
             <Button
               type="button"
-              size={isMobile ? "touch-lg" : "default"}
+              size="default"
               onClick={handleSave}
               disabled={isSaving}
             >
@@ -531,7 +527,7 @@ export function GRNDetailClient({
           ) : (
             <Button
               type="button"
-              size={isMobile ? "touch-lg" : "default"}
+              size="default"
               className="sm:min-w-80"
               disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
               aria-disabled={
@@ -614,7 +610,7 @@ export function GRNDetailClient({
           grnCode={grn.code}
           currentLocationId={grn.locationId}
           locationOptions={receivingLocationOptions}
-          buttonSize={isMobile ? "touch" : "default"}
+          buttonSize="default"
           disabledReason={
             dirtyLines.length > 0
               ? grnCopy.draftReceiving.saveBeforeSwitch
@@ -635,7 +631,7 @@ export function GRNDetailClient({
           <Button
             type="button"
             variant="outline"
-            size={isMobile ? "touch" : "default"}
+            size="default"
             onClick={() => setAddDialogOpen(true)}
           >
             <IconPlus className="size-4" />
@@ -980,7 +976,7 @@ export function GRNDetailClient({
           }}
           breadcrumb={
             <AppBackLink href={backHref}>
-              {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
+              {tRoute("/inventory/grn", "heading")}
             </AppBackLink>
           }
         />

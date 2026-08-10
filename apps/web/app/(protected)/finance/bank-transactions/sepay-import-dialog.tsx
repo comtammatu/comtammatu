@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   InputGroup,
@@ -29,10 +30,6 @@ export function SepayImportDialog() {
   );
 
   useEffect(() => {
-    if (state.status === "error") {
-      toast.error(state.message);
-      return;
-    }
     if (state.status === "success") {
       toast.success(
         copy.importSuccess(state.insertedCount, state.existingCount),
@@ -70,6 +67,16 @@ export function SepayImportDialog() {
           action={action}
           className="grid gap-4"
         >
+          {state.status === "error" ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                <p>{state.message}</p>
+                {state.rowErrors?.map(({ row, reason }) => (
+                  <p key={row}>{copy.importRowError(row, reason)}</p>
+                ))}
+              </AlertDescription>
+            </Alert>
+          ) : null}
           <div className="grid gap-2">
             <Label htmlFor="sepay-export-file">{copy.importFileLabel}</Label>
             <InputGroup size="touch">

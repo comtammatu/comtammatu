@@ -1,7 +1,7 @@
 import { interpolate } from "@comtammatu/shared/messages";
 
 import { auth } from "./auth";
-import { owner } from "./owner";
+import { controlSurface } from "./control-surface";
 import { catalog } from "./catalog";
 import { common } from "./common";
 import { employee } from "./employee";
@@ -15,12 +15,13 @@ import {
   UNITS_VI,
 } from "./inventory-master";
 import { notifications } from "./notifications";
+import { orders } from "./orders";
 import { operator } from "./operator";
 import { pos } from "./pos";
 import { settings } from "./settings";
 
 export const messages = {
-  owner,
+  controlSurface,
   catalog,
   common,
   auth,
@@ -35,6 +36,7 @@ export const messages = {
     ingredientForm: INGREDIENT_FORM_VI,
   },
   notifications,
+  orders,
   operator,
   pos,
   settings,
