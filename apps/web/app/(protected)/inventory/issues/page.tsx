@@ -5,7 +5,6 @@ export default async function IssuesPage({
 }: {
   searchParams: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
   }>;
@@ -17,11 +16,7 @@ export default async function IssuesPage({
   const branch = Array.isArray(params.branch)
     ? params.branch[0]
     : params.branch;
-  const legacyBranchId = Array.isArray(params.branchId)
-    ? params.branchId[0]
-    : params.branchId;
-  const scope = branch ?? legacyBranchId;
-  if (scope) qParams.set("branch", scope);
+  if (branch) qParams.set("branch", branch);
 
   for (const key of ["startDate", "endDate"] as const) {
     const value = params[key];

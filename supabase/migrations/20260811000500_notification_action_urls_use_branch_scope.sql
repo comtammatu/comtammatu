@@ -1,6 +1,5 @@
 -- Control Surface scope: L0 inventory notification action URLs use ?branch=
--- (canonical). Legacy ?branchId= links remain readable in the app until dual-read
--- is retired after this emitter cutover.
+-- (canonical). List/report readers no longer dual-read leftover ?branchId=.
 
 CREATE OR REPLACE FUNCTION private.canonicalize_notification() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER

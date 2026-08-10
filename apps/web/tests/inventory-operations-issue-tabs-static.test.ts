@@ -22,4 +22,6 @@ test("Owner consumption hub keeps issues as waste-tab redirect", () => {
   );
   assert.match(issuesSource, /redirect\([\s\S]*\/inventory\/consumption/);
   assert.match(issuesSource, /qParams\.set\("view", "waste"\)/);
+  assert.match(issuesSource, /qParams\.set\("branch", branch\)/);
+  assert.doesNotMatch(issuesSource, /branchId/);
 });
