@@ -124,6 +124,22 @@ BEGIN
     (v_tenant, v_ingredient, v_issue_unit, 10, FALSE, TRUE, 1),
     (v_tenant, v_ingredient, v_receipt_unit, 100, FALSE, TRUE, 2);
 
+  PERFORM set_config('request.jwt.claim.sub', v_owner::text, TRUE);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', TRUE);
+  PERFORM set_config(
+    'request.jwt.claims',
+    jsonb_build_object(
+      'sub', v_owner::text,
+      'role', 'authenticated',
+      'app_metadata', jsonb_build_object(
+        'tenant_id', v_tenant,
+        'user_role', 'owner',
+        'position_code', 'owner'
+      )
+    )::text,
+    TRUE
+  );
+
   INSERT INTO public.supplier_items (
     tenant_id, supplier_id, ingredient_id, is_active, created_by
   ) VALUES (v_tenant, v_supplier, v_ingredient, TRUE, v_owner);

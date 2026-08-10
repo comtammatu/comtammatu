@@ -62,9 +62,20 @@ BEGIN
   WHERE position_code = 'waiter'
   LIMIT 1;
 
-  IF v_waiter_keys IS DISTINCT FROM ARRAY['hr:request_leave']::text[] THEN
+  IF v_waiter_keys IS NULL
+     OR NOT v_waiter_keys @> ARRAY[
+       'hr:request_leave',
+       'orders:read',
+       'orders:write',
+       'pos:use',
+       'pos:send_kitchen',
+       'pos:print',
+       'pos:reprint_receipt',
+       'pos:confirm_payment'
+     ]::text[]
+     OR v_waiter_keys @> ARRAY['pos:void_order']::text[] THEN
     RAISE EXCEPTION
-      'TEST FAILED: waiter template stays leave-only (no POS money keys), got %',
+      'TEST FAILED: waiter near-cashier POS grants missing or still has void, got %',
       v_waiter_keys;
   END IF;
 
