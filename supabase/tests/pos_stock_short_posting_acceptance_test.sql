@@ -120,24 +120,24 @@ BEGIN
     (v_tenant, v_ingredient_nocost, v_unit, 1, true, true);
 
   INSERT INTO public.menu_items (
-    tenant_id, category_id, name, base_price, sort_order, is_active
+    tenant_id, category_id, name, base_price, sort_order, is_active, vat_rate
   ) VALUES (
     v_tenant, v_category, '__adr26_menu_short_' || gen_random_uuid()::text,
-    10000, 1, true
+    10000, 1, true, 8
   ) RETURNING id INTO v_menu_short;
 
   INSERT INTO public.menu_items (
-    tenant_id, category_id, name, base_price, sort_order, is_active
+    tenant_id, category_id, name, base_price, sort_order, is_active, vat_rate
   ) VALUES (
     v_tenant, v_category, '__adr26_menu_missing_' || gen_random_uuid()::text,
-    10000, 2, true
+    10000, 2, true, 8
   ) RETURNING id INTO v_menu_missing;
 
   INSERT INTO public.menu_items (
-    tenant_id, category_id, name, base_price, sort_order, is_active
+    tenant_id, category_id, name, base_price, sort_order, is_active, vat_rate
   ) VALUES (
     v_tenant, v_category, '__adr26_menu_nocost_' || gen_random_uuid()::text,
-    10000, 3, true
+    10000, 3, true, 8
   ) RETURNING id INTO v_menu_nocost;
 
   INSERT INTO public.recipes (

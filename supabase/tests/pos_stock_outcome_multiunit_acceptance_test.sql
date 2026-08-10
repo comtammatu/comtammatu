@@ -622,9 +622,27 @@ BEGIN
     AND flag_key = 'pos_stock_outcome_posting';
 
   v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
-  IF v_result ->> 'reason' <> 'insufficient_stock_at_posting' THEN
+  IF COALESCE((v_result ->> 'consumed')::boolean, false) IS NOT TRUE THEN
     RAISE EXCEPTION
-      'TEST 9 FAILED: insufficient stock did not fail closed: %',
+      'TEST 9 FAILED: ADR 0026 post-and-flag did not consume: %',
+      v_result;
+  END IF;
+
+  IF COALESCE((v_result ->> 'movements_created')::int, 0) <> 1 THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: expected 1 movement, got %',
+      v_result;
+  END IF;
+
+  IF COALESCE((v_result ->> 'followup')::boolean, false) IS NOT TRUE THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: expected followup flag for oversell, got %',
+      v_result;
+  END IF;
+
+  IF NOT (v_result -> 'short_ingredient_ids') @> to_jsonb(v_drink_ingredient) THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: drink ingredient not flagged short: %',
       v_result;
   END IF;
 
@@ -634,10 +652,35 @@ BEGIN
     AND order_id = v_order
     AND movement_subtype = 'sale_consumption';
 
-  IF v_count <> 0 THEN
+  IF v_count <> 1 THEN
     RAISE EXCEPTION
-      'TEST 9 FAILED: insufficient posting wrote % partial movement(s)',
+      'TEST 9 FAILED: post-and-flag wrote % movement(s), expected 1',
       v_count;
+  END IF;
+
+  SELECT current_quantity INTO v_qty
+  FROM public.stock_levels
+  WHERE tenant_id = v_tenant
+    AND branch_id = v_branch
+    AND ingredient_id = v_drink_ingredient
+    AND location_id = v_location;
+
+  IF v_qty <> -997 THEN
+    RAISE EXCEPTION
+      'TEST 9 FAILED: expected stock=-997 after oversell, got %',
+      v_qty;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.notifications n
+    WHERE n.tenant_id = v_tenant
+      AND n.kind = 'inventory.pos_stock_shortfall'
+      AND n.entity_id = v_order
+      AND n.target_branch_id = v_branch
+      AND n.action_url = format('/br/%s/stock', v_branch)
+  ) THEN
+    RAISE EXCEPTION 'TEST 9 FAILED: shortfall notification missing';
   END IF;
 
   RAISE NOTICE 'G5 POS/KDS stock outcome multi-unit acceptance passed';

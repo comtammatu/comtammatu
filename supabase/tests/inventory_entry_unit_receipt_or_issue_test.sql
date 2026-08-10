@@ -206,7 +206,7 @@ BEGIN
     v_tenant,
     v_branch,
     '__EUR-ISSUE-' || pg_catalog.gen_random_uuid()::text,
-    'other',
+    'writeoff',
     'draft',
     v_owner,
     v_location

@@ -40,10 +40,8 @@ BEGIN
     END IF;
   END LOOP;
   FOREACH v_signature IN ARRAY v_retired_signatures LOOP
-    IF has_function_privilege('anon', v_signature, 'EXECUTE')
-       OR has_function_privilege('authenticated', v_signature, 'EXECUTE')
-       OR has_function_privilege('service_role', v_signature, 'EXECUTE') THEN
-      RAISE EXCEPTION 'STOCK FULFILLMENT: retired RPC is executable: %',
+    IF to_regprocedure(v_signature) IS NOT NULL THEN
+      RAISE EXCEPTION 'STOCK FULFILLMENT: retired RPC still exists: %',
         v_signature;
     END IF;
   END LOOP;
