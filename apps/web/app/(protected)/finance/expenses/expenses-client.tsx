@@ -38,7 +38,6 @@ import {
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { AppListFrame, AppPageHeader } from "@/components/surface";
-import { messages } from "@lib/messages";
 import {
   DataTable,
   type DataTableColumn,

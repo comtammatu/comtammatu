@@ -284,7 +284,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.doesNotMatch(financeMessages, /Marketing \/ khuyến mãi/);
 });
 
-test("Product UI copy bans recurring EN loanwords in Hint\/Description dictionaries", () => {
+test("Product UI copy bans recurring EN loanwords in Hint/Description dictionaries", () => {
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
   const notificationsMessages = read("apps/web/lib/messages/notifications.ts");
   const settingsMessages = read("apps/web/lib/messages/settings.ts");

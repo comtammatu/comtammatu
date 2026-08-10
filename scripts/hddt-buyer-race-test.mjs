@@ -309,6 +309,7 @@ function submitSql(tokenHash, buyerName, lockKey = null) {
       SELECT public.submit_invoice_buyer_request_as_system(
         ${sqlLiteral(tokenHash)},
         jsonb_build_object(
+          'buyerKind', 'business',
           'buyerName', ${sqlLiteral(buyerName)},
           'buyerTaxCode', '0312345678',
           'buyerAddress', '1 Test Street',
