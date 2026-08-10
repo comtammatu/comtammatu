@@ -106,7 +106,7 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
  * Derive provider `invoiceType` from `templateCode`.
  *
  * Per Viettel HDSD line 580-598 + example bodies (HDSD §III.2, line
- * 869+ all show `invoiceType: "1"` paired with `templateCode: "1/001"`):
+ * 869+ all show `invoiceType: "1"` paired with `templateCode: "1/00x"`):
  * Throws if templateCode shape is unrecognised so misconfigured env
  * surfaces loudly at boot rather than producing rejected invoices.
  */
@@ -114,7 +114,7 @@ export function deriveInvoiceTypeFromTemplate(templateCode: string): string {
   if (!/^1\//.test(templateCode)) {
     throw new Error(
       `Invalid invoice template format: "${templateCode}". ` +
-        `Expected VAT template form like "1/001".`,
+        `Expected VAT template form like "1/002".`,
     );
   }
   return "1";
