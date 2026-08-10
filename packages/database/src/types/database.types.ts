@@ -1643,6 +1643,7 @@ export type Database = {
           branch_kind: string
           code: string | null
           created_at: string | null
+          google_review_url: string | null
           id: number
           is_active: boolean | null
           latitude: number | null
@@ -1658,6 +1659,7 @@ export type Database = {
           branch_kind?: string
           code?: string | null
           created_at?: string | null
+          google_review_url?: string | null
           id?: never
           is_active?: boolean | null
           latitude?: number | null
@@ -1673,6 +1675,7 @@ export type Database = {
           branch_kind?: string
           code?: string | null
           created_at?: string | null
+          google_review_url?: string | null
           id?: never
           is_active?: boolean | null
           latitude?: number | null
@@ -2184,8 +2187,13 @@ export type Database = {
           comment: string | null
           created_at: string
           id: number
+          order_created_at: string | null
+          order_id: number | null
+          order_number: string | null
           qr_code_id: number
           rating: number
+          table_id: number | null
+          table_number: string | null
           tenant_id: number
         }
         Insert: {
@@ -2194,8 +2202,13 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: never
+          order_created_at?: string | null
+          order_id?: number | null
+          order_number?: string | null
           qr_code_id: number
           rating: number
+          table_id?: number | null
+          table_number?: string | null
           tenant_id: number
         }
         Update: {
@@ -2204,8 +2217,13 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: never
+          order_created_at?: string | null
+          order_id?: number | null
+          order_number?: string | null
           qr_code_id?: number
           rating?: number
+          table_id?: number | null
+          table_number?: string | null
           tenant_id?: number
         }
         Relationships: [
@@ -2224,10 +2242,24 @@ export type Database = {
             referencedColumns: ["branch_id", "tenant_id"]
           },
           {
+            foreignKeyName: "feedbacks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "feedbacks_qr_code_id_fkey"
             columns: ["qr_code_id"]
             isOneToOne: false
             referencedRelation: "feedback_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
             referencedColumns: ["id"]
           },
           {
@@ -14404,6 +14436,17 @@ export type Database = {
           p_start_date: string
         }
         Returns: number
+      }
+      submit_self_order_feedback: {
+        Args: {
+          p_client_submission_id: string
+          p_comment: string
+          p_ip_hash: string
+          p_order_id: number
+          p_rating: number
+          p_token: string
+        }
+        Returns: Json
       }
       sync_insurance_base: {
         Args: { p_employee_id: number }

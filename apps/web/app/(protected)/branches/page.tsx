@@ -9,7 +9,7 @@ export default async function BranchesPage() {
 
   const { data: branches, error } = await supabase
     .from("branches")
-    .select("id, name, code, address, phone, is_active, branch_kind")
+    .select("id, name, code, address, phone, google_review_url, is_active, branch_kind")
     .order("name");
 
   if (error) {

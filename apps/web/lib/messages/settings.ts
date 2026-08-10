@@ -32,6 +32,10 @@ export const settings = {
     addressPlaceholder: "Ví dụ: 123 Nguyễn Huệ, Quận 1",
     phoneLabel: "Điện thoại",
     phonePlaceholder: "Ví dụ: 028 1234 5678",
+    googleReviewUrlLabel: "Đường dẫn đánh giá Google",
+    googleReviewUrlPlaceholder: "https://maps.google.com/…",
+    googleReviewUrlHint:
+      "Dùng sau khi khách chấm từ 4 sao. Để trống nếu chưa có trang Google.",
   },
   pages: {
     branchesTitle: "Điểm vận hành",

@@ -54,6 +54,7 @@ export interface BranchRow {
   code: string | null;
   address: string | null;
   phone: string | null;
+  google_review_url: string | null;
   is_active: boolean | null;
   branch_kind: string | null;
 }

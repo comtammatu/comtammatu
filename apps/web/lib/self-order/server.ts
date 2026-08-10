@@ -797,3 +797,104 @@ export async function cancelSelfOrderVietQrPayment(input: {
   }
   return { ok: true, data: parsed.data };
 }
+
+export async function submitSelfOrderFeedback(input: {
+  token: string;
+  ipHash: string | null;
+  orderId: number;
+  clientSubmissionId: string;
+  rating: number;
+  comment?: string;
+}): Promise<
+  SelfOrderActionResult<{ feedbackId: number; duplicate: boolean }>
+> {
+  const { data, error } = await service().rpc<{
+    ok?: boolean;
+    feedbackId?: number;
+    duplicate?: boolean;
+  }>("submit_self_order_feedback", {
+    p_token: input.token,
+    p_order_id: input.orderId,
+    p_client_submission_id: input.clientSubmissionId,
+    p_rating: input.rating,
+    p_comment: (input.comment ?? null) as string,
+    p_ip_hash: (input.ipHash ?? null) as string,
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+    if (message.includes("feedback_rate_limited")) {
+      return {
+        ok: false,
+        status: 429,
+        code: "rate_limited",
+        message: SELF_ORDER_VI.feedbackRateLimited,
+        retryAfterSeconds: retryAfterSeconds(error) ?? 900,
+      };
+    }
+    if (
+      message.includes("feedback_token_invalid") ||
+      message.includes("feedback_branch_inactive")
+    ) {
+      return {
+        ok: false,
+        status: 404,
+        code: "invalid_token",
+        message: SELF_ORDER_VI.unavailableInvalidTokenDescription,
+      };
+    }
+    if (message.includes("feedback_order_already_submitted")) {
+      return {
+        ok: false,
+        status: 409,
+        code: "already_submitted",
+        message: SELF_ORDER_VI.feedbackAlreadySubmitted,
+      };
+    }
+    if (message.includes("feedback_qr_required")) {
+      return {
+        ok: false,
+        status: 503,
+        code: "feedback_qr_required",
+        message: SELF_ORDER_VI.feedbackQrRequired,
+      };
+    }
+    if (
+      message.includes("feedback_order_invalid") ||
+      message.includes("feedback_rating_invalid") ||
+      message.includes("feedback_comment_too_long") ||
+      message.includes("feedback_client_submission_required")
+    ) {
+      return {
+        ok: false,
+        status: 422,
+        code: "invalid_body",
+        message: SELF_ORDER_VI.feedbackFailed,
+      };
+    }
+    console.error("[self-order] feedback submit failed", error);
+    return {
+      ok: false,
+      status: 500,
+      code: "internal",
+      message: SELF_ORDER_VI.feedbackFailed,
+    };
+  }
+
+  if (!data?.ok || typeof data.feedbackId !== "number") {
+    return {
+      ok: false,
+      status: 500,
+      code: "internal",
+      message: SELF_ORDER_VI.feedbackFailed,
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      feedbackId: data.feedbackId,
+      duplicate: Boolean(data.duplicate),
+    },
+  };
+}

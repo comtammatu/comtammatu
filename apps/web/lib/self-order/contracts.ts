@@ -68,6 +68,21 @@ export const selfOrderPaymentCancelRequestSchema = z
   })
   .strict();
 
+export const selfOrderFeedbackRequestSchema = z
+  .object({
+    clientSubmissionId: z.uuid(),
+    orderId: z.number().int().positive(),
+    rating: z.number().int().min(1).max(5),
+    comment: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .transform((value) => (value && value.length > 0 ? value : undefined)),
+    website: z.string().optional(),
+  })
+  .strict();
+
 export const selfOrderRequestStatusSchema = z.enum([
   "pending",
   "accepted",
@@ -303,7 +318,13 @@ export const publicSelfOrderAvailableSnapshotSchema = z
   .object({
     ok: z.literal(true),
     state: selfOrderDerivedStateSchema,
-    branch: z.object({ name: z.string().min(1).max(200) }).strict(),
+    branch: z
+      .object({
+        name: z.string().min(1).max(200),
+        phone: z.string().min(1).max(40).nullable(),
+        googleReviewUrl: z.string().url().max(500).nullable(),
+      })
+      .strict(),
     table: z
       .object({
         id: z.number().int().positive(),

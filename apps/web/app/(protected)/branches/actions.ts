@@ -21,6 +21,7 @@ const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
   address: optionalText,
   phone: optionalText,
+  googleReviewUrl: optionalText,
 });
 
 const createBranchSchema = branchSchema.extend({
@@ -35,6 +36,15 @@ const toggleIdSchema = z.object({
   id: z.coerce.number().int().positive({ error: "Mã chi nhánh không hợp lệ" }),
 });
 
+function normalizeGoogleReviewUrl(raw: string | undefined): string | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  if (value.length > 500 || !/^https?:\/\//i.test(value)) {
+    return "__invalid__";
+  }
+  return value;
+}
+
 /* ─── Actions ─── */
 
 export const createBranch = withFormAction(
@@ -46,15 +56,26 @@ export const createBranch = withFormAction(
       code: fd.get("code"),
       address: fd.get("address"),
       phone: fd.get("phone"),
+      googleReviewUrl: fd.get("googleReviewUrl"),
     }),
   },
   async (data, { supabase, claims }) => {
+    const googleReviewUrl = normalizeGoogleReviewUrl(data.googleReviewUrl);
+    if (googleReviewUrl === "__invalid__") {
+      return {
+        success: false,
+        error:
+          "Đường dẫn đánh giá Google không hợp lệ (cần bắt đầu bằng http:// hoặc https://).",
+      };
+    }
+
     const { error } = await supabase.from("branches").insert({
       tenant_id: claims.tenant_id,
       name: data.name,
       code: data.code,
       address: data.address || null,
       phone: data.phone || null,
+      google_review_url: googleReviewUrl,
       branch_kind: "branch",
     });
 
@@ -94,15 +115,26 @@ export const updateBranch = withFormAction(
       name: fd.get("name"),
       address: fd.get("address"),
       phone: fd.get("phone"),
+      googleReviewUrl: fd.get("googleReviewUrl"),
     }),
   },
   async (data, { supabase, claims }) => {
+    const googleReviewUrl = normalizeGoogleReviewUrl(data.googleReviewUrl);
+    if (googleReviewUrl === "__invalid__") {
+      return {
+        success: false,
+        error:
+          "Đường dẫn đánh giá Google không hợp lệ (cần bắt đầu bằng http:// hoặc https://).",
+      };
+    }
+
     const { error } = await supabase
       .from("branches")
       .update({
         name: data.name,
         address: data.address || null,
         phone: data.phone || null,
+        google_review_url: googleReviewUrl,
         branch_kind: "branch",
       })
       .eq("id", data.id)

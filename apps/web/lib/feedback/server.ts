@@ -6,6 +6,8 @@ export type FeedbackQrPublicContext = {
   label: string;
   branchName: string;
   branchId: number;
+  branchPhone: string | null;
+  googleReviewUrl: string | null;
 };
 
 export type SubmitFeedbackResult =
@@ -39,7 +41,7 @@ export async function loadFeedbackQrPublicContext(
 
   const { data: branch } = await service()
     .from("branches")
-    .select("id, name, is_active, branch_kind")
+    .select("id, name, phone, google_review_url, is_active, branch_kind")
     .eq("id", qr.branch_id)
     .eq("tenant_id", qr.tenant_id)
     .maybeSingle();
@@ -57,6 +59,8 @@ export async function loadFeedbackQrPublicContext(
     label: qr.label,
     branchName: branch.name,
     branchId: branch.id,
+    branchPhone: branch.phone,
+    googleReviewUrl: branch.google_review_url,
   };
 }
 
