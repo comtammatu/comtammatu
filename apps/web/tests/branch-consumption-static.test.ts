@@ -43,12 +43,15 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   );
 
   assert.match(data, /import "server-only"/);
-  assert.match(data, /order_id, issue_id/);
+  assert.match(data, /orders!stock_movements_order_id_fkey/);
+  assert.match(data, /groupSaleConsumptionsByOrder/);
   assert.match(data, /branch\?\.branch_kind === "branch"/);
   assert.match(data, /\.not\("order_id", "is", null\)/);
   assert.match(listClient, /showRecorded && requestedView !== "manual"/);
-  assert.match(data, /stock_issues!stock_movements_issue_id_fkey/);
-  assert.match(data, /\.limit\(100\)/);
+  assert.match(data, /RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT/);
+  assert.match(data, /RECORDED_SALE_CONSUMPTION_ORDER_LIMIT/);
+  assert.match(listClient, /order\.orderNumber/);
+  assert.match(listClient, /selectedOrder\.lines\.map/);
   assert.match(issueData, /expectedType/);
   assert.match(issueData, /detail\.issue\.issue_type !== expectedType/);
 
@@ -92,7 +95,10 @@ test("recorded consumption is POS-only and hidden for central sites", () => {
   );
 
   assert.match(copy, /recordedConsumptionTitle: "Tiêu hao đã ghi nhận"/);
-  assert.match(copy, /Chỉ gồm các lần trừ tồn tự động từ đơn POS/);
+  assert.match(
+    copy,
+    /Mỗi dòng là một đơn POS đã trừ tồn; mở chi tiết để xem nguyên liệu\./,
+  );
   assert.match(page, /branch_kind === "branch"/);
   assert.match(page, /\.not\("order_id", "is", null\)/);
   assert.match(page, /showRecordedConsumptions=\{showRecordedConsumptions\}/);

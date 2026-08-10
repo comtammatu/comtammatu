@@ -7,18 +7,23 @@ export type BranchConsumptionSourceKind =
   | "import"
   | "other";
 
-export type BranchRecordedConsumption = {
+export type BranchRecordedConsumptionLine = {
   id: number;
-  issueId: number | null;
-  orderId: number | null;
-  issueCode: string | null;
-  sourceKind: BranchConsumptionSourceKind;
-  sourceLabel: string;
-  recordedAt: string;
-  locationName: string;
   ingredientName: string;
+  locationName: string;
   quantity: number;
   unit: string;
+};
+
+export type BranchRecordedConsumption = {
+  orderId: number;
+  orderNumber: string;
+  recordedAt: string;
+  locationName: string;
+  sourceKind: "pos";
+  sourceLabel: string;
+  ingredientCount: number;
+  lines: BranchRecordedConsumptionLine[];
 };
 
 export function resolveBranchConsumptionSourceKind({
@@ -47,7 +52,13 @@ export function filterBranchRecordedConsumptions(
   if (!normalized) return rows;
   return rows.filter((row) =>
     matchesSearch(
-      [row.ingredientName, row.locationName, row.sourceLabel, row.issueCode],
+      [
+        row.orderNumber,
+        String(row.orderId),
+        row.locationName,
+        row.sourceLabel,
+        ...row.lines.map((line) => line.ingredientName),
+      ],
       normalized,
     ),
   );
