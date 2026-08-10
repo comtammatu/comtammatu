@@ -38,6 +38,12 @@ corepack pnpm --filter @comtammatu/web test:e2e
 corepack pnpm --filter @comtammatu/web guides:capture
 ```
 
+## Deploy
+
+Vercel Production only (`main`, region `sin1`): [`vercel.json`](./vercel.json).
+Preview is fail-closed. Topology:
+[`docs/modules/infrastructure.md`](../../docs/modules/infrastructure.md).
+
 ## Docs
 
 - Module map: [`docs/modules/web-app.md`](../../docs/modules/web-app.md)

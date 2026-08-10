@@ -7,6 +7,7 @@
 - `main` chỉ phục vụ CTCP Chén Sứ / Cơm Tấm Má Tư.
 - Production dùng Vercel project `comtammatu`, Supabase ref
   `enloyfnuerqgaqderbwb` và domain `web.comtammatu.com`.
+- Platforms (GitHub CI / Vercel / Supabase): [modules/infrastructure.md](modules/infrastructure.md)
 - Current architecture: [spec/architecture.md](spec/architecture.md)
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
 - `plan/decisions.md` only preserves meanings for referenced `Dxxx` labels.
@@ -18,6 +19,7 @@
 
 ## Đọc theo nhu cầu
 
+- Setup local + env Vercel: [ref/setup.md](ref/setup.md)
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Skill/plugin/tool routing cho agent: [agent/rules/skills.md](agent/rules/skills.md)
