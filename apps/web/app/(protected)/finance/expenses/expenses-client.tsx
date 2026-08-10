@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useTransition } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Banknote as IconBanknote,
@@ -17,14 +16,6 @@ import { formatAccountingVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { EXPENSE_PAYMENT_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
   Item,
@@ -92,8 +83,6 @@ import {
 import { ExpenseViewDialog } from "./expense-view-dialog";
 
 const EXPENSE_OVERLAY_KEYS = ["expenseId", "mode"] as const;
-const commonCopy = messages.finance.common;
-const linkCopy = messages.finance.links;
 
 interface Branch {
   id: number;
@@ -589,41 +578,6 @@ export function ExpensesClient({
     <>
       <AppPageHeader
         title={copy.page.title}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>{copy.page.description}</span>
-            {copy.page.detailExplanation ? (
-              <Sheet>
-                <SheetTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs font-medium"
-                    >
-                      {commonCopy.detailLink}
-                    </Button>
-                  }
-                />
-                <SheetContent side="right" className="sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>{copy.page.title}</SheetTitle>
-                    <SheetDescription>
-                      {copy.page.detailExplanation}
-                    </SheetDescription>
-                  </SheetHeader>
-                </SheetContent>
-              </Sheet>
-            ) : null}
-            <Link
-              href="/finance/supplier-invoices"
-              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {linkCopy.supplierInvoices.label} →
-            </Link>
-          </span>
-        }
         actions={
           canManageExpenses ? (
             <Button

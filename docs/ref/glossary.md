@@ -325,11 +325,11 @@ Nếu chưa có source dữ liệu trong hệ thống, agent được phép đá
 | `cash_outflow`               | dòng tiền ra           | Tiền chi cho NCC/nhân sự/expense/chủ rút.                                                    | expense nếu là trả nợ cũ           |
 | `cash_on_hand`               | tiền mặt hiện hữu      | Tiền thực có trong két hoặc quỹ.                                                             | cash collected                     |
 | `bank_opening_balance`       | số dư ngân hàng đầu kỳ | Mốc số dư Owner nhập vì hệ thống không đọc được số dư tài khoản ngân hàng.                   | Tổng giao dịch SePay               |
-| `bank_transaction`           | giao dịch ngân hàng    | Một biến động tiền vào hoặc tiền ra canonical từ SePay, tính đúng một lần theo ID giao dịch. | Webhook delivery, payment, expense |
+| `bank_transaction`           | giao dịch ngân hàng    | Một biến động tiền vào hoặc tiền ra canonical từ SePay, tính đúng một lần theo ID giao dịch. Màn Finance LIST `/finance/bank-transactions` nhãn UI **Giao dịch**. | Webhook delivery, payment, expense; không lẫn với quy trình đối soát |
 | `opening_cash`               | tiền đầu ca            | Tiền mặt trong két khi mở ca.                                                                | doanh thu                          |
 | `closing_cash`               | tiền cuối ca           | Tiền mặt thực đếm khi đóng ca.                                                               | expected cash                      |
 | `cash_over_short`            | thừa/thiếu tiền mặt    | Counted cash - expected cash.                                                                | lãi/lỗ                             |
-| `bank_reconciliation`        | đối soát ngân hàng     | Phân loại giao dịch ngân hàng vào payment/chứng từ; gắn hoặc gỡ không đổi số dư.             | payment split, bank movement       |
+| `bank_reconciliation`        | đối soát ngân hàng     | Phân loại giao dịch ngân hàng vào payment/chứng từ; gắn hoặc gỡ không đổi số dư. Hành động khớp trên màn **Giao dịch**, không phải tên màn. | payment split, bank movement; không gọi màn hình là «Đối soát NH» |
 | `accounts_receivable` (`AR`) | phải thu               | Tiền khách/nền tảng/đối tác còn nợ.                                                          | revenue                            |
 | `accounts_payable`           | phải trả               | Tiền còn nợ NCC/đối tác.                                                                     | purchase spend                     |
 | `payable_due_date`           | hạn thanh toán NCC     | Ngày phải trả hóa đơn/khế ước NCC.                                                           | ngày GRN                           |

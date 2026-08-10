@@ -48,7 +48,6 @@ export default async function BankTransactionsPage({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
-        description={copy.description}
         actions={canLinkPayments ? <SepayImportDialog /> : undefined}
       />
       <BankTransactionsTable

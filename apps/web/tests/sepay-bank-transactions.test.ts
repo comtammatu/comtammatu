@@ -843,18 +843,9 @@ test("SePay bank reconciliation reads supplier AP payments without turning them 
   assert.match(loader, /attachSupplierPaymentMatches/);
   assert.match(table, /supplierPaymentMatches=\{tx\.supplierPaymentMatches\}/);
   assert.match(table, /supplierPaymentMatchConfirmed=/);
-  assert.match(cell, /supplierInvoiceHref/);
-  assert.match(cell, /\/finance\/supplier-invoices\?invoiceId=/);
-  assert.match(
-    cell,
-    /\{copy\.openSupplierInvoice\}/,
-  );
-  assert.match(
-    cell,
-    /<Button[\s\S]*size="touch"[\s\S]*render=\{[\s\S]*supplierInvoiceHref/,
-  );
-  assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
+  assert.match(cell, /copy\.clearSupplierPaymentMatch/);
   assert.match(cell, /matchSepayTransactionWithSupplierPayments/);
+  assert.doesNotMatch(cell, /sm:h-7|sm:min-h-7/);
   assert.match(action, /match_sepay_transaction_supplier_payments/);
   assert.match(migration, /ADD COLUMN webhook_event_id bigint/);
   assert.match(migration, /public\.auth_is_owner\(v_user_id\)/);
@@ -891,11 +882,15 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /TooltipTrigger/);
   assert.match(table, /SheetTrigger/);
   assert.match(table, /SheetContent/);
-  assert.match(table, /key: "index"/);
-  assert.match(table, /sticky left-0/);
-  assert.match(table, /sticky left-12/);
-  assert.match(table, /sticky left-44/);
-  assert.equal(table.match(/bg-card/g)?.length, 3);
+  assert.match(table, /key: "date"/);
+  assert.match(table, /key: "content"/);
+  assert.match(table, /key: "status"/);
+  assert.match(table, /key: "action"/);
+  assert.match(table, /copy\.table\.date/);
+  assert.match(table, /formatVNDate/);
+  assert.doesNotMatch(table, /key: "index"/);
+  assert.doesNotMatch(table, /header: "#"/);
+  assert.doesNotMatch(table, /sticky left-/);
   assert.doesNotMatch(table, /bg-background/);
   assert.match(table, /<AppListFrame[\s\S]*?toolbar=\{/);
   assert.match(table, /variant="inline"/);
@@ -933,7 +928,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /isSepayPaymentConflictReviewCode\(tx\.errorCode\)/);
   assert.match(
     table,
-    /\? hasPaymentConflictDetail\s*\?\s*null\s*:\s*reasonLabel\(classifySepayUnmatchedMoneyIn\(tx\)\)/,
+    /reasonLabel\(classifySepayUnmatchedMoneyIn\(tx\)\)/,
   );
   assert.match(table, /const conflictOrder[\s\S]*tx\.orderNumber/);
   assert.match(
@@ -945,9 +940,13 @@ test("SePay bank page uses one filtered reconciliation table", () => {
     table,
     /conflictOrder[\s\S]{0,300}formatOrderId\(conflictOrder/,
   );
-  assert.match(table, /copy\.unmatchedMoneyInTable\.conflictOrder/);
+  assert.doesNotMatch(
+    table,
+    /copy\.unmatchedMoneyInTable\.conflictOrder:/,
+  );
   assert.match(messages, /conflictOrder: "Đơn liên quan"/);
   assert.match(messages, /openConflictOrder: "Mở đơn"/);
+  assert.match(messages, /date: "Ngày"/);
 
   const loader = read(
     "apps/web/app/(protected)/finance/_lib/sepay-bank-transactions.ts",
@@ -982,9 +981,10 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /money_out_review/);
   assert.match(table, /missing_webhook/);
   assert.doesNotMatch(page, /outgoingMoneyReviewTransactions/);
-  assert.match(messages, /Lọc đối soát/);
+  assert.match(messages, /Lọc giao dịch/);
   assert.match(messages, /label: "Lọc"/);
-  assert.match(messages, /Đối soát NH/);
+  assert.match(messages, /title: "Giao dịch"/);
+  assert.match(messages, /bankTransactions: "Giao dịch"/);
   assert.match(messages, /Thanh toán #\$\{id\}/);
   assert.match(messages, /linkTitle: "Khớp giao dịch tiền vào"/);
 
@@ -1003,7 +1003,7 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(messages, /Hoàn tiền \$\{order\}/);
   assert.match(messages, /Thiếu bằng chứng NH/);
   assert.match(messages, /Nộp tiền mặt vào tài khoản/);
-  assert.match(messages, /Không còn việc đối soát cần xử lý/);
+  assert.match(messages, /Không còn việc cần xử lý/);
 });
 
 test("SePay content keeps reconciliation metadata outside transfer tooltips", () => {
@@ -1011,7 +1011,7 @@ test("SePay content keeps reconciliation metadata outside transfer tooltips", ()
     "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
   );
 
-  assert.match(table, /const occurredAt = formatVNDateTime/);
+  assert.match(table, /formatVNDateTime\(instant\)/);
   assert.match(table, /const reference = referenceCode\(row\.tx\)/);
   assert.match(table, /const isLongContent = content\.length > 80/);
   assert.doesNotMatch(table, /showMetadata/);

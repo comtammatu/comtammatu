@@ -106,7 +106,6 @@ export function SupplierInvoicesClient({
   branchId,
   tenantId,
   grnBasePath = "/inventory/grn",
-  description,
   canCreateInvoice = false,
   canPaySupplier = false,
   canAttachVatEvidence = false,
@@ -124,7 +123,6 @@ export function SupplierInvoicesClient({
   branchId?: number;
   tenantId: number;
   grnBasePath?: string;
-  description?: string;
   canCreateInvoice?: boolean;
   canPaySupplier?: boolean;
   canAttachVatEvidence?: boolean;
@@ -1099,8 +1097,7 @@ export function SupplierInvoicesClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={copy.title}
-        description={description}
+        title={messages.finance.supplierInvoicesPage.title}
         actions={
           canCreateInvoice ? (
             <Button type="button" size="touch" onClick={openCreateDialog}>

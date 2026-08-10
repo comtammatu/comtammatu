@@ -276,7 +276,7 @@ export function RefundsClient({
     },
     {
       key: "bank_evidence",
-      header: "Đối soát NH",
+      header: "Khớp sao kê",
       className: "text-sm",
       render: bankReconciliationLabel,
     },
@@ -624,7 +624,7 @@ export function RefundsClient({
               </ItemFooter>
               <ItemFooter>
                 <span className="text-xs text-muted-foreground">
-                  Đối soát NH
+                  Khớp sao kê
                 </span>
                 <span className="text-sm">
                   {bankReconciliationLabel(refund)}

@@ -4,28 +4,11 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 /**
- * Finance LIST Converge — copy length, CTA placement, query-budget guards.
+ * Finance LIST Converge — header chrome, CTA placement, query-budget guards.
  */
 
 function read(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
-}
-
-function wordCount(text: string): number {
-  return text
-    .replace(/[·•]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
-
-/** Extract a string literal assigned to `description:` near a page block. */
-function extractDescription(source: string, afterMarker: string): string {
-  const from = source.indexOf(afterMarker);
-  assert.ok(from >= 0, `marker not found: ${afterMarker}`);
-  const slice = source.slice(from, from + 800);
-  const match = slice.match(/description:\s*\n?\s*"([^"]+)"/);
-  assert.ok(match?.[1], `description not found after ${afterMarker}`);
-  return match[1];
 }
 
 test("Targets LIST primary CTA is header-only (month filter not beside create)", () => {
@@ -44,31 +27,78 @@ test("Targets LIST primary CTA is header-only (month filter not beside create)",
   assert.doesNotMatch(toolbarBlock, /\{copy\.add\}/);
 });
 
-test("Finance LIST header descriptions stay short (≤12 words)", () => {
-  const source = read("lib/messages/finance.ts");
-  const cases: Array<{ marker: string; label: string }> = [
-    { marker: 'expenses: {\n    page: {', label: "expenses" },
-    { marker: 'bankTransactions: {', label: "bankTransactions" },
-    { marker: 'supplierInvoicesPage: {', label: "supplierInvoices" },
-    { marker: 'invoicesPage: {', label: "invoices" },
+test("Finance LIST page headers are title-only (no header Description essay)", () => {
+  const surfaces: Array<{ path: string; headerEnd: string }> = [
+    {
+      path: "app/(protected)/finance/bank-transactions/page.tsx",
+      headerEnd: "<BankTransactionsTable",
+    },
+    {
+      path: "app/(protected)/finance/expenses/expenses-client.tsx",
+      headerEnd: "<AppListFrame",
+    },
+    {
+      path: "app/(protected)/finance/targets/targets-client.tsx",
+      headerEnd: "<AppListFrame",
+    },
+    {
+      path: "app/(protected)/finance/invoices/page.tsx",
+      headerEnd: "<AppListFrame",
+    },
+    {
+      path: "app/(protected)/finance/food-cost/page.tsx",
+      headerEnd: "/>",
+    },
   ];
-  for (const { marker, label } of cases) {
-    const description = extractDescription(source, marker);
-    const words = wordCount(description);
-    assert.ok(
-      words <= 12,
-      `${label} description has ${words} words (budget 12): "${description}"`,
+  for (const { path, headerEnd } of surfaces) {
+    const source = read(path);
+    const start = source.indexOf("<AppPageHeader");
+    assert.ok(start >= 0, `${path}: AppPageHeader not found`);
+    const end = source.indexOf(headerEnd, start);
+    assert.ok(end > start, `${path}: header end marker not found`);
+    const header = source.slice(start, end);
+    assert.doesNotMatch(
+      header,
+      /description=/,
+      `${path} header must not set description`,
     );
+    assert.doesNotMatch(header, /FinanceListPageDescription/);
   }
 
-  const targetsDesc = extractDescription(
-    source,
-    'title: "Chỉ tiêu tháng"',
+  const supplierClient = read(
+    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
   );
-  assert.ok(
-    wordCount(targetsDesc) <= 12,
-    `targets description has ${wordCount(targetsDesc)} words: "${targetsDesc}"`,
+  const supplierHeader = supplierClient.slice(
+    supplierClient.indexOf("<AppPageHeader"),
+    supplierClient.indexOf("<AppListFrame"),
   );
+  assert.doesNotMatch(supplierHeader, /description=/);
+  assert.match(
+    supplierClient,
+    /messages\.finance\.supplierInvoicesPage\.title/,
+  );
+
+  assert.throws(
+    () =>
+      readFileSync(
+        join(
+          process.cwd(),
+          "app/(protected)/finance/components/finance-list-page-description.tsx",
+        ),
+        "utf8",
+      ),
+    { code: "ENOENT" },
+  );
+});
+
+test("Finance invoice LIST nav labels use HĐ đầu vào / HĐ đầu ra", () => {
+  const source = read("lib/messages/finance.ts");
+  assert.match(source, /supplierPayables:\s*"HĐ đầu vào"/);
+  assert.match(source, /invoices:\s*"HĐ đầu ra"/);
+  assert.match(source, /title:\s*"HĐ đầu vào"/);
+  assert.match(source, /title:\s*"HĐ đầu ra"/);
+  assert.doesNotMatch(source, /GTGT đầu vào & NCC/);
+  assert.doesNotMatch(source, /HĐĐT & GTGT đầu ra/);
 });
 
 test("Finance status term map is shared on common.status", () => {
@@ -155,7 +185,7 @@ test("Expenses LIST primary CTA is header-only (filter not beside create)", () =
   assert.match(source, /trailing=\{[\s\S]*?needsActionFilterButton/);
 });
 
-test("HĐĐT primary CTA lives on AppPageHeader", () => {
+test("HĐ đầu ra primary CTA lives on AppPageHeader", () => {
   const list = read("app/(protected)/finance/invoice-list.tsx");
   const page = read("app/(protected)/finance/invoices/page.tsx");
   const headerActions = read(

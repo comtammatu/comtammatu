@@ -48,7 +48,10 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
     "supabase/migration-archive/20260730150000_supplier_invoice_line_pricing.sql",
   );
 
-  assert.match(financeCopy, /GTGT đầu vào & NCC/);
+  assert.match(financeCopy, /HĐ đầu vào/);
+  assert.match(financeCopy, /HĐ đầu ra/);
+  assert.doesNotMatch(financeCopy, /GTGT đầu vào & NCC/);
+  assert.doesNotMatch(financeCopy, /HĐĐT & GTGT đầu ra/);
   assert.match(financeCopy, /chưa mặc định được khấu trừ/);
   assert.match(invoiceClient, /recordSupplierPayment/);
   assert.match(invoiceClient, /copy\.invoiceLines/);

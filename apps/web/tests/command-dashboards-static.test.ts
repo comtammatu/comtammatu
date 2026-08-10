@@ -117,7 +117,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /không gồm giá vốn món/);
-  assert.match(copy, /bankReconciliationLabel: "Đối soát NH"/);
+  assert.match(copy, /bankReconciliationLabel: "Giao dịch"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
 });
@@ -196,8 +196,11 @@ test("finance subroutes share the compact surface and operational vocabulary", (
   }
   assert.doesNotMatch(copy, literalWith(String.raw`\bpayment\b`));
   assert.doesNotMatch(copy, literalWith(String.raw`\bwebhook\b`));
-  assert.match(bankTable, /gap-2 overflow-hidden whitespace-nowrap sm:gap-3/);
-  assert.match(bankTable, /max-w-36 truncate font-mono/);
+  assert.match(bankTable, /copy\.matchAction/);
+  assert.match(bankTable, /key: "date"/);
+  assert.match(bankTable, /key: "action"/);
+  assert.match(copy, /title: "Giao dịch"/);
+  assert.doesNotMatch(copy, /Đối soát NH/);
 });
 
 test("inventory copy uses Vietnamese operational labels on active surfaces", () => {

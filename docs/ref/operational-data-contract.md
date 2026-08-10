@@ -107,7 +107,7 @@ cho đến khi đủ source/formula/exclusions/confidence/drilldown.
 | Giá trị tồn | `get_inventory_value_period` | không phải chi phí kỳ |
 | Chi VH | `expenses` nhóm operating | không suy từ PO/GRN/NCC |
 | Quỹ TM/NH | `get_finance_current_funds` | Owner nhập số dư đầu; “Chưa mở sổ”; không = đếm ca POS |
-| Đối soát NH / VietQR | `bank_transactions` + matches | `needs_review`; không sửa doanh thu/số dư tự động |
+| Giao dịch / VietQR | `bank_transactions` + matches | `needs_review`; không sửa doanh thu/số dư tự động |
 | HĐĐT queue | `get_finance_dashboard_summary` | workflow, không thay doanh thu VH |
 | Công nợ NCC | `supplier_invoices` / payments | AP queue; không = chi VH nếu chưa qua contract |
 | Lệch ca / desync | `get_cash_variance_*`, `find_payment_order_desync` | exception; không sửa KPI chính |

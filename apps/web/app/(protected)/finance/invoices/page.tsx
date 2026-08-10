@@ -59,7 +59,6 @@ export default async function InvoicesPage({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.title}
-        description={copy.description}
         actions={
           canIssueInvoices ? (
             <InvoicePageHeaderActions

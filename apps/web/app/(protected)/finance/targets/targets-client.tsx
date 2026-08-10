@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -19,14 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@comtammatu/ui/components/sheet";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
@@ -65,7 +56,6 @@ import {
 } from "../_lib/revenue-target";
 
 const copy = messages.finance.revenueTargets;
-const commonCopy = messages.finance.common;
 
 type EditableRewardTier = {
   id: string;
@@ -441,41 +431,6 @@ export function RevenueTargetsClient({
     <>
       <AppPageHeader
         title={copy.page.title}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>{copy.page.description}</span>
-            {copy.page.detailExplanation ? (
-              <Sheet>
-                <SheetTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs font-medium"
-                    >
-                      {commonCopy.detailLink}
-                    </Button>
-                  }
-                />
-                <SheetContent side="right" className="sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>{copy.page.title}</SheetTitle>
-                    <SheetDescription>
-                      {copy.page.detailExplanation}
-                    </SheetDescription>
-                  </SheetHeader>
-                </SheetContent>
-              </Sheet>
-            ) : null}
-            <Link
-              href="/finance/revenue"
-              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {messages.finance.nav.items.revenue} →
-            </Link>
-          </span>
-        }
         actions={
           <Button
             type="button"
