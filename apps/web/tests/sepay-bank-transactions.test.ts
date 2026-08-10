@@ -896,7 +896,17 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   );
   assert.doesNotMatch(table, /rounded-lg border bg-card/);
   assert.match(table, /copy\.matchedPayment\(tx\.paymentId\)/);
-  assert.match(table, /function displayBankContent/);
+  assert.match(
+    table,
+    /import \{ displayBankContent \} from "\.\.\/_lib\/display-bank-content"/,
+  );
+  assert.match(table, /export \{ displayBankContent \}/);
+  assert.match(
+    read(
+      "apps/web/app/(protected)/finance/_lib/display-bank-content.ts",
+    ),
+    /export function displayBankContent/,
+  );
   assert.doesNotMatch(table, /function reasonDetail/);
   assert.doesNotMatch(table, /key: "match"/);
   assert.match(table, /queueCount\(formatCount\(openQueueCount\)\)/);
@@ -980,8 +990,10 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.doesNotMatch(matchCell, /Popover(Content|Trigger)?/);
   assert.doesNotMatch(matchCell, /max-h-(48|72).*overflow-y-auto/);
   assert.match(matchCell, /htmlFor=\{checkboxId\}/);
-  assert.match(matchCell, /formatVNDateTime/);
   assert.match(matchCell, /formatVNBusinessDate/);
+  assert.match(matchCell, /displayBankContent/);
+  assert.match(matchCell, /FinanceMoneySummary/);
+  assert.match(matchCell, /ToggleGroup/);
   assert.match(messages, /Hoàn tiền \$\{order\}/);
   assert.match(messages, /Chưa có bằng chứng ngân hàng/);
   assert.match(messages, /Nộp tiền mặt vào tài khoản/);

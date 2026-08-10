@@ -45,6 +45,8 @@ interface FilterBarProps {
   branchLabel?: string;
   branchPlaceholder?: string;
   allBranchesLabel?: string;
+  /** Stick at Owner scrollport top when not already inside AppListFrame toolbar. */
+  sticky?: boolean;
 }
 
 type FilterBarControl = "branch" | "range" | "granularity" | "compare";
@@ -113,6 +115,7 @@ export function FilterBar({
   branchLabel = filterCopy.branch,
   branchPlaceholder = filterCopy.branchPlaceholder,
   allBranchesLabel = messages.finance.common.allBranches,
+  sticky = false,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -214,6 +217,7 @@ export function FilterBar({
 
   return (
     <AppToolbar
+      sticky={sticky}
       className={cn(
         "flex-col items-stretch gap-2 lg:flex-row lg:flex-nowrap lg:items-center",
         className,

@@ -95,10 +95,6 @@ export default async function ExpensesPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={copy.page.title}
-        description={copy.page.description}
-      />
       <ExpensesClient
         params={params}
         branches={branches}

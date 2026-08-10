@@ -79,6 +79,21 @@ export const finance = {
     backToFinance: "Quay lại Tài chính",
     reportError: "Lỗi tạo báo cáo.",
   },
+  /** Layer A VAT-core labels — use across expenses, HĐ NCC, bank match. */
+  moneyLabels: {
+    unitPrice: "Đơn giá",
+    vatRate: "Thuế suất",
+    vatAmount: "Thuế GTGT",
+    subtotalExVat: "Tổng cộng (chưa GTGT)",
+    totalInclVat: "Tổng cộng (đã gồm GTGT)",
+    vatAutoPlaceholder: "Tự tính nếu bỏ trống",
+    recalculateVat: "Tính lại GTGT",
+  },
+  /** Layer B document adjustments (HĐ NCC). */
+  adjustmentLabels: {
+    lineDiscount: "Chiết khấu (dòng)",
+    documentDiscount: "Chiết khấu toàn hóa đơn",
+  },
   shell: {
     subLabel: "Vận hành",
     mainLabel: "Tài chính",
@@ -771,9 +786,10 @@ export const finance = {
     matchExpensePlaceholder: "Khớp chi phí",
     matchExpenseTitle: "Khớp khoản chi phí",
     matchedExpenseCount: (count: string) => `Đã khớp ${count} khoản chi`,
-    bankTransactionAmount: "Sao kê",
-    selectedExpenseAmount: "Khoản chi đã chọn",
+    bankTransactionAmount: "Sao kê (đã gồm GTGT)",
+    selectedExpenseAmount: "Khoản chi đã chọn (đã gồm GTGT)",
     expenseMatchDelta: "Lệch",
+    selectedExpenseCount: (count: string) => `${count} khoản chi`,
     expenseAllocationMismatch:
       "Tổng chi đã chọn phải bằng số tiền trên sao kê.",
     noUnmatchedExpenses: "Không có khoản chi chưa trả để khớp",
