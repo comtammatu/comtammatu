@@ -111,8 +111,8 @@ per-module ramp.
 
 | Prefix | Plane | Examples |
 | --- | --- | --- |
-| `App*` | Quản lý hệ thống (`control_surface`) | `AppPage`, `AppSection`, `AppToolbar`, `AppListFrame` |
-| `BranchOperator*` | Vận hành bán hàng (`branch_surface`) | `BranchOperatorPage`, `BranchOperatorPanel` |
+| `App*` | `Quản lý hệ thống` (`control_surface`) | `AppPage`, `AppSection`, `AppToolbar`, `AppListFrame` |
+| `BranchOperator*` | `Vận hành bán hàng` (`branch_surface`) | `BranchOperatorPage`, `BranchOperatorPanel` |
 | `Station*` | `station_chrome` (POS / KDS / Runner) | `StationSection` |
 | `Employee*` | Employee/staff-runtime half | `EmployeePage`, `EmployeePanel` |
 | `Public*` | Guest / system-gate sections | `PublicSection` |
@@ -181,9 +181,9 @@ Adding an exception requires a row in the table above in the same change set.
 
 Two product halves (see `docs/spec/architecture.md` § Product Dual Thesis):
 
-- **Quản lý hệ thống** (`control_surface`) — dense management: tables, filters,
+- **`Quản lý hệ thống`** (`control_surface`) — dense management: tables, filters,
   documents, review states. Adapters: `App*`.
-- **Vận hành bán hàng** (`branch_surface` + `station_chrome`) — touch-first
+- **`Vận hành bán hàng`** (`branch_surface` + `station_chrome`) — touch-first
   shift work and live queues (POS/KDS/Runner). Adapters: `BranchOperator*` /
   station.
 
@@ -224,13 +224,13 @@ Allowed token families:
 - Typography: the runtime font variables from `apps/web/app/layout.tsx` and
   `globals.css`
 
-Brand mapping: `background` = kem gạo; `foreground` = xanh đậm; `primary` = đỏ
-gạch; `ring` / chart accent = vàng gạo; `success` = xanh lá dịu;
-`muted-foreground` = nâu gỗ or xám ấm by theme.
+Brand mapping: `background` = `kem gạo`; `foreground` = `xanh đậm`; `primary` =
+`đỏ gạch`; `ring` / chart accent = `vàng gạo`; `success` = `xanh lá dịu`;
+`muted-foreground` = `nâu gỗ` or `xám ấm` by theme.
 
 ### Theme runtime
 
-- Two modes: `light` (day shift, default) and `night` (warm-dark "gạo cháy").
+- Two modes: `light` (day shift, default) and `night` (warm-dark `gạo cháy`).
   `night` maps to the `.dark` selector so `dark:` variants and the chart THEMES
   map resolve. Every semantic token ships a `:root` + `.dark` pair.
 - `packages/ui/src/components/theme-script.tsx` applies the class before
@@ -266,7 +266,7 @@ gạch; `ring` / chart accent = vàng gạo; `success` = xanh lá dịu;
   `brand-strip` are decorative footer strips, packaging trim, or section
   separators — never a background behind body text.
 - `mascot-cotlet` + `animate-cotlet-idle` / `animate-cotlet-waiting` /
-  `animate-cotlet-waving` render the Cốt Lết sprite loops on the pickup idle
+  `animate-cotlet-waving` render the `Cốt Lết` sprite loops on the pickup idle
   board only, always gated with `motion-safe:`.
 - `shadow-effect-*`, `bg-effect-scrim`, and `drawer-scrim` are the depth
   utilities backed by the `--effect-*` family (see § Elevation / Shadow).
@@ -320,8 +320,8 @@ hand-rolled tinted callout chrome.
 
 **Sanctioned inline-style exception:** `apps/web/app/global-error.tsx` is the
 single file allowed to use inline `style`, because root CSS may not have loaded
-when it renders. Its hex literals must still read as Má Tư (kem gạo background,
-xanh đậm text, a muted supporting tone) and its retry control keeps the 44px
+when it renders. Its hex literals must still read as Má Tư (`kem gạo` background,
+`xanh đậm` text, a muted supporting tone) and its retry control keeps the 44px
 minimum touch target.
 
 A genuinely new token is added to `globals.css`, documented here, and checked
@@ -339,7 +339,7 @@ for body).
 | `muted-foreground` / `background` and `/muted` | ≥4.5:1 |
 | `border` / `input` vs `background` | ≥3:1 |
 | `ring` / `background` | ≥3:1 |
-| `card` / `background` | Visible hierarchy — prefer a border when ΔL is small |
+| `card` / `background` | Visible hierarchy — prefer a border when `ΔL` is small |
 
 | Pair (night `.dark`) | Target |
 | --- | --- |
@@ -436,9 +436,9 @@ card padding with route-local utility strings.
   must be stable (`table_number`, `order_number` / `kitchen_ticket_number`),
   never a render index.
 - Runner/KDS customer boards use one responsive semantic grid, never duplicate
-  mobile and desktop markup. Below `sm` the four fields form a 2×2 grid; from
-  `sm` keep Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ
-  `col-span-1`. Runner display tokens scale with `dvh`, never viewport width.
+  mobile and desktop markup. Below `sm` the four fields form a 2x2 grid; from
+  `sm` keep `Đơn` `col-span-4`, `Số món` `col-span-3`, `Trạng thái` `col-span-4`,
+  `Chờ` `col-span-1`. Runner display tokens scale with `dvh`, never viewport width.
   Status cells must not add a separate `text-*` class, so `tailwind-merge`
   cannot drop the shared row typography.
 - Heading weight defaults to `font-semibold`. `font-bold` is reserved for
@@ -779,9 +779,9 @@ CRUD dialogs use shared form helpers and Zod 4 schemas.
 supplier documents, and exceptions before analytics. Keep terms aligned with
 `docs/ref/glossary.md`. Dense tables are expected, but row actions and
 destructive actions stay visually separated. Route IA stays anchored to three
-operator flows: nhập hàng (GRN → PO approval → confirm → Finance/AP handoff, ADR
-0018), kiểm soát tồn (one-warehouse stock, stocktake, count review, waste and
-reporting), and sản xuất/tiêu hao. Branch receiving stays supplier-first — no
+operator flows: `nhập hàng` (GRN → PO approval → confirm → Finance/AP handoff, ADR
+0018), `kiểm soát tồn` (one-warehouse stock, stocktake, count review, waste and
+reporting), and `sản xuất`/`tiêu hao`. Branch receiving stays supplier-first — no
 direct PO creation, PO-first receiving, supplier return, price-QC, lot/expiry,
 production order DETAIL, or same-branch warehouse-to-kitchen transfer in daily
 UI. Complex Inventory forms use RHF + Zod + app form helpers. Entity audit
@@ -898,7 +898,7 @@ contract change; route-local chrome outside this list is drift.
    vocabulary, header lockup, and bottom-nav components. Station routes compose
    shared primitives (`StationSection`, `Frame`) and operational adapters; they must not
    import `AppSection`, `AppListFrame`, or other `control_surface` chrome.
-   Board recipes: `pos-board`, `realtime-board` (KDS), `runner-board` (pickup / Gọi số board). Guest
+   Board recipes: `pos-board`, `realtime-board` (KDS), `runner-board` (pickup / `Gọi số` board). Guest
    feedback at `/r/[token]` is `public`, not the pickup station.
 4. **Public** — guest token workflows stay outside `control_surface` chrome.
    Public card sections use `PublicSection`; recipes `public-transaction`,

@@ -576,8 +576,8 @@ allowlist, not a precedent for stretching another archetype's definition:
     control_surface table at tablet landscape widths. Classified **LIST** (Branch touch
     variant); control_surface retains the management `DataTable` LIST.
 12. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/page.tsx`
-    — Redirect shim. A normal branch continues to Yêu cầu hàng; Kho Tổng and
-    Bếp Trung Tâm continue to Yêu cầu mua. GRN drafts are created only from a
+    — Redirect shim. A normal branch continues to `Yêu cầu hàng`; `Kho Tổng` and
+    `Bếp Trung Tâm` continue to `Yêu cầu mua`. GRN drafts are created only from a
     sent PO and appear in the GRN queue.
 13. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/page.tsx`
     — Compatibility redirect shim with the same destination rules as the
@@ -598,7 +598,7 @@ allowlist, not a precedent for stretching another archetype's definition:
     Classified **DETAIL** (Branch touch variant).
 16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
     — Compatibility redirect shim to `/inventory/production?branchId=...`.
-    Production has one canonical control surface and only accepts Bếp TT scope.
+    Production has one canonical control surface and only accepts `Bếp TT` scope.
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Compatibility redirect shims to the
     canonical create/detail routes; detail keeps the run ID and both keep URL scope.
