@@ -13,20 +13,29 @@ import {
 } from "@lib/feedback/contracts";
 import { feedbackCopy } from "@lib/messages/feedback";
 
+function telHref(phone: string): string {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
+
 export function FeedbackForm({
   token,
   branchName,
   qrLabel,
+  branchPhone,
+  googleReviewUrl,
 }: {
   token: string;
   branchName: string;
   qrLabel: string;
+  branchPhone: string | null;
+  googleReviewUrl: string | null;
 }) {
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [website, setWebsite] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [submittedRating, setSubmittedRating] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [clientSubmissionId] = useState(() => crypto.randomUUID());
 
@@ -35,6 +44,10 @@ export function FeedbackForm({
     setError(null);
     if (rating == null) {
       setError(feedbackCopy.ratingRequired);
+      return;
+    }
+    if (rating <= 3 && comment.trim().length === 0) {
+      setError(feedbackCopy.commentRequired);
       return;
     }
 
@@ -68,15 +81,60 @@ export function FeedbackForm({
         return;
       }
 
+      setSubmittedRating(rating);
       setDone(true);
     });
   }
+
+  const showGoogleCta =
+    done &&
+    submittedRating != null &&
+    submittedRating >= 4 &&
+    Boolean(googleReviewUrl);
+
+  const showCallCta =
+    done &&
+    submittedRating != null &&
+    submittedRating <= 3 &&
+    Boolean(branchPhone);
 
   if (done) {
     return (
       <div className="flex flex-col gap-3 text-center">
         <h1 className="text-xl font-semibold">{feedbackCopy.guestThanks}</h1>
         <p className="text-muted-foreground">{feedbackCopy.guestThanksBody}</p>
+        {showGoogleCta && googleReviewUrl ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {feedbackCopy.googleHint}
+            </p>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                window.open(googleReviewUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              {feedbackCopy.googleCta}
+            </Button>
+          </>
+        ) : null}
+        {showCallCta && branchPhone ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {feedbackCopy.callHint}
+            </p>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                window.location.href = telHref(branchPhone);
+              }}
+            >
+              {feedbackCopy.callCta}
+            </Button>
+          </>
+        ) : null}
       </div>
     );
   }
@@ -120,7 +178,11 @@ export function FeedbackForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="feedback-comment">{feedbackCopy.commentLabel}</Label>
+        <Label htmlFor="feedback-comment">
+          {rating != null && rating <= 3
+            ? feedbackCopy.commentLabelRequired
+            : feedbackCopy.commentLabel}
+        </Label>
         <Textarea
           id="feedback-comment"
           value={comment}
@@ -128,6 +190,7 @@ export function FeedbackForm({
           placeholder={feedbackCopy.commentPlaceholder}
           maxLength={2000}
           rows={4}
+          required={rating != null && rating <= 3}
         />
       </div>
 

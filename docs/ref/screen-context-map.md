@@ -1,24 +1,14 @@
 # Bản đồ mục tiêu màn hình & Luồng vận hành (Screen Context Map)
 
-> **Trạng thái:** Tài liệu tham chiếu chuẩn nghiệp vụ (SSoT).  
-> **Quy tắc bắt buộc:** Mọi thay đổi UI, thêm tính năng, hoặc tái cấu trúc trên các đường dẫn (route) tương ứng phải tuân thủ nghiêm ngặt mục tiêu nghiệp vụ, luồng thao tác và ranh giới thông tin được định nghĩa tại đây. Nghiêm cấm việc chắp vá UI (patchwork) hoặc thêm các trường dữ liệu/nút bấm nằm ngoài mục tiêu hoạt động của màn hình.
+> **SSoT ngữ cảnh màn hình.** UI/route phải khớp actor, job và ranh giới thông tin tại đây. Không chắp vá ngoài mục tiêu màn hình.
+>
+> **Phân quyền tài liệu:** tài liệu này = actor / job / workflow / what-to-show. Layout & exemplar → [`docs/spec/page-archetypes.md`](../spec/page-archetypes.md). Visual/primitive → [`docs/spec/design-system.md`](../spec/design-system.md). Inventory plane `/br/*` → [`branch-route-inventory.md`](./branch-route-inventory.md). ACL → `packages/shared/src/auth/module-acl.ts`.
 
 ---
 
-## 1. Hướng dẫn sử dụng Bản đồ Ngữ cảnh
+## 1. Cách dùng
 
-Tài liệu này được tổ chức theo cấu trúc chuẩn hóa cho mỗi màn hình nhằm trả lời 6 câu hỏi cốt lõi trước khi lập trình hoặc thiết kế:
-
-- **Tại sao màn hình này tồn tại?** (Mục tiêu nghiệp vụ - Business Purpose)
-- **Ai là người ngồi trước màn hình này?** (Đối tượng sử dụng - Primary Actor)
-- **Họ muốn đạt được kết quả gì nhanh nhất?** (Mục tiêu người dùng - User Goal)
-- **Họ sẽ tương tác theo các bước nào?** (Luồng thao tác - Workflow)
-- **Thông tin gì cần hiển thị để phục vụ mục tiêu đó?** (Thông tin hiển thị - What to Show / What NOT to Show)
-- **Màn hình dùng cấu trúc trang nào?** (Archetype - do `docs/spec/page-archetypes.md` sở hữu)
-
-Khi lập UI Advisor Gate, tài liệu này sở hữu actor, job, workflow và ranh giới
-thông tin; `docs/spec/page-archetypes.md` sở hữu cấu trúc trang, exemplar và
-fallback. Không dùng Screen Context Map để tự tạo layout hoặc primitive mới.
+Trước khi thiết kế/code, trả lời: **Why?** · **Ai?** · **Goal?** · **Workflow?** · **Show / NOT show?** · **Archetype?** (archetype thuộc `page-archetypes.md`). Không dùng map này để tự tạo layout/primitive mới.
 
 **Product UX spine (lớp mỏng trước khi compose UI):** khóa *gia đình route*
 (actor × việc × plane) ở §1A trước khi chọn archetype/block. Plane và Dual
@@ -69,116 +59,71 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ---
 
-## 2. Chi tiết các màn hình cốt lõi
+## 2. Màn hình cốt lõi
 
-### 2.1. Màn hình Bán hàng (POS) — `/br/[branchId]/pos`
+### 2.1. POS — `/br/[branchId]/pos`
 
 - **Gia đình:** Station (spine §1A); block `pos-board`. Entry mở ca/session-gate
   → chọn món → thanh toán/in → success; recovery: lịch sử đơn (không sửa cart
   đã gửi), đóng ca khi lệch tiền.
 - **Archetype:** `BOARD`.
-- **Đối tượng sử dụng chính:** Thu ngân (`cashier`), Quản lý chi nhánh (`branch_manager`) (khi hỗ trợ).
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Ghi nhận đơn hàng bán ra chính xác, nhanh chóng, thu tiền đúng và truyền đạt lệnh chế biến tức thời đến bếp (KDS).
-  - Bảo đảm tính toàn vẹn của doanh thu thông qua kiểm soát ca và kiểm soát dòng tiền mặt thực tế tại két.
-- **Mục tiêu Người dùng (Goal):** Nhận order từ khách, chọn món, thanh toán và in hóa đơn trong vòng dưới 30 giây để tối ưu tốc độ phục vụ.
-- **Luồng thao tác (Workflow):**
-  1. **Khởi tạo:** Mở ca POS mới (nếu đầu ngày/đầu ca) -> Xác nhận số tiền mặt ban đầu tại két.
-  2. **Chọn món:** Chọn danh mục món -> Chọn món ăn -> Thêm tùy chọn món (`modifier`) hoặc ghi chú nếu khách yêu cầu.
-  3. **Xác nhận Order:** Chọn hình thức phục vụ (Ăn tại bàn + số bàn / Mang đi) -> Bấm gửi lệnh chế biến đến bếp (KDS).
-  4. **Thanh toán:** Chọn phương thức thanh toán (Tiền mặt / VietQR) -> Áp dụng mã giảm giá (nếu có quyền) -> Xác nhận đã thu tiền -> Hệ thống tự động in hóa đơn giấy ra máy in quầy bar.
-  5. **Kết ca:** Cuối ca, kiểm đếm số tiền mặt thực tế trong két -> Nhập số tiền thực tế -> Đóng ca và đối chiếu lệch dòng tiền (`cash variance`).
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Danh sách món ăn dạng lưới (grid) với hình ảnh/tên ngắn dễ bấm; Giỏ hàng (Cart) hiện tại; Trạng thái kết nối máy in và két tiền; Nút thanh toán nổi bật, kích thước chạm (`size="touch"`).
-  - **KHÔNG hiển thị:** Báo cáo doanh thu tháng, lịch sử chi tiết của các ca làm việc khác, thông tin lương nhân sự, hoặc danh sách nguyên liệu thô của kho.
-- **Quy chuẩn UX/UI:**
-  - Mobile-first và tối ưu cảm ứng (màn hình tablet/máy POS cầm tay). Các nút bấm phải đạt chuẩn touch-target (tối thiểu `44px`).
-  - Giỏ hàng (Cart) chỉ dùng để tạo đơn mới. Khi đơn đã gửi hoặc thanh toán, mọi thay đổi phải thực hiện qua luồng Lịch sử đơn hàng, không chỉnh sửa trực tiếp trên giỏ hàng POS.
+- **Actor:** `cashier`; `branch_manager` khi hỗ trợ.
+- **Job:** Ghi đơn đúng, thu tiền đúng, đẩy KDS; kiểm soát ca & tiền mặt két.
+- **Goal:** Order → thanh toán → in hóa đơn dưới ~30s.
+- **Workflow:** Mở ca (tiền đầu) → chọn món/modifier → hình thức phục vụ → gửi KDS → thanh toán (tiền mặt/VietQR, mã giảm nếu có quyền) → kết ca & đối chiếu `cash variance`.
+- **Ưu tiên data:** Grid món + cart + trạng thái in/két + CTA thanh toán touch. **Không:** báo cáo tháng, ca khác, lương, tồn nguyên liệu.
+- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn.
 
 ---
 
-### 2.2. Màn hình Bếp (KDS) — `/br/[branchId]/kds`
+### 2.2. KDS — `/br/[branchId]/kds`
 
 - **Gia đình:** Station (spine §1A); block `realtime-board`. Entry ticket realtime
   → bump ready → success; recovery: recall khi bump nhầm (không skeleton giả).
 - **Archetype:** `BOARD`.
-- **Đối tượng sử dụng chính:** Đầu bếp (`chef`), Nhân viên bếp.
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Tiếp nhận danh sách món cần chế biến theo thời gian thực từ POS để bếp chế biến đúng món, đúng thứ tự, giảm thiểu sai sót và lãng phí nguyên liệu.
-- **Mục tiêu Người dùng (Goal):** Biết ngay món nào cần làm trước, số lượng bao nhiêu, và đánh dấu hoàn thành nhanh chóng để chuyển ra cho khách.
-- **Luồng thao tác (Workflow):**
-  1. **Tiếp nhận:** KDS tự động nhận ticket món ăn mới từ POS qua kết nối realtime (Websocket).
-  2. **Theo dõi:** Sắp xếp ticket theo thời gian (cũ nhất ở trước) hoặc theo độ ưu tiên.
-  3. **Chế biến:** Bếp nhìn tổng lượng món cùng loại cần chế biến (ví dụ: "Tổng 5 Sườn cốt lết cần nướng") để tối ưu công suất bếp.
-  4. **Hoàn thành:** Bấm vào món/ticket để đánh dấu "Đã làm xong" (`ready/bump`) -> Lệnh tự động chuyển sang màn hình Runner và in bill ra bàn ra món.
-  5. **Hoàn tác:** Bấm "Thu hồi" (`recall`) nếu lỡ tay bấm nhầm ticket chưa hoàn thành.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Các thẻ order (`OperationalBoardCard`) chứa danh sách món, số lượng, thời gian chờ (đổi màu cảnh báo nếu quá giờ), số bàn/mã mang đi.
-  - **KHÔNG hiển thị:** Giá tiền của món, phương thức thanh toán, thông tin doanh thu, hoặc bất kỳ nút bấm quản trị nào.
-- **Quy chuẩn UX/UI:**
-  - Sử dụng giao diện tối (Dark mode) hoặc độ tương phản cực cao để chống mỏi mắt trong môi trường bếp nóng và nhiều khói dầu.
-  - Tuyệt đối không dùng dữ liệu giả lập (loading skeletons) khi tải KDS để tránh việc bếp làm nhầm đơn ảo; chỉ dùng vòng quay tải trang (`PageSpinner`) khi chưa có dữ liệu thật.
+- **Actor:** `chef` / NV bếp.
+- **Job:** Nhận ticket realtime từ POS; đúng món, đúng thứ tự; giảm sai/lãng phí.
+- **Goal:** Biết món ưu tiên + số lượng; bump `ready` nhanh.
+- **Workflow:** Ticket realtime → xếp theo thời gian/ưu tiên → gộp công suất → bump → Gọi số / in bill; `recall` nếu nhầm.
+- **Ưu tiên data:** Thẻ order (món, SL, chờ, bàn/mã). **Không:** giá, PTTT, doanh thu, nút quản trị.
+- **UX:** Tương phản cao/dark. Không skeleton giả; chỉ `PageSpinner` khi chưa có data thật.
 
 ---
 
-### 2.3. Màn hình Điều phối (Runner) — `/br/[branchId]/runner`
+### 2.3. Gọi số (`pickup_display`) — `/br/[branchId]/pickup`
 
 - **Gia đình:** Station (spine §1A); block `runner-board`. Entry món ready →
   giao đúng bàn → served; recovery: chỉ giữ cửa sổ ngắn vừa giao, không lịch sử dài.
 - **Archetype:** `BOARD`.
-- **Đối tượng sử dụng chính:** Nhân viên chạy bàn (`runner`), Nhân viên điều phối ra món.
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Khớp đúng món ăn đã hoàn thành từ bếp với đúng bàn hoặc đúng khách hàng mang đi, tránh giao nhầm món, giao thiếu món hoặc làm nguội món.
-- **Mục tiêu Người dùng (Goal):** Nhìn thấy món nào đã sẵn sàng, lấy đúng đĩa mang đến đúng bàn và đánh dấu "Đã giao" (`served`).
-- **Luồng thao tác (Workflow):**
-  1. **Nhận diện:** Runner nhìn danh sách món có trạng thái "Đã xong" (màu xanh lá) hiển thị trên màn hình.
-  2. **So khớp:** Lấy đĩa thức ăn tương ứng kèm bill giấy đối chiếu số bàn/mã đơn.
-  3. **Bàn giao:** Mang món ra bàn hoặc giao cho khách mang đi -> Bấm "Xác nhận đã giao" (`served`) trên màn hình Runner để đóng trạng thái món.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Danh sách món kèm số bàn, mã đơn hàng, tên món và số lượng, sắp xếp theo thời gian xong của bếp.
-  - **KHÔNG hiển thị:** Giá tiền, thông tin nguyên liệu kho, lịch sử ca làm việc của nhân viên.
-- **Quy chuẩn UX/UI:**
-  - Giao diện siêu tinh gọn, chữ lớn để đọc được từ khoảng cách 2 mét.
-  - Chỉ hiển thị các đơn đang chờ giao hoặc vừa giao xong trong vòng 5 phút, không kéo dài danh sách lịch sử để tránh quá tải thông tin.
+- **Actor:** Khách tại quán + shipper giao hàng (public read-only).
+- **Job:** Nhìn số/bàn/đơn đã sẵn sàng để nhận món — không phải workflow nhân viên runner ghép đĩa.
+- **Goal:** Biết đơn nào sẵn sàng lấy; tự nhận hoặc shipper lấy đúng mã.
+- **Workflow:** Màn hình công khai cập nhật realtime → khách/shipper đối chiếu số/bàn → nhận món tại quầy.
+- **Ưu tiên data:** Số đơn / bàn / trạng thái sẵn sàng, chữ lớn. **Không:** giá, kho, thao tác staff, lịch sử ca.
+- **UX:** Chữ lớn (~2m), light mode; không nav nhân viên.
 
 ---
 
-### 2.4. Bảng điều khiển Chi nhánh (Branch Dashboard) — `/br/[branchId]/dashboard`
+### 2.4. Branch Dashboard — `/br/[branchId]/dashboard`
 
 - **Archetype:** `DASHBOARD`.
-- **Đối tượng sử dụng chính:** Quản lý chi nhánh (`branch_manager`), Chủ cửa hàng (`owner`).
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Cho biết chi nhánh đang có ngoại lệ vận hành hoặc việc quản lý nào phải xử lý ngay trong ngày, không biến Branch runtime thành dashboard tài chính thu nhỏ.
-- **Mục tiêu Người dùng (Goal):** Biết ngay chi nhánh có đang vận hành ổn định không, có sự cố nào cần xử lý khẩn cấp không (lệch tiền két, thiếu nguyên liệu, chưa mở ca POS).
-- **Luồng thao tác (Workflow):**
-  1. **Đọc việc cần xử lý:** Xem ngoại lệ hoặc readiness chưa đạt theo mức ưu tiên.
-  2. **Giám sát vận hành:** Mở đúng workflow sở hữu trạng thái máy in, phiên POS, nhân sự hoặc kho.
-  3. **Kết ngày:** Đi tới công việc chốt ca, duyệt lệch hoặc kiểm tra còn tồn đọng.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Lanes công việc có đích xử lý rõ ràng: vận hành đang mở, readiness, việc kết ngày và drill-down quản lý.
-  - **KHÔNG hiển thị:** `KpiRow`, `KpiCard`, biểu đồ, doanh thu tổng hợp, dashboard-card mosaic, báo cáo tài chính chi tiết của cả chuỗi (L0), công nợ nhà cung cấp tổng, hoặc cấu hình phân quyền hệ thống.
-- **Quy chuẩn UX/UI:**
-  - Ưu tiên hiển thị danh sách công việc cần làm (`task queue first`) lên đầu để định hướng hành động cho Quản lý chi nhánh ngay khi mở trang.
+- **Actor:** `branch_manager`, `owner`.
+- **Job:** Ngoại lệ/readiness trong ngày — không phải dashboard tài chính thu nhỏ.
+- **Goal:** Biết ổn định hay sự cố (lệch két, thiếu NL, chưa mở ca).
+- **Workflow:** Đọc việc ưu tiên → mở workflow sở hữu (in/POS/NV/kho) → chốt ngày.
+- **Ưu tiên data:** Lanes công việc + drill-down. **Không:** `KpiRow`/`KpiCard`, biểu đồ, doanh thu chuỗi, công nợ L0, phân quyền hệ thống.
+- **UX:** Task queue first.
 
 ---
 
 ### 2.4. control_surface — `/`
 
 - **Archetype:** `LANDING`.
-- **Đối tượng sử dụng chính:** Chủ sở hữu (`owner`).
-- **Mục tiêu Nghiệp vụ (Why?):** Gom điểm vào điều hành, kiểm soát và thiết lập
-  toàn hệ thống về một nơi rõ ràng, tách khỏi công việc hằng ngày của Chi nhánh.
-- **Mục tiêu Người dùng (Goal):** Từ Chi nhánh mở một cửa control_surface, sau
-  đó chọn đúng mô-đun cần kiểm soát mà không đi qua nhiều shortcut rời rạc.
-- **Thông tin hiển thị:** Hai nhóm `Điều hành` và `Nền tảng`; hàng điều hướng
-  cho Tài chính, Đơn hàng, Kho hàng, Thực đơn,
-  Nhân sự, Chi nhánh và Cài đặt. Không hiển thị KPI khi chưa có contract dữ liệu
-  Owner tương ứng.
-- **Quy chuẩn UX/UI:** Dùng `AppPage` + `AppSection` + `ItemGroup` + `Item`;
-  không có Header/Breadcrumb dư thừa, toàn bộ hàng là điểm vào mô-đun.
-  Một cột trên phone, hai cột trên tablet dọc; desktop đặt nhóm Điều hành rộng
-  hơn nhóm Nền tảng nhưng giữ cùng thứ tự thông tin.
-  Chỉ Owner được vào mọi route top-level của control_surface.
+- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (JWT `self_service` + `hr:view_employee`). Role chi nhánh giữ `/br/...`.
+- **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
+- **Goal:** Một cửa → xử lý việc hôm nay hoặc chọn đúng mô-đun.
+- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`.
+- **UX:** `AppPage` + `AppSection` + `ItemGroup` + `Item` + `Badge`; không breadcrumb thừa. 1 cột phone / 2 cột tablet. Branch roles giữ `/br/...`; `self_service` thuần giữ `/me`.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
@@ -244,7 +189,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ---
 
-### 2.5. Phân hệ Kho hàng (Inventory Workspace) — `/inventory` & `/br/[branchId]/stock`
+### 2.5. Kho hàng — `/inventory` & `/br/[branchId]/stock`
+
+> On-hand exemplar context (tests may cite as comment only) — giữ section này.
 
 - **Gia đình:** Inventory (spine §1A). Entry → success → recovery ở mức phiếu:
   mở list/hub đúng plane → nháp/kiểm nhận → chốt chứng từ; lệch/hủy qua dialog
@@ -321,62 +268,27 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ---
 
-### 2.6. Kiểm nhận phiếu nhập kho (GRN) — `/inventory/grn` & `/inventory/grn/[id]`
+### 2.6. GRN — `/inventory/grn` & `/inventory/grn/[id]`
 
-- **Archetype:** danh sách là `LIST` theo composition `AppPage → AppPageHeader → AppPageTabs → AppListFrame → DataTable`; chi tiết là `DOC-WORKFLOW`.
-- **Đối tượng sử dụng chính:** Quản lý kho, Nhân viên nhận hàng.
-- **Mục tiêu Nghiệp vụ (Why?):** Ghi nhận chính xác số lượng nguyên liệu thực tế nhận từ nhà cung cấp để cập nhật tồn kho tức thời và xác lập cơ sở tính giá vốn hàng bán chính xác.
-- **Mục tiêu Người dùng (Goal):** Mở phiếu **Chờ nhập hàng** đã tạo từ PO, ghi nhận đúng hàng thực giao và hoàn thành nhanh để giải phóng xe giao hàng.
-- **Luồng thao tác (Workflow):**
-  1. **Tạo phiếu:** Từ PO đã gửi hoặc nhận một phần, bấm `Tạo phiếu nhập`; hệ thống giữ tối đa một GRN nháp hoạt động cho PO và suy NCC từ PO.
-  2. **Kiểm nhận vật lý:** Nhập số lượng thực nhận và số lượng từ chối. Nếu có
-     hàng từ chối, bắt buộc lý do + ảnh; trạng thái được suy ra, không nhập tay.
-  3. **Đối chiếu PO:** Hệ thống tính phần áp dụng PO, còn thiếu và dư ngoài đơn; Kho không nhập/xem giá mua.
-  4. **Hoàn tất:** Bấm `Xác nhận nhập kho` để ghi tăng tồn, tính WAC cho phần áp dụng PO theo giá PO và ghi phần dư với giá `0`.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** GRN, NCC, PO, YCM, kho nhận, ngày dự kiến, số đã đặt, đã nhận trước, còn phải giao, thực nhận, từ chối, hợp lệ, áp dụng PO, thiếu, dư và đơn vị quy đổi chuẩn. Sau khi chốt, phiếu chỉ đọc.
-  - **KHÔNG hiển thị:** Giá mua, price variance, biểu đồ xu hướng giá hoặc thông
-    tin quỹ tiền mặt tại bề mặt Kho.
-- **Quy chuẩn UX/UI:**
-  - control_surface bắt buộc dùng `DocumentFormFrame` (header `AppPageHeader`
-    cuộn cùng nội dung + thân danh sách dòng + footer sticky chứa số dòng và CTA
-    xác nhận — không sticky header ngoài scrollport). Branch bắt buộc dùng
-    `BranchOperatorPage` + `BranchOperatorPanel` + `AppDetailFooter` sticky;
-    không render khung control_surface, bảng desktop, hoặc picker đổi chi nhánh.
-  - Nút "Xác nhận nhập kho" phải nằm ở vị trí cố định dưới cùng bên phải và yêu cầu xác nhận lại qua Dialog để tránh bấm nhầm khi chưa kiểm đếm xong.
+- **Archetype:** list = `LIST` (`AppPage`…`DataTable`); detail = `DOC-WORKFLOW`.
+- **Actor:** Quản lý kho / NV nhận hàng.
+- **Job:** Ghi thực nhận → cập nhật tồn + cơ sở WAC.
+- **Goal:** Mở **Chờ nhập hàng** từ PO → ghi đúng → giải phóng xe.
+- **Workflow:** Auto-GRN khi PO `sent|approved|partially_received` (1 nháp hoạt động/PO; partial → nháp kế) → kiểm nhận + từ chối (lý do+ảnh) → hệ thống suy trạng thái/đối chiếu PO (Kho không nhập giá) → `Xác nhận nhập kho` (WAC phần PO; dư giá `0`).
+- **Ưu tiên data:** GRN/NCC/PO/YCM/kho/ngày/SL đặt·đã nhận·còn·thực·từ chối·áp dụng PO·thiếu·dư·ĐVT. Sau chốt = chỉ đọc. **Không:** giá mua, price variance, biểu đồ giá, quỹ tiền mặt trên bề mặt Kho.
+- **UX:** L0 = `DocumentFormFrame` + footer sticky CTA. Branch = `BranchOperatorPage` + panel + `AppDetailFooter`; không khung L0/picker CN. CTA xác nhận + Dialog chống nhầm.
 
 ---
 
-### 2.7. Đối soát hóa đơn NCC (Supplier Invoice Match) — `/finance/supplier-invoices`
+### 2.7. Hóa đơn NCC — `/finance/supplier-invoices`
 
 - **Archetype:** `LIST`.
-- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Đối soát phiếu thực nhập (GRN) với hóa đơn NCC gửi đến. Đảm bảo doanh nghiệp chỉ thanh toán đúng lượng thực nhận và đơn giá trên chứng từ mua hàng, tránh thất thoát tài chính.
-- **Mục tiêu Người dùng (Goal):** Phát hiện nhanh các dòng hóa đơn bị lệch giá hoặc lệch lượng để yêu cầu NCC điều chỉnh trước khi bấm duyệt thanh toán.
-- **Luồng thao tác (Workflow):**
-  1. **Chọn phiếu nhập:** Chọn một hoặc nhiều GRN đã xác nhận của cùng NCC; hệ
-     thống lấy NCC, PO/Yêu cầu mua, dòng hàng và số lượng còn được lập hóa đơn.
-     Mỗi HĐ NCC mới trên màn này bắt buộc liên kết GRN.
-  2. **Nhập hóa đơn:** Chọn ngày; chọn một mức VAT (0/5/8/10) + tiền trước VAT (tiền VAT tự tính nếu để trống). Thêm mức thuế chỉ khi hóa đơn có nhiều suất. Có thể đính kèm HĐ GTGT ngay khi lưu (tùy chọn).
-  3. **Đối soát:** Sau khi lưu, so giá trị trước VAT cộng chiết khấu chứng từ
-     với phần GRN áp dụng PO. Dòng PO giá `0` và phần dư giá `0` được phép không
-     có trên hóa đơn. VAT không tham gia so giá trị hàng.
-  4. **Xử lý chênh lệch:** Kế toán kiểm tra chứng từ khi số lượng hoặc giá trị
-     không khớp; dung sai tự động là `±1đ`, không dùng ngưỡng price-QC của GRN.
-  5. **Đính kèm HĐ GTGT:** Nếu chưa tải lúc tạo, tải lên ít nhất một file PDF/ảnh vào `vat_invoice_attachment_path` (bucket private) trước khi thanh toán. Owner có `procurement:invoice_create` hoặc `finance:ap_pay` được đính kèm.
-  6. **Thanh toán/giảm công nợ:** Một thanh toán hoặc phiếu giảm công nợ có thể
-     phân bổ nhiều hóa đơn cùng NCC. Phần thanh toán chưa phân bổ là ứng trước.
-     Owner có thể phân bổ ứng trước về sau mà không trừ tiền lần thứ hai. Trả
-     hàng không tự giảm công nợ.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Loại hóa đơn, tổng trước VAT, VAT, tổng phải trả, toàn bộ liên kết GRN/PO, giá trị hóa đơn dùng đối soát, giá trị nhận theo PO, chênh lệch/lý do, trạng thái đối soát và công nợ, trạng thái đính kèm HĐ GTGT, số dư ứng trước theo NCC; khi nhóm có nhiều hóa đơn thì chọn được từng hóa đơn trong nhóm.
-  - **KHÔNG hiển thị:** Doanh thu bán cơm tấm, sơ đồ bàn ăn, ca làm việc của nhân viên phục vụ.
-- **Quy chuẩn UX/UI:**
-  - Bố cục màn hình rộng (width `xwide`); danh sách full-width. Chọn nhóm/hóa đơn mở `Sheet` phải (`sm:max-w-xl`) chứa chi tiết công nợ, HĐ GTGT, thanh toán và đối soát — không chiếm cột cố định cạnh bảng.
-  - Popup ghi nhận: dòng đầu là Nhà cung cấp (suy ra từ GRN) và Ngày hóa đơn; sau đó là Phiếu nhập liên kết và Dòng hóa đơn. Chọn một hoặc nhiều GRN đã xác nhận cùng NCC, rồi nhập VAT progressive (một mức mặc định + thêm mức khi cần) và đính kèm tùy chọn. Không có trường Số hóa đơn trên luồng này.
-  - Sheet detail: tiêu đề là số HĐ; khối `Item` “còn phải trả” + ứng trước NCC + đính kèm HĐ GTGT; meta ngày/hạn/VAT/tuổi nợ và toàn bộ GRN/PO trong `ItemGroup`; chỉ `Alert` khi thiếu xác minh/đối soát hoặc lệch. Footer chỉ hiện `Tính lại đối soát`/`Chấp nhận chênh lệch`/`Xác minh chứng từ` với `procurement:invoice_match`; `Thanh toán`/`Phân bổ ứng trước` chỉ hiện cho Owner có `finance:ap_pay`.
-  - Form thanh toán hiển thị trước tổng trả, tổng phân bổ và phần ứng trước. URL là nguồn trạng thái của thao tác đang mở: `?invoiceId=...&mode=view|pay|credit|advance` và `?mode=create&grnId=...`. Mở hàng dùng history để Back đóng Sheet; chuyển mode dùng replace. Chỉ một overlay nghiệp vụ được mở tại một thời điểm.
+- **Actor:** `owner`.
+- **Job:** Đối soát GRN ↔ HĐ NCC; chỉ trả đúng thực nhận + đơn giá chứng từ.
+- **Goal:** Phát hiện lệch giá/lượng trước khi duyệt thanh toán.
+- **Workflow:** Chọn GRN cùng NCC (HĐ mới bắt buộc gắn GRN) → ngày + VAT progressive + đính kèm tùy chọn → đối soát trước VAT (±1đ; VAT không so hàng; dòng/dư giá `0` được thiếu trên HĐ) → xử lý lệch → đính kèm HĐ GTGT trước thanh toán → thanh toán/giảm nợ/phân bổ ứng trước (không trừ tiền lần 2). Trả hàng không tự giảm nợ.
+- **Ưu tiên data:** Loại HĐ, trước VAT/VAT/phải trả, liên kết GRN/PO, chênh lệch, trạng thái đối soát/công nợ/đính kèm, ứng trước NCC. **Không:** doanh thu bán, sơ đồ bàn, ca phục vụ.
+- **UX:** Width `xwide`; detail `Sheet` phải. URL state: `?invoiceId&mode=view|pay|credit|advance` / `?mode=create&grnId`. Một overlay tại một thời điểm. Footer action theo `procurement:invoice_match` / `finance:ap_pay`.
 
 ---
 
@@ -385,107 +297,71 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Gia đình:** HR (spine §1A). Entry → strip **Cần xử lý** / Thêm NV → success
   onboard hoặc chuyển Thời gian/Lương/Quy tắc; recovery qua tab URL và deep
   link hồ sơ thiếu (không sửa lương tại attendance).
+- **Planes:** Company HR (`/hr/*`) = hồ sơ/tài khoản/công/lương/setup tenant. People ops CN = `/br/.../team` + `/shift/*`. Self-service = `/me/*` (ADR 0015).
 - **Archetype:** `LIST` + tab URL (`view=profile|accounts`).
-- **Đối tượng sử dụng chính:** Chủ sở hữu (`owner`) — admin HR duy nhất trên control surface.
-- **Mục tiêu Nghiệp vụ (Why?):** Quản lý hồ sơ NLĐ, HĐLĐ, chế độ lương (`Theo công` / `Lương tháng`), site/vị trí; cổng vào Thời gian / Lương / Quy tắc; tài khoản đăng nhập & phân quyền là tab phụ trên cùng màn.
-- **Mục tiêu Người dùng (Goal):** Thấy việc cần xử lý (duyệt, thiếu HĐ/lương), onboard NV; chuyển tab Tài khoản để cấp quyền theo chức vụ.
-- **Luồng thao tác (Workflow):**
-  1. Tab **Hồ sơ** (`view=profile`, mặc định): strip **Cần xử lý** → filter → bảng hồ sơ; primary **Thêm nhân viên**.
-  2. **Onboard:** Hồ sơ → Vị trí/site → HĐ + chế độ lương → Tài khoản (email/mật khẩu; quyền tinh chỉnh tại tab Tài khoản / `/hr/staff/[id]/permissions`).
-  3. Tab **Tài khoản** (`view=accounts`, `staff` ACL): đăng nhập, trạng thái quyền (đã áp mẫu / chưa / ngoại lệ), overflow nhật ký; `/hr/staff` redirect về tab này.
-- **Thông tin hiển thị:**
-  - **Hồ sơ:** Tên, mã, vị trí, site, lương, loại HĐ, tình trạng làm việc.
-  - **Tài khoản:** Tên, chức vụ, site, SĐT, trạng thái đăng nhập, trạng thái quyền.
-  - **KHÔNG hiển thị:** KPI doanh thu/kho; bảng công tháng chi tiết (sang `/hr/attendance`); raw `pay_basis`.
-- **Quy chuẩn UX/UI:** Deep nav chỉ Người · Thời gian · Lương · Quy tắc. Desktop bảng + dialog; cùng IA trên mobile.
+- **Actor:** Owner / company HR theo ACL.
+- **Job:** Tab **Hồ sơ nhân viên** = NLĐ, HĐLĐ, chế độ lương, site/vị trí (không sửa quyền). Tab **Tài khoản & quyền** = đăng nhập, bật/tắt login, phân quyền (không sửa HĐ/lương/hồ sơ NLĐ).
+- **Goal:** Việc cần xử lý + onboard hồ sơ; chuyển **Tài khoản** để cấp quyền theo chức vụ hoặc tạo tài khoản độc lập.
+- **Workflow:** Tab hồ sơ (strip Cần xử lý → filter → bảng; **Thêm NV** gồm bước tạo đăng nhập) → tab accounts: **Cấp quyền cho hồ sơ** hoặc **Tạo tài khoản độc lập** → `/hr/staff/[id]/permissions` (`/hr/staff` redirect vào accounts).
+- **Ưu tiên data:** Hồ sơ = tên/mã/vị trí/site/lương/HĐ/tình trạng. Tài khoản = tên/đăng nhập/quyền/trạng thái login; badge tài khoản độc lập khi chưa gắn `employees`. **Không:** KPI doanh thu/kho; bảng công tháng (`/hr/attendance`); raw `pay_basis`; sửa identity/chức vụ/CN của NV đã gắn hồ sơ từ tab Tài khoản.
+- **UX:** Desktop bảng + dialog; cùng IA mobile. Workspace = deep nav; mode = `AppPageTabs` + URL; short edit = `FormDialog`.
 
-### 2.8a. Thời gian / ngày công — `/hr/attendance`
+### 2.8a. Chấm công & ca — `/hr/attendance`
 
-- **Archetype:** `LIST` + tab URL (`tab`).
-- **Đối tượng:** `owner`.
-- **Mục tiêu Nghiệp vụ:** Theo dõi vào/ra ca hôm nay, hàng đợi duyệt kết ca & phép, bảng công tháng; phân ca tuần (kể cả Văn phòng).
-- **Mục tiêu Người dùng:** Đầu ngày xử lý hàng đợi Duyệt; trong tháng xem Bảng công; gán ca trước khi NV chấm công; không sửa lương tại đây.
-- **Luồng thao tác:**
-  1. Tab **Hôm nay** — clock hôm nay (ẩn month/view switcher; cột ưu tiên NV · Ca · Vào · Ra · Ghi nhận).
-  2. Tab **Duyệt** — queue kết ca nhúng + bảng phép (một bộ cột; filter trạng thái).
-  3. Tab **Bảng công** — summary mặc định; toggle lịch / vào-ra trong tháng.
-  4. **Phân ca** — `/br/*/shift/roster`; lưới tuần theo site (chi nhánh + Văn phòng `branch_id` null); quyền `hr:assign_shift`.
-- **Nên hiển thị:** Pending counts trên tab Duyệt; site gồm Văn phòng; cảnh báo khi chưa phân ca.
-- **KHÔNG hiển thị:** Phân quyền staff; chỉnh `pay_basis`; KPI bán hàng; fallback chọn ca theo đồng hồ tường.
-- **Quy chuẩn:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL. Duyệt tách khỏi cấu hình Setup. BM dùng `/br/{id}/shift/roster`.
+- **Archetype:** `LIST` + `tab` URL.
+- **Actor:** company HR.
+- **Job:** Vào/ra hôm nay; duyệt kết ca & phép; bảng công tháng; phân ca tuần (kể cả VP).
+- **Goal:** Đầu ngày **Cần duyệt**; trong tháng **Bảng công**; gán ca trước khi NV chấm; không sửa lương.
+- **Workflow:** `today` → `approvals` → `timesheet` → `roster` (BM peer: `/br/{id}/shift/roster`).
+- **Show / NOT:** Pending trên Cần duyệt; site gồm VP; cảnh báo chưa phân ca. **Không:** phân quyền staff; chỉnh `pay_basis`; KPI bán.
+- **UX:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL.
 
-### 2.8b. Lương — `/hr/payroll`
+### 2.8b. Bảng lương — `/hr/payroll`
 
-- **Archetype:** `LIST` / document kỳ.
-- **Đối tượng:** `owner` (`hr_payroll`).
-- **Mục tiêu Nghiệp vụ:** Tạm tính → đối soát → chốt kỳ; phân biệt chế độ Theo công vs Lương tháng.
-- **Mục tiêu Người dùng:** Preflight thiếu HĐ/`pay_basis`/entitlement → tính → điều chỉnh → chốt.
-- **Luồng thao tác:** Chọn tháng/kỳ → xem blocker (chỉ khi có) → mở kỳ → điều chỉnh → chốt (thanh toán thuộc Finance).
-- **Nên hiển thị:** Cột chế độ lương tiếng Việt; khấu trừ nghỉ không lương; link hồ sơ thiếu → `/hr?view=profile&salary=missing`; link công → `/hr/attendance?tab=timesheet`.
-- **KHÔNG hiển thị:** Chấm công giúp NV; đổi quyền; raw technical keys; section preflight “sẵn sàng” khi không blocker.
+- **Archetype:** `LIST` / document kỳ (`?month=YYYY-MM`).
+- **Actor:** company HR có payroll capability.
+- **Job:** Tạm tính → đối soát → chốt; phân biệt Theo công vs Lương tháng. Thanh toán = Finance.
+- **Goal:** Preflight thiếu HĐ/`pay_basis`/entitlement → tính → điều chỉnh → chốt.
+- **Workflow:** Chọn tháng → blocker (chỉ khi có) → mở kỳ → điều chỉnh → chốt.
+- **Show / NOT:** Cột chế độ lương VI; khấu trừ nghỉ KL; link hồ sơ thiếu → `/hr?view=profile&salary=missing`; link công → `/hr/attendance?tab=timesheet`. **Không:** chấm giúp NV; đổi quyền; raw keys; preflight “sẵn sàng” khi không blocker.
 
 ### 2.8c. Thiết lập nhân sự — `/hr/setup`
 
-- **Archetype:** `SETTINGS-PANEL` + tab URL (`tab=leave|shifts|tasks`).
-- **Đối tượng:** `owner`.
-- **Mục tiêu Nghiệp vụ:** Cấu hình quy tắc ít đụng hàng ngày — mỗi tab một chức năng.
-- **Mục tiêu Người dùng:** Chọn đúng mục cần chỉnh; không cuộn qua checklist nhiều section.
-- **Luồng thao tác:**
-  1. Tab **Phép** — ngày công chuẩn & phép tháng.
-  2. Tab **Khung ca làm** — tên ca, giờ bắt đầu và giờ kết thúc.
-  3. Tab **Việc trong ca** — việc theo chức danh hoặc mẫu riêng nhân viên (`position_shift_tasks`).
-- **Nên hiển thị:** Preview việc NV sẽ thấy; cảnh báo tắt ca đang được gán.
-- **KHÔNG hiển thị:** Stack nhiều section; phân ca tuần (đã chuyển `/hr/attendance?tab=roster` và `/br/*/shift/roster`); bảng lương.
+- **Archetype:** `SETTINGS-PANEL` + `tab=leave|shifts|tasks`.
+- **Actor:** company HR.
+- **Job:** Quy tắc ít đụng hàng ngày — mỗi tab một chức năng.
+- **Goal:** Chọn đúng mục; không cuộn nhiều section.
+- **Workflow:** `leave` (default) → `shifts` → `tasks` (`position_shift_tasks` SSOT).
+- **Show / NOT:** Preview việc NV; cảnh báo tắt ca đang gán. **Không:** stack nhiều section; phân ca tuần (ở attendance roster / `/br/*/shift/roster`); bảng lương.
 
-### 2.8d. Phân quyền chi tiết — `/hr/staff/[id]/permissions` (+ audit)
+### 2.8d. Phân quyền — `/hr/staff/[id]/permissions` (+ audit)
 
-- **Archetype:** `DETAIL` (list tài khoản nằm ở `/hr?view=accounts`).
-- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`) (độc quyền phân quyền).
-- **Mục tiêu Nghiệp vụ (Why?):** Cấp đúng quyền truy cập hệ thống theo chức vụ; tránh NV xem/sửa vượt cấp.
-- **Mục tiêu Người dùng (Goal):** Áp mẫu theo chức vụ trước, xem quyền đang có, thêm ngoại lệ khi cần; lịch sử cá nhân trên tab; nhật ký tenant từ overflow Tài khoản (`/hr/staff/audit`).
-- **Luồng thao tác (Workflow):**
-  1. Mở từ tab Tài khoản trên `/hr`.
-  2. **Áp quyền theo chức vụ** (CTA chính) → xem quyền đang có → ngoại lệ qua dialog.
-  3. Tab **Lịch sử** trên DETAIL; audit tenant secondary.
-- **Thông tin hiển thị:**
-  - Nhãn quyền / nhóm việc tiếng Việt (`getStaffPermissionLabelVi`); audit hiện nhóm việc + chức vụ mẫu khi `apply_template`.
-  - **KHÔNG hiển thị:** Doanh thu, tồn kho, công nợ NCC, bảng công, chỉnh `pay_basis`; không dùng key/mô tả tiếng Anh làm nhãn chính.
-- **Quy chuẩn UX/UI:**
-  - Mọi thay đổi phân quyền ghi `permission_audit_log`.
-  - `/br/[branchId]/shift/leave-approvals` giữ `LIST` touch-native Branch; control_surface dùng bảng HR desktop.
+- **Archetype:** `DETAIL` (list tài khoản ở `/hr?view=accounts`).
+- **Actor:** `owner` (độc quyền phân quyền).
+- **Job:** Cấp đúng quyền theo chức vụ; tránh vượt cấp.
+- **Goal:** Áp mẫu chức vụ → xem quyền → ngoại lệ; lịch sử cá nhân; audit tenant từ overflow (`/hr/staff/audit`).
+- **Workflow:** Tab Tài khoản → **Áp quyền theo chức vụ** → ngoại lệ dialog → tab **Lịch sử**.
+- **Ưu tiên data:** Nhãn VI (`getStaffPermissionLabelVi`); audit nhóm việc + chức vụ khi `apply_template`. **Không:** doanh thu, tồn, công nợ, bảng công, `pay_basis`; không key EN làm nhãn chính.
+- **UX:** Mọi đổi quyền → `permission_audit_log`. Branch leave-approvals = touch `LIST`; L0 = bảng HR desktop.
 
 ---
 
-### 2.9. Báo cáo Doanh thu & Chi phí — `/finance`
+### 2.9. Tài chính — `/finance`
 
 - **Gia đình:** Finance (spine §1A). Sibling oversight cùng plane: `/finance/revenue`
   (REPORT), `/finance/expenses`, `/finance/bank-transactions`, `/finance/targets`,
   và AP `/finance/supplier-invoices` (§2.7). Không dựng dashboard bán hàng/POS.
 - **Archetype:** `DASHBOARD`.
-- **Đối tượng sử dụng chính:** Chủ cửa hàng (`owner`).
-- **Mục tiêu Nghiệp vụ (Why?):**
-  - Cung cấp công thức kết quả kinh doanh rõ ràng theo kỳ (hai dòng), đồng thời tách số dư hiện có và giá trị tồn kho.
-- **Mục tiêu Người dùng (Goal):** Nhìn một màn để biết doanh thu thuần còn lại bao nhiêu sau giá vốn món, chi phí vận hành và biến động tồn kho; mở báo cáo chuyên biệt khi cần đối chiếu.
-- **Luồng thao tác (Workflow):**
-  1. **Chọn kỳ báo cáo:** Chọn `Nay`, `Hôm qua`, `Tuần`, `Tháng`, `Quý` hoặc `Năm`. Khi chọn kỳ lịch, chọn tiếp đúng tuần/tháng/quý/năm cần xem; kỳ hiện tại tính đến hôm nay, kỳ quá khứ lấy trọn kỳ.
-  2. **Chọn phạm vi:** Chọn `Tất cả`, `Công ty`, `Toàn bộ Chi nhánh` hoặc `Chi nhánh`; khi chọn `Chi nhánh`, chọn tiếp một chi nhánh cụ thể. `Công ty` lấy bản ghi không gắn chi nhánh; `Toàn bộ Chi nhánh` loại các bản ghi cấp công ty; `Tất cả` cộng cả hai phạm vi.
-  3. **Xem kết quả:** Đọc hai dòng công thức `Doanh thu thuần − Giá vốn món = Lợi nhuận gộp` rồi `Lợi nhuận gộp − Chi phí vận hành + Biến động tồn kho (Tồn cuối kỳ − Tồn đầu kỳ) = Kết quả kinh doanh`.
-  4. **Xem số dư:** Đọc `Tiền mặt + Tiền tài khoản = Tổng tiền` trong section Tiền mặt hiện có; các số này không đổi theo bộ lọc.
-  5. **Xem tồn kho:** Đọc giá trị tồn kho cuối kỳ theo bộ lọc (số tuyệt đối; biến động đã nằm trong công thức kết quả).
-  6. **Xử lý ngoại lệ:** Mở đúng route cho ca lệch, đối soát ngân hàng, thiếu giá vốn, chi phí chưa ghi nhận hoặc chứng từ cần xử lý.
-- **Thông tin hiển thị:**
-  - **Nên hiển thị:** Hai dòng KPI kết quả theo kỳ, tiền mặt hiện có (ba card công thức), giá trị tồn kho cuối kỳ và danh sách cần xử lý ở cuối trang. Khi kỳ là tháng/`mtd` và đã có chỉ tiêu, KPI Doanh thu thuần được kèm tín hiệu tiến độ chỉ tiêu (Progress/%); đua chi nhánh, pace chart và editor chỉ tiêu thuộc `/finance/revenue` và `/finance/targets`. Biểu đồ, CSV, bảng doanh thu, giá vốn món, sổ chi phí và đối soát ngân hàng dùng cùng thuật ngữ tại các route chuyên biệt.
-  - **Không lặp:** Finance chỉ hiển thị card Giá trị tồn kho cuối kỳ; bảng chi tiết tồn kho thuộc Inventory.
-  - **Trạng thái thiếu dữ liệu:** Thiếu coverage giá vốn thì không tính Lợi nhuận gộp và Kết quả kinh doanh; chưa ghi nhận chi phí thì không tính Kết quả kinh doanh.
-  - **KHÔNG hiển thị:** `Lợi nhuận sau thuế TNDN` khi chưa đủ sổ kế toán và khóa sổ, nút tạo order, hoặc các bước chế biến món ăn.
-- **Quy chuẩn UX/UI:**
-  - Mọi số liệu tiền tệ phải được định dạng chuẩn VND bằng hàm `formatVND` (ví dụ: `150.000đ`, không viết `150k` hay `150000`).
-  - Desktop: dòng kết quả 1 ba card, dòng 2 bốn card (khi có quyền giá trị tồn); section tiền mặt hiện có ba card `Tiền mặt + Tiền tài khoản = Tổng tiền`; tablet hai cột; mobile một cột. Dùng lại `KpiCard`, `KpiRow` và `AppSection`.
-  - Tất cả các biểu đồ tài chính chỉ được phép sử dụng bảng màu quy chuẩn từ `chart-1` đến `chart-5` trong token của hệ thống để đảm bảo tính đồng bộ thị giác.
+- **Actor:** `owner`.
+- **Job:** Công thức KQKD theo kỳ (hai dòng); tách số dư hiện có và giá trị tồn.
+- **Goal:** Doanh thu thuần sau giá vốn món / chi phí VH / biến động tồn; drill báo cáo chuyên biệt khi cần.
+- **Workflow:** Chọn kỳ (`Nay`…`Năm`) → phạm vi (`Tất cả`/`Công ty`/`Toàn bộ CN`/`CN`) → đọc 2 dòng công thức → tiền mặt hiện có (không theo bộ lọc) → giá trị tồn cuối kỳ → mở route ngoại lệ (ca lệch, bank match, thiếu giá vốn…).
+- **Ưu tiên data:** Hai dòng KPI kỳ; 3 card tiền mặt; giá trị tồn cuối kỳ; danh sách cần xử lý. Tháng/`mtd` + chỉ tiêu → Progress trên Doanh thu thuần; đua CN/pace/editor → `/finance/revenue` · `/finance/targets`. **Không lặp:** bảng tồn chi tiết (Inventory). Thiếu coverage giá vốn → không tính Lợi nhuận gộp/KQKD; chưa chi phí → không KQKD. **Không:** LN sau thuế khi chưa sổ/khóa sổ; nút order/KDS.
+- **UX:** `formatVND`. Desktop: dòng 1 = 3 card, dòng 2 = 4 card (khi có quyền tồn); tablet 2 cột; mobile 1 cột (`KpiCard`/`KpiRow`/`AppSection`). Chart chỉ `chart-1`…`chart-5`.
 
 ---
 
-### 2.10. Bổ sung thông tin nhận HĐĐT — `/q/invoice/[token]`
+### 2.10. HĐĐT khách — `/q/invoice/[token]`
 
 - **Archetype:** `PUBLIC-WORKFLOW`.
 - **Đối tượng sử dụng chính:** Khách hàng đã thanh toán.

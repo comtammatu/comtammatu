@@ -5,26 +5,44 @@ runtime adapters, local tool state, and `tasks/todo.md` are not parallel SSOTs.
 
 ## System Sources
 
+HOT — load by default for matching work:
+
 - Agent entrypoint: `AGENTS.md`
 - Tool/subagent routing: `docs/agent/rules/skills.md`
 - Cross-runtime review: `docs/agent/rules/orchestration.md`
 - Codebase/module index: `docs/CODEBASE_MAP.md`
 - Architecture: `docs/spec/architecture.md`, `docs/architecture/README.md`
-- Auth and ACL: `docs/modules/auth.md`
+- Auth and ACL: `docs/modules/auth.md` (includes ADR 0015 cutover pointer)
 - Database: `docs/modules/database.md`, `docs/spec/database-schema.md`
-- UI: `docs/spec/design-system.md`, `docs/spec/page-archetypes.md`,
-  `docs/modules/ui.md`; Product Dual Thesis in `docs/spec/architecture.md`.
-  Product UX spine (actor × job × plane per route family, before compose):
-  `docs/ref/screen-context-map.md` §1A — not a parallel DS or `DESIGN.md`.
-  Target-only docs under `docs/architecture/target-*` are future.
+- UI (ordered 3+1): `docs/spec/design-system.md` (visual) →
+  `docs/spec/page-archetypes.md` (workflow) →
+  `docs/ref/screen-context-map.md` (audience/device; Product UX spine §1A
+  actor × job × plane per route family, before compose) →
+  `docs/modules/ui.md` (thin implementation map). Product Dual Thesis in
+  `docs/spec/architecture.md`. Not a parallel DS or root `DESIGN.md`; optional
+  local Stitch mirror `.stitch/DESIGN.md` (non-SSOT, untracked). Target-only
+  docs under `docs/architecture/target-*` are future.
 - Routes/scopes: `docs/spec/role-route-matrix.md`
 - Notifications: `docs/spec/toast-notification-system.md`
 - Finance: `docs/modules/finance.md`
-- Inventory: `docs/ref/inventory.md`
+- Inventory: `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`
 - Infrastructure: `docs/modules/infrastructure.md`
-- Legal/tax/payroll/HĐĐT: `docs/ref/legal-framework-2026.md` first, then
-  `docs/ref/payroll-pit.md`, `docs/ref/einvoice-tax.md`,
-  `docs/ref/labor-contracts.md`, and `docs/ref/business-context.md` as applicable
+- Vocabulary / language: `docs/ref/glossary.md`,
+  `docs/agent/rules/language.md`
+- Operational data: `docs/ref/operational-data-contract.md`
+- Business/domain index: `docs/ref/README.md`
+
+## Warm Sources
+
+On-demand legal/tax/finance deep refs (not default System Sources):
+
+- Legal register: `docs/ref/legal-framework-2026.md`
+- E-invoice / VAT / CIT: `docs/ref/einvoice-tax.md`
+- Assets / VAT / F&B profit ladder: `docs/ref/finance-assets-vat-fnb.md`
+- Accounting books TT133/TT99: `docs/ref/accounting-books-tt133-tt99.md`
+- Payroll PIT / labor contracts: `docs/ref/payroll-pit.md`,
+  `docs/ref/labor-contracts.md`
+- Business boundary: `docs/ref/business-context.md`
 
 ## Agent Entrypoints Per IDE
 
@@ -32,8 +50,8 @@ Adapter directories wire tools back to repo authority; they do not own rules.
 
 | Runtime      | Entrypoint                     | MCP config                            | Production DB guard                                                               |
 | ------------ | ------------------------------ | ------------------------------------- | --------------------------------------------------------------------------------- |
-| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | Plugin/runtime config; no tracked file | `.claude/settings.json` → canonical guard                                         |
-| Codex        | `AGENTS.md`                    | `.codex/config.toml`                  | `.codex/hooks.json` → canonical guard                                             |
+| Claude Code  | `CLAUDE.md` shim → `AGENTS.md` | Plugin/runtime config; no tracked file | Optional local `.claude/settings.json` → canonical guard                          |
+| Codex        | `AGENTS.md`                    | Optional local `.codex/config.toml`   | Optional local `.codex/hooks.json` → canonical guard                              |
 | Cursor/other | Adapter-local pointer required | Adapter-specific                      | Unregistered: read-only until adapter is added and guard-sync registration exists |
 
 The tracked capability contract and required bundle are
@@ -42,15 +60,14 @@ The tracked capability contract and required bundle are
 `corepack pnpm agent:start` before agent work, and CI verifies the skill bundle
 in `lint`.
 Global skill catalogs, plugin caches, and per-user plugin state are additive only.
-`.claude/settings.json` enables the shared Claude plugin subset;
-`.codex/config.toml` registers Codex MCP servers. Neither adapter can replace or
-alter project policy or the required bundle.
+Local Claude/Codex adapter files are optional and untracked; when present they
+may enable plugins or MCP servers but cannot replace or alter project policy or
+the required bundle.
 
 The production guard contract spans the Environment Registry in `database.md`,
-`scripts/guard-prod-db.mjs`, the pinned Codex MCP binding in
-`.codex/config.toml`, and every adapter registered by
-`scripts/check-guard-sync.mjs`. Project-less direct MCP reads are accepted only
-when that Codex binding is mechanically verified. A runtime without an adapter
+`scripts/guard-prod-db.mjs`, and `scripts/check-guard-sync.mjs`. An optional
+local `.codex/config.toml` may pin a read-only Production MCP binding; when
+absent, project-less direct MCP reads fail closed. A runtime without an adapter
 is unguarded; use only read-only/plan/ask/sandbox review until it is registered.
 Keep secrets, tokens, caches, generated sessions, worktrees, and local state
 untracked.
@@ -70,10 +87,6 @@ System Sources above.
 - Regressions: `tasks/regressions.md`
 - Prose-only learning staging: `tasks/lessons.md`
 - Runbooks: `docs/runbooks/README.md`
-- Business/domain index: `docs/ref/README.md`
-- Vocabulary: `docs/ref/glossary.md`
-- Operational data: `docs/ref/operational-data-contract.md`
-- Legal register: `docs/ref/legal-framework-2026.md`
 
 One fact has one owner. Prefer a deterministic guard/test over recurring prose.
 Promote stable contracts to the owning source, park only owner-kept options with

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useRef } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Eye as IconEye,
   EyeOff as IconEyeOff,
@@ -59,6 +59,12 @@ import {
   getDisplayReferenceCost,
   type ReferenceCost,
 } from "@lib/inventory/reference-cost";
+import {
+  catalogReadinessHasGap,
+  resolveCatalogReadiness,
+  summarizeCatalogReadiness,
+  type CatalogReadinessGap,
+} from "@lib/inventory/catalog-readiness";
 
 import {
   ACTIONS_VI,
@@ -83,6 +89,26 @@ const activeOptions = [
   { value: "active", label: ingredientListCopy.activeOnly },
   { value: "all", label: ingredientListCopy.includeHidden },
 ];
+type ReadinessFilter =
+  | "all"
+  | "gaps"
+  | "missing_fulfill_site"
+  | "missing_supplier_link";
+const readinessFilterOptions: {
+  value: ReadinessFilter;
+  label: string;
+}[] = [
+  { value: "all", label: ingredientListCopy.readinessAll },
+  { value: "gaps", label: ingredientListCopy.readinessGapsOnly },
+  {
+    value: "missing_fulfill_site",
+    label: ingredientListCopy.readinessMissingFulfillSite,
+  },
+  {
+    value: "missing_supplier_link",
+    label: ingredientListCopy.readinessMissingSupplier,
+  },
+];
 const allItemKindsValue = "all";
 const itemKindOptions = [
   {
@@ -91,6 +117,32 @@ const itemKindOptions = [
   },
   ...ITEM_KIND_OPTIONS,
 ] as const;
+
+function toReadinessInput(item: IngredientRow) {
+  return {
+    isActive: item.is_active,
+    defaultFulfillSiteKind: item.default_fulfill_site_kind,
+    hasActiveSupplierLink: item.has_active_supplier_link === true,
+  };
+}
+
+function ReadinessBadges({ item }: { item: IngredientRow }) {
+  const { gaps } = resolveCatalogReadiness(toReadinessInput(item));
+  if (gaps.length === 0) return null;
+  const label = (gap: CatalogReadinessGap) =>
+    gap === "missing_fulfill_site"
+      ? ingredientListCopy.missingFulfillSite
+      : ingredientListCopy.missingSupplierLink;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {gaps.map((gap) => (
+        <Badge key={gap} variant="destructive" className="text-xs">
+          {label(gap)}
+        </Badge>
+      ))}
+    </div>
+  );
+}
 
 function categoryLabel(item: IngredientRow): string | null {
   return item.category_name ?? item.category ?? null;
@@ -182,6 +234,9 @@ function IngredientMobileCard({
               {itemKindLabel(item)}
             </Badge>
           </div>
+          <div className="mt-2">
+            <ReadinessBadges item={item} />
+          </div>
         </div>
         <div
           onClick={(event) => event.stopPropagation()}
@@ -233,6 +288,8 @@ export function IngredientsClient({
   const [category, setCategory] = useState("all");
   const [itemKind, setItemKind] = useState(allItemKindsValue);
   const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
+  const [readinessFilter, setReadinessFilter] =
+    useState<ReadinessFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
@@ -241,20 +298,6 @@ export function IngredientsClient({
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const isTouchLayout = useIsMobile(1024);
   const controlSize = useFormControlSize();
-
-  const lastUpdatedAtRef = useRef<string | null>(null);
-
-  // Initialize the water-mark cursor from initial rows
-  if (lastUpdatedAtRef.current === null && initial.length > 0) {
-    const timestamps = initial
-      .map((r) => r.updated_at)
-      .filter((t): t is string => !!t);
-    if (timestamps.length > 0) {
-      lastUpdatedAtRef.current = timestamps.reduce((latest, current) =>
-        new Date(current) > new Date(latest) ? current : latest,
-      );
-    }
-  }
 
   const toneMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -272,6 +315,11 @@ export function IngredientsClient({
     [categoryOptions],
   );
 
+  const readinessSummary = useMemo(
+    () => summarizeCatalogReadiness(rows.map(toReadinessInput)),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     let result = rows;
     if (activeFilter === "active") {
@@ -283,60 +331,45 @@ export function IngredientsClient({
     if (itemKind !== allItemKindsValue) {
       result = result.filter((item) => item.item_kind === itemKind);
     }
+    if (readinessFilter !== "all") {
+      const gap =
+        readinessFilter === "gaps"
+          ? "any"
+          : (readinessFilter as CatalogReadinessGap);
+      result = result.filter((item) =>
+        catalogReadinessHasGap(toReadinessInput(item), gap),
+      );
+    }
     if (searchQuery.trim()) {
       result = result.filter((item) =>
         matchesSearch([item.name, item.sku], searchQuery),
       );
     }
     return result;
-  }, [rows, activeFilter, category, itemKind, searchQuery]);
+  }, [rows, activeFilter, category, itemKind, readinessFilter, searchQuery]);
 
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     category !== "all" ||
     itemKind !== allItemKindsValue ||
-    activeFilter !== "active";
+    activeFilter !== "active" ||
+    readinessFilter !== "all";
 
   function clearFilters() {
     setSearchQuery("");
     setCategory("all");
     setItemKind(allItemKindsValue);
     setActiveFilter("active");
+    setReadinessFilter("all");
     setCurrentPage(1);
   }
 
   async function reload() {
     try {
-      const response = await fetchIngredients(
-        2000,
-        lastUpdatedAtRef.current ?? undefined,
-      );
+      // Full reload keeps Nguồn hàng + NCC readiness flags in sync after save.
+      const response = await fetchIngredients(2000);
       if (response.success) {
-        const delta = (response.data ?? []) as IngredientRow[];
-        if (delta.length > 0) {
-          setRows((prev) => {
-            const next = [...prev];
-            for (const item of delta) {
-              const idx = next.findIndex((r) => r.id === item.id);
-              if (idx !== -1) {
-                next[idx] = item;
-              } else {
-                next.push(item);
-              }
-            }
-            return next;
-          });
-          const timestamps = delta
-            .map((r) => r.updated_at)
-            .filter((t): t is string => !!t);
-          if (timestamps.length > 0) {
-            lastUpdatedAtRef.current = timestamps.reduce(
-              (latest, current) =>
-                new Date(current) > new Date(latest) ? current : latest,
-              lastUpdatedAtRef.current ?? timestamps[0]!,
-            );
-          }
-        }
+        setRows((response.data ?? []) as IngredientRow[]);
         return;
       }
       toast.error(response.error ?? ingredientListCopy.reloadFailed);
@@ -518,6 +551,37 @@ export function IngredientsClient({
               ))}
             </SelectContent>
           </Select>
+
+          <Select
+            value={readinessFilter}
+            onValueChange={(value) => {
+              setReadinessFilter(value as ReadinessFilter);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger
+              size={controlSize}
+              className={
+                controlSize === "touch"
+                  ? "w-full"
+                  : inventoryListFilterSelectClassName
+              }
+              aria-label={ingredientListCopy.colReadiness}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {readinessFilterOptions.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  size={controlSize === "touch" ? "touch" : "default"}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </>
       }
       reset={
@@ -525,6 +589,14 @@ export function IngredientsClient({
           <Badge variant="outline">
             {ingredientListCopy.countSummary(filtered.length, rows.length)}
           </Badge>
+          {readinessSummary.gapCount > 0 ? (
+            <Badge variant="destructive">
+              {ingredientListCopy.readinessGapSummary(
+                readinessSummary.gapCount,
+                readinessSummary.activeCount,
+              )}
+            </Badge>
+          ) : null}
           {hasActiveFilters ? (
             <Button
               type="button"
@@ -589,6 +661,12 @@ export function IngredientsClient({
         </div>
       ),
     },
+    {
+      key: "readiness",
+      header: ingredientListCopy.colReadiness,
+      className: "min-w-44",
+      render: (item) => <ReadinessBadges item={item} />,
+    },
     ...(rows.some((item) => item.monetary != null)
       ? [
           {
@@ -640,6 +718,11 @@ export function IngredientsClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={PRODUCT_VI.rawIngredient}
+        description={
+          readinessSummary.gapCount > 0
+            ? ingredientListCopy.readinessHint
+            : undefined
+        }
         actions={
           canManage ? (
             <Button type="button" size="lg" onClick={openCreate}>

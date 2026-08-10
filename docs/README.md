@@ -13,7 +13,8 @@
   ADR status decides whether a direction is Accepted, Proposed, or Parked; ADRs
   are decision records, not the active tracker.
 - Superseded plans and snapshots are deleted after their live contract or action
-  is promoted to the owning spec, ref, module, runbook, or task.
+  is promoted to the owning spec, ref, module, runbook, or task. Git history is
+  the archive.
 
 ## Đọc theo nhu cầu
 
@@ -26,13 +27,13 @@
 - UI implementation and Base UI migration guide: [modules/ui.md](modules/ui.md)
 - Database schema source ladder: [spec/database-schema.md](spec/database-schema.md)
 - Finance active boundary: [modules/finance.md](modules/finance.md)
+- Auth/ACL (current + ADR 0015 cutover pointer): [modules/auth.md](modules/auth.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
 - Active work: `tasks/todo.md`; decision records: `docs/plan/decisions.md` and
   `docs/plan/adr/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
   (gồm inventory, POS/KDS, finance, và `runbooks/db/*`)
-- Worklog policy: [worklog/README.md](worklog/README.md)
 - Xuất tri thức agent dạng OKF tạm thời: `corepack pnpm docs:okf` -> `.tmp/okf/`
   (generated, không phải SSOT)
 
@@ -53,4 +54,3 @@
   workflow composition và regression proof có owner riêng trong authority map
 - `plan/`: compatibility decisions and ADR records; not a rollout archive
 - `runbooks/`: operational verification (gồm `db/` cho Preview branch và re-baseline)
-- `worklog/`: policy only; use PR/task notes for transient implementation artifacts

@@ -25,7 +25,7 @@ test("supplier invoice lines expose a fixed NET-price entry set with additive VA
   assert.doesNotMatch(copy, /pricingModes:/);
   assert.doesNotMatch(copy, /pricingModeLabel/);
   assert.match(copy, /unitPriceLabel/);
-  assert.match(copy, /grossLineTotalLabel: "Tổng tiền"/);
+  assert.match(copy, /grossLineTotalLabel: "Tổng cộng \(đã gồm GTGT\)"/);
 });
 
 test("supplier invoice create payload derives additive VAT from the net line total", () => {

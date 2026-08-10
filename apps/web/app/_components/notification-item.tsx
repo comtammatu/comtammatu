@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -52,18 +53,23 @@ function iconFor(kind: string) {
     case "procurement.purchase_request_submitted":
     case "procurement.po_pending_approval":
     case "inventory.waste.weekly_report":
+    case "inventory.waste_pending_approval":
       return IconClipboardList;
     case "workflow.transfer_in_transit":
       return IconTruck;
     case "inventory.stock_request_submitted":
+    case "inventory.stock_request_rejected":
       return IconPackageExport;
-    case "workflow.stocktake_submitted":
     case "inventory.stocktake_completed":
       return IconCircleCheck;
     case "hr.leave_approved":
+    case "hr.checkout_approved":
     case "hr.payroll_period_ready":
+    case "pos.void_resolved":
       return IconCircleCheck;
     case "hr.leave_rejected":
+    case "hr.checkout_rejected":
+    case "pos.void_rejected":
       return IconAlertTriangle;
     case "hr.leave_requested":
     case "hr.checkout_requested":
@@ -78,11 +84,9 @@ function iconFor(kind: string) {
     case "inventory.stocktake_conflict":
       return IconAlertTriangle;
     case "inventory.stock_low":
-    case "inventory.expiry_soon":
     case "inventory.valuation_variance":
     case "inventory.valuation_reconciliation_failed":
     case "pos.kds_out_of_stock":
-    case "pos.payment_stock_failed":
     case "pos.shift_variance":
     case "system.cron_failed":
       return IconAlertTriangle;
@@ -142,6 +146,8 @@ export function getNotificationRowActions(
   item: NotificationItemModel,
   handlers: {
     onOpen: () => void;
+    onHistory?: () => void;
+    onAudit?: () => void;
     onRead: (id: number, options?: { quiet?: boolean }) => void;
   },
 ): RowActionItem[] {
@@ -152,6 +158,20 @@ export function getNotificationRowActions(
       key: "open",
       label: openCtaLabel(item.kind),
       onSelect: handlers.onOpen,
+    });
+  }
+  if (item.history_url && handlers.onHistory) {
+    actions.push({
+      key: "history",
+      label: messages.notifications.viewDocumentHistory,
+      onSelect: handlers.onHistory,
+    });
+  }
+  if (item.audit_url && handlers.onAudit) {
+    actions.push({
+      key: "audit",
+      label: messages.notifications.viewSystemActivity,
+      onSelect: handlers.onAudit,
     });
   }
   if (unread) {
@@ -199,8 +219,24 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     if (item.action_url) router.push(item.action_url);
   };
 
+  const handleHistory = () => {
+    if (!item.history_url) return;
+    if (unread) onRead(item.id, { quiet: true });
+    onNavigate?.();
+    router.push(item.history_url);
+  };
+
+  const handleAudit = () => {
+    if (!item.audit_url) return;
+    if (unread) onRead(item.id, { quiet: true });
+    onNavigate?.();
+    router.push(item.audit_url);
+  };
+
   const actions = getNotificationRowActions(item, {
     onOpen: handleOpen,
+    onHistory: item.history_url ? handleHistory : undefined,
+    onAudit: item.audit_url ? handleAudit : undefined,
     onRead,
   });
 
@@ -252,12 +288,30 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
             ) : null}
             <Badge variant="outline">{kindLabel}</Badge>
           </div>
-          {cta ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
-              {cta}
-              <IconChevronRight className="size-3.5" aria-hidden />
-            </span>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {cta ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                {cta}
+                <IconChevronRight className="size-3.5" aria-hidden />
+              </span>
+            ) : null}
+            {item.history_url &&
+            item.history_url !== item.action_url ? (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-2xs text-muted-foreground"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleHistory();
+                }}
+              >
+                {messages.notifications.viewDocumentHistory}
+              </Button>
+            ) : null}
+          </div>
         </ItemFooter>
       </ItemContent>
     </>

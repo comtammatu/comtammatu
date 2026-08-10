@@ -20,8 +20,8 @@ export function AddStaffButton({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <IconUserPlus className="mr-2 size-4" />
+      <Button size="touch" onClick={() => setOpen(true)}>
+        <IconUserPlus data-icon="inline-start" />
         {messages.controlSurface.staffPage.createAccount}
       </Button>
       <StaffFormDialog

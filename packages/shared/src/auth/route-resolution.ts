@@ -59,24 +59,26 @@ function matchesPathPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-export function isRunnerPublicDisplayPath(pathname: string): boolean {
-  return /^\/br\/\d+\/runner\/?$/.test(pathname);
+/** Guest-facing pickup board (`Gọi số`) — public read-only display. */
+export function isPickupPublicDisplayPath(pathname: string): boolean {
+  return /^\/br\/\d+\/pickup\/?$/.test(pathname);
 }
 
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
-  // Operational PWA manifests (Branch home plus POS/KDS/Runner stations).
+  // Operational PWA manifests (Branch home plus POS/KDS/pickup stations).
   // Browsers fetch `<link rel="manifest">` without credentials, so a gated
   // manifest 302s to /login and the PWA becomes uninstallable. The manifest
   // body carries no sensitive data (name/icons/colors only).
   if (
-    /^\/br\/\d+\/(?:(?:pos|kds|runner)\/)?manifest\.webmanifest$/.test(pathname)
+    /^\/br\/\d+\/(?:(?:pos|kds|pickup)\/)?manifest\.webmanifest$/.test(
+      pathname,
+    )
   ) {
     return true;
   }
-  // Runner is a customer-facing read-only display, not a staff login surface.
-  if (isRunnerPublicDisplayPath(pathname)) return true;
+  if (isPickupPublicDisplayPath(pathname)) return true;
 
   return PUBLIC_APP_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
@@ -147,7 +149,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/settings(?:\/|$)/.test(pathname)) return "branch_settings";
   if (/^\/br\/\d+\/pos(?:\/|$)/.test(pathname)) return "pos";
   if (/^\/br\/\d+\/kds(?:\/|$)/.test(pathname)) return "kds";
-  if (/^\/br\/\d+\/runner(?:\/|$)/.test(pathname)) return "runner";
+  if (/^\/br\/\d+\/pickup(?:\/|$)/.test(pathname)) return "pickup";
   if (matchesPathPrefix(pathname, "/notifications")) return "notifications";
 
   return null;

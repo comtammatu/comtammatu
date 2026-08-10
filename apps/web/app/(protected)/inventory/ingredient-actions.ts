@@ -304,19 +304,42 @@ export async function fetchIngredients(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const { data, error } = await getIngredientsCached(
-    readClient,
-    claims.tenant_id,
-    safeLimit,
-    updatedSince,
-    monetary.purchasePrice,
-  );
+  const [ingredientsResult, supplierLinksResult] = await Promise.all([
+    getIngredientsCached(
+      readClient,
+      claims.tenant_id,
+      safeLimit,
+      updatedSince,
+      monetary.purchasePrice,
+    ),
+    // Match YCM gate: active supplier_items on an active supplier.
+    supabase
+      .from("supplier_items")
+      .select("ingredient_id, suppliers!inner(id)")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .eq("suppliers.is_active", true),
+  ]);
+
+  const { data, error } = ingredientsResult;
 
   if (error) {
     return {
       success: false,
       error: messages.inventory.ingredients.list.loadFailed,
     };
+  }
+
+  if (supplierLinksResult.error) {
+    return {
+      success: false,
+      error: messages.inventory.ingredients.list.loadFailed,
+    };
+  }
+
+  const linkedIngredientIds = new Set<number>();
+  for (const link of supplierLinksResult.data ?? []) {
+    linkedIngredientIds.add(Number(link.ingredient_id));
   }
 
   const rows = (data ?? []).map((row) => {
@@ -347,6 +370,7 @@ export async function fetchIngredients(
       .sort((a: any, b: any) => a.sort_order - b.sort_order);
 
     const baseUnit = units.find((u) => u.is_base);
+    const ingredientId = Number(safeRest.id);
 
     return {
       ...safeRest,
@@ -354,6 +378,7 @@ export async function fetchIngredients(
       category_name: ingredient_categories?.name ?? null,
       units,
       unit: baseUnit?.unit_name ?? "",
+      has_active_supplier_link: linkedIngredientIds.has(ingredientId),
     };
   });
 

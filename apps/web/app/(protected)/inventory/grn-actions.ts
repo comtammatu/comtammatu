@@ -539,8 +539,8 @@ export async function fetchGrnDetail(
     .from("grn_items")
     .select(
       (monetary.purchasePrice
-        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity, unit_price_est)"
-        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity)") as never,
+        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity, unit_price_est)"
+        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity)") as never,
     )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
@@ -564,6 +564,8 @@ export async function fetchGrnDetail(
     entry_unit_id: number | null;
     unit_cost?: number | string;
     total_cost?: number | string;
+    cost_pending?: boolean | null;
+    provisional_cost_source?: string | null;
     suppliers: { id: number; name: string } | null;
     ingredients: {
       id: number;
@@ -639,6 +641,8 @@ export async function fetchGrnDetail(
         line.purchase_order_item_id == null
           ? 0
           : (previouslyApplied.get(line.purchase_order_item_id) ?? 0),
+      cost_pending: line.cost_pending === true,
+      provisional_cost_source: line.provisional_cost_source ?? null,
       monetary: monetary.purchasePrice
         ? {
             unit_price:

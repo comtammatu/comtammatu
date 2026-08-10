@@ -58,7 +58,7 @@ export interface PwaToolbarProps {
    * "contained" = the Employee toolbar: centers at max-w-lg/lg:max-w-3xl, sm:
    * breakpoints, always offers a manual-install fallback, no update banner,
    * hides fully once installed+online. "full-bleed" = the Operations
-   * (POS/KDS/Runner) toolbar: edge-to-edge bar, md: breakpoints, install row
+   * (POS/KDS/pickup) toolbar: edge-to-edge bar, md: breakpoints, install row
    * only when a real install path exists, shows an undismissable update
    * banner, and otherwise gets out of the operational screen.
    */
@@ -71,7 +71,7 @@ export interface PwaToolbarProps {
 
 /**
  * Canonical install/offline/update PWA toolbar (design-system.md § B). Single
- * source for the Operations (POS/KDS/Runner) and Employee toolbars: shares
+ * source for the Operations (POS/KDS/pickup) and Employee toolbars: shares
  * the online/standalone/install-prompt state and handlers, and renders each
  * layout's exact pre-extraction markup so both consumers keep identical
  * behavior.

@@ -170,7 +170,7 @@ function buildTileGroups(
       {
         moduleKey: "kds",
         href: `/br/${branchId}/kds`,
-        title: "Quầy Bếp",
+        title: "KDS",
         description: copy.commandKdsDescription,
         icon: <IconChefHat />,
       },
@@ -184,7 +184,7 @@ function buildTileGroups(
       {
         moduleKey: "branch_orders",
         href: `/br/${branchId}/orders`,
-        title: "Đơn hàng",
+        title: "Đơn bán",
         description: copy.commandOrdersDescription,
         icon: <IconClipboardList />,
       },

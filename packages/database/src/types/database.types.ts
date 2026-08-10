@@ -1297,6 +1297,7 @@ export type Database = {
           limit_quantity: number | null
           menu_item_id: number
           sold_today: number
+          stock_allowance_quantity: number | null
           stock_capacity: number | null
           tenant_id: number
           updated_at: string
@@ -1310,6 +1311,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id: number
           sold_today?: number
+          stock_allowance_quantity?: number | null
           stock_capacity?: number | null
           tenant_id: number
           updated_at?: string
@@ -1323,6 +1325,7 @@ export type Database = {
           limit_quantity?: number | null
           menu_item_id?: number
           sold_today?: number
+          stock_allowance_quantity?: number | null
           stock_capacity?: number | null
           tenant_id?: number
           updated_at?: string
@@ -1351,6 +1354,91 @@ export type Database = {
           },
           {
             foreignKeyName: "branch_menu_item_daily_limits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_network_gate_bypasses: {
+        Row: {
+          activated_at: string
+          activated_by: string
+          bound_pos_session_id: number | null
+          branch_id: number
+          duration_kind: string
+          expires_at: string
+          id: number
+          note: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          tenant_id: number
+        }
+        Insert: {
+          activated_at?: string
+          activated_by: string
+          bound_pos_session_id?: number | null
+          branch_id: number
+          duration_kind: string
+          expires_at: string
+          id?: never
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tenant_id: number
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string
+          bound_pos_session_id?: number | null
+          branch_id?: number
+          duration_kind?: string
+          expires_at?: string
+          id?: never
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_network_gate_bypasses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_bound_pos_session_id_fkey"
+            columns: ["bound_pos_session_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_network_gate_bypasses_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1555,6 +1643,7 @@ export type Database = {
           branch_kind: string
           code: string | null
           created_at: string | null
+          google_review_url: string | null
           id: number
           is_active: boolean | null
           latitude: number | null
@@ -1570,6 +1659,7 @@ export type Database = {
           branch_kind?: string
           code?: string | null
           created_at?: string | null
+          google_review_url?: string | null
           id?: never
           is_active?: boolean | null
           latitude?: number | null
@@ -1585,6 +1675,7 @@ export type Database = {
           branch_kind?: string
           code?: string | null
           created_at?: string | null
+          google_review_url?: string | null
           id?: never
           is_active?: boolean | null
           latitude?: number | null
@@ -2096,8 +2187,13 @@ export type Database = {
           comment: string | null
           created_at: string
           id: number
+          order_created_at: string | null
+          order_id: number | null
+          order_number: string | null
           qr_code_id: number
           rating: number
+          table_id: number | null
+          table_number: string | null
           tenant_id: number
         }
         Insert: {
@@ -2106,8 +2202,13 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: never
+          order_created_at?: string | null
+          order_id?: number | null
+          order_number?: string | null
           qr_code_id: number
           rating: number
+          table_id?: number | null
+          table_number?: string | null
           tenant_id: number
         }
         Update: {
@@ -2116,8 +2217,13 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: never
+          order_created_at?: string | null
+          order_id?: number | null
+          order_number?: string | null
           qr_code_id?: number
           rating?: number
+          table_id?: number | null
+          table_number?: string | null
           tenant_id?: number
         }
         Relationships: [
@@ -2136,10 +2242,24 @@ export type Database = {
             referencedColumns: ["branch_id", "tenant_id"]
           },
           {
+            foreignKeyName: "feedbacks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "feedbacks_qr_code_id_fkey"
             columns: ["qr_code_id"]
             isOneToOne: false
             referencedRelation: "feedback_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
             referencedColumns: ["id"]
           },
           {
@@ -9117,6 +9237,7 @@ export type Database = {
           is_final: boolean
           needs_recount: boolean
           offline_created_at: string | null
+          reason_code: string | null
           round_no: number
           session_id: number
           system_quantity: number
@@ -9137,6 +9258,7 @@ export type Database = {
           is_final?: boolean
           needs_recount?: boolean
           offline_created_at?: string | null
+          reason_code?: string | null
           round_no?: number
           session_id: number
           system_quantity: number
@@ -9157,6 +9279,7 @@ export type Database = {
           is_final?: boolean
           needs_recount?: boolean
           offline_created_at?: string | null
+          reason_code?: string | null
           round_no?: number
           session_id?: number
           system_quantity?: number
@@ -11667,24 +11790,6 @@ export type Database = {
         Returns: Json
       }
       activate_invoice_profile: { Args: never; Returns: number }
-      add_menu_item_stock_exception: {
-        Args: {
-          p_branch_id: number
-          p_extra_portions: number
-          p_menu_item_id: number
-          p_reason: string
-        }
-        Returns: Json
-      }
-      add_stock_request_line: {
-        Args: {
-          p_entry_unit_id: number
-          p_ingredient_id: number
-          p_quantity: number
-          p_request_id: number
-        }
-        Returns: Json
-      }
       adjust_stock_exception:
         | {
             Args: {
@@ -11793,7 +11898,6 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: undefined
       }
-      approve_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       approve_waste: {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined
@@ -11892,6 +11996,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -11908,7 +12013,6 @@ export type Database = {
         Args: { p_groups: Json }
         Returns: Json
       }
-      bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
       cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
@@ -12112,19 +12216,6 @@ export type Database = {
             Returns: Json
           }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
-      confirm_goods_receipt_note_legacy: {
-        Args: { p_grn_id: number }
-        Returns: Json
-      }
-      confirm_payment_and_post: {
-        Args: {
-          p_branch_id: number
-          p_payment_id: number
-          p_provider_ref?: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
       confirm_production_run: {
         Args: {
           p_actual_ingredients?: Json
@@ -12151,11 +12242,6 @@ export type Database = {
         Returns: Json
       }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
-      consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
-      consume_stock_for_order_service: {
-        Args: { p_actor_id?: string; p_order_id: number }
-        Returns: Json
-      }
       copy_shift_assignments_week: {
         Args: {
           p_branch_id: number
@@ -12307,10 +12393,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_purchase_order_from_grn: {
-        Args: { p_grn_id: number }
-        Returns: Json
-      }
       create_purchase_order_from_request: {
         Args: {
           p_expected_delivery_date: string
@@ -12323,10 +12405,6 @@ export type Database = {
       }
       create_purchase_orders_from_grn: {
         Args: { p_grn_id: number }
-        Returns: Json
-      }
-      create_purchase_orders_from_request: {
-        Args: { p_orders: Json; p_request_id: number }
         Returns: Json
       }
       create_refund: {
@@ -12353,10 +12431,6 @@ export type Database = {
           p_provider_ref: string
           p_tenant_id: number
         }
-        Returns: Json
-      }
-      create_stock_request_draft: {
-        Args: { p_branch_id: number; p_notes?: string }
         Returns: Json
       }
       create_stock_transfer_draft: {
@@ -12688,6 +12762,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -12916,26 +12991,6 @@ export type Database = {
       get_order_operational_trace: {
         Args: { p_order_id: number }
         Returns: Json
-      }
-      get_orders_for_day: {
-        Args: { p_branch_id: number; p_date: string }
-        Returns: {
-          branch_id: number
-          branch_name: string
-          discount_amount: number
-          invoice_number: string
-          invoice_status: string
-          item_count: number
-          order_id: number
-          order_number: string
-          order_type: string
-          paid_at: string
-          paid_hour: number
-          payment_method: string
-          subtotal: number
-          tax_amount: number
-          total_amount: number
-        }[]
       }
       get_orders_for_day_v2: {
         Args: { p_branch_id: number; p_date: string }
@@ -13292,6 +13347,7 @@ export type Database = {
           menu_item_id: number
           pending_unfinalized_demand: number
           sold_today: number
+          stock_allowance_quantity: number
           stock_capacity: number
         }[]
       }
@@ -13996,16 +14052,6 @@ export type Database = {
         }
         Returns: Json
       }
-      save_purchase_order: {
-        Args: {
-          p_expected_delivery_date: string
-          p_lines: Json
-          p_notes: string
-          p_po_id: number
-          p_send?: boolean
-        }
-        Returns: Json
-      }
       save_purchase_order_group: {
         Args: {
           p_branch_id: number
@@ -14015,15 +14061,6 @@ export type Database = {
           p_lines: Json
           p_notes: string
           p_submit?: boolean
-        }
-        Returns: Json
-      }
-      save_purchase_orders_from_request: {
-        Args: {
-          p_idempotency_key?: string
-          p_orders: Json
-          p_request_id: number
-          p_send?: boolean
         }
         Returns: Json
       }
@@ -14244,6 +14281,14 @@ export type Database = {
         }
         Returns: Json
       }
+      set_branch_menu_stock_allowance: {
+        Args: {
+          p_branch_id: number
+          p_menu_item_id: number
+          p_stock_allowance_quantity: number
+        }
+        Returns: Json
+      }
       set_inventory_count_assignments: {
         Args: {
           p_branch_id: number
@@ -14338,10 +14383,6 @@ export type Database = {
         Args: { p_transfer_id: number }
         Returns: Json
       }
-      stock_transfer_confirm_ship_legacy: {
-        Args: { p_transfer_id: number }
-        Returns: Json
-      }
       stock_transfer_list_branches: {
         Args: never
         Returns: {
@@ -14356,10 +14397,6 @@ export type Database = {
         Returns: Json
       }
       stock_transfer_receive: {
-        Args: { p_items?: Json; p_transfer_id: number }
-        Returns: Json
-      }
-      stock_transfer_receive_legacy: {
         Args: { p_items?: Json; p_transfer_id: number }
         Returns: Json
       }
@@ -14400,7 +14437,17 @@ export type Database = {
         }
         Returns: number
       }
-      submit_stock_request: { Args: { p_request_id: number }; Returns: Json }
+      submit_self_order_feedback: {
+        Args: {
+          p_client_submission_id: string
+          p_comment: string
+          p_ip_hash: string
+          p_order_id: number
+          p_rating: number
+          p_token: string
+        }
+        Returns: Json
+      }
       sync_insurance_base: {
         Args: { p_employee_id: number }
         Returns: undefined

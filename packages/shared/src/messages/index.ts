@@ -17,7 +17,6 @@ export {
   STAFF_VI,
   TABLE_VI,
   PRODUCT_VI,
-  CUSTOMER_VI,
 } from "./domain";
 export type {
   OrderKey,
@@ -25,7 +24,6 @@ export type {
   StaffKey,
   TableKey,
   ProductKey,
-  CustomerKey,
 } from "./domain";
 export { INVENTORY_VI } from "./inventory";
 export type { InventoryKey } from "./inventory";
@@ -47,3 +45,17 @@ export { AUTH_VI } from "./auth";
 export type { AuthKey } from "./auth";
 export { HR_VI } from "./hr";
 export type { HrKey } from "./hr";
+export {
+  AUDIT_ACTION_LABELS_VI,
+  AUDIT_ENTITY_TYPE_LABELS_VI,
+  AUDIT_DIFF_FIELD_LABELS_VI,
+  INVENTORY_AUDIT_ACTION_CODES,
+  formatAuditActionLabel,
+  formatAuditEntityTypeLabel,
+  summarizeAuditDiff,
+} from "./audit";
+export type {
+  AuditActionLabelKey,
+  AuditEntityTypeLabelKey,
+  AuditDiffField,
+} from "./audit";

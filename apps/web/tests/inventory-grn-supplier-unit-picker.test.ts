@@ -6,7 +6,6 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "../lib/inventory/purchase-units";
-import { persistPendingGrnDraftLines } from "../lib/inventory/persist-grn-draft-lines";
 import {
   getDisplayReferenceCost,
   getReferenceCostForUnit,
@@ -267,40 +266,19 @@ test("GRN create editor no longer seeds commercial price from reference cost (D0
 });
 
 test("GRN warehouse draft does not require unit price (D091)", () => {
-  const controller = readRepo(
-    "apps/web/lib/inventory/use-grn-create-controller.ts",
-  );
-  const data = readRepo("apps/web/lib/inventory/grn-create-data.ts");
-  const client = readRepo(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/new/[supplierId]/branch-grn-create-client.tsx",
-  );
   const editor = readRepo(
     "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
+  const sheet = readRepo(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
+  );
 
-  assert.doesNotMatch(controller, /unitCost/);
-  assert.doesNotMatch(controller, /hasMissingPrice/);
-  assert.doesNotMatch(controller, /toastMissingPrices/);
   assert.doesNotMatch(editor, /edit\.unitCost != null/);
   assert.doesNotMatch(editor, /MoneyVndInput/);
   assert.doesNotMatch(editor, /priceSetOnPoHint/);
-  assert.match(client, /GRN_CREATE_COPY\.lineQtyOnly/);
-  assert.doesNotMatch(client, /GRN_CREATE_COPY\.linePriceRequired/);
-  assert.match(controller, /lines: recentLines/);
-  assert.doesNotMatch(controller, /existingDraft/);
-  assert.match(data, /\.from\("goods_received_notes"\)/);
-  assert.doesNotMatch(data, /\.eq\("supplier_id", supplierId\)/);
-  assert.match(data, /\.eq\("branch_id", defaultBranchId\)/);
-  assert.match(data, /\.eq\("status", "confirmed"\)/);
-  assert.match(
-    data,
-    /ingredient_id, received_quantity, entry_unit_id, supplier_id/,
-  );
-  assert.doesNotMatch(data, /supplier_price_list/);
-  assert.doesNotMatch(
-    data,
-    /\.select\("ingredient_id, received_quantity, entry_unit_id, unit_cost"\)/,
-  );
+  assert.doesNotMatch(editor, /GRN_CREATE_COPY\.linePriceRequired/);
+  assert.doesNotMatch(sheet, /MoneyVndInput/);
+  assert.doesNotMatch(sheet, /priceSetOnPoHint/);
 });
 
 test("GRN add-line dialog is qty/UOM only without PO price hint (D091)", () => {
@@ -328,25 +306,25 @@ test("quickCreateIngredient refuses units outside the catalog instead of creatin
   );
 });
 
-test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsertGrnLine", () => {
+test("GRN add-line dialog threads the picked entryUnitId to upsertGrnLine", () => {
   const source = readRepo(
-    "apps/web/lib/inventory/use-grn-create-controller.ts",
+    "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
-  const callStart = source.indexOf("const lineRes = await upsertGrnLine({");
+  const callStart = source.indexOf("const res = await upsertGrnLine({");
   assert.ok(callStart >= 0, "upsertGrnLine call not found");
   const saveCall = source.slice(
     callStart,
-    source.indexOf("if (!lineRes.success)", callStart),
+    source.indexOf("if (!res.success || !res.data)", callStart),
   );
 
   assert.match(
     saveCall,
-    /entryUnitId:\s*edit\.entryUnitId/,
+    /entryUnitId,/,
     "saveLine must forward the selected entryUnitId, not force the base unit",
   );
   assert.match(
     saveCall,
-    /supplierId:\s*edit\.supplierId/,
+    /supplierId:\s*parsedSupplierId/,
     "saveLine must forward the selected line supplierId",
   );
   assert.doesNotMatch(
@@ -354,127 +332,4 @@ test("GRN create-from-supplier saveLine threads the picked entryUnitId to upsert
     /\bunit\s*:/,
     "saveLine must not send unit text/code to the write action",
   );
-});
-
-test("GRN submit persists preloaded recent lines before review navigation", async () => {
-  const controller = readRepo(
-    "apps/web/lib/inventory/use-grn-create-controller.ts",
-  );
-  const persistIndex = controller.indexOf(
-    "const persisted = await persistPendingGrnDraftLines(",
-  );
-  const reviewNavigationIndex = controller.indexOf(
-    "router.push(`${grnBasePath}/${grnId}`)",
-  );
-  assert.ok(persistIndex >= 0, "submit must persist pending draft lines");
-  assert.ok(
-    reviewNavigationIndex > persistIndex,
-    "review navigation must happen after pending lines are persisted",
-  );
-
-  const calls: Array<{
-    grnId: number;
-    ingredientId: number;
-    supplierId: number;
-    receivedQuantity: number;
-    entryUnitId: number | null;
-  }> = [];
-  const result = await persistPendingGrnDraftLines(
-    91,
-    [
-      {
-        ingredientId: 10,
-        ingredientName: "Gạo",
-        supplierId: 7,
-        supplierName: "NCC A",
-        unit: "bao",
-        entryUnitId: 3,
-        quantity: 2,
-      },
-      {
-        lineId: 44,
-        ingredientId: 11,
-        ingredientName: "Muối",
-        supplierId: 8,
-        supplierName: "NCC B",
-        unit: "kg",
-        entryUnitId: null,
-        quantity: 1,
-      },
-    ],
-    async (input) => {
-      calls.push(input);
-      return { success: true, data: { id: 45 } };
-    },
-  );
-
-  assert.deepEqual(calls, [
-    {
-      grnId: 91,
-      ingredientId: 10,
-      supplierId: 7,
-      receivedQuantity: 2,
-      entryUnitId: 3,
-    },
-  ]);
-  assert.deepEqual(result, {
-    success: true,
-    lines: [
-      {
-        lineId: 45,
-        ingredientId: 10,
-        ingredientName: "Gạo",
-        supplierId: 7,
-        supplierName: "NCC A",
-        unit: "bao",
-        entryUnitId: 3,
-        quantity: 2,
-      },
-      {
-        lineId: 44,
-        ingredientId: 11,
-        ingredientName: "Muối",
-        supplierId: 8,
-        supplierName: "NCC B",
-        unit: "kg",
-        entryUnitId: null,
-        quantity: 1,
-      },
-    ],
-  });
-});
-
-test("GRN submit stops when a preloaded line cannot be persisted", async () => {
-  let attempts = 0;
-  const result = await persistPendingGrnDraftLines(
-    92,
-    [
-      {
-        ingredientId: 20,
-        ingredientName: "Dầu",
-        supplierId: 7,
-        supplierName: "NCC A",
-        unit: "can",
-        quantity: 1,
-      },
-      {
-        ingredientId: 21,
-        ingredientName: "Đường",
-        supplierId: 8,
-        supplierName: "NCC B",
-        unit: "kg",
-        quantity: 1,
-      },
-    ],
-    async () => {
-      attempts += 1;
-      return { success: false, error: "Không thể lưu dòng phiếu nhập." };
-    },
-  );
-
-  assert.equal(attempts, 1);
-  assert.deepEqual(result, {
-    success: false,
-    error: "Không thể lưu dòng phiếu nhập.",
-  });
 });

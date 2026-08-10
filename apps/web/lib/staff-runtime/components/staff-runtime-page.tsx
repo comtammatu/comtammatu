@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
-import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
@@ -299,38 +299,6 @@ export function EmployeeInlineState({
       ) : null}
       {children ? <div className="basis-full min-w-0">{children}</div> : null}
     </Item>
-  );
-}
-
-interface EmployeeBadgeListProps {
-  items: Array<{
-    key: string;
-    label: ReactNode;
-    title?: string;
-    variant?: BadgeProps["variant"];
-  }>;
-  className?: string;
-}
-
-export function EmployeeBadgeList({
-  items,
-  className,
-}: EmployeeBadgeListProps) {
-  return (
-    <div
-      data-employee-badge-list
-      className={cn("flex flex-wrap gap-1.5", className)}
-    >
-      {items.map((item) => (
-        <Badge
-          key={item.key}
-          variant={item.variant ?? "secondary"}
-          title={item.title}
-        >
-          {item.label}
-        </Badge>
-      ))}
-    </div>
   );
 }
 

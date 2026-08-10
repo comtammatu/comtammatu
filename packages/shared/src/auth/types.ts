@@ -146,6 +146,16 @@ export function staffRoleFromPositionCode(
   return POSITION_CODE_TO_STAFF_ROLE[code] ?? "unassigned";
 }
 
+/**
+ * Owner is tenant auth identity, not a Company HR lifecycle subject.
+ * HR list/create/update/deactivate surfaces must exclude this position.
+ */
+export function isOwnerPositionCode(
+  code: string | null | undefined,
+): boolean {
+  return staffRoleFromPositionCode(code) === "owner";
+}
+
 export function requiredBranchKindForPositionCode(
   code: string | null | undefined,
 ): BranchKind | null | "unassigned" {

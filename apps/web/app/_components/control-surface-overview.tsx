@@ -10,7 +10,9 @@ import {
   Utensils as IconUtensils,
   Wallet as IconWallet,
 } from "lucide-react";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
+import { canAccess, MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
+import { formatCount } from "@comtammatu/shared/format";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
   ItemActions,
@@ -21,6 +23,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import type { ControlHomeAttentionItem } from "@/_lib/control-home-attention";
 import { messages } from "@lib/messages";
 
 type ControlSurfaceModuleLink = {
@@ -28,6 +31,7 @@ type ControlSurfaceModuleLink = {
   title: string;
   description: string;
   icon: LucideIcon;
+  moduleKey: keyof typeof MODULE_ACL;
 };
 
 const copy = messages.controlSurface.dashboard;
@@ -38,30 +42,35 @@ const operationsModules: ControlSurfaceModuleLink[] = [
     title: MODULE_ACL.finance.label,
     description: copy.financeDescription,
     icon: IconWallet,
+    moduleKey: "finance",
   },
   {
     href: MODULE_ACL.orders.path,
     title: MODULE_ACL.orders.label,
     description: copy.ordersDescription,
     icon: IconClipboardList,
+    moduleKey: "orders",
   },
   {
     href: MODULE_ACL.inventory.path,
     title: MODULE_ACL.inventory.label,
     description: copy.inventoryDescription,
     icon: IconPackage,
+    moduleKey: "inventory",
   },
   {
     href: MODULE_ACL.menu.path,
     title: MODULE_ACL.menu.label,
     description: copy.menuDescription,
     icon: IconUtensils,
+    moduleKey: "menu",
   },
   {
     href: MODULE_ACL.hr.path,
     title: MODULE_ACL.hr.label,
     description: copy.hrDescription,
     icon: IconBriefcase,
+    moduleKey: "hr",
   },
 ];
 
@@ -71,12 +80,14 @@ const foundationModules: ControlSurfaceModuleLink[] = [
     title: MODULE_ACL.branches.label,
     description: copy.branchesDescription,
     icon: IconBuilding2,
+    moduleKey: "branches",
   },
   {
     href: MODULE_ACL.settings.path,
     title: MODULE_ACL.settings.label,
     description: copy.settingsDescription,
     icon: IconSettings,
+    moduleKey: "settings",
   },
 ];
 
@@ -87,6 +98,8 @@ function ModuleLinks({
   modules: ControlSurfaceModuleLink[];
   className?: string;
 }) {
+  if (modules.length === 0) return null;
+
   return (
     <ItemGroup className={className}>
       {modules.map((module) => {
@@ -122,36 +135,101 @@ function ModuleLinks({
   );
 }
 
-export function ControlSurfaceOverview() {
+function AttentionQueue({ items }: { items: ControlHomeAttentionItem[] }) {
+  if (items.length === 0) return null;
+
+  return (
+    <AppSection
+      title={copy.attentionTitle}
+      description={copy.description}
+      headingLevel="h2"
+    >
+      <ItemGroup>
+        {items.map((item) => (
+          <Item
+            key={item.id}
+            variant="outline"
+            size="sm"
+            role="listitem"
+            render={<Link href={item.href} />}
+          >
+            <ItemContent className="min-w-0">
+              <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
+            </ItemContent>
+            <ItemActions className="ml-auto">
+              <Badge
+                variant={
+                  item.tone === "destructive" ? "destructive" : "warning"
+                }
+              >
+                {formatCount(item.count)}
+              </Badge>
+              <IconArrowRight className="size-4" aria-hidden />
+            </ItemActions>
+          </Item>
+        ))}
+      </ItemGroup>
+    </AppSection>
+  );
+}
+
+export function ControlSurfaceOverview({
+  role,
+  attention,
+}: {
+  role: StaffRole;
+  attention: ControlHomeAttentionItem[];
+}) {
+  const isOwner = role === "owner";
+  const visibleOperations = operationsModules.filter((module) =>
+    canAccess(role, module.moduleKey),
+  );
+  const visibleFoundation = foundationModules.filter((module) =>
+    canAccess(role, module.moduleKey),
+  );
+
   return (
     <AppPage density="compact" width="wide">
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-      />
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <AppPageHeader title={copy.title} description={copy.description} />
+
+      <AttentionQueue items={attention} />
+
+      {isOwner ? (
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+          <AppSection
+            title={copy.operationsTitle}
+            description={copy.operationsDescription}
+            headingLevel="h2"
+          >
+            <ModuleLinks
+              modules={visibleOperations}
+              className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+            />
+          </AppSection>
+
+          <AppSection
+            title={copy.foundationTitle}
+            description={copy.foundationDescription}
+            headingLevel="h2"
+          >
+            <ModuleLinks
+              modules={visibleFoundation}
+              className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1"
+            />
+          </AppSection>
+        </div>
+      ) : (
         <AppSection
-          title={copy.operationsTitle}
-          description={copy.operationsDescription}
+          title={copy.shortcutsTitle}
+          description={copy.shortcutsDescription}
           headingLevel="h2"
         >
           <ModuleLinks
-            modules={operationsModules}
+            modules={[...visibleOperations, ...visibleFoundation]}
             className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
           />
         </AppSection>
-
-        <AppSection
-          title={copy.foundationTitle}
-          description={copy.foundationDescription}
-          headingLevel="h2"
-        >
-          <ModuleLinks
-            modules={foundationModules}
-            className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1"
-          />
-        </AppSection>
-      </div>
+      )}
     </AppPage>
   );
 }

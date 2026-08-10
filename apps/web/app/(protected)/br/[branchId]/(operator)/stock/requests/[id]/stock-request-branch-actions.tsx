@@ -17,11 +17,13 @@ export function StockRequestBranchActions({
   branchId,
   requestId,
   editable,
+  canCopyToNew,
   editHref,
 }: {
   branchId: number;
   requestId: number;
   editable: boolean;
+  canCopyToNew?: boolean;
   editHref?: string;
 }) {
   const router = useRouter();
@@ -30,7 +32,7 @@ export function StockRequestBranchActions({
   const [reason, setReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  if (!editable) return null;
+  if (!editable && !canCopyToNew) return null;
 
   function cancelRequest() {
     if (!isOnline) {
@@ -58,47 +60,64 @@ export function StockRequestBranchActions({
       <AppDetailFooter
         sticky
         leading={
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            disabled={isPending || !isOnline}
-            onClick={() => setOpen(true)}
-          >
-            {copy.cancelAction}
-          </Button>
+          editable ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPending || !isOnline}
+              onClick={() => setOpen(true)}
+            >
+              {copy.cancelAction}
+            </Button>
+          ) : null
         }
         trailing={
-          <Button
-            size="touch"
-            render={
-              <Link
-                href={
-                  editHref ??
-                  `/br/${branchId}/stock/requests/new?requestId=${requestId}`
-                }
-              />
-            }
-          >
-            {copy.editAction}
-          </Button>
+          editable ? (
+            <Button
+              size="touch"
+              render={
+                <Link
+                  href={
+                    editHref ??
+                    `/br/${branchId}/stock/requests/new?requestId=${requestId}`
+                  }
+                />
+              }
+            >
+              {copy.editAction}
+            </Button>
+          ) : canCopyToNew ? (
+            <Button
+              size="touch"
+              render={
+                <Link
+                  href={`/br/${branchId}/stock/requests/new?copyFromId=${requestId}`}
+                />
+              }
+            >
+              {copy.copyToNewAction}
+            </Button>
+          ) : null
         }
       />
-      <ReasonConfirmDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={copy.cancelTitle}
-        description={copy.cancelDescription}
-        reasonId="stock-request-cancel-reason"
-        reason={reason}
-        onReasonChange={setReason}
-        reasonLabel={copy.cancelReasonLabel}
-        reasonPlaceholder={copy.cancelReasonPlaceholder}
-        cancelLabel={copy.cancelBack}
-        confirmLabel={copy.cancelAction}
-        onConfirm={cancelRequest}
-        isPending={isPending || !isOnline}
-      />
+      {editable ? (
+        <ReasonConfirmDialog
+          open={open}
+          onOpenChange={setOpen}
+          title={copy.cancelTitle}
+          description={copy.cancelDescription}
+          reasonId="stock-request-cancel-reason"
+          reason={reason}
+          onReasonChange={setReason}
+          reasonLabel={copy.cancelReasonLabel}
+          reasonPlaceholder={copy.cancelReasonPlaceholder}
+          cancelLabel={copy.cancelBack}
+          confirmLabel={copy.cancelAction}
+          onConfirm={cancelRequest}
+          isPending={isPending || !isOnline}
+        />
+      ) : null}
     </>
   );
 }

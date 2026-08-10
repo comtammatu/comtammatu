@@ -57,6 +57,7 @@ interface DailyLimitRow {
   is_disabled: boolean;
   sold_today: number;
   manual_limit_quantity: number | null;
+  stock_allowance_quantity: number | null;
   available_to_sell: number | null;
 }
 
@@ -392,6 +393,7 @@ export function PosDesktopProvider({
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
         manual_limit_quantity: row.manual_limit_quantity,
+        stock_allowance_quantity: row.stock_allowance_quantity,
         available_to_sell: row.available_to_sell,
       });
     }

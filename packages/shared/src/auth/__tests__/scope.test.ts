@@ -22,7 +22,7 @@ import {
   isOwnerRoutePath,
   isPublicAppPath,
   resolveModuleFromPath,
-  isRunnerPublicDisplayPath,
+  isPickupPublicDisplayPath,
 } from "../route-resolution";
 
 function tokenWithAppMetadata(appMetadata: Record<string, unknown>): string {
@@ -186,7 +186,7 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("self_service"), {
-    label: "Công việc của tôi",
+    label: "Ca của tôi",
     href: "/me",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
@@ -215,23 +215,22 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
 
   for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
     assert.deepEqual(resolveRoleHomeLink(role, 3), {
-      label: "Kho hàng",
-      href: "/inventory",
+      label: "Tổng quan",
+      href: "/",
     });
   }
+
+  assert.deepEqual(resolveRoleHomeLink("accountant"), {
+    label: "Tổng quan",
+    href: "/",
+  });
 });
 
 test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   assert.equal(resolveRouteFamilyContract("/login")?.surface, "public");
-  assert.equal(resolveRouteFamilyContract("/br/3/runner")?.surface, "public");
-  assert.equal(
-    resolveRouteFamilyContract("/br/3/runner/history")?.id,
-    "runner",
-  );
-  assert.equal(
-    resolveRouteFamilyContract("/br/3/runner/history")?.surface,
-    "branch_operation",
-  );
+  assert.equal(resolveRouteFamilyContract("/br/3/pickup")?.surface, "public");
+  assert.equal(resolveRouteFamilyContract("/br/3/runner"), null);
+  assert.equal(resolveRouteFamilyContract("/br/3/runner/history"), null);
   assert.equal(resolveRouteFamilyContract("/settings/tables")?.id, "settings");
   assert.equal(resolveRouteFamilyContract("/")?.surface, "owner");
   assert.equal(resolveRouteFamilyContract("/me/clock")?.surface, "self");
@@ -542,14 +541,14 @@ test("resolvePostLoginRedirect → chef accessing own KDS → allowed", () => {
   );
 });
 
-test("resolvePostLoginRedirect → public Runner display bypasses branch auth returnTo gating", () => {
+test("resolvePostLoginRedirect → public pickup display bypasses branch auth returnTo gating", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("branch_staff", null), "/br/5/runner"),
-    "/br/5/runner",
+    resolvePostLoginRedirect(makeClaims("branch_staff", null), "/br/5/pickup"),
+    "/br/5/pickup",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 5), "/br/7/runner"),
-    "/br/7/runner",
+    resolvePostLoginRedirect(makeClaims("cashier", 5), "/br/7/pickup"),
+    "/br/7/pickup",
   );
 });
 
@@ -578,9 +577,9 @@ test("resolvePostLoginRedirect → cashier branch gating follows JWT scope", () 
   );
 });
 
-test("resolvePostLoginRedirect → explicit Owner oversight resolves cross-branch POS/KDS/Runner returnTo", () => {
+test("resolvePostLoginRedirect → explicit Owner oversight resolves cross-branch POS/KDS/Pickup returnTo", () => {
   // Owner has branch_id null and may cover a shift on any branch surface.
-  for (const path of ["/br/7/pos", "/br/7/kds", "/br/7/runner"]) {
+  for (const path of ["/br/7/pos", "/br/7/kds", "/br/7/pickup"]) {
     assert.equal(resolvePostLoginRedirect(makeClaims("owner"), path), path);
   }
 });
@@ -600,7 +599,7 @@ test("resolvePostLoginRedirect → HR stays a candidate for the live proxy gate"
   );
 });
 
-test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () => {
+test("isPublicAppPath PWA manifests and pickup display bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
   assert.equal(isPublicAppPath("/q/table-token-123"), true);
@@ -615,16 +614,16 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
   );
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/kds/manifest.webmanifest"), true);
-  assert.equal(isPublicAppPath("/br/3/runner"), true);
-  assert.equal(isPublicAppPath("/br/3/runner/"), true);
-  assert.equal(isRunnerPublicDisplayPath("/br/3/runner"), true);
+  assert.equal(isPublicAppPath("/br/3/pickup"), true);
+  assert.equal(isPublicAppPath("/br/3/pickup/"), true);
+  assert.equal(isPickupPublicDisplayPath("/br/3/pickup"), true);
+  assert.equal(isPublicAppPath("/br/3/runner"), false);
+  assert.equal(isPublicAppPath("/br/3/runner/"), false);
   assert.equal(isPublicAppPath("/r/abc123DEF4567"), true);
   assert.equal(isPublicAppPath("/api/feedback/abc123DEF4567"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/3/kds"), false);
   assert.equal(isPublicAppPath("/br/3/settings/manifest.webmanifest"), false);
-  assert.equal(isPublicAppPath("/br/abc/runner"), false);
-  assert.equal(isPublicAppPath("/br/3/runner/history"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
   assert.equal(isPublicAppPath("/br/abc/kds/manifest.webmanifest"), false);
 });
@@ -658,7 +657,8 @@ test("resolveModuleFromPath → branch operation controls and finance workspace 
     "branch_pos_sessions",
   );
   assert.equal(resolveModuleFromPath("/br/3/settings/pos-sessions"), null);
-  assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
+  assert.equal(resolveModuleFromPath("/br/3/pickup"), "pickup");
+  assert.equal(resolveModuleFromPath("/br/3/runner"), null);
   assert.equal(resolveModuleFromPath("/employee/checkout-approvals"), null);
   assert.equal(resolveModuleFromPath("/employee/clock"), null);
 });
@@ -803,12 +803,12 @@ test("canAccess → HR approvals belong to Owner and Branch Manager", () => {
   }
 });
 
-test("canAccess → Owner may explicitly oversee POS/KDS/Runner; floor roles stay branch-pinned", () => {
-  for (const moduleKey of ["pos", "kds", "runner"] as const) {
+test("canAccess → Owner may explicitly oversee POS/KDS/pickup; floor roles stay branch-pinned", () => {
+  for (const moduleKey of ["pos", "kds", "pickup"] as const) {
     assert.equal(canAccess("owner", moduleKey), true);
   }
-  // POS floor roles follow the current cashier + manager service model.
-  for (const role of ["cashier", "branch_manager"] as const) {
+  // POS floor roles follow the current cashier + manager + waiter service model.
+  for (const role of ["cashier", "branch_manager", "branch_staff"] as const) {
     assert.equal(canAccess(role, "pos"), true);
   }
   assert.equal(canAccess("chef", "pos"), false);
@@ -816,14 +816,17 @@ test("canAccess → Owner may explicitly oversee POS/KDS/Runner; floor roles sta
   for (const role of ["chef", "branch_manager"] as const) {
     assert.equal(canAccess(role, "kds"), true);
   }
-  for (const role of ["cashier"] as const) {
+  for (const role of ["cashier", "branch_staff"] as const) {
     assert.equal(canAccess(role, "kds"), false);
   }
-  // Branch staff do not gain POS/KDS access.
-  for (const role of ["branch_staff"] as const) {
-    assert.equal(canAccess(role, "pos"), false);
-    assert.equal(canAccess(role, "kds"), false);
-    assert.equal(canAccess(role, "runner"), false);
+  // Pickup display is open to all branch floor roles (guest board; staff may open it).
+  for (const role of [
+    "cashier",
+    "chef",
+    "branch_manager",
+    "branch_staff",
+  ] as const) {
+    assert.equal(canAccess(role, "pickup"), true);
   }
 });
 
@@ -895,7 +898,7 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
       "branch_menu_limits",
       "branch_pos_sessions",
       "branch_close_day",
-      "runner",
+      "pickup",
     ],
   );
   assert.equal(

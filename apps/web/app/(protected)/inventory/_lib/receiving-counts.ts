@@ -70,3 +70,23 @@ export async function countOpenSupplierInvoices(
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);
 }
+
+/** Open YCM awaiting allocation (submitted / pending_allocation). */
+export async function countOpenPurchaseRequests(
+  branchId?: number,
+): Promise<number> {
+  const ctx = await getAuthContextWithPermission(
+    PROCUREMENT_ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
+  if (!ctx) return 0;
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("purchase_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", ["submitted", "pending_allocation"]);
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { count, error } = await query;
+  return error ? 0 : (count ?? 0);
+}

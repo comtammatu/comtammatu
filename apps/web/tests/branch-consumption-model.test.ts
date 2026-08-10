@@ -45,25 +45,36 @@ test("recorded consumption keeps POS, HRM, manual, and import sources distinct",
   );
 });
 
-test("recorded consumption search includes source and linked issue code", () => {
+test("recorded consumption search matches order number and ingredient", () => {
   const rows: BranchRecordedConsumption[] = [
     {
-      id: 1,
-      issueId: 8,
-      orderId: null,
-      issueCode: "PXK-008",
-      sourceKind: "manual",
-      sourceLabel: "Thủ công · PXK-008",
+      orderId: 10,
+      orderNumber: "TC-10",
       recordedAt: "2026-07-10T03:00:00Z",
       locationName: "Kho chính",
-      ingredientName: "Gạo tấm",
-      quantity: 2,
-      unit: "kg",
-      unitCost: 10000,
-      totalCost: 20000,
+      sourceKind: "pos",
+      sourceLabel: "POS",
+      ingredientCount: 2,
+      lines: [
+        {
+          id: 1,
+          ingredientName: "Gạo tấm",
+          locationName: "Kho chính",
+          quantity: 2,
+          unit: "kg",
+        },
+        {
+          id: 2,
+          ingredientName: "Trứng",
+          locationName: "Kho chính",
+          quantity: 3,
+          unit: "quả",
+        },
+      ],
     },
   ];
-  assert.equal(filterBranchRecordedConsumptions(rows, "PXK-008").length, 1);
+  assert.equal(filterBranchRecordedConsumptions(rows, "TC-10").length, 1);
   assert.equal(filterBranchRecordedConsumptions(rows, "gao tam").length, 1);
+  assert.equal(filterBranchRecordedConsumptions(rows, "trung").length, 1);
   assert.equal(filterBranchRecordedConsumptions(rows, "không có").length, 0);
 });

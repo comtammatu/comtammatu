@@ -85,6 +85,31 @@ export function FeedbackInbox({
         ]
       : []),
     {
+      key: "orderNumber",
+      header: feedbackCopy.orderNumber,
+      render: (item) => item.orderNumber ?? "—",
+    },
+    {
+      key: "tableNumber",
+      header: feedbackCopy.tableNumber,
+      render: (item) =>
+        item.tableNumber
+          ? feedbackCopy.tableLabel.replace("{number}", item.tableNumber)
+          : "—",
+    },
+    {
+      key: "orderCreatedAt",
+      header: feedbackCopy.orderCreatedAt,
+      render: (item) =>
+        item.orderCreatedAt ? (
+          <span className="whitespace-nowrap">
+            {formatVNDateTime(item.orderCreatedAt)}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
+    {
       key: "rating",
       header: feedbackCopy.rating,
       render: (item) => item.rating,
@@ -167,6 +192,26 @@ export function FeedbackInbox({
                   {formatVNDateTime(item.createdAt)}
                   {showBranchFilter ? ` · ${item.branchName}` : ""}
                 </ItemDescription>
+                {item.orderNumber || item.tableNumber ? (
+                  <ItemDescription>
+                    {[
+                      item.orderNumber
+                        ? `${feedbackCopy.orderNumber} ${item.orderNumber}`
+                        : null,
+                      item.tableNumber
+                        ? feedbackCopy.tableLabel.replace(
+                            "{number}",
+                            item.tableNumber,
+                          )
+                        : null,
+                      item.orderCreatedAt
+                        ? formatVNDateTime(item.orderCreatedAt)
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </ItemDescription>
+                ) : null}
                 <ItemDescription className="line-clamp-3">
                   {item.comment ?? "—"}
                 </ItemDescription>

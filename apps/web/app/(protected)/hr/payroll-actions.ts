@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
+  isOwnerPositionCode,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
@@ -325,7 +326,7 @@ async function buildPayrollPreview(
         dependents_count, is_active, start_date,
         profiles!inner (
           full_name, branch_id,
-          positions ( label_vi ),
+          positions ( code, label_vi ),
           branches ( name )
         )
       `,
@@ -351,7 +352,13 @@ async function buildPayrollPreview(
     };
   }
 
-  const employeeRows = employees ?? [];
+  const employeeRows = (employees ?? []).filter((employee) => {
+    const position = employee.profiles?.positions as
+      | { code?: string | null }
+      | null
+      | undefined;
+    return !isOwnerPositionCode(position?.code);
+  });
   const employeeIds = employeeRows.map((employee) => employee.id);
   const [
     contractsResult,

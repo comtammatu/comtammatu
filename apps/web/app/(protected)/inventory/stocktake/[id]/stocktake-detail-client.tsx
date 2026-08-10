@@ -36,6 +36,8 @@ import {
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
+import { WasteReasonDropdown } from "../../_components/waste-reason-dropdown";
+import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
   cancelStocktake,
@@ -83,6 +85,7 @@ interface StocktakeLine {
   counted_quantity: number | null;
   variance: number | null;
   variance_reason: string | null;
+  reason_code: string | null;
   ingredients: {
     id: number;
     name: string;
@@ -90,6 +93,8 @@ interface StocktakeLine {
     category: string | null;
   } | null;
 }
+
+type WasteReason = keyof typeof WASTE_REASON_LABELS_VI;
 
 export function StocktakeDetailClient({
   session: initialSession,
@@ -158,6 +163,7 @@ export function StocktakeDetailClient({
             lineId,
             countedQuantity: num,
             varianceReason: currentLine.variance_reason ?? undefined,
+            reasonCode: (currentLine.reason_code as WasteReason | null) ?? null,
           });
           if (!res.success) {
             toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
@@ -170,6 +176,31 @@ export function StocktakeDetailClient({
     }
   }
 
+  function handleReasonCodeChange(lineId: number, reasonCode: WasteReason) {
+    const currentLine = lines.find((l) => l.id === lineId);
+    if (!currentLine || currentLine.counted_quantity == null) return;
+    if (currentLine.reason_code === reasonCode) return;
+
+    startTransition(async () => {
+      const res = await updateStocktakeLine({
+        lineId,
+        countedQuantity: currentLine.counted_quantity ?? 0,
+        varianceReason: currentLine.variance_reason ?? undefined,
+        reasonCode,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
+      } else {
+        setSavedLines((prev) => new Set(prev).add(lineId));
+        setLines((prev) =>
+          prev.map((line) =>
+            line.id === lineId ? { ...line, reason_code: reasonCode } : line,
+          ),
+        );
+      }
+    });
+  }
+
   function handleReasonBlur(lineId: number, reason: string) {
     const currentLine = lines.find((l) => l.id === lineId);
     if (!currentLine || currentLine.counted_quantity == null) return;
@@ -180,6 +211,7 @@ export function StocktakeDetailClient({
         lineId,
         countedQuantity: currentLine.counted_quantity ?? 0,
         varianceReason: reason || undefined,
+        reasonCode: (currentLine.reason_code as WasteReason | null) ?? null,
       });
       if (!res.success) {
         toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
@@ -191,6 +223,17 @@ export function StocktakeDetailClient({
   }
 
   async function handleComplete() {
+    const missingReason = lines.some((line) => {
+      if (line.counted_quantity == null) return false;
+      const variance =
+        line.variance ?? line.counted_quantity - line.system_quantity;
+      return variance !== 0 && !line.reason_code;
+    });
+    if (missingReason) {
+      toast.error(stocktakeDetailCopy.reasonCodeRequired);
+      return;
+    }
+
     const ok = await confirm({
       title: stocktakeDetailCopy.completeDialogTitle,
       description: stocktakeDetailCopy.completeDialogDescription,
@@ -348,6 +391,7 @@ export function StocktakeDetailClient({
           isPending={isPending}
           onLineBlur={handleLineBlur}
           onReasonBlur={handleReasonBlur}
+          onReasonCodeChange={handleReasonCodeChange}
         />
       )}
 
@@ -428,12 +472,14 @@ function CountingPhase({
   isPending,
   onLineBlur,
   onReasonBlur,
+  onReasonCodeChange,
 }: {
   lines: StocktakeLine[];
   savedLines: Set<number>;
   isPending: boolean;
   onLineBlur: (lineId: number, value: string) => void;
   onReasonBlur: (lineId: number, reason: string) => void;
+  onReasonCodeChange: (lineId: number, reasonCode: WasteReason) => void;
 }) {
   const countingColumns: DataTableColumn<StocktakeLine>[] = [
     {
@@ -481,14 +527,23 @@ function CountingPhase({
       key: "reason",
       header: stocktakeDetailCopy.varianceReason,
       render: (line) => (
-        <Input
-          type="text"
-          defaultValue={line.variance_reason ?? ""}
-          placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
-          className="h-8 w-48 text-sm"
-          onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-          disabled={isPending}
-        />
+        <div className="flex min-w-56 flex-col gap-1">
+          <WasteReasonDropdown
+            value={(line.reason_code as WasteReason | null) ?? ""}
+            onChange={(value) => onReasonCodeChange(line.id, value)}
+            disabled={isPending || line.counted_quantity == null}
+            size="sm"
+            className="h-8 w-full"
+          />
+          <Input
+            type="text"
+            defaultValue={line.variance_reason ?? ""}
+            placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
+            className="h-8 w-full text-sm"
+            onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+            disabled={isPending || line.counted_quantity == null}
+          />
+        </div>
       ),
     },
   ];
@@ -532,15 +587,21 @@ function CountingPhase({
                 maxFractionDigits={3}
                 disabled={isPending}
               />
-              <Input
-                type="text"
-                defaultValue={line.variance_reason ?? ""}
-                placeholder={stocktakeDetailCopy.reasonPlaceholder}
-                className="h-8 flex-1 text-sm"
-                onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-                disabled={isPending}
-              />
             </div>
+            <WasteReasonDropdown
+              value={(line.reason_code as WasteReason | null) ?? ""}
+              onChange={(value) => onReasonCodeChange(line.id, value)}
+              disabled={isPending || line.counted_quantity == null}
+              size="sm"
+            />
+            <Input
+              type="text"
+              defaultValue={line.variance_reason ?? ""}
+              placeholder={stocktakeDetailCopy.reasonPlaceholder}
+              className="h-8 text-sm"
+              onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+              disabled={isPending || line.counted_quantity == null}
+            />
           </div>
         )}
       />
@@ -640,7 +701,12 @@ function ResultsPhase({
       header: FORM_VI.reason,
       render: (line) => (
         <span className="text-sm text-muted-foreground">
-          {line.variance_reason ?? inventoryCommon.noValue}
+          {line.reason_code
+            ? WASTE_REASON_LABELS_VI[
+                line.reason_code as keyof typeof WASTE_REASON_LABELS_VI
+              ] ?? line.reason_code
+            : inventoryCommon.noValue}
+          {line.variance_reason ? ` — ${line.variance_reason}` : ""}
         </span>
       ),
     },

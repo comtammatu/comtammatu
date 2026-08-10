@@ -26,8 +26,8 @@ export const INVENTORY_VI = {
   createOrderShort: "Tạo lệnh",
   productionNoteePlaceholder:
     "Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói...",
-  productionTitle: "Sản xuất Bếp Trung Tâm",
-  productionDescription: "Lệnh sản xuất và Công thức thành phẩm",
+  productionTitle: "Sản xuất",
+  productionDescription: "Lệnh sản xuất và công thức thành phẩm",
   productionOrdersTab: "Lệnh sản xuất",
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
@@ -102,7 +102,7 @@ export const INVENTORY_VI = {
   selectFile: "Vui lòng chọn file",
   templateCreateFailed: "Không tạo được mẫu",
   partialReceive: "Nhận một phần",
-  today: "Nay",
+  today: "Hôm nay",
   yesterday: "Hôm qua",
   grnListBackLabel: "Danh sách phiếu nhập",
   receivingEyebrow: "Nhập hàng",
@@ -356,6 +356,10 @@ export const INVENTORY_VI = {
   rowRatio: (visible: number, total: number) => `${visible}/${total} dòng`,
   rowRatioRecent: (visible: number, total: number) =>
     `${visible}/${total} dòng gần nhất`,
+  rowRatioOrders: (visible: number, total: number) =>
+    `${visible}/${total} đơn`,
+  rowRatioRecentOrders: (visible: number, total: number) =>
+    `${visible}/${total} đơn gần nhất`,
   issueExportEmpty: "Không có dữ liệu để xuất báo cáo.",
   issueExportSuccess: (count: number) =>
     `Đã xuất ${formatCount(count)} phiếu xuất.`,
@@ -364,11 +368,14 @@ export const INVENTORY_VI = {
   deductLocationLabel: "Kho trừ",
   unitCostLabel: "Đơn giá ghi sổ",
   sourceLabel: "Nguồn",
+  recordedOrderLabel: "Đơn bán",
+  recordedIngredientLinesLabel: "Nguyên liệu trừ",
+  recordedOrderDetailTitle: (orderNumber: string) => `Đơn bán ${orderNumber}`,
   recordedExportSuccess: (count: number) =>
     `Đã xuất ${formatCount(count)} dòng tiêu hao.`,
   allStatusesOption: "Tất cả trạng thái",
   issueSearchPlaceholder: "Tìm mã phiếu, chi nhánh...",
-  recordedSearchPlaceholder: "Tìm nguyên liệu, nguồn...",
+  recordedSearchPlaceholder: "Tìm số đơn, chi nhánh, nguyên liệu...",
   createSlipAction: "Tạo phiếu",
   exportReportAction: "Xuất báo cáo",
   recordedConsumptionTitle: "Tiêu hao đã ghi nhận",
@@ -376,12 +383,12 @@ export const INVENTORY_VI = {
   consumptionTabManual: "Phiếu tiêu hao",
   consumptionTabWaste: "Hao hụt",
   exportCsvAction: "Xuất CSV",
-  visibleRowsLabel: "Dòng hiển thị",
+  visibleRowsLabel: "Đơn hiển thị",
   totalAmountLabel: "Tổng thành tiền",
   scopeLabel: "Phạm vi",
   recordedEmptyTitle: "Chưa có tiêu hao đã ghi nhận",
   recordedEmptyDescription:
-    "Chỉ gồm các lần trừ tồn tự động từ đơn POS tại chi nhánh bán hàng.",
+    "Mỗi dòng là một đơn POS đã trừ tồn; mở chi tiết để xem nguyên liệu.",
   manualConsumptionSlipsTitle: "Phiếu tiêu hao thủ công",
   manualConsumptionCreateAction: "Tạo phiếu tiêu hao thủ công",
   manualConsumptionCreateDescription:
@@ -515,6 +522,10 @@ export const INVENTORY_VI = {
   menuRecipeColUnitCost: "Giá vốn/phần",
   menuRecipeColStockCapacity: "Phần bán được",
   menuRecipeCostUnavailable: "Chưa có giá vốn",
+  menuRecipeMissingFulfillSite: "Thiếu Nguồn hàng",
+  menuRecipeMissingSourceWac: "Chờ định giá",
+  menuRecipeCostSignalsHint:
+    "Gán Nguồn hàng trên nguyên liệu và xác nhận HĐ NCC tại Kho gốc để có giá vốn/phần.",
   menuRecipeCardSummary: (count: number, cost: string) =>
     `${formatCount(count)} nguyên liệu · ${cost}/phần`,
   menuRecipeCardSummaryNoCost: (count: number) =>

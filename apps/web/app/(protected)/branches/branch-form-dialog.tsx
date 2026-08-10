@@ -25,6 +25,18 @@ const branchSchema = z.object({
     .trim()
     .max(30, { error: "Số điện thoại tối đa 30 ký tự" })
     .optional(),
+  googleReviewUrl: z
+    .string()
+    .trim()
+    .max(500, { error: "Đường dẫn đánh giá Google tối đa 500 ký tự" })
+    .refine(
+      (value) => value === "" || /^https?:\/\//i.test(value),
+      {
+        error:
+          "Đường dẫn phải bắt đầu bằng http:// hoặc https://",
+      },
+    )
+    .optional(),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
@@ -35,6 +47,7 @@ function toFormValues(branch: BranchRow | null | undefined): BranchFormValues {
     code: branch?.code ?? "",
     address: branch?.address ?? "",
     phone: branch?.phone ?? "",
+    googleReviewUrl: branch?.google_review_url ?? "",
   };
 }
 
@@ -108,6 +121,13 @@ export function BranchFormDialog({
             label={messages.settings.branchForm.phoneLabel}
             type="tel"
             placeholder={messages.settings.branchForm.phonePlaceholder}
+          />
+          <TextField
+            control={form.control}
+            name="googleReviewUrl"
+            label={messages.settings.branchForm.googleReviewUrlLabel}
+            placeholder={messages.settings.branchForm.googleReviewUrlPlaceholder}
+            description={messages.settings.branchForm.googleReviewUrlHint}
           />
         </>
       )}

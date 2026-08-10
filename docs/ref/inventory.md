@@ -10,11 +10,7 @@
 
 ## Cách đọc tài liệu này
 
-Tài liệu này là contract vận hành Inventory hiện tại, không phải roadmap. Nếu một ý tưởng mới không nằm trong bảng dưới đây, mặc định không thuộc scope cho đến khi có quyết định riêng.
-
-Card tổng quan, KPI, và report summary của Inventory phải đọc cùng
-[operational-data-contract.md](operational-data-contract.md). Nếu một số liệu
-kho không map được vào contract hiện có, cập nhật contract trước khi thêm UI.
+Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng ngoài bảng dưới đây mặc định ngoài scope. Card/KPI/report summary đọc cùng [operational-data-contract.md](operational-data-contract.md); số liệu kho không map được thì cập nhật contract trước khi thêm UI.
 
 ## Current Contract
 
@@ -82,7 +78,7 @@ warehouse mới là luồng giảm tồn gắn giá vốn món.
 
 | Loại phiếu                    | Mô tả                                            | `stock_movements.type`                                |
 | ----------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
-| **Nhập từ NCC (GRN)**         | Tại CN / Kho Tổng / Bếp TT                       | `grn_receipt`                                         |
+| **Nhập từ NCC (GRN)**         | Chỉ Kho Tổng / Bếp TT (không GRN tại chi nhánh)  | `grn_receipt`                                         |
 | **Xuất luân chuyển**          | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`                                        |
 | **Nhận luân chuyển**          | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`                                         |
 | **Tiêu hao bán hàng thực tế** | POS recipe hoặc phiếu tiêu hao đã xác nhận       | `consumption` + `movement_subtype = sale_consumption` |
@@ -98,20 +94,15 @@ warehouse mới là luồng giảm tồn gắn giá vốn món.
 | Tiêu hao | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao) | `consumption` | Giá vốn món |
 | Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
 
-Không có loại `other` / “Xuất khác”. `stock_issues` là bảng chứng từ kỹ thuật;
-ngôn ngữ UI là **phiếu tiêu hao** hoặc **hao hụt**, không phải “phiếu xuất loại …”.
-
-Ghi chú: `mv_food_cost` là dữ liệu recipe/theoretical để đối chiếu. Lãi gộp vận
-hành dùng actual food cost từ phân bổ định giá bucket `food_cost` (sale
-consumption), không gồm writeoff/waste.
+Không có loại `other` / “Xuất khác”. UI: **phiếu tiêu hao** hoặc **hao hụt**.
+`mv_food_cost` là recipe/theoretical; lãi gộp dùng actual food cost bucket
+`food_cost` (sale consumption), không gồm writeoff/waste.
 
 ### Mã chứng từ kho
 
-Mã phiếu mới dùng format `{PREFIX}-{DDMMYYYY}-{####}` (ngày
-`Asia/Ho_Chi_Minh`, sequence pad 4 số), cấp atomic qua
-`next_inventory_doc_number` / `tenant_inventory_doc_counters`. Sequence vẫn
-theo tenant, loại phiếu và năm; không reset theo ngày. Phiếu cũ giữ nguyên mã
-lịch sử (không rewrite). Đơn mua hàng dùng `next_po_display_id` và cùng format.
+Format `{PREFIX}-{DDMMYYYY}-{####}` (`Asia/Ho_Chi_Minh`, pad 4), atomic qua
+`next_inventory_doc_number` / `tenant_inventory_doc_counters` (tenant + loại +
+năm; không reset theo ngày). PO dùng `next_po_display_id`. Phiếu cũ giữ mã lịch sử.
 
 | Loại              | Prefix | Cột                                                         |
 | ----------------- | ------ | ----------------------------------------------------------- |
@@ -126,8 +117,7 @@ lịch sử (không rewrite). Đơn mua hàng dùng `next_po_display_id` và cù
 | Yêu cầu hàng      | `YC`   | `stock_requests.request_number`                             |
 | Tiêu hao HRM      | `THB`  | `stock_issues.issue_number` = `THB-{report_id}` (không đổi) |
 
-Prefix trong mã là identifier; câu UI vẫn dùng nhãn Việt (`phiếu nhập`, …).
-Các cột trên và generated database types là contract hiện hành.
+Prefix là identifier; UI dùng nhãn Việt. Cột trên + generated types là contract hiện hành.
 
 ---
 
@@ -135,28 +125,23 @@ Các cột trên và generated database types là contract hiện hành.
 
 ### 2.1 Hệ đơn vị
 
-`units` là registry dùng chung theo tenant. Mỗi nguyên liệu có từ 1 đến 20 dòng
-`ingredient_units` đang hoạt động và đúng một dòng `is_base = true`, gọi là
-**Đơn vị chuẩn**. Đơn vị đầu tiên được thêm tự động là Đơn vị chuẩn; người dùng
-có thể đổi sang một đơn vị khác trong cùng danh sách.
+`units` là registry theo tenant. Mỗi nguyên liệu có 1–20 dòng `ingredient_units`
+active và đúng một `is_base = true` (**Đơn vị chuẩn**). Đơn vị đầu tiên thêm tự
+động là Đơn vị chuẩn; có thể đổi trong cùng danh sách.
 
-`ingredients.receipt_unit_id` và `issue_unit_id` chỉ còn là gương tương thích
-của Đơn vị chuẩn; `production_unit_id` để `NULL`. Runtime không đọc ba cột này,
-không coi chúng là cấu hình nghiệp vụ và không hiển thị chúng trên UI. Chúng
-được xóa ở migration contract sau khi runtime mới đã deploy và soak.
+`ingredients.receipt_unit_id` / `issue_unit_id` chỉ là gương tương thích của Đơn
+vị chuẩn; `production_unit_id` để `NULL`. Runtime không đọc/hiển thị ba cột này
+(xóa ở migration sau soak).
 
-Trong editor, mỗi đơn vị không phải Đơn vị chuẩn chỉ được chọn đích từ các đơn
-vị đang hoạt động đã thêm cho cùng nguyên liệu, qua `anchor_unit_id` và
-`anchor_factor`. Editor yêu cầu chuỗi neo kết thúc tại Đơn vị chuẩn, không tự
-trỏ và không tạo vòng lặp. Ví dụ: `1 Thùng = 24 Chai`, `1 Chai = 250 ml`, với
-`ml` là Đơn vị chuẩn.
+Editor: đơn vị không chuẩn neo qua `anchor_unit_id` + `anchor_factor` tới đơn vị
+active cùng nguyên liệu; chuỗi neo kết thúc tại Đơn vị chuẩn, không tự trỏ/vòng
+lặp. Ví dụ: `1 Thùng = 24 Chai`, `1 Chai = 250 ml` (`ml` = Đơn vị chuẩn).
 
-RPC `save_ingredient_catalog` suy hệ số từ payload và xác nhận lại toàn bộ đồ
-thị ở biên database. Mỗi `anchor_unit_id` khác `NULL` phải khớp đúng một dòng
-active trong `p_units` của chính nguyên liệu; Đơn vị chuẩn không được có cạnh đi
-ra. Resolver đi theo cạnh đã khai báo của cả đơn vị chuẩn hệ thống đã chọn,
-không dừng sớm tại registry, đồng thời chặn neo thiếu, tự trỏ, vòng lặp và mọi
-chuỗi có các `dimension` đã biết không tương thích. Đơn vị không chuẩn bắt buộc
+RPC `save_ingredient_catalog` suy hệ số từ payload và xác nhận đồ thị ở biên DB.
+Mỗi `anchor_unit_id` khác `NULL` phải khớp đúng một dòng active trong `p_units`
+của chính nguyên liệu; Đơn vị chuẩn không có cạnh đi ra. Resolver đi theo cạnh
+đã khai báo, chặn neo thiếu, tự trỏ, vòng lặp và `dimension` không tương thích.
+Đơn vị không chuẩn bắt buộc
 có neo; chỉ đơn vị chuẩn hệ thống không có neo mới được suy trực tiếp bằng
 `standard_factor` khi cùng `dimension` với Đơn vị chuẩn của nguyên liệu.
 
@@ -165,154 +150,89 @@ có neo; chỉ đơn vị chuẩn hệ thống không có neo mới được suy
 `numeric(18,12)`. RPC từ chối giá trị không hữu hạn, không dương, vượt miền hoặc
 cần làm tròn; không âm thầm làm tròn payload gọi trực tiếp trước khi lưu.
 
-`ingredient_units.to_base_factor` là hệ số hiệu lực đã suy qua toàn bộ chuỗi.
-Ledger, tồn, ngưỡng và giá vốn chỉ dùng hệ số hiệu lực này. Hai đơn vị chuẩn cùng
-`dimension` mặc định lấy tỷ lệ từ `units.standard_factor`; Owner có thể khai báo
-đích khác khi cần quy cách riêng. Khi đổi Đơn vị chuẩn, RPC quy đổi hệ số, số
-lượng và đơn giá để giữ nguyên lượng vật lý và tổng giá trị tồn.
+`ingredient_units.to_base_factor` là hệ số hiệu lực (ledger/tồn/ngưỡng/giá vốn
+chỉ dùng hệ số này). Hai đơn vị chuẩn cùng `dimension` mặc định lấy tỷ lệ từ
+`units.standard_factor`. Khi đổi Đơn vị chuẩn, RPC quy đổi hệ số/số lượng/đơn giá
+để giữ lượng vật lý và tổng giá trị tồn.
 
 > **Quy tắc:** `stock_levels.current_quantity`, `stock_movements.quantity_change`
-> và giá vốn BQ **lưu và hiển thị** theo **Đơn vị chuẩn**. Dòng chứng từ cho phép
-> chọn mọi `ingredient_units` đang hoạt động của nguyên liệu:
->
-> - YCM → PO → GRN: PO kế thừa đơn vị đã chọn trên YCM; GRN kế thừa PO
-> - Điều chuyển / xuất / tiêu hao / hao hụt: chọn một đơn vị đang hoạt động
-> - Kiểm kê: chọn một đơn vị cho mỗi nguyên liệu trong vòng kiểm kê
-> - Định mức món bán và công thức sản xuất: chọn một đơn vị đang hoạt động
-> - Lệnh sản xuất: dùng snapshot đơn vị từ công thức, không chọn lại
->
-> Mỗi dòng chứng từ/movement lưu snapshot đơn vị + factor. Owner được thêm/đổi
-> đơn vị và quy đổi bất kỳ lúc nào; khi đổi Đơn vị chuẩn, RPC
-> `save_ingredient_catalog` quy đổi tồn hiện tại, ngưỡng, WAC và số lượng
-> valuation hiện hành trong cùng transaction (tổng giá trị không đổi). Snapshot
-> lịch sử không bị viết lại.
+> và giá vốn BQ **lưu và hiển thị** theo **Đơn vị chuẩn**. Chứng từ chọn mọi
+> `ingredient_units` active: YCM→PO→GRN kế thừa đơn vị; điều chuyển/xuất/tiêu
+> hao/hao hụt/kiểm kê/định mức/công thức chọn đơn vị active; lệnh SX dùng
+> snapshot từ công thức. Mỗi dòng lưu snapshot đơn vị + factor. Đổi Đơn vị
+> chuẩn: RPC quy đổi tồn, ngưỡng, WAC và valuation hiện hành trong cùng
+> transaction; snapshot lịch sử không viết lại.
 
-Đổi Đơn vị chuẩn hoặc quy đổi sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi gỡ
-đơn vị vẫn đang được BOM/production recipe tham chiếu.
+Đổi Đơn vị chuẩn sau khi đã có `stock_movements` không bị khóa. Chỉ từ chối khi
+gỡ đơn vị vẫn được BOM/production recipe tham chiếu.
 
 ### 2.2 Database — bảng `ingredients`
 
-Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients` không phải nguồn giá kho. **Giá vốn bình quân** theo từng kho nằm ở `stock_levels.avg_unit_cost` và hiển thị theo Đơn vị chuẩn.
-
-- `item_kind = raw_material`: nguyên liệu đầu vào.
-- `item_kind = finished_good`: thành phẩm sản xuất tại chi nhánh hoặc hàng chuẩn bị sẵn được giữ ở stock-bearing location của chi nhánh.
+Master theo tenant. `unit_cost` trên `ingredients` không phải nguồn giá kho;
+**giá vốn bình quân** ở `stock_levels.avg_unit_cost` (theo Đơn vị chuẩn).
+`units.code` = mã kỹ thuật; `units.name` = nhãn. Cần ít nhất một
+`ingredient_units` base. `item_kind` phân loại tồn (`raw_material | finished_good`
+validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
+`category` / `category_id` là nhóm vận hành — đổi category cập nhật cả hai.
 
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
-- **Khóa:** theo `(tenant_id, branch_id, location_id, ingredient_id)` — flow mới chỉ cộng tồn vận hành từ stock-bearing locations.
-- **`current_quantity`:** tồn thực theo **Đơn vị chuẩn** (`is_base`).
-- **`avg_unit_cost`:** **giá vốn bình quân** tại kho đó theo **Đơn vị chuẩn**, được cập nhật từ sổ định giá khi Hóa đơn NCC được xác nhận và có thể dùng làm **đơn giá ghi sổ** khi một chi nhánh chuyển sang chi nhánh khác (policy mặc định: giá vốn BQ tại thời điểm xuất).
+- **Khóa:** `(tenant_id, branch_id, location_id, ingredient_id)` — tồn từ stock-bearing locations.
+- **`current_quantity`:** theo **Đơn vị chuẩn** (`is_base`).
+- **`avg_unit_cost`:** giá vốn BQ theo Đơn vị chuẩn, cập nhật từ sổ định giá khi
+  Hóa đơn NCC được xác nhận; dùng làm đơn giá ghi sổ khi transfer (mặc định: WAC lúc xuất).
 
 ---
 
 ## 3. Định mức món bán (Menu recipes)
 
-> Contract thuật ngữ: `MenuRecipe`/“Định mức món bán” là định mức tiêu hao cho
-> `menu_item`, lưu ở bảng lịch sử `recipes` và quản lý tại
-> `/inventory/menu-recipes`. Không gọi miền này là `Recipe` trần trong source
-> ứng dụng. `ProductionRecipe`/“Công thức sản xuất” là BOM thành phẩm riêng,
-> lưu ở `production_recipes` và quản lý trong tab Công thức của
-> `/inventory/production`.
+> `MenuRecipe`/“Định mức món bán” = tiêu hao cho `menu_item` (`recipes`,
+> `/inventory/menu-recipes`). Không gọi `Recipe` trần trong source.
+> `ProductionRecipe`/“Công thức sản xuất” = BOM thành phẩm
+> (`production_recipes`, tab Công thức `/inventory/production`).
 
-Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi
-đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP).
-`recipes.entry_unit_id` có thể là bất kỳ đơn vị active trên ladder; số lượng
-được quy về Đơn vị chuẩn qua `entry_to_base_factor` khi trừ tồn. UI mặc định
-gợi ý Đơn vị chuẩn. Định mức món bán không có Yield.
-
-```sql
--- Mục tiêu schema (triển khai theo migration)
-CREATE TABLE recipes (
-  id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  tenant_id       BIGINT NOT NULL REFERENCES tenants(id),
-  menu_item_id    BIGINT NOT NULL REFERENCES menu_items(id),
-  ingredient_id   BIGINT NOT NULL REFERENCES ingredients(id),
-  quantity        NUMERIC(15,3) NOT NULL,
-  entry_unit_id   BIGINT REFERENCES units(id),
-  note            TEXT,
-  yield_factor    NUMERIC(15,6) NOT NULL DEFAULT 1, -- tương thích SQL; ứng dụng luôn dùng 1
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (menu_item_id, ingredient_id, tenant_id)
-);
-```
+Định mức theo `menu_item`; xuất kho (`consumption`) khi đơn `completed` (RPC).
+`recipes.entry_unit_id` = đơn vị active bất kỳ; quy về Đơn vị chuẩn qua
+`entry_to_base_factor`. Không có Yield; `recipes.yield_factor` luôn 1 ở app,
+không dùng cho production BOM.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 
-Sản xuất dùng bộ bảng riêng:
+Bảng: `production_recipe_specs` (header, `needs_review | active | inactive`);
+`production_recipes` (dòng NL + `recipe_spec_id`); `production_runs`
+(`draft -> in_progress -> completed` / `cancelled`); `production_run_lines`
+(snapshot). RPC từ `production-run-actions.ts`.
 
-- `production_recipe_specs`: header duy nhất theo tenant/thành phẩm, lưu sản lượng chuẩn, đơn vị thành phẩm và trạng thái `needs_review | active | inactive`.
-- `production_recipes`: các dòng nguyên liệu, mỗi dòng chọn một quy cách active và tham chiếu header bằng `recipe_spec_id`.
-- `production_runs`: lệnh sản xuất tại Bếp TT, snapshot header; state machine
-  `draft -> in_progress -> completed` (hoặc `cancelled`).
-- `production_run_lines`: snapshot toàn bộ dòng nguyên liệu tại thời điểm tạo lệnh.
+1. Bếp TT nhận NL qua GRN vào warehouse; không transfer giả cho production.
+2. `create_production_run`: recipe `active` + sản lượng + location cùng Bếp TT → `draft` + snapshot.
+3. `start_production_run`: `draft` → `in_progress`.
+4. `complete_production_run`: production operator + `inventory:production_confirm`
+   trên `branch_id`; lệnh `in_progress`, actual `> 0`, đủ snapshot; location cùng
+   Bếp TT; tồn đủ sau quy đổi Đơn vị chuẩn → atomic `production_consumption` /
+   `production_output` / `stock_levels` / `completed`.
+5. Giao CN qua Điều chuyển riêng.
 
-Workflow sản xuất chuẩn (RPC family gọi từ `apps/web/app/(protected)/inventory/production-run-actions.ts`):
+Kế hoạch (“Định làm”) điền sẵn tiêu hao; thực tế (“Thực ra”) chỉ điều khiển giá
+vốn đầu ra — không co giãn tiêu hao đã ghi. Hao hụt tăng giá vốn TP, không tự
+sinh phế phẩm. Complete kiểm tra tồn rồi ghi consumption/output/stock/status
+cùng transaction.
 
-1. Bếp TT nhận nguyên liệu qua GRN vào warehouse đang hoạt động; không tạo
-   transfer giả để cấp nguyên liệu cho production.
-2. `create_production_run` chỉ nhận recipe `active`, sản lượng kế hoạch và location cùng Bếp TT, rồi tạo `draft` cùng snapshot dòng nguyên liệu.
-3. `start_production_run` là transition duy nhất từ `draft` sang `in_progress`.
-4. `complete_production_run` kiểm tra:
-   - caller là production operator (`is_inventory_production_operator()`) và có `inventory:production_confirm` trên đúng `branch_id`,
-   - lệnh đang `in_progress`, sản lượng thực tế `> 0`, đúng đủ tập nguyên liệu snapshot,
-   - source/target location thuộc cùng Bếp TT,
-   - tồn kho đủ sau khi quy đổi số thực tế về Đơn vị chuẩn.
-5. RPC ghi atomically:
-   - `production_consumption` cho nguyên liệu đầu vào,
-   - `production_output` cho thành phẩm đầu ra,
-   - cập nhật `stock_levels`,
-   - chốt `production_runs.status = completed`.
-6. Thành phẩm tiếp tục ở Bếp TT. Giao về chi nhánh phải qua chứng từ Điều chuyển riêng.
-
-Quy tắc kế hoạch so với thực tế:
-
-- Số lượng kế hoạch (`planned output` / “Định làm”) chỉ điều khiển định mức và
-  phần tiêu hao được điền sẵn.
-- Số lượng thành phẩm thực tế (`actual output` / “Thực ra”) chỉ điều khiển giá
-  vốn đơn vị đầu ra; không được dùng để tự co giãn tiêu hao đã ghi nhận.
-- Người vận hành có thể chốt nguyên liệu và số lượng thực dùng khác kế hoạch.
-  Hao hụt làm tăng giá vốn thành phẩm và không tự sinh một dòng phế phẩm.
-- `complete_production_run` phải kiểm tra tồn kho sau khi áp dụng bộ nguyên liệu
-  thực tế rồi ghi consumption, output, stock level và trạng thái trong cùng một
-  giao dịch.
-
-### 3c. `output_quantity` của công thức sản xuất
-
-> Boundary: đây là current Inventory control; không kéo theo multi-level BOM hay costing engine mới.
-
-- `production_recipe_specs.output_quantity` là số lượng thành phẩm chuẩn theo `output_unit_id` của công thức.
-- Bắt buộc `> 0`; form tạo mới không prefills giá trị mặc định.
-- Khi lập / chốt mẻ, nhu cầu nguyên liệu scale theo:
-
-```
-batch_ratio = planned_output / recipe_output_quantity
-planned_raw = batch_ratio × recipe_raw_quantity
-```
-
-- Menu `recipes.yield_factor` (định mức món bán) là domain riêng; không dùng cho production BOM.
-
-Ngoài phạm vi v1:
-
-- sub-recipe nhiều tầng,
-- labor / overhead costing,
-- production variance engine đầy đủ.
+`production_recipe_specs.output_quantity` > 0 theo `output_unit_id`;
+`batch_ratio = planned_output / recipe_output_quantity`,
+`planned_raw = batch_ratio × recipe_raw_quantity`. Ngoài v1: sub-recipe nhiều
+tầng, labor/overhead, production variance engine.
 
 ---
 
 ## 4. Biến động tồn kho — `stock_movements`
 
-- **Append-only** (không UPDATE/DELETE dòng movement).
-- Các loại `type` mở rộng như bảng ở §1b.
-- Liên kết tùy loại: `order_id`, `grn_id`, `transfer_id`, `unit_cost` (**đơn giá ghi sổ** snapshot tại thời điểm ghi, theo Đơn vị chuẩn; không gọi là WAC trên lịch sử movement).
+Append-only. `type` như §1b. Liên kết: `order_id`, `grn_id`, `transfer_id`,
+`unit_cost` (đơn giá ghi sổ snapshot theo Đơn vị chuẩn; không gọi WAC trên lịch sử).
 
-### POS food-cost boundary
-
-Mặc định Sale Runtime ghi `stock_movements.consumption/sale_consumption` tại
-Kho chi nhánh bằng RPC atomic khi đơn đã `paid` + `completed`: line có KDS chờ
-`first_ready_at`, còn line không có KDS chỉ được trừ sau khi đã dispatch qua
-phiếu bếp in. `pos_stock_outcome_posting` là một switch Owner-only để tắt riêng
-một chi nhánh khi cần rollback; khi tắt, POS không trừ và không rào tồn. Báo
-cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ từ bán POS.
+POS: Sale Runtime ghi `consumption/sale_consumption` tại Kho CN khi đơn `paid` +
+`completed` (KDS chờ `first_ready_at`; không KDS chờ dispatch phiếu bếp).
+`pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
+tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 
 ---
 
@@ -320,217 +240,157 @@ cáo tiêu hao thủ công không được ghi lại nguyên liệu đã trừ t
 
 ### 5.1 Quy trình
 
-1. Thiết lập **NCC**, điều khoản thanh toán và gán nguyên liệu NCC được phép
-   cung cấp trong `supplier_items`.
-2. Kho Tổng hoặc Bếp Trung Tâm tạo **Yêu cầu mua**. Đây là nhu cầu mua ngoài;
-   **Yêu cầu hàng** vẫn chỉ dùng cho cấp hàng nội bộ về chi nhánh.
-3. Nếu mỗi nguyên liệu còn thiếu chỉ có một NCC active, Kế toán hoặc Owner dùng
-   **Duyệt & tạo đơn mua** để hệ thống tự lấy toàn bộ số lượng còn lại và gom
-   thành một PO/NCC. Chỉ khi nguyên liệu có nhiều NCC, Kế toán mới chọn hoặc
-   chia số lượng; nguyên liệu chưa có NCC phải được bổ sung mapping trước. Mỗi
-   PO thuộc đúng một Yêu cầu mua và một NCC; PO chỉ xác nhận nhu cầu, NCC, số
-   lượng và đơn vị.
-4. Khi PO chuyển sang `sent`, hệ thống tạo ngay đúng một GRN nháp
-   **Chờ nhập hàng**, sao chép các dòng còn thiếu và khóa nháp thứ hai của cùng
-   PO. Người nhận hàng làm việc trực tiếp từ danh sách GRN, không cần quay lại
-   PO để tạo phiếu.
-5. Kho nhập thực nhận và từ chối. Khi xác nhận, RPC khóa PO/GRN/dòng, tính phần
-   áp dụng PO và ghi tăng số lượng đúng một lần. Giá tạm chỉ có thể lấy từ một
-   Hóa đơn NCC đã xác nhận trước đó; nếu chưa có thì dòng chờ Hóa đơn NCC. PO
-   chuyển `partially_received` hoặc `received` trong cùng transaction; nếu còn
-   thiếu, hệ thống tự tạo GRN nháp kế tiếp.
-6. Finance ghi nhận **Hóa đơn NCC** riêng, có thể đối chiếu nhiều GRN/PO cùng
-   NCC; thanh toán và phiếu giảm công nợ phân bổ nhiều-nhiều với hóa đơn.
+1. Thiết lập **NCC**, điều khoản và `supplier_items`.
+2. Kho Tổng / Bếp TT tạo **Yêu cầu mua** (mua ngoài). **Yêu cầu hàng** = cấp nội bộ về CN.
+3. Một NCC active/NL → **Duyệt & tạo đơn mua** tự gom PO/NCC; nhiều NCC thì Kế
+   toán chọn/chia; thiếu mapping thì chặn. Mỗi PO = một YCM + một NCC (nhu cầu,
+   NCC, SL, đơn vị — không giá).
+4. PO `sent` → đúng một GRN nháp **Chờ nhập hàng** (copy dòng thiếu, khóa nháp
+   thứ hai). Làm việc từ danh sách GRN.
+5. Kho nhập thực nhận/từ chối; confirm RPC khóa PO/GRN/dòng, áp dụng PO, tăng
+   tồn một lần. Giá tạm từ Hóa đơn NCC đã xác nhận trước đó (hoặc chờ HĐ). PO →
+   `partially_received` / `received`; còn thiếu → GRN nháp kế tiếp.
+6. Finance ghi **Hóa đơn NCC** riêng (đối chiếu nhiều GRN/PO); thanh toán /
+   giảm công nợ phân bổ nhiều-nhiều.
 
 **Nguyên tắc nhận hàng theo PO:** `grn_items.po_applied_quantity` là phần thực nhận dùng
 hoàn thành PO. Giá cuối cùng thuộc dòng Hóa đơn NCC đã xác nhận và được phân bổ
 vào GRN; PO không là nguồn giá. Kho không được nhận monetary payload từ server.
 
-PO mới chỉ dùng nguyên liệu có mapping `supplier_items.is_active = true` với NCC
-của PO. Bỏ mapping không sửa chứng từ lịch sử. GRN mới suy NCC từ PO và không
-cho đổi nguyên liệu, quy cách hoặc NCC.
+PO mới chỉ dùng `supplier_items.is_active = true` với NCC của PO. GRN suy NCC từ
+PO; không đổi NL/quy cách/NCC. Đối soát tiền: giá trị dòng HĐ trước VAT/chiết
+khấu, phân bổ theo SL thực nhận. Phần dư → `unplanned_billed_quantity` + lý do;
+không sửa SL lịch sử GRN. `vat_amount` chỉ vào AP; `vat_breakdown` 0%/5%/8%/10%
+suy ra header `subtotal` / `vat_amount` / `total_amount`.
 
-Đối soát tiền dùng giá trị dòng Hóa đơn NCC trước VAT và chiết khấu chứng từ,
-phân bổ theo số lượng thực nhận trên GRN. Nếu NCC tính tiền phần dư, Finance ghi
-`unplanned_billed_quantity`; việc chấp nhận chênh lệch bắt buộc có lý do và
-không sửa số lượng lịch sử GRN.
-`vat_amount` chỉ cộng vào công nợ phải trả; không làm tăng giá trị hàng nhận
-trong bước đối soát này. `supplier_invoices.vat_breakdown` giữ từng nhóm
-0%/5%/8%/10% của chứng từ; header `subtotal`, `vat_amount` và `total_amount`
-được suy ra từ tổng các nhóm.
-
-### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
+### 5.2 QC vật lý trên GRN
 
 **`branch_id` trên GRN là inventory site nhận hàng.** GRN nhận vào active
 warehouse duy nhất của site.
 
-QC vật lý trên mỗi dòng chỉ có:
+QC mỗi dòng:
 
 - `received_quantity`: số lượng thực giao;
 - `rejected_quantity`: số lượng không nhận, từ `0` đến `received_quantity`;
 - số lượng đạt được suy ra bằng `received_quantity - rejected_quantity`;
 - khi `rejected_quantity > 0`, bắt buộc lý do và ảnh trước confirm.
 
-GRN có toàn bộ số lượng bị từ chối không tạo giao dịch mua hay nhập tồn: giữ
-chứng từ chưa liên kết PO để hủy, thay vì tạo PO giá trị bằng không.
-
-Không lưu `quality_status`; UI suy ra `accepted` / `partial` / `rejected` để
-hiển thị. GRN không lưu lot/HSD/nhiệt độ, short-delivery action, price
-variance/baseline/evidence hoặc quyết định review.
+Toàn bộ từ chối → không tạo giao dịch mua/nhập tồn (hủy chứng từ chưa liên kết
+PO). Không lưu `quality_status` (UI suy `accepted` / `partial` / `rejected`).
+Không lưu lot/HSD/nhiệt độ, short-delivery action, price variance/baseline/
+evidence hoặc quyết định review.
 
 ---
 
 ## 6. Phương pháp tính giá xuất kho
 
-- **Current:** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập
-  nhật từ sổ định giá khi Hóa đơn NCC được xác nhận.
-- **FIFO / FEFO theo lô:** hướng mở rộng sau (cần bảng lô/batch); phần mở đầu §6 cũ nhắc FIFO như **nguyên tắc thực phẩm**, không mâu thuẫn nếu ghi rõ **hệ thống v1 dùng WAC**.
-
-Công thức WAC sau mỗi dòng nhập (đơn giản hóa):
+**Current:** WAC trên từng `stock_levels`, cập nhật từ sổ định giá khi Hóa đơn
+NCC được xác nhận. FIFO/FEFO theo lô = mở rộng sau; v1 dùng WAC.
 
 ```
 Q_new = Q_old + Q_recv_base
 WAC_new = (Q_old × WAC_old + Q_recv_base × đơn_giá_nhập_quy_đổi_về_tồn_chuẩn) / Q_new   (khi Q_new > 0)
 ```
 
-### 6.1 Kiểm soát giá
-
-Kế toán hoặc Owner nhập và xác nhận đơn giá trên Hóa đơn NCC. Inventory không
-tính ngưỡng lệch giá, không yêu cầu Kho giải trình/đính ảnh giá và không tạo
-approval thứ hai tại GRN. Kết quả đối soát không thay đổi QC vật lý hay làm phát
-sinh price-QC trong Inventory.
+Kế toán/Owner nhập và xác nhận đơn giá trên Hóa đơn NCC. Inventory không tính
+ngưỡng lệch giá, không bắt Kho giải trình giá, không approval thứ hai tại GRN /
+price-QC.
 
 ---
 
 ## 7. Supplier Invoice Handoff — Finance
 
-Áp dụng cho **hàng mua về chi nhánh** (đầu vào VAT). Điều kiện thanh toán / kê khai: tham chiếu [einvoice-tax.md](einvoice-tax.md) §4.
-
-Đây là Finance handoff. Inventory vẫn đóng ngày được khi Hóa đơn NCC chưa về.
-Khi hóa đơn được xác nhận, valuation settlement phân bổ chênh lệch giữa tồn
-còn lại, thành phẩm và các variance bucket mà không thay đổi số lượng. Late
-invoice của kỳ đã đóng được ghi vào kỳ hiện tại; payment không thay đổi giá trị
-tồn hoặc food cost.
+Hàng mua (VAT đầu vào); thanh toán/kê khai: [einvoice-tax.md](einvoice-tax.md) §4.
+Finance handoff — Inventory đóng ngày được khi HĐ chưa về. Khi xác nhận HĐ,
+valuation settlement phân bổ chênh lệch (tồn còn / TP / variance buckets) không
+đổi số lượng. Late invoice kỳ đã đóng → kỳ hiện tại; payment không đổi giá trị
+tồn/food cost.
 
 | Bước     | Kiểm tra       | Boundary             |
 | -------- | -------------- | -------------------- |
 | GRN ↔ HĐ | SL HĐ / SL GRN | HĐ không > thực nhận |
 | GRN ↔ HĐ | Đơn giá        | Lệch cần review rõ   |
 
-`matching_status`: `pending` | `matched` | `discrepancy` | `approved` (ngoại lệ có duyệt).
+`matching_status`: `pending` | `matched` | `discrepancy` | `approved`.
 
-### 7.1 AP Boundary — accounts payable tối thiểu
-
-Các khái niệm nên coi là vocabulary chuẩn của Inventory/AP boundary:
-
-- `payment_terms` trên `suppliers`: ví dụ `COD`, `NET7`, `NET14`, `NET30`
-- `due_date` trên `supplier_invoices`
-- `payment_status` trên `supplier_invoices`: `unpaid` | `partial` | `paid`
-- `paid_amount`, `paid_at` nếu có flow đánh dấu thanh toán
-
-Nguyên tắc:
-
-- AP ở giai đoạn này vẫn là **tracking + báo cáo**, không phải payment engine đầy đủ.
-- `due_date` được tính từ `invoice_date + payment_terms`.
-- `AP aging` là report/query layer, không cần thêm bảng tổng hợp riêng ở v1.
-
-Ngoài phạm vi v1:
-
-- payment proposal batches,
-- debit note / credit note engine đầy đủ,
-- approval thanh toán nhiều cấp,
-- AP giữa pháp nhân/nội bộ doanh nghiệp.
+AP tối thiểu: `payment_terms` (`COD`/`NET7`/…), `due_date`, `payment_status`
+(`unpaid`|`partial`|`paid`), `paid_amount`/`paid_at`. Tracking + báo cáo, không
+payment engine. `due_date` = `invoice_date + payment_terms`. `AP aging` =
+report layer. Ngoài v1: payment proposal, debit/credit note engine, approval
+nhiều cấp, AP liên pháp nhân.
 
 ---
 
 ## 8. Kiểm kê kho (Stocktake)
 
-> Route: `/inventory/stocktake` (list), `/inventory/stocktake/[id]` (chi tiết đếm/kết quả)
+Routes: `/inventory/stocktake`, `/inventory/stocktake/[id]`.
 
-### 8.1 Quy trình
+1. **Tạo** (`start_stocktake`): CN + `location_id` + `mode` + blind + ngưỡng →
+   sessions/lines từ `stock_levels` (`system_quantity`, `abc_class`). 1 phiên
+   `in_progress`/CN.
+2. **Đếm** (`get_stocktake_lines_blind`, rounds/draft): `counted_quantity` theo
+   `round_no`; zone lock acquire/heartbeat/release.
+3. **Đóng vòng** (`close_recount_round`): ngưỡng (chặt hơn class A) → recount /
+   final; hội tụ → `count_adjustment` + cập nhật `stock_levels`.
 
-1. **Tạo phiên kiểm kê** (`startStocktake` → RPC `start_stocktake`): chọn chi nhánh, `location_id`, `mode` (`daily/weekly/monthly/quarterly/spot`), blind mode và ngưỡng variance → tạo `stocktake_sessions` + tự động tạo `stocktake_lines` từ `stock_levels` hiện có (snapshot `system_quantity`, gán `abc_class`).
-2. **Đếm thực tế** (`getStocktakeLinesBlind` → RPC `get_stocktake_lines_blind`, `submitCountRound`, `saveStocktakeDraft`): nhập `counted_quantity` theo từng `round_no`; blind mode ẩn `system_quantity` cho người đếm. Zone lock chống đếm trùng dùng `acquireZoneLock` / `heartbeatZoneLock` / `releaseZoneLock`.
-3. **Đóng vòng đếm** (RPC `close_recount_round`): so chênh lệch theo ngưỡng (chặt hơn cho `abc_class = 'A'`) → đánh `needs_recount` / `is_final` → mở `round_no` kế tiếp nếu còn dòng phải đếm lại; round hội tụ được post `count_adjustment` vào `stock_movements` + cập nhật `stock_levels`.
-
-### 8.2 Bảng
-
-- `stocktake_sessions`: `id, tenant_id, branch_id, location_id, started_at, completed_at, status, notes, created_by, mode, blind_mode, auditor_id, auditor_branch_id, is_unaudited, variance_threshold_pct/vnd (+ class_a), abc_snapshot_at, current_round, offline_enabled`
-  - Status: `in_progress` | `completed` | `cancelled`; `current_round` 1..4
-  - Partial unique: chỉ 1 phiên `in_progress` mỗi chi nhánh
-- `stocktake_lines`: `id, tenant_id, session_id, ingredient_id, system_quantity, counted_quantity, variance (generated), variance_reason, round_no, counted_by, counted_at, needs_recount, is_final, abc_class`
-  - `variance = counted_quantity - system_quantity` (generated column); `round_no` 1..4
-
-### 8.3 UI
-
-- **Danh sách phiên**: mã phiên (KK-{id}), chi nhánh, ngày, trạng thái. Tìm kiếm theo mã/tên CN.
-- **Chi tiết đếm** (in_progress): bảng nguyên liệu + input số lượng đếm + lý do chênh lệch theo vòng đếm; blind mode ẩn SL hệ thống. Auto-save khi blur.
-- **Kết quả** (completed): bảng SL hệ thống vs SL thực đếm + chênh lệch + color coding (xanh <1%, vàng 1-5%, đỏ >5%).
-- **Tiến độ**: hiển thị `{đã đếm}/{tổng}` khi đang thực hiện.
-
-### 8.4 ACL
-
-- `branch_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh trong phạm vi của
-  mình khi có permission tương ứng.
-- `owner`: tạo kiểm kê cho bất kỳ chi nhánh nào, xem toàn bộ lịch sử.
+`stocktake_sessions`: `in_progress`|`completed`|`cancelled`, `current_round` 1..4.
+`stocktake_lines.variance = counted_quantity - system_quantity`. ACL: BM trong
+phạm vi; owner mọi CN.
 
 ---
 
 ## 9. Cảnh báo tồn kho
 
-### 9.1 Cảnh báo ngưỡng tồn
-
-> Hiển thị: strip cảnh báo trên `/inventory/stock` (top nguyên liệu chạm Min) + bộ lọc «Dưới ngưỡng»
-
-So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` (theo từng chi nhánh, chỉ `is_active = true`). UI, import/export và cài đặt chỉ công bố một trường **Tồn tối thiểu**; `reorder_point` và `max_stock_level` là cột tương thích cũ và được ghi `NULL` khi danh mục được cập nhật.
-
-- Card vàng khi tồn chạm hoặc thấp hơn `Min`, xanh khi đủ tồn.
-- Hiển thị top 5 nguyên liệu cần nhập + current/Min ratio + đơn vị trên strip Tồn kho.
-- Tính `suggested_order_qty = max(0, min_stock_level - current_quantity)`.
-- Branch scoping: `branch_manager` chỉ thấy chi nhánh mình.
-
-### 9.2 Hạn sử dụng
-
-Inventory v1 không vận hành sổ lô, FIFO/FEFO, cảnh báo hạn dùng, hoặc route
-`/inventory/expiry`.
-
-- GRN draft ghi số thực nhận / đơn vị theo chứng từ / số từ chối / lý do + ảnh khi có;
-  giá chỉ được nhận từ Hóa đơn NCC đã xác nhận. Không ghi lô/HSD/nhiệt độ.
-- Stock control dùng WAC + tồn theo location; cảnh báo ưu tiên hiện tại là tồn thấp/reorder và phiếu đang mở.
-- Khi cần quản lý hạn dùng thật, phải thiết kế lại thành lot ledger hoàn chỉnh.
-
----
-
-## 10. Báo cáo (gợi ý truy vấn)
-
-- **Food cost (chi nhánh):** lọc `stock_movements` `type = 'consumption'` theo `branch_id` và kỳ thời gian; join `ingredients`.
-- **Giá trị tồn:** `sum(current_quantity * avg_unit_cost)` trên stock-bearing locations.
-- **AP aging:** nhóm `supplier_invoices` chưa `paid` theo bucket `current / 1-30 / 31-60 / 61-90 / >90 ngày` khi Finance handoff mở; không phải gate đóng ngày Inventory.
-- **Consumption variance:** so sánh tiêu hao lý thuyết từ recipe (`mv_food_cost`) với actual approved consumption (`stock_movements.consumption/sale_consumption`) để tìm site lệch lớn.
+So sánh `current_quantity` với `ingredients.min_stock_level` (CN active). UI chỉ
+**Tồn tối thiểu** (`reorder_point`/`max_stock_level` = cột cũ, ghi `NULL`).
+Strip `/inventory/stock`; `suggested_order_qty = max(0, min_stock_level - current_quantity)`.
+Không sổ lô/FIFO/FEFO/HSD/route `/inventory/expiry`. GRN: thực nhận/từ chối; giá
+từ Hóa đơn NCC đã xác nhận.
 
 ---
 
 ## 11. Quyền truy cập (ACL) — hướng dẫn
 
-SSOT phân vai / nav: [inventory-role-ops.md](inventory-role-ops.md) (**D093**).
 Module/route: `packages/shared/src/auth/module-acl.ts`; coarse roles:
-`inventory-roles.ts`. Mutation: permission keys + RLS/RPC.
+`inventory-roles.ts`. Mutation: permission keys + RLS/RPC. UI visibility is not
+authorization. **D093** model: GRN chỉ Kho Tổng / Bếp TT; CN dùng Yêu cầu hàng →
+fulfill → DC; CN không production.
 
-Tóm tắt (D093):
+Shell primary: BM → `/br/{branchId}`; Owner + Kế toán + central → L0
+(`/inventory`, Accountant `/finance`). Central residual `/br/{pinnedSiteId}`
+chỉ deep-link/pad; notification `/br/.../stock/*` resolve về L0 khi mở feed.
 
-- `owner`: tenant-wide; catalog + `default_fulfill_site_kind`; WAC; oversight.
-- `accountant`: GRN đọc (trung tâm) + PO/giá + Finance; không QC/tồn/SX/yêu cầu CN.
-- `central_supply_ops` / `central_kitchen_lead`: GRN tại site ghim; inbox yêu cầu
-  theo nguồn; fulfill→DC (`transfer_create`); Bếp TT thêm production. Không PO.
-  Được **xem** danh mục nguyên liệu (`/inventory/ingredients`); Owner CRUD.
-- `branch_manager`: yêu cầu hàng + tồn/tiêu hao/kiểm kê/hao hụt/nhận DC; **không**
-  GRN, PO, production, giá mua chuỗi.
+Tóm tắt vai (D093):
+
+- `owner`: tenant-wide; catalog + `default_fulfill_site_kind`; WAC; oversight;
+  checklist sẵn sàng trên `/inventory/ingredients` (Nguồn hàng + NCC).
+- `accountant`: YCM đọc → PO/giá; GRN đọc (trung tâm); HĐ/AP. Không tồn/SX/
+  định mức/yêu cầu CN/QC confirm.
+- `central_supply_ops` / `central_kitchen_lead`: primary L0 `/inventory`; GRN
+  tại site ghim; inbox yêu cầu theo nguồn; fulfill→DC (`transfer_create`);
+  Bếp TT thêm production / ProductionRecipe. Soft-hide PO lifecycle; không tạo
+  PO/giá; catalog chỉ đọc (Owner CRUD).
+- `branch_manager`: hub `/br/{id}/stock` (tồn / YCH / kiểm kê / hao); nhận DC
+  inbound; **không** GRN, PO, production, giá mua, `procurement:read` /
+  `supplier_manage` / `supplier_return:*` (R08/R09); không tạo/ship DC.
 - `cashier` / `chef` / `branch_staff`: chỉ đếm khi được gán.
+
+Permission keys (D093):
+
+| Key | Ai |
+| --- | --- |
+| `inventory:request_create/submit/cancel` | owner, branch_manager |
+| `inventory:request_fulfill` | owner, central_supply_ops, central_kitchen_lead |
+| `inventory:transfer_create` | owner, central_supply_ops, central_kitchen_lead |
+| `procurement:grn_*` | central sites (+ owner); không BM |
+| `procurement:read` / `supplier_manage` | owner, accountant (read), central ops; không BM |
+| `supplier_return:*` | không BM; daily UI retired |
+| `inventory:production_*` | central_kitchen (+ owner); không BM |
 
 ---
 
 ## Tài liệu liên quan
 
-- [inventory-role-ops.md](inventory-role-ops.md) — phân vai, routing, luồng D093
 - [einvoice-tax.md](einvoice-tax.md) — VAT đầu vào, HĐ NCC
 - [inventory-sop.md](inventory-sop.md) — SOP vận hành
+- [screen-context-map.md](screen-context-map.md) — audience/device cho màn kho

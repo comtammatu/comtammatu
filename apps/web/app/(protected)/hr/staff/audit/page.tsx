@@ -1,14 +1,10 @@
 import Link from "next/link";
-import {
-  ArrowLeft as IconArrowLeft,
-  History as IconHistory,
-} from "lucide-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  AppEmptyState,
   AppListFrame,
   AppPage,
   AppPageHeader,
@@ -17,11 +13,8 @@ import { messages } from "@lib/messages";
 import {
   getStaffPermissionLabelVi,
 } from "@lib/messages/control-surface";
-import { PermissionAuditTable } from "./permission-audit-table";
-import {
-  PermissionAuditFilters,
-  type PermissionAuditTargetOption,
-} from "./permission-audit-filters";
+import { PermissionAuditClient } from "./permission-audit-client";
+import type { PermissionAuditTargetOption } from "./permission-audit-filters";
 import {
   resolveHrBranchScope,
   withHrBranchScope,
@@ -33,6 +26,7 @@ interface Props {
     target?: string;
     since?: string;
     branch?: string;
+    q?: string;
   }>;
 }
 
@@ -167,7 +161,8 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     a.label.localeCompare(b.label),
   );
 
-  const hasFilters = Boolean(params.action || params.target || params.since);
+  const q = params.q?.trim() || null;
+  const hasServerFilters = Boolean(params.action || params.target || params.since);
 
   const auditDisplayRows = auditRows.map((r) => {
     const meta = (r.metadata ?? {}) as Record<string, unknown>;
@@ -235,45 +230,19 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             ? copy.recentItems(auditDisplayRows.length)
             : undefined
         }
-        toolbar={
-          <PermissionAuditFilters
-            value={{
-              action: params.action ?? null,
-              target: params.target ?? null,
-              since: params.since ?? null,
-            }}
-            targetOptions={targetOptions}
-            branchScope={branchScope}
-          />
-        }
       >
-        {auditDisplayRows.length === 0 ? (
-          <AppEmptyState
-            mode={hasFilters ? "no-results" : "no-data"}
-            title={hasFilters ? copy.emptyFiltered : copy.empty}
-            description={hasFilters ? copy.emptyFilteredHint : undefined}
-            icon={<IconHistory />}
-          >
-            {hasFilters ? null : (
-              <Button
-                variant="outline"
-                size="touch"
-                render={
-                  <Link
-                    href={withHrBranchScope(
-                      "/hr?view=accounts",
-                      branchScope,
-                    )}
-                  />
-                }
-              >
-                {copy.emptyAction}
-              </Button>
-            )}
-          </AppEmptyState>
-        ) : (
-          <PermissionAuditTable rows={auditDisplayRows} />
-        )}
+        <PermissionAuditClient
+          rows={auditDisplayRows}
+          filterValue={{
+            action: params.action ?? null,
+            target: params.target ?? null,
+            since: params.since ?? null,
+            q,
+          }}
+          targetOptions={targetOptions}
+          branchScope={branchScope}
+          hasServerFilters={hasServerFilters}
+        />
       </AppListFrame>
     </AppPage>
   );

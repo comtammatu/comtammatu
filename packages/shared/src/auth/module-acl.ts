@@ -21,7 +21,7 @@ export type ModuleKey =
   | "settings"
   | "pos"
   | "kds"
-  | "runner"
+  | "pickup"
   | "branch_home"
   | "branch_dashboard"
   | "branch_settings"
@@ -48,7 +48,16 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   owner: {
     path: "/",
-    allowedRoles: ["owner"],
+    // Control home («Hôm nay»): Owner + L0 ops adapters. HR Control bindings
+    // (JWT self_service + tenant hr:view_employee) reach `/` via proxy/login —
+    // not via this JWT allow-list. Branch roles with the same capability stay
+    // on `/br/[id]`.
+    allowedRoles: [
+      "owner",
+      "accountant",
+      "central_supply_ops",
+      "central_kitchen_lead",
+    ],
     label: getModuleLabelVi("owner"),
   },
   menu: {
@@ -100,7 +109,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   me: {
     path: "/me",
     allowedRoles: STAFF_ROLES.filter((role) => role !== "owner"),
-    label: "Công việc của tôi",
+    label: "Ca của tôi",
   },
   finance: {
     path: "/finance",
@@ -129,10 +138,10 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "chef", "branch_manager"],
     label: getModuleLabelVi("kds"),
   },
-  runner: {
-    path: "/br/*/runner",
+  pickup: {
+    path: "/br/*/pickup",
     allowedRoles: ["owner", "cashier", "chef", "branch_manager", "branch_staff"],
-    label: getModuleLabelVi("runner"),
+    label: getModuleLabelVi("pickup"),
   },
   branch_home: {
     path: "/br/*",

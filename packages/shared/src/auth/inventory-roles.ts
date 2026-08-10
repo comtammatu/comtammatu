@@ -66,10 +66,10 @@ export function isProcurementBranchInScope(
   return effectiveBranchId === targetBranchId;
 }
 
+/** Owner | Accountant create PO from YCM; central ops are hard-denied. */
 export const PO_CREATE_ROLES: readonly StaffRole[] = [
   "owner",
-  "central_supply_ops",
-  "central_kitchen_lead",
+  "accountant",
 ] as const;
 
 export const PO_REVIEW_ROLES: readonly StaffRole[] = [
@@ -79,7 +79,5 @@ export const PO_REVIEW_ROLES: readonly StaffRole[] = [
 
 export const PO_MUTATE_ROLES = PO_REVIEW_ROLES;
 
-export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
-  "owner",
-  "branch_manager",
-];
+/** Residual RPC/role gate; daily supplier-return UI retired (R08). BM stripped. */
+export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = ["owner"];

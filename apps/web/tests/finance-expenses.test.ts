@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
+  EXPENSE_CATEGORIES_BY_GROUP,
   EXPENSE_CATEGORY_VALUES,
   classifyExpensePaymentState,
   expenseNeedsAction,
@@ -180,7 +181,11 @@ test("hospitality is selectable and accepted across expense boundaries", () => {
   );
 
   assert.equal(EXPENSE_CATEGORY_VALUES.includes("hospitality"), true);
-  assert.match(client, /EXPENSE_FORM_CATEGORIES[\s\S]*"hospitality"/);
+  assert.match(client, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.equal(
+    EXPENSE_CATEGORIES_BY_GROUP.operating.includes("hospitality"),
+    true,
+  );
   assert.match(messages, /hospitality: "Tiếp khách"/);
   assert.match(
     migration,
@@ -353,8 +358,9 @@ test("expense create captures immutable multi-rate VAT and optional attachment",
   );
   assert.match(client, /buildExpenseVatBreakdown/);
   assert.match(client, /PhotoUploadInput/);
-  assert.match(client, /name=\{`lines\.\$\{index\}\.vatRate`\}/);
-  assert.match(client, /name=\{`lines\.\$\{index\}\.vatAmount`\}/);
+  assert.match(client, /FinanceMoneyBlockFields/);
+  assert.match(client, /taxableName=\{`lines\.\$\{index\}\.taxableAmount`\}/);
+  assert.match(client, /vatRateName=\{`lines\.\$\{index\}\.vatRate`\}/);
   assert.doesNotMatch(client, /được khấu trừ/);
   assert.match(migration, /normalize_expense_vat_breakdown/);
   assert.match(migration, /expense_vat_snapshot_immutable/);
@@ -511,7 +517,10 @@ test("expense list keeps the ledger compact and uses consistent operator terms",
     client.indexOf("  return (", client.indexOf("const columns:")),
   );
 
-  assert.doesNotMatch(columns, /key: "(?:payment_state|vat|attachment)"/);
+  assert.doesNotMatch(columns, /key: "(?:payment_state|attachment)"/);
+  assert.match(columns, /key: "vat"/);
+  assert.match(columns, /key: "paymentState"/);
+  assert.match(columns, /key: "subtotal"/);
   assert.match(messages, /branch: "Nơi chi"/);
   assert.match(messages, /category: "Khoản chi"/);
   assert.match(messages, /branchTenantLevel: "Công ty"/);

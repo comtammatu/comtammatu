@@ -30,7 +30,7 @@ const CENTRAL_PRIMARY_SUFFIXES: Partial<Record<BranchKind, readonly string[]>> =
     ],
     central_kitchen: [
       "/stock/grn",
-      "/stock/production",
+      "/inventory/production",
       "/stock/transfer",
       "/stock/requests",
       "/stock/receive",

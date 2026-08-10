@@ -20,6 +20,7 @@ import {
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
+  ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
   Receipt as IconReceipt,
@@ -58,6 +59,10 @@ import {
 } from "@lib/inventory/grn-detail-model";
 import { supplierInvoiceHrefForGrn } from "@lib/inventory/grn-list-model";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
+import {
+  grnHasCostPendingLines,
+  resolveGrnValuationDisplay,
+} from "@lib/inventory/valuation-display";
 import { messages } from "@lib/messages";
 import { AddGrnLineDialog } from "./views/add-grn-line-dialog";
 import { AmendOwnerDialog } from "./views/amend-owner-dialog";
@@ -76,6 +81,7 @@ import type {
 
 const DESK_LINE_EDIT_BREAKPOINT = 1024;
 const grnMessages = messages.inventory.grn;
+const valuationCopy = messages.inventory.valuationDisplay;
 
 export function GRNDetailClient({
   grn,
@@ -88,7 +94,9 @@ export function GRNDetailClient({
   receivingLocationOptions = [],
   auditLogs = [],
   grnListBasePath = "/inventory/grn",
+  grnMobileBackPath = "/inventory/grn/new",
   supplierInvoicesBasePath = "/finance/supplier-invoices",
+  embedded = false,
   presentation = "page",
 }: {
   grn: GRNDetail;
@@ -101,11 +109,14 @@ export function GRNDetailClient({
   receivingLocationOptions?: ReceivingLocationOption[];
   auditLogs?: AuditLogRow[];
   grnListBasePath?: string;
+  grnMobileBackPath?: string;
   supplierInvoicesBasePath?: string;
+  embedded?: boolean;
   presentation?: "page" | "dialog";
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isMobile = embedded;
   const isDesktopLineEdit = !useIsMobile(DESK_LINE_EDIT_BREAKPOINT);
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
@@ -135,6 +146,11 @@ export function GRNDetailClient({
 
   const { lines, setLines, patch, dirtyLines } = useGrnLines(grn.items);
   const hasAcceptedQuantity = hasAcceptedGrnQuantity(lines);
+  const valuationKind = resolveGrnValuationDisplay({
+    status: grn.status,
+    invoiceId: grn.invoiceId,
+    hasCostPendingLines: grnHasCostPendingLines(lines),
+  });
 
   function closeOwnerDialogUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -152,7 +168,7 @@ export function GRNDetailClient({
   const { handleSave, handleDeleteLine, upsertLocalLine, handleConfirmGrn } =
     useGrnLineActions({
       grn,
-      isMobile: false,
+      isMobile,
       lines,
       dirtyLines,
       setLines,
@@ -197,6 +213,30 @@ export function GRNDetailClient({
   const closeLineEdit = () => setEditingLineId(null);
 
   const nextStepBanner = (() => {
+    if (isConfirmed && valuationKind === "pending_invoice") {
+      return {
+        title: valuationCopy.pendingInvoice,
+        body: valuationCopy.hintReceivedAwaitingInvoice,
+        action: canManageSupplierInvoice ? (
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <Link
+                href={supplierInvoiceHrefForGrn({
+                  basePath: supplierInvoicesBasePath,
+                  grnId: grn.id,
+                  invoiceId: grn.invoiceId,
+                })}
+              />
+            }
+          >
+            <IconReceipt className="size-4" />
+            {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
+          </Button>
+        ) : null,
+      };
+    }
     if (!isDraft) return null;
     if (dirtyLines.length > 0) {
       return {
@@ -359,6 +399,11 @@ export function GRNDetailClient({
               {excess > 0 ? (
                 <Badge variant="warning" className="mt-1">
                   {grnCopy.line.excessShort(excess, line.unit)}
+                </Badge>
+              ) : null}
+              {!isDraft && line.costPending ? (
+                <Badge variant="warning" className="mt-1">
+                  {valuationCopy.pendingInvoice}
                 </Badge>
               ) : null}
             </div>
@@ -831,7 +876,7 @@ export function GRNDetailClient({
         },
       ]}
       defaultValue="document"
-      stickyList={presentation !== "dialog"}
+      stickyList={!embedded && presentation !== "dialog"}
     >
       <TabsContent value="document" className="mt-4">
         {documentBody}
@@ -843,6 +888,40 @@ export function GRNDetailClient({
       </TabsContent>
     </AppPageTabs>
   );
+
+  if (embedded) {
+    return (
+      <div className="flex w-full flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            render={<Link href={grnMobileBackPath} aria-label={grnCopy.back} />}
+          >
+            <IconArrowLeft className="size-4" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-semibold">
+              {grn.code}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {grn.supplier} • {grn.poCode || "—"} • {grn.branchName}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+            {valuationKind === "pending_invoice" ? (
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            ) : null}
+          </div>
+        </div>
+        {tabs}
+        {footer}
+        {dialogs}
+      </div>
+    );
+  }
 
   if (presentation === "dialog") {
     const closeDialog = async () => {
@@ -867,7 +946,11 @@ export function GRNDetailClient({
         }}
         variant="document"
         title={grn.code}
-        description={statusBadge.label}
+        description={
+          valuationKind === "pending_invoice"
+            ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
+            : statusBadge.label
+        }
         footer={footer}
       >
         {tabs}
@@ -885,7 +968,10 @@ export function GRNDetailClient({
         <AppPageHeader
           title={grn.code}
           badge={{
-            children: statusBadge.label,
+            children:
+              valuationKind === "pending_invoice"
+                ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
+                : statusBadge.label,
             variant: statusBadge.variant,
           }}
           breadcrumb={

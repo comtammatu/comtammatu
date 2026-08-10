@@ -1,8 +1,7 @@
 # SOP Inventory — Một warehouse mỗi site
 
-> Áp dụng sau **D093**. Business contract: [inventory.md](inventory.md);
-> phân vai / nav: [inventory-role-ops.md](inventory-role-ops.md). Route/action
-> authority: runtime auth + permission/RLS/RPC.
+> Áp dụng sau **D093**. Business contract và phân vai: [inventory.md](inventory.md)
+> §11. Route/action authority: runtime auth + permission/RLS/RPC.
 
 ## 1. Boundary
 
@@ -11,7 +10,8 @@
 - **Mua NCC:** chỉ Kho Tổng / Bếp TT — Yêu cầu mua → PO theo NCC → GRN theo
   lần giao.
 - **Bổ sung CN:** phiếu **Yêu cầu hàng** → fulfill trung tâm → DC → CN nhận.
-  Nguồn dòng = `ingredients.default_fulfill_site_kind` (Owner gán trên catalog).
+  Nguồn dòng = `ingredients.default_fulfill_site_kind` (Owner gán trên catalog;
+  checklist sẵn sàng tại `/inventory/ingredients`).
 - Kho trên GRN nháp chỉ SL / đơn vị / từ chối (+ lý do/ảnh). Đơn giá trên PO.
 - Chi nhánh **không** GRN UI, **không** production, **không** PO/giá mua chuỗi.
 - Không dùng tài liệu này để suy ra quyền.
@@ -22,11 +22,15 @@
 
 1. Kho tạo **Yêu cầu mua** tại site nhận trung tâm.
 2. Kế toán hoặc Owner tạo PO theo từng NCC, nhập giá và duyệt (`draft → sent`).
-3. Khi NCC giao, mở PO và chọn **Tạo phiếu nhập**. Một PO chỉ có một GRN nháp
-   **Chờ nhập hàng** tại một thời điểm.
-4. Kho nhập thực nhận và từ chối; lý do + ảnh là bắt buộc khi có từ chối.
+3. Khi PO chuyển `sent` (hoặc `approved` / `partially_received`), hệ thống **tự
+   tạo** đúng một GRN nháp **Chờ nhập hàng** (Auto-GRN). Một PO chỉ có một GRN
+   nháp hoạt động tại một thời điểm. Nút «Tạo phiếu nhập» trên PO chỉ là recovery
+   / idempotent — không phải bước quy trình chính.
+4. Kho mở danh sách GRN, nhập thực nhận và từ chối; lý do + ảnh là bắt buộc khi
+   có từ chối.
 5. Kho xác nhận GRN. Phần áp dụng PO dùng giá PO; phần dư ngoài đơn nhập giá `0`.
-6. PO còn thiếu tiếp tục tạo GRN cho lần giao sau. HĐ NCC → Finance/AP.
+6. Nếu PO còn thiếu sau confirm, hệ thống **tự tạo GRN nháp kế tiếp** cho phần
+   còn lại. HĐ NCC → Finance/AP.
 
 Hàng tặng biết trước là dòng PO giá `0`; không tạo phân hệ khuyến mãi.
 
@@ -78,6 +82,5 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 
 ## 7. Tài liệu liên quan
 
-- [inventory-role-ops.md](inventory-role-ops.md)
 - [inventory.md](inventory.md)
 - [operational-data-contract.md](operational-data-contract.md)

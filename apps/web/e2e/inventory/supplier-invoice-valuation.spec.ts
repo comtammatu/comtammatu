@@ -10,7 +10,7 @@ test.describe("inventory valuation surfaces", () => {
     await page.goto("/finance/supplier-invoices");
     await expect(
       page.getByRole("heading", {
-        name: "Thuế GTGT đầu vào | Thanh toán NCC",
+        name: "GTGT đầu vào & NCC",
       }),
     ).toBeVisible();
   });

@@ -32,6 +32,8 @@ export type StockRequestIngredientOption = {
   name: string;
   sku: string | null;
   fulfillSiteKind: "central_supply" | "central_kitchen";
+  /** Base-unit INV-10 suggestion; 0 when at/above min. Editable after prefill. */
+  suggestedOrderQty: number;
   units: Array<{ id: number; label: string; isBase: boolean }>;
 };
 
@@ -79,6 +81,7 @@ export function StockRequestEditor({
   initialStatus,
   initialNeededAt,
   initialNotes,
+  copyFromRequestId = null,
   returnHref,
 }: {
   branchId: number;
@@ -88,6 +91,7 @@ export function StockRequestEditor({
   initialStatus: string | null;
   initialNeededAt: string | null;
   initialNotes: string | null;
+  copyFromRequestId?: number | null;
   returnHref?: string;
 }) {
   const router = useRouter();
@@ -117,9 +121,16 @@ export function StockRequestEditor({
     const ingredient = ingredients.find((item) => item.id === Number(value));
     const defaultUnit =
       ingredient?.units.find((unit) => unit.isBase) ?? ingredient?.units[0];
+    const shouldPrefill =
+      line.quantity.trim() === "" || Number(line.quantity) <= 0;
+    const suggested =
+      ingredient != null && ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : line.quantity;
     patchLine(line.key, {
       ingredientId: value,
       entryUnitId: defaultUnit ? String(defaultUnit.id) : "",
+      ...(shouldPrefill ? { quantity: suggested } : {}),
     });
   }
 
@@ -181,6 +192,11 @@ export function StockRequestEditor({
 
   return (
     <>
+      {copyFromRequestId != null ? (
+        <Item variant="muted" size="sm">
+          {messages.inventory.stockRequests.branch.copyToNewBanner}
+        </Item>
+      ) : null}
       <BranchOperatorPanel
         title={copy.itemsTitle}
         description={copy.itemsDescription}

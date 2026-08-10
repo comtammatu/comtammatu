@@ -50,6 +50,7 @@ import type {
   IngredientOption,
   MenuRecipeLineDraft,
 } from "./menu-recipe-line-dialog";
+import type { MenuRecipeCostSignal } from "../_lib/menu-recipe-cost";
 import { messages } from "@lib/messages";
 
 export type MenuRecipeItem = {
@@ -60,7 +61,38 @@ export type MenuRecipeItem = {
   entryUnitId: number | null;
   note: string | null;
   lineCost: number | null;
+  costSignals: readonly MenuRecipeCostSignal[];
 };
+
+function menuRecipeCostSignalLabel(signal: MenuRecipeCostSignal): string {
+  switch (signal) {
+    case "missing_fulfill_site":
+      return INVENTORY_VI.menuRecipeMissingFulfillSite;
+    case "missing_source_wac":
+      return INVENTORY_VI.menuRecipeMissingSourceWac;
+    default: {
+      const _exhaustive: never = signal;
+      return _exhaustive;
+    }
+  }
+}
+
+function MenuRecipeCostSignalBadges({
+  signals,
+}: {
+  signals: readonly MenuRecipeCostSignal[];
+}) {
+  if (signals.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {signals.map((signal) => (
+        <Badge key={signal} variant="destructive" className="text-xs">
+          {menuRecipeCostSignalLabel(signal)}
+        </Badge>
+      ))}
+    </div>
+  );
+}
 
 export type MenuRecipeRow = {
   id: number;
@@ -173,13 +205,16 @@ export function MenuRecipesClient({
             </span>
           ) : (
             menuRecipe.items.map((item, i) => (
-              <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">
-                  {item.ingredientName}
-                </span>
-                <span className="font-mono">
-                  {item.qty} {item.unitLabel}
-                </span>
+              <div key={i} className="flex flex-col gap-1">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">
+                    {item.ingredientName}
+                  </span>
+                  <span className="font-mono">
+                    {item.qty} {item.unitLabel}
+                  </span>
+                </div>
+                <MenuRecipeCostSignalBadges signals={item.costSignals} />
               </div>
             ))
           )}
@@ -190,14 +225,23 @@ export function MenuRecipesClient({
       key: "cost",
       header: INVENTORY_VI.menuRecipeColUnitCost,
       className: "font-mono",
-      render: (menuRecipe) =>
-        menuRecipe.estimatedCost == null ? (
-          <span className="text-muted-foreground">
-            {INVENTORY_VI.menuRecipeCostUnavailable}
-          </span>
-        ) : (
-          INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost))
-        ),
+      render: (menuRecipe) => {
+        const rowSignals = [
+          ...new Set(menuRecipe.items.flatMap((item) => item.costSignals)),
+        ];
+        return (
+          <div className="flex flex-col items-start gap-1">
+            {menuRecipe.estimatedCost == null ? (
+              <span className="text-muted-foreground">
+                {INVENTORY_VI.menuRecipeCostUnavailable}
+              </span>
+            ) : (
+              INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost))
+            )}
+            <MenuRecipeCostSignalBadges signals={rowSignals} />
+          </div>
+        );
+      },
     },
     {
       key: "stockCapacity",
@@ -367,13 +411,16 @@ function MenuRecipeCard({
             </span>
           ) : (
             menuRecipe.items.map((item, i) => (
-              <div key={i} className="flex justify-between gap-2">
-                <span className="text-muted-foreground">
-                  {item.ingredientName}
-                </span>
-                <span className="font-mono">
-                  {item.qty} {item.unitLabel}
-                </span>
+              <div key={i} className="flex flex-col gap-1">
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">
+                    {item.ingredientName}
+                  </span>
+                  <span className="font-mono">
+                    {item.qty} {item.unitLabel}
+                  </span>
+                </div>
+                <MenuRecipeCostSignalBadges signals={item.costSignals} />
               </div>
             ))
           )}

@@ -79,6 +79,9 @@ import {
 } from "../_lib/bank-reconciliation-filter";
 import { FilterBar } from "../components/filter-bar";
 import { MatchExpenseCell } from "./match-expense-cell";
+import { displayBankContent } from "../_lib/display-bank-content";
+
+export { displayBankContent };
 
 const copy = messages.finance.bankTransactions;
 const REVIEW_PENDING_VALUE = "pending";
@@ -244,11 +247,6 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
   );
 }
 
-function displayBankContent(content: string | null): string {
-  const value = content?.trim();
-  return value && value.toLowerCase() !== "null" ? value : copy.noContent;
-}
-
 function RowContentCell({ row }: { row: BankReconciliationRow }) {
   if (row.kind === "missing_webhook") {
     const content = `${copy.missingWebhookTable.payment} ${formatPaymentId(
@@ -346,7 +344,7 @@ function MatchCell({
       expenseOptions={expenseOptions}
       touch={touch}
       evidence={{
-        content: tx.content ?? copy.noContent,
+        content: tx.content,
         reference: referenceCode(tx),
         occurredAt: formatVNDateTime(resolveSepayTransactionInstant(tx)),
         accountNumber: tx.accountNumber,

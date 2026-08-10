@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFieldArray, useForm, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import {
 } from "@comtammatu/shared/format";
 import {
   addMoney,
+  calculateVatAmount,
   hasMaximumScale,
   minorUnitsToCanonical,
   parseMoneyToMinorUnits,
@@ -39,19 +40,19 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
+  RowActionsContextMenuItems,
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { KpiCard } from "@/components/kpi/kpi-card";
 import { StatusBadge } from "@/components/status-badge";
-import { AppListFrame, AppToolbar, KpiRow } from "@/components/surface";
+import { AppListFrame, AppPageHeader, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -60,14 +61,21 @@ import {
   AppDialog,
   BusinessDateField,
   FormDialog,
-  MoneyVndField,
   PhotoUploadInput,
   SelectField,
   TextareaField,
 } from "@/components/form";
 import { messages } from "@lib/messages";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { FilterBar } from "../components/filter-bar";
+import { FinanceAmountCell } from "../components/finance-amount-cell";
 import {
+  FinanceMoneyBlockFields,
+  FinanceMoneySummary,
+  moneyLabels,
+} from "../components/finance-money-block";
+import {
+  EXPENSE_CATEGORIES_BY_GROUP,
   EXPENSE_PAYMENT_METHODS,
   canCorrectExpensePaymentMethod,
   classifyExpensePaymentState,
@@ -79,8 +87,8 @@ import {
 import type { FinanceParams } from "../_lib/finance-params";
 import {
   EXPENSE_VAT_RATES,
-  expenseTaxableFromGross,
-  resolveExpenseVatAmountFromGross,
+  expenseGrossFromBreakdown,
+  resolveExpenseVatAmount,
   type ExpenseVatRate,
 } from "../_lib/expense-vat";
 import {
@@ -97,6 +105,7 @@ import {
 
 const copy = messages.finance.expenses;
 const TENANT_LEVEL_BRANCH_VALUE = "__tenant__";
+const EXPENSE_OVERLAY_KEYS = ["expenseId", "mode"] as const;
 
 const optionalMoneySchema = z.string().refine(
   (value) => {
@@ -134,7 +143,7 @@ interface Props {
 }
 
 const expenseFormLineSchema = z.object({
-  totalAmount: optionalMoneySchema.refine(
+  taxableAmount: optionalMoneySchema.refine(
     (value) => !!value && parseMoneyToMinorUnits(value) > 0n,
     { error: FORM_VI.required },
   ),
@@ -166,10 +175,10 @@ const expenseFormSchema = z
 
       if (!line.vatAmount) return;
       const vatAmount = parseMoneyToMinorUnits(line.vatAmount);
-      if (vatAmount > parseMoneyToMinorUnits(line.totalAmount)) {
+      if (vatAmount > parseMoneyToMinorUnits(line.taxableAmount)) {
         ctx.addIssue({
           code: "custom",
-          message: "Thuế GTGT không được lớn hơn tổng tiền.",
+          message: "Thuế GTGT không được lớn hơn tiền chưa thuế.",
           path: ["lines", index, "vatAmount"],
         });
       }
@@ -187,41 +196,59 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 function buildExpenseVatBreakdown(values: ExpenseFormValues) {
   return values.lines.flatMap((line) => {
-    if (!line.totalAmount || parseMoneyToMinorUnits(line.totalAmount) <= 0n) {
+    if (
+      !line.taxableAmount ||
+      parseMoneyToMinorUnits(line.taxableAmount) <= 0n
+    ) {
       return [];
     }
-    const grossAmount = minorUnitsToCanonical(
-      parseMoneyToMinorUnits(line.totalAmount),
+    const taxableAmount = minorUnitsToCanonical(
+      parseMoneyToMinorUnits(line.taxableAmount),
     );
     const vatRate = Number(line.vatRate) as ExpenseVatRate;
-    const vatAmount = resolveExpenseVatAmountFromGross(
-      grossAmount,
+    const vatAmount = resolveExpenseVatAmount(
+      taxableAmount,
       vatRate,
       line.vatAmount.trim(),
     );
 
-    return [
-      {
-        vatRate,
-        taxableAmount: expenseTaxableFromGross(grossAmount, vatAmount),
-        vatAmount,
-      },
-    ];
+    return [{ vatRate, taxableAmount, vatAmount }];
   });
 }
 
-const EXPENSE_FORM_CATEGORIES = [
-  "rent",
-  "salary",
-  "utilities",
-  "hospitality",
-  "other",
-] as const satisfies readonly ExpenseCategory[];
-
-const CATEGORY_OPTIONS = EXPENSE_FORM_CATEGORIES.map((value) => ({
-  value,
-  label: copy.categoryLabels[value],
-}));
+function expenseCategoryGroups(currentCategory: string) {
+  const operatingOptions = EXPENSE_CATEGORIES_BY_GROUP.operating.map(
+    (value) => ({
+      value,
+      label: copy.categoryLabels[value],
+    }),
+  );
+  const isOperating =
+    currentCategory !== "" &&
+    (EXPENSE_CATEGORIES_BY_GROUP.operating as readonly string[]).includes(
+      currentCategory,
+    );
+  const extraOptions =
+    currentCategory && !isOperating
+      ? [
+          {
+            value: currentCategory,
+            label:
+              (copy.categoryLabels as Record<string, string>)[
+                currentCategory
+              ] ?? currentCategory,
+          },
+        ]
+      : [];
+  const options = [
+    ...operatingOptions,
+    ...extraOptions.filter(
+      (option) =>
+        !operatingOptions.some((existing) => existing.value === option.value),
+    ),
+  ];
+  return [{ label: copy.categoryGroupLabels.operating, options }];
+}
 
 const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({
   value,
@@ -234,7 +261,7 @@ const VAT_RATE_OPTIONS = EXPENSE_VAT_RATES.map((rate) => ({
 }));
 
 const EMPTY_EXPENSE_LINE: ExpenseFormValues["lines"][number] = {
-  totalAmount: "",
+  taxableAmount: "",
   vatRate: "0",
   vatAmount: "",
 };
@@ -265,10 +292,11 @@ function ExpenseFormFields({
     name: "lines",
   });
   const lines = form.watch("lines");
+  const category = form.watch("category");
   const vatBreakdown = buildExpenseVatBreakdown(form.getValues());
   const subtotal = addMoney(vatBreakdown.map((line) => line.taxableAmount));
   const vatAmount = addMoney(vatBreakdown.map((line) => line.vatAmount));
-  const totalAmount = addMoney(lines.map((line) => line.totalAmount || "0"));
+  const grossTotal = expenseGrossFromBreakdown(vatBreakdown);
   const showPaymentMethodAsText = readOnly || paymentMethodReadOnly;
 
   return (
@@ -296,7 +324,7 @@ function ExpenseFormFields({
           control={form.control}
           name="category"
           label={copy.form.category}
-          options={CATEGORY_OPTIONS}
+          groups={expenseCategoryGroups(category)}
           placeholder={copy.form.categoryPlaceholder}
           required
           disabled={readOnly}
@@ -352,37 +380,40 @@ function ExpenseFormFields({
             <Item
               key={field.id}
               variant="outline"
-              className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)_auto]"
+              className="flex flex-col gap-3 p-4"
             >
-              <MoneyVndField
+              <FinanceMoneyBlockFields
                 control={form.control}
-                name={`lines.${index}.totalAmount`}
-                label={copy.form.lineTotal}
-                placeholder="0"
-                required
-                disabled={readOnly}
-              />
-              <SelectField
-                control={form.control}
-                name={`lines.${index}.vatRate`}
-                label={copy.form.lineVatRate}
-                options={rateOptions}
-                required
-                disabled={readOnly}
-              />
-              <MoneyVndField
-                control={form.control}
-                name={`lines.${index}.vatAmount`}
-                label={copy.form.lineVatAmount}
-                placeholder={copy.form.vatAutoPlaceholder}
-                disabled={readOnly}
+                taxableName={`lines.${index}.taxableAmount`}
+                vatRateName={`lines.${index}.vatRate`}
+                vatAmountName={`lines.${index}.vatAmount`}
+                vatRateOptions={rateOptions}
+                readOnly={readOnly}
+                onRecalculateVat={
+                  readOnly
+                    ? undefined
+                    : () => {
+                        const taxable = form.getValues(
+                          `lines.${index}.taxableAmount`,
+                        );
+                        const rate = Number(
+                          form.getValues(`lines.${index}.vatRate`),
+                        ) as ExpenseVatRate;
+                        if (!taxable?.trim()) return;
+                        form.setValue(
+                          `lines.${index}.vatAmount`,
+                          calculateVatAmount(taxable, rate),
+                          { shouldDirty: true },
+                        );
+                      }
+                }
               />
               {!readOnly && fields.length > 1 ? (
                 <Button
                   type="button"
                   variant="outline"
                   size={isTouchLayout ? "touch" : "default"}
-                  className="self-end"
+                  className="self-start"
                   onClick={() => remove(index)}
                 >
                   <IconTrash data-icon="inline-start" />
@@ -415,30 +446,17 @@ function ExpenseFormFields({
             {copy.form.addLine}
           </Button>
         ) : null}
-        <NoteCallout tone="muted">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">
-              {copy.form.subtotalLabel}
-            </span>
-            <span className="font-mono tabular-nums">
-              {formatAccountingVND(subtotal)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">
-              {copy.form.vatTotalLabel}
-            </span>
-            <span className="font-mono tabular-nums">
-              {formatAccountingVND(vatAmount)}
-            </span>
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-medium">
-            <span>{copy.form.grossLabel}</span>
-            <span className="font-mono tabular-nums">
-              {formatAccountingVND(totalAmount)}
-            </span>
-          </div>
-        </NoteCallout>
+        <FinanceMoneySummary
+          rows={[
+            { label: moneyLabels.subtotalExVat, value: subtotal },
+            { label: moneyLabels.vatAmount, value: vatAmount },
+            {
+              label: moneyLabels.totalInclVat,
+              value: grossTotal,
+              emphasize: true,
+            },
+          ]}
+        />
       </div>
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium">{copy.form.attachment}</p>
@@ -498,10 +516,9 @@ function expenseToFormValues(expense: ExpenseRow): ExpenseFormValues {
     lines:
       expense.vat_breakdown.length > 0
         ? expense.vat_breakdown.map((line) => ({
-            totalAmount: addMoney([
-              String(line.taxableAmount),
-              String(line.vatAmount),
-            ]),
+            taxableAmount: minorUnitsToCanonical(
+              parseMoneyToMinorUnits(String(line.taxableAmount)),
+            ),
             vatRate: String(
               line.vatRate,
             ) as ExpenseFormValues["lines"][number]["vatRate"],
@@ -613,16 +630,46 @@ export function ExpensesClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const overlay = useDocumentOverlayUrl(EXPENSE_OVERLAY_KEYS);
   const isTouchLayout = useIsMobile(1024);
   const showOnlyNeedsAction = stateFilter === "pending";
   const visibleRows = useMemo(
     () => (showOnlyNeedsAction ? rows.filter(expenseNeedsAction) : rows),
     [rows, showOnlyNeedsAction],
   );
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<ExpenseRow | null>(null);
-  const [viewingExpense, setViewingExpense] = useState<ExpenseRow | null>(null);
   const [isMutating, startMutation] = useTransition();
+
+  const mode = overlay.get("mode");
+  const expenseIdRaw = overlay.get("expenseId");
+  const parsedExpenseId = expenseIdRaw ? Number(expenseIdRaw) : null;
+  const expenseId =
+    parsedExpenseId != null &&
+    Number.isInteger(parsedExpenseId) &&
+    parsedExpenseId > 0
+      ? parsedExpenseId
+      : null;
+  const selectedExpense = useMemo(
+    () =>
+      expenseId != null
+        ? (rows.find((row) => row.id === expenseId) ?? null)
+        : null,
+    [rows, expenseId],
+  );
+  const createOpen = mode === "create";
+  const viewOpen = mode === "view" && selectedExpense != null;
+  const editOpen = mode === "edit" && selectedExpense != null;
+  const formDialogOpen = canManageExpenses && (createOpen || editOpen);
+  const viewingExpense = viewOpen ? selectedExpense : null;
+  const editingExpense = editOpen ? selectedExpense : null;
+
+  const { clearOverlay, patchOverlay } = overlay;
+
+  useEffect(() => {
+    if (mode == null || mode === "create") return;
+    if (expenseId != null && selectedExpense == null) {
+      clearOverlay();
+    }
+  }, [mode, expenseId, selectedExpense, clearOverlay]);
 
   const branchNames = new Map(branches.map((b) => [b.id, b.name]));
   const branchLabel = (branchId: number | null) =>
@@ -631,18 +678,11 @@ export function ExpensesClient({
       : copy.tenantLevel;
 
   function openExpenseDocument(row: ExpenseRow) {
-    if (canManageExpenses) {
-      setEditingExpense(row);
-      setDialogOpen(true);
-      return;
-    }
-    setViewingExpense(row);
+    patchOverlay({ expenseId: row.id, mode: "view" }, "push");
   }
 
   function closeExpenseDocument() {
-    setDialogOpen(false);
-    setEditingExpense(null);
-    setViewingExpense(null);
+    clearOverlay();
   }
 
   function toggleNeedsActionFilter() {
@@ -751,12 +791,15 @@ export function ExpensesClient({
 
   function onCreateSuccess(_result: ActionResult) {
     toast.success(editingExpense ? copy.form.editSuccess : copy.form.success);
+    closeExpenseDocument();
   }
 
   function onEdit(row: ExpenseRow) {
-    setViewingExpense(null);
-    setEditingExpense(row);
-    setDialogOpen(true);
+    patchOverlay({ expenseId: row.id, mode: "edit" }, "replace");
+  }
+
+  function openCreateExpense() {
+    patchOverlay({ expenseId: null, mode: "create" }, "push");
   }
 
   async function copyTransferContent(content: string) {
@@ -781,6 +824,7 @@ export function ExpensesClient({
       const result = await deleteExpense({ expenseId: row.id });
       if (result.success) {
         toast.success(copy.table.deleteSuccess);
+        if (row.id === expenseId) closeExpenseDocument();
         router.refresh();
       } else {
         toast.error(result.error ?? copy.table.deleteFailed);
@@ -970,10 +1014,36 @@ export function ExpensesClient({
       render: (row) => methodLabel(row),
     },
     {
+      key: "subtotal",
+      header: moneyLabels.subtotalExVat,
+      className: "text-right",
+      render: (row) => (
+        <FinanceAmountCell amount={row.subtotal} basis="exVat" />
+      ),
+    },
+    {
+      key: "vat",
+      header: copy.table.vat,
+      className: "text-right",
+      render: (row) => <FinanceAmountCell amount={row.vat_amount} />,
+    },
+    {
       key: "amount",
-      header: copy.table.amount,
-      className: "text-right font-mono tabular-nums",
-      render: (row) => formatAccountingVND(row.amount),
+      header: moneyLabels.totalInclVat,
+      className: "text-right",
+      render: (row) => (
+        <FinanceAmountCell amount={row.amount} basis="inclVat" />
+      ),
+    },
+    {
+      key: "paymentState",
+      header: copy.table.paymentState,
+      render: (row) => (
+        <StatusBadge
+          domain="expense-payment"
+          value={classifyExpensePaymentState(row)}
+        />
+      ),
     },
     {
       key: "detail",
@@ -1009,12 +1079,32 @@ export function ExpensesClient({
 
   return (
     <>
-      <FilterBar
-        params={params}
-        branches={branches}
-        basePath="/finance/expenses"
-        locationFilter
-        hide={["compare", "granularity"]}
+      <AppPageHeader
+        title={copy.page.title}
+        description={copy.page.description}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size={isTouchLayout ? "touch" : "default"}
+              variant={showOnlyNeedsAction ? "default" : "outline"}
+              onClick={toggleNeedsActionFilter}
+              aria-pressed={showOnlyNeedsAction}
+            >
+              <IconAlertTriangle data-icon="inline-start" />
+              {copy.needsActionFilter}
+            </Button>
+            {canManageExpenses ? (
+              <Button
+                size={isTouchLayout ? "touch" : "default"}
+                onClick={openCreateExpense}
+              >
+                <IconPlus data-icon="inline-start" />
+                {copy.add}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       <KpiRow density="compact">
@@ -1042,34 +1132,13 @@ export function ExpensesClient({
         title={copy.listTitle}
         contentScroll
         toolbar={
-          <AppToolbar
+          <FilterBar
             variant="inline"
-            actions={
-              <>
-                <Button
-                  type="button"
-                  size={isTouchLayout ? "touch" : "default"}
-                  variant={showOnlyNeedsAction ? "default" : "outline"}
-                  onClick={toggleNeedsActionFilter}
-                  aria-pressed={showOnlyNeedsAction}
-                >
-                  <IconAlertTriangle data-icon="inline-start" />
-                  {copy.needsActionFilter}
-                </Button>
-                {canManageExpenses ? (
-                  <Button
-                    size={isTouchLayout ? "touch" : "default"}
-                    onClick={() => {
-                      setEditingExpense(null);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <IconPlus data-icon="inline-start" />
-                    {copy.add}
-                  </Button>
-                ) : null}
-              </>
-            }
+            params={params}
+            branches={branches}
+            basePath="/finance/expenses"
+            locationFilter
+            hide={["compare", "granularity"]}
           />
         }
       >
@@ -1083,10 +1152,15 @@ export function ExpensesClient({
             copy.form.openAria(categoryLabel(row.category))
           }
           getRowDataState={(row) =>
-            row.id === editingExpense?.id || row.id === viewingExpense?.id
-              ? "selected"
-              : undefined
+            row.id === expenseId ? "selected" : undefined
           }
+          renderRowContextMenu={(row) => {
+            if (!canManageExpenses) return null;
+            const items = getExpenseRowActions(row);
+            return items.length > 0 ? (
+              <RowActionsContextMenuItems items={items} />
+            ) : null;
+          }}
           emptyMode="no-data"
           emptyTitle={
             showOnlyNeedsAction ? copy.empty.clearedTitle : copy.empty.title
@@ -1122,29 +1196,32 @@ export function ExpensesClient({
                       {branchLabel(row.branch_id)} · {methodLabel(row)}
                     </ItemDescription>
                   </ItemContent>
-                  {canManageExpenses && actionItems.length > 0 ? (
-                    <ItemActions
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
-                      <RowActionsMenu
-                        items={actionItems}
-                        label={copy.table.actions}
-                        triggerSize="icon-touch"
-                      />
-                    </ItemActions>
-                  ) : null}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge
+                      domain="expense-payment"
+                      value={classifyExpensePaymentState(row)}
+                    />
+                    {canManageExpenses && actionItems.length > 0 ? (
+                      <ItemActions
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <RowActionsMenu
+                          items={actionItems}
+                          label={copy.table.actions}
+                          triggerSize="icon-touch"
+                        />
+                      </ItemActions>
+                    ) : null}
+                  </div>
                 </ItemHeader>
                 <ItemFooter className="items-end gap-2">
                   <ItemDescription className="min-w-0 flex-1">
                     {detail || "—"}
                   </ItemDescription>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span
-                      className="shrink-0 whitespace-nowrap font-mono text-sm font-semibold tabular-nums"
-                      title={formatAccountingVND(row.amount)}
-                    >
-                      {formatCompactVND(row.amount)}
+                    <span className="shrink-0 whitespace-nowrap font-mono text-sm font-semibold tabular-nums">
+                      {formatAccountingVND(row.amount)}
                     </span>
                   </div>
                 </ItemFooter>
@@ -1156,10 +1233,9 @@ export function ExpensesClient({
 
       {canManageExpenses ? (
         <FormDialog
-          open={dialogOpen}
+          open={formDialogOpen}
           onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setEditingExpense(null);
+            if (!open) closeExpenseDocument();
           }}
           title={editingExpense ? copy.form.editTitle : copy.form.title}
           description={
@@ -1288,16 +1364,14 @@ export function ExpensesClient({
         </FormDialog>
       ) : null}
 
-      {!canManageExpenses ? (
-        <ExpenseViewDialog
-          expense={viewingExpense}
-          branchOptions={branchOptions}
-          tenantId={tenantId}
-          isTouchLayout={isTouchLayout}
-          onClose={() => setViewingExpense(null)}
-          onCopyTransferContent={(content) => void copyTransferContent(content)}
-        />
-      ) : null}
+      <ExpenseViewDialog
+        expense={viewingExpense}
+        branchOptions={branchOptions}
+        tenantId={tenantId}
+        isTouchLayout={isTouchLayout}
+        onClose={closeExpenseDocument}
+        onCopyTransferContent={(content) => void copyTransferContent(content)}
+      />
     </>
   );
 }

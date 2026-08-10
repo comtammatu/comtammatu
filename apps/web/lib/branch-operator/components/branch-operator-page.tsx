@@ -357,38 +357,6 @@ export function BranchOperatorInlineState({
   );
 }
 
-export interface BranchOperatorBadgeListProps {
-  items: Array<{
-    key: string;
-    label: ReactNode;
-    title?: string;
-    variant?: BadgeProps["variant"];
-  }>;
-  className?: string;
-}
-
-export function BranchOperatorBadgeList({
-  items,
-  className,
-}: BranchOperatorBadgeListProps) {
-  return (
-    <div
-      data-branch-operator-badge-list
-      className={cn("flex flex-wrap gap-1.5", className)}
-    >
-      {items.map((item) => (
-        <Badge
-          key={item.key}
-          variant={item.variant ?? "secondary"}
-          title={item.title}
-        >
-          {item.label}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
 export interface BranchOperatorStatusStripProps {
   items: Array<{
     label: string;

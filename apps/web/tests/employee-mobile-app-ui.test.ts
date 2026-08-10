@@ -53,8 +53,14 @@ test("operator entry owns the mobile shell and keeps bottom nav outside scroll c
   );
   const appBottomNav = read("apps/web/app/components/app-bottom-nav.tsx");
 
-  assert.match(layout, /homeHref=\{`\/br\/\$\{context\.branchId\}`\}/);
-  assert.match(layout, /homeAriaLabel=\{APP_COPY_VI\.branchHome\}/);
+  assert.match(
+    layout,
+    /homeHref=\{\s*branchKind === "branch"\s*\?\s*`\/br\/\$\{context\.branchId\}`\s*:\s*"\/"\s*\}/,
+  );
+  assert.match(
+    layout,
+    /homeAriaLabel=\{\s*branchKind === "branch"\s*\?\s*APP_COPY_VI\.branchHome\s*:\s*APP_COPY_VI\.ownerTitle\s*\}/,
+  );
   assert.match(layout, /id="main-content"[\s\S]*overflow-y-auto/);
   assert.match(
     layout,

@@ -197,7 +197,7 @@ test("Branch bottom nav only contains persistent daily job families", () => {
   assert.match(bottomNav, /\bUser\b/);
 });
 
-test("POS, KDS, and Runner stay standalone station apps", () => {
+test("POS, KDS, and Pickup stay standalone station apps", () => {
   const routeMap = read("packages/shared/src/auth/route-map.ts");
 
   for (const contract of [
@@ -216,10 +216,10 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
       primaryNav: "operational-chrome",
     },
     {
-      id: "runner",
+      id: "pickup",
       surface: "branch_operation",
-      entryPath: "/br/[branchId]/runner",
-      moduleKey: "runner",
+      entryPath: "/br/[branchId]/pickup",
+      moduleKey: "pickup",
       primaryNav: "operational-chrome",
     },
   ]) {
@@ -238,9 +238,9 @@ test("POS, KDS, and Runner stay standalone station apps", () => {
       "apps/web/app/(protected)/br/[branchId]/kds/layout.tsx",
     ],
     [
-      "Runner",
-      "apps/web/app/(protected)/br/[branchId]/(operator)/runner",
-      "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx",
+      "Pickup",
+      "apps/web/app/(protected)/br/[branchId]/(operator)/pickup",
+      "apps/web/app/(protected)/br/[branchId]/pickup/layout.tsx",
     ],
   ] as const) {
     assert.equal(
@@ -314,7 +314,7 @@ test("Branch operator routes do not import management shell chrome", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/pos",
     "apps/web/app/(protected)/br/[branchId]/kds",
-    "apps/web/app/(protected)/br/[branchId]/runner",
+    "apps/web/app/(protected)/br/[branchId]/pickup",
     "apps/web/app/(protected)/br/[branchId]/(operator)",
   ]) {
     if (!existsSync(resolve(repoRoot, dir))) continue;
@@ -377,7 +377,6 @@ test("Branch command dashboard is a branch-native command surface", () => {
   for (const expected of [
     "/br/${branchId}/pos",
     "/br/${branchId}/kds",
-    "/br/${branchId}/runner",
     "/br/${branchId}/menu-limits",
     "/br/${branchId}/orders",
     "/br/${branchId}/pos-sessions",
@@ -385,6 +384,11 @@ test("Branch command dashboard is a branch-native command surface", () => {
   ]) {
     assert.ok(commandConfig.includes(expected), `expected ${expected}`);
   }
+  assert.doesNotMatch(
+    commandConfig,
+    /\/br\/\$\{branchId\}\/pickup/,
+    "Pickup (Gọi số) stays off Branch Command — station chrome only",
+  );
 
   assert.match(
     commandSections,
@@ -683,7 +687,7 @@ test("Branch-scoped operational routes do not use management shell", () => {
   for (const dir of [
     "apps/web/app/(protected)/br/[branchId]/pos",
     "apps/web/app/(protected)/br/[branchId]/kds",
-    "apps/web/app/(protected)/br/[branchId]/runner",
+    "apps/web/app/(protected)/br/[branchId]/pickup",
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock",

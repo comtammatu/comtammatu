@@ -63,6 +63,15 @@ export function useNotificationBadges(): NotificationBadgeSummary {
         },
         () => void refreshRef.current(),
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notification_reads",
+        },
+        () => void refreshRef.current(),
+      )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") void refreshRef.current();
       });

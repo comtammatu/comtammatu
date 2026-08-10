@@ -123,7 +123,7 @@ block.
 | `management-document` | control_surface | `apps/web/app/(protected)/inventory/transfers/new/page.tsx` |
 | `pos-board` | station | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx` |
 | `realtime-board` | station | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx` |
-| `runner-board` | station | `apps/web/app/(protected)/br/[branchId]/runner/page.tsx` |
+| `runner-board` | station | `apps/web/app/(protected)/br/[branchId]/pickup/page.tsx` |
 | `branch-action-home` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx` |
 | `branch-touch-list` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/page.tsx` |
 | `branch-touch-detail` | branch | `apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/page.tsx` |

@@ -85,5 +85,5 @@ test("PWA runtime exposes the new-version signal and the toolbar offers reload",
   assert.match(pwaRuntimeSource, /export function useHasNewVersion/);
   assert.match(pwaToolbarSource, /useHasNewVersion/);
   assert.match(pwaToolbarSource, /window\.location\.reload\(\)/);
-  assert.match(toolbarSource, /"pos" \| "kds" \| "runner"/);
+  assert.match(toolbarSource, /"pos" \| "kds" \| "pickup"/);
 });

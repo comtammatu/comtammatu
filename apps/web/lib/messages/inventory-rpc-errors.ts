@@ -142,6 +142,19 @@ export const transferReceiveRpcMappings: readonly RpcErrorMapping[] = [
     userMessage: "Hãy bắt đầu kiểm nhận trước khi xác nhận số lượng.",
   },
   {
+    match: includesAny(
+      "short_receive_classification_required",
+      "shortfall_class",
+    ),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Chọn phân loại thiếu hụt trước khi xác nhận.",
+  },
+  {
+    match: includesAny("short_receive_reason_required"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Ghi chú thiếu hụt cần ít nhất 5 ký tự.",
+  },
+  {
     match: includesAny("receive_qty", "quantity"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Số lượng nhận không hợp lệ.",
@@ -361,11 +374,6 @@ export const grnConfirmRpcMappings: readonly RpcErrorMapping[] = [
   notFound,
 ];
 
-export const grnConfirmRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể chốt nhập kho.",
-  errorCode: INVENTORY_ERROR_CODES.GRN_CONFIRM_FAILED,
-};
-
 /* ─── Stock request ─── */
 
 export const stockRequestRpcMappings: readonly RpcErrorMapping[] = [
@@ -534,11 +542,6 @@ export const procurementRpcMappings: readonly RpcErrorMapping[] = [
   privilege,
   notFound,
 ];
-
-export const procurementRpcFallback: RpcErrorFallback = {
-  userMessage: "Không thể xử lý chứng từ mua hàng.",
-  errorCode: INVENTORY_ERROR_CODES.PROCUREMENT_FAILED,
-};
 
 /* ─── Production ─── */
 

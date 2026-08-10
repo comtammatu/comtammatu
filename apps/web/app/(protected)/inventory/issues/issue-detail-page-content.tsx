@@ -6,7 +6,7 @@ import { fetchIngredients } from "../ingredient-actions";
 import { fetchStockIssueDetail } from "../issue-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { IssueDetailClient } from "./[id]/issue-detail-client";
-import type { IngredientRow } from "../page";
+import type { IngredientRow } from "@lib/inventory/types";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 
 interface IssueDetailPageContentProps {

@@ -2,397 +2,256 @@
 
 ## Product Boundary
 
-Statutory enterprise accounting is an obligation of the company, but a general
-ledger and financial statements are outside the current Finance product
-boundary.
+Statutory enterprise accounting is a company obligation, but a general ledger
+and financial statements are outside the Finance product boundary (D020).
 
-Finance Basic is the default Finance experience when `/finance` opens as
-`Tổng quan tài chính`. The first section shows period results in two formula
-rows:
+Finance Basic is the default `/finance` experience (`Tổng quan tài chính`).
+Period-result formula (two rows):
 
-- **Doanh thu thuần**: paid-order merchandise value after discount and before
-  VAT.
-- **Giá vốn món**: recorded ingredient cost for the paid orders in the period.
-- **Lợi nhuận gộp**: net revenue minus recorded food cost.
-- **Chi phí vận hành**: posted period expense for rent, utilities, payroll,
-  repairs, consumables/small tools, marketing, fees/tax, and other operating
-  categories. It excludes equipment acquisition that must be capitalized or
-  allocated over time.
-- **Biến động tồn kho**: closing inventory value minus opening inventory value
-  for the selected period (shown when inventory valuation is readable).
-- **Kết quả kinh doanh**: gross profit minus recorded operating expense, plus
-  inventory change.
+- **`Doanh thu thuần`**: paid-order merchandise value after discount, before VAT.
+- **`Giá vốn món`**: recorded ingredient cost for paid orders in the period.
+- **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
+- **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
+  repairs, consumables/small tools, marketing, fees/tax, other). Excludes
+  equipment that must be capitalized or allocated over time.
+- **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
+- **`Kết quả kinh doanh`**: gross profit − operating expense + inventory change.
 
-Missing food-cost coverage makes both gross profit and period result
-unavailable. A period with no recorded operating expense keeps the period result
-unavailable instead of treating missing data as zero.
+Missing food-cost coverage makes gross profit and period result unavailable.
+No recorded operating expense keeps period result unavailable (not zero).
 
-Below the period result, keep the tenant-wide current-funds row as
+Below the period result, tenant-wide current funds (not period/branch filtered):
 `Tiền mặt + Tiền tài khoản = Tổng tiền`:
 
-- **Tiền mặt**: immutable opening cash plus completed cash collections,
-  minus cash refunds, cash expenses, and cash supplier payments, plus
-  append-only audited adjustments. POS-session counts and variances are
-  reconciliation evidence only and never change this balance.
-- **Tiền tài khoản**: immutable opening bank amount plus every canonical
-  SePay movement in `bank_transactions` and append-only audited adjustments.
-  Incoming amounts add and outgoing amounts subtract.
-- **Tổng tiền**: sum of the two balances above.
+- **`Tiền mặt`**: immutable opening cash + completed cash collections − cash
+  refunds, cash expenses, cash supplier payments + append-only audited
+  adjustments. POS-session counts/variances are reconciliation evidence only.
+- **`Tiền tài khoản`**: immutable opening bank + every canonical SePay movement
+  in `bank_transactions` + append-only audited adjustments.
+- **`Tổng tiền`**: sum of the two.
 
-These two balances do not follow the page's period or branch filter. Show
-`Chưa mở sổ` until Finance has created one verified opening through
-`initialize_finance_funds`. The opening is the first delta from zero at its
-verified boundary and cannot be edited or deleted. Corrections use
-`create_finance_fund_adjustment`; they never replace the opening.
+Show `Chưa mở sổ` until one verified opening via `initialize_finance_funds`.
+Opening cannot be edited/deleted; corrections use
+`create_finance_fund_adjustment`. Legacy `cash_opening_*` / `bank_opening_*`
+settings are frozen evidence only — never a calculation fallback; their
+presence blocks interactive init. Operator UI must not say "cutover": default
+boundary is "Ngay bây giờ"; "Từ 0 giờ ngày bắt đầu" only when evidence proves
+that boundary.
 
-Legacy `cash_opening_balance`, `bank_opening_balance`, and `cash_opening_date`
-settings remain frozen as investigation evidence and are never a calculation
-fallback. Their presence blocks interactive initialization and requires a
-controlled handoff. Operator UI must not say "cutover": the default boundary is
-"Ngay bây giờ" (exact server timestamp); "Từ 0 giờ ngày bắt đầu" uses 00:00
-Vietnam time only when evidence proves the balance at that boundary.
+`bank_transactions` is bank-ledger source of truth. Signed SePay webhooks and
+Owner-imported SePay exports are idempotent by stable SePay transaction ID.
+`webhook_events` is delivery evidence.
+`bank_transaction_reconciliation_matches` classifies only — never changes
+bank balance.
 
-`bank_transactions` is the bank-ledger source of truth. Signed SePay webhooks
-and Owner-imported SePay exports are idempotent ingestion paths keyed by the
-stable SePay transaction ID. `webhook_events` remains delivery and processing
-evidence. `bank_transaction_reconciliation_matches` only classifies a bank row
-against a payment, operating expense, supplier payment, or refund; adding or
-removing a match must never change the bank balance.
+Cash supplier payments (`payment_method='cash'`) reduce cash.
+`bank_transfer` supplier payments update AP without a second bank movement;
+the canonical outgoing `bank_transactions` row reduces bank funds.
 
-A supplier payment reduces cash only when
-`supplier_payments.payment_method='cash'`. A `bank_transfer` supplier payment
-updates accounts payable but does not create a second bank movement; the
-canonical outgoing `bank_transactions` row reduces bank funds whether or not
-it has been reconciled.
+Inventory sits in a filtered **`Tồn kho`** section (**`Giá trị tồn kho cuối kỳ`**),
+not a full asset section. Attention queue is last. Tax/GTGT stay on existing
+HĐĐT routes — not on this landing formula.
 
-Inventory sits in a separate filtered **Tồn kho** section and is labeled **Giá
-trị tồn kho cuối kỳ**. It is not a complete asset section.
-The attention queue remains the last section. Tax and GTGT reporting are not
-added to this landing formula; HĐĐT and tax workflows keep their existing
-separate routes and contracts.
-
-Do not expand Finance by default into a full enterprise accounting product.
-The Finance surface serves restaurant operating finance first: daily money,
-stock value, food cost, expenses, HĐĐT, AP and accountant export.
-
-Finance metrics, cards, titles, and overview summaries must also follow
-`docs/ref/operational-data-contract.md`. Do not add a new finance KPI or reuse a
-generic label such as "doanh thu" or "lợi nhuận" unless the metric contract
-states the exact source, formula, exclusions, confidence, and drilldown.
+Do not expand Finance into a full enterprise accounting product by default.
+Metrics must follow `docs/ref/operational-data-contract.md`. Do not add or
+reuse a finance KPI label unless that contract states source, formula,
+exclusions, confidence, and drilldown.
 
 ## Scope Boundary
 
-## Reporting Maturity
+### Reporting Maturity
 
-Finance grows by reporting maturity, not by exposing enterprise accounting
-screens to every operator from day one.
+Finance grows by reporting maturity, not by exposing enterprise screens to
+every operator.
 
-| Stage | Key                    | Default audience              | Product intent                                                                         |
-| ----- | ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
-| 1     | `operating_basic`      | Owner / operator              | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
-| 2     | `branch_control`       | Multi-branch owner / operator | Compare branches using the same operating formulas, then drill into outliers           |
-| 3     | `accountant_reporting` | Accountant / reporting owner  | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
+| Stage | Key                    | Default audience              | Intent |
+| ----- | ---------------------- | ----------------------------- | ------ |
+| 1     | `operating_basic`      | Owner / operator              | Daily cash, simple gross profit, inventory money, expenses, exceptions |
+| 2     | `branch_control`       | Multi-branch owner / operator | Same formulas across branches, then drill outliers |
+| 3     | `accountant_reporting` | Accountant / reporting owner  | HĐĐT, AP, payroll liability, exports, advanced reports |
 
-The default `/finance` experience must start at `operating_basic`. It may reveal
-`branch_control` comparison only when the user has more than one accessible
-branch. Accountant-reporting routes stay available by permission, but they must
-not become the default Finance landing while the operating dataset is not a
-complete accounting close.
+Default `/finance` starts at `operating_basic`. Reveal `branch_control` only
+with more than one accessible branch. Accountant routes stay permission-gated
+but must not become the default landing.
 
 ### Finance Basic
 
-Finance Basic is the current finance surface. Its landing owns five primary
-period-result cards:
+Landing cards (formulas in Product Boundary):
 
-1. **Net revenue**
-   - `Doanh thu thuần` is `subtotal_revenue - discount_amount` for paid orders
-     and excludes VAT.
-   - Keep the internal adapter field `netRevenueBeforeVat` only as a legacy code
-     identifier; UI and operating documentation use the precise label above.
-   - `totalCollected` remains available in the revenue detail and is labeled
-     `Tổng tiền đã thu`; it is not a landing formula card.
-   - Top món uses the same `resolved.start→end` window as every other KPI; side
-     items in `order_items.sides` are counted as their own món and their revenue
-     is subtracted from the parent món line to avoid double-counting.
+1. **Net revenue** — `subtotal_revenue - discount_amount` (paid, ex-VAT).
+   `netRevenueBeforeVat` is legacy adapter ID only. `totalCollected` =
+   `Tổng tiền đã thu` in detail, not a landing card. `Top món` shares
+   `resolved.start→end`; `order_items.sides` are own `món` (parent revenue reduced).
+2. **Food cost** — sale-consumption for paid orders; incomplete → missing-data.
+3. **Gross profit** — net revenue − food cost; margin only when coverage complete.
+4. **Operating expense** — `rent|utilities|gas_fuel|salary|repair|supplies|
+   marketing|fees_tax|other`. Exclude COGS, supplier payments, cash↔bank.
+   None → `Chưa ghi nhận`.
+5. **Period result** — gross − opex + inventory change. Not "net profit".
+   Unavailable if food cost incomplete or no opex recorded.
 
-2. **Food cost**
-   - Use recorded sale-consumption movements for paid orders.
-   - If food-cost coverage is incomplete, display missing-data state and do not
-     calculate the following derived cards.
-
-3. **Gross profit**
-   - `Lợi nhuận gộp = Doanh thu thuần - Giá vốn món`.
-   - Show gross margin as supporting context only when food-cost coverage is
-     complete.
-
-4. **Operating expense**
-   - Posted operating expenses in the selected period.
-   - Include only `rent`, `utilities`, `gas_fuel`, `salary`, `repair`,
-     `supplies`, `marketing`, `fees_tax`, and `other`.
-   - Exclude ingredient/material COGS, supplier invoice payments, and internal
-     cash-to-bank deposits/transfers from the top-line operating expense number.
-   - If no operating expense has been recorded, display `Chưa ghi nhận`.
-
-5. **Period result**
-   - `Kết quả kinh doanh = Lợi nhuận gộp - Chi phí vận hành + Biến động tồn kho`.
-   - `Biến động tồn kho = Tồn cuối kỳ - Tồn đầu kỳ`.
-   - Do not call it net profit. Keep it unavailable when food cost is incomplete
-     or operating expense has not been recorded.
-
-After the formula, show the unfiltered current-funds section, the filtered
-period-end inventory value, then the attention queue. Desktop uses two formula
-rows (three then four cards when valuation is visible), tablet uses two columns,
-and mobile uses one.
-
-Supporting workflows remain available but are not the first screen:
-
-- Food-cost and gross-profit analysis.
-- Cash session reconciliation.
-- Payment/order desync recovery.
-- HĐĐT issuance, cancellation, and replacement support.
-- Supplier payable review.
-- Accountant export.
+Then: unfiltered funds, filtered period-end inventory, attention queue.
+Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
+food-cost analysis, cash sessions, desync recovery, HĐĐT, AP, export.
 
 ### POS Session Cash Contract
 
-The closed POS session is the immutable physical-count record:
+Closed POS session is the immutable physical-count record:
 
-1. `opening_cash` is the counted cash at shift open.
-2. `cash_revenue` is the sum of completed `payments.amount` with
-   `method='cash'` for paid, non-cancelled orders in that session.
+1. `opening_cash` — counted cash at shift open.
+2. `cash_revenue` — sum completed `payments.amount` with `method='cash'` for
+   paid, non-cancelled orders in session.
 3. `expected_cash = opening_cash + cash_revenue`.
-4. `cash_difference = closing_cash - expected_cash`, where `closing_cash` is
-   the physical count entered at close.
+4. `cash_difference = closing_cash - expected_cash`.
 
-An over-threshold difference is resolved from
+Over-threshold resolution from
 `/br/[branchId]/pos-sessions?session=[id]`:
 
-- `staff_repaid` is allowed only for a shortage and records full repayment of
-  `abs(cash_difference)`. It does not rewrite the close count or add a cash-book
-  adjustment: the repayment restores physical cash to the already expected
-  amount.
-- `accepted_adjustment` keeps the close count and records the variance outcome
-  for reporting and investigation. It does not change `Tiền mặt`.
+- `staff_repaid` — shortage only; full `abs(cash_difference)` repayment; does
+  not rewrite close count or add cash-book adjustment.
+- `accepted_adjustment` — keeps close count; records variance for reporting;
+  does not change `Tiền mặt`.
 
-Any verified gain or loss that must change book funds is recorded separately
-through `create_finance_fund_adjustment` with its own reason and evidence.
+Book-fund gains/losses use `create_finance_fund_adjustment` separately.
 
-Payment-method correction belongs to Finance in the session bill drawer and HĐĐT
-queue (Owner and Accountant). The atomic RPC updates `payments.method`, the
-`orders.payment_method` display mirror, and recomputes a closed session's
-expected cash and difference.
+Payment-method correction: Finance session bill drawer / HĐĐT queue (Owner,
+Accountant). Atomic RPC updates `payments.method`, `orders.payment_method`
+mirror, and recomputes closed-session expected cash/difference.
 
-Unmatched operating-expense payment methods (`cash` / `transfer` / `unpaid`) may
-also be corrected by Owner or Accountant with `finance:expense_create` from the
-expense edit form via `transition_expense_payment`. Matched bank evidence,
-`bank_deposit`, and open transfer-content intents stay locked.
-Any prior variance resolution is cleared because the underlying classification
-changed. The audit log preserves the correction reason and prior values. A
-VietQR payment with canonical reconciliation or signed webhook evidence cannot
-be changed to cash until Finance explicitly removes that bank evidence from
-the bank-reconciliation workflow; changing the payment method never rewrites a
-`bank_transactions` movement.
+Unmatched expense methods (`cash`/`transfer`/`unpaid`) may be corrected by
+Owner/Accountant with `finance:expense_create` via `transition_expense_payment`.
+Matched bank evidence, `bank_deposit`, and open transfer-content intents stay
+locked. Prior variance resolution clears when classification changes. VietQR
+with canonical reconciliation/webhook evidence cannot become cash until Finance
+removes that bank evidence; method change never rewrites `bank_transactions`.
 
 ### Owner and Accountant Visibility
 
 **Product contract (D076/D091):** authenticated `accountant` is a first-class
-application role with complete `/finance` operational authority and an Inventory
-GRN/PO slice. Runtime MODULE_ACL admits `owner` and `accountant` to `/finance`.
+role with complete `/finance` operational authority and Inventory GRN/PO slice.
+Runtime `MODULE_ACL` admits `owner` and `accountant` to `/finance`. Full
+role/route map: `docs/spec/role-route-matrix.md`. JWT central/accountant roles
+are temporary until [ADR 0015](../plan/adr/0015-authorization-model.md).
 
-| Actor          | System access                                                                                                                                                                                                                                                            | Must review or act on                                                                                                                                                                                                                                                                                                                                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Owner          | Tenant-wide `/finance`; oversight and the same Finance operations as Accountant                                                                                                                                                                                          | Daily landing metrics; cash/bank; POS cash variances; SePay unmatched; VietQR missing bank evidence; expenses; AP; HĐĐT; inventory opening/closing; exports; staff permission grants                                                                                                                                                                                                                      |
-| Accountant     | Owns all `/finance` operations: funds, expenses, supplier invoices and advances, bank (NH), payment-method correction (PTTT), HĐĐT, revenue targets, and Finance reporting; Inventory GRN/PO view plus PO management; no stock/production/catalog surface | Review supplier documents, recompute matching, verify service invoices, resolve discrepancies, record and allocate supplier payments, reconcile bank evidence, and maintain Finance records                                                                                                                                                                                                                     |
-| Branch Manager | Branch POS-session workflow only; no tenant-wide Finance; no purchase-price / chain-PO visibility                                                                                                                                                                        | Resolve an exact subordinate shift shortage as `staff_repaid` or record its variance outcome as `accepted_adjustment`, subject to branch permission and audit; neither action changes tenant-wide book funds. May **read** MTD + calendar-day Doanh thu thuần, monthly target progress, and assigned-branch reward tiers on Branch home via `get_branch_revenue_target_progress` (`finance.revenue.monthly_target_progress` / `monthly_target_reward`); cannot edit targets, call `list_branch_revenue_target_reward_tiers`, or open `/finance` |
+| Actor          | Access | Must act on |
+| -------------- | ------ | ----------- |
+| Owner          | Tenant-wide `/finance`; same ops as Accountant | Landing metrics; cash/bank; POS variances; SePay unmatched; VietQR evidence; expenses; AP; HĐĐT; inventory open/close; exports; staff grants |
+| Accountant     | All `/finance` ops + Inventory GRN/PO view/manage; no stock/production/catalog | Supplier docs, matching, service invoice verify, payments/advances, bank reconcile, Finance records |
+| Branch Manager | Branch POS-session only; no tenant Finance; no purchase-price / chain-PO | `staff_repaid` / `accepted_adjustment` for subordinate shortage (neither changes book funds). May **read** MTD + day `Doanh thu thuần` / target progress via `get_branch_revenue_target_progress`; cannot edit targets or open `/finance` |
 
-Operators must not silently map `office` or a retired position code to Finance. Period-close
-enterprise accounting remains outside the product (D020). JWT roles added for
-accountant / central sites are temporary until ADR 0015 Authority.
+Do not map `office` or retired position codes to Finance. Period-close
+enterprise accounting remains outside product (D020).
 
-Every money-changing or classification-changing workflow leaves a durable
-audit action: `bank_transactions.sepay_import`,
-`bank_transaction.reconcile`, `payment.method_correct`, or
-`pos_session.variance_resolve`, `finance_fund_opening_created`, or
-`finance_fund_adjustment_created`. Reconciliation matches classify evidence;
-they never add or subtract a second bank movement.
+Money/classification workflows leave durable audit actions:
+`bank_transactions.sepay_import`, `bank_transaction.reconcile`,
+`payment.method_correct`, `pos_session.variance_resolve`,
+`finance_fund_opening_created`, `finance_fund_adjustment_created`.
+Reconciliation matches never add/subtract a second bank movement.
 
 ### Accounting Advanced Boundary (D020)
 
-The company must formally select and apply the accounting regime appropriate to
-its size and conditions (TT 99/2025, TT 133/2016 or TT 58/2026 as applicable).
-The current Finance surface is not the statutory general ledger, tax
-finalization or financial statements.
+Company must apply the appropriate accounting regime (TT 99/2025, TT 133/2016
+or TT 58/2026). Current Finance is not the statutory GL, tax finalization, or
+financial statements.
 
-`accounting_periods` and the close/reopen RPCs remain database-only owner-gated
-support. No current app route exposes period close/reopen. Reopening that scope
-requires a new decision.
+`accounting_periods` and close/reopen RPCs remain database-only owner-gated
+support. No app route exposes them. Reopening that scope needs a new decision.
 
 ### Permission Enforcement (mutation gates)
 
-Finance mutations gate on one of two patterns at the action layer, mirrored by
-the RPC's own checks:
+Action-layer gates (mirrored by RPC):
 
 - **Expense mutations** (`createExpense`, `transitionExpensePayment`, cancel,
-  period updates) require `finance:expense_create` (Owner or Accountant).
+  period updates) → `finance:expense_create` (Owner or Accountant).
 - **Supplier-invoice / fund mutations** (`createSupplierInvoice`,
   `confirmSupplierInvoice`, `recordSupplierPayment`, `allocateSupplierAdvance`,
   `createSupplierCreditAllocated`, `acceptSupplierInvoiceDiscrepancy`,
   `verifyServiceSupplierInvoice`, `initialize_finance_funds`,
-  `create_finance_fund_adjustment`) gate on `finance:view` plus the
-  `owner`/`accountant` position — not on `finance:ap_pay`. The finer-grained
-  `finance:ap_pay` is reserved for `attachSupplierInvoiceVatEvidence` (which
-  also accepts `procurement:invoice_create`), matching its RPC.
-- The "Owner only may pay above the current allocation" rule is enforced inside
-  the `recordSupplierPayment` / allocation RPC, not by a distinct permission key.
+  `create_finance_fund_adjustment`) → `finance:view` + `owner`/`accountant`
+  position — not `finance:ap_pay`.
+- **`finance:ap_pay`** reserved for `attachSupplierInvoiceVatEvidence` (also
+  accepts `procurement:invoice_create`), matching its RPC.
+- Owner-only "pay above current allocation" is inside
+  `recordSupplierPayment` / allocation RPC, not a separate permission key.
 
-The `finance:ap_pay` / `finance:expense_create` / `accounting:period_close`
-keys in `module-acl.ts` still exist for future fine-grained delegation; they are
-not the current mutation gate for the actions listed above. RLS remains the
-final enforcement on every RPC.
+`finance:ap_pay` / `finance:expense_create` / `accounting:period_close` in
+`module-acl.ts` remain for future delegation; they are not the current gate for
+the actions above. RLS remains final enforcement.
 
 ## Route Contract
 
-Current code has a broad `/finance/*` workspace. The target product contract is:
+| Route family                 | Role                         | Decision |
+| ---------------------------- | ---------------------------- | -------- |
+| `/finance`                   | Finance Basic landing        | Period formula + funds + inventory card + attention |
+| `/finance/revenue`           | Revenue analytics            | Keep; not sole money-control entry |
+| `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
+| `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
+| `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
+| `/finance/invoices`          | HĐĐT queue                   | Support workflow |
 
-| Route family                 | Current role                 | Decision                                                                                     |
-| ---------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
-| `/finance`                   | Four-card basic landing      | Show completed-payment revenue, sales after discount, inventory value, and operating expense |
-| `/finance/revenue`           | Revenue analytics            | Keep, but do not make it the only money-control entry                                        |
-| `/finance/targets`           | Monthly revenue target setup | Finance-managed target and non-cumulative reward tiers; no automatic payroll allocation       |
-| `/finance/food-cost`         | Gross profit / margin signal | Keep as read-only analysis, not enterprise accounting                                        |
-| `/finance/supplier-invoices` | Supplier payable review      | Thin Finance/AP entry to supplier invoices; do not count as expenses                         |
-| `/finance/invoices`          | HĐĐT queue                   | Keep as support workflow                                                                     |
+Inventory owns stock-value detail; Finance shows only the current-value card.
+No `/accounting/*` app surface.
 
-Inventory owns the detailed stock-value workspace. Finance displays only the
-current inventory-value card and does not expose a duplicate inventory route.
-
-Goods supplier invoice matching validates line quantities against allocated
-confirmed GRN/PO lines from the same supplier and values each allocation with
-the supplier invoice line's effective net value after line and document
-discounts, allocated proportionally by billed quantity. VAT is excluded from
-inventory cost. PO and GRN prices are not commercial price sources. Supplier
-invoice entry uses additive VAT (Vietnam HĐĐT convention): `unit_price` is the
-NET (pre-VAT) unit price, `line_total` is the net line total after line
-discount, automatic VAT is `round(line_total × vat_rate / 100, 2)`, and
-`gross_line_total = line_total + vat_amount`. Manual VAT remains authoritative,
-and every line must satisfy `line_total + vat_amount = gross_line_total`.
-Supplier price history continues to consume the net `unit_price` /
-`line_total`. Header subtotal, document discount, VAT, and total must reconcile
-within `±1 VND`; a larger difference remains
-`discrepancy` until an Accountant accepts it with a reason. Service invoices
-do not allocate GRNs and remain `pending` until an Accountant verifies the
-document with a reason. A draft remains editable; confirmation seals its
-financial lines, publishes supplier-ingredient effective price history and
-atomically settles receipt value. Payment remains an AP/cash event and never
-creates inventory value or food cost a second time. AP balance
-and supplier payment use `total_amount = subtotal -
-document_discount_amount + vat_amount`. Multi-rate input invoices
-store one immutable `vat_breakdown` bucket per rate; database normalization
-derives the header totals and leaves the compatibility `vat_rate` null when
-more than one rate is present. Recording a supplier payment requires at least
-one HĐ GTGT file on `supplier_invoices.vat_invoice_attachment_path` (private
-bucket `supplier-invoice-attachments`). Owner and Accountant with `finance:view`
-may record an invoice-bound payment via `recordSupplierPayment` (the action and
-its RPC gate on `finance:view` plus the `owner`/`accountant` position, not on
-`finance:ap_pay`). Only Owner may pay above
-the current allocation. The remainder is a visible supplier advance that may
-be allocated later without changing cash or bank a second time. Attachment may
-be uploaded optionally during invoice create or later on the detail Sheet; the
-`attach_supplier_invoice_vat_evidence` action allows Owner with
-`finance:ap_pay` or a user with `procurement:invoice_create` (matching the RPC).
-The legacy
-`/inventory/supplier-invoices` route remains a compatibility `REDIRECT-SHIM`
-only (ADR 0018); new GRN and report links use `/finance/supplier-invoices`.
-The LIST client, row mapper, and list model live under
-`apps/web/app/(protected)/finance/supplier-invoices/` (Wave 2 Record Depth).
-Procurement Server Actions for create/match/pay may still live under Inventory
-`procurement-actions` / `supplier-invoice-actions` as the RPC boundary.
-
-There is no current `/accounting/*` app surface.
+Supplier invoice matching/VAT/payment: actions +
+[ADR 0018](../plan/adr/0018-inventory-finance-route-boundary.md). Invariants:
+goods match confirmed GRN/PO (VAT out of inventory cost; PO/GRN not price
+source); additive VN HĐĐT VAT (`gross = line + vat`; auto
+`round(line*rate/100,2)`; manual VAT authoritative; header `±1 VND` or
+`discrepancy`); service invoices `pending` until Accountant verifies;
+confirm seals lines + price history + receipt settle; payment is AP/cash only
+(never second inventory/COGS); multi-rate → immutable `vat_breakdown`; payment
+needs HĐĐT GTGT path; only Owner pays above allocation (remainder = advance).
+Legacy `/inventory/supplier-invoices` = `REDIRECT-SHIM`. LIST under
+`finance/supplier-invoices/`; create/match/pay may stay in Inventory actions.
 
 ## VAT And Equipment Boundary
 
-### Monetary precision contract
+### Monetary precision
 
-| Finance value | Storage/application scale |
+| Finance value | Scale |
 | --- | ---: |
 | Money total, VAT, discount, supplier unit price, payment, credit, advance, fund balance, fixed reward | 2 |
 | Supplier quantity | 3 |
 | VAT rate | enum `0`, `5`, `8`, `10` |
 | POS settlement, menu price, cash, VietQR | 0 |
 
-Canonical decimal strings cross the browser, Server Action, and RPC boundaries.
-Financial aggregation uses scaled integer arithmetic rather than JavaScript
-floating point. Supplier line totals and automatically calculated VAT use
-round-half-up at two decimal places. A VAT amount entered from a source document
-is authoritative and remains unchanged until the operator explicitly requests a
-recalculation. Finance and tax details always render two decimal places.
+Canonical decimal strings cross browser / Server Action / RPC. Aggregation uses
+scaled integers. Round-half-up at 2dp for supplier lines and auto VAT. Document
+VAT amounts stay authoritative until operator recalculates. UI always shows 2dp.
 
-Supplier invoice VAT and operating-expense `expenses.vat_breakdown` are only
-`input_vat_recorded`. Optional `expenses.invoice_attachment_url` is supporting
-evidence for that recorded snapshot. The current schema does not store deduction
-evidence, business-use allocation, declaration period, or adjustment state, so
-Finance must not label either surface `input_vat_deductible` or derive
-`vat_payable`. The operating-expense KPI uses pre-VAT `expenses.subtotal`;
-cash and payable totals continue to use gross `expenses.amount` (= subtotal +
-recorded VAT).
+Supplier invoice VAT and `expenses.vat_breakdown` are `input_vat_recorded` only.
+Do not label `input_vat_deductible` or derive `vat_payable` without evidence,
+allocation, period, and adjustment state. Operating-expense KPI uses pre-VAT
+`expenses.subtotal`; cash/payable use gross `expenses.amount`.
 
-Output VAT belongs to effective issued/corrected sales invoice snapshots. It is
-not revenue. Under the deduction method, the provisional relationship is
-`output VAT - deductible input VAT +/- period adjustments`; other VAT methods
-must use their own registered contract.
+Output VAT belongs to issued/corrected sales invoice snapshots — not revenue.
 
-Equipment is classified before it reaches operating result:
-
-- qualifying fixed assets are recorded at cost; period depreciation is the
-  expense;
-- tools/equipment below the fixed-asset criteria are expensed or allocated over
-  time under the selected accounting policy;
-- consumables used in the period may be posted directly as operating expense.
-
-There is no asset register, placed-in-service date, useful-life policy,
-accumulated depreciation, or carrying-value source in the current product.
-Therefore Finance does not expose an equipment-value card. Add that surface
-only with the full source and reconciliation contract.
+Equipment: classify before operating result (fixed asset → depreciation;
+below-criteria tools → expense/allocate; period consumables → expense). No asset
+register in product → no equipment-value card until full source/recon contract.
 
 ## Acceptance Criteria
 
-Finance Basic is operationally acceptable only when all of these are true:
-
-1. Owner can open one screen and see completed-payment revenue, sales after discount, inventory opening/closing movement, and operating expense.
-2. Revenue uses the paid-at Vietnam-local period contract.
-3. Inventory value uses actual stock valuation data, not a static estimate.
-4. Operating expense is clearly separate from direct ingredient COGS.
-5. Gross profit remains supporting read-only analysis derived from revenue before VAT after discounts minus food cost.
-6. Labels avoid advanced accounting terms unless the user is inside an advanced accounting route.
-7. Support workflows for HĐĐT, payment/order desync, cash sessions, and supplier payables stay accessible but do not dominate the first screen.
-8. No current operating action depends on enterprise-accounting screens.
+1. One Owner screen: paid revenue, sales after discount, inventory open/close, opex.
+2. Revenue = paid-at Vietnam-local period. Inventory = actual valuation.
+3. Opex separate from ingredient COGS. Gross profit = supporting read-only.
+4. No advanced-accounting labels outside advanced routes.
+5. HĐĐT / desync / cash sessions / AP accessible but not first screen.
+6. No operating action depends on enterprise-accounting screens.
 
 ## Stop Rules
 
-Do not implement new Accounting Advanced work until Finance Basic passes the acceptance criteria above.
-
-Do not add new finance KPIs unless they answer a daily operator question or a required accountant export question.
-
-Do not expose statutory accounting routes as the primary Finance experience for owner or branch operations.
-
-Do not call the module "done" because enterprise-accounting objects exist in old migrations or archived references. Restaurant finance readiness is operating cash, revenue, expense, HĐĐT, inventory value, and accountant export.
+- No Accounting Advanced until Finance Basic meets acceptance above.
+- No new KPI unless daily operator or required accountant-export question.
+- Statutory routes must not be primary Finance experience.
+- Not "done" because enterprise objects exist in old migrations. Readiness =
+  cash, revenue, expense, HĐĐT, inventory value, accountant export.
 
 ## Current Gaps
 
-- Chi phí vận hành is captured in `/finance/expenses`; keep it as an operating record, not a statutory journal entry.
-- Inventory value detail stays in Inventory; Finance shows only the current-value card.
-- Input invoice VAT is recorded by rate, but deductible input VAT and VAT
-  payable remain unavailable until evidence, allocation, period, and adjustment
-  states exist.
-- Equipment/fixed-asset value remains unavailable until an asset register and
-  depreciation/allocation workflow exist.
-- HĐĐT is active through Viettel S-invoice. The app owns per-order issuance,
-  cancellation, and replacement; provider-side artifacts and status lookup stay
-  in Viettel S-invoice operations rather than becoming Finance product surfaces.
-  Recovery and archival workflows remain support operations, not Finance Basic
-  landing surfaces.
-- Period close/reopen is not an app workflow. Treat it as database-only support unless a new owner decision reopens it.
+- `/finance/expenses` = operating record, not statutory journal.
+- Deductible input VAT / VAT payable / equipment value / period close app UI
+  unavailable until evidence or owner decision (see D020, schema, Viettel ops).
 
 ## Source Files
 

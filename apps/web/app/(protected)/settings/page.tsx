@@ -2,6 +2,8 @@ import {
   Building2 as IconBuilding2,
   CreditCard as IconCreditCard,
   Printer as IconPrinter,
+  Radar as IconRadar,
+  ShieldCheck as IconShieldCheck,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import {
@@ -19,9 +21,10 @@ export default async function SettingsPage() {
     claims.user_role,
   );
   const canManagePrintSettings = canManageBranchFloorSettings(claims.user_role);
+  const isOwner = claims.user_role === "owner";
   const copy = messages.settings.pages;
 
-  if (!canManageTenantSettings && !canManagePrintSettings) {
+  if (!canManageTenantSettings && !canManagePrintSettings && !isOwner) {
     redirect("/access-denied?reason=insufficient-permission");
   }
 
@@ -49,6 +52,28 @@ export default async function SettingsPage() {
               icon={<IconCreditCard />}
               tone="success"
               ctaLabel={copy.openSettings}
+            />
+          </LinkCardGrid>
+        </AppSection>
+      ) : null}
+
+      {isOwner ? (
+        <AppSection title={copy.accountSecurityTitle}>
+          <LinkCardGrid className="lg:grid-cols-2 xl:grid-cols-2">
+            <AppLinkCard
+              href="/settings/security"
+              title={copy.securityTitle}
+              description={copy.securityDescription}
+              icon={<IconShieldCheck />}
+              ctaLabel={copy.openSettings}
+            />
+            <AppLinkCard
+              href="/settings/tracking"
+              title={copy.trackingTitle}
+              description={copy.trackingDescription}
+              icon={<IconRadar />}
+              tone="info"
+              ctaLabel={copy.trackingLink}
             />
           </LinkCardGrid>
         </AppSection>

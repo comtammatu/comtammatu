@@ -41,6 +41,8 @@ export type GrnListRow = {
   rejectedLineCount: number;
   updatedAt: string;
   handledBy: string | null;
+  /** Invoice link for valuation status — not a monetary amount. */
+  invoiceId: number | null;
   monetary: {
     receiptValue: number;
     invoiceId: number | null;

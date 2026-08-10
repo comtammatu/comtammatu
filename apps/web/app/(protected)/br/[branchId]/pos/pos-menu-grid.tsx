@@ -109,7 +109,9 @@ function getMenuCardStatus(
     remainingLabel:
       dailyRemaining === null
         ? null
-        : messages.pos.menu.remainingOnCard(dailyRemaining),
+        : (dailyLimit?.stock_allowance_quantity ?? 0) > 0
+          ? `${messages.pos.menu.sellingOnAllowance} · ${messages.pos.menu.remainingOnCard(dailyRemaining)}`
+          : messages.pos.menu.remainingOnCard(dailyRemaining),
   };
 }
 

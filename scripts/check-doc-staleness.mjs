@@ -5,7 +5,6 @@ import { existsSync, readFileSync } from "node:fs";
 const DURABLE = [
   /^docs\/plan\/decisions\.md$/,
   /^docs\/plan\/adr\//,
-  /^docs\/worklog\/README\.md$/,
   /(^|\/)README\.md$/i,
 ];
 const SNAPSHOT_MARKERS = [
@@ -99,7 +98,6 @@ function collectViolations() {
         "--others",
         "--exclude-standard",
         "docs/plan",
-        "docs/worklog",
       ],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
     )

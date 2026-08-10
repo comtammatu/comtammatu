@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
@@ -8,7 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   Ban,
   CheckCircle,
-  CookingPot,
   Save as IconSave,
   Search as IconSearch,
 } from "lucide-react";
@@ -21,7 +19,6 @@ import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-oper
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { Button } from "@comtammatu/ui/components/button";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   InputGroup,
   InputGroupAddon,
@@ -52,7 +49,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
 import { useSwipeReveal, type SwipeReveal } from "@lib/hooks/use-swipe-reveal";
@@ -61,8 +57,8 @@ import { useRealtimeRefresh } from "@/_hooks/use-realtime-refresh";
 import {
   type MenuLimitRow,
   clearBranchMenuDailyLimit,
-  replenishMenuItemStock,
   setBranchMenuDailyLimit,
+  setBranchMenuStockAllowance,
 } from "./actions";
 import { messages } from "@lib/messages";
 
@@ -97,6 +93,10 @@ function getAvailableToSellValue(row: MenuLimitRow): number | string {
 
 function getManualLimitValue(row: MenuLimitRow): number | string {
   return row.manual_limit_quantity ?? messages.pos.menu.manualLimitNotSet;
+}
+
+function getStockAllowanceValue(row: MenuLimitRow): number | string {
+  return row.stock_allowance_quantity ?? messages.pos.menu.stockAllowanceNotSet;
 }
 
 function getStockCapacityValue(row: MenuLimitRow): number | string {
@@ -325,8 +325,8 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
   const [drawerRow, setDrawerRow] = useState<MenuLimitRow | null>(null);
   const [draftQty, setDraftQty] = useState<string>("");
+  const [draftAllowance, setDraftAllowance] = useState<string>("");
   const [draftDisabled, setDraftDisabled] = useState<boolean>(false);
-  const [replenishReason, setReplenishReason] = useState("");
 
   const grouped = useMemo(() => {
     const needle = normalizeSearch(query).trim();
@@ -399,8 +399,12 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
         ? ""
         : String(row.manual_limit_quantity),
     );
+    setDraftAllowance(
+      row.stock_allowance_quantity == null
+        ? ""
+        : String(row.stock_allowance_quantity),
+    );
     setDraftDisabled(row.is_disabled);
-    setReplenishReason("");
   }
 
   function handleSaveLimit() {
@@ -415,6 +419,20 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       }
     }
 
+    const allowanceTrimmed = draftAllowance.trim();
+    let allowanceParsed: number | null = null;
+    if (allowanceTrimmed !== "") {
+      allowanceParsed = Number(allowanceTrimmed);
+      if (
+        !Number.isInteger(allowanceParsed) ||
+        allowanceParsed < 0 ||
+        allowanceParsed > 9999
+      ) {
+        toast.error(messages.pos.menu.stockAllowanceRange);
+        return;
+      }
+    }
+
     startTransition(async () => {
       const result = await setBranchMenuDailyLimit({
         branchId,
@@ -425,6 +443,19 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
 
       if (!result.success) {
         toast.error(result.error ?? messages.pos.menu.saveLimitFailed);
+        return;
+      }
+
+      const allowanceResult = await setBranchMenuStockAllowance({
+        branchId,
+        menuItemId: drawerRow.menu_item_id,
+        stockAllowanceQuantity: allowanceParsed,
+      });
+
+      if (!allowanceResult.success) {
+        toast.error(
+          allowanceResult.error ?? messages.pos.menu.stockAllowanceSaveFailed,
+        );
         return;
       }
 
@@ -465,39 +496,6 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
       }
       toast.success(messages.pos.menu.limitUpdated(drawerRow.item_name));
       setDrawerRow(null);
-      router.refresh();
-    });
-  }
-
-  function handleReplenishStock(extraPortions: 1 | 2) {
-    if (!drawerRow) return;
-    const reason = replenishReason.trim();
-    if (reason.length < 5) {
-      toast.error(messages.pos.menu.replenishStockReasonMin);
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await replenishMenuItemStock({
-        branchId,
-        menuItemId: drawerRow.menu_item_id,
-        extraPortions,
-        reason,
-      });
-
-      if (!result.success) {
-        toast.error(result.error ?? messages.pos.menu.replenishStockFailed);
-        return;
-      }
-
-      toast.success(
-        messages.pos.menu.replenishStockSuccess(
-          drawerRow.item_name,
-          extraPortions,
-        ),
-      );
-      setDrawerRow(null);
-      setReplenishReason("");
       router.refresh();
     });
   }
@@ -646,6 +644,10 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       description: getManualLimitValue(drawerRow),
                     },
                     {
+                      term: messages.pos.menu.stockAllowanceLabel,
+                      description: getStockAllowanceValue(drawerRow),
+                    },
+                    {
                       term: messages.pos.menu.stockCapacityLabel,
                       description: getStockCapacityValue(drawerRow),
                     },
@@ -705,56 +707,25 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                       {messages.pos.menu.manualLimitOptionalHint}
                     </FieldDescription>
                   </Field>
-                </FieldGroup>
 
-                <div className="flex flex-col gap-3 border-t pt-3">
-                  <SectionLabel>
-                    {messages.pos.menu.replenishStockTitle}
-                  </SectionLabel>
-                  <p className="text-xs text-muted-foreground">
-                    {messages.pos.menu.replenishStockHint}
-                  </p>
                   <Field>
-                    <FieldLabel htmlFor="menu-limit-replenish-reason">
-                      {messages.pos.menu.replenishStockReasonLabel}
+                    <FieldLabel htmlFor="menu-stock-allowance">
+                      {messages.pos.menu.stockAllowanceLabel}
                     </FieldLabel>
-                    <Textarea
-                      id="menu-limit-replenish-reason"
-                      value={replenishReason}
-                      onChange={(event) =>
-                        setReplenishReason(event.target.value)
-                      }
-                      placeholder={messages.pos.menu.replenishStockPlaceholder}
-                      disabled={isPending}
-                      className="min-h-20 resize-none text-base"
+                    <QuantityInput
+                      id="menu-stock-allowance"
+                      maxFractionDigits={0}
+                      max={9999}
+                      placeholder={messages.pos.menu.stockAllowanceExample}
+                      value={draftAllowance}
+                      onValueChange={setDraftAllowance}
+                      aria-label={`${messages.pos.menu.stockAllowanceLabel} ${drawerRow.item_name}`}
                     />
                     <FieldDescription>
-                      {messages.pos.menu.replenishStockReasonHint}
+                      {messages.pos.menu.stockAllowanceHint}
                     </FieldDescription>
                   </Field>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() => handleReplenishStock(1)}
-                    >
-                      <CookingPot />
-                      +1 suất
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() => handleReplenishStock(2)}
-                    >
-                      <CookingPot />
-                      +2 suất
-                    </Button>
-                  </div>
-                </div>
+                </FieldGroup>
               </div>
               <DrawerFooter className="flex-row gap-2">
                 {drawerRow.manual_limit_quantity != null && (

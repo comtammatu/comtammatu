@@ -19,6 +19,7 @@ import type {
 } from "./_types";
 import type { PositionTasksData } from "./position-tasks-actions";
 import { AddStaffButton } from "./staff/add-staff-button";
+import { GrantEmployeeAccessButton } from "./staff/grant-employee-access-button";
 import { StaffHeaderOverflow } from "./staff/staff-header-actions";
 import { StaffFilters } from "./staff/staff-filters";
 import {
@@ -96,7 +97,9 @@ export function HrClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={workspaceCopy.ownerTitle}
+        title={
+          view === "accounts" ? staffCopy.title : workspaceCopy.ownerTitle
+        }
         description={
           view === "accounts"
             ? staffCopy.description
@@ -107,6 +110,10 @@ export function HrClient({
             <HrScopeSelector branches={branches} value={branchScope} />
             {view === "accounts" && canManageAccounts ? (
               <>
+                <GrantEmployeeAccessButton
+                  employees={employees}
+                  staff={staff}
+                />
                 <AddStaffButton
                   branches={staffBranches}
                   positionOptions={staffPositionOptions}

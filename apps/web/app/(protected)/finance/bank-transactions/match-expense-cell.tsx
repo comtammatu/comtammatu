@@ -10,6 +10,10 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { cn } from "@comtammatu/ui";
 import {
   Sheet,
@@ -23,10 +27,7 @@ import {
   formatAccountingVND as formatVND,
   formatCount,
 } from "@comtammatu/shared/format";
-import {
-  formatVNBusinessDate,
-  formatVNDateTime,
-} from "@comtammatu/shared/time";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import {
   isSepayExpenseAllocationBalanced,
@@ -46,6 +47,9 @@ import {
   matchSepayTransactionWithSupplierPayments,
   searchSepayRefundOptions,
 } from "../expense-actions";
+import { FinanceAmountCell } from "../components/finance-amount-cell";
+import { FinanceMoneySummary } from "../components/finance-money-summary";
+import { displayBankContent } from "../_lib/display-bank-content";
 
 const copy = messages.finance.bankTransactions;
 type MatchPurpose = "expense" | "refund" | "supplier";
@@ -64,11 +68,17 @@ interface MatchExpenseCellProps {
   expenseOptions: ExpenseMatchOption[];
   touch: boolean;
   evidence: {
-    content: string;
+    content: string | null;
     reference: string;
     occurredAt: string;
     accountNumber: string | null;
   };
+}
+
+function formatSignedDelta(delta: number): string {
+  if (delta === 0) return formatVND(0);
+  const prefix = delta > 0 ? "+" : "-";
+  return `${prefix}${formatVND(Math.abs(delta))}`;
 }
 
 function expenseDetail(expense: ExpenseMatchOption): string {
@@ -465,215 +475,214 @@ export function MatchExpenseCell({
           </Button>
         }
       />
-      <SheetContent>
+      <SheetContent className="overflow-hidden">
         <SheetHeader>
           <SheetTitle>{copy.matchSheetTitle}</SheetTitle>
           <SheetDescription>{copy.matchSheetDescription}</SheetDescription>
         </SheetHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-          <NoteCallout label={copy.bankEvidenceTitle}>
-            <div className="grid gap-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <Badge variant="outline">{copy.moneyOut}</Badge>
-                <span className="font-mono font-medium text-warning">
-                  -{formatVND(amount)}
-                </span>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+            <NoteCallout label={copy.bankEvidenceTitle}>
+              <div className="grid gap-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Badge variant="outline">{copy.moneyOut}</Badge>
+                  <span className="font-mono font-medium text-warning">
+                    -{formatVND(amount)}
+                  </span>
+                </div>
+                <p className="break-words text-sm font-medium">
+                  {displayBankContent(evidence.content)}
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span>{evidence.occurredAt}</span>
+                  <span className="break-all font-mono">
+                    {evidence.reference}
+                  </span>
+                  <span className="break-all">
+                    {copy.account}: {evidence.accountNumber ?? "—"}
+                  </span>
+                </div>
               </div>
-              <p className="break-words text-sm font-medium">
-                {evidence.content}
+            </NoteCallout>
+            <div className="grid gap-2 border-b pb-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                {copy.matchPurposeTitle}
               </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>{evidence.occurredAt}</span>
-                <span className="break-all font-mono">
-                  {evidence.reference}
-                </span>
-                <span className="break-all">
-                  {copy.account}: {evidence.accountNumber ?? "—"}
-                </span>
-              </div>
+              <ToggleGroup
+                type="single"
+                value={purpose ?? ""}
+                variant="outline"
+                size="touch"
+                spacing={0}
+                className="grid w-full grid-cols-1 min-[360px]:grid-cols-3"
+                aria-label={copy.matchPurposeTitle}
+                onValueChange={(value) => {
+                  if (
+                    value === "refund" ||
+                    value === "expense" ||
+                    value === "supplier"
+                  ) {
+                    selectPurpose(value);
+                  }
+                }}
+              >
+                <ToggleGroupItem
+                  value="refund"
+                  className="min-w-0 justify-center"
+                  disabled={expenseIds.length > 0}
+                >
+                  {copy.refundPurpose}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="expense"
+                  className="min-w-0 justify-center"
+                >
+                  {copy.expensePurpose}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="supplier"
+                  className="min-w-0 justify-center"
+                  disabled={
+                    expenseIds.length > 0 || supplierPaymentMatches.length === 0
+                  }
+                >
+                  {copy.supplierPurpose}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
-          </NoteCallout>
-          <div className="grid gap-2 border-b pb-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              {copy.matchPurposeTitle}
-            </p>
-            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
-              <Button
-                type="button"
-                size="touch"
-                variant={purpose === "refund" ? "default" : "outline"}
-                disabled={expenseIds.length > 0}
-                onClick={() => selectPurpose("refund")}
-              >
-                {copy.refundPurpose}
-              </Button>
-              <Button
-                type="button"
-                size="touch"
-                variant={purpose === "expense" ? "default" : "outline"}
-                onClick={() => selectPurpose("expense")}
-              >
-                {copy.expensePurpose}
-              </Button>
-              <Button
-                type="button"
-                size="touch"
-                variant={purpose === "supplier" ? "default" : "outline"}
-                disabled={
-                  expenseIds.length > 0 || supplierPaymentMatches.length === 0
-                }
-                onClick={() => selectPurpose("supplier")}
-              >
-                {copy.supplierPurpose}
-              </Button>
-            </div>
-          </div>
-          {purpose === "supplier" && supplierPaymentMatches.length > 0 ? (
-            <NoteCallout label={copy.supplierPaymentSuggestion}>
-              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {purpose === "supplier" && supplierPaymentMatches.length > 0 ? (
+              <NoteCallout label={copy.supplierPaymentSuggestion}>
                 <span className="truncate text-xs text-muted-foreground">
                   {copy.matchedSupplierPaymentDetail(
                     supplierPaymentMatches[0]?.supplierName ?? "—",
                     formatVND(supplierPaymentMatches[0]?.amount ?? 0),
                   )}
                 </span>
-                <Button
-                  type="button"
-                  size="touch"
-                  className="w-full sm:w-auto"
-                  disabled={isPending}
-                  onClick={() =>
-                    handleSupplierPaymentMatch(
-                      supplierPaymentMatches.map((match) => match.id),
-                    )
-                  }
-                >
-                  {copy.confirmSupplierPaymentMatch}
-                </Button>
-              </div>
-            </NoteCallout>
-          ) : null}
-          {purpose === "refund" ? (
-            <div className="grid gap-2">
-              <div>
-                <p className="font-medium">{copy.refundMatchTitle}</p>
-                <p className="text-xs text-muted-foreground">
-                  {copy.refundMatchHint}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <span className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">
-                    {copy.bankTransactionAmount}
-                  </span>
-                  <span className="font-mono font-medium text-warning">
-                    -{formatVND(amount)}
-                  </span>
-                </span>
-                <span className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">
-                    {copy.selectedRefundAmount}
-                  </span>
-                  <span className="font-mono font-medium text-warning">
-                    -{formatVND(selectedRefundTotal)}
-                  </span>
-                </span>
-              </div>
-              {!refundAllocationBalanced ? (
-                <p className="text-xs text-warning">
-                  {copy.refundAllocationMismatch}
-                </p>
-              ) : null}
-              <form
-                className="flex flex-col gap-2 min-[360px]:flex-row"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  loadRefundOptions({ append: false, query: refundQuery });
-                }}
-              >
-                <Input
-                  type="search"
-                  name="refund-order-number"
-                  value={refundQuery}
-                  onChange={(event) => setRefundQuery(event.target.value)}
-                  placeholder={copy.refundSearchPlaceholder}
-                  aria-label={copy.refundSearchPlaceholder}
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={64}
-                  disabled={isRefundSearchPending}
-                />
-                <Button
-                  type="submit"
-                  size="touch"
-                  variant="outline"
-                  className="w-full min-[360px]:w-auto"
-                  disabled={isRefundSearchPending}
-                >
-                  {isRefundSearchPending
-                    ? copy.refundLoadingAction
-                    : copy.refundSearchAction}
-                </Button>
-              </form>
-              {refundOptionsError ? (
-                <p
-                  role="status"
-                  aria-live="polite"
-                  className="text-xs text-destructive"
-                >
-                  {refundOptionsError}
-                </p>
-              ) : null}
-              <div>
-                <div className="flex flex-col gap-1 pr-1">
-                  {availableRefunds.map((refund) => {
-                    const checkboxId = `sepay-${String(matchKey)}-refund-${refund.id}`;
-                    return (
-                      <label
-                        key={refund.id}
-                        htmlFor={checkboxId}
-                        className="flex cursor-pointer items-center gap-2 rounded-md hover:bg-muted/30"
-                      >
-                        <Checkbox
-                          size="touch"
-                          id={checkboxId}
-                          checked={selectedRefundSet.has(refund.id)}
-                          onCheckedChange={() => toggleRefund(refund)}
-                          disabled={isPending}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm">
-                            {refund.orderNumber}
-                          </span>
-                          <span className="block text-xs text-muted-foreground">
-                            {formatVNDateTime(refund.approvedAt)}
-                          </span>
-                        </span>
-                        <span className="font-mono text-xs font-medium text-warning">
-                          -{formatVND(refund.amount)}
-                        </span>
-                      </label>
-                    );
-                  })}
-                  {isRefundSearchPending && availableRefunds.length === 0 ? (
-                    <div
-                      role="status"
-                      aria-live="polite"
-                      className="text-center text-xs text-muted-foreground"
-                    >
-                      {copy.refundLoading}
-                    </div>
-                  ) : null}
-                  {refundOptionsLoaded &&
-                  !isRefundSearchPending &&
-                  availableRefunds.length === 0 ? (
-                    <div className="text-center text-xs text-muted-foreground">
-                      {copy.noUnmatchedRefunds}
-                    </div>
-                  ) : null}
+              </NoteCallout>
+            ) : null}
+            {purpose === "refund" ? (
+              <div className="grid gap-2">
+                <div>
+                  <p className="font-medium">{copy.refundMatchTitle}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {copy.refundMatchHint}
+                  </p>
                 </div>
-              </div>
-              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <span className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">
+                      {copy.bankTransactionAmount}
+                    </span>
+                    <span className="font-mono font-medium text-warning">
+                      -{formatVND(amount)}
+                    </span>
+                  </span>
+                  <span className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">
+                      {copy.selectedRefundAmount}
+                    </span>
+                    <span className="font-mono font-medium text-warning">
+                      -{formatVND(selectedRefundTotal)}
+                    </span>
+                  </span>
+                </div>
+                {!refundAllocationBalanced ? (
+                  <p className="text-xs text-warning">
+                    {copy.refundAllocationMismatch}
+                  </p>
+                ) : null}
+                <form
+                  className="flex flex-col gap-2 min-[360px]:flex-row"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    loadRefundOptions({ append: false, query: refundQuery });
+                  }}
+                >
+                  <Input
+                    type="search"
+                    name="refund-order-number"
+                    value={refundQuery}
+                    onChange={(event) => setRefundQuery(event.target.value)}
+                    placeholder={copy.refundSearchPlaceholder}
+                    aria-label={copy.refundSearchPlaceholder}
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={64}
+                    disabled={isRefundSearchPending}
+                  />
+                  <Button
+                    type="submit"
+                    size="touch"
+                    variant="outline"
+                    className="w-full min-[360px]:w-auto"
+                    disabled={isRefundSearchPending}
+                  >
+                    {isRefundSearchPending
+                      ? copy.refundLoadingAction
+                      : copy.refundSearchAction}
+                  </Button>
+                </form>
+                {refundOptionsError ? (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="text-xs text-destructive"
+                  >
+                    {refundOptionsError}
+                  </p>
+                ) : null}
+                <div>
+                  <div className="flex flex-col gap-1 pr-1">
+                    {availableRefunds.map((refund) => {
+                      const checkboxId = `sepay-${String(matchKey)}-refund-${refund.id}`;
+                      return (
+                        <label
+                          key={refund.id}
+                          htmlFor={checkboxId}
+                          className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md py-2 hover:bg-muted/30"
+                        >
+                          <Checkbox
+                            size="touch"
+                            id={checkboxId}
+                            checked={selectedRefundSet.has(refund.id)}
+                            onCheckedChange={() => toggleRefund(refund)}
+                            disabled={isPending}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="line-clamp-2 text-sm">
+                              {refund.orderNumber}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {formatVNBusinessDate(refund.approvedAt)}
+                            </span>
+                          </span>
+                          <FinanceAmountCell
+                            amount={refund.amount}
+                            basis="inclVat"
+                            signed
+                            className="text-xs text-warning"
+                          />
+                        </label>
+                      );
+                    })}
+                    {isRefundSearchPending && availableRefunds.length === 0 ? (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="text-center text-xs text-muted-foreground"
+                      >
+                        {copy.refundLoading}
+                      </div>
+                    ) : null}
+                    {refundOptionsLoaded &&
+                    !isRefundSearchPending &&
+                    availableRefunds.length === 0 ? (
+                      <div className="text-center text-xs text-muted-foreground">
+                        {copy.noUnmatchedRefunds}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -692,143 +701,160 @@ export function MatchExpenseCell({
                 >
                   {copy.refundLoadMore}
                 </Button>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="touch"
-                    className="w-full sm:w-auto"
-                    onClick={() => setSelectedRefundsById({})}
-                    disabled={isPending || selectedRefundIds.length === 0}
-                  >
-                    {copy.clearRefundMatch}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="touch"
-                    className="w-full sm:w-auto"
-                    onClick={() => handleRefundMatch(selectedRefundIds)}
-                    disabled={
-                      isPending ||
-                      selectedRefundIds.length === 0 ||
-                      !refundAllocationBalanced ||
-                      expenseIds.length > 0
-                    }
-                  >
-                    {copy.saveRefundMatch}
-                  </Button>
+              </div>
+            ) : null}
+            {purpose === "expense" ? (
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{copy.matchExpenseTitle}</span>
+                  {selectedIds.length > 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {copy.selectedExpenseCount(formatCount(selectedIds.length))}
+                    </span>
+                  ) : null}
                 </div>
+                <FinanceMoneySummary
+                  tone="none"
+                  rows={[
+                    {
+                      label: copy.bankTransactionAmount,
+                      display: `-${formatVND(amount)}`,
+                      tone: "warning",
+                    },
+                    {
+                      label: copy.selectedExpenseAmount,
+                      display: `-${formatVND(selectedTotal)}`,
+                      tone: "warning",
+                    },
+                    {
+                      label: copy.expenseMatchDelta,
+                      display: formatSignedDelta(delta),
+                    },
+                  ]}
+                />
+                {!allocationBalanced ? (
+                  <p className="text-xs text-warning">
+                    {copy.expenseAllocationMismatch}
+                  </p>
+                ) : null}
+                {persistedIntentIds.size > 0 ? (
+                  <NoteCallout label={copy.transferIntentLabel}>
+                    {selectedPersistedIntentId != null
+                      ? copy.transferIntentSelectionHint
+                      : copy.transferIntentExclusiveHint}
+                  </NoteCallout>
+                ) : null}
+                <div>
+                  <div className="flex flex-col gap-1 pr-1">
+                    {availableExpenses.map((exp) => {
+                      const checked = selectedSet.has(exp.id);
+                      const checkboxId = `sepay-${String(matchKey)}-expense-${exp.id}`;
+                      const hasTransferIntent = exp.transfer_content != null;
+                      const blockedBySelectedIntent =
+                        selectedPersistedIntentId != null &&
+                        selectedPersistedIntentId !== exp.id;
+                      return (
+                        <label
+                          key={exp.id}
+                          htmlFor={checkboxId}
+                          aria-disabled={blockedBySelectedIntent || isPending}
+                          className={cn(
+                            "flex min-h-11 items-center gap-2 rounded-md py-2",
+                            blockedBySelectedIntent || isPending
+                              ? "cursor-not-allowed opacity-60"
+                              : "cursor-pointer hover:bg-muted/30",
+                          )}
+                        >
+                          <Checkbox
+                            size="touch"
+                            id={checkboxId}
+                            checked={checked}
+                            onCheckedChange={() => toggleExpense(exp)}
+                            disabled={isPending || blockedBySelectedIntent}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="line-clamp-2 text-sm">
+                              {expenseDetail(exp)}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {formatVNBusinessDate(exp.expense_date)}
+                            </span>
+                            {hasTransferIntent ? (
+                              <span className="mt-1 block text-xs text-muted-foreground">
+                                {copy.transferIntentLabel}:{" "}
+                                <code className="break-all font-mono text-xs text-foreground">
+                                  {exp.transfer_content}
+                                </code>
+                              </span>
+                            ) : null}
+                          </span>
+                          <FinanceAmountCell
+                            amount={exp.amount}
+                            basis="inclVat"
+                            signed
+                            className="text-xs text-warning"
+                          />
+                        </label>
+                      );
+                    })}
+                    {availableExpenses.length === 0 ? (
+                      <div className="text-center text-xs text-muted-foreground">
+                        {copy.noUnmatchedExpenses}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          {purpose === "supplier" && supplierPaymentMatches.length > 0 ? (
+            <div className="sticky bottom-0 shrink-0 border-t bg-background p-4 pt-3">
+              <Button
+                type="button"
+                size="touch"
+                className="w-full"
+                disabled={isPending}
+                onClick={() =>
+                  handleSupplierPaymentMatch(
+                    supplierPaymentMatches.map((match) => match.id),
+                  )
+                }
+              >
+                {copy.confirmSupplierPaymentMatch}
+              </Button>
+            </div>
+          ) : null}
+          {purpose === "refund" ? (
+            <div className="sticky bottom-0 shrink-0 border-t bg-background p-4 pt-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="touch"
+                  onClick={() => setSelectedRefundsById({})}
+                  disabled={isPending || selectedRefundIds.length === 0}
+                >
+                  {copy.clearRefundMatch}
+                </Button>
+                <Button
+                  type="button"
+                  size="touch"
+                  onClick={() => handleRefundMatch(selectedRefundIds)}
+                  disabled={
+                    isPending ||
+                    selectedRefundIds.length === 0 ||
+                    !refundAllocationBalanced ||
+                    expenseIds.length > 0
+                  }
+                >
+                  {copy.saveRefundMatch}
+                </Button>
               </div>
             </div>
           ) : null}
           {purpose === "expense" ? (
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{copy.matchExpenseTitle}</span>
-                <span className="font-mono text-warning">
-                  {selectedExpenses.length > 0
-                    ? `-${formatVND(selectedTotal)}`
-                    : selectedIds.length > 0
-                      ? `${formatCount(selectedIds.length)} chi`
-                      : "—"}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <span className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">
-                    {copy.bankTransactionAmount}
-                  </span>
-                  <span className="font-mono font-medium text-warning">
-                    -{formatVND(amount)}
-                  </span>
-                </span>
-                <span className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">
-                    {copy.selectedExpenseAmount}
-                  </span>
-                  <span className="font-mono font-medium text-warning">
-                    -{formatVND(selectedTotal)}
-                  </span>
-                </span>
-                <span className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">
-                    {copy.expenseMatchDelta}
-                  </span>
-                  <span className="font-mono font-medium">
-                    {delta === 0 ? formatVND(0) : formatVND(Math.abs(delta))}
-                  </span>
-                </span>
-              </div>
-              {!allocationBalanced ? (
-                <p className="text-xs text-warning">
-                  {copy.expenseAllocationMismatch}
-                </p>
-              ) : null}
-              {persistedIntentIds.size > 0 ? (
-                <NoteCallout label={copy.transferIntentLabel}>
-                  {selectedPersistedIntentId != null
-                    ? copy.transferIntentSelectionHint
-                    : copy.transferIntentExclusiveHint}
-                </NoteCallout>
-              ) : null}
-              <div>
-                <div className="flex flex-col gap-1 pr-1">
-                  {availableExpenses.map((exp) => {
-                    const checked = selectedSet.has(exp.id);
-                    const checkboxId = `sepay-${String(matchKey)}-expense-${exp.id}`;
-                    const hasTransferIntent = exp.transfer_content != null;
-                    const blockedBySelectedIntent =
-                      selectedPersistedIntentId != null &&
-                      selectedPersistedIntentId !== exp.id;
-                    return (
-                      <label
-                        key={exp.id}
-                        htmlFor={checkboxId}
-                        aria-disabled={blockedBySelectedIntent || isPending}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md",
-                          blockedBySelectedIntent || isPending
-                            ? "cursor-not-allowed opacity-60"
-                            : "cursor-pointer hover:bg-muted/30",
-                        )}
-                      >
-                        <Checkbox
-                          size="touch"
-                          id={checkboxId}
-                          checked={checked}
-                          onCheckedChange={() => toggleExpense(exp)}
-                          disabled={isPending || blockedBySelectedIntent}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm">
-                            {expenseDetail(exp)}
-                          </span>
-                          <span className="block text-xs text-muted-foreground">
-                            {formatVNBusinessDate(exp.expense_date)}
-                          </span>
-                          {hasTransferIntent ? (
-                            <span className="mt-1 block text-xs text-muted-foreground">
-                              {copy.transferIntentLabel}:{" "}
-                              <code className="break-all font-mono text-xs text-foreground">
-                                {exp.transfer_content}
-                              </code>
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="font-mono text-xs font-medium text-warning">
-                          -{formatVND(exp.amount)}
-                        </span>
-                      </label>
-                    );
-                  })}
-                  {availableExpenses.length === 0 ? (
-                    <div className="text-center text-xs text-muted-foreground">
-                      {copy.noUnmatchedExpenses}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-col items-stretch gap-2 border-t pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="sticky bottom-0 shrink-0 border-t bg-background p-4 pt-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                   <Button
                     type="button"

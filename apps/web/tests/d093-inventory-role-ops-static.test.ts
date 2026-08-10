@@ -14,8 +14,8 @@ const inventoryNav = readFileSync(
   "app/(protected)/inventory/_lib/inventory-nav.ts",
   "utf8",
 );
-const inventoryHome = readFileSync(
-  "app/(protected)/inventory/_lib/inventory-home.ts",
+const inventoryPage = readFileSync(
+  "app/(protected)/inventory/page.tsx",
   "utf8",
 );
 const stockRequestInbox = readFileSync(
@@ -159,7 +159,7 @@ test("D093 nav-config exposes one branch fulfillment hub", () => {
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/transfer"/,
   );
-  assert.match(navConfig, /label: "Giao nhận hàng"/);
+  assert.match(navConfig, /label: "Giao nhận"/);
   assert.doesNotMatch(
     navConfig,
     /hrefTemplate: "\/br\/\{branchId\}\/stock\/requests"/,
@@ -177,14 +177,13 @@ test("D093 branch GRN list route keeps branch redirect; central mounts list", ()
 
 test("D093 inventory-nav includes one fulfillment hub", () => {
   assert.match(inventoryNav, /href: "\/inventory\/transfers"/);
-  assert.match(inventoryNav, /label: "Giao nhận hàng"/);
+  assert.match(inventoryNav, /tNav\("transfers"/);
   assert.match(inventoryNav, /"\/inventory\/stock-requests"/);
 });
 
-test("D093 inventory L0 landing is a redirect without hub dashboard", () => {
-  assert.match(inventoryHome, /\/inventory\/stock/);
-  assert.match(inventoryHome, /accountant/);
-  assert.match(inventoryHome, /\/inventory\/grn/);
+test("D093 inventory L0 landing is workflow lanes without hub dashboard", () => {
+  assert.match(inventoryPage, /resolveInventoryNav/);
+  assert.doesNotMatch(inventoryPage, /resolveInventoryHomePath|redirect\(/);
   assert.doesNotMatch(inventoryNav, /0 · Nay/);
   assert.doesNotMatch(inventoryNav, /href: "\/inventory",/);
 });

@@ -3,7 +3,11 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
-import { resolveNotificationActionUrl } from "@lib/notifications/action-url";
+import {
+  resolveNotificationActionUrl,
+  resolveNotificationAuditUrl,
+  resolveNotificationHistoryUrl,
+} from "@lib/notifications/action-url";
 import { messages } from "@lib/messages";
 
 export interface NotificationItem {
@@ -18,6 +22,8 @@ export interface NotificationItem {
   entity_type: string | null;
   entity_id: number | null;
   action_url: string | null;
+  history_url: string | null;
+  audit_url: string | null;
   meta: Record<string, unknown>;
   created_at: string;
   expires_at: string | null;
@@ -97,8 +103,19 @@ export async function listNotifications(
       action_url: resolveNotificationActionUrl(claims, {
         actionUrl: row.action_url,
         entityId: row.entity_id,
+        entityType: row.entity_type,
         kind: row.kind,
         targetBranchId: row.target_branch_id,
+      }),
+      history_url: resolveNotificationHistoryUrl(claims, {
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        kind: row.kind,
+        targetBranchId: row.target_branch_id,
+      }),
+      audit_url: resolveNotificationAuditUrl(claims, {
+        entityType: row.entity_type,
+        entityId: row.entity_id,
       }),
       meta: (row.meta ?? {}) as Record<string, unknown>,
       created_at: row.created_at,
@@ -125,7 +142,7 @@ export async function getUnreadCount(): Promise<
 export async function getNotificationBadgeSummary(): Promise<
   ActionResult<NotificationBadgeSummary>
 > {
-  const { supabase } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
   const { data, error } = await supabase.rpc(
     "count_unread_notifications_by_target" as never,
     {} as never,
@@ -141,7 +158,12 @@ export async function getNotificationBadgeSummary(): Promise<
 
   const targets = parsed.data.map((row) => ({
     kind: row.kind,
-    actionUrl: row.action_url,
+    actionUrl: resolveNotificationActionUrl(claims, {
+      actionUrl: row.action_url,
+      entityId: null,
+      kind: row.kind,
+      targetBranchId: null,
+    }),
     unreadCount: row.unread_count,
   }));
 

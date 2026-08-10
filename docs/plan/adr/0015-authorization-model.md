@@ -6,118 +6,75 @@
 
 ## Context
 
-The current authorization model binds one user to one Tenant and one Branch,
-derives an application role from an HR position, carries that authority in JWT
-claims, and combines role route gates with live permission grants. It cannot
-represent Company-scoped office staff, multiple operational-site kinds, or
-multi-site assignments without preserving legacy assumptions.
+The current model binds one user to one Tenant and one Branch, derives an
+application role from an HR position, carries authority in JWT claims, and
+combines role route gates with live permission grants. It cannot represent
+Company-scoped office staff, multiple operational-site kinds, or multi-site
+assignments without legacy assumptions. Revocation must not wait on JWT role
+refresh. “PBAC” is ambiguous and must not name the architecture.
 
-The Production target needs one Company, one Tenant, and operational sites of
-kind `central_warehouse`, `central_kitchen`, or `branch`. Revocation and row
-isolation must not depend on a JWT role refresh.
-
-Production is the database and authorization target for the existing
-`comtammatu` repository after cutoff `baf3720f8`. It is not a repository fork
-or parallel product.
-
-The term PBAC is ambiguous between permission-based and policy-based access
-control, so it cannot be a durable architecture name.
+Production target after cutoff `baf3720f8` is one Company, one Tenant, and
+sites of kind `central_warehouse`, `central_kitchen`, or `branch` — not a
+repository fork.
 
 ## Decision
 
-- Keep Supabase Auth for identity and session management.
-- Replace authority behind the existing database, auth, route, and module seams
-  in this repository. Do not create a parallel app/package tree.
-- Use standard JWT identity/session claims only. Do not place roles,
-  capabilities, Tenant memberships, or site assignments in JWTs, and do not add
-  a custom access-token hook in V1.
+- Keep Supabase Auth for identity/session. Replace authority behind existing
+  database, auth, route, and module seams — no parallel app/package tree.
+- Standard JWT identity/session claims only. No roles, capabilities, Tenant
+  memberships, or site assignments in JWTs; no custom access-token hook in V1.
 - Model Company membership, Tenant membership, and site assignment as separate
-  live relations.
-- Keep HR positions and departments independent from authorization. They may
-  suggest onboarding choices but never create or change access.
-- Use scoped RBAC: an access role contains capabilities and an explicit binding
-  assigns that role to a principal at one `company`, `tenant`, or `site` scope.
-- Bind scoped roles to the exact immutable Company membership, Tenant
-  membership, or site-assignment lifecycle row. A later rehire/reassignment
-  cannot reactivate an old binding.
-- Treat membership/assignment lifecycle mutations as authorization-sensitive
-  RPCs. Creating placement grants no role; ending placement cannot bypass
-  privileged-binding protection.
-- Use typed `AuthorizationPolicy` functions for Company, Tenant, and site
-  decisions. They evaluate live membership, resource lineage/status, binding
-  validity, capability scope, and session assurance.
-- Make those database functions the only live membership/binding evaluator.
-  TypeScript owns types, route admission, and UX projection, not a second
-  authorization decision engine.
-- Do not implement a generic policy engine, JSON rule DSL, runtime policy
-  editor, explicit deny rows, or direct per-user capability grants in V1.
-- Do not infer Company-to-Tenant or Tenant-to-site access. Cross-scope oversight
-  requires an explicit capability and policy.
+  live relations. HR positions/departments never create or change access.
+- Scoped RBAC: an access role holds capabilities; a binding assigns that role
+  at one `company`, `tenant`, or `site` scope, tied to the exact immutable
+  membership/assignment lifecycle row (rehire cannot reactivate an old binding).
+- Membership/assignment mutations are authorization-sensitive RPCs. Placement
+  alone grants no role.
+- Typed `AuthorizationPolicy` database functions are the only live
+  membership/binding evaluator. TypeScript owns types, route admission, and UX
+  projection — not a second decision engine.
+- No generic policy engine, JSON rule DSL, runtime policy editor, explicit deny
+  rows, or direct per-user capability grants in V1.
+- No inferred Company→Tenant or Tenant→site access; cross-scope oversight needs
+  an explicit capability and policy.
 - Replace role-list route ACL with a typed route-capability registry. Route
-  admission remains a coarse gate; RLS and domain RPCs are authoritative.
-- Remove universal Owner bypass. Company administration is an explicit role and
-  remains subject to scope, RLS, AAL, and domain invariants.
-- Keep authorization tables non-exposed and deny direct authenticated writes.
-  Expose only narrow `api` RPC entrypoints; role binding and revocation are
-  audited and idempotent.
-- Keep one versioned capability manifest and generate/check the SQL catalog,
-  route registry types, and matrices against it.
-- Persist an idempotent provisioning request before calling the external Auth
-  Admin API so partial identity/membership creation can be reconciled.
-- In V1, only Security Admin with AAL2 mutates human role bindings. Role
-  assignment class, sensitivity floor, expiry ceiling, reason, and privileged
-  approval remain enforced; human RPCs cannot grant machine-only roles. Access
-  Admin is deferred until a separate onboarding operator exists.
-- Bootstrap the first Security Admin through an owner-run, one-time, audited
-  candidate script with exact target and identity checks. No permanent bypass
-  is added.
-- Keep site agents outside human roles. Each agent has a revocable identity for
-  one site and never receives `service_role`.
+  admission is coarse; RLS and domain RPCs are authoritative.
+- Remove universal Owner bypass. Company administration is an explicit role
+  subject to scope, RLS, AAL, and domain invariants.
+- Authorization tables non-exposed; deny direct authenticated writes. Narrow
+  `api` RPC entrypoints only; binding/revocation audited and idempotent.
+- One versioned capability manifest generates/checks SQL catalog, route
+  registry types, and matrices.
+- Persist an idempotent provisioning request before Auth Admin API calls.
+- V1: only Security Admin with AAL2 mutates human role bindings. Bootstrap the
+  first Security Admin via an owner-run, one-time, audited candidate script.
+  Site agents stay outside human roles (one site, never `service_role`).
+
+Live interim contracts until cutover: `packages/shared/src/auth/`,
+`docs/modules/auth.md`, `docs/spec/role-route-matrix.md`.
 
 ## Consequences
 
-- Production cannot remove the current `profiles` scope columns,
-  position-to-role mapper, `MODULE_ACL`, permission tables, Owner bypass, or
-  custom JWT claim shape as target authority.
-- Route code, navigation, Server Actions, RLS, RPCs, Realtime, and Storage share
-  one capability vocabulary but retain their distinct enforcement
-  responsibilities.
-- Authorization reads live indexed relations rather than cached role claims.
-  Performance optimizations require measurements and cannot weaken revocation.
-- Small exceptions use additional narrow or temporary role bindings. A direct
-  capability grant model or delegation matrix requires a demonstrated use case.
-- The authority slice must be source-ready and proven
-  before Branch Workspace migration.
-- Existing runtime modules stay authoritative until their callers cross the new
-  seam; remove legacy implementation only after the last caller moves.
-
-## Revisit triggers
-
-Reconsider a dedicated policy engine only when independent Tenant
-administrators must author conditional runtime policies across multiple
-domains, policy changes cannot use reviewed migrations, and typed policies show
-measured duplication or latency.
-
-Reconsider direct capability grants only when a real exception cannot be
-represented by a narrow scoped role.
+- Production cannot drop `profiles` scope columns, position-to-role mapper,
+  `MODULE_ACL`, permission tables, Owner bypass, or custom JWT claims as target
+  authority until callers cross the new seam.
+- Route/nav/Server Actions/RLS/RPC/Realtime/Storage share one capability
+  vocabulary with distinct enforcement responsibilities.
+- Authorization reads live indexed relations; performance work cannot weaken
+  revocation.
+- Exceptions use narrow/temporary role bindings; direct grants need a
+  demonstrated use case.
+- Revisit a policy engine or direct grants only when typed policies show
+  measured failure modes (multi-admin authored policies, or exceptions that
+  cannot be a narrow role).
 
 ## Verification
 
-- Office users perform Company actions without a fake Tenant or site.
-- Company membership, Tenant membership, and site assignment alone grant no
-  business action.
-- Position changes have no authorization effect.
-- Site bindings cannot cross site or site kind.
-- Revoked or expired bindings are denied without waiting for a JWT role refresh.
-- Injected legacy role/scope claims have no effect.
-- Company administrators cannot bypass RLS or high-risk AAL requirements.
-- Protected routes missing from the route-capability registry fail closed.
-- Authorization-table DML is unavailable to authenticated clients.
-- RLS and RPC tests cover the same subject/action/scope decision matrix.
-- Rehire or reassignment cannot reactivate a prior binding.
-- Explicit Tenant oversight capabilities have positive and negative descendant
-  tests; parent membership alone never authorizes a site.
-- Candidate MFA bootstrap/recovery and Realtime revocation-window evidence are
-  recorded before go-live.
-- Site-agent cross-site and human-workflow denial is verified in the Print &
-  Devices/G6 slice.
+- Office users act at Company scope without a fake Tenant/site; membership alone
+  grants no business action; position changes have no auth effect.
+- Site bindings cannot cross site/kind; revoked/expired bindings deny without
+  JWT role refresh; injected legacy claims have no effect.
+- Company admins cannot bypass RLS or high-risk AAL; missing route-capability
+  registry entries fail closed; auth-table DML unavailable to authenticated.
+- Rehire cannot reactivate a prior binding; parent membership alone never
+  authorizes a site; site-agent cross-site denial verified in Print & Devices.

@@ -46,7 +46,7 @@ const THEME_COOKIE = "matu-theme";
 
 // `landsOn` declares the URL a route is expected to finally land on. The
 // inventory entry point server-redirects to the fixed L0 inventory landing
-// (inventory-home.ts); declaring it keeps the URL guard strict against silent
+// (/inventory page); declaring it keeps the URL guard strict against silent
 // access-denied redirects while tolerating this known-benign redirect.
 const ROUTES: ReadonlyArray<{
   name: string;

@@ -22,6 +22,9 @@ claims and ACL rules are owned by `database.md` and `docs/modules/auth.md`.
 ## Git And Commit Conventions
 
 - No AI attribution or generated-by trailers.
+- Language separation: `docs/agent/rules/language.md` (English agent/technical
+  surfaces; Vietnamese product UI and `docs/ref/**`). Enforce with
+  `lint:language-policy` and `lint:copy`.
 - Commit subjects are English, imperative, and use a conventional prefix when
   one fits.
 - Agent-authored implementation commits include a `Verification:` line naming

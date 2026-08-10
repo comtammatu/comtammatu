@@ -164,6 +164,9 @@ export function PurchaseRequestsClient({
   const [reason, setReason] = useState("");
   const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [pendingId, setPendingId] = useState<number | null>(null);
+  const [copyFromRequestId, setCopyFromRequestId] = useState<number | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
 
   const mode = overlay.get("mode");
@@ -283,6 +286,30 @@ export function PurchaseRequestsClient({
     setNeededBy(getVNDateString());
     setRequestLines([blankRequestLine()]);
     setRequestBaseline("");
+    setCopyFromRequestId(null);
+  }
+
+  function openCopyFromSelected() {
+    if (!selected || !canCreateRequest) return;
+    const nextBranchId = String(selected.branchId);
+    const nextNeededBy = selected.neededBy ?? getVNDateString();
+    const nextLines =
+      selected.items.length > 0
+        ? selected.items.map((item) => ({
+            key: crypto.randomUUID(),
+            ingredientId: String(item.ingredientId),
+            quantity: String(item.quantity),
+            entryUnitId: String(item.entryUnitId),
+          }))
+        : [blankRequestLine()];
+    setBranchId(nextBranchId);
+    setNeededBy(nextNeededBy);
+    setRequestLines(nextLines);
+    setRequestBaseline(
+      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
+    );
+    setCopyFromRequestId(selected.id);
+    updateUrl(null, "create");
   }
 
   async function closeRequestForm() {
@@ -324,9 +351,16 @@ export function PurchaseRequestsClient({
 
   function chooseIngredient(line: RequestDraftLine, value: string) {
     const ingredient = ingredients.find((item) => item.id === Number(value));
+    const shouldPrefill =
+      line.quantity.trim() === "" || Number(line.quantity) <= 0;
+    const suggested =
+      ingredient != null && ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : line.quantity;
     patchRequestLine(line.key, {
       ingredientId: value,
       entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
+      ...(shouldPrefill ? { quantity: suggested } : {}),
     });
   }
 
@@ -771,6 +805,7 @@ export function PurchaseRequestsClient({
               setRequestBaseline(
                 JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
               );
+              setCopyFromRequestId(null);
               updateUrl(null, "create");
             }}
           >
@@ -861,11 +896,19 @@ export function PurchaseRequestsClient({
           if (!open) void closeRequestForm();
         }}
         variant="document"
-        title={mode === "edit" && selected ? selected.code : copy.createTitle}
+        title={
+          mode === "edit" && selected
+            ? selected.code
+            : copyFromRequestId != null
+              ? copy.copyToNewAction
+              : copy.createTitle
+        }
         description={
           mode === "edit" && selected
             ? copy.statusLabel(selected.status)
-            : copy.description
+            : copyFromRequestId != null
+              ? copy.copyToNewBanner
+              : copy.description
         }
         footer={
           <>
@@ -908,6 +951,11 @@ export function PurchaseRequestsClient({
       >
         {createOpen ? (
           <>
+            {copyFromRequestId != null ? (
+              <Item variant="muted" size="sm">
+                {copy.copyToNewBanner}
+              </Item>
+            ) : null}
             {selected?.status === "changes_requested" &&
             selected.statusReason ? (
               <Item variant="muted" size="sm">
@@ -1085,6 +1133,11 @@ export function PurchaseRequestsClient({
                   onClick={() => updateUrl(selected.id, "edit", "replace")}
                 >
                   {ACTIONS_VI.edit}
+                </Button>
+              ) : null}
+              {canCreateRequest && selected.status === "cancelled" ? (
+                <Button type="button" onClick={openCopyFromSelected}>
+                  {copy.copyToNewAction}
                 </Button>
               ) : null}
               <Button

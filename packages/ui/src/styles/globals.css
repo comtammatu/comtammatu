@@ -100,9 +100,9 @@
   --text-3xs: 0.625rem;
   --text-3xs--line-height: 0.875rem;
 
-  /* Runner/KDS customer-facing board rows need large scan sizes that adapt to
-   * desktop display height without app-surface text-4xl, arbitrary text
-   * values, or viewport-width typography. */
+  /* Runner + Pickup/KDS customer-facing board rows need large scan sizes that
+   * adapt to desktop display height without app-surface text-4xl, arbitrary
+   * text values, or viewport-width typography. */
   --text-runner-header: clamp(1.25rem, 3.2dvh, 2.875rem);
   --text-runner-header--line-height: 1.12;
   --text-runner-board: clamp(1.625rem, 3.8dvh, 3.75rem);
@@ -111,10 +111,18 @@
   --text-runner-empty-secondary--line-height: 1.12;
   --text-runner-footer: clamp(1.125rem, 2.4dvh, 2.25rem);
   --text-runner-footer--line-height: 1.12;
+  --text-pickup-header: clamp(1.25rem, 3.2dvh, 2.875rem);
+  --text-pickup-header--line-height: 1.12;
+  --text-pickup-board: clamp(1.625rem, 3.8dvh, 3.75rem);
+  --text-pickup-board--line-height: 1.12;
+  --text-pickup-empty-secondary: clamp(1.25rem, 3dvh, 2.75rem);
+  --text-pickup-empty-secondary--line-height: 1.12;
+  --text-pickup-footer: clamp(1.125rem, 2.4dvh, 2.25rem);
+  --text-pickup-footer--line-height: 1.12;
 
   /* The --animate-spin rebind retimes the global spinner to the DS 700ms. */
   --animate-spin: spin var(--motion-spinner) var(--ease-linear) infinite;
-  /* Cot Let runner mascot — Codex Pet Atlas rows with exact frame counts. */
+  /* Cot Let pickup mascot — Codex Pet Atlas rows with exact frame counts. */
   --animate-cotlet-idle: cotlet-idle 1s steps(6) infinite;
   --animate-cotlet-waiting: cotlet-waiting 1.1s steps(6) infinite;
   --animate-cotlet-waving: cotlet-waving 800ms steps(4) infinite;
@@ -559,8 +567,8 @@
   border-radius: var(--radius-md);
 }
 
-/* Cot Let runner mascot — Codex Pet Atlas (8 cols x 9 rows, 192x208 per
- * frame). The runner idle board is the documented full-screen idle-visual
+/* Cot Let runner/pickup mascot — Codex Pet Atlas (8 cols x 9 rows, 192x208 per
+ * frame). The idle board is the documented full-screen idle-visual
  * exception (§G Motion); sprite loops apply via motion-safe utilities and
  * collapse under the global prefers-reduced-motion backstop. */
 @utility mascot-cotlet {

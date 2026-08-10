@@ -64,7 +64,7 @@ const BLOCKED_STATE_REASON_COPY: Record<
     description:
       "POS và KDS chỉ hoạt động khi thiết bị nối vào wifi của chi nhánh. Bạn đang ở mạng khác — vui lòng kết nối wifi cửa hàng và thử lại.",
     nextStep:
-      "Kiểm tra wifi cửa hàng. Nếu vừa đổi mạng / đổi nhà mạng, báo quản lý để cấu hình lại IP tin cậy.",
+      "Kết nối wifi cửa hàng, hoặc báo chủ sở hữu mở bypass khẩn cấp tại Cổng mạng POS/KDS của chi nhánh (1 giờ / 2 giờ / 4 giờ / Ca POS / Ngày).",
     toastMessage: "Thiết bị không nằm trong mạng cửa hàng.",
     tone: "warning",
   },

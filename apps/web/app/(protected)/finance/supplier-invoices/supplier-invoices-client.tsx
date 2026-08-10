@@ -1055,13 +1055,13 @@ function SupplierInvoiceCreateFields({
             </span>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{copy.vat}</span>
+            <span className="text-muted-foreground">{copy.vatAmountLabel}</span>
             <span className="font-mono tabular-nums">
               {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
+            <span className="text-muted-foreground">{copy.totalInvoice}</span>
             <span className="font-mono font-semibold tabular-nums">
               {messages.inventory.common.currencyCompact(
                 formatVND(totalAmount),
@@ -3442,13 +3442,13 @@ export function SupplierInvoicesClient({
             <TextField
               control={form.control}
               name="creditNumber"
-              label="Số phiếu giảm công nợ"
+              label={copy.creditNumberLabel}
               required
             />
             <MoneyVndField
               control={form.control}
               name="amount"
-              label="Số tiền giảm"
+              label={copy.creditAmountLabel}
               required
             />
             <TextareaField

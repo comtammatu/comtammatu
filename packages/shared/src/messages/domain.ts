@@ -5,7 +5,7 @@
 // must not introduce synonyms for the canonical terms.
 
 // POS sale order — distinct from procurement purchase order (PO).
-// glossary §"Bán hàng": canonical "Đơn hàng bán" / short "Đơn bán".
+// glossary: formal long "Đơn hàng bán"; chrome/nav short "Đơn bán".
 export const ORDER_VI = {
   long: "Đơn hàng bán",
   short: "Đơn bán",
@@ -61,13 +61,3 @@ export const PRODUCT_VI = {
   finishedGood: "Thành phẩm",
 } as const;
 export type ProductKey = keyof typeof PRODUCT_VI;
-
-// Customer — formal "khách hàng" for admin/legal context; "khách" for POS
-// toast short form. HĐĐT buyer-name field is legally fixed; use LEGAL_FIXED_VI
-// from the labels module for that surface, never CUSTOMER_VI.
-export const CUSTOMER_VI = {
-  long: "Khách hàng",
-  short: "Khách",
-  walkIn: "Khách lẻ",
-} as const;
-export type CustomerKey = keyof typeof CUSTOMER_VI;

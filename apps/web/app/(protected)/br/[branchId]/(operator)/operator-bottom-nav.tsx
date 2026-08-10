@@ -23,17 +23,18 @@ import type { BranchNavBadgeCounts } from "./_lib/branch-nav-badges";
 const branchCopy = messages.settings.branch;
 const employeeNavCopy = messages.employee.nav;
 
-function centralNavItems(
+/**
+ * R04 residual pad when central deep-links into `/br/{site}/stock/*`.
+ * Home escapes to Control home `/` — not a second daily hub on `/br`.
+ */
+function centralResidualNavItems(
   branchId: number,
   branchKind: BranchKind,
 ): ShellNavItem[] {
   const base = `/br/${branchId}`;
-  const home = {
-    href: base,
-    label:
-      branchKind === "central_kitchen"
-        ? branchCopy.centralKitchenNavHome
-        : APP_COPY_VI.branchHome,
+  const controlHome = {
+    href: "/",
+    label: APP_COPY_VI.ownerTitle,
     icon: Home,
     exact: true,
   };
@@ -76,7 +77,7 @@ function centralNavItems(
 
   if (branchKind === "central_supply") {
     return [
-      home,
+      controlHome,
       receive,
       {
         href: `${base}/stock/on-hand`,
@@ -90,10 +91,10 @@ function centralNavItems(
   }
 
   return [
-    home,
+    controlHome,
     receive,
     {
-      href: `${base}/stock/production`,
+      href: "/inventory/production",
       label: branchCopy.centralNavProduction,
       icon: ChefHat,
       exact: false,
@@ -125,7 +126,7 @@ export function OperatorBottomNav({
 
   const items: ShellNavItem[] =
     branchKind !== "branch"
-      ? centralNavItems(branchId, branchKind)
+      ? centralResidualNavItems(branchId, branchKind)
       : [
           {
             href: `/br/${branchId}`,

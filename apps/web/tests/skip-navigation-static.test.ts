@@ -33,8 +33,8 @@ test("global skip navigation lands in every primary route plane", () => {
       /<main[\s\S]*id="main-content"\s+tabIndex=\{-1\}/,
     ],
     [
-      "Runner",
-      "apps/web/app/(protected)/br/[branchId]/runner/layout.tsx",
+      "Pickup",
+      "apps/web/app/(protected)/br/[branchId]/pickup/layout.tsx",
       /<main[\s\S]*id="main-content"\s+tabIndex=\{-1\}/,
     ],
     [

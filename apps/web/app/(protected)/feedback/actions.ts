@@ -23,6 +23,9 @@ export type FeedbackInboxRow = {
   comment: string | null;
   createdAt: string;
   qrLabel: string;
+  orderNumber: string | null;
+  tableNumber: string | null;
+  orderCreatedAt: string | null;
 };
 
 export type FeedbackQrRow = {
@@ -67,7 +70,7 @@ export const listFeedbackInbox = withAction(
     let query = ctx.supabase
       .from("feedbacks")
       .select(
-        "id, branch_id, rating, comment, created_at, qr_code_id, feedback_qr_codes!inner(label), branches!inner(name)",
+        "id, branch_id, rating, comment, created_at, qr_code_id, order_number, table_number, order_created_at, feedback_qr_codes!inner(label), branches!inner(name)",
         { count: "exact" },
       )
       .eq("tenant_id", ctx.claims.tenant_id)
@@ -99,6 +102,9 @@ export const listFeedbackInbox = withAction(
         comment: row.comment,
         createdAt: row.created_at,
         qrLabel: qr?.label ?? "—",
+        orderNumber: row.order_number,
+        tableNumber: row.table_number,
+        orderCreatedAt: row.order_created_at,
       };
     });
 

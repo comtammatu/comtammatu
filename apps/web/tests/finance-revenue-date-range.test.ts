@@ -153,11 +153,9 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(cockpit, /select\("subtotal, category"\)/);
   assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
   assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
-  assert.match(
-    expensesClient,
-    /const EXPENSE_FORM_CATEGORIES = \[[\s\S]*"rent"[\s\S]*"salary"[\s\S]*"utilities"[\s\S]*"other"[\s\S]*\] as const/,
-  );
-  assert.match(dataContract, /category thuộc nhóm `operating`/);
+  assert.match(expensesClient, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(expensesClient, /expenseCategoryGroups\(category\)/);
+  assert.match(dataContract, /expenses\.subtotal` nhóm operating/);
   assert.doesNotMatch(dataContract, /category='bank_deposit'/);
 });
 
@@ -206,8 +204,11 @@ test("Finance revenue money-collected fields use payment amount", () => {
     "method breakdowns must not bucket order totals by payment method",
   );
   assert.match(revenueClient, /Sum of payments\.amount/);
-  assert.match(dataContract, /Tổng `payments\.amount` theo `payments\.method`/);
-  assert.match(dataContract, /`COUNT\(DISTINCT orders\.id\)`/);
+  assert.match(
+    dataContract,
+    /finance\.revenue\.money_collected[\s\S]*`payments\.amount` completed/,
+  );
+  assert.match(dataContract, /get_revenue_kpis[\s\S]*payments \+ orders/);
 });
 
 test("Finance food-cost page shows actual cost coverage before estimate rows", () => {
@@ -238,7 +239,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   );
   assert.match(expenseActions, /orderIds\.add\(movement\.order_id\)/);
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
-  assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế đã ghi nhận"/);
+  assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
 });
 
 test("Finance gates gross profit and operating result on data coverage", () => {

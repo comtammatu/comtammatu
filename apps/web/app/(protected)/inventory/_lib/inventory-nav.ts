@@ -34,8 +34,17 @@ export function withInventoryBranchNavScope(
   }));
 }
 
+/** Full Mua hàng workspace (PO lifecycle) — Owner / Kế toán only. */
 function canShowPurchaseOrders(role: StaffRole): boolean {
-  return role !== "branch_manager";
+  return role === "owner" || role === "accountant";
+}
+
+/**
+ * Central sites create Yêu cầu mua; they must not own PO pricing/send.
+ * Same `/inventory/purchase-orders` workspace defaults to the needs tab.
+ */
+function canShowPurchaseRequests(role: StaffRole): boolean {
+  return role === "central_supply_ops" || role === "central_kitchen_lead";
 }
 
 /** Menu-item consumption recipes are owner-managed catalog data. */
@@ -75,13 +84,13 @@ export function resolveInventoryNav({
             items: [
               {
                 href: "/inventory/purchase-orders",
-                label: "Mua hàng",
+                label: tNav("purchaseOrders", "navigation"),
                 icon: IconShoppingCart,
                 matchPrefixes: ["/inventory/purchase-requests"],
               },
               {
                 href: "/inventory/grn",
-                label: "Nhập kho",
+                label: tNav("grn", "navigation"),
                 icon: IconPackagePlus,
               },
             ],
@@ -107,7 +116,14 @@ export function resolveInventoryNav({
   if (showProcurement && canShowPurchaseOrders(userRole)) {
     inboundItems.push({
       href: "/inventory/purchase-orders",
-      label: "Mua hàng",
+      label: tNav("purchaseOrders", "navigation"),
+      icon: IconShoppingCart,
+      matchPrefixes: ["/inventory/purchase-requests"],
+    });
+  } else if (showProcurement && canShowPurchaseRequests(userRole)) {
+    inboundItems.push({
+      href: "/inventory/purchase-orders",
+      label: tNav("purchaseRequests", "navigation"),
       icon: IconShoppingCart,
       matchPrefixes: ["/inventory/purchase-requests"],
     });
@@ -115,13 +131,13 @@ export function resolveInventoryNav({
   if (showProcurement) {
     inboundItems.push({
       href: "/inventory/grn",
-      label: "Nhập kho",
+      label: tNav("grn", "navigation"),
       icon: IconPackagePlus,
     });
   }
   inboundItems.push({
     href: "/inventory/consumption",
-    label: "Tiêu hao",
+    label: tNav("consumption", "navigation"),
     icon: IconCircleMinus,
     matchPrefixes: [
       "/inventory/consumption/",
@@ -132,7 +148,7 @@ export function resolveInventoryNav({
   if (showStockRequestInbox || userRole === "owner") {
     inboundItems.push({
       href: "/inventory/transfers",
-      label: "Giao nhận hàng",
+      label: tNav("transfers", "navigation"),
       icon: IconArrowRightLeft,
       matchPrefixes: ["/inventory/transfers/", "/inventory/stock-requests"],
     });
@@ -149,7 +165,7 @@ export function resolveInventoryNav({
       items: [
         {
           href: "/inventory/production",
-          label: "Sản xuất",
+          label: tNav("production", "navigation"),
           icon: IconToolsKitchen,
           matchPrefixes: [
             "/inventory/production/new",

@@ -326,17 +326,7 @@ function parsePermissionKeysByNamespace(source) {
 function derivePostLoginHomes(staffRoles, ownerRoles) {
   const rows = [];
   for (const role of staffRoles) {
-    if (ownerRoles.has(role)) {
-      rows.push({
-        role,
-        desktop: "/ (Owner overview)",
-        phone: "/ (Owner overview)",
-        note: "Owner enters the L0 surface directly and opens a branch explicitly when needed.",
-      });
-      continue;
-    }
-
-    // Mirror packages/shared/src/auth/login-destination.ts (D076/D091).
+    // Mirror packages/shared/src/auth/login-destination.ts (A1 Control home).
     if (role === "self_service") {
       rows.push({
         role,
@@ -350,9 +340,9 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     if (role === "accountant") {
       rows.push({
         role,
-        desktop: "/finance",
-        phone: "/finance",
-        note: "D076 adapter until ADR 0015; D091 grants only the Inventory GRN/PO slice.",
+        desktop: '/ (Control home "Hôm nay")',
+        phone: '/ (Control home "Hôm nay")',
+        note: 'Control home "Hôm nay"; D091 grants Inventory GRN/PO slice via /inventory lanes.',
       });
       continue;
     }
@@ -360,9 +350,19 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     if (role === "central_supply_ops" || role === "central_kitchen_lead") {
       rows.push({
         role,
-        desktop: "/inventory",
-        phone: "/inventory",
-        note: "Pinned central site roles land on the inventory control surface; personal attendance and leave stay under /me.",
+        desktop: '/ (Control home "Hôm nay")',
+        phone: '/ (Control home "Hôm nay")',
+        note: 'Control home "Hôm nay"; inventory work under /inventory/*; personal attendance/leave under /me.',
+      });
+      continue;
+    }
+
+    if (role === "owner" || ownerRoles.has(role)) {
+      rows.push({
+        role,
+        desktop: '/ (Control home "Hôm nay")',
+        phone: '/ (Control home "Hôm nay")',
+        note: 'Control L0 home: queue-first "Hôm nay"; Owner opens a branch explicitly when needed.',
       });
       continue;
     }
@@ -388,7 +388,9 @@ function renderModuleAclTable(moduleAcl, roleLabels, navSources) {
   const rows = moduleAcl.map((entry) => {
     const roles =
       entry.allowedRoles.length > 0
-        ? entry.allowedRoles.map((r) => roleLabels[r] ?? r).join(", ")
+        ? entry.allowedRoles
+            .map((r) => `\`${roleLabels[r] ?? r}\``)
+            .join(", ")
         : "(none — retired)";
     const sources = navSources[entry.key]
       ? [...navSources[entry.key]].sort().join("; ")
@@ -416,7 +418,7 @@ function renderPostLoginHomeTable(rows, roleLabels) {
     "| ---- | ------------------------- | ------------------------ | ----- |";
   const body = rows.map(
     (r) =>
-      `| ${roleLabels[r.role] ?? r.role} (\`${r.role}\`) | ${r.desktop} | ${r.phone} | ${r.note || "—"} |`,
+      `| \`${roleLabels[r.role] ?? r.role}\` (\`${r.role}\`) | ${r.desktop} | ${r.phone} | ${r.note || "—"} |`,
   );
   return [header, ...body].join("\n");
 }
@@ -462,7 +464,7 @@ function renderActionGateTable(
     .flatMap((f) => {
       if (f.id === "inventory") {
         return [
-          `| inventory-home | \`/inventory\` (exact, redirect → \`/inventory/stock\` or \`/inventory/grn\`) | ${formatRoles(["inventory"])} | ${formatKeys(["inventory"])} |`,
+          `| inventory-home | \`/inventory\` (exact, workflow LANDING lanes) | ${formatRoles(["inventory"])} | ${formatKeys(["inventory"])} |`,
           `| inventory-procurement | ${formatPrefixes(inventoryRoutePrefixes.procurement)} | ${formatRoles(["inventory"])} | ${formatKeys(["procurement"])} |`,
           `| inventory-operations | ${formatPrefixes(inventoryRoutePrefixes.operations)} | ${formatRoles(["inventory_operations"])} | ${formatKeys(["inventory", "procurement"])} |`,
         ];

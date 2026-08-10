@@ -429,7 +429,7 @@ test("UI component audit command stays wired for route-family drill-down", () =>
   );
   assert.match(
     auditScript,
-    /!file\.includes\("\/\(protected\)\/br\/\[branchId\]\/runner\/"\)/,
+    /!file\.includes\("\/\(protected\)\/br\/\[branchId\]\/pickup\/"\)/,
   );
   assert.match(
     componentRegistry,

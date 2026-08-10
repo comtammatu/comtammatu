@@ -36,66 +36,16 @@ test("Wave C production DETAIL uses xwide AppPage + DescriptionList", () => {
   );
 });
 
-test("Wave C GRN create keeps DocumentFormFrame and sticky DOC footer", () => {
-  const client = read(
-    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
+test("Wave C GRN create routes stay redirect-only after direct-create retirement", () => {
+  const page = read("app/(protected)/inventory/grn/new/page.tsx");
+  const supplierPage = read(
+    "app/(protected)/inventory/grn/new/[supplierId]/page.tsx",
   );
 
-  assert.match(
-    client,
-    /DocumentFormFrame/,
-    "grn create: keeps DocumentFormFrame",
-  );
-  assert.match(
-    client,
-    /<AppDetailFooter[\s\S]*sticky/,
-    "grn create: sticky AppDetailFooter CTA rung",
-  );
-  assert.match(
-    client,
-    /<DocumentFormFrame[\s\S]*footer=\{footer\}/,
-    "grn create: DocumentFormFrame AppPage footer slot (Wave E bleed recipe)",
-  );
-  assert.match(
-    client,
-    /showDeskEditor/,
-    "grn create: progressive desktop editor (no idle empty pane)",
-  );
-  assert.match(
-    client,
-    /pb-24/,
-    "grn create: workspace clears sticky AppDetailFooter",
-  );
-  assert.match(
-    client,
-    /lg:max-h-\[calc\(100dvh-8\.5rem\)\]/,
-    "grn create: desk editor capped above sticky footer",
-  );
-  assert.match(
-    client,
-    /contextStrip/,
-    "grn create: dense context strip before lines",
-  );
-  assert.match(
-    client,
-    /draftEmptyTitle|draftLinesTitle/,
-    "grn create: draft lines section always present",
-  );
-  assert.doesNotMatch(
-    client,
-    /panelEmptyTitle/,
-    "grn create: no idle empty right-pane placeholder",
-  );
-  assert.doesNotMatch(
-    client,
-    /from "@comtammatu\/ui\/components\/frame"/,
-    "grn create: no Frame warehouse inset (muted AppSection inset)",
-  );
-  assert.doesNotMatch(
-    client,
-    /className="[^"]*\brounded-md\b[^"]*\bborder\b/,
-    "grn create: no raw rounded-md+border chrome clone",
-  );
+  assert.match(page, /redirect\("\/inventory\/grn"\)/);
+  assert.match(supplierPage, /redirect\("\/inventory\/grn"\)/);
+  assert.doesNotMatch(page, /GrnCreateClient|DocumentFormFrame/);
+  assert.doesNotMatch(supplierPage, /GrnCreateClient|DocumentFormFrame/);
 });
 
 test("Wave C stocktake DETAIL keeps single responsive Owner composition", () => {

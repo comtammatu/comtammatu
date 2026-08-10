@@ -1,7 +1,7 @@
 # ADR 0019 — HRM roster and contract options
 
 **Status:** Accepted (2026-08-01, owner approval). Amended 2026-08-01 for
-hard-require clock-in and hour-ratio công (owner decisions 1B + Payroll B).
+hard-require clock-in and hour-ratio `công` (owner decisions 1B + Payroll B).
 
 ## Context
 
@@ -11,7 +11,7 @@ history, probation semantics, and payroll treatment when a contract changes
 mid-period. Those proposals would alter D012, D026, and D027. With owner
 approval on 2026-08-01, the roster boundary and contract/probation semantics
 are now authorized. A later owner decision the same day upgraded rostering from
-optional soft-prefer to hard-require for clock-in, and replaced flat 0.5 công
+optional soft-prefer to hard-require for clock-in, and replaced flat 0.5 `công`
 per completed shift with hour-ratio credit inside the assigned shift window.
 
 ## Decision
@@ -23,15 +23,15 @@ per completed shift with hour-ratio credit inside the assigned shift window.
 2. **Reverse the rostering clause of D012.** The "no rostering" clause is
    lifted. The remaining D012 prohibitions stay: no auto-late, no auto-absent,
    no leave-balance enforcement, no multi-tier approval.
-3. **Amend D026 / D027 for công and fixed_monthly.** Attendance unit remains
-   SHIFT. Công for a completed shift (has `check_out` / kết ca) is
+3. **Amend D026 / D027 for `công` and fixed_monthly.** Attendance unit remains
+   SHIFT. Attendance credit (`công`) for a completed shift (has `check_out` / `kết ca`) is
    `min(1.0, round_1dp(|(check_in, check_out) ∩ scheduled_window| / scheduled_len))`
    using the shift window frozen onto the attendance row at clock-in. Both
    `attendance_prorated` and `fixed_monthly` use `working_days` from that
    formula. `fixed_monthly` payable days:
    `min(standard_days, working_days + paid_leave_days)` — do not also auto-deduct
    unpaid leave that is already absent from `working_days`. Manual adjustments
-   remain. D027 no longer uses flat 0.5 công per completed shift.
+   remain. D027 no longer uses flat 0.5 `công` per completed shift.
 4. **Contract revisions are append-only.** A revision creates a new
    `employment_contracts` row and marks the previous one `expired`; history
    begins at the migration — do not synthesize rows overwritten by the legacy
@@ -49,7 +49,7 @@ per completed shift with hour-ratio credit inside the assigned shift window.
    from the application role.
 6. **Payroll V1 mid-month contract selection.** Payroll evaluates base
    compensation using the contract active at the period-end/snapshot date; no
-   mid-period proration of contract changes. Attendance công proration above
+   mid-period proration of contract changes. Attendance `công` proration above
    is separate.
 
 ## Consequences
@@ -61,10 +61,10 @@ per completed shift with hour-ratio credit inside the assigned shift window.
   including office (`branch_id` null).
 - Payroll guards (`PAYROLL-CALCULATE-MUST-BE-ATOMIC-RPC`,
   `PAYROLL-PRORATION-CAP-AT-STANDARD`, `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`,
-  `ATTENDANCE-INSERT-SERVICE-ROLE-ONLY`) remain; công source changes to
+  `ATTENDANCE-INSERT-SERVICE-ROLE-ONLY`) remain; `công` source changes to
   hour-ratio on frozen windows.
 
 ## Canonical
 
 - `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
-- `tasks/todo.md` → roster + payroll công outcomes
+- `tasks/todo.md` → roster + payroll `công` outcomes

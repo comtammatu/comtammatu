@@ -43,6 +43,10 @@ import {
 import { buildCartDemandByMenuItemId } from "@lib/self-order/availability";
 import { CartSheet } from "./self-order/cart-sheet";
 import { BillDrawer } from "./self-order/bill-drawer";
+import {
+  SelfOrderFeedbackSheet,
+  type PaidOrderFeedbackContext,
+} from "./self-order/feedback-sheet";
 import { useSnapshotSync } from "./self-order/hooks";
 import {
   MenuPanel,
@@ -206,7 +210,15 @@ function UnavailableState({
   );
 }
 
-function PaymentCompletedState({ onClose }: { onClose: () => void }) {
+function PaymentCompletedState({
+  onClose,
+  onOpenFeedback,
+  canFeedback,
+}: {
+  onClose: () => void;
+  onOpenFeedback: () => void;
+  canFeedback: boolean;
+}) {
   return (
     <AppPage
       as="main"
@@ -231,10 +243,21 @@ function PaymentCompletedState({ onClose }: { onClose: () => void }) {
           <ItemDescription className="w-full text-center text-sm leading-6">
             {SELF_ORDER_VI.paymentCompletedDescription}
           </ItemDescription>
-          <ItemFooter className="mt-3 w-full">
+          <ItemFooter className="mt-3 w-full flex-col gap-2">
+            {canFeedback ? (
+              <Button
+                type="button"
+                size="touch"
+                className="w-full"
+                onClick={onOpenFeedback}
+              >
+                {SELF_ORDER_VI.feedbackCta}
+              </Button>
+            ) : null}
             <Button
               type="button"
               size="touch"
+              variant={canFeedback ? "outline" : "default"}
               className="w-full"
               onClick={onClose}
             >
@@ -264,6 +287,11 @@ export function SelfOrderClient({
       null,
   );
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paidOrderContext, setPaidOrderContext] =
+    useState<PaidOrderFeedbackContext | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const paidOrderContextRef = useRef<PaidOrderFeedbackContext | null>(null);
   const [activeCategoryValue, setActiveCategoryValue] = useState(() =>
     defaultSelfOrderCategoryValue(initialSnapshot.menu),
   );
@@ -297,6 +325,17 @@ export function SelfOrderClient({
       batchIntentRef.current = null;
       paymentIntentRef.current = null;
     });
+
+  useEffect(() => {
+    if (!snapshot.ok || !snapshot.order) return;
+    paidOrderContextRef.current = {
+      orderId: snapshot.order.id,
+      orderNumber: snapshot.order.orderNumber,
+      tableNumber: snapshot.table.number,
+      branchPhone: snapshot.branch.phone,
+      googleReviewUrl: snapshot.branch.googleReviewUrl,
+    };
+  }, [snapshot]);
 
   const currentPaymentStatusClientOpId = snapshot.ok
     ? (normalizePaymentRequest(snapshot.paymentRequest)?.clientOpId ??
@@ -373,20 +412,31 @@ export function SelfOrderClient({
 
   const resetPaymentCompleted = useCallback(() => {
     setPaymentCompleted(false);
+    setPaidOrderContext(null);
+    setFeedbackOpen(false);
+    setFeedbackSubmitted(false);
     setLocalPaymentRequest(null);
     ignoredPaymentStatusClientOpIdRef.current = paymentStatusClientOpId;
     setPaymentStatusClientOpId(null);
     void refreshSnapshot();
   }, [paymentStatusClientOpId, refreshSnapshot]);
 
+  const markPaymentCompleted = useCallback(() => {
+    const context = paidOrderContextRef.current;
+    if (context) setPaidOrderContext(context);
+    setFeedbackSubmitted(false);
+    setFeedbackOpen(false);
+    setPaymentCompleted(true);
+  }, []);
+
   useEffect(() => {
-    if (!paymentCompleted) return;
+    if (!paymentCompleted || feedbackOpen) return;
     const timer = window.setTimeout(
       resetPaymentCompleted,
       PAYMENT_COMPLETED_DISPLAY_MS,
     );
     return () => window.clearTimeout(timer);
-  }, [paymentCompleted, resetPaymentCompleted]);
+  }, [paymentCompleted, feedbackOpen, resetPaymentCompleted]);
 
   useEffect(() => {
     if (!paymentStatusClientOpId || paymentCompleted) return;
@@ -408,7 +458,7 @@ export function SelfOrderClient({
         if (!response.ok || controller.signal.aborted) return;
 
         if (payload?.status === "completed") {
-          setPaymentCompleted(true);
+          markPaymentCompleted();
           return;
         }
         if (payload?.status === "cancelled" || payload?.status === "expired") {
@@ -427,7 +477,7 @@ export function SelfOrderClient({
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [paymentCompleted, paymentStatusClientOpId, token]);
+  }, [paymentCompleted, paymentStatusClientOpId, token, markPaymentCompleted]);
 
   useEffect(() => {
     if (!refreshError) {
@@ -501,12 +551,23 @@ export function SelfOrderClient({
 
   if (paymentCompleted) {
     return (
-      <PaymentCompletedState
-        onClose={() => {
-          window.close();
-          window.setTimeout(resetPaymentCompleted, 250);
-        }}
-      />
+      <>
+        <PaymentCompletedState
+          canFeedback={Boolean(paidOrderContext) && !feedbackSubmitted}
+          onOpenFeedback={() => setFeedbackOpen(true)}
+          onClose={() => {
+            window.close();
+            window.setTimeout(resetPaymentCompleted, 250);
+          }}
+        />
+        <SelfOrderFeedbackSheet
+          open={feedbackOpen}
+          onOpenChange={setFeedbackOpen}
+          token={token}
+          orderContext={paidOrderContext}
+          onSubmitted={() => setFeedbackSubmitted(true)}
+        />
+      </>
     );
   }
 
@@ -718,7 +779,7 @@ export function SelfOrderClient({
           return;
         }
         if (paymentRequest.status === "completed") {
-          setPaymentCompleted(true);
+          markPaymentCompleted();
           await refreshSnapshot();
           return;
         }

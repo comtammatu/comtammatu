@@ -32,31 +32,22 @@ test("branch roles land on their Branch surface", () => {
   assert.equal(getDefaultRedirect(claims("branch_staff", 5)), "/br/5");
 });
 
-test("D076 accountant lands at finance", () => {
-  assert.equal(getDefaultRedirect(claims("accountant", null)), "/finance");
+test("D076 accountant lands at Control home", () => {
+  assert.equal(getDefaultRedirect(claims("accountant", null)), "/");
 });
 
 test("zero-module company member lands on personal self-service", () => {
   assert.equal(getDefaultRedirect(claims("self_service", null)), "/me");
 });
 
-test("central site roles land at inventory control surface", () => {
-  assert.equal(
-    getDefaultRedirect(claims("central_supply_ops", 15)),
-    "/inventory",
-  );
-  assert.equal(
-    getDefaultRedirect(claims("central_kitchen_lead", 16)),
-    "/inventory",
-  );
+test("central site roles land at Control home", () => {
+  assert.equal(getDefaultRedirect(claims("central_supply_ops", 15)), "/");
+  assert.equal(getDefaultRedirect(claims("central_kitchen_lead", 16)), "/");
 });
 
-test("central site roles without branch scope fail closed", () => {
+test("central site roles without branch scope still reach Control home", () => {
   for (const role of ["central_supply_ops", "central_kitchen_lead"] as const) {
-    assert.equal(
-      getDefaultRedirect(claims(role, null)),
-      "/access-denied?reason=branch-scope-mismatch",
-    );
+    assert.equal(getDefaultRedirect(claims(role, null)), "/");
   }
 });
 

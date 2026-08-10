@@ -200,6 +200,9 @@ export function BranchPurchaseRequestsClient({
   const [reasonAction, setReasonAction] = useState<ReasonAction>();
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [qtyPad, setQtyPad] = useState<QtyPadTarget | null>(null);
+  const [copyFromRequestId, setCopyFromRequestId] = useState<number | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
 
   const mode = searchParams.get("mode");
@@ -332,6 +335,7 @@ export function BranchPurchaseRequestsClient({
     setNeededBy(getVNDateString());
     setRequestLines([blankRequestLine()]);
     setRequestBaseline("");
+    setCopyFromRequestId(null);
   }
 
   async function closeRequestForm() {
@@ -373,9 +377,16 @@ export function BranchPurchaseRequestsClient({
 
   function chooseIngredient(line: RequestDraftLine, value: string) {
     const ingredient = ingredients.find((item) => item.id === Number(value));
+    const shouldPrefill =
+      line.quantity.trim() === "" || Number(line.quantity) <= 0;
+    const suggested =
+      ingredient != null && ingredient.suggestedOrderQty > 0
+        ? String(ingredient.suggestedOrderQty)
+        : line.quantity;
     patchRequestLine(line.key, {
       ingredientId: value,
       entryUnitId: String(defaultPurchaseRequestUnit(ingredient)?.id ?? ""),
+      ...(shouldPrefill ? { quantity: suggested } : {}),
     });
   }
 
@@ -625,6 +636,30 @@ export function BranchPurchaseRequestsClient({
     setRequestBaseline(
       JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
     );
+    setCopyFromRequestId(null);
+    updateUrl(null, "create");
+  }
+
+  function openCopyFromSelected() {
+    if (!selected || !canCreateRequest) return;
+    const nextBranchId = String(selected.branchId);
+    const nextNeededBy = selected.neededBy ?? getVNDateString();
+    const nextLines =
+      selected.items.length > 0
+        ? selected.items.map((item) => ({
+            key: crypto.randomUUID(),
+            ingredientId: String(item.ingredientId),
+            quantity: String(item.quantity),
+            entryUnitId: String(item.entryUnitId),
+          }))
+        : [blankRequestLine()];
+    setDraftBranchId(nextBranchId);
+    setNeededBy(nextNeededBy);
+    setRequestLines(nextLines);
+    setRequestBaseline(
+      JSON.stringify([nextBranchId, nextNeededBy, nextLines]),
+    );
+    setCopyFromRequestId(selected.id);
     updateUrl(null, "create");
   }
 
@@ -1001,6 +1036,15 @@ export function BranchPurchaseRequestsClient({
                     Đóng phần còn lại
                   </Button>
                 ) : null}
+                {canCreateRequest && selected.status === "cancelled" ? (
+                  <Button
+                    type="button"
+                    size="touch"
+                    onClick={openCopyFromSelected}
+                  >
+                    {copy.copyToNewAction}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
@@ -1049,17 +1093,28 @@ export function BranchPurchaseRequestsClient({
         >
           <SheetHeader className="shrink-0">
             <SheetTitle>
-              {mode === "edit" && selected ? selected.code : copy.createTitle}
+              {mode === "edit" && selected
+                ? selected.code
+                : copyFromRequestId != null
+                  ? copy.copyToNewAction
+                  : copy.createTitle}
             </SheetTitle>
             <p className="text-sm text-muted-foreground">
               {mode === "edit" && selected
                 ? copy.statusLabel(selected.status)
-                : copy.description}
+                : copyFromRequestId != null
+                  ? copy.copyToNewBanner
+                  : copy.description}
             </p>
           </SheetHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
             <div className="flex flex-col gap-3">
+              {copyFromRequestId != null ? (
+                <Item variant="muted" size="sm">
+                  {copy.copyToNewBanner}
+                </Item>
+              ) : null}
               {selected?.status === "changes_requested" &&
               selected.statusReason ? (
                 <Item variant="muted" size="sm">

@@ -98,11 +98,11 @@ test("finance overview presents period results, current funds, and inventory in 
     "Inventory must appear before the exception queue",
   );
   assert.equal((pageBody.match(/<FinanceAttentionSection/g) ?? []).length, 1);
-  assert.match(copy, /title: "Tổng quan tài chính"/);
+  assert.match(copy, /title: "Tài chính"/);
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
   assert.match(copy, /ingredientCost: "Giá vốn món"/);
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
-  assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
+  assert.match(copy, /operatingExpense: "Chi phí"/);
   assert.match(copy, /inventoryChange: "Biến động tồn kho"/);
   assert.match(copy, /operatingResult: "Kết quả kinh doanh"/);
   assert.match(copy, /inventory: "Tồn kho"/);
@@ -117,7 +117,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.doesNotMatch(cockpit, /const netProfit =/);
   assert.match(copy, /Đầu kỳ/);
   assert.match(copy, /không gồm giá vốn món/);
-  assert.match(copy, /bankReconciliationLabel: "Đối soát ngân hàng"/);
+  assert.match(copy, /bankReconciliationLabel: "Đối soát NH"/);
   assert.match(page, /FinanceAttentionSection/);
   assert.doesNotMatch(copy, /cashDeltaTitle:/);
 });

@@ -12,6 +12,8 @@ import type {
   PurchaseRequestIngredientOption,
   PurchaseRequestRow,
 } from "@lib/inventory/purchase-request-model";
+import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested-order-qty";
+import { suggestedOrderQtyInEntryUnit } from "@lib/inventory/suggested-order-qty";
 import { fetchProcurementBranches } from "@/(protected)/inventory/_lib/procurement-branches";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import type { PurchaseOrderSupplier } from "@/(protected)/inventory/purchase-requests/purchase-order-drafts";
@@ -261,19 +263,45 @@ export default async function OperatorPurchaseRequestsPage({
     };
   });
 
-  const ingredientOptions: PurchaseRequestIngredientOption[] = (
-    (ingredientResult.data ?? []) as IngredientRow[]
-  ).map((ingredient) => ({
-    id: ingredient.id,
-    name: ingredient.name,
-    units: (ingredient.units ?? [])
-      .filter((unit) => unit.is_active)
-      .map((unit) => ({
-        id: unit.unit_id,
-        label: unit.unit_name || unit.unit_code,
-        factor: unit.to_base_factor,
-      })),
-  }));
+  const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
+  const suggestedByIngredient = await loadSuggestedOrderQtyByIngredient({
+    supabase,
+    tenantId: claims.tenant_id,
+    branchId,
+    ingredientIds: ingredientRows.map((ingredient) => ingredient.id),
+    minStockByIngredient: new Map(
+      ingredientRows.map((ingredient) => [
+        ingredient.id,
+        ingredient.min_stock_level,
+      ]),
+    ),
+  });
+  const ingredientOptions: PurchaseRequestIngredientOption[] =
+    ingredientRows.map((ingredient) => {
+      const units = (ingredient.units ?? [])
+        .filter((unit) => unit.is_active)
+        .map((unit) => ({
+          id: unit.unit_id,
+          label: unit.unit_name || unit.unit_code,
+          factor: unit.to_base_factor,
+        }));
+      const defaultUnit = units.reduce<
+        (typeof units)[number] | undefined
+      >(
+        (selected, unit) =>
+          selected == null || unit.factor > selected.factor ? unit : selected,
+        undefined,
+      );
+      return {
+        id: ingredient.id,
+        name: ingredient.name,
+        suggestedOrderQty: suggestedOrderQtyInEntryUnit(
+          suggestedByIngredient.get(ingredient.id) ?? 0,
+          defaultUnit?.factor ?? 1,
+        ),
+        units,
+      };
+    });
 
   const requestBranches = [
     { id: branchId, name: branchContext.branch.name },

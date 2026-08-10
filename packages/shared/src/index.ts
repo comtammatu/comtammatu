@@ -3,7 +3,7 @@ export * from "./labels/index";
 export * from "./messages/index";
 export * from "./settings/index";
 export * from "./kds/index";
-export * from "./runner/index";
+export * from "./pickup/index";
 export * from "./runtime/env";
 export * from "./time/vietnam";
 export type { ActionResult } from "./types/action-result";

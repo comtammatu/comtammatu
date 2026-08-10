@@ -137,7 +137,7 @@ export function BranchConsumptionListClient({
   const [status, setStatus] = useState<BranchStockIssueStatusFilter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [notes, setNotes] = useState("");
-  const [selectedMovement, setSelectedMovement] =
+  const [selectedOrder, setSelectedOrder] =
     useState<BranchRecordedConsumption | null>(null);
   const [isPending, startTransition] = useTransition();
   const filteredManual = useMemo(
@@ -310,32 +310,32 @@ export function BranchConsumptionListClient({
             />
           ) : (
             <ItemGroup className="grid gap-2 lg:grid-cols-2">
-              {filteredRecorded.map((movement) => (
+              {filteredRecorded.map((order) => (
                 <Item
-                  key={movement.id}
+                  key={order.orderId}
                   variant="outline"
                   className="min-h-20 touch-manipulation"
                   render={
                     <button
                       type="button"
-                      onClick={() => setSelectedMovement(movement)}
+                      onClick={() => setSelectedOrder(order)}
                     />
                   }
                 >
                   <ItemContent className="min-w-0 gap-1 text-left">
-                    <ItemTitle size="heading">
-                      {movement.ingredientName}
+                    <ItemTitle size="heading" className="font-mono">
+                      {order.orderNumber}
                     </ItemTitle>
                     <ItemDescription className="line-clamp-none flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-mono tabular-nums">
-                        {movement.quantity} {movement.unit}
+                      <span>
+                        {INVENTORY_VI.ingredientCountBadge(order.ingredientCount)}
                       </span>
-                      <span>{formatVNDateTime(movement.recordedAt)}</span>
+                      <span>{formatVNDateTime(order.recordedAt)}</span>
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>
-                    <Badge variant={sourceBadgeVariant(movement.sourceKind)}>
-                      {movement.sourceLabel}
+                    <Badge variant={sourceBadgeVariant(order.sourceKind)}>
+                      {order.sourceLabel}
                     </Badge>
                     <IconChevronRight className="size-4 text-muted-foreground" />
                   </ItemActions>
@@ -458,9 +458,9 @@ export function BranchConsumptionListClient({
       </Sheet>
 
       <Sheet
-        open={selectedMovement != null}
+        open={selectedOrder != null}
         onOpenChange={(open) => {
-          if (!open) setSelectedMovement(null);
+          if (!open) setSelectedOrder(null);
         }}
       >
         <SheetContent
@@ -468,53 +468,31 @@ export function BranchConsumptionListClient({
           showCloseButton={false}
           className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0"
         >
-          {selectedMovement ? (
+          {selectedOrder ? (
             <>
               <SheetHeader>
-                <SheetTitle>{selectedMovement.ingredientName}</SheetTitle>
+                <SheetTitle className="font-mono">
+                  {selectedOrder.orderNumber}
+                </SheetTitle>
                 <p className="text-sm text-muted-foreground">
-                  {selectedMovement.sourceLabel}
+                  {formatVNDateTime(selectedOrder.recordedAt)}
                 </p>
               </SheetHeader>
               <div className="px-4 pb-4">
                 <BranchOperatorDetailList
                   columns={1}
-                  rows={[
-                    {
-                      label: FORM_VI.quantity,
-                      value: `${selectedMovement.quantity} ${selectedMovement.unit}`,
-                    },
-                    {
-                      label: INVENTORY_VI.recordedAtLabel,
-                      value: formatVNDateTime(selectedMovement.recordedAt),
-                    },
-                    {
-                      label: INVENTORY_VI.deductLocationLabel,
-                      value: selectedMovement.locationName,
-                    },
-                    {
-                      label: INVENTORY_VI.sourceLabel,
-                      value: selectedMovement.sourceLabel,
-                    },
-                  ]}
+                  rows={selectedOrder.lines.map((line) => ({
+                    label: line.ingredientName,
+                    value: `${line.quantity} ${line.unit} · ${line.locationName}`,
+                  }))}
                 />
               </div>
               <SheetFooter>
-                {selectedMovement.issueId != null ? (
-                  <Button
-                    size="touch-lg"
-                    render={
-                      <Link href={`${basePath}/${selectedMovement.issueId}`} />
-                    }
-                  >
-                    {ACTIONS_VI.viewDetails}
-                  </Button>
-                ) : null}
                 <Button
                   type="button"
                   variant="outline"
                   size="touch"
-                  onClick={() => setSelectedMovement(null)}
+                  onClick={() => setSelectedOrder(null)}
                 >
                   {ACTIONS_VI.close}
                 </Button>

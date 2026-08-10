@@ -6,6 +6,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { FormDialog, SelectField } from "@/components/form";
 import { IngredientLinesEditor } from "../_components/ingredient-lines-editor";
 import type { IngredientUnitRow } from "@lib/inventory/types";
+import type { MenuRecipeCostSignal } from "../_lib/menu-recipe-cost";
 import { upsertMenuRecipeLines } from "../menu-recipe-actions";
 import { ACTIONS_VI, INVENTORY_VI } from "@comtammatu/shared/messages";
 
@@ -19,6 +20,7 @@ export interface IngredientOption {
   name: string;
   unitLabel: string;
   units?: IngredientUnitRow[];
+  costSignals?: readonly MenuRecipeCostSignal[];
 }
 
 export interface MenuRecipeLineDraft {
@@ -169,6 +171,16 @@ export function MenuRecipeLineDialog({
         const errors = form.formState.errors;
         const linesRootError =
           errors.lines?.root?.message ?? errors.lines?.message;
+        const watchedLines = form.watch("lines");
+        const ingredientById = new Map(
+          ingredients.map((ingredient) => [ingredient.id, ingredient]),
+        );
+        const hasCostSignals = (watchedLines ?? []).some((line) => {
+          const id = Number(line.ingredient_id);
+          if (!Number.isFinite(id) || id <= 0) return false;
+          const signals = ingredientById.get(id)?.costSignals;
+          return signals != null && signals.length > 0;
+        });
 
         return (
           <>
@@ -194,6 +206,12 @@ export function MenuRecipeLineDialog({
               <h3 className="text-sm font-medium">
                 {INVENTORY_VI.ingredientListLabel}
               </h3>
+
+              {hasCostSignals ? (
+                <p className="text-sm text-muted-foreground">
+                  {INVENTORY_VI.menuRecipeCostSignalsHint}
+                </p>
+              ) : null}
 
               <IngredientLinesEditor
                 control={form.control}

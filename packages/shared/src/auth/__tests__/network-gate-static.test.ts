@@ -31,6 +31,12 @@ const printAgentRunbook = readRepoFile(
 const migration = readRepoFile(
   "supabase/migration-archive/20260601870000_network_gate_presence_token_registry.sql",
 );
+const emergencyBypassMigration = readRepoFile(
+  "supabase/migrations/20260810020844_branch_network_gate_emergency_bypass.sql",
+);
+const networkActions = readRepoFile(
+  "apps/web/app/(protected)/branches/network-config-actions.ts",
+);
 
 test("branch-presence route uses token hash + RPC instead of a global shared token", () => {
   assert.doesNotMatch(route, /process\.env\.PRINT_AGENT_PRESENCE_TOKEN/);
@@ -84,6 +90,59 @@ test("owner bypasses station network gate while other roles still use it", () =>
   assert.match(
     proxy,
     /if \(networkGateEnabled\) \{[\s\S]*\.from\("branch_trusted_egress_ips"\)/,
+  );
+});
+
+test("proxy checks per-branch emergency bypass before trusted-IP deny", () => {
+  assert.match(
+    proxy,
+    /\.from\("branch_network_gate_bypasses"\)[\s\S]*\.from\("branch_trusted_egress_ips"\)/,
+  );
+  assert.match(
+    proxy,
+    /bound_pos_session_id[\s\S]*\.from\("pos_sessions"\)[\s\S]*status", "open"/,
+  );
+});
+
+test("emergency bypass migration enforces duration kinds and pos_shift auto-revoke", () => {
+  assert.match(
+    emergencyBypassMigration,
+    /CREATE TABLE public\.branch_network_gate_bypasses/,
+  );
+  assert.match(
+    emergencyBypassMigration,
+    /duration_kind = ANY \(ARRAY\['1h'::text, '2h'::text, '4h'::text, 'pos_shift'::text, 'business_day'::text\]\)/,
+  );
+  assert.match(
+    emergencyBypassMigration,
+    /CREATE UNIQUE INDEX branch_network_gate_bypasses_one_open_per_branch_idx/,
+  );
+  assert.match(
+    emergencyBypassMigration,
+    /trg_revoke_network_gate_bypass_on_pos_session_close/,
+  );
+  assert.match(
+    emergencyBypassMigration,
+    /AFTER UPDATE OF status ON public\.pos_sessions/,
+  );
+});
+
+test("emergency bypass actions allowlist duration kinds and require settings:branch_network", () => {
+  assert.match(
+    networkActions,
+    /z\.enum\(NETWORK_GATE_BYPASS_DURATION_KINDS\)/,
+  );
+  assert.match(
+    networkActions,
+    /activateNetworkGateBypass[\s\S]*PERMISSION_KEYS\.SETTINGS_BRANCH_NETWORK/,
+  );
+  assert.match(
+    networkActions,
+    /durationKind === "pos_shift"[\s\S]*status", "open"/,
+  );
+  assert.match(
+    networkActions,
+    /rpc\(\s*"branch_business_day_bounds"/,
   );
 });
 

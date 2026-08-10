@@ -13,6 +13,7 @@ export {
   requiredBranchKindForPositionCode,
   requiredOperatorBranchKindForRole,
   staffRoleFromPositionCode,
+  isOwnerPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess } from "./module-acl";
@@ -115,7 +116,7 @@ export {
   PUBLIC_APP_PATHS,
   isOwnerRoutePath,
   isPublicAppPath,
-  isRunnerPublicDisplayPath,
+  isPickupPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 export type {

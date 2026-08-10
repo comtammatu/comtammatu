@@ -13,8 +13,8 @@ Read in order:
    and Structural Governance.
 2. `docs/spec/page-archetypes.md` — page/workflow composition and UI Advisor Gate.
 3. `docs/ref/screen-context-map.md` — audience, device, route context.
-4. `docs/modules/ui.md` and `packages/ui/src/components/*` — adapters and the
-   implementation map.
+4. `docs/modules/ui.md` and `packages/ui/src/components/*` — thin
+   implementation map (adapters and Base behavior).
 5. Target route/component and targeted `tasks/regressions.md` rows.
 
 Do not restate class strings, typography scales, token values, theme storage,

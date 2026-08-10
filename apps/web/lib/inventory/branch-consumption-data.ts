@@ -13,12 +13,13 @@ import {
   toBranchStockIssueStatus,
   type BranchStockIssue,
 } from "./stock-issue-model";
+import { type BranchRecordedConsumption } from "./branch-consumption-model";
 import {
-  resolveBranchConsumptionSourceKind,
-  type BranchConsumptionSourceKind,
-  type BranchRecordedConsumption,
-} from "./branch-consumption-model";
-import { messages } from "@lib/messages";
+  groupSaleConsumptionsByOrder,
+  RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT,
+  RECORDED_SALE_CONSUMPTION_ORDER_LIMIT,
+  type RecordedSaleConsumptionLineInput,
+} from "./recorded-sale-consumption-model";
 
 type ConsumptionIssueRow = {
   id: number;
@@ -30,25 +31,22 @@ type ConsumptionIssueRow = {
   branch_id: number;
 };
 
-type RelatedIssue = {
-  issue_number: string | null;
-  source_type: string | null;
-  source_ref: unknown;
+type OrderRef = {
+  id: number;
+  order_number: string | null;
 };
 
 type RecordedConsumptionRow = {
   id: number;
-  order_id: number | null;
-  issue_id: number | null;
+  order_id: number;
   quantity_change: number;
   created_at: string;
-  reason: string | null;
   inventory_locations:
     | { name: string | null; code: string | null }
     | Array<{ name: string | null; code: string | null }>
     | null;
   ingredients: Record<string, unknown> | Array<Record<string, unknown>> | null;
-  stock_issues: RelatedIssue | RelatedIssue[] | null;
+  orders: OrderRef | OrderRef[] | null;
 };
 
 export type BranchConsumptionListData = {
@@ -72,22 +70,6 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function sourceLabel(
-  kind: BranchConsumptionSourceKind,
-  issue: RelatedIssue | null,
-  reason: string | null,
-): string {
-  if (kind === "pos") return "POS";
-  if (kind === "hrm") return messages.inventory.issues.hrmConsumptionSource;
-  if (kind === "manual") {
-    return issue?.issue_number
-      ? `${messages.inventory.issues.manualSource} · ${issue.issue_number}`
-      : messages.inventory.issues.manualSource;
-  }
-  if (kind === "import") return "Import matu-platform";
-  return reason?.trim() || "—";
-}
-
 function mapManualIssue(row: ConsumptionIssueRow): BranchStockIssue | null {
   if (
     row.issue_type !== "consumption" ||
@@ -106,32 +88,55 @@ function mapManualIssue(row: ConsumptionIssueRow): BranchStockIssue | null {
   };
 }
 
-function mapRecordedConsumption(
-  row: RecordedConsumptionRow,
-): BranchRecordedConsumption {
-  const issue = relatedOne(row.stock_issues);
-  const location = relatedOne(row.inventory_locations);
-  const ingredient = relatedOne(row.ingredients);
-  const quantity = Math.abs(toNumber(row.quantity_change));
-  const kind = resolveBranchConsumptionSourceKind({
-    orderId: row.order_id,
-    issueId: row.issue_id,
-    issueSourceType: issue?.source_type ?? null,
-    reason: row.reason,
+function mapRecordedConsumptionOrders(
+  rows: RecordedConsumptionRow[],
+  branchId: number,
+  branchName: string,
+): BranchRecordedConsumption[] {
+  const lineInputs: RecordedSaleConsumptionLineInput[] = rows.map((row) => {
+    const order = relatedOne(row.orders);
+    const location = relatedOne(row.inventory_locations);
+    const ingredient = relatedOne(row.ingredients);
+    const quantity = Math.abs(toNumber(row.quantity_change));
+    const unit = getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "";
+    return {
+      id: row.id,
+      orderId: row.order_id,
+      orderNumber: order?.order_number ?? null,
+      branchId,
+      branchName,
+      recordedAtIso: row.created_at,
+      recordedAtLabel: row.created_at,
+      locationName: location?.name ?? location?.code ?? "—",
+      ingredientName: String(ingredient?.name ?? "—"),
+      quantityLabel: unit ? `${quantity} ${unit}` : String(quantity),
+      quantityValue: quantity,
+      unit,
+      unitCostLabel: null,
+      totalCostValue: 0,
+      totalCostLabel: null,
+      sourceLabel: "POS",
+    };
   });
-  return {
-    id: row.id,
-    issueId: row.issue_id,
-    orderId: row.order_id,
-    issueCode: issue?.issue_number ?? null,
-    sourceKind: kind,
-    sourceLabel: sourceLabel(kind, issue, row.reason),
-    recordedAt: row.created_at,
-    locationName: location?.name ?? location?.code ?? "—",
-    ingredientName: String(ingredient?.name ?? "—"),
-    quantity,
-    unit: getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "",
-  };
+
+  return groupSaleConsumptionsByOrder(lineInputs, {
+    orderLimit: RECORDED_SALE_CONSUMPTION_ORDER_LIMIT,
+  }).map((order) => ({
+    orderId: order.orderId,
+    orderNumber: order.orderNumber,
+    recordedAt: order.recordedAtIso,
+    locationName: order.locationName,
+    sourceKind: "pos" as const,
+    sourceLabel: order.sourceLabel,
+    ingredientCount: order.ingredientCount,
+    lines: order.lines.map((line) => ({
+      id: line.id,
+      ingredientName: line.ingredientName,
+      locationName: line.locationName,
+      quantity: line.quantityValue,
+      unit: line.unit,
+    })),
+  }));
 }
 
 export async function loadBranchConsumptionListData(
@@ -146,12 +151,15 @@ export async function loadBranchConsumptionListData(
   const branch = scope.allowedBranches.find(
     (item) => item.id === routeBranchId,
   );
+  const branchName = branch
+    ? getBranchSiteDisplayName(branch)
+    : `CN #${routeBranchId}`;
   const showRecorded = branch?.branch_kind === "branch";
   const recordedQuery = showRecorded
     ? supabase
         .from("stock_movements")
         .select(
-          "id, order_id, issue_id, quantity_change, created_at, reason, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), stock_issues!stock_movements_issue_id_fkey ( issue_number, source_type, source_ref )",
+          "id, order_id, quantity_change, created_at, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
         )
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", routeBranchId)
@@ -159,7 +167,7 @@ export async function loadBranchConsumptionListData(
         .eq("movement_subtype", "sale_consumption")
         .not("order_id", "is", null)
         .order("created_at", { ascending: false })
-        .limit(100)
+        .limit(RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT)
     : null;
   const [issuesResult, recordedResult, canManage] = await Promise.all([
     fetchStockIssues({
@@ -180,14 +188,16 @@ export async function loadBranchConsumptionListData(
 
   return {
     branchId: routeBranchId,
-    branchName: branch
-      ? getBranchSiteDisplayName(branch)
-      : `CN #${routeBranchId}`,
+    branchName,
     canManage,
     showRecorded,
     manualIssues,
     manualIssuesLoadFailed: !issuesResult.success,
-    recorded: recordedRows.map(mapRecordedConsumption),
+    recorded: mapRecordedConsumptionOrders(
+      recordedRows,
+      routeBranchId,
+      branchName,
+    ),
     recordedLoadFailed: recordedResult?.error != null,
   };
 }

@@ -227,9 +227,9 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(cell, /href="\/finance\/expenses"/);
   assert.match(
     financeMessages,
-    /matchExpensePlaceholder: "Khớp Chi phí vận hành"/,
+    /matchExpensePlaceholder: "Khớp chi phí"/,
   );
-  assert.match(financeMessages, /openExpenses: "Mở Chi phí vận hành"/);
+  assert.match(financeMessages, /openExpenses: "Mở chi phí"/);
   assert.match(financeMessages, /matchedExpenseCount/);
   assert.doesNotMatch(cell, /\bmatchedEventId\b/);
   assert.match(actions, /matchedEventIds/);
@@ -246,10 +246,8 @@ test("SePay expense matching UI and actions use the plural RPC path", () => {
   assert.match(table, /missingBankWebhookPayments/);
   assert.match(table, /ReviewStatusSelect/);
   assert.match(actions, /parsed\.data\.category === "bank_deposit"/);
-  assert.match(
-    expenseClient,
-    /const EXPENSE_FORM_CATEGORIES = \[[\s\S]*"rent"[\s\S]*"salary"[\s\S]*"utilities"[\s\S]*"other"[\s\S]*\] as const/,
-  );
+  assert.match(expenseClient, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(expenseClient, /expenseCategoryGroups\(category\)/);
   assert.match(expenseClient, /getExpenseRowActions/);
   assert.match(expenseClient, /paymentState === "transfer_matched"/);
   assert.match(expenseClient, /<RowActionsMenu/);

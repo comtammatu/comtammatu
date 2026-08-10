@@ -385,11 +385,34 @@ BEGIN
     RAISE EXCEPTION 'STOCK FULFILLMENT: short receive accepted without reason';
   END IF;
 
+  v_rejected := FALSE;
+  BEGIN
+    PERFORM public.stock_transfer_receive(
+      v_transfer_id,
+      jsonb_build_object(
+        v_ingredient::text,
+        jsonb_build_object('qty', 4, 'note', 'Damaged package')
+      )
+    );
+  EXCEPTION
+    WHEN SQLSTATE '22023' THEN
+      v_rejected := TRUE;
+  END;
+
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION
+      'STOCK FULFILLMENT: short receive accepted without classification';
+  END IF;
+
   PERFORM public.stock_transfer_receive(
     v_transfer_id,
     jsonb_build_object(
       v_ingredient::text,
-      jsonb_build_object('qty', 4, 'note', 'Damaged package')
+      jsonb_build_object(
+        'qty', 4,
+        'note', 'Damaged package',
+        'shortfall_class', 'transit_loss'
+      )
     )
   );
 
@@ -399,6 +422,19 @@ BEGIN
     WHERE transfer.id = v_transfer_id
   ) <> 'received' THEN
     RAISE EXCEPTION 'STOCK FULFILLMENT: receive did not complete';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.stock_movements AS movement
+    WHERE movement.transfer_id = v_transfer_id
+      AND movement.branch_id = v_source
+      AND movement.movement_subtype = 'transfer_transit_loss'
+      AND movement.quantity_change = 0
+      AND movement.entry_quantity = 1
+  ) THEN
+    RAISE EXCEPTION
+      'STOCK FULFILLMENT: transit shortfall was not attributed to source';
   END IF;
 
   v_result := public.save_stock_request(

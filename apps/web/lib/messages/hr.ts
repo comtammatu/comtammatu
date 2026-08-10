@@ -9,18 +9,17 @@ export const hr = {
   workspace: {
     eyebrow: "Nhân sự",
     ownerTitle: "Hồ sơ nhân viên",
-    branchManagerTitle: "Nhân sự chi nhánh",
+    branchManagerTitle: "Nhân sự",
     ownerDescription:
-      "Quản lý hồ sơ nhân viên, HĐLĐ và lương; phân quyền truy cập được tách riêng.",
-    branchManagerDescription:
-      "Theo dõi ca, ngày công, kết ca và nghỉ phép của chi nhánh được gán.",
+      "Hồ sơ NLĐ, HĐLĐ và lương · đăng nhập và phân quyền ở tab Tài khoản.",
+    branchManagerDescription: "Ca, ngày công, kết ca và nghỉ phép.",
   },
   payBasis: {
     labels: PAY_BASIS_LABELS_VI,
     label: getPayBasisLabelVi,
     fieldLabel: "Chế độ lương",
     fieldDescription:
-      "Theo công: lương theo ngày công và phép có lương. Lương tháng: giữ nguyên lương tháng; nghỉ không lương khấu trừ riêng.",
+      "Theo công: theo ngày công và phép có lương. Lương tháng: giữ nguyên; nghỉ không lương khấu trừ riêng.",
     options: [
       {
         value: "attendance_prorated" as const,
@@ -59,15 +58,15 @@ export const hr = {
       office: "Văn phòng công ty",
     },
     tabs: {
-      employees: "Hồ sơ nhân viên",
-      attendance: "Chấm công & ca làm",
+      employees: "Hồ sơ",
+      attendance: "Chấm công",
       payroll: "Bảng lương",
-      setup: "Thiết lập nhân sự",
+      setup: "Thiết lập",
     },
     peopleTabs: {
       profile: "Hồ sơ nhân viên",
-      accounts: "Tài khoản & phân quyền",
-      ariaLabel: "Tab hồ sơ và tài khoản nhân sự",
+      accounts: "Tài khoản & quyền",
+      ariaLabel: "Tab hồ sơ nhân viên và tài khoản",
     },
     quickConfig: {
       todayShift: "Ca hôm nay",
@@ -102,38 +101,34 @@ export const hr = {
       roster: "Phân ca",
       ariaLabel: "Tab chấm công và ca làm",
     },
-    attendanceTitle: "Chấm công và ngày công theo ca",
+    attendanceTitle: "Chấm công",
     branchAttendanceTitle: "Bảng chấm công",
-    attendanceDescription:
-      "Theo dõi vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
+    attendanceDescription: "Vào/ra ca hôm nay, hàng đợi duyệt và bảng công tháng.",
     checkoutApprovalsAction: "Duyệt kết ca",
     checkoutApprovalsHint:
       "Kết ca của Kế toán và địa điểm trung tâm chờ Chủ sở hữu duyệt.",
-    setupTitle: "Thiết lập nhân sự",
-    setupDescription:
-      "Quản lý chính sách ngày công, khung ca và việc trong ca dùng chung toàn công ty.",
+    setupTitle: "Thiết lập",
+    setupDescription: "",
     setupTabs: {
-      leave: "Ngày công & nghỉ phép",
-      shifts: "Khung ca làm",
+      leave: "Ngày công",
+      shifts: "Khung ca",
       tasks: "Việc trong ca",
       ariaLabel: "Tab thiết lập nhân sự",
     },
     setupSteps: {
       leavePolicy: {
         title: "Ngày công & nghỉ phép",
-        description:
-          "Thiết lập ngày công chuẩn và phép tháng dùng chung cho toàn bộ nhân viên.",
+        description: "",
         hint: "Chính sách",
       },
       shifts: {
         title: "Khung ca làm",
-        description: "Tạo khung giờ dùng chung để phân ca và tính giờ công.",
+        description: "",
         hint: "Khung ca",
       },
       positionTasks: {
         title: "Việc trong ca",
-        description:
-          "Quản lý mẫu theo chức danh và mẫu riêng thay thế cho từng nhân viên.",
+        description: "",
         hint: "Mẫu việc",
       },
     },
@@ -152,13 +147,13 @@ export const hr = {
           "Hợp đồng, mức lương, BHXH và chế độ Theo công / Lương tháng.",
       },
       account: {
-        title: "Bước 4 · Tài khoản",
+        title: "Bước 4 · Tạo đăng nhập",
         description:
-          "Email đăng nhập và mật khẩu. Tinh chỉnh quyền tại Tài khoản & quyền.",
+          "Email và mật khẩu. Phân quyền chi tiết ở tab Tài khoản & quyền.",
       },
       next: "Tiếp",
       back: "Quay lại",
-      staffLink: "Sau khi tạo, tinh chỉnh quyền tại Tài khoản & quyền.",
+      staffLink: "Sau khi tạo, phân quyền chi tiết ở tab Tài khoản & quyền.",
     },
     leavePolicy: {
       standardWorkdaysLabel: "Ngày công chuẩn",
@@ -353,7 +348,7 @@ export const hr = {
     approvedMonthMonthLabel: "Tháng nghỉ phép đã duyệt",
     historyStatusFilterLabel: "Trạng thái lịch sử",
     historyStatusAll: "Mọi trạng thái",
-    approvalsHomeLabel: "Nay",
+    approvalsHomeLabel: "Hôm nay",
     approvalsNoAccessTitle: "Không có quyền duyệt nghỉ phép",
     approvalsNoAccessDescription:
       "Chỉ tài khoản quản lý có quyền nhân sự mới duyệt yêu cầu nghỉ phép.",

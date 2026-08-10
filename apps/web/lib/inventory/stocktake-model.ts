@@ -14,12 +14,6 @@ export type BranchStocktakeSession = {
   countedItems: number;
 };
 
-export function branchStocktakeCode(
-  session: Pick<BranchStocktakeSession, "id" | "sessionNumber">,
-): string {
-  return session.sessionNumber.trim() || `KK-${session.id}`;
-}
-
 export type BranchStocktakeLocation = {
   id: number;
   name: string;

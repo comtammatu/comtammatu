@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS, isOwnerPositionCode } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { getAuthContextWithPermission, probePermission } from "@/_lib/auth";
@@ -43,7 +43,7 @@ export default async function StaffPermissionsPage({
   ] = await Promise.all([
     ctx.supabase
       .from("profiles")
-      .select("id, full_name, is_active, positions(label_vi)")
+      .select("id, full_name, is_active, positions(code, label_vi)")
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("id", id)
       .maybeSingle(),
@@ -69,7 +69,11 @@ export default async function StaffPermissionsPage({
 
   const profile = profileResult.data;
   if (!profile) notFound();
-  const position = profile.positions as { label_vi: string | null } | null;
+  const position = profile.positions as {
+    code: string | null;
+    label_vi: string | null;
+  } | null;
+  if (isOwnerPositionCode(position?.code)) notFound();
   const roles = (
     (rolesResult.data ?? []) as Array<{
       code: string;
@@ -129,6 +133,7 @@ export default async function StaffPermissionsPage({
         bindings={bindings}
         branches={branchesResult.data ?? []}
         canManage={canManage}
+        canOpenSecuritySettings={ctx.claims.user_role === "owner"}
       />
     </AppPage>
   );

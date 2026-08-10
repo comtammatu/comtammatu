@@ -134,7 +134,6 @@ function typeFor(sourcePath) {
   if (sourcePath.startsWith("docs/runbooks/")) return "Runbook";
   if (sourcePath.startsWith("docs/plan/adr/")) return "Architecture Decision";
   if (sourcePath.startsWith("docs/plan/")) return "Planning Document";
-  if (sourcePath.startsWith("docs/worklog/")) return "Worklog";
   if (sourcePath.startsWith("docs/user-guides/")) return "User Guide";
   if (sourcePath.startsWith("tasks/")) return "Task And Learning Tracker";
   if (sourcePath.startsWith("docs/architecture/"))

@@ -64,6 +64,7 @@ import {
 } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { formatQty, formatVND } from "@lib/inventory/format";
+import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
   resolveStockDisplayUnit,
@@ -85,6 +86,31 @@ import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
+const valuationCopy = messages.inventory.valuationDisplay;
+
+function stockWacLabel(
+  quantity: number,
+  unitCost: number | null | undefined,
+  unitLabel: string,
+): string {
+  const kind = resolveStockValuationDisplay({ quantity, unitCost });
+  if (kind === "valued" && unitCost != null) {
+    return `${inventoryCommon.currencyCompact(formatVND(unitCost))}/${unitLabel}`;
+  }
+  if (kind === "pending") return valuationCopy.pendingWac;
+  return inventoryCommon.noValue;
+}
+
+function stockValueLabel(
+  quantity: number,
+  unitCost: number | null | undefined,
+  value: number | null,
+): string {
+  const kind = resolveStockValuationDisplay({ quantity, unitCost });
+  if (kind === "valued" && value != null) return formatVND(value);
+  if (kind === "pending") return valuationCopy.pendingWac;
+  return inventoryCommon.noValue;
+}
 
 const AdjustStockDialog = dynamic<AdjustStockDialogProps>(
   () => import("./adjust-stock-dialog").then((mod) => mod.AdjustStockDialog),
@@ -410,11 +436,19 @@ export function StockClient({
                 costUnit,
               );
               const unitLabel = stockUnitLabel(costUnit, item.unit);
+              const kind = resolveStockValuationDisplay({
+                quantity: item.qty,
+                unitCost: displayWac,
+              });
               return (
-                <span className="font-mono tabular-nums">
-                  {displayWac != null && displayWac > 0
-                    ? `${inventoryCommon.currencyCompact(formatVND(displayWac))}/${unitLabel}`
-                    : inventoryCommon.noValue}
+                <span
+                  className={
+                    kind === "pending"
+                      ? "text-muted-foreground"
+                      : "font-mono tabular-nums"
+                  }
+                >
+                  {stockWacLabel(item.qty, displayWac, unitLabel)}
                 </span>
               );
             },
@@ -425,11 +459,23 @@ export function StockClient({
             className: "min-w-28 text-right",
             render: (item: StockIngredient) => {
               const value = stockValue(item);
+              const kind = resolveStockValuationDisplay({
+                quantity: item.qty,
+                unitCost: item.monetary?.averageUnitCost,
+              });
               return (
-                <span className="font-mono tabular-nums">
-                  {value != null && value > 0
-                    ? formatVND(value)
-                    : inventoryCommon.noValue}
+                <span
+                  className={
+                    kind === "pending"
+                      ? "text-muted-foreground"
+                      : "font-mono tabular-nums"
+                  }
+                >
+                  {stockValueLabel(
+                    item.qty,
+                    item.monetary?.averageUnitCost,
+                    value,
+                  )}
                 </span>
               );
             },
@@ -684,12 +730,27 @@ export function StockClient({
               <p className="text-xs text-muted-foreground">
                 {stockCopy.table.stockValue}
               </p>
-              <p className="font-semibold tabular-nums">
-                {(stockValue(item) ?? 0) > 0
-                  ? inventoryCommon.currencyCompact(
-                      formatVND(stockValue(item) ?? 0),
-                    )
-                  : inventoryCommon.noValue}
+              <p
+                className={
+                  resolveStockValuationDisplay({
+                    quantity: item.qty,
+                    unitCost: item.monetary.averageUnitCost,
+                  }) === "pending"
+                    ? "text-sm text-muted-foreground"
+                    : "font-semibold tabular-nums"
+                }
+              >
+                {(() => {
+                  const label = stockValueLabel(
+                    item.qty,
+                    item.monetary.averageUnitCost,
+                    stockValue(item),
+                  );
+                  return label === inventoryCommon.noValue ||
+                    label === valuationCopy.pendingWac
+                    ? label
+                    : inventoryCommon.currencyCompact(label);
+                })()}
               </p>
             </div>
             <div>
@@ -699,17 +760,28 @@ export function StockClient({
                   item.monetary.averageUnitCost,
                   costUnit,
                 );
+                const unitLabel = stockUnitLabel(costUnit, item.unit);
+                const kind = resolveStockValuationDisplay({
+                  quantity: item.qty,
+                  unitCost: displayWac,
+                });
                 return (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      {stockCopy.table.wacPerUnit(
-                        stockUnitLabel(costUnit, item.unit),
-                      )}
+                      {stockCopy.table.wacPerUnit(unitLabel)}
                     </p>
-                    <p className="font-mono tabular-nums">
-                      {displayWac != null && displayWac > 0
+                    <p
+                      className={
+                        kind === "pending"
+                          ? "text-sm text-muted-foreground"
+                          : "font-mono tabular-nums"
+                      }
+                    >
+                      {kind === "valued" && displayWac != null
                         ? inventoryCommon.currencyCompact(formatVND(displayWac))
-                        : inventoryCommon.noValue}
+                        : kind === "pending"
+                          ? valuationCopy.pendingWac
+                          : inventoryCommon.noValue}
                     </p>
                   </>
                 );

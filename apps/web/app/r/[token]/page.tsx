@@ -41,6 +41,8 @@ export default async function FeedbackTokenPage({
             token={context.token}
             branchName={context.branchName}
             qrLabel={context.label}
+            branchPhone={context.branchPhone}
+            googleReviewUrl={context.googleReviewUrl}
           />
         </ItemContent>
       </Item>

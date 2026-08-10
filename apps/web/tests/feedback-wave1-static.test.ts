@@ -204,3 +204,108 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.match(branchQr, /presentation="branch"/);
   assert.match(branchQr, /CreateFeedbackQrButton/);
 });
+
+test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", () => {
+  const migration = readRepo(
+    "supabase/migrations/20260810123000_self_order_feedback_order_snapshot.sql",
+  );
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_id/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_number/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS table_number/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS order_created_at/);
+  assert.match(migration, /idx_feedbacks_order_id_unique/);
+  assert.match(
+    migration,
+    /CREATE OR REPLACE FUNCTION public\.submit_self_order_feedback\([\s\S]*?SECURITY DEFINER/,
+  );
+  assert.match(migration, /SET search_path TO ''/);
+  assert.match(
+    migration,
+    /GRANT EXECUTE ON FUNCTION public\.submit_self_order_feedback\([\s\S]*?\) TO service_role/,
+  );
+  assert.match(
+    migration,
+    /REVOKE ALL ON FUNCTION public\.submit_self_order_feedback\([\s\S]*?\) FROM anon, authenticated/,
+  );
+  assert.match(migration, /payment_status IS DISTINCT FROM 'paid'/);
+  assert.match(migration, /feedback_qr_required/);
+  assert.match(migration, /feedback_order_already_submitted/);
+
+  assert.equal(
+    existsRepo("apps/web/app/api/self-order/[token]/feedback/route.ts"),
+    true,
+  );
+  assert.equal(
+    existsRepo("apps/web/app/q/[token]/self-order/feedback-sheet.tsx"),
+    true,
+  );
+
+  const api = readWeb("app/api/self-order/[token]/feedback/route.ts");
+  assert.match(api, /validateSelfOrderMutationRequest/);
+  assert.match(api, /submitSelfOrderFeedback/);
+  assert.match(api, /website/);
+
+  const client = readWeb("app/q/[token]/self-order-client.tsx");
+  assert.match(client, /SelfOrderFeedbackSheet/);
+  assert.match(client, /feedbackCta/);
+  assert.match(client, /markPaymentCompleted/);
+  assert.match(client, /paidOrderContext/);
+
+  const inbox = readWeb(
+    "app/(protected)/feedback/_components/feedback-inbox.tsx",
+  );
+  assert.match(inbox, /feedbackCopy\.orderNumber/);
+  assert.match(inbox, /feedbackCopy\.tableNumber/);
+  assert.match(inbox, /feedbackCopy\.orderCreatedAt/);
+
+  const actions = readWeb("app/(protected)/feedback/actions.ts");
+  assert.match(actions, /order_number, table_number, order_created_at/);
+
+  const docs = readRepo("docs/modules/feedback.md");
+  assert.match(docs, /submit_self_order_feedback/);
+  assert.match(docs, /order snapshot/);
+  assert.doesNotMatch(docs, /order snapshots, `is_suspect`/);
+});
+
+test("Wave 1.2 routes >=4 to Google Review and <=3 to branch phone", () => {
+  const migration = readRepo(
+    "supabase/migrations/20260810124502_branch_google_review_url.sql",
+  );
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS google_review_url/);
+  assert.match(migration, /branches_google_review_url_chk/);
+  assert.match(migration, /googleReviewUrl/);
+  assert.match(migration, /branch_phone/);
+
+  const contracts = readWeb("lib/self-order/contracts.ts");
+  assert.match(contracts, /googleReviewUrl/);
+  assert.match(contracts, /phone: z\.string/);
+
+  const sheet = readWeb("app/q/[token]/self-order/feedback-sheet.tsx");
+  assert.match(sheet, /feedbackCommentRequired/);
+  assert.match(sheet, /feedbackGoogleCta/);
+  assert.match(sheet, /feedbackCallCta/);
+  assert.match(sheet, /rating <= 3/);
+  assert.match(sheet, /submittedRating >= 4/);
+
+  const form = readWeb("app/r/[token]/feedback-form.tsx");
+  assert.match(form, /googleReviewUrl/);
+  assert.match(form, /branchPhone/);
+  assert.match(form, /feedbackCopy\.googleCta/);
+  assert.match(form, /feedbackCopy\.callCta/);
+
+  const branchForm = readWeb(
+    "app/(protected)/branches/branch-form-dialog.tsx",
+  );
+  assert.match(branchForm, /googleReviewUrl/);
+  assert.match(branchForm, /googleReviewUrlLabel/);
+
+  const branchActions = readWeb("app/(protected)/branches/actions.ts");
+  assert.match(branchActions, /google_review_url/);
+  assert.match(branchActions, /normalizeGoogleReviewUrl/);
+
+  const docs = readRepo("docs/modules/feedback.md");
+  assert.match(docs, /Wave 1\.2/);
+  assert.match(docs, /google_review_url/);
+  assert.doesNotMatch(docs, /Google Review routing \(≥4 stars\)/);
+});

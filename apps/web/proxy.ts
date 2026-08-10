@@ -29,7 +29,7 @@ type BranchSurfaceGate = {
   isActive: boolean | null;
 };
 
-// Per-warm-instance cache of the branch-surface gate lookup (POS/KDS/runner
+// Per-warm-instance cache of the branch-surface gate lookup (POS/KDS/pickup
 // surfaces and central-site scope checks). Key includes tenant_id so an entry
 // can never be reused across tenants. Value is null when no matching branch
 // row exists for that tenant.
@@ -267,9 +267,27 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Owner-plane routes default to owner-only. D076 operational roles may access
-  // specific ModuleKeys (finance / inventory); D091 narrows the Inventory jobs.
-  if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
+  // Control home (`/`): MODULE_ACL.owner JWT roles, plus HR Control bindings.
+  // HR Control = JWT `self_service` + tenant `hr:view_employee` (same as login).
+  // Branch-floor roles also hold `hr:view_employee` for `/br/.../team`, so the
+  // capability alone must never keep them on `/` (role-route-matrix L1).
+  if (pathname === "/" && !canAccess(claims.user_role, "owner")) {
+    if (claims.user_role !== "self_service") {
+      return redirectToDefaultLanding(request, response, claims);
+    }
+    const { data: canOpenHrHome, error: hrHomeError } = await supabase.rpc(
+      "has_permission",
+      {
+        p_branch_id: null as unknown as number,
+        p_key: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+      },
+    );
+    if (hrHomeError || canOpenHrHome !== true) {
+      return redirectToDefaultLanding(request, response, claims);
+    }
+  } else if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
+    // Owner-plane routes default to owner-only. D076 operational roles may
+    // access specific ModuleKeys (finance / inventory); D091 narrows Inventory.
     const ownerModuleKey: ModuleKey | null = resolveModuleFromPath(pathname);
     if (!ownerModuleKey || !canAccess(claims.user_role, ownerModuleKey)) {
       return redirectToDefaultLanding(request, response, claims);
@@ -282,7 +300,12 @@ export async function proxy(request: NextRequest) {
   // /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
-    if (!canAccess(claims.user_role, moduleKey)) {
+    const homeHrBypass =
+      pathname === "/" &&
+      moduleKey === "owner" &&
+      claims.user_role === "self_service" &&
+      !canAccess(claims.user_role, "owner");
+    if (!canAccess(claims.user_role, moduleKey) && !homeHrBypass) {
       if (isOwnerRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);
       }
@@ -308,12 +331,12 @@ export async function proxy(request: NextRequest) {
       }
 
       const isStationRoute =
-        moduleKey === "pos" || moduleKey === "kds" || moduleKey === "runner";
+        moduleKey === "pos" || moduleKey === "kds" || moduleKey === "pickup";
       const needsBranchSurface =
         isStationRoute || pathname.startsWith(`/br/${routeBranchId}/stock`);
 
       if (needsBranchSurface) {
-        // Stations (POS/KDS/runner) stay branch-kind "branch". Owner enters
+        // Stations (POS/KDS/pickup) stay branch-kind "branch". Owner enters
         // any ACTIVE site's non-station surfaces; central roles are pinned to
         // their site kind; store roles stay on branch-kind sites.
         const requiredBranchKind = isStationRoute
@@ -336,7 +359,7 @@ export async function proxy(request: NextRequest) {
       if (isStationRoute) {
         // Network gate: only devices sharing NAT egress IP with the branch's
         // print-agent (registered via /api/branch-presence) may load protected
-        // POS/KDS branch surfaces. The exact Runner customer board path is public.
+        // POS/KDS branch surfaces. The exact pickup customer board path is public.
         // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
         // data access (PostgREST direct calls bypass this gate). Kill-switch
         // via POS_NETWORK_GATE=off for incident response.
@@ -348,7 +371,7 @@ export async function proxy(request: NextRequest) {
         // set POS_NETWORK_GATE=off on those if you don't want the gate there.
         //
         // Owner is the business break-glass role for all Má Tư surfaces,
-        // including POS/KDS/Runner.
+        // including POS/KDS/pickup.
         const networkGateEnabled =
           process.env.NODE_ENV === "production" &&
           claims.user_role !== "owner" &&
@@ -371,22 +394,55 @@ export async function proxy(request: NextRequest) {
         }
 
         if (networkGateEnabled) {
-          const clientIp = getClientIp(request.headers);
-          const graceCutoff = new Date(Date.now() - 30 * 60_000).toISOString();
-          let trusted = false;
-          if (clientIp) {
-            const { data: trustRow } = await supabase
-              .from("branch_trusted_egress_ips")
-              .select("id")
-              .eq("branch_id", routeBranchId)
-              .eq("tenant_id", claims.tenant_id)
-              .eq("ip_address", clientIp)
-              .is("revoked_at", null)
-              .gte("last_seen_at", graceCutoff)
-              .maybeSingle();
-            trusted = trustRow !== null;
+          const nowIso = new Date().toISOString();
+          let allowed = false;
+
+          // Per-branch emergency bypass (owner-activated TTL / Ca POS / Ngày).
+          // Checked before trusted-IP deny — never use global POS_NETWORK_GATE
+          // for a single-branch outage.
+          const { data: bypassRow } = await supabase
+            .from("branch_network_gate_bypasses")
+            .select("id, bound_pos_session_id")
+            .eq("branch_id", routeBranchId)
+            .eq("tenant_id", claims.tenant_id)
+            .is("revoked_at", null)
+            .gt("expires_at", nowIso)
+            .maybeSingle();
+
+          if (bypassRow) {
+            if (bypassRow.bound_pos_session_id == null) {
+              allowed = true;
+            } else {
+              const { data: openSession } = await supabase
+                .from("pos_sessions")
+                .select("id")
+                .eq("id", bypassRow.bound_pos_session_id)
+                .eq("status", "open")
+                .maybeSingle();
+              allowed = openSession !== null;
+            }
           }
-          if (!trusted) {
+
+          if (!allowed) {
+            const clientIp = getClientIp(request.headers);
+            const graceCutoff = new Date(
+              Date.now() - 30 * 60_000,
+            ).toISOString();
+            if (clientIp) {
+              const { data: trustRow } = await supabase
+                .from("branch_trusted_egress_ips")
+                .select("id")
+                .eq("branch_id", routeBranchId)
+                .eq("tenant_id", claims.tenant_id)
+                .eq("ip_address", clientIp)
+                .is("revoked_at", null)
+                .gte("last_seen_at", graceCutoff)
+                .maybeSingle();
+              allowed = trustRow !== null;
+            }
+          }
+
+          if (!allowed) {
             return redirectToAccessDenied(
               request,
               response,

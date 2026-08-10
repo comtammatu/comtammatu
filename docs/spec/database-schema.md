@@ -60,7 +60,7 @@ Current high-level groups:
 
 - Auth and permissions.
 - Tenant, branch, area, and staff identity.
-- Menu, POS, orders, KDS, and runner.
+- Menu, POS, orders, KDS, and pickup.
 - Payments, refunds, webhooks, HĐĐT, and reconciliation.
 - Inventory, procurement, production, QC, and waste.
 - Finance, expenses, HĐĐT, accountant export, period-close support, and audit.

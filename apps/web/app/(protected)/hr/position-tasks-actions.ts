@@ -7,7 +7,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   PERMISSION_KEYS,
   STAFF_ROLES,
-  staffRoleFromPositionCode,
+  isOwnerPositionCode,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -89,7 +89,7 @@ type EmployeeDbRow = {
     full_name: string;
     position_id: number | null;
     branch_id: number | null;
-    positions: { label_vi: string | null } | null;
+    positions: { code: string | null; label_vi: string | null } | null;
     branches: { name: string } | null;
   } | null;
 };
@@ -181,7 +181,7 @@ export async function fetchPositionTasksData(): Promise<
     service
       .from("employees")
       .select(
-        "id, profile_id, profiles!inner(full_name, position_id, branch_id, positions(label_vi), branches(name))",
+        "id, profile_id, profiles!inner(full_name, position_id, branch_id, positions(code, label_vi), branches(name))",
       )
       .eq("tenant_id", ctx.claims.tenant_id)
       .eq("is_active", true)
@@ -249,6 +249,7 @@ export async function fetchPositionTasksData(): Promise<
     (employee): EmployeeSummary[] => {
       const profile = employee.profiles;
       if (!profile) return [];
+      if (isOwnerPositionCode(profile.positions?.code)) return [];
       return [
         {
           id: employee.id,
@@ -273,8 +274,10 @@ export async function fetchPositionTasksData(): Promise<
   // Show every assignable position so owners can configure tasks before staff exist.
   const positions = (positionsResult.data ?? []).flatMap<PositionOption>(
     (position) => {
-      const bucket = staffRoleFromPositionCode(position.code);
-      if (bucket === "owner" || position.code === "archived_staff") {
+      if (
+        isOwnerPositionCode(position.code) ||
+        position.code === "archived_staff"
+      ) {
         return [];
       }
       return [

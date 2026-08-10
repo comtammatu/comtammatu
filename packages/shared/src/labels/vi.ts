@@ -18,7 +18,7 @@ export type ModuleLabelKey =
   | "settings"
   | "pos"
   | "kds"
-  | "runner"
+  | "pickup"
   | "branch_home"
   | "branch_dashboard"
   | "branch_settings"
@@ -43,7 +43,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   owner: "Tổng quan",
   menu: "Thực đơn",
   inventory: "Kho hàng",
-  orders: "Đơn hàng bán",
+  orders: "Đơn bán",
   feedback: "Phản hồi",
   staff: "Nhân viên",
   hr: "Nhân sự",
@@ -53,17 +53,17 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
-  runner: "Màn gọi số",
-  branch_home: "Nay",
-  branch_dashboard: "Điều hành chi nhánh",
-  branch_settings: "Thiết lập chi nhánh",
+  pickup: "Gọi số",
+  branch_home: "Hôm nay",
+  branch_dashboard: "Điều hành",
+  branch_settings: "Thiết lập",
   branch_menu_limits: "Giới hạn bán",
   branch_pos_sessions: "Đối soát ca POS",
   branch_close_day: "Báo cáo tổng hợp ngày",
-  branch_team: "Nhân sự chi nhánh",
-  branch_stock: "Kho chi nhánh",
-  branch_orders: "Đơn hàng chi nhánh",
-  branch_feedback: "Phản hồi chi nhánh",
+  branch_team: "Nhân sự",
+  branch_stock: "Kho",
+  branch_orders: "Đơn bán",
+  branch_feedback: "Phản hồi",
   employee_checkout_approvals: "Duyệt kết ca",
   employee_leave_approvals: "Duyệt nghỉ phép",
   branch_shift_roster: "Phân ca",
@@ -92,12 +92,13 @@ export const APP_COPY_VI = {
   employeePortal: "Ca của tôi",
   hrWorkspace: "Nhân sự",
   hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
-  branchOperationsKds: "Quầy Bếp",
-  branchOperationsRunner: "Màn gọi số",
-  branchCommand: "Điều hành chi nhánh",
+  branchOperationsKds: "KDS",
+  branchOperationsPickup: "Gọi số",
+  branchCommand: "Điều hành",
   branchHome: "Hôm nay",
-  operatorRuntimeActions: "Vận hành chi nhánh",
-  operatorOpsActions: "Thiết lập chi nhánh",
+  inventory: "Kho hàng",
+  operatorRuntimeActions: "Vận hành",
+  operatorOpsActions: "Thiết lập",
   operatorShift: "Ca",
   operatorManagement: "Quản lý",
   operations: "Điều hành",
@@ -266,10 +267,6 @@ export function getModuleLabelVi(moduleKey: string): string {
   return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? UNKNOWN_LABEL_VI;
 }
 
-export function getInventorySiteLabelVi(site: SiteLike): string {
-  return getInventorySiteKindLabelVi(resolveSiteKind(site));
-}
-
 export function normalizeInventoryLocationNameVi(
   name: string | null | undefined,
 ): string {
@@ -396,14 +393,6 @@ export const PAYMENT_METHOD_LABELS_VI = {
   bank_transfer: "Chuyển khoản",
 } as const;
 
-/** Long form for shift-close / accounting reports where ambiguity must be
- * eliminated (kế toán đọc cần phân biệt rõ kênh tiền). */
-export const PAYMENT_METHOD_LABELS_FULL_VI = {
-  ...PAYMENT_METHOD_LABELS_VI,
-  vietqr: "Chuyển khoản (VietQR)",
-  unknown: "Khác",
-} as const;
-
 /** orders.status (DB orders_status_check) — full Owner vocabulary.
  * POS cashier view intentionally collapses these states
  * (apps/web pos/_lib/order-status-display.ts). */
@@ -473,15 +462,6 @@ export const PRINT_JOB_STATUS_LABELS_VI = {
   printed: "Đã in",
   failed: "Lỗi",
   expired: "Hết hạn",
-  cancelled: "Đã hủy",
-} as const;
-
-/** kds_tickets.status (DB kds_tickets_status_check). */
-export const KDS_TICKET_STATUS_LABELS_VI = {
-  pending: "Chờ",
-  preparing: "Đang chuẩn bị",
-  ready: "Sẵn sàng",
-  served: "Đã phục vụ",
   cancelled: "Đã hủy",
 } as const;
 

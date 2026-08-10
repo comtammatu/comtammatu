@@ -55,6 +55,7 @@ export async function StocktakeDetailPageContent({
       counted_quantity: number | null;
       variance: number | null;
       variance_reason: string | null;
+      reason_code: string | null;
       ingredients: {
         id: number;
         name: string;

@@ -17,6 +17,18 @@ import type {
   RecordedConsumptionRow,
 } from "./issues-client";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
+import {
+  groupSaleConsumptionsByOrder,
+  RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT,
+  RECORDED_SALE_CONSUMPTION_ORDER_LIMIT,
+  type RecordedSaleConsumptionLineInput,
+} from "@lib/inventory/recorded-sale-consumption-model";
+import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+
+function relatedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
 
 function toNumber(value: unknown): number {
   const parsed = Number(value ?? 0);
@@ -26,20 +38,6 @@ function toNumber(value: unknown): number {
 function formatUnitCost(unitCost: number, unit: string): string {
   if (unitCost <= 0) return "—";
   return unit ? `${formatVND(unitCost)}/${unit}` : formatVND(unitCost);
-}
-
-function movementSourceLabel(reason: unknown): string {
-  const rawReason = String(reason ?? "");
-  const transferCode = rawReason.match(/:(TRF[\w-]+)/)?.[1];
-
-  if (rawReason.startsWith("matu-platform import:")) {
-    return transferCode
-      ? `Đồng bộ từ matu-platform · ${transferCode}`
-      : "Đồng bộ từ matu-platform";
-  }
-  if (/tiêu hao|tieu hao/i.test(rawReason)) return "Báo cáo tiêu hao";
-  if (rawReason) return rawReason;
-  return "—";
 }
 
 function getSingleParam(value: string | string[] | undefined): string | null {
@@ -168,12 +166,12 @@ export async function IssuesPageContent({
           ? movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
               )
           : movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
               )
       )
         .eq("tenant_id", claims.tenant_id)
@@ -208,7 +206,9 @@ export async function IssuesPageContent({
       );
     }
     if (!hasRecordedDateFilter) {
-      recordedConsumptionQuery = recordedConsumptionQuery.limit(50);
+      recordedConsumptionQuery = recordedConsumptionQuery.limit(
+        RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT,
+      );
     }
   }
 
@@ -246,43 +246,64 @@ export async function IssuesPageContent({
       status: (row.status as string) ?? "draft",
     };
   });
-  const recordedConsumptions: RecordedConsumptionRow[] =
+  const recordedConsumptionLineInputs: RecordedSaleConsumptionLineInput[] =
     recordedConsumptionRows.map((row) => {
-      const branch = row.branches as Record<string, unknown> | null;
-      const location = row.inventory_locations as Record<
-        string,
-        unknown
-      > | null;
-      const ingredient = row.ingredients as Record<string, unknown> | null;
+      const branch = relatedOne(
+        row.branches as Record<string, unknown> | Record<string, unknown>[] | null,
+      );
+      const order = relatedOne(
+        row.orders as
+          | { id: number; order_number: string | null }
+          | Array<{ id: number; order_number: string | null }>
+          | null,
+      );
+      const location = relatedOne(
+        row.inventory_locations as Record<string, unknown> | Record<string, unknown>[] | null,
+      );
+      const ingredient = relatedOne(
+        row.ingredients as Record<string, unknown> | Record<string, unknown>[] | null,
+      );
       const quantity = Math.abs(toNumber(row.quantity_change));
       const unitCost =
         monetary.valuation && "unit_cost" in row
           ? toNumber(row.unit_cost)
           : 0;
       const unit = getEmbeddedIngredientBaseUnitDisplayName(ingredient) ?? "";
+      const totalCostValue = monetary.valuation ? quantity * unitCost : 0;
+      const createdAt = row.created_at as string | null;
 
       return {
         id: row.id as number,
+        orderId: row.order_id as number,
+        orderNumber: order?.order_number ?? null,
         branchId: row.branch_id as number,
-        recordedAt: row.created_at
-          ? formatDateTime(row.created_at as string)
-          : "—",
         branchName: (branch?.name as string) ?? "—",
+        recordedAtIso: createdAt ?? "",
+        recordedAtLabel: createdAt ? formatDateTime(createdAt) : "—",
         locationName:
           (location?.name as string | null) ??
           (location?.code as string | null) ??
           "—",
         ingredientName: (ingredient?.name as string) ?? "—",
-        quantity: unit ? `${formatQty(quantity)} ${unit}` : formatQty(quantity),
-        sourceLabel: movementSourceLabel(row.reason),
-        monetary: monetary.valuation
-          ? {
-              unitCost: formatUnitCost(unitCost, unit),
-              totalCost: formatVND(quantity * unitCost),
-              totalCostValue: quantity * unitCost,
-            }
+        quantityLabel: unit
+          ? `${formatQty(quantity)} ${unit}`
+          : formatQty(quantity),
+        quantityValue: quantity,
+        unit,
+        unitCostLabel: monetary.valuation
+          ? formatUnitCost(unitCost, unit)
           : null,
+        totalCostValue,
+        totalCostLabel: monetary.valuation ? formatVND(totalCostValue) : null,
+        sourceLabel: INVENTORY_STATUS_LABELS_VI.sale_consumption,
       };
+    });
+  const recordedConsumptions: RecordedConsumptionRow[] =
+    groupSaleConsumptionsByOrder(recordedConsumptionLineInputs, {
+      orderLimit: hasRecordedDateFilter
+        ? null
+        : RECORDED_SALE_CONSUMPTION_ORDER_LIMIT,
+      formatTotalCost: monetary.valuation ? formatVND : undefined,
     });
 
   // Desktop route variants derive heading from the route dictionary.

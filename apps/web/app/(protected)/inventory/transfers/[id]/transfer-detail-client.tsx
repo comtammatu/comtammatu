@@ -117,6 +117,9 @@ export function TransferDetailClient({
     return initial;
   });
   const [shortNote, setShortNote] = useState("");
+  const [shortfallClass, setShortfallClass] = useState<
+    "source_variance" | "transit_loss"
+  >("source_variance");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [shortageIngredientId, setShortageIngredientId] = useState<
@@ -193,7 +196,10 @@ export function TransferDetailClient({
           return;
         }
         const trimmedNote = shortNote.trim();
-        const payload: Record<string, { qty: number; note?: string }> = {};
+        const payload: Record<
+          string,
+          { qty: number; note?: string; shortfall_class?: string }
+        > = {};
         for (const item of transfer.items) {
           const raw = receiveQty[item.ingredientId];
           const qty = Number(raw ?? item.qty);
@@ -208,8 +214,12 @@ export function TransferDetailClient({
             return;
           }
           payload[String(item.ingredientId)] =
-            qty < item.qty && trimmedNote
-              ? { qty, note: trimmedNote }
+            qty < item.qty
+              ? {
+                  qty,
+                  note: trimmedNote,
+                  shortfall_class: shortfallClass,
+                }
               : { qty };
         }
         res = await transferReceive(transfer.id, payload);
@@ -500,6 +510,39 @@ export function TransferDetailClient({
 
           {isReceiveMode && hasShort ? (
             <AppSection tone="warning">
+              <p className="text-sm font-semibold">
+                {copy.shortfallClassTitle}{" "}
+                <span className="text-destructive">*</span>
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    shortfallClass === "source_variance"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => setShortfallClass("source_variance")}
+                >
+                  {copy.shortfallClassSourceVariance}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    shortfallClass === "transit_loss" ? "default" : "outline"
+                  }
+                  onClick={() => setShortfallClass("transit_loss")}
+                >
+                  {copy.shortfallClassTransitLoss}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {shortfallClass === "transit_loss"
+                  ? copy.shortfallClassTransitLossHint
+                  : copy.shortfallClassSourceVarianceHint}
+              </p>
               <p className="text-sm font-semibold">
                 {copy.shortageNoteTitle}{" "}
                 <span className="text-destructive">*</span>

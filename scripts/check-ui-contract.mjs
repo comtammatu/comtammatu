@@ -862,6 +862,7 @@ if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
 }
 
 // Root DESIGN.md is blocked; visual SSOT is docs/spec/design-system.md.
+  // Optional local Stitch/agent mirror: `.stitch/DESIGN.md` (non-SSOT, untracked).
 const blockedRootContextFiles = new Map([
   ["PRODUCT.md", "use docs/ref/business-context.md"],
   ["DESIGN.md", "use docs/spec/design-system.md"],

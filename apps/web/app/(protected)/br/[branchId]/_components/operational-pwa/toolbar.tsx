@@ -2,7 +2,7 @@
 
 import { PwaToolbar, PwaToolbarEntryLink } from "@/components/pwa-toolbar";
 
-type OperationalPwaSurface = "pos" | "kds" | "runner";
+type OperationalPwaSurface = "pos" | "kds" | "pickup";
 
 function getDismissStorageKey(
   surface: OperationalPwaSurface,
@@ -13,7 +13,7 @@ function getDismissStorageKey(
 
 function buildCopy(surface: OperationalPwaSurface) {
   const appLabel =
-    surface === "pos" ? "POS" : surface === "kds" ? "KDS" : "màn gọi số";
+    surface === "pos" ? "POS" : surface === "kds" ? "KDS" : "Gọi số";
   const jobLabel =
     surface === "pos"
       ? "đơn/thanh toán"
@@ -55,11 +55,11 @@ export function OperationalPwaToolbar({
   surface: OperationalPwaSurface;
 }) {
   const copy = buildCopy(surface);
-  // Runner is a guest-facing display: it never gets staff navigation.
+  // Pickup is a guest-facing display: it never gets staff navigation.
   // POS/KDS keep the entry link in every toolbar state (including standalone,
   // where browser chrome is absent) so staff can always return to the entry.
   const entryLink =
-    surface !== "runner" ? (
+    surface !== "pickup" ? (
       <PwaToolbarEntryLink
         href={`/br/${branchId}`}
         label={copy.entryLinkLabel}
@@ -84,6 +84,6 @@ export function KdsPwaToolbar({ branchId }: { branchId: string }) {
   return <OperationalPwaToolbar branchId={branchId} surface="kds" />;
 }
 
-export function RunnerPwaToolbar({ branchId }: { branchId: string }) {
-  return <OperationalPwaToolbar branchId={branchId} surface="runner" />;
+export function PickupPwaToolbar({ branchId }: { branchId: string }) {
+  return <OperationalPwaToolbar branchId={branchId} surface="pickup" />;
 }

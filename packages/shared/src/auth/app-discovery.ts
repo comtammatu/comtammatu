@@ -81,9 +81,8 @@ export function resolveControlSurfaceDiscoveryGroups(
 ): DiscoveredAppGroup[] {
   if (role === "self_service") return [];
 
-  // Filter by the role-route ACL so accountant / central roles see their
-  // allowed L0 slices without requiring the owner home ModuleKey.
-  // AppDiscoverySurface "owner" remains the technical RouteSurface alias.
+  // Filter by MODULE_ACL so accountant / central / Control-home roles only see
+  // modules they can open (Owner-only tiles stay hidden).
   return CONTROL_SURFACE_NAV_GROUPS.map((group) => ({
     title: group.title,
     surface: "owner" as const,

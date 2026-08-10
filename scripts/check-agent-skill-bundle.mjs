@@ -17,18 +17,13 @@ const REPO_ROOT = process.cwd();
 const BUNDLE_PATH = ".agents/skills";
 const MANIFEST_PATH = "docs/agent/skills-manifest.json";
 const REQUIRED_SKILLS = [
-  "ai-elements",
   "building-components",
   "next-best-practices",
-  "next-cache-components",
-  "next-upgrade",
   "playwright",
   "shadcn",
   "supabase",
   "supabase-postgres-best-practices",
   "turborepo",
-  "vercel-react-best-practices",
-  "web-design-guidelines",
 ];
 
 function sameNames(left, right) {

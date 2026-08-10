@@ -1,8 +1,8 @@
 # Cài Đặt Project
 
 Hướng dẫn tối thiểu để chạy repo local. Công cụ agent, MCP, plugin, và guard
-adapter thuộc `.claude/`, `.codex/`, và `docs/agent/rules/`, không thuộc file
-setup nghiệp vụ này.
+adapter (nếu dùng local, không track trong repo) cùng
+`docs/agent/rules/` — không thuộc file setup nghiệp vụ này.
 
 ## Yêu cầu
 

@@ -29,6 +29,8 @@ export interface IngredientRow {
   reorder_point: number | null;
   storage_type: string | null;
   default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
+  /** Active supplier_items on an active supplier — YCM/PO mapping gate. */
+  has_active_supplier_link?: boolean;
   is_active: boolean;
   updated_at: string | null;
   units?: IngredientUnitRow[];

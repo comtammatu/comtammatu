@@ -127,6 +127,9 @@ test("shipping and receiving use explicit atomic transitions", () => {
   const migration = read(
     "supabase/migration-archive/20260730090000_unify_stock_fulfillment.sql",
   );
+  const shortfallMigration = read(
+    "supabase/migrations/20260810012250_transfer_shortfall_ownership.sql",
+  );
 
   const shipAction = actions.slice(
     actions.indexOf("export async function transferConfirmShip"),
@@ -136,8 +139,11 @@ test("shipping and receiving use explicit atomic transitions", () => {
   assert.match(actions, /Hãy bắt đầu kiểm nhận trước/);
   assert.match(receiveClient, /transferConfirmReceive/);
   assert.match(receiveClient, /startReceiveSession/);
+  assert.match(receiveClient, /shortfall_class/);
   assert.match(migration, /RETURN public\.stock_transfer_mark_in_transit/);
   assert.match(migration, /short_receive_reason_required/);
+  assert.match(shortfallMigration, /short_receive_classification_required/);
+  assert.match(shortfallMigration, /transfer_transit_loss/);
   assert.match(migration, /FROM PUBLIC, anon, authenticated, service_role/);
 });
 

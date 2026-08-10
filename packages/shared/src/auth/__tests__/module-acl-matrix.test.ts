@@ -42,7 +42,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "branch_home",
     "orders",
     "pos",
-    "runner",
+    "pickup",
     "settings",
     "staff",
   ],
@@ -68,7 +68,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "branch_home",
     "pos",
-    "runner",
+    "pickup",
     "staff",
   ],
   cashier: [
@@ -79,7 +79,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "branch_home",
     "pos",
-    "runner",
+    "pickup",
     "staff",
   ],
   chef: [
@@ -89,7 +89,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "me",
     "notifications",
     "branch_home",
-    "runner",
+    "pickup",
     "staff",
   ],
   branch_staff: [
@@ -100,7 +100,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "branch_home",
     "pos",
-    "runner",
+    "pickup",
     "staff",
   ],
   accountant: [
@@ -110,6 +110,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "inventory",
     "me",
     "notifications",
+    "owner",
     "staff",
   ],
   central_supply_ops: [
@@ -121,6 +122,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "inventory_operations",
     "me",
     "notifications",
+    "owner",
     "staff",
   ],
   central_kitchen_lead: [
@@ -132,6 +134,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "inventory_operations",
     "me",
     "notifications",
+    "owner",
     "staff",
   ],
 };

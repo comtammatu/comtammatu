@@ -60,7 +60,6 @@ docs/
   spec/             # Architecture, database schema, design system
   ref/              # Business domain, inventory SOP, e-invoice, PIT, glossary
   runbooks/         # Pre-release QA, operator journeys, smoke gates, db Preview/re-baseline
-  worklog/          # Policy only; no historical worklog archive
 tasks/              # regressions.md, lessons.md, todo.md
 scripts/            # SQL seeds, lint helpers
 ```

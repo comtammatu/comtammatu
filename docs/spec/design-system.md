@@ -266,7 +266,7 @@ gạch; `ring` / chart accent = vàng gạo; `success` = xanh lá dịu;
   `brand-strip` are decorative footer strips, packaging trim, or section
   separators — never a background behind body text.
 - `mascot-cotlet` + `animate-cotlet-idle` / `animate-cotlet-waiting` /
-  `animate-cotlet-waving` render the Cốt Lết sprite loops on the runner idle
+  `animate-cotlet-waving` render the Cốt Lết sprite loops on the pickup idle
   board only, always gated with `motion-safe:`.
 - `shadow-effect-*`, `bg-effect-scrim`, and `drawer-scrim` are the depth
   utilities backed by the `--effect-*` family (see § Elevation / Shadow).
@@ -427,7 +427,7 @@ card padding with route-local utility strings.
 | KDS kitchen item-name | `text-base font-semibold leading-6 xl:text-lg xl:leading-6` | KDS ticket |
 | Numeric input echo | `text-3xl font-semibold tabular-nums` | Number pad, scale display |
 | Runner board header / row / footer / empty secondary | `text-runner-header` / `text-runner-board` / `text-runner-footer` / `text-runner-empty-secondary` + `font-semibold` | Height-responsive display tokens |
-| Display call target | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only |
+| Display call target | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing pickup / queue display only |
 
 - `text-4xl` / `text-5xl` are not allowed in app surfaces (marketing/login splash
   only). `text-3xl` is reserved for the numeric-echo role and must pair with
@@ -898,8 +898,8 @@ contract change; route-local chrome outside this list is drift.
    vocabulary, header lockup, and bottom-nav components. Station routes compose
    shared primitives (`StationSection`, `Frame`) and operational adapters; they must not
    import `AppSection`, `AppListFrame`, or other `control_surface` chrome.
-   Board recipes: `pos-board`, `realtime-board` (KDS), `runner-board`. Guest
-   feedback at `/r/[token]` is `public`, not runner station.
+   Board recipes: `pos-board`, `realtime-board` (KDS), `runner-board` (pickup / Gọi số board). Guest
+   feedback at `/r/[token]` is `public`, not the pickup station.
 4. **Public** — guest token workflows stay outside `control_surface` chrome.
    Public card sections use `PublicSection`; recipes `public-transaction`,
    `public-feedback`, `system-gate`.
@@ -1058,7 +1058,7 @@ improvisation.
 
 - `loading.tsx` is built from `PageSkeleton` / `PageSpinner`
   (`apps/web/app/components/page-skeleton.tsx`). POS keeps its purpose-built
-  `PosPageSkeleton`. KDS, runner, and other realtime boards use `PageSpinner` —
+  `PosPageSkeleton`. KDS, pickup, and other realtime boards use `PageSpinner` —
   fake tickets on an operational screen are forbidden.
 - `error.tsx` delegates to `ErrorPanel`
   (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"` with

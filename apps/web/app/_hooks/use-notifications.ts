@@ -148,14 +148,19 @@ export function useNotifications({
 
   const markRead = useCallback(
     async (id: number, options?: { quiet?: boolean }) => {
-      setItems((prev) =>
-        prev.map((n) =>
+      let shouldDecrement = false;
+      setItems((prev) => {
+        const current = prev.find((n) => n.id === id);
+        shouldDecrement = Boolean(current && !current.read_at);
+        return prev.map((n) =>
           n.id === id && !n.read_at
             ? { ...n, read_at: new Date().toISOString() }
             : n,
-        ),
-      );
-      setUnreadCount((c) => Math.max(0, c - 1));
+        );
+      });
+      if (shouldDecrement) {
+        setUnreadCount((c) => Math.max(0, c - 1));
+      }
       const r = await markNotificationRead({ id });
       if (!r.success) {
         void refresh();
@@ -225,6 +230,17 @@ export function useNotifications({
             ) {
               return;
             }
+            void refreshRef.current();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notification_reads",
+          },
+          () => {
             void refreshRef.current();
           },
         )

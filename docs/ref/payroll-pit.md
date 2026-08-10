@@ -58,33 +58,18 @@ Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ k�
 | 4   | Trên 60 triệu đến 100 triệu | 30%       | = TNTT × 30% − 9,500,000  |
 | 5   | Trên 100 triệu              | 35%       | = TNTT × 35% − 14,500,000 |
 
-> **Số thuế tính nhanh** giúp tính trực tiếp mà không cần tính từng bậc.
-> Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025; cách
-> khấu trừ chuyển tiếp trong năm 2026 theo hướng dẫn của cơ quan thuế.
-
-> **Đồng bộ với mã nguồn:** payroll engine = `packages/shared/src/payroll/calculate.ts` + `legal-versions.ts` (versioned theo `effectiveFrom`). Code tính **mọi kỳ từ 2026-01** bằng **biểu 5 bậc** ở §2 (`PIT_BRACKETS_2026`) — cả version `effectiveFrom: 2026-01-01` lẫn `2026-07-01`. Giảm trừ 15.5M/6.2M áp dụng từ 2026-01; trần BHXH 46.8M đến 30/06/2026 rồi bước lên 50.6M từ 01/07/2026 (NĐ 161/2026). Test khoá: `packages/shared/src/payroll/__tests__/legal-versions.test.ts`; quy tắc `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
+> Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025.
 >
-> **Lưu ý kế toán (không phải lỗi code):** mức khấu trừ hàng tháng H1-2026 có thể chọn giữ biểu 7 bậc cũ chờ ngày hiệu lực chung 01/07/2026 rồi true-up khi quyết toán — nghĩa vụ cả năm không đổi. Theo NĐ 253/2026, hồ sơ khai tháng/quý đã nộp cho kỳ 2026 trước 01/07/2026 không phải nộp lại, điều chỉnh vào quyết toán năm 2026. Nếu kế toán chốt phương án bảo thủ cho H1 thì trỏ version `effectiveFrom: "2026-01-01"` về `PIT_BRACKETS_2007` (một dòng), không đổi giảm trừ/trần.
-
-### Ví dụ tính thuế
-
-```
-Branch Manager, lương gross: 25,000,000 VND/tháng
-Phụ cấp ăn ca: 1,200,000 (miễn thuế nếu chi tiền từ 01/07/2026)
-Lương BH: 25,000,000 (đăng ký đóng toàn phần)
-1 người phụ thuộc
-
-BHXH NLĐ đóng = 25,000,000 × 10.5% = 2,625,000
-
-Thu nhập chịu thuế = 25,000,000 (lương không tính phụ cấp miễn)
-Thu nhập tính thuế = 25,000,000 - 15,500,000 (bản thân) - 6,200,000 (1 NP thuộc) - 2,625,000
-                   = 675,000
-
-Thuế = 675,000 × 5% = 33,750 VND
-```
-
-> Với mức giảm trừ 15,5 triệu từ kỳ 2026, đa số vị trí vận hành của quán
-> (cashier/chef/kitchen_helper 6–12 triệu) không phát sinh thuế TNCN phải khấu trừ.
+> **Đồng bộ mã nguồn:** `packages/shared/src/payroll/calculate.ts` +
+> `legal-versions.ts` (versioned theo `effectiveFrom`). Mọi kỳ từ 2026-01 dùng
+> biểu 5 bậc (`PIT_BRACKETS_2026`). Giảm trừ 15.5M/6.2M từ 2026-01; trần BHXH
+> 46.8M đến 30/06/2026, 50.6M từ 01/07/2026. Test:
+> `packages/shared/src/payroll/__tests__/legal-versions.test.ts`; quy tắc
+> `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP` (`tasks/regressions.md`).
+>
+> **Lưu ý kế toán:** khấu trừ H1-2026 có thể giữ biểu 7 bậc chờ true-up quyết
+> toán (NĐ 253/2026). Phương án bảo thủ: trỏ version `effectiveFrom: "2026-01-01"`
+> về `PIT_BRACKETS_2007` — không đổi giảm trừ/trần.
 
 ---
 
@@ -97,8 +82,7 @@ Thuế = 675,000 × 5% = 33,750 VND
 | Bản thân NLĐ        | **15,500,000 VND** | 186,000,000 VND  |
 | Mỗi người phụ thuộc | **6,200,000 VND**  | 74,400,000 VND   |
 
-> Mức cũ 11,000,000 / 4,400,000 (từ 01/07/2020) chỉ dùng cho quyết toán các
-> kỳ tính thuế ≤ 2025.
+> Mức cũ 11,000,000 / 4,400,000 chỉ dùng cho quyết toán kỳ ≤ 2025.
 
 ### 3.2 Điều kiện người phụ thuộc hợp lệ
 
@@ -109,97 +93,70 @@ Thuế = 675,000 × 5% = 33,750 VND
 | Vợ/chồng                | Thu nhập bình quân tháng trong năm không quá 3 triệu hoặc không có khả năng lao động |
 | Cha/mẹ                  | Thu nhập bình quân tháng trong năm không quá 3 triệu hoặc ≥ 60 tuổi / không có khả năng lao động |
 
-> ⚠️ **Rule**: Một người phụ thuộc chỉ được đăng ký giảm trừ tại **1 nơi làm việc** duy nhất. NLĐ tự khai và chịu trách nhiệm về thông tin.
-> Từ 01/07/2026, mức thu nhập làm căn cứ xác định người phụ thuộc là không quá
-> **3 triệu đồng/tháng** theo TT 87/2026/TT-BTC; mức cũ 1 triệu chỉ dùng cho
-> kỳ trước khi quy định mới có hiệu lực.
-
-### 3.3 Đăng ký người phụ thuộc
-
-NLĐ nộp Mẫu 02/ĐK-TNCN cho HR. HR lưu hồ sơ và cập nhật vào hệ thống. Việc xác minh thuộc trách nhiệm của NLĐ.
+> ⚠️ Một người phụ thuộc chỉ đăng ký giảm trừ tại **1 nơi làm việc**. Từ
+> 01/07/2026, ngưỡng thu nhập NP thuộc = **3 triệu/tháng** (TT 87/2026/TT-BTC);
+> mức cũ 1 triệu chỉ cho kỳ trước quy định mới. NLĐ nộp Mẫu 02/ĐK-TNCN; HR lưu
+> hồ sơ — xác minh thuộc trách nhiệm NLĐ.
 
 ---
 
 ## 4. Bảng lương tháng
 
-### 4.1 Quy trình tính lương
+### 4.1 Quy trình
 
-```
-1. Tổng hợp ngày công (từ chấm công / ca làm việc)
-2. Tính lương ngày công thực tế
-3. Tính các khoản phụ cấp và thưởng
-4. Tính BHXH/BHYT/BHTN phần NLĐ đóng (10.5%)
-5. Tính thuế TNCN theo biểu lũy tiến
-6. Dự kiến thực lĩnh = Gross - BHXH/BHYT/BHTN - Thuế TNCN - Khấu trừ khác
-7. Chốt bảng lương → Finance thanh toán và lưu evidence
-```
+Công → phụ cấp/thưởng → BH NLĐ 10.5% → TNCN → dự kiến thực lĩnh → chốt →
+Finance thanh toán + evidence.
 
 ### 4.2 Hợp đồng dữ liệu lương live và snapshot
 
-`/hr/payroll` là workspace xem **lương live** theo tháng; owner chọn tháng,
-chi nhánh, tìm nhân viên và `standard_days` (mặc định 26). Không có bước tạo
-`payroll_period` trước khi xem hoặc tính lại.
+`/hr/payroll` xem **lương live** theo tháng (tháng, chi nhánh, nhân viên,
+`standard_days` mặc định 26). Không tạo `payroll_period` trước khi xem/tính.
 
 | Dữ liệu hiển thị | Nguồn live | Quy tắc |
 | --- | --- | --- |
-| Công làm | `attendance_records` có `check_out` | Theo D027: ca đã kết thúc quy đổi ngày công; không tự suy diễn ca vắng. |
-| Phép có lương / nghỉ không lương | `leave_requests` đã `approved` | Phép năm được tách theo entitlement hiện hành; các ngày vượt quyền lợi và loại nghỉ khác là không lương. |
-| Lương tháng / mức đóng BH | HĐLĐ có hiệu lực trong kỳ, fallback `employees` | Không có nguồn lương thì hàng được gắn trạng thái thiếu dữ liệu, không được im lặng coi là 0 hợp lệ. `pay_basis` phải lấy từ HĐLĐ có hiệu lực và được snapshot khi chốt, không suy từ JWT role. |
-| Thưởng, phụ cấp, tạm ứng, khấu trừ | `payroll_adjustments` theo nhân viên-tháng | Mỗi điều chỉnh có loại, số tiền dương, ghi chú và người tạo; đây là nguồn live duy nhất cho các khoản nhập bổ sung. |
-| Dự kiến thực lĩnh | Các nguồn trên + engine version-aware | Tính tại thời điểm mở/lọc workspace, không ghi `payroll_entries`. |
+| Công làm | `attendance_records` có `check_out` | D027: ca đã kết thúc quy đổi ngày công; không suy diễn ca vắng. |
+| Phép có lương / nghỉ không lương | `leave_requests` đã `approved` | Phép năm theo entitlement; vượt quyền lợi và loại khác = không lương. |
+| Lương tháng / mức đóng BH | HĐLĐ hiệu lực trong kỳ, fallback `employees` | Thiếu lương → trạng thái thiếu dữ liệu, không im lặng = 0. `pay_basis` từ HĐLĐ, snapshot khi chốt — không suy từ JWT role. |
+| Thưởng, phụ cấp, tạm ứng, khấu trừ | `payroll_adjustments` | Loại, số dương, ghi chú, người tạo; nguồn live duy nhất cho khoản nhập bổ sung. |
+| Dự kiến thực lĩnh | Nguồn trên + engine version-aware | Tính khi mở/lọc; không ghi `payroll_entries`. |
 
-`standard_days` chỉ là tham số của preview. Khi owner bấm **Chốt bảng lương**,
-hệ thống trong một transaction tạo hoặc cập nhật snapshot của đúng tháng, lưu
-toàn bộ dòng vào `payroll_entries`, gắn người/thời điểm chốt và khóa nguồn
-snapshot đó. UI sau chốt dùng nhãn **Thực lĩnh đã chốt**; trước chốt dùng
-**Dự kiến thực lĩnh**. Chốt lại chỉ được phép khi snapshot còn ở trạng thái có
-thể sửa theo state machine; không được thay đổi snapshot đã giao cho Finance.
+Chốt bảng lương: một transaction tạo/cập nhật snapshot tháng → `payroll_entries`,
+khóa nguồn. UI: **Thực lĩnh đã chốt** / **Dự kiến thực lĩnh**. Chốt lại chỉ khi
+state machine cho phép; không sửa snapshot đã giao Finance.
 
-Công mỗi ca đã kết (có `check_out` / kết ca) lấy từ khung ca đã freeze trên
-attendance lúc clock-in (ADR 0019 / D027):
+Công mỗi ca đã kết (ADR 0019 / D027):
 
 `công = min(1.0, round_1dp(|(check_in, check_out) ∩ scheduled_window| / scheduled_len))`.
 
-Chưa kết ca → không cộng công. Cả `attendance_prorated` và `fixed_monthly` dùng
-`working_days = Σ công`. Ngày trả lương cơ bản:
+Chưa kết ca → không cộng. `working_days = Σ công`.
 
 `payable_days = min(standard_days, working_days + paid_leave_days)`
 `base = monthly_salary × payable_days / standard_days`.
 
 Không khấu trừ thêm nghỉ không lương trùng phần đã thiếu trong `working_days`.
-Adjustment tay (`payroll_adjustments`) vẫn giữ. `pay_basis` là thuộc tính HĐLĐ,
-không suy từ JWT role.
 
-Trước khi gọi snapshot, `/hr/payroll` chạy preflight chỉ đọc. Snapshot bị chặn
-khi còn nhân viên thiếu mức lương, ca đã quá giờ nhưng chưa có giờ ra, hoặc yêu
-cầu nghỉ trong kỳ còn chờ duyệt. Preflight chỉ dẫn về hồ sơ nhân sự hoặc Lịch
-công; không tự sửa công, phép, hoặc dữ liệu lương. Ngoại lệ Owner chỉ được bổ
-sung khi có một cơ chế phê duyệt được lưu vết riêng.
+Preflight (chỉ đọc) chặn snapshot khi thiếu mức lương, ca quá giờ chưa giờ ra,
+hoặc nghỉ chờ duyệt. Không tự sửa dữ liệu. Ngoại lệ Owner cần cơ chế phê duyệt
+có lưu vết.
 
-**Ranh giới Finance:** chốt bảng lương không đồng nghĩa với đã trả tiền.
-Khoản chi lương, phương thức tiền mặt/chuyển khoản và evidence đối soát nằm ở
-Finance `expenses` với category `salary`. HR không tự cập nhật
-`payroll_periods.status = 'paid'`.
+**Ranh giới Finance:** chốt ≠ đã trả. Chi lương/evidence ở Finance `expenses`
+category `salary`. HR không tự set `payroll_periods.status = 'paid'`.
 
-### 4.3 Database — bảng `payroll_periods` và `payroll_entries`
+### 4.3 Database — `payroll_periods` và `payroll_entries`
 
 ```sql
 CREATE TABLE payroll_periods (
   id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   tenant_id           BIGINT NOT NULL REFERENCES tenants(id),
-
   period_month        INT NOT NULL,              -- 1-12
   period_year         INT NOT NULL,
   status              TEXT NOT NULL DEFAULT 'draft',
   -- 'draft' | 'calculated' | 'approved' | 'paid'
-
   approved_by         UUID REFERENCES profiles(id),
   approved_at         TIMESTAMPTZ,
   paid_at             TIMESTAMPTZ,
-
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   UNIQUE(period_month, period_year, tenant_id)
 );
 
@@ -208,133 +165,70 @@ CREATE TABLE payroll_entries (
   tenant_id           BIGINT NOT NULL REFERENCES tenants(id),
   payroll_period_id   BIGINT NOT NULL REFERENCES payroll_periods(id),
   employee_id         BIGINT NOT NULL REFERENCES employees(id),
-
-  -- Công
-  working_days        NUMERIC(5,1) NOT NULL,     -- Ngày công thực tế
-  standard_days       NUMERIC(5,1) NOT NULL,     -- Ngày công chuẩn tháng
+  working_days        NUMERIC(5,1) NOT NULL,
+  standard_days       NUMERIC(5,1) NOT NULL,
   overtime_hours      NUMERIC(6,2) DEFAULT 0,
-
-  -- Thu nhập
-  base_salary         NUMERIC(15,2) NOT NULL,    -- Lương cơ bản × (công thực tế / công chuẩn)
-  allowances          NUMERIC(15,2) DEFAULT 0,   -- Phụ cấp chịu thuế
-  tax_exempt_allowances NUMERIC(15,2) DEFAULT 0, -- Phụ cấp miễn thuế (ăn ca, xăng xe, ...)
+  base_salary         NUMERIC(15,2) NOT NULL,
+  allowances          NUMERIC(15,2) DEFAULT 0,
+  tax_exempt_allowances NUMERIC(15,2) DEFAULT 0,
   overtime_pay        NUMERIC(15,2) DEFAULT 0,
   bonus               NUMERIC(15,2) DEFAULT 0,
-  gross_total         NUMERIC(15,2) NOT NULL,    -- Tổng thu nhập chịu thuế
-
-  -- Bảo hiểm NLĐ đóng
-  bhxh_employee       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 8%
-  bhyt_employee       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1.5%
-  bhtn_employee       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
+  gross_total         NUMERIC(15,2) NOT NULL,
+  bhxh_employee       NUMERIC(15,2) NOT NULL,    -- × 8%
+  bhyt_employee       NUMERIC(15,2) NOT NULL,    -- × 1.5%
+  bhtn_employee       NUMERIC(15,2) NOT NULL,    -- × 1%
   total_insurance_employee NUMERIC(15,2) NOT NULL,
-
-  -- Bảo hiểm NSDLĐ đóng (chi phí doanh nghiệp)
-  bhxh_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 17.5%
-  bhyt_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 3%
-  bhtn_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
+  bhxh_employer       NUMERIC(15,2) NOT NULL,    -- × 17.5%
+  bhyt_employer       NUMERIC(15,2) NOT NULL,    -- × 3%
+  bhtn_employer       NUMERIC(15,2) NOT NULL,    -- × 1%
   total_insurance_employer NUMERIC(15,2) NOT NULL,
-
-  -- Giảm trừ thuế TNCN
-  -- ⚠️ DEFAULT 11000000 là fallback legacy (kỳ ≤ 2025). Engine luôn GHI ĐÈ bằng
-  --    giá trị versioned: từ kỳ 2026 là 15.500.000 / 6.200.000 (legal-versions.ts).
+  -- DEFAULT 11000000 = fallback legacy (kỳ ≤ 2025). Engine ghi đè versioned
+  -- từ kỳ 2026: 15.500.000 / 6.200.000 (legal-versions.ts).
   personal_deduction  NUMERIC(15,2) NOT NULL DEFAULT 11000000,
   dependent_count     INT NOT NULL DEFAULT 0,
-  dependent_deduction NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 6.200.000 × count (kỳ 2026); 4.400.000 cho kỳ ≤ 2025
+  dependent_deduction NUMERIC(15,2) NOT NULL DEFAULT 0,
   charity_deduction   NUMERIC(15,2) DEFAULT 0,
-
-  -- Thuế TNCN
-  taxable_income      NUMERIC(15,2) NOT NULL,    -- Sau giảm trừ
-  pit_tax             NUMERIC(15,2) NOT NULL,    -- Thuế TNCN phải nộp
-  pit_tax_rate        NUMERIC(5,2),              -- Bậc thuế hiệu dụng (informational)
-
-  -- Khấu trừ khác
-  advance_deduction   NUMERIC(15,2) DEFAULT 0,   -- Tạm ứng lương
+  taxable_income      NUMERIC(15,2) NOT NULL,
+  pit_tax             NUMERIC(15,2) NOT NULL,
+  pit_tax_rate        NUMERIC(5,2),
+  advance_deduction   NUMERIC(15,2) DEFAULT 0,
   other_deductions    NUMERIC(15,2) DEFAULT 0,
-
-  -- Lương thực lĩnh
-  net_salary          NUMERIC(15,2) NOT NULL,    -- gross_total - insurance_employee - pit_tax - deductions
-
-  -- Metadata
-  insurance_base      NUMERIC(15,2) NOT NULL,    -- Mức lương đóng BH tháng này
+  net_salary          NUMERIC(15,2) NOT NULL,
+  insurance_base      NUMERIC(15,2) NOT NULL,    -- snapshot mức đóng BH
   notes               TEXT,
-
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-
   UNIQUE(payroll_period_id, employee_id, tenant_id)
 );
 ```
 
-### 4.4 Nhất quán `insurance_base` giữa 3 bảng
+### 4.4 `insurance_base`
 
-Trường `insurance_base` trong `payroll_entries` là **immutable snapshot** của mức lương đóng BH tại thời điểm tính lương. Source of truth nằm ở `employment_contracts.insurance_base_salary`.
-
-```
-employment_contracts.insurance_base_salary  (source of truth — HR nhập khi ký HĐ)
-        │  auto sync khi HĐ active
-        ▼
-employees.insurance_base_salary             (derived/cache — giá trị hiện tại)
-        │  snapshot khi tính lương
-        ▼
-payroll_entries.insurance_base              (immutable — KHÔNG đổi sau approved)
-```
-
-Khi tính lương, logic phải:
-
-1. Lấy `insurance_base` từ `employees.insurance_base_salary` (đã sync từ HĐ active)
-2. Apply trần BHXH version-aware: `MIN(insurance_base, version.insuranceCap)` —
-   **46,8tr đến 30/06/2026**, **50,6tr từ 01/07/2026** (NĐ 161/2026). KHÔNG
-   hardcode `46_800_000` cho mọi kỳ; cap bước theo `legal-versions.ts` (quy tắc
-   `PAYROLL-2026-FIVE-BRACKET-AND-BHXH-CAP-STEP`).
-3. Ghi snapshot vào `payroll_entries.insurance_base`
-
-> Xem chi tiết rủi ro và luồng dữ liệu tại `docs/ref/labor-contracts.md` § 5.3
+Immutable snapshot lúc tính lương. Source of truth + luồng 3 bảng: xem
+`docs/ref/labor-contracts.md` §5.3. Khi tính: lấy mức từ HĐ/`employees`, áp
+trần version-aware `MIN(base, version.insuranceCap)` — **46,8tr đến 30/06/2026**,
+**50,6tr từ 01/07/2026** — ghi `payroll_entries.insurance_base`.
 
 ---
 
 ## 5. Logic tính thuế TNCN (TypeScript)
 
-Engine thật là **version-aware** — KHÔNG hardcode tỷ lệ/bậc/trần trong app. Gọi
-`calculatePayrollEntry`, truyền `effectiveDate` (ngày cuối kỳ lương) để resolve
-đúng version theo `legal-versions.ts`:
+Engine version-aware — không hardcode tỷ lệ/bậc/trần. Gọi
+`calculatePayrollEntry` với `effectiveDate` (ngày cuối kỳ) để resolve
+`legal-versions.ts`:
 
-- `packages/shared/src/payroll/calculate.ts` — `calculatePayrollEntry(input)`
-- `packages/shared/src/payroll/legal-versions.ts` — bảng hằng số theo `effectiveFrom`
-  (biểu thuế, giảm trừ, trần BHXH, tỷ lệ BH). Số thật nằm ở đây.
+- `packages/shared/src/payroll/calculate.ts`
+- `packages/shared/src/payroll/legal-versions.ts`
 
-```typescript
-import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
-
-const row = calculatePayrollEntry({
-  grossTotal,            // tổng thu nhập chịu thuế
-  insuranceBaseSalary,   // mức lương đóng BH (trần áp theo version)
-  taxExemptAllowances,
-  dependentCount,
-  charityDeduction,
-  advanceDeduction,
-  otherDeductions,
-  effectiveDate: "2026-07-31", // T7/2026 → biểu 5 bậc + trần BHXH 50,6tr
-});
-// row.pitTax, row.totalInsuranceEmployee, row.netSalary
-// row.legalVersionEffectiveFrom is helper audit metadata; payroll_entries snapshots the money fields.
-```
-
-Công thức biểu 5 bậc (kỳ tính thuế 2026) ở §2; biểu 7 bậc cũ chỉ dùng khi quyết
-toán các kỳ ≤ 2025 (version `effectiveFrom` ≤ `2024-07-01`).
+Biểu 5 bậc kỳ 2026 ở §2; biểu 7 bậc chỉ cho quyết toán kỳ ≤ 2025
+(`effectiveFrom` ≤ `2024-07-01`).
 
 ---
 
 ## 6. Quyết toán thuế TNCN cuối năm
 
-### 6.1 Quyết toán theo ủy quyền
-
-Nếu NLĐ chỉ có thu nhập từ 1 nơi → có thể **ủy quyền quyết toán** cho NSDLĐ
-theo điều kiện pháp luật thuế hiện hành. Với Cơm Tấm Má Tư, NSDLĐ là doanh
-nghiệp.
-
-**Hạn quyết toán**: ngày 31/3 năm kế tiếp (ví dụ: quyết toán năm 2025 → 31/3/2026).
-
-### 6.2 Tờ khai cần nộp hàng tháng (hoặc quý)
+NLĐ chỉ có thu nhập 1 nơi → có thể ủy quyền quyết toán cho NSDLĐ. Hạn: **31/3**
+năm kế tiếp.
 
 | Tờ khai         | Nội dung                            | Hạn nộp                                          |
 | --------------- | ----------------------------------- | ------------------------------------------------ |
@@ -342,75 +236,35 @@ nghiệp.
 | **05/QTT-TNCN** | Quyết toán thuế năm                 | 31/3 năm kế tiếp                                 |
 | **05/BK-TNCN**  | Bảng kê thu nhập từng cá nhân       | Kèm theo 05/QTT-TNCN                             |
 
-> Việc nộp tờ khai thực hiện qua **eTax** hoặc phần mềm kế toán — không nộp trực tiếp từ hệ thống này. Hệ thống cung cấp **dữ liệu xuất** để kế toán khai báo.
-
-### 6.3 Dữ liệu xuất cho kế toán
-
-```sql
--- Tổng hợp thu nhập và thuế TNCN đã khấu trừ theo năm
-SELECT
-  p.full_name,
-  e.id_number,
-  SUM(pe.gross_total) AS total_gross,
-  SUM(pe.total_insurance_employee) AS total_insurance,
-  SUM(pe.dependent_deduction) AS total_dependent_deduction,
-  SUM(pe.taxable_income) AS total_taxable_income,
-  SUM(pe.pit_tax) AS total_pit_withheld
-FROM payroll_entries pe
-JOIN employees e ON e.id = pe.employee_id
-JOIN profiles p ON p.id = e.profile_id
-JOIN payroll_periods pp ON pp.id = pe.payroll_period_id
-WHERE pe.tenant_id = $1
-  AND pp.period_year = $2
-  AND pp.status = 'paid'
-GROUP BY e.id, p.full_name, e.id_number
-ORDER BY p.full_name;
-```
+Nộp qua eTax / phần mềm kế toán — hệ thống chỉ cung cấp dữ liệu xuất. Xuất năm:
+`SUM` các trường `gross_total`, `total_insurance_employee`,
+`dependent_deduction`, `taxable_income`, `pit_tax` từ `payroll_entries` join
+`employees`/`profiles`, lọc `period_year` và `status = 'paid'`.
 
 ---
 
-## 7. Chi phí lương của NSDLĐ (Total Labor Cost)
-
-Khi lập kế hoạch ngân sách, tổng chi phí lao động NSDLĐ phải chịu = Lương
-gross + Bảo hiểm phần NSDLĐ đóng:
+## 7. Chi phí lương NSDLĐ
 
 ```
-Total labor cost = Gross salary
-                 + BHXH employer (17.5%)
-                 + BHYT employer (3%)
-                 + BHTN employer (1%)
-                 = Gross × (1 + 21.5%) ≈ Gross × 1.215
+Total labor cost ≈ Gross × 1.215
+  (= Gross + BHXH 17.5% + BHYT 3% + BHTN 1% employer)
 ```
 
-Ví dụ: Nhân viên lương gross 10 triệu → doanh nghiệp/NSDLĐ thực tế chi khoảng 12,15 triệu/tháng.
-
-### 7.1 Người quản lý doanh nghiệp và thành viên HĐQT
-
-Đối tượng và căn cứ đóng của người quản lý doanh nghiệp, thành viên HĐQT,
-Giám đốc/Tổng giám đốc phụ thuộc chức danh, việc hưởng tiền lương và quan hệ
-lao động thực tế theo Luật BHXH 41/2024 và NĐ 158/2025. Không suy từ application
-role `owner` hoặc tư cách cổ đông. Kế toán/HR phải xác nhận từng hồ sơ trước khi
-đưa vào payroll.
+Người quản lý DN / HĐQT / Giám đốc: căn cứ đóng theo chức danh, hưởng lương và
+quan hệ LĐ thực tế (Luật BHXH 41/2024, NĐ 158/2025) — không suy từ app role
+`owner` hay cổ đông. HR/kế toán xác nhận từng hồ sơ.
 
 ---
 
-## 8. Các mức lương tham chiếu
+## 8. Mức lương tham chiếu
 
-| Vị trí (ví dụ Cơm Tấm Má Tư) | Lương gross tham chiếu | Ghi chú                   |
-| ---------------------------- | ---------------------- | ------------------------- |
-| Chef (bếp trưởng)            | 12–18 triệu            | Theo kinh nghiệm          |
-| Cashier / Waiter             | 6–9 triệu              | + % service charge nếu có |
-| Branch Manager               | 20–35 triệu            |                           |
-| Area Manager                 | 35–55 triệu            |                           |
+**Lương tối thiểu vùng từ 01/01/2026** (NĐ 293/2025 — Vùng I, gồm TP.HCM):
+**5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000). HĐ ≥ tối thiểu
+vùng.
 
-**Lương tối thiểu vùng từ 01/01/2026** (NĐ 293/2025/NĐ-CP — Vùng I, gồm
-TP.HCM): **5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000).
-
-> Lương trong HĐ phải ≥ lương tối thiểu vùng.
-
-> ⚠️ **Đừng nhầm 2 mức:** *lương tối thiểu vùng* (sàn lương HĐLĐ, theo NĐ
-> 293/2025) khác *lương cơ sở* (căn cứ tính **trần BHXH** = 20×, theo NĐ 73/2024
-> → NĐ 161/2026). Lương cơ sở: 2,34tr đến 30/06/2026, **2,53tr từ 01/07/2026**.
+> ⚠️ Đừng nhầm: *lương tối thiểu vùng* (sàn HĐLĐ, NĐ 293/2025) ≠ *lương cơ sở*
+> (căn cứ trần BHXH = 20×: 2,34tr đến 30/06/2026, **2,53tr từ 01/07/2026**,
+> NĐ 73/2024 → NĐ 161/2026).
 
 ---
 

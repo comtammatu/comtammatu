@@ -46,9 +46,9 @@ const isAuthedPath = (pathname: string) =>
 
 // Branch shell only (PWA-2, D062) — branch-scoped routes under
 // `/br/{branchId}` (dashboard/orders/profile/settings/shift/
-// stock/team), excluding the POS/KDS/Runner station apps. Stations keep their
+// stock/team), excluding the POS/KDS/pickup station apps. Stations keep their
 // existing offline handling untouched.
-const BRANCH_STATION_SEGMENTS = ["pos", "kds", "runner"];
+const BRANCH_STATION_SEGMENTS = ["pos", "kds", "pickup"];
 const isOperatorShellPath = (pathname: string) => {
   if (!pathname.startsWith("/br/")) return false;
   const segments = pathname.split("/").filter(Boolean);
@@ -143,7 +143,7 @@ const runtimeCaching: RuntimeCaching[] = [
       request.mode === "navigate" && isOperatorShellPath(url.pathname),
     handler: new NetworkOnly({ plugins: [operatorOfflineFallback] }),
   },
-  // 10. Remaining authed navigations (POS/KDS/Runner stations and admin/domain
+  // 10. Remaining authed navigations (POS/KDS/pickup stations and admin/domain
   //    workspaces): never cache, no offline fallback.
   //    Protected shells embed user identity in the SSR'd HTML, so the service
   //    worker must never persist a navigation response.

@@ -1,302 +1,100 @@
-# Chỉ mục quyết định tương thích
+# Compatibility Decision Index
 
-> Các mã `Dxxx` được giữ để những inbound reference còn hiệu lực không mất
-> nghĩa. Đây không phải backlog, worklog hay nguồn mô tả chi tiết. ADR, spec,
-> ref, module docs và rules được trỏ trong từng entry mới là authority. Quyết
-> định đã supersede bị xóa; Git giữ lịch sử.
+> `Dxxx` codes are kept so inbound references stay meaningful. This file is not
+> a backlog, worklog, or detailed authority. ADR, spec, ref, module docs, and
+> rules named in each entry own the detail. Superseded decisions are deleted;
+> Git keeps history.
 
-Không tạo mã `Dxxx` mới cho task hoặc ghi chú triển khai. Thay đổi kiến trúc mới
-dùng ADR; khi không còn inbound reference, entry tương thích được xóa.
-
-## D002: Tenant → Branch
-
-**Net effect:** Phân cấp runtime là `Tenant (L0) → Branch (L1)`, không có Brand
-scope hoặc Brand claim. Canonical: `docs/spec/architecture.md`.
-
-## D005: Infrastructure do owner quản lý
-
-**Net effect:** Source chỉ giữ biến môi trường và guard; agent không tự tạo
-infrastructure ngoài nhiệm vụ được owner ủy quyền rõ ràng. Canonical:
-`docs/agent/rules/database.md`.
+Do not create new `Dxxx` codes for tasks or implementation notes. New architecture
+changes use an ADR. When no inbound reference remains, delete the compatibility
+entry.
 
 ## D009: Path-based routing
-
-**Net effect:** Owner ở `/`; Branch runtime ở `/br/[branchId]/*`; ACL tập trung
-tại proxy và module ACL. Nhân sự không gắn site dùng self-service `/me/*`;
-Owner bị từ chối tường minh khỏi route family này. Canonical:
-`docs/spec/architecture.md`, ADR 0012.
-
-## D010: Form contract
-
-**Net effect:** Form CRUD dùng React Hook Form, Zod và Má Tư DS Field; ngoại lệ
-chỉ khi owning module ghi rõ. Canonical: `docs/modules/ui.md`.
+**Net effect:** Owner `/`; Branch `/br/[branchId]/*`; self-service `/me/*` (Owner denied); ACL at proxy + module ACL. Canonical: `docs/spec/architecture.md`, ADR 0012.
 
 ## D011: Print-agent LAN-only
+**Net effect:** `apps/print-agent` supports LAN printers only; no USB or runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
 
-**Net effect:** `apps/print-agent` chỉ hỗ trợ máy in LAN; không có USB transport
-hoặc runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
+## D012: Lean operations
+**Net effect:** PWA is the operations client; no Local-first POS / native rewrite / non-consumer payment rail; floor role is `cashier`; shift-lead void exception per ADR 0023. Canonical: ADR 0023.
 
-## D012: Vận hành tinh gọn
-
-**Net effect:** PWA là client vận hành; không đưa Local-first POS, native rewrite
-hay payment rail không có consumer vào backlog. Role sàn bán hàng là `cashier`.
-Ngoại lệ kiểm soát: hàng đợi duyệt void của trưởng ca theo ADR 0023 — không suy
-ra khung multi-tier approval chung.
-
-## D015: `main` là Production track của CTCP Chén Sứ
-
-**Net effect:** `main` chỉ phục vụ CTCP Chén Sứ/Cơm Tấm Má Tư. Production duy
-nhất là Vercel `comtammatu`, Supabase `enloyfnuerqgaqderbwb`, domain
-`web.comtammatu.com`. Không nhập dữ liệu, Auth, secret hoặc runtime evidence của
-pháp nhân khác. Canonical: `docs/agent/rules/database.md`, ADR 0016.
+## D015: `main` is the Production track for CTCP Chén Sứ
+**Net effect:** `main` serves CTCP Chén Sứ only; sole Production stack is Vercel `comtammatu` / Supabase `enloyfnuerqgaqderbwb` / `web.comtammatu.com`. Canonical: `docs/agent/rules/database.md`, ADR 0016.
 
 ## D016: POS stock outcome
-
-**Net effect:** Trừ tồn bán hàng theo final order outcome và feature contract;
-không đặt stock mutation vào client/payment UI. Canonical:
-`docs/ref/operational-data-contract.md`.
+**Net effect:** Stock deducts from final order outcome and feature contract; no client/payment UI stock mutation. Canonical: `docs/ref/operational-data-contract.md`.
 
 ## D017: Owner L0, Branch Manager L1
+**Net effect:** Owner governs the tenant; Branch Manager operates one branch; Self plane is not an admin tier. Canonical: ADR 0012, `docs/spec/role-route-matrix.md`.
 
-**Net effect:** Owner quản lý Tenant; Branch Manager vận hành đúng chi nhánh.
-Self plane chỉ phục vụ hồ sơ/ngày làm của nhân viên không phải Owner và không
-tạo thêm cấp quản trị. Canonical: ADR 0012 và
-`docs/spec/role-route-matrix.md`.
+## D019: Control surface and branch surface
+**Net effect:** `control_surface` uses shared management chrome; `branch_surface` uses operator/station chrome; one capability maps to one home route. Canonical: `docs/spec/design-system.md`, `docs/spec/role-route-matrix.md`.
 
-## D018: Không có tenant-admin phụ
+## D020: Operational finance, not enterprise GL
+**Net effect:** No GL / Circular 200 / VAS close UI; 04:00 business-day window is not book close; manual Chốt ngày ceremony removed (ADR 0024). Canonical: `docs/modules/finance.md`, ADR 0016, ADR 0024.
 
-**Net effect:** `owner` là tenant administrator duy nhất. Role và claim
-canonical nằm trong `packages/shared/src/auth/`.
+## D023: Corrections outside POS
+**Net effect:** Payment / HĐĐT corrections belong to Owner/Accountant; POS only does contracted full void-after-paid. Canonical: `docs/modules/finance.md`.
 
-## D019: Control surface và branch surface
+## D026: HR around Person, attendance day, and payroll
+**Net effect:** HR reads operations sources; payroll snapshots on close; `pay_basis` from HĐLĐ; both bases use `working_days` (D027 / ADR 0019); HR closes obligations, Finance records payment. Canonical: `docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`, ADR 0019.
 
-**Net effect:** `control_surface` dùng shared management chrome; `branch_surface`
-dùng operator/station chrome. Một capability có một route home, nav là data và
-outer padding thuộc `AppPage`. Canonical: `docs/spec/design-system.md`,
-`docs/spec/role-route-matrix.md`.
+## D027: Shift-based attendance
+**Net effect:** Attendance follows assigned shifts; work credit is hours / freeze window capped at 1.0 per shift; Owner does not punch; floor checkout needs Branch Manager approval. Canonical: `docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
 
-## D020: Finance vận hành, không phải sổ kế toán doanh nghiệp
-
-**Net effect:** Product không cung cấp General Ledger/TT 200/VAS close UI.
-Database close/reopen support không trở thành app surface. Branch **business-day
-window** (04:00) không phải buổi “đóng sổ”; ceremony Chốt ngày thủ công bị loại
-khỏi product surface theo ADR 0024 (shipped). Canonical:
-`docs/modules/finance.md`, ADR 0016, ADR 0024.
-
-## D022: HĐĐT theo payment event
-
-**Net effect:** HĐĐT được enqueue khi thanh toán hoàn tất; không có local draft
-sau thanh toán. Canonical: `docs/ref/einvoice-tax.md`, ADR 0013.
-
-## D023: Correction ngoài POS
-
-**Net effect:** Sửa payment/HĐĐT thuộc Owner/Accountant; POS chỉ giữ full
-void-after-paid đã được contract cho phép. Canonical: `docs/modules/finance.md`.
-
-## D026: HR theo Người, Ngày công, Lương
-
-**Net effect:** HR đọc nguồn vận hành hiện tại; payroll entry là snapshot khi
-chốt. `pay_basis` lấy từ HĐLĐ có hiệu lực, không suy từ JWT role. Cả
-`attendance_prorated` và `fixed_monthly` dùng `working_days` từ công ca
-(D027/ADR 0019). `fixed_monthly`:
-`payable_days = min(standard_days, working_days + paid_leave_days)` — không
-khấu trừ thêm nghỉ không lương trùng phần đã thiếu trong `working_days`;
-adjustment tay vẫn được. Phép hưởng lương cộng vào `paid_leave_days`. HR chốt
-nghĩa vụ lương, Finance ghi nhận thanh toán. Canonical:
-`docs/ref/payroll-pit.md`, `docs/ref/labor-contracts.md`, ADR 0019.
-
-## D027: Chấm công theo ca
-
-**Net effect:** Đơn vị attendance là ca đã gán (`shift_assignments`); mỗi lượt
-vào/kết ca thuộc một attendance với khung ca đã freeze lúc clock-in. Công =
-tỷ lệ giờ `(check_in→check_out) ∩ khung freeze` / độ dài khung, tối đa 1.0/ca
-(không còn hằng 0.5). Chưa kết ca → 0 công. Mọi non-Owner self-service;
-floor/central theo site gán, Kế toán `branch_id = NULL`; Owner không punch.
-Checkout floor do BM duyệt, central/Kế toán vào queue Owner. Canonical:
-`docs/spec/database-schema.md`, `docs/ref/payroll-pit.md`, ADR 0019.
-
-## D028: Kết quả vận hành và kiểm soát nguyên liệu
-
-**Net effect:** Tiêu hao nguyên liệu dựa trên đếm thực tế và stock ledger.
-Finance hiển thị `Kết quả vận hành`, dòng tiền và số dư quỹ theo nguồn riêng;
-không gọi các chỉ số này là `Lợi nhuận ròng`. Canonical:
-`docs/ref/operational-data-contract.md`, `docs/modules/finance.md`.
-
-## D029: Money display
-
-**Net effect:** Glyph tiền app/print là `đ`; số tiền dùng formatter và money
-helpers theo domain, không dùng formatter làm nguồn tính. Canonical:
-`docs/spec/design-system.md`.
+## D028: Kết quả vận hành and ingredient control
+**Net effect:** Consumption follows physical counts and the stock ledger; Finance shows Kết quả vận hành / cash flow / fund balances, not Lợi nhuận ròng. Canonical: `docs/ref/operational-data-contract.md`, `docs/modules/finance.md`.
 
 ## D030: Ratchet allowlist
-
-**Net effect:** Allowlist của guard là sàn false-positive có phân loại, không
-phải backlog phải ép về zero bằng sửa hình thức.
-
-## D033: TypeScript/Supabase trunk
-
-**Net effect:** `main` dùng TypeScript/Next.js/Supabase hiện hành; không có Go
-port song song.
-
-## D039: HĐĐT provider result
-
-**Net effect:** Provider result được xử lý qua canonical invoice job/provider
-contract; không dựng đường phát hành thứ hai. Canonical:
-`docs/ref/einvoice-tax.md`.
-
-## D040: Không dùng tax percentage giả
-
-**Net effect:** VAT/HĐĐT dùng tax rate theo dòng và cấu hình pháp lý/provider;
-không dùng `taxPercentage` tổng hợp giả. Canonical: ADR 0016.
-
-## D041: Payroll calculation atomic
-
-**Net effect:** Payroll calculation nhiều dòng đi qua một RPC atomic và snapshot
-versioned tax/labor inputs.
-
-## D043: Payment authorization
-
-**Net effect:** Payment RPC tự kiểm tra permission và scope; UI visibility không
-thay authorization.
-
-## D044: Một UI contract
-
-**Net effect:** Má Tư Design System là UI SSOT duy nhất. Canonical:
-`docs/spec/design-system.md`.
+**Net effect:** Guard allowlists are classified false-positive floors, not a backlog to force to zero with cosmetic edits.
 
 ## D046: Foreground notification
+**Net effect:** Device popups only while the PWA is open; no server Web Push layer. Canonical: `docs/spec/toast-notification-system.md`.
 
-**Net effect:** Popup thiết bị chỉ chạy khi PWA đang mở; không có Web Push
-server layer. Canonical: `docs/spec/toast-notification-system.md`.
-
-## D048: IA Người và Chi nhánh
-
-**Net effect:** HR quản lý nhân sự/tài khoản; Branch management quản lý site.
-Không dựng roster hoặc admin surface thứ hai.
+## D048: Person and branch IA
+**Net effect:** HR owns people/accounts; Branch management owns sites; no second roster/admin surface.
 
 ## D049: Full void-after-paid
-
-**Net effect:** POS chỉ được full void theo canonical atomic correction; partial
-financial correction vẫn thuộc Owner/Accountant. Ủy quyền duyệt void cho trưởng
-ca (assignment flag + queue) theo ADR 0023; không gồm refund.
+**Net effect:** POS only full-voids via atomic correction; partial correction is Owner/Accountant; shift-lead authority per ADR 0023; no refund rail. Canonical: ADR 0023.
 
 ## D050: Operator workspace
+**Net effect:** Branch daily work lives under `/br/[branchId]/*`, mobile-first, scoped from URL and verified claims. Canonical: ADR 0012.
 
-**Net effect:** Branch daily work nằm trong `/br/[branchId]/*`, mobile-first,
-scope lấy từ URL và verified claims. Canonical: ADR 0012.
+## D052: Position shift tasks
+**Net effect:** `position_shift_tasks` is the SSOT for in-shift work; clock-in snapshots tasks; do not revive `shift_checklist_templates`.
 
-## D052: Việc trong ca theo vị trí
-
-**Net effect:** `position_shift_tasks` là SSOT việc trong ca theo vị trí; clock-in
-snapshot task để giữ lịch sử. Sao chép từ vị trí khác là thao tác mẫu; không hồi
-sinh `shift_checklist_templates` hoặc tạo workflow song song.
-
-## D053: KDS/POS/Inventory truth
-
-**Net effect:** KDS state, payment state và inventory outcome là các fact riêng;
-không suy trạng thái vật lý từ aggregate khác. Canonical:
-`docs/ref/operational-data-contract.md`.
-
-## D056: Branch receive và consumption
-
-**Net effect:** Branch nhận transfer và ghi consumption qua canonical
-branch-native workflows; không mở branch GRN.
-
-## D058: Hai presentation plane, một contract
-
-**Net effect:** Management và Branch presentation khác chrome nhưng dùng chung
-domain contract, route identity và shared records.
+## D058: Two presentation planes, one contract
+**Net effect:** Management and Branch presentation differ in chrome but share domain contract, route identity, and shared records.
 
 ## D062: PWA delivery
+**Net effect:** PWA is the operations client direction; native rewrite only when a hardware constraint cannot be solved with PWA.
 
-**Net effect:** PWA là hướng client vận hành; native rewrite chỉ mở lại khi có
-constraint phần cứng không giải được bằng PWA.
+## D064: POS capacity and quota
+**Net effect:** Manual quota and stock availability are distinct sources; NULL capacity fails open; hold tokens prevent double-count. Canonical: `docs/ref/operational-data-contract.md`.
 
-## D064: POS capacity và quota
+## D065: One stock-sale-outcome switch
+**Net effect:** Enabling stock outcome also enables availability signalling and posting; posting races fail soft; stocktake detects drift. The no-negative-at-posting clause is reversed by ADR 0026 (post-and-flag after payment). Pre-order `enforce_branch_stock_availability` stays a hard block for cashiers/floor staff; Branch Manager may reopen the sell path only on the menu-limits page via re-enable and/or a dedicated daily sellable-allowance field (`stock_allowance_quantity` — adds N portions on top of stock-derived remaining; not absolute daily sellable; not ignore-stock; former `Bổ sung tồn kho` ledger replenish retired; no POS PIN) without skipping posting. Canonical: ADR 0026.
 
-**Net effect:** Manual quota và stock availability là hai nguồn rõ ràng; NULL
-capacity fail-open, hold token chống double-count. Canonical:
-`docs/ref/operational-data-contract.md`.
+## D069: Typography and night mode
+**Net effect:** Geist heading/body, Geist Mono for data; warm-dark night mode via cookie; print unaffected. Canonical: `docs/spec/design-system.md`.
 
-## D065: Một công tắc stock sale outcome
-
-**Net effect:** Bật stock outcome đồng thời bật hard availability gate và
-posting; không cho tồn âm, race ở posting fail-soft và được stocktake phát hiện.
-
-## D069: Typography và night mode
-
-**Net effect:** Geist cho heading và body, Geist Mono cho data.
-Night mode dùng warm-dark cookie contract và không ảnh hưởng print. Canonical:
-`docs/spec/design-system.md`.
-
-## D075: Self-order dùng POS order canonical
-
-**Net effect:** Self-order chỉ tạo canonical POS order qua server boundary;
-không có session/order store song song. Approval component còn hoạt động.
-Canonical: `docs/spec/self-order-guest-ui.md`.
+## D075: Self-order uses canonical POS order
+**Net effect:** Self-order creates only the canonical POS order through the server; no parallel session/order store. Canonical: `docs/spec/self-order-guest-ui.md`.
 
 ## D076: Application roles
+**Net effect:** Role/permission/route audience live in `packages/shared/src/auth/` and the role-route matrix; HR position is not a second auth layer.
 
-**Net effect:** Role, permission và route audience canonical nằm trong
-`packages/shared/src/auth/` và generated role-route matrix; HR position không
-trở thành authorization layer thứ hai.
+## D091: Inventory topology and physical QC
+**Net effect:** Each active site has one active warehouse; GRN records received/rejected (+ reason/photo); no lot / expiry / temperature / price-QC. Canonical: `docs/ref/inventory.md`.
 
-## D085: Operating expense VAT
+## D093: Central-only GRN and branch stock request
+**Net effect:** GRN is Central Supply/Kitchen only; Branch requests stock and receives transfers; no Branch production/GRN. Canonical: `docs/ref/inventory.md` §11.
 
-**Net effect:** Expense hỗ trợ breakdown VAT `0|5|8|10`, gross/taxable money
-chính xác và attachment HĐ GTGT tùy chọn. Canonical:
-`docs/ref/finance-assets-vat-fnb.md`.
-
-## D091: Inventory topology và physical QC
-
-**Net effect:** Mỗi active site có đúng một active warehouse. GRN ghi
-received/rejected quantity; rejected quantity cần reason và ảnh. Không lot/HSD,
-temperature, price-QC hoặc manual quality status. Canonical:
-`docs/ref/inventory.md`.
-
-## D093: Central-only GRN và branch stock request
-
-**Net effect:** GRN chỉ tại Central Supply/Central Kitchen. Branch xin hàng bằng
-stock request và nhận transfer; Branch không production hoặc GRN. Canonical:
-`docs/ref/inventory-role-ops.md`, `docs/ref/inventory.md`.
-
-## D099: Nhu cầu mua và xác định NCC
-
-**Net effect:** Kho lập Nhu cầu mua không NCC/giá. Nếu mỗi nguyên liệu còn thiếu
-chỉ có một NCC active, hệ thống tự lấy toàn bộ số lượng còn lại và tạo một
-PO/NCC; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC. Dòng chưa có NCC
-bị chặn để bổ sung mapping. Một RPC tạo PO và GRN nháp/PO. PO/GRN không là nguồn
-giá thương mại; Hóa đơn NCC là price authority. Canonical: `docs/ref/inventory.md`,
-ADR 0017.
+## D099: Nhu cầu mua and supplier selection
+**Net effect:** Warehouse drafts Nhu cầu mua without NCC/price; when chỉ có một NCC active then auto PO; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; lines bị chặn để bổ sung mapping before creating PO/NCC; GRN nháp/PO carry no price; Hóa đơn NCC is the price authority. Canonical: `docs/ref/inventory.md`, ADR 0017.
 
 ## D101: Inventory valuation settlement
+**Net effect:** Moving WAC continues; Valuation subledger append-only settles Hóa đơn NCC and không tăng số lượng lần hai; legacy variance posts as `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017.
 
-**Net effect:** Moving WAC tiếp tục được dùng. Valuation subledger append-only
-quyết toán giá trị Hóa đơn NCC mà không tăng số lượng lần hai hoặc sửa movement
-snapshot. `legacy_purchase_price_variance` chỉ ghi phần variance mở đầu không
-thể suy đoán lineage. Canonical:
-`docs/ref/inventory.md`, ADR 0017,
-`supabase/migrations/20260730155938_inventory_valuation_subledger.sql`.
-
-## D102: Vai trò đơn vị kho độc lập
-
-**Net effect:** `Nhập`, `Xuất` và `Sản xuất` là ba vai trò độc lập, không còn
-quan hệ `Nhập ≥ Xuất ≥ Sản xuất`. Mỗi nguyên liệu có tối đa ba đơn vị khác nhau
-và đúng một tồn chuẩn thuộc ít nhất một vai trò; tạo mới mặc định theo Đơn vị
-xuất, sửa dữ liệu cũ giữ nguyên tồn chuẩn. Mọi đơn vị quy đổi trực tiếp về tồn
-chuẩn; đơn vị chuẩn cùng `dimension` lấy `standard_factor`, bao bì dùng hệ số
-nhập tay. Không đổi schema hoặc chữ ký `save_ingredient_catalog`; snapshot lịch
-sử giữ nguyên, master/draft đang mở nhận factor mới. Migration phát hành trước
-UI và chỉ apply Production khi owner ủy quyền rõ; sau khi có dữ liệu mới không
-khôi phục guard thứ tự cũ, rollback database phải là forward migration.
-Canonical: `docs/ref/inventory.md`.
-
-## D103: Onboarding nền tảng giao đồ ăn trước khi viết adapter
-
-**Net effect:** Cơm Tấm Má Tư chỉ thiết kế adapter cho nền tảng giao đồ ăn sau
-khi được duyệt quyền đối tác và nhận contract kỹ thuật chính thức. Trong thời
-gian chờ, phạm vi dừng ở merchant onboarding, partner discovery và readiness
-gate; không suy đoán payload hoặc reverse-engineer ứng dụng merchant. Adapter
-code và ticket tích hợp **gated** cho đến trigger đó (disposition:
-`docs/ref/branch-operations.md`). Canonical:
-`docs/runbooks/food-delivery-platform-onboarding.md`.
+## D103: Food-delivery platform onboarding before adapters
+**Net effect:** Food-delivery adapters ship only after partner approval and a signed contract; until then, onboarding/readiness only. Canonical: `docs/runbooks/food-delivery-platform-onboarding.md`, `docs/ref/branch-operations.md`.

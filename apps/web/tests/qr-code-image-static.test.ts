@@ -104,14 +104,14 @@ test("bank app catalog keeps safe unique apps for testing", () => {
         id: "mb",
         name: "MB Bank",
         logoUrl: "https://play-lh.googleusercontent.com/mb-logo",
-        autofill: false,
+        autofill: true,
         monthlyInstall: 0,
       },
       {
         id: "vcb",
         name: "Vietcombank",
         logoUrl: null,
-        autofill: false,
+        autofill: true,
         monthlyInstall: 0,
       },
     ],
@@ -179,40 +179,23 @@ test("Self-Order does not hardcode a MoMo payment or unsupported app target", ()
   assert.doesNotMatch(server, /createSelfOrderMomoPaymentRequest/);
 });
 
-test("native bank handoffs open apps directly; only MB carries EMV QR", () => {
+test("native EMV handoffs carry the QR payload for supported bank apps", () => {
   const qrData =
     "00020101021238530010A0000007270123000697042201091234567890208QRIBFTTA530370454061670005802VN6304ABCD";
 
-  for (const appId of ["acb", "bidv", "icb", "ocb", "vcb"] as const) {
-    const iosHref = buildVietQrBankAppUrl({
-      appId,
-      accountNo: "0123456789",
-      bankCode: "MB",
-      amount: 167_000,
-      paymentCode: "MATU ABC123",
-      accountName: "CONG TY CO PHAN CHEN SU",
-      qrData,
-      platform: "ios",
-    });
-    assert.ok(iosHref);
-    assert.match(iosHref, /^[a-z0-9.+-]+:\/\//i);
-    assert.doesNotMatch(iosHref, /dl\.vietqr\.io/);
-    assert.doesNotMatch(iosHref, /qrContent|targetPage/);
-
-    const androidHref = buildVietQrBankAppUrl({
-      appId,
-      accountNo: "0123456789",
-      bankCode: "MB",
-      amount: 167_000,
-      paymentCode: "MATU ABC123",
-      platform: "android",
-    });
-    assert.ok(androidHref);
-    assert.match(androidHref, /^intent:\/\//);
-    assert.match(androidHref, /#Intent;scheme=/);
-    assert.match(androidHref, /;package=/);
-    assert.doesNotMatch(androidHref, /dl\.vietqr\.io/);
-  }
+  const icb = buildVietQrBankAppUrl({
+    appId: "icb",
+    accountNo: "0123456789",
+    bankCode: "MB",
+    amount: 167_000,
+    paymentCode: "MATU ABC123",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(icb);
+  assert.match(icb, /^vietinbankipay:\/\/host\.qrTransfer\?/);
+  assert.match(icb, /targetPage=QRPay/);
+  assert.equal(new URL(icb).searchParams.get("qrContent"), qrData);
 
   const bidvAndroid = buildVietQrBankAppUrl({
     appId: "bidv",
@@ -220,12 +203,54 @@ test("native bank handoffs open apps directly; only MB carries EMV QR", () => {
     bankCode: "MB",
     amount: 1_000,
     paymentCode: "X",
+    qrData,
     platform: "android",
   });
   assert.ok(bidvAndroid);
-  assert.match(bidvAndroid, /^intent:\/\/payment#Intent;/);
-  assert.match(bidvAndroid, /scheme=bidv\.smartbanking\.partner/);
+  assert.match(bidvAndroid, /^intent:\/\/applink\?/);
+  assert.match(bidvAndroid, /targetPage=QRPay/);
+  assert.match(bidvAndroid, /qrContent=/);
+  assert.match(bidvAndroid, /scheme=dl\.bidvsmartbanking\.vn/);
   assert.match(bidvAndroid, /package=com\.vnpay\.bidv/);
+
+  const acb = buildVietQrBankAppUrl({
+    appId: "acb",
+    accountNo: "0123456789",
+    bankCode: "ACB",
+    amount: 10_000,
+    paymentCode: "CODE",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(acb);
+  assert.match(acb, /^acbone:\/\/ZaloPay\/external\/transactions\/v1\/qrcode\?/);
+  assert.equal(new URL(acb).searchParams.get("qrCode"), qrData);
+
+  const tpb = buildVietQrBankAppUrl({
+    appId: "tpb",
+    accountNo: "0123456789",
+    bankCode: "TPB",
+    amount: 10_000,
+    paymentCode: "CODE",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(tpb);
+  assert.equal(tpb, `hydro://ZaloPay/${encodeURIComponent(qrData)}`);
+
+  // Open-app-only bank (no EMV template): bare native scheme, no QR payload.
+  const shb = buildVietQrBankAppUrl({
+    appId: "shb",
+    accountNo: "0123456789",
+    bankCode: "SHB",
+    amount: 10_000,
+    paymentCode: "CODE",
+    qrData,
+    platform: "ios",
+  });
+  assert.ok(shb);
+  assert.equal(shb, "shbmobile://");
+  assert.doesNotMatch(shb, /qrContent|qrCode|qr_data/);
 });
 
 test("unknown catalog appIds still fall back to the VietQR aggregator", () => {

@@ -7,10 +7,11 @@ import { fileURLToPath } from "node:url";
 // adapter to that rule, not a second source of truth. The refs below MUST
 // match the registry table; update both in the same change.
 //
-// One canonical copy, wired per runtime: .claude/settings.json (Claude Code)
-// and .codex/hooks.json (Codex) both run this file. scripts/check-guard-sync.mjs
-// keeps the registry, this script, and every adapter's matchers in sync, and
-// replays behavior fixtures so regex edits cannot silently weaken blocking.
+// One canonical copy. Optional local adapters (`.claude/settings.json`,
+// `.codex/hooks.json`) may wire PreToolUse to this file when present; they are
+// not tracked. scripts/check-guard-sync.mjs keeps the registry and this script
+// in sync, validates any present adapters, and replays behavior fixtures so
+// regex edits cannot silently weaken blocking.
 //
 // Blocks (exit 2): state-mutating Supabase CLI subcommands unless a supported
 // command binds its literal database URL to a verified Preview Branch or the

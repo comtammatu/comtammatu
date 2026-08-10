@@ -2,7 +2,7 @@ import { canAccess } from "./module-acl";
 import { getDefaultRedirect } from "./login-destination";
 import {
   isOwnerRoutePath,
-  isRunnerPublicDisplayPath,
+  isPickupPublicDisplayPath,
   resolveModuleFromPath,
 } from "./route-resolution";
 import {
@@ -218,7 +218,7 @@ export function resolvePostLoginRedirect(
     return canonicalSelfPath;
   }
 
-  if (isRunnerPublicDisplayPath(targetUrl.pathname)) {
+  if (isPickupPublicDisplayPath(targetUrl.pathname)) {
     return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
   }
 

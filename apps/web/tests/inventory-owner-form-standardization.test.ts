@@ -26,9 +26,6 @@ test("shared ComboboxField owns RHF label and error wiring", () => {
 });
 
 test("Owner surface Inventory entry surfaces use the shared field contract", () => {
-  const grnCreate = readWorkspaceFile(
-    "app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx",
-  );
   const grnLineEditor = readWorkspaceFile(
     "app/(protected)/inventory/_components/grn-line-editor.tsx",
   );
@@ -45,10 +42,6 @@ test("Owner surface Inventory entry surfaces use the shared field contract", () 
     "app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   );
 
-  assert.match(grnCreate, /<FormField[\s\S]*?"grn-receiving-branch"/);
-  assert.match(grnCreate, /size="field"/);
-  assert.doesNotMatch(grnCreate, /className="h-11 w-full"/);
-  assert.match(grnCreate, /controlSize="field"/);
   assert.match(grnLineEditor, /controlSize\?: GrnLineEditorControlSize/);
   assert.match(grnLineEditor, /<FormField[\s\S]*?controlId="grn-line-unit"/);
   assert.match(productionRecipe, /<ComboboxField/);

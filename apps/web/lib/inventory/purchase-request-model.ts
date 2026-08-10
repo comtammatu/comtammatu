@@ -40,6 +40,8 @@ export type PurchaseRequestRow = {
 export type PurchaseRequestIngredientOption = {
   id: number;
   name: string;
+  /** Base-unit suggestion converted to default entry unit for prefill (INV-10). */
+  suggestedOrderQty: number;
   units: Array<{ id: number; label: string; factor: number }>;
 };
 

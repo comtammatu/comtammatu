@@ -31,6 +31,7 @@ export interface MenuLimitRow {
   sold_today: number;
   stock_capacity: number | null;
   manual_limit_quantity: number | null;
+  stock_allowance_quantity: number | null;
   pending_unfinalized_demand: number;
   active_hold_demand: number;
   available_to_sell: number | null;
@@ -89,15 +90,6 @@ const setLimitSchema = z.object({
     ])
     .optional(),
   isDisabled: z.boolean(),
-});
-
-const replenishStockSchema = z.object({
-  branchId: branchIdSchema,
-  menuItemId: menuItemIdSchema,
-  extraPortions: z.union([z.literal(1), z.literal(2)]),
-  reason: z.string().trim().min(5, {
-    error: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
-  }),
 });
 
 export async function setBranchMenuDailyLimit(
@@ -226,16 +218,30 @@ export async function clearBranchMenuDailyLimit(
   return { success: true, data: row };
 }
 
-export async function replenishMenuItemStock(
-  input: z.input<typeof replenishStockSchema>,
+const stockAllowanceSchema = z.object({
+  branchId: branchIdSchema,
+  menuItemId: menuItemIdSchema,
+  stockAllowanceQuantity: z
+    .union([
+      z.coerce
+        .number()
+        .int()
+        .min(0, { error: "Số phần tối thiểu là 0" })
+        .max(9999, { error: "Số phần tối đa 9999" }),
+      z.null(),
+    ])
+    .optional(),
+});
+
+export async function setBranchMenuStockAllowance(
+  input: z.input<typeof stockAllowanceSchema>,
 ): Promise<
   ActionResult<{
-    portions_added: number;
-    movements_created: number;
-    stock_capacity: number | null;
+    menu_item_id: number;
+    stock_allowance_quantity: number | null;
   }>
 > {
-  const parsed = replenishStockSchema.safeParse(input);
+  const parsed = stockAllowanceSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -251,68 +257,34 @@ export async function replenishMenuItemStock(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
+  const allowance = parsed.data.stockAllowanceQuantity ?? null;
+
   const { data, error } = await ctx.supabase.rpc(
-    "add_menu_item_stock_exception" as never,
+    "set_branch_menu_stock_allowance" as never,
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
-      p_extra_portions: parsed.data.extraPortions,
-      p_reason: parsed.data.reason,
+      p_stock_allowance_quantity: allowance as number,
     } as never,
   );
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
     if (msg.includes("forbidden") || msg.includes("scope mismatch")) {
-      return {
-        success: false,
-        error: "Không có quyền bổ sung tồn kho chi nhánh.",
-      };
+      return { success: false, error: "Không có quyền chỉnh cho phép bán thêm." };
     }
-    if (msg.includes("extra_portions_range")) {
-      return { success: false, error: "Chỉ bổ sung 1 hoặc 2 suất mỗi lần." };
-    }
-    if (msg.includes("reason_required")) {
-      return {
-        success: false,
-        error: "Nhập lý do bổ sung tối thiểu 5 ký tự.",
-      };
-    }
-    if (
-      msg.includes("branch_not_found") ||
-      msg.includes("menu_item_not_found")
-    ) {
+    if (msg.includes("not found")) {
       return { success: false, error: "Không tìm thấy món hoặc chi nhánh." };
     }
-    if (
-      msg.includes("branch_warehouse_required") ||
-      msg.includes("default_warehouse_location_required")
-    ) {
+    if (msg.includes("nonnegative")) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình Kho chi nhánh.",
+        error: messages.pos.menu.stockAllowanceRange,
       };
     }
-    if (
-      msg.includes("menu_recipe_required") ||
-      msg.includes("recipe_unit_config_required") ||
-      msg.includes("entry_unit_not_found") ||
-      msg.includes("recipe_ingredient_inactive") ||
-      msg.includes("no_positive_recipe_quantity")
-    ) {
-      return {
-        success: false,
-        error: "Chưa đủ định mức nguyên liệu để bổ sung tồn kho chi nhánh.",
-      };
-    }
-
-    console.error(
-      "[menu-limits:replenishMenuItemStock] [unmapped] rpc error:",
-      error,
-    );
     return {
       success: false,
-      error: "Không thể bổ sung tồn kho chi nhánh. Vui lòng thử lại.",
+      error: messages.pos.menu.stockAllowanceSaveFailed,
     };
   }
 
@@ -321,17 +293,15 @@ export async function replenishMenuItemStock(
   revalidatePath(`/br/${parsed.data.branchId}/kds`);
 
   const row = (data ?? null) as {
-    portions_added?: number;
-    movements_created?: number;
-    stock_capacity?: number | null;
+    menu_item_id: number;
+    stock_allowance_quantity: number | null;
   } | null;
+  if (!row) {
+    return {
+      success: false,
+      error: messages.pos.menu.stockAllowanceSaveFailed,
+    };
+  }
 
-  return {
-    success: true,
-    data: {
-      portions_added: row?.portions_added ?? parsed.data.extraPortions,
-      movements_created: row?.movements_created ?? 0,
-      stock_capacity: row?.stock_capacity ?? null,
-    },
-  };
+  return { success: true, data: row };
 }

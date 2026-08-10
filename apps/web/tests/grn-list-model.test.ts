@@ -7,11 +7,6 @@ import {
   hasGrnListFilters,
   newGrnSupplierHref,
 } from "../lib/inventory/grn-list-model";
-import {
-  filterGrnSourceSuppliers,
-  grnSourceSupplierHref,
-  parseGrnSupplierIdParam,
-} from "../lib/inventory/grn-source-model";
 
 const rows = [
   {
@@ -119,40 +114,4 @@ test("GRN draft list search matches code, supplier, branch, and PO", () => {
     ["GRN-D1"],
   );
   assert.equal(filterGrnDraftRows(drafts, "").length, 2);
-});
-
-test("GRN source picker filters suppliers and keeps Branch navigation scoped", () => {
-  const suppliers = [
-    {
-      id: 10,
-      name: "NCC Gạo",
-      phone: "0901000000",
-      recentLabel: null,
-      lastLabel: null,
-    },
-    {
-      id: 11,
-      name: "NCC Thịt",
-      phone: null,
-      recentLabel: null,
-      lastLabel: null,
-    },
-  ];
-
-  assert.deepEqual(
-    filterGrnSourceSuppliers(suppliers, "0901").map((supplier) => supplier.id),
-    [10],
-  );
-  assert.equal(
-    grnSourceSupplierHref("/br/12/stock/grn/new", 44),
-    "/br/12/stock/grn/new/44",
-  );
-});
-
-test("GRN source picker accepts only positive integer supplier parameters", () => {
-  assert.equal(parseGrnSupplierIdParam("44"), 44);
-  assert.equal(parseGrnSupplierIdParam(["45", "46"]), 45);
-  assert.equal(parseGrnSupplierIdParam("0"), null);
-  assert.equal(parseGrnSupplierIdParam("4.5"), null);
-  assert.equal(parseGrnSupplierIdParam(undefined), null);
 });

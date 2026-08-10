@@ -42,10 +42,6 @@ const inventoryPageSource = readFileSync(
   "app/(protected)/inventory/page.tsx",
   "utf8",
 );
-const inventoryHomeSource = readFileSync(
-  "app/(protected)/inventory/_lib/inventory-home.ts",
-  "utf8",
-);
 
 test("accountant inventory nav contains only the GRN to PO workflow", () => {
   const visible = hrefs(
@@ -62,9 +58,8 @@ test("accountant inventory nav contains only the GRN to PO workflow", () => {
     "/inventory/grn",
     "/inventory/purchase-orders",
   ]);
-  assert.match(inventoryPageSource, /resolveInventoryHomePath/);
-  assert.match(inventoryHomeSource, /role === "accountant"/);
-  assert.match(inventoryHomeSource, /\/inventory\/grn/);
+  assert.match(inventoryPageSource, /resolveInventoryNav/);
+  assert.doesNotMatch(inventoryPageSource, /resolveInventoryHomePath|redirect\(/);
 });
 
 test("owner inventory nav keeps primary flow entry routes visible", () => {
@@ -311,45 +306,51 @@ test("inventory settings sub-pages stay internal routes, not sidebar items", () 
   assert.doesNotMatch(settingsLayoutSource, /settings\/qc|icon: "qc"/);
 });
 
-test("central_supply_ops nav shows PO, GRN and fulfillment while hiding recipes", () => {
-  const visible = hrefs(
-    resolveInventoryNav({
-      userRole: "central_supply_ops",
-      showProcurement: true,
-      showProduction: false,
-      showCatalogManagement: false,
-      showCatalogRead: true,
-      showSettings: false,
-      showStockRequestInbox: true,
-    }),
-  );
+test("central_supply_ops nav shows Yêu cầu mua without PO-owner branding", () => {
+  const groups = resolveInventoryNav({
+    userRole: "central_supply_ops",
+    showProcurement: true,
+    showProduction: false,
+    showCatalogManagement: false,
+    showCatalogRead: true,
+    showSettings: false,
+    showStockRequestInbox: true,
+  });
+  const visible = hrefs(groups);
+  const purchaseItem = groups
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/inventory/purchase-orders");
 
   assert.equal(visible.has("/inventory/grn"), true);
   assert.equal(visible.has("/inventory/transfers"), true);
   assert.equal(visible.has("/inventory/stock-requests"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), true);
+  assert.equal(purchaseItem?.label, "Yêu cầu mua");
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/production"), false);
 });
 
-test("central_kitchen_lead sees PO and production without catalog recipes", () => {
-  const visible = hrefs(
-    resolveInventoryNav({
-      userRole: "central_kitchen_lead",
-      showProcurement: true,
-      showProduction: true,
-      showCatalogManagement: false,
-      showCatalogRead: true,
-      showSettings: false,
-      showStockRequestInbox: true,
-    }),
-  );
+test("central_kitchen_lead sees production and Yêu cầu mua without catalog recipes", () => {
+  const groups = resolveInventoryNav({
+    userRole: "central_kitchen_lead",
+    showProcurement: true,
+    showProduction: true,
+    showCatalogManagement: false,
+    showCatalogRead: true,
+    showSettings: false,
+    showStockRequestInbox: true,
+  });
+  const visible = hrefs(groups);
+  const purchaseItem = groups
+    .flatMap((group) => group.items)
+    .find((item) => item.href === "/inventory/purchase-orders");
 
   assert.equal(visible.has("/inventory/production"), true);
   assert.equal(visible.has("/inventory/menu-recipes"), false);
   assert.equal(visible.has("/inventory/recipes"), false);
   assert.equal(visible.has("/inventory/ingredients"), true);
   assert.equal(visible.has("/inventory/purchase-orders"), true);
+  assert.equal(purchaseItem?.label, "Yêu cầu mua");
 });

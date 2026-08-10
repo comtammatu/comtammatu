@@ -6,7 +6,6 @@ import {
 } from "./grn-create-model";
 
 export const GRN_DETAIL_COPY = messages.inventory.grn;
-export const INVENTORY_COMMON_COPY = messages.inventory.common;
 
 export type GrnDetailItem = {
   lineId: number;
@@ -29,6 +28,9 @@ export type GrnDetailItem = {
   rejectedPhotoUrl: string;
   unit: string;
   entryUnitId: number | null;
+  /** True when line qty is received but WAC awaits supplier invoice settlement. */
+  costPending: boolean;
+  provisionalCostSource: string | null;
   monetary: {
     unitPrice: number | null;
     lineTotal: number;
@@ -185,6 +187,8 @@ export function createEditableGrnLine({
     rejectedPhotoUrl: "",
     unit,
     entryUnitId,
+    costPending: true,
+    provisionalCostSource: "pending",
     monetary: null,
     dirty: false,
   };

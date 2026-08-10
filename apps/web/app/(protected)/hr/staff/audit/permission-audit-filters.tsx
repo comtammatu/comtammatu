@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ export interface PermissionAuditFilterValue {
   action: string | null;
   target: string | null;
   since: string | null;
+  q: string | null;
 }
 
 // The select control reserves empty-string item values; this sentinel maps to the
@@ -39,10 +41,12 @@ export function PermissionAuditFilters({
   value,
   targetOptions,
   branchScope,
+  trailing,
 }: {
   value: PermissionAuditFilterValue;
   targetOptions: PermissionAuditTargetOption[];
   branchScope: HrBranchScope;
+  trailing?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,12 +59,16 @@ export function PermissionAuditFilters({
   const actionFilterId = `${filterIdPrefix}-action`;
   const targetFilterId = `${filterIdPrefix}-target`;
   const sinceFilterId = `${filterIdPrefix}-since`;
+  const searchFilterId = `${filterIdPrefix}-q`;
 
-  // `since` is a free-typed date; push on Apply rather than per keystroke.
   const [draftSince, setDraftSince] = useState(value.since ?? "");
+  const [draftQ, setDraftQ] = useState(value.q ?? "");
   useEffect(() => {
     setDraftSince(value.since ?? "");
   }, [value.since]);
+  useEffect(() => {
+    setDraftQ(value.q ?? "");
+  }, [value.q]);
 
   function pushParams(next: Partial<PermissionAuditFilterValue>) {
     const merged: PermissionAuditFilterValue = { ...value, ...next };
@@ -69,6 +77,7 @@ export function PermissionAuditFilters({
     if (merged.action) usp.set("action", merged.action);
     if (merged.target) usp.set("target", merged.target);
     if (merged.since) usp.set("since", merged.since);
+    if (merged.q) usp.set("q", merged.q);
     const qs = usp.toString();
     startTransition(() => {
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -78,7 +87,10 @@ export function PermissionAuditFilters({
   const actionValue = value.action ?? ALL_VALUE;
   const targetValue = value.target ?? ALL_VALUE;
   const sinceDirty = draftSince !== (value.since ?? "");
-  const hasActive = Boolean(value.action || value.target || value.since);
+  const qDirty = draftQ !== (value.q ?? "");
+  const hasActive = Boolean(
+    value.action || value.target || value.since || value.q || draftSince || draftQ,
+  );
 
   return (
     <AppToolbar
@@ -155,23 +167,45 @@ export function PermissionAuditFilters({
             <Label htmlFor={sinceFilterId} className="text-xs">
               {copy.filterSince}
             </Label>
-            <div className="flex items-end gap-2">
-              <Input
-                id={sinceFilterId}
-                type="date"
-                value={draftSince}
-                onChange={(e) => setDraftSince(e.target.value)}
-                controlSize={controlSize}
-                className="min-w-40"
-              />
-              <Button
-                size={actionSize}
-                onClick={() => pushParams({ since: draftSince || null })}
-                disabled={isPending || !sinceDirty}
-              >
-                {copy.filterApply}
-              </Button>
-            </div>
+            <Input
+              id={sinceFilterId}
+              type="date"
+              value={draftSince}
+              onChange={(e) => setDraftSince(e.target.value)}
+              controlSize={controlSize}
+              className="min-w-40"
+            />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor={searchFilterId} className="text-xs">
+              {copy.searchLabel}
+            </Label>
+            <Input
+              id={searchFilterId}
+              type="search"
+              value={draftQ}
+              onChange={(e) => setDraftQ(e.target.value)}
+              placeholder={copy.searchPlaceholder}
+              controlSize={controlSize}
+              className="min-w-48"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-end gap-2">
+            <Button
+              size={actionSize}
+              onClick={() =>
+                pushParams({
+                  since: draftSince || null,
+                  q: draftQ.trim() ? draftQ.trim() : null,
+                })
+              }
+              disabled={isPending || (!sinceDirty && !qDirty)}
+            >
+              {copy.filterApply}
+            </Button>
+            {trailing}
           </div>
         </>
       }
@@ -182,7 +216,13 @@ export function PermissionAuditFilters({
             size={actionSize}
             onClick={() => {
               setDraftSince("");
-              pushParams({ action: null, target: null, since: null });
+              setDraftQ("");
+              pushParams({
+                action: null,
+                target: null,
+                since: null,
+                q: null,
+              });
             }}
             disabled={isPending}
           >

@@ -26,10 +26,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@comtammatu/ui/components/sheet";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
+import {
+  filterSaleConsumptionOrders,
+  flattenSaleConsumptionOrdersForExport,
+} from "@lib/inventory/recorded-sale-consumption-model";
+import type { RecordedSaleConsumptionOrder } from "@lib/inventory/recorded-sale-consumption-model";
 import { FormDialog, SelectField, TextareaField } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
@@ -81,21 +99,7 @@ export type IssueBranchOption = {
   branchKind: string | null;
 };
 
-export type RecordedConsumptionRow = {
-  id: number;
-  branchId: number;
-  recordedAt: string;
-  branchName: string;
-  locationName: string;
-  ingredientName: string;
-  quantity: string;
-  sourceLabel: string;
-  monetary: {
-    unitCost: string;
-    totalCost: string;
-    totalCostValue: number;
-  } | null;
-};
+export type RecordedConsumptionRow = RecordedSaleConsumptionOrder;
 
 const ISSUE_TYPES = [
   { value: "consumption", label: INVENTORY_VI.issueTypeConsumption },
@@ -205,6 +209,8 @@ export function IssuesClient({
     initialRecordedBranchId ? String(initialRecordedBranchId) : "all",
   );
   const [recordedSearch, setRecordedSearch] = useState("");
+  const [selectedRecordedOrder, setSelectedRecordedOrder] =
+    useState<RecordedConsumptionRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const controlSize = useFormControlSize("responsive");
@@ -273,6 +279,10 @@ export function IssuesClient({
 
   const openIssueDetail = (item: IssueRow) => {
     router.push(issueDetailHref(item));
+  };
+
+  const openRecordedOrderDetail = (item: RecordedConsumptionRow) => {
+    setSelectedRecordedOrder(item);
   };
 
   const allowedTypeFilterOptions = TYPE_FILTER_OPTIONS.filter(
@@ -361,26 +371,20 @@ export function IssuesClient({
     activeStatus !== "all" ||
     (showTypeFilter && activeType !== "all") ||
     search.trim().length > 0;
-  const visibleRecordedConsumptions = useMemo(() => {
-    const q = recordedSearch.trim();
-    if (!q) return recordedConsumptions;
-    return recordedConsumptions.filter((row) =>
-      matchesSearch(
-        [row.ingredientName, row.branchName, row.locationName, row.sourceLabel],
-        q,
-      ),
-    );
-  }, [recordedConsumptions, recordedSearch]);
+  const visibleRecordedConsumptions = useMemo(
+    () => filterSaleConsumptionOrders(recordedConsumptions, recordedSearch),
+    [recordedConsumptions, recordedSearch],
+  );
   const visibleRecordedConsumptionTotal = visibleRecordedConsumptions.reduce(
-    (sum, row) => sum + (row.monetary?.totalCostValue ?? 0),
+    (sum, row) => sum + row.totalCostValue,
     0,
   );
   const visibleRecordedConsumptionRatio = recordedIsLimited
-    ? INVENTORY_VI.rowRatioRecent(
+    ? INVENTORY_VI.rowRatioRecentOrders(
         visibleRecordedConsumptions.length,
         recordedConsumptions.length,
       )
-    : INVENTORY_VI.rowRatio(
+    : INVENTORY_VI.rowRatioOrders(
         visibleRecordedConsumptions.length,
         recordedConsumptions.length,
       );
@@ -443,7 +447,11 @@ export function IssuesClient({
       return;
     }
 
+    const flatRows = flattenSaleConsumptionOrdersForExport(
+      visibleRecordedConsumptions,
+    );
     const header = [
+      INVENTORY_VI.recordedOrderLabel,
       INVENTORY_VI.recordedAtLabel,
       PRODUCT_VI.rawIngredient,
       BRANCH_VI.long,
@@ -454,17 +462,20 @@ export function IssuesClient({
         : []),
       INVENTORY_VI.sourceLabel,
     ];
-    const rows = visibleRecordedConsumptions.map((row) => [
-      row.recordedAt,
-      row.ingredientName,
-      row.branchName,
-      row.locationName,
-      row.quantity,
-      ...(row.monetary
-        ? [row.monetary.unitCost, row.monetary.totalCost]
-        : []),
-      row.sourceLabel,
-    ]);
+    const rows = flatRows.map(
+      ({ orderNumber, recordedAtLabel, branchName, sourceLabel, line }) => [
+        orderNumber,
+        recordedAtLabel,
+        line.ingredientName,
+        branchName,
+        line.locationName,
+        line.quantityLabel,
+        ...(canViewMonetary
+          ? [line.unitCostLabel ?? "—", line.totalCostLabel ?? "—"]
+          : []),
+        sourceLabel,
+      ],
+    );
     const body = [header, ...rows]
       .map((line) => line.map((cell) => csvCell(cell)).join(","))
       .join("\n");
@@ -476,9 +487,7 @@ export function IssuesClient({
       .replace("T", "-");
 
     downloadCsv(toUtf8Base64(csv), `tieu-hao-da-ghi-nhan-${stamp}.csv`);
-    toast.success(
-      INVENTORY_VI.recordedExportSuccess(visibleRecordedConsumptions.length),
-    );
+    toast.success(INVENTORY_VI.recordedExportSuccess(flatRows.length));
   }
 
   function applyRecordedDateFilter() {
@@ -798,14 +807,16 @@ export function IssuesClient({
         header: INVENTORY_VI.recordedAtLabel,
         render: (item) => (
           <span className="font-mono tabular-nums text-muted-foreground">
-            {item.recordedAt}
+            {item.recordedAtLabel}
           </span>
         ),
       },
       {
-        key: "ingredientName",
-        header: PRODUCT_VI.rawIngredient,
-        render: (item) => item.ingredientName,
+        key: "orderNumber",
+        header: INVENTORY_VI.recordedOrderLabel,
+        render: (item) => (
+          <span className="font-mono font-medium">{item.orderNumber}</span>
+        ),
       },
       {
         key: "branchName",
@@ -818,30 +829,19 @@ export function IssuesClient({
         render: (item) => item.locationName,
       },
       {
-        key: "quantity",
-        header: FORM_VI.quantity,
-        render: (item) => (
-          <span className="font-mono tabular-nums">{item.quantity}</span>
-        ),
+        key: "ingredientCount",
+        header: INVENTORY_VI.recordedIngredientLinesLabel,
+        render: (item) => INVENTORY_VI.ingredientCountBadge(item.ingredientCount),
       },
       ...(canViewMonetary
         ? [
-            {
-              key: "unitCost",
-              header: INVENTORY_VI.unitCostLabel,
-              render: (item: RecordedConsumptionRow) => (
-                <span className="font-mono tabular-nums">
-                  {item.monetary?.unitCost ?? "—"}
-                </span>
-              ),
-            },
             {
               key: "totalCost",
               header: FORM_VI.amount,
               className: "text-right",
               render: (item: RecordedConsumptionRow) => (
                 <span className="font-mono font-medium tabular-nums">
-                  {item.monetary?.totalCost ?? "—"}
+                  {item.totalCostLabel ?? "—"}
                 </span>
               ),
             },
@@ -899,15 +899,28 @@ export function IssuesClient({
   };
 
   const renderRecordedConsumptionCard = (item: RecordedConsumptionRow) => (
-    <InteractiveCard minHeight="tap" padding="compact">
+    <InteractiveCard
+      minHeight="tap"
+      padding="compact"
+      className="cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => openRecordedOrderDetail(item)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openRecordedOrderDetail(item);
+        }
+      }}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium">
-            {item.ingredientName}
+          <span className="truncate font-mono text-sm font-semibold">
+            {item.orderNumber}
           </span>
           {canViewMonetary ? (
             <span className="shrink-0 font-mono text-sm font-semibold">
-              {item.monetary?.totalCost ?? "—"}
+              {item.totalCostLabel ?? "—"}
             </span>
           ) : null}
         </div>
@@ -915,7 +928,8 @@ export function IssuesClient({
           {item.branchName} · {item.locationName}
         </p>
         <p className="text-xs text-muted-foreground">
-          {item.quantity} · {item.recordedAt}
+          {INVENTORY_VI.ingredientCountBadge(item.ingredientCount)} ·{" "}
+          {item.recordedAtLabel}
         </p>
         <p className="text-xs text-muted-foreground">{item.sourceLabel}</p>
       </div>
@@ -1000,7 +1014,8 @@ export function IssuesClient({
                 columns={recordedConsumptionColumns}
                 data={visibleRecordedConsumptions}
                 pageSize={50}
-                getRowKey={(item) => item.id}
+                getRowKey={(item) => item.orderId}
+                onRowClick={openRecordedOrderDetail}
                 emptyTitle={INVENTORY_VI.recordedEmptyTitle}
                 emptyDescription={INVENTORY_VI.recordedEmptyDescription}
                 emptyMode="no-data"
@@ -1112,6 +1127,53 @@ export function IssuesClient({
           </TabsContent>
         ) : null}
       </AppPageTabs>
+
+      <Sheet
+        open={selectedRecordedOrder != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRecordedOrder(null);
+        }}
+      >
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
+          {selectedRecordedOrder ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  {INVENTORY_VI.recordedOrderDetailTitle(
+                    selectedRecordedOrder.orderNumber,
+                  )}
+                </SheetTitle>
+                <p className="text-sm text-muted-foreground">
+                  {selectedRecordedOrder.recordedAtLabel} ·{" "}
+                  {selectedRecordedOrder.branchName}
+                </p>
+              </SheetHeader>
+              <div className="flex flex-col gap-3 px-4 pb-4">
+                <ItemGroup className="flex flex-col gap-2">
+                  {selectedRecordedOrder.lines.map((line) => (
+                    <Item key={line.id} variant="outline" size="sm">
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle>{line.ingredientName}</ItemTitle>
+                        <ItemDescription className="line-clamp-none">
+                          {line.quantityLabel} · {line.locationName}
+                        </ItemDescription>
+                        {canViewMonetary ? (
+                          <p className="font-mono text-sm tabular-nums">
+                            {line.unitCostLabel
+                              ? `${line.unitCostLabel} · `
+                              : ""}
+                            {line.totalCostLabel ?? "—"}
+                          </p>
+                        ) : null}
+                      </ItemContent>
+                    </Item>
+                  ))}
+                </ItemGroup>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <FormDialog
         open={createOpen}

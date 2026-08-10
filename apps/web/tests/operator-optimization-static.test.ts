@@ -46,10 +46,12 @@ test("operator stock hub groups tiles into ordered workflow sections", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
   );
   assert.match(source, /StockWorkflowSections/);
-  assert.match(source, /BRANCH_STOCK_TAB_SUFFIXES/);
+  // Store stock landing uses BranchStockDoors — not BRANCH_STOCK_TAB_SUFFIXES.
+  assert.doesNotMatch(source, /BRANCH_STOCK_TAB_SUFFIXES/);
+  assert.match(source, /BranchStockDoors/);
   assert.match(source, /CENTRAL_STOCK_TAB_SUFFIXES/);
   assert.match(source, /CENTRAL_BOTTOM_NAV_SUFFIXES/);
-  assert.match(source, /stockFlowDailyTitle/);
+  assert.match(source, /stockFlowLookupTitle/);
   assert.match(source, /stockJobOnHand/);
   assert.match(source, /mobileColumns=\{2\}/);
   assert.match(source, /presentation=\{section\.primary \? "stations" : "plain"\}/);
@@ -141,9 +143,9 @@ test("AppPageTabs exposes an accessible name for the tablist", () => {
   assert.match(source, /aria-label=\{ariaLabel\}/);
 });
 
-test("Runner board halves its poll cadence to 6s while keeping deterministic staleness", () => {
+test("Pickup board halves its poll cadence to 6s while keeping deterministic staleness", () => {
   const source = read(
-    "apps/web/app/(protected)/br/[branchId]/runner/runner-realtime-refresh.tsx",
+    "apps/web/app/(protected)/br/[branchId]/pickup/pickup-realtime-refresh.tsx",
   );
   // Still polling (derived "now serving" view needs a full rebuild per change and
   // must stay fresh on an always-visible kiosk even if the socket drops).

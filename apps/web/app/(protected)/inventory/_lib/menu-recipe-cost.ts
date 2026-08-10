@@ -119,3 +119,28 @@ export function sumMenuRecipeEstimatedCost(
   }
   return sum;
 }
+
+/** Editor/list signals — does not change the cost formula. */
+export type MenuRecipeCostSignal =
+  | "missing_fulfill_site"
+  | "missing_source_wac";
+
+export function resolveMenuRecipeCostSignals({
+  ingredientId,
+  sourceSiteKind,
+  sourceSiteWacMap,
+}: {
+  ingredientId: number;
+  sourceSiteKind: string | null | undefined;
+  sourceSiteWacMap: Readonly<Record<string, number>>;
+}): MenuRecipeCostSignal[] {
+  if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) {
+    return ["missing_fulfill_site"];
+  }
+  const sourceWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
+  if (!isPositiveUnitCost(sourceWac)) {
+    return ["missing_source_wac"];
+  }
+  return [];
+}
