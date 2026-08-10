@@ -46,11 +46,14 @@ export type { HrKey } from "./hr";
 export {
   AUDIT_ACTION_LABELS_VI,
   AUDIT_ENTITY_TYPE_LABELS_VI,
+  AUDIT_DIFF_FIELD_LABELS_VI,
   INVENTORY_AUDIT_ACTION_CODES,
   formatAuditActionLabel,
   formatAuditEntityTypeLabel,
+  summarizeAuditDiff,
 } from "./audit";
 export type {
   AuditActionLabelKey,
   AuditEntityTypeLabelKey,
+  AuditDiffField,
 } from "./audit";

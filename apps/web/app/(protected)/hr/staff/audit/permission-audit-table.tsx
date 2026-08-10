@@ -59,6 +59,7 @@ export function PermissionAuditTable({
 }) {
   const copy = messages.owner.staffAudit;
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
+  // Contract order: Thời gian → Hành động → Đối tượng → Người thao tác → phụ.
   const columns: DataTableColumn<PermissionAuditDisplayRow>[] = [
     {
       key: "time",
@@ -76,12 +77,6 @@ export function PermissionAuditTable({
       ),
     },
     {
-      key: "actor",
-      header: copy.actor,
-      className: "text-sm",
-      render: (row) => <UserLabel name={row.actorName} />,
-    },
-    {
       key: "target",
       header: copy.target,
       className: "text-sm",
@@ -96,6 +91,12 @@ export function PermissionAuditTable({
           <UserLabel name={row.targetName} />
         </Link>
       ),
+    },
+    {
+      key: "actor",
+      header: copy.actor,
+      className: "text-sm",
+      render: (row) => <UserLabel name={row.actorName} />,
     },
     {
       key: "permission",
@@ -151,9 +152,6 @@ export function PermissionAuditTable({
           </ItemHeader>
           <ItemContent>
             <ItemDescription>
-              {copy.actor}: <UserLabel name={row.actorName} />
-            </ItemDescription>
-            <ItemDescription>
               {copy.target}:{" "}
               <Link
                 href={withHrBranchScope(
@@ -164,6 +162,9 @@ export function PermissionAuditTable({
               >
                 <UserLabel name={row.targetName} />
               </Link>
+            </ItemDescription>
+            <ItemDescription>
+              {copy.actor}: <UserLabel name={row.actorName} />
             </ItemDescription>
             <ItemDescription>{row.permissionLabel}</ItemDescription>
             <ItemDescription>

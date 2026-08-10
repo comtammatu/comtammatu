@@ -134,3 +134,108 @@ export const INVENTORY_AUDIT_ACTION_CODES = [
   "inventory.stocktake.created",
   "inventory.stocktake.completed",
 ] as const;
+
+/** Whitelisted field labels for audit evidence sheets (Owner / Security). */
+export const AUDIT_DIFF_FIELD_LABELS_VI = {
+  status: "Trạng thái",
+  payment_method: "Hình thức thanh toán",
+  paid_at: "Thời điểm thanh toán",
+  category: "Nhóm chi",
+  amount: "Số tiền",
+  branch_id: "Chi nhánh",
+  expense_date: "Ngày chi",
+  vendor_name: "Nhà cung cấp",
+  note: "Ghi chú",
+  invoice_number: "Số hóa đơn",
+  provider_ref: "Mã nhà cung cấp",
+  cqt_code: "Mã CQT",
+  reason: "Lý do",
+  cancel_reason: "Lý do huỷ",
+  requeued: "Phát hành lại",
+  transfer_content: "Nội dung chuyển khoản",
+  invoice_attachment_url: "Ảnh/đính kèm hóa đơn",
+  vat_breakdown: "Chi tiết thuế",
+  item_ids: "Dòng bị từ chối",
+  fulfill_site_kind: "Nơi đáp ứng",
+  rejected_count: "Số dòng từ chối",
+  trigger_source: "Nguồn thao tác",
+  job_id: "Mã yêu cầu phát hành",
+} as const satisfies Record<string, string>;
+
+export type AuditDiffField = {
+  key: string;
+  label: string;
+  from: string | null;
+  to: string | null;
+};
+
+const SENSITIVE_FIELD_RE =
+  /password|secret|token|api[_-]?key|authorization|cookie|session/i;
+
+const MAX_AUDIT_DIFF_FIELDS = 12;
+
+function formatAuditDiffValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Summarize changed top-level fields for Owner/Security evidence sheets.
+ * Skips sensitive keys; prefers whitelisted Vietnamese labels; caps length.
+ */
+export function summarizeAuditDiff(
+  oldData: Record<string, unknown> | null | undefined,
+  newData: Record<string, unknown> | null | undefined,
+  limit = MAX_AUDIT_DIFF_FIELDS,
+): AuditDiffField[] {
+  const before = isPlainRecord(oldData) ? oldData : {};
+  const after = isPlainRecord(newData) ? newData : {};
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort(
+    (a, b) => a.localeCompare(b),
+  );
+
+  const fields: AuditDiffField[] = [];
+  for (const key of keys) {
+    if (SENSITIVE_FIELD_RE.test(key)) continue;
+    const fromRaw = Object.prototype.hasOwnProperty.call(before, key)
+      ? before[key]
+      : undefined;
+    const toRaw = Object.prototype.hasOwnProperty.call(after, key)
+      ? after[key]
+      : undefined;
+    const from = formatAuditDiffValue(fromRaw);
+    const to = formatAuditDiffValue(toRaw);
+    if (from === to) continue;
+
+    const labeled =
+      AUDIT_DIFF_FIELD_LABELS_VI[
+        key as keyof typeof AUDIT_DIFF_FIELD_LABELS_VI
+      ];
+    // Skip unknown keys on the evidence sheet — expand whitelist when needed.
+    if (!labeled) continue;
+
+    fields.push({
+      key,
+      label: labeled,
+      from,
+      to,
+    });
+    if (fields.length >= limit) break;
+  }
+  return fields;
+}

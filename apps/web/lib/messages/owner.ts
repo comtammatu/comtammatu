@@ -125,6 +125,7 @@ export const owner = {
     workGroup: "Nhóm việc",
     template: "Mẫu",
     expires: "Hạn",
+    scope: "Phạm vi",
     tenantWide: "toàn quán",
     forever: "vĩnh viễn",
     filterActionAll: "Tất cả hành động",

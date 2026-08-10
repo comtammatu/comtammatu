@@ -42,6 +42,12 @@ export type TenantAuditLogRow = AuditLogRow & {
   href: string | null;
 };
 
+export type TenantAuditLogDetail = TenantAuditLogRow & {
+  oldData: Record<string, unknown> | null;
+  newData: Record<string, unknown> | null;
+  ipAddress: string | null;
+};
+
 async function resolveActorNames(
   supabase: SupabaseServerClient,
   userIds: string[],
@@ -191,10 +197,12 @@ async function resolveEntityLabels(
 export async function fetchTenantAuditLogs(params: {
   sinceIso?: string | null;
   entityType?: string | null;
+  entityId?: number | null;
   actorUserId?: string | null;
   limit?: number;
 }): Promise<TenantAuditLogRow[]> {
   const supabase = await createServerClient();
+  // List stays narrow: never pull old_data/new_data blobs into the table payload.
   let query = supabase
     .from("audit_logs")
     .select("id, action, entity_type, entity_id, user_id, created_at")
@@ -206,6 +214,9 @@ export async function fetchTenantAuditLogs(params: {
   }
   if (params.entityType) {
     query = query.eq("entity_type", params.entityType);
+  }
+  if (params.entityId != null) {
+    query = query.eq("entity_id", params.entityId);
   }
   if (params.actorUserId) {
     query = query.eq("user_id", params.actorUserId);
@@ -232,4 +243,55 @@ export async function fetchTenantAuditLogs(params: {
       href: auditEntityHref(row.entityType, row.entityId),
     };
   });
+}
+
+/**
+ * Owner/Security evidence sheet: loads JSON diffs only for one selected row.
+ */
+export async function fetchTenantAuditLogDetail(
+  id: number,
+): Promise<TenantAuditLogDetail | null> {
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("audit_logs")
+    .select(
+      "id, action, entity_type, entity_id, user_id, created_at, old_data, new_data, ip_address",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const actorNameById = await resolveActorNames(
+    supabase,
+    data.user_id ? [data.user_id] : [],
+  );
+  const mapped = mapAuditRows([data], actorNameById);
+  const row = mapped[0];
+  if (!row) return null;
+
+  const entityLabels = await resolveEntityLabels(supabase, [row]);
+  const numericId = Number(row.entityId);
+  const entityLabel =
+    Number.isFinite(numericId) && numericId > 0
+      ? (entityLabels.get(`${row.entityType}:${numericId}`) ?? null)
+      : null;
+
+  const oldData = isJsonRecord(data.old_data) ? data.old_data : null;
+  const newData = isJsonRecord(data.new_data) ? data.new_data : null;
+
+  return {
+    ...row,
+    entityLabel,
+    href: auditEntityHref(row.entityType, row.entityId),
+    oldData,
+    newData,
+    ipAddress: data.ip_address ?? null,
+  };
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
 }

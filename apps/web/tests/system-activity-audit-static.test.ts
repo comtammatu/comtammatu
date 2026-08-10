@@ -16,6 +16,7 @@ test("settings activity page is owner-only and uses explicit audit_logs columns"
   );
   assert.match(page, /claims\.user_role !== "owner"/);
   assert.match(page, /fetchTenantAuditLogs/);
+  assert.match(page, /entity_id/);
   assert.match(page, /\/hr\/staff\/audit/);
   assert.match(page, /Nhật ký quyền hạn|permissionAuditLink/);
 
@@ -25,10 +26,50 @@ test("settings activity page is owner-only and uses explicit audit_logs columns"
   );
   assert.match(
     audit,
-    /select\("id, action, entity_type, entity_id, user_id, created_at"\)/,
+    /\/\/ List stays narrow[\s\S]*select\("id, action, entity_type, entity_id, user_id, created_at"\)/,
   );
-  assert.doesNotMatch(audit, /old_data|new_data|ip_address/);
-  assert.match(audit, /formatAuditActionLabel|auditEntityHref/);
+  assert.match(audit, /fetchTenantAuditLogDetail/);
+  assert.match(
+    audit,
+    /fetchTenantAuditLogDetail[\s\S]*old_data, new_data, ip_address/,
+  );
+  assert.match(audit, /auditEntityHref/);
+});
+
+test("system activity table opens evidence sheet without list JSON blobs", () => {
+  const table = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/settings/activity/system-activity-table.tsx",
+    ),
+    "utf8",
+  );
+  assert.match(table, /onRowClick/);
+  assert.match(table, /SheetContent/);
+  assert.match(table, /side="right"/);
+  assert.match(table, /size="md"/);
+  assert.match(table, /getSystemActivityDetail/);
+  assert.match(table, /summarizeAuditDiff/);
+  assert.match(table, /filterSameDocument|Lọc cùng chứng từ/);
+  assert.doesNotMatch(table, /old_data|new_data/);
+});
+
+test("permission audit table follows shared column contract order", () => {
+  const table = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx",
+    ),
+    "utf8",
+  );
+  const timeIdx = table.indexOf('key: "time"');
+  const actionIdx = table.indexOf('key: "action"');
+  const targetIdx = table.indexOf('key: "target"');
+  const actorIdx = table.indexOf('key: "actor"');
+  assert.ok(timeIdx > 0 && actionIdx > timeIdx);
+  assert.ok(targetIdx > actionIdx);
+  assert.ok(actorIdx > targetIdx);
+  assert.match(table, /\{copy\.target\}:[\s\S]*\{copy\.actor\}:/);
 });
 
 test("settings home links to ops tracking hub for owners", () => {
@@ -50,6 +91,15 @@ test("settings tracking hub keeps three store boundaries", () => {
   assert.match(page, /\/notifications/);
   assert.match(page, /\/settings\/activity/);
   assert.match(page, /\/hr\/staff\/audit/);
+
+  const messages = readFileSync(
+    join(root, "apps/web/lib/messages/settings.ts"),
+    "utf8",
+  );
+  assert.match(
+    messages,
+    /Thời gian → Hành động → Đối tượng → Người thao tác/,
+  );
 });
 
 test("inventory lifecycle audit migration writes issue/stocktake/transfer actions", () => {

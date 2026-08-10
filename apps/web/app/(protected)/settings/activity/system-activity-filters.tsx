@@ -21,6 +21,7 @@ const ALL_VALUE = "all";
 
 export type SystemActivityFilterValue = {
   entityType: string | null;
+  entityId: string | null;
   actor: string | null;
   since: string | null;
 };
@@ -65,6 +66,7 @@ export function SystemActivityFilters({
     const merged: SystemActivityFilterValue = { ...value, ...next };
     const usp = new URLSearchParams();
     if (merged.entityType) usp.set("entity_type", merged.entityType);
+    if (merged.entityId) usp.set("entity_id", merged.entityId);
     if (merged.actor) usp.set("actor", merged.actor);
     if (merged.since) usp.set("since", merged.since);
     const qs = usp.toString();
@@ -76,6 +78,9 @@ export function SystemActivityFilters({
   const entityValue = value.entityType ?? ALL_VALUE;
   const actorValue = value.actor ?? ALL_VALUE;
   const sinceDirty = draftSince !== (value.since ?? "");
+  const hasActiveFilters = Boolean(
+    value.entityType || value.entityId || value.actor || value.since || draftSince,
+  );
 
   return (
     <AppToolbar>
@@ -87,6 +92,10 @@ export function SystemActivityFilters({
             onValueChange={(next) =>
               pushParams({
                 entityType: next === ALL_VALUE ? null : next,
+                entityId:
+                  next === ALL_VALUE || next !== value.entityType
+                    ? null
+                    : value.entityId,
               })
             }
           >
@@ -158,19 +167,38 @@ export function SystemActivityFilters({
             type="button"
             variant="outline"
             size={actionSize}
-            disabled={
-              isPending ||
-              (!value.entityType && !value.actor && !value.since && !draftSince)
-            }
+            disabled={isPending || !hasActiveFilters}
             onClick={() => {
               setDraftSince("");
-              pushParams({ entityType: null, actor: null, since: null });
+              pushParams({
+                entityType: null,
+                entityId: null,
+                actor: null,
+                since: null,
+              });
             }}
           >
             {copy.filterReset}
           </Button>
         </div>
       </div>
+
+      {value.entityId ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">
+            {copy.filterEntityIdActive(value.entityId)}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size={actionSize}
+            disabled={isPending}
+            onClick={() => pushParams({ entityId: null })}
+          >
+            {copy.clearEntityId}
+          </Button>
+        </div>
+      ) : null}
     </AppToolbar>
   );
 }

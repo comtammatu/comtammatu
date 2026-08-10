@@ -26,6 +26,7 @@ import { SystemActivityTable } from "./system-activity-table";
 interface Props {
   searchParams: Promise<{
     entity_type?: string;
+    entity_id?: string;
     actor?: string;
     since?: string;
   }>;
@@ -58,6 +59,9 @@ export default async function SystemActivityPage({ searchParams }: Props) {
     ENTITY_FILTER_OPTIONS.some((option) => option.id === params.entity_type)
       ? params.entity_type
       : null;
+  const entityIdRaw = params.entity_id?.trim() || null;
+  const entityId =
+    entityIdRaw && /^\d+$/.test(entityIdRaw) ? Number(entityIdRaw) : null;
   const actor = params.actor?.trim() || null;
   const since = params.since?.trim() || null;
   const sinceIso = since ? getVNDayUtcRange(since).startIso : null;
@@ -65,6 +69,7 @@ export default async function SystemActivityPage({ searchParams }: Props) {
   const rows = await fetchTenantAuditLogs({
     sinceIso,
     entityType,
+    entityId,
     actorUserId: actor,
     limit: 200,
   });
@@ -80,7 +85,7 @@ export default async function SystemActivityPage({ searchParams }: Props) {
 
   const copy = messages.settings.activity;
   const pages = messages.settings.pages;
-  const hasFilters = Boolean(entityType || actor || since);
+  const hasFilters = Boolean(entityType || entityId || actor || since);
 
   return (
     <SettingsPageFrame
@@ -112,7 +117,12 @@ export default async function SystemActivityPage({ searchParams }: Props) {
         description={pages.systemActivityDescription}
       >
         <SystemActivityFilters
-          value={{ entityType, actor, since }}
+          value={{
+            entityType,
+            entityId: entityId != null ? String(entityId) : null,
+            actor,
+            since,
+          }}
           actorOptions={[...actorOptionById.values()].sort((a, b) =>
             a.label.localeCompare(b.label, "vi"),
           )}
