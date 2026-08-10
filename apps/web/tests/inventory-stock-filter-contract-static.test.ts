@@ -43,7 +43,7 @@ test("inventory stock status and category filters have one control source", () =
     toolbarStart,
   );
   const toolbar = stockClientSource.slice(toolbarStart, toolbarEnd);
-  assert.doesNotMatch(toolbar, /actions=|reset=/);
+  assert.doesNotMatch(toolbar, /reset=/);
 });
 
 test("inventory stock status filters are mutually exclusive", () => {

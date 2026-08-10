@@ -1,4 +1,5 @@
 import { canAccess } from "./module-acl";
+import { buildAccessDeniedPath } from "./blocked-state";
 import { getDefaultRedirect } from "./login-destination";
 import {
   isOwnerRoutePath,
@@ -213,7 +214,21 @@ export function resolvePostLoginRedirect(
   }
 
   const canonicalSelfPath = canonicalizeSelfServicePath(claims, safeReturnTo);
-  if (canonicalSelfPath === null) return fallback;
+  if (canonicalSelfPath === null) {
+    // `/me` without a pinned branch must fail closed for operational roles.
+    // Central L0 roles still default to `/` on normal login; only this returnTo
+    // path is denied so we never bounce them onto Owner Control via fallback.
+    if (
+      (targetUrl.pathname === "/me" ||
+        targetUrl.pathname.startsWith("/me/")) &&
+      claims.user_role !== "owner" &&
+      BRANCH_REQUIRED_OPERATIONAL_ROLES.includes(claims.user_role) &&
+      claims.branch_id == null
+    ) {
+      return buildAccessDeniedPath("branch-scope-mismatch");
+    }
+    return fallback;
+  }
   if (canonicalSelfPath !== safeReturnTo) {
     return canonicalSelfPath;
   }

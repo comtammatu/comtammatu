@@ -59,7 +59,7 @@ function filesImportingControlSurfaceChrome(dir: string): string[] {
 }
 
 const kdsDir = join(process.cwd(), "app/(protected)/br/[branchId]/kds");
-const runnerDir = join(process.cwd(), "app/(protected)/br/[branchId]/runner");
+const pickupDir = join(process.cwd(), "app/(protected)/br/[branchId]/pickup");
 const operationalAdapter = join(
   process.cwd(),
   "app/components/surface/operational.tsx",
@@ -89,37 +89,37 @@ test("KDS station routes do not import control_surface chrome", () => {
   );
 });
 
-test("Runner station routes do not import control_surface AppSection", () => {
+test("Pickup station routes do not import control_surface AppSection", () => {
   assert.deepEqual(
-    filesImportingAppSection(runnerDir),
+    filesImportingAppSection(pickupDir),
     [],
-    "Runner station_chrome must not import AppSection",
+    "Pickup station_chrome must not import AppSection",
   );
 });
 
-test("Runner station routes do not import raw Card primitive", () => {
+test("Pickup station routes do not import raw Card primitive", () => {
   assert.deepEqual(
-    filesImportingRawCard(runnerDir),
+    filesImportingRawCard(pickupDir),
     [],
-    "Runner station_chrome must not import raw Card",
+    "Pickup station_chrome must not import raw Card",
   );
 });
 
-test("Runner station routes do not import control_surface chrome", () => {
+test("Pickup station routes do not import control_surface chrome", () => {
   assert.deepEqual(
-    filesImportingControlSurfaceChrome(runnerDir),
+    filesImportingControlSurfaceChrome(pickupDir),
     [],
-    "Runner must not import AppShell / ControlSurfaceShell / AppListFrame / BranchOperatorPage / DataTable",
+    "Pickup must not import AppShell / ControlSurfaceShell / AppListFrame / BranchOperatorPage / DataTable",
   );
 });
 
-test("KDS and Runner loading stay PageSpinner (no fake ticket skeleton)", () => {
+test("KDS and Pickup loading stay PageSpinner (no fake ticket skeleton)", () => {
   const kdsLoading = readFileSync(join(kdsDir, "loading.tsx"), "utf8");
-  const runnerLoading = readFileSync(join(runnerDir, "loading.tsx"), "utf8");
+  const pickupLoading = readFileSync(join(pickupDir, "loading.tsx"), "utf8");
   assert.match(kdsLoading, /PageSpinner/);
-  assert.match(runnerLoading, /PageSpinner/);
+  assert.match(pickupLoading, /PageSpinner/);
   assert.doesNotMatch(kdsLoading, /\bSkeleton\b/);
-  assert.doesNotMatch(runnerLoading, /\bSkeleton\b/);
+  assert.doesNotMatch(pickupLoading, /\bSkeleton\b/);
 });
 
 test("OperationalBoardCard uses named motion tokens, not bare transition", () => {
@@ -163,7 +163,7 @@ test("realtime-board, runner-board, and pos-board UI blocks stay registered for 
   assert.match(runner[0]?.forbidden ?? "", /raw Card/);
   assert.match(pos[0]?.forbidden ?? "", /raw Card/);
   assert.match(kds[0]?.exemplar ?? "", /\/kds\/page\.tsx$/);
-  assert.match(runner[0]?.exemplar ?? "", /\/runner\/page\.tsx$/);
+  assert.match(runner[0]?.exemplar ?? "", /\/pickup\/page\.tsx$/);
   assert.match(pos[0]?.exemplar ?? "", /\/pos\/session-gate\.tsx$/);
 });
 

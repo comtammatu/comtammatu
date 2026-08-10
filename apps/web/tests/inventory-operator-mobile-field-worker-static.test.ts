@@ -61,7 +61,7 @@ test("operator transfer receive auto-starts inspection and requires shortage not
   assert.match(receiveClientSource, /const \[notes, setNotes\]/);
   assert.match(receiveClientSource, /qty < item\.qty && note\.length < 5/);
   assert.match(receiveClientSource, /copy\.shortageNoteMinLength/);
-  assert.match(receiveClientSource, /note \}/);
+  assert.match(receiveClientSource, /shortfall_class: classification/);
   assert.match(receiveClientSource, /<Textarea/);
 });
 

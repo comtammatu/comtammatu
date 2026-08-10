@@ -93,7 +93,7 @@ export default async function CentralKitchenStockRequestNewPage({
   }
   if (branchResult.data?.branch_kind !== "central_kitchen") {
     redirect(
-      `/inventory/transfers${branchId == null ? "" : `?branchId=${branchId}`}`,
+      `/inventory/transfers${branchId == null ? "" : `?branch=${branchId}`}`,
     );
   }
   const request = requestResult.data as {
@@ -178,7 +178,7 @@ export default async function CentralKitchenStockRequestNewPage({
             <Button
               variant="ghost"
               render={
-                <Link href={`/inventory/transfers?branchId=${branchId}`} />
+                <Link href={`/inventory/transfers?branch=${branchId}`} />
               }
             >
               {messages.inventory.stockRequests.journey.back}
@@ -195,7 +195,7 @@ export default async function CentralKitchenStockRequestNewPage({
         initialStatus={request?.status ?? null}
         initialNeededAt={request?.needed_at ?? null}
         initialNotes={request?.notes ?? null}
-        returnHref={`/inventory/transfers?branchId=${branchId}&requestId=:requestId`}
+        returnHref={`/inventory/transfers?branch=${branchId}&requestId=:requestId`}
       />
     </DocumentFormFrame>
   );

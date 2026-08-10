@@ -128,7 +128,7 @@ export default async function TransfersPage({
                   <Button
                     render={
                       <Link
-                        href={`/inventory/stock-requests/new?branch=${branchId}&branchId=${branchId}`}
+                        href={`/inventory/stock-requests/new?branch=${branchId}&branch=${branchId}`}
                       />
                     }
                   >
@@ -153,7 +153,7 @@ export default async function TransfersPage({
                     variant="outline"
                     render={
                       <Link
-                        href={`/inventory/transfers/new?branch=${branchId}&branchId=${branchId}`}
+                        href={`/inventory/transfers/new?branch=${branchId}&branch=${branchId}`}
                       />
                     }
                   >

@@ -129,7 +129,7 @@ export function TransferDetailClient({
   const transferListHref =
     listHref ??
     (userBranchId != null
-      ? `/inventory/transfers?branchId=${userBranchId}`
+      ? `/inventory/transfers?branch=${userBranchId}`
       : "/inventory/transfers");
   const shortLines = useMemo(() => {
     if (!isReceiveMode) return 0;

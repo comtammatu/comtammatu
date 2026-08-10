@@ -301,7 +301,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                         disabled={!isActive}
                         render={
                           isActive ? (
-                            <Link href={`/inventory?branchId=${branch.id}`} />
+                            <Link href={`/inventory?branch=${branch.id}`} />
                           ) : undefined
                         }
                       >

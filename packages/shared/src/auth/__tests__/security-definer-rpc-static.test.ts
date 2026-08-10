@@ -32,7 +32,10 @@ function readForwardMigrations(): Array<{ path: string; source: string }> {
     .sort()
     .map((name) => {
       const path = `supabase/migrations/${name}`;
-      return { path, source: readRepoFile(path) };
+      // Strip block comments so rollback snapshots inside DROP migrations do
+      // not register as live SECURITY DEFINER definitions.
+      const source = readRepoFile(path).replace(/\/\*[\s\S]*?\*\//g, "");
+      return { path, source };
     });
 }
 
@@ -41,7 +44,7 @@ function escapeRegExp(value: string): string {
 }
 
 const definerFunctionPattern =
-  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
+  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)(?:(?!CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION)[\s\S])*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 
 const authzPrimitivePattern =
   /\bpublic\.(?:has_permission|has_permission_any|auth_tenant_id|auth_is_owner|can_read_inventory_monetary)\s*\(|\bauth\.(?:uid|role)\s*\(/i;

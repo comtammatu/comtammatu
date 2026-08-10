@@ -422,7 +422,7 @@ export function GrnListClient({
               render={
                 <Link
                   href={`${basePath}?status=${filters.status}${
-                    filters.branchId ? `&branchId=${filters.branchId}` : ""
+                    filters.branchId ? `&branch=${filters.branchId}` : ""
                   }`}
                 />
               }

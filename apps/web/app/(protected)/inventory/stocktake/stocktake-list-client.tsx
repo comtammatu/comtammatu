@@ -84,7 +84,7 @@ function formatDateShort(dateStr: string | null): string {
 }
 
 function stocktakeDetailHref(routeBase: string, row: StocktakeSessionRow): string {
-  return `${routeBase}/${row.id}?branchId=${row.branch_id}`;
+  return `${routeBase}/${row.id}?branch=${row.branch_id}`;
 }
 
 function StocktakeSessionCard({
@@ -160,7 +160,7 @@ export function StocktakeListClient({
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const branchQuery =
     userBranchId != null
-      ? `?branch=${userBranchId}&branchId=${userBranchId}`
+      ? `?branch=${userBranchId}`
       : "";
   const writeRequiresSitePick = userBranchId == null;
   const [isPending, startTransition] = useTransition();

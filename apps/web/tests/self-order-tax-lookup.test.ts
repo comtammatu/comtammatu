@@ -101,7 +101,10 @@ test("public invoice QR flow wires fail-safe lookup with stale-request protectio
     invoiceBuyerForm,
     /lookupBusinessTaxCode\(\s*normalized,\s*controller\.signal/,
   );
-  assert.match(invoiceBuyerForm, /onBlur=\{\(\) => void handleLookup\(\)\}/);
+  assert.match(
+    invoiceBuyerForm,
+    /onBlur=\{\(\) => \{\s*if \(buyerKind === "business"\) void handleLookup\(\);/,
+  );
   assert.match(invoiceBuyerForm, /setBuyerName\(business\.name\)/);
   assert.match(invoiceBuyerForm, /setBuyerAddress\(business\.address\)/);
   assert.match(invoiceBuyerForm, /role="status"/);

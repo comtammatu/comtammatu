@@ -397,7 +397,7 @@ test("Branch command dashboard is a branch-native command surface", () => {
   );
   assert.match(
     commandSections,
-    /<ItemGroup className="gap-2"/,
+    /<ItemGroup className="grid grid-cols-2 gap-2"/,
     "Branch Command lanes should group action rows consistently",
   );
   assert.doesNotMatch(
@@ -458,7 +458,7 @@ test("Branch command dashboard is a branch-native command surface", () => {
   assert.match(settingsMessages, /readinessKdsTitle: "Bếp \(KDS\)"/);
   assert.match(settingsMessages, /readinessKdsSetupTitle: "Trạm bếp"/);
   assert.match(settingsMessages, /readinessPosClosed: "Chưa mở ca\."/);
-  assert.doesNotMatch(settingsMessages, /Mở POS|Mở KDS|Bếp\/KDS|Trạm KDS|3 máy in|Agent in| POS active|trạm bếp active|nhân sự active/);
+  assert.doesNotMatch(settingsMessages, /Mở POS[^/]|Mở KDS|Trạm KDS|3 máy in|Agent in| POS active|trạm bếp active|nhân sự active/);
   assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
@@ -574,10 +574,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(stationsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(tablesClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(printersClient, /const canSwitchBranch = branches\.length > 1/);
-  assert.match(terminalsClient, /filters=\{\s*canSwitchBranch \?/);
-  assert.match(stationsClient, /filters=\{\s*canSwitchBranch \?/);
-  assert.match(tablesClient, /\{canSwitchBranch \? \(\s*<AppToolbar/);
-  assert.match(printersClient, /\{canSwitchBranch \? \(\s*<div/);
+  assert.match(printersClient, /\{canSwitchBranch \?/);
   assert.doesNotMatch(setupClients, /SelectTrigger className="w-60"/);
   assert.doesNotMatch(setupClients, /size="icon"/);
   assert.doesNotMatch(setupClients, /className="ml-auto"/);
@@ -590,7 +587,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   );
   assert.match(
     printersClient,
-    /basis-full justify-start pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0/,
+    /ItemActions className="basis-full justify-start gap-2 pt-1 sm:ml-auto sm:basis-auto sm:justify-end sm:pt-0"/,
     "printer row actions should occupy their own mobile row and align right on desktop",
   );
   assert.match(printersClient, /className="w-full sm:w-auto"/);

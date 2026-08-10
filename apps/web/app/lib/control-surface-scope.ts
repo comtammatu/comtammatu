@@ -45,7 +45,8 @@ function parseToken(
 }
 
 /**
- * Parse unified `branch` (preferred) or legacy inventory `branchId`.
+ * Parse unified `branch` (preferred). Legacy inventory `branchId` remains
+ * readable for notification SQL / bookmarks until those writers migrate.
  */
 export function parseControlSurfaceBranchScope(
   rawBranch: string | string[] | null | undefined,
@@ -62,7 +63,6 @@ export function parseControlSurfaceBranchScope(
   }
   const legacy = firstRaw(rawBranchId);
   if (legacy) {
-    // Legacy inventory only used numeric ids; "all" may appear during migration.
     return parseToken(legacy, options?.allowedIds) ?? fallback;
   }
   return fallback;
@@ -103,14 +103,13 @@ const DEFAULT_SCOPE_PREFIXES = [
 ] as const;
 
 /**
- * Attach `?branch=` (and optional legacy `branchId` for inventory dual-read).
+ * Attach unified `?branch=` and strip legacy inventory `branchId` query.
  */
 export function withControlSurfaceBranchScope(
   href: string,
   scope: ControlSurfaceBranchScope,
   options?: {
     prefixes?: readonly string[];
-    dualInventoryBranchId?: boolean;
   },
 ): string {
   const [pathname = "", query = ""] = href.split("?", 2);
@@ -125,11 +124,7 @@ export function withControlSurfaceBranchScope(
 
   const params = new URLSearchParams(query);
   params.set("branch", scope);
-  const siteId = getControlSurfaceScopeBranchId(scope);
-  if (options?.dualInventoryBranchId) {
-    if (siteId != null) params.set("branchId", String(siteId));
-    else params.delete("branchId");
-  }
+  params.delete("branchId");
   const next = params.toString();
   return next ? `${pathname}?${next}` : pathname;
 }

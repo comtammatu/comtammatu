@@ -27,7 +27,7 @@ test("scope=all write gate disables create without inventing defaultBranchId", (
   assert.match(issuesClient, /disabled/);
   assert.doesNotMatch(
     issuesClient,
-    /createHref && defaultBranchId\s*\n?\s*\? `\$\{createHref\}\?branchId=\$\{defaultBranchId\}`/,
+    /createHref && defaultBranchId\s*\n?\s*\? `\$\{createHref\}\?branch=\$\{defaultBranchId\}`/,
   );
 });
 

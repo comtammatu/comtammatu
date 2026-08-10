@@ -35,7 +35,8 @@ test("Branch fulfillment hub deep-links to detail pages without Owner dialogs", 
   assert.doesNotMatch(transferPage, /selectedRequest|selectedTransfer/);
 
   assert.match(hubClient, /stockFulfillmentRowHref/);
-  assert.match(hubClient, /preferWork:\s*work/);
+  assert.match(hubClient, /preferWork:/);
+  assert.match(hubClient, /receiveFocus[\s\S]*?"receive"/);
   assert.match(hubClient, /searchParams\.get\("work"\)/);
   assert.match(hubClient, /searchParams\.get\("q"\)/);
   assert.match(hubClient, /mode === "branch" \? "active" : "all"/);

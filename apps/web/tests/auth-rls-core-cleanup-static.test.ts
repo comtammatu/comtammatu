@@ -118,9 +118,12 @@ test("active auth templates and target-role lists use canonical access names", (
   assert.match(canonicalTemplateMigration, /ARRAY\['owner','branch_manager'\]::TEXT\[\]/);
 });
 
-test("retired service position is absent from the active auth contract", () => {
-  const retiredServicePosition = ["wait", "er"].join("");
-  assert.doesNotMatch(authTypes, new RegExp(retiredServicePosition));
+test("waiter remains a position code mapped to branch_staff, not a StaffRole", () => {
+  assert.doesNotMatch(
+    authTypes,
+    /export const STAFF_ROLES = \[[\s\S]*?"waiter"/,
+  );
+  assert.match(authTypes, /waiter: "branch_staff"/);
 });
 
 test("staff permission rows are read-only to authenticated clients through one policy", () => {

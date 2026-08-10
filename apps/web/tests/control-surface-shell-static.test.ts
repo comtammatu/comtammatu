@@ -44,11 +44,11 @@ test("control_surface routes share one persistent protected shell", () => {
   assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(protectedLayout, /resolveInventoryBranchScope/);
   assert.match(protectedLayout, /showSupplierPayables/);
-  assert.doesNotMatch(rootPage, /ControlSurfaceShell|loadAuthState/);
+  assert.doesNotMatch(rootPage, /ControlSurfaceShell|OwnerModuleShell|InventoryShell|FinanceShell/);
+  assert.match(rootPage, /loadAuthState/);
   assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
   assert.doesNotMatch(branchesLayout, /ControlSurfaceShell/);
   assert.doesNotMatch(feedbackLayout, /ControlSurfaceShell/);
-  assert.doesNotMatch(rootPage, /OwnerModuleShell|InventoryShell|FinanceShell/);
   assert.doesNotMatch(inventoryLayout, /\bInventoryShell\b/);
 
   for (const removed of [

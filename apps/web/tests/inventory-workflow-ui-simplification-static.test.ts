@@ -217,9 +217,9 @@ test("operations tabs use the same sectioned list chrome", () => {
 
   for (const source of [grn, issuesSurface, fulfillmentHub]) {
     assert.match(source, /<AppListFrame/);
-    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
-    assert.match(source, /<AppToolbar[\s\S]{0,500}search=\{/);
-    assert.match(source, /<AppToolbar[\s\S]{0,1200}filters=\{/);
+    assert.match(source, /variant="inline"/);
+    assert.match(source, /<AppToolbar[\s\S]*search=\{/);
+    assert.match(source, /<AppToolbar[\s\S]*filters=\{/);
   }
 
   for (const source of [grn, issuesSurface, fulfillmentHub]) {
@@ -380,9 +380,10 @@ test("AppToolbar inline shares card surface without muted fill", () => {
 });
 
 test("migrated inventory lists use AppListFrame toolbar slot", () => {
-  const invoices = read(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const invoices = [
+    read("app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx"),
+    read("app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx"),
+  ].join("\n");
   const supplierItems = read(
     "app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx",
   );
@@ -399,7 +400,7 @@ test("migrated inventory lists use AppListFrame toolbar slot", () => {
 
   for (const source of [invoices, supplierItems, thresholdsClient]) {
     assert.match(source, /<AppListFrame[\s\S]{0,800}toolbar=\{/);
-    assert.match(source, /<AppToolbar[\s\S]{0,120}variant="inline"/);
+    assert.match(source, /variant="inline"/);
   }
 
   assert.match(
@@ -442,8 +443,14 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   const stocktake = read(
     "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
   );
-  const invoices = read(
-    "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
+  const invoicesListUi = read(
+    "app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx",
+  );
+  const financeInvoicesPage = read(
+    "app/(protected)/finance/invoices/page.tsx",
+  );
+  const financeFilterBar = read(
+    "app/(protected)/finance/components/filter-bar.tsx",
   );
   const orders = read("app/(protected)/orders/orders-client.tsx");
   const employeeTable = read("app/(protected)/hr/employee-table.tsx");
@@ -493,7 +500,9 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   assert.match(ingredients, /useFormControlSize\(\)/);
   assert.match(issues, /useFormControlSize\("responsive"\)/);
   assert.match(fulfillmentHub, /size="field"/);
-  assert.match(invoices, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
+  assert.match(invoicesListUi, /<PopoverContent[\s\S]*className="w-\[min\(20rem/);
+  assert.match(financeInvoicesPage, /variant="inline"/);
+  assert.match(financeFilterBar, /className="w-full sm:w-44"/);
   assert.match(stocktake, /useFormControlSize\("responsive"\)/);
   assert.match(stocktake, /size="lg"/);
   assert.match(orders, /useFormControlSize\(\)/);

@@ -127,7 +127,7 @@ test("count assignment scope defaults to the current shift unless all-shifts is 
   );
   assert.match(
     countAssignmentsClientSource,
-    /<Label htmlFor="count-assignment-shift">Ca đếm tồn<\/Label>/,
+    /id="count-assignment-shift"[\s\S]*aria-label="Ca đếm tồn"/,
     "shift scope picker should be labeled as count assignment scope, not shift setup",
   );
   assert.match(

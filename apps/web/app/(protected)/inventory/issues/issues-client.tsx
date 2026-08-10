@@ -382,8 +382,10 @@ export function IssuesClient({
     if (recordedEndDate) next.set("endDate", recordedEndDate);
     else next.delete("endDate");
     if (selectedRecordedBranchId && selectedRecordedBranchId !== "all") {
-      next.set("branchId", selectedRecordedBranchId);
+      next.set("branch", selectedRecordedBranchId);
+      next.delete("branchId");
     } else {
+      next.delete("branch");
       next.delete("branchId");
     }
     router.push(buildListHref(listBasePath, next));
@@ -393,6 +395,7 @@ export function IssuesClient({
     const next = new URLSearchParams(searchParams.toString());
     next.delete("startDate");
     next.delete("endDate");
+    next.delete("branch");
     next.delete("branchId");
     setRecordedStartDate("");
     setRecordedEndDate("");
@@ -402,7 +405,7 @@ export function IssuesClient({
 
   const resolvedCreateHref =
     createHref && defaultBranchId != null
-      ? `${createHref}?branch=${defaultBranchId}&branchId=${defaultBranchId}`
+      ? `${createHref}?branch=${defaultBranchId}`
       : writeRequiresSitePick
         ? undefined
         : createHref;

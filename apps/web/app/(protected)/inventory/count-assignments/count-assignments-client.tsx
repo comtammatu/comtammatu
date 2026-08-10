@@ -108,7 +108,7 @@ function buildShiftScopeHref({
   assignmentId?: number | null;
 }) {
   const params = new URLSearchParams();
-  if (branchId !== null) params.set("branchId", String(branchId));
+  if (branchId !== null) params.set("branch", String(branchId));
   if (locationId !== null) params.set("locationId", String(locationId));
   if (shiftId !== null) params.set("shiftId", String(shiftId));
   if (assignmentId != null) params.set("assignmentId", String(assignmentId));

@@ -21,35 +21,10 @@ const AUTH_BOUNDARY_TOKENS = [
   "can_read_inventory_monetary(",
 ] as const;
 
-const BROAD_GRANT_ALLOWLIST = new Set([
-  "generate_order_payment_code",
-  // Reads the customer-facing transfer-memo prefix (printed on every VietQR);
-  // no auth boundary because callers run SECURITY DEFINER and a direct call only
-  // returns public config. Sibling of generate_order_payment_code, which calls it.
-  "vietqr_payment_code_prefix",
-  "inv_to_base",
-  // Non-SECURITY-DEFINER bill line-item aggregator (20260706150000_bill_line_items_merge_notes):
-  // runs as the caller, so order_items RLS (tenant_id = auth_tenant_id()) gates every
-  // row. Granted to authenticated for the web bill preview; the enqueue_*_bill
-  // definers also call it. No in-body boundary needed — RLS is the boundary.
-  "bill_line_items",
-  // Pure catalog-factor resolver: parses the caller's jsonb and delegates to
-  // inv_derive_to_base_factor (itself tenant-scoped from auth_tenant_id());
-  // reads no tables and mutates nothing, so a direct browser call only echoes
-  // arithmetic. Gated at the calling upsert_ingredient_catalog RPC.
-  "inv_catalog_unit_to_base",
-]);
-
 const BROWSER_EXECUTE_GRANT =
   /GRANT\s+(?:EXECUTE|ALL)\s+ON\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+TO\s+[^;]*\b(?:PUBLIC|anon|authenticated)\b[^;]*;/gi;
-const FUNCTION_BODY =
-  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)[\s\S]*?\bAS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 const DEFINER_FUNCTION =
-  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)[\s\S]*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
-const FUNCTION_CALL = /\b(?:public\.)?([a-zA-Z_][\w]*)\s*\(/g;
-const FUNCTION_RENAME =
-  /ALTER\s+FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([^;]*?\)\s+RENAME\s+TO\s+([a-zA-Z_][\w]*)\s*;/gi;
-
+  /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-zA-Z_][\w]*)\s*\([\s\S]*?\)(?:(?!CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION)[\s\S])*?SECURITY\s+DEFINER[\s\S]*?AS\s+(\$[A-Za-z0-9_]*\$)([\s\S]*?)\2\s*;/gi;
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -152,6 +127,18 @@ function delegatesToPrivateAuthorizedFunction(
   });
 }
 
+function isSecurityDefinerFunction(match: RegExpMatchArray): boolean {
+  const headerEnd = match[0].search(/\bAS\s+\$[A-Za-z0-9_]*\$/i);
+  return (
+    headerEnd >= 0 &&
+    /\bSECURITY\s+DEFINER\b/i.test(match[0].slice(0, headerEnd))
+  );
+}
+
+function stripBlockComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
 function forwardMigrationFiles(): string[] {
   return readdirSync(migrationsDir)
     .filter(
@@ -163,17 +150,21 @@ function forwardMigrationFiles(): string[] {
     .sort();
 }
 
+function readForwardMigrations(): Array<{ name: string; sql: string }> {
+  return forwardMigrationFiles().map((name) => ({
+    name,
+    sql: stripBlockComments(
+      readFileSync(resolve(migrationsDir, name), "utf8"),
+    ),
+  }));
+}
+
 test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-role REVOKE", () => {
-  const files = forwardMigrationFiles();
+  const migrations = readForwardMigrations();
   // Sanity: the scan resolves real forward migrations.
-  assert.ok(files.length > 0, "expected at least one forward migration");
+  assert.ok(migrations.length > 0, "expected at least one forward migration");
 
   const violations: string[] = [];
-
-  const migrations = files.map((name) => ({
-    name,
-    sql: readFileSync(resolve(migrationsDir, name), "utf8"),
-  }));
   const allSource = migrations.map(({ sql }) => sql).join("\n");
 
   for (const [index, migration] of migrations.entries()) {
@@ -182,6 +173,7 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
       .map(({ sql }) => sql)
       .join("\n");
     for (const match of migration.sql.matchAll(DEFINER_FUNCTION)) {
+      if (!isSecurityDefinerFunction(match)) continue;
       const functionName = match[1]!;
       const body = match[3] ?? "";
       const hasAuthBoundary =
@@ -206,72 +198,50 @@ test("forward SECURITY DEFINER migrations carry an auth boundary or a browser-ro
   );
 });
 
-test("browser-executable RPC grants have an auth boundary or an explicit allowlist entry", () => {
-  const files = forwardMigrationFiles();
-  assert.ok(files.length > 0, "expected at least one forward migration");
+test("browser-executable SECURITY DEFINER RPC grants have an auth boundary or browser-role revoke", () => {
+  const migrations = readForwardMigrations();
+  assert.ok(migrations.length > 0, "expected at least one forward migration");
 
   const violations: string[] = [];
-  const functionBodies = new Map<string, string[]>();
-  const migrations = files.map((name) => ({
-    name,
-    sql: readFileSync(resolve(migrationsDir, name), "utf8"),
-  }));
-  const finalSource = migrations.map(({ sql }) => sql).join("\n");
-
-  function bodyHasAuthBoundary(
-    functionName: string,
-    visited = new Set<string>(),
-  ): boolean {
-    if (visited.has(functionName)) return false;
-    visited.add(functionName);
-
-    for (const body of functionBodies.get(functionName) ?? []) {
-      if (AUTH_BOUNDARY_TOKENS.some((token) => body.includes(token))) {
-        return true;
-      }
-
-      for (const match of body.matchAll(FUNCTION_CALL)) {
-        const callee = match[1];
-        if (callee && bodyHasAuthBoundary(callee, visited)) return true;
-      }
-    }
-
-    return false;
-  }
+  const allSource = migrations.map(({ sql }) => sql).join("\n");
+  const definerNames = new Set<string>();
 
   for (const { sql } of migrations) {
-    for (const match of sql.matchAll(FUNCTION_BODY)) {
-      const functionName = match[1];
-      const body = match[3] ?? "";
-      if (functionName) {
-        functionBodies.set(functionName, [
-          ...(functionBodies.get(functionName) ?? []),
-          body,
-        ]);
-      }
-    }
-    for (const match of sql.matchAll(FUNCTION_RENAME)) {
-      const previousName = match[1];
-      const nextName = match[2];
-      if (previousName && nextName) {
-        functionBodies.set(nextName, [
-          ...(functionBodies.get(nextName) ?? []),
-          ...(functionBodies.get(previousName) ?? []),
-        ]);
+    for (const match of sql.matchAll(DEFINER_FUNCTION)) {
+      if (match[1] && isSecurityDefinerFunction(match)) {
+        definerNames.add(match[1]);
       }
     }
   }
 
-  for (const { name, sql } of migrations) {
-    for (const match of sql.matchAll(BROWSER_EXECUTE_GRANT)) {
+  for (const [index, migration] of migrations.entries()) {
+    const finalSource = migrations
+      .slice(index)
+      .map(({ sql }) => sql)
+      .join("\n");
+
+    for (const match of migration.sql.matchAll(BROWSER_EXECUTE_GRANT)) {
       const functionName = match[1];
-      if (!functionName) continue;
-      if (BROAD_GRANT_ALLOWLIST.has(functionName)) continue;
+      if (!functionName || !definerNames.has(functionName)) continue;
       if (browserRolesAreFinallyRevoked(finalSource, functionName)) continue;
       if (isFinallySecurityInvoker(finalSource, functionName)) continue;
 
-      if (!bodyHasAuthBoundary(functionName)) {
-        violations.push(`${name}: ${functionName}`);
+      let body = "";
+      for (const definerMatch of allSource.matchAll(DEFINER_FUNCTION)) {
+        if (
+          definerMatch[1] === functionName &&
+          isSecurityDefinerFunction(definerMatch)
+        ) {
+          body = definerMatch[3] ?? "";
+        }
+      }
+
+      const hasAuthBoundary =
+        bodyHasDirectAuthBoundary(body) ||
+        delegatesToPrivateAuthorizedFunction(body, allSource);
+
+      if (!hasAuthBoundary) {
+        violations.push(`${migration.name}: ${functionName}`);
       }
     }
   }
@@ -279,7 +249,8 @@ test("browser-executable RPC grants have an auth boundary or an explicit allowli
   assert.deepEqual(
     violations,
     [],
-    `Browser-executable RPC grants must define an auth boundary in the same migration ` +
-      `or be listed in BROAD_GRANT_ALLOWLIST:\n${violations.join("\n")}`,
+    `Browser-executable SECURITY DEFINER RPC grants must define an auth boundary ` +
+      `(${AUTH_BOUNDARY_TOKENS.join(", ")}) or revoke PUBLIC/anon/authenticated:\n` +
+      violations.join("\n"),
   );
 });

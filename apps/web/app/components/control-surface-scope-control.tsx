@@ -37,8 +37,6 @@ export type ControlSurfaceAggregateOption =
 type Props = {
   sites: readonly ControlSurfaceScopeSite[];
   aggregates?: readonly ControlSurfaceAggregateOption[];
-  /** When true, dual-write legacy inventory `branchId`. */
-  dualInventoryBranchId?: boolean;
   /** Clear HR drill-down keys when scope changes. */
   clearHrDrilldown?: boolean;
   /** Clear Finance `location` when writing unified `branch`. */
@@ -59,7 +57,6 @@ const AGGREGATE_LABEL: Record<ControlSurfaceAggregateOption, string> = {
 export function ControlSurfaceScopeControl({
   sites,
   aggregates = ["all"],
-  dualInventoryBranchId = false,
   clearHrDrilldown = false,
   clearFinanceLocation = false,
   fallback = "all",
@@ -112,13 +109,7 @@ export function ControlSurfaceScopeControl({
       if (value === currentScope) return;
       const next = new URLSearchParams(searchParams.toString());
       next.set("branch", value);
-      if (dualInventoryBranchId) {
-        if (value === "all" || Number.isNaN(Number(value))) {
-          next.delete("branchId");
-        } else {
-          next.set("branchId", value);
-        }
-      }
+      next.delete("branchId");
       if (clearFinanceLocation) {
         next.delete("location");
       }
@@ -136,7 +127,6 @@ export function ControlSurfaceScopeControl({
       clearFinanceLocation,
       clearHrDrilldown,
       currentScope,
-      dualInventoryBranchId,
       pathname,
       router,
       searchParams,

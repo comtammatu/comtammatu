@@ -24,7 +24,7 @@ test("Branch Manager header collapses secondary controls into the existing overf
 
   assert.match(
     source,
-    /const usesHeaderOverflow = canOpenOwnerHome \|\| canManageBranch/,
+    /const usesHeaderOverflow =[\s\S]*canOpenOwnerHome \|\| canManageBranch \|\| canOpenFeedback/,
   );
   assert.match(source, /showThemeToggle=\{!usesHeaderOverflow\}/);
   assert.match(source, /\{usesHeaderOverflow \? \([\s\S]*<DropdownMenu>/);

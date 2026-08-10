@@ -60,7 +60,7 @@ export async function WasteNewPageContent({
       description: INVENTORY_VI.branchRequiredWasteHint,
     });
   }
-  const fallbackHref = `/inventory/consumption?view=waste&branchId=${branchId}`;
+  const fallbackHref = `/inventory/consumption?view=waste&branch=${branchId}`;
 
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,

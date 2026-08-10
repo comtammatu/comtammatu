@@ -327,7 +327,7 @@ test("KDS layout owns the viewport while board states fill the remaining workspa
   assert.match(kdsLayoutSource, /<main[\s\S]*?className="[^"]*h-dvh[^"]*"/);
   assert.match(
     kdsBoardSource,
-    /className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-background"/,
+    /className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-background font-sans"/,
   );
   assert.doesNotMatch(kdsBoardSource, /\bh-dvh\b/);
   assert.match(

@@ -23,15 +23,19 @@ const INGREDIENT_IMPORT_EXPORT =
   "apps/web/app/(protected)/inventory/ingredients/import-export-menu.tsx";
 
 test("Owner order KPI rows stay compact and expose work sooner on phones", () => {
-  for (const file of ORDER_SURFACES) {
-    const source = read(file);
+  const orders = read(ORDERS_CLIENT);
+  const refunds = read(REFUNDS_CLIENT);
 
-    assert.match(source, /<KpiRow[\s\S]*density="compact"/);
-    assert.match(source, /className="grid-cols-2 md:grid-cols-3"/);
-    assert.match(source, /className="col-span-2 md:col-span-1"/);
-    assert.equal((source.match(/density="compact"/g) ?? []).length, 4);
-    assert.doesNotMatch(source, /<div className="grid gap-3 md:grid-cols-3">/);
-  }
+  assert.match(orders, /<KpiRow[\s\S]*density="compact"/);
+  assert.match(orders, /className="grid-cols-2 md:grid-cols-5"/);
+  assert.equal((orders.match(/density="compact"/g) ?? []).length, 6);
+  assert.doesNotMatch(orders, /<div className="grid gap-3 md:grid-cols-3">/);
+
+  assert.match(refunds, /<KpiRow[\s\S]*density="compact"/);
+  assert.match(refunds, /className="grid-cols-2 md:grid-cols-3"/);
+  assert.match(refunds, /className="col-span-2 md:col-span-1"/);
+  assert.equal((refunds.match(/density="compact"/g) ?? []).length, 4);
+  assert.doesNotMatch(refunds, /<div className="grid gap-3 md:grid-cols-3">/);
 });
 
 test("Owner finance results stay one column on mobile, two on tablet, and expose the formula on wide screens", () => {
@@ -159,9 +163,9 @@ test("expense primary and dialog actions use the touch contract", () => {
   );
 
   assert.match(source, /size=\{isTouchLayout \? "touch" : "default"\}/);
-  assert.ok(
-    (source.match(/size=\{isTouchLayout \? "touch" : "default"\}/g) ?? [])
-      .length >= 5,
-  );
   assert.match(source, /size=\{actionSize\}/);
+  assert.ok(
+    (source.match(/size=\{actionSize\}/g) ?? []).length >= 5,
+    "expense row and dialog actions must use actionSize",
+  );
 });

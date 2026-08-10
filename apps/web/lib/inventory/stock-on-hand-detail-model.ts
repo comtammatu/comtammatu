@@ -184,5 +184,5 @@ export function stockMovementReferenceHref({
     return `/inventory/transfers?transferId=${movement.transferId}&mode=view`;
   }
   if (movement.issueId != null) return `/inventory/consumption/${movement.issueId}`;
-  return `/inventory/reports?branchId=${branchId}`;
+  return `/inventory/reports?branch=${branchId}`;
 }

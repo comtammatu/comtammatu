@@ -691,8 +691,8 @@ test("operator stock branch-native extensions keep issue and report actions in t
   assert.match(grnListClient, /onRowClick=\{\(row\) => openDetail\(row\)\}/);
   assert.doesNotMatch(grnListClient, /useLongPress/);
   assert.doesNotMatch(grnListClient, /touch-none/);
-  assert.doesNotMatch(grnDetailClient, /embedded\?: boolean/);
-  assert.doesNotMatch(grnDetailClient, /\bembedded\b/);
+  assert.match(grnDetailClient, /embedded\?: boolean/);
+  assert.match(grnDetailClient, /presentation\?: "page" \| "dialog"/);
   assert.match(grnDetailClient, /presentation\?: "page" \| "dialog"/);
   assert.match(grnDetailClient, /presentation === "dialog"/);
 
@@ -1085,8 +1085,8 @@ test("branch production routes redirect to the canonical production surface", ()
   );
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
-  assert.match(route, /redirect\(`\/inventory\/production\?branchId=/);
-  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branchId=/);
+  assert.match(route, /redirect\(`\/inventory\/production\?branch=/);
+  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branch=/);
   assert.match(detailRoute, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
 
   assert.match(

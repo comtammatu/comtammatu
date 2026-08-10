@@ -18,7 +18,7 @@ interface InventoryBranchFilterProps {
 }
 
 /**
- * Inventory Phạm vi chrome — dual-writes `branch` + legacy `branchId`.
+ * Inventory Phạm vi chrome — writes unified `?branch=` only.
  */
 export function InventoryBranchFilter({
   branches,
@@ -56,7 +56,6 @@ export function InventoryBranchFilter({
     <ControlSurfaceScopeControl
       sites={branches}
       aggregates={canSelectAll ? ["all"] : []}
-      dualInventoryBranchId
       fallback={effectiveFallback}
       allowedIds={allowedIds}
     />

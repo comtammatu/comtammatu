@@ -77,12 +77,12 @@ export async function StocktakeDetailPageContent({
 
   if (requestedBranchId !== sessionBranchId) {
     redirect(
-      `${routeBase}/${sessionId}?branchId=${sessionBranchId}${detailViewParam}`,
+      `${routeBase}/${sessionId}?branch=${sessionBranchId}${detailViewParam}`,
     );
   }
 
   if (stocktakeSession.status === "in_progress" && !isDetailView) {
-    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
+    redirect(`${routeBase}/${sessionId}/count?branch=${sessionBranchId}`);
   }
 
   const auditLogs = await fetchEntityAuditLogs(

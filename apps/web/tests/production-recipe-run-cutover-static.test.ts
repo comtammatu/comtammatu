@@ -106,7 +106,7 @@ test("branch production routes only redirect to the canonical surface", () => {
   const detail = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
   );
-  assert.match(list, /redirect\(`\/inventory\/production\?branchId=/);
-  assert.match(create, /\/inventory\/production\/new\?branchId=/);
+  assert.match(list, /redirect\(`\/inventory\/production\?branch=/);
+  assert.match(create, /\/inventory\/production\/new\?branch=/);
   assert.match(detail, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
 });

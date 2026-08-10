@@ -154,7 +154,7 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
       try {
         // ── confirm_ship (manager = warehouse_manager at Kho Tong) ─────────────
         await page.goto(
-          `/inventory/transfers/${transfer.id}?branchId=${fx.sourceBranchId}`,
+          `/inventory/transfers/${transfer.id}?branch=${fx.sourceBranchId}`,
         );
         await page.waitForLoadState("networkidle");
         if (await isAccessDenied(page)) {
@@ -187,7 +187,7 @@ test.describe("Transfer direction — branch-to-branch happy path", () => {
         //   2. stock_transfer_receive         (confirmed_receive → received)
         // So the status goes directly to "received" from the UI's perspective.
         await ownerPage.goto(
-          `/inventory/transfers/${transfer.id}?branchId=${fx.destinationBranchId}`,
+          `/inventory/transfers/${transfer.id}?branch=${fx.destinationBranchId}`,
         );
         await ownerPage.waitForLoadState("networkidle");
 

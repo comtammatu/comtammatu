@@ -93,7 +93,8 @@ test("warehouse can submit missing suppliers but accountant cannot approve incom
     /mode !== "allocate"[\s\S]*buildPurchaseOrderDrafts\([\s\S]*selected\.allocations/,
   );
   assert.doesNotMatch(demandClient, /unitPrice|Đơn giá/);
-  assert.match(purchaseActions, /purchase_demand_allocation_incomplete/);
+  const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
+  assert.match(rpcErrors, /purchase_demand_allocation_incomplete/);
 });
 
 test("submitted demands remain allocatable during cutover", () => {

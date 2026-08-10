@@ -161,7 +161,6 @@ function StockQtyCell({
 function branchHref(branchId: number, path: string): string {
   return withControlSurfaceBranchScope(path, String(branchId) as `${number}`, {
     prefixes: ["/inventory"],
-    dualInventoryBranchId: true,
   });
 }
 

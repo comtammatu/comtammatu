@@ -21,14 +21,14 @@ test("stock requests and transfers share job-based canonical hubs", () => {
   );
   const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
 
-  for (const label of [
-    "Phân loại",
-    "Đang xử lý",
-    "Yêu cầu",
-    "Cần giao",
-    "Cần nhận",
-  ]) {
-    assert.match(centralHub, new RegExp(label));
+  for (const key of [
+    "hubWorkKindAria",
+    "hubWorkRequest",
+    "hubWorkDispatch",
+    "hubWorkReceive",
+  ] as const) {
+    assert.match(centralHub, new RegExp(`copy\\.${key}`));
+    assert.match(inventoryMessages, new RegExp(`${key}:`));
   }
   assert.match(centralHub, /rawState === "active"[\s\S]*: "all"/);
   assert.match(centralHub, /header: "Phiếu"/);

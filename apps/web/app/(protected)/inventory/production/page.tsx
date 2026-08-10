@@ -88,7 +88,7 @@ export async function ProductionPageContent({
                 <Link
                   href={`/inventory/production/new${
                     scope.selectedBranchId
-                      ? `?branchId=${scope.selectedBranchId}`
+                      ? `?branch=${scope.selectedBranchId}`
                       : ""
                   }`}
                 />

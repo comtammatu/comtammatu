@@ -517,7 +517,7 @@ export function StockFulfillmentHubClient({
                       (item) => item.status === "pending",
                     )
                   }
-                  editHref={`/inventory/stock-requests/new?branchId=${selectedRequest.data.branchId}&requestId=${selectedRequest.data.id}`}
+                  editHref={`/inventory/stock-requests/new?branch=${selectedRequest.data.branchId}&requestId=${selectedRequest.data.id}`}
                 />
               ) : null
             }

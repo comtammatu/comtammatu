@@ -57,10 +57,10 @@ const ROUTES: ReadonlyArray<{
   { name: "kds-queue", path: "/br/1/kds" },
   {
     name: "inventory-dashboard",
-    path: "/inventory?branchId=1",
-    landsOn: "/inventory/stock?branchId=1",
+    path: "/inventory?branch=1",
+    landsOn: "/inventory/stock?branch=1",
   },
-  { name: "inventory-stock", path: "/inventory/stock?branchId=1" },
+  { name: "inventory-stock", path: "/inventory/stock?branch=1" },
   { name: "branch-home", path: "/br/1" },
 ];
 

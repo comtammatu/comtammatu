@@ -30,20 +30,18 @@ test("parse accepts office/company/branches aggregates", () => {
   }
 });
 
-test("withControlSurfaceBranchScope dual-writes inventory branchId", () => {
+test("withControlSurfaceBranchScope writes branch and strips legacy branchId", () => {
   assert.equal(
     withControlSurfaceBranchScope("/inventory/stock", "all", {
       prefixes: ["/inventory"],
-      dualInventoryBranchId: true,
     }),
     "/inventory/stock?branch=all",
   );
   assert.equal(
-    withControlSurfaceBranchScope("/inventory/stock", "7", {
+    withControlSurfaceBranchScope("/inventory/stock?branchId=7&q=rice", "7", {
       prefixes: ["/inventory"],
-      dualInventoryBranchId: true,
     }),
-    "/inventory/stock?branch=7&branchId=7",
+    "/inventory/stock?q=rice&branch=7",
   );
 });
 

@@ -19,12 +19,12 @@ const messages = readFileSync(
 test("employee list hides suspended staff until explicitly shown", () => {
   assert.match(
     source,
-    /const \[showInactive, setShowInactive\] = useState\(false\)/,
+    /const \[showInactive, setShowInactive\] = useState\([\s\S]*searchParams\.get\("inactive"\) === "1"/,
   );
   assert.match(source, /showInactive \|\| employee\.is_active/);
   assert.match(source, /<AppToolbar[\s\S]*filters=\{/);
   assert.doesNotMatch(source.slice(source.indexOf("<DataTable")), /\bfilters=/);
-  assert.match(source, /setShowInactive\(\(current\) => !current\)/);
+  assert.match(source, /setShowInactive\(next\)/);
   assert.doesNotMatch(source, /branchFilter|setBranchFilter/);
   assert.match(source, /const \[positionFilter, setPositionFilter\]/);
   assert.match(source, /const \[salaryFilter, setSalaryFilter\]/);

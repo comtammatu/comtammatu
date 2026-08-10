@@ -400,7 +400,7 @@ export function StocktakeDetailClient({
         <ResultsPhase
           lines={lines}
           varianceCount={varianceCount}
-          reviewHref={`${reportsBasePath}?branchId=${session.branch_id}`}
+          reviewHref={`${reportsBasePath}?branch=${session.branch_id}`}
         />
       )}
     </div>
@@ -453,7 +453,7 @@ export function StocktakeDetailClient({
           variant: statusBadge.variant,
         }}
         breadcrumb={
-          <AppBackLink href={`${routeBase}?branchId=${session.branch_id}`}>
+          <AppBackLink href={`${routeBase}?branch=${session.branch_id}`}>
             {tRoute("/inventory/stocktake")}
           </AppBackLink>
         }

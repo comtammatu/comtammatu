@@ -146,7 +146,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
               href: withControlSurfaceBranchScope(
                 item.href,
                 inventoryScopeToken,
-                { prefixes: ["/inventory"], dualInventoryBranchId: true },
+                { prefixes: ["/inventory"] },
               ),
             };
           }

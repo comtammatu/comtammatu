@@ -85,18 +85,12 @@ describe("Branch manager employee shift-task overrides", () => {
     assert.doesNotMatch(sheet, /savePositionTasks/);
   });
 
-  test("ADR 0022 records branch operate / position denied split", () => {
+  test("ADR 0022 records Company HR vs Branch people-ops split", () => {
     const adr = read(
       "docs/plan/adr/0022-hr-control-surface-information-architecture.md",
     );
-    assert.match(adr, /hr:manage_employee_shift_overrides/);
-    assert.match(
-      adr,
-      /Employee shift-task overrides[\s\S]*Operate own-branch employees/,
-    );
-    assert.match(
-      adr,
-      /Company position task templates[\s\S]*Denied/,
-    );
+    assert.match(adr, /Branch people ops[\s\S]*`\/br\/\[branchId\]\/team`/);
+    assert.match(adr, /Company HR[\s\S]*`\/hr\/\*`/);
+    assert.match(adr, /HR positions are not a second authorization layer/);
   });
 });

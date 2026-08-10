@@ -82,7 +82,7 @@ function StockIngredientDetail({
   data: StockIngredientDetailData;
 }) {
   const { ingredient } = data;
-  const listHref = `/inventory/stock?branchId=${data.branchId}`;
+  const listHref = `/inventory/stock?branch=${data.branchId}`;
 
   if (data.coreDataLoadFailed) {
     return (
@@ -123,14 +123,14 @@ function StockIngredientDetail({
           unitCost: wac,
         });
   const actionHrefs = {
-    receive: `/inventory/grn?branchId=${data.branchId}`,
-    transfer: `/inventory/transfers?branchId=${data.branchId}`,
-    stocktake: `/inventory/stocktake?branchId=${data.branchId}`,
+    receive: `/inventory/grn?branch=${data.branchId}`,
+    transfer: `/inventory/transfers?branch=${data.branchId}`,
+    stocktake: `/inventory/stocktake?branch=${data.branchId}`,
     issues: "/inventory/consumption",
     waste: withControlSurfaceBranchScope(
       "/inventory/waste/new",
       String(data.branchId) as `${number}`,
-      { prefixes: ["/inventory"], dualInventoryBranchId: true },
+      { prefixes: ["/inventory"] },
     ),
   };
 

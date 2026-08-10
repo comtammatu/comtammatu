@@ -131,7 +131,7 @@ $$;
 COMMENT ON FUNCTION public.trg_revoke_network_gate_bypass_on_pos_session_close() IS
   'System revoke of pos_shift network-gate bypass when bound pos_sessions leaves open. revoked_by NULL = automatic.';
 
-REVOKE ALL ON FUNCTION public.trg_revoke_network_gate_bypass_on_pos_session_close() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.trg_revoke_network_gate_bypass_on_pos_session_close() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.trg_revoke_network_gate_bypass_on_pos_session_close() TO service_role;
 
 CREATE TRIGGER revoke_network_gate_bypass_on_pos_session_close

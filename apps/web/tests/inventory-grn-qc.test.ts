@@ -15,17 +15,22 @@ test("GRN confirmation maps physical rejection evidence failures only", () => {
     "app/(protected)/inventory/grn-actions.ts",
     "utf8",
   );
+  const rpcErrors = readFileSync(
+    "lib/messages/inventory-rpc-errors.ts",
+    "utf8",
+  );
 
   for (const code of [
     "grn_qc_quantity_mismatch",
     "grn_qc_reason_required",
     "grn_qc_photo_required",
   ]) {
-    assert.match(action, new RegExp(code));
+    assert.match(rpcErrors, new RegExp(code));
   }
 
+  assert.match(action, /mapInventoryRpcFailure/);
   assert.doesNotMatch(
-    action,
+    rpcErrors,
     /grn_qc_price_reason_required|grn_qc_price_photo_required/,
   );
 });

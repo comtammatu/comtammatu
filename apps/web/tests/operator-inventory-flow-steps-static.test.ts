@@ -16,26 +16,17 @@ test("operator inventory work routes expose touch progress steps", () => {
   assert.match(component, /sm:hidden/);
   assert.match(component, /hidden gap-2 sm:grid/);
 
-  const routeClients = [
-    [
-      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
-      /grnCopy\.inspectionItemsTitle/,
-    ],
-    [
-      "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
-      /operatorFlow\.stocktakeListTitle/,
-    ],
-    [
-      "apps/web/app/(protected)/inventory/production-recipe-panel.tsx",
-      /operatorFlow\.productionRecipeTitle/,
-    ],
-  ] as const;
+  const grnReview = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/[id]/grn-review-operator-client.tsx",
+  );
+  assert.match(grnReview, /<OperatorFlowSteps/);
+  assert.match(grnReview, /grnCopy\.inspectionItemsTitle/);
 
-  for (const [path, marker] of routeClients) {
-    const source = read(path);
-    assert.match(source, /<OperatorFlowSteps/);
-    assert.match(source, marker);
-  }
+  const stocktakeWizard = read(
+    "apps/web/app/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard.tsx",
+  );
+  assert.doesNotMatch(stocktakeWizard, /OperatorFlowSteps/);
+  assert.match(stocktakeWizard, /@comtammatu\/ui\/components\/progress/);
 
   const branchOnHand = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/on-hand/branch-stock-on-hand-client.tsx",

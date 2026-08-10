@@ -142,6 +142,9 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   const expenseActions = read(
     "apps/web/app/(protected)/finance/expense-actions.ts",
   );
+  const expenseFormSchema = read(
+    "apps/web/app/(protected)/finance/expenses/expense-form-schema.ts",
+  );
   const expensesClient = read(
     "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
   );
@@ -153,8 +156,8 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
   assert.match(cockpit, /select\("subtotal, category"\)/);
   assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
   assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
-  assert.match(expensesClient, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
-  assert.match(expensesClient, /expenseCategoryGroups\(category\)/);
+  assert.match(expenseFormSchema, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(expensesClient, /categoryLabel\(row\.category\)/);
   assert.match(dataContract, /expenses\.subtotal` nhóm operating/);
   assert.doesNotMatch(dataContract, /category='bank_deposit'/);
 });

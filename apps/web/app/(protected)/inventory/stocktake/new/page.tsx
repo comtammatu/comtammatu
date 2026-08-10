@@ -45,7 +45,7 @@ export async function NewStocktakeSessionPageContent({
     );
     if (!flagEnabled) {
       redirect(
-        `${routeBase}?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
+        `${routeBase}?branch=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
       );
     }
   }

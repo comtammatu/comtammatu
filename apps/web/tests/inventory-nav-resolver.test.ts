@@ -164,7 +164,7 @@ test("inventory nav click targets preserve branch URL scope", () => {
     .find((item) => item.href === "/inventory/stock");
 
   assert.equal(stockItem?.href, "/inventory/stock");
-  assert.equal(stockItem?.linkHref, "/inventory/stock?branch=3&branchId=3");
+  assert.equal(stockItem?.linkHref, "/inventory/stock?branch=3");
   assert.match(
     appShellSource,
     /href=\{\s*subItem\.linkHref\s*\?\?\s*subItem\.href\s*\}/,

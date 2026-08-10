@@ -251,7 +251,7 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
   assert.match(
     client,
-    /value:\s*PRINT_JOB_ATTENTION_STATUS[\s\S]{0,100}?label:\s*PRINT_JOBS_COPY\.attentionStatus/,
+    /value=\{PRINT_JOB_ATTENTION_STATUS\}[\s\S]{0,120}?\{PRINT_JOBS_COPY\.attentionStatus\}/,
   );
 });
 

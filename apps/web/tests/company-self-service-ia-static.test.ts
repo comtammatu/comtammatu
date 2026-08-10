@@ -126,12 +126,10 @@ test("default post-login landing splits self_service from module-bound roles", (
   const redirect = read("packages/shared/src/auth/login-destination.ts");
   const navResolution = read("packages/shared/src/auth/nav-resolution.ts");
 
-  // Zero-module office employee lands on `/me`; accountant lands on Finance.
+  // Fail-closed landing: self_service gets /me; module-bound roles resolve via canAccess elsewhere.
   assert.match(redirect, /user_role === "self_service"[\s\S]*?return "\/me"/);
-  assert.match(
-    redirect,
-    /user_role === "accountant"[\s\S]*?return "\/finance"/,
-  );
+  assert.doesNotMatch(redirect, /user_role === "accountant"[\s\S]*?return "\/finance"/);
+  assert.match(redirect, /return "\/access-denied\?reason=role-unassigned"/);
 
   // `self_service` role home is the personal surface, not a control module.
   assert.match(

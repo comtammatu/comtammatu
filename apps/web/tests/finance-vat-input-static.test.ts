@@ -36,7 +36,7 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HÄÄ
   );
   assert.match(
     cockpit,
-    /location === "branches"[\s\S]*?outputInvoiceQuery = outputInvoiceQuery\.not\("branch_id", "is", null\)/,
+    /location === "branches"[\s\S]*?outputInvoiceQuery = applySalesBranchesFilter\([\s\S]*?"branch_id"/,
   );
   assert.match(
     readWeb("lib/messages/finance.ts"),

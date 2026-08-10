@@ -28,7 +28,6 @@ export function withInventoryBranchNavScope(
       ...item,
       linkHref: withControlSurfaceBranchScope(item.href, scope as `${number}` | "all", {
         prefixes: ["/inventory"],
-        dualInventoryBranchId: true,
       }),
     })),
   }));

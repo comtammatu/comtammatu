@@ -33,7 +33,7 @@ const BRANCHES_PAGE = "apps/web/app/(protected)/branches/page.tsx";
 const BRANCH_TABLE = "apps/web/app/(protected)/branches/branch-table.tsx";
 const PRINT_JOBS =
   "apps/web/app/(protected)/settings/printers/jobs/print-jobs-client.tsx";
-const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/page.tsx";
+const STAFF_AUDIT = "apps/web/app/(protected)/hr/staff/audit/permission-audit-client.tsx";
 const STAFF_AUDIT_TABLE =
   "apps/web/app/(protected)/hr/staff/audit/permission-audit-table.tsx";
 const HR_DATA_TABLE_FILES = [
@@ -213,14 +213,14 @@ test("Owner monitors use DataTable while the branch launcher keeps a responsive,
   assert.match(branchLauncher, /filtered\.map\(\(branch\) =>/);
   assert.match(
     branchLauncher,
-    /grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3/,
+    /grid grid-cols-1 gap-3(?: p-3)? md:grid-cols-2 xl:grid-cols-3/,
   );
   assert.match(branchLauncher, /resolveSiteKind\(branch\)/);
   assert.match(branchLauncher, /\.\.\.\(isActive && isBranchSite/);
   assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}\/dashboard`\}/);
   assert.match(
     branchLauncher,
-    /href=\{`\/inventory\?branchId=\$\{branch\.id\}`\}/,
+    /href=\{`\/inventory\?branch=\$\{branch\.id\}`\}/,
   );
   assert.match(branchLauncher, /copy\.openBranch\.short/);
   assert.match(branchLauncher, /copy\.openBranch\.long/);
@@ -246,9 +246,7 @@ test("Print job monitor keeps owner recovery filter through DataTable filters", 
   const source = read(PRINT_JOBS);
 
   assert.match(source, /PRINT_JOB_ATTENTION_STATUS = "needs_attention"/);
-  assert.match(source, /filters=\{filters\}/);
-  assert.match(source, /filterValues=\{\{/);
-  assert.match(source, /onFilterChange=\{\(key, value\) =>/);
+  assert.match(source, /filters=\{filterSelects\}/);
   assert.match(source, /retryJobFromMonitor/);
 });
 

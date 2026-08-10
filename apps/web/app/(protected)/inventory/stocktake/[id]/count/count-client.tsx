@@ -266,7 +266,7 @@ export function StocktakeCountClient({
             size="sm"
             render={
               <Link
-                href={`${routeBase}/${sessionId}?branchId=${branchId}&view=detail`}
+                href={`${routeBase}/${sessionId}?branch=${branchId}&view=detail`}
               />
             }
           >

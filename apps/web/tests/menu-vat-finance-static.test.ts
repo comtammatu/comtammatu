@@ -36,9 +36,10 @@ test("finance exposes input VAT invoices and supplier payments together", () => 
   const invoiceActions = read(
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
-  const invoiceClient = read(
-    "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx",
-  );
+  const invoiceClient = [
+    read("apps/web/app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx"),
+    read("apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx"),
+  ].join("\n");
   const invoiceRow = read(
     "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts",
   );

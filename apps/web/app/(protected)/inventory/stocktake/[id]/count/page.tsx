@@ -44,7 +44,7 @@ export async function StocktakeCountPageContent({
     notFound();
   }
   if (requestedBranchId !== sessionBranchId) {
-    redirect(`${routeBase}/${sessionId}/count?branchId=${sessionBranchId}`);
+    redirect(`${routeBase}/${sessionId}/count?branch=${sessionBranchId}`);
   }
 
   // Feature flag gate — route the counter to the pre-redesign detail screen when the flag is off.
@@ -55,7 +55,7 @@ export async function StocktakeCountPageContent({
   );
   if (!flagEnabled) {
     redirect(
-      `${routeBase}/${sessionId}?branchId=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
+      `${routeBase}/${sessionId}?branch=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
     );
   }
 

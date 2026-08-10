@@ -250,8 +250,9 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(contracts, /available_to_sell/);
   assert.match(contracts, /manual_limit_quantity/);
   assert.match(guestUi, /branch_menu_limit_availability/);
-  assert.match(guestUi, /primary \(terracotta\)/);
-  assert.match(guestUi, /no\s+per-item category eyebrow/);
+  assert.match(guestUi, /primary `Hoá đơn` \(terracotta/);
+  assert.match(guestUi, /sticky category pills/);
+  assert.match(guestUi, /\*\*No Tabs\*\*/);
   assert.doesNotMatch(guestUi, /fixed lower-right/);
 });
 

@@ -18,7 +18,7 @@ export default async function TransferDetailPage({
   const listHref =
     data.userBranchId == null
       ? "/inventory/transfers"
-      : `/inventory/transfers?branchId=${data.userBranchId}`;
+      : `/inventory/transfers?branch=${data.userBranchId}`;
 
   return (
     <TransferDetailClient

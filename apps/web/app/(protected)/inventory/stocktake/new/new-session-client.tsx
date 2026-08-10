@@ -116,7 +116,7 @@ export function NewStocktakeSessionClient({
         ),
       );
       router.push(
-        `${routeBase}/${res.data.sessionId}/count?branchId=${branchId}`,
+        `${routeBase}/${res.data.sessionId}/count?branch=${branchId}`,
       );
     });
   }

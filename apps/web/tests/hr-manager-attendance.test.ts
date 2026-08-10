@@ -212,7 +212,7 @@ test("attendance and leave approval data stay in their respective tabs", () => {
   );
   assert.match(
     attendanceTableSource,
-    /key: "index",\s*header: "#"[\s\S]*key: "employee",\s*header: "Họ tên"[\s\S]*key: "workdays",\s*header: "Số ngày công"[\s\S]*key: "work_hours",\s*header: "Số giờ công"/,
+    /key: "index",\s*header: "#"[\s\S]*key: "employee",\s*header: attendanceCopy\.fullName[\s\S]*key: "workdays",\s*header: attendanceCopy\.summaryWorkdaysCountHeader[\s\S]*key: "work_hours",\s*header: attendanceCopy\.summaryWorkHoursCountHeader/,
   );
   assert.match(
     attendanceTableSource,

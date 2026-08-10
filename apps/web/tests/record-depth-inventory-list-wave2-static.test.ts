@@ -9,12 +9,18 @@ function read(path: string): string {
 
 const financeClient =
   "app/(protected)/finance/supplier-invoices/supplier-invoices-client.tsx";
+const financeListUi =
+  "app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx";
 const financeModel =
   "app/(protected)/finance/supplier-invoices/supplier-invoice-list-model.ts";
 const financeRow =
   "app/(protected)/finance/supplier-invoices/supplier-invoice-row.ts";
 const inventoryRedirect =
   "app/(protected)/inventory/supplier-invoices/page.tsx";
+
+function readFinanceInvoiceListModule(): string {
+  return `${read(financeClient)}\n${read(financeListUi)}`;
+}
 
 test("Wave 2 supplier invoice client lives under Finance, not Inventory", () => {
   assert.equal(existsSync(join(process.cwd(), financeClient)), true);
@@ -72,7 +78,7 @@ test("Wave 2 Inventory LIST clients do not import Popover as a record view", () 
     assert.doesNotMatch(source, /<Popover[\s>]/, path);
   }
 
-  const financeSource = read(financeClient);
+  const financeSource = readFinanceInvoiceListModule();
   assert.match(financeSource, /const filterPopover = \(\s*<Popover>/);
   assert.match(financeSource, /filters=\{[\s\S]*\{filterPopover\}[\s\S]*\}/);
 });

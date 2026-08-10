@@ -44,7 +44,7 @@ test("warehouse creates demand and accountant allocation creates POs with GRN dr
   );
   assert.match(nav, /\/inventory\/purchase-orders/);
   assert.doesNotMatch(nav, /href: "\/inventory\/purchase-requests"/);
-  assert.match(nav, /label: "Mua hàng"/);
+  assert.match(nav, /tNav\("purchaseOrders", "navigation"\)/);
   assert.match(actions, /savePurchaseDemand/);
   assert.match(actions, /savePurchaseDemandAllocations/);
   assert.match(actions, /reviewPurchaseDemand/);
@@ -139,7 +139,8 @@ test("warehouse can edit an unallocated pending demand without reopening draft",
   );
   assert.match(client, /editingPendingDemand/);
   assert.match(client, /ACTIONS_VI\.saveChanges/);
-  assert.match(actions, /purchase_demand_allocation_started/);
+  const rpcErrors = read("apps/web/lib/messages/inventory-rpc-errors.ts");
+  assert.match(rpcErrors, /purchase_demand_allocation_started/);
   assert.match(
     migration,
     /status NOT IN \([\s\S]*?'draft',[\s\S]*?'submitted',[\s\S]*?'pending_allocation'[\s\S]*?\)/,
@@ -196,8 +197,9 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     client,
     /<span className="font-mono font-medium">\{row\.code\}<\/span>/,
   );
-  assert.match(client, /params\.set\("poId", String\(poId\)\)/);
-  assert.match(client, /params\.set\("mode", nextMode\)/);
+  assert.match(client, /overlay\.patchOverlay/);
+  assert.match(client, /poId,/);
+  assert.match(client, /mode: nextMode/);
   assert.match(client, /<AppDialog/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);

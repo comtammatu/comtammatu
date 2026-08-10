@@ -162,7 +162,7 @@ test("bank evidence must be removed before a VietQR payment becomes cash", () =>
   assert.match(bankEvidenceGuardMigration, /payment_has_bank_evidence/);
   assert.match(
     financeModuleDoc,
-    /changing the payment method never rewrites a[\s\S]*?`bank_transactions` movement/,
+    /method change never rewrites `bank_transactions`/,
   );
 });
 
@@ -212,6 +212,6 @@ test("Finance admits accountant per D076 (temporary until ADR 0015)", () => {
   assert.match(staffRoles, /central_kitchen_lead/);
   assert.doesNotMatch(staffRoles, /\boffice\b/);
   assert.match(financeModuleDoc, /authenticated `accountant`/);
-  assert.match(financeModuleDoc, /must not silently map `office`/);
+  assert.match(financeModuleDoc, /Do not map `office`/);
   assert.match(financeModuleDoc, /period-close/i);
 });

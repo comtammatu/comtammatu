@@ -133,7 +133,7 @@ test.describe("GRN list-first document dialog", () => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await requireOwnerSession(
         page,
-        `/inventory/grn?branchId=${centralSupplyId}`,
+        `/inventory/grn?branch=${centralSupplyId}`,
       );
 
       const rowCode = page.getByText(/^GRN-/).first();
@@ -158,7 +158,7 @@ test.describe("GRN list-first document dialog", () => {
 
       await page.goBack();
       await expect(page).toHaveURL(
-        `/inventory/grn?branchId=${centralSupplyId}`,
+        `/inventory/grn?branch=${centralSupplyId}`,
       );
       await expect(page.getByRole("dialog")).toBeHidden();
       await expect(rowCode).toBeVisible();

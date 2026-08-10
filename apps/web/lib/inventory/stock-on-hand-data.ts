@@ -120,7 +120,7 @@ export async function loadStockOnHandPageData({
         withControlSurfaceBranchScope(
           "/inventory/stock",
           String(scope.defaultBranchId) as `${number}`,
-          { prefixes: ["/inventory"], dualInventoryBranchId: true },
+          { prefixes: ["/inventory"] },
         ),
       );
     }
