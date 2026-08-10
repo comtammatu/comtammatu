@@ -4,7 +4,7 @@ export default async function ConsumptionPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
     view?: string | string[];

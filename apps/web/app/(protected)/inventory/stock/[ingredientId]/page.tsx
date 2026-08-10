@@ -73,7 +73,7 @@ export type IngredientRow = {
 
 interface StockIngredientDetailPageContentProps {
   ingredientId: number;
-  searchParams?: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
 }
 
 function StockIngredientDetail({
@@ -470,7 +470,6 @@ export async function StockIngredientDetailPageContent({
   const params = searchParams ? await searchParams : {};
   const data = await loadStockIngredientDetailData({
     ingredientId,
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
 
@@ -482,7 +481,7 @@ export default async function StockIngredientDetailPage({
   searchParams,
 }: {
   params: Promise<{ ingredientId: string }>;
-  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { ingredientId: rawIngredientId } = await params;
   const ingredientId = Number(rawIngredientId);

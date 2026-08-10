@@ -10,7 +10,7 @@ import { StocktakeListClient } from "./stocktake-list-client";
 import { getBranchSiteDisplayName } from "../_lib/branch-site-labels";
 
 interface StocktakePageContentProps {
-  searchParams?: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
 }
@@ -27,7 +27,6 @@ export async function StocktakePageContent({
   // role-gated filters). Collapses to claims.branch_id for branch-scoped roles.
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();
@@ -59,7 +58,7 @@ export async function StocktakePageContent({
 export default async function StocktakePage({
   searchParams,
 }: {
-  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   return <StocktakePageContent searchParams={searchParams} />;
 }

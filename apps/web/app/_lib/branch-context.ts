@@ -198,10 +198,10 @@ export interface ListScopeResolution extends BranchScope {
  * surfaces (D058 W3b). Embedded callers pass the validated `routeBranchId`
  * from the URL segment; it always wins, and a mismatch against the
  * resolved scope means the branch is not allowed for this user — the
- * caller must `notFound()`. Owner surface callers pass raw `?branch=` /
- * legacy `?branchId=` query values; they survive ONLY as a display
- * filter/default — never as write authority. Writes MUST re-derive their
- * own scope from claims/RLS/RPC permission checks, not from this resolution.
+ * caller must `notFound()`. Owner surface callers pass raw `?branch=`
+ * query values; they survive ONLY as a display filter/default — never as
+ * write authority. Writes MUST re-derive their own scope from claims/RLS/RPC
+ * permission checks, not from this resolution.
  */
 export async function resolveListScope(
   supabase: unknown,
@@ -209,8 +209,7 @@ export async function resolveListScope(
   branches: readonly OperatorBranchOption[],
   options: {
     routeBranchId?: number;
-    queryBranchId?: string | string[] | undefined;
-    /** Unified Control Surface `?branch=` (preferred over queryBranchId). */
+    /** Unified Control Surface `?branch=`. */
     queryBranch?: string | string[] | undefined;
     tenantWideRoles: readonly StaffRole[];
   },
@@ -229,14 +228,10 @@ export async function resolveListScope(
     };
   }
 
-  const token = parseControlSurfaceBranchScope(
-    options.queryBranch,
-    options.queryBranchId,
-    {
-      allowedIds: branches.map((branch) => branch.id),
-      fallback: "all",
-    },
-  );
+  const token = parseControlSurfaceBranchScope(options.queryBranch, {
+    allowedIds: branches.map((branch) => branch.id),
+    fallback: "all",
+  });
   // Inventory list engine only distinguishes all vs concrete site.
   // office/company/branches aggregate tokens map to all-sites read.
   const requestAll =

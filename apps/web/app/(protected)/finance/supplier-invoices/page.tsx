@@ -19,7 +19,6 @@ export default async function FinanceSupplierInvoicesPage({
 }: {
   searchParams: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     invoiceId?: string | string[];
     grnId?: string | string[];
     mode?: string | string[];
@@ -74,8 +73,7 @@ export default async function FinanceSupplierInvoicesPage({
 
   const params = await searchParams;
   const branchFilter =
-    (await resolveRequestedBranchId(params.branchId ?? params.branch)) ??
-    undefined;
+    (await resolveRequestedBranchId(params.branch)) ?? undefined;
   const filters = parseSupplierInvoiceListFilters(params);
   const rawInvoiceId = Array.isArray(params.invoiceId)
     ? params.invoiceId[0]

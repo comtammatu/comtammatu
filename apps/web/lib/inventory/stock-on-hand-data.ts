@@ -64,7 +64,6 @@ type StockIngredientRow = {
 
 interface LoadStockOnHandPageDataOptions {
   includeValuation?: boolean;
-  queryBranchId?: string | string[];
   queryBranch?: string | string[];
   routeBranchId?: number;
 }
@@ -99,14 +98,12 @@ function storageTemp(type: string | null): string | null {
 
 export async function loadStockOnHandPageData({
   includeValuation = true,
-  queryBranchId,
   queryBranch,
   routeBranchId,
 }: LoadStockOnHandPageDataOptions = {}): Promise<StockOnHandPageData> {
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
     queryBranch,
   });
   if (scope.outOfScope) notFound();

@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface StocktakeCountPageContentProps {
   stocktakeId: number;
-  searchParams?: Promise<{ branchId?: string | string[] }>;
+  searchParams?: Promise<{ branch?: string | string[] }>;
   routeBranchId?: number;
   routeBase?: string;
 }
@@ -39,7 +39,7 @@ export async function StocktakeCountPageContent({
   if (!sessionRow) notFound();
   const sessionBranchId = sessionRow.branch_id as number;
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
   if (routeBranchId != null && routeBranchId !== sessionBranchId) {
     notFound();
   }
@@ -118,7 +118,7 @@ export default async function StocktakeCountPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { id } = await params;
   return (

@@ -53,7 +53,7 @@ type MenuItemRow = {
 export default async function MenuRecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { supabase, claims } = await loadAuthState();
   if (!INVENTORY_CATALOG_ROLES.includes(claims.user_role)) {
@@ -64,7 +64,7 @@ export default async function MenuRecipesPage({
     );
   }
   const params = await searchParams;
-  const requested = await resolveRequestedBranchId(params.branchId);
+  const requested = await resolveRequestedBranchId(params.branch);
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchId = scope.selectedBranchId;
 

@@ -97,7 +97,6 @@ export async function loadGrnListPageData(
   const { supabase, claims } = auth;
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId: params.routeBranchId,
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();

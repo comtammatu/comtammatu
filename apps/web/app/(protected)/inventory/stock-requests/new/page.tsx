@@ -33,7 +33,6 @@ export default async function CentralKitchenStockRequestNewPage({
 }: {
   searchParams: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     requestId?: string | string[];
   }>;
 }) {
@@ -47,7 +46,6 @@ export default async function CentralKitchenStockRequestNewPage({
     redirect("/inventory");
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: query.branchId,
     queryBranch: query.branch,
   });
   const branchId = scope.selectedBranchId;

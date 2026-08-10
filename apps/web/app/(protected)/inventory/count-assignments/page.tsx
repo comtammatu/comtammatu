@@ -20,7 +20,6 @@ const ALL_SHIFTS_PARAM = "all";
 interface CountAssignmentsPageContentProps {
   searchParams?: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     locationId?: string | string[];
     shiftId?: string | string[];
     assignmentId?: string | string[];
@@ -68,7 +67,6 @@ export async function CountAssignmentsPageContent({
   const rosterClient = createServiceClient();
 
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
 
@@ -296,7 +294,6 @@ export default async function CountAssignmentsPage({
 }: {
   searchParams?: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     locationId?: string | string[];
     shiftId?: string | string[];
     assignmentId?: string | string[];

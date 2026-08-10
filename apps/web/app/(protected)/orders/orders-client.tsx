@@ -6,6 +6,10 @@ import { useState, useTransition, useMemo, useEffect, useRef, useCallback } from
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import {
+  getControlSurfaceScopeBranchId,
+  resolveScopeFromSearchParams,
+} from "@/lib/control-surface-scope";
 import { ShoppingBag as IconShoppingBag, X as IconX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDateTime } from "@comtammatu/shared/time";
@@ -230,9 +234,12 @@ export function OrdersClient({
   const [status, setStatus] = useState(
     () => searchParams.get("status") ?? "",
   );
-  const [branchId, setBranchId] = useState(
-    () => searchParams.get("branchId") ?? "",
-  );
+  const [branchId, setBranchId] = useState(() => {
+    const id = getControlSurfaceScopeBranchId(
+      resolveScopeFromSearchParams(searchParams, { fallback: "all" }),
+    );
+    return id != null ? String(id) : "";
+  });
   const alertFilter = parseAlertFilter(searchParams.get("alert"));
   const notifiedRef = useRef<Set<string>>(new Set());
 
@@ -252,7 +259,10 @@ export function OrdersClient({
     setDateFrom(searchParams.get("dateFrom") ?? "");
     setDateTo(searchParams.get("dateTo") ?? "");
     setStatus(searchParams.get("status") ?? "");
-    setBranchId(searchParams.get("branchId") ?? "");
+    const id = getControlSurfaceScopeBranchId(
+      resolveScopeFromSearchParams(searchParams, { fallback: "all" }),
+    );
+    setBranchId(id != null ? String(id) : "");
   }, [searchParams]);
 
   const setAlertFilter = useCallback(
@@ -406,7 +416,9 @@ export function OrdersClient({
       writeListFilterParam(nextParams, "dateFrom", dateFrom);
       writeListFilterParam(nextParams, "dateTo", dateTo);
       writeListFilterParam(nextParams, "status", status);
-      writeListFilterParam(nextParams, "branchId", branchId);
+      if (branchId) nextParams.set("branch", branchId);
+      else nextParams.delete("branch");
+      nextParams.delete("branchId");
     });
   }
 
@@ -419,6 +431,7 @@ export function OrdersClient({
       nextParams.delete("dateFrom");
       nextParams.delete("dateTo");
       nextParams.delete("status");
+      nextParams.delete("branch");
       nextParams.delete("branchId");
       nextParams.delete("alert");
     });

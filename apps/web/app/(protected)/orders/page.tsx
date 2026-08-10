@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchActiveBranches, resolveListScope } from "@/_lib/branch-context";
+import {
+  getControlSurfaceScopeBranchId,
+  parseControlSurfaceBranchScope,
+} from "@/lib/control-surface-scope";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersPageBody } from "./orders-page-body";
@@ -29,7 +33,6 @@ function parseDateParam(raw: string | undefined): string | undefined {
 interface OrdersPageContentProps {
   searchParams?: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     orderId?: string | string[];
     dateFrom?: string | string[];
     dateTo?: string | string[];
@@ -51,7 +54,6 @@ export async function OrdersPageContent({
   const dateFrom = parseDateParam(firstParam(params.dateFrom));
   const dateTo = parseDateParam(firstParam(params.dateTo));
   const status = firstParam(params.status)?.trim() || undefined;
-  const queryBranchId = parsePositiveInt(firstParam(params.branchId));
 
   // Scope resolution only applies to embedded (routeBranchId) callers: the
   // engine always resolves a concrete default branch, which would narrow the
@@ -61,14 +63,18 @@ export async function OrdersPageContent({
     const branches = await fetchActiveBranches(supabase, claims.tenant_id);
     const scope = await resolveListScope(supabase, claims, branches, {
       routeBranchId,
-      queryBranchId: params.branchId,
       queryBranch: params.branch,
       tenantWideRoles: ["owner"],
     });
     if (scope.outOfScope) notFound();
     branchFilter = scope.selectedBranchId ?? undefined;
-  } else if (queryBranchId != null) {
-    branchFilter = queryBranchId;
+  } else {
+    branchFilter =
+      getControlSurfaceScopeBranchId(
+        parseControlSurfaceBranchScope(params.branch, {
+          fallback: "all",
+        }),
+      ) ?? undefined;
   }
 
   const listFilters = {
@@ -134,7 +140,7 @@ export default async function OrdersPage({
   searchParams,
 }: {
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     orderId?: string | string[];
     dateFrom?: string | string[];
     dateTo?: string | string[];

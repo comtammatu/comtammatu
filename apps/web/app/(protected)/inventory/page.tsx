@@ -119,11 +119,11 @@ async function resolveInventoryHomeFlags(
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const auth = await loadAuthState();
   const params = await searchParams;
-  const branchId = await resolveRequestedBranchId(params.branchId);
+  const branchId = await resolveRequestedBranchId(params.branch);
   const flags = await resolveInventoryHomeFlags(auth.claims.user_role, auth);
   const groups = withInventoryBranchNavScope(
     resolveInventoryNav({

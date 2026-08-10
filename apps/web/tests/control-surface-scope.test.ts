@@ -8,17 +8,24 @@ import {
   withControlSurfaceBranchScope,
 } from "../app/lib/control-surface-scope";
 
-test("parse prefers branch over legacy branchId", () => {
+test("parse reads only unified branch token", () => {
   assert.equal(
-    parseControlSurfaceBranchScope("all", "3", { fallback: "all" }),
+    parseControlSurfaceBranchScope("all", { fallback: "all" }),
     "all",
   );
   assert.equal(
-    parseControlSurfaceBranchScope(undefined, "3", {
+    parseControlSurfaceBranchScope("3", {
       allowedIds: [3],
       fallback: "all",
     }),
     "3",
+  );
+  assert.equal(
+    parseControlSurfaceBranchScope(undefined, {
+      allowedIds: [3],
+      fallback: "all",
+    }),
+    "all",
   );
 });
 
@@ -30,7 +37,7 @@ test("parse accepts office/company/branches aggregates", () => {
   }
 });
 
-test("withControlSurfaceBranchScope writes branch and strips legacy branchId", () => {
+test("withControlSurfaceBranchScope writes branch and strips leftover branchId", () => {
   assert.equal(
     withControlSurfaceBranchScope("/inventory/stock", "all", {
       prefixes: ["/inventory"],

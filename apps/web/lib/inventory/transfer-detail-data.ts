@@ -16,7 +16,6 @@ import type { TransferDetail } from "./transfer-detail-model";
 interface LoadTransferDetailPageDataOptions {
   transferId: number;
   routeBranchId?: number;
-  queryBranchId?: string | string[];
   queryBranch?: string | string[];
   includeAudit?: boolean;
   includeCorrections?: boolean;
@@ -33,7 +32,6 @@ export interface TransferDetailPageData {
 export async function loadTransferDetailPageData({
   transferId,
   routeBranchId,
-  queryBranchId,
   queryBranch,
   includeAudit = true,
   includeCorrections = true,
@@ -49,7 +47,6 @@ export async function loadTransferDetailPageData({
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
     routeBranchId,
-    queryBranchId,
     queryBranch,
   });
   const scopedBranchId = scope.selectedBranchId;

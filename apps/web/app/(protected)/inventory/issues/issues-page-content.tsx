@@ -117,7 +117,6 @@ const SCOPE_CONFIG: Record<IssuesScope, ScopeConfig> = {
 
 interface IssuesPageContentProps {
   searchParams?: Promise<{
-    branchId?: string | string[];
     branch?: string | string[];
     endDate?: string | string[];
     startDate?: string | string[];
@@ -140,7 +139,6 @@ export async function IssuesPageContent({
   const hasRecordedDateFilter = startDate != null || endDate != null;
   const { supabase, claims } = await loadAuthState();
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
   if (scope.outOfScope) notFound();

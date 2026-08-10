@@ -19,7 +19,6 @@ export default async function TransfersPage({
 }: {
   searchParams: Promise<{
     branch?: string | string[];
-    branchId?: string | string[];
     requestId?: string | string[];
     transferId?: string | string[];
   }>;
@@ -34,7 +33,6 @@ export default async function TransfersPage({
     redirect("/inventory");
   }
   const scope = await resolveInventoryListScope(supabase, claims, {
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
   const actorKind =
@@ -77,7 +75,6 @@ export default async function TransfersPage({
     Number.isInteger(transferId) && transferId > 0
       ? loadTransferDetailPageData({
           transferId,
-          queryBranchId: params.branchId,
           queryBranch: params.branch,
         })
       : Promise.resolve(null);

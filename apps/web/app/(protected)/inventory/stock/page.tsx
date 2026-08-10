@@ -2,7 +2,7 @@ import { loadStockOnHandPageData } from "@lib/inventory/stock-on-hand-data";
 import { StockClient } from "./stock-client";
 
 interface StockPageProps {
-  searchParams: Promise<{ branch?: string | string[]; branchId?: string | string[] }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }
 
 export default async function StockPage({ searchParams }: StockPageProps) {
@@ -16,7 +16,6 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     summary,
     totalValue,
   } = await loadStockOnHandPageData({
-    queryBranchId: params.branchId,
     queryBranch: params.branch,
   });
 

@@ -44,13 +44,9 @@ function parseToken(
   return String(branchId) as ControlSurfaceBranchScope;
 }
 
-/**
- * Parse unified `branch` (preferred). Legacy inventory `branchId` remains
- * readable for notification SQL / bookmarks until those writers migrate.
- */
+/** Parse unified Control Surface `?branch=` scope. */
 export function parseControlSurfaceBranchScope(
   rawBranch: string | string[] | null | undefined,
-  rawBranchId?: string | string[] | null | undefined,
   options?: {
     allowedIds?: readonly number[];
     fallback?: ControlSurfaceBranchScope;
@@ -60,10 +56,6 @@ export function parseControlSurfaceBranchScope(
   const primary = firstRaw(rawBranch);
   if (primary) {
     return parseToken(primary, options?.allowedIds) ?? fallback;
-  }
-  const legacy = firstRaw(rawBranchId);
-  if (legacy) {
-    return parseToken(legacy, options?.allowedIds) ?? fallback;
   }
   return fallback;
 }
@@ -75,11 +67,7 @@ export function resolveScopeFromSearchParams(
     fallback?: ControlSurfaceBranchScope;
   },
 ): ControlSurfaceBranchScope {
-  return parseControlSurfaceBranchScope(
-    searchParams.get("branch"),
-    searchParams.get("branchId"),
-    options,
-  );
+  return parseControlSurfaceBranchScope(searchParams.get("branch"), options);
 }
 
 export function getControlSurfaceScopeBranchId(
@@ -100,10 +88,11 @@ const DEFAULT_SCOPE_PREFIXES = [
   "/inventory",
   "/hr",
   "/finance",
+  "/orders",
 ] as const;
 
 /**
- * Attach unified `?branch=` and strip legacy inventory `branchId` query.
+ * Attach unified `?branch=` and strip leftover inventory `branchId` query.
  */
 export function withControlSurfaceBranchScope(
   href: string,

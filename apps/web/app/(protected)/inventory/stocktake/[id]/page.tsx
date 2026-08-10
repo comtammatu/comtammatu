@@ -7,7 +7,7 @@ import { StocktakeDetailClient } from "./stocktake-detail-client";
 interface StocktakeDetailPageContentProps {
   stocktakeId: number;
   searchParams?: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     error?: string;
     view?: string;
   }>;
@@ -65,7 +65,7 @@ export async function StocktakeDetailPageContent({
     }>;
   };
   const sp = searchParams ? await searchParams : {};
-  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branchId);
+  const requestedBranchId = routeBranchId ?? parseBranchIdParam(sp.branch);
   const sessionBranchId = stocktakeSession.branch_id;
   const isDetailView =
     sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";
@@ -108,7 +108,7 @@ export default async function StocktakeDetailPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
-    branchId?: string | string[];
+    branch?: string | string[];
     error?: string;
     view?: string;
   }>;

@@ -25,8 +25,8 @@ export type InventoryListScope = ListScopeResolution;
 /**
  * Single scope-read path for shared inventory `*PageContent` list/report
  * surfaces (D058 W3b). `routeBranchId` (validated URL segment, embedded
- * runtime) always wins over query `?branch=` / legacy `?branchId=`. Callers
- * apply exactly one guard: `if (scope.outOfScope) notFound();`.
+ * runtime) always wins over query `?branch=`. Callers apply exactly one
+ * guard: `if (scope.outOfScope) notFound();`.
  */
 export const resolveInventoryListScope = cache(
   async (
@@ -34,7 +34,6 @@ export const resolveInventoryListScope = cache(
     claims: JwtClaims,
     options: {
       routeBranchId?: number;
-      queryBranchId?: string | string[] | undefined;
       queryBranch?: string | string[] | undefined;
     },
   ): Promise<InventoryListScope> => {

@@ -361,7 +361,7 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
   assert.doesNotMatch(branchDetailSource, /\bStockIngredientDetail\b/);
   assert.doesNotMatch(branchDetailSource, /\$\{stockBasePath\}\/receive/);
   assert.match(stockPageSource, /loadStockOnHandPageData/);
-  assert.match(stockPageSource, /queryBranchId: params\.branchId/);
+  assert.match(stockPageSource, /queryBranch: params.branch/);
   assert.doesNotMatch(
     stockPageSource,
     /routeBranchId\?: number|branchStockBasePath|embedded/,
