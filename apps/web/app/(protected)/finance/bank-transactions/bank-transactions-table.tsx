@@ -283,7 +283,7 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
     )}`;
     const reference = formatProviderRef(row.payment.providerRef);
     return (
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-1">
         <p className="line-clamp-2 text-sm font-medium">{content}</p>
         {reference !== "—" ? (
           <span className="truncate font-mono text-xs text-muted-foreground">
@@ -302,7 +302,7 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
   );
 
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-1">
       {isLongContent ? (
         <Tooltip>
           <TooltipTrigger
