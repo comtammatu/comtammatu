@@ -58,8 +58,10 @@ test("every shared primitive has an importer", () => {
       .map((name) => ({ dir: "lib", name, stem: name.slice(0, -3) })),
   ];
 
-  const orphans = primitives.filter(({ dir, stem }) => {
-    const importers = spawnSync(
+  const filesWithImport = (stem: string, dir: string): string => {
+    const pattern = `from ["'][^"']*/${stem}["']`;
+    const exclude = `packages/ui/src/${dir}/${stem}.*`;
+    const rg = spawnSync(
       "rg",
       [
         "--files-with-matches",
@@ -68,15 +70,54 @@ test("every shared primitive has an importer", () => {
         "--glob",
         "!.next",
         "--glob",
-        `!packages/ui/src/${dir}/${stem}.*`,
-        `from ["'][^"']*/${stem}["']`,
+        `!${exclude}`,
+        pattern,
         "apps",
         "packages",
       ],
       { cwd: repoRoot, encoding: "utf8" },
     );
-    return (importers.stdout ?? "").trim().length === 0;
-  });
+    // rg status 0 = matches, 1 = none; missing binary or other errors must not
+    // look like "no importers" (CI runners often lack ripgrep on PATH).
+    if (!rg.error && (rg.status === 0 || rg.status === 1)) {
+      return (rg.stdout ?? "").trim();
+    }
+
+    const git = spawnSync(
+      "git",
+      [
+        "grep",
+        "-l",
+        "-E",
+        "--untracked",
+        pattern,
+        "--",
+        "apps",
+        "packages",
+        `:(exclude)${exclude}`,
+        ":(exclude)*/node_modules/*",
+        ":(exclude)*/.next/*",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    if (!git.error && (git.status === 0 || git.status === 1)) {
+      return (git.stdout ?? "").trim();
+    }
+
+    throw new Error(
+      `importer search failed for ${stem}: ${
+        rg.error?.message ??
+        rg.stderr ??
+        git.error?.message ??
+        git.stderr ??
+        "unknown search failure"
+      }`,
+    );
+  };
+
+  const orphans = primitives.filter(
+    ({ dir, stem }) => filesWithImport(stem, dir).length === 0,
+  );
 
   assert.deepEqual(
     orphans.map(({ dir, name }) => `packages/ui/src/${dir}/${name}`),
