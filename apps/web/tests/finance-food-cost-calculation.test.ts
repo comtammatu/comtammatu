@@ -132,5 +132,5 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.doesNotMatch(page, /meta=\{messages\.finance\.basic\.periodMeta/);
   assert.match(client, /<FilterBar/);
   assert.doesNotMatch(client, /description=\{foodCopy\.tableDescription\}/);
-  assert.match(client, /hide=\{\["branch", "compare", "granularity"\]\}/);
+  assert.match(client, /hide=\{\["compare", "granularity"\]\}/);
 });

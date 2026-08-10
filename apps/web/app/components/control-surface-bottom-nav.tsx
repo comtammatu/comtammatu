@@ -51,7 +51,7 @@ function selectBottomNavItems(
 /**
  * Mobile bottom navbar for control_surface (Quản trị) routes. Bar destinations are the
  * active module's deep nav (tier-2), falling back to primary modules when no
- * deep nav exists. The leading "Mô-đun" tab opens the single sidebar drawer.
+ * deep nav exists. The leading "Phân hệ" tab opens the single sidebar drawer.
  * Must render inside `SidebarProvider` (AppShell does this).
  */
 export function ControlSurfaceBottomNav({

@@ -31,7 +31,7 @@ const EXCLUDED_PATH_SEGMENTS = new Set([
 const ALLOWED_EXTENSIONS = new Set([".ts", ".tsx", ".md", ".html"]);
 const VI_DIACRITIC_PATTERN = /[À-ỹ]/;
 const TECHNICAL_UI_TERM_PATTERN =
-  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard|yield|ad-hoc|template|online|offline|topping|blind|sku|inbox|tenant|grant|owner|agent|job|routing|webhook|provider|draft|mobile|checklist|quota|app|link|copy|order|ship|focus|sheet|top)\b|\bpeer\s+cross\b|\bpermission\s+key\b|\b(?:item_kind|provider_ref|tenant_id|branch_id|order_id|tax_invoice_id)\b|\bmigration\b|\bround\s+r\b|\bcận\s+date\b|\b(?:HRM|WAG)\b|\b(?:[A-Za-z][A-Za-z0-9_-]*\s+)?ID\b)/i;
+  /(?:\b(?:override|fallback|qty|gate|matching|cold-chain|lock|acquire|cap|credit|tier|zone|snapshot|ticket|import|export|dashboard|yield|ad-hoc|template|online|offline|topping|blind|sku|inbox|tenant|grant|owner|agent|job|routing|webhook|provider|draft|mobile|checklist|quota|app|link|copy|order|ship|focus|sheet|top|bucket|hub|ledger|handoff|payroll|fulfillment|cockpit|shipper|raster|pixel|marketing)\b|\bpeer\s+cross\b|\bpermission\s+key\b|\b(?:item_kind|provider_ref|tenant_id|branch_id|order_id|tax_invoice_id)\b|\bmigration\b|\bround\s+r\b|\bcận\s+date\b|\b(?:HRM|WAG)\b|\b(?:[A-Za-z][A-Za-z0-9_-]*\s+)?ID\b)/i;
 const PURE_TECHNICAL_UI_COPY_PATTERN =
   /^(?:Owner|Checklist|Template|Self-Order|Feedback|Comming Soon|VAT|KPI|QC|HRM|WAG|Mobile|Draft|Top|Permission key|(?:Agent|Session|Payment|Item|Terminal|Station|Order|Branch|Job)\s+ID)[:.]?$/;
 const UI_ACRONYM_ALLOWLIST = new Set([
@@ -205,6 +205,26 @@ const UI_ONLY_CHECKS = [
     pattern: /["']Đơn hàng bán["']/g,
     replacement: 'chrome short "Đơn bán"; keep ORDER_VI.long only in domain.ts',
     allowedPaths: new Set(["packages/shared/src/messages/domain.ts"]),
+  },
+  {
+    pattern: /\bmô-đun\b/gi,
+    replacement: "phân hệ",
+  },
+  {
+    pattern: /\bFile CSV\b/g,
+    replacement: "Tệp CSV",
+  },
+  {
+    pattern: /\bChọn file\b/gi,
+    replacement: "Chọn tệp",
+  },
+  {
+    pattern: /\btừ file\b/gi,
+    replacement: "từ tệp",
+  },
+  {
+    pattern: /["'`]File (?:SePay|HĐ|có|trống|rỗng|vượt|dữ liệu|quá lớn)/g,
+    replacement: '"Tệp …"',
   },
 ];
 
@@ -530,6 +550,18 @@ async function main() {
   if (!findTechnicalUiCopy(unsafeLoanwordFixture, "unsafe-loanword.tsx").length) {
     failures.push(
       "lint-copy fixture không kích hoạt guard loanword UI (Yield/template/…)",
+    );
+  }
+  const unsafeLedgerHandoffFixture =
+    'const copy = "Xem ledger tiêu hao và handoff kho";\n';
+  if (
+    !findTechnicalUiCopy(
+      unsafeLedgerHandoffFixture,
+      "unsafe-ledger-handoff.tsx",
+    ).length
+  ) {
+    failures.push(
+      "lint-copy fixture không kích hoạt guard ledger/handoff/payroll trên UI",
     );
   }
   const unsafeAcronymSentence =

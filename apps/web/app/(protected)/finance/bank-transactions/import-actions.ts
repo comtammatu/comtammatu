@@ -62,7 +62,7 @@ export async function importSepayBankTransactions(
   }
 
   if (!sheet) {
-    return { status: "error", message: "File SePay không có dữ liệu." };
+    return { status: "error", message: "Tệp SePay không có dữ liệu." };
   }
 
   const parsedRows = parseSepayExportRows(sheet.headers, sheet.rows);
@@ -97,7 +97,7 @@ export async function importSepayBankTransactions(
       status: "error",
       message:
         error.code === "23505"
-          ? "File có giao dịch trùng mã nhưng khác số tiền, loại hoặc thời gian."
+          ? "Tệp có giao dịch trùng mã nhưng khác số tiền, loại hoặc thời gian."
           : "Không thể nhập giao dịch SePay.",
     };
   }

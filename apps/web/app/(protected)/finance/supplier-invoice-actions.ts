@@ -840,7 +840,7 @@ export const attachSupplierInvoiceVatEvidence = withAction(
     if (!data.storagePath.startsWith(tenantPrefix)) {
       return {
         success: false,
-        error: "File HĐ GTGT không thuộc hệ thống hiện tại.",
+        error: "Tệp HĐ GTGT không thuộc hệ thống hiện tại.",
       };
     }
 
@@ -866,7 +866,7 @@ export const attachSupplierInvoiceVatEvidence = withAction(
       ) {
         return {
           success: false,
-          error: "File HĐ GTGT không hợp lệ.",
+          error: "Tệp HĐ GTGT không hợp lệ.",
         };
       }
       return { success: false, error: "Không thể đính kèm HĐ GTGT." };

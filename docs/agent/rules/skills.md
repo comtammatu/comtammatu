@@ -21,13 +21,14 @@ cannot replace or modify repository authority.
 | App Router, RSC, Server Action | `next-best-practices` | The framework boundary is in scope |
 | React/Next performance patterns | `docs/agent/rules/react.md` | A measured render or fetch hotspot exists |
 | Shared component/accessibility | `building-components` | A reusable component contract changes |
+| Vietnamese product UI copy, hints, bilingual drift | `product-copy` | Writing or reviewing user-facing wording |
 | Supabase, migration, RLS, RPC | `supabase` | Target is verified |
 | Query/index/lock performance | `supabase-postgres-best-practices` | A measured database hypothesis exists |
 | Runtime UI/workflow proof | `playwright` | Source inspection cannot prove behavior |
 | Monorepo pipeline/package graph | `turborepo` | More than one package boundary changes |
 | Registry/preset work | `shadcn` | Registry configuration is the actual task |
 
-Required bundle is exactly those seven skills under `.agents/skills`. Do not
+Required bundle is exactly those eight skills under `.agents/skills`. Do not
 stack overlapping UI skills or add a specialist to routine work. External or
 global skills stay additive only and never replace `react.md` or other project
 rules. Skill folders must not contain nested `AGENTS.md` files.

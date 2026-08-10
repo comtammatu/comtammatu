@@ -54,5 +54,6 @@ Vietnamese UI terminology must follow `docs/ref/glossary.md` (`canonical_term` â
 ## Agent workflow
 
 1. Read this file when changing copy language, glossary, or agent/docs language.
-2. For UI strings, use shared messages/labels and `lint:copy`.
+2. For UI strings, use shared messages/labels, load `.agents/skills/product-copy`,
+   and run `lint:copy`.
 3. For agent/technical docs, write English; quote `label_vi` only when needed.

@@ -11,7 +11,7 @@ export const hr = {
     ownerTitle: "Hồ sơ nhân viên",
     branchManagerTitle: "Nhân sự",
     ownerDescription:
-      "Hồ sơ NLĐ, HĐLĐ và lương · đăng nhập và phân quyền ở tab Tài khoản.",
+      "Hồ sơ NLĐ, HĐLĐ và lương. Đăng nhập và phân quyền ở tab Tài khoản.",
     branchManagerDescription: "Ca, ngày công, kết ca và nghỉ phép.",
   },
   payBasis: {

@@ -126,11 +126,11 @@ export function parseSepayExportRows(
   if (missingHeaders.length > 0) {
     return {
       success: false,
-      error: `File SePay thiếu cột: ${missingHeaders.join(", ")}`,
+      error: `Tệp SePay thiếu cột: ${missingHeaders.join(", ")}`,
     };
   }
   if (rawRows.length === 0) {
-    return { success: false, error: "File SePay không có giao dịch." };
+    return { success: false, error: "Tệp SePay không có giao dịch." };
   }
 
   const rows: SepayExportImportRow[] = [];

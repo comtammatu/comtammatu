@@ -28,7 +28,7 @@ export const inventory = {
   home: {
     title: "Kho hàng",
     description: "Chọn nhóm việc để mở danh sách hoặc phiếu.",
-    laneHint: "Mở danh sách và làm tiếp trong mô-đun.",
+    laneHint: "Mở danh sách và làm tiếp trong phân hệ.",
   },
   operatorFlow: {
     stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,
@@ -143,7 +143,8 @@ export const inventory = {
     stockJobCountAssignments: "Phân công nhóm nguyên liệu cho nhân viên đếm.",
     stockJobCountSlips: "Duyệt hoặc yêu cầu đếm lại phiếu đã nộp.",
     stockJobWaste: "Tạo phiếu hao hụt kèm lý do và bằng chứng.",
-    stockJobConsumption: "Xem ledger tiêu hao và chứng từ thủ công cần rà.",
+    stockJobConsumption:
+      "Xem sổ tiêu hao và phiếu ghi tay cần kiểm tra.",
     stockJobCatalog: "Tra cứu nguyên liệu, đơn vị và danh mục kho.",
     stockJobPurchaseRequests: "Tạo và theo dõi yêu cầu mua cho kho trung tâm.",
     branchDoorOnHand: "Kho hàng",
@@ -174,11 +175,11 @@ export const inventory = {
       `${formatCount(count)} yêu cầu đang xử lý`,
     noActiveTransfers: "Không có điều chuyển đang xử lý",
     headerTagline:
-      "Điểm vào: kiểm soát tồn · giao dịch kho · sản xuất · danh mục.",
+      "Vào nhanh: kiểm soát tồn, giao dịch kho, sản xuất và danh mục.",
     centralSupplyTagline:
-      "Điểm vào: tồn kho · phiếu nhập · yêu cầu hàng · điều chuyển.",
+      "Vào nhanh: tồn kho, phiếu nhập, yêu cầu hàng và điều chuyển.",
     centralKitchenTagline:
-      "Điểm vào: tồn kho · phiếu nhập · yêu cầu hàng · sản xuất.",
+      "Vào nhanh: tồn kho, phiếu nhập, yêu cầu hàng và sản xuất.",
     operationalTitle: (siteKind: string) => `Điều hành ${siteKind}`,
     allClearTitle: "Mọi thứ đang ổn",
     allClearHint:

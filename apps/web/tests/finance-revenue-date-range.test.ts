@@ -230,10 +230,16 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
     /fetchRevenueKpis\(params\.branch, resolved\.start, resolved\.end\)/,
   );
   assert.match(page, /actualFoodCost=\{actualSummary\.total\}/);
+  assert.match(
+    page,
+    /operatingConsumption=\{actualSummary\.operatingConsumption\}/,
+  );
   assert.match(page, /coveredOrderCount=\{actualSummary\.orderCount\}/);
   assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
+  assert.match(client, /label=\{foodCopy\.operatingConsumption\}/);
   assert.match(client, /foodCopy\.coverageValue/);
-  assert.equal((client.match(/<KpiCard/g) ?? []).length, 2);
+  assert.match(client, /foodCopy\.unitSellingPriceCurrency/);
+  assert.equal((client.match(/<KpiCard/g) ?? []).length, 3);
   assert.match(client, /title=\{foodCopy\.tableTitle\}[\s\S]*<DataTable/);
   assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
   assert.match(
@@ -241,8 +247,76 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
     /\.from\("inventory_valuation_events"\)/,
   );
   assert.match(expenseActions, /orderIds\.add\(movement\.order_id\)/);
+  assert.match(expenseActions, /operatingConsumptionTotal/);
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
+  assert.match(financeMessages, /operatingConsumption: "Tiêu hao vận hành"/);
+  assert.match(financeMessages, /unitSellingPriceCurrency: "Giá bán\/phần"/);
+  assert.match(
+    financeMessages,
+    /actualFoodCostHint:\s*"Nguyên liệu đã trừ kho theo đơn đã thanh toán\. Khác giá vốn định mức theo món\."/,
+  );
+  assert.match(
+    financeMessages,
+    /operatingConsumptionHint:\s*"Phiếu tiêu hao ghi tay, không gắn đơn bán\. Vẫn tính vào giá vốn món\."/,
+  );
+  assert.doesNotMatch(financeMessages, /\bbucket\b/i);
+  assert.doesNotMatch(
+    financeMessages,
+    /Tiêu hao bán gắn đơn đã thanh toán · khác định mức/,
+  );
+  assert.match(
+    financeMessages,
+    /netRevenueHint:\s*"Giá món trừ giảm giá\. Chưa gồm thuế GTGT\."/,
+  );
+  assert.match(
+    financeMessages,
+    /expenseDescription:\s*"Chi phí đã ghi trong kỳ\. Không gồm giá vốn món\."/,
+  );
+  assert.match(
+    financeMessages,
+    /description:\s*"Hóa đơn NCC, công nợ và thuế GTGT\."/,
+  );
+  assert.match(
+    financeMessages,
+    /description:\s*"Sao kê SePay\. Khớp với chứng từ thanh toán và chi\."/,
+  );
+  assert.doesNotMatch(financeMessages, /Marketing \/ khuyến mãi/);
+});
+
+test("Product UI copy bans recurring EN loanwords in Hint\/Description dictionaries", () => {
+  const inventoryMessages = read("apps/web/lib/messages/inventory.ts");
+  const notificationsMessages = read("apps/web/lib/messages/notifications.ts");
+  const settingsMessages = read("apps/web/lib/messages/settings.ts");
+  const controlSurfaceMessages = read(
+    "apps/web/lib/messages/control-surface.ts",
+  );
+  const operatorMessages = read("apps/web/lib/messages/operator.ts");
+  const hrForm = read(
+    "apps/web/app/(protected)/hr/employee-form-dialog.tsx",
+  );
+
+  assert.match(
+    inventoryMessages,
+    /stockJobConsumption:\s*"Xem sổ tiêu hao và phiếu ghi tay cần kiểm tra\."/,
+  );
+  assert.doesNotMatch(inventoryMessages, /\bledger\b/i);
+  assert.doesNotMatch(inventoryMessages, /\bmô-đun\b/i);
+  assert.match(
+    notificationsMessages,
+    /pageDescription:\s*"Việc còn mở: duyệt, bàn giao kho và cảnh báo vận hành"/,
+  );
+  assert.doesNotMatch(notificationsMessages, /\bhandoff\b/i);
+  assert.doesNotMatch(settingsMessages, /\bhandoff\b/i);
+  assert.match(controlSurfaceMessages, /shortcutsTitle:\s*"Phân hệ"/);
+  assert.doesNotMatch(controlSurfaceMessages, /\bmô-đun\b/i);
+  assert.match(
+    operatorMessages,
+    /pickupDescription:\s*"Gọi số cho khách và người giao hàng"/,
+  );
+  assert.doesNotMatch(operatorMessages, /\bshipper\b/i);
+  assert.match(hrForm, /khi tạo kỳ lương/);
+  assert.doesNotMatch(hrForm, /\bpayroll\b/i);
 });
 
 test("Finance gates gross profit and operating result on data coverage", () => {

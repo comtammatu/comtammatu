@@ -187,7 +187,7 @@ export function PrintersClient(props: {
             key={branch.id}
             title={branch.name}
             badge={{
-              children: `Agent: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
+              children: `Dịch vụ in: ${agent?.is_online ? "Đang kết nối" : "Mất kết nối"}`,
               variant: agent?.is_online ? "default" : "outline",
             }}
           >

@@ -17,7 +17,7 @@ export const notifications = {
   loadFailed: "Không thể tải thông báo",
   loadMore: "Tải thêm",
   pageTitle: "Thông báo",
-  pageDescription: "Việc còn mở: duyệt, handoff kho và cảnh báo vận hành",
+  pageDescription: "Việc còn mở: duyệt, bàn giao kho và cảnh báo vận hành",
   pageDescriptionUnread: "{count} việc chưa đọc — mở để xử lý",
   back: "Quay lại",
   filters: {

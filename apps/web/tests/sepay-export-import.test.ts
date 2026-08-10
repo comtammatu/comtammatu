@@ -73,7 +73,7 @@ test("SePay export parser fails closed on missing columns and invalid money", ()
   assert.deepEqual(parseSepayExportRows(["ID"], [row()]), {
     success: false,
     error:
-      "File SePay thiếu cột: Tài khoản, Thời gian, Loại giao dịch, Tiền, Luỹ kế, Nội dung, Mã thanh toán, Mã tham chiếu",
+      "Tệp SePay thiếu cột: Tài khoản, Thời gian, Loại giao dịch, Tiền, Luỹ kế, Nội dung, Mã thanh toán, Mã tham chiếu",
   });
 
   const invalid = parseSepayExportRows(headers, [row({ Tiền: "không rõ" })]);

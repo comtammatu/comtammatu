@@ -20,6 +20,7 @@ const REQUIRED_SKILLS = [
   "building-components",
   "next-best-practices",
   "playwright",
+  "product-copy",
   "shadcn",
   "supabase",
   "supabase-postgres-best-practices",

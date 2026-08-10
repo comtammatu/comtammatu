@@ -363,7 +363,7 @@ export function EmployeeFormDialog({
 
               <FormGroupBlock
                 title="HĐLĐ, lương và BHXH"
-                description="Nguồn tính lương tháng, mức đóng BH và thuế TNCN khi tạo kỳ payroll."
+                description="Nguồn tính lương tháng, mức đóng BH và thuế TNCN khi tạo kỳ lương."
               >
                 <SelectField
                   control={form.control}

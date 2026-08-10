@@ -235,7 +235,7 @@ const UX_FAMILY_RECIPES = [
   },
   {
     family: "control_surface LIST",
-    entry: "Hub/list đúng plane",
+    entry: "Danh sách đúng plane",
     success: "Mở record / chốt phiếu",
     recovery: "Retry / confirm; empty + filter reset",
     density: "compact + xwide; AppListFrame → DataTable",

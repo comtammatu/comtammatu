@@ -567,7 +567,10 @@ export async function fetchActualFoodCostSummary(params: {
   endDate: string;
 }): Promise<
   ActionResult<{
+    /** Sale-linked food cost (order_id) + sale-lineage reprice. */
     total: number;
+    /** Manual phiếu tiêu hao / ops consumption without a paid order. */
+    operatingConsumption: number;
     orderCount: number;
   }>
 > {
@@ -609,7 +612,9 @@ export async function fetchActualFoodCostSummary(params: {
 
   let eventQuery = monetary.client
     .from("inventory_valuation_events")
-    .select("value_delta, stock_movements!inner ( order_id, branch_id )")
+    .select(
+      "value_delta, stock_movements!inner ( order_id, issue_id, branch_id )",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("terminal_bucket", "food_cost")
     .gte("effective_at", startIso)
@@ -641,13 +646,23 @@ export async function fetchActualFoodCostSummary(params: {
   }
 
   const orderIds = new Set<number>();
-  const foodCostTotal = (eventsResult.data ?? []).reduce((sum, row) => {
+  let saleFoodCostTotal = 0;
+  let operatingConsumptionTotal = 0;
+  for (const row of eventsResult.data ?? []) {
     const movement = Array.isArray(row.stock_movements)
       ? row.stock_movements[0]
       : row.stock_movements;
-    if (movement?.order_id != null) orderIds.add(movement.order_id);
-    return sum + Math.abs(Number(row.value_delta));
-  }, 0);
+    const amount = Math.abs(Number(row.value_delta));
+    // Paid-order POS consumption stays in Giá vốn món; manual phiếu tiêu hao
+    // (issue without order) is Tiêu hao vận hành — same food_cost bucket,
+    // different owner-facing card.
+    if (movement?.order_id != null) {
+      orderIds.add(movement.order_id);
+      saleFoodCostTotal += amount;
+    } else {
+      operatingConsumptionTotal += amount;
+    }
+  }
   const repriceTotal = (repriceResult.data ?? []).reduce(
     (sum, row) => sum + Number(row.allocated_value),
     0,
@@ -700,10 +715,16 @@ export async function fetchActualFoodCostSummary(params: {
       );
     }, 0);
   }
-  const total = foodCostTotal + scopedRepriceTotal;
+  // Invoice/credit reprice adjusts inventory that already flowed to food cost;
+  // attribute it to sale food cost (not operating slips).
+  const total = saleFoodCostTotal + scopedRepriceTotal;
   return {
     success: true,
-    data: { total, orderCount: orderIds.size },
+    data: {
+      total,
+      operatingConsumption: operatingConsumptionTotal,
+      orderCount: orderIds.size,
+    },
   };
 }
 

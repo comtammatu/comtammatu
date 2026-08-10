@@ -34,6 +34,7 @@ interface Props {
   branches: { id: number; name: string }[];
   rows: FoodCostRow[];
   actualFoodCost: number;
+  operatingConsumption: number;
   coveredOrderCount: number;
   totalOrderCount: number;
 }
@@ -59,11 +60,18 @@ function marginToneClass(pct: number | null): string {
   return "text-destructive";
 }
 
+function unitSellingPrice(row: FoodCostRow): number {
+  const qty = Number(row.quantity_sold ?? 0);
+  if (qty <= 0) return 0;
+  return Number(row.revenue ?? 0) / qty;
+}
+
 export function FoodCostClient({
   params,
   branches,
   rows,
   actualFoodCost,
+  operatingConsumption,
   coveredOrderCount,
   totalOrderCount,
 }: Props) {
@@ -83,6 +91,7 @@ export function FoodCostClient({
       header: [
         PRODUCT_VI.posItem,
         foodCopy.quantitySold,
+        foodCopy.unitSellingPriceCurrency,
         foodCopy.revenueCurrency,
         foodCopy.unitFoodCostCurrency,
         foodCopy.foodCostCurrency,
@@ -92,6 +101,7 @@ export function FoodCostClient({
       rows: rows.map((row) => [
         row.item_name ?? "—",
         Number(row.quantity_sold ?? 0),
+        Math.round(unitSellingPrice(row)),
         Math.round(Number(row.revenue ?? 0)),
         Math.round(Number(row.unit_ingredient_cost ?? 0)),
         Math.round(Number(row.ingredient_cost ?? 0)),
@@ -112,6 +122,12 @@ export function FoodCostClient({
       header: foodCopy.quantitySold,
       className: "w-24 text-right font-mono tabular-nums",
       render: (row) => formatCount(Number(row.quantity_sold ?? 0)),
+    },
+    {
+      key: "unit_selling_price",
+      header: foodCopy.unitSellingPriceCurrency,
+      className: "text-right font-mono tabular-nums",
+      render: (row) => formatVND(unitSellingPrice(row)),
     },
     {
       key: "revenue",
@@ -154,12 +170,11 @@ export function FoodCostClient({
 
   return (
     <>
-      {/* DASHBOARD_REPORT: non-sticky FilterBar above KPI; breakdown stays AppSection, not AppListFrame. */}
       <FilterBar
         params={params}
         branches={branches}
         basePath="/finance/food-cost"
-        hide={["branch", "compare", "granularity"]}
+        hide={["compare", "granularity"]}
         trailing={
           <FinanceExportActions
             filename={csvFilename}
@@ -185,6 +200,13 @@ export function FoodCostClient({
               ? "warning"
               : "primary"
           }
+        />
+        <KpiCard
+          label={foodCopy.operatingConsumption}
+          value={formatVND(operatingConsumption)}
+          shortValue={formatCompactVND(operatingConsumption)}
+          hint={foodCopy.operatingConsumptionHint}
+          tone={operatingConsumption > 0 ? "warning" : "neutral"}
         />
         <KpiCard
           label={foodCopy.coverage}
@@ -232,8 +254,8 @@ export function FoodCostClient({
                   <ItemDescription>
                     {foodCopy.quantitySold}:{" "}
                     {formatCount(Number(row.quantity_sold ?? 0))} ·{" "}
-                    {foodCopy.revenueCurrency}:{" "}
-                    {formatVND(Number(row.revenue ?? 0))}
+                    {foodCopy.unitSellingPriceCurrency}:{" "}
+                    {formatVND(unitSellingPrice(row))}
                   </ItemDescription>
                   <ItemDescription>
                     {foodCopy.unitFoodCostCurrency}:{" "}

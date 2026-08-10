@@ -889,7 +889,7 @@ export async function importMenu(
   if (parsed.format === "csv") {
     const sheet = parsed.sheets[0];
     if (!sheet) {
-      return { success: false, error: "File CSV rỗng" };
+      return { success: false, error: "Tệp CSV rỗng" };
     }
     const hasItemHeader = sheet.headers.some((h) =>
       /t[eê]n\s*m[oó]n|^name$/i.test(h),

@@ -99,7 +99,7 @@ test("Control Surface chrome exposes Trang cá nhân and hides empty module nav"
   assert.match(shell, /activeModule === "me"[\s\S]*?return \[\]/);
 
   // Zero-module actors (empty tier1) suppress the bottom navbar so no empty
-  // "Mô-đun" tab renders.
+  // "Phân hệ" tab renders.
   assert.match(appShell, /showBottomNav = bottomNav && tier1WithBadges\.length > 0/);
   assert.match(appShell, /showBottomNav \? \(\s*<ControlSurfaceBottomNav/);
 

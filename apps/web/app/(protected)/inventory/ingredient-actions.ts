@@ -868,7 +868,7 @@ function mapBulkIngredientImportError(
     return "Không có quyền nhập nguyên liệu.";
   }
   if (message?.includes("duplicate_import_name")) {
-    return "File có tên nguyên liệu bị trùng.";
+    return "Tệp có tên nguyên liệu bị trùng.";
   }
   if (message?.includes("unit_not_found")) {
     return "Có đơn vị không còn hợp lệ.";
@@ -924,7 +924,7 @@ export async function importIngredients(
 
   const sheet = parsed.sheets[0];
   if (!sheet || sheet.rows.length === 0) {
-    return { success: false, error: "File trống" };
+    return { success: false, error: "Tệp trống" };
   }
 
   const { supabase } = ctx;

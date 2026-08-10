@@ -143,7 +143,7 @@ export const settings = {
       "Ba nguồn khác nhau: việc còn mở, bằng chứng chứng từ, và thay đổi phân quyền — không gộp một bảng. Nhật ký đọc cùng khung Thời gian → Hành động → Đối tượng → Người thao tác.",
     needActionTitle: "Cần xử lý",
     needActionDescription:
-      "Việc còn mở từ thông báo: duyệt, handoff kho và cảnh báo vận hành.",
+      "Việc còn mở từ thông báo: duyệt, bàn giao kho và cảnh báo vận hành.",
     needActionLink: "Mở thông báo",
     systemLogTitle: "Nhật ký hệ thống",
     systemLogDescription:
@@ -166,7 +166,7 @@ export const settings = {
     removeBlock: "Xóa khối",
     previewTitle: "Xem trước",
     previewDescription:
-      "Dựng bằng đúng bộ raster của máy in — khớp từng pixel với bản giấy.",
+      "Xem trước đúng như bản in ra giấy của máy in.",
     previewAlt: (kindLabel: string) => `Xem trước ${kindLabel}`,
     previewLoading: "Đang dựng bản xem trước…",
     previewFailed: "Không thể dựng bản xem trước",

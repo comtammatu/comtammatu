@@ -149,7 +149,7 @@ function mapProductionRecipeImportError(
     message?.includes("duplicate_ingredient") ||
     message?.includes("duplicate_finished_good")
   ) {
-    return "File dữ liệu có dòng công thức bị trùng.";
+    return "Tệp dữ liệu có dòng công thức bị trùng.";
   }
   if (message?.includes("finished_good_not_found")) {
     return "Có thành phẩm không còn hợp lệ.";
@@ -635,7 +635,7 @@ export async function importProductionRecipes(
 
   const sheet = parsed.sheets[0];
   if (!sheet || sheet.rows.length === 0) {
-    return { success: false, error: "File trống" };
+    return { success: false, error: "Tệp trống" };
   }
 
   const { supabase, claims } = ctx;
