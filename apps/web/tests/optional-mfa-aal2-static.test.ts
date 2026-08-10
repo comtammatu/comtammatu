@@ -34,6 +34,13 @@ test("MFA security settings are Owner-only at /settings/security", () => {
   assert.doesNotMatch(scope, /\/profile\/security/);
 });
 
+test("TOTP enroll passes a colon-free issuer (Site URL host is not used)", () => {
+  const mfa = read("apps/web/lib/auth/mfa.ts");
+  assert.match(mfa, /issuer:\s*TOTP_ISSUER/);
+  assert.match(mfa, /TOTP_ISSUER\s*=\s*"Cơm Tấm Má Tư"/);
+  assert.doesNotMatch(mfa, /issuer:\s*["']localhost/);
+});
+
 test("role binding action returns structured aal2_required for step-up", () => {
   const actions = read(
     "apps/web/app/(protected)/hr/staff/[id]/permissions/actions.ts",

@@ -18,7 +18,7 @@ mandatory.
 
 | Concern | Behavior |
 | --- | --- |
-| Enroll / unenroll | Owner at `/settings/security` only; no staff MFA surface in V1 |
+| Enroll / unenroll | Owner at `/settings/security` only; no staff MFA surface in V1. `mfa.enroll` passes issuer `Cơm Tấm Má Tư` so authenticator labels are not derived from Site URL host (`localhost:3000` breaks `otpauth` `Issuer:account` parsing) |
 | Login | Owner with verified TOTP: challenge before post-login redirect; staff stay password-only |
 | Role binding writes | RPC `set_auth_role_binding` requires JWT AAL2; UI step-up + retry on `aal2_required` |
 | Role binding reads | Allowed at AAL1 |

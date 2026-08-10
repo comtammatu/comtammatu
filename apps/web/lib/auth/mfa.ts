@@ -66,6 +66,10 @@ export async function getVerifiedTotpFactorId(): Promise<MfaResult<string | null
   return { success: true, data: verified?.id ?? null };
 }
 
+/** Shown in authenticator apps. Must not contain `:` — Supabase defaults to
+ * Site URL host (`localhost:3000` in local), which breaks otpauth label parsing. */
+const TOTP_ISSUER = "Cơm Tấm Má Tư";
+
 export async function enrollTotp(
   friendlyName = "Authenticator",
 ): Promise<MfaResult<TotpEnrollment>> {
@@ -73,6 +77,7 @@ export async function enrollTotp(
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: "totp",
     friendlyName,
+    issuer: TOTP_ISSUER,
   });
   if (error || !data || data.type !== "totp") {
     return { success: false, error: GENERIC_MFA_ERROR };
