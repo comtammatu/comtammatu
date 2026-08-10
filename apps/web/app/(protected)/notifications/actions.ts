@@ -5,6 +5,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
 import {
   resolveNotificationActionUrl,
+  resolveNotificationAuditUrl,
   resolveNotificationHistoryUrl,
 } from "@lib/notifications/action-url";
 import { messages } from "@lib/messages";
@@ -22,6 +23,7 @@ export interface NotificationItem {
   entity_id: number | null;
   action_url: string | null;
   history_url: string | null;
+  audit_url: string | null;
   meta: Record<string, unknown>;
   created_at: string;
   expires_at: string | null;
@@ -110,6 +112,10 @@ export async function listNotifications(
         entityId: row.entity_id,
         kind: row.kind,
         targetBranchId: row.target_branch_id,
+      }),
+      audit_url: resolveNotificationAuditUrl(claims, {
+        entityType: row.entity_type,
+        entityId: row.entity_id,
       }),
       meta: (row.meta ?? {}) as Record<string, unknown>,
       created_at: row.created_at,

@@ -9,6 +9,7 @@ export const notifications = {
   openAction: "Mở",
   openWork: "Mở việc",
   viewDocumentHistory: "Xem lịch sử chứng từ",
+  viewSystemActivity: "Xem nhật ký hệ thống",
   copyLink: "Sao chép liên kết",
   copyLinkSuccess: "Đã sao chép liên kết",
   viewAll: "Xem tất cả",

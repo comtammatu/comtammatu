@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -146,6 +147,7 @@ export function getNotificationRowActions(
   handlers: {
     onOpen: () => void;
     onHistory?: () => void;
+    onAudit?: () => void;
     onRead: (id: number, options?: { quiet?: boolean }) => void;
   },
 ): RowActionItem[] {
@@ -163,6 +165,13 @@ export function getNotificationRowActions(
       key: "history",
       label: messages.notifications.viewDocumentHistory,
       onSelect: handlers.onHistory,
+    });
+  }
+  if (item.audit_url && handlers.onAudit) {
+    actions.push({
+      key: "audit",
+      label: messages.notifications.viewSystemActivity,
+      onSelect: handlers.onAudit,
     });
   }
   if (unread) {
@@ -217,9 +226,17 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     router.push(item.history_url);
   };
 
+  const handleAudit = () => {
+    if (!item.audit_url) return;
+    if (unread) onRead(item.id, { quiet: true });
+    onNavigate?.();
+    router.push(item.audit_url);
+  };
+
   const actions = getNotificationRowActions(item, {
     onOpen: handleOpen,
     onHistory: item.history_url ? handleHistory : undefined,
+    onAudit: item.audit_url ? handleAudit : undefined,
     onRead,
   });
 
@@ -280,9 +297,19 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
             ) : null}
             {item.history_url &&
             item.history_url !== item.action_url ? (
-              <span className="text-2xs text-muted-foreground">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-2xs text-muted-foreground"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleHistory();
+                }}
+              >
                 {messages.notifications.viewDocumentHistory}
-              </span>
+              </Button>
             ) : null}
           </div>
         </ItemFooter>

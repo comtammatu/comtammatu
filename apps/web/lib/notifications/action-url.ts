@@ -5,7 +5,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import {
-  isGoldTrackingEntityType,
+  normalizeEntityType,
   resolveEntityHref,
 } from "@lib/entity-href";
 
@@ -29,6 +29,19 @@ const L0_INVENTORY_SHELL_ROLES: ReadonlySet<StaffRole> = new Set([
 const TENANT_WIDE_NOTIFICATION_ROLES: ReadonlySet<StaffRole> = new Set([
   "owner",
   "accountant",
+]);
+
+/** Entity types that can deep-link into /settings/activity filter. */
+const SYSTEM_ACTIVITY_ENTITY_TYPES: ReadonlySet<string> = new Set([
+  "goods_received_note",
+  "stock_transfer",
+  "stock_request",
+  "stock_issue",
+  "stocktake_session",
+  "purchase_order",
+  "orders",
+  "expense",
+  "tax_invoice",
 ]);
 
 function isL0InventoryShellRole(role: StaffRole): boolean {
@@ -245,8 +258,9 @@ export function resolveNotificationActionUrl(
 }
 
 /**
- * Document DETAIL / history deep-link for gold workflows (notify ↔ chứng từ).
- * Always prefers the role-aware entity map over work-queue hubs.
+ * Document DETAIL / history deep-link (notify ↔ chứng từ).
+ * Prefers the role-aware entity map over work-queue hubs whenever a detail
+ * path exists (gold workflows plus hub-vs-detail entities like issues/PO).
  */
 export function resolveNotificationHistoryUrl(
   claims: JwtClaims,
@@ -255,7 +269,6 @@ export function resolveNotificationHistoryUrl(
     "entityType" | "entityId" | "targetBranchId" | "kind"
   >,
 ): string | null {
-  if (!isGoldTrackingEntityType(target.entityType)) return null;
   const entityHref = resolveEntityHref({
     entityType: target.entityType,
     entityId: target.entityId,
@@ -276,4 +289,27 @@ export function resolveNotificationHistoryUrl(
     },
     entityHref,
   );
+}
+
+/**
+ * Owner-only jump into system activity filtered to the same document.
+ * Separate from 「Xem lịch sử chứng từ」 (document DETAIL).
+ */
+export function resolveNotificationAuditUrl(
+  claims: JwtClaims,
+  target: Pick<NotificationActionTarget, "entityType" | "entityId">,
+): string | null {
+  if (claims.user_role !== "owner") return null;
+  const entityType = normalizeEntityType(target.entityType);
+  if (!entityType || !SYSTEM_ACTIVITY_ENTITY_TYPES.has(entityType)) {
+    return null;
+  }
+  if (target.entityId == null || !Number.isFinite(target.entityId)) {
+    return null;
+  }
+  const params = new URLSearchParams({
+    entity_type: entityType,
+    entity_id: String(target.entityId),
+  });
+  return `/settings/activity?${params.toString()}`;
 }

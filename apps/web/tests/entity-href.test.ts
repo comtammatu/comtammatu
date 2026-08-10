@@ -9,6 +9,7 @@ import {
 } from "@lib/entity-href";
 import {
   resolveNotificationActionUrl,
+  resolveNotificationAuditUrl,
   resolveNotificationHistoryUrl,
 } from "@lib/notifications/action-url";
 
@@ -27,6 +28,7 @@ test("normalizeEntityType maps notification grn alias to audit entity", () => {
     normalizeEntityType("goods_received_note"),
     "goods_received_note",
   );
+  assert.equal(normalizeEntityType("stocktake"), "stocktake_session");
   assert.equal(normalizeEntityType(null), null);
 });
 
@@ -128,10 +130,43 @@ test("notification history URL prefers document DETAIL for L0 roles", () => {
   );
   assert.equal(
     resolveNotificationHistoryUrl(claims("owner", null), {
-      entityType: "expense",
-      entityId: 12,
-      kind: "finance.expense",
-      targetBranchId: null,
+      entityType: "stock_issue",
+      entityId: 15,
+      kind: "inventory.waste_pending_approval",
+      targetBranchId: 20,
+    }),
+    "/inventory/issues/15",
+  );
+  assert.equal(
+    resolveNotificationHistoryUrl(claims("owner", null), {
+      entityType: "stocktake",
+      entityId: 7,
+      kind: "inventory.stocktake_completed",
+      targetBranchId: 20,
+    }),
+    "/inventory/stocktake/7",
+  );
+});
+
+test("owner-only audit URL filters system activity by entity", () => {
+  assert.equal(
+    resolveNotificationAuditUrl(claims("owner", null), {
+      entityType: "goods_received_note",
+      entityId: 44,
+    }),
+    "/settings/activity?entity_type=goods_received_note&entity_id=44",
+  );
+  assert.equal(
+    resolveNotificationAuditUrl(claims("branch_manager", 20), {
+      entityType: "goods_received_note",
+      entityId: 44,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveNotificationAuditUrl(claims("owner", null), {
+      entityType: "ingredient",
+      entityId: 1,
     }),
     null,
   );

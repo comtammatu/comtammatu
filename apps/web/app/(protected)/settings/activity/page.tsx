@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  History as IconHistory,
   ShieldCheck as IconShieldCheck,
 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -9,19 +8,14 @@ import { formatAuditEntityTypeLabel } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  AppEmptyState,
   AppSection,
 } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchTenantAuditLogs } from "@/_lib/audit";
 import { messages } from "@lib/messages";
 import { SettingsPageFrame } from "../settings-page-frame";
-import {
-  SystemActivityFilters,
-  type SystemActivityActorOption,
-  type SystemActivityEntityOption,
-} from "./system-activity-filters";
-import { SystemActivityTable } from "./system-activity-table";
+import { SystemActivityClient } from "./system-activity-client";
+import type { SystemActivityEntityOption } from "./system-activity-filters";
 
 interface Props {
   searchParams: Promise<{
@@ -29,6 +23,7 @@ interface Props {
     entity_id?: string;
     actor?: string;
     since?: string;
+    q?: string;
   }>;
 }
 
@@ -38,10 +33,21 @@ const ENTITY_FILTER_OPTIONS: SystemActivityEntityOption[] = [
   { id: "stock_request", label: formatAuditEntityTypeLabel("stock_request") },
   { id: "stock_issue", label: formatAuditEntityTypeLabel("stock_issue") },
   { id: "stocktake_session", label: formatAuditEntityTypeLabel("stocktake_session") },
+  { id: "purchase_order", label: formatAuditEntityTypeLabel("purchase_order") },
   { id: "orders", label: formatAuditEntityTypeLabel("orders") },
   { id: "expense", label: formatAuditEntityTypeLabel("expense") },
   { id: "tax_invoice", label: formatAuditEntityTypeLabel("tax_invoice") },
 ];
+
+function parseEntityTypeParam(raw: string | undefined): string | null {
+  const trimmed = raw?.trim() || null;
+  if (!trimmed) return null;
+  if (ENTITY_FILTER_OPTIONS.some((option) => option.id === trimmed)) {
+    return trimmed;
+  }
+  // Allow deep-links (e.g. notification → activity) for known snake_case types.
+  return /^[a-z][a-z0-9_]*$/i.test(trimmed) ? trimmed : null;
+}
 
 /**
  * Tenant-wide operational audit viewer (owner settings).
@@ -54,16 +60,13 @@ export default async function SystemActivityPage({ searchParams }: Props) {
   }
 
   const params = await searchParams;
-  const entityType =
-    params.entity_type &&
-    ENTITY_FILTER_OPTIONS.some((option) => option.id === params.entity_type)
-      ? params.entity_type
-      : null;
+  const entityType = parseEntityTypeParam(params.entity_type);
   const entityIdRaw = params.entity_id?.trim() || null;
   const entityId =
     entityIdRaw && /^\d+$/.test(entityIdRaw) ? Number(entityIdRaw) : null;
   const actor = params.actor?.trim() || null;
   const since = params.since?.trim() || null;
+  const q = params.q?.trim() || null;
   const sinceIso = since ? getVNDayUtcRange(since).startIso : null;
 
   const rows = await fetchTenantAuditLogs({
@@ -74,7 +77,10 @@ export default async function SystemActivityPage({ searchParams }: Props) {
     limit: 200,
   });
 
-  const actorOptionById = new Map<string, SystemActivityActorOption>();
+  const actorOptionById = new Map<
+    string,
+    { id: string; label: string }
+  >();
   for (const row of rows) {
     if (!row.userId || actorOptionById.has(row.userId)) continue;
     actorOptionById.set(row.userId, {
@@ -84,8 +90,17 @@ export default async function SystemActivityPage({ searchParams }: Props) {
   }
 
   const copy = messages.settings.activity;
-  const pages = messages.settings.pages;
-  const hasFilters = Boolean(entityType || entityId || actor || since);
+
+  const entityOptions =
+    entityType && !ENTITY_FILTER_OPTIONS.some((o) => o.id === entityType)
+      ? [
+          ...ENTITY_FILTER_OPTIONS,
+          {
+            id: entityType,
+            label: formatAuditEntityTypeLabel(entityType),
+          },
+        ]
+      : ENTITY_FILTER_OPTIONS;
 
   return (
     <SettingsPageFrame
@@ -114,37 +129,24 @@ export default async function SystemActivityPage({ searchParams }: Props) {
     >
       <AppSection
         title={copy.recentItems(rows.length)}
-        description={pages.systemActivityDescription}
+        description={messages.settings.pages.systemActivityDescription}
+        contentFlush
       >
-        <SystemActivityFilters
-          value={{
+        <SystemActivityClient
+          rows={rows}
+          filterValue={{
             entityType,
             entityId: entityId != null ? String(entityId) : null,
             actor,
             since,
+            q,
           }}
           actorOptions={[...actorOptionById.values()].sort((a, b) =>
             a.label.localeCompare(b.label, "vi"),
           )}
-          entityOptions={ENTITY_FILTER_OPTIONS}
+          entityOptions={entityOptions}
+          pagesHomeLink="/settings"
         />
-
-        {rows.length === 0 ? (
-          <AppEmptyState
-            mode={hasFilters ? "no-results" : "no-data"}
-            title={hasFilters ? copy.emptyFiltered : copy.empty}
-            description={hasFilters ? copy.emptyFilteredHint : undefined}
-            icon={<IconHistory />}
-          >
-            {hasFilters ? null : (
-              <Button variant="outline" render={<Link href="/settings" />}>
-                {pages.settingsHomeLink}
-              </Button>
-            )}
-          </AppEmptyState>
-        ) : (
-          <SystemActivityTable rows={rows} />
-        )}
       </AppSection>
     </SettingsPageFrame>
   );

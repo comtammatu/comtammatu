@@ -15,6 +15,7 @@ export type EntityHrefClaims = Pick<JwtClaims, "user_role">;
 /** Notification/audit aliases → canonical audit `entity_type` values. */
 const ENTITY_TYPE_ALIASES: Readonly<Record<string, string>> = {
   grn: "goods_received_note",
+  stocktake: "stocktake_session",
 };
 
 export function normalizeEntityType(

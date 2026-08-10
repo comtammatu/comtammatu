@@ -16,6 +16,7 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { formatAuditEntityTypeLabel } from "@comtammatu/shared/messages";
+import type { ReactNode } from "react";
 
 const ALL_VALUE = "all";
 
@@ -24,6 +25,7 @@ export type SystemActivityFilterValue = {
   entityId: string | null;
   actor: string | null;
   since: string | null;
+  q: string | null;
 };
 
 export type SystemActivityActorOption = {
@@ -40,10 +42,12 @@ export function SystemActivityFilters({
   value,
   actorOptions,
   entityOptions,
+  trailing,
 }: {
   value: SystemActivityFilterValue;
   actorOptions: SystemActivityActorOption[];
   entityOptions: SystemActivityEntityOption[];
+  trailing?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,11 +60,16 @@ export function SystemActivityFilters({
   const entityFilterId = `${filterIdPrefix}-entity`;
   const actorFilterId = `${filterIdPrefix}-actor`;
   const sinceFilterId = `${filterIdPrefix}-since`;
+  const searchFilterId = `${filterIdPrefix}-q`;
 
   const [draftSince, setDraftSince] = useState(value.since ?? "");
+  const [draftQ, setDraftQ] = useState(value.q ?? "");
   useEffect(() => {
     setDraftSince(value.since ?? "");
   }, [value.since]);
+  useEffect(() => {
+    setDraftQ(value.q ?? "");
+  }, [value.q]);
 
   function pushParams(next: Partial<SystemActivityFilterValue>) {
     const merged: SystemActivityFilterValue = { ...value, ...next };
@@ -69,6 +78,7 @@ export function SystemActivityFilters({
     if (merged.entityId) usp.set("entity_id", merged.entityId);
     if (merged.actor) usp.set("actor", merged.actor);
     if (merged.since) usp.set("since", merged.since);
+    if (merged.q) usp.set("q", merged.q);
     const qs = usp.toString();
     startTransition(() => {
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -78,8 +88,15 @@ export function SystemActivityFilters({
   const entityValue = value.entityType ?? ALL_VALUE;
   const actorValue = value.actor ?? ALL_VALUE;
   const sinceDirty = draftSince !== (value.since ?? "");
+  const qDirty = draftQ !== (value.q ?? "");
   const hasActiveFilters = Boolean(
-    value.entityType || value.entityId || value.actor || value.since || draftSince,
+    value.entityType ||
+      value.entityId ||
+      value.actor ||
+      value.since ||
+      value.q ||
+      draftSince ||
+      draftQ,
   );
 
   return (
@@ -152,13 +169,29 @@ export function SystemActivityFilters({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="grid gap-1.5">
+          <Label htmlFor={searchFilterId}>{copy.searchLabel}</Label>
+          <Input
+            id={searchFilterId}
+            type="search"
+            value={draftQ}
+            onChange={(event) => setDraftQ(event.target.value)}
+            placeholder={copy.searchPlaceholder}
+            controlSize={controlSize}
+            className="min-w-48"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size={actionSize}
-            disabled={isPending || !sinceDirty}
+            disabled={isPending || (!sinceDirty && !qDirty)}
             onClick={() =>
-              pushParams({ since: draftSince.trim() ? draftSince : null })
+              pushParams({
+                since: draftSince.trim() ? draftSince : null,
+                q: draftQ.trim() ? draftQ.trim() : null,
+              })
             }
           >
             {copy.filterApply}
@@ -170,16 +203,19 @@ export function SystemActivityFilters({
             disabled={isPending || !hasActiveFilters}
             onClick={() => {
               setDraftSince("");
+              setDraftQ("");
               pushParams({
                 entityType: null,
                 entityId: null,
                 actor: null,
                 since: null,
+                q: null,
               });
             }}
           >
             {copy.filterReset}
           </Button>
+          {trailing}
         </div>
       </div>
 

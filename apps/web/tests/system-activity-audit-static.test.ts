@@ -89,6 +89,61 @@ test("permission audit table opens evidence sheet from list rows", () => {
   assert.doesNotMatch(table, /JSON\.stringify|\.metadata\b/);
 });
 
+test("activity and permission audit toolbars support CSV export and q search", () => {
+  const activityClient = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/settings/activity/system-activity-client.tsx",
+    ),
+    "utf8",
+  );
+  const activityFilters = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/settings/activity/system-activity-filters.tsx",
+    ),
+    "utf8",
+  );
+  const permClient = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/hr/staff/audit/permission-audit-client.tsx",
+    ),
+    "utf8",
+  );
+  const exportHelper = readFileSync(
+    join(root, "apps/web/app/_lib/export-csv.ts"),
+    "utf8",
+  );
+
+  assert.match(activityClient, /AuditExportButton/);
+  assert.match(activityClient, /matchesSearch/);
+  assert.match(activityFilters, /usp\.set\("q"/);
+  assert.match(permClient, /AuditExportButton/);
+  assert.match(permClient, /matchesSearch/);
+  assert.match(exportHelper, /CSV_BOM|\\uFEFF/);
+  assert.match(exportHelper, /CSV_SEP\s*=\s*";"/);
+  assert.doesNotMatch(activityClient, /old_data|new_data/);
+  assert.doesNotMatch(permClient, /metadata/);
+});
+
+test("notification item exposes clickable document history and owner audit menu", () => {
+  const item = readFileSync(
+    join(root, "apps/web/app/_components/notification-item.tsx"),
+    "utf8",
+  );
+  const actions = readFileSync(
+    join(root, "apps/web/app/(protected)/notifications/actions.ts"),
+    "utf8",
+  );
+  assert.match(item, /handleHistory/);
+  assert.match(item, /handleAudit/);
+  assert.match(item, /viewSystemActivity/);
+  assert.match(item, /Button[\s\S]*viewDocumentHistory|viewDocumentHistory[\s\S]*Button/);
+  assert.match(actions, /resolveNotificationAuditUrl/);
+  assert.match(actions, /audit_url:/);
+});
+
 test("settings home links to ops tracking hub for owners", () => {
   const home = readFileSync(
     join(root, "apps/web/app/(protected)/settings/page.tsx"),
