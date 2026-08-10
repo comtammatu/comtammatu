@@ -15,8 +15,11 @@ BEGIN
   ORDER BY id
   LIMIT 1;
 
+  -- Data migration: no-op on empty greenfield / Preview / e2e before seeds.
+  -- Production already applied this version against a populated tenant.
   IF v_tenant_id IS NULL THEN
-    RAISE EXCEPTION 'menu_vat_matrix_tenant_missing';
+    RAISE NOTICE 'menu_vat_matrix_tenant_missing; skip';
+    RETURN;
   END IF;
 
   SELECT id INTO v_nuoc_id
@@ -26,7 +29,8 @@ BEGIN
   LIMIT 1;
 
   IF v_nuoc_id IS NULL THEN
-    RAISE EXCEPTION 'menu_vat_matrix_nuoc_category_missing';
+    RAISE NOTICE 'menu_vat_matrix_nuoc_category_missing; skip';
+    RETURN;
   END IF;
 
   SELECT id INTO v_phu_thu_id
