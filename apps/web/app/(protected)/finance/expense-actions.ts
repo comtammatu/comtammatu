@@ -306,6 +306,17 @@ export async function updateExpense(
     };
   }
 
+  await logAudit(ctx.supabase, {
+    action: "update",
+    entityType: "expense",
+    entityId: parsed.data.expenseId,
+    newData: {
+      branch_id: branchId,
+      category: parsed.data.category,
+      expense_date: parsed.data.expenseDate,
+    },
+  });
+
   return { success: true };
 }
 
@@ -372,6 +383,16 @@ export async function transitionExpensePayment(
     };
   }
 
+  await logAudit(ctx.supabase, {
+    action: "update",
+    entityType: "expense",
+    entityId: parsed.data.expenseId,
+    newData: {
+      payment_method: parsed.data.targetMethod,
+      paid_at: updated.paid_at ?? null,
+    },
+  });
+
   return { success: true };
 }
 
@@ -403,6 +424,12 @@ export async function deleteExpense(
       error: mapExpenseMutationError(error.code, "Không thể xóa chi phí."),
     };
   }
+
+  await logAudit(ctx.supabase, {
+    action: "cancel",
+    entityType: "expense",
+    entityId: parsed.data.expenseId,
+  });
 
   return { success: true };
 }

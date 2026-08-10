@@ -47,6 +47,15 @@ export const settings = {
     openSettings: "Mở cài đặt",
     tenantSettingsTitle: "Doanh nghiệp và thu tiền",
     accountSecurityTitle: "Tài khoản của bạn",
+    trackingTitle: "Theo dõi vận hành",
+    trackingDescription:
+      "Cần xử lý, nhật ký chứng từ và nhật ký quyền hạn — ba nguồn tách biệt.",
+    trackingLink: "Mở theo dõi",
+    systemActivityTitle: "Nhật ký hệ thống",
+    systemActivityDescription:
+      "Theo dõi thao tác trên chứng từ kho, đơn và thiết lập — không gồm nhật ký phân quyền.",
+    systemActivityLink: "Mở nhật ký",
+    permissionAuditCrossLink: "Nhật ký quyền hạn",
     printSettingsTitle: "Thiết bị và in ấn",
     generalTitle: "Doanh nghiệp",
     securityTitle: "Bảo mật đăng nhập",
@@ -75,6 +84,44 @@ export const settings = {
     posSessionsTitle: "Đối soát ca POS",
     posSessionsDescription:
       "Lịch sử ca, đơn đã bán, doanh thu và chênh lệch quỹ.",
+  },
+  activity: {
+    title: "Nhật ký hệ thống",
+    description:
+      "Thao tác gần đây trên chứng từ. Phân quyền nhân sự xem ở Nhật ký quyền hạn.",
+    permissionAuditLink: "Nhật ký quyền hạn",
+    trackingHubLink: "Theo dõi vận hành",
+    empty: "Chưa có thao tác nào được ghi nhận.",
+    emptyFiltered: "Không có kết quả phù hợp",
+    emptyFilteredHint: "Thử đổi loại chứng từ, người thao tác hoặc mốc thời gian.",
+    time: "Thời gian",
+    action: "Hành động",
+    entity: "Chứng từ",
+    actor: "Người thao tác",
+    filterEntityAll: "Tất cả chứng từ",
+    filterActorAll: "Tất cả người thao tác",
+    filterSince: "Từ ngày",
+    filterApply: "Áp dụng",
+    filterReset: "Xóa lọc",
+    recentItems: (count: number) => `${formatCount(count)} mục gần nhất`,
+    openDocument: "Mở chứng từ",
+  },
+  tracking: {
+    title: "Theo dõi vận hành",
+    description:
+      "Ba nguồn khác nhau: việc còn mở, bằng chứng chứng từ, và thay đổi phân quyền — không gộp một bảng.",
+    needActionTitle: "Cần xử lý",
+    needActionDescription:
+      "Việc còn mở từ thông báo: duyệt, handoff kho và cảnh báo vận hành.",
+    needActionLink: "Mở thông báo",
+    systemLogTitle: "Nhật ký hệ thống",
+    systemLogDescription:
+      "Bằng chứng thao tác trên chứng từ kho, đơn và thiết lập.",
+    systemLogLink: "Mở nhật ký hệ thống",
+    permissionLogTitle: "Nhật ký quyền hạn",
+    permissionLogDescription:
+      "Ai được gán hoặc thu hồi quyền — không gồm thao tác chứng từ.",
+    permissionLogLink: "Mở nhật ký quyền hạn",
   },
   printTemplates: {
     layoutTitle: "Bố cục phiếu",

@@ -94,3 +94,67 @@ test("branch inventory notification routing migration is present", () => {
     /replace\(action_url, '\/finance\/cost-close\?', '\/finance\/food-cost\?'\)/,
   );
 });
+
+test("gold handoff kinds keep deep-link CTA copy and labels", () => {
+  const messages = read("apps/web/lib/messages/notifications.ts");
+  for (const kind of [
+    "workflow.grn_pending",
+    "inventory.stock_request_submitted",
+    "workflow.transfer_in_transit",
+  ]) {
+    assert.match(
+      messages,
+      new RegExp(`"${kind.replace(/\./g, "\\.")}":\\s*"`),
+    );
+    assert.match(
+      messages,
+      new RegExp(
+        `ctaByKind:[\\s\\S]*"${kind.replace(/\./g, "\\.")}":\\s*"`,
+      ),
+    );
+  }
+  assert.match(messages, /viewDocumentHistory:\s*"Xem lịch sử chứng từ"/);
+});
+
+test("gold handoff producers bind entity_type entity_id and dedup keys", () => {
+  const baseline = read("supabase/migrations/20260802162900_baseline.sql");
+  assert.match(
+    baseline,
+    /trg_notify_grn_created[\s\S]*'workflow\.grn_pending'[\s\S]*NEW\.id[\s\S]*workflow\.grn_pending:%s/,
+  );
+  assert.match(
+    baseline,
+    /notify_stock_request_submitted[\s\S]*'inventory\.stock_request_submitted'[\s\S]*'stock_request'[\s\S]*inventory\.stock_request_submitted:%s/,
+  );
+  assert.match(
+    migration,
+    /'workflow\.transfer_in_transit'[\s\S]*'stock_transfer'[\s\S]*NEW\.id[\s\S]*workflow\.transfer_in_transit:%s/,
+  );
+});
+
+test("ops tracking correlation migration normalizes GRN entity_type", () => {
+  const correlation = read(
+    "supabase/migrations/20260810120000_ops_tracking_entity_correlation.sql",
+  );
+  assert.match(correlation, /'goods_received_note'/);
+  assert.match(
+    correlation,
+    /entity_type IN \('grn', 'goods_received_note'\)/,
+  );
+  assert.match(
+    correlation,
+    /SET entity_type = 'goods_received_note'[\s\S]*kind = 'workflow\.grn_pending'/,
+  );
+});
+
+test("attention hygiene: control toast only; POS KDS stay popup-only", () => {
+  const foreground = read("apps/web/app/_hooks/use-foreground-notifications.ts");
+  assert.match(foreground, /shouldShowInAppToast/);
+  assert.match(foreground, /surface === "owner"/);
+  assert.match(foreground, /surface === "branch_management"/);
+  assert.match(foreground, /pos\|kds\|pickup/);
+  assert.match(
+    foreground,
+    /Sonner on control surfaces; POS\/KDS\/pickup keep OS popup only/,
+  );
+});

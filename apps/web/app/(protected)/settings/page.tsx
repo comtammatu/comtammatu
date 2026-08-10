@@ -2,6 +2,7 @@ import {
   Building2 as IconBuilding2,
   CreditCard as IconCreditCard,
   Printer as IconPrinter,
+  Radar as IconRadar,
   ShieldCheck as IconShieldCheck,
 } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -65,6 +66,14 @@ export default async function SettingsPage() {
               description={copy.securityDescription}
               icon={<IconShieldCheck />}
               ctaLabel={copy.openSettings}
+            />
+            <AppLinkCard
+              href="/settings/tracking"
+              title={copy.trackingTitle}
+              description={copy.trackingDescription}
+              icon={<IconRadar />}
+              tone="info"
+              ctaLabel={copy.trackingLink}
             />
           </LinkCardGrid>
         </AppSection>

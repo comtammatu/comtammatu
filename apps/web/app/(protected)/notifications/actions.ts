@@ -3,7 +3,10 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
-import { resolveNotificationActionUrl } from "@lib/notifications/action-url";
+import {
+  resolveNotificationActionUrl,
+  resolveNotificationHistoryUrl,
+} from "@lib/notifications/action-url";
 import { messages } from "@lib/messages";
 
 export interface NotificationItem {
@@ -18,6 +21,7 @@ export interface NotificationItem {
   entity_type: string | null;
   entity_id: number | null;
   action_url: string | null;
+  history_url: string | null;
   meta: Record<string, unknown>;
   created_at: string;
   expires_at: string | null;
@@ -96,6 +100,13 @@ export async function listNotifications(
       entity_id: row.entity_id,
       action_url: resolveNotificationActionUrl(claims, {
         actionUrl: row.action_url,
+        entityId: row.entity_id,
+        entityType: row.entity_type,
+        kind: row.kind,
+        targetBranchId: row.target_branch_id,
+      }),
+      history_url: resolveNotificationHistoryUrl(claims, {
+        entityType: row.entity_type,
         entityId: row.entity_id,
         kind: row.kind,
         targetBranchId: row.target_branch_id,

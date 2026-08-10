@@ -43,3 +43,14 @@ export { AUTH_VI } from "./auth";
 export type { AuthKey } from "./auth";
 export { HR_VI } from "./hr";
 export type { HrKey } from "./hr";
+export {
+  AUDIT_ACTION_LABELS_VI,
+  AUDIT_ENTITY_TYPE_LABELS_VI,
+  INVENTORY_AUDIT_ACTION_CODES,
+  formatAuditActionLabel,
+  formatAuditEntityTypeLabel,
+} from "./audit";
+export type {
+  AuditActionLabelKey,
+  AuditEntityTypeLabelKey,
+} from "./audit";

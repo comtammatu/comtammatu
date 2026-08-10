@@ -145,6 +145,7 @@ export function getNotificationRowActions(
   item: NotificationItemModel,
   handlers: {
     onOpen: () => void;
+    onHistory?: () => void;
     onRead: (id: number, options?: { quiet?: boolean }) => void;
   },
 ): RowActionItem[] {
@@ -155,6 +156,13 @@ export function getNotificationRowActions(
       key: "open",
       label: openCtaLabel(item.kind),
       onSelect: handlers.onOpen,
+    });
+  }
+  if (item.history_url && handlers.onHistory) {
+    actions.push({
+      key: "history",
+      label: messages.notifications.viewDocumentHistory,
+      onSelect: handlers.onHistory,
     });
   }
   if (unread) {
@@ -202,8 +210,16 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
     if (item.action_url) router.push(item.action_url);
   };
 
+  const handleHistory = () => {
+    if (!item.history_url) return;
+    if (unread) onRead(item.id, { quiet: true });
+    onNavigate?.();
+    router.push(item.history_url);
+  };
+
   const actions = getNotificationRowActions(item, {
     onOpen: handleOpen,
+    onHistory: item.history_url ? handleHistory : undefined,
     onRead,
   });
 
@@ -255,12 +271,20 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
             ) : null}
             <Badge variant="outline">{kindLabel}</Badge>
           </div>
-          {cta ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
-              {cta}
-              <IconChevronRight className="size-3.5" aria-hidden />
-            </span>
-          ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {cta ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                {cta}
+                <IconChevronRight className="size-3.5" aria-hidden />
+              </span>
+            ) : null}
+            {item.history_url &&
+            item.history_url !== item.action_url ? (
+              <span className="text-2xs text-muted-foreground">
+                {messages.notifications.viewDocumentHistory}
+              </span>
+            ) : null}
+          </div>
         </ItemFooter>
       </ItemContent>
     </>

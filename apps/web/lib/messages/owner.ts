@@ -183,7 +183,7 @@ export const owner = {
     validUntilDescription: "Để trống = vĩnh viễn.",
     historyTitle: (count: number) =>
       `Lịch sử thay đổi (${formatCount(count)} mục gần nhất)`,
-    branchFallback: (branchId: number) => `Chi nhánh #${branchId}`,
+    branchFallback: (_branchId: number) => "Chi nhánh không còn trong danh sách",
     otherWorkArea: "Quyền khác",
     permissionModuleLabels: {
       dashboard: "Tổng quan vận hành",

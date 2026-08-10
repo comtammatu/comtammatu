@@ -1,0 +1,176 @@
+"use client";
+
+import { useEffect, useId, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import { useFormControlSize } from "@/components/form/control-size";
+import { AppToolbar } from "@/components/surface";
+import { messages } from "@lib/messages";
+import { formatAuditEntityTypeLabel } from "@comtammatu/shared/messages";
+
+const ALL_VALUE = "all";
+
+export type SystemActivityFilterValue = {
+  entityType: string | null;
+  actor: string | null;
+  since: string | null;
+};
+
+export type SystemActivityActorOption = {
+  id: string;
+  label: string;
+};
+
+export type SystemActivityEntityOption = {
+  id: string;
+  label: string;
+};
+
+export function SystemActivityFilters({
+  value,
+  actorOptions,
+  entityOptions,
+}: {
+  value: SystemActivityFilterValue;
+  actorOptions: SystemActivityActorOption[];
+  entityOptions: SystemActivityEntityOption[];
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
+  const controlSize = useFormControlSize();
+  const optionSize = controlSize === "touch" ? "touch" : "default";
+  const actionSize = controlSize === "touch" ? "touch" : "sm";
+  const copy = messages.settings.activity;
+  const filterIdPrefix = useId();
+  const entityFilterId = `${filterIdPrefix}-entity`;
+  const actorFilterId = `${filterIdPrefix}-actor`;
+  const sinceFilterId = `${filterIdPrefix}-since`;
+
+  const [draftSince, setDraftSince] = useState(value.since ?? "");
+  useEffect(() => {
+    setDraftSince(value.since ?? "");
+  }, [value.since]);
+
+  function pushParams(next: Partial<SystemActivityFilterValue>) {
+    const merged: SystemActivityFilterValue = { ...value, ...next };
+    const usp = new URLSearchParams();
+    if (merged.entityType) usp.set("entity_type", merged.entityType);
+    if (merged.actor) usp.set("actor", merged.actor);
+    if (merged.since) usp.set("since", merged.since);
+    const qs = usp.toString();
+    startTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    });
+  }
+
+  const entityValue = value.entityType ?? ALL_VALUE;
+  const actorValue = value.actor ?? ALL_VALUE;
+  const sinceDirty = draftSince !== (value.since ?? "");
+
+  return (
+    <AppToolbar>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor={entityFilterId}>{copy.entity}</Label>
+          <Select
+            value={entityValue}
+            onValueChange={(next) =>
+              pushParams({
+                entityType: next === ALL_VALUE ? null : next,
+              })
+            }
+          >
+            <SelectTrigger id={entityFilterId} size={controlSize}>
+              <SelectValue placeholder={copy.filterEntityAll} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE} size={optionSize}>
+                {copy.filterEntityAll}
+              </SelectItem>
+              {entityOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id} size={optionSize}>
+                  {option.label || formatAuditEntityTypeLabel(option.id)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor={actorFilterId}>{copy.actor}</Label>
+          <Select
+            value={actorValue}
+            onValueChange={(next) =>
+              pushParams({
+                actor: next === ALL_VALUE ? null : next,
+              })
+            }
+          >
+            <SelectTrigger id={actorFilterId} size={controlSize}>
+              <SelectValue placeholder={copy.filterActorAll} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_VALUE} size={optionSize}>
+                {copy.filterActorAll}
+              </SelectItem>
+              {actorOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id} size={optionSize}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor={sinceFilterId}>{copy.filterSince}</Label>
+          <Input
+            id={sinceFilterId}
+            type="date"
+            value={draftSince}
+            onChange={(event) => setDraftSince(event.target.value)}
+            controlSize={controlSize}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size={actionSize}
+            disabled={isPending || !sinceDirty}
+            onClick={() =>
+              pushParams({ since: draftSince.trim() ? draftSince : null })
+            }
+          >
+            {copy.filterApply}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size={actionSize}
+            disabled={
+              isPending ||
+              (!value.entityType && !value.actor && !value.since && !draftSince)
+            }
+            onClick={() => {
+              setDraftSince("");
+              pushParams({ entityType: null, actor: null, since: null });
+            }}
+          >
+            {copy.filterReset}
+          </Button>
+        </div>
+      </div>
+    </AppToolbar>
+  );
+}

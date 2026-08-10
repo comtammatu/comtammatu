@@ -10,6 +10,8 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/settings/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/security/page.tsx": "SETTINGS-PANEL",
+  "apps/web/app/(protected)/settings/activity/page.tsx": "LIST",
+  "apps/web/app/(protected)/settings/tracking/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/printers/jobs/page.tsx": "LIST",
   "apps/web/app/(protected)/settings/printers/page.tsx": "LANDING",
   "apps/web/app/(protected)/settings/printers/templates/page.tsx":

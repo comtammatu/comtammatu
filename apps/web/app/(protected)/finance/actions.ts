@@ -210,6 +210,12 @@ export async function requeueTaxInvoiceIssueJob(
     console.error("[finance/actions:requeueTaxInvoiceIssueJob]", error.code);
     return { success: false, error: "Yêu cầu chưa đủ điều kiện phát hành lại." };
   }
+  await logAudit(ctx.supabase, {
+    action: "update",
+    entityType: "tax_invoice",
+    entityId: parsed.data,
+    newData: { requeued: true },
+  });
   revalidatePath("/finance/invoices");
   return { success: true };
 }
@@ -255,6 +261,18 @@ export async function reconcileTaxInvoiceProviderIssued(
       error: "Không thể ghi đối soát; kiểm tra lại mã giao dịch và trạng thái.",
     };
   }
+  await logAudit(ctx.supabase, {
+    action: "update",
+    entityType: "tax_invoice",
+    entityId: parsed.data.taxInvoiceId,
+    newData: {
+      status: "issued",
+      provider_ref: parsed.data.providerRef,
+      invoice_number: parsed.data.invoiceNumber,
+      cqt_code: parsed.data.cqtCode ?? null,
+      trigger_source: "manual",
+    },
+  });
   revalidatePath("/finance/invoices");
   return { success: true };
 }

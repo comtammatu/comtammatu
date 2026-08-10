@@ -432,6 +432,21 @@ export async function fetchOrders(filters?: FetchOrdersFilters): Promise<
  *   - split_order (new):      note='split_from: order#N'
  *   - merge_orders, transfer_table, etc. fall through to "other"
  */
+const ORDER_STATUS_LABELS_VI: Record<string, string> = {
+  new: "Mới",
+  confirmed: "Đã xác nhận",
+  preparing: "Đang làm",
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
+  paid: "Đã thanh toán",
+  cancelled: "Đã huỷ",
+  completed: "Hoàn thành",
+};
+
+function orderStatusLabelVi(status: string): string {
+  return ORDER_STATUS_LABELS_VI[status] ?? "trạng thái khác";
+}
+
 function parseAuditNote(
   note: string | null,
   toStatus: string,
@@ -443,7 +458,7 @@ function parseAuditNote(
     }
     return {
       action: "status_change",
-      label: `Trạng thái → ${toStatus}`,
+      label: `Trạng thái → ${orderStatusLabelVi(toStatus)}`,
       reason: null,
     };
   }
@@ -498,7 +513,13 @@ function parseAuditNote(
 
   if (note.startsWith("split_from")) {
     const colon = note.indexOf(":");
-    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    const raw = colon > -1 ? note.slice(colon + 1).trim() : null;
+    // Prefer human display codes; drop bare order#N machine refs from reason.
+    const reason =
+      raw && !/^order#\d+$/i.test(raw)
+        ? raw.replace(/\border#\d+\b/gi, "").replace(/\(\s*\)/g, "").trim() ||
+          null
+        : null;
     return {
       action: "split_from",
       label: "Tách từ đơn khác",
@@ -546,7 +567,7 @@ function parseAuditNote(
 
   return {
     action: "other",
-    label: `Trạng thái → ${toStatus}`,
+    label: `Trạng thái → ${orderStatusLabelVi(toStatus)}`,
     reason: note,
   };
 }

@@ -32,9 +32,13 @@ export function HistoryTab({
         ? messages.owner.staffPermissions.tenantWide
         : (branchNameById.get(entry.branchId) ??
           messages.owner.staffPermissions.branchFallback(entry.branchId));
+    const actionLabel =
+      messages.owner.staffAudit.actionLabels[entry.action] ??
+      "Cập nhật phân quyền";
     return {
       id: entry.id,
-      action: `${messages.owner.staffAudit.actionLabels[entry.action] ?? UNKNOWN_LABEL_VI} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
+      // Precomposed " · " string bypasses the dictionary map in AuditHistoryList.
+      action: `${actionLabel} · ${permissionLabelByKey.get(entry.permissionKey) ?? UNKNOWN_LABEL_VI} · ${branchLabel}`,
       entityType: "permission",
       entityId: entry.actorUserId,
       userId: entry.actorUserId,

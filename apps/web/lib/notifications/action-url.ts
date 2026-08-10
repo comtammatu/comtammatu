@@ -4,10 +4,15 @@ import {
   type JwtClaims,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import {
+  isGoldTrackingEntityType,
+  resolveEntityHref,
+} from "@lib/entity-href";
 
 interface NotificationActionTarget {
   actionUrl: string | null;
   entityId: number | null;
+  entityType?: string | null;
   kind: string;
   targetBranchId: number | null;
 }
@@ -193,14 +198,11 @@ function canOpenTargetBranch(
   return claims.branch_id === targetBranchId;
 }
 
-/** Keep notification links inside the authenticated user's product plane. */
-export function resolveNotificationActionUrl(
+function finalizeNotificationUrl(
   claims: JwtClaims,
   target: NotificationActionTarget,
+  url: string,
 ): string | null {
-  const safeActionUrl = getSafeInternalReturnTo(target.actionUrl);
-  if (!safeActionUrl) return null;
-
   if (!canOpenTargetBranch(claims, target.targetBranchId)) {
     return null;
   }
@@ -213,8 +215,8 @@ export function resolveNotificationActionUrl(
         claims.user_role,
         // Branch GRN rewrite only for non-L0 shells (BM / floor).
         isL0InventoryShellRole(claims.user_role)
-          ? safeActionUrl
-          : rewriteRetiredBranchGrnPath(safeActionUrl),
+          ? url
+          : rewriteRetiredBranchGrnPath(url),
       ),
     ),
   );
@@ -222,4 +224,56 @@ export function resolveNotificationActionUrl(
   return resolvePostLoginRedirect(claims, rewritten) === rewritten
     ? rewritten
     : null;
+}
+
+/** Keep notification links inside the authenticated user's product plane. */
+export function resolveNotificationActionUrl(
+  claims: JwtClaims,
+  target: NotificationActionTarget,
+): string | null {
+  const safeActionUrl = getSafeInternalReturnTo(target.actionUrl);
+  const entityHref = resolveEntityHref({
+    entityType: target.entityType,
+    entityId: target.entityId,
+    claims,
+    branchId: target.targetBranchId,
+  });
+  // Prefer stored work-queue action_url; fill from shared entity map when missing.
+  const candidate = safeActionUrl ?? entityHref;
+  if (!candidate) return null;
+  return finalizeNotificationUrl(claims, target, candidate);
+}
+
+/**
+ * Document DETAIL / history deep-link for gold workflows (notify ↔ chứng từ).
+ * Always prefers the role-aware entity map over work-queue hubs.
+ */
+export function resolveNotificationHistoryUrl(
+  claims: JwtClaims,
+  target: Pick<
+    NotificationActionTarget,
+    "entityType" | "entityId" | "targetBranchId" | "kind"
+  >,
+): string | null {
+  if (!isGoldTrackingEntityType(target.entityType)) return null;
+  const entityHref = resolveEntityHref({
+    entityType: target.entityType,
+    entityId: target.entityId,
+    claims,
+    branchId: target.targetBranchId,
+    // History for L0 shells is always the document DETAIL, not branch hubs.
+    plane: isL0InventoryShellRole(claims.user_role) ? "control" : undefined,
+  });
+  if (!entityHref) return null;
+  return finalizeNotificationUrl(
+    claims,
+    {
+      actionUrl: entityHref,
+      entityId: target.entityId,
+      entityType: target.entityType,
+      kind: target.kind,
+      targetBranchId: target.targetBranchId,
+    },
+    entityHref,
+  );
 }

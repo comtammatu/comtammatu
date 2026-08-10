@@ -11,6 +11,7 @@ import {
   formatVND,
   sidePortionQuantity,
 } from "@comtammatu/shared/format";
+import { formatAuditActionLabel } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Item } from "@comtammatu/ui/components/item";
@@ -106,16 +107,6 @@ const PRINT_JOB_LABELS: Record<string, string> = {
   receipt: "Hoá đơn thanh toán",
   provisional_bill: "Phiếu tạm tính",
   shift_close_report: "Báo cáo chốt ca",
-};
-
-const AUDIT_ACTION_LABELS: Record<string, string> = {
-  create: "Tạo",
-  update: "Cập nhật",
-  delete: "Xoá",
-  sepay_canonical_reconciliation_match: "Đã khớp giao dịch VietQR",
-  sepay_canonical_reconciliation_backfill:
-    "Đã bổ sung liên kết giao dịch VietQR",
-  sepay_canonical_reconciliation_needs_review: "Cần kiểm tra giao dịch VietQR",
 };
 
 const VERDICT_COPY: Record<
@@ -385,7 +376,7 @@ export function OrderDetailContent({ order }: { order: OrderRow }) {
     })),
     ...(operationalTrace?.audit_events ?? []).map((event) => ({
       key: `audit-${String(event.id)}`,
-      label: AUDIT_ACTION_LABELS[event.action] ?? "Cập nhật dữ liệu",
+      label: formatAuditActionLabel(event.action),
       at: event.created_at,
       actorName: event.actor_name ?? "Hệ thống",
       reason: null,

@@ -19,6 +19,7 @@ function stubItem(
     entity_type: null,
     entity_id: null,
     action_url: null,
+    history_url: null,
     meta: {},
     created_at: createdAt,
     expires_at: null,
