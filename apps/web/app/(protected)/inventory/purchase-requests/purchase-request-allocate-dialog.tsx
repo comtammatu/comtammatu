@@ -6,7 +6,10 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
 import { AppDialog, QuantityInput } from "@/components/form";
-import { type PurchaseRequestRow } from "@lib/inventory/purchase-request-model";
+import {
+  purchaseRequestStatusVariant,
+  type PurchaseRequestRow,
+} from "@lib/inventory/purchase-request-model";
 import { messages } from "@lib/messages";
 import {
   type PurchaseOrderDraft,
@@ -14,6 +17,7 @@ import {
 } from "./purchase-order-drafts";
 
 const copy = messages.inventory.purchaseRequests;
+const detailCopy = copy.detail;
 
 export function PurchaseRequestAllocateDialog({
   open,
@@ -48,15 +52,30 @@ export function PurchaseRequestAllocateDialog({
     patch: Partial<PurchaseOrderDraftLine>,
   ) => void;
 }) {
+  const openLineCount = selected
+    ? Math.max(selected.lineCount - selected.orderedLineCount, 0)
+    : 0;
+
   return (
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
       variant="document"
-      title={copy.allocateTitle}
+      title={
+        selected ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{selected.code}</span>
+            <Badge variant={purchaseRequestStatusVariant(selected.status)}>
+              {copy.statusLabel(selected.status)}
+            </Badge>
+          </div>
+        ) : (
+          copy.allocateTitle
+        )
+      }
       description={
         selected
-          ? `${selected.code} · ${selected.branchName}${
+          ? `${selected.branchName}${
               selected.neededBy
                 ? ` · Cần ${formatVNDate(selected.neededBy)}`
                 : ""
@@ -101,11 +120,56 @@ export function PurchaseRequestAllocateDialog({
         </>
       }
     >
+      {selected ? (
+        <Item
+          variant="outline"
+          className="mb-4 grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
+        >
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {detailCopy.kpiLines}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {selected.lineCount}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {detailCopy.kpiOrdered}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {selected.orderedLineCount}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {detailCopy.kpiOpen}
+            </span>
+            <span
+              className={
+                openLineCount > 0
+                  ? "mt-1 block font-mono text-base font-semibold tabular-nums text-destructive"
+                  : "mt-1 block font-mono text-base font-semibold tabular-nums text-foreground"
+              }
+            >
+              {openLineCount}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {detailCopy.kpiNeeded}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {selected.neededBy ? formatVNDate(selected.neededBy) : "—"}
+            </span>
+          </div>
+        </Item>
+      ) : null}
       {missingSupplierItems.length > 0 ? (
         <Item
           variant="muted"
           size="sm"
-          className="items-start flex-col sm:flex-row"
+          className="mb-4 items-start flex-col sm:flex-row"
         >
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <p className="font-medium">{copy.missingSupplierMappingsTitle}</p>
@@ -125,6 +189,14 @@ export function PurchaseRequestAllocateDialog({
         </Item>
       ) : null}
       <div className="flex flex-col gap-3">
+        {selected ? (
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h4 className="text-sm font-semibold">{copy.linesTitle}</h4>
+            <p className="text-xs text-muted-foreground">
+              {detailCopy.sectionLineCount(selected.items.length)}
+            </p>
+          </div>
+        ) : null}
         {selected?.items.map((item) => {
           const supplierDrafts = allocationDrafts
             .map((draft) => ({

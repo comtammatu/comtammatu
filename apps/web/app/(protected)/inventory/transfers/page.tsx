@@ -106,12 +106,37 @@ export default async function TransfersPage({
       claims.user_role === "central_kitchen_lead");
   const writeRequiresSitePick = scope.scopeMode === "all" || branchId == null;
   const sitePickTitle = messages.controlSurface.scopeControl.pickSite;
+  const activeCount = rows.filter((row) => row.lifecycle === "active").length;
+  const completedCount = rows.filter(
+    (row) => row.lifecycle === "completed",
+  ).length;
 
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={copy.hubTitle}
-        description={copy.centralHubDescription}
+        meta={
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span>{copy.listMetaActive}</span>
+              <span className="font-mono font-semibold tabular-nums text-foreground">
+                {activeCount}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span>{copy.listMetaCompleted}</span>
+              <span className="font-mono font-semibold tabular-nums text-foreground">
+                {completedCount}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span>{copy.listMetaTotal}</span>
+              <span className="font-mono font-semibold tabular-nums text-foreground">
+                {rows.length}
+              </span>
+            </span>
+          </div>
+        }
         actions={
           canRequestCentralSupply || canCreateManualTransfer ? (
             <div className="flex flex-wrap gap-2">

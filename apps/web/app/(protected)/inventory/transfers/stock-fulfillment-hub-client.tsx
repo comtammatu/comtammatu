@@ -35,6 +35,7 @@ import {
 } from "@/components/data-table/data-table";
 import { AppListFrame, AppToolbar } from "@/components/surface";
 import { AppDialog } from "@/components/form";
+import { StatusBadge } from "@/components/status-badge";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { StockRequestDetailView } from "@/components/stock-request-detail-view";
 import { matchesSearch } from "@lib/search";
@@ -296,7 +297,7 @@ export function StockFulfillmentHubClient({
   const dialogOpen =
     mode === "central" && (selectedRequest != null || selectedTransfer != null);
   const dialogTitle = selectedTransfer ? (
-    <span className="flex items-center gap-2">
+    <span className="flex flex-wrap items-center gap-2">
       {selectedRequest ? (
         <Button
           type="button"
@@ -309,16 +310,29 @@ export function StockFulfillmentHubClient({
         </Button>
       ) : null}
       <span className="font-mono">{selectedTransfer.transfer.code}</span>
+      <StatusBadge
+        domain="inventory"
+        value={selectedTransfer.transfer.status}
+      />
     </span>
   ) : (
-    <span className="font-mono">
-      {selectedRequest?.data.requestNumber ?? "Giao nhận"}
+    <span className="flex flex-wrap items-center gap-2">
+      <span className="font-mono">
+        {selectedRequest?.data.requestNumber ?? copy.hubTitle}
+      </span>
+      {selectedRequest ? (
+        <Badge variant="secondary">
+          {messages.inventory.stockRequests.statusLabel(
+            selectedRequest.data.status,
+          )}
+        </Badge>
+      ) : null}
     </span>
   );
   const dialogDescription = selectedTransfer
     ? `${selectedTransfer.transfer.fromBranch} → ${selectedTransfer.transfer.toBranch}`
     : selectedRequest
-      ? `${selectedRequest.data.branchName} · ${messages.inventory.stockRequests.statusLabel(selectedRequest.data.status)}${selectedRequest.data.neededAt ? ` · Cần trước ${formatVNDate(selectedRequest.data.neededAt)}` : ""}`
+      ? `${selectedRequest.data.branchName}${selectedRequest.data.neededAt ? ` · Cần trước ${formatVNDate(selectedRequest.data.neededAt)}` : ""}`
       : undefined;
 
   const toolbar = (

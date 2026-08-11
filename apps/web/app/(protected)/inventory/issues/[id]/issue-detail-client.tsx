@@ -58,7 +58,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -84,7 +84,7 @@ import {
 } from "../../_lib/issue-units";
 import type { IngredientRow } from "@lib/inventory/types";
 
-import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 const ISSUES_VI = messages.inventory.issues;
 const stockCopy = messages.inventory.stock;
@@ -455,13 +455,61 @@ export function IssueDetailClient({
   ];
 
   const pageLayout = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <Item
+        variant="outline"
+        className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+      >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {ISSUES_VI.kpiLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {lines.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {ISSUES_VI.kpiTotal}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {canViewMonetary
+              ? messages.inventory.common.currency(formatVND(totalAmount))
+              : "—"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {ISSUES_VI.kpiBranch}
+          </span>
+          <span className="mt-1 block truncate text-base font-semibold text-foreground">
+            {issueBranchName}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {ISSUES_VI.kpiKind}
+          </span>
+          <span className="mt-1 block truncate text-base font-semibold text-foreground">
+            {surface.label}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {ISSUES_VI.kpiDate}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {issue.issued_at ? formatDateTime(issue.issued_at) : "—"}
+          </span>
+        </div>
+      </Item>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
         {/* Lines + history: second on phone, primary column on desktop */}
         <div className="order-2 flex flex-col gap-4 lg:order-1">
           <AppSection
             title={tTerm("ingredientsList")}
-            description={
+            description={ISSUES_VI.sectionLineCount(lines.length)}
+            headerHint={
               isDraft
                 ? ISSUES_VI.draftAutoSaveHint
                 : ISSUES_VI.finalizedReadOnlyHint
@@ -587,31 +635,9 @@ export function IssueDetailClient({
               descriptionClassName="font-semibold"
               items={[
                 {
-                  term: ISSUES_VI.businessKindLabel,
-                  description: surface.label,
-                },
-                {
-                  term: `${BRANCH_VI.long} xuất`,
-                  description: issueBranchName,
-                },
-                {
-                  term: ISSUES_VI.totalLines,
-                  description: String(lines.length).padStart(2, "0"),
-                },
-                {
                   term: ISSUES_VI.sourceLabel,
                   description: getIssueSourceLabel(issue),
                 },
-                ...(canViewMonetary ? [{
-                  term: ISSUES_VI.totalValue,
-                  description: (
-                    <span className="text-primary font-semibold">
-                      {messages.inventory.common.currency(
-                        formatVND(totalAmount),
-                      )}
-                    </span>
-                  ),
-                }] : []),
               ]}
             />
           </AppSection>
@@ -689,16 +715,21 @@ export function IssueDetailClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         eyebrow={surface.eyebrow}
-        title={issue.issue_number}
-        description={ISSUES_VI.headerMeta(
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{issue.issue_number}</span>
+            <StatusBadge
+              domain="inventory"
+              value={issue.status}
+              label={statusBadge.label}
+            />
+          </div>
+        }
+        meta={ISSUES_VI.headerMeta(
           surface.label,
           issueBranchName,
           issue.issued_at ? formatDateTime(issue.issued_at) : "—",
         )}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
         breadcrumb={
           <AppBackLink href={listBasePath}>
             {tRoute("/inventory/consumption")}

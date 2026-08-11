@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { formatVNDateTime } from "@comtammatu/shared/time";
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -352,6 +352,45 @@ export function StockRequestDetailView({
       transfersForSite(data, siteKind).map((transfer) => transfer.id),
     ),
   ).size;
+  const requestKpiStrip = (
+    <Item
+      variant="outline"
+      className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
+    >
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {copy.kpiLines}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {data.items.length}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {copy.kpiSources}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {sourceKinds.length}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {copy.kpiTransfers}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {tripCount}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {copy.kpiNeeded}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {data.neededAt ? formatVNDate(data.neededAt) : "—"}
+        </span>
+      </div>
+    </Item>
+  );
 
   if (mode === "branch" && !embedded) {
     return (
@@ -423,6 +462,8 @@ export function StockRequestDetailView({
 
   const content = workFirst ? (
     <>
+      {requestKpiStrip}
+
       {actions}
 
       {tripsSection}
@@ -447,6 +488,8 @@ export function StockRequestDetailView({
     </>
   ) : (
     <>
+      {requestKpiStrip}
+
       {data.submittedAt ? (
         <Item variant="outline">
           <ItemContent>

@@ -35,7 +35,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -479,11 +479,66 @@ export function TransferDetailClient({
   const pageLayout = (
     <div
       className={cn(
-        "flex flex-col gap-4",
+        "flex flex-col gap-6",
         // Document dialog: fill body height on desktop so only the line list scrolls.
         embedded && "lg:h-full lg:min-h-0",
       )}
     >
+      <Item
+        variant="outline"
+        className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+      >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.kpiLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {transfer.items.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.kpiRecorded}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {receivedCount}/{transfer.items.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.kpiShort}
+          </span>
+          <span
+            className={
+              shortLines > 0
+                ? "mt-1 block font-mono text-base font-semibold tabular-nums text-destructive"
+                : "mt-1 block font-mono text-base font-semibold tabular-nums text-foreground"
+            }
+          >
+            {isReceiveMode ? shortLines : "—"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.kpiDate}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {transfer.date || "—"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.kpiValue}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {transfer.monetary
+              ? messages.inventory.common.currencyCompact(
+                  formatVND(transfer.monetary.total),
+                )
+              : "—"}
+          </span>
+        </div>
+      </Item>
       <div
         className={cn(
           "grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]",
@@ -504,6 +559,7 @@ export function TransferDetailClient({
                 embedded && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col",
               )}
               title={tTerm("ingredientsList")}
+              description={copy.sectionLineCount(transfer.items.length)}
             headerHint={
               isReceiveMode
                 ? copy.receiveInstructions
@@ -589,24 +645,6 @@ export function TransferDetailClient({
               className="grid gap-3"
               descriptionClassName="flex items-center gap-1 font-semibold"
               items={[
-                ...(transfer.monetary
-                  ? [
-                      {
-                        term: copy.totalValue,
-                        description: (
-                          <span className="text-primary font-semibold">
-                            {messages.inventory.common.currencyCompact(
-                              formatVND(transfer.monetary.total),
-                            )}
-                          </span>
-                        ),
-                      },
-                    ]
-                  : []),
-                {
-                  term: copy.totalItems,
-                  description: String(transfer.items.length).padStart(2, "0"),
-                },
                 {
                   term: copy.sourceBranchLabel,
                   description: (
@@ -624,10 +662,6 @@ export function TransferDetailClient({
                       {transfer.toLocation}
                     </>
                   ),
-                },
-                {
-                  term: copy.recorded,
-                  description: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
                 },
               ]}
             />
@@ -845,16 +879,17 @@ export function TransferDetailClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={transfer.code}
-        description={copy.routeMeta(
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{transfer.code}</span>
+            <StatusBadge domain="inventory" value={transfer.status} />
+          </div>
+        }
+        meta={copy.routeMeta(
           transfer.fromBranch,
           transfer.toBranch,
           transfer.date,
         )}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
         breadcrumb={
           <AppBackLink href={transferListHref}>
             {tRoute("/inventory/transfers")}
