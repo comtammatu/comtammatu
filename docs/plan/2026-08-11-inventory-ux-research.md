@@ -72,12 +72,12 @@ Reuse stock/PO/GRN only:
 | Surface | Density target |
 | --- | --- |
 | Stock dialog, PO doc, GRN doc | **Done** (gold) |
-| Giao nhận hub + transfer/YCH doc | Wave 1 |
-| Demand view dialog | Wave 1 |
-| Issue / consumption DETAIL | Wave 1 |
-| Production DETAIL, stocktake DETAIL | Wave 2 |
-| Hub attention + Kiểm kê nav | Wave 2 |
-| Stock page twin, GRN→AP CTA | Wave 3 |
+| Giao nhận hub + transfer/YCH doc | **Done** (Wave 1) |
+| Demand view dialog | **Done** (Wave 1) |
+| Issue / consumption DETAIL | **Done** (Wave 1) |
+| Production DETAIL, stocktake DETAIL | **Done** (Wave 2) |
+| Hub attention + Kiểm kê nav | **Done** (Wave 2) |
+| Stock page twin, GRN→AP CTA | **Done** (Wave 3) |
 
 ## 7. Implementation waves
 

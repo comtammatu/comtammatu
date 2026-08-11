@@ -9,7 +9,7 @@ import {
   AppPage,
   AppPageHeader,
 } from "@/components/surface";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 
 export default async function ProductionDetailPage({
   params,
@@ -26,15 +26,16 @@ export default async function ProductionDetailPage({
   }
 
   const run = res.data;
-  const statusBadge = getStatusBadgeMeta("inventory", run.status);
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={`Lệnh sản xuất ${run.production_number}`}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{run.production_number}</span>
+            <StatusBadge domain="inventory" value={run.status} />
+          </div>
+        }
+        meta={run.finished_good_name}
         breadcrumb={
           <AppBackLink href="/inventory/production">
             Quay lại

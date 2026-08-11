@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { formatPercent } from "@comtammatu/shared/format";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -28,7 +28,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   DataTable,
   type DataTableColumn,
@@ -129,12 +129,11 @@ export function StocktakeDetailClient({
     () => lines.filter((line) => (line.variance ?? 0) !== 0).length,
     [lines],
   );
-  const headerDescription = [
+  const headerMeta = [
     stocktakeDetailCopy.createdAt(formatVNDateTime(session.created_at)),
     session.completed_at
       ? stocktakeDetailCopy.completedAt(formatVNDateTime(session.completed_at))
       : null,
-    session.notes ? stocktakeDetailCopy.notes(session.notes) : null,
   ]
     .filter(Boolean)
     .join(" • ");
@@ -304,46 +303,8 @@ export function StocktakeDetailClient({
         descriptionClassName="font-semibold text-right"
         items={[
           {
-            term: stocktakeDetailCopy.metrics.status,
-            description: (
-              <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-            ),
-          },
-          {
-            term: stocktakeDetailCopy.metrics.counted,
-            description: `${countedCount}/${lines.length}`,
-          },
-          {
-            term: stocktakeDetailCopy.metrics.progress,
-            description: (
-              <div className="flex items-center justify-end gap-2">
-                <span className="tabular-nums">
-                  {formatPercent(progressPct, 0)}
-                </span>
-                <Progress value={progressPct} className="h-1.5 w-16" />
-              </div>
-            ),
-          },
-          {
-            term: stocktakeDetailCopy.metrics.varianceLines,
-            description: (
-              <span
-                className={cn(
-                  "tabular-nums",
-                  varianceCount > 0
-                    ? "text-warning font-semibold"
-                    : "text-muted-foreground",
-                )}
-              >
-                {varianceCount}
-              </span>
-            ),
-          },
-          {
-            term: stocktakeCopy.startedAt,
-            description: formatVNDateTime(
-              session.started_at ?? session.created_at,
-            ),
+            term: labelCreator,
+            description: session.created_by,
           },
           ...(session.completed_at
             ? [
@@ -353,10 +314,6 @@ export function StocktakeDetailClient({
                 },
               ]
             : []),
-          {
-            term: labelCreator,
-            description: session.created_by,
-          },
         ]}
       />
       {session.notes ? (
@@ -366,6 +323,60 @@ export function StocktakeDetailClient({
         </div>
       ) : null}
     </AppSection>
+  );
+
+  const kpiStrip = (
+    <Item
+      variant="outline"
+      className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+    >
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {stocktakeDetailCopy.kpiLines}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {lines.length}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {stocktakeDetailCopy.kpiCounted}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {countedCount}/{lines.length}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {stocktakeDetailCopy.kpiProgress}
+        </span>
+        <span className="mt-1 flex items-center gap-2 font-mono text-base font-semibold tabular-nums text-foreground">
+          {formatPercent(progressPct, 0)}
+          <Progress value={progressPct} className="h-1.5 w-16" />
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {stocktakeDetailCopy.kpiVariance}
+        </span>
+        <span
+          className={cn(
+            "mt-1 block font-mono text-base font-semibold tabular-nums",
+            varianceCount > 0 ? "text-warning" : "text-foreground",
+          )}
+        >
+          {varianceCount}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <span className="block font-medium text-muted-foreground">
+          {stocktakeDetailCopy.kpiStarted}
+        </span>
+        <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+          {formatVNDateTime(session.started_at ?? session.created_at)}
+        </span>
+      </div>
+    </Item>
   );
 
   const mainContent = (
@@ -413,10 +424,13 @@ export function StocktakeDetailClient({
   );
 
   const documentPane = (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
-      <div className="flex flex-col gap-4">{mainContent}</div>
-      <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-        {summarySection}
+    <div className="flex flex-col gap-6">
+      {kpiStrip}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] items-start">
+        <div className="flex flex-col gap-4">{mainContent}</div>
+        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+          {summarySection}
+        </div>
       </div>
     </div>
   );
@@ -446,12 +460,17 @@ export function StocktakeDetailClient({
   return (
     <AppPage width="xwide" density="compact">
       <AppPageHeader
-        title={stocktakeCode(session)}
-        description={headerDescription}
-        badge={{
-          children: statusLabel,
-          variant: statusBadge.variant,
-        }}
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{stocktakeCode(session)}</span>
+            <StatusBadge
+              domain="inventory"
+              value={session.status}
+              label={statusLabel}
+            />
+          </div>
+        }
+        meta={headerMeta}
         breadcrumb={
           <AppBackLink href={`${routeBase}?branch=${session.branch_id}`}>
             {tRoute("/inventory/stocktake")}
@@ -549,7 +568,11 @@ function CountingPhase({
   ];
 
   return (
-    <AppSection className="overflow-hidden" contentFlush>
+    <AppSection
+      className="overflow-hidden"
+      contentFlush
+      description={stocktakeDetailCopy.sectionLineCount(lines.length)}
+    >
       <DataTable
         columns={countingColumns}
         data={lines}

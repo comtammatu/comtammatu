@@ -28,6 +28,20 @@ export const inventory = {
   home: {
     title: "Kho hàng",
     laneHint: "Mở danh sách và làm tiếp trong phân hệ.",
+    attentionTitle: "Cần xử lý",
+    attentionGrn: "Chờ nhập",
+    attentionWaste: "Chờ duyệt hao",
+    attentionTransfers: "YCH đang mở",
+  },
+  productionDetail: {
+    kpiLines: "Dòng NL",
+    kpiPlanned: "Kế hoạch",
+    kpiActual: "Thực tế",
+    kpiBranch: "Bếp",
+    kpiFinishedGood: "Thành phẩm",
+    sectionLineCount: (count: number) => `${formatCount(count)} dòng`,
+    startedAt: "Bắt đầu",
+    completedAt: "Hoàn thành",
   },
   operatorFlow: {
     stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,
@@ -2197,6 +2211,12 @@ export const inventory = {
         progress: "Tiến độ",
         varianceLines: "Dòng lệch",
       },
+      kpiLines: "Dòng hàng",
+      kpiCounted: "Đã đếm",
+      kpiProgress: "Tiến độ",
+      kpiVariance: "Dòng lệch",
+      kpiStarted: "Bắt đầu",
+      sectionLineCount: (count: number) => `${formatCount(count)} dòng`,
       progressText: (counted: number, total: number, percent: string) =>
         `Tiến độ: ${formatCount(counted)}/${formatCount(total)} đã đếm (${percent})`,
       cancelledTitle: "Phiên kiểm kê đã bị hủy",

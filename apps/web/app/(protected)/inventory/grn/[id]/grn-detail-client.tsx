@@ -228,7 +228,6 @@ export function GRNDetailClient({
         body: valuationCopy.hintReceivedAwaitingInvoice,
         action: canManageSupplierInvoice ? (
           <Button
-            variant="outline"
             size="sm"
             render={
               <Link
@@ -503,7 +502,9 @@ export function GRNDetailClient({
           ) : null}
           {!isDraft && canManageSupplierInvoice ? (
             <Button
-              variant="outline"
+              variant={
+                valuationKind === "pending_invoice" ? "default" : "outline"
+              }
               size="default"
               render={
                 <Link

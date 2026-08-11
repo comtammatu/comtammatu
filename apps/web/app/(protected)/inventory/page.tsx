@@ -5,6 +5,7 @@ import {
   canAccess,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
   ItemActions,
@@ -31,10 +32,16 @@ import {
 } from "./_lib/inventory-nav";
 import { resolveRequestedBranchId } from "./_lib/inventory-scope";
 import {
+  countOpenGrns,
+  countOpenStockRequests,
+  countPendingWasteApprovals,
+} from "./_lib/receiving-counts";
+import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
   PRODUCTION_OPEN_PERMISSIONS,
 } from "./production-data";
+import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { messages } from "@lib/messages";
 
 const INVENTORY_SETTINGS_PERMISSIONS = [
@@ -116,6 +123,21 @@ async function resolveInventoryHomeFlags(
   };
 }
 
+function scopeHref(href: string, branchId: number | null): string {
+  if (branchId == null) return href;
+  return withControlSurfaceBranchScope(href, String(branchId) as `${number}`, {
+    prefixes: ["/inventory"],
+  });
+}
+
+async function settledCount(promise: Promise<number>): Promise<number> {
+  try {
+    return await promise;
+  } catch {
+    return 0;
+  }
+}
+
 export default async function InventoryPage({
   searchParams,
 }: {
@@ -133,9 +155,65 @@ export default async function InventoryPage({
     branchId,
   );
 
+  const [grnCount, wasteCount, transferCount] = await Promise.all([
+    flags.showProcurement
+      ? settledCount(countOpenGrns(branchId ?? undefined))
+      : Promise.resolve(0),
+    settledCount(countPendingWasteApprovals(branchId ?? undefined)),
+    flags.showStockRequestInbox
+      ? settledCount(countOpenStockRequests(branchId ?? undefined))
+      : Promise.resolve(0),
+  ]);
+
+  const attentionItems = [
+    grnCount > 0
+      ? {
+          id: "grn",
+          label: copy.attentionGrn,
+          count: grnCount,
+          href: scopeHref("/inventory/grn", branchId),
+        }
+      : null,
+    wasteCount > 0
+      ? {
+          id: "waste",
+          label: copy.attentionWaste,
+          count: wasteCount,
+          href: scopeHref("/inventory/waste/approvals", branchId),
+        }
+      : null,
+    transferCount > 0
+      ? {
+          id: "transfers",
+          label: copy.attentionTransfers,
+          count: transferCount,
+          href: scopeHref("/inventory/transfers", branchId),
+        }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item != null);
+
   return (
     <AppPage density="compact" width="wide">
-      <AppPageHeader title={copy.title} description={copy.description} />
+      <AppPageHeader title={copy.title} />
+      {attentionItems.length > 0 ? (
+        <AppSection title={copy.attentionTitle} headingLevel="h2">
+          <div className="flex flex-wrap gap-2">
+            {attentionItems.map((item) => (
+              <Badge
+                key={item.id}
+                variant="warning"
+                render={<Link href={item.href} />}
+                className="gap-1.5 px-2.5 py-1 text-sm"
+              >
+                <span>{item.label}</span>
+                <span className="font-mono font-semibold tabular-nums">
+                  {item.count}
+                </span>
+              </Badge>
+            ))}
+          </div>
+        </AppSection>
+      ) : null}
       <div className="grid items-start gap-3">
         {groups.map((group) => (
           <AppSection key={group.title} title={group.title} headingLevel="h2">

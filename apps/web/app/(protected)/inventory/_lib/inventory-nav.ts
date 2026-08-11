@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft as IconArrowRightLeft,
   CircleMinus as IconCircleMinus,
+  ClipboardList as IconClipboardList,
   FileText as IconFileText,
   Package as IconPackage,
   PackagePlus as IconPackagePlus,
@@ -106,6 +107,16 @@ export function resolveInventoryNav({
           href: "/inventory/stock",
           label: tNav("stock", "navigation"),
           icon: IconPackage,
+        },
+        {
+          href: "/inventory/stocktake",
+          label: tNav("stocktake", "navigation"),
+          icon: IconClipboardList,
+          matchPrefixes: [
+            "/inventory/stocktake/",
+            "/inventory/count-assignments",
+            "/inventory/count-slips",
+          ],
         },
       ],
     },

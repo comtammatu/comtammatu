@@ -1,7 +1,10 @@
 "use server";
 
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
-import { getAuthContextWithPermission } from "./auth";
+import {
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "./auth";
 
 // Receiving badge counts. The landing page previously fetched the full PO / GRN /
 // supplier-invoice lists (with eager joins) only to count a filtered subset and
@@ -86,6 +89,61 @@ export async function countOpenPurchaseRequests(
     .select("id", { count: "exact", head: true })
     .eq("tenant_id", claims.tenant_id)
     .in("status", ["submitted", "pending_allocation"]);
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { count, error } = await query;
+  return error ? 0 : (count ?? 0);
+}
+
+const INVENTORY_ATTENTION_ROLES = [
+  "owner",
+  "central_supply_ops",
+  "central_kitchen_lead",
+] as const;
+
+/** Writeoff issues awaiting 4-eye approval. */
+export async function countPendingWasteApprovals(
+  branchId?: number,
+): Promise<number> {
+  const ctx = await getAuthContextWithPermission(
+    INVENTORY_ATTENTION_ROLES,
+    PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
+  );
+  if (!ctx) return 0;
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("stock_issues")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .eq("issue_type", "writeoff")
+    .eq("approval_status", "pending");
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { count, error } = await query;
+  return error ? 0 : (count ?? 0);
+}
+
+/** Open YCH still in fulfill queue (not draft / closed / cancelled). */
+export async function countOpenStockRequests(
+  branchId?: number,
+): Promise<number> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_ATTENTION_ROLES,
+    [
+      PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+      PERMISSION_KEYS.INVENTORY_READ,
+    ],
+  );
+  if (!ctx) return 0;
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("stock_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", [
+      "submitted",
+      "partially_fulfilled",
+      "pending",
+      "allocated",
+    ]);
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);

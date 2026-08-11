@@ -11,7 +11,7 @@ import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   AppBackLink,
   AppEmptyState,
@@ -137,17 +137,28 @@ function StockIngredientDetail({
     ),
   };
 
+  const thresholdUnits = formatStockUnits(
+    ingredient.min,
+    ingredient.units,
+    formatQty,
+  );
+
   return (
     <AppPage width="wide" scroll>
       <AppPageHeader
-        title={ingredient.name}
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{ingredient.name}</span>
+            <StatusBadge
+              domain="inventory"
+              value={data.status}
+              label={statusBadge.label}
+            />
+          </div>
+        }
         meta={[ingredient.sku, ingredient.category, ingredient.unit]
           .filter(Boolean)
           .join(" · ")}
-        badge={{
-          children: statusBadge.label,
-          variant: statusBadge.variant,
-        }}
         breadcrumb={
           <AppBackLink href={listHref}>
             {detailCopy.backToStock}
@@ -155,59 +166,90 @@ function StockIngredientDetail({
         }
       />
 
-      <AppSection size="sm">
-        <DescriptionList
-          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-          descriptionClassName="font-mono text-base font-semibold tabular-nums"
-          items={[
-            {
-              term: stockCopy.table.currentStock,
-              description: (
-                <span className="flex flex-col">
-                  <span>{totalStockUnits.big ?? totalStockUnits.base}</span>
-                  {totalStockUnits.big !== null ? (
+      <div className="flex flex-col gap-6">
+        <Item
+          variant="outline"
+          className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+        >
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {stockCopy.table.currentStock}
+            </span>
+            <span className="mt-1 flex flex-col font-mono text-base font-semibold tabular-nums text-foreground">
+              <span>{totalStockUnits.big ?? totalStockUnits.base}</span>
+              {totalStockUnits.big !== null ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {totalStockUnits.base}
+                </span>
+              ) : null}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {stockCopy.table.stockValue}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {valuationKind === "valued" && totalValue != null
+                ? formatVND(totalValue)
+                : valuationKind === "pending"
+                  ? valuationCopy.pendingWac
+                  : inventoryCommon.noValue}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {stockCopy.table.wac}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {valuationKind === "valued" && displayWac != null
+                ? `${formatVND(displayWac)} / ${wacUnitLabel}`
+                : valuationKind === "pending"
+                  ? valuationCopy.pendingWac
+                  : inventoryCommon.noValue}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {stockCopy.table.threshold}
+            </span>
+            <span className="mt-1 flex flex-col font-mono text-base font-semibold tabular-nums text-foreground">
+              {ingredient.min > 0 ? (
+                <>
+                  <span>{thresholdUnits.big ?? thresholdUnits.base}</span>
+                  {thresholdUnits.big !== null ? (
                     <span className="text-xs font-normal text-muted-foreground">
-                      {totalStockUnits.base}
+                      {thresholdUnits.base}
                     </span>
                   ) : null}
-                </span>
-              ),
-            },
-            {
-              term: stockCopy.table.stockValue,
-              description:
-                valuationKind === "valued" && totalValue != null
-                  ? formatVND(totalValue)
-                  : valuationKind === "pending"
-                    ? valuationCopy.pendingWac
-                    : inventoryCommon.noValue,
-            },
-            {
-              term: stockCopy.table.wacPerUnit(wacUnitLabel),
-              description:
-                valuationKind === "valued" && displayWac != null
-                  ? formatVND(displayWac)
-                  : valuationKind === "pending"
-                    ? valuationCopy.pendingWac
-                    : inventoryCommon.noValue,
-            },
-            {
-              term: stockCopy.table.lastCount,
-              description: data.latestCountedAt
+                </>
+              ) : (
+                inventoryCommon.noValue
+              )}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span className="block font-medium text-muted-foreground">
+              {stockCopy.table.lastCount}
+            </span>
+            <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+              {data.latestCountedAt
                 ? formatDate(data.latestCountedAt)
-                : inventoryCommon.noValue,
-            },
-          ]}
-        />
-      </AppSection>
+                : inventoryCommon.noValue}
+            </span>
+          </div>
+        </Item>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-2">
-          <AppSection
-            title={detailCopy.locationTitle}
-            description={detailCopy.locationDescription}
-            icon={<IconPackageCheck />}
-          >
+          <div className="flex flex-col gap-2">
+            <h4 className="text-sm font-medium">{detailCopy.locationTitle}</h4>
+            {data.locations.length === 0 ? null : (
+              <p className="text-xs text-muted-foreground">
+                {detailCopy.locationDescription}
+              </p>
+            )}
+          </div>
+          <AppSection icon={<IconPackageCheck />}>
             {data.locations.length === 0 ? (
               <AppEmptyState
                 compact
@@ -439,17 +481,9 @@ function StockIngredientDetail({
             </div>
           </AppSection>
 
-          <AppSection title={detailCopy.thresholdTitle}>
+          <AppSection title={detailCopy.thresholdTitle} size="sm">
             <DescriptionList
               items={[
-                {
-                  term: stockCopy.table.currentStock,
-                  description: `${formatQty(data.totalQty)} ${ingredient.unit}`,
-                },
-                {
-                  term: stockCopy.table.minThreshold,
-                  description: `${formatQty(ingredient.min)} ${ingredient.unit}`,
-                },
                 {
                   term: detailCopy.storage,
                   description:
@@ -459,6 +493,7 @@ function StockIngredientDetail({
             />
           </AppSection>
         </div>
+      </div>
       </div>
     </AppPage>
   );

@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { confirm } from "@/components/confirm-dialog";
@@ -15,6 +16,7 @@ import {
   DescriptionList,
 } from "@/components/surface";
 import { formatDateTime, formatQty } from "@lib/inventory/format";
+import { messages } from "@lib/messages";
 import {
   cancelProductionRun,
   completeProductionRun,
@@ -22,6 +24,8 @@ import {
   type ProductionRunRow,
 } from "../../production-run-actions";
 import type { ProductionShortageRow } from "../../production-types";
+
+const detailCopy = messages.inventory.productionDetail;
 
 export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
   const router = useRouter();
@@ -128,29 +132,73 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
     });
   }
 
+  const unit = run.entry_unit_name ?? "";
+  const actualQtyLabel =
+    run.actual_quantity == null
+      ? "—"
+      : `${formatQty(run.actual_quantity)} ${unit}`.trim();
+
   return (
-    <div className="flex flex-col gap-4">
-      <AppSection
-        title="Thông tin lệnh"
-        description={`${run.finished_good_name} · ${formatQty(run.planned_quantity)} ${run.entry_unit_name ?? ""}`.trim()}
+    <div className="flex flex-col gap-6">
+      <Item
+        variant="outline"
+        className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
       >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {detailCopy.kpiLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {run.lines.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {detailCopy.kpiPlanned}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {`${formatQty(run.planned_quantity)} ${unit}`.trim()}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {detailCopy.kpiActual}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {actualQtyLabel}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {detailCopy.kpiBranch}
+          </span>
+          <span className="mt-1 block truncate text-base font-semibold text-foreground">
+            {run.branch_name}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {detailCopy.kpiFinishedGood}
+          </span>
+          <span className="mt-1 block truncate text-base font-semibold text-foreground">
+            {run.finished_good_name}
+          </span>
+        </div>
+      </Item>
+
+      <AppSection title="Thông tin lệnh" size="sm">
         <DescriptionList
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-3 sm:grid-cols-2"
           descriptionClassName="font-medium"
           items={[
-            { term: "Bếp", description: run.branch_name },
             {
-              term: "Sản lượng chuẩn",
-              description: `${formatQty(run.recipe_output_quantity ?? 0)} ${run.entry_unit_name ?? ""}`.trim(),
-            },
-            {
-              term: "Bắt đầu",
+              term: detailCopy.startedAt,
               description: run.started_at
                 ? formatDateTime(run.started_at)
                 : "—",
             },
             {
-              term: "Hoàn thành",
+              term: detailCopy.completedAt,
               description: run.completed_at
                 ? formatDateTime(run.completed_at)
                 : "—",
@@ -161,7 +209,8 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
 
       <AppSection
         title="Định mức đã chốt theo lệnh"
-        description="Lệnh giữ nguyên định mức này dù công thức được sửa sau đó."
+        description={detailCopy.sectionLineCount(run.lines.length)}
+        headerHint="Lệnh giữ nguyên định mức này dù công thức được sửa sau đó."
       >
         <div className="divide-y border">
           {run.lines.map((line) => (

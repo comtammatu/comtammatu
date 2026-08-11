@@ -74,6 +74,8 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
   );
 
   for (const href of [
+    "/inventory/stock",
+    "/inventory/stocktake",
     "/inventory/grn",
     "/inventory/purchase-orders",
     "/inventory/consumption",
@@ -95,7 +97,6 @@ test("owner inventory nav keeps primary flow entry routes visible", () => {
     "/inventory/operations",
     "/inventory/issues",
     "/inventory/supplier-invoices",
-    "/inventory/stocktake",
     "/inventory/count-assignments",
     "/inventory/count-slips",
     "/inventory/reports",
@@ -133,8 +134,12 @@ test("inventory sidebar removes duplicate stock-control and finance entries", ()
     showSettings: true,
   });
   const visible = hrefs(groups);
+  assert.equal(
+    visible.has("/inventory/stocktake"),
+    true,
+    "Kiểm kê must be discoverable in sidebar group 1",
+  );
   for (const href of [
-    "/inventory/stocktake",
     "/inventory/count-assignments",
     "/inventory/count-slips",
     "/inventory/reports",
