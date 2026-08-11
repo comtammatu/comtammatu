@@ -1,6 +1,7 @@
 # ADR 0008 — Operational Audio Alerts (Beep + Voice)
 
-**Status:** Accepted (2026-07-09) · Amended (2026-07-10: browser TTS; 2026-07-11: POS critical alerts, KDS quiet window, sequential beep and voice)
+**Status:** Accepted (2026-07-09; amended 2026-07-10/11)
+
 **Decision drivers:** Kitchen/POS need eyes-free attention during service; current Web Audio beeps are reliable but content-blind; a recorded clip pack ships no voice until someone records it.
 
 ## Context
@@ -75,19 +76,6 @@ Constraints that matter in-store:
 
 - Vietnamese voice quality, rate, and latency vary by OS/browser; a device without a `vi-*` voice gets beep only.
 - Voice-on-by-default is intentionally deferred until kitchen smoke feedback.
-
-## Implementation Phases (non-normative schedule)
-
-| Phase | Scope                                                                                           |
-| ----- | ----------------------------------------------------------------------------------------------- |
-| 1     | Catalog + mode prefs; KDS 3 kinds; `speechSynthesis` voice; wire beside current `playAppSignal` |
-| 2     | In-store tune (length, coalesce, volume); keep default `beep` unless owner flips                |
-| 3     | POS critical kinds only                                                                           |
-| 4     | Optional recorded brand voice pack                                                              |
+- A recorded brand voice pack and Runner audio stay optional / out of scope until a separate decision.
 
 Normative runtime contract: `docs/spec/operational-audio-alerts.md`.
-
-## Open Items
-
-- Whether a recorded brand voice pack replaces TTS stays open until kitchen smoke feedback on real tablets.
-- Whether Runner ever gets audio remains out of scope until a separate decision.

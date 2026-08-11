@@ -243,31 +243,14 @@ Client event -> local validation / Server Action -> ActionResult -> toast.*
 Durable notification INSERT -> RLS-scoped refetch -> visible control surface -> toast.*
 ```
 
-Rules:
+Import `@comtammatu/ui/components/sonner`; root `<Toaster />` in
+`apps/web/app/layout.tsx`. Use Sonner variants directly; one-sentence title;
+disable pending / stable id against duplicates; no page-local toast containers;
+no URL flash for non-auth feedback (`/access-denied?reason=...` stays auth/scope).
 
-- Import from `@comtammatu/ui/components/sonner`.
-- Root mounting stays in `apps/web/app/layout.tsx` through `<Toaster />`.
-- Use Sonner variants directly: `toast.success`, `toast.error`, `toast.warning`, `toast.info`, `toast.message`, and `toast.loading`.
-- Keep title to one sentence; put secondary details in `description` only when it changes next action.
-- Avoid stacked duplicates; disable pending buttons or use a stable toast id.
-- Do not render custom toast containers or page-local toast systems.
-- Do not use URL flash/search params for non-auth action feedback. Route-level redirects with reasons are reserved for permission, auth, and scope failures such as `/access-denied?reason=...`.
-
-| Variant            | Meaning                                                       | Example                                   |
-| ------------------ | ------------------------------------------------------------- | ----------------------------------------- |
-| `success`          | Action completed and no further action is needed              | `Đã lưu cài đặt`                          |
-| `info` / `message` | Neutral state or next-step hint                               | `Đang chờ thanh toán`                     |
-| `warning`          | Parent action succeeded but follow-up is needed               | `Waste auto đã gửi nhưng admin cần xử lý` |
-| `error`            | Action failed and the current user can retry or correct input | `Không thể xác nhận thanh toán`           |
-| `loading`          | Action is in progress and should resolve/update               | `Đang xử lý...`                           |
-
-## Toast Copy Rules
-
-Good copy says what happened (not which function ran), uses the business object name when useful, avoids raw exception text, does not blame the user, and gives the next action only when needed.
-
-Good: `Đã lưu cài đặt`, `Không thể xác nhận thanh toán`, `Chọn nguyên liệu cần xuất`, `Waste auto đã gửi nhưng admin cần xử lý`.
-
-Avoid: `PGRST204`, `insert failed`, `RPC returned 22023`, `Unexpected error`, `Success!`.
+Variants: `success` (done), `info`/`message` (hint), `warning` (follow-up),
+`error` (retry/correct), `loading` (in progress). Copy names the business
+object, never raw DB/RPC text (`PGRST204`, `insert failed`, `Success!`).
 
 ## In-App Notification Architecture
 
@@ -279,53 +262,33 @@ Domain event / RPC / server action
   -> NotificationList renders item rows
 ```
 
-Runtime: `notifications/actions.ts` (list, unread, badges with resolved action URLs, mark read/all); `use-notifications.ts` / `use-notification-badges.ts` (Realtime on `notifications` and `notification_reads`); `notification-list.tsx` / `notification-item.tsx`; `(protected)/notifications/page.tsx`. Control-surface chrome uses the `AppShell` footer entry; module tabs show grouped unread; full feed remains the reliable source.
-
-UI rules: use list/item primitives; row click may mark read then navigate `action_url`; absent `action_url` still marks read without implying a next action; severity from semantic tokens and Lucide icons; full feed is source of truth, bell/popover is shortcut.
+Runtime: `notifications/actions.ts`; `use-notifications.ts` /
+`use-notification-badges.ts`; `notification-list.tsx` / `notification-item.tsx`;
+`(protected)/notifications/page.tsx`. Full feed is source of truth; bell/footer
+is shortcut. Row click may mark read then navigate `action_url`.
 
 ## Surface Placement
 
-### POS
-
-- Toasts for payment, order creation, print, session open/close, and recoverable cashier errors.
-- Do not show global notification chrome that competes with cart/payment work.
-- Durable notifications are for manager follow-up, not cashier confirmation.
-
-### KDS
-
-- Live queue is the primary surface for kitchen work.
-- Toast only for mutation feedback (bump/undo/cancel failure).
-- Avoid notification rows for every ticket movement unless another station/role needs handoff.
-- New-ticket sound/voice is operational audio (`docs/spec/operational-audio-alerts.md`), not a durable notification.
-
-### Owner
-
-- Full feed and badge/entry point are appropriate.
-- Footer badge shows total unread; module badges show unread whose kind or action URL belongs to that destination.
-- Owner notifications should link to review queues, settings, audit, finance, staff, or inventory exception pages.
-
-### Inventory
-
-Durable rows for stock low, stocktake conflicts, period-close, and approval
-queues. Branch stock requests target `Kho Tổng` / `Bếp Trung tâm`; purchase
-demand at `pending_allocation` targets Owner + `Kế toán`. PR/PO open `Mua hàng`
-queues; only GRN work opens `Nhập kho`. Toasts confirm local action; durable
-rows carry cross-role obligations.
-
-### Staff (`Cổng nhân viên`)
-
-- Keep notifications task-led and narrow.
-- Do not turn the staff notification feed into an Owner control surface.
+- **POS:** toasts for payment/order/print/session; no global chrome competing with
+  cart; durable rows = manager follow-up.
+- **KDS:** live queue primary; toast only mutation feedback; ticket sound =
+  operational audio, not durable.
+- **Owner:** full feed + module badges; link to review/finance/staff/inventory
+  exceptions.
+- **Inventory:** durable for stock low, stocktake conflict, approvals; Branch
+  requests → central sites; purchase demand → Owner + Accountant; PR/PO →
+  purchase queues; GRN → goods-receipt queues.
+- **Staff (`Cổng nhân viên`):** task-led only — not an Owner control surface.
 
 ## Domain producer matrix (P0–P1)
 
 Inventory: `procurement.purchase_request_submitted` /
-`procurement.po_pending_approval` (owner, accountant); `inventory.stock_request_*`
-/ `inventory.waste_pending_approval` / `workflow.transfer_in_transit` (owner +
-site/BM roles). Finance: `inventory.valuation_variance` /
-`inventory.valuation_reconciliation_failed`. Orders: `pos.void_*`. HR:
-`hr.leave_*`, `hr.checkout_*` / `attendance.checkout_requested`,
-`hr.payroll_period_ready`. Closed-app Web Push / APNs / FCM remains out of scope.
+`procurement.po_pending_approval`; `inventory.stock_request_*` /
+`inventory.waste_pending_approval` / `workflow.transfer_in_transit`. Finance:
+`inventory.valuation_variance` / `inventory.valuation_reconciliation_failed`.
+Orders: `pos.void_*`. HR: `hr.leave_*`, `hr.checkout_*` /
+`attendance.checkout_requested`, `hr.payroll_period_ready`. Closed-app Web Push
+/ APNs / FCM remains out of scope.
 
 ## External Outbox
 

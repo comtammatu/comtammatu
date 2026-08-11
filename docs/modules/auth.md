@@ -50,21 +50,11 @@ Discovery: `CONTROL_SURFACE_NAV_GROUPS` then Company HR by Tenant capability.
 
 ## Role Hierarchy
 
-```
-owner                          ← governance + tenant oversight, operations + catalog NL, procurement
-├── accountant                 ← Control home `/` + Finance + Inventory GRN/PO (D076/D091; temp until ADR 0015)
-├── central_supply_ops         ← central warehouse (`Kho Tổng`) / GRN draft (D076/D091; temp until ADR 0015)
-├── central_kitchen_lead       ← central kitchen (`Bếp TT`) production + GRN draft (D076/D091; temp until ADR 0015)
-├── branch_manager             ← single branch ops (no purchase-price — D091)
-├── cashier                    ← POS (/br/[branchId]/pos)
-├── chef                       ← KDS (/br/[branchId]/kds)
-└── branch_staff               ← branch runtime without POS/KDS specialty
-```
-
-JWT `user_role` is derived from `positions.code` (shared TS + SQL mapper). HR
-labels (`label_vi` / `label_en`) must not gate authz. Unknown/retired codes fail
-closed to `unassigned`. D076 owns the application-role set; D091 owns Inventory
-workflow boundary. Full route matrix: `docs/spec/role-route-matrix.md`.
+JWT `user_role` comes from `positions.code` (shared TS + SQL mapper). HR
+`label_vi` / `label_en` must not gate authz. Unknown/retired codes fail closed
+to `unassigned`. Application-role set: D076; Inventory workflow boundary: D091;
+routes: `docs/spec/role-route-matrix.md`. Temporary until ADR 0015: accountant /
+central_supply_ops / central_kitchen_lead on Control L0 + GRN/PO per D076/D091.
 
 ## RLS Gate Choice
 
@@ -99,20 +89,14 @@ permission keys outside HRM payroll/base-salary work.
 
 ## Auth — Position vs Permission
 
-| Concept | Storage | Purpose |
-| ------- | ------- | ------- |
-| **Position** | `positions` + `profiles.position_id` | HR label. Codes: English `lower_snake_case` via `POSITION_CODE_TO_STAFF_ROLE` / `private.staff_role_from_position_code`. Display via `label_vi`. Does not gate authz. |
-| **Application role** | JWT `user_role` | Route role from `positions.code`. Feeds `MODULE_ACL` / default home. Not an action grant. |
-| **Permission** | `permission_keys` | Action strings (`inventory:read`, `pos:use`, …). |
-| **Role binding** | `auth_role_bindings` | Canonical system authority; Tenant/Branch scope independent of HR position. |
-| **Compatibility grant** | `staff_permissions` | Readable during compat cycle; browser grant/revoke disabled. |
-
-**Authz path:** `proxy.ts` classifies control_surface → `canAccess(user_role, …)`
-→ module ACL + Branch scope. Row authz → `has_permission*()` in RLS. Owner has
-no unconditional permission bypass. New access changes use `auth_role_bindings`;
-position/workplace alone never grant a system role.
-Browser `grant_permission` / `revoke_permission` / `apply_template_to_user`
-execution is revoked.
+Layer meanings above. Short map: **Position** (`positions` / `profiles.position_id`)
+= HR label only; **application role** = JWT `user_role` for `MODULE_ACL`;
+**permission** = `permission_keys`; **role binding** = `auth_role_bindings`
+(canonical); **compat grant** = `staff_permissions` (read-only; browser
+grant/revoke/apply-template RPCs revoked). Authz path: `proxy.ts` →
+`canAccess` → module ACL + branch scope; rows via `has_permission*()`. Owner has
+no unconditional permission bypass; position/workplace alone never grant a
+system role.
 
 ## Access Operations
 
@@ -202,51 +186,32 @@ revoked Auth while cookie JWT still valid → redirect GET `/api/auth/signout` v
 
 ## Failure Modes
 
-| Failure | Signal | Recovery |
-| ------- | ------ | -------- |
-| JWT hook no claims | Generic login error + `auth.login.claims_missing` | Hook SECURITY DEFINER; profile + position resolve |
-| No session after signin | Generic login + `auth.login.no_session_after_signin` + signOut | Cookie / `Set-Cookie` path |
-| Upstash rate-limit down | `auth.login.rate_limit_failopen` — login continues | Upstash health; fail-open by design |
-| RLS silent block | `{ data: null, error: null }` | GRANT + policy |
-| Role not in MODULE_ACL | `canAccess` false → redirect | Add role to ACL |
-| Stale JWT after role change | Old role until refresh | `refreshSession()` / proxy `updateSession()` |
-| Zombie JWT after global signOut | Peer tab keeps access JWT | Middleware clears on terminal refresh; `withAction` → `session_expired`; `loadAuthState` → `/api/auth/signout`. See `ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT` |
+Login post-validation always returns generic
+`"Email hoặc mật khẩu không đúng"` (`LOGIN-MESSAGE-MUST-BE-GENERIC`); detail
+only in structured logs. Notable signals: `auth.login.claims_missing`,
+`auth.login.no_session_after_signin`, `auth.login.rate_limit_failopen`
+(fail-open), RLS silent `{ data: null, error: null }`, `canAccess` false,
+stale JWT until refresh, zombie JWT after global signOut
+(`ZOMBIE-JWT-AFTER-GLOBAL-SIGNOUT`).
 
-All post-validation login failures return the same Vietnamese copy
-`"Email hoặc mật khẩu không đúng"` (`LOGIN-MESSAGE-MUST-BE-GENERIC`). Detail
-only in structured server logs.
-
-### Proxy session refresh vs Auth liveness
-
-- **Proxy:** `getSession()` only (`PROXY-NEVER-CALL-GETUSER`). Terminal refresh
-  clears session; overrides auth-js proactive-preserve so dead refresh cannot
-  keep a live access JWT on that path.
-- **RSC `getAuthContext`:** cookie claims only — no `getUser()` (GRN/expense false-deny).
-- **Protected `loadAuthState`:** cookie session + `probeAuthSessionLiveness` →
-  revoke redirects to `/api/auth/signout`.
-- **Mutations (`withAction*`):** `getUser()` liveness → `session_expired` + local
-  `signOut`, never soft "Không có quyền".
+Liveness split: **proxy** = `getSession()` only (`PROXY-NEVER-CALL-GETUSER`);
+**RSC `getAuthContext`** = cookie claims, no `getUser()`; **`loadAuthState`** =
+cookie + `probeAuthSessionLiveness` → `/api/auth/signout`; **`withAction*`** =
+`getUser()` → `session_expired` + local `signOut` (never soft deny).
 
 ## Blocked-State Reasons
 
-Defined in `blocked-state.ts`:
+`blocked-state.ts`: `insufficient-permission`, `missing-auth-context`,
+`branch-scope-mismatch`, `branch-surface-restricted`, `untrusted-network`.
+Unknown → `DEFAULT_BLOCKED_STATE_COPY`. Helper:
+`buildAccessDeniedPath(reason, { from? })`. `/access-denied` is presentation
+only (`BLOCKED-STATE-UI-IS-PRESENTATION-ONLY`).
 
-- `insufficient-permission` — role cannot enter module/route
-- `missing-auth-context` — user present, claims unresolved
-- `branch-scope-mismatch` — URL `branchId` ≠ `claims.branch_id`
-- `branch-surface-restricted` — POS/KDS on invalid/inactive branch
-- `untrusted-network` — station IP outside trusted branch egress (and no active per-branch emergency bypass)
-
-### POS/KDS network gate (defense-in-depth)
-
-- Proxy (`apps/web/proxy.ts`) enforces trusted egress IPs for POS/KDS in production for non-owner roles.
-- **Per-branch emergency bypass** (`branch_network_gate_bypasses`): owner activates from Branches → POS/KDS network gate for presets `1h` / `2h` / `4h` / `pos_shift` / `business_day`. Auto-revokes when the bound POS session closes (`pos_shift`) or when `expires_at` passes. Early revoke via the same dialog.
-- **Engineering kill-switch** `POS_NETWORK_GATE=off` opens the perimeter for *all* branches. Use only for platform incidents — never as the ops path for a single store Wi‑Fi outage.
-
-Unknown reason → `DEFAULT_BLOCKED_STATE_COPY`. Canonical redirect helper:
-`buildAccessDeniedPath(reason, { from? })`. `/access-denied` is public
-presentation only (`BLOCKED-STATE-UI-IS-PRESENTATION-ONLY`); reads
-`reason`/`from`, no auth re-check. Actions: default module (`/`) and re-login.
+POS/KDS network gate (prod, non-owner): trusted egress IPs in `proxy.ts`.
+Owner per-branch bypass `branch_network_gate_bypasses` (`1h`/`2h`/`4h`/
+`pos_shift`/`business_day`; auto-revoke on session close or `expires_at`).
+Engineering kill-switch `POS_NETWORK_GATE=off` opens all branches — platform
+incidents only, never single-store Wi‑Fi ops.
 
 ## Blast Radius
 

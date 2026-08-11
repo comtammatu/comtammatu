@@ -254,39 +254,13 @@ Lợi nhuận gộp vận hành − Chi phí vận hành đã ghi nhận
 ```
 
 Giữ tên `Kết quả kinh doanh`; hiển thị coverage/confidence; không đổi nhãn
-`Lợi nhuận ròng`; chỉ cộng **biến động** tồn, không cộng tồn cuối vào kết quả.
-
-Thang đầy đủ (chỉ khi Accounting close đủ):
-
-```text
-Doanh thu thuần − Giá vốn đầy đủ = Lợi nhuận gộp
-→ Kết quả HĐKD chính (± tài chính, thu nhập/chi phí khác)
-→ Lợi nhuận kế toán trước thuế
-→ Thu nhập tính thuế (± điều chỉnh thuế, lỗ chuyển)
-→ Thuế TNDN hiện hành (× suất đã duyệt − miễn/giảm/ưu đãi)
-→ Lợi nhuận sau thuế
-```
-
-`Thu nhập tính thuế` ≠ mặc định `Lợi nhuận trước thuế`. Không dùng
-`Lợi nhuận trước thuế × 20%` cho mọi Công ty.
-
-| Candidate policy từ 2026 | Điều kiện cấp cao cần kiểm tra |
-| --- | --- |
-| Miễn TNDN | Doanh thu năm ≤ 1 tỷ theo cách xác định/loại trừ tại NĐ 141/2026 |
-| 15% | Doanh thu năm ≤ 3 tỷ và không thuộc trường hợp loại trừ |
-| 17% | Doanh thu năm > 3 tỷ đến ≤ 50 tỷ và không thuộc loại trừ |
-| 20% | Mức chung khi không thuộc mức khác/ưu đãi hợp lệ |
-
-Hệ thống chỉ tạo candidate; Accountant duyệt `revenue_basis_period`,
-`revenue_basis_amount`, `exemption_status`, `statutory_rate`, căn cứ và ngày
-hiệu lực. Tách: `Chi phí kế toán` / `Chi phí được trừ TNDN` /
-`Chi phí không được trừ/điều chỉnh tăng`. Không dùng nhãn mơ hồ `Chi phí hợp lý`.
-
-Chỉ hiển thị `Lợi nhuận sau thuế` khi kỳ đã có: HĐĐT đầu ra đối chiếu; giá vốn
-đầy đủ + coverage; chi phí đã phân loại (không còn mua tài sản sai OPEX); KH/
-phân bổ đã posting; tài chính/khác; đối chiếu GTGT/công nợ/NH/tiền; workpaper
-TNDN + policy duyệt; khóa sổ có người và thời điểm. Trước đó: `Kết quả vận hành`
-hoặc `Lợi nhuận kế toán tạm tính` kèm phạm vi loại trừ.
+`Lợi nhuận ròng`; chỉ cộng **biến động** tồn. Thang đầy đủ (DT → LNST) chỉ khi
+Accounting close đủ — xem `docs/modules/finance.md`. Không hard-code suất
+15%/17%/20% hay `Lợi nhuận trước thuế × 20%`; candidate policy NĐ 141/2026 chỉ
+sau Accountant duyệt. Tách `Chi phí kế toán` / `Chi phí được trừ TNDN` /
+`Chi phí không được trừ`. Chỉ hiện `Lợi nhuận sau thuế` khi kỳ đủ đối chiếu
+HĐĐT/giá vốn/KH/GTGT/công nợ/TNDN + khóa sổ; trước đó: `Kết quả vận hành` hoặc
+`Lợi nhuận kế toán tạm tính`.
 
 ## 11. Sự kiện không đổi lợi nhuận ngay · Vai trò · Gate
 
@@ -322,28 +296,12 @@ tiền/tài sản không cộng trực tiếp vào LN. UI/hiện trạng/close:
 
 ## 12. Nguồn pháp lý chính
 
-- [Luật GTGT 48/2024/QH15](https://vanban.chinhphu.vn/?classid=1&docid=212476&pageid=27160&typegroupid=3),
-  [Luật 149/2025/QH15](https://vanban.chinhphu.vn/?docid=216588&orggroupid=1&pageid=27160)
-  và [Luật 09/2026/QH16](https://vanban.chinhphu.vn/?classid=1&docid=218095&pageid=27160&typegroupid=3).
-- [NĐ 181/2025/NĐ-CP](https://vanban.chinhphu.vn/?docid=214336&pageid=27160),
-  [NĐ 359/2025/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=216388&orggroupid=2&pageid=27160)
-  và [NĐ 144/2026/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=218020&pageid=27160&typegroupid=4).
-- [NQ 204/2025/QH15](https://vanban.chinhphu.vn/?classid=1&docid=214209&pageid=27160)
-  và [NĐ 174/2025/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=214310&pageid=27160&typegroupid=4)
-  về giảm GTGT đến hết 2026 cho nhóm đủ điều kiện.
-- [NĐ 254/2026/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=218689&orggroupid=2&pageid=27160)
-  về hóa đơn điện tử/chứng từ điện tử, gồm nội dung HĐĐT MTT.
-- [Luật TNDN 67/2025/QH15](https://vanban.chinhphu.vn/?docid=214607&pageid=27160),
-  [NĐ 320/2025/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=216219&pageid=27160&typegroupid=4),
-  [NĐ 141/2026/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4)
-  và [TT 20/2026/TT-BTC](https://vanban.chinhphu.vn/?docid=217191&orggroupid=4&pageid=27160).
-- [TT 99/2025/TT-BTC](https://congbao.chinhphu.vn/van-ban/thong-tu-so-99-2025-tt-btc-46529/59634.htm)
-  về chế độ kế toán doanh nghiệp từ năm tài chính áp dụng.
-- [TT 45/2013/TT-BTC, đã được sửa đổi](https://congbao.chinhphu.vn/van-ban/thong-tu-so-45-2013-tt-btc-4118/2275.htm),
-  [TT 30/2025/TT-BTC](https://vanban.chinhphu.vn/?classid=1&docid=213853&orggroupid=4&pageid=27160)
-  và [QĐ 1760/QĐ-BTC](https://vanban.chinhphu.vn/?classid=0&docid=218751&pageid=27160)
-  về quản lý, sử dụng và trích khấu hao TSCĐ.
+Chi tiết và URL: `docs/ref/legal-framework-2026.md`. Bộ chính: Luật GTGT
+48/2024 + 149/2025 + 09/2026; NĐ 181/2025, 359/2025, 144/2026; NQ 204/2025 +
+NĐ 174/2025 (giảm GTGT đến hết 2026); NĐ 254/2026 (HĐĐT/MTT); Luật TNDN
+67/2025 + NĐ 320/2025, 141/2026 + TT 20/2026; TT 99/2025 (chế độ kế toán);
+TT 45/2013 (sửa đổi), TT 30/2025, QĐ 1760/QĐ-BTC (TSCĐ).
 
-Nguồn chi tiết trong repo: `legal-framework-2026.md`, `einvoice-tax.md`,
-`accounting-books-tt133-tt99.md`, `operational-data-contract.md`,
-`business-context.md`, `inventory.md`, `docs/modules/finance.md`.
+Cùng repo: `einvoice-tax.md`, `accounting-books-tt133-tt99.md`,
+`operational-data-contract.md`, `business-context.md`, `inventory.md`,
+`docs/modules/finance.md`.

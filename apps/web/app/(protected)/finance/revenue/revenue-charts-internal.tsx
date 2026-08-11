@@ -84,7 +84,8 @@ export function RevenueCharts({
           tickFormatter={(v: number) => formatVND(v)}
         />
         <Tooltip
-          formatter={(value, name) => [
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          formatter={(value: any, name: any) => [
             formatVND(Number(value ?? 0)),
             name === "pace" ? paceCopy.paceTarget : paceCopy.paceActual,
           ]}

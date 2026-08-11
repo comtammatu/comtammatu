@@ -1,6 +1,6 @@
 # ADR 0025 — F&B Operating ERP scope and evolution boundary
 
-**Status:** Accepted (Owner 2026-08-09).
+**Status:** Accepted (2026-08-09)
 
 **Decision owner:** Owner
 
