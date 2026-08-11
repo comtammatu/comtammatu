@@ -31,8 +31,8 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "hr.leave_requested": "/hr/attendance",
   "hr.payroll_period_ready": "/hr/payroll",
   "inventory.count_slip_submitted": "/inventory/count-slips",
+  "inventory.count_slip_recount": "/inventory/count-slips",
   "inventory.stock_low": "/inventory/stock",
-  "inventory.stocktake_completed": "/inventory/stocktake",
   "inventory.stocktake_conflict": "/inventory/stocktake",
   "inventory.waste.weekly_report": "/inventory/waste/approvals",
   "inventory.waste_pending_approval": "/inventory/waste/approvals",
@@ -52,6 +52,11 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "pos.void_rejected": "/orders",
   "order.delay_sla_breach": "/orders",
 };
+
+/** FYI / history kinds stay in the feed but must not badge work-queue nav. */
+const NAV_BADGE_EXCLUDED_KINDS: ReadonlySet<string> = new Set([
+  "inventory.stocktake_completed",
+]);
 
 // Only the match-relevant fields are read here, so the parameter is the
 // `Pick` of those — letting icon-less navs (settings tabs) route their
@@ -114,6 +119,7 @@ export function getNavNotificationCount(
   targets: readonly ShellNotificationTarget[],
 ): number {
   return targets.reduce((total, target) => {
+    if (NAV_BADGE_EXCLUDED_KINDS.has(target.kind)) return total;
     const actionPath = target.actionUrl?.split(/[?#]/, 1)[0] ?? null;
     const targetPath = notificationKindTargetPath(target.kind) ?? actionPath;
     return targetPath && isNavItemActive(item, targetPath)

@@ -62,10 +62,30 @@ const targets: ShellNotificationTarget[] = [
     actionUrl: "/br/7/shift/leave-approvals",
     unreadCount: 5,
   },
+  {
+    kind: "inventory.stocktake_completed",
+    actionUrl: "/inventory/stocktake/99?branch=7",
+    unreadCount: 1,
+  },
+  {
+    kind: "inventory.stocktake_conflict",
+    actionUrl: "/inventory/stocktake/98?branch=7",
+    unreadCount: 2,
+  },
+  {
+    kind: "inventory.count_slip_submitted",
+    actionUrl: "/inventory/count-slips/50",
+    unreadCount: 3,
+  },
+  {
+    kind: "inventory.count_slip_recount",
+    actionUrl: "/inventory/count-slips/51",
+    unreadCount: 1,
+  },
 ];
 
 test("notification counts roll up to modules and matching work queues", () => {
-  assert.equal(getNavNotificationCount(navItem("/inventory"), targets), 14);
+  assert.equal(getNavNotificationCount(navItem("/inventory"), targets), 20);
   assert.equal(getNavNotificationCount(navItem("/finance"), targets), 0);
   assert.equal(getNavNotificationCount(navItem("/hr"), targets), 5);
   assert.equal(
@@ -87,6 +107,28 @@ test("notification counts roll up to modules and matching work queues", () => {
   );
   assert.equal(getNavNotificationCount(navItem("/inventory/grn"), targets), 4);
   assert.equal(getNavNotificationCount(navItem("/hr/attendance"), targets), 5);
+});
+
+test("stocktake nav badges actionable count work only, not completed FYI", () => {
+  const stocktakeNav = navItem("/inventory/stocktake", {
+    matchPrefixes: [
+      "/inventory/stocktake/",
+      "/inventory/count-assignments",
+      "/inventory/count-slips",
+    ],
+  });
+
+  assert.equal(getNavNotificationCount(stocktakeNav, targets), 6);
+  assert.equal(
+    getNavNotificationCount(stocktakeNav, [
+      {
+        kind: "inventory.stocktake_completed",
+        actionUrl: "/inventory/stocktake/99?branch=7",
+        unreadCount: 9,
+      },
+    ]),
+    0,
+  );
 });
 
 test("notification shell uses one realtime summary for footer and tab badges", () => {
@@ -256,5 +298,37 @@ test("procurement notifications route to Mua hàng and GRNs route to Nhập kho"
   assert.match(
     migration,
     /UPDATE public\.notifications[\s\S]*procurement\.purchase_request_submitted[\s\S]*workflow\.po_approved[\s\S]*workflow\.po_sent/,
+  );
+});
+
+test("stocktake completed is excluded from nav badges; conflict expires on resolve", () => {
+  const shell = read("apps/web/app/lib/shell-primitives.ts");
+  const migration = read(
+    "supabase/migrations/20260811142314_expire_stocktake_conflict_notification.sql",
+  );
+
+  assert.match(shell, /NAV_BADGE_EXCLUDED_KINDS/);
+  assert.match(shell, /"inventory\.stocktake_completed"/);
+  assert.doesNotMatch(
+    shell,
+    /"inventory\.stocktake_completed": "\/inventory\/stocktake"/,
+  );
+  assert.match(shell, /"inventory\.stocktake_conflict": "\/inventory\/stocktake"/);
+  assert.match(shell, /"inventory\.count_slip_recount": "\/inventory\/count-slips"/);
+  assert.match(
+    migration,
+    /FUNCTION private\.expire_stocktake_conflict_notification\(\)/,
+  );
+  assert.match(
+    migration,
+    /kind = 'inventory\.stocktake_conflict'[\s\S]*dedup_key = format\(\s*'stocktake\.conflict:%s:%s'/,
+  );
+  assert.match(
+    migration,
+    /AFTER UPDATE OF resolved_at OR DELETE[\s\S]*ON public\.stocktake_conflicts/,
+  );
+  assert.match(
+    migration,
+    /UPDATE public\.notifications AS notification[\s\S]*conflict\.resolved_at IS NOT NULL/,
   );
 });
