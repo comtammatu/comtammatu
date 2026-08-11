@@ -54,8 +54,18 @@ test("GRN document dialog keeps tabs and CTA footer inside the dialog frame", ()
   );
   assert.match(
     client,
-    /title=\{grn\.code\}[\s\S]*description=\{[\s\S]*statusBadge\.label/,
-    "dialog header must not repeat supplier and receiving warehouse metadata",
+    /title=\{\s*<div className="flex flex-wrap items-center gap-2">[\s\S]*StatusBadge[\s\S]*label=\{statusBadge\.label\}/,
+    "dialog title carries code + StatusBadge",
+  );
+  assert.match(
+    client,
+    /description=\{\s*<span>[\s\S]*grn\.supplier/,
+    "dialog description carries supplier identity",
+  );
+  assert.match(
+    client,
+    /variant="outline"[\s\S]*grnMessages\.kpiLines/,
+    "document body leads with KPI Item strip",
   );
   assert.match(
     surface,

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -43,7 +44,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { getStatusBadgeMeta } from "@/components/status-badge";
+import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
@@ -714,8 +715,18 @@ export function GRNDetailClient({
     </AppSection>
   );
 
+  const exceptionLineCount = lines.filter(
+    (line) =>
+      line.shortageQuantity > 0 ||
+      line.excessQuantity > 0 ||
+      line.rejected > 0,
+  ).length;
+  const inspectedLineCount = lines.filter(
+    (line) => line.actual > 0 || line.rejected > 0,
+  ).length;
+
   const documentBody = (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-6">
       {nextStepBanner ? (
         <Alert>
           <IconInfoCircle className="size-4" />
@@ -729,7 +740,62 @@ export function GRNDetailClient({
         </Alert>
       ) : null}
 
-      {/* Dense context only — lines are the first full section. */}
+      <Item
+        variant="outline"
+        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+      >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {grnMessages.kpiLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {lines.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {grnMessages.kpiInspected}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {inspectedLineCount}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {grnMessages.kpiExceptions}
+          </span>
+          <span
+            className={
+              exceptionLineCount > 0
+                ? "mt-1 block font-mono text-base font-semibold tabular-nums text-destructive"
+                : "mt-1 block font-mono text-base font-semibold tabular-nums text-foreground"
+            }
+          >
+            {exceptionLineCount}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {grnMessages.kpiValuation}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {valuationKind === "pending_invoice"
+              ? valuationCopy.pendingInvoice
+              : valuationKind === "settled"
+                ? valuationCopy.settled
+                : "—"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {grnMessages.kpiExpected}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {grn.expectedReceiveDate ?? "—"}
+          </span>
+        </div>
+      </Item>
+
       {contextStrip}
 
       {isDraft ? (
@@ -954,11 +1020,28 @@ export function GRNDetailClient({
             if (!open) void closeDialog();
           }}
           variant="document"
-          title={grn.code}
+          title={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono">{grn.code}</span>
+              <StatusBadge
+                domain="inventory"
+                value={grn.status}
+                label={statusBadge.label}
+              />
+              {valuationKind === "pending_invoice" ? (
+                <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+              ) : null}
+            </div>
+          }
           description={
-            valuationKind === "pending_invoice"
-              ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
-              : statusBadge.label
+            <span>
+              {grn.supplier}
+              <span className="text-muted-foreground">
+                {" "}
+                · {grn.branchName}
+                {grn.poCode ? ` · ${grn.poCode}` : ""}
+              </span>
+            </span>
           }
           footer={footer}
         >

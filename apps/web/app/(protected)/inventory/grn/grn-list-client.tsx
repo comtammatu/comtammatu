@@ -125,6 +125,28 @@ export function GrnListClient({
     };
   }, [rows]);
 
+  const pageMetrics = useMemo(() => {
+    let exceptionCount = 0;
+    let pendingInvoiceCount = 0;
+    for (const row of rows) {
+      if (
+        row.shortageLineCount + row.excessLineCount + row.rejectedLineCount >
+        0
+      ) {
+        exceptionCount += 1;
+      }
+      if (
+        resolveGrnValuationDisplay({
+          status: row.status,
+          invoiceId: row.invoiceId,
+        }) === "pending_invoice"
+      ) {
+        pendingInvoiceCount += 1;
+      }
+    }
+    return { exceptionCount, pendingInvoiceCount };
+  }, [rows]);
+
   function listHref(next: Record<string, string | null>) {
     const params = new URLSearchParams();
     const values = {
@@ -411,6 +433,9 @@ export function GrnListClient({
       }
       actions={
         <>
+          <Badge variant="outline">
+            {rows.length}/{total}
+          </Badge>
           <Button
             type="button"
             size="field"
@@ -491,7 +516,43 @@ export function GrnListClient({
   return (
     <>
       <AppPage width="xwide" density="compact">
-        <AppPageHeader title={grnCopy.listTitle} />
+        <AppPageHeader
+          title={grnCopy.listTitle}
+          meta={
+            loadFailed ? undefined : (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="inline-flex items-center gap-1.5">
+                  <span>{grnCopy.listMetaPage}</span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {rows.length}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span>{grnCopy.listMetaTotal}</span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {total}
+                  </span>
+                </span>
+                {pageMetrics.exceptionCount > 0 ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{grnCopy.listMetaExceptions}</span>
+                    <span className="font-mono font-semibold tabular-nums text-foreground">
+                      {pageMetrics.exceptionCount}
+                    </span>
+                  </span>
+                ) : null}
+                {pageMetrics.pendingInvoiceCount > 0 ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{grnCopy.listMetaPendingInvoice}</span>
+                    <span className="font-mono font-semibold tabular-nums text-foreground">
+                      {pageMetrics.pendingInvoiceCount}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            )
+          }
+        />
         <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
           {table}
         </AppListFrame>
@@ -571,7 +632,7 @@ function GrnMobileCard({
       padding="default"
       role="button"
       tabIndex={0}
-      className="cursor-pointer touch-manipulation justify-between"
+      className="w-full flex-col items-stretch gap-3 text-left"
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -580,54 +641,66 @@ function GrnMobileCard({
         }
       }}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm font-semibold">{row.code}</span>
-          <StatusBadge
-            domain="inventory"
-            value={row.status}
-            label={statusLabels[row.status] ?? grnCopy.unknownStatus}
-          />
-          {resolveGrnValuationDisplay({
-            status: row.status,
-            invoiceId: row.invoiceId,
-          }) === "pending_invoice" ? (
-            <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
-          ) : null}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm font-semibold">{row.code}</span>
+            <StatusBadge
+              domain="inventory"
+              value={row.status}
+              label={statusLabels[row.status] ?? grnCopy.unknownStatus}
+            />
+            {resolveGrnValuationDisplay({
+              status: row.status,
+              invoiceId: row.invoiceId,
+            }) === "pending_invoice" ? (
+              <Badge variant="warning">{valuationCopy.pendingInvoice}</Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 truncate text-sm">{row.supplierName}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {row.poCode} · {row.receivingSiteName}
+          </p>
         </div>
-        <p className="truncate text-xs">{row.supplierName}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          {row.poCode}
-        </p>
-        <p className="truncate text-xs text-muted-foreground">
-          {row.receivingSiteName} ·{" "}
-          {row.status === "confirmed"
-            ? grnCopy.receivedDate
-            : grnCopy.expectedDate}{" "}
-          {row.status === "confirmed"
-            ? row.receivedDate
-              ? formatVNDate(row.receivedDate)
-              : "—"
-            : row.expectedReceiveDate
-              ? formatVNDate(row.expectedReceiveDate)
-              : "—"}
-        </p>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span>
-            {grnCopy.lineProgress(row.completedLineCount, row.lineCount)}
-          </span>
-          <ExceptionBadges row={row} />
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <RowActionsMenu
+            items={actions}
+            label={`${FORM_VI.action} ${row.code}`}
+            triggerSize={isTouchLayout ? "icon-touch" : "icon"}
+          />
         </div>
       </div>
-      <div
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <RowActionsMenu
-          items={actions}
-          label={`${FORM_VI.action} ${row.code}`}
-          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
-        />
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="min-w-0">
+          <span className="block text-xs text-muted-foreground">
+            {row.status === "confirmed"
+              ? grnCopy.receivedDate
+              : grnCopy.expectedDate}
+          </span>
+          <span className="font-mono text-sm font-semibold tabular-nums">
+            {row.status === "confirmed"
+              ? row.receivedDate
+                ? formatVNDate(row.receivedDate)
+                : "—"
+              : row.expectedReceiveDate
+                ? formatVNDate(row.expectedReceiveDate)
+                : "—"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block text-xs text-muted-foreground">
+            {grnCopy.kpiLines}
+          </span>
+          <span className="font-mono text-sm font-semibold tabular-nums">
+            {grnCopy.lineProgress(row.completedLineCount, row.lineCount)}
+          </span>
+        </div>
+      </div>
+      <div className="border-t pt-2 text-xs">
+        <ExceptionBadges row={row} />
       </div>
     </InteractiveCard>
   );

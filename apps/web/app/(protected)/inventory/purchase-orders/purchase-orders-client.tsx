@@ -36,11 +36,7 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import {
-  AppListFrame,
-  AppToolbar,
-  DescriptionList,
-} from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { matchesSearch } from "@lib/search";
@@ -491,15 +487,36 @@ export function PurchaseOrdersClient({
           if (!open) updateUrl(null, null, "replace");
         }}
         variant="document"
-        title={selectedRow?.code ?? copy.pageTitle}
+        title={
+          selectedRow ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono">{selectedRow.code}</span>
+              <StatusBadge
+                domain="purchase-order"
+                value={selectedRow.status}
+              />
+            </div>
+          ) : (
+            copy.pageTitle
+          )
+        }
         description={
-          selectedRow
-            ? `${selectedRow.supplierName} · ${selectedRow.branchName}`
-            : undefined
+          selectedRow ? (
+            <span>
+              {selectedRow.supplierName}
+              <span className="text-muted-foreground">
+                {" "}
+                · {selectedRow.branchName}
+                {selectedRow.groupCode
+                  ? ` · ${copy.groupCode} ${selectedRow.groupCode}`
+                  : ""}
+              </span>
+            </span>
+          ) : undefined
         }
         footer={
           viewOpen && selectedRow ? (
-            <>
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
               {canManage &&
               selectedRow.status === "approved" &&
               !selectedRow.linkedGrns.some(
@@ -526,116 +543,35 @@ export function PurchaseOrdersClient({
                   {copy.closeRemainingAction}
                 </Button>
               ) : null}
-              <div className="ml-auto flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => updateUrl(null, null, "replace")}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+              {canReceive &&
+              (selectedRow.status === "approved" ||
+                selectedRow.status === "partially_received") ? (
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => updateUrl(null, null, "replace")}
+                  disabled={isPending || pendingId === selectedRow.id}
+                  onClick={() => openReceipt(selectedRow)}
                 >
-                  {ACTIONS_VI.close}
+                  {selectedRow.status === "partially_received"
+                    ? copy.receiveMoreAction
+                    : copy.continueGrn}
                 </Button>
-                {canReceive &&
-                (selectedRow.status === "approved" ||
-                  selectedRow.status === "partially_received") ? (
-                  <Button
-                    type="button"
-                    disabled={isPending || pendingId === selectedRow.id}
-                    onClick={() => openReceipt(selectedRow)}
-                  >
-                    {selectedRow.status === "partially_received"
-                      ? copy.receiveMoreAction
-                      : copy.continueGrn}
-                  </Button>
-                ) : null}
-              </div>
-            </>
+              ) : null}
+            </div>
           ) : null
         }
       >
         {viewOpen && selectedRow ? (
-          <div className="flex flex-col gap-4">
-            <DescriptionList
-              className="sm:grid sm:grid-cols-4 sm:gap-4"
-              items={[
-                {
-                  term: copy.statusColumn,
-                  description: getStatusBadgeMeta(
-                    "purchase-order",
-                    selectedRow.status,
-                  ).label,
-                },
-                {
-                  term: copy.groupCode,
-                  description: selectedRow.groupCode ?? "—",
-                },
-                {
-                  term: copy.expectedDeliveryDate,
-                  description: selectedRow.expectedDeliveryDate
-                    ? formatVNDate(selectedRow.expectedDeliveryDate)
-                    : "—",
-                },
-                {
-                  term: copy.relatedReceipts,
-                  description: String(selectedRow.linkedGrns.length),
-                },
-              ]}
-            />
-            {selectedRow.statusReason ? (
-              <Item variant="muted" size="sm">
-                {selectedRow.statusReason}
-              </Item>
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                {copy.detail.overviewLinesTitle}
-              </p>
-              {selectedRow.lines.map((line) => (
-                <Item
-                  key={line.id}
-                  variant="outline"
-                  size="sm"
-                  className="grid gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
-                >
-                  <span>{line.ingredientName}</span>
-                  <span className="font-mono tabular-nums">
-                    {copy.lineReceiptSummary(
-                      line.quantity,
-                      line.receivedQuantity,
-                      Math.max(line.quantity - line.receivedQuantity, 0),
-                      line.unitLabel,
-                    )}
-                  </span>
-                </Item>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                {copy.detail.linkedGrnsTitle}
-              </p>
-              {selectedRow.linkedGrns.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {copy.emptyLinkedGrnsHint}
-                </p>
-              ) : (
-                selectedRow.linkedGrns.map((grn) => (
-                  <Button
-                    key={grn.id}
-                    type="button"
-                    variant="outline"
-                    className="justify-between"
-                    render={
-                      <Link
-                        href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${purchaseOrderReturnTo(selectedRow.id)}`}
-                      />
-                    }
-                  >
-                    <span className="font-mono">{grn.code}</span>
-                    <span>{grn.status === "draft" ? "Nháp" : "Đã xác nhận"}</span>
-                  </Button>
-                ))
-              )}
-            </div>
-          </div>
+          <PurchaseOrderDocumentBody
+            row={selectedRow}
+            returnTo={purchaseOrderReturnTo(selectedRow.id)}
+          />
         ) : null}
       </AppDialog>
       <ReasonConfirmDialog
@@ -664,5 +600,196 @@ export function PurchaseOrdersClient({
         onConfirm={runReasonAction}
       />
     </>
+  );
+}
+
+function PurchaseOrderDocumentBody({
+  row,
+  returnTo,
+}: {
+  row: PurchaseOrderRow;
+  returnTo: string;
+}) {
+  const openLineCount = row.lines.filter(
+    (line) => line.receivedQuantity < line.quantity,
+  ).length;
+  const doneLineCount = row.lines.length - openLineCount;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Item
+        variant="outline"
+        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+      >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.detail.kpiLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {row.lines.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.detail.kpiOpenLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {openLineCount}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.detail.kpiDoneLines}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {doneLineCount}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.detail.kpiReceipts}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {row.linkedGrns.length}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {copy.detail.kpiExpected}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {row.expectedDeliveryDate
+              ? formatVNDate(row.expectedDeliveryDate)
+              : "—"}
+          </span>
+        </div>
+      </Item>
+
+      {row.statusReason ? (
+        <Item variant="muted" size="sm">
+          {row.statusReason}
+        </Item>
+      ) : null}
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-sm font-medium">
+            {copy.detail.overviewLinesTitle}
+          </h4>
+          <span className="text-xs text-muted-foreground">
+            {copy.detail.sectionLineCount(row.lines.length)}
+          </span>
+        </div>
+        {row.lines.length === 0 ? (
+          <Item
+            variant="outline"
+            className="p-4 text-center text-xs text-muted-foreground"
+          >
+            {copy.emptyLinesDescription}
+          </Item>
+        ) : (
+          row.lines.map((line) => {
+            const remaining = Math.max(
+              line.quantity - line.receivedQuantity,
+              0,
+            );
+            return (
+              <Item
+                key={line.id}
+                variant="outline"
+                className="flex flex-col gap-3 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground">
+                    {line.ingredientName}
+                  </p>
+                  <p className="text-muted-foreground">{line.unitLabel}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3 sm:min-w-56">
+                  <div className="min-w-0">
+                    <span className="block text-muted-foreground">
+                      {copy.detail.orderedShort}
+                    </span>
+                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                      {line.quantity}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block text-muted-foreground">
+                      {copy.detail.receivedShort}
+                    </span>
+                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                      {line.receivedQuantity}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block text-muted-foreground">
+                      {copy.detail.remainingShort}
+                    </span>
+                    <span
+                      className={
+                        remaining > 0
+                          ? "font-mono text-sm font-semibold tabular-nums text-destructive"
+                          : "font-mono text-sm font-semibold tabular-nums text-foreground"
+                      }
+                    >
+                      {remaining}
+                    </span>
+                  </div>
+                </div>
+              </Item>
+            );
+          })
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-sm font-medium">{copy.detail.linkedGrnsTitle}</h4>
+          <span className="text-xs text-muted-foreground">
+            {copy.detail.sectionReceiptCount(row.linkedGrns.length)}
+          </span>
+        </div>
+        {row.linkedGrns.length === 0 ? (
+          <Item
+            variant="outline"
+            className="p-4 text-center text-xs text-muted-foreground"
+          >
+            {copy.emptyLinkedGrnsHint}
+          </Item>
+        ) : (
+          row.linkedGrns.map((grn) => (
+            <Item
+              key={grn.id}
+              variant="outline"
+              className="flex items-center justify-between gap-3 p-3 text-xs"
+              render={
+                <Link
+                  href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${returnTo}`}
+                />
+              }
+            >
+              <div className="min-w-0">
+                <p className="font-mono font-semibold text-foreground">
+                  {grn.code}
+                </p>
+                <p className="text-muted-foreground">
+                  {grn.receivedAt ? formatVNDate(grn.receivedAt) : "—"}
+                </p>
+              </div>
+              <StatusBadge
+                domain="inventory"
+                value={grn.status}
+                label={
+                  grn.status === "draft"
+                    ? copy.detail.grnDraft
+                    : copy.detail.grnConfirmed
+                }
+              />
+            </Item>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
