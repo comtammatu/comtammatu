@@ -14,7 +14,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
 } from "@comtammatu/ui/components/item";
-import { StatusBadge } from "@/components/status-badge";
 import {
   BusinessDateField,
   PhotoUploadInput,
@@ -28,7 +27,6 @@ import {
 } from "../components/finance-money-block";
 import {
   type ExpensePaymentMethod,
-  type ExpensePaymentState,
 } from "../_lib/expense-categories";
 import {
   EXPENSE_VAT_RATES,
@@ -53,7 +51,6 @@ export function ExpenseFormFields({
   paymentMethodReadOnly = false,
   readOnly = false,
   transferContent = null,
-  paymentState = null,
   onCopyTransferContent,
 }: {
   form: UseFormReturn<ExpenseFormValues>;
@@ -63,7 +60,6 @@ export function ExpenseFormFields({
   paymentMethodReadOnly?: boolean;
   readOnly?: boolean;
   transferContent?: string | null;
-  paymentState?: ExpensePaymentState | null;
   onCopyTransferContent?: (content: string) => void;
 }) {
   const { fields, append, remove } = useFieldArray({
@@ -80,10 +76,7 @@ export function ExpenseFormFields({
 
   return (
     <>
-      {paymentState ? (
-        <StatusBadge domain="expense-payment" value={paymentState} />
-      ) : null}
-      <div className="grid gap-4 md:grid-cols-2">
+      <Item variant="outline" className="grid gap-4 p-4 md:grid-cols-2">
         <BusinessDateField
           control={form.control}
           name="expenseDate"
@@ -139,14 +132,9 @@ export function ExpenseFormFields({
             disabled={readOnly}
           />
         </div>
-      </div>
+      </Item>
       <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-sm font-medium">{copy.form.vatSection}</p>
-          <p className="text-xs text-muted-foreground">
-            {copy.form.vatSectionHint}
-          </p>
-        </div>
+        <p className="text-sm font-medium">{copy.form.vatSection}</p>
         {fields.map((field, index) => {
           const selectedRate = lines[index]?.vatRate;
           const rateOptions = VAT_RATE_OPTIONS.map((option) => ({

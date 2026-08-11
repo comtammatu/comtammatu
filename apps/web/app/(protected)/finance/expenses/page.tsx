@@ -6,7 +6,7 @@ import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
-import { fetchExpenses } from "../expense-actions";
+import { fetchExpenseById, fetchExpenses } from "../expense-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -29,20 +29,34 @@ export default async function ExpensesPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
+  const rawExpenseId = Array.isArray(sp.expenseId)
+    ? sp.expenseId[0]
+    : sp.expenseId;
+  const targetExpenseId =
+    rawExpenseId &&
+    Number.isInteger(Number(rawExpenseId)) &&
+    Number(rawExpenseId) > 0
+      ? Number(rawExpenseId)
+      : null;
+
   // Settle cookie session before parallel getAuthContext fan-out.
   // Racing loadAuthState with finance actions on the shared GoTrue client
   // yields false-null ctx and the expenses soft load-error empty state.
   const { claims } = await loadAuthState();
-  const [branchesRes, expensesRes, canManageExpenses] = await Promise.all([
-    fetchAccessibleBranches(),
-    fetchExpenses({
-      location: params.location,
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
-    currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
-  ]);
+  const [branchesRes, expensesRes, canManageExpenses, targetExpenseRes] =
+    await Promise.all([
+      fetchAccessibleBranches(),
+      fetchExpenses({
+        location: params.location,
+        startDate: resolved.start,
+        endDate: resolved.end,
+        ...(params.branch != null ? { branchId: params.branch } : {}),
+      }),
+      currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
+      targetExpenseId != null
+        ? fetchExpenseById(targetExpenseId)
+        : Promise.resolve({ success: true, data: null }),
+    ]);
 
   if (!branchesRes.success || !expensesRes.success) {
     return (
@@ -64,7 +78,14 @@ export default async function ExpensesPage({
     id: number;
     name: string;
   }[];
-  const rows = expensesRes.data ?? [];
+  let rows = expensesRes.data ?? [];
+  if (
+    targetExpenseRes?.success &&
+    targetExpenseRes.data &&
+    !rows.some((row) => row.id === targetExpenseRes.data!.id)
+  ) {
+    rows = [targetExpenseRes.data, ...rows];
+  }
   const summary = rows.reduce(
     (acc, row) => {
       if (isOperatingExpenseCategory(row.category)) {

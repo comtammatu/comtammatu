@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { formatAccountingVND } from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
-import { EXPENSE_PAYMENT_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
 import {
@@ -710,11 +709,20 @@ export function ExpensesClient({
           onOpenChange={(open) => {
             if (!open) closeExpenseDocument();
           }}
-          title={editingExpense ? copy.form.editTitle : copy.form.title}
-          description={
-            editingExpense && editingPaymentState
-              ? EXPENSE_PAYMENT_STATE_LABELS_VI[editingPaymentState]
-              : undefined
+          title={
+            editingExpense && editingPaymentState ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span>{`${copy.form.editTitle} - #${editingExpense.id}`}</span>
+                <StatusBadge
+                  domain="expense-payment"
+                  value={editingPaymentState}
+                />
+              </div>
+            ) : editingExpense ? (
+              `${copy.form.editTitle} - #${editingExpense.id}`
+            ) : (
+              copy.form.title
+            )
           }
           schema={expenseFormSchema}
           defaultValues={formDefaultValues}
@@ -722,6 +730,7 @@ export function ExpensesClient({
           onSubmit={onSubmit}
           onSuccess={onCreateSuccess}
           submitLabel={editingExpense ? copy.form.editSubmit : copy.form.submit}
+          actionSize={isTouchLayout ? "touch" : "default"}
           variant="document"
           renderFooter={
             editingExpense &&
@@ -827,7 +836,6 @@ export function ExpensesClient({
                 isTouchLayout={isTouchLayout}
                 paymentMethodReadOnly={!canEditPaymentMethod}
                 transferContent={editingExpense?.transfer_content}
-                paymentState={editingPaymentState}
                 onCopyTransferContent={(content) =>
                   void copyTransferContent(content)
                 }
@@ -840,9 +848,12 @@ export function ExpensesClient({
       <ExpenseViewDialog
         expense={viewingExpense}
         branchOptions={branchOptions}
-        tenantId={tenantId}
         isTouchLayout={isTouchLayout}
+        canManageExpenses={canManageExpenses}
         onClose={closeExpenseDocument}
+        onEdit={onEdit}
+        onPayCash={(row) => void onPayCash(row)}
+        onPayTransfer={(row) => void onPayTransfer(row)}
         onCopyTransferContent={(content) => void copyTransferContent(content)}
       />
     </>

@@ -63,7 +63,7 @@ export interface FormDialogProps<TValues extends FieldValues> {
   variant?: "default" | "document";
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
+  title: ReactNode;
   description?: string;
   schema: ZodType<TValues>;
   defaultValues: DefaultValues<TValues>;

@@ -534,6 +534,70 @@ export async function fetchExpenses(params: {
   };
 }
 
+export async function fetchExpenseById(
+  expenseId: number,
+): Promise<ActionResult<ExpenseRow | null>> {
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .select(
+      "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", expenseId)
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: "Không tải được thông tin khoản chi." };
+  }
+  if (!data) return { success: true, data: null };
+
+  const amount = Number(data.amount);
+  const subtotal = Number(data.subtotal ?? amount);
+  const vatAmount = Number(data.vat_amount ?? 0);
+  const row = {
+    id: data.id,
+    branch_id: data.branch_id,
+    expense_date: data.expense_date,
+    category: data.category,
+    amount,
+    subtotal,
+    vat_amount: vatAmount,
+    vat_breakdown: mapExpenseVatBreakdown(data.vat_breakdown, {
+      subtotal,
+      vatAmount,
+    }),
+    payment_method: data.payment_method,
+    paid_at: data.paid_at,
+    transfer_content: data.transfer_content,
+    vendor_name: data.vendor_name,
+    note: data.note,
+    invoice_attachment_url: data.invoice_attachment_url ?? null,
+    created_at: data.created_at,
+  };
+
+  const [matchedByExpense, matchedByBankTransaction] = await Promise.all([
+    fetchExpenseMatchMap(supabase, claims.tenant_id, [expenseId]),
+    fetchExpenseBankTransactionMatchMap(supabase, claims.tenant_id, [expenseId]),
+  ]);
+
+  return {
+    success: true,
+    data: {
+      ...row,
+      matchedEventIds: matchedByExpense.get(expenseId) ?? [],
+      matchedBankTransactionIds: matchedByBankTransaction.get(expenseId) ?? [],
+    },
+  };
+}
+
 function getVNDateRangeUtc(startDate: string, endDate: string) {
   const { startIso } = getVNDayUtcRange(startDate);
   const { endIso } = getVNDayUtcRange(endDate);

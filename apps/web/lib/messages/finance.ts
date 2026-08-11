@@ -434,6 +434,8 @@ export const finance = {
       grossLabel: "Tổng tiền",
       attachment: "Hóa đơn GTGT (Đính kèm)",
       attachmentHint: "Tùy chọn. PDF hoặc ảnh.",
+      viewPdf: "Xem tệp PDF",
+      zoomAttachment: "Phóng to ảnh hóa đơn",
       transferContent: "Nội dung chuyển khoản",
       submit: "Lưu khoản chi",
       success: "Đã lưu khoản chi",
