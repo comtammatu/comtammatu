@@ -123,7 +123,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   ];
 
   return (
-    <Tabs defaultValue={defaultTab} className="flex flex-col gap-4">
+    <Tabs defaultValue={defaultTab} className="gap-4">
       <div className="flex flex-col gap-3">
         <AppPageHeader
           title={messages.inventory.value.title}
