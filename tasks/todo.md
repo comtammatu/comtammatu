@@ -96,8 +96,8 @@ Kind: feature
 Tier: T2
 Lane: work/control-surface
 Exit: `work_*` migration owner-applied + `db:types`; `/work` Inbox and `/work/tasks/[id]` read for members; non-members denied; pgTAP isolation green; ADR 0033 / screen-map `/work` already Accepted (W0).
-Evidence: migration `work_management_foundation`; ACL `work`; nav Công việc; `/work` UI (Inbox, Board DnD, Calendar, Timeline, Detail mutations); control-home `work:mine-due`; `/me` CTA; static + pgTAP tests; runbook `docs/runbooks/work-module-pilot-rollback.md`.
-Pilot department seed label: **Văn phòng**.
+Evidence: migration `work_management_foundation`; ACL `work`; nav `Công việc`; `/work` UI (Inbox, Board DnD, Calendar, Timeline, Detail mutations); control-home `work:mine-due`; `/me` CTA; static + pgTAP tests; runbook `docs/runbooks/work-module-pilot-rollback.md`.
+Pilot department seed label: **`Văn phòng`**.
 
 Progress:
 - **W0 done** — ADR 0033, screen-map, archetypes, SSOT Accepted, PR #348 superseded.

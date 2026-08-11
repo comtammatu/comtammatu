@@ -37,7 +37,7 @@ Canonical integration plan:
 5. **Control home `/`.** Remains module attention hub; adds one attention row
    for due-today + overdue Work tasks → `/work`. Does not become a Work shell.
 
-6. **`/me`.** Remains personal day (clock + Việc trong ca). When Work access
+6. **`/me`.** Remains personal day (clock + `Việc trong ca`). When Work access
    exists, expose CTA to `/work`. Never merge `work_tasks` into
    `position_shift_tasks`.
 

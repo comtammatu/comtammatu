@@ -6,7 +6,7 @@
 
 ## 1. Goal
 
-Give Owner / Kế toán / Kho Tổng / Bếp TT a coherent ops experience across
+Give Owner / Kế toán / `Kho Tổng` / `Bếp TT` a coherent ops experience across
 procurement, receiving, fulfillment, shrinkage, production, and stocktake —
 same Má Tư Design System density as stock/PO/GRN, without merging job surfaces
 or inventing a second design language.
@@ -24,18 +24,18 @@ or inventing a second design language.
 ## 3. Journey map
 
 ```text
-Hub → Tồn → (YCH/DC | Tiêu hao/Hao)
-    → Mua hàng (YCM→PO) → GRN → Finance HĐ NCC
-    → Giao nhận (YCH/DC hub)
-    → Sản xuất → optional DC
-    → Kiểm kê / phiếu đếm (discoverability gap)
+Hub → `Tồn` → (YCH/DC | `Tiêu hao/Hao`)
+    → `Mua hàng` (YCM→PO) → GRN → Finance `HĐ NCC`
+    → `Giao nhận` (YCH/DC hub)
+    → `Sản xuất` → optional DC
+    → `Kiểm kê` / `phiếu đếm` (discoverability gap)
     → Master (NL / NCC / CT / settings)
 ```
 
 | Journey | Happy path | Chrome baseline (2026-08-11) |
 | --- | --- | --- |
-| Procurement | YCM → allocate → PO → GRN → HĐ NCC | Dense PO/GRN; Demand thinner until Wave 1 |
-| Stock control | On-hand → thẻ kho dialog | Dense dialog; page twin thinner (Wave 3) |
+| Procurement | YCM → allocate → PO → GRN → `HĐ NCC` | Dense PO/GRN; Demand thinner until Wave 1 |
+| Stock control | On-hand → `thẻ kho` dialog | Dense dialog; page twin thinner (Wave 3) |
 | Fulfillment | Hub → transfer/YCH document | Wave 1 densify |
 | Shrinkage | Consumption → waste/issue detail | Wave 1 densify issue DETAIL |
 | Production | List → run detail | Wave 2 |
@@ -49,7 +49,7 @@ receiving, Chick-fil-A scanner UX, Supy multi-site GRN, ERP dock receiving.
 
 | Principle | Application here |
 | --- | --- |
-| Exception-first receiving | Keep GRN reject + list/document KPI ngoại lệ |
+| Exception-first receiving | Keep GRN reject + list/document KPI `ngoại lệ` |
 | Three-way match | Qty on GRN; price/AP on Finance — clear handoff CTA (Wave 3) |
 | Job-scoped surfaces | Do not merge PO + GRN + AP into one workspace |
 | Location via URL/JWT | Meta KPIs respect selected site scope |
@@ -72,11 +72,11 @@ Reuse stock/PO/GRN only:
 | Surface | Density target |
 | --- | --- |
 | Stock dialog, PO doc, GRN doc | **Done** (gold) |
-| Giao nhận hub + transfer/YCH doc | **Done** (Wave 1) |
+| `Giao nhận` hub + transfer/YCH doc | **Done** (Wave 1) |
 | Demand view dialog | **Done** (Wave 1) |
 | Issue / consumption DETAIL | **Done** (Wave 1) |
 | Production DETAIL, stocktake DETAIL | **Done** (Wave 2) |
-| Hub attention + Kiểm kê nav | **Done** (Wave 2) |
+| Hub attention + `Kiểm kê` nav | **Done** (Wave 2) |
 | Stock page twin, GRN→AP CTA | **Done** (Wave 3) |
 
 ## 7. Implementation waves
@@ -85,7 +85,7 @@ Reuse stock/PO/GRN only:
 
 ### Wave 1 — Daily ops density
 
-- Giao nhận: hub meta + dialog StatusBadge; transfer detail KPI strip; YCH
+- `Giao nhận`: hub meta + dialog StatusBadge; transfer detail KPI strip; YCH
   overview densify in `stock-request-detail-view` / fulfill page header  
 - Demand: `purchase-request-view-dialog` KPI + StatusBadge title  
 - Issue DETAIL: KPI strip before overview  
@@ -94,7 +94,7 @@ Reuse stock/PO/GRN only:
 
 - Production + stocktake DETAIL gold bar  
 - `/inventory` hub attention deep-links  
-- Nav: Kiểm kê (and reports if product Accept)  
+- Nav: `Kiểm kê` (and reports if product Accept)  
 
 ### Wave 3 — Parity & handoff
 

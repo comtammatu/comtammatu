@@ -1,6 +1,6 @@
 # Work module integration — Control Surface (comprehensive)
 
-> **Status:** Accepted · 2026-08-11 (Owner implement Accept; pilot dept **Văn phòng**)  
+> **Status:** Accepted · 2026-08-11 (Owner implement Accept; pilot dept **`Văn phòng`**)  
 
 > **Supersedes (host/runtime):** separate-app design on `codex/workspace-foundation` / PR #348  
 > **Keeps (domain ideas):** `work_*` tables, membership authority, inbox-first landing, no dual money/stock/HR data in tasks  
@@ -8,12 +8,12 @@
 
 ## 1. Goal
 
-Ship **Công việc** (`/work`) as a first-class Control Surface module for office
+Ship **`Công việc`** (`/work`) as a first-class Control Surface module for office
 collaboration (departments, projects, assigned work), with progressive views:
 
 | View | Product job | Default audience |
 | --- | --- | --- |
-| Inbox (list) | Việc được giao / theo dõi — name, status, people, due | Every Work member |
+| Inbox (list) | `Việc được giao` / `theo dõi` — name, status, people, due | Every Work member |
 | Kanban | Move tasks across status in **one** department or **one** project | Lead / member of that scope |
 | Calendar | See due dates across allowed tasks | Members with due-dated work |
 | Timeline | Sequence / dependency span for a project (later) | Project lead |
@@ -30,7 +30,7 @@ checklist for any future Control Surface module.
    Kanban wall.
 3. **Control home `/`** — stays module attention hub; adds **one** Work attention
    row (due today + overdue) → `/work` when `can_access_workspace()` passes.
-4. **`/me`** — stays personal day (clock + Việc trong ca). When Work access
+4. **`/me`** — stays personal day (clock + `Việc trong ca`). When Work access
    exists, add a CTA/list entry to `/work`. Do not merge `work_tasks` into
    `position_shift_tasks`.
 5. **Login destinations unchanged** — Owner / accountant / central → `/`;
@@ -47,14 +47,14 @@ family; do not invent a parallel map.
 
 | # | Seam | Must update | Proof |
 | --- | --- | --- | --- |
-| M1 | Module ACL | `packages/shared/src/auth/module-acl.ts` (+ matrix test) | Role × module lock test green |
+| M1 | Module ACL | `packages/shared/src/auth/module-acl.ts` (+ matrix test) | Role x module lock test green |
 | M2 | Path → module | `route-resolution.ts` / `resolveModuleFromPath` | Static + matrix |
 | M3 | Nav | `nav-config.ts` + label VI glossary/messages | Visible only when candidate allows; deep-nav contract |
 | M4 | Login / landing | Only if module changes default home — **Work: no** | `login-destination` tests unchanged |
 | M5 | Screen context | `docs/ref/screen-context-map.md` section | Actor / job / device / NOT list |
 | M6 | Archetype | `docs/spec/page-archetypes.md` + `scripts/page-archetypes.mjs` if new compose | CI compose gate |
 | M7 | UI contract | `scripts/check-ui-contract.mjs` / registry as needed | `lint:ui-contract` |
-| M8 | Role × route matrix | `scripts/gen-role-route-matrix.mjs` + committed matrix | `lint:route-matrix` |
+| M8 | Role x route matrix | `scripts/gen-role-route-matrix.mjs` + committed matrix | `lint:route-matrix` |
 | M9 | Permissions | SQL permission keys + `permissions.ts` + seed lint | `lint:seed-permissions` |
 | M10 | Schema / RLS / RPC | Additive migrations; composite tenant FKs; atomic multi-row RPC | pgTAP + advisors |
 | M11 | Types | `pnpm db:types` after Production-source apply | `lint:typegen` |
@@ -168,8 +168,8 @@ flowchart TB
 | Surface | Integration |
 | --- | --- |
 | `/` | One attention item `work:mine-due` via `loadControlHomeAttention` |
-| `/me` | CTA “Việc được giao” when access; never replace Việc trong ca |
-| Nav | Sidebar / deep-nav **Công việc** → `/work` |
+| `/me` | CTA “Việc được giao” when access; never replace `Việc trong ca` |
+| Nav | Sidebar / deep-nav **`Công việc`** → `/work` |
 | Notifications | Same-origin paths; existing Realtime attention bus |
 | Search (future) | Out of scope until Inbox+Board stable |
 
@@ -208,7 +208,7 @@ Suggested pilot: one office department membership set; Owner has `work:manage`.
 | Notification exact-user rejected by canonicalize trigger | Fix in W1/W2 with foundation review gap |
 | Calendar/Timeline scope creep | Wave-lock; Timeline after Calendar Accept |
 | PR #348 drift (separate app + 50+ commits behind) | Rewrite design docs on fresh branch from `main`; cherry-pick only terminology/origin utilities if still useful |
-| Office UX confusion with Việc trong ca | Distinct copy: **Việc được giao** vs **Việc trong ca**; screen-map NOT list |
+| Office UX confusion with `Việc trong ca` | Distinct copy: **`Việc được giao`** vs **`Việc trong ca`**; screen-map NOT list |
 
 ## 11. Accept asks (Owner)
 
