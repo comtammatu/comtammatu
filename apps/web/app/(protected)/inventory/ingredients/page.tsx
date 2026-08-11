@@ -40,7 +40,7 @@ export default async function IngredientsPage() {
     (await currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS));
 
   const [result, unitsResult, categoriesResult] = await Promise.all([
-    fetchIngredients(),
+    fetchIngredients(2000, undefined, { includeUnits: false }),
     fetchUnitOptions(),
     fetchCategoryOptions(),
   ]);

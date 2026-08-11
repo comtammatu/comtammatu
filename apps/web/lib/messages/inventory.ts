@@ -332,9 +332,21 @@ export const inventory = {
       readinessGapSummary: (gaps: number, active: number) =>
         `${formatCount(gaps)} / ${formatCount(active)} đang dùng còn thiếu sẵn sàng`,
       colReadiness: "Sẵn sàng",
+      colBaseUnit: "Đơn vị chuẩn",
       colStorage: "Bảo quản",
       colReferenceCost: "Giá tham chiếu",
       colThresholds: "Ngưỡng tồn",
+      readinessGapFilterAria: "Lọc nguyên liệu còn thiếu sẵn sàng",
+      moreFilters: "Thêm bộ lọc",
+      moreFiltersHide: "Thu gọn bộ lọc",
+      assignFulfillAction: "Gán nguồn hàng",
+      linkSupplierAction: "Gắn NCC",
+      createNudgeFulfill:
+        "Gán Nguồn hàng trước khi chi nhánh tạo yêu cầu hàng.",
+      createNudgeSupplier:
+        "Gắn nguyên liệu vào ít nhất một NCC đang dùng để tạo yêu cầu mua.",
+      gapFulfillAria: (name: string) => `Gán nguồn hàng cho ${name}`,
+      gapSupplierAria: (name: string) => `Gắn NCC cho ${name}`,
       storageAmbient: "Nhiệt độ phòng",
       loadFailed: "Không thể tải danh sách nguyên liệu.",
       reloadFailed: "Không thể tải lại danh sách nguyên liệu.",
@@ -2014,6 +2026,9 @@ export const inventory = {
     emptySearchDescription: "Thử tên, mã số thuế hoặc số điện thoại khác.",
     emptyInitialDescription: 'Nhấn "Thêm nhà cung cấp" để bắt đầu.',
     loadFailed: "Không thể tải nhà cung cấp.",
+    linkIngredientBanner: (name: string) =>
+      `Đang gắn nguyên liệu "${name}". Mở một NCC → Gán nguyên liệu để thêm vào danh mục mua.`,
+    linkIngredientDismiss: "Bỏ gợi ý",
     taxLookup: {
       action: "Tra cứu MST",
       loading: "Đang tra cứu thông tin doanh nghiệp…",

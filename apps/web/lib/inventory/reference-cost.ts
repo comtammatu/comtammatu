@@ -3,6 +3,8 @@ import type { IngredientUnitRow } from "./types";
 type IngredientWithReferenceCost = {
   monetary?: { unitCost?: number | string | null } | null;
   units?: IngredientUnitRow[];
+  /** Base unit label when the ladder is not loaded (LIST slim payload). */
+  unit?: string;
 };
 
 export type ReferenceCost = {
@@ -82,7 +84,12 @@ export function getDisplayReferenceCost(
     ) ?? null;
 
   if (!displayUnit) {
-    return { value: baseCost, unit: "", unitId: null, isBase: true };
+    return {
+      value: baseCost,
+      unit: ingredient.unit?.trim() || "",
+      unitId: null,
+      isBase: true,
+    };
   }
 
   return buildReferenceCost(baseCost, displayUnit);

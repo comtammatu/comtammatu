@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Trash2 as IconTrash } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronDown as IconChevronDown,
+  Trash2 as IconTrash,
+} from "lucide-react";
 import {
   useController,
   type Control,
@@ -12,9 +15,13 @@ import { z } from "zod";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
+import {
   Field,
   FieldError,
-  FieldLegend,
   FieldLabel,
   FieldSet,
 } from "@comtammatu/ui/components/field";
@@ -30,8 +37,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import {
+  AppDialog,
   FormDialog,
   FormattedNumberInput,
   QuantityField,
@@ -39,7 +48,11 @@ import {
   TextField,
 } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
-import { createIngredient, updateIngredient } from "../ingredient-actions";
+import {
+  createIngredient,
+  fetchIngredientDetail,
+  updateIngredient,
+} from "../ingredient-actions";
 import type {
   CategoryOption,
   IngredientRow,
@@ -49,6 +62,7 @@ import { parseOptionalNumber } from "@lib/inventory/format";
 import { formatDecimal } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import { cn } from "@comtammatu/ui";
 import {
   buildCatalogUnits,
   deriveEffectiveUnitFactor,
@@ -330,8 +344,16 @@ interface IngredientDialogProps {
   ingredient: IngredientRow | null;
   unitOptions: UnitOption[];
   categoryOptions: CategoryOption[];
-  onSaved: () => void | Promise<void>;
+  /** When set, focus this field after the dialog opens (edit readiness flow). */
+  focusField?: "default_fulfill_site_kind";
+  onSaved: (detail: IngredientSavedDetail) => void | Promise<void>;
 }
+
+export type IngredientSavedDetail = {
+  mode: "create" | "edit";
+  id: number;
+  row: IngredientRow;
+};
 
 export function IngredientDialog({
   open,
@@ -339,12 +361,57 @@ export function IngredientDialog({
   ingredient,
   unitOptions,
   categoryOptions,
+  focusField,
   onSaved,
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
+  const [resolvedIngredient, setResolvedIngredient] =
+    useState<IngredientRow | null>(ingredient);
+  const [unitsLoading, setUnitsLoading] = useState(false);
+  const [unitsLoadError, setUnitsLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setResolvedIngredient(ingredient);
+      setUnitsLoading(false);
+      setUnitsLoadError(null);
+      return;
+    }
+
+    setResolvedIngredient(ingredient);
+    setUnitsLoadError(null);
+
+    if (!ingredient) {
+      setUnitsLoading(false);
+      return;
+    }
+
+    if ((ingredient.units?.length ?? 0) > 0) {
+      setUnitsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setUnitsLoading(true);
+    void fetchIngredientDetail(ingredient.id).then((result) => {
+      if (cancelled) return;
+      setUnitsLoading(false);
+      if (!result.success || !result.data) {
+        setUnitsLoadError(copy.units.unitsLoadFailed);
+        toast.error(result.error ?? copy.units.unitsLoadFailed);
+        return;
+      }
+      setResolvedIngredient(result.data);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, ingredient]);
+
   const defaultValues = useMemo(
-    () => toFormValues(ingredient, unitOptions),
-    [ingredient, unitOptions],
+    () => toFormValues(resolvedIngredient, unitOptions),
+    [resolvedIngredient, unitOptions],
   );
   const ingredientSchema = useMemo(
     () => createIngredientSchema(unitOptions),
@@ -378,10 +445,15 @@ export function IngredientDialog({
           ? Number(values.category_id)
           : null;
       const storageType: "ambient" | "refrigerated" | "frozen" =
-        ingredient?.storage_type === "refrigerated" ||
-        ingredient?.storage_type === "frozen"
-          ? ingredient.storage_type
+        resolvedIngredient?.storage_type === "refrigerated" ||
+        resolvedIngredient?.storage_type === "frozen"
+          ? resolvedIngredient.storage_type
           : "ambient";
+      const fulfillSiteKind =
+        values.default_fulfill_site_kind &&
+        values.default_fulfill_site_kind !== FULFILL_SITE_NONE
+          ? values.default_fulfill_site_kind
+          : null;
       const payload = {
         name: values.name,
         sku: values.sku || undefined,
@@ -389,24 +461,80 @@ export function IngredientDialog({
         item_kind: values.item_kind,
         storage_type: storageType,
         min_stock_level: parseOptionalNumber(values.min_stock_level) ?? 0,
-        default_fulfill_site_kind:
-          values.default_fulfill_site_kind &&
-          values.default_fulfill_site_kind !== FULFILL_SITE_NONE
-            ? values.default_fulfill_site_kind
-            : null,
+        default_fulfill_site_kind: fulfillSiteKind,
         units,
       };
       const result =
-        isEdit && ingredient
-          ? await updateIngredient(ingredient.id, payload)
+        isEdit && resolvedIngredient
+          ? await updateIngredient(resolvedIngredient.id, payload)
           : await createIngredient(payload);
 
-      if (result.success) {
-        try {
-          await onSaved();
-        } catch {
-          toast.error(dialogCopy.reloadAfterSaveFailed);
-        }
+      if (!result.success) return result;
+
+      const savedId =
+        isEdit && resolvedIngredient
+          ? resolvedIngredient.id
+          : Number(
+              (result.data as { id?: number } | undefined)?.id ?? NaN,
+            );
+      if (!Number.isInteger(savedId) || savedId <= 0) {
+        return { success: false, error: dialogCopy.saveFailed };
+      }
+
+      const baseUnit = units.find((unit) => unit.is_base);
+      const categoryName =
+        categoryOptions.find((category) => category.id === categoryId)?.name ??
+        null;
+      const row: IngredientRow = {
+        id: savedId,
+        name: values.name.trim(),
+        sku: values.sku?.trim() ? values.sku.trim() : null,
+        category: categoryName,
+        category_id: categoryId,
+        category_name: categoryName,
+        item_kind: values.item_kind,
+        monetary: resolvedIngredient?.monetary ?? null,
+        min_stock_level: payload.min_stock_level,
+        max_stock_level: resolvedIngredient?.max_stock_level ?? null,
+        reorder_point: resolvedIngredient?.reorder_point ?? null,
+        storage_type: storageType,
+        default_fulfill_site_kind: fulfillSiteKind,
+        has_active_supplier_link:
+          resolvedIngredient?.has_active_supplier_link === true,
+        unit: baseUnit
+          ? unitOptions.find((option) => option.id === baseUnit.unit_id)?.name ??
+            ""
+          : "",
+        is_active: resolvedIngredient?.is_active ?? true,
+        updated_at: resolvedIngredient?.updated_at ?? null,
+        units: units.map((unit, index) => {
+          const option = unitOptions.find((item) => item.id === unit.unit_id);
+          return {
+            id:
+              resolvedIngredient?.units?.find(
+                (rowUnit) => rowUnit.unit_id === unit.unit_id,
+              )?.id ?? index + 1,
+            unit_id: unit.unit_id,
+            unit_code: option?.code ?? "",
+            unit_name: option?.name ?? option?.code ?? "",
+            to_base_factor: unit.to_base_factor,
+            is_base: unit.is_base,
+            anchor_unit_id: unit.anchor_unit_id ?? null,
+            anchor_factor: unit.anchor_factor ?? null,
+            is_active: true,
+            sort_order: index,
+          };
+        }),
+      };
+
+      try {
+        await onSaved({
+          mode: isEdit ? "edit" : "create",
+          id: savedId,
+          row,
+        });
+      } catch {
+        toast.error(dialogCopy.reloadAfterSaveFailed);
       }
       return result;
     } catch (error) {
@@ -421,13 +549,54 @@ export function IngredientDialog({
     }
   }
 
+  if (open && isEdit && unitsLoading) {
+    return (
+      <AppDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={dialogCopy.editTitle}
+        contentClassName="sm:max-w-2xl"
+        footer={
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {ACTIONS_VI.cancel}
+          </Button>
+        }
+      >
+        <div className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
+          <Spinner className="size-4" />
+          {copy.units.unitsLoading}
+        </div>
+      </AppDialog>
+    );
+  }
+
+  if (open && isEdit && unitsLoadError) {
+    return (
+      <AppDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={dialogCopy.editTitle}
+        contentClassName="sm:max-w-2xl"
+        footer={
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {ACTIONS_VI.cancel}
+          </Button>
+        }
+      >
+        <p className="text-sm text-destructive" role="alert">
+          {unitsLoadError}
+        </p>
+      </AppDialog>
+    );
+  }
+
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
       schema={ingredientSchema}
       defaultValues={defaultValues}
-      entityKey={ingredient?.id ?? "new-ingredient"}
+      entityKey={`${resolvedIngredient?.id ?? "new-ingredient"}:${focusField ?? "default"}:u${resolvedIngredient?.units?.length ?? 0}`}
       title={isEdit ? dialogCopy.editTitle : dialogCopy.addTitle}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       successMessage={isEdit ? dialogCopy.editSuccess : dialogCopy.addSuccess}
@@ -440,6 +609,8 @@ export function IngredientDialog({
           categorySelectOptions={categorySelectOptions}
           unitSelectOptions={unitSelectOptions}
           unitOptions={unitOptions}
+          focusField={focusField}
+          defaultUnitsOpen={!isEdit || (resolvedIngredient?.units?.length ?? 0) > 1}
         />
       )}
     </FormDialog>
@@ -451,11 +622,15 @@ function IngredientDialogFields({
   categorySelectOptions,
   unitSelectOptions,
   unitOptions,
+  focusField,
+  defaultUnitsOpen,
 }: {
   form: UseFormReturn<IngredientFormValues>;
   categorySelectOptions: Array<{ value: string; label: string }>;
   unitSelectOptions: Array<{ value: string; label: string }>;
   unitOptions: UnitOption[];
+  focusField?: "default_fulfill_site_kind";
+  defaultUnitsOpen: boolean;
 }) {
   const itemKind = form.watch("item_kind");
   const unitIds = form.watch("unit_ids");
@@ -465,7 +640,20 @@ function IngredientDialogFields({
   const [blockedRemovalErrors, setBlockedRemovalErrors] = useState<
     Record<number, string>
   >({});
+  const [unitsOpen, setUnitsOpen] = useState(defaultUnitsOpen);
   const controlSize = useFormControlSize("responsive");
+
+  useEffect(() => {
+    setUnitsOpen(defaultUnitsOpen);
+  }, [defaultUnitsOpen]);
+
+  useEffect(() => {
+    if (!focusField) return;
+    const frame = window.requestAnimationFrame(() => {
+      form.setFocus(focusField);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusField, form]);
   const { field: baseField, fieldState: baseFieldState } = useController({
     control: form.control,
     name: "base_unit_id",
@@ -506,6 +694,7 @@ function IngredientDialogFields({
   function addUnit(nextValue: string) {
     if (!nextValue || unitIds.includes(nextValue) || unitIds.length >= 20)
       return;
+    setUnitsOpen(true);
     form.setValue("unit_ids", [...unitIds, nextValue], {
       shouldDirty: true,
       shouldValidate: true,
@@ -769,86 +958,120 @@ function IngredientDialogFields({
         </Field>
       </div>
 
-      <FieldSet data-invalid={Boolean(baseFieldState.error)}>
-        <FieldLegend>{copy.units.sectionLabel}</FieldLegend>
-        {selectedUnitIds.length > 0 && baseUnit && relations ? (
-          <ItemGroup className="gap-2" role="list">
-            {selectedUnitIds
-              .filter((unitId) => unitId !== baseUnit.id)
-              .map((unitId) => {
-                const unit = unitsById.get(unitId);
-                if (!unit) return null;
-                const effectiveFactor = (() => {
-                  try {
-                    return deriveEffectiveUnitFactor(relations, unitId);
-                  } catch {
-                    return null;
-                  }
-                })();
-                const anchorUnitId = relations.anchorUnitIds[unitId] ?? null;
-                const anchorOptions = selectedUnitIds
-                  .filter(
-                    (candidateId) =>
-                      candidateId !== unitId &&
-                      !wouldCreateUnitCycle(
-                        relations.anchorUnitIds,
-                        unitId,
-                        candidateId,
-                      ),
-                  )
-                  .flatMap((candidateId) => {
-                    const candidate = unitsById.get(candidateId);
-                    return candidate == null
-                      ? []
-                      : [{ value: String(candidateId), label: candidate.name }];
-                  });
-
-                return (
-                  <UnitRelationRow
-                    key={unitId}
-                    control={form.control}
-                    unit={unit}
-                    anchorOptions={anchorOptions}
-                    effectiveFactor={effectiveFactor}
-                    automatic={isAutomaticStandardRelation(
-                      unit,
-                      baseUnit,
-                      anchorUnitId,
-                      relations.anchorFactors[unitId] ?? null,
-                    )}
-                    removalError={blockedRemovalErrors[unitId]}
-                    removeDisabled={selectedUnitIds.length === 1}
-                    onRemove={() => removeUnit(unitId)}
-                  />
-                );
-              })}
-          </ItemGroup>
-        ) : null}
-        {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
-          <div className="w-full">
-            <Select value="" onValueChange={addUnit}>
-              <SelectTrigger
+      <Collapsible open={unitsOpen} onOpenChange={setUnitsOpen}>
+        <FieldSet data-invalid={Boolean(baseFieldState.error)}>
+          <CollapsibleTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
                 size={controlSize}
-                className="w-full"
-                aria-label={copy.units.add}
-              >
-                <SelectValue placeholder={copy.units.add} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUnitOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    size={controlSize === "touch" ? "touch" : "default"}
+                className="group -mx-2 h-auto w-[calc(100%+1rem)] justify-between px-2 py-2 font-normal"
+              />
+            }
+          >
+            <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
+              <span className="text-sm font-medium">
+                {copy.units.sectionToggle}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {copy.units.sectionToggleHint}
+              </span>
+            </span>
+            <IconChevronDown
+              className={cn(
+                "size-4 shrink-0 text-muted-foreground transition-transform",
+                unitsOpen && "rotate-180",
+              )}
+              aria-hidden
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="flex flex-col gap-3 pt-2">
+            {selectedUnitIds.length > 0 && baseUnit && relations ? (
+              <ItemGroup className="gap-2" role="list">
+                {selectedUnitIds
+                  .filter((unitId) => unitId !== baseUnit.id)
+                  .map((unitId) => {
+                    const unit = unitsById.get(unitId);
+                    if (!unit) return null;
+                    const effectiveFactor = (() => {
+                      try {
+                        return deriveEffectiveUnitFactor(relations, unitId);
+                      } catch {
+                        return null;
+                      }
+                    })();
+                    const anchorUnitId = relations.anchorUnitIds[unitId] ?? null;
+                    const anchorOptions = selectedUnitIds
+                      .filter(
+                        (candidateId) =>
+                          candidateId !== unitId &&
+                          !wouldCreateUnitCycle(
+                            relations.anchorUnitIds,
+                            unitId,
+                            candidateId,
+                          ),
+                      )
+                      .flatMap((candidateId) => {
+                        const candidate = unitsById.get(candidateId);
+                        return candidate == null
+                          ? []
+                          : [
+                              {
+                                value: String(candidateId),
+                                label: candidate.name,
+                              },
+                            ];
+                      });
+
+                    return (
+                      <UnitRelationRow
+                        key={unitId}
+                        control={form.control}
+                        unit={unit}
+                        anchorOptions={anchorOptions}
+                        effectiveFactor={effectiveFactor}
+                        automatic={isAutomaticStandardRelation(
+                          unit,
+                          baseUnit,
+                          anchorUnitId,
+                          relations.anchorFactors[unitId] ?? null,
+                        )}
+                        removalError={blockedRemovalErrors[unitId]}
+                        removeDisabled={selectedUnitIds.length === 1}
+                        onRemove={() => removeUnit(unitId)}
+                      />
+                    );
+                  })}
+              </ItemGroup>
+            ) : null}
+            {availableUnitOptions.length > 0 && unitIds.length < 20 ? (
+              <div className="w-full">
+                <Select value="" onValueChange={addUnit}>
+                  <SelectTrigger
+                    size={controlSize}
+                    className="w-full"
+                    aria-label={copy.units.add}
                   >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
-      </FieldSet>
+                    <SelectValue placeholder={copy.units.add} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUnitOptions.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        size={controlSize === "touch" ? "touch" : "default"}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </CollapsibleContent>
+        </FieldSet>
+      </Collapsible>
     </>
   );
 }

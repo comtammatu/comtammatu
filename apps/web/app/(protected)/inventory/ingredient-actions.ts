@@ -1,6 +1,7 @@
 "use server";
 
 import { cache } from "react";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
@@ -28,6 +29,7 @@ import {
 } from "./_lib/constants";
 import type {
   CategoryOption,
+  IngredientRow,
   IngredientUnitRow,
   UnitOption,
 } from "@lib/inventory/types";
@@ -48,6 +50,40 @@ import {
   isValidAnchorFactor,
   isValidEffectiveFactor,
 } from "./ingredients/ingredient-unit-form-model";
+
+const INGREDIENTS_LIST_PATH = "/inventory/ingredients";
+
+type IngredientUnitEmbed = {
+  id: number;
+  unit_id: number;
+  to_base_factor: number | string | null;
+  is_base: boolean;
+  anchor_unit_id: number | null;
+  anchor_factor: number | string | null;
+  is_active: boolean;
+  sort_order: number;
+  units?: { code?: string | null; name?: string | null } | null;
+};
+
+function mapIngredientUnitRows(
+  ingredientUnits: IngredientUnitEmbed[] | null | undefined,
+): IngredientUnitRow[] {
+  return (ingredientUnits ?? [])
+    .map((unit) => ({
+      id: unit.id,
+      unit_id: unit.unit_id,
+      unit_code: unit.units?.code ?? "",
+      unit_name: unit.units?.name ?? unit.units?.code ?? "",
+      to_base_factor: Number(unit.to_base_factor ?? 1),
+      is_base: unit.is_base,
+      anchor_unit_id: unit.anchor_unit_id ?? null,
+      anchor_factor:
+        unit.anchor_factor == null ? null : Number(unit.anchor_factor),
+      is_active: unit.is_active,
+      sort_order: unit.sort_order,
+    }))
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
 
 /* ─── Ingredient catalog (CRUD via save_ingredient_catalog RPC) ─── */
 
@@ -265,22 +301,31 @@ const getIngredientsCached = cache(
     supabase: SupabaseClient,
     tenantId: number,
     limit: number,
-    updatedSince?: string,
-    includeMonetary = false,
+    updatedSince: string | undefined,
+    includeMonetary: boolean,
+    includeUnits: boolean,
   ) => {
-    let query = (
-      includeMonetary
-        ? supabase
-            .from("ingredients")
-            .select(
-              "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-            )
-        : supabase
-            .from("ingredients")
-            .select(
-              "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
-            )
-    ).eq("tenant_id", tenantId);
+    const withUnitsMonetary =
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
+    const withUnitsLean =
+      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))";
+    const withoutUnitsMonetary =
+      "*, ingredient_categories!ingredients_category_tenant_fkey(name)";
+    const withoutUnitsLean =
+      "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name)";
+
+    const select = includeUnits
+      ? includeMonetary
+        ? withUnitsMonetary
+        : withUnitsLean
+      : includeMonetary
+        ? withoutUnitsMonetary
+        : withoutUnitsLean;
+
+    let query = supabase
+      .from("ingredients")
+      .select(select)
+      .eq("tenant_id", tenantId);
 
     if (updatedSince) {
       query = query.gt("updated_at", updatedSince);
@@ -290,13 +335,19 @@ const getIngredientsCached = cache(
   },
 );
 
+export type FetchIngredientsOptions = {
+  includeUnits?: boolean;
+};
+
 export async function fetchIngredients(
   limit = 2000,
   updatedSince?: string,
-): Promise<ActionResult> {
+  options?: FetchIngredientsOptions,
+): Promise<ActionResult<IngredientRow[]>> {
   const ctx = await getAuthContext(INGREDIENT_READ_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
+  const includeUnits = options?.includeUnits !== false;
   const { supabase, claims } = ctx;
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5000);
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
@@ -304,22 +355,34 @@ export async function fetchIngredients(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const [ingredientsResult, supplierLinksResult] = await Promise.all([
-    getIngredientsCached(
-      readClient,
-      claims.tenant_id,
-      safeLimit,
-      updatedSince,
-      monetary.purchasePrice,
-    ),
-    // Match YCM gate: active supplier_items on an active supplier.
-    supabase
-      .from("supplier_items")
-      .select("ingredient_id, suppliers!inner(id)")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true)
-      .eq("suppliers.is_active", true),
-  ]);
+  const [ingredientsResult, supplierLinksResult, baseUnitsResult] =
+    await Promise.all([
+      getIngredientsCached(
+        readClient,
+        claims.tenant_id,
+        safeLimit,
+        updatedSince,
+        monetary.purchasePrice,
+        includeUnits,
+      ),
+      // Match YCM gate: active supplier_items on an active supplier.
+      supabase
+        .from("supplier_items")
+        .select("ingredient_id, suppliers!inner(id)")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("is_active", true)
+        .eq("suppliers.is_active", true),
+      includeUnits
+        ? Promise.resolve({ data: null, error: null })
+        : supabase
+            .from("ingredient_units")
+            .select(
+              "ingredient_id, units!ingredient_units_unit_tenant_fkey(code, name)",
+            )
+            .eq("tenant_id", claims.tenant_id)
+            .eq("is_base", true)
+            .eq("is_active", true),
+    ]);
 
   const { data, error } = ingredientsResult;
 
@@ -330,7 +393,7 @@ export async function fetchIngredients(
     };
   }
 
-  if (supplierLinksResult.error) {
+  if (supplierLinksResult.error || baseUnitsResult.error) {
     return {
       success: false,
       error: messages.inventory.ingredients.list.loadFailed,
@@ -342,47 +405,189 @@ export async function fetchIngredients(
     linkedIngredientIds.add(Number(link.ingredient_id));
   }
 
-  const rows = (data ?? []).map((row) => {
-    const { ingredient_categories, ingredient_units, ...rest } = row;
-    const safeRest = { ...rest } as typeof rest & {
-      unit_cost?: number | null;
-    };
-    const unitCost =
-      monetary.purchasePrice && safeRest.unit_cost != null
-        ? Number(safeRest.unit_cost)
-        : null;
-    delete safeRest.unit_cost;
-    const units: IngredientUnitRow[] = (ingredient_units ?? [])
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((u: any) => ({
-        id: u.id,
-        unit_id: u.unit_id,
-        unit_code: u.units?.code ?? "",
-        unit_name: u.units?.name ?? u.units?.code ?? "",
-        to_base_factor: Number(u.to_base_factor ?? 1),
-        is_base: u.is_base,
-        anchor_unit_id: u.anchor_unit_id ?? null,
-        anchor_factor: u.anchor_factor == null ? null : Number(u.anchor_factor),
-        is_active: u.is_active,
-        sort_order: u.sort_order,
-      }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .sort((a: any, b: any) => a.sort_order - b.sort_order);
+  const baseUnitByIngredientId = new Map<number, string>();
+  if (!includeUnits) {
+    for (const row of baseUnitsResult.data ?? []) {
+      const ingredientId = Number(row.ingredient_id);
+      const units = row.units as
+        | { code?: string | null; name?: string | null }
+        | null
+        | undefined;
+      const label = units?.name?.trim() || units?.code?.trim() || "";
+      if (label) baseUnitByIngredientId.set(ingredientId, label);
+    }
+  }
 
-    const baseUnit = units.find((u) => u.is_base);
-    const ingredientId = Number(safeRest.id);
+  const rows: IngredientRow[] = (data ?? []).map((raw) => {
+    const row = raw as unknown as {
+      id: number;
+      name?: string | null;
+      sku?: string | null;
+      category?: string | null;
+      category_id?: number | null;
+      item_kind?: string | null;
+      min_stock_level?: number | null;
+      max_stock_level?: number | null;
+      reorder_point?: number | null;
+      storage_type?: string | null;
+      default_fulfill_site_kind?:
+        | "central_supply"
+        | "central_kitchen"
+        | null;
+      is_active?: boolean | null;
+      updated_at?: string | null;
+      unit_cost?: number | null;
+      ingredient_categories?: { name?: string | null } | null;
+      ingredient_units?: IngredientUnitEmbed[] | null;
+    };
+    const {
+      ingredient_categories,
+      ingredient_units,
+      unit_cost,
+      ...rest
+    } = row;
+    const unitCost =
+      monetary.purchasePrice && unit_cost != null ? Number(unit_cost) : null;
+    const units = includeUnits
+      ? mapIngredientUnitRows(ingredient_units)
+      : undefined;
+    const baseUnit = units?.find((unit) => unit.is_base);
+    const ingredientId = Number(rest.id);
 
     return {
-      ...safeRest,
+      id: ingredientId,
+      name: String(rest.name ?? ""),
+      sku: rest.sku ?? null,
+      category: rest.category ?? null,
+      category_id: rest.category_id ?? null,
+      item_kind: String(rest.item_kind ?? "raw_material"),
+      min_stock_level: rest.min_stock_level ?? null,
+      max_stock_level: rest.max_stock_level ?? null,
+      reorder_point: rest.reorder_point ?? null,
+      storage_type: rest.storage_type ?? null,
+      default_fulfill_site_kind: rest.default_fulfill_site_kind ?? null,
+      is_active: Boolean(rest.is_active),
+      updated_at: rest.updated_at ?? null,
       monetary: monetary.purchasePrice ? { unitCost } : null,
       category_name: ingredient_categories?.name ?? null,
-      units,
-      unit: baseUnit?.unit_name ?? "",
+      ...(units ? { units } : {}),
+      unit: includeUnits
+        ? (baseUnit?.unit_name ?? "")
+        : (baseUnitByIngredientId.get(ingredientId) ?? ""),
       has_active_supplier_link: linkedIngredientIds.has(ingredientId),
     };
   });
 
   return { success: true, data: rows };
+}
+
+export async function fetchIngredientDetail(
+  id: number,
+): Promise<ActionResult<IngredientRow>> {
+  const parsedId = z.coerce.number().int().positive().safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, error: "Mã nguyên liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(INGREDIENT_READ_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
+  const readClient = monetary.purchasePrice
+    ? (monetary.client ?? supabase)
+    : supabase;
+
+  const [ingredientResult, supplierLinkResult] = await Promise.all([
+    monetary.purchasePrice
+      ? readClient
+          .from("ingredients")
+          .select(
+            "*, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("id", parsedId.data)
+          .maybeSingle()
+      : readClient
+          .from("ingredients")
+          .select(
+            "id, tenant_id, name, sku, category, category_id, item_kind, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active, updated_at, default_fulfill_site_kind, ingredient_categories!ingredients_category_tenant_fkey(name), ingredient_units!ingredient_units_ingredient_tenant_fkey(id, unit_id, to_base_factor, is_base, anchor_unit_id, anchor_factor, is_active, sort_order, units!ingredient_units_unit_tenant_fkey(code, name))",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("id", parsedId.data)
+          .maybeSingle(),
+    supabase
+      .from("supplier_items")
+      .select("ingredient_id, suppliers!inner(id)")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("ingredient_id", parsedId.data)
+      .eq("is_active", true)
+      .eq("suppliers.is_active", true)
+      .limit(1),
+  ]);
+
+  if (ingredientResult.error || supplierLinkResult.error) {
+    return {
+      success: false,
+      error: messages.inventory.ingredients.list.loadFailed,
+    };
+  }
+  if (!ingredientResult.data) {
+    return { success: false, error: "Nguyên liệu không tồn tại." };
+  }
+
+  const row = ingredientResult.data as unknown as {
+    id: number;
+    name?: string | null;
+    sku?: string | null;
+    category?: string | null;
+    category_id?: number | null;
+    item_kind?: string | null;
+    min_stock_level?: number | null;
+    max_stock_level?: number | null;
+    reorder_point?: number | null;
+    storage_type?: string | null;
+    default_fulfill_site_kind?: "central_supply" | "central_kitchen" | null;
+    is_active?: boolean | null;
+    updated_at?: string | null;
+    unit_cost?: number | null;
+    ingredient_categories?: { name?: string | null } | null;
+    ingredient_units?: IngredientUnitEmbed[] | null;
+  };
+  const {
+    ingredient_categories,
+    ingredient_units,
+    unit_cost,
+    ...rest
+  } = row;
+  const unitCost =
+    monetary.purchasePrice && unit_cost != null ? Number(unit_cost) : null;
+  const units = mapIngredientUnitRows(ingredient_units);
+  const baseUnit = units.find((unit) => unit.is_base);
+
+  return {
+    success: true,
+    data: {
+      id: parsedId.data,
+      name: String(rest.name ?? ""),
+      sku: rest.sku ?? null,
+      category: rest.category ?? null,
+      category_id: rest.category_id ?? null,
+      item_kind: String(rest.item_kind ?? "raw_material"),
+      min_stock_level: rest.min_stock_level ?? null,
+      max_stock_level: rest.max_stock_level ?? null,
+      reorder_point: rest.reorder_point ?? null,
+      storage_type: rest.storage_type ?? null,
+      default_fulfill_site_kind: rest.default_fulfill_site_kind ?? null,
+      is_active: Boolean(rest.is_active),
+      updated_at: rest.updated_at ?? null,
+      monetary: monetary.purchasePrice ? { unitCost } : null,
+      category_name: ingredient_categories?.name ?? null,
+      units,
+      unit: baseUnit?.unit_name ?? "",
+      has_active_supplier_link: (supplierLinkResult.data?.length ?? 0) > 0,
+    },
+  };
 }
 
 /* ─── Option fetchers for the dialog dropdowns ─── */
@@ -443,6 +648,7 @@ export const createIngredient = withAction<
     }
 
     const ingredientId = Number(id);
+    revalidatePath(INGREDIENTS_LIST_PATH);
     return { success: true, data: { id: ingredientId } };
   },
 );
@@ -605,6 +811,7 @@ export async function updateIngredient(
     };
   }
 
+  revalidatePath(INGREDIENTS_LIST_PATH);
   return { success: true };
 }
 
@@ -633,6 +840,7 @@ export const toggleIngredientActive = withAction(
       }
       return { success: false, error: "Không thể đổi trạng thái nguyên liệu." };
     }
+    revalidatePath(INGREDIENTS_LIST_PATH);
     return { success: true };
   },
 );

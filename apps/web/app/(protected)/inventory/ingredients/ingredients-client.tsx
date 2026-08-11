@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ChevronDown as IconChevronDown,
   Eye as IconEye,
   EyeOff as IconEyeOff,
+  Link2 as IconLink,
+  MapPin as IconMapPin,
   Pencil as IconPencil,
   Plus as IconPlus,
   Search as IconSearch,
@@ -30,7 +34,6 @@ import {
 } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { useFormControlSize } from "@/components/form/control-size";
-import { matchesSearch } from "@lib/search";
 import {
   AppListFrame,
   AppPage,
@@ -48,11 +51,11 @@ import {
   ITEM_KIND_LABELS,
   ITEM_KIND_OPTIONS,
 } from "../_lib/constants";
+import { toggleIngredientActive } from "../ingredient-actions";
 import {
-  fetchIngredients,
-  toggleIngredientActive,
-} from "../ingredient-actions";
-import { IngredientDialog } from "./ingredient-dialog";
+  IngredientDialog,
+  type IngredientSavedDetail,
+} from "./ingredient-dialog";
 import type {
   CategoryOption,
   IngredientRow,
@@ -63,11 +66,22 @@ import {
   type ReferenceCost,
 } from "@lib/inventory/reference-cost";
 import {
-  catalogReadinessHasGap,
   resolveCatalogReadiness,
   summarizeCatalogReadiness,
   type CatalogReadinessGap,
 } from "@lib/inventory/catalog-readiness";
+import {
+  applyIngredientsListFilterPatch,
+  filterIngredientListRows,
+  hasIngredientsListFilters,
+  INGREDIENTS_ALL_KINDS,
+  INGREDIENTS_DEFAULT_PAGE_SIZE,
+  parseIngredientsListFilters,
+  supplierCatalogLinkHref,
+  type IngredientsActiveFilter,
+  type IngredientsListFilterPatch,
+  type IngredientsReadinessFilter,
+} from "@lib/inventory/ingredients-list-model";
 
 import {
   ACTIONS_VI,
@@ -77,9 +91,7 @@ import {
 } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { messages } from "@lib/messages";
-import {
-  inventoryListFilterSelectClassName,
-} from "../_components/inventory-list-filters";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
@@ -88,17 +100,13 @@ import {
 
 const ingredientFormCopy = messages.inventoryMaster.ingredientForm;
 const ingredientListCopy = messages.inventory.ingredients.list;
+const dialogCopy = messages.inventory.ingredients.dialog;
 const activeOptions = [
   { value: "active", label: ingredientListCopy.activeOnly },
   { value: "all", label: ingredientListCopy.includeHidden },
 ];
-type ReadinessFilter =
-  | "all"
-  | "gaps"
-  | "missing_fulfill_site"
-  | "missing_supplier_link";
 const readinessFilterOptions: {
-  value: ReadinessFilter;
+  value: IngredientsReadinessFilter;
   label: string;
 }[] = [
   { value: "all", label: ingredientListCopy.readinessAll },
@@ -112,11 +120,10 @@ const readinessFilterOptions: {
     label: ingredientListCopy.readinessMissingSupplier,
   },
 ];
-const allItemKindsValue = "all";
 const itemKindOptions = [
   {
-    value: allItemKindsValue,
-    label: messages.inventory.ingredients.dialog.itemKindLabel,
+    value: INGREDIENTS_ALL_KINDS,
+    label: dialogCopy.itemKindLabel,
   },
   ...ITEM_KIND_OPTIONS,
 ] as const;
@@ -129,20 +136,79 @@ function toReadinessInput(item: IngredientRow) {
   };
 }
 
-function ReadinessBadges({ item }: { item: IngredientRow }) {
+function fulfillSiteLabel(
+  kind: IngredientRow["default_fulfill_site_kind"],
+): string | null {
+  if (kind === "central_supply") {
+    return dialogCopy.defaultFulfillSiteKindCentralSupply;
+  }
+  if (kind === "central_kitchen") {
+    return dialogCopy.defaultFulfillSiteKindCentralKitchen;
+  }
+  return null;
+}
+
+function ReadinessCell({
+  item,
+  canManage,
+  onAssignFulfill,
+  onLinkSupplier,
+}: {
+  item: IngredientRow;
+  canManage: boolean;
+  onAssignFulfill?: (item: IngredientRow) => void;
+  onLinkSupplier?: (item: IngredientRow) => void;
+}) {
+  const fulfillLabel = fulfillSiteLabel(item.default_fulfill_site_kind);
   const { gaps } = resolveCatalogReadiness(toReadinessInput(item));
-  if (gaps.length === 0) return null;
-  const label = (gap: CatalogReadinessGap) =>
+  const gapLabel = (gap: CatalogReadinessGap) =>
     gap === "missing_fulfill_site"
       ? ingredientListCopy.missingFulfillSite
       : ingredientListCopy.missingSupplierLink;
+
+  if (!fulfillLabel && gaps.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {gaps.map((gap) => (
-        <Badge key={gap} variant="destructive" className="text-xs">
-          {label(gap)}
+      {fulfillLabel ? (
+        <Badge variant="secondary" className="text-xs">
+          {fulfillLabel}
         </Badge>
-      ))}
+      ) : null}
+      {gaps.map((gap) => {
+        const interactive =
+          canManage &&
+          ((gap === "missing_fulfill_site" && onAssignFulfill) ||
+            (gap === "missing_supplier_link" && onLinkSupplier));
+        if (!interactive) {
+          return (
+            <Badge key={gap} variant="destructive" className="text-xs">
+              {gapLabel(gap)}
+            </Badge>
+          );
+        }
+        return (
+          <Button
+            key={gap}
+            type="button"
+            variant="destructive"
+            size="xs"
+            className="h-auto px-2 py-0.5 text-xs font-normal"
+            aria-label={
+              gap === "missing_fulfill_site"
+                ? ingredientListCopy.gapFulfillAria(item.name)
+                : ingredientListCopy.gapSupplierAria(item.name)
+            }
+            onClick={(event) => {
+              event.stopPropagation();
+              if (gap === "missing_fulfill_site") onAssignFulfill?.(item);
+              else onLinkSupplier?.(item);
+            }}
+          >
+            {gapLabel(gap)}
+          </Button>
+        );
+      })}
     </div>
   );
 }
@@ -172,24 +238,28 @@ function formatReferenceCost(cost: ReferenceCost): string {
   return `${formatVND(cost.value)}${unitSuffix}`;
 }
 
-function ThresholdBadges({ item }: { item: IngredientRow }) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      <Badge variant="destructive">Min {item.min_stock_level ?? 0}</Badge>
-    </div>
-  );
+function baseUnitLabel(item: IngredientRow): string {
+  if (item.unit?.trim()) return item.unit;
+  const base = item.units?.find((unit) => unit.is_base);
+  return base?.unit_name?.trim() || base?.unit_code?.trim() || "—";
 }
 
 function IngredientMobileCard({
   item,
   toneMap,
   actions,
+  canManage,
   onOpen,
+  onAssignFulfill,
+  onLinkSupplier,
 }: {
   item: IngredientRow;
   toneMap: Map<string, string>;
   actions: RowActionItem[];
+  canManage: boolean;
   onOpen?: (item: IngredientRow) => void;
+  onAssignFulfill?: (item: IngredientRow) => void;
+  onLinkSupplier?: (item: IngredientRow) => void;
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const category = categoryLabel(item);
@@ -237,9 +307,17 @@ function IngredientMobileCard({
             <Badge variant="secondary" className="text-xs">
               {itemKindLabel(item)}
             </Badge>
+            <Badge variant="outline" className="text-xs">
+              {baseUnitLabel(item)}
+            </Badge>
           </div>
           <div className="mt-2">
-            <ReadinessBadges item={item} />
+            <ReadinessCell
+              item={item}
+              canManage={canManage}
+              onAssignFulfill={onAssignFulfill}
+              onLinkSupplier={onLinkSupplier}
+            />
           </div>
         </div>
         <div
@@ -253,14 +331,6 @@ function IngredientMobileCard({
               triggerSize={isTouchLayout ? "icon-touch" : "icon"}
             />
           ) : null}
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 px-4 py-2 text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {ingredientListCopy.colThresholds}
-          </p>
-          <ThresholdBadges item={item} />
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
@@ -288,20 +358,83 @@ export function IngredientsClient({
   canManage?: boolean;
 }) {
   const [rows, setRows] = useState(initial);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [category, setCategory] = useState("all");
-  const [itemKind, setItemKind] = useState(allItemKindsValue);
-  const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
-  const [readinessFilter, setReadinessFilter] =
-    useState<ReadinessFilter>("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
+  const [focusField, setFocusField] = useState<
+    "default_fulfill_site_kind" | undefined
+  >(undefined);
   const [isPending, startTransition] = useTransition();
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const controlSize = useFormControlSize();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const deepLinkHandledRef = useRef(false);
+
+  const filters = useMemo(
+    () => parseIngredientsListFilters(searchParams),
+    [searchParams],
+  );
+
+  const hasSecondaryFilters =
+    filters.category !== "all" ||
+    filters.itemKind !== INGREDIENTS_ALL_KINDS ||
+    filters.active !== "active";
+
+  useEffect(() => {
+    setRows(initial);
+  }, [initial]);
+
+  useEffect(() => {
+    setSearchDraft(filters.query);
+  }, [filters.query]);
+
+  useEffect(() => {
+    if (hasSecondaryFilters) setMoreFiltersOpen(true);
+  }, [hasSecondaryFilters]);
+
+  const replaceListFilters = useCallback(
+    (patch: IngredientsListFilterPatch) => {
+      const next = applyIngredientsListFilterPatch(searchParams, {
+        ...patch,
+        // Reset page unless the patch explicitly sets it.
+        page: patch.page !== undefined ? patch.page : 1,
+      });
+      const query = next.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        });
+      });
+    },
+    [pathname, router, searchParams],
+  );
+
+  useEffect(() => {
+    if (!canManage || deepLinkHandledRef.current) return;
+    if (searchParams.get("mode") !== "edit") return;
+    const rawId = searchParams.get("ingredientId");
+    const ingredientId = rawId ? Number(rawId) : NaN;
+    if (!Number.isInteger(ingredientId) || ingredientId <= 0) return;
+
+    const row = rows.find((item) => item.id === ingredientId);
+    if (!row) return;
+
+    deepLinkHandledRef.current = true;
+    setFocusField(undefined);
+    setEditingIngredient(row);
+    setDialogOpen(true);
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("ingredientId");
+    next.delete("mode");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [canManage, pathname, rows, router, searchParams]);
 
   const toneMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -324,72 +457,83 @@ export function IngredientsClient({
     [rows],
   );
 
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (activeFilter === "active") {
-      result = result.filter((item) => item.is_active);
-    }
-    if (category !== "all") {
-      result = result.filter((item) => categoryLabel(item) === category);
-    }
-    if (itemKind !== allItemKindsValue) {
-      result = result.filter((item) => item.item_kind === itemKind);
-    }
-    if (readinessFilter !== "all") {
-      const gap =
-        readinessFilter === "gaps"
-          ? "any"
-          : (readinessFilter as CatalogReadinessGap);
-      result = result.filter((item) =>
-        catalogReadinessHasGap(toReadinessInput(item), gap),
-      );
-    }
-    if (searchQuery.trim()) {
-      result = result.filter((item) =>
-        matchesSearch([item.name, item.sku], searchQuery),
-      );
-    }
-    return result;
-  }, [rows, activeFilter, category, itemKind, readinessFilter, searchQuery]);
+  const filtered = useMemo(
+    () => filterIngredientListRows(rows, filters, toReadinessInput),
+    [rows, filters],
+  );
 
-  const hasActiveFilters =
-    searchQuery.trim() !== "" ||
-    category !== "all" ||
-    itemKind !== allItemKindsValue ||
-    activeFilter !== "active" ||
-    readinessFilter !== "all";
+  const hasActiveFilters = hasIngredientsListFilters(filters);
 
   function clearFilters() {
-    setSearchQuery("");
-    setCategory("all");
-    setItemKind(allItemKindsValue);
-    setActiveFilter("active");
-    setReadinessFilter("all");
-    setCurrentPage(1);
+    setSearchDraft("");
+    replaceListFilters({
+      q: null,
+      category: null,
+      kind: null,
+      active: null,
+      ready: null,
+      page: 1,
+    });
   }
 
-  async function reload() {
-    try {
-      // Full reload keeps Nguồn hàng + NCC readiness flags in sync after save.
-      const response = await fetchIngredients(2000);
-      if (response.success) {
-        setRows((response.data ?? []) as IngredientRow[]);
-        return;
-      }
-      toast.error(response.error ?? ingredientListCopy.reloadFailed);
-    } catch {
-      toast.error(ingredientListCopy.reloadFailed);
+  function commitSearch(nextQuery = searchDraft) {
+    replaceListFilters({ q: nextQuery, page: 1 });
+  }
+
+  function handleSaved(detail: IngredientSavedDetail) {
+    setRows((prev) => {
+      const exists = prev.some((row) => row.id === detail.id);
+      if (!exists) return [...prev, detail.row];
+      return prev.map((row) => (row.id === detail.id ? detail.row : row));
+    });
+    router.refresh();
+
+    if (detail.mode !== "create") return;
+
+    const readiness = resolveCatalogReadiness(toReadinessInput(detail.row));
+    if (readiness.gaps.includes("missing_fulfill_site")) {
+      toast.message(ingredientListCopy.createNudgeFulfill, {
+        action: {
+          label: ingredientListCopy.assignFulfillAction,
+          onClick: () => openEdit(detail.row, "default_fulfill_site_kind"),
+        },
+      });
+      return;
+    }
+    if (readiness.gaps.includes("missing_supplier_link")) {
+      toast.message(ingredientListCopy.createNudgeSupplier, {
+        action: {
+          label: ingredientListCopy.linkSupplierAction,
+          onClick: () => {
+            router.push(supplierCatalogLinkHref(detail.id));
+          },
+        },
+      });
     }
   }
 
   function openCreate() {
+    setFocusField(undefined);
     setEditingIngredient(null);
     setDialogOpen(true);
   }
 
-  function openEdit(row: IngredientRow) {
+  function openEdit(
+    row: IngredientRow,
+    nextFocusField?: "default_fulfill_site_kind",
+  ) {
+    setFocusField(nextFocusField);
     setEditingIngredient(row);
     setDialogOpen(true);
+  }
+
+  function linkSupplier(item: IngredientRow) {
+    router.push(supplierCatalogLinkHref(item.id));
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) setFocusField(undefined);
   }
 
   function handleToggleActive(item: IngredientRow) {
@@ -409,74 +553,181 @@ export function IngredientsClient({
           ? ingredientListCopy.hiddenToast(item.name)
           : ingredientListCopy.shownToast(item.name),
       );
+      router.refresh();
     });
   }
 
   const getIngredientRowActions = (item: IngredientRow): RowActionItem[] => {
     if (!canManage) return [];
-    return [
+    const readiness = resolveCatalogReadiness(toReadinessInput(item));
+    const items: RowActionItem[] = [
       {
         key: "edit",
         label: ACTIONS_VI.edit,
         icon: <IconPencil />,
         onSelect: () => openEdit(item),
       },
-      {
-        key: "toggle-active",
-        label: item.is_active
-          ? ingredientListCopy.hideAction
-          : ingredientListCopy.showAction,
-        icon: item.is_active ? <IconEyeOff /> : <IconEye />,
-        disabled: isPending,
-        separatorBefore: true,
-        onSelect: () => handleToggleActive(item),
-      },
     ];
+    if (readiness.gaps.includes("missing_fulfill_site")) {
+      items.push({
+        key: "assign-fulfill",
+        label: ingredientListCopy.assignFulfillAction,
+        icon: <IconMapPin />,
+        onSelect: () => openEdit(item, "default_fulfill_site_kind"),
+      });
+    }
+    if (readiness.gaps.includes("missing_supplier_link")) {
+      items.push({
+        key: "link-supplier",
+        label: ingredientListCopy.linkSupplierAction,
+        icon: <IconLink />,
+        onSelect: () => linkSupplier(item),
+      });
+    }
+    items.push({
+      key: "toggle-active",
+      label: item.is_active
+        ? ingredientListCopy.hideAction
+        : ingredientListCopy.showAction,
+      icon: item.is_active ? <IconEyeOff /> : <IconEye />,
+      disabled: isPending,
+      separatorBefore: true,
+      onSelect: () => handleToggleActive(item),
+    });
+    return items;
   };
 
+  const filterSelectClassName =
+    controlSize === "touch" ? "w-full" : inventoryListFilterSelectClassName;
+
   const filterBar = (
-    <AppToolbar
-      variant="inline"
-      search={
-        <InputGroup
-          size={isTouchLayout ? "touch" : "field"}
-          className="min-w-0 flex-1 sm:min-w-72"
-        >
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
-          <InputGroupInput
-            type="search"
-            aria-label={ingredientListCopy.searchPlaceholder}
-            name="ingredient-search"
-            inputMode="search"
-            autoComplete="off"
-            value={searchQuery}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder={ingredientListCopy.searchPlaceholder}
-          />
-        </InputGroup>
-      }
-      filters={
-        <>
+    <div className="flex min-w-0 flex-col">
+      <AppToolbar
+        variant="inline"
+        search={
+          <InputGroup
+            size={isTouchLayout ? "touch" : "field"}
+            className="min-w-0 flex-1 sm:min-w-72"
+          >
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              aria-label={ingredientListCopy.searchPlaceholder}
+              name="ingredient-search"
+              inputMode="search"
+              autoComplete="off"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitSearch();
+                }
+              }}
+              onBlur={() => commitSearch()}
+              placeholder={ingredientListCopy.searchPlaceholder}
+            />
+          </InputGroup>
+        }
+        filters={
+          <>
+            <Select
+              value={filters.readiness}
+              onValueChange={(value) => {
+                replaceListFilters({
+                  ready: value as IngredientsReadinessFilter,
+                  page: 1,
+                });
+              }}
+            >
+              <SelectTrigger
+                size={controlSize}
+                className={filterSelectClassName}
+                aria-label={ingredientListCopy.colReadiness}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {readinessFilterOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    size={controlSize === "touch" ? "touch" : "default"}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size={controlSize}
+              aria-expanded={moreFiltersOpen}
+              onClick={() => setMoreFiltersOpen((open) => !open)}
+            >
+              {moreFiltersOpen
+                ? ingredientListCopy.moreFiltersHide
+                : ingredientListCopy.moreFilters}
+              <IconChevronDown
+                data-icon="inline-end"
+                className={cn(
+                  "transition-transform",
+                  moreFiltersOpen && "rotate-180",
+                )}
+              />
+            </Button>
+          </>
+        }
+        reset={
+          <>
+            <Badge variant="outline">
+              {ingredientListCopy.countSummary(filtered.length, rows.length)}
+            </Badge>
+            {readinessSummary.gapCount > 0 ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size={controlSize === "touch" ? "touch" : "sm"}
+                aria-label={ingredientListCopy.readinessGapFilterAria}
+                aria-pressed={filters.readiness === "gaps"}
+                onClick={() =>
+                  replaceListFilters({
+                    ready: filters.readiness === "gaps" ? "all" : "gaps",
+                    page: 1,
+                  })
+                }
+              >
+                {ingredientListCopy.readinessGapSummary(
+                  readinessSummary.gapCount,
+                  readinessSummary.activeCount,
+                )}
+              </Button>
+            ) : null}
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size={controlSize}
+                onClick={clearFilters}
+              >
+                {ACTIONS_VI.clearFilters}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+      {moreFiltersOpen ? (
+        <div className="flex flex-col gap-2 border-b border-border px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select
-            value={category}
+            value={filters.category}
             onValueChange={(value) => {
-              setCategory(value);
-              setCurrentPage(1);
+              replaceListFilters({ category: value, page: 1 });
             }}
           >
-            <SelectTrigger
-              size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
-            >
+            <SelectTrigger size={controlSize} className={filterSelectClassName}>
               <SelectValue placeholder={ingredientFormCopy.category.all} />
             </SelectTrigger>
             <SelectContent>
@@ -493,25 +744,13 @@ export function IngredientsClient({
           </Select>
 
           <Select
-            value={itemKind}
+            value={filters.itemKind}
             onValueChange={(value) => {
-              setItemKind(value);
-              setCurrentPage(1);
+              replaceListFilters({ kind: value, page: 1 });
             }}
           >
-            <SelectTrigger
-              size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
-            >
-              <SelectValue
-                placeholder={
-                  messages.inventory.ingredients.dialog.itemKindLabel
-                }
-              />
+            <SelectTrigger size={controlSize} className={filterSelectClassName}>
+              <SelectValue placeholder={dialogCopy.itemKindLabel} />
             </SelectTrigger>
             <SelectContent>
               {itemKindOptions.map((option) => (
@@ -527,20 +766,15 @@ export function IngredientsClient({
           </Select>
 
           <Select
-            value={activeFilter}
+            value={filters.active}
             onValueChange={(value) => {
-              setActiveFilter(value as "active" | "all");
-              setCurrentPage(1);
+              replaceListFilters({
+                active: value as IngredientsActiveFilter,
+                page: 1,
+              });
             }}
           >
-            <SelectTrigger
-              size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
-            >
+            <SelectTrigger size={controlSize} className={filterSelectClassName}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -555,65 +789,9 @@ export function IngredientsClient({
               ))}
             </SelectContent>
           </Select>
-
-          <Select
-            value={readinessFilter}
-            onValueChange={(value) => {
-              setReadinessFilter(value as ReadinessFilter);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger
-              size={controlSize}
-              className={
-                controlSize === "touch"
-                  ? "w-full"
-                  : inventoryListFilterSelectClassName
-              }
-              aria-label={ingredientListCopy.colReadiness}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {readinessFilterOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  size={controlSize === "touch" ? "touch" : "default"}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </>
-      }
-      reset={
-        <>
-          <Badge variant="outline">
-            {ingredientListCopy.countSummary(filtered.length, rows.length)}
-          </Badge>
-          {readinessSummary.gapCount > 0 ? (
-            <Badge variant="destructive">
-              {ingredientListCopy.readinessGapSummary(
-                readinessSummary.gapCount,
-                readinessSummary.activeCount,
-              )}
-            </Badge>
-          ) : null}
-          {hasActiveFilters ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size={controlSize}
-              onClick={clearFilters}
-            >
-              {ACTIONS_VI.clearFilters}
-            </Button>
-          ) : null}
-        </>
-      }
-    />
+        </div>
+      ) : null}
+    </div>
   );
 
   const columns: DataTableColumn<IngredientRow>[] = [
@@ -638,6 +816,14 @@ export function IngredientsClient({
       ),
     },
     {
+      key: "base_unit",
+      header: ingredientListCopy.colBaseUnit,
+      className: "min-w-28",
+      render: (item) => (
+        <span className="text-sm tabular-nums">{baseUnitLabel(item)}</span>
+      ),
+    },
+    {
       key: "classification",
       header: messages.inventory.stock.table.kind,
       className: "min-w-40",
@@ -656,20 +842,19 @@ export function IngredientsClient({
       },
     },
     {
-      key: "thresholds",
-      header: ingredientListCopy.colThresholds,
-      className: "min-w-40",
-      render: (item) => (
-        <div className="flex flex-col gap-1">
-          <ThresholdBadges item={item} />
-        </div>
-      ),
-    },
-    {
       key: "readiness",
       header: ingredientListCopy.colReadiness,
       className: "min-w-44",
-      render: (item) => <ReadinessBadges item={item} />,
+      render: (item) => (
+        <ReadinessCell
+          item={item}
+          canManage={canManage}
+          onAssignFulfill={(row) =>
+            openEdit(row, "default_fulfill_site_kind")
+          }
+          onLinkSupplier={linkSupplier}
+        />
+      ),
     },
     ...(rows.some((item) => item.monetary != null)
       ? [
@@ -743,16 +928,16 @@ export function IngredientsClient({
           data={filtered}
           getRowKey={(item) => item.id}
           emptyTitle={
-            searchQuery.trim()
+            hasActiveFilters
               ? ingredientListCopy.emptyFiltered
               : ingredientListCopy.emptyTitle
           }
           emptyDescription={
-            searchQuery.trim()
+            hasActiveFilters
               ? ingredientListCopy.emptyFilteredDescription
               : ingredientListCopy.emptyDescription
           }
-          emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+          emptyMode={hasActiveFilters ? "no-results" : "no-data"}
           onRowClick={canManage ? openEdit : undefined}
           getRowDataState={(item) =>
             openActionRowId === item.id ? "selected" : undefined
@@ -771,23 +956,31 @@ export function IngredientsClient({
               item={item}
               toneMap={toneMap}
               actions={getIngredientRowActions(item)}
+              canManage={canManage}
               onOpen={canManage ? openEdit : undefined}
+              onAssignFulfill={
+                canManage
+                  ? (row) => openEdit(row, "default_fulfill_site_kind")
+                  : undefined
+              }
+              onLinkSupplier={canManage ? linkSupplier : undefined}
             />
           )}
-          pageSize={25}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
+          pageSize={INGREDIENTS_DEFAULT_PAGE_SIZE}
+          currentPage={filters.page}
+          onPageChange={(page) => replaceListFilters({ page })}
         />
       </AppListFrame>
 
       {canManage ? (
         <IngredientDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={handleDialogOpenChange}
           ingredient={editingIngredient}
           unitOptions={unitOptions}
           categoryOptions={categoryOptions}
-          onSaved={reload}
+          focusField={focusField}
+          onSaved={handleSaved}
         />
       ) : null}
     </AppPage>

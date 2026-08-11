@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { useFormControlSize } from "@/components/form/control-size";
 import { confirm } from "@/components/confirm-dialog";
 import {
@@ -184,6 +185,15 @@ export function SuppliersClient({
   );
   const [, startTransition] = useTransition();
   const selectedSupplierId = Number(searchParams.get("supplierId"));
+  const linkIngredientIdRaw = searchParams.get("ingredientId");
+  const linkIngredientId = linkIngredientIdRaw
+    ? Number(linkIngredientIdRaw)
+    : Number.NaN;
+  const linkIngredient =
+    Number.isSafeInteger(linkIngredientId) && linkIngredientId > 0
+      ? (ingredients.find((ingredient) => ingredient.id === linkIngredientId) ??
+        null)
+      : null;
   const selectedSupplier =
     canReadItems && Number.isSafeInteger(selectedSupplierId)
       ? (rows.find((supplier) => supplier.id === selectedSupplierId) ?? null)
@@ -221,6 +231,15 @@ export function SuppliersClient({
   function closeItems() {
     const next = new URLSearchParams(searchParams.toString());
     next.delete("supplierId");
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  }
+
+  function dismissLinkIngredient() {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("ingredientId");
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, {
       scroll: false,
@@ -352,6 +371,23 @@ export function SuppliersClient({
             </Button>
           }
         />
+        {linkIngredient ? (
+          <Alert className="mb-3">
+            <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {suppliersCopy.linkIngredientBanner(linkIngredient.name)}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size={controlSize}
+                onClick={dismissLinkIngredient}
+              >
+                {suppliersCopy.linkIngredientDismiss}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <AppListFrame
           toolbar={
             <AppToolbar
