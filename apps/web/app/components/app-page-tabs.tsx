@@ -50,16 +50,20 @@ export function AppPageTabs({
     : items[0]?.value;
   if (!initial) return null;
   const list = (
-    <TabsList variant="toolbar" size={isTouchLayout ? "touch" : "default"} aria-label={ariaLabel}>
+    <TabsList
+      size={isTouchLayout ? "touch" : "default"}
+      aria-label={ariaLabel}
+    >
       {items.map((item) => (
         <TabsTrigger
           key={item.value}
           value={item.value}
           disabled={item.disabled}
+          className="flex-none px-2.5"
         >
           <span>{item.label}</span>
           {typeof item.count === "number" ? (
-            <Badge variant="secondary" className="ml-1.5 font-mono">
+            <Badge variant="outline" className="ml-1.5 font-mono">
               {formatCount(item.count)}
             </Badge>
           ) : null}

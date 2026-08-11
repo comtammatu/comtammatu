@@ -28,6 +28,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDialog } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   DataTable,
   type DataTableColumn,
@@ -112,6 +113,7 @@ export function PurchaseOrdersClient({
   canReceive: boolean;
 }) {
   const router = useRouter();
+  const controlSize = useFormControlSize();
   const overlay = useDocumentOverlayUrl(ORDER_OVERLAY_KEYS);
   const [search, setSearch] = useState(() => overlay.get("ordersQ") ?? "");
   const [pendingId, setPendingId] = useState<number | null>(null);
@@ -354,7 +356,10 @@ export function PurchaseOrdersClient({
         <AppToolbar
           variant="inline"
           search={
-            <InputGroup className="min-w-0 flex-1 sm:min-w-72">
+            <InputGroup
+              size={controlSize}
+              className="min-w-0 flex-1 sm:min-w-72"
+            >
               <InputGroupAddon>
                 <IconSearch />
               </InputGroupAddon>
@@ -392,7 +397,7 @@ export function PurchaseOrdersClient({
                 }}
               >
                 <SelectTrigger
-                  size="field"
+                  size={controlSize}
                   aria-label={copy.statusFilterAria}
                 >
                   <SelectValue placeholder={copy.statusFilterPlaceholder} />
@@ -420,7 +425,7 @@ export function PurchaseOrdersClient({
                   }}
                 >
                   <SelectTrigger
-                    size="field"
+                    size={controlSize}
                     aria-label={copy.warehouseFilterAria}
                   >
                     <SelectValue placeholder={copy.warehouseFilterPlaceholder} />

@@ -32,6 +32,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
+import { useFormControlSize } from "@/components/form/control-size";
 import { AppListFrame, AppToolbar } from "@/components/surface";
 import {
   RowActionsMenu,
@@ -94,6 +95,8 @@ export function PurchaseRequestsList({
   onCloseRow: (row: PurchaseRequestRow) => void;
   onSupplierDecision: (row: PurchaseRequestRow) => void;
 }) {
+  const controlSize = useFormControlSize();
+
   function rowActions(row: PurchaseRequestRow): RowActionItem[] {
     const actions: RowActionItem[] = [
       {
@@ -213,7 +216,10 @@ export function PurchaseRequestsList({
         <AppToolbar
           variant="inline"
           search={
-            <InputGroup className="min-w-0 flex-1 sm:min-w-72">
+            <InputGroup
+              size={controlSize}
+              className="min-w-0 flex-1 sm:min-w-72"
+            >
               <InputGroupAddon>
                 <IconSearch />
               </InputGroupAddon>
@@ -229,7 +235,10 @@ export function PurchaseRequestsList({
           filters={
             <>
               <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-                <SelectTrigger size="field" aria-label={copy.statusFilterAria}>
+                <SelectTrigger
+                  size={controlSize}
+                  aria-label={copy.statusFilterAria}
+                >
                   <SelectValue placeholder={copy.statusFilterPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,7 +253,7 @@ export function PurchaseRequestsList({
               {branches.length > 1 ? (
                 <Select value={siteFilter} onValueChange={onSiteFilterChange}>
                   <SelectTrigger
-                    size="field"
+                    size={controlSize}
                     aria-label={copy.warehouseFilterAria}
                   >
                     <SelectValue placeholder={copy.warehouseFilterPlaceholder} />
@@ -263,7 +272,7 @@ export function PurchaseRequestsList({
           }
           actions={
             canCreateRequest ? (
-              <Button type="button" onClick={onOpenCreate}>
+              <Button type="button" size={controlSize} onClick={onOpenCreate}>
                 <IconPlus data-icon="inline-start" />
                 {copy.createAction}
               </Button>

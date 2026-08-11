@@ -19,10 +19,29 @@ test("page tabs reject unknown URL values", () => {
   assert.match(urlTabs, /validValues\.includes\(requestedValue\)/);
 });
 
-test("primary page tabs keep touch-safe targets", () => {
+test("primary page tabs use the canonical segmented Tabs contract", () => {
   const pageTabs = read("../app/components/app-page-tabs.tsx");
 
-  assert.match(pageTabs, /<TabsList variant="toolbar" size="touch"/);
+  assert.match(
+    pageTabs,
+    /size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
+  assert.doesNotMatch(pageTabs, /variant="toolbar"/);
+  assert.match(pageTabs, /Badge variant="outline"/);
+  assert.match(pageTabs, /className="flex-none px-2\.5"/);
+});
+
+test("toolbar Tabs keep content width and the muted track token", () => {
+  const tabs = read("../../../packages/ui/src/components/tabs.tsx");
+
+  assert.match(tabs, /toolbar:\s*\n\s*"h-auto w-fit[\s\S]*?\bbg-muted\b/);
+  assert.doesNotMatch(tabs, /toolbar:[\s\S]*?bg-muted\/30/);
+  assert.doesNotMatch(tabs, /data-active:bg-card/);
+  assert.doesNotMatch(tabs, /data-active:shadow-sm/);
+  assert.match(
+    tabs,
+    /group-data-\[variant=toolbar\]\/tabs-list:flex-none/,
+  );
 });
 
 test("Branch workflow tabs use the named touch contract", () => {
