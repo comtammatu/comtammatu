@@ -474,10 +474,7 @@ export default async function PurchaseOrdersPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={messages.inventory.po.workspaceTitle}
-        description={messages.inventory.po.workspaceDescription}
-      />
+      <AppPageHeader title={messages.inventory.po.workspaceTitle} />
       <AppPageTabs
         items={[
           {
@@ -493,6 +490,24 @@ export default async function PurchaseOrdersPage({
         ]}
         defaultValue={defaultTab}
         ariaLabel="Mua hàng"
+        queryKeysByValue={{
+          needs: [
+            "demandId",
+            "needsQ",
+            "needsStatus",
+            "needsSite",
+            "needsPage",
+            "branch",
+          ],
+          orders: [
+            "poId",
+            "ordersQ",
+            "ordersStatus",
+            "ordersSite",
+            "ordersPage",
+            "branch",
+          ],
+        }}
       >
         <TabsContent value="needs" className="mt-0">
           {needsContent}

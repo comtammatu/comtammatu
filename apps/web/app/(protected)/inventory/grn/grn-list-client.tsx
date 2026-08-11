@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDialog, Combobox } from "@/components/form";
+import { Combobox } from "@/components/form";
+import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   AppEmptyState,
   AppListFrame,
@@ -156,7 +156,7 @@ export function GrnListClient({
     overlay.patchOverlay(
       {
         grnId: row.id,
-        mode: row.status === "draft" ? "receive" : "view",
+        mode: "view",
       },
       method,
     );
@@ -177,7 +177,7 @@ export function GrnListClient({
         key: "purchase-order",
         label: "Xem đơn đặt hàng",
         icon: <IconFileText />,
-        href: `/inventory/purchase-orders?poId=${row.poId}&mode=view`,
+        href: `/inventory/purchase-orders?tab=orders&poId=${row.poId}&mode=view`,
       },
     ];
     if (row.status === "confirmed" && canManageSupplierInvoice) {
@@ -491,45 +491,34 @@ export function GrnListClient({
   return (
     <>
       <AppPage width="xwide" density="compact">
-        <AppPageHeader
-          title={grnCopy.listTitle}
-          description={grnCopy.listDescription}
-        />
+        <AppPageHeader title={grnCopy.listTitle} />
         <AppListFrame toolbar={loadFailed ? undefined : toolbar}>
           {table}
         </AppListFrame>
       </AppPage>
-      <AppDialog
+      <ReasonConfirmDialog
         open={cancelRow != null}
         onOpenChange={(open) => {
-          if (!open) setCancelRow(null);
+          if (!open) {
+            setCancelRow(null);
+            setCancelReason("");
+          }
         }}
         title={grnCopy.cancelTitle}
         description={cancelRow?.code}
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setCancelRow(null)}>
-              {ACTIONS_VI.close}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={cancelReason.trim().length < 5 || pending}
-              onClick={() => {
-                startTransition(cancelDraft);
-              }}
-            >
-              {grnCopy.cancelAction}
-            </Button>
-          </>
-        }
-      >
-        <Textarea
-          aria-label={grnCopy.cancelReason}
-          value={cancelReason}
-          onChange={(event) => setCancelReason(event.target.value)}
-          placeholder={grnCopy.cancelReasonPlaceholder}
-        />
-      </AppDialog>
+        reasonId="grn-list-cancel-reason"
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        reasonLabel={grnCopy.cancelReason}
+        reasonPlaceholder={grnCopy.cancelReasonPlaceholder}
+        cancelLabel={ACTIONS_VI.close}
+        confirmLabel={grnCopy.cancelAction}
+        confirmVariant="destructive"
+        isPending={pending}
+        onConfirm={() => {
+          startTransition(cancelDraft);
+        }}
+      />
     </>
   );
 }

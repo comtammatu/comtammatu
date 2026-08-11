@@ -958,7 +958,7 @@ export const UI_BLOCK_REGISTRY = {
     "AppPage + AppPageHeader + DescriptionList + DataTable + AppDetailFooter",
     "AppSection when the entity has no repeated lines",
     "KpiCard metadata or route-local detail chrome",
-    "apps/web/app/(protected)/inventory/grn/[id]/page.tsx",
+    "apps/web/app/(protected)/inventory/transfers/[id]/page.tsx",
   ),
   "management-document": block(
     ["DOC-WORKFLOW"],

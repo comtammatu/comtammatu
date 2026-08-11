@@ -140,11 +140,12 @@ export default async function XPage({ searchParams }: { searchParams?: ... }) {
   route deliberately re-mounts a shared staff-runtime `PageContent`. They do
   not authorize a Branch management workflow to reuse an control_surface presenter;
   those routes share loaders/models/actions and own a touch-native composition.
-- Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx`,
-  `apps/web/app/(protected)/inventory/grn/[id]/page.tsx`,
-  `apps/web/app/(protected)/inventory/transfers/new/page.tsx`,
-  `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
+- Exemplars: `apps/web/app/(protected)/inventory/grn/page.tsx` (LIST + D1
+  document host), `apps/web/app/(protected)/inventory/transfers/[id]/page.tsx`
+  (DETAIL), `apps/web/app/(protected)/inventory/transfers/new/page.tsx`
+  (DOC-WORKFLOW), `apps/web/app/(protected)/br/[branchId]/(operator)/shift/clock/page.tsx`
   (`ClockPageContent` from `apps/web/lib/staff-runtime/clock/page.tsx`).
+  Owner `/inventory/grn/[id]` is **REDIRECT-SHIM** only — not a DETAIL exemplar.
 
 **Shared state frames (all archetypes):**
 
@@ -359,8 +360,13 @@ density="compact"` already owns width/padding. Return a bare flex
 
 ### DETAIL
 
-**Exemplar:** `apps/web/app/(protected)/inventory/grn/[id]/page.tsx` +
-`grn-detail-client.tsx`.
+**Exemplar:** `apps/web/app/(protected)/inventory/transfers/[id]/page.tsx` +
+`transfer-detail-client.tsx`.
+
+Owner GRN is list-first D1 (`/inventory/grn` + `GrnDocumentDialogHost`);
+`/inventory/grn/[id]` is **REDIRECT-SHIM** → `?grnId=&mode=view`. Do not cite
+it as a DETAIL page exemplar. Branch GRN touch detail remains a separate
+presenter under `/br/…/stock/grn/[id]`.
 
 - `PageContent` takes a numeric/string id, calls `notFound()` on a miss or a
   branch-scope mismatch, and fetches `fetchEntityAuditLogs(entity, id)` for

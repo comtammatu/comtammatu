@@ -185,13 +185,17 @@ export function PurchaseOrdersClient({
     updateUrl(null, null, "replace");
   }, [mode, selectedPoId, selectedRow, updateUrl]);
 
-  function openReceipt(row: PurchaseOrderRow) {
-    const returnTo = encodeURIComponent(
-      `/inventory/purchase-orders?poId=${row.id}&mode=view`,
+  function purchaseOrderReturnTo(poId: number) {
+    return encodeURIComponent(
+      `/inventory/purchase-orders?tab=orders&poId=${poId}&mode=view`,
     );
+  }
+
+  function openReceipt(row: PurchaseOrderRow) {
+    const returnTo = purchaseOrderReturnTo(row.id);
     if (row.activeDraftGrnId != null) {
       router.push(
-        `/inventory/grn?grnId=${row.activeDraftGrnId}&mode=receive&returnTo=${returnTo}`,
+        `/inventory/grn?grnId=${row.activeDraftGrnId}&mode=view&returnTo=${returnTo}`,
         { scroll: false },
       );
       return;
@@ -208,7 +212,7 @@ export function PurchaseOrdersClient({
           return;
         }
         router.push(
-          `/inventory/grn?grnId=${result.data.id}&mode=receive&returnTo=${returnTo}`,
+          `/inventory/grn?grnId=${result.data.id}&mode=view&returnTo=${returnTo}`,
           { scroll: false },
         );
         router.refresh();
@@ -621,9 +625,7 @@ export function PurchaseOrdersClient({
                     className="justify-between"
                     render={
                       <Link
-                        href={`/inventory/grn?grnId=${grn.id}&mode=${
-                          grn.status === "draft" ? "receive" : "view"
-                        }`}
+                        href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${purchaseOrderReturnTo(selectedRow.id)}`}
                       />
                     }
                   >

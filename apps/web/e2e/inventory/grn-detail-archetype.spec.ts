@@ -140,7 +140,7 @@ test.describe("GRN list-first document dialog", () => {
       await expect(rowCode).toBeVisible({ timeout: 30_000 });
       await rowCode.click();
       await expect(page).toHaveURL(
-        /\/inventory\/grn\?.*grnId=\d+.*mode=(receive|view)/,
+        /\/inventory\/grn\?.*grnId=\d+.*mode=view/,
       );
 
       const dialog = page.getByRole("dialog");

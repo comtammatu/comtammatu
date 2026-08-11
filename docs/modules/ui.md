@@ -119,7 +119,7 @@ block.
 | Block | Plane | Exemplar |
 | --- | --- | --- |
 | `management-list` | control_surface | `apps/web/app/(protected)/inventory/grn/page.tsx` |
-| `management-detail` | control_surface | `apps/web/app/(protected)/inventory/grn/[id]/page.tsx` |
+| `management-detail` | control_surface | `apps/web/app/(protected)/inventory/transfers/[id]/page.tsx` |
 | `management-document` | control_surface | `apps/web/app/(protected)/inventory/transfers/new/page.tsx` |
 | `pos-board` | station | `apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx` |
 | `realtime-board` | station | `apps/web/app/(protected)/br/[branchId]/kds/page.tsx` |
@@ -240,7 +240,7 @@ export. Detail and edit steps open a bottom `Sheet` with a sticky
 | `/stock/on-hand/[ingredientId]` | DETAIL | `loadStockIngredientDetailData` with `includeValuation: false`. Supplier receiving links to `/stock/grn/new`, never `/stock/receive`. |
 | `/stock/grn` | LIST | `loadGrnListPageData`; own drafts first, then queue. Row shows code, supplier, date, status only. |
 | `/stock/grn/new`, `/stock/grn/new/[supplierId]` | REDIRECT-SHIM | Compatibility redirects: store → `Yêu cầu hàng`; `Kho Tổng`/`Bếp TT` → `Yêu cầu mua`. No live create UI. |
-| `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on `/inventory/grn/[id]`. |
+| `/stock/grn/[id]` | DETAIL | Draft owns a touch receiving list and line sheet; confirmed slips are read-only. Post-confirm correction stays on control_surface `/inventory/grn?grnId=&mode=view`. |
 | `/stock/stocktake` | LIST | `loadBranchStocktakeListData`; manager sessions, distinct from `/stock/count` slips. |
 | `/stock/stocktake/new` | DOC-WORKFLOW | Mode + location only, then open the session and enter count. |
 | `/stock/stocktake/[id]/count` | DOC-WORKFLOW | Number pad entry with unit choice, autosave draft, zone lock, round submit. Blind payload carries no system quantity. |

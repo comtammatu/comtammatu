@@ -165,7 +165,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx":
     "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/grn/new/page.tsx": "REDIRECT-SHIM",
@@ -303,17 +303,17 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
   "apps/web/app/(protected)/inventory/grn/new/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -586,7 +586,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/consumption/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-assignments/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/count-slips/page.tsx": "LIST",
-  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/grn/[id]/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/grn/new/[supplierId]/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/grn/new/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/grn/page.tsx": "LIST",

@@ -212,12 +212,6 @@ export function GRNDetailClient({
       ? -1
       : lines.findIndex((line) => line.lineId === editingLineId);
   const editingLine = editingIdx >= 0 ? lines[editingIdx] : null;
-  const secondaryOverlayOpen =
-    addDialogOpen ||
-    amendingLine != null ||
-    cancelOpen ||
-    (!isDesktopLineEdit && editingLine != null);
-
   const receivingLocationName = grn.locationName;
   const linkedPoApproved = allLinkedPosApproved(
     grn.linkedPos,
@@ -277,7 +271,7 @@ export function GRNDetailClient({
                   size="sm"
                   render={
                     <Link
-                      href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
+                      href={`/inventory/purchase-orders?tab=orders&poId=${po.id}&mode=view`}
                     />
                   }
                 >
@@ -292,7 +286,7 @@ export function GRNDetailClient({
               size="sm"
               render={
                 <Link
-                  href={`/inventory/purchase-orders?poId=${grn.poId}&mode=view`}
+                  href={`/inventory/purchase-orders?tab=orders&poId=${grn.poId}&mode=view`}
                 />
               }
             >
@@ -581,7 +575,7 @@ export function GRNDetailClient({
                       {grn.linkedPos.map((po) => (
                         <Link
                           key={po.id}
-                          href={`/inventory/purchase-orders?poId=${po.id}&mode=view`}
+                          href={`/inventory/purchase-orders?tab=orders&poId=${po.id}&mode=view`}
                           className="font-mono text-primary hover:underline"
                         >
                           {po.poNumber}
@@ -601,7 +595,7 @@ export function GRNDetailClient({
                     description:
                       grn.poId != null ? (
                         <Link
-                          href={`/inventory/purchase-orders?poId=${grn.poId}&mode=view`}
+                          href={`/inventory/purchase-orders?tab=orders&poId=${grn.poId}&mode=view`}
                           className="font-mono text-primary hover:underline"
                         >
                           {grn.poCode}
@@ -955,9 +949,9 @@ export function GRNDetailClient({
     return (
       <>
         <AppDialog
-          open={!secondaryOverlayOpen}
+          open
           onOpenChange={(open) => {
-            if (!open && !secondaryOverlayOpen) void closeDialog();
+            if (!open) void closeDialog();
           }}
           variant="document"
           title={grn.code}
