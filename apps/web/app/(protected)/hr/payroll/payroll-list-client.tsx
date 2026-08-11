@@ -725,7 +725,7 @@ export function PayrollListClient({
             actions={
               <Button
                 variant="outline"
-                size="touch"
+                size={controlSize === "touch" ? "touch" : "default"}
                 onClick={() =>
                   replaceFilters({ calendarTarget: "all", calendarDay: null })
                 }
@@ -799,7 +799,7 @@ export function PayrollListClient({
               <ItemActions className="items-end gap-2">
                 <Button
                   variant="ghost"
-                  size="touch"
+                  size={controlSize === "touch" ? "touch" : "default"}
                   onClick={() => openCalendar(entry)}
                 >
                   <IconCalendarDays data-icon="inline-start" />
@@ -809,7 +809,7 @@ export function PayrollListClient({
                   canCalculate(entry) ? (
                     <Button
                       variant="ghost"
-                      size="touch"
+                      size={controlSize === "touch" ? "touch" : "default"}
                       onClick={() => openAdjustment(entry)}
                     >
                       <IconPencil data-icon="inline-start" />
@@ -818,7 +818,7 @@ export function PayrollListClient({
                   ) : (
                     <Button
                       variant="ghost"
-                      size="touch"
+                      size={controlSize === "touch" ? "touch" : "default"}
                       onClick={() =>
                         router.push(withHrBranchScope("/hr", branchScope))
                       }

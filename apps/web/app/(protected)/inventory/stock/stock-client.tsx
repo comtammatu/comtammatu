@@ -238,6 +238,10 @@ function QuickActionButton({
   );
 }
 
+import { StockDetailDialog } from "./stock-detail-dialog";
+import { fetchStockIngredientDetailAction } from "../stock-actions";
+import type { StockIngredientDetailData } from "@lib/inventory/stock-on-hand-detail-model";
+
 export function StockClient({
   ingredients,
   branchId,
@@ -246,6 +250,8 @@ export function StockClient({
   totalValue,
   summary,
   permissions,
+  initialIngredientId = null,
+  initialDetailData = null,
 }: {
   ingredients: StockIngredient[];
   branchId: number;
@@ -254,6 +260,8 @@ export function StockClient({
   totalValue: number | null;
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
+  initialIngredientId?: number | null;
+  initialDetailData?: StockIngredientDetailData | null;
 }) {
   const router = useRouter();
   const canViewMonetary = branchValue != null;
@@ -269,6 +277,42 @@ export function StockClient({
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
+  const [viewingIngredientId, setViewingIngredientId] = useState<number | null>(
+    initialIngredientId,
+  );
+  const [detailData, setDetailData] = useState<StockIngredientDetailData | null>(
+    initialDetailData,
+  );
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+  const openStockDetail = (ingredientId: number) => {
+    setViewingIngredientId(ingredientId);
+    const url = new URL(window.location.href);
+    url.searchParams.set("ingredientId", String(ingredientId));
+    url.searchParams.set("mode", "view");
+    window.history.pushState(null, "", url.toString());
+
+    if (detailData?.ingredient?.id !== ingredientId) {
+      setIsDetailLoading(true);
+      void fetchStockIngredientDetailAction({ ingredientId, branchId })
+        .then((res) => {
+          if (res.success && res.data) {
+            setDetailData(res.data);
+          }
+        })
+        .finally(() => {
+          setIsDetailLoading(false);
+        });
+    }
+  };
+
+  const closeStockDetail = () => {
+    setViewingIngredientId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("ingredientId");
+    url.searchParams.delete("mode");
+    window.history.pushState(null, "", url.toString());
+  };
 
   const { categories, hasUncategorized } = useMemo(
     () => getStockOnHandCategories(ingredients),
@@ -364,6 +408,7 @@ export function StockClient({
       label: stockCopy.actions.viewStockCard,
       icon: <IconArrowBarRight />,
       href: stockDetailHref(item.id),
+      onSelect: () => openStockDetail(item.id),
       separatorBefore: rowActions.length > 0,
     });
 
@@ -695,6 +740,10 @@ export function StockClient({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <Link
             href={stockDetailHref(item.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              openStockDetail(item.id);
+            }}
             className="truncate font-semibold hover:underline"
           >
             {item.name}
@@ -805,7 +854,7 @@ export function StockClient({
           {actionPermissions.canCreateIssue ? (
             <Button
               type="button"
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               variant="outline"
               onClick={() =>
                 setQuickIssueTarget({
@@ -819,7 +868,7 @@ export function StockClient({
           ) : null}
           {actionPermissions.canCreateStocktake && actionHrefs.stocktake ? (
             <Button
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               variant="outline"
               render={<Link href={actionHrefs.stocktake} />}
             >
@@ -829,7 +878,7 @@ export function StockClient({
           {actionPermissions.canAdjustException ? (
             <Button
               type="button"
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               variant="destructive"
               className="col-span-2"
               onClick={() => setAdjustTarget(item)}
@@ -926,6 +975,7 @@ export function StockClient({
           emptyMode={
             isFirstLoadEmpty || !searchQuery.trim() ? "no-data" : "no-results"
           }
+          onRowClick={(item) => openStockDetail(item.id)}
           renderRowContextMenu={(item) => (
             <RowActionsContextMenuItems items={getStockRowActions(item)} />
           )}
@@ -963,6 +1013,30 @@ export function StockClient({
           }}
         />
       ) : null}
+
+      <StockDetailDialog
+        open={viewingIngredientId !== null}
+        onOpenChange={(open) => {
+          if (!open) closeStockDetail();
+        }}
+        detailData={detailData}
+        isLoading={isDetailLoading}
+        isTouchLayout={controlSize === "touch"}
+        canAdjustStock={permissions.canAdjustException}
+        onAdjustStock={() => {
+          const target = ingredients.find((i) => i.id === viewingIngredientId);
+          if (target) setAdjustTarget(target);
+        }}
+        onQuickIssue={() => {
+          const target = ingredients.find((i) => i.id === viewingIngredientId);
+          if (target) {
+            setQuickIssueTarget({
+              ingredient: target,
+              issueType: "consumption",
+            });
+          }
+        }}
+      />
     </>
   );
 

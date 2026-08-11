@@ -96,6 +96,8 @@ function StocktakeSessionCard({
   actions: RowActionItem[];
   onOpen: (row: StocktakeSessionRow) => void;
 }) {
+  const controlSize = useFormControlSize();
+
   return (
     <InteractiveCard
       minHeight="mobile"
@@ -123,7 +125,7 @@ function StocktakeSessionCard({
           <RowActionsMenu
             items={actions}
             label={`${FORM_VI.action} ${stocktakeCode(row)}`}
-            triggerSize="icon-touch"
+            triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
           />
         </div>
       </div>

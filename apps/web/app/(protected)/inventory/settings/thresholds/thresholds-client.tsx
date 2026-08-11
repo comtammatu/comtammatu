@@ -27,6 +27,10 @@ import {
 import { messages } from "@lib/messages";
 import { bulkUpdateIngredientThresholds } from "./actions";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.inventory.settings.thresholds;
 const ariaSelectRowPrefix = "Chọn ";
 const invalidThresholdLabel = "Ngưỡng tồn phải là số không âm.";
@@ -65,6 +69,8 @@ function rowIsDirty(row: EditableRow): boolean {
 }
 
 export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [editable, setEditable] = useState<EditableRow[]>(() =>
     rows.map((row) => ({ ...row, initialMin: row.minStock })),
   );
@@ -226,7 +232,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
                 </ItemDescription>
               </div>
               <Checkbox
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 checked={selected.has(row.id)}
                 onCheckedChange={(value) => toggleRow(row.id, value === true)}
                 aria-label={`${ariaSelectRowPrefix}${row.name}`}

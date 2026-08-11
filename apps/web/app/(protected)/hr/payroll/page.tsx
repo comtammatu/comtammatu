@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getVNMonthYear } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
+import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
@@ -100,13 +101,11 @@ export default async function PayrollPage({
         description={copy.live.description}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            <ResponsiveBackButton
+              href={withHrBranchScope("/hr", branchScope)}
             >
               {copy.backToHr}
-            </Button>
+            </ResponsiveBackButton>
           </div>
         }
       />

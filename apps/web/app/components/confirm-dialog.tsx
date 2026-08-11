@@ -12,6 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 
 export interface ConfirmOptions {
   title: string;
@@ -65,6 +69,8 @@ export function ConfirmDialog({
   cancelText = "Hủy",
   variant = "default",
 }: ConfirmDialogProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = isTouchLayout ? "touch" : "default";
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -88,8 +94,12 @@ export function ConfirmDialog({
           </div>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel size="touch">{cancelText}</AlertDialogCancel>
-          <AlertDialogAction variant={variant} size="touch" onClick={onConfirm}>
+          <AlertDialogCancel size={actionSize}>{cancelText}</AlertDialogCancel>
+          <AlertDialogAction
+            variant={variant}
+            size={actionSize}
+            onClick={onConfirm}
+          >
             {confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>

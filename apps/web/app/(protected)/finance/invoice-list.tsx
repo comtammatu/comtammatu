@@ -20,7 +20,10 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 
@@ -194,7 +197,7 @@ export function InvoiceList({
   canManageInvoices,
   initialIssueAttention = [],
 }: InvoiceListProps) {
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const [invoices, setInvoices] = useState(initialInvoices);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [nextCursor, setNextCursor] = useState<TaxInvoiceCursor | null>(
@@ -444,7 +447,7 @@ export function InvoiceList({
 
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
-    const size = dense ? "icon" : "touch";
+    const size = dense ? "icon" : isTouchLayout ? "touch" : "default";
     return (
       <div
         className={
@@ -835,7 +838,7 @@ export function InvoiceList({
                   key={m}
                   type="button"
                   variant={methodFixMethod === m ? "default" : "outline"}
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   onClick={() => setMethodFixMethod(m)}
                   disabled={isPending}
                 >

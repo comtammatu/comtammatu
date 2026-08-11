@@ -55,6 +55,10 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
@@ -137,13 +141,15 @@ export function FormDialog<TValues extends FieldValues>({
   onSuccess,
   submitLabel,
   submitVariant = "default",
-  actionSize = "touch",
+  actionSize: actionSizeProp,
   cancelLabel = "Hủy",
   contentClassName,
   renderFooter,
   children,
 }: FormDialogProps<TValues>) {
   const formId = useId();
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = actionSizeProp ?? (isTouchLayout ? "touch" : "default");
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
@@ -479,6 +485,8 @@ export function FileImportDialog<
   renderIssue,
   onImported,
 }: FileImportDialogProps<TSummary, TIssue>) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = isTouchLayout ? "touch" : "default";
   const [isPending, startTransition] = useTransition();
   const [issues, setIssues] = useState<TIssue[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -598,13 +606,13 @@ export function FileImportDialog<
             <Button
               type="button"
               variant="outline"
-              size="touch"
+              size={actionSize}
               onClick={() => handleOpenChange(false)}
               disabled={isPending}
             >
               {closeLabel}
             </Button>
-            <Button type="submit" size="touch" disabled={isPending}>
+            <Button type="submit" size={actionSize} disabled={isPending}>
               {isPending && <Spinner data-icon="inline-start" />}
               {submitLabel}
             </Button>

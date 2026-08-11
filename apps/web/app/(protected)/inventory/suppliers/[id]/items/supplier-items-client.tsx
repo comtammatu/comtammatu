@@ -82,6 +82,7 @@ function SupplierItemsFormFields({
   form: UseFormReturn<ItemFormValues>;
   ingredients: SupplierIngredientOption[];
 }) {
+  const controlSize = useFormControlSize();
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
@@ -136,7 +137,7 @@ function SupplierItemsFormFields({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-touch"
+                    size={controlSize === "touch" ? "icon-touch" : "icon-sm"}
                     aria-label={copy.removeSelectedAria(
                       ingredient?.name ?? copy.ingredient,
                     )}
@@ -344,7 +345,7 @@ export function SupplierItemsClient({
                 canManage ? (
                   <Button
                     type="button"
-                    size="touch"
+                    size={controlSize === "touch" ? "touch" : "default"}
                     disabled={availableIngredients.length === 0}
                     onClick={() => setDialogOpen(true)}
                   >
@@ -405,7 +406,7 @@ export function SupplierItemsClient({
                       <RowActionsMenu
                         items={getSupplierItemRowActions(row)}
                         label={FORM_VI.action}
-                        triggerSize="icon-touch"
+                        triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
                       />
                     </div>
                   </ItemActions>

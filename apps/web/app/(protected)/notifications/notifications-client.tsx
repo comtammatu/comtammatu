@@ -17,6 +17,10 @@ import { NotificationPopupControl } from "@/_components/notification-popup-contr
 import { AppListFrame, AppPageHeader, AppSection } from "@/components/surface";
 import { messages, m } from "@lib/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function NotificationsClient({
   tenantId,
   branchId,
@@ -26,6 +30,8 @@ export function NotificationsClient({
   branchId: number | null;
   backHref: string | null;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const {
     items,
     unreadCount,
@@ -58,7 +64,7 @@ export function NotificationsClient({
               <Button
                 type="button"
                 variant="outline"
-                size="touch"
+                size={isTouchLayout ? "touch" : "lg"}
                 onClick={markAll}
               >
                 {messages.notifications.markAllRead}
@@ -67,7 +73,7 @@ export function NotificationsClient({
             {backHref ? (
               <Button
                 variant="outline"
-                size="touch"
+                size={isTouchLayout ? "touch" : "lg"}
                 render={<Link href={backHref} />}
               >
                 <ArrowLeft data-icon="inline-start" />
@@ -114,7 +120,7 @@ export function NotificationsClient({
               <Button
                 type="button"
                 variant="ghost"
-                size="touch"
+                size={isTouchLayout ? "touch" : "lg"}
                 className="group w-full justify-between px-3 font-normal"
               />
             }

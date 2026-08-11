@@ -387,6 +387,8 @@ function MenuRecipeCard({
   actions: RowActionItem[];
   onOpen: (menuRecipe: MenuRecipeRow) => void;
 }) {
+  const controlSize = useFormControlSize();
+
   return (
     <Item variant="outline" onClick={() => onOpen(menuRecipe)}>
       <ItemHeader>
@@ -440,7 +442,7 @@ function MenuRecipeCard({
             <RowActionsMenu
               items={actions}
               label={FORM_VI.action}
-              triggerSize="icon-touch"
+              triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
             />
           </div>
         </ItemActions>

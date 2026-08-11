@@ -47,6 +47,10 @@ import type { IssueRow, RecordedConsumptionRow } from "./issue-list-types";
 
 type SelectOption = { value: string; label: string };
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function IssueListFilterBar({
   controlSize,
   search,
@@ -439,6 +443,8 @@ export function IssueRowCard({
   actions: RowActionItem[];
   onOpen: (item: IssueRow) => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   return (
     <InteractiveCard
       minHeight="mobile"
@@ -473,7 +479,7 @@ export function IssueRowCard({
         <RowActionsMenu
           items={actions}
           label={`${ACTIONS_VI.viewDetails} ${item.code}`}
-          triggerSize="icon-touch"
+          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
         />
       </div>
     </InteractiveCard>

@@ -44,6 +44,10 @@ import {
   type CategoryRow,
 } from "./categories-actions";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.inventoryMaster.categories;
 
 const categoryFormSchema = z.object({
@@ -61,6 +65,8 @@ const NEW_CATEGORY_DEFAULTS: CategoryFormValues = {
 };
 
 export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<CategoryRow | null>(null);
@@ -220,7 +226,7 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
                   <RowActionsMenu
                     items={getCategoryRowActions(row)}
                     label={FORM_VI.action}
-                    triggerSize="icon-touch"
+                    triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
               </ItemActions>

@@ -33,6 +33,11 @@ import {
   type GrnLineEditState,
 } from "@lib/inventory/grn-create-model";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
+
 type GrnLineEditorControlSize = Extract<
   ComponentProps<typeof Button>["size"],
   "field" | "touch"
@@ -180,6 +185,7 @@ export function GrnLineEditSheet({
   onUnitChange,
   controlSize = "touch",
 }: GrnLineEditSheetProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const open = edit != null;
   const valid =
     edit != null && edit.quantity > 0 && edit.supplierId != null;
@@ -223,7 +229,7 @@ export function GrnLineEditSheet({
             <SheetFooter>
               <Button
                 type="button"
-                size="touch-lg"
+                size={isTouchLayout ? "touch-lg" : "lg"}
                 className="w-full"
                 onClick={onSave}
                 disabled={!valid}
@@ -237,7 +243,7 @@ export function GrnLineEditSheet({
                   <Button
                     type="button"
                     variant="destructive"
-                    size="touch-lg"
+                    size={isTouchLayout ? "touch-lg" : "lg"}
                     onClick={onRemove}
                     className="flex-1"
                   >
@@ -247,7 +253,7 @@ export function GrnLineEditSheet({
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch-lg"
+                  size={isTouchLayout ? "touch-lg" : "lg"}
                   onClick={onClose}
                   className="flex-1"
                 >

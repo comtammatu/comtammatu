@@ -23,6 +23,10 @@ import {
   type PermissionAuditDisplayRow,
 } from "./permission-audit-table";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 function actionLabel(
   copy: typeof messages.controlSurface.staffAudit,
   action: string,
@@ -45,6 +49,8 @@ export function PermissionAuditClient({
   hasServerFilters: boolean;
   listTitle?: string;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const copy = messages.controlSurface.staffAudit;
   const q = filterValue.q?.trim() || null;
 
@@ -150,7 +156,7 @@ export function PermissionAuditClient({
           {hasFilters ? null : (
             <Button
               variant="outline"
-              size="touch"
+              size={isTouchLayout ? "touch" : "default"}
               render={
                 <Link
                   href={withHrBranchScope("/hr?view=accounts", branchScope)}

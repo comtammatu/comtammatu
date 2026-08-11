@@ -53,6 +53,10 @@ import {
 } from "./position-task-types";
 import { matchesHrBranchScope, resolveHrBranchScope } from "@/lib/hr-scope";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.hr.client.positionTasks;
 
 const taskRowSchema = z.object({
@@ -559,6 +563,7 @@ export function PositionTasksClient({
   initialData,
   initialBranchFilter,
 }: PositionTasksClientProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const [data, setData] = useState(initialData);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -877,7 +882,7 @@ export function PositionTasksClient({
         actions={
           <Button
             type="button"
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             disabled={availableEmployees.length === 0}
             onClick={() => setCreateOpen(true)}
           >

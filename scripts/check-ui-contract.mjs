@@ -386,6 +386,85 @@ const rawInputFixedHeightCheck = {
   },
 };
 
+const HARDCODED_TOUCH_SIZE_RE =
+  /\b(?<attr>size|triggerSize|previewSize|controlSize)=(["'])(?<val>(?:icon-)?touch(?:-lg)?)\2/g;
+
+const HARDCODED_TOUCH_EXEMPT_PREFIXES = [
+  "apps/web/app/(protected)/br/",
+  "apps/web/app/q/",
+  "apps/web/lib/staff-runtime/",
+  "apps/web/app/(public)/",
+  "apps/web/app/offline/",
+  "apps/web/app/(dev)/",
+];
+
+const HARDCODED_TOUCH_EXEMPT_FILES = new Set([
+  "apps/web/app/components/app-bottom-nav.tsx",
+  "apps/web/app/components/control-surface-bottom-nav.tsx",
+  "apps/web/app/components/pwa-toolbar.tsx",
+  "apps/web/app/components/form/number-pad-grid.tsx",
+  "apps/web/app/components/form/number-pad-sheet.tsx",
+  // Redirect-only Owner stock detail; operations live in stock-detail-dialog.
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+]);
+
+function countHardcodedTouchSizeLiterals(content) {
+  let count = 0;
+  for (const match of content.matchAll(HARDCODED_TOUCH_SIZE_RE)) {
+    const lineStart = content.lastIndexOf("\n", match.index) + 1;
+    const lineEndIdx = content.indexOf("\n", match.index);
+    const lineEnd = lineEndIdx === -1 ? content.length : lineEndIdx;
+    const before = content.slice(lineStart, match.index);
+    const after = content.slice(match.index + match[0].length, lineEnd);
+    // Ternary true-branch strings stay legal: size={cond ? "touch" : "default"}
+    if (/\?\s*$/.test(before.trimEnd())) continue;
+    if (before.includes("?") && after.includes(":")) continue;
+    count += 1;
+  }
+  return count;
+}
+
+function collectHardcodedTouchSizeCounts() {
+  const roots = [
+    { dir: "apps/web/app", extensions: [".tsx"] },
+    { dir: "apps/web/lib/hr", extensions: [".tsx"] },
+    { dir: "apps/web/lib/auth", extensions: [".tsx"] },
+  ];
+  const seen = new Map();
+  for (const root of roots) {
+    for (const filePath of walkFiles(root.dir, root.extensions)) {
+      const file = toPosix(filePath);
+      if (
+        HARDCODED_TOUCH_EXEMPT_PREFIXES.some((prefix) =>
+          file.startsWith(prefix),
+        ) ||
+        HARDCODED_TOUCH_EXEMPT_FILES.has(file)
+      ) {
+        continue;
+      }
+      const content = fs.readFileSync(filePath, "utf8");
+      const count = countHardcodedTouchSizeLiterals(content);
+      if (count > 0) seen.set(file, count);
+    }
+  }
+  return seen;
+}
+
+const controlSurfaceHardcodedTouchCheck = {
+  id: "control-surface-hardcoded-touch-size",
+  description:
+    "control_surface and shared adapters must resolve touch density via useIsMobile(OWNER_SHELL_BREAKPOINT) / useFormControlSize (or an equivalent ternary). Hardcoded size|triggerSize|previewSize|controlSize=\"(icon-)touch(-lg)?\" is reserved for touch-first planes (br/, q/, staff-runtime) and mobile-only chrome.",
+  allowlist: {},
+  custom() {
+    failures.push(
+      ...perFileBudgetFailures(
+        controlSurfaceHardcodedTouchCheck,
+        collectHardcodedTouchSizeCounts(),
+      ),
+    );
+  },
+};
+
 function hasDirectAsChildPrimitiveParent(content, start) {
   const before = content.slice(Math.max(0, start - 320), start);
   const tail = before.slice(before.lastIndexOf("<"));
@@ -506,6 +585,7 @@ const formatterGuards = [
 
 const checks = [
   rawInputFixedHeightCheck,
+  controlSurfaceHardcodedTouchCheck,
   {
     id: "print-format-ssot",
     description:
@@ -1588,6 +1668,22 @@ function runLegacyDebtBudgetSelfTest() {
     ) !== 0
   ) {
     throw new Error("raw input fixed-height self-test did not enforce scope");
+  }
+
+  if (
+    countHardcodedTouchSizeLiterals('<Button size="touch" />') !== 1 ||
+    countHardcodedTouchSizeLiterals('<Button size="icon-touch" />') !== 1 ||
+    countHardcodedTouchSizeLiterals(
+      '<Button size={isTouchLayout ? "touch" : "default"} />',
+    ) !== 0 ||
+    countHardcodedTouchSizeLiterals(
+      'triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}',
+    ) !== 0 ||
+    countHardcodedTouchSizeLiterals('<TabsList size="touch-lg" />') !== 1
+  ) {
+    throw new Error(
+      "control-surface hardcoded touch size self-test did not enforce scope",
+    );
   }
 
   const legacyCssVariableCheck = checks.find(

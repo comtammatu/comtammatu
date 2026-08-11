@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
@@ -5,6 +7,10 @@ import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import {
   Collapsible,
   CollapsibleContent,
@@ -168,6 +174,7 @@ function BranchRequestDetailContent({
   data: StockRequestDetailData;
   actions?: ReactNode;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const progress = getBranchStockRequestProgress({
     requestStatus: data.status,
     items: data.items,
@@ -279,7 +286,7 @@ function BranchRequestDetailContent({
       {/* Step 4: confirm receive — no DC prep detail. */}
       {receiveHref != null ? (
         <Button
-          size="touch-lg"
+          size={isTouchLayout ? "touch-lg" : "lg"}
           className="w-full"
           render={<Link href={receiveHref} />}
         >
@@ -303,6 +310,7 @@ export function StockRequestDetailView({
   embedded?: boolean;
   onTransferOpen?: (transferId: number) => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const stageIndex = STAGES.indexOf(data.journey.stage);
   const backHref =
     mode === "branch"
@@ -365,7 +373,7 @@ export function StockRequestDetailView({
         <BranchOperatorControlBar className="sm:hidden">
           <Button
             variant="ghost"
-            size="icon-touch"
+            size={isTouchLayout ? "icon-touch" : "icon-sm"}
             render={<Link href={backHref} aria-label={ACTIONS_VI.back} />}
           >
             <IconArrowLeft />

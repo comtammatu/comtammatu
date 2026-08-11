@@ -28,7 +28,10 @@ import {
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   RowActionsContextMenuItems,
@@ -119,7 +122,7 @@ export function ExpensesClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const overlay = useDocumentOverlayUrl(EXPENSE_OVERLAY_KEYS);
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const showOnlyNeedsAction = stateFilter === "pending";
   const visibleRows = useMemo(
     () => (showOnlyNeedsAction ? rows.filter(expenseNeedsAction) : rows),
@@ -681,7 +684,7 @@ export function ExpensesClient({
                         <RowActionsMenu
                           items={actionItems}
                           label={copy.table.actions}
-                          triggerSize="icon-touch"
+                          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                         />
                       </ItemActions>
                     ) : null}

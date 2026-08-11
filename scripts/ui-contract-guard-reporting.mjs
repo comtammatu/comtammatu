@@ -56,6 +56,7 @@ export const UI_CONTRACT_LINT_ONLY_GROUPS = {
       "scrollarea-no-max-height-only",
       "status-focus-ring-contrast",
       "status-foreground-on-tint",
+      "control-surface-hardcoded-touch-size",
     ],
   },
   "legacy-debt-ratchet": {

@@ -93,6 +93,10 @@ import { SupplierInvoiceDetailSheet } from "./supplier-invoice-detail-sheet";
 import { SupplierInvoiceDialogs } from "./supplier-invoice-dialogs";
 import { useSupplierInvoiceListUi } from "./supplier-invoice-list-ui";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function SupplierInvoicesClient({
   invoices,
   suppliers,
@@ -128,6 +132,8 @@ export function SupplierInvoicesClient({
   canAttachVatEvidence?: boolean;
   canAcceptDiscrepancy?: boolean;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -1100,7 +1106,7 @@ export function SupplierInvoicesClient({
         title={messages.finance.supplierInvoicesPage.title}
         actions={
           canCreateInvoice ? (
-            <Button type="button" size="touch" onClick={openCreateDialog}>
+            <Button type="button" size={isTouchLayout ? "touch" : "lg"} onClick={openCreateDialog}>
               {copy.createAction}
             </Button>
           ) : undefined
@@ -1144,7 +1150,7 @@ export function SupplierInvoicesClient({
             <Button
               type="button"
               variant="outline"
-              size="touch"
+              size={isTouchLayout ? "touch" : "lg"}
               onClick={handleLoadMore}
               disabled={loadingMore}
             >

@@ -38,6 +38,10 @@ import {
   type HrBranchScope,
 } from "@/lib/hr-scope";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export interface BranchOption {
   id: number;
   name: string;
@@ -181,6 +185,8 @@ export function StaffTable({
   positionOptions,
   hasActiveFilters,
 }: StaffTableProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -356,7 +362,7 @@ export function StaffTable({
             <ItemActions>
               <Button
                 variant="outline"
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 render={
                   <Link
                     href={withHrBranchScope(

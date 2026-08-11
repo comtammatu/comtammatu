@@ -19,7 +19,10 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import {
   formatAccountingVND as formatVND,
   formatPercent,
@@ -119,7 +122,7 @@ export function RevenueTargetsClient({
   initialRows: RevenueTargetSetupRow[];
 }) {
   const controlSize = useFormControlSize();
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((row) => ({
       ...row,
@@ -506,7 +509,7 @@ export function RevenueTargetsClient({
                   <RowActionsMenu
                     items={rowActions(row)}
                     label={`${FORM_VI.action} ${row.branchName}`}
-                    triggerSize="icon-touch"
+                    triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
               </InteractiveCard>

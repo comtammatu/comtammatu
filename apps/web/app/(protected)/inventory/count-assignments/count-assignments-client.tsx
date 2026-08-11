@@ -475,7 +475,7 @@ export function CountAssignmentsClient({
         actions={
           <Button
             variant="outline"
-            size="touch"
+            size={controlSize === "touch" ? "touch" : "lg"}
             render={<Link href="/inventory/count-slips" />}
           >
             <IconFileText aria-hidden="true" />
@@ -608,7 +608,7 @@ export function CountAssignmentsClient({
                     <Button
                       type="button"
                       variant="outline"
-                      size="touch"
+                      size={controlSize === "touch" ? "touch" : "default"}
                       disabled={isPending}
                       onClick={() => openEditor(employee)}
                     >
@@ -618,7 +618,7 @@ export function CountAssignmentsClient({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="touch"
+                      size={controlSize === "touch" ? "touch" : "default"}
                       disabled={isPending || selectedIds.length === 0}
                       onClick={() => void handleClear(employee)}
                     >

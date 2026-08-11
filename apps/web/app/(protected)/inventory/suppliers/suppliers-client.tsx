@@ -97,6 +97,8 @@ function SupplierMobileCard({
   actions: RowActionItem[];
   onOpen?: (row: SupplierRow) => void;
 }) {
+  const controlSize = useFormControlSize();
+
   return (
     <InteractiveCard
       minHeight="mobile"
@@ -138,7 +140,7 @@ function SupplierMobileCard({
           <RowActionsMenu
             items={actions}
             label={FORM_VI.action}
-            triggerSize="icon-touch"
+            triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
           />
         </div>
       </div>

@@ -47,6 +47,10 @@ import {
   type UnitRow,
 } from "./units-actions";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.inventoryMaster.units;
 
 const unitFormSchema = z.object({
@@ -69,6 +73,8 @@ const STANDARD_DIMENSION_LABEL: Record<UnitDimension, string> = {
 };
 
 export function UnitsClient({ rows }: { rows: UnitRow[] }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState<UnitRow | null>(null);
@@ -346,7 +352,7 @@ export function UnitsClient({ rows }: { rows: UnitRow[] }) {
                   <RowActionsMenu
                     items={getUnitRowActions(row)}
                     label={FORM_VI.action}
-                    triggerSize="icon-touch"
+                    triggerSize={isTouchLayout ? "icon-touch" : "icon"}
                   />
                 </div>
               </ItemActions>

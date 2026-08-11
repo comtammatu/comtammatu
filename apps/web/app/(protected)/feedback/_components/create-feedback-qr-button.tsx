@@ -11,6 +11,10 @@ import { createFeedbackQr } from "../actions";
 import { feedbackCopy } from "@lib/messages/feedback";
 import type { FeedbackQrTableOption } from "./qr-management";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const BRANCH_WIDE_TABLE = "branch";
 
 const createQrFormSchema = z.object({
@@ -32,6 +36,8 @@ export function CreateFeedbackQrButton({
   lockBranch: boolean;
   branches?: { id: number; name: string }[];
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const defaultValues = useMemo<CreateQrFormValues>(
@@ -45,7 +51,7 @@ export function CreateFeedbackQrButton({
 
   return (
     <>
-      <Button type="button" size="touch" onClick={() => setOpen(true)}>
+      <Button type="button" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
         {feedbackCopy.qrCreate}
       </Button>
       <FormDialog

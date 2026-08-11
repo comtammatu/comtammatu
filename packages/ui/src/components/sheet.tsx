@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "../lib/utils";
+import { OWNER_SHELL_BREAKPOINT, useIsMobile } from "../hooks/use-mobile";
 import { Button } from "./button";
 import { X as IconX } from "lucide-react";
 
@@ -60,6 +61,7 @@ function SheetContent({
   /** Fill the dynamic viewport for top and bottom sheets. */
   fullscreen?: boolean;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -93,7 +95,7 @@ function SheetContent({
                 // notch inset only — never floor at 0.5rem (that drops the X
                 // below SheetTitle on desktop / zero-inset devices).
                 className="absolute top-[env(safe-area-inset-top,0px)] right-2"
-                size="icon-touch"
+                size={isTouchLayout ? "icon-touch" : "icon-sm"}
               >
                 <IconX />
                 <span className="sr-only">Close</span>

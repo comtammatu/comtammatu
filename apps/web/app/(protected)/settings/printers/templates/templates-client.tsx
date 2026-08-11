@@ -20,7 +20,10 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { confirm } from "@/components/confirm-dialog";
 import {
   Item,
@@ -164,7 +167,7 @@ export function TemplatesClient({
 }) {
   const router = useRouter();
   const editorIdPrefix = useId();
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const [kind, setKind] = useState<PrintKind>(templates[0]?.kind ?? "receipt");
   const [blocksByKind, setBlocksByKind] = useState<
     Record<string, TemplateBlock[]>
@@ -362,7 +365,7 @@ export function TemplatesClient({
   return (
     <div className="flex flex-col gap-4">
       <Tabs value={kind} onValueChange={(v) => setKind(v as PrintKind)}>
-        <TabsList variant="toolbar" size="touch" className="w-full">
+        <TabsList variant="toolbar" size={isTouchLayout ? "touch" : "default"} className="w-full">
           {templates.map((t) => (
             <TabsTrigger key={t.kind} value={t.kind} className="gap-1.5">
               {KIND_LABEL[t.kind]}

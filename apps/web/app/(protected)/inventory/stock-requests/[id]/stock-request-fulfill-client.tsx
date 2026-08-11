@@ -61,6 +61,10 @@ import {
   type StockRequestFulfillLine,
 } from "@lib/inventory/stock-request-fulfillment-model";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const stockRequestCopy = messages.inventory.stockRequests;
 const copy = stockRequestCopy.fulfill;
 
@@ -129,6 +133,8 @@ export function StockRequestFulfillClient({
   canClose = false,
   onTransferCreated,
 }: StockRequestFulfillClientProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const isOnline = useIsOnline();
   const [isPending, startTransition] = useTransition();
@@ -333,7 +339,7 @@ export function StockRequestFulfillClient({
         className: "w-14",
         render: (line) => (
           <Checkbox
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             checked={
               selectedByGroup[group.fulfillSiteKind]?.has(line.id) ?? false
             }
@@ -494,7 +500,7 @@ export function StockRequestFulfillClient({
                     key={group.fulfillSiteKind}
                     type="button"
                     variant={isActive ? "secondary" : "outline"}
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     aria-pressed={isActive}
                     onClick={() => activateSource(group.fulfillSiteKind)}
                   >
@@ -559,7 +565,7 @@ export function StockRequestFulfillClient({
                         >
                           <SelectTrigger
                             id={`fulfill-location-${group.fulfillSiteKind}`}
-                            size="touch"
+                            size={isTouchLayout ? "touch" : "default"}
                             className="w-full"
                           >
                             <SelectValue
@@ -571,7 +577,7 @@ export function StockRequestFulfillClient({
                               <SelectItem
                                 key={location.id}
                                 value={String(location.id)}
-                                size="touch"
+                                size={isTouchLayout ? "touch" : "default"}
                               >
                                 {location.label}
                               </SelectItem>
@@ -592,7 +598,7 @@ export function StockRequestFulfillClient({
                     <Button
                       type="button"
                       variant="outline"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       disabled={isPending}
                       onClick={() =>
                         selectAllPending(
@@ -639,7 +645,7 @@ export function StockRequestFulfillClient({
                           }
                         >
                           <Checkbox
-                            size="touch"
+                            size={isTouchLayout ? "touch" : "default"}
                             checked={
                               selectedByGroup[group.fulfillSiteKind]?.has(
                                 line.id,
@@ -755,7 +761,7 @@ export function StockRequestFulfillClient({
                   <Button
                     type="button"
                     variant="outline"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     disabled={
                       isPending ||
                       !isOnline ||
@@ -772,7 +778,7 @@ export function StockRequestFulfillClient({
                     <Button
                       type="button"
                       variant="destructive"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       disabled={isPending || !isOnline}
                       onClick={() => setReasonAction({ kind: "close" })}
                     >
@@ -784,7 +790,7 @@ export function StockRequestFulfillClient({
               trailing={
                 <Button
                   type="button"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   disabled={
                     isPending ||
                     !isOnline ||
@@ -807,7 +813,7 @@ export function StockRequestFulfillClient({
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   disabled={
                     isPending ||
                     !isOnline ||
@@ -824,7 +830,7 @@ export function StockRequestFulfillClient({
                   <Button
                     type="button"
                     variant="destructive"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     disabled={isPending || !isOnline}
                     onClick={() => setReasonAction({ kind: "close" })}
                   >
@@ -836,7 +842,7 @@ export function StockRequestFulfillClient({
             trailing={
               <Button
                 type="button"
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 disabled={
                   isPending ||
                   !isOnline ||

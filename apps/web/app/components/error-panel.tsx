@@ -2,6 +2,10 @@
 
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { AppEmptyState } from "@/components/surface";
 
 export type ErrorPanelProps = {
@@ -16,9 +20,11 @@ export type ErrorPanelProps = {
 };
 
 export function ErrorPanel({ reset, allowSignOut = false }: ErrorPanelProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = isTouchLayout ? "touch" : "default";
   return (
     <AppEmptyState mode="error" description={ERRORS_VI.fallback}>
-      <Button size="touch" onClick={reset}>
+      <Button size={actionSize} onClick={reset}>
         {ACTIONS_VI.retry}
       </Button>
       {allowSignOut ? (

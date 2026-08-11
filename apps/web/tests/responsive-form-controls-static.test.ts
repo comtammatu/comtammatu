@@ -9,7 +9,7 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 test("shared RHF fields resolve responsive density at the Owner shell cutover", () => {
   const controlSize = read("apps/web/app/components/form/control-size.ts");
 
-  assert.match(controlSize, /useIsMobile\(1024\)/);
+  assert.match(controlSize, /useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
   assert.match(
     controlSize,
     /controlSize === "responsive"[\s\S]*?isTouchLayout[\s\S]*?"touch"[\s\S]*?"field"/,

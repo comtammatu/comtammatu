@@ -31,7 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import {
   Item,
   ItemActions,
@@ -94,7 +97,7 @@ export function RefundsClient({
   canApprove,
   branches,
 }: RefundsClientProps) {
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const [refunds, setRefunds] = useState<RefundRow[]>(initialRefunds);
   const [isPending, startTransition] = useTransition();
   const [actioningId, setActioningId] = useState<number | null>(null);
@@ -642,7 +645,7 @@ export function RefundsClient({
                 {canApprove && refund.status === "pending" ? (
                   <ItemActions className="flex-wrap justify-end">
                     <Button
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       className="border-success/20 text-success hover:bg-success/10 hover:text-success"
                       disabled={isPending && actioningId === refund.id}
@@ -656,7 +659,7 @@ export function RefundsClient({
                       <span className="ml-1">Duyệt</span>
                     </Button>
                     <Button
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       disabled={isPending && actioningId === refund.id}

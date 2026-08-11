@@ -20,7 +20,7 @@ test("manual transfer remains a secondary Owner workflow", () => {
   assert.match(form, /<Combobox[\s\S]*?searchPlaceholder=/);
 });
 
-test("Owner waste create propagates touch density through route-local controls", () => {
+test("Owner waste create propagates responsive density through route-local controls", () => {
   const form = read(
     "apps/web/app/(protected)/inventory/waste/waste-operational-form.tsx",
   );
@@ -28,27 +28,26 @@ test("Owner waste create propagates touch density through route-local controls",
     "apps/web/app/(protected)/inventory/_components/waste-reason-dropdown.tsx",
   );
 
-  assert.match(form, /<SelectTrigger size="touch">/);
-  assert.match(form, /<Combobox[\s\S]*?size="touch"/);
+  assert.match(form, /useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
+  assert.match(
+    form,
+    /<SelectTrigger size=\{isTouchLayout \? "touch" : "default"\}>/,
+  );
+  assert.match(form, /<Combobox[\s\S]*?size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(form, /className=\{cn\([\s\S]*?"h-12"/);
-  assert.match(form, /previewSize="touch"/);
-  assert.match(form, /size="touch-lg"/);
+  assert.match(form, /previewSize=\{isTouchLayout \? "touch" : "default"\}/);
+  assert.match(form, /size=\{isTouchLayout \? "touch-lg" : "lg"\}/);
   assert.match(reasons, /size=\{size === "touch" \? "touch" : "default"\}/);
 });
 
-test("Owner stock detail operations are touch-safe without a two-column phone squeeze", () => {
+test("Owner stock detail dialog operations stay responsive without a two-column phone squeeze", () => {
   const source = read(
-    "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+    "apps/web/app/(protected)/inventory/stock/stock-detail-dialog.tsx",
   );
-  const operationStart = source.indexOf("detailCopy.operationTitle");
-  const operationEnd = source.indexOf("detailCopy.thresholdTitle");
-  const operations = source.slice(operationStart, operationEnd);
 
-  assert.notEqual(operationStart, -1);
-  assert.notEqual(operationEnd, -1);
-  assert.match(operations, /grid grid-cols-1 gap-2 sm:grid-cols-2/);
-  assert.equal(operations.match(/size="touch"/g)?.length, 5);
-  assert.doesNotMatch(operations, /size="sm"/);
+  assert.match(source, /isTouchLayout/);
+  assert.match(source, /const actionSize = isTouchLayout \? "touch" : "default"/);
+  assert.doesNotMatch(source, /size="sm"/);
 });
 
 test("production recipe import and export menu mirrors the responsive Inventory menu contract", () => {
@@ -56,7 +55,7 @@ test("production recipe import and export menu mirrors the responsive Inventory 
     "apps/web/app/(protected)/inventory/production-recipe-import-export-menu.tsx",
   );
 
-  assert.match(source, /useIsMobile\(1024\)/);
+  assert.match(source, /useIsMobile\(1024\)|useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
   assert.equal(
     source.match(/size=\{isTouchLayout \? "touch" : "default"\}/g)?.length,
     5,

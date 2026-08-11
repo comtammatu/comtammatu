@@ -34,9 +34,15 @@ import {
 import { MfaChallengeForm } from "@lib/auth/mfa-challenge-form";
 import { messages } from "@lib/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.auth.mfa;
 
 export function MfaSecurityClient() {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [factors, setFactors] = useState<TotpFactor[]>([]);
   const [aal, setAal] = useState<"aal1" | "aal2" | string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -226,7 +232,7 @@ export function MfaSecurityClient() {
               <div>
                 <Button
                   type="button"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   onClick={beginEnroll}
                   disabled={isEnrolling}
                 >
@@ -286,7 +292,7 @@ export function MfaSecurityClient() {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     onClick={confirmEnroll}
                     disabled={isVerifying || enrollCode.length < 6}
                   >
@@ -302,7 +308,7 @@ export function MfaSecurityClient() {
                   <Button
                     type="button"
                     variant="outline"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     disabled={isVerifying}
                     onClick={() => {
                       setEnrollment(null);

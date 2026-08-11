@@ -24,7 +24,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { useFormControlSize } from "@/components/form/control-size";
 import { matchesSearch } from "@lib/search";
@@ -188,6 +191,7 @@ function IngredientMobileCard({
   actions: RowActionItem[];
   onOpen?: (item: IngredientRow) => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const category = categoryLabel(item);
   const referenceCost = getDisplayReferenceCost(item);
   return (
@@ -246,7 +250,7 @@ function IngredientMobileCard({
             <RowActionsMenu
               items={actions}
               label={ingredientListCopy.rowActionsAria(item.name)}
-              triggerSize="icon-touch"
+              triggerSize={isTouchLayout ? "icon-touch" : "icon"}
             />
           ) : null}
         </div>
@@ -296,7 +300,7 @@ export function IngredientsClient({
     useState<IngredientRow | null>(null);
   const [isPending, startTransition] = useTransition();
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const controlSize = useFormControlSize();
 
   const toneMap = useMemo(() => {

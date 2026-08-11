@@ -105,7 +105,7 @@ export function BranchTable({ branches }: BranchTableProps) {
 
     return (
       <RowActionsMenu
-        triggerSize="icon-touch"
+        triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
         items={[
           ...(isActive && isBranchSite
             ? [
@@ -234,7 +234,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                     {isBranchSite ? (
                       <>
                         <Button
-                          size="touch"
+                          size={controlSize === "touch" ? "touch" : "default"}
                           className="w-full"
                           aria-label={`${copy.openBranch.long}: ${branch.name}`}
                           disabled={!isActive}
@@ -249,7 +249,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                         </Button>
                         <Button
                           variant="outline"
-                          size="touch"
+                          size={controlSize === "touch" ? "touch" : "default"}
                           className="w-full"
                           aria-label={`${copy.openSettings.long}: ${branch.name}`}
                           disabled={!isActive}
@@ -264,7 +264,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                         </Button>
                         <Button
                           variant="outline"
-                          size="touch"
+                          size={controlSize === "touch" ? "touch" : "default"}
                           className="w-full"
                           aria-label={`${copy.selfOrder.long}: ${branch.name}`}
                           disabled={!isActive}
@@ -279,7 +279,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                         </Button>
                         <Button
                           variant="outline"
-                          size="touch"
+                          size={controlSize === "touch" ? "touch" : "default"}
                           className="w-full"
                           aria-label={`${copy.feedback.long}: ${branch.name}`}
                           disabled={!isActive}
@@ -295,7 +295,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                       </>
                     ) : (
                       <Button
-                        size="touch"
+                        size={controlSize === "touch" ? "touch" : "default"}
                         className="col-span-2 w-full"
                         aria-label={`${copy.openInventory.long}: ${branch.name}`}
                         disabled={!isActive}

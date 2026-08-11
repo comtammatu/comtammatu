@@ -37,6 +37,10 @@ import {
   type SupplierOption,
 } from "./supplier-invoice-form-schema";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function SupplierInvoiceCreateFields({
   form,
   suppliers,
@@ -58,6 +62,8 @@ export function SupplierInvoiceCreateFields({
   pendingVatFile: File | null;
   onPendingVatFileChange: (file: File | null) => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const invoiceKind = form.watch("invoiceKind");
   const grnId = form.watch("grnId");
   const invoiceVatRate = form.watch("invoiceVatRate");
@@ -605,7 +611,7 @@ export function SupplierInvoiceCreateFields({
             <Button
               type="button"
               variant="outline"
-              size="touch"
+              size={isTouchLayout ? "touch" : "default"}
               className="relative w-full sm:w-auto"
               render={<label />}
             >

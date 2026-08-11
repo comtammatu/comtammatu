@@ -6,6 +6,10 @@ import { Button } from "@comtammatu/ui/components/button";
 import { AppToolbar } from "@/components/surface";
 import { feedbackCopy } from "@lib/messages/feedback";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function FeedbackSubNav({
   inboxHref,
   qrHref,
@@ -13,6 +17,8 @@ export function FeedbackSubNav({
   inboxHref: string;
   qrHref: string;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const pathname = usePathname();
   const items = [
     { href: inboxHref, label: feedbackCopy.tabInbox },
@@ -28,7 +34,7 @@ export function FeedbackSubNav({
           <Button
             key={item.href}
             variant={active ? "secondary" : "ghost"}
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             aria-current={active ? "page" : undefined}
             render={<Link href={item.href} />}
           >

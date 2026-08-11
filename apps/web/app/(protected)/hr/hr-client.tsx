@@ -31,6 +31,10 @@ import { resolveHrBranchScope, type HrBranchScope } from "@/lib/hr-scope";
 
 type PeopleView = "profile" | "accounts";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface HrClientProps {
   employees: EmployeeRow[];
   branches: BranchOption[];
@@ -72,6 +76,8 @@ export function HrClient({
   staffHasActiveFilters = false,
   initialScope,
 }: HrClientProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [addOpen, setAddOpen] = useState(false);
   const searchParams = useSearchParams();
   const copy = messages.hr.client;
@@ -119,7 +125,7 @@ export function HrClient({
                 <StaffHeaderOverflow />
               </>
             ) : canManageEmployees ? (
-              <Button size="touch" onClick={() => setAddOpen(true)}>
+              <Button size={isTouchLayout ? "touch" : "lg"} onClick={() => setAddOpen(true)}>
                 <IconUserPlus data-icon="inline-start" />
                 {copy.addEmployee}
               </Button>

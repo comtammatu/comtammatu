@@ -305,7 +305,7 @@ test("persisted expense transfer intents resolve before mutable memo settings", 
   );
   assert.match(expenseClientBundle, /copy\.transferInstruction\.copy/);
   assert.match(expenseClientBundle, /<AppDialog/);
-  assert.match(expenseClient, /triggerSize="icon-touch"/);
+  assert.match(expenseClient, /triggerSize=\{isTouchLayout \? "icon-touch" : "icon"\}/);
   assert.match(expenseClientBundle, /font-mono text-base font-semibold tabular-nums/);
   assert.match(expenseClientBundle, /row\.transfer_content == null/);
   assert.match(

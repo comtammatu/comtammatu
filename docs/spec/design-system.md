@@ -499,9 +499,18 @@ Form controls follow their own table:
 | Fixed-density multi-select / date-picker trigger | `h-10` | `h-10` | `form/multi-select-combobox`, `form/business-date-field` |
 
 RHF wrappers default to `controlSize="responsive"` (touch below the 1024px
-cutover, field above). A touch Combobox propagates touch density to its popup
-search input and options. `h-10` / `min-h-12` are permitted only through these
-named sizes; do not hand-patch a raw `Input` or `SelectTrigger`.
+`OWNER_SHELL_BREAKPOINT` cutover, field above). A touch Combobox propagates
+touch density to its popup search input and options. `h-10` / `min-h-12` are
+permitted only through these named sizes; do not hand-patch a raw `Input` or
+`SelectTrigger`.
+
+On `control_surface` and shared adapters, never hardcode
+`size="touch"` / `icon-touch` / `touch-lg` (or the matching `triggerSize` /
+`previewSize` / `controlSize` literals). Resolve density with
+`useIsMobile(OWNER_SHELL_BREAKPOINT)` or `useFormControlSize` (header primary
+CTA: touch|lg; body CTA: touch|default; icon: icon-touch|icon-sm). Hardcoded
+touch remains legal on touch-first planes (`branch` / `station_chrome` / `q` /
+staff-runtime) and mobile-only chrome (bottom nav, PWA toolbar, number pad).
 
 ### E. Radius Scale (4 tiers, 4 tokens)
 

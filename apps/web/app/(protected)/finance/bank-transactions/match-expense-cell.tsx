@@ -54,6 +54,10 @@ import { FinanceAmountCell } from "../components/finance-amount-cell";
 import { FinanceMoneySummary } from "../components/finance-money-summary";
 import { displayBankContent } from "../_lib/display-bank-content";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.finance.bankTransactions;
 type MatchPurpose = "expense" | "refund" | "supplier";
 
@@ -109,6 +113,8 @@ export function MatchExpenseCell({
   touch,
   evidence,
 }: MatchExpenseCellProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [isRefundSearchPending, startRefundSearchTransition] =
@@ -459,7 +465,7 @@ export function MatchExpenseCell({
                 type="single"
                 value={purpose ?? ""}
                 variant="outline"
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 spacing={0}
                 className="grid w-full grid-cols-1 min-[360px]:grid-cols-3"
                 aria-label={copy.matchPurposeTitle}
@@ -559,7 +565,7 @@ export function MatchExpenseCell({
                   />
                   <Button
                     type="submit"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     variant="outline"
                     className="w-full min-[360px]:w-auto"
                     disabled={isRefundSearchPending}
@@ -589,7 +595,7 @@ export function MatchExpenseCell({
                           className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md py-2 hover:bg-muted/30"
                         >
                           <Checkbox
-                            size="touch"
+                            size={isTouchLayout ? "touch" : "default"}
                             id={checkboxId}
                             checked={selectedRefundSet.has(refund.id)}
                             onCheckedChange={() => toggleRefund(refund)}
@@ -633,7 +639,7 @@ export function MatchExpenseCell({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   onClick={() =>
                     loadRefundOptions({
                       append: true,
@@ -713,7 +719,7 @@ export function MatchExpenseCell({
                           )}
                         >
                           <Checkbox
-                            size="touch"
+                            size={isTouchLayout ? "touch" : "default"}
                             id={checkboxId}
                             checked={checked}
                             onCheckedChange={() => toggleExpense(exp)}
@@ -758,7 +764,7 @@ export function MatchExpenseCell({
             <div className="sticky bottom-0 shrink-0 border-t bg-background p-4 pt-3">
               <Button
                 type="button"
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 className="w-full"
                 disabled={isPending}
                 onClick={() =>
@@ -777,7 +783,7 @@ export function MatchExpenseCell({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   onClick={() => setSelectedRefundsById({})}
                   disabled={isPending || selectedRefundIds.length === 0}
                 >
@@ -785,7 +791,7 @@ export function MatchExpenseCell({
                 </Button>
                 <Button
                   type="button"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   onClick={() => handleRefundMatch(selectedRefundIds)}
                   disabled={
                     isPending ||
@@ -806,7 +812,7 @@ export function MatchExpenseCell({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     className="w-full sm:w-auto"
                     render={<Link href="/finance/expenses" />}
                   >
@@ -815,7 +821,7 @@ export function MatchExpenseCell({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     className="w-full sm:w-auto"
                     onClick={() => setSelectedIds([])}
                     disabled={isPending || selectedIds.length === 0}
@@ -825,7 +831,7 @@ export function MatchExpenseCell({
                 </div>
                 <Button
                   type="button"
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                   className="w-full sm:w-auto"
                   onClick={handleSave}
                   disabled={isPending || !hasChanges || !allocationBalanced}

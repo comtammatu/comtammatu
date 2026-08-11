@@ -21,7 +21,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import {
   Sidebar,
   SidebarContent,
@@ -202,7 +205,7 @@ export function AppShell({
   bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
-  const isTouchLayout = useIsMobile(1024);
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const copy = messages.common;
   const controlSurfaceCopy = messages.controlSurface;
   const notificationSummary = useNotificationBadges();
@@ -365,7 +368,7 @@ export function AppShell({
         <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
           <Button
             variant="ghost"
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             className="w-full justify-start gap-2 rounded-lg px-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             render={<Link href={notificationsHref} />}
           >

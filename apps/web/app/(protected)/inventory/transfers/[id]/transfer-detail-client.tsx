@@ -63,6 +63,10 @@ import {
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const DocumentStockCorrectionDialog = dynamic(
   () =>
     import("../../_components/document-stock-correction-dialog").then(
@@ -104,6 +108,8 @@ export function TransferDetailClient({
   embeddedHeader?: boolean;
   listHref?: string;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const isOnline = useIsOnline();
   const copy = messages.inventory.transfer;
@@ -654,7 +660,7 @@ export function TransferDetailClient({
                   <Button
                     type="button"
                     variant="outline"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     disabled={isPending || !isOnline}
                     onClick={() => setCancelOpen(true)}
                   >
@@ -669,7 +675,7 @@ export function TransferDetailClient({
                     documentId={transfer.id}
                     documentCode={transfer.code}
                     branchOptions={correctionBranches}
-                    buttonSize="touch"
+                    buttonSize={isTouchLayout ? "touch" : "default"}
                     itemOptions={transfer.items.map((item) => ({
                       ingredientId: item.ingredientId,
                       name: item.name,
@@ -690,7 +696,7 @@ export function TransferDetailClient({
                     actionConfig?.kind === "receive" &&
                     !noteOk)
                 }
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 className="px-4 font-semibold"
                 onClick={handlePrimaryAction}
               >

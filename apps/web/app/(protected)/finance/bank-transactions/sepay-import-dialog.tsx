@@ -17,10 +17,16 @@ import {
   type SepayImportState,
 } from "./import-actions";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.finance.bankTransactions;
 const initialState: SepayImportState = { status: "idle" };
 
 export function SepayImportDialog() {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
@@ -42,7 +48,7 @@ export function SepayImportDialog() {
 
   return (
     <>
-      <Button variant="outline" size="touch" onClick={() => setOpen(true)}>
+      <Button variant="outline" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
         {copy.importAction}
       </Button>
       <AppDialog
@@ -54,7 +60,7 @@ export function SepayImportDialog() {
           <Button
             type="submit"
             form="sepay-export-import-form"
-             size="touch"
+             size={isTouchLayout ? "touch" : "default"}
             disabled={pending}
           >
             {pending ? copy.importPending : copy.importSubmit}
@@ -79,7 +85,7 @@ export function SepayImportDialog() {
           ) : null}
           <div className="grid gap-2">
             <Label htmlFor="sepay-export-file">{copy.importFileLabel}</Label>
-            <InputGroup size="touch">
+            <InputGroup size={isTouchLayout ? "touch" : "default"}>
               <InputGroupInput
                 id="sepay-export-file"
                 name="file"

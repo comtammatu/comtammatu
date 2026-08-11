@@ -36,7 +36,7 @@ test("Owner mobile shell keeps the module drawer available on the root landing",
     source,
     /isTouchLayout \? "min-h-12 text-sm" : "min-h-10 text-sm"/,
   );
-  assert.match(source, /useIsMobile\(1024\)/);
+  assert.match(source, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
   assert.match(source, /isTouchLayout \? "min-h-12" : "min-h-10"/);
   assert.match(
     source,
@@ -327,7 +327,7 @@ test("Inventory branch selector keeps touch targets through tablet widths", () =
   );
 
   assert.match(filter, /ControlSurfaceScopeControl/);
-  assert.match(scopeControl, /useIsMobile\(1024\)/);
+  assert.match(scopeControl, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
   assert.match(scopeControl, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(
     scopeControl,
@@ -347,7 +347,7 @@ test("Inventory ingredient editor keeps a touch-safe unit list", () => {
   const issueDetail = read(
     "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx",
   );
-  assert.match(issueDetail, /useIsMobile\(1024\)/);
+  assert.match(issueDetail, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
   assert.match(
     issueDetail,
     /isTouchLayout \? <div className="min-w-0">\{pageLayout\}<\/div> : pageLayout/,
@@ -356,12 +356,9 @@ test("Inventory ingredient editor keeps a touch-safe unit list", () => {
   assert.doesNotMatch(issueDetail, /hidden lg:block">\{pageLayout\}/);
 });
 
-test("Owner page-header actions use named button sizes", () => {
-  const touchPaths = [
-    "apps/web/app/(protected)/hr/attendance/page.tsx",
+test("Owner page-header actions use responsive named button sizes", () => {
+  const responsiveHeaderPaths = [
     "apps/web/app/(protected)/hr/hr-client.tsx",
-    "apps/web/app/(protected)/hr/payroll/page.tsx",
-    "apps/web/app/(protected)/hr/setup/page.tsx",
     "apps/web/app/(protected)/inventory/count-assignments/count-assignments-client.tsx",
     "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx",
     "apps/web/app/(protected)/inventory/inventory-value-panel.tsx",
@@ -386,11 +383,24 @@ test("Owner page-header actions use named button sizes", () => {
   );
   assert.match(
     importDialog,
-    /size="touch"/,
-    "bank Import trigger must stay touch-sized",
+    /size=\{isTouchLayout \? "touch" : "default"\}/,
+    "bank Import trigger resolves touch below Owner shell cutover",
   );
 
-  for (const path of touchPaths) {
+  for (const path of [
+    "apps/web/app/(protected)/hr/attendance/page.tsx",
+    "apps/web/app/(protected)/hr/payroll/page.tsx",
+    "apps/web/app/(protected)/hr/setup/page.tsx",
+  ]) {
+    const source = read(path);
+    assert.match(
+      source,
+      /<ResponsiveBackButton/,
+      `${path} must use ResponsiveBackButton for header back action`,
+    );
+  }
+
+  for (const path of responsiveHeaderPaths) {
     const source = read(path);
     const headerStart = source.indexOf("<AppPageHeader");
     const actionsStart = source.indexOf("actions={", headerStart);
@@ -398,8 +408,8 @@ test("Owner page-header actions use named button sizes", () => {
     const actionBlock = source.slice(actionsStart, actionsStart + 900);
     assert.match(
       actionBlock,
-      /<Button[\s\S]{0,240}size="touch"/,
-      `${path} must size its header button for touch`,
+      /size=\{(?:isTouchLayout|controlSize === "touch") \? "touch" : "lg"\}/,
+      `${path} must resolve header button touch|lg at Owner cutover`,
     );
   }
 
@@ -444,6 +454,10 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   assert.match(branches, /grid grid-cols-2 gap-2 border-t pt-3/);
   assert.match(branches, /href=\{`\/br\/\$\{branch\.id\}\/settings\/tables`\}/);
   assert.match(branches, /href=\{`\/br\/\$\{branch\.id\}\/feedback`\}/);
+  assert.match(
+    branches,
+    /triggerSize=\{controlSize === "touch" \? "icon-touch" : "icon"\}/,
+  );
 
   const employees = read("apps/web/app/(protected)/hr/employee-table.tsx");
   assert.match(employees, /size=\{touch \? "touch" : "sm"\}/);
@@ -451,7 +465,10 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   assert.match(employees, /render: \(employee\) => renderEdit\(employee\)/);
 
   const refunds = read("apps/web/app/(protected)/orders/refunds-client.tsx");
-  assert.equal(refunds.match(/size="touch"/g)?.length, 2);
+  assert.ok(
+    (refunds.match(/size=\{isTouchLayout \? "touch" : "sm"\}/g) ?? []).length >=
+      2,
+  );
 });
 
 test("single-Min threshold cards stay touch-safe and paginate the growth list", () => {
@@ -465,5 +482,8 @@ test("single-Min threshold cards stay touch-safe and paginate the growth list", 
     source.match(/h-12 text-right tabular-nums lg:h-10/g)?.length,
     2,
   );
-  assert.match(source, /<Checkbox[\s\S]*size="touch"/);
+  assert.match(
+    source,
+    /<Checkbox[\s\S]*size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
 });

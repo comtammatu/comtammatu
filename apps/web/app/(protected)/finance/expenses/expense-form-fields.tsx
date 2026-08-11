@@ -76,7 +76,7 @@ export function ExpenseFormFields({
 
   return (
     <>
-      <Item variant="outline" className="grid gap-4 p-4 md:grid-cols-2">
+      <Item variant="outline" className="grid gap-4 md:grid-cols-2">
         <BusinessDateField
           control={form.control}
           name="expenseDate"

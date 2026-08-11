@@ -445,7 +445,7 @@ export function LeaveRequestsTable({
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch"
+                  size={controlSize === "touch" ? "touch" : "default"}
                   onClick={() => setHistoryPanelOpen(true)}
                 >
                   <IconHistory data-icon="inline-start" />

@@ -16,6 +16,10 @@ import {
   TOAST_VI,
 } from "@comtammatu/shared/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const DEFAULT_BUCKET = "inventory-attachments";
 
 type Props = {
@@ -60,6 +64,8 @@ export function PhotoUploadInput({
   captureCamera = false,
   previewSize = "default",
 }: Props) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [uploading, setUploading] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +137,7 @@ export function PhotoUploadInput({
           {previewSize === "touch" ? (
             <Button
               variant="link"
-              size="touch"
+              size={isTouchLayout ? "touch" : "default"}
               className="min-w-0 flex-1 justify-start px-0 text-left font-normal"
               render={<a href={value} target="_blank" rel="noreferrer" />}
             >

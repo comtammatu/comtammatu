@@ -77,3 +77,24 @@ export const adjustStock = withAction(
     return { success: true };
   },
 );
+
+/* ─── fetchStockIngredientDetailAction ─── */
+
+const fetchDetailSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
+export const fetchStockIngredientDetailAction = withAction(
+  { roles: INVENTORY_OPS_ROLES, schema: fetchDetailSchema, requireBranchScope: false },
+  async (data) => {
+    const { loadStockIngredientDetailData } = await import(
+      "@lib/inventory/stock-on-hand-detail-data"
+    );
+    const detailData = await loadStockIngredientDetailData({
+      ingredientId: data.ingredientId,
+      queryBranch: data.branchId ? String(data.branchId) : undefined,
+    });
+    return { success: true, data: detailData };
+  },
+);

@@ -255,7 +255,8 @@ test("shared primitives use Base UI behavior without Radix", () => {
   assert.match(dialogSource, /@base-ui\/react\/dialog/);
   assert.match(dialogSource, /DialogPrimitive\.(?:Backdrop|Popup)/);
   assert.match(dialogSource, /overscroll-contain/);
-  assert.match(dialogSource, /size="icon-touch"/);
+  assert.match(dialogSource, /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/);
+  assert.match(dialogSource, /useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
   assert.doesNotMatch(
     dialogSource,
     /radix-ui|DialogPrimitive\.(?:Content|Overlay)|asChild/,
@@ -296,6 +297,8 @@ test("shared primitives use Base UI behavior without Radix", () => {
     sheetSource,
     /data-\[side=bottom\]:pb-\[env\(safe-area-inset-bottom\)\]/,
   );
+  assert.match(sheetSource, /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/);
+  assert.match(sheetSource, /useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
   assert.doesNotMatch(
     sheetSource,
     /radix-ui|SheetPrimitive\.(?:Content|Overlay)|asChild/,
@@ -345,7 +348,8 @@ test("foundations bind typography/motion and gate looping Spinner/Skeleton motio
 test("confirm dialog settles every request exactly once", () => {
   const source = read("apps/web/app/components/confirm-dialog.tsx");
 
-  assert.equal(source.match(/size="touch"/g)?.length, 2);
+  assert.match(source, /size=\{actionSize\}/);
+  assert.match(source, /const actionSize = isTouchLayout \? "touch" : "default"/);
 
   // The awaited resolver lives in a ref that is cleared before it is called, so
   // a request can never resolve twice and callers cannot be left pending.

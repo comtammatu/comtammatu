@@ -18,7 +18,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { OWNER_SHELL_BREAKPOINT, useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
@@ -114,6 +114,8 @@ export function GRNDetailClient({
   embedded?: boolean;
   presentation?: "page" | "dialog";
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = embedded;
@@ -787,7 +789,7 @@ export function GRNDetailClient({
                   <Button
                     type="button"
                     variant="destructive"
-                    size="touch-lg"
+                    size={isTouchLayout ? "touch-lg" : "lg"}
                     onClick={() => {
                       void handleDeleteLine(editingLine);
                       closeLineEdit();
@@ -800,7 +802,7 @@ export function GRNDetailClient({
                 <Button
                   type="button"
                   variant="outline"
-                  size="touch-lg"
+                  size={isTouchLayout ? "touch-lg" : "lg"}
                   onClick={closeLineEdit}
                   className="w-full"
                 >

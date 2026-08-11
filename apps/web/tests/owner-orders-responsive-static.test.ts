@@ -68,8 +68,8 @@ test("Owner list and finance controls use actual touch-sized fields below deskto
   const dataTable = read(DATA_TABLE);
 
   assert.match(financeFilter, /useFormControlSize\(\)/);
-  assert.match(currentFunds, /useIsMobile\(1024\)/);
-  assert.match(ingredients, /useIsMobile\(1024\)/);
+  assert.match(currentFunds, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
+  assert.match(ingredients, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
   assert.match(ingredients, /useFormControlSize\(\)/);
   assert.match(dataTable, /mobileBreakpoint = 1024/);
   assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
@@ -94,7 +94,7 @@ test("Owner order and refund controls use named touch variants below desktop", (
   const pageBody = read(ORDERS_PAGE_BODY);
 
   assert.match(orders, /useFormControlSize\(\)/);
-  assert.match(refunds, /useIsMobile\(1024\)/);
+  assert.match(refunds, /useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/);
   assert.match(orders, /size=\{controlSize\}/);
   assert.match(
     orders,
@@ -108,7 +108,7 @@ test("Owner order and refund controls use named touch variants below desktop", (
     2,
   );
   assert.match(refunds, /actionSize=\{isTouchLayout \? "touch" : "default"\}/);
-  assert.match(pageBody, /size="touch"/);
+  assert.match(pageBody, /size=\{isTouchLayout \? "touch" : "lg"\}/);
   assert.doesNotMatch(pageBody, /size=\{embedded \? "touch" : "sm"\}/);
 });
 
@@ -120,12 +120,15 @@ test("Ingredients no longer exposes Import and Export", () => {
 test("invoice mobile cards wrap touch actions without forcing page overflow", () => {
   const source = read("apps/web/app/(protected)/finance/invoice-list.tsx");
 
-  assert.match(source, /const size = dense \? "icon" : "touch"/);
+  assert.match(source, /const size = dense \? "icon" : isTouchLayout \? "touch" : "default"/);
   assert.equal(
     source.match(/size=\{isTouchLayout \? "touch" : "sm"\}/g)?.length,
     1,
   );
-  assert.match(source, /variant=\{methodFixMethod[\s\S]*size="touch"/);
+  assert.match(
+    source,
+    /variant=\{methodFixMethod[\s\S]*size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
   assert.match(source, /flex flex-wrap items-center justify-end gap-2/);
   assert.match(
     source,

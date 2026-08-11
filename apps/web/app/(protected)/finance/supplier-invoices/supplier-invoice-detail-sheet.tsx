@@ -50,6 +50,10 @@ import {
   getPaymentMethodLabel,
 } from "./supplier-invoice-form-schema";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export type SupplierInvoiceDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -133,6 +137,8 @@ export function SupplierInvoiceDetailSheet({
   onCredit,
   onRecomputeMatching,
 }: SupplierInvoiceDetailSheetProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const selectedLastPayment = selectedInvoice?.lastPayment ?? null;
 
   return (
@@ -615,7 +621,7 @@ export function SupplierInvoiceDetailSheet({
                   selectedInvoice.matchStatus === "matched" ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       className="flex-1"
                       onClick={onConfirmInvoice}
                       disabled={isPending}
@@ -627,7 +633,7 @@ export function SupplierInvoiceDetailSheet({
                   selectedInvoice.documentStatus === "draft" ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       onClick={onEditInvoice}
                       disabled={isPending}
@@ -638,7 +644,7 @@ export function SupplierInvoiceDetailSheet({
                   {canShowPayAction ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       className="flex-1"
                       variant={payIsPrimary ? "default" : "outline"}
                       onClick={onPay}
@@ -652,7 +658,7 @@ export function SupplierInvoiceDetailSheet({
                   parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       onClick={onAllocateAdvance}
                       disabled={isPending}
@@ -665,7 +671,7 @@ export function SupplierInvoiceDetailSheet({
                   selectedInvoice.matchStatus === "pending" ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       onClick={onVerifyService}
                       disabled={isPending}
@@ -678,7 +684,7 @@ export function SupplierInvoiceDetailSheet({
                   selectedInvoice.matchStatus === "discrepancy" ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       onClick={onAcceptDiscrepancy}
                       disabled={isPending}
@@ -689,7 +695,7 @@ export function SupplierInvoiceDetailSheet({
                   {canAcceptDiscrepancy && selectedOutstandingAmount > 0 ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       variant="outline"
                       onClick={onCredit}
                       disabled={isPending}
@@ -701,7 +707,7 @@ export function SupplierInvoiceDetailSheet({
                   selectedInvoice.invoiceKind === "goods" ? (
                     <Button
                       type="button"
-                      size="touch"
+                      size={isTouchLayout ? "touch" : "default"}
                       className={canShowPayAction ? "flex-1" : "w-full"}
                       variant="outline"
                       onClick={onRecomputeMatching}

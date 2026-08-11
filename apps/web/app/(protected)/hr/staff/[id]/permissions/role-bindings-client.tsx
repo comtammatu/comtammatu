@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: security role binding surface */
 
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -63,6 +67,8 @@ export function RoleBindingsClient({
   canManage,
   canOpenSecuritySettings,
 }: Props) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [revoking, setRevoking] = useState<RoleBinding | null>(null);
@@ -220,7 +226,7 @@ export function RoleBindingsClient({
           canManage ? (
             <Button
               type="button"
-              size="touch"
+              size={isTouchLayout ? "touch" : "default"}
               onClick={() => setFormOpen(true)}
             >
               Gán vai trò

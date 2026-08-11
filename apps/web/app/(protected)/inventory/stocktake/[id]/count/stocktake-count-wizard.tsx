@@ -21,6 +21,10 @@ import { messages } from "@lib/messages";
 import type { StocktakeLineBlind } from "../../../stocktake-actions";
 import type { DraftCounts } from "../../../_components/stocktake-draft-saver";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface StocktakeCountWizardProps {
   /** Current-round lines already filtered by the container. */
   lines: StocktakeLineBlind[];
@@ -87,6 +91,8 @@ export function StocktakeCountWizard({
   showFooter = true,
   chrome,
 }: StocktakeCountWizardProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const copy = messages.inventory.stocktake.countNative;
   const [sheetIngredientId, setSheetIngredientId] = useState<number | null>(
     null,
@@ -207,7 +213,7 @@ export function StocktakeCountWizard({
                 >
                   <SelectTrigger
                     aria-label="Counting unit"
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                     className="w-full"
                   >
                     <SelectValue />
@@ -217,7 +223,7 @@ export function StocktakeCountWizard({
                       <SelectItem
                         key={option.unitId}
                         value={String(option.unitId)}
-                        size="touch"
+                        size={isTouchLayout ? "touch" : "default"}
                       >
                         {option.label}
                       </SelectItem>
@@ -254,7 +260,7 @@ export function StocktakeCountWizard({
           trailing={
             <Button
               type="button"
-              size="touch-lg"
+              size={isTouchLayout ? "touch-lg" : "lg"}
               onClick={onSubmit}
               disabled={!editable || submitting || done === 0}
             >

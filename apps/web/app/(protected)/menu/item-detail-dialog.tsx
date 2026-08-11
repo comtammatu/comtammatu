@@ -33,6 +33,10 @@ import { WholeVndInput } from "@/components/form";
 
 import { FORM_VI, MENU_VI } from "@comtammatu/shared/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface VariantEntry {
   id?: number;
   name: string;
@@ -66,6 +70,8 @@ export function ItemDetailDialog({
   item,
   allItems,
 }: ItemDetailDialogProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [variants, setVariants] = useState<VariantEntry[]>([]);
   const [modifiers, setModifiers] = useState<ModifierEntry[]>([]);
   const [sides, setSides] = useState<SideEntry[]>([]);
@@ -275,7 +281,7 @@ export function ItemDetailDialog({
         </Alert>
       ) : (
         <Tabs defaultValue="variants" className="w-full">
-          <TabsList size="touch" className="w-full">
+          <TabsList size={isTouchLayout ? "touch" : "default"} className="w-full">
             <TabsTrigger value="variants" className="flex-1">
               {MENU_VI.variantsTab} ({variants.length})
             </TabsTrigger>

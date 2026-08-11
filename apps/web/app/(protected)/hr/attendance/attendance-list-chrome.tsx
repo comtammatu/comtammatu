@@ -159,12 +159,14 @@ export function AttendanceToolbarActions({
   isPending: boolean;
   onSelectView: (view: AttendanceView) => void;
 }) {
+  const controlSize = useFormControlSize();
+
   return (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {todayMode ? null : (
         <ToggleGroup
           type="single"
-          size="touch"
+          size={controlSize === "touch" ? "touch" : "default"}
           value={view}
           onValueChange={(value) => {
             if (

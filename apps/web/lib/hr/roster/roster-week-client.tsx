@@ -42,6 +42,10 @@ import {
 } from "./week";
 import { WeeklyScheduleDialog } from "./weekly-schedule-dialog";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.hr.roster;
 
 export type RosterSiteOption = {
@@ -66,6 +70,8 @@ export function RosterWeekClient({
   loadFailed: boolean;
   urlTab?: string;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const {
     isPending,
     assignmentMap,
@@ -91,7 +97,7 @@ export function RosterWeekClient({
       <Button
         type="button"
         variant="ghost"
-        size="touch"
+        size={isTouchLayout ? "touch" : "default"}
         className={cn("px-3 text-sm", className)}
         onClick={() => setScheduleEmployeeId(employee.employeeId)}
         disabled={isPending || data.shifts.length === 0}
@@ -121,15 +127,15 @@ export function RosterWeekClient({
           }
           disabled={isPending}
         >
-          <SelectTrigger size="touch" className="w-full min-w-0 flex-1">
+          <SelectTrigger size={isTouchLayout ? "touch" : "default"} className="w-full min-w-0 flex-1">
             <SelectValue placeholder={copy.emptyShift} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={EMPTY_SHIFT_VALUE} size="touch">
+            <SelectItem value={EMPTY_SHIFT_VALUE} size={isTouchLayout ? "touch" : "default"}>
               {copy.emptyShift}
             </SelectItem>
             {data.shifts.map((shift) => (
-              <SelectItem key={shift.id} value={String(shift.id)} size="touch">
+              <SelectItem key={shift.id} value={String(shift.id)} size={isTouchLayout ? "touch" : "default"}>
                 {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
               </SelectItem>
             ))}
@@ -138,7 +144,7 @@ export function RosterWeekClient({
         <Button
           type="button"
           variant="ghost"
-          size="icon-touch"
+          size={isTouchLayout ? "icon-touch" : "icon-sm"}
           className="shrink-0"
           disabled={isPending || !canToggleLeader}
           aria-label={
@@ -232,7 +238,7 @@ export function RosterWeekClient({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             onClick={() => handleWeekShift(-7)}
             disabled={isPending}
             aria-label={copy.previousWeek}
@@ -248,7 +254,7 @@ export function RosterWeekClient({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             onClick={() => handleWeekShift(7)}
             disabled={isPending}
             aria-label={copy.nextWeek}
@@ -316,7 +322,7 @@ export function RosterWeekClient({
         <Button
           type="button"
           variant="outline"
-          size="touch"
+          size={isTouchLayout ? "touch" : "default"}
           className="min-w-0 flex-1"
           onClick={handleCopyPreviousWeek}
           disabled={isPending}
@@ -325,7 +331,7 @@ export function RosterWeekClient({
         </Button>
         <Button
           type="button"
-          size="touch"
+          size={isTouchLayout ? "touch" : "default"}
           className="min-w-0 flex-1"
           onClick={handleSave}
           disabled={isPending || !dirty}

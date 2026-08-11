@@ -2,6 +2,9 @@ import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
+/** Owner / control_surface shell cutover: touch below, dense from this width up. */
+export const OWNER_SHELL_BREAKPOINT = 1024;
+
 const mqlCache = new Map<number, MediaQueryList>();
 
 function getMediaQueryList(breakpoint: number): MediaQueryList {

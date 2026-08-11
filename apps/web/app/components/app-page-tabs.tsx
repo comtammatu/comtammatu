@@ -7,6 +7,11 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { UrlTabs } from "@/_components/url-tabs";
 import { APP_PAGE_STICKY_FILTER_CLASSNAME } from "@/components/surface";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
+
 type AppPageTabItem = {
   value: string;
   label: ReactNode;
@@ -38,12 +43,14 @@ export function AppPageTabs({
   stickyList = false,
   queryKeysByValue,
 }: AppPageTabsProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const initial = items.some((item) => item.value === defaultValue)
     ? defaultValue
     : items[0]?.value;
   if (!initial) return null;
   const list = (
-    <TabsList variant="toolbar" size="touch" aria-label={ariaLabel}>
+    <TabsList variant="toolbar" size={isTouchLayout ? "touch" : "default"} aria-label={ariaLabel}>
       {items.map((item) => (
         <TabsTrigger
           key={item.value}

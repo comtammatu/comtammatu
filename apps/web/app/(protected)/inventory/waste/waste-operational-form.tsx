@@ -40,6 +40,10 @@ import {
 import { INVENTORY_ERROR_CODES } from "@lib/messages/inventory-rpc-errors";
 import { cn } from "@comtammatu/ui";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export function WasteOperationalForm({
   context,
   cancelHref,
@@ -49,6 +53,8 @@ export function WasteOperationalForm({
   cancelHref: string;
   onCreated: (issueId: number) => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const copy = messages.inventory.waste.operational;
   const nextLineId = useRef(1);
   const [locationId, setLocationId] = useState<number | null>(
@@ -199,7 +205,7 @@ export function WasteOperationalForm({
             value={locationId == null ? "" : String(locationId)}
             onValueChange={(value) => setLocationId(Number(value))}
           >
-            <SelectTrigger size="touch">
+            <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
               <SelectValue placeholder={copy.locationPlaceholder} />
             </SelectTrigger>
             <SelectContent>
@@ -207,7 +213,7 @@ export function WasteOperationalForm({
                 <SelectItem
                   key={location.id}
                   value={String(location.id)}
-                  size="touch"
+                  size={isTouchLayout ? "touch" : "default"}
                 >
                   {location.name}
                 </SelectItem>
@@ -269,7 +275,7 @@ export function WasteOperationalForm({
                       value: String(item.id),
                       label: item.name,
                     }))}
-                    size="touch"
+                    size={isTouchLayout ? "touch" : "default"}
                   />
                 </Field>
                 <Field>
@@ -286,7 +292,7 @@ export function WasteOperationalForm({
                       });
                     }}
                   >
-                    <SelectTrigger size="touch">
+                    <SelectTrigger size={isTouchLayout ? "touch" : "default"}>
                       <SelectValue placeholder={copy.unitPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
@@ -294,7 +300,7 @@ export function WasteOperationalForm({
                         <SelectItem
                           key={item.unitId}
                           value={String(item.unitId)}
-                          size="touch"
+                          size={isTouchLayout ? "touch" : "default"}
                         >
                           {item.label}
                         </SelectItem>
@@ -365,7 +371,7 @@ export function WasteOperationalForm({
                         photoUrls: url ? [url] : [],
                       })
                     }
-                    previewSize="touch"
+                    previewSize={isTouchLayout ? "touch" : "default"}
                   />
                 </Field>
                 <Button
@@ -389,7 +395,7 @@ export function WasteOperationalForm({
           <Button
             type="button"
             variant="outline"
-            size="touch"
+            size={isTouchLayout ? "touch" : "default"}
             render={<Link href={cancelHref} />}
           >
             {ACTIONS_VI.cancel}
@@ -398,7 +404,7 @@ export function WasteOperationalForm({
         trailing={
           <Button
             type="button"
-            size="touch-lg"
+            size={isTouchLayout ? "touch-lg" : "lg"}
             disabled={isPending}
             onClick={submit}
           >

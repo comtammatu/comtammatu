@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
-import { Button } from "@comtammatu/ui/components/button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import {
   AppEmptyState,
   AppPage,
@@ -174,13 +173,11 @@ export default async function HrAttendancePage({
         description={copy.attendanceDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            <ResponsiveBackButton
+              href={withHrBranchScope("/hr", branchScope)}
             >
               {messages.hr.payroll.backToHr}
-            </Button>
+            </ResponsiveBackButton>
           </div>
         }
       />

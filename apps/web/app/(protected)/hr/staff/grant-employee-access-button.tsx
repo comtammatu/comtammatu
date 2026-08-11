@@ -32,6 +32,11 @@ import {
   withHrBranchScope,
 } from "@/lib/hr-scope";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
+
 type GrantEmployeeAccessButtonProps = {
   employees: EmployeeRow[];
   staff: StaffRow[];
@@ -41,6 +46,8 @@ export function GrantEmployeeAccessButton({
   employees,
   staff,
 }: GrantEmployeeAccessButtonProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const router = useRouter();
   const branchScope = resolveHrBranchScope(useSearchParams().get("branch"));
   const [open, setOpen] = useState(false);
@@ -126,7 +133,7 @@ export function GrantEmployeeAccessButton({
 
   return (
     <>
-      <Button variant="outline" size="touch" onClick={() => setOpen(true)}>
+      <Button variant="outline" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
         <IconKeyRound data-icon="inline-start" />
         {staffCopy.grantForEmployee}
       </Button>
@@ -140,7 +147,7 @@ export function GrantEmployeeAccessButton({
         description={staffCopy.grantForEmployeeDescription}
       >
         <div className="grid gap-3">
-          <InputGroup size="touch" className="min-w-0">
+          <InputGroup size={isTouchLayout ? "touch" : "default"} className="min-w-0">
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>

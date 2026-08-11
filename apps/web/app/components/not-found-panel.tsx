@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { AppEmptyState } from "@/components/surface";
 
 export type NotFoundPanelProps = {
@@ -22,6 +28,8 @@ export function NotFoundPanel({
   allowSignInAgain = true,
   preferLogin = false,
 }: NotFoundPanelProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = isTouchLayout ? "touch" : "default";
   return (
     <AppEmptyState
       title={ERRORS_VI.pageNotFound}
@@ -32,7 +40,7 @@ export function NotFoundPanel({
       <div className="flex w-full max-w-sm flex-col gap-2 sm:max-w-none sm:flex-row sm:justify-center">
         {preferLogin ? (
           <Button
-            size="touch"
+            size={actionSize}
             className="w-full sm:w-auto sm:min-w-40"
             render={<Link href="/login" replace />}
           >
@@ -48,13 +56,17 @@ export function NotFoundPanel({
                 method="post"
                 className="w-full sm:w-auto"
               >
-                <Button type="submit" size="touch" className="w-full sm:min-w-40">
+                <Button
+                  type="submit"
+                  size={actionSize}
+                  className="w-full sm:min-w-40"
+                >
                   {ACTIONS_VI.signInAgain}
                 </Button>
               </form>
             ) : null}
             <Button
-              size="touch"
+              size={actionSize}
               variant="outline"
               className="w-full sm:w-auto sm:min-w-40"
               render={<Link href={homeHref} replace />}

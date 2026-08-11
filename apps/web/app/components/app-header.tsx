@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
 import { BRAND_NAME, BrandLogoBox, BrandMark } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ResponsiveThemeToggle } from "@/components/theme-toggle";
 
 export interface AppHeaderBrandProps {
   title: ReactNode;
@@ -137,7 +137,7 @@ export function AppHeader({
         {nav}
         <div className="flex shrink-0 items-center gap-2">
           {showThemeToggle ? (
-            <ThemeToggle variant="outline" size="icon-touch" />
+            <ResponsiveThemeToggle variant="outline" />
           ) : null}
           {actions}
         </div>

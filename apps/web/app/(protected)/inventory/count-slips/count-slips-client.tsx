@@ -373,7 +373,7 @@ export function CountSlipsClient({
         actions={
           <Button
             variant="outline"
-            size="touch"
+            size={controlSize === "touch" ? "touch" : "lg"}
             render={<Link href="/inventory/count-assignments" />}
           >
             <IconClipboardList aria-hidden="true" />

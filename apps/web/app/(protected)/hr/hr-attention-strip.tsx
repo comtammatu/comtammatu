@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AlertTriangle as IconAlertTriangle,
@@ -13,6 +15,10 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 import { AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import type { HrAttentionSummary } from "./hr-attention";
@@ -28,6 +34,8 @@ export function HrAttentionStrip({
   summary: HrAttentionSummary;
   branchScope: HrBranchScope;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const actionSize = isTouchLayout ? "touch" : "default";
   const copy = messages.hr.attention;
   const hasWork =
     summary.pendingApprovals > 0 || summary.missingContractOrSalary > 0;
@@ -49,7 +57,7 @@ export function HrAttentionStrip({
               </ItemContent>
               <ItemActions>
                 <Button
-                  size="touch"
+                  size={actionSize}
                   render={
                     <Link
                       href={withHrBranchScope(
@@ -76,7 +84,7 @@ export function HrAttentionStrip({
               <ItemActions>
                 <Button
                   variant="outline"
-                  size="touch"
+                  size={actionSize}
                   render={
                     <Link
                       href={withHrBranchScope(

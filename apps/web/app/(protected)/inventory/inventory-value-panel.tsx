@@ -34,6 +34,10 @@ import { messages } from "@lib/messages";
 import { AppEmptyState, AppPageHeader, AppSection } from "@/components/surface";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
 }
@@ -45,6 +49,8 @@ type BranchValueRow = {
 };
 
 export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [systemTotal, setSystemTotal] = useState<number | null>(null);
   const [branchRows, setBranchRows] = useState<BranchValueRow[] | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -125,7 +131,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           actions={
             <Button
               variant="ghost"
-              size="touch"
+              size={isTouchLayout ? "touch" : "lg"}
               onClick={refreshAll}
               disabled={isPending}
               className="gap-1.5 text-muted-foreground"
@@ -137,7 +143,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
         />
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
-            <TabsList variant="toolbar" size="touch" className="w-fit">
+            <TabsList variant="toolbar" size={isTouchLayout ? "touch" : "default"} className="w-fit">
               {visibility.system && (
                 <TabsTrigger value="system">
                   {messages.inventory.value.tabs.system}

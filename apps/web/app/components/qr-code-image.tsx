@@ -7,6 +7,10 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface QrCodeImageProps {
   value: string;
   alt: string;
@@ -28,6 +32,8 @@ export function QrCodeImage({
   downloadLabel,
   downloadName,
 }: QrCodeImageProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [directImageFailed, setDirectImageFailed] = useState(false);
   const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
@@ -109,7 +115,7 @@ export function QrCodeImage({
               <Button
                 type="button"
                 variant="outline"
-                size="touch"
+                size={isTouchLayout ? "touch" : "default"}
                 render={<a href={imageSource} download={downloadName} />}
               >
                 {downloadLabel}
@@ -134,7 +140,7 @@ export function QrCodeImage({
         <Button
           type="button"
           variant="outline"
-          size="touch"
+          size={isTouchLayout ? "touch" : "default"}
           onClick={() => {
             setDirectImageFailed(false);
             setGeneratedDataUrl(null);

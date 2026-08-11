@@ -17,6 +17,10 @@ import { messages } from "@lib/messages";
 import { calculateAttendanceWorkHours } from "./attendance-summary";
 import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export interface AttendanceCalendarRecord {
   id: number;
   date: string;
@@ -128,6 +132,8 @@ export function AttendanceCalendar({
   attentionOnly?: boolean;
   staleOpenDates?: string[];
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const summaryByDate = summarizeAttendanceByDate(records);
   const staleOpenDateSet = new Set(staleOpenDates);
   const cells = getVNMonthCalendarCells(`${month}-01`);
@@ -223,7 +229,7 @@ export function AttendanceCalendar({
                             <Button
                               type="button"
                               variant="ghost"
-                              size="touch"
+                              size={isTouchLayout ? "touch" : "default"}
                               aria-label={getCalendarDayAriaLabel(
                                 formatVNBusinessDate(cell.date),
                                 summary,

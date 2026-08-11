@@ -82,6 +82,10 @@ import type { UnitOption } from "@lib/inventory/types";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { matchesSearch } from "@lib/search";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 /* ─── Schema ─── */
 
 import {
@@ -991,6 +995,7 @@ function RecipeGroupCard({
   actions: RowActionItem[];
   onOpen?: () => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const overflowActions = actions.filter((action) => action.key !== "edit");
 
   return (
@@ -1035,7 +1040,7 @@ function RecipeGroupCard({
               <RowActionsMenu
                 items={overflowActions}
                 label={recipeActionAria(group)}
-                triggerSize="icon-touch"
+                triggerSize={isTouchLayout ? "icon-touch" : "icon"}
               />
             ) : null}
           </ItemActions>

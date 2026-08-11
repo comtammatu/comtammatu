@@ -900,7 +900,7 @@ export function EmployeeTable({
             <Button
               type="button"
               variant="outline"
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               disabled={isPending}
               onClick={() => setPendingPlacement(null)}
             >
@@ -908,7 +908,7 @@ export function EmployeeTable({
             </Button>
             <Button
               type="button"
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               disabled={isPending || pendingPlacement == null}
               onClick={() => {
                 if (!pendingPlacement) return;
@@ -940,7 +940,7 @@ export function EmployeeTable({
             }
           >
             <SelectTrigger
-              size="touch"
+              size={controlSize === "touch" ? "touch" : "default"}
               className="w-full"
               aria-label={quickCopy.transferWorkplaceLabel}
             >

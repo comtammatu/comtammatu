@@ -59,6 +59,10 @@ import {
 } from "@lib/inventory/grn-list-model";
 import { resolveGrnValuationDisplay } from "@lib/inventory/valuation-display";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const statusLabels: Record<string, string> = {
   draft: "Chờ nhập hàng",
   confirmed: "Đã nhập kho",
@@ -570,6 +574,8 @@ function GrnMobileCard({
   actions: RowActionItem[];
   onOpen: () => void;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   return (
     <InteractiveCard
       minHeight="mobile"
@@ -631,7 +637,7 @@ function GrnMobileCard({
         <RowActionsMenu
           items={actions}
           label={`${FORM_VI.action} ${row.code}`}
-          triggerSize="icon-touch"
+          triggerSize={isTouchLayout ? "icon-touch" : "icon"}
         />
       </div>
     </InteractiveCard>

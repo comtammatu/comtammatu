@@ -14,6 +14,10 @@ import {
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 export interface SupplierRow {
   id: number;
   name: string;
@@ -58,6 +62,7 @@ function SupplierTaxCodeField({
 }: {
   form: UseFormReturn<SupplierFormValues>;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const taxCode = form.watch("tax_code") ?? "";
   const [status, setStatus] = useState<TaxLookupStatus>("idle");
 
@@ -122,7 +127,7 @@ function SupplierTaxCodeField({
         <Button
           type="button"
           variant="outline"
-          size="touch"
+          size={isTouchLayout ? "touch" : "default"}
           disabled={!taxCode.trim() || status === "loading"}
           onClick={() => void handleLookup()}
         >

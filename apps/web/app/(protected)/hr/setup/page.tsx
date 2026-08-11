@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { Suspense } from "react";
-import { Button } from "@comtammatu/ui/components/button";
+import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchShifts } from "../actions";
@@ -82,13 +81,11 @@ export default async function HrSetupPage({
         description={copy.setupDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="touch"
-              render={<Link href={withHrBranchScope("/hr", branchScope)} />}
+            <ResponsiveBackButton
+              href={withHrBranchScope("/hr", branchScope)}
             >
               {messages.hr.payroll.backToHr}
-            </Button>
+            </ResponsiveBackButton>
           </div>
         }
       />

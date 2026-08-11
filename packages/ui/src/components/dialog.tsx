@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "../lib/utils";
+import { OWNER_SHELL_BREAKPOINT, useIsMobile } from "../hooks/use-mobile";
 import { Button } from "./button";
 import { X as IconX } from "lucide-react";
 
@@ -62,6 +63,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Popup> & {
   showCloseButton?: boolean;
 }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -82,8 +84,8 @@ function DialogContent({
                 variant="ghost"
                 // Pin to header cell so absolute close does not create an
                 // implicit second grid column under AppDialog document rows.
-                className="absolute top-2 right-2 z-10 col-start-1 row-start-1"
-                size="icon-touch"
+                className="absolute top-3 right-3 z-10 col-start-1 row-start-1"
+                size={isTouchLayout ? "icon-touch" : "icon-sm"}
               >
                 <IconX />
                 <span className="sr-only">Close</span>

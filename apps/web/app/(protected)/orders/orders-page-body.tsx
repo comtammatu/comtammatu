@@ -12,6 +12,10 @@ import { RefundsClient } from "./refunds-client";
 import type { OrderRow, OrdersSummary } from "./actions";
 import type { RefundRow } from "./refund-actions";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 interface OrdersPageBodyProps {
   orders: OrderRow[];
   summary: OrdersSummary;
@@ -33,6 +37,8 @@ export function OrdersPageBody({
   initialSelectedOrder = null,
   embedded = false,
 }: OrdersPageBodyProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const pendingRefundCount = refunds.filter(
     (r) => r.status === "pending",
   ).length;
@@ -79,7 +85,7 @@ export function OrdersPageBody({
         actions={
           <Button
             variant="outline"
-            size="touch"
+            size={isTouchLayout ? "touch" : "lg"}
             render={<Link href="/finance" />}
           >
             {ORDERS_COPY.reportsAction}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ClipboardList as IconClipboardList,
   PackageCheck as IconPackageCheck,
@@ -487,10 +487,7 @@ export default async function StockIngredientDetailPage({
   const ingredientId = Number(rawIngredientId);
   if (!Number.isInteger(ingredientId) || ingredientId <= 0) notFound();
 
-  return (
-    <StockIngredientDetailPageContent
-      ingredientId={ingredientId}
-      searchParams={searchParams}
-    />
-  );
+  const sp = await searchParams;
+  const branchQuery = sp.branch ? `&branch=${sp.branch}` : "";
+  redirect(`/inventory/stock?ingredientId=${ingredientId}&mode=view${branchQuery}`);
 }

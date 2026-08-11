@@ -14,6 +14,10 @@ import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { challengeAndVerifyTotp } from "@lib/auth/mfa";
 import { messages } from "@lib/messages";
 
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.auth.mfa;
 
 type MfaChallengeFormProps = {
@@ -29,6 +33,8 @@ export function MfaChallengeForm({
   submitLabel = copy.verifySubmit,
   description = copy.challengeDescription,
 }: MfaChallengeFormProps) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -84,7 +90,7 @@ export function MfaChallengeForm({
         </Field>
       </FieldGroup>
 
-      <Button type="submit" size="touch" disabled={isPending || code.length < 6}>
+      <Button type="submit" size={isTouchLayout ? "touch" : "default"} disabled={isPending || code.length < 6}>
         {isPending ? (
           <>
             <Spinner className="motion-reduce:animate-none" />
