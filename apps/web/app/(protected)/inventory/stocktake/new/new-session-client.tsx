@@ -135,10 +135,7 @@ export function NewStocktakeSessionClient({
   );
 
   const header = (
-    <AppPageHeader
-      title={messages.inventory.stocktake.startTitle}
-      description={messages.inventory.stocktake.startDescription}
-    />
+    <AppPageHeader title={messages.inventory.stocktake.startTitle} />
   );
 
   if (loadFailed) {

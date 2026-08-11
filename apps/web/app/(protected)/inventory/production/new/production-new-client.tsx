@@ -368,7 +368,6 @@ export function ProductionNewClient({
       header={
         <AppPageHeader
           title="Tạo Lệnh sản xuất"
-          description="Tạo lệnh nháp từ một công thức đã duyệt."
           breadcrumb={<AppBackLink href={basePath}>Quay lại</AppBackLink>}
         />
       }

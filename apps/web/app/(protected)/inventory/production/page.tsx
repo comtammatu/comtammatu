@@ -78,7 +78,6 @@ export async function ProductionPageContent({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={INVENTORY_VI.productionTitle}
-        description={INVENTORY_VI.productionOrdersCardDescription}
         actions={
           activeTab === "runs" ? (
             <Button

@@ -471,7 +471,6 @@ export function CountAssignmentsClient({
     <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader
         title={INVENTORY_VI.countAssignTitle}
-        description={INVENTORY_VI.countAssignDescription}
         actions={
           <Button
             variant="outline"

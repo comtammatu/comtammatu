@@ -127,7 +127,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
       <div className="flex flex-col gap-3">
         <AppPageHeader
           title={messages.inventory.value.title}
-          description={messages.inventory.value.description}
           actions={
             <Button
               variant="ghost"

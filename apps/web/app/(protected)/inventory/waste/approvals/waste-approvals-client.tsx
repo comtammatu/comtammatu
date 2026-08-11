@@ -58,7 +58,7 @@ export function WasteApprovalsClient({
     <AppPage width="xwide">
       <AppPageHeader
         title={copy.title}
-        description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
+        meta={branchFilter !== null ? `CN #${branchFilter}` : undefined}
         badge={{ children: copy.count(rows.length) }}
       />
       {loadFailed ? (

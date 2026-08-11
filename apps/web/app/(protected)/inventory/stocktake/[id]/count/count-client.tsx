@@ -202,7 +202,7 @@ export function StocktakeCountClient({
   const header = (
     <AppPageHeader
       title={`${messages.inventory.stocktake.startCounting} #${sessionId}`}
-      description={`CN #${branchId} · Round R${currentRound}`}
+      meta={`CN #${branchId} · Round R${currentRound}`}
     />
   );
 

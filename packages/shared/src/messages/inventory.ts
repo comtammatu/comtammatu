@@ -31,8 +31,6 @@ export const INVENTORY_VI = {
   productionOrdersTab: "Lệnh sản xuất",
   productionRecipesTab: "Công thức sản xuất",
   productionBackToHub: "Về trạm sản xuất",
-  productionOrdersCardDescription:
-    "Theo dõi lệnh từ nháp, bắt đầu sản xuất đến khi nhập thành phẩm tại Bếp Trung Tâm.",
   productionOrdersMetricLabel: "lệnh",
   productionOrdersSearchPlaceholder: "Tìm số lệnh, thành phẩm, chi nhánh…",
   productionOpenOrders: "Mở lệnh sản xuất",
@@ -409,8 +407,6 @@ export const INVENTORY_VI = {
   issueCreated: "Đã tạo phiếu.",
   issueNotesPlaceholder: "Nhập ghi chú cho phiếu",
   countSlipTitle: "Duyệt phiếu đếm tồn",
-  countSlipDescription:
-    "Đối chiếu số đếm với tồn hệ thống, rồi duyệt hoặc yêu cầu đếm lại.",
   countSlipPendingBadge: (count: number) => `${formatCount(count)} chờ duyệt`,
   countSlipEmptyTitle: "Không có phiếu đếm chờ duyệt",
   countSlipEmptyDescription:

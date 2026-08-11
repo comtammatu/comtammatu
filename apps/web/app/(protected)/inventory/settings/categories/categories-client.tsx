@@ -188,7 +188,6 @@ export function CategoriesClient({ rows }: { rows: CategoryRow[] }) {
     <>
       <AppPageHeader
         title={copy.page.title}
-        description={copy.page.description}
         actions={
           <Button size="lg" onClick={openCreate}>
             <IconPlus data-icon="inline-start" />

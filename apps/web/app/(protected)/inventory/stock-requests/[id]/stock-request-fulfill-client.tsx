@@ -889,7 +889,7 @@ export function StockRequestFulfillClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={requestNumber}
-        description={copy.headerDescription(
+        meta={copy.headerDescription(
           branchLabel,
           stockRequestCopy.statusLabel(status),
         )}

@@ -30,10 +30,7 @@ export default async function InventoryCategoriesPage() {
         <CategoriesClient rows={rows} />
       ) : (
         <>
-          <AppPageHeader
-            title={copy.page.title}
-            description={copy.page.description}
-          />
+          <AppPageHeader title={copy.page.title} />
           <AppListFrame>
             <AppEmptyState
               mode="error"

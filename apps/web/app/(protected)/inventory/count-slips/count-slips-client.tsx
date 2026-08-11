@@ -369,7 +369,6 @@ export function CountSlipsClient({
     <AppPage width="xwide" density="compact">
       <AppPageHeader
         title={INVENTORY_VI.countSlipTitle}
-        description={INVENTORY_VI.countSlipDescription}
         actions={
           <Button
             variant="outline"

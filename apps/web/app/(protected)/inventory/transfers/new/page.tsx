@@ -23,7 +23,6 @@ export default async function NewTransferPage({
       header={
         <AppPageHeader
           title={copy.manualTransferAction}
-          description={copy.manualTransferDescription}
           actions={
             <Button
               variant="ghost"

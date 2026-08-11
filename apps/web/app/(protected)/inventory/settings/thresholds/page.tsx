@@ -45,10 +45,7 @@ export default async function InventoryThresholdsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-      />
+      <AppPageHeader title={copy.title} />
 
       {!res.success ? (
         <AppListFrame>

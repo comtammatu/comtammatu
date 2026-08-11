@@ -2,7 +2,6 @@ export const UNITS_VI = {
   page: {
     eyebrow: "Quản lý nguyên liệu",
     title: "Đơn vị đo",
-    description: "Đơn vị dùng chung. Quy đổi cấu hình theo từng nguyên liệu.",
   },
   add: "Thêm đơn vị",
   empty: "Chưa có đơn vị nào. Thêm đơn vị đầu tiên để bắt đầu.",
@@ -63,7 +62,6 @@ export const CATEGORIES_VI = {
   page: {
     eyebrow: "Quản lý nguyên liệu",
     title: "Nhóm nguyên liệu",
-    description: "Phân nhóm nguyên liệu để lọc, báo cáo và gán màu hiển thị.",
   },
   add: "Thêm nhóm",
   empty: "Chưa có nhóm nào. Thêm nhóm đầu tiên để bắt đầu.",

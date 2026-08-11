@@ -15,7 +15,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
       header={
         <AppPageHeader
           title={copy.title}
-          description={context.branch.name}
+          meta={context.branch.name}
         />
       }
       width="wide"

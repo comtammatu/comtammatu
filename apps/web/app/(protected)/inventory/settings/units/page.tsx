@@ -26,10 +26,7 @@ export default async function InventoryUnitsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <AppPageHeader
-        title={copy.page.title}
-        description={copy.page.description}
-      />
+      <AppPageHeader title={copy.page.title} />
 
       {res.success ? (
         <UnitsClient rows={rows} />
