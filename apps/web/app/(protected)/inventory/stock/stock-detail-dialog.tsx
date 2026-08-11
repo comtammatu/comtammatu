@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import {
+  ArrowDownToLine as IconArrowDownToLine,
+  ArrowUpFromLine as IconArrowUpFromLine,
   Pencil as IconPencil,
+  SquarePen as IconSquarePen,
   Truck as IconTruck,
 } from "lucide-react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { cn } from "@comtammatu/ui/lib/utils";
 import { AppDialog } from "@/components/form";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
@@ -21,8 +25,9 @@ import {
 import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
-  resolveStockDisplayUnit,
+  resolveStockCompactUnit,
   stockUnitLabel,
+  toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
 import {
   stockMovementLabel,
@@ -44,7 +49,9 @@ export interface StockDetailDialogProps {
   isLoading?: boolean;
   isTouchLayout: boolean;
   canAdjustStock?: boolean;
+  canEditIngredient?: boolean;
   onAdjustStock?: () => void;
+  onEditIngredient?: () => void;
   onQuickIssue?: () => void;
 }
 
@@ -55,7 +62,9 @@ export function StockDetailDialog({
   isLoading = false,
   isTouchLayout,
   canAdjustStock = false,
+  canEditIngredient = false,
   onAdjustStock,
+  onEditIngredient,
   onQuickIssue,
 }: StockDetailDialogProps) {
   const actionSize = isTouchLayout ? "touch" : "default";
@@ -69,15 +78,22 @@ export function StockDetailDialog({
     ? formatStockUnits(detailData?.totalQty ?? 0, ingredient.units, formatQty)
     : { big: null, base: "" };
 
+  const compactUnit = ingredient
+    ? resolveStockCompactUnit(
+        detailData?.totalQty ?? 0,
+        ingredient.units,
+      )
+    : undefined;
   const wacUnitLabel = ingredient
     ? stockUnitLabel(
-        resolveStockDisplayUnit(ingredient.units),
+        compactUnit,
         ingredient.unit || inventoryCommon.noValue,
       )
     : "";
 
   const totalValue = detailData?.valuation?.totalValue ?? null;
   const wac = detailData?.valuation?.wac ?? null;
+  const displayWac = toStockDisplayUnitCost(wac, compactUnit);
   const valuationKind =
     detailData?.valuation == null
       ? null
@@ -86,6 +102,10 @@ export function StockDetailDialog({
           unitCost: wac,
         });
 
+  const thresholdUnits = ingredient
+    ? formatStockUnits(ingredient.min, ingredient.units, formatQty)
+    : { big: null, base: "" };
+
   const titleContent = (
     <div className="flex flex-wrap items-center gap-2">
       <span>{ingredient ? `Thẻ kho - ${ingredient.name}` : detailCopy.eyebrow}</span>
@@ -93,11 +113,18 @@ export function StockDetailDialog({
     </div>
   );
 
+  const skuDescription = ingredient ? (
+    <span className="font-mono">
+      {stockCopy.table.sku}: {ingredient.sku || inventoryCommon.noValue}
+    </span>
+  ) : undefined;
+
   return (
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
       title={titleContent}
+      description={skuDescription}
       variant="document"
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
@@ -110,15 +137,24 @@ export function StockDetailDialog({
             {ACTIONS_VI.close}
           </Button>
 
+          {canEditIngredient && onEditIngredient ? (
+            <Button
+              type="button"
+              variant="outline"
+              size={actionSize}
+              onClick={onEditIngredient}
+            >
+              <IconSquarePen data-icon="inline-start" />
+              {stockCopy.actions.edit}
+            </Button>
+          ) : null}
+
           {canAdjustStock && onAdjustStock ? (
             <Button
               type="button"
               variant="outline"
               size={actionSize}
-              onClick={() => {
-                onOpenChange(false);
-                onAdjustStock();
-              }}
+              onClick={onAdjustStock}
             >
               <IconPencil data-icon="inline-start" />
               {stockCopy.actions.exception}
@@ -129,10 +165,7 @@ export function StockDetailDialog({
             <Button
               type="button"
               size={actionSize}
-              onClick={() => {
-                onOpenChange(false);
-                onQuickIssue();
-              }}
+              onClick={onQuickIssue}
             >
               <IconTruck data-icon="inline-start" />
               {stockCopy.actions.issueStock}
@@ -147,24 +180,11 @@ export function StockDetailDialog({
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* Sub-Header Metadata */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>
-              SKU: <strong className="font-mono text-foreground">{ingredient.sku || inventoryCommon.noValue}</strong>
-            </span>
-            <span>·</span>
-            <span>
-              {stockCopy.table.categoryKind}: <strong className="text-foreground">{ingredient.category || inventoryCommon.noValue}</strong>
-            </span>
-            <span>·</span>
-            <span>
-              {stockCopy.table.stock}: <strong className="text-foreground">{ingredient.unit || inventoryCommon.noValue}</strong>
-            </span>
-          </div>
-
-          {/* Core Metrics Cards (Tồn hiện tại, Giá trị tồn, WAC, Kiểm kê cuối) */}
-          <Item variant="outline" className="grid grid-cols-2 gap-4 p-4 text-xs lg:grid-cols-4">
-            <div>
+          <Item
+            variant="outline"
+            className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+          >
+            <div className="min-w-0">
               <span className="block font-medium text-muted-foreground">
                 {stockCopy.table.currentStock}
               </span>
@@ -178,7 +198,7 @@ export function StockDetailDialog({
               </span>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <span className="block font-medium text-muted-foreground">
                 {stockCopy.table.stockValue}
               </span>
@@ -191,20 +211,40 @@ export function StockDetailDialog({
               </span>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <span className="block font-medium text-muted-foreground">
-                {stockCopy.table.wacPerUnit(wacUnitLabel)}
+                {stockCopy.table.wac}
               </span>
               <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-                {valuationKind === "valued" && wac != null
-                  ? formatVND(wac)
+                {valuationKind === "valued" && displayWac != null
+                  ? `${formatVND(displayWac)} / ${wacUnitLabel}`
                   : valuationKind === "pending"
                     ? valuationCopy.pendingWac
                     : inventoryCommon.noValue}
               </span>
             </div>
 
-            <div>
+            <div className="min-w-0">
+              <span className="block font-medium text-muted-foreground">
+                {stockCopy.table.threshold}
+              </span>
+              <span className="mt-1 flex flex-col font-mono text-base font-semibold tabular-nums text-foreground">
+                {ingredient.min > 0 ? (
+                  <>
+                    <span>{thresholdUnits.big ?? thresholdUnits.base}</span>
+                    {thresholdUnits.big !== null ? (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {thresholdUnits.base}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  inventoryCommon.noValue
+                )}
+              </span>
+            </div>
+
+            <div className="min-w-0">
               <span className="block font-medium text-muted-foreground">
                 {stockCopy.table.lastCount}
               </span>
@@ -216,56 +256,6 @@ export function StockDetailDialog({
             </div>
           </Item>
 
-          {/* Detailed Thresholds & Storage Specifications */}
-          {ingredient.min > 0 || ingredient.max > 0 || ingredient.reorder > 0 || detailData.storageTemperature ? (
-            <div className="flex flex-col gap-2">
-              {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: section heading */}
-              <h4 className="text-sm font-medium">Định mức tồn kho & Bảo quản</h4>
-              <Item variant="outline" className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4">
-                {ingredient.min > 0 ? (
-                  <div>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: metric label */}
-                    <span className="block text-muted-foreground">Tồn tối thiểu (Min)</span>
-                    <span className="mt-1 block font-mono font-semibold tabular-nums text-foreground">
-                      {formatQty(ingredient.min)} {ingredient.unit}
-                    </span>
-                  </div>
-                ) : null}
-
-                {ingredient.max > 0 ? (
-                  <div>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: metric label */}
-                    <span className="block text-muted-foreground">Tồn tối đa (Max)</span>
-                    <span className="mt-1 block font-mono font-semibold tabular-nums text-foreground">
-                      {formatQty(ingredient.max)} {ingredient.unit}
-                    </span>
-                  </div>
-                ) : null}
-
-                {ingredient.reorder > 0 ? (
-                  <div>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: metric label */}
-                    <span className="block text-muted-foreground">Điểm đặt hàng lại (Reorder)</span>
-                    <span className="mt-1 block font-mono font-semibold tabular-nums text-foreground">
-                      {formatQty(ingredient.reorder)} {ingredient.unit}
-                    </span>
-                  </div>
-                ) : null}
-
-                {detailData.storageTemperature ? (
-                  <div>
-                    {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: metric label */}
-                    <span className="block text-muted-foreground">Nhiệt độ bảo quản</span>
-                    <span className="mt-1 block font-medium text-foreground">
-                      {detailData.storageTemperature}
-                    </span>
-                  </div>
-                ) : null}
-              </Item>
-            </div>
-          ) : null}
-
-          {/* Locations Breakdown */}
           <div className="flex flex-col gap-2">
             <h4 className="text-sm font-medium">{detailCopy.locationTitle}</h4>
 
@@ -335,11 +325,10 @@ export function StockDetailDialog({
             )}
           </div>
 
-          {/* Stock Movement History */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <h4 className="text-sm font-medium">{detailCopy.movementTitle}</h4>
-              <span className="text-xs text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {detailCopy.movementHint(detailData.movements.length)}
               </span>
             </div>
@@ -349,90 +338,132 @@ export function StockDetailDialog({
                 {detailCopy.noMovementDescription}
               </Item>
             ) : (
-              <div className="flex flex-col gap-2">
-                {detailData.movements.map((movement: StockIngredientDetailMovement) => {
-                  const signedQty =
-                    movement.quantityChange > 0
-                      ? `+${formatQty(movement.quantityChange)}`
-                      : formatQty(movement.quantityChange);
-                  const referenceLabel = stockMovementReferenceLabel(movement);
-                  const referenceHref = stockMovementReferenceHref({
-                    movement,
-                    branchId: detailData.branchId,
-                  });
-                  const locationDisplay =
-                    movement.locationName === "main_warehouse" || movement.locationCode === "main_warehouse"
-                      ? messages.inventory.ingredients.dialog.defaultFulfillSiteKindCentralSupply
-                      : movement.locationName || inventoryCommon.noValue;
+              <Item
+                variant="outline"
+                className="flex-col flex-nowrap items-stretch gap-0 overflow-hidden p-0 text-xs"
+              >
+                <div
+                  className="grid grid-cols-3 gap-3 border-b bg-muted/40 px-3 py-2 font-medium text-muted-foreground"
+                  role="row"
+                >
+                  <span>{detailCopy.movementColOperation}</span>
+                  <span>{detailCopy.movementColWarehouse}</span>
+                  <span className="text-right">
+                    {detailCopy.movementColQuantity}
+                  </span>
+                </div>
 
-                  return (
-                    <Item
-                      key={movement.id}
-                      variant="outline"
-                      className="p-3 text-xs"
-                    >
-                      <div className="grid grid-cols-3 items-center gap-x-2 gap-y-1">
-                        {/* Col 1, Row 1: Action Type */}
-                        <div className="font-medium text-foreground truncate">
-                          {stockMovementLabel(movement)}
+                <div className="divide-y" role="list">
+                  {detailData.movements.map((movement: StockIngredientDetailMovement) => {
+                    const movementUnits = formatStockUnits(
+                      movement.quantityChange,
+                      ingredient.units,
+                      formatQty,
+                    );
+                    const withSignedPrefix = (value: string) =>
+                      movement.quantityChange > 0 ? `+${value}` : value;
+                    const movementPrimary = withSignedPrefix(
+                      movementUnits.big ?? movementUnits.base,
+                    );
+                    const movementBase =
+                      movementUnits.big !== null
+                        ? withSignedPrefix(movementUnits.base)
+                        : null;
+                    const referenceLabel = stockMovementReferenceLabel(movement);
+                    const referenceHref = stockMovementReferenceHref({
+                      movement,
+                      branchId: detailData.branchId,
+                    });
+                    const locationDisplay =
+                      movement.locationName === "main_warehouse" ||
+                      movement.locationCode === "main_warehouse"
+                        ? messages.inventory.ingredients.dialog
+                            .defaultFulfillSiteKindCentralSupply
+                        : movement.locationName || inventoryCommon.noValue;
+                    const isInbound = movement.quantityChange > 0;
+                    const isOutbound = movement.quantityChange < 0;
+                    const DirectionIcon = isInbound
+                      ? IconArrowDownToLine
+                      : isOutbound
+                        ? IconArrowUpFromLine
+                        : null;
+
+                    return (
+                      <div
+                        key={movement.id}
+                        role="listitem"
+                        className="grid grid-cols-3 items-center gap-3 px-3 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {stockMovementLabel(movement)}
+                          </p>
+                          <p className="truncate text-muted-foreground">
+                            {formatDateTime(movement.createdAt)}
+                          </p>
                         </div>
 
-                        {/* Col 2, Row 1: Reference Document Code */}
-                        <div className="text-center font-mono truncate">
+                        <div className="flex min-w-0 items-center gap-2">
+                          {DirectionIcon ? (
+                            <span
+                              className={cn(
+                                "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
+                                isInbound
+                                  ? "bg-success/10 text-success"
+                                  : "bg-destructive/10 text-destructive",
+                              )}
+                              aria-hidden
+                            >
+                              <DirectionIcon className="size-3.5" />
+                            </span>
+                          ) : (
+                            <span className="size-7 shrink-0" aria-hidden />
+                          )}
+                          <span className="truncate text-foreground">
+                            {locationDisplay}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 text-right">
+                          <p
+                            className={cn(
+                              "flex flex-col font-mono font-semibold tabular-nums",
+                              isOutbound
+                                ? "text-destructive"
+                                : isInbound
+                                  ? "text-success"
+                                  : "text-muted-foreground",
+                            )}
+                          >
+                            <span>{movementPrimary}</span>
+                            {movementBase ? (
+                              <span className="text-xs font-normal text-muted-foreground">
+                                {movementBase}
+                              </span>
+                            ) : null}
+                          </p>
                           {referenceLabel ? (
                             referenceHref ? (
                               <Link
                                 href={referenceHref}
-                                className="font-medium text-primary hover:underline"
+                                className="block truncate text-primary hover:underline"
                               >
                                 {referenceLabel}
                               </Link>
                             ) : (
-                              <span className="text-muted-foreground">{referenceLabel}</span>
+                              <span className="block truncate text-muted-foreground">
+                                {referenceLabel}
+                              </span>
                             )
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </div>
-
-                        {/* Col 3, Row 1: Signed Quantity */}
-                        <div className="text-right">
-                          <span
-                            className={`font-mono font-semibold tabular-nums ${
-                              movement.quantityChange < 0
-                                ? "text-destructive"
-                                : movement.quantityChange > 0
-                                  ? "text-success"
-                                  : "text-muted-foreground"
-                            }`}
-                          >
-                            {signedQty} {ingredient.unit}
-                          </span>
-                        </div>
-
-                        {/* Col 1, Row 2: Time */}
-                        <div className="text-muted-foreground">
-                          {formatDateTime(movement.createdAt)}
-                        </div>
-
-                        {/* Col 2, Row 2: Location Route */}
-                        <div className="text-center text-muted-foreground truncate">
-                          {locationDisplay}
-                        </div>
-
-                        {/* Col 3, Row 2: Reason or Unit Cost */}
-                        <div className="text-right text-muted-foreground truncate">
-                          {movement.reason
-                            ? movement.reason
-                            : movement.monetary?.unitCost != null
-                              ? `${formatVND(movement.monetary.unitCost)} / ${ingredient.unit}`
-                              : ""}
-                        </div>
                       </div>
-                    </Item>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </Item>
             )}
           </div>
         </div>

@@ -29,6 +29,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
 import {
   AppBackLink,
   AppDetailFooter,
@@ -156,8 +157,14 @@ export function GRNDetailClient({
 
   function closeOwnerDialogUrl() {
     const params = new URLSearchParams(window.location.search);
+    const returnTo = getSafeInternalReturnTo(params.get("returnTo"));
     params.delete("grnId");
     params.delete("mode");
+    params.delete("returnTo");
+    if (returnTo) {
+      router.push(returnTo, { scroll: false });
+      return;
+    }
     const q = params.toString();
     window.history.replaceState(
       null,
@@ -205,6 +212,11 @@ export function GRNDetailClient({
       ? -1
       : lines.findIndex((line) => line.lineId === editingLineId);
   const editingLine = editingIdx >= 0 ? lines[editingIdx] : null;
+  const secondaryOverlayOpen =
+    addDialogOpen ||
+    amendingLine != null ||
+    cancelOpen ||
+    (!isDesktopLineEdit && editingLine != null);
 
   const receivingLocationName = grn.locationName;
   const linkedPoApproved = allLinkedPosApproved(
@@ -941,23 +953,25 @@ export function GRNDetailClient({
     };
 
     return (
-      <AppDialog
-        open
-        onOpenChange={(open) => {
-          if (!open) void closeDialog();
-        }}
-        variant="document"
-        title={grn.code}
-        description={
-          valuationKind === "pending_invoice"
-            ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
-            : statusBadge.label
-        }
-        footer={footer}
-      >
-        {tabs}
+      <>
+        <AppDialog
+          open={!secondaryOverlayOpen}
+          onOpenChange={(open) => {
+            if (!open && !secondaryOverlayOpen) void closeDialog();
+          }}
+          variant="document"
+          title={grn.code}
+          description={
+            valuationKind === "pending_invoice"
+              ? `${statusBadge.label} · ${valuationCopy.pendingInvoice}`
+              : statusBadge.label
+          }
+          footer={footer}
+        >
+          {tabs}
+        </AppDialog>
         {dialogs}
-      </AppDialog>
+      </>
     );
   }
 

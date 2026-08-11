@@ -118,6 +118,25 @@ function rowHref(
   return `${pathname}?${params}`;
 }
 
+function hubRequestEditHref({
+  branchId,
+  requestId,
+  pathname,
+  searchParams,
+}: {
+  branchId: number;
+  requestId: number;
+  pathname: string;
+  searchParams: URLSearchParams;
+}): string {
+  const returnParams = new URLSearchParams(searchParams.toString());
+  returnParams.set("requestId", String(requestId));
+  returnParams.delete("transferId");
+  const returnQuery = returnParams.toString();
+  const returnTo = returnQuery ? `${pathname}?${returnQuery}` : pathname;
+  return `/inventory/stock-requests/new?branch=${branchId}&requestId=${requestId}&returnTo=${encodeURIComponent(returnTo)}`;
+}
+
 export function StockFulfillmentHubClient({
   rows,
   mode,
@@ -517,7 +536,14 @@ export function StockFulfillmentHubClient({
                       (item) => item.status === "pending",
                     )
                   }
-                  editHref={`/inventory/stock-requests/new?branch=${selectedRequest.data.branchId}&requestId=${selectedRequest.data.id}`}
+                  editHref={hubRequestEditHref({
+                    branchId: selectedRequest.data.branchId,
+                    requestId: selectedRequest.data.id,
+                    pathname,
+                    searchParams: new URLSearchParams(
+                      searchParams.toString(),
+                    ),
+                  })}
                 />
               ) : null
             }

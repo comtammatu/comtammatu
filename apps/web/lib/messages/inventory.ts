@@ -27,7 +27,6 @@ export const inventory = {
   },
   home: {
     title: "Kho hàng",
-    description: "Chọn nhóm việc để mở danh sách hoặc phiếu.",
     laneHint: "Mở danh sách và làm tiếp trong phân hệ.",
   },
   operatorFlow: {
@@ -486,8 +485,6 @@ export const inventory = {
     },
     branch: {
       listTitle: "Yêu cầu hàng",
-      listDescription:
-        "Xin hàng từ Kho Tổng và Bếp Trung Tâm theo danh mục nguyên liệu.",
       createDraft: "Tạo phiếu yêu cầu",
       emptyTitle: "Chưa có phiếu yêu cầu",
       emptyDescription:
@@ -740,8 +737,6 @@ export const inventory = {
   value: {
     eyebrow: "Báo cáo",
     title: "Giá trị tồn kho",
-    description:
-      "Giá trị ghi sổ của số lượng còn trong kho theo phạm vi được phân quyền.",
     tabs: {
       system: "Toàn hệ thống",
       branch: "Theo chi nhánh",
@@ -800,7 +795,6 @@ export const inventory = {
     statusTabsAria: "Trạng thái phiếu nhập",
     allStatuses: "Tất cả",
     listTitle: "Phiếu nhập kho",
-    listDescription: "Kiểm nhận hàng được tạo từ đơn đặt hàng đã duyệt",
     cancelTitle: "Hủy phiếu nhập",
     cancelAction: "Hủy phiếu",
     cancelReason: "Lý do hủy",
@@ -1181,6 +1175,7 @@ export const inventory = {
       issueStock: "Ghi tiêu hao",
       viewStockCard: "Xem thẻ kho",
       exception: "Ngoại lệ",
+      edit: "Chỉnh sửa",
       moreStockJobs: "Thêm chức năng kho",
       applyFilters: "Áp dụng",
       adjustExceptionAria: (name: string) => `Điều chỉnh ngoại lệ ${name}`,
@@ -1235,6 +1230,8 @@ export const inventory = {
       locationEmpty: "Chưa có tồn theo vị trí",
       stockValue: "Giá trị tồn kho",
       minThreshold: "Tối thiểu",
+      threshold: "Ngưỡng tồn",
+      sku: "SKU",
       history: "Lịch sử",
       noRecentHistory: "Chưa có biến động gần đây cho nguyên liệu này.",
       chooseIngredientDetail: "Chọn một nguyên liệu để xem chi tiết thao tác.",
@@ -1256,6 +1253,9 @@ export const inventory = {
       noLocationStockDescription: "Chưa có tồn ở kho vận hành của chi nhánh.",
       movementTitle: "Lịch sử biến động",
       movementHint: (count: number) => `${formatCount(count)}/30 gần nhất`,
+      movementColOperation: "Nghiệp vụ",
+      movementColWarehouse: "Kho",
+      movementColQuantity: "Số lượng / Phiếu",
       noMovementTitle: "Chưa có biến động",
       noMovementDescription:
         "Biến động hiện sau nhập, điều chuyển, kiểm kê hoặc xuất dùng.",
@@ -1489,13 +1489,10 @@ export const inventory = {
     title: "Cài đặt",
     eyebrow: "Cài đặt",
     policyTitle: "Chính sách & mặc định",
-    description: "Chính sách vận hành và giá trị mặc định của kho.",
     policyLayer: "Chính sách vận hành",
     thresholds: {
       title: "Ngưỡng tồn kho",
       eyebrow: "Ngưỡng tồn kho",
-      description:
-        "Một ngưỡng tồn tối thiểu mỗi nguyên liệu, dùng cho cảnh báo và đề xuất.",
       hint: "Tồn thực tế chạm hoặc thấp hơn ngưỡng này sẽ được cảnh báo.",
       cols: {
         ingredient: "Nguyên liệu",
@@ -2257,7 +2254,6 @@ export const inventory = {
     approvals: {
       title: "Duyệt phiếu hao hụt — chờ QLV",
       principle: "Người tạo phiếu không tự duyệt phiếu của mình",
-      branchSuffix: (branchId: number) => ` • CN #${branchId}`,
       count: (count: number) => `${formatCount(count)} phiếu`,
       empty: "Không có phiếu chờ duyệt.",
       loadFailed: "Không thể tải phiếu chờ duyệt.",

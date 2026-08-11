@@ -267,6 +267,17 @@ export function PurchaseRequestsClient({
     ) {
       return;
     }
+    if (mode === "edit" && selected) {
+      updateUrl(selected.id, "view", "replace");
+      resetCreate();
+      return;
+    }
+    if (mode === "create" && copyFromRequestId != null) {
+      const sourceId = copyFromRequestId;
+      resetCreate();
+      updateUrl(sourceId, "view", "replace");
+      return;
+    }
     updateUrl(null, null, "replace");
     resetCreate();
   }

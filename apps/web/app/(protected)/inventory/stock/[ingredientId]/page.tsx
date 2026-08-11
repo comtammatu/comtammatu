@@ -38,8 +38,9 @@ import {
 import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
-  resolveStockDisplayUnit,
+  resolveStockCompactUnit,
   stockUnitLabel,
+  toStockDisplayUnitCost,
 } from "../../_lib/stock-unit-format";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 
@@ -89,7 +90,7 @@ function StockIngredientDetail({
       <AppPage width="wide" scroll>
         <AppPageHeader
           title={ingredient.name}
-          description={[ingredient.sku, ingredient.category, ingredient.unit]
+          meta={[ingredient.sku, ingredient.category, ingredient.unit]
             .filter(Boolean)
             .join(" · ")}
           actions={<AppBackLink href={listHref}>{ACTIONS_VI.back}</AppBackLink>}
@@ -108,13 +109,15 @@ function StockIngredientDetail({
     ingredient.units,
     formatQty,
   );
+  const compactUnit = resolveStockCompactUnit(data.totalQty, ingredient.units);
   const wacUnitLabel = stockUnitLabel(
-    resolveStockDisplayUnit(ingredient.units),
+    compactUnit,
     ingredient.unit || inventoryCommon.noValue,
   );
   const statusBadge = getStatusBadgeMeta("inventory", data.status);
   const totalValue = data.valuation?.totalValue ?? null;
   const wac = data.valuation?.wac ?? null;
+  const displayWac = toStockDisplayUnitCost(wac, compactUnit);
   const valuationKind =
     data.valuation == null
       ? null
@@ -138,7 +141,7 @@ function StockIngredientDetail({
     <AppPage width="wide" scroll>
       <AppPageHeader
         title={ingredient.name}
-        description={[ingredient.sku, ingredient.category, ingredient.unit]
+        meta={[ingredient.sku, ingredient.category, ingredient.unit]
           .filter(Boolean)
           .join(" · ")}
         badge={{
@@ -182,8 +185,8 @@ function StockIngredientDetail({
             {
               term: stockCopy.table.wacPerUnit(wacUnitLabel),
               description:
-                valuationKind === "valued" && wac != null
-                  ? formatVND(wac)
+                valuationKind === "valued" && displayWac != null
+                  ? formatVND(displayWac)
                   : valuationKind === "pending"
                     ? valuationCopy.pendingWac
                     : inventoryCommon.noValue,

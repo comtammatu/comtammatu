@@ -37,6 +37,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { cn } from "@comtammatu/ui";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
@@ -68,7 +69,7 @@ import { formatQty, formatVND } from "@lib/inventory/format";
 import { resolveStockValuationDisplay } from "@lib/inventory/valuation-display";
 import {
   formatStockUnits,
-  resolveStockDisplayUnit,
+  resolveStockCompactUnit,
   stockUnitLabel,
   toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
@@ -82,6 +83,16 @@ import {
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
+import {
+  fetchCategoryOptions,
+  fetchIngredients,
+  fetchUnitOptions,
+} from "../ingredient-actions";
+import type {
+  CategoryOption,
+  IngredientRow,
+  UnitOption,
+} from "@lib/inventory/types";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
@@ -126,10 +137,24 @@ const QuickStockIssueDialog = dynamic<QuickStockIssueDialogProps>(
   { ssr: false },
 );
 
+const IngredientDialog = dynamic(
+  () =>
+    import("../ingredients/ingredient-dialog").then(
+      (mod) => mod.IngredientDialog,
+    ),
+  { ssr: false },
+);
+
 type QuickIssueType = "consumption";
 type QuickIssueTarget = {
   ingredient: StockIngredient;
   issueType: QuickIssueType;
+};
+
+type EditIngredientTarget = {
+  ingredient: IngredientRow;
+  unitOptions: UnitOption[];
+  categoryOptions: CategoryOption[];
 };
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
@@ -276,6 +301,8 @@ export function StockClient({
   );
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
+  const [editIngredientTarget, setEditIngredientTarget] =
+    useState<EditIngredientTarget | null>(null);
   const [openActionRowId, setOpenActionRowId] = useState<number | null>(null);
   const [viewingIngredientId, setViewingIngredientId] = useState<number | null>(
     initialIngredientId,
@@ -284,6 +311,21 @@ export function StockClient({
     initialDetailData,
   );
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+  const secondaryOverlayOpen =
+    adjustTarget != null ||
+    quickIssueTarget != null ||
+    editIngredientTarget != null;
+
+  const refreshStockDetail = async (ingredientId: number) => {
+    const res = await fetchStockIngredientDetailAction({
+      ingredientId,
+      branchId,
+    });
+    if (res.success && res.data) {
+      setDetailData(res.data);
+    }
+  };
 
   const openStockDetail = (ingredientId: number) => {
     setViewingIngredientId(ingredientId);
@@ -294,15 +336,9 @@ export function StockClient({
 
     if (detailData?.ingredient?.id !== ingredientId) {
       setIsDetailLoading(true);
-      void fetchStockIngredientDetailAction({ ingredientId, branchId })
-        .then((res) => {
-          if (res.success && res.data) {
-            setDetailData(res.data);
-          }
-        })
-        .finally(() => {
-          setIsDetailLoading(false);
-        });
+      void refreshStockDetail(ingredientId).finally(() => {
+        setIsDetailLoading(false);
+      });
     }
   };
 
@@ -312,6 +348,36 @@ export function StockClient({
     url.searchParams.delete("ingredientId");
     url.searchParams.delete("mode");
     window.history.pushState(null, "", url.toString());
+  };
+
+  const openEditIngredientFromDetail = async () => {
+    if (viewingIngredientId == null) return;
+    const [ingredientsResult, unitsResult, categoriesResult] =
+      await Promise.all([
+        fetchIngredients(),
+        fetchUnitOptions(),
+        fetchCategoryOptions(),
+      ]);
+    if (
+      !ingredientsResult.success ||
+      !unitsResult.success ||
+      !categoriesResult.success
+    ) {
+      toast.error(messages.inventory.ingredients.list.loadFailed);
+      return;
+    }
+    const ingredient = (ingredientsResult.data as IngredientRow[] | undefined)?.find(
+      (row) => row.id === viewingIngredientId,
+    );
+    if (!ingredient) {
+      toast.error(messages.inventory.ingredients.list.loadFailed);
+      return;
+    }
+    setEditIngredientTarget({
+      ingredient,
+      unitOptions: unitsResult.data ?? [],
+      categoryOptions: categoriesResult.data ?? [],
+    });
   };
 
   const { categories, hasUncategorized } = useMemo(
@@ -428,7 +494,7 @@ export function StockClient({
     {
       key: "ingredient",
       header: PRODUCT_VI.rawIngredient,
-      className: "min-w-56",
+      className: "min-w-48 w-full",
       render: (item) => (
         <div className="flex flex-col gap-1">
           <p>{item.name}</p>
@@ -441,19 +507,19 @@ export function StockClient({
     {
       key: "status",
       header: stockCopy.table.status,
-      className: "min-w-28",
+      className: "w-28 whitespace-nowrap",
       render: (item) => <StockItemStatus item={item} />,
     },
     {
       key: "category",
       header: stockCopy.table.categoryKind,
-      className: "min-w-36",
+      className: "w-36 whitespace-nowrap",
       render: (item) => <StockCategoryKindCell item={item} />,
     },
     {
       key: "stock",
       header: stockCopy.table.stock,
-      className: "min-w-24 text-right",
+      className: "w-28 whitespace-nowrap text-right",
       render: (item) => (
         <div className="flex flex-col items-end gap-1">
           <StockQtyCell
@@ -476,9 +542,9 @@ export function StockClient({
           {
             key: "wac",
             header: stockCopy.table.wac,
-            className: "min-w-28 text-right",
+            className: "w-40 whitespace-nowrap text-right",
             render: (item: StockIngredient) => {
-              const costUnit = resolveStockDisplayUnit(item.units);
+              const costUnit = resolveStockCompactUnit(item.qty, item.units);
               const displayWac = toStockDisplayUnitCost(
                 item.monetary?.averageUnitCost,
                 costUnit,
@@ -504,7 +570,7 @@ export function StockClient({
           {
             key: "value",
             header: stockCopy.table.stockValue,
-            className: "min-w-28 text-right",
+            className: "w-36 whitespace-nowrap text-right",
             render: (item: StockIngredient) => {
               const value = stockValue(item);
               const kind = resolveStockValuationDisplay({
@@ -807,7 +873,7 @@ export function StockClient({
             </div>
             <div>
               {(() => {
-                const costUnit = resolveStockDisplayUnit(item.units);
+                const costUnit = resolveStockCompactUnit(item.qty, item.units);
                 const displayWac = toStockDisplayUnitCost(
                   item.monetary.averageUnitCost,
                   costUnit,
@@ -893,20 +959,6 @@ export function StockClient({
     </InteractiveCard>
   );
 
-  const stockToolbar = (
-    <AppToolbar
-      sticky
-      variant="inline"
-      search={searchControl}
-      filters={
-        <>
-          {filterControls}
-          {underThresholdButton}
-        </>
-      }
-    />
-  );
-
   const content = (
     <>
       <AppPageHeader
@@ -942,18 +994,28 @@ export function StockClient({
       />
 
       <AppListFrame
-        title={PRODUCT_VI.rawIngredient}
-        badge={
-          isFirstLoadEmpty
-            ? undefined
-            : {
-                children: `${filtered.length}/${ingredients.length}`,
-                variant: "outline",
-              }
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            search={searchControl}
+            filters={
+              <>
+                {filterControls}
+                {underThresholdButton}
+              </>
+            }
+            actions={
+              isFirstLoadEmpty ? undefined : (
+                <Badge variant="outline">
+                  {filtered.length}/{ingredients.length}
+                </Badge>
+              )
+            }
+          />
         }
-        toolbar={stockToolbar}
       >
         <DataTable
+          className="[&_table]:table-fixed"
           columns={stockColumns}
           data={filtered}
           pageSize={25}
@@ -995,8 +1057,12 @@ export function StockClient({
           branchId={branchId}
           ingredient={adjustTarget}
           onAdjusted={() => {
+            const ingredientId = adjustTarget.id;
             setAdjustTarget(null);
             router.refresh();
+            if (viewingIngredientId === ingredientId) {
+              void refreshStockDetail(ingredientId);
+            }
           }}
         />
       ) : null}
@@ -1014,8 +1080,27 @@ export function StockClient({
         />
       ) : null}
 
+      {editIngredientTarget ? (
+        <IngredientDialog
+          open={editIngredientTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditIngredientTarget(null);
+          }}
+          ingredient={editIngredientTarget.ingredient}
+          unitOptions={editIngredientTarget.unitOptions}
+          categoryOptions={editIngredientTarget.categoryOptions}
+          onSaved={async () => {
+            const ingredientId = editIngredientTarget.ingredient.id;
+            router.refresh();
+            if (viewingIngredientId === ingredientId) {
+              await refreshStockDetail(ingredientId);
+            }
+          }}
+        />
+      ) : null}
+
       <StockDetailDialog
-        open={viewingIngredientId !== null}
+        open={viewingIngredientId !== null && !secondaryOverlayOpen}
         onOpenChange={(open) => {
           if (!open) closeStockDetail();
         }}
@@ -1023,6 +1108,10 @@ export function StockClient({
         isLoading={isDetailLoading}
         isTouchLayout={controlSize === "touch"}
         canAdjustStock={permissions.canAdjustException}
+        canEditIngredient={permissions.canEditIngredient}
+        onEditIngredient={() => {
+          void openEditIngredientFromDetail();
+        }}
         onAdjustStock={() => {
           const target = ingredients.find((i) => i.id === viewingIngredientId);
           if (target) setAdjustTarget(target);

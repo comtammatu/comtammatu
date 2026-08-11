@@ -3,13 +3,18 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import {
   getInventoryValueVisibility,
+  INVENTORY_CATALOG_ROLES,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
 import { normalizeInventoryLocationNameVi } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
-import { currentUserHasPermission } from "@/_lib/permissions";
+import {
+  currentUserHasAnyPermissionAny,
+  currentUserHasPermission,
+} from "@/_lib/permissions";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
 import { formatDate } from "@lib/inventory/format";
+import { CATALOG_MANAGE_PERMISSIONS } from "@/(protected)/inventory/_lib/catalog-permissions";
 import { resolveInventoryListScope } from "@/(protected)/inventory/_lib/inventory-scope";
 import { fetchStockBearingLocationIds } from "@/(protected)/inventory/_lib/stock-bearing-locations";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
@@ -159,6 +164,7 @@ export async function loadStockOnHandPageData({
     canCreateStocktake,
     canWriteoff,
     canAdjustException,
+    canManageCatalog,
   ] = await Promise.all([
     fetchIngredients(),
     stockBearingLocations.ok && stockBearingLocationIds.length > 0
@@ -188,7 +194,11 @@ export async function loadStockOnHandPageData({
     ),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
+    currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
   ]);
+
+  const canEditIngredient =
+    INVENTORY_CATALOG_ROLES.includes(claims.user_role) && canManageCatalog;
 
   // Fail-soft: a denied/failed ingredient catalog read degrades to an empty
   // list + coreDataLoadFailed flag instead of crashing the whole page. Stock
@@ -378,6 +388,7 @@ export async function loadStockOnHandPageData({
     canCreateStocktake,
     canWriteoff,
     canAdjustException,
+    canEditIngredient,
   };
 
   return {

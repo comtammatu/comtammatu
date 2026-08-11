@@ -37,7 +37,7 @@ const defaultFilters: StockOnHandFilters = {
   status: "all",
 };
 
-test("stock list sorts out and low ingredients before normal stock", () => {
+test("stock list sorts normal, then low, then out", () => {
   const rows = filterStockOnHandIngredients(
     [
       makeIngredient({ id: 1, name: "Rice" }),
@@ -49,11 +49,11 @@ test("stock list sorts out and low ingredients before normal stock", () => {
 
   assert.deepEqual(
     rows.map((row) => row.id),
-    [3, 2, 1],
+    [1, 2, 3],
   );
 });
 
-test("in_stock hides out and keeps low ahead of normal", () => {
+test("in_stock hides out and keeps normal ahead of low", () => {
   const rows = filterStockOnHandIngredients(
     [
       makeIngredient({ id: 1, name: "Rice" }),
@@ -65,7 +65,7 @@ test("in_stock hides out and keeps low ahead of normal", () => {
 
   assert.deepEqual(
     rows.map((row) => row.id),
-    [2, 1],
+    [1, 2],
   );
 });
 
@@ -126,7 +126,7 @@ test("stock filters combine search, category, and exclusive status buckets", () 
       ...defaultFilters,
       categories: ["Dry", "Sauce"],
     }).map((row) => row.id),
-    [4, 2, 1],
+    [1, 2, 4],
   );
 });
 

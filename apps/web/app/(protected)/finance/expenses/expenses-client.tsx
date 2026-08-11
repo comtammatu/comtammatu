@@ -176,6 +176,14 @@ export function ExpensesClient({
     clearOverlay();
   }
 
+  function closeExpenseForm() {
+    if (editingExpense) {
+      patchOverlay({ expenseId: editingExpense.id, mode: "view" }, "replace");
+      return;
+    }
+    closeExpenseDocument();
+  }
+
   function toggleNeedsActionFilter() {
     const next = new URLSearchParams(searchParams.toString());
     if (showOnlyNeedsAction) next.delete(EXPENSE_LIST_STATE_PARAM);
@@ -282,6 +290,10 @@ export function ExpensesClient({
 
   function onCreateSuccess(_result: ActionResult) {
     toast.success(editingExpense ? copy.form.editSuccess : copy.form.success);
+    if (editingExpense) {
+      patchOverlay({ expenseId: editingExpense.id, mode: "view" }, "replace");
+      return;
+    }
     closeExpenseDocument();
   }
 
@@ -344,7 +356,9 @@ export function ExpensesClient({
       } else {
         toast.success(copy.actions.cancelTransferSuccess);
       }
-      closeExpenseDocument();
+      if (expenseId === row.id) {
+        patchOverlay({ expenseId: row.id, mode: "view" }, "replace");
+      }
       router.refresh();
     });
   }
@@ -710,7 +724,7 @@ export function ExpensesClient({
         <FormDialog
           open={formDialogOpen}
           onOpenChange={(open) => {
-            if (!open) closeExpenseDocument();
+            if (!open) closeExpenseForm();
           }}
           title={
             editingExpense && editingPaymentState ? (

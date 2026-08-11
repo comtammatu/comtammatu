@@ -186,9 +186,12 @@ export function PurchaseOrdersClient({
   }, [mode, selectedPoId, selectedRow, updateUrl]);
 
   function openReceipt(row: PurchaseOrderRow) {
+    const returnTo = encodeURIComponent(
+      `/inventory/purchase-orders?poId=${row.id}&mode=view`,
+    );
     if (row.activeDraftGrnId != null) {
       router.push(
-        `/inventory/grn?grnId=${row.activeDraftGrnId}&mode=receive`,
+        `/inventory/grn?grnId=${row.activeDraftGrnId}&mode=receive&returnTo=${returnTo}`,
         { scroll: false },
       );
       return;
@@ -205,7 +208,7 @@ export function PurchaseOrdersClient({
           return;
         }
         router.push(
-          `/inventory/grn?grnId=${result.data.id}&mode=receive`,
+          `/inventory/grn?grnId=${result.data.id}&mode=receive&returnTo=${returnTo}`,
           { scroll: false },
         );
         router.refresh();

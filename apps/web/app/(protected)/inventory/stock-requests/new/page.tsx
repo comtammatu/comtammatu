@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { STOCK_REQUEST_ROLES } from "@comtammatu/shared/auth";
+import {
+  getSafeInternalReturnTo,
+  STOCK_REQUEST_ROLES,
+} from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPageHeader, DocumentFormFrame } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
@@ -34,6 +37,7 @@ export default async function CentralKitchenStockRequestNewPage({
   searchParams: Promise<{
     branch?: string | string[];
     requestId?: string | string[];
+    returnTo?: string | string[];
   }>;
 }) {
   const query = await searchParams;
@@ -58,6 +62,18 @@ export default async function CentralKitchenStockRequestNewPage({
     Number.isInteger(parsedRequestId) && parsedRequestId > 0
       ? parsedRequestId
       : null;
+  const rawReturnTo = Array.isArray(query.returnTo)
+    ? query.returnTo[0]
+    : query.returnTo;
+  const safeReturnTo = getSafeInternalReturnTo(rawReturnTo ?? null);
+  const backHref =
+    safeReturnTo ??
+    (requestId != null
+      ? `/inventory/transfers?branch=${branchId}&requestId=${requestId}`
+      : `/inventory/transfers?branch=${branchId}`);
+  const returnHref =
+    safeReturnTo ??
+    `/inventory/transfers?branch=${branchId}&requestId=:requestId`;
 
   const [branchResult, ingredientsResult, requestResult] = await Promise.all([
     supabase
@@ -169,15 +185,11 @@ export default async function CentralKitchenStockRequestNewPage({
           title={
             messages.inventory.stockRequests.journey.centralSupplyRequestAction
           }
-          description={messages.inventory.stockRequests.journey.centralSupplyRequestDescription(
-            branchResult.data.name,
-          )}
+          meta={branchResult.data.name}
           actions={
             <Button
               variant="ghost"
-              render={
-                <Link href={`/inventory/transfers?branch=${branchId}`} />
-              }
+              render={<Link href={backHref} />}
             >
               {messages.inventory.stockRequests.journey.back}
             </Button>
@@ -193,7 +205,7 @@ export default async function CentralKitchenStockRequestNewPage({
         initialStatus={request?.status ?? null}
         initialNeededAt={request?.needed_at ?? null}
         initialNotes={request?.notes ?? null}
-        returnHref={`/inventory/transfers?branch=${branchId}&requestId=:requestId`}
+        returnHref={returnHref}
       />
     </DocumentFormFrame>
   );

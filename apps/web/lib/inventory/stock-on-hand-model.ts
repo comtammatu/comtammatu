@@ -57,6 +57,8 @@ export type StockActionPermissions = {
   canCreateStocktake: boolean;
   canWriteoff: boolean;
   canAdjustException: boolean;
+  /** Owner-only ingredient catalog edit from stock card. */
+  canEditIngredient: boolean;
 };
 
 export interface StockOnHandPageData {
@@ -77,9 +79,9 @@ export interface StockOnHandFilters {
 }
 
 const STATUS_PRIORITY: Record<StockStatus, number> = {
-  out: 0,
+  normal: 0,
   low: 1,
-  normal: 2,
+  out: 2,
 };
 
 export function computeStockStatus(qty: number, min: number): StockStatus {
@@ -193,16 +195,10 @@ export function filterStockOnHandIngredients(
     );
   }
 
-  // in_stock: low before normal. all: out → low → normal.
-  const priority =
-    filters.status === "in_stock"
-      ? ({ low: 0, normal: 1, out: 2 } as const)
-      : STATUS_PRIORITY;
-
+  // Còn hàng → Chạm ngưỡng → Hết hàng; name tiebreak within status.
   return [...result].sort(
     (left, right) =>
-      priority[left.status] - priority[right.status] ||
-      Number(isStockReorderRisk(right)) - Number(isStockReorderRisk(left)) ||
+      STATUS_PRIORITY[left.status] - STATUS_PRIORITY[right.status] ||
       left.name.localeCompare(right.name, "vi"),
   );
 }

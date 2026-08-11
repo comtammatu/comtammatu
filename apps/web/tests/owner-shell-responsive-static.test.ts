@@ -133,6 +133,7 @@ test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () 
   const framedInline = [
     "apps/web/app/(protected)/orders/orders-client.tsx",
     "apps/web/app/(protected)/hr/payroll/payroll-list-client.tsx",
+    "apps/web/app/(protected)/inventory/stock/stock-client.tsx",
   ] as const;
 
   for (const path of framedInline) {
@@ -174,12 +175,6 @@ test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () 
   assert.doesNotMatch(
     read("apps/web/app/(protected)/hr/staff/audit/permission-audit-filters.tsx"),
     /<AppToolbar\s+sticky/,
-  );
-
-  // Stock still passes a sibling sticky toolbar into AppListFrame until migrated.
-  assert.match(
-    read("apps/web/app/(protected)/inventory/stock/stock-client.tsx"),
-    /<AppToolbar\s+sticky\b/,
   );
 
   // Finance FilterBar sits above KPI/dashboard cards — sticky crushes the

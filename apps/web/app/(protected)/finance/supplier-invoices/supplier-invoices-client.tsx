@@ -943,6 +943,10 @@ export function SupplierInvoicesClient({
       openInvoiceDetail(createdInvoiceId, "replace");
       return;
     }
+    if (invoiceMode === "edit" && selectedInvoiceId != null) {
+      updateListParams({ mode: "view" });
+      return;
+    }
     updateListParams({ mode: null, invoiceId: null, grnId: null });
   }
 

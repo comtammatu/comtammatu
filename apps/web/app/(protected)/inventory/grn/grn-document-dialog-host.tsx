@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { AppDialog } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { getSafeInternalReturnTo } from "@comtammatu/shared/auth";
 import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import type { GrnDetailData } from "@lib/inventory/grn-detail-model";
 import { messages } from "@lib/messages";
@@ -20,6 +22,7 @@ export function GrnDocumentDialogHost({
 }: {
   basePath?: string;
 }) {
+  const router = useRouter();
   const overlay = useDocumentOverlayUrl(GRN_OVERLAY_KEYS);
   const grnKey = overlay.get("grnId");
   const open = grnKey != null && grnKey.length > 0;
@@ -53,7 +56,13 @@ export function GrnDocumentDialogHost({
   }, [grnKey, open]);
 
   function closeOverlay() {
+    const returnTo = getSafeInternalReturnTo(
+      new URLSearchParams(window.location.search).get("returnTo"),
+    );
     overlay.clearOverlay(["grnId", "mode"], "replace");
+    if (returnTo) {
+      router.push(returnTo, { scroll: false });
+    }
   }
 
   if (!open) return null;
