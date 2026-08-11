@@ -1,0 +1,85 @@
+export const WORK_TASK_STATUSES = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "review",
+  "done",
+  "canceled",
+] as const;
+
+export type WorkTaskStatusLabelKey = (typeof WORK_TASK_STATUSES)[number];
+
+export const WORK_TASK_PRIORITIES = [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+] as const;
+
+export type WorkTaskPriorityLabelKey = (typeof WORK_TASK_PRIORITIES)[number];
+
+export const workCopy = {
+  pageTitle: "Công việc",
+  inboxTitle: "Việc được giao",
+  inboxEmpty: "Chưa có việc nào được giao cho bạn.",
+  loadFailed: "Không tải được danh sách công việc.",
+  noAccess: "Bạn chưa được thêm vào không gian làm việc Công việc.",
+  statusLabels: {
+    backlog: "Chờ xử lý",
+    todo: "Cần làm",
+    in_progress: "Đang làm",
+    review: "Chờ duyệt",
+    done: "Hoàn thành",
+    canceled: "Đã hủy",
+  } satisfies Record<WorkTaskStatusLabelKey, string>,
+  priorityLabels: {
+    low: "Thấp",
+    normal: "Bình thường",
+    high: "Cao",
+    urgent: "Khẩn",
+  } satisfies Record<WorkTaskPriorityLabelKey, string>,
+  due: "Hạn",
+  assignee: "Người nhận",
+  detailTitle: "Chi tiết công việc",
+  createTask: "Tạo việc",
+  save: "Lưu",
+  statusChange: "Đổi trạng thái",
+  revisionConflict:
+    "Người khác vừa cập nhật việc này. Tải lại rồi thử lại.",
+  boardNeedsScope:
+    "Chọn phòng ban hoặc dự án để xem bảng công việc.",
+  calendarTitle: "Lịch công việc",
+  timelineTitle: "Tiến độ dự án",
+  viewMine: "Việc của tôi",
+  viewBoard: "Bảng",
+  viewCalendar: "Lịch",
+  viewTimeline: "Tiến độ",
+  dueTodayAttention: "Việc đến hạn / quá hạn",
+  openWorkCta: "Mở Công việc",
+  pilotDept: "Văn phòng",
+  forbidden: "Bạn không có quyền thực hiện thao tác này.",
+  saveFailed: "Không lưu được công việc.",
+  createFailed: "Không tạo được công việc.",
+  taskNotFound: "Không tìm thấy công việc.",
+  titleLabel: "Tiêu đề",
+  descriptionLabel: "Mô tả",
+  priorityLabel: "Ưu tiên",
+  statusLabel: "Trạng thái",
+  dueLabel: "Hạn hoàn thành",
+  noDue: "Không có hạn",
+  clearAssignee: "Bỏ người nhận",
+  clearDue: "Bỏ hạn",
+  scopeDepartment: "Phòng ban",
+  scopeProject: "Dự án",
+  pickScope: "Chọn phạm vi",
+  commentsTitle: "Bình luận",
+  commentsEmpty: "Chưa có bình luận.",
+  commentPlaceholder: "Viết bình luận…",
+  commentSubmit: "Gửi bình luận",
+  commentFailed: "Không gửi được bình luận.",
+  checklistTitle: "Việc cần làm",
+  checklistEmpty: "Chưa có mục việc cần làm.",
+  checklistAdd: "Thêm mục",
+  checklistPlaceholder: "Tên mục việc cần làm",
+  checklistFailed: "Không cập nhật được việc cần làm.",
+} as const;

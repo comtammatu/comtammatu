@@ -32,6 +32,7 @@ export type ModuleKey =
   | "branch_stock"
   | "branch_orders"
   | "feedback"
+  | "work"
   | "branch_feedback"
   | "employee_checkout_approvals"
   | "employee_leave_approvals"
@@ -90,6 +91,20 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/feedback",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("feedback"),
+  },
+  work: {
+    path: "/work",
+    // Control-plane office pilot (ADR 0033). Live access still fails closed on
+    // can_access_workspace() / membership RLS; branch station roles stay out of
+    // the candidate gate so discovery does not pull Work into branch shells.
+    allowedRoles: [
+      "owner",
+      "accountant",
+      "central_supply_ops",
+      "central_kitchen_lead",
+      "self_service",
+    ],
+    label: getModuleLabelVi("work"),
   },
   staff: {
     path: "/hr/staff",

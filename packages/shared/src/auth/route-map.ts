@@ -118,6 +118,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: false,
   },
   {
+    id: "work",
+    label: MODULE_ACL.work.label,
+    surface: "owner",
+    entryPath: MODULE_ACL.work.path,
+    matchPrefixes: [MODULE_ACL.work.path],
+    moduleKeys: ["work"],
+    primaryNav: "owner-sidebar",
+    backBehavior: "role-home",
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
+    requiresBranchId: false,
+  },
+  {
     id: "inventory",
     label: MODULE_ACL.inventory.label,
     surface: "owner",

@@ -10,6 +10,7 @@ export type ModuleLabelKey =
   | "inventory"
   | "orders"
   | "feedback"
+  | "work"
   | "staff"
   | "hr"
   | "hr_payroll"
@@ -45,6 +46,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   inventory: "Kho hàng",
   orders: "Đơn bán",
   feedback: "Phản hồi",
+  work: "Công việc",
   staff: "Nhân viên",
   hr: "Nhân sự",
   hr_payroll: "Lương",

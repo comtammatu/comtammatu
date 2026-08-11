@@ -122,7 +122,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (JWT `self_service` + `hr:view_employee`). Role chi nhánh giữ `/br/...`.
 - **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
 - **Goal:** Một cửa → xử lý việc hôm nay hoặc chọn đúng mô-đun.
-- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`.
+- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; khi `can_access_workspace()` có việc đến hạn/quá hạn thì **một** row `Việc đến hạn` → `/work`; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`; **không** render Kanban phòng ban trên `/`.
 - **UX:** `AppPage` + `AppSection` + `ItemGroup` + `Item` + `Badge`; không breadcrumb thừa. 1 cột phone / 2 cột tablet. Branch roles giữ `/br/...`; `self_service` thuần giữ `/me`.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
@@ -173,8 +173,11 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
      `/me/*`.
 - **Thông tin hiển thị:** Ca hôm nay, giờ vào/ra, tiến độ việc trong ca, lịch của
   chính nhân viên, trạng thái phép và dữ liệu hồ sơ/phiếu lương của chính actor.
+  Khi `can_access_workspace()`: thêm CTA/list ngắn **Việc được giao** → `/work`
+  (không thay Việc trong ca).
 - **KHÔNG hiển thị:** Chọn nhân viên, chọn Branch/site, danh sách đội, hàng duyệt,
-  quyền tài khoản, dữ liệu HR nhạy cảm của người khác hoặc module không được cấp.
+  quyền tài khoản, dữ liệu HR nhạy cảm của người khác hoặc module không được cấp;
+  Kanban Work đầy đủ (thuộc `/work`).
 - **Quy chuẩn UX/UI:**
   - `/me` là route ngang cấp với `/inventory`, `/finance` và `/hr`, nhưng không là
     tab mô-đun; điểm vào nằm trong Avatar Footer.
@@ -189,9 +192,34 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ---
 
+### 2.4C. Công việc — `/work/*`
+
+- **Gia đình / plane:** `control_surface` (ADR 0033). Cùng shell với `/finance` ·
+  `/inventory` · `/hr` — không app/host riêng.
+- **Archetype:** `/work` Inbox = `LIST` (queue); `/work/tasks/[id]` = `DETAIL`;
+  `?view=board` = compose `TASK_BOARD`; `?view=calendar` = `TASK_CALENDAR`;
+  `?view=timeline` = `TASK_TIMELINE`. **Không** dùng archetype `BOARD` /
+  `station_chrome` (KDS/POS).
+- **Actor:** Thành viên `work_*` (membership) + Owner (`work:manage`). Candidate
+  ACL `work` chỉ là cửa vào; RLS/RPC là authority.
+- **Job:** Việc được giao / theo dõi liên phòng ban; sau đó board/calendar/
+  timeline theo scope một phòng hoặc một dự án.
+- **Goal:** Mở Inbox → đúng việc → đổi trạng thái / comment; lead mở board một
+  scope — không tường Kanban cả công ty trên `/`.
+- **Ưu tiên data:** Tên việc, trạng thái, người, hạn, dự án/phòng. **Không:**
+  số tiền, tồn kho, lương; không trộn `position_shift_tasks` (Việc trong ca).
+- **UX:** View switcher URL `view=`; filter trên URL; desktop primary cho board;
+  mobile board = tab trạng thái + list. Copy: **Việc được giao** ≠ **Việc trong ca**.
+- **SSOT:** `docs/plan/2026-08-11-work-module-integration.md`, ADR 0033.
+
+---
+
 ### 2.5. Kho hàng — `/inventory` & `/br/[branchId]/stock`
 
 > On-hand exemplar context (tests may cite as comment only) — giữ section này.
+> **Document gold bar** (control_surface): stock dialog + PO + GRN — KPI
+> `Item` strip, title + `StatusBadge`, sectioned line cards. Research/roadmap:
+> `docs/plan/2026-08-11-inventory-ux-research.md`.
 
 - **Gia đình:** Inventory (spine §1A). Entry → success → recovery ở mức phiếu:
   mở list/hub đúng plane → nháp/kiểm nhận → chốt chứng từ; lệch/hủy qua dialog

@@ -21,6 +21,7 @@ import {
 import { fetchHrAttentionSummary } from "@/(protected)/hr/hr-attention";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { countPrintJobsNeedingAttention } from "@/_lib/print-attention";
+import { countMyWorkTasksDue } from "@/(protected)/work/actions";
 import { messages } from "@lib/messages";
 
 export type ControlHomeAttentionItem = {
@@ -214,6 +215,28 @@ async function loadPrintAttention(
   ];
 }
 
+async function loadWorkAttention(
+  role: StaffRole,
+): Promise<ControlHomeAttentionItem[]> {
+  if (!canAccess(role, "work")) return [];
+  try {
+    const result = await countMyWorkTasksDue({});
+    if (!result.success || !result.data || result.data.count <= 0) return [];
+    return [
+      {
+        id: "work:mine-due",
+        moduleKey: "work",
+        label: copy.attention.workMineDue,
+        count: result.data.count,
+        href: MODULE_ACL.work.path,
+        tone: "warning",
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
 async function loadNotificationAttention(): Promise<ControlHomeAttentionItem[]> {
   try {
     const result = await getUnreadCount();
@@ -246,6 +269,7 @@ export async function loadControlHomeAttention(
     loadHrAttention(role),
     loadOrdersAttention(role),
     loadPrintAttention(role),
+    loadWorkAttention(role),
     loadNotificationAttention(),
   ]);
 

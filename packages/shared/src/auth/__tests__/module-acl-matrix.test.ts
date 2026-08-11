@@ -45,8 +45,9 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "pickup",
     "settings",
     "staff",
+    "work",
   ],
-  self_service: ["hr", "hr_payroll", "me", "notifications", "staff"],
+  self_service: ["hr", "hr_payroll", "me", "notifications", "staff", "work"],
   branch_manager: [
     "branch_close_day",
     "branch_dashboard",
@@ -112,6 +113,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "owner",
     "staff",
+    "work",
   ],
   central_supply_ops: [
     "branch_home",
@@ -124,6 +126,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "owner",
     "staff",
+    "work",
   ],
   central_kitchen_lead: [
     "branch_home",
@@ -136,6 +139,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "notifications",
     "owner",
     "staff",
+    "work",
   ],
 };
 

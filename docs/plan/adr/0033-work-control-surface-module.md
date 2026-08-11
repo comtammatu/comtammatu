@@ -1,0 +1,65 @@
+# ADR 0033 — Work module on Control Surface
+
+**Status:** Accepted
+
+**Decision owner:** Owner, 2026-08-11 (implement plan Accept)
+
+**Review tier:** T2 — new Control Surface module, membership RLS, notifications
+
+## Context
+
+Office staff need cross-department assigned work (inbox, later board/calendar/
+timeline) without a second deployable or second auth cookie domain. PR #348 /
+`codex/workspace-foundation` proposed `apps/workspace` + `work.comtammatu.com`;
+Owner rejected separate-app hosting in favor of same Control Surface.
+
+Canonical integration plan:
+`docs/plan/2026-08-11-work-module-integration.md`.
+
+## Decision
+
+1. **Same Surface.** Routes live under `apps/web` at `/work/*` inside Control
+   Surface chrome. No `apps/workspace`, no `work.*` host, no second Production
+   Vercel project, no Work-specific cookie domain.
+
+2. **Module ACL.** `ModuleKey` `work` with `path: "/work"` (web default; no
+   `app: "workspace"`). Candidate roles may include all staff; live authority is
+   `can_access_workspace()` + RLS membership.
+
+3. **Landing.** `/work` opens Inbox (`view=mine` / assignee·participant). Full
+   multi-department Kanban is forbidden as default.
+
+4. **Views (URL only).** `view=board|calendar|timeline` with required scope
+   (`project` or `department` for board/timeline). Compose shapes `TASK_BOARD`,
+   `TASK_CALENDAR`, `TASK_TIMELINE` are Control Surface recipes — not KDS
+   `BOARD` / `station_chrome`.
+
+5. **Control home `/`.** Remains module attention hub; adds one attention row
+   for due-today + overdue Work tasks → `/work`. Does not become a Work shell.
+
+6. **`/me`.** Remains personal day (clock + Việc trong ca). When Work access
+   exists, expose CTA to `/work`. Never merge `work_tasks` into
+   `position_shift_tasks`.
+
+7. **Domain.** Additive `work_*` tables; tasks may link to Finance/Inventory/HR
+   records later but must not copy money, stock, or payroll payloads.
+
+8. **Permission.** Tenant `work:manage` for Owner (department/member admin in
+   MVP). Leads get authority from membership tables, not broad tenant grants.
+
+9. **Supersession.** Separate-app design in PR #348 is not to be merged as
+   runtime. Domain ideas (`work_*`, membership, inbox-first) are retained via
+   this ADR and the 2026-08-11 plan.
+
+## Consequences
+
+- Implementation follows waves W0→W5 in the integration plan.
+- Notification `action_url` values are same-origin `/work/tasks/[id]`.
+- `login-destination` stays unchanged.
+- Page-archetype census must register Work routes under LIST/DETAIL or the new
+  TASK_* compose shapes — never under station BOARD.
+
+## Non-goals
+
+Separate Work deployable; org-wide Kanban wall on `/`; AI/wiki; Gantt leveling;
+time tracking; changing Branch KDS BOARD semantics.

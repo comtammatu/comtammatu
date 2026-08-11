@@ -212,6 +212,8 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/menu/page.tsx": "LIST",
   "apps/web/app/(protected)/notifications/page.tsx": "LIST",
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/work/page.tsx": "LIST",
+  "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/me/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/me/clock/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/me/schedule/page.tsx": "EMBED-WRAPPER",
@@ -632,6 +634,8 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/menu/page.tsx": "LIST",
   "apps/web/app/(protected)/notifications/page.tsx": "LIST",
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/work/page.tsx": "LIST",
+  "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/page.tsx": "DASHBOARD_REPORT",
   "apps/web/app/(protected)/settings/(tenant)/general/page.tsx": "DETAIL",
   "apps/web/app/(protected)/settings/(tenant)/payments/page.tsx": "DETAIL",
@@ -651,4 +655,8 @@ export const CONTROL_SURFACE_COMPOSE_SHAPES = [
   "DASHBOARD_REPORT",
   "REDIRECT",
   "STAFF_EMBED",
+  // Work module (ADR 0033) — registered when /work routes ship; not KDS BOARD.
+  "TASK_BOARD",
+  "TASK_CALENDAR",
+  "TASK_TIMELINE",
 ];

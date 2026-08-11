@@ -233,6 +233,14 @@ rather than staying a near-empty category.
 | 11  | BOARD           | Realtime operational queue (full-screen station_chrome)                       |
 | 12  | PUBLIC-WORKFLOW | Token-scoped customer transaction without control_surface chrome                   |
 
+Control Surface Work compose shapes (ADR 0033 — not station BOARD):
+
+| Compose id | Job |
+| --- | --- |
+| `TASK_BOARD` | Office Kanban columns by `work_tasks.status` for **one** department or project; HTML5 drag → status RPC + `expected_revision`; mobile = status tabs + list |
+| `TASK_CALENDAR` | Month/week cells from `due_at` (Vietnam day); click → task DETAIL |
+| `TASK_TIMELINE` | Single-project date bars (read-heavy MVP) |
+
 ## 3. Shared Composition Recipes
 
 ### LIST

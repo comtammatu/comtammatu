@@ -11504,6 +11504,546 @@ export type Database = {
           },
         ]
       }
+      work_department_members: {
+        Row: {
+          created_at: string
+          department_id: number
+          id: number
+          is_active: boolean
+          role: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: number
+          id?: never
+          is_active?: boolean
+          role: string
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: number
+          id?: never
+          is_active?: boolean
+          role?: string
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_department_members_department_fk"
+            columns: ["department_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_departments"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_department_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_department_members_user_fk"
+            columns: ["user_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      work_departments: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_departments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_project_members: {
+        Row: {
+          created_at: string
+          id: number
+          project_id: number
+          role: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          project_id: number
+          role: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          project_id?: number
+          role?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_project_members_project_fk"
+            columns: ["project_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_project_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_project_members_user_fk"
+            columns: ["user_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      work_projects: {
+        Row: {
+          created_at: string
+          created_by: string
+          department_id: number
+          id: number
+          name: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          department_id: number
+          id?: never
+          name: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          department_id?: number
+          id?: never
+          name?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_projects_created_by_fk"
+            columns: ["created_by", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_projects_department_fk"
+            columns: ["department_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_departments"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_attachments: {
+        Row: {
+          byte_size: number | null
+          content_type: string | null
+          created_at: string
+          file_name: string
+          id: number
+          storage_path: string
+          task_id: number
+          tenant_id: number
+          uploaded_by: string
+        }
+        Insert: {
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          file_name: string
+          id?: never
+          storage_path: string
+          task_id: number
+          tenant_id: number
+          uploaded_by: string
+        }
+        Update: {
+          byte_size?: number | null
+          content_type?: string | null
+          created_at?: string
+          file_name?: string
+          id?: never
+          storage_path?: string
+          task_id?: number
+          tenant_id?: number
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_attachments_task_fk"
+            columns: ["task_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_task_attachments_uploaded_by_fk"
+            columns: ["uploaded_by", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      work_task_checklist_items: {
+        Row: {
+          created_at: string
+          id: number
+          is_done: boolean
+          sort_order: number
+          task_id: number
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_done?: boolean
+          sort_order?: number
+          task_id: number
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_done?: boolean
+          sort_order?: number
+          task_id?: number
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_checklist_items_task_fk"
+            columns: ["task_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_checklist_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: number
+          task_id: number
+          tenant_id: number
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: never
+          task_id: number
+          tenant_id: number
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: never
+          task_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_comments_author_fk"
+            columns: ["author_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_comments_task_fk"
+            columns: ["task_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_comments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          event_kind: string
+          id: number
+          payload: Json
+          task_id: number
+          tenant_id: number
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          event_kind: string
+          id?: never
+          payload?: Json
+          task_id: number
+          tenant_id: number
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          event_kind?: string
+          id?: never
+          payload?: Json
+          task_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_events_actor_fk"
+            columns: ["actor_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_events_task_fk"
+            columns: ["task_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_task_participants: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          task_id: number
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          task_id: number
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          task_id?: number
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_task_participants_task_fk"
+            columns: ["task_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_tasks"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_task_participants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_task_participants_user_fk"
+            columns: ["user_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+        ]
+      }
+      work_tasks: {
+        Row: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          department_id: number
+          description?: string | null
+          due_at?: string | null
+          id?: never
+          priority?: string
+          project_id?: number | null
+          revision?: number
+          started_at?: string | null
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          department_id?: number
+          description?: string | null
+          due_at?: string | null
+          id?: never
+          priority?: string
+          project_id?: number | null
+          revision?: number
+          started_at?: string | null
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_tasks_assignee_fk"
+            columns: ["assignee_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_tasks_created_by_fk"
+            columns: ["created_by", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_tasks_department_fk"
+            columns: ["department_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_departments"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_tasks_project_fk"
+            columns: ["project_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "work_projects"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "work_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_daily_revenue: {
@@ -11790,6 +12330,23 @@ export type Database = {
         Returns: Json
       }
       activate_invoice_profile: { Args: never; Returns: number }
+      add_work_task_comment: {
+        Args: { p_body: string; p_task_id: number }
+        Returns: {
+          author_id: string
+          body: string
+          created_at: string
+          id: number
+          task_id: number
+          tenant_id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_task_comments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       adjust_stock_exception:
         | {
             Args: {
@@ -12013,8 +12570,19 @@ export type Database = {
         Args: { p_groups: Json }
         Returns: Json
       }
+      can_access_workspace: { Args: never; Returns: boolean }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
+      can_read_work_department: {
+        Args: { p_department_id: number }
+        Returns: boolean
+      }
+      can_read_work_project: {
+        Args: { p_project_id: number }
+        Returns: boolean
+      }
+      can_read_work_task: { Args: { p_task_id: number }; Returns: boolean }
+      can_write_work_task: { Args: { p_task_id: number }; Returns: boolean }
       cancel_expense: { Args: { p_expense_id: number }; Returns: Json }
       cancel_goods_receipt_note: {
         Args: { p_grn_id: number; p_reason: string }
@@ -12265,6 +12833,7 @@ export type Database = {
         Args: { p_new_method: string; p_payment_id: number; p_reason: string }
         Returns: Json
       }
+      count_my_work_tasks_due: { Args: { p_before: string }; Returns: number }
       count_unread_notifications: { Args: never; Returns: number }
       count_unread_notifications_by_target: {
         Args: never
@@ -12544,6 +13113,41 @@ export type Database = {
         }
         Returns: Json
       }
+      create_work_task: {
+        Args: {
+          p_assignee_id: string
+          p_department_id: number
+          p_description: string
+          p_due_at: string
+          p_priority: string
+          p_project_id: number
+          p_title: string
+        }
+        Returns: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       delete_branch_revenue_target: {
@@ -12659,6 +13263,7 @@ export type Database = {
         Args: { p_branch_id: number; p_order_id: number; p_tenant_id: number }
         Returns: Json
       }
+      ensure_pilot_work_department: { Args: never; Returns: number }
       escalate_round_4: {
         Args: {
           p_final_qty: number
@@ -13247,6 +13852,33 @@ export type Database = {
               tenant_id: number
             }[]
           }
+      get_work_task: {
+        Args: { p_task_id: number }
+        Returns: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       grant_permission: {
         Args: {
           p_branch_id: number
@@ -13396,6 +14028,33 @@ export type Database = {
           p_supplier_id?: number
         }
         Returns: Json
+      }
+      list_my_work_tasks: {
+        Args: { p_include_done?: boolean }
+        Returns: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "work_tasks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       list_notifications: {
         Args: {
@@ -14328,6 +14987,37 @@ export type Database = {
         Args: { p_is_preferred: boolean; p_item_id: number }
         Returns: Json
       }
+      set_work_task_status: {
+        Args: {
+          p_expected_revision: number
+          p_status: string
+          p_task_id: number
+        }
+        Returns: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       snapshot_payroll_calculation: {
         Args: {
           p_entries: Json
@@ -14581,6 +15271,45 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_work_task: {
+        Args: {
+          p_assignee_id?: string
+          p_clear_assignee_id?: boolean
+          p_clear_due_at?: boolean
+          p_clear_project_id?: boolean
+          p_description?: string
+          p_due_at?: string
+          p_expected_revision: number
+          p_priority?: string
+          p_project_id?: number
+          p_task_id: number
+          p_title?: string
+        }
+        Returns: {
+          assignee_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: number
+          description: string | null
+          due_at: string | null
+          id: number
+          priority: string
+          project_id: number | null
+          revision: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_branch_revenue_targets: {
         Args: { p_rows: Json; p_year_month: string }
         Returns: Json
@@ -14667,6 +15396,30 @@ export type Database = {
           p_station_id?: number
         }
         Returns: number
+      }
+      upsert_work_task_checklist_item: {
+        Args: {
+          p_is_done: boolean
+          p_item_id: number
+          p_sort_order: number
+          p_task_id: number
+          p_title: string
+        }
+        Returns: {
+          created_at: string
+          id: number
+          is_done: boolean
+          sort_order: number
+          task_id: number
+          tenant_id: number
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_task_checklist_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       verify_service_supplier_invoice: {
         Args: { p_invoice_id: number; p_reason: string }

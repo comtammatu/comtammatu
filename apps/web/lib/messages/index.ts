@@ -19,6 +19,7 @@ import { orders } from "./orders";
 import { operator } from "./operator";
 import { pos } from "./pos";
 import { settings } from "./settings";
+import { workCopy } from "./work";
 
 export const messages = {
   controlSurface,
@@ -40,6 +41,7 @@ export const messages = {
   operator,
   pos,
   settings,
+  work: workCopy,
 } as const;
 
 export const m = interpolate;

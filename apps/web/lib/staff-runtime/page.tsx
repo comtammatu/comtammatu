@@ -10,6 +10,7 @@ import {
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
+  Briefcase as IconBriefcase,
   ReceiptText as IconPayslip,
   UserCircle as IconUserCircle,
 } from "lucide-react";
@@ -35,6 +36,7 @@ import { loadAuthState } from "@/_lib/auth";
 import { BranchOpsRefresh } from "@/_components/branch-ops-refresh";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
 import { messages } from "@lib/messages";
+import { workCopy } from "@lib/messages/work";
 import {
   EmployeeActionSection,
   EmployeeControlBar,
@@ -401,6 +403,7 @@ export async function StaffWorkdayPageContent({
     ActionSection,
   } = primitives;
   const { supabase, claims, session } = authState ?? (await loadAuthState());
+  const { data: canAccessWork } = await supabase.rpc("can_access_workspace");
   const state = await getTodayWorkState();
 
   // Checkout requests BLOCK the requesting employee until a manager
@@ -1080,6 +1083,20 @@ export async function StaffWorkdayPageContent({
     />
   );
 
+  const workCtaSection =
+    canAccessWork === true ? (
+      <Panel tone="info" size="sm">
+        <Button
+          size="touch-lg"
+          className="w-full sm:w-fit"
+          render={<Link href="/work" />}
+        >
+          <IconBriefcase data-icon="inline-start" />
+          {workCopy.openWorkCta}
+        </Button>
+      </Panel>
+    ) : null;
+
   const pageContent =
     mode === "manager-dashboard" ? (
       <div className="flex flex-col gap-3">
@@ -1093,6 +1110,7 @@ export async function StaffWorkdayPageContent({
       <div className="grid gap-3 lg:grid-cols-5 lg:items-start">
         <div className="lg:sticky lg:top-3 lg:col-span-2">{todayCard}</div>
         <div className="lg:col-span-3 lg:col-start-3 lg:row-span-4 lg:row-start-1 flex flex-col gap-3">
+          {workCtaSection}
           {workflowSection}
           {personalShortcutsSection}
           {isBranchManager ? managerActionPanel : null}
@@ -1110,6 +1128,7 @@ export async function StaffWorkdayPageContent({
     ) : (
       <div className="flex flex-col gap-3">
         {todayCard}
+        {workCtaSection}
         {shiftsTodaySection}
         {staleOpenShiftSection}
         {checkoutApprovalsSection}

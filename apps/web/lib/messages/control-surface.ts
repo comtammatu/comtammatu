@@ -33,6 +33,7 @@ export const controlSurface = {
       pendingRefunds: "Hoàn tiền chờ duyệt",
       printJobs: "Lệnh in lỗi / hết hạn",
       unreadNotifications: "Thông báo chưa đọc",
+      workMineDue: "Việc đến hạn / quá hạn",
     },
   },
   nav: {

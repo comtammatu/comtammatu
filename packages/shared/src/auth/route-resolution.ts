@@ -112,6 +112,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/menu")) return "menu";
   if (matchesPathPrefix(pathname, "/orders")) return "orders";
   if (matchesPathPrefix(pathname, "/feedback")) return "feedback";
+  if (matchesPathPrefix(pathname, "/work")) return "work";
   if (matchesPathPrefix(pathname, "/hr/staff")) return "staff";
   if (matchesPathPrefix(pathname, "/hr/payroll")) return "hr_payroll";
   if (matchesPathPrefix(pathname, "/hr")) return "hr";

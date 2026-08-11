@@ -62,6 +62,11 @@ export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
         icon: "MessageSquareHeart",
         label: MODULE_LABELS_VI.feedback,
       },
+      {
+        moduleKey: "work",
+        icon: "ListTodo",
+        label: MODULE_LABELS_VI.work,
+      },
       { moduleKey: "inventory", icon: "Package", label: MODULE_LABELS_VI.inventory },
       { moduleKey: "menu", icon: "Utensils", label: MODULE_LABELS_VI.menu },
       { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
