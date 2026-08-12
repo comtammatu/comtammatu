@@ -125,3 +125,11 @@ test("Work permission key is registered", () => {
   const permissions = readRepo("packages/shared/src/auth/permissions.ts");
   assert.match(permissions, /WORK_MANAGE: "work:manage"/);
 });
+
+test("Work deep nav exposes department team section for manage", () => {
+  const nav = readWeb("app/lib/control-surface-nav.ts");
+  assert.match(nav, /teamNavSection/);
+  assert.match(nav, /\/work\/team/);
+  const shell = readWeb("app/components/control-surface-shell.tsx");
+  assert.match(shell, /canManageTeam/);
+});

@@ -84,6 +84,7 @@ export const workCopy = {
   checklistFailed: "Không cập nhật được việc cần làm.",
   teamTitle: "Thành viên Công việc",
   teamNav: "Thành viên",
+  teamNavSection: "Phòng ban, đội nhóm",
   teamEmpty: "Chưa có thành viên trong phòng ban này.",
   teamAdd: "Thêm thành viên",
   teamRoleLead: "Trưởng phòng",

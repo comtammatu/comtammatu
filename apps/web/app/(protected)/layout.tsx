@@ -12,6 +12,7 @@ import {
 } from "@/_lib/permissions";
 import { ControlSurfaceShell } from "@/components/control-surface-shell";
 import { fetchActiveBranches } from "@/_lib/branch-context";
+import { canManageWorkTeam } from "@/(protected)/work/_lib/work-manage";
 import {
   CATALOG_MANAGE_PERMISSIONS,
   CATALOG_READ_PERMISSIONS,
@@ -55,6 +56,7 @@ export default async function ProtectedLayout({
     showSupplierPayables,
     canOpenHr,
     canOpenHrPayroll,
+    canManageWorkTeamFlag,
   ] = await Promise.all([
     canOpenInventory
       ? resolveInventoryBranchScope(supabase, claims, null)
@@ -102,6 +104,9 @@ export default async function ProtectedLayout({
         : denied,
     currentUserHasPermission(null, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
     currentUserHasPermission(null, PERMISSION_KEYS.HR_PAYROLL_PREPARE),
+    canAccess(role, "work")
+      ? canManageWorkTeam({ supabase, claims })
+      : Promise.resolve(false),
   ]);
 
   const isCentralCatalogViewer =
@@ -151,6 +156,9 @@ export default async function ProtectedLayout({
         canOpenPayroll: canOpenHrPayroll,
         branches: hrBranches,
         canSelectAll: isOwner,
+      }}
+      work={{
+        canManageTeam: canManageWorkTeamFlag,
       }}
     >
       {children}

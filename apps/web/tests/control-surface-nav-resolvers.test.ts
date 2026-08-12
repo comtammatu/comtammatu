@@ -12,6 +12,7 @@ import {
 import {
   resolveControlSurfacePrimaryTabs,
   resolveControlSurfaceCoreDeepNav,
+  resolveControlSurfaceDeepNav,
 } from "../app/lib/control-surface-nav";
 import {
   findActivePrimaryNavItem,
@@ -211,6 +212,24 @@ for (const surface of FLAT_CONTROL_SURFACE_MODULE_IDS) {
     );
   });
 }
+
+test("resolveControlSurfaceDeepNav exposes work department team section", () => {
+  const ownerGroups = resolveControlSurfaceDeepNav("owner", "work", {
+    work: { canManageTeam: true },
+  });
+  const ownerHrefs = hrefList(flattenGroups(ownerGroups));
+  assert.ok(ownerHrefs.includes(MODULE_ACL.work.path));
+  assert.ok(ownerHrefs.includes("/work/team"));
+  assert.ok(
+    ownerGroups.some((group) => group.title === "Phòng ban, đội nhóm"),
+    "work deep nav must include the department/team section",
+  );
+
+  const memberGroups = resolveControlSurfaceDeepNav("accountant", "work", {
+    work: { canManageTeam: false },
+  });
+  assert.deepEqual(memberGroups, []);
+});
 
 test("resolveControlSurfaceCoreDeepNav exposes HR candidates for the live capability gate", () => {
   // Accounts live under `/hr?view=accounts` — not a second deep-nav group.

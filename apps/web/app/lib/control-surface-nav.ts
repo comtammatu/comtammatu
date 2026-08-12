@@ -9,6 +9,7 @@ import {
   Printer as IconPrinter,
   ReceiptText as IconReceiptText,
   Settings as IconSettings,
+  ListTodo as IconListTodo,
   Users as IconUsers,
   Utensils as IconUtensils,
   Wallet as IconWallet,
@@ -33,6 +34,7 @@ import type {
 } from "@/lib/control-surface-module";
 import type { ShellNavGroup, ShellNavItem } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
+import { workCopy } from "@lib/messages/work";
 
 export type { InventoryNavFlags };
 
@@ -40,6 +42,10 @@ export type FinanceNavFlags = {
   showInvoices: boolean;
   showSupplierPayables: boolean;
   showRevenueTargets?: boolean;
+};
+
+export type WorkNavFlags = {
+  canManageTeam: boolean;
 };
 
 // control_surface primary + deep nav. Every L0 route shares the same primary
@@ -149,7 +155,34 @@ function resolveHrDeepNav(role: StaffRole): ShellNavGroup[] {
   return [{ title: APP_COPY_VI.hrWorkspace, items: peopleItems }];
 }
 
-// Core-module deep nav (settings/hr). Flat modules emit no sub-nav — the
+function resolveWorkDeepNav(canManageTeam: boolean): ShellNavGroup[] {
+  if (!canManageTeam) return [];
+
+  return [
+    {
+      title: MODULE_ACL.work.label,
+      items: [
+        {
+          href: MODULE_ACL.work.path,
+          label: workCopy.viewMine,
+          icon: IconListTodo,
+        },
+      ],
+    },
+    {
+      title: workCopy.teamNavSection,
+      items: [
+        {
+          href: "/work/team",
+          label: workCopy.teamNav,
+          icon: IconUsers,
+        },
+      ],
+    },
+  ];
+}
+
+// Core-module deep nav (settings/hr/work). Flat modules emit no sub-nav — the
 // primary tab already links to the module; a single-child group would
 // duplicate the tab (sidebar filters sub-items equal to the parent href).
 export function resolveControlSurfaceCoreDeepNav(
@@ -191,6 +224,7 @@ export function resolveControlSurfaceDeepNav(
     branchId?: number | null;
     inventory?: InventoryNavFlags;
     finance?: FinanceNavFlags;
+    work?: WorkNavFlags;
   },
 ): ShellNavGroup[] {
   if (module === "inventory") {
@@ -211,6 +245,10 @@ export function resolveControlSurfaceDeepNav(
     const flags = opts?.finance;
     if (!flags) return [];
     return resolveFinanceNav(flags);
+  }
+
+  if (module === "work") {
+    return resolveWorkDeepNav(opts?.work?.canManageTeam ?? false);
   }
 
   return resolveControlSurfaceCoreDeepNav(

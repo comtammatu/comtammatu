@@ -61,6 +61,9 @@ type BaseProps = {
     branches: ScopeSite[];
     canSelectAll: boolean;
   };
+  work: {
+    canManageTeam: boolean;
+  };
 };
 
 export type ControlSurfaceShellProps = BaseProps;
@@ -109,6 +112,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     inventory,
     finance,
     hr,
+    work,
   } = props;
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -214,6 +218,12 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       );
     }
 
+    if (activeModule === "work") {
+      return resolveControlSurfaceDeepNav(role, "work", {
+        work: { canManageTeam: work.canManageTeam },
+      });
+    }
+
     if (
       !activeModule ||
       activeModule === "notifications" ||
@@ -247,6 +257,7 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     role,
     hr.canOpenPayroll,
     hrBranchScope,
+    work.canManageTeam,
   ]);
 
   const showInventoryScope =

@@ -37,6 +37,5 @@ export const FLAT_CONTROL_SURFACE_MODULE_IDS = [
   "menu",
   "orders",
   "feedback",
-  "work",
   "branches",
 ] as const satisfies readonly ControlSurfaceCoreModuleId[];
