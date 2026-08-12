@@ -420,7 +420,7 @@ export function AppShell({
             // flex-col + child flex-1: short DETAIL pages fill the scrollport
             // so AppPage footer (mt-auto) docks to the panel bottom. Desktop
             // pb-0 so sticky CTA can sit flush; mobile keeps bottom-nav clearance.
-            "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4",
+            "no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4",
             showBottomNav ? "pb-24 lg:pb-0" : "pb-3 md:pb-4",
           )}
         >

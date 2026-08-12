@@ -19,7 +19,7 @@ test("GRN list and detail keep controls inside one coherent workflow", () => {
 
   assert.match(
     list,
-    /\[&>\[data-slot=toolbar-group\]:first-child\]:basis-full/,
+    /min-w-64 flex-1/,
   );
   assert.doesNotMatch(detail, /function LineMetrics/);
   assert.match(detail, /header: "Theo đơn"/);

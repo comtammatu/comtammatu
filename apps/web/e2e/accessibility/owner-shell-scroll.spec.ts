@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 /**
  * Owner inset scroll contract (design-system Structural Governance):
  * document/body stay viewport-bounded; only `[data-control-surface-scroll]` scrolls;
- * AppPageHeader (and LIST filter chrome) sticks inside that scrollport.
+ * AppPageHeader scrolls with content; optional sticky via AppToolbar / AppPageTabs.
  */
 
 const VIEWPORTS = [
@@ -71,14 +71,10 @@ test.describe("Owner shell inset scroll model", () => {
             : null,
           scrollportClientHeight: scrollport?.clientHeight ?? 0,
           scrollportScrollHeight: scrollport?.scrollHeight ?? 0,
-          headerSticky: (() => {
-            // LIST filters use negative sticky top to cancel shell pt-3/md:pt-4;
-            // do not require the literal `top-0` class.
-            const header = document.querySelector("#main-content .sticky");
-            return header
-              ? getComputedStyle(header).position === "sticky"
-              : false;
-          })(),
+          scrollportHidesScrollbar: scrollport
+            ? getComputedStyle(scrollport).scrollbarWidth === "none" ||
+              scrollport.classList.contains("no-scrollbar")
+            : false,
         };
       });
 
@@ -87,11 +83,14 @@ test.describe("Owner shell inset scroll model", () => {
       );
       expect(metrics.docScrollTop).toBe(0);
       expect(metrics.scrollportOverflowY).toMatch(/auto|scroll/);
+      expect(
+        metrics.scrollportHidesScrollbar,
+        "Owner scrollport must hide native scrollbar",
+      ).toBe(true);
       // Document must not be the scroll owner for the inset card model.
       expect(metrics.docScrollHeight).toBeLessThanOrEqual(
         metrics.innerHeight + 2,
       );
-      expect(metrics.headerSticky).toBe(true);
 
       if (metrics.scrollportScrollHeight > metrics.scrollportClientHeight + 8) {
         await page.locator("[data-control-surface-scroll]").evaluate((el) => {
@@ -113,7 +112,7 @@ test.describe("Owner shell inset scroll model", () => {
   }
 
   for (const path of OWNER_LIST_PATHS) {
-    test(`desktop ${path}: page header scrolls with content; LIST filters may sticky`, async ({
+    test(`desktop ${path}: page header scrolls with content`, async ({
       page,
     }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
@@ -136,15 +135,6 @@ test.describe("Owner shell inset scroll model", () => {
         );
         scrollport.scrollTop = Math.min(160, maxScroll);
         const afterTop = h1.getBoundingClientRect().top;
-        const sticky = scrollport.querySelector(".sticky") as HTMLElement | null;
-        const stickyFlush =
-          sticky == null || maxScroll < 80
-            ? null
-            : (() => {
-                const sr = scrollport.getBoundingClientRect();
-                const st = sticky.getBoundingClientRect();
-                return Math.abs(st.top - sr.top) <= 2;
-              })();
         return {
           ok: true as const,
           headerInScroll,
@@ -154,7 +144,6 @@ test.describe("Owner shell inset scroll model", () => {
           canScroll: maxScroll > 0,
           noChromeHost:
             document.querySelector("[data-owner-page-chrome]") == null,
-          stickyFlush,
         };
       });
 
@@ -172,12 +161,6 @@ test.describe("Owner shell inset scroll model", () => {
         expect(
           metrics.headerScrolledAway,
           `${path} h1 must scroll away with content`,
-        ).toBe(true);
-      }
-      if (metrics.stickyFlush != null) {
-        expect(
-          metrics.stickyFlush,
-          `${path} LIST sticky filter must flush to inset panel top`,
         ).toBe(true);
       }
     });

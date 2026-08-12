@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 import { AppSection, type AppSectionProps } from "./app-section";
-import { AppStickyFilterChrome } from "./app-sticky-filter-chrome";
 
 export type AppListFrameProps = Omit<
   AppSectionProps,
@@ -56,15 +55,14 @@ export function AppListFrame({
     >
       <div className="flex min-w-0 flex-col">
         {hasToolbar ? (
-          <AppStickyFilterChrome
-            className={
-              flushTop
-                ? "overflow-hidden rounded-t-lg"
-                : undefined
-            }
+          <div
+            className={cn(
+              "bg-card",
+              flushTop ? "overflow-hidden rounded-t-lg" : undefined,
+            )}
           >
             {toolbar}
-          </AppStickyFilterChrome>
+          </div>
         ) : null}
         <div
           className={cn(

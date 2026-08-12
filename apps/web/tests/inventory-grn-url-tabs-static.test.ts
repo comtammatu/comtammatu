@@ -23,14 +23,19 @@ test("GRN is a direct route and /inventory/operations is gone", () => {
 
   assert.match(grnListClientSource, /<AppListFrame/);
   assert.doesNotMatch(grnListClientSource, /AppPageTabs|TabsContent/);
+  assert.match(grnListClientSource, /<TabsList aria-label=\{grnCopy\.statusTabsAria\}/);
 });
 
-test("GRN status is a filter on the compact operational list", () => {
+test("GRN status uses header tabs on the compact operational list", () => {
+  assert.match(grnListClientSource, /tabs=\{statusTabs\}/);
   assert.match(grnListClientSource, /value=\{filters\.status\}/);
   assert.match(
     grnListClientSource,
-    /navigate\(\{ status: value, page: null \}\)/,
+    /navigate\(\{[\s\S]*?status: value[\s\S]*?page: null[\s\S]*?dateField: null/,
   );
+  assert.doesNotMatch(grnListClientSource, /applyFilters/);
+  assert.doesNotMatch(grnListClientSource, /supplierFilter/);
+  assert.doesNotMatch(grnListClientSource, /purchaseOrderFilter/);
   assert.doesNotMatch(grnListClientSource, /header: "Đơn đặt hàng"/);
   assert.doesNotMatch(grnListClientSource, /header: "Yêu cầu mua"/);
   assert.doesNotMatch(grnListClientSource, /header: "Giá trị nhập"/);

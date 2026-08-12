@@ -80,7 +80,7 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.match(source, /lg:ring-1 lg:ring-sidebar-border\/50/);
   assert.match(
     source,
-    /flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4/,
+    /no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 pt-3 md:px-4 md:pt-4/,
   );
   assert.match(source, /data-control-surface-scroll=""/);
   assert.match(source, /showBottomNav \? "pb-24 lg:pb-0" : "pb-3 md:pb-4"/);
@@ -118,7 +118,12 @@ test("Owner AppShell keeps inset panel viewport-bounded with inner scroll", () =
   assert.match(surface, /APP_PAGE_STICKY_FILTER_SHELL_BLEED_CLASSNAME/);
   assert.match(surface, /function AppStickyFilterChrome\(/);
   assert.doesNotMatch(surface, /function AppPageStickyChrome\(/);
-  assert.match(surface, /function AppListFrame\([\s\S]*?AppStickyFilterChrome/);
+  const listFrame = read("apps/web/app/components/surface/app-list-frame.tsx");
+  assert.doesNotMatch(
+    listFrame,
+    /AppStickyFilterChrome/,
+    "AppListFrame toolbar scrolls with content — opt into sticky via AppToolbar sticky or AppPageTabs stickyList",
+  );
   assert.match(surface, /data-stuck/);
   // Negative top cancels Owner shell pt-3/md:pt-4 so stuck filters flush to
   // the inset panel top (top-0 leaves a pad gap where list rows peek above).
@@ -147,7 +152,7 @@ test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () 
     assert.doesNotMatch(
       source,
       /<AppToolbar\s+sticky/,
-      `${path} must not use AppToolbar sticky — frame owns sticky stack`,
+      `${path} must not use AppToolbar sticky — use AppListFrame toolbar slot (scrolls with content)`,
     );
   }
 
@@ -162,7 +167,7 @@ test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () 
   assert.doesNotMatch(
     attendanceSource,
     /<AppToolbar\s+sticky/,
-    "attendance modules must not use AppToolbar sticky — frame owns sticky stack",
+    "attendance modules must not use AppToolbar sticky — use AppListFrame toolbar slot (scrolls with content)",
   );
 
   const auditClient = read(
@@ -179,7 +184,7 @@ test("Owner LIST filter bars use AppListFrame inline or intentional sticky", () 
   );
 
   // Finance FilterBar sits above KPI/dashboard cards — sticky crushes the
-  // next section while scrolling. LIST pages use AppListFrame sticky chrome.
+  // next section while scrolling. LIST pages use AppListFrame toolbar slot.
   assert.doesNotMatch(
     read("apps/web/app/(protected)/finance/components/filter-bar.tsx"),
     /<AppToolbar\s+sticky/,
@@ -270,7 +275,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
     const coveredBySticky = stickyToolbar.test(source);
     assert.ok(
       coveredByFrame || coveredBySticky,
-      `${rel} has AppToolbar search/filters but neither AppListFrame toolbar sticky wrap nor AppToolbar sticky — add sticky, move into AppListFrame toolbar, or allowlist with reason`,
+      `${rel} has AppToolbar search/filters but neither AppListFrame toolbar slot nor AppToolbar sticky — move into AppListFrame toolbar, opt into AppToolbar sticky, or allowlist with reason`,
     );
   }
 

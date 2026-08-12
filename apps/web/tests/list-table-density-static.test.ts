@@ -29,7 +29,7 @@ test("AppListFrame flushes Card vertical pad so toolbar/table own edge rhythm", 
   );
   assert.match(
     surface,
-    /AppStickyFilterChrome\s*\n\s*className=\{\s*flushTop\s*\?\s*"overflow-hidden rounded-t-lg"\s*:\s*undefined\s*\}/,
+    /hasToolbar \?[\s\S]*?"bg-card"[\s\S]*flushTop \? "overflow-hidden rounded-t-lg"/,
   );
   assert.match(
     surface,

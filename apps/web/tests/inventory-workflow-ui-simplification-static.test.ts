@@ -493,7 +493,7 @@ test("SelectContent defaults to popper and Inventory LIST filters share field wi
   for (const source of [stock, ingredients, issuesSurface, stocktake]) {
     assert.match(source, /inventoryListFilterSelectClassName/);
   }
-  assert.match(grn, /className="w-44"/);
+  assert.match(grn, /className="w-36"/);
   assert.match(fulfillmentHub, /inventoryListFilterSelectClassName/);
   assert.match(stock, /useFormControlSize\(\)/);
   assert.match(stock, /size=\{controlSize\}/);
