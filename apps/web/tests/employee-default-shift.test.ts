@@ -175,7 +175,7 @@ test("assigned shift rejects yesterday day-shift backdate", () => {
   assert.equal(picked, null);
 });
 
-test("assigned shift accepts today assignment outside window", () => {
+test("assigned shift rejects today assignment outside window", () => {
   const picked = pickAssignedShiftInWindow(
     [
       {
@@ -189,11 +189,7 @@ test("assigned shift accepts today assignment outside window", () => {
     "2026-07-11",
     7 * 60,
   );
-  assert.deepEqual(picked, {
-    shiftId: 2,
-    businessDate: "2026-07-11",
-    shiftName: "Ca sáng",
-  });
+  assert.equal(picked, null);
 });
 
 test("assigned shift accepts overnight yesterday in window", () => {

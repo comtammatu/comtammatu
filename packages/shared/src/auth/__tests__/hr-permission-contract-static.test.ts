@@ -315,7 +315,7 @@ test("HR imports the shared staff runtime, not the retired employee runtime", ()
   assert.equal(existsSync(resolve(repoRoot, "apps/web/lib/employee")), false);
   assert.match(
     read("apps/web/lib/staff-runtime/_lib/workday-math.ts"),
-    /export function countCompletedShiftWorkdays/,
+    /export function sumShiftWorkdaysFromAttendanceRecords/,
   );
 
   for (const path of hrFiles) {

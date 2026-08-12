@@ -261,3 +261,12 @@ test("P2 app no longer references shift assignments except roster clock-in paths
     "Phân ca tab must be removed from the HR workspace",
   );
 });
+
+test("ADR 0036 hour-ratio SSOT is exported for payroll and attendance", () => {
+  const workdayMath = read("apps/web/lib/staff-runtime/_lib/workday-math.ts");
+  const payrollDayMath = read("apps/web/lib/hr/payroll-day-math.ts");
+
+  assert.match(workdayMath, /sumShiftWorkdaysFromAttendanceRecords/);
+  assert.doesNotMatch(workdayMath, /countCompletedShiftWorkdays/);
+  assert.match(payrollDayMath, /shiftWorkdaysFromAttendanceRecord/);
+});

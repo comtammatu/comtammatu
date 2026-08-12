@@ -46,9 +46,19 @@ export type RosterWeekData = {
   weeklySchedules: EmployeeWeeklySchedule[];
 };
 
+export function rosterCellKey(employeeId: number, workDate: string): string {
+  return `${employeeId}:${workDate}`;
+}
+
 export function rosterAssignmentKey(
   employeeId: number,
   workDate: string,
+  shiftId: number,
 ): string {
-  return `${employeeId}:${workDate}`;
+  return `${employeeId}:${workDate}:${shiftId}`;
+}
+
+/** @deprecated Use rosterCellKey or rosterAssignmentKey for multi-shift roster. */
+export function rosterDayKey(employeeId: number, workDate: string): string {
+  return rosterCellKey(employeeId, workDate);
 }

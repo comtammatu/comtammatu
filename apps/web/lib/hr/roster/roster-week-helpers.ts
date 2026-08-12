@@ -1,17 +1,20 @@
 import type { RosterAssignment } from "./roster-model";
-import { rosterAssignmentKey } from "./roster-model";
+import { rosterAssignmentKey, rosterCellKey } from "./roster-model";
 
 export const EMPTY_SHIFT_VALUE = "__empty__";
 
 export function buildAssignmentMap(
   assignments: RosterAssignment[],
-): Map<string, number> {
-  const map = new Map<string, number>();
+): Map<string, number[]> {
+  const map = new Map<string, number[]>();
   for (const assignment of assignments) {
-    map.set(
-      rosterAssignmentKey(assignment.employeeId, assignment.workDate),
-      assignment.shiftId,
-    );
+    if (assignment.shiftId == null) continue;
+    const key = rosterCellKey(assignment.employeeId, assignment.workDate);
+    const current = map.get(key) ?? [];
+    if (!current.includes(assignment.shiftId)) {
+      current.push(assignment.shiftId);
+    }
+    map.set(key, current);
   }
   return map;
 }
@@ -21,10 +24,18 @@ export function buildLeaderMap(
 ): Map<string, { assignmentId: number; isLeader: boolean }> {
   const map = new Map<string, { assignmentId: number; isLeader: boolean }>();
   for (const assignment of assignments) {
-    map.set(rosterAssignmentKey(assignment.employeeId, assignment.workDate), {
-      assignmentId: assignment.id,
-      isLeader: assignment.isShiftLeader,
-    });
+    if (assignment.shiftId == null) continue;
+    map.set(
+      rosterAssignmentKey(
+        assignment.employeeId,
+        assignment.workDate,
+        assignment.shiftId,
+      ),
+      {
+        assignmentId: assignment.id,
+        isLeader: assignment.isShiftLeader,
+      },
+    );
   }
   return map;
 }

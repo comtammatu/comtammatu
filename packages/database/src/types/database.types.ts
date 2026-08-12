@@ -1903,6 +1903,7 @@ export type Database = {
           contract_sequence: number
           contract_type: string
           created_at: string
+          daily_rate: number | null
           document_url: string | null
           employee_id: number
           end_date: string | null
@@ -1920,6 +1921,7 @@ export type Database = {
           termination_notice_date: string | null
           termination_reason: string | null
           updated_at: string
+          wage_unit: string
           work_location: string | null
         }
         Insert: {
@@ -1927,6 +1929,7 @@ export type Database = {
           contract_sequence?: number
           contract_type: string
           created_at?: string
+          daily_rate?: number | null
           document_url?: string | null
           employee_id: number
           end_date?: string | null
@@ -1944,6 +1947,7 @@ export type Database = {
           termination_notice_date?: string | null
           termination_reason?: string | null
           updated_at?: string
+          wage_unit?: string
           work_location?: string | null
         }
         Update: {
@@ -1951,6 +1955,7 @@ export type Database = {
           contract_sequence?: number
           contract_type?: string
           created_at?: string
+          daily_rate?: number | null
           document_url?: string | null
           employee_id?: number
           end_date?: string | null
@@ -1968,6 +1973,7 @@ export type Database = {
           termination_notice_date?: string | null
           termination_reason?: string | null
           updated_at?: string
+          wage_unit?: string
           work_location?: string | null
         }
         Relationships: [
@@ -5280,6 +5286,7 @@ export type Database = {
           bonus: number
           charity_deduction: number
           created_at: string
+          daily_rate: number | null
           dependent_count: number
           dependent_deduction: number
           employee_id: number
@@ -5305,6 +5312,7 @@ export type Database = {
           total_insurance_employer: number
           unpaid_leave_days: number
           updated_at: string
+          wage_unit: string
           working_days: number
         }
         Insert: {
@@ -5320,6 +5328,7 @@ export type Database = {
           bonus?: number
           charity_deduction?: number
           created_at?: string
+          daily_rate?: number | null
           dependent_count?: number
           dependent_deduction?: number
           employee_id: number
@@ -5345,6 +5354,7 @@ export type Database = {
           total_insurance_employer: number
           unpaid_leave_days?: number
           updated_at?: string
+          wage_unit?: string
           working_days: number
         }
         Update: {
@@ -5360,6 +5370,7 @@ export type Database = {
           bonus?: number
           charity_deduction?: number
           created_at?: string
+          daily_rate?: number | null
           dependent_count?: number
           dependent_deduction?: number
           employee_id?: number
@@ -5385,6 +5396,7 @@ export type Database = {
           total_insurance_employer?: number
           unpaid_leave_days?: number
           updated_at?: string
+          wage_unit?: string
           working_days?: number
         }
         Relationships: [

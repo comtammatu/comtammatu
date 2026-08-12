@@ -15,7 +15,7 @@ import {
 } from "@lib/hr/leave-calendar";
 import { messages } from "@lib/messages";
 import { calculateAttendanceWorkHours } from "./attendance-summary";
-import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import { shiftWorkdaysFromAttendanceRecord } from "@lib/staff-runtime/_lib/workday-math";
 
 import {
   OWNER_SHELL_BREAKPOINT,
@@ -26,6 +26,8 @@ export interface AttendanceCalendarRecord {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  scheduled_start_at?: string | null;
+  scheduled_end_at?: string | null;
   shifts?: { name: string; start_time: string; end_time: string } | null;
 }
 
@@ -39,6 +41,7 @@ interface AttendanceDaySummary {
   closedShifts: number;
   openShifts: number;
   workHours: number;
+  workdays: number;
   shiftNames: string[];
 }
 
@@ -54,6 +57,7 @@ function summarizeAttendanceByDate(records: AttendanceCalendarRecord[]) {
       closedShifts: 0,
       openShifts: 0,
       workHours: 0,
+      workdays: 0,
       shiftNames: [],
     };
 
@@ -66,6 +70,12 @@ function summarizeAttendanceByDate(records: AttendanceCalendarRecord[]) {
 
     if (record.check_out) {
       summary.closedShifts += 1;
+      summary.workdays += shiftWorkdaysFromAttendanceRecord({
+        checkIn: record.check_in,
+        checkOut: record.check_out,
+        scheduledStart: record.scheduled_start_at,
+        scheduledEnd: record.scheduled_end_at,
+      });
       summary.workHours += calculateAttendanceWorkHours(
         record.check_in,
         record.check_out,
@@ -92,7 +102,7 @@ function getCalendarDayAriaLabel(
         date,
         summary.closedShifts,
         summary.openShifts,
-        countCompletedShiftWorkdays(summary.closedShifts),
+        summary.workdays,
         summary.workHours,
       )
     : copy.calendarDayAria(date, 0, 0, 0, 0);
@@ -197,9 +207,7 @@ export function AttendanceCalendar({
                           leave === "pending"),
                       );
                       const isFilteredOut = attentionOnly && !needsAttention;
-                      const workdays = summary
-                        ? countCompletedShiftWorkdays(summary.closedShifts)
-                        : 0;
+                      const workdays = summary?.workdays ?? 0;
                       const calendarDetailLabel = isFilteredOut
                         ? null
                         : summary?.openShifts

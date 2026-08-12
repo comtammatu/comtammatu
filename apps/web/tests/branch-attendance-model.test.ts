@@ -14,6 +14,8 @@ function record(
     branch_id: 1,
     check_in: null,
     check_out: null,
+    scheduled_start_at: null,
+    scheduled_end_at: null,
     check_in_photo_path: null,
     status: "present",
     note: null,
@@ -63,10 +65,28 @@ test("buildBranchAttendanceMonthSummary counts closed and open shifts", () => {
   assert.equal(first.closedShifts, 1);
   assert.equal(first.openShifts, 1);
   assert.equal(first.work_hours, 8);
-  assert.equal(first.workdays, 0.5);
+  assert.equal(first.workdays, 0);
   assert.equal(second.closedShifts, 1);
   assert.equal(second.openShifts, 0);
   assert.equal(second.work_hours, 4);
+  assert.equal(second.workdays, 0);
+});
+
+test("buildBranchAttendanceMonthSummary uses hour-ratio when frozen window exists", () => {
+  const rows = buildBranchAttendanceMonthSummary([
+    record({
+      id: 1,
+      employee_id: 10,
+      date: "2026-08-01",
+      check_in: "2026-08-01T01:00:00.000Z",
+      check_out: "2026-08-01T09:00:00.000Z",
+      scheduled_start_at: "2026-08-01T01:00:00.000Z",
+      scheduled_end_at: "2026-08-01T09:00:00.000Z",
+    }),
+  ]);
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.workdays, 1);
 });
 
 test("filterAttendanceByEmployee sorts newest first", () => {

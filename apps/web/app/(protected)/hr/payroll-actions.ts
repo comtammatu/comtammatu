@@ -181,7 +181,9 @@ export interface PayrollPreviewEntry {
   positionLabel: string | null;
   salarySource: "contract" | "employee" | "missing";
   payBasis: "attendance_prorated" | "fixed_monthly";
+  wageUnit: "monthly" | "daily";
   monthlySalary: number;
+  dailyRate: number;
   workingDays: number;
   workHours: number;
   paidLeaveDays: number;
@@ -522,6 +524,8 @@ async function buildPayrollPreview(
       gross_salary: number;
       insurance_base_salary: number;
       pay_basis: "attendance_prorated" | "fixed_monthly";
+      wage_unit: "monthly" | "daily";
+      daily_rate: number | null;
       start_date: string;
     }
   >();
@@ -530,6 +534,8 @@ async function buildPayrollPreview(
     gross_salary: number;
     insurance_base_salary: number;
     pay_basis: "attendance_prorated" | "fixed_monthly";
+    wage_unit?: "monthly" | "daily" | null;
+    daily_rate?: number | null;
     start_date: string;
   }>;
   for (const contract of [...contracts].sort((left, right) =>
@@ -630,12 +636,9 @@ async function buildPayrollPreview(
       const monthlySalary = numberValue(
         contract?.gross_salary ?? employee.base_salary,
       );
-      const salarySource = contract
-        ? "contract"
-        : monthlySalary > 0
-          ? "employee"
-          : "missing";
       const payBasis = contract?.pay_basis ?? "attendance_prorated";
+      const wageUnit = contract?.wage_unit ?? "monthly";
+      const dailyRate = numberValue(contract?.daily_rate ?? 0);
       const insuranceBaseSalary = numberValue(
         contract?.insurance_base_salary ?? employee.insurance_base_salary,
       );
@@ -687,14 +690,30 @@ async function buildPayrollPreview(
                   annualSplit.annualLeaveUsedDays,
               ),
             };
-      const payableDays = calculatePayableDays({
-        workingDays: workdays,
-        paidLeaveDays,
-        standardDays,
-      });
-      const proratedSalary = Math.round(
-        (monthlySalary * payableDays) / standardDays,
-      );
+      const payableDays =
+        wageUnit === "daily"
+          ? workdays + paidLeaveDays
+          : calculatePayableDays({
+              workingDays: workdays,
+              paidLeaveDays,
+              standardDays,
+            });
+      const proratedSalary =
+        wageUnit === "daily"
+          ? Math.round(dailyRate * payableDays)
+          : Math.round((monthlySalary * payableDays) / standardDays);
+      const salarySourceResolved =
+        contract == null
+          ? monthlySalary > 0
+            ? "employee"
+            : "missing"
+          : wageUnit === "daily"
+            ? dailyRate > 0
+              ? "contract"
+              : "missing"
+            : monthlySalary > 0
+              ? "contract"
+              : "missing";
       const adjustments = adjustmentsByEmployee.get(employee.id) ?? [];
       const adjustmentTotals = adjustments.reduce((total, adjustment) => {
         if (adjustment.kind === "bonus") total.bonus += adjustment.amount;
@@ -734,9 +753,11 @@ async function buildPayrollPreview(
         branchId: profile?.branch_id ?? null,
         branchName: profile?.branches?.name ?? null,
         positionLabel: profile?.positions?.label_vi ?? null,
-        salarySource,
+        salarySource: salarySourceResolved,
         payBasis,
+        wageUnit,
         monthlySalary,
+        dailyRate,
         workingDays: workdays,
         workHours: workHoursByEmployee.get(employee.id) ?? 0,
         paidLeaveDays,
@@ -1005,6 +1026,8 @@ export const snapshotPayrollPreview = withAction(
       other_deductions: entry.otherDeductions,
       net_salary: entry.expectedNet,
       insurance_base: entry.insuranceBase,
+      wage_unit: entry.wageUnit,
+      daily_rate: entry.wageUnit === "daily" ? entry.dailyRate : null,
     }));
 
     const { data: snapshot, error } = await context.supabase.rpc(
@@ -1085,6 +1108,106 @@ export async function fetchPayrollPeriods(): Promise<ActionResult> {
     return { success: false, error: payrollActionCopy.periodLoadFailed };
   }
   return { success: true, data: data ?? [] };
+}
+
+export async function exportPaidPayrollCsv(input: {
+  year: number;
+  month: number;
+}): Promise<ActionResult<{ csv: string; filename: string }>> {
+  const context = await getAuthContextWithPermission(
+    PAYROLL_ROLES,
+    PERMISSION_KEYS.HR_PAYROLL_PREPARE,
+  );
+  if (!context) return { success: false, error: payrollActionCopy.forbidden };
+
+  const { data: period, error: periodError } = await context.supabase
+    .from("payroll_periods")
+    .select("id, status")
+    .eq("tenant_id", context.claims.tenant_id)
+    .eq("period_year", input.year)
+    .eq("period_month", input.month)
+    .maybeSingle();
+  if (periodError || !period || period.status !== "paid") {
+    return { success: false, error: payrollActionCopy.periodNotFound };
+  }
+
+  const { data: rows, error } = await context.supabase
+    .from("payroll_entries")
+    .select(
+      `
+        employee_id,
+        working_days,
+        paid_leave_days,
+        payable_days,
+        wage_unit,
+        daily_rate,
+        base_salary,
+        gross_total,
+        total_insurance_employee,
+        total_insurance_employer,
+        pit_tax,
+        net_salary,
+        employees!inner (
+          employee_code,
+          profiles!inner ( full_name )
+        )
+      `,
+    )
+    .eq("tenant_id", context.claims.tenant_id)
+    .eq("payroll_period_id", period.id);
+  if (error) {
+    console.error(
+      "[hr/payroll-actions:exportPaidPayrollCsv] entries query failed",
+      error.code,
+    );
+    return { success: false, error: payrollActionCopy.entriesLoadFailed };
+  }
+
+  const header = [
+    "employee_code",
+    "employee_name",
+    "wage_unit",
+    "working_days",
+    "paid_leave_days",
+    "payable_days",
+    "base_salary",
+    "gross_total",
+    "insurance_employee",
+    "insurance_employer",
+    "pit_tax",
+    "net_salary",
+  ].join(",");
+  const lines = (rows ?? []).map((row) => {
+    const employee = row.employees as {
+      employee_code: string | null;
+      profiles: { full_name: string | null };
+    };
+    const values = [
+      employee.employee_code ?? "",
+      employee.profiles.full_name ?? "",
+      row.wage_unit ?? "monthly",
+      row.working_days,
+      row.paid_leave_days,
+      row.payable_days,
+      row.base_salary,
+      row.gross_total,
+      row.total_insurance_employee,
+      row.total_insurance_employer,
+      row.pit_tax,
+      row.net_salary,
+    ];
+    return values
+      .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+      .join(",");
+  });
+
+  return {
+    success: true,
+    data: {
+      csv: [header, ...lines].join("\n"),
+      filename: `payroll-${input.year}-${String(input.month).padStart(2, "0")}.csv`,
+    },
+  };
 }
 
 export const fetchPayrollPeriod = withAction(

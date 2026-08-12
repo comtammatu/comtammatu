@@ -7,6 +7,8 @@ export interface AttendanceRecord {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
   check_in_photo_path: string | null;
   status: string;
   note: string | null;

@@ -22,6 +22,8 @@ export interface ScheduleAttendance {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
   status: string;
   shift_name: string | null;
   start_time: string | null;
@@ -94,7 +96,7 @@ export async function fetchMySchedule(
     supabase
       .from("attendance_records")
       .select(
-        "date, check_in, check_out, status, shifts ( name, start_time, end_time )",
+        "date, check_in, check_out, scheduled_start_at, scheduled_end_at, status, shifts ( name, start_time, end_time )",
       )
       .eq("employee_id", employeeId)
       .eq("tenant_id", claims.tenant_id)
@@ -156,6 +158,8 @@ export async function fetchMySchedule(
         date: row.date,
         check_in: row.check_in,
         check_out: row.check_out,
+        scheduled_start_at: row.scheduled_start_at,
+        scheduled_end_at: row.scheduled_end_at,
         status: row.status,
         shift_name: shift?.name ?? null,
         start_time: shift?.start_time ?? null,

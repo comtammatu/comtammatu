@@ -37,6 +37,7 @@ import {
   formatVNBusinessDate,
   formatVNTime,
 } from "@comtammatu/shared/time";
+import { shiftWorkdaysFromAttendanceRecord } from "@lib/staff-runtime/_lib/workday-math";
 import { isStaleOpenAttendanceRecord } from "@lib/hr/branch-attendance-model";
 import { messages } from "@lib/messages";
 import {
@@ -176,6 +177,19 @@ export function DetailView({
     );
   }
 
+  function workdayBreakdown(record: AttendanceRecord) {
+    const workdays = shiftWorkdaysFromAttendanceRecord({
+      checkIn: record.check_in,
+      checkOut: record.check_out,
+      scheduledStart: record.scheduled_start_at,
+      scheduledEnd: record.scheduled_end_at,
+    });
+    if (!record.scheduled_start_at || !record.scheduled_end_at) {
+      return "Chưa có khung ca · 0 công";
+    }
+    return `${formatVNTime(record.scheduled_start_at)}–${formatVNTime(record.scheduled_end_at)} · ${workdays} công`;
+  }
+
   function recordStateBadge(record: AttendanceRecord) {
     if (isStaleOpenAttendanceRecord(record, todayStr)) {
       return <StatusBadge domain="attendance" value="stale_open" />;
@@ -280,6 +294,54 @@ export function DetailView({
     );
   }
 
+  const compactColumns: DataTableColumn<AttendanceRecord>[] = [
+    {
+      key: "shift",
+      header: attendanceCopy.shift,
+      className: "text-sm text-muted-foreground",
+      render: (record) => record.shifts?.name ?? "—",
+    },
+    {
+      key: "check_in",
+      header: attendanceCopy.checkIn,
+      className: "font-mono text-sm",
+      render: (record) =>
+        record.check_in ? formatVNTime(record.check_in) : "—",
+    },
+    {
+      key: "check_out",
+      header: attendanceCopy.checkOut,
+      className: "font-mono text-sm",
+      render: (record) =>
+        record.check_out ? formatVNTime(record.check_out) : "—",
+    },
+    {
+      key: "workday",
+      header: "Công",
+      className: "text-sm",
+      render: (record) => workdayBreakdown(record),
+    },
+    {
+      key: "state",
+      header: attendanceCopy.recordState,
+      render: recordStateBadge,
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      render: (record) => (
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          <ChecklistProgressButton
+            record={record}
+            onOpen={() => setChecklistRecord(record)}
+          />
+          {correctionAction(record)}
+          {forceCloseAction(record)}
+        </div>
+      ),
+    },
+  ];
+
   const columns: DataTableColumn<AttendanceRecord>[] = todayColumns
     ? [
         {
@@ -328,7 +390,9 @@ export function DetailView({
           ),
         },
       ]
-    : [
+    : compact
+      ? compactColumns
+      : [
         {
           key: "date",
           header: FORM_VI.date,
@@ -431,6 +495,11 @@ export function DetailView({
                 {attendanceCopy.checkOut}:{" "}
                 {record.check_out ? formatVNTime(record.check_out) : "—"}
               </p>
+              {compact ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {workdayBreakdown(record)}
+                </p>
+              ) : null}
               <div className="mt-2 flex flex-wrap gap-2">
                 {recordStateBadge(record)}
                 <ChecklistProgressButton

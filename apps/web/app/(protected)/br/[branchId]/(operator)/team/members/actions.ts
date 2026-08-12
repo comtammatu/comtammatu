@@ -10,8 +10,8 @@ import {
 } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import {
-  countCompletedShiftWorkdays,
   countOverlapDays,
+  shiftWorkdaysFromAttendanceRecord,
 } from "@lib/staff-runtime/_lib/workday-math";
 
 const TEAM_MEMBER_DETAIL_ROLES: readonly StaffRole[] = [
@@ -102,7 +102,7 @@ export const fetchTeamMemberMonthDetail = withAction(
     const [attendanceResult, leaveResult] = await Promise.all([
       readClient
         .from("attendance_records")
-        .select("date, check_in, check_out")
+        .select("date, check_in, check_out, scheduled_start_at, scheduled_end_at")
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", data.branchId)
         .eq("employee_id", data.employeeId)
@@ -130,19 +130,19 @@ export const fetchTeamMemberMonthDetail = withAction(
       return { success: false, error: "Không tải được công và nghỉ phép tháng này." };
     }
 
-    const completedByDate = new Map<string, number>();
+    let workdays = 0;
     let workHours = 0;
     for (const row of attendanceResult.data ?? []) {
       if (!row.check_in || !row.check_out) continue;
-      completedByDate.set(row.date, (completedByDate.get(row.date) ?? 0) + 1);
+      workdays += shiftWorkdaysFromAttendanceRecord({
+        checkIn: row.check_in,
+        checkOut: row.check_out,
+        scheduledStart: row.scheduled_start_at,
+        scheduledEnd: row.scheduled_end_at,
+      });
       workHours += hoursBetween(row.check_in, row.check_out);
     }
     workHours = Math.round(workHours * 10) / 10;
-
-    let workdays = 0;
-    for (const count of completedByDate.values()) {
-      workdays += countCompletedShiftWorkdays(count);
-    }
     workdays = Math.round(workdays * 10) / 10;
 
     let approvedLeaveDays = 0;

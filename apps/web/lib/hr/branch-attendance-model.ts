@@ -1,4 +1,4 @@
-import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import { shiftWorkdaysFromAttendanceRecord } from "@lib/staff-runtime/_lib/workday-math";
 import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
 
 function hoursBetween(checkIn: string | null, checkOut: string | null): number {
@@ -23,6 +23,8 @@ export type BranchAttendanceRecord = {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
   check_in_photo_path: string | null;
   status: string;
   note: string | null;
@@ -88,10 +90,10 @@ export function buildBranchAttendanceMonthSummary(
       employee_id: number;
       employee_code: string;
       full_name: string;
-      closedByDate: Map<string, number>;
       work_hours: number;
       closedShifts: number;
       openShifts: number;
+      workdays: number;
     }
   >();
 
@@ -103,20 +105,22 @@ export function buildBranchAttendanceMonthSummary(
         employee_id: empId,
         employee_code: record.employees?.employee_code ?? "",
         full_name: record.employees?.profiles?.full_name ?? "",
-        closedByDate: new Map(),
         work_hours: 0,
         closedShifts: 0,
         openShifts: 0,
+        workdays: 0,
       };
       summaryMap.set(empId, entry);
     }
 
     if (record.check_out) {
       entry.closedShifts += 1;
-      entry.closedByDate.set(
-        record.date,
-        (entry.closedByDate.get(record.date) ?? 0) + 1,
-      );
+      entry.workdays += shiftWorkdaysFromAttendanceRecord({
+        checkIn: record.check_in,
+        checkOut: record.check_out,
+        scheduledStart: record.scheduled_start_at,
+        scheduledEnd: record.scheduled_end_at,
+      });
       entry.work_hours += hoursBetween(record.check_in, record.check_out);
     } else if (record.check_in) {
       entry.openShifts += 1;
@@ -124,21 +128,15 @@ export function buildBranchAttendanceMonthSummary(
   }
 
   return Array.from(summaryMap.values())
-    .map((entry) => {
-      let workdays = 0;
-      for (const count of entry.closedByDate.values()) {
-        workdays += countCompletedShiftWorkdays(count);
-      }
-      return {
-        employee_id: entry.employee_id,
-        employee_code: entry.employee_code,
-        full_name: entry.full_name,
-        workdays,
-        work_hours: Math.round(entry.work_hours * 10) / 10,
-        closedShifts: entry.closedShifts,
-        openShifts: entry.openShifts,
-      };
-    })
+    .map((entry) => ({
+      employee_id: entry.employee_id,
+      employee_code: entry.employee_code,
+      full_name: entry.full_name,
+      workdays: Math.round(entry.workdays * 10) / 10,
+      work_hours: Math.round(entry.work_hours * 10) / 10,
+      closedShifts: entry.closedShifts,
+      openShifts: entry.openShifts,
+    }))
     .toSorted((left, right) =>
       left.full_name.localeCompare(right.full_name, "vi"),
     );

@@ -32,21 +32,19 @@ export interface ShiftAssignmentCandidate {
   endTime: string;
 }
 
-export function pickAssignedShiftInWindow(
+export function listAssignedShiftsInWindow(
   assignments: readonly ShiftAssignmentCandidate[],
   calendarDate: string,
   nowMinutes: number,
-): { shiftId: number; businessDate: string; shiftName: string | null } | null {
-  if (assignments.length === 0) return null;
+): ShiftAssignmentCandidate[] {
+  if (assignments.length === 0) return [];
 
   const previousDate = addVNDateDays(calendarDate, -1);
-  const ranked = assignments
+  return assignments
     .map((assignment) => {
       const startMin = parseClockTimeToMinutes(assignment.startTime);
       const endMin = parseClockTimeToMinutes(assignment.endTime);
-      if (startMin === null || endMin === null) {
-        return { assignment, priority: 2 };
-      }
+      if (startMin === null || endMin === null) return null;
 
       const isDayShift = endMin > startMin;
       const inWindowToday =
@@ -59,27 +57,29 @@ export function pickAssignedShiftInWindow(
         !isDayShift &&
         nowMinutes < endMin;
 
-      let priority = 2;
-      if (inWindowToday) priority = 0;
-      else if (overnightYesterday) priority = 1;
-
-      return { assignment, priority };
+      if (!inWindowToday && !overnightYesterday) return null;
+      return assignment;
     })
-    .sort((left, right) => {
-      if (left.priority !== right.priority) return left.priority - right.priority;
-      return right.assignment.workDate.localeCompare(left.assignment.workDate);
-    });
+    .filter((row): row is ShiftAssignmentCandidate => row !== null);
+}
 
-  const best = ranked[0];
-  // Accept in-window today/overnight yesterday, or today's assignment outside
-  // the clock window (early/late). Never backdate onto yesterday's day shift.
-  if (!best || (best.priority > 1 && best.assignment.workDate !== calendarDate)) {
-    return null;
-  }
+export function pickAssignedShiftInWindow(
+  assignments: readonly ShiftAssignmentCandidate[],
+  calendarDate: string,
+  nowMinutes: number,
+): { shiftId: number; businessDate: string; shiftName: string | null } | null {
+  const eligible = listAssignedShiftsInWindow(
+    assignments,
+    calendarDate,
+    nowMinutes,
+  );
+  if (eligible.length !== 1) return null;
+
+  const best = eligible[0]!;
   return {
-    shiftId: best.assignment.shiftId,
-    businessDate: best.assignment.workDate,
-    shiftName: best.assignment.shiftName,
+    shiftId: best.shiftId,
+    businessDate: best.workDate,
+    shiftName: best.shiftName,
   };
 }
 

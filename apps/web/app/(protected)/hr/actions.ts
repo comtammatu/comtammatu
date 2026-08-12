@@ -16,7 +16,7 @@ import {
   getVNMonthEndDateString,
 } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
+import { shiftWorkdaysFromAttendanceRecord } from "@lib/staff-runtime/_lib/workday-math";
 import { messages } from "@lib/messages";
 import {
   getAuthContext,
@@ -64,6 +64,8 @@ const createEmployeeAccountSchema = z.object({
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
   payBasis: z.enum(PAY_BASIS_VALUES).optional(),
+  wageUnit: z.enum(["monthly", "daily"]).optional(),
+  dailyRate: z.coerce.number().int().nonnegative().nullable().optional(),
 });
 
 const updateEmployeeSchema = z.object({
@@ -94,6 +96,8 @@ const updateEmployeeSchema = z.object({
   idNumber: z.string().trim().optional(),
   bankAccount: z.string().trim().optional(),
   payBasis: z.enum(PAY_BASIS_VALUES).optional(),
+  wageUnit: z.enum(["monthly", "daily"]).optional(),
+  dailyRate: z.coerce.number().int().nonnegative().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -112,6 +116,8 @@ interface ContractPayload {
   position: string | null | undefined;
   workLocation: string | null | undefined;
   payBasis?: (typeof PAY_BASIS_VALUES)[number];
+  wageUnit?: "monthly" | "daily";
+  dailyRate?: number | null;
 }
 
 async function upsertActiveContract(
@@ -151,6 +157,8 @@ async function upsertActiveContract(
     status: "active",
     // Column lands with universal HR migration; cast until db:types.
     pay_basis: payload.payBasis ?? "attendance_prorated",
+    wage_unit: payload.wageUnit ?? "monthly",
+    daily_rate: payload.dailyRate ?? null,
   };
 
   const query = existing
@@ -513,6 +521,8 @@ export const createEmployeeAccount = withAction(
       position: data.positionCode,
       workLocation: branchName,
       payBasis: data.payBasis,
+      wageUnit: data.wageUnit,
+      dailyRate: data.dailyRate,
     });
     if (!contractResult.success) {
       await service.auth.admin.deleteUser(userId);
@@ -769,6 +779,8 @@ export const updateEmployee = withAction(
         null,
       workLocation: employee.profiles?.branches?.name ?? null,
       payBasis: data.payBasis,
+      wageUnit: data.wageUnit,
+      dailyRate: data.dailyRate,
     });
     if (!contractResult.success) return contractResult;
 
@@ -1022,6 +1034,7 @@ export const fetchAttendance = withAction(
       .select(
         `
       id, branch_id, date, check_in, check_out, status, note, check_in_photo_path,
+      scheduled_start_at, scheduled_end_at,
       checklist_template_id,
       employee_id,
       employees (
@@ -1085,6 +1098,8 @@ export const fetchAttendanceCalendar = withAction(
       .select(
         `
         id, branch_id, date, check_in, check_out, status, note, check_in_photo_path,
+        scheduled_start_at, scheduled_end_at,
+      scheduled_start_at, scheduled_end_at,
         checklist_template_id,
         employee_id,
         employees (
@@ -1394,7 +1409,7 @@ export const fetchAttendanceSummary = withAction(
       .from("attendance_records")
       .select(
         `
-      employee_id, date, check_in, check_out,
+      employee_id, date, check_in, check_out, scheduled_start_at, scheduled_end_at,
       employees (
         id, employee_code,
         profiles ( full_name )
@@ -1419,14 +1434,14 @@ export const fetchAttendanceSummary = withAction(
       };
     }
 
-    // Per-shift attendance (D027): only closed shifts contribute workdays/hours.
+    // Per-shift attendance (D027): hour-ratio công inside frozen window.
     const summaryMap = new Map<
       number,
       {
         employee_id: number;
         employee_code: string;
         full_name: string;
-        days: Map<string, number>;
+        workdays: number;
         work_hours: number;
       }
     >();
@@ -1443,13 +1458,18 @@ export const fetchAttendanceSummary = withAction(
           employee_id: empId,
           employee_code: emp?.employee_code ?? "",
           full_name: emp?.profiles?.full_name ?? "",
-          days: new Map(),
+          workdays: 0,
           work_hours: 0,
         });
       }
       const s = summaryMap.get(empId)!;
       if (record.check_out) {
-        s.days.set(record.date, (s.days.get(record.date) ?? 0) + 1);
+        s.workdays += shiftWorkdaysFromAttendanceRecord({
+          checkIn: record.check_in,
+          checkOut: record.check_out,
+          scheduledStart: record.scheduled_start_at,
+          scheduledEnd: record.scheduled_end_at,
+        });
         s.work_hours += calculateAttendanceWorkHours(
           record.check_in,
           record.check_out,
@@ -1457,19 +1477,13 @@ export const fetchAttendanceSummary = withAction(
       }
     }
 
-    const summary = Array.from(summaryMap.values()).map((s) => {
-      let workdays = 0;
-      for (const count of s.days.values()) {
-        workdays += countCompletedShiftWorkdays(count);
-      }
-      return {
-        employee_id: s.employee_id,
-        employee_code: s.employee_code,
-        full_name: s.full_name,
-        workdays,
-        work_hours: s.work_hours,
-      };
-    });
+    const summary = Array.from(summaryMap.values()).map((s) => ({
+      employee_id: s.employee_id,
+      employee_code: s.employee_code,
+      full_name: s.full_name,
+      workdays: Math.round(s.workdays * 10) / 10,
+      work_hours: s.work_hours,
+    }));
 
     return { success: true, data: summary };
   },

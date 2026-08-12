@@ -31,6 +31,18 @@ export const hr = {
       },
     ],
   },
+  wageUnit: {
+    fieldLabel: "Đơn vị lương",
+    fieldDescription:
+      "Lương tháng: lương gộp/tháng × ngày công chuẩn. Lương ngày: đơn giá/ngày × (công + phép có lương).",
+    options: [
+      { value: "monthly" as const, label: "Lương tháng" },
+      { value: "daily" as const, label: "Lương ngày" },
+    ],
+    label(value: "monthly" | "daily") {
+      return value === "daily" ? "Lương ngày" : "Lương tháng";
+    },
+  },
   attention: {
     title: "Cần xử lý",
     description: "Việc nhân sự cần làm trước khi vận hành hoặc chốt lương.",
@@ -435,6 +447,21 @@ export const hr = {
         "Chỉ chốt được khi đang xem tất cả chi nhánh.",
       snapshotLocked: "Đã chốt",
       snapshotOpen: "Chưa chốt",
+      exportCsv: "Xuất CSV",
+      exportFailed: "Không thể xuất CSV kỳ lương.",
+      detail: {
+        wageUnit: "Đơn vị lương",
+        payableDays: "Công + phép có lương",
+        baseSalary: "Lương cơ bản kỳ",
+        bhxhEmployee: "BHXH người lao động",
+        bhytEmployee: "BHYT người lao động",
+        bhtnEmployee: "BHTN người lao động",
+        insuranceEmployer: "BHXH người sử dụng lao động",
+        taxableIncome: "Thu nhập tính thuế",
+        pitTax: "Thuế TNCN",
+        netSalary: "Thực lĩnh",
+        detailAction: "Chi tiết",
+      },
       preflight: {
         title: "Kiểm tra trước chốt lương",
         blockedBadge: "Cần xử lý",
@@ -548,6 +575,7 @@ export const hr = {
     shiftLeaderSetSuccess: "Đã gán trưởng ca.",
     shiftLeaderClearedSuccess: "Đã bỏ trưởng ca.",
     shiftLeaderFailed: "Không thể cập nhật trưởng ca.",
+    addShift: "Thêm ca",
     schedule: "Lịch cố định",
     scheduleDays: (count: number) =>
       `Lịch cố định · ${formatCount(count)} ngày`,

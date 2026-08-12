@@ -64,6 +64,7 @@ const dependentsField = z
   );
 
 const payBasisField = z.enum(["attendance_prorated", "fixed_monthly"]);
+const wageUnitField = z.enum(["monthly", "daily"]);
 
 const employeeSchema = z.object({
   full_name: z.string().trim().min(1, { error: "Họ tên không được để trống" }),
@@ -82,6 +83,8 @@ const employeeSchema = z.object({
   insurance_base_salary: insuranceBaseSalaryField,
   dependents_count: dependentsField,
   pay_basis: payBasisField,
+  wage_unit: wageUnitField,
+  daily_rate: baseSalaryField,
   id_number: z.string().trim().optional(),
   bank_account: z.string().trim().optional(),
 });
@@ -103,6 +106,8 @@ const editEmployeeSchema = z.object({
   insurance_base_salary: insuranceBaseSalaryField,
   dependents_count: dependentsField,
   pay_basis: payBasisField,
+  wage_unit: wageUnitField,
+  daily_rate: baseSalaryField,
   id_number: z.string().trim().optional(),
   bank_account: z.string().trim().optional(),
   status: z.string(),
@@ -128,6 +133,8 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   insurance_base_salary: "",
   dependents_count: "0",
   pay_basis: PAY_BASIS_DEFAULT,
+  wage_unit: "monthly",
+  daily_rate: "",
   id_number: "",
   bank_account: "",
 };
@@ -144,6 +151,8 @@ const STEP_FIELDS: Record<OnboardStep, (keyof EmployeeFormValues)[]> = {
     "insurance_base_salary",
     "dependents_count",
     "pay_basis",
+    "wage_unit",
+    "daily_rate",
   ],
   account: ["email", "password"],
 };
@@ -201,6 +210,9 @@ function editDefaults(employee: EmployeeRow): EditEmployeeFormValues {
     ).toString(),
     dependents_count: employee.dependents_count.toString(),
     pay_basis: resolvePayBasis(contract?.pay_basis),
+    wage_unit:
+      contract?.wage_unit === "daily" ? "daily" : ("monthly" as const),
+    daily_rate: contract?.daily_rate?.toString() ?? "",
     id_number: employee.id_number ?? "",
     bank_account: employee.bank_account ?? "",
     status: employee.is_active ? STATUS_ACTIVE : STATUS_INACTIVE,
@@ -265,6 +277,8 @@ export function EmployeeFormDialog({
           ? Number(values.dependents_count)
           : 0,
         payBasis: values.pay_basis,
+        wageUnit: values.wage_unit,
+        dailyRate: values.daily_rate ? Number(values.daily_rate) : null,
         idNumber: values.id_number ?? "",
         bankAccount: values.bank_account ?? "",
         isActive: values.status === STATUS_ACTIVE,
@@ -400,13 +414,33 @@ export function EmployeeFormDialog({
                   }))}
                   description={messages.hr.payBasis.fieldDescription}
                 />
-                <MoneyVndField
+                <SelectField
                   control={form.control}
-                  name="base_salary"
-                  label="Lương tháng (VND)"
-                  placeholder="12.000.000"
-                  description="Lương gộp/tháng — dùng để tính lương"
+                  name="wage_unit"
+                  label={messages.hr.wageUnit.fieldLabel}
+                  options={messages.hr.wageUnit.options.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  description={messages.hr.wageUnit.fieldDescription}
                 />
+                {form.watch("wage_unit") === "daily" ? (
+                  <MoneyVndField
+                    control={form.control}
+                    name="daily_rate"
+                    label="Lương ngày (VND)"
+                    placeholder="500.000"
+                    description="Đơn giá mỗi ngày công + phép có lương"
+                  />
+                ) : (
+                  <MoneyVndField
+                    control={form.control}
+                    name="base_salary"
+                    label="Lương tháng (VND)"
+                    placeholder="12.000.000"
+                    description="Lương gộp/tháng — dùng để tính lương"
+                  />
+                )}
                 <MoneyVndField
                   control={form.control}
                   name="insurance_base_salary"
@@ -472,6 +506,8 @@ export function EmployeeFormDialog({
         ? Number(values.dependents_count)
         : 0,
       payBasis: values.pay_basis,
+      wageUnit: values.wage_unit,
+      dailyRate: values.daily_rate ? Number(values.daily_rate) : null,
       idNumber: values.id_number || undefined,
       bankAccount: values.bank_account || undefined,
     });
@@ -700,13 +736,33 @@ export function EmployeeFormDialog({
                   }))}
                   description={messages.hr.payBasis.fieldDescription}
                 />
-                <MoneyVndField
+                <SelectField
                   control={form.control}
-                  name="base_salary"
-                  label="Lương tháng (VND)"
-                  placeholder="12.000.000"
-                  description="Lương gộp/tháng — dùng để tính lương"
+                  name="wage_unit"
+                  label={messages.hr.wageUnit.fieldLabel}
+                  options={messages.hr.wageUnit.options.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  description={messages.hr.wageUnit.fieldDescription}
                 />
+                {form.watch("wage_unit") === "daily" ? (
+                  <MoneyVndField
+                    control={form.control}
+                    name="daily_rate"
+                    label="Lương ngày (VND)"
+                    placeholder="500.000"
+                    description="Đơn giá mỗi ngày công + phép có lương"
+                  />
+                ) : (
+                  <MoneyVndField
+                    control={form.control}
+                    name="base_salary"
+                    label="Lương tháng (VND)"
+                    placeholder="12.000.000"
+                    description="Lương gộp/tháng — dùng để tính lương"
+                  />
+                )}
                 <MoneyVndField
                   control={form.control}
                   name="insurance_base_salary"

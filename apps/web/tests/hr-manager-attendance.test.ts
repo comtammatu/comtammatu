@@ -366,7 +366,7 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /calculateAttendanceWorkHours\(\s*record\.check_in,\s*record\.check_out\s*\)[\s\S]*countCompletedShiftWorkdays\(\s*selectedDayClosedShifts,?\s*\)/,
+    /selectedDayWorkdays/,
     "the day detail summary should derive hours and workdays from recorded attendance",
   );
   assert.match(

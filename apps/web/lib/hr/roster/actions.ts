@@ -330,30 +330,14 @@ export const setEmployeeTodayShiftAssignment = withAction(
     const today = getVNDateString();
     const weekStart = getVNWeekStartMonday(today);
     const service = createServiceClient();
-    const [{ data: employee }, { data: attendance }] = await Promise.all([
-      service
-        .from("employees")
-        .select("id, profiles!inner(branch_id)")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("id", data.employeeId)
-        .maybeSingle(),
-      service
-        .from("attendance_records")
-        .select("id")
-        .eq("tenant_id", claims.tenant_id)
-        .eq("employee_id", data.employeeId)
-        .eq("date", today)
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    const { data: employee } = await service
+      .from("employees")
+      .select("id, profiles!inner(branch_id)")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", data.employeeId)
+      .maybeSingle();
     if (!employee || employee.profiles?.branch_id !== data.branchId) {
       return { success: false, error: messages.common.forbidden };
-    }
-    if (attendance) {
-      return {
-        success: false,
-        error: "Không thể đổi ca sau khi nhân viên đã chấm công hôm nay.",
-      };
     }
 
     const current = await loadRosterWeekData(
@@ -371,19 +355,54 @@ export const setEmployeeTodayShiftAssignment = withAction(
       return { success: false, error: "Khung ca không hợp lệ." };
     }
 
-    const assignments = current.assignments.filter(
-      (assignment) =>
-        assignment.employeeId !== data.employeeId ||
-        assignment.workDate !== today,
-    );
+    const assignments = current.assignments
+      .filter((assignment) => assignment.shiftId != null)
+      .map((assignment) => ({
+        id: assignment.id,
+        employeeId: assignment.employeeId,
+        workDate: assignment.workDate,
+        shiftId: assignment.shiftId,
+        isShiftLeader: assignment.isShiftLeader,
+      }));
+
     if (data.shiftId != null) {
-      assignments.push({
-        id: 0,
-        employeeId: data.employeeId,
-        workDate: today,
-        shiftId: data.shiftId,
-        isShiftLeader: false,
-      });
+      const alreadyAssigned = assignments.some(
+        (assignment) =>
+          assignment.employeeId === data.employeeId &&
+          assignment.workDate === today &&
+          assignment.shiftId === data.shiftId,
+      );
+      if (!alreadyAssigned) {
+        assignments.push({
+          id: 0,
+          employeeId: data.employeeId,
+          workDate: today,
+          shiftId: data.shiftId,
+          isShiftLeader: false,
+        });
+      }
+    } else {
+      const { data: punchedToday } = await service
+        .from("attendance_records")
+        .select("shift_id")
+        .eq("tenant_id", claims.tenant_id)
+        .eq("employee_id", data.employeeId)
+        .eq("date", today);
+      const punchedShiftIds = new Set(
+        (punchedToday ?? [])
+          .map((row) => row.shift_id)
+          .filter((shiftId): shiftId is number => shiftId != null),
+      );
+      for (let index = assignments.length - 1; index >= 0; index -= 1) {
+        const assignment = assignments[index]!;
+        if (
+          assignment.employeeId === data.employeeId &&
+          assignment.workDate === today &&
+          !punchedShiftIds.has(assignment.shiftId)
+        ) {
+          assignments.splice(index, 1);
+        }
+      }
     }
 
     const { error } = await supabase.rpc(

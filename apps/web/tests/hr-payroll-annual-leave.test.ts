@@ -152,8 +152,22 @@ test("completed workdays use hour-ratio when scheduled window is present", () =>
 
 test("open attendance shifts do not count as workdays", () => {
   const workdays = buildCompletedWorkdays([
-    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T04:00:00Z" },
-    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T12:00:00Z" },
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T00:00:00Z",
+      checkOut: "2026-06-10T04:00:00Z",
+      scheduledStart: "2026-06-10T00:00:00Z",
+      scheduledEnd: "2026-06-10T08:00:00Z",
+    },
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T08:00:00Z",
+      checkOut: "2026-06-10T12:00:00Z",
+      scheduledStart: "2026-06-10T08:00:00Z",
+      scheduledEnd: "2026-06-10T16:00:00Z",
+    },
     { employeeId: 1, date: "2026-06-11", checkOut: null },
   ]);
 
@@ -162,9 +176,30 @@ test("open attendance shifts do not count as workdays", () => {
 
 test("completed workdays do not cap multiple shifts on the same day", () => {
   const workdays = buildCompletedWorkdays([
-    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T04:00:00Z" },
-    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T10:00:00Z" },
-    { employeeId: 1, date: "2026-06-10", checkOut: "2026-06-10T15:00:00Z" },
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T00:00:00Z",
+      checkOut: "2026-06-10T04:00:00Z",
+      scheduledStart: "2026-06-10T00:00:00Z",
+      scheduledEnd: "2026-06-10T08:00:00Z",
+    },
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T08:00:00Z",
+      checkOut: "2026-06-10T12:00:00Z",
+      scheduledStart: "2026-06-10T08:00:00Z",
+      scheduledEnd: "2026-06-10T16:00:00Z",
+    },
+    {
+      employeeId: 1,
+      date: "2026-06-10",
+      checkIn: "2026-06-10T16:00:00Z",
+      checkOut: "2026-06-10T20:00:00Z",
+      scheduledStart: "2026-06-10T16:00:00Z",
+      scheduledEnd: "2026-06-11T00:00:00Z",
+    },
   ]);
 
   assert.equal(workdays.get(1), 1.5);

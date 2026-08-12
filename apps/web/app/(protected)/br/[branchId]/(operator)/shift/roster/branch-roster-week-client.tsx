@@ -4,10 +4,8 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Repeat2 as IconRepeat,
-  Star as IconStar,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
-import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -16,28 +14,12 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
-import {
-  rosterAssignmentKey,
-  type RosterEmployee,
-  type RosterWeekData,
-} from "@lib/hr/roster/roster-model";
-import {
-  EMPTY_SHIFT_VALUE,
-  formatShiftLabel,
-} from "@lib/hr/roster/roster-week-helpers";
+import { RosterDayCell } from "@lib/hr/roster/roster-day-cell";
+import type { RosterEmployee, RosterWeekData } from "@lib/hr/roster/roster-model";
 import { useRosterWeekEditor } from "@lib/hr/roster/use-roster-week-editor";
 import {
   formatRosterDayHeader,
@@ -72,7 +54,8 @@ export function BranchRosterWeekClient({
     selectedSchedule,
     scheduleLabel,
     handleWeekShift,
-    handleCellChange,
+    handleAddShift,
+    handleRemoveShift,
     handleSave,
     handleCopyPreviousWeek,
     handleLeaderToggle,
@@ -95,64 +78,23 @@ export function BranchRosterWeekClient({
     );
   }
 
-  function renderShiftSelect(employee: RosterEmployee, workDate: string) {
-    const key = rosterAssignmentKey(employee.employeeId, workDate);
-    const selected = assignmentMap.get(key)?.toString() ?? EMPTY_SHIFT_VALUE;
-    const leader = leaderMap.get(key);
-    const canToggleLeader =
-      !dirty &&
-      selected !== EMPTY_SHIFT_VALUE &&
-      leader != null &&
-      leader.assignmentId > 0;
+  function renderDayCell(employee: RosterEmployee, workDate: string) {
     return (
-      <div className="flex min-w-0 items-center gap-1">
-        <Select
-          value={selected}
-          onValueChange={(value) =>
-            handleCellChange(employee.employeeId, workDate, value)
-          }
-          disabled={isPending}
-        >
-          <SelectTrigger size="touch" className="w-full min-w-0 flex-1">
-            <SelectValue placeholder={copy.emptyShift} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={EMPTY_SHIFT_VALUE} size="touch">
-              {copy.emptyShift}
-            </SelectItem>
-            {data.shifts.map((shift) => (
-              <SelectItem key={shift.id} value={String(shift.id)} size="touch">
-                {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-touch"
-          className="shrink-0"
-          disabled={isPending || !canToggleLeader}
-          aria-label={
-            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
-          }
-          title={
-            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
-          }
-          onClick={() =>
-            handleLeaderToggle(employee.employeeId, workDate, !leader?.isLeader)
-          }
-        >
-          <IconStar
-            className={cn(
-              "size-4",
-              leader?.isLeader
-                ? "fill-current text-warning"
-                : "text-muted-foreground",
-            )}
-          />
-        </Button>
-      </div>
+      <RosterDayCell
+        employeeId={employee.employeeId}
+        workDate={workDate}
+        shifts={data.shifts}
+        assignedShiftIds={
+          assignmentMap.get(`${employee.employeeId}:${workDate}`) ?? []
+        }
+        leaderMap={leaderMap}
+        dirty={dirty}
+        isPending={isPending}
+        touch
+        onAddShift={handleAddShift}
+        onRemoveShift={handleRemoveShift}
+        onLeaderToggle={handleLeaderToggle}
+      />
     );
   }
 
@@ -237,7 +179,7 @@ export function BranchRosterWeekClient({
                           {formatRosterDayHeader(date)}
                         </span>
                         <div className="min-w-0 flex-1">
-                          {renderShiftSelect(employee, date)}
+                          {renderDayCell(employee, date)}
                         </div>
                       </div>
                     ))}

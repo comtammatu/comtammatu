@@ -1,7 +1,4 @@
-import {
-  countCompletedShiftWorkdays,
-  countShiftWorkdaysFromOverlap,
-} from "@lib/staff-runtime/_lib/workday-math";
+import { shiftWorkdaysFromAttendanceRecord } from "@lib/staff-runtime/_lib/workday-math";
 
 export interface LeaveRange {
   employeeId: number;
@@ -77,15 +74,12 @@ export function buildCompletedWorkdays(
   for (const rec of attendance) {
     if (!rec.checkOut) continue;
 
-    const shiftWorkdays =
-      rec.checkIn && rec.scheduledStart && rec.scheduledEnd
-        ? countShiftWorkdaysFromOverlap({
-            checkIn: rec.checkIn,
-            checkOut: rec.checkOut,
-            scheduledStart: rec.scheduledStart,
-            scheduledEnd: rec.scheduledEnd,
-          })
-        : countCompletedShiftWorkdays(1);
+    const shiftWorkdays = shiftWorkdaysFromAttendanceRecord({
+      checkIn: rec.checkIn,
+      checkOut: rec.checkOut,
+      scheduledStart: rec.scheduledStart,
+      scheduledEnd: rec.scheduledEnd,
+    });
 
     workdays.set(
       rec.employeeId,

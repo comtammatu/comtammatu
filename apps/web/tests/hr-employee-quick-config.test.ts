@@ -63,10 +63,13 @@ test("today quick assignment preserves the rest of the week", () => {
 
   assert.match(body, /getVNDateString\(\)/);
   assert.match(body, /loadRosterWeekData/);
-  assert.match(body, /assignment\.employeeId !== data\.employeeId/);
-  assert.match(body, /assignment\.workDate !== today/);
+  assert.match(body, /alreadyAssigned/);
+  assert.match(body, /punchedShiftIds/);
   assert.match(body, /reconcile_shift_assignments_week/);
-  assert.match(body, /Không thể đổi ca sau khi nhân viên đã chấm công hôm nay/);
+  assert.doesNotMatch(
+    body,
+    /Không thể đổi ca sau khi nhân viên đã chấm công hôm nay/,
+  );
   assert.doesNotMatch(
     body,
     /\.from\("shift_assignments"[\s\S]*\.(insert|upsert|update|delete)\(/,

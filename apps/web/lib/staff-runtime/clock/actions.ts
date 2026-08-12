@@ -186,6 +186,9 @@ function reuseExistingClockIn(
 }
 
 function mapClockInError(message: string | undefined): string {
+  if (message?.includes("multiple_shift_candidates")) {
+    return "Có nhiều ca trong khung giờ. Chọn ca trước khi chấm công.";
+  }
   if (message?.includes("shift_assignment_required")) {
     return "Chưa được phân ca. Liên hệ quản lý.";
   }

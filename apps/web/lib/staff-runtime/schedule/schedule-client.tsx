@@ -69,7 +69,7 @@ import {
   getStatusDotClassName,
   StatusBadge,
 } from "@/components/status-badge";
-import { countCompletedShiftWorkdays } from "../_lib/workday-math";
+import { sumShiftWorkdaysFromAttendanceRecords } from "../_lib/workday-math";
 
 const copy = messages.employee.schedule;
 
@@ -593,16 +593,14 @@ export function ScheduleClient({
     ? leaveByDate.get(selectedDate)
     : undefined;
 
-  // Per-shift (D027): each completed shift contributes 0.5 workday.
-  const shiftCountByDate = new Map<string, number>();
-  for (const item of monthData.attendance) {
-    if (!item.check_out) continue;
-    shiftCountByDate.set(item.date, (shiftCountByDate.get(item.date) ?? 0) + 1);
-  }
-  let workdaysCount = 0;
-  for (const count of shiftCountByDate.values()) {
-    workdaysCount += countCompletedShiftWorkdays(count);
-  }
+  const workdaysCount = sumShiftWorkdaysFromAttendanceRecords(
+    monthData.attendance.map((item) => ({
+      checkIn: item.check_in,
+      checkOut: item.check_out,
+      scheduledStart: item.scheduled_start_at,
+      scheduledEnd: item.scheduled_end_at,
+    })),
+  );
   const monthlyLeaveBalance = monthData.monthlyLeaveBalance;
   const hasMonthlySalary = monthlySalary > 0;
   const estimatedPay = hasMonthlySalary

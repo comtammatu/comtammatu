@@ -65,23 +65,17 @@ test("roster week grid renders through the design-system DataTable", () => {
   assert.doesNotMatch(weekClient, /@comtammatu\/ui\/components\/table/);
 });
 
-test("roster week grid keeps the shared cell-change handler and Select", () => {
+test("roster week grid keeps multi-shift cell editor", () => {
   const weekClient = read("apps/web/lib/hr/roster/roster-week-client.tsx");
   const editor = read("apps/web/lib/hr/roster/use-roster-week-editor.ts");
+  const dayCell = read("apps/web/lib/hr/roster/roster-day-cell.tsx");
+  const model = read("apps/web/lib/hr/roster/roster-model.ts");
 
-  assert.match(editor, /function handleCellChange\(/);
-  assert.match(weekClient, /handleCellChange\(employee\.employeeId/);
-  assert.match(weekClient, /assignmentMap\.get\(key\)/);
-  assert.match(weekClient, /<Select/);
-  assert.match(weekClient, /EMPTY_SHIFT_VALUE/);
-  assert.match(
-    weekClient,
-    /SelectTrigger size=\{isTouchLayout \? "touch" : "default"\}/,
-  );
-  assert.match(
-    weekClient,
-    /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/,
-  );
+  assert.match(editor, /function handleAddShift\(/);
+  assert.match(editor, /function handleRemoveShift\(/);
+  assert.match(weekClient, /RosterDayCell/);
+  assert.match(dayCell, /IconStar/);
+  assert.match(model, /rosterAssignmentKey\([\s\S]*shiftId/);
   assert.match(weekClient, /sticky bottom-0/);
 });
 
@@ -96,11 +90,28 @@ test("Branch roster uses week cards without Owner DataTable", () => {
   assert.match(rosterClient, /BranchRosterWeekClient/);
   assert.doesNotMatch(rosterClient, /(?<!Branch)RosterWeekClient|DataTable/);
   assert.match(branchWeek, /ItemGroup/);
+  assert.match(branchWeek, /RosterDayCell/);
   assert.match(branchWeek, /useRosterWeekEditor/);
-  assert.match(branchWeek, /SelectTrigger size="touch"/);
   assert.match(branchWeek, /sticky bottom-0/);
   assert.doesNotMatch(
     branchWeek,
     /DataTable|from "@lib\/hr\/roster\/roster-week-client"/,
   );
+});
+
+test("ADR 0036 Phase B migration enables multi-shift roster constraints", () => {
+  const migration = read(
+    "supabase/migrations/20260812220000_hrm_multi_shift_roster_and_clock_in.sql",
+  );
+
+  assert.match(migration, /shift_assignments_one_per_employee_day/);
+  assert.match(migration, /NULLS NOT DISTINCT/);
+  assert.match(migration, /shift_assignments_one_day_off_per_day/);
+  assert.match(migration, /desired\.shift_id IS NOT DISTINCT FROM assignment\.shift_id/);
+  assert.doesNotMatch(
+    migration,
+    /OR sa\.work_date = v_vn_date/,
+  );
+  assert.match(migration, /multiple_shift_candidates/);
+  assert.match(migration, /scheduled_start_at, scheduled_end_at/);
 });

@@ -4,7 +4,6 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Repeat2 as IconRepeat,
-  Star as IconStar,
 } from "lucide-react";
 import { STATES_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
@@ -26,15 +25,11 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
 import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { RosterDayCell } from "./roster-day-cell";
 import {
-  rosterAssignmentKey,
   type RosterEmployee,
   type RosterWeekData,
 } from "./roster-model";
-import {
-  EMPTY_SHIFT_VALUE,
-  formatShiftLabel,
-} from "./roster-week-helpers";
 import { useRosterWeekEditor } from "./use-roster-week-editor";
 import {
   formatRosterDayHeader,
@@ -85,7 +80,8 @@ export function RosterWeekClient({
     scheduleLabel,
     handleSiteChange,
     handleWeekShift,
-    handleCellChange,
+    handleAddShift,
+    handleRemoveShift,
     handleSave,
     handleCopyPreviousWeek,
     handleLeaderToggle,
@@ -108,65 +104,23 @@ export function RosterWeekClient({
     );
   }
 
-  function renderShiftSelect(employee: RosterEmployee, workDate: string) {
-    const key = rosterAssignmentKey(employee.employeeId, workDate);
-    const selected = assignmentMap.get(key)?.toString() ?? EMPTY_SHIFT_VALUE;
-    const leader = leaderMap.get(key);
-    const canToggleLeader =
-      branchId != null &&
-      !dirty &&
-      selected !== EMPTY_SHIFT_VALUE &&
-      leader != null &&
-      leader.assignmentId > 0;
+  function renderDayCell(employee: RosterEmployee, workDate: string) {
     return (
-      <div className="flex min-w-32 items-center gap-1">
-        <Select
-          value={selected}
-          onValueChange={(value) =>
-            handleCellChange(employee.employeeId, workDate, value)
-          }
-          disabled={isPending}
-        >
-          <SelectTrigger size={isTouchLayout ? "touch" : "default"} className="w-full min-w-0 flex-1">
-            <SelectValue placeholder={copy.emptyShift} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={EMPTY_SHIFT_VALUE} size={isTouchLayout ? "touch" : "default"}>
-              {copy.emptyShift}
-            </SelectItem>
-            {data.shifts.map((shift) => (
-              <SelectItem key={shift.id} value={String(shift.id)} size={isTouchLayout ? "touch" : "default"}>
-                {formatShiftLabel(shift.name, shift.startTime, shift.endTime)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="ghost"
-          size={isTouchLayout ? "icon-touch" : "icon-sm"}
-          className="shrink-0"
-          disabled={isPending || !canToggleLeader}
-          aria-label={
-            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
-          }
-          title={
-            leader?.isLeader ? copy.unmarkShiftLeader : copy.markShiftLeader
-          }
-          onClick={() =>
-            handleLeaderToggle(employee.employeeId, workDate, !leader?.isLeader)
-          }
-        >
-          <IconStar
-            className={cn(
-              "size-4",
-              leader?.isLeader
-                ? "fill-current text-warning"
-                : "text-muted-foreground",
-            )}
-          />
-        </Button>
-      </div>
+      <RosterDayCell
+        employeeId={employee.employeeId}
+        workDate={workDate}
+        shifts={data.shifts}
+        assignedShiftIds={
+          assignmentMap.get(`${employee.employeeId}:${workDate}`) ?? []
+        }
+        leaderMap={leaderMap}
+        dirty={dirty}
+        isPending={isPending}
+        touch={isTouchLayout}
+        onAddShift={handleAddShift}
+        onRemoveShift={handleRemoveShift}
+        onLeaderToggle={handleLeaderToggle}
+      />
     );
   }
 
@@ -192,7 +146,7 @@ export function RosterWeekClient({
         key: date,
         header: formatRosterDayHeader(date),
         className: "min-w-32",
-        render: (employee) => renderShiftSelect(employee, date),
+        render: (employee) => renderDayCell(employee, date),
       }),
     ),
   ];
@@ -299,7 +253,7 @@ export function RosterWeekClient({
                           {formatRosterDayHeader(date)}
                         </span>
                         <div className="min-w-0 flex-1">
-                          {renderShiftSelect(employee, date)}
+                          {renderDayCell(employee, date)}
                         </div>
                       </div>
                     ))}

@@ -55,7 +55,9 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import { PayrollCalendarDialog } from "./payroll-calendar-dialog";
+import { PayrollRowDetailDialog } from "./payroll-row-detail-dialog";
 import {
+  exportPaidPayrollCsv,
   removePayrollAdjustment,
   savePayrollAdjustment,
   snapshotPayrollPreview,
@@ -216,6 +218,8 @@ export function PayrollListClient({
     String(preview.standardDays),
   );
   const [selectedEntry, setSelectedEntry] =
+    useState<PayrollPreviewEntry | null>(null);
+  const [detailEntry, setDetailEntry] =
     useState<PayrollPreviewEntry | null>(null);
   const [editingAdjustment, setEditingAdjustment] =
     useState<PayrollAdjustment | null>(null);
@@ -380,6 +384,30 @@ export function PayrollListClient({
     replaceFilters({ standardDays: String(parsed) });
   }
 
+  function openDetail(entry: PayrollPreviewEntry) {
+    setDetailEntry(entry);
+  }
+
+  async function downloadPaidCsv() {
+    const result = await exportPaidPayrollCsv({
+      year: preview.year,
+      month: preview.month,
+    });
+    if (!result.success || !result.data) {
+      toast.error(result.error ?? copy.exportFailed);
+      return;
+    }
+    const blob = new Blob([result.data.csv], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = result.data.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   function openAdjustment(entry: PayrollPreviewEntry) {
     setEditingAdjustment(null);
     setSelectedEntry(entry);
@@ -453,14 +481,19 @@ export function PayrollListClient({
     });
   }
 
-  const snapshotAction = !isLocked ? (
-    <Button
-      onClick={() => void confirmSnapshot()}
-      disabled={!preview.canSnapshot || isSnapshotting}
-    >
-      {isSnapshotting ? copy.snapshotting : copy.snapshot}
-    </Button>
-  ) : null;
+  const snapshotAction =
+    preview.snapshot?.status === "paid" ? (
+      <Button variant="outline" onClick={() => void downloadPaidCsv()}>
+        {copy.exportCsv}
+      </Button>
+    ) : !isLocked ? (
+      <Button
+        onClick={() => void confirmSnapshot()}
+        disabled={!preview.canSnapshot || isSnapshotting}
+      >
+        {isSnapshotting ? copy.snapshotting : copy.snapshot}
+      </Button>
+    ) : null;
 
   function openPreflightBlocker(blocker: PayrollPreflightBlocker) {
     if (blocker.kind === "missing_salary") {
@@ -565,32 +598,44 @@ export function PayrollListClient({
       key: "actions",
       header: copy.table.edit,
       className: "w-32 text-right",
-      render: (entry) =>
-        !isLocked &&
-        (canCalculate(entry) ? (
+      render: (entry) => (
+        <div className="flex flex-wrap items-center justify-end gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={(event) => {
               event.stopPropagation();
-              openAdjustment(entry);
+              openDetail(entry);
             }}
           >
-            <IconPencil data-icon="inline-start" />
-            {copy.table.edit}
+            {copy.detail.detailAction}
           </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(event) => {
-              event.stopPropagation();
-              router.push(withHrBranchScope("/hr", branchScope));
-            }}
-          >
-            {copy.missingSalaryAction}
-          </Button>
-        )),
+          {!isLocked && canCalculate(entry) ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                openAdjustment(entry);
+              }}
+            >
+              <IconPencil data-icon="inline-start" />
+              {copy.table.edit}
+            </Button>
+          ) : !isLocked ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                router.push(withHrBranchScope("/hr", branchScope));
+              }}
+            >
+              {copy.missingSalaryAction}
+            </Button>
+          ) : null}
+        </div>
+      ),
     },
   ];
 
@@ -959,6 +1004,14 @@ export function PayrollListClient({
           )}
         </FormDialog>
       ) : null}
+
+      <PayrollRowDetailDialog
+        entry={detailEntry}
+        open={detailEntry != null}
+        onOpenChange={(open) => {
+          if (!open) setDetailEntry(null);
+        }}
+      />
     </>
   );
 }

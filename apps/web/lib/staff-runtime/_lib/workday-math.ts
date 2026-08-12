@@ -1,16 +1,14 @@
-/** Fallback when attendance rows lack a frozen scheduled window (pre-roster). */
-export const WORKDAY_PER_COMPLETED_SHIFT = 0.5;
-
-export function countCompletedShiftWorkdays(
-  completedShiftCount: number,
-): number {
-  return Math.max(0, completedShiftCount) * WORKDAY_PER_COMPLETED_SHIFT;
-}
-
 function toEpochMs(value: string | Date): number {
   const ms = value instanceof Date ? value.getTime() : Date.parse(value);
   return Number.isFinite(ms) ? ms : Number.NaN;
 }
+
+export type WorkdayAttendanceRecord = {
+  checkIn?: string | null;
+  checkOut?: string | null;
+  scheduledStart?: string | null;
+  scheduledEnd?: string | null;
+};
 
 /** Hour-ratio công; mirrors SQL `attendance_shift_workdays`. */
 export function countShiftWorkdaysFromOverlap(input: {
@@ -49,6 +47,31 @@ export function countShiftWorkdaysFromOverlap(input: {
 
   const rounded = Math.round((workedSeconds / shiftSeconds) * 10) / 10;
   return Math.min(1, rounded);
+}
+
+export function shiftWorkdaysFromAttendanceRecord(
+  record: WorkdayAttendanceRecord,
+): number {
+  if (!record.checkOut) return 0;
+  if (!record.checkIn || !record.scheduledStart || !record.scheduledEnd) {
+    return 0;
+  }
+  return countShiftWorkdaysFromOverlap({
+    checkIn: record.checkIn,
+    checkOut: record.checkOut,
+    scheduledStart: record.scheduledStart,
+    scheduledEnd: record.scheduledEnd,
+  });
+}
+
+export function sumShiftWorkdaysFromAttendanceRecords(
+  records: readonly WorkdayAttendanceRecord[],
+): number {
+  let total = 0;
+  for (const record of records) {
+    total += shiftWorkdaysFromAttendanceRecord(record);
+  }
+  return total;
 }
 
 export function countInclusiveDays(startDate: string, endDate: string): number {

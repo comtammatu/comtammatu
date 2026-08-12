@@ -11,7 +11,6 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
-import { countCompletedShiftWorkdays } from "@lib/staff-runtime/_lib/workday-math";
 import { messages } from "@lib/messages";
 import type {
   AttendanceCalendarEmployee,
@@ -51,6 +50,7 @@ export function AttendanceCalendarHost({
   selectedDayLeave,
   selectedDayClosedShifts,
   selectedDayOpenShifts,
+  selectedDayWorkdays,
   selectedDayWorkHours,
   selectedCalendarEmployee,
   isPending,
@@ -80,6 +80,7 @@ export function AttendanceCalendarHost({
   selectedDayLeave: AttendanceCalendarLeave | undefined;
   selectedDayClosedShifts: number;
   selectedDayOpenShifts: number;
+  selectedDayWorkdays: number;
   selectedDayWorkHours: number;
   selectedCalendarEmployee: AttendanceCalendarEmployee | undefined;
   isPending: boolean;
@@ -182,7 +183,7 @@ export function AttendanceCalendarHost({
                     <Badge variant="outline">
                       {attendanceCopy.calendarActualSummary(
                         selectedDayClosedShifts,
-                        countCompletedShiftWorkdays(selectedDayClosedShifts),
+                        selectedDayWorkdays,
                         selectedDayWorkHours,
                       )}
                     </Badge>

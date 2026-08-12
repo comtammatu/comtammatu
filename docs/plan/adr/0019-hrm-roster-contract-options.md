@@ -2,6 +2,8 @@
 
 **Status:** Accepted (2026-08-01, owner approval). Amended 2026-08-01 for
 hard-require clock-in and hour-ratio `công` (owner decisions 1B + Payroll B).
+**Items 1 and 3 further amended by ADR 0036** (multi-shift roster,
+`wage_unit`, UI SSOT) — **Accepted** 2026-08-12.
 
 ## Context
 

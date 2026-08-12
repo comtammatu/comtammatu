@@ -9,6 +9,7 @@ import {
   getVNMonthSequenceBack,
   getVNMonthString,
 } from "@comtammatu/shared/time";
+import { sumShiftWorkdaysFromAttendanceRecords } from "@lib/staff-runtime/_lib/workday-math";
 import { isStaleOpenAttendanceRecord } from "@lib/hr/branch-attendance-model";
 import { messages } from "@lib/messages";
 import {
@@ -297,6 +298,14 @@ export function AttendanceTable({
   const selectedDayOpenShifts = selectedDayRecords.filter(
     (record) => record.check_in && !record.check_out,
   ).length;
+  const selectedDayWorkdays = sumShiftWorkdaysFromAttendanceRecords(
+    selectedDayRecords.map((record) => ({
+      checkIn: record.check_in,
+      checkOut: record.check_out,
+      scheduledStart: record.scheduled_start_at,
+      scheduledEnd: record.scheduled_end_at,
+    })),
+  );
   const selectedDayWorkHours = selectedDayRecords.reduce(
     (total, record) =>
       total + calculateAttendanceWorkHours(record.check_in, record.check_out),
@@ -366,6 +375,7 @@ export function AttendanceTable({
         selectedDayLeave={selectedDayLeave}
         selectedDayClosedShifts={selectedDayClosedShifts}
         selectedDayOpenShifts={selectedDayOpenShifts}
+        selectedDayWorkdays={selectedDayWorkdays}
         selectedDayWorkHours={selectedDayWorkHours}
         selectedCalendarEmployee={selectedCalendarEmployee}
         isPending={isPending}

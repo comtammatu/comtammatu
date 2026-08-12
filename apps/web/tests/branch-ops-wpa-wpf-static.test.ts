@@ -88,10 +88,11 @@ test("WP-D allows_photo flows through HR + PWA tasks", () => {
 
 test("WP-F roster star calls set_shift_assignment_leader", () => {
   const rosterClient = readWeb("lib/hr/roster/roster-week-client.tsx");
+  const rosterDayCell = readWeb("lib/hr/roster/roster-day-cell.tsx");
   const rosterEditor = readWeb("lib/hr/roster/use-roster-week-editor.ts");
   const rosterActions = readWeb("lib/hr/roster/actions.ts");
   assert.match(rosterClient, /handleLeaderToggle/);
-  assert.match(rosterClient, /IconStar/);
+  assert.match(rosterDayCell, /IconStar/);
   assert.match(rosterEditor, /setShiftAssignmentLeader/);
   assert.match(rosterActions, /set_shift_assignment_leader/);
 });
