@@ -243,6 +243,25 @@ const STATUS_DOMAINS = {
       warning: "warning",
     },
   },
+  "work-task": {
+    labels: {
+      backlog: "Chờ xử lý",
+      todo: "Cần làm",
+      in_progress: "Đang làm",
+      review: "Chờ duyệt",
+      done: "Hoàn thành",
+      canceled: "Đã hủy",
+    },
+    fallbackVariant: "secondary",
+    variants: {
+      backlog: "secondary",
+      todo: "secondary",
+      in_progress: "info",
+      review: "warning",
+      done: "success",
+      canceled: "destructive",
+    },
+  },
 } satisfies Record<string, DomainConfig>;
 
 export type StatusDomain = keyof typeof STATUS_DOMAINS;

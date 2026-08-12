@@ -9,7 +9,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppEmptyState, AppListFrame } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
 
@@ -39,40 +39,38 @@ function priorityVariant(
 }
 
 export function WorkInbox({ tasks }: { tasks: WorkTaskRow[] }) {
+  if (tasks.length === 0) {
+    return <AppEmptyState mode="no-data" description={workCopy.inboxEmpty} />;
+  }
+
   return (
-    <AppListFrame contentScroll>
-      {tasks.length === 0 ? (
-        <AppEmptyState mode="no-data" description={workCopy.inboxEmpty} />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {tasks.map((task) => (
-            <Item
-              key={task.id}
-              variant="outline"
-              render={<Link href={`/work/tasks/${task.id}`} />}
-            >
-              <ItemContent className="gap-1">
-                <ItemTitle>{task.title}</ItemTitle>
-                <ItemDescription className="flex flex-wrap items-center gap-2">
-                  <Badge variant={statusVariant(task.status)}>
-                    {workCopy.statusLabels[task.status]}
-                  </Badge>
-                  {task.dueAt ? (
-                    <span>
-                      {workCopy.due}: {formatVNDate(task.dueAt)}
-                    </span>
-                  ) : (
-                    <span>{workCopy.noDue}</span>
-                  )}
-                  <Badge variant={priorityVariant(task.priority)}>
-                    {workCopy.priorityLabels[task.priority]}
-                  </Badge>
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-          ))}
-        </div>
-      )}
-    </AppListFrame>
+    <div className="flex flex-col gap-2 px-3 py-3">
+      {tasks.map((task) => (
+        <Item
+          key={task.id}
+          variant="outline"
+          render={<Link href={`/work/tasks/${task.id}`} />}
+        >
+          <ItemContent className="gap-1">
+            <ItemTitle>{task.title}</ItemTitle>
+            <ItemDescription className="flex flex-wrap items-center gap-2">
+              <Badge variant={statusVariant(task.status)}>
+                {workCopy.statusLabels[task.status]}
+              </Badge>
+              {task.dueAt ? (
+                <span>
+                  {workCopy.due}: {formatVNDate(task.dueAt)}
+                </span>
+              ) : (
+                <span>{workCopy.noDue}</span>
+              )}
+              <Badge variant={priorityVariant(task.priority)}>
+                {workCopy.priorityLabels[task.priority]}
+              </Badge>
+            </ItemDescription>
+          </ItemContent>
+        </Item>
+      ))}
+    </div>
   );
 }

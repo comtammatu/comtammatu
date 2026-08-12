@@ -114,6 +114,8 @@ function trustedPreviewBranch(candidate) {
         stdio: ["ignore", "pipe", "ignore"],
         timeout: 10_000,
         maxBuffer: 64 * 1024,
+        // Windows resolves supabase.cmd only when shell is enabled.
+        shell: process.platform === "win32",
       },
     );
     if (result.status !== 0 || result.error) return null;

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -155,9 +156,14 @@ export function WorkTaskDetail({
   return (
     <AppPage width="wide" density="compact" scroll>
       <AppPageHeader
-        title={workCopy.detailTitle}
-        description={task.title}
-        actions={<AppBackLink href="/work">{workCopy.pageTitle}</AppBackLink>}
+        title={task.title}
+        description={workCopy.detailTitle}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge domain="work-task" value={task.status} />
+            <AppBackLink href="/work">{workCopy.pageTitle}</AppBackLink>
+          </div>
+        }
       />
 
       <AppSection title={workCopy.detailTitle}>
@@ -379,20 +385,18 @@ export function WorkTaskDetail({
       </AppSection>
 
       <AppDetailFooter
-        leading={
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">
-              {workCopy.statusLabels[task.status]}
-            </Badge>
-            <Badge variant="secondary">
-              {workCopy.priorityLabels[task.priority]}
-            </Badge>
-          </div>
-        }
         trailing={
           <Button size={controlSize} disabled={isPending} onClick={saveFields}>
             {workCopy.save}
           </Button>
+        }
+        leading={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge domain="work-task" value={task.status} />
+            <Badge variant="secondary">
+              {workCopy.priorityLabels[task.priority]}
+            </Badge>
+          </div>
         }
       />
     </AppPage>

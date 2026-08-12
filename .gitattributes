@@ -4,3 +4,6 @@ supabase/migrations/*_baseline.sql linguist-generated=true
 
 # Exclude generated database types
 packages/database/src/types/database.types.ts linguist-generated=true
+
+# Generated route matrix must stay LF for cross-platform lint:route-matrix
+docs/spec/role-route-matrix.md text eol=lf

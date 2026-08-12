@@ -448,10 +448,7 @@ const previewFixtureBranches = {
     parent_project_ref: PROD,
   },
 };
-fs.writeFileSync(
-  path.join(previewFixtureDir, "supabase"),
-  `#!/usr/bin/env node
-const branches = ${JSON.stringify(previewFixtureBranches)};
+const previewStubSource = `const branches = ${JSON.stringify(previewFixtureBranches)};
 const args = process.argv.slice(2);
 const branch =
   args[0] === "branches" &&
@@ -464,8 +461,21 @@ const branch =
     : null;
 if (!branch) process.exit(1);
 process.stdout.write(JSON.stringify(branch));
-`,
+`;
+fs.writeFileSync(
+  path.join(previewFixtureDir, "supabase.mjs"),
+  previewStubSource,
   { mode: 0o700 },
+);
+fs.writeFileSync(
+  path.join(previewFixtureDir, "supabase"),
+  `#!/usr/bin/env node\n${previewStubSource}`,
+  { mode: 0o700 },
+);
+// Windows PATH lookup needs supabase.cmd; Unix uses the extensionless stub.
+fs.writeFileSync(
+  path.join(previewFixtureDir, "supabase.cmd"),
+  `@echo off\r\nnode "%~dp0supabase.mjs" %*\r\n`,
 );
 const FIXTURES = [
   ["block: supabase db push", 2, bash("supabase db push")],
@@ -2159,7 +2169,12 @@ const FIXTURES = [
   ],
 ];
 const hookBaseEnv = { ...process.env };
-hookBaseEnv.PATH = `${previewFixtureDir}${path.delimiter}${hookBaseEnv.PATH ?? ""}`;
+// Windows enumerates PATH as `Path`; plain-object copies are case-sensitive.
+const pathKey =
+  Object.keys(hookBaseEnv).find((key) => key.toLowerCase() === "path") ??
+  "PATH";
+hookBaseEnv[pathKey] =
+  `${previewFixtureDir}${path.delimiter}${hookBaseEnv[pathKey] ?? ""}`;
 for (const name of [
   "CLAUDE_PROJECT_DIR",
   "PGDATABASE",

@@ -558,3 +558,217 @@ export const upsertWorkChecklistItem = withAction<typeof upsertWorkChecklistItem
     };
   },
 );
+
+export type WorkMemberRole = "lead" | "member";
+
+export type WorkDepartmentMemberRow = {
+  id: number;
+  departmentId: number;
+  userId: string;
+  fullName: string;
+  role: WorkMemberRole;
+  isActive: boolean;
+};
+
+export type WorkProfileOption = {
+  id: string;
+  fullName: string;
+};
+
+const workMemberRoleSchema = z.enum(["lead", "member"]);
+
+function mapMemberRole(value: string): WorkMemberRole {
+  return value === "lead" ? "lead" : "member";
+}
+
+export const listWorkDepartmentMembers = withAction(
+  {
+    schema: z.object({
+      departmentId: z.number().int().positive(),
+    }),
+    roles: WORK_ROUTE_ROLES,
+  },
+  async (data, ctx) => {
+    const { data: rows, error } = await ctx.supabase
+      .from("work_department_members")
+      .select("id, department_id, user_id, role, is_active, profiles!inner(full_name)")
+      .eq("tenant_id", ctx.claims.tenant_id)
+      .eq("department_id", data.departmentId)
+      .eq("is_active", true)
+      .order("role", { ascending: true });
+    if (error) {
+      return { success: false, error: workCopy.loadFailed };
+    }
+    const items: WorkDepartmentMemberRow[] = (rows ?? []).map((row) => {
+      const profile = row.profiles as unknown as { full_name: string } | null;
+      return {
+        id: row.id,
+        departmentId: row.department_id,
+        userId: row.user_id,
+        fullName: profile?.full_name ?? row.user_id,
+        role: mapMemberRole(row.role),
+        isActive: row.is_active,
+      };
+    });
+    return { success: true, data: { items } };
+  },
+);
+
+export const listWorkCandidateProfiles = withAction(
+  {
+    schema: z.object({
+      departmentId: z.number().int().positive(),
+    }),
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const [{ data: memberRows }, { data: profiles, error }] = await Promise.all([
+      ctx.supabase
+        .from("work_department_members")
+        .select("user_id")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("department_id", data.departmentId)
+        .eq("is_active", true),
+      ctx.supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .order("full_name"),
+    ]);
+    if (error) {
+      return { success: false, error: workCopy.loadFailed };
+    }
+    const taken = new Set((memberRows ?? []).map((row) => row.user_id));
+    const items: WorkProfileOption[] = (profiles ?? [])
+      .filter((row) => !taken.has(row.id))
+      .map((row) => ({ id: row.id, fullName: row.full_name }));
+    return { success: true, data: { items } };
+  },
+);
+
+const upsertMemberSchema = z.object({
+  departmentId: z.number().int().positive(),
+  userId: z.string().uuid(),
+  role: workMemberRoleSchema,
+});
+
+export const upsertWorkDepartmentMember = withAction(
+  {
+    schema: upsertMemberSchema,
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const { data: row, error } = await ctx.supabase.rpc(
+      "upsert_work_department_member",
+      {
+        p_department_id: data.departmentId,
+        p_user_id: data.userId,
+        p_role: data.role,
+      },
+    );
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.teamAddFailed,
+        errorCode: "work.member_upsert_failed",
+      });
+    }
+    if (!row) {
+      return { success: false, error: workCopy.teamAddFailed };
+    }
+    revalidatePath("/work");
+    revalidatePath("/work/team");
+    return {
+      success: true,
+      data: {
+        id: row.id,
+        departmentId: row.department_id,
+        userId: row.user_id,
+        fullName: "",
+        role: mapMemberRole(row.role),
+        isActive: row.is_active,
+      } satisfies WorkDepartmentMemberRow,
+    };
+  },
+);
+
+export const setWorkDepartmentMemberRole = withAction(
+  {
+    schema: upsertMemberSchema,
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const { data: row, error } = await ctx.supabase.rpc(
+      "set_work_department_member_role",
+      {
+        p_department_id: data.departmentId,
+        p_user_id: data.userId,
+        p_role: data.role,
+      },
+    );
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.teamSaveFailed,
+        errorCode: "work.member_role_failed",
+      });
+    }
+    if (!row) {
+      return { success: false, error: workCopy.teamSaveFailed };
+    }
+    revalidatePath("/work/team");
+    return {
+      success: true,
+      data: {
+        id: row.id,
+        departmentId: row.department_id,
+        userId: row.user_id,
+        fullName: "",
+        role: mapMemberRole(row.role),
+        isActive: row.is_active,
+      } satisfies WorkDepartmentMemberRow,
+    };
+  },
+);
+
+export const deactivateWorkDepartmentMember = withAction(
+  {
+    schema: z.object({
+      departmentId: z.number().int().positive(),
+      userId: z.string().uuid(),
+    }),
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const { data: row, error } = await ctx.supabase.rpc(
+      "deactivate_work_department_member",
+      {
+        p_department_id: data.departmentId,
+        p_user_id: data.userId,
+      },
+    );
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.teamSaveFailed,
+        errorCode: "work.member_deactivate_failed",
+      });
+    }
+    if (!row) {
+      return { success: false, error: workCopy.teamSaveFailed };
+    }
+    revalidatePath("/work");
+    revalidatePath("/work/team");
+    return { success: true };
+  },
+);

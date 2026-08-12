@@ -71,6 +71,10 @@ Control Surface module seams: `docs/modules/web-app.md`.
 - `login-destination` stays unchanged.
 - Page-archetype census must register Work routes under LIST/DETAIL or TASK_*
   compose shapes — never under station BOARD.
+- **UI compose / create UX / authority documentation** for the post-pilot
+  Layout Frame pass: proposed ADR 0035
+  (`docs/plan/adr/0035-work-ui-compose-and-authority.md`). Hosting and domain
+  in this ADR are unchanged.
 
 ## Non-goals
 
