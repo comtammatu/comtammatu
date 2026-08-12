@@ -1,8 +1,13 @@
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
 const ROOT = process.cwd();
+
+/** Windows `path.relative` uses `\`; allowlists and path guards are POSIX. */
+function toPosixRelPath(absPath) {
+  return relative(ROOT, absPath).split(sep).join("/");
+}
 
 const INCLUDE_DIRS = [
   "apps/web/app",
@@ -425,7 +430,7 @@ async function collectFiles(dir, files = []) {
 
   for (const entry of entries) {
     const absPath = join(dir, entry.name);
-    const relPath = relative(ROOT, absPath);
+    const relPath = toPosixRelPath(absPath);
 
     if (
       relPath &&
@@ -475,7 +480,7 @@ async function main() {
   const failures = [];
 
   for (const file of files) {
-    const relPath = relative(ROOT, file);
+    const relPath = toPosixRelPath(file);
     const raw = await readFile(file, "utf8");
     const text = sanitizeText(relPath, raw);
 

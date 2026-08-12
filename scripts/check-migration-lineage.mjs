@@ -16,6 +16,12 @@ function fail(message) {
   errors.push(message);
 }
 
+/** Hash LF bytes so Windows autocrlf checkouts match the committed manifest. */
+function sha256Utf8Lf(buffer) {
+  const normalized = buffer.toString("utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return createHash("sha256").update(normalized, "utf8").digest("hex");
+}
+
 function readManifest() {
   try {
     return JSON.parse(readFileSync(MANIFEST_PATH, "utf8"));
@@ -49,7 +55,7 @@ if (!existsSync(baselineFile ?? "")) {
   fail(`${String(baselineFile)} does not exist`);
 } else {
   const baselineSql = readFileSync(baselineFile);
-  const actualHash = createHash("sha256").update(baselineSql).digest("hex");
+  const actualHash = sha256Utf8Lf(baselineSql);
   if (actualHash !== baselineSha256) {
     fail(
       `${baselineFile}: hash drifted; only the re-baseline workflow may update the baseline and manifest together`,
