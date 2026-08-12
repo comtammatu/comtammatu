@@ -4,7 +4,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+// Normalize CRLF checkouts (Windows) to LF so multi-line assertions written
+// with \n stay stable; CI checks out LF where this is a no-op.
+const read = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8").replace(/\r\n/g, "\n");
 
 test("Employee Daily Work migration hardens attendance and adds checklist RPCs", () => {
   const migration = read(

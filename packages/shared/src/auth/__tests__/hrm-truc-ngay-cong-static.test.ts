@@ -12,7 +12,10 @@ import { resolve } from "node:path";
 //    because it gates checkout approval.
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+// Normalize CRLF checkouts (Windows) to LF so multi-line assertions written
+// with \n stay stable; CI checks out LF where this is a no-op.
+const read = (path: string) =>
+  readFileSync(resolve(repoRoot, path), "utf8").replace(/\r\n/g, "\n");
 
 const MIGRATION_PATH =
   "supabase/migration-archive/20260610234500_hrm_leave_grants_drop_shift_requests.sql";
