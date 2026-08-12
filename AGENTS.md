@@ -10,8 +10,9 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 ## Start Here
 
 1. On a fresh checkout, or when graph freshness is unknown, run
-   `corepack pnpm agent:start`. It verifies the tracked skill bundle and refreshes
-   CodeGraph only when status reports drift.
+   `corepack pnpm agent:start`. It refreshes CodeGraph only when status reports
+   drift. IDE plugins and global skills are additive; they do not replace these
+   rules.
 2. Read `docs/agent/rules/engineering.md`, then only the topic rule needed:
 
 | Signal | Read |
@@ -65,7 +66,7 @@ use built-in search tools; indexing remains an owner decision.
 
 - Owner-facing chat is Vietnamese. Everything else for agents and engineering
   is English — see `docs/agent/rules/language.md`.
-- English (required): agent rules/skills, specs, modules, plan/ADR/decisions,
+- English (required): agent rules, specs, modules, plan/ADR/decisions,
   architecture notes, tasks, scripts prose, code identifiers, technical
   comments, commit subjects, APIs, schema, config, infrastructure.
 - Vietnamese (required): product UI copy, end-user/owner business docs under
@@ -95,6 +96,6 @@ corepack pnpm typecheck    # TypeScript checks
 corepack pnpm lint         # Safety, contract, lifecycle, and ESLint gates
 corepack pnpm test         # Test suites
 corepack pnpm verify       # Dependency, boundary, type, lint, build, and test gate
-corepack pnpm agent:start  # Skill check + status-first CodeGraph refresh
+corepack pnpm agent:start  # Status-first CodeGraph refresh
 corepack pnpm db:types     # Regenerate database types after an applied migration
 ```

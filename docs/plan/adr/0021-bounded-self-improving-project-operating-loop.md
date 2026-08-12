@@ -59,8 +59,7 @@ their live actions and contracts are promoted.
 
 ### Make startup incremental
 
-`agent:start` verifies the tracked skill bundle through Node without a shell
-shim and reads CodeGraph status first. Pending file changes use incremental
+`agent:start` reads CodeGraph status first. Pending file changes use incremental
 sync; an uninitialized graph, worktree mismatch, or extraction upgrade uses a
 full index. Missing or invalid optional graph state falls back to built-in
 search tools instead of blocking repository work.
@@ -73,8 +72,8 @@ search tools instead of blocking repository work.
   current authority.
 - Judgment is still required to prove that a canonical owner or guard fully
   covers a staged lesson/regression.
-- Skill-bundle composition, Local database policy, UI debt ratchets, and active
-  ADR 0022 are separate changes with separate failure boundaries.
+- Local database policy, UI debt ratchets, and active ADR 0022 are separate
+  changes with separate failure boundaries.
 
 ## Verification And Rollback
 

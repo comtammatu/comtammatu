@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -21,7 +21,6 @@ import {
   codeGraphErrorPaths,
   codeGraphInvocation,
   codeGraphRefreshFailed,
-  skillCheckInvocation,
 } from "./agent-start-policy.mjs";
 
 const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
@@ -36,26 +35,6 @@ function status(overrides = {}) {
     ...overrides,
   });
 }
-
-test("launches the tracked skill check through Node without a shell shim", () => {
-  const invocation = skillCheckInvocation(scriptsDirectory);
-
-  assert.equal(invocation.command, process.execPath);
-  assert.deepEqual(invocation.args, [
-    join(scriptsDirectory, "check-agent-skill-bundle.mjs"),
-  ]);
-
-  const result = spawnSync(invocation.command, invocation.args, {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  });
-
-  assert.equal(
-    result.status,
-    0,
-    `${result.stdout ?? ""}${result.stderr ?? ""}`,
-  );
-});
 
 test("launches the CodeGraph npm shim through the Windows command processor", { skip: !codeGraphBinaryAvailable }, () => {
   const invocation = codeGraphInvocation(["version"]);

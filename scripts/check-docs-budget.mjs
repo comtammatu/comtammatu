@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 
 const REPO_ROOT = process.cwd();
 
@@ -51,35 +51,9 @@ function countLines(filePath) {
     : text.split("\n").length;
 }
 
-function walkFiles(root) {
-  if (!existsSync(root)) return [];
-  const out = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
-      const full = join(current, entry.name);
-      if (entry.isDirectory()) {
-        stack.push(full);
-        continue;
-      }
-      if (entry.isFile()) out.push(full);
-    }
-  }
-  return out.sort();
-}
-
 export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
   const errors = [];
-  const skillsRoot = join(repoRoot, ".agents/skills");
   const worklogRoot = join(repoRoot, "docs/worklog");
-
-  for (const nested of walkFiles(skillsRoot)) {
-    if (!nested.endsWith("AGENTS.md")) continue;
-    errors.push(
-      `${relative(repoRoot, nested)}: nested AGENTS.md is forbidden under .agents/skills`,
-    );
-  }
 
   if (existsSync(worklogRoot)) {
     errors.push(
@@ -128,16 +102,12 @@ export function collectDocsBudgetErrors(repoRoot = REPO_ROOT) {
 function runSelfTest() {
   const fixture = mkdtempSync(join(tmpdir(), "comtammatu-docs-budget-"));
   try {
-    mkdirSync(join(fixture, ".agents/skills/demo"), { recursive: true });
-    writeFileSync(join(fixture, ".agents/skills/demo/SKILL.md"), "# demo\n");
-    writeFileSync(join(fixture, ".agents/skills/demo/AGENTS.md"), "# nested\n");
     // Join segments so this source file never embeds a contiguous
     // docs/worklog/*.md path (dead-doc-reference scans scripts/).
     mkdirSync(join(fixture, "docs", "worklog"), { recursive: true });
     writeFileSync(join(fixture, "docs", "worklog", "README.md"), "# worklog\n");
 
     const errors = collectDocsBudgetErrors(fixture);
-    assert.match(errors.join("\n"), /nested AGENTS\.md is forbidden/);
     assert.match(errors.join("\n"), /docs\/worklog/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -155,9 +125,7 @@ function main() {
   const strict = process.argv.includes("--strict");
   const errors = collectDocsBudgetErrors(REPO_ROOT).filter((error) => {
     if (strict) return true;
-    return (
-      error.includes("nested AGENTS.md") || error.includes("docs/worklog")
-    );
+    return error.includes("docs/worklog");
   });
 
   if (errors.length > 0) {
@@ -168,7 +136,7 @@ function main() {
   console.log(
     strict
       ? "[docs-budget] structural bans and line budgets ok"
-      : "[docs-budget] nested skill AGENTS.md and worklog bans ok",
+      : "[docs-budget] worklog ban ok",
   );
 }
 

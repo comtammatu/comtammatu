@@ -1,13 +1,4 @@
-import { join } from "node:path";
-
 const INDEX_LOCK_FAILURE = /Could not acquire file lock/i;
-
-export function skillCheckInvocation(scriptsDirectory) {
-  return {
-    command: process.execPath,
-    args: [join(scriptsDirectory, "check-agent-skill-bundle.mjs")],
-  };
-}
 
 export function codeGraphInvocation(args) {
   if (process.platform === "win32") {

@@ -23,7 +23,6 @@
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Skill/plugin/tool routing cho agent: [agent/rules/skills.md](agent/rules/skills.md)
-- Fresh checkout skill bundle: `corepack pnpm agent:skills`
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
 - Má Tư visual contract and authority map: [spec/design-system.md](spec/design-system.md)
 - UI implementation and Base UI migration guide: [modules/ui.md](modules/ui.md)

@@ -54,15 +54,12 @@ Adapter directories wire tools back to repo authority; they do not own rules.
 | Codex        | `AGENTS.md`                    | Optional local `.codex/config.toml`   | Optional local `.codex/hooks.json` → canonical guard                              |
 | Cursor/other | Adapter-local pointer required | Adapter-specific                      | Unregistered: read-only until adapter is added and guard-sync registration exists |
 
-The tracked capability contract and required bundle are
-`docs/agent/rules/skills.md` and `.agents/skills/`. Its exact tree is locked by
-`docs/agent/skills-manifest.json`; every fresh checkout must pass
-`corepack pnpm agent:start` before agent work, and CI verifies the skill bundle
-in `lint`.
-Global skill catalogs, plugin caches, and per-user plugin state are additive only.
-Local Claude/Codex adapter files are optional and untracked; when present they
-may enable plugins or MCP servers but cannot replace or alter project policy or
-the required bundle.
+Tool and plugin routing lives in `docs/agent/rules/skills.md`. There is no
+tracked `.agents/skills` bundle. Global skill catalogs, plugin caches, and
+per-user plugin state are additive only. Local Claude/Codex adapter files are
+optional and untracked; when present they may enable plugins or MCP servers but
+cannot replace or alter project policy.
+`corepack pnpm agent:start` refreshes CodeGraph when `.codegraph/` exists.
 
 The production guard contract spans the Environment Registry in `database.md`,
 `scripts/guard-prod-db.mjs`, and `scripts/check-guard-sync.mjs`. An optional
