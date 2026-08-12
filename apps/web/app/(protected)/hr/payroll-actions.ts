@@ -542,7 +542,14 @@ async function buildPayrollPreview(
     right.start_date.localeCompare(left.start_date),
   )) {
     if (!contractByEmployee.has(contract.employee_id)) {
-      contractByEmployee.set(contract.employee_id, contract);
+      contractByEmployee.set(contract.employee_id, {
+        gross_salary: contract.gross_salary,
+        insurance_base_salary: contract.insurance_base_salary,
+        pay_basis: contract.pay_basis,
+        wage_unit: contract.wage_unit === "daily" ? "daily" : "monthly",
+        daily_rate: contract.daily_rate ?? null,
+        start_date: contract.start_date,
+      });
     }
   }
 

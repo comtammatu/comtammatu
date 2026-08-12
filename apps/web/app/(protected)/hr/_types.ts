@@ -28,6 +28,8 @@ export interface EmployeeRow {
     status: string;
     /** Present after pay_basis migration; UI never shows the raw key. */
     pay_basis?: "attendance_prorated" | "fixed_monthly" | string | null;
+    wage_unit?: "monthly" | "daily" | null;
+    daily_rate?: number | null;
   }[];
   profiles: {
     id: string;
