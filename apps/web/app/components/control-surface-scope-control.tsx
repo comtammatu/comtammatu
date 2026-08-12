@@ -19,6 +19,8 @@ import {
   getControlSurfaceScopeBranchId,
   groupSitesByKind,
   resolveScopeFromSearchParams,
+  shouldGroupSitesByKind,
+  sortSitesByKind,
   type ControlSurfaceBranchScope,
 } from "@/lib/control-surface-scope";
 
@@ -95,6 +97,8 @@ export function ControlSurfaceScopeControl({
     [sites, currentId],
   );
   const groups = useMemo(() => groupSitesByKind(sites), [sites]);
+  const useGroupedSites = useMemo(() => shouldGroupSitesByKind(sites), [sites]);
+  const flatSites = useMemo(() => sortSitesByKind(sites), [sites]);
 
   const displayLabel = useMemo(() => {
     if (currentScope === "all") return AGGREGATE_LABEL.all;
@@ -164,10 +168,25 @@ export function ControlSurfaceScopeControl({
             {AGGREGATE_LABEL[aggregate]}
           </SelectItem>
         ))}
-        {groups.map((group) => (
-          <SelectGroup key={group.kind}>
-            <SelectLabel>{getSiteKindLabelVi(group.kind)}</SelectLabel>
-            {group.items.map((site) => (
+        {useGroupedSites
+          ? groups.map((group) => (
+              <SelectGroup key={group.kind}>
+                <SelectLabel>{getSiteKindLabelVi(group.kind)}</SelectLabel>
+                {group.items.map((site) => (
+                  <SelectItem
+                    key={site.id}
+                    value={String(site.id)}
+                    label={site.name}
+                    className={isTouchLayout ? "min-h-12 text-sm" : undefined}
+                  >
+                    <span className="block min-w-0 truncate text-sm">
+                      {site.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))
+          : flatSites.map((site) => (
               <SelectItem
                 key={site.id}
                 value={String(site.id)}
@@ -179,8 +198,6 @@ export function ControlSurfaceScopeControl({
                 </span>
               </SelectItem>
             ))}
-          </SelectGroup>
-        ))}
       </SelectContent>
     </Select>
   );

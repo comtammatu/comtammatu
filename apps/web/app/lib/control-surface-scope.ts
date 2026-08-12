@@ -118,6 +118,27 @@ export function withControlSurfaceBranchScope(
   return next ? `${pathname}?${next}` : pathname;
 }
 
+/** Group by site kind only when multiple sales branches need separation. */
+export function shouldGroupSitesByKind(
+  sites: readonly { branch_kind: string }[],
+): boolean {
+  return sites.filter((site) => site.branch_kind === "branch").length >= 2;
+}
+
+export function sortSitesByKind<
+  T extends { id: number; name: string; branch_kind: string },
+>(sites: readonly T[]): T[] {
+  const rank = (kind: string) => {
+    const index = SITE_KIND_ORDER.indexOf(kind as ControlSurfaceSiteKind);
+    return index >= 0 ? index : SITE_KIND_ORDER.length;
+  };
+  return [...sites].sort((left, right) => {
+    const kindDelta = rank(left.branch_kind) - rank(right.branch_kind);
+    if (kindDelta !== 0) return kindDelta;
+    return left.name.localeCompare(right.name, "vi");
+  });
+}
+
 export function groupSitesByKind<
   T extends { id: number; name: string; branch_kind: string },
 >(sites: readonly T[]): { kind: ControlSurfaceSiteKind; items: T[] }[] {

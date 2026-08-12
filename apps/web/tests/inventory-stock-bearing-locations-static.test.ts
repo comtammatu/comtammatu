@@ -38,6 +38,12 @@ test("stock-bearing locations disambiguate inventory_locations→branches FK and
   assert.match(stockData, /coreDataLoadFailed:/);
   assert.match(stockDetailData, /!stockBearingLocations\.ok/);
   assert.match(stockDetailData, /coreDataLoadFailed:/);
+  assert.match(stockDetailData, /claims\.user_role === "owner"/);
+  assert.match(stockDetailData, /systemLocations/);
+  assert.match(
+    stockDetailData,
+    /branches!inventory_locations_branch_id_fkey\s*\(\s*name\s*\)/,
+  );
   assert.match(inventoryValue, /!stockBearingLocations\.ok/);
   assert.match(inventoryValue, /messages\.inventory\.value\.stockLoadFailed/);
   assert.match(recipeActions, /!stockBearingLocations\.ok/);

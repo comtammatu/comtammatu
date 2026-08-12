@@ -76,7 +76,6 @@ import {
 import { CATEGORY_TONE_CLASS, ITEM_KIND_LABELS } from "../_lib/constants";
 import type { AdjustStockDialogProps } from "./adjust-stock-dialog";
 import type { QuickStockIssueDialogProps } from "./quick-stock-issue-dialog";
-import { StockLocationBreakdownLine } from "./stock-location-breakdown";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import {
   RowActionsContextMenuItems,
@@ -530,10 +529,6 @@ export function StockClient({
                 "text-destructive",
             )}
           />
-          <StockLocationBreakdownLine
-            rows={item.locationBreakdown}
-            className="max-w-40 text-right"
-          />
         </div>
       ),
     },
@@ -836,10 +831,6 @@ export function StockClient({
               (item.status === "low" || item.status === "out") &&
                 "text-destructive",
             )}
-          />
-          <StockLocationBreakdownLine
-            rows={item.locationBreakdown}
-            className="mt-1"
           />
         </div>
         {item.monetary ? (

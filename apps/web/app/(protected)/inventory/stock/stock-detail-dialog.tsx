@@ -29,11 +29,13 @@ import {
   stockUnitLabel,
   toStockDisplayUnitCost,
 } from "../_lib/stock-unit-format";
+import { visibleStockLocationRows } from "@lib/inventory/stock-on-hand-model";
 import {
   stockMovementLabel,
   stockMovementReferenceHref,
   stockMovementReferenceLabel,
   type StockIngredientDetailData,
+  type StockIngredientDetailLocation,
   type StockIngredientDetailMovement,
 } from "@lib/inventory/stock-on-hand-detail-model";
 
@@ -41,6 +43,17 @@ const stockCopy = messages.inventory.stock;
 const inventoryCommon = messages.inventory.common;
 const valuationCopy = messages.inventory.valuationDisplay;
 const detailCopy = stockCopy.detail;
+
+function stockDetailLocationLabel(
+  location: StockIngredientDetailLocation,
+): string {
+  const locationName =
+    location.name === "main_warehouse" || location.code === "main_warehouse"
+      ? messages.inventory.ingredients.dialog.defaultFulfillSiteKindCentralSupply
+      : location.name;
+  const branchName = location.branchName?.trim();
+  return branchName ? `${branchName} · ${locationName}` : locationName;
+}
 
 export interface StockDetailDialogProps {
   open: boolean;
@@ -73,6 +86,9 @@ export function StockDetailDialog({
 
   const ingredient = detailData?.ingredient;
   const status = detailData?.status;
+  const systemLocations = detailData?.systemLocations
+    ? visibleStockLocationRows(detailData.systemLocations)
+    : [];
 
   const totalStockUnits = ingredient
     ? formatStockUnits(detailData?.totalQty ?? 0, ingredient.units, formatQty)
@@ -256,74 +272,89 @@ export function StockDetailDialog({
             </div>
           </Item>
 
-          <div className="flex flex-col gap-2">
-            <h4 className="text-sm font-medium">{detailCopy.locationTitle}</h4>
+          {detailData.systemLocations != null ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-sm font-medium">
+                  {detailCopy.systemLocationTitle}
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  {detailCopy.systemLocationDescription}
+                </p>
+              </div>
 
-            {detailData.locations.length === 0 ? (
-              <Item variant="outline" className="p-4 text-center text-xs text-muted-foreground">
-                {detailCopy.noLocationStockDescription}
-              </Item>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {detailData.locations.map((location) => {
-                  const locationStockUnits = formatStockUnits(
-                    location.qty,
-                    ingredient.units,
-                    formatQty,
-                  );
-                  const locationKind =
-                    location.monetary == null
-                      ? null
-                      : resolveStockValuationDisplay({
-                          quantity: location.qty,
-                          unitCost: location.monetary.avgUnitCost,
-                        });
-                  const locationStockValue =
-                    locationKind === "valued" &&
-                    location.monetary?.avgUnitCost != null
-                      ? location.qty * location.monetary.avgUnitCost
-                      : null;
+              {systemLocations.length === 0 ? (
+                <Item
+                  variant="outline"
+                  className="p-4 text-center text-xs text-muted-foreground"
+                >
+                  {detailCopy.systemLocationEmptyDescription}
+                </Item>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {systemLocations.map((location) => {
+                    const locationStockUnits = formatStockUnits(
+                      location.qty,
+                      ingredient.units,
+                      formatQty,
+                    );
+                    const locationKind =
+                      location.monetary == null
+                        ? null
+                        : resolveStockValuationDisplay({
+                            quantity: location.qty,
+                            unitCost: location.monetary.avgUnitCost,
+                          });
+                    const locationStockValue =
+                      locationKind === "valued" &&
+                      location.monetary?.avgUnitCost != null
+                        ? location.qty * location.monetary.avgUnitCost
+                        : null;
 
-                  return (
-                    <Item
-                      key={location.locationId}
-                      variant="outline"
-                      className="flex items-center justify-between p-3 text-xs"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground">
-                          {location.name === "main_warehouse" || location.code === "main_warehouse"
-                            ? messages.inventory.ingredients.dialog.defaultFulfillSiteKindCentralSupply
-                            : location.name}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 sm:min-w-64">
-                        <div>
-                          <p className="text-muted-foreground">{FORM_VI.quantity}</p>
-                          <p className="font-mono font-semibold tabular-nums text-foreground">
-                            {locationStockUnits.big ?? locationStockUnits.base}
+                    return (
+                      <Item
+                        key={location.locationId}
+                        variant="outline"
+                        className="flex items-center justify-between p-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">
+                            {stockDetailLocationLabel(location)}
                           </p>
                         </div>
-                        {locationKind != null ? (
-                          <div className="text-right">
-                            <p className="text-muted-foreground">{stockCopy.table.stockValue}</p>
+
+                        <div className="grid grid-cols-2 gap-4 sm:min-w-64">
+                          <div>
+                            <p className="text-muted-foreground">
+                              {FORM_VI.quantity}
+                            </p>
                             <p className="font-mono font-semibold tabular-nums text-foreground">
-                              {locationKind === "valued" && locationStockValue != null
-                                ? formatVND(locationStockValue)
-                                : locationKind === "pending"
-                                  ? valuationCopy.pendingWac
-                                  : inventoryCommon.noValue}
+                              {locationStockUnits.big ?? locationStockUnits.base}
                             </p>
                           </div>
-                        ) : null}
-                      </div>
-                    </Item>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                          {locationKind != null ? (
+                            <div className="text-right">
+                              <p className="text-muted-foreground">
+                                {stockCopy.table.stockValue}
+                              </p>
+                              <p className="font-mono font-semibold tabular-nums text-foreground">
+                                {locationKind === "valued" &&
+                                locationStockValue != null
+                                  ? formatVND(locationStockValue)
+                                  : locationKind === "pending"
+                                    ? valuationCopy.pendingWac
+                                    : inventoryCommon.noValue}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      </Item>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">

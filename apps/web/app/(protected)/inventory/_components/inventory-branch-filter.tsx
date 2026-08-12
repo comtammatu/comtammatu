@@ -1,15 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ControlSurfaceScopeControl,
 } from "@/components/control-surface-scope-control";
 import {
-  resolveScopeFromSearchParams,
   type ControlSurfaceBranchScope,
 } from "@/lib/control-surface-scope";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
+import { inventoryPathSupportsAggregateScope } from "../_lib/inventory-scope-paths";
 
 interface InventoryBranchFilterProps {
   branches: InventoryBranchOption[];
@@ -25,37 +25,37 @@ export function InventoryBranchFilter({
   defaultBranchId,
   canSelectAll = false,
 }: InventoryBranchFilterProps) {
-  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const allowedIds = useMemo(
     () => branches.map((branch) => branch.id),
     [branches],
   );
 
+  const supportsAggregate = inventoryPathSupportsAggregateScope(pathname ?? "");
+
   const fallback = useMemo((): ControlSurfaceBranchScope => {
-    if (canSelectAll) return "all";
+    if (canSelectAll && supportsAggregate) return "all";
     if (defaultBranchId != null) {
       return String(defaultBranchId) as `${number}`;
     }
     return "all";
-  }, [canSelectAll, defaultBranchId]);
+  }, [canSelectAll, defaultBranchId, supportsAggregate]);
 
   // Non-tenant roles must never stay on aggregate `all` from a stale URL.
   const effectiveFallback = useMemo((): ControlSurfaceBranchScope => {
-    if (canSelectAll) return fallback;
-    const fromUrl = resolveScopeFromSearchParams(searchParams, {
-      allowedIds,
-      fallback,
-    });
-    if (fromUrl === "all") return fallback;
+    if (canSelectAll && supportsAggregate) return fallback;
+    if (defaultBranchId != null) {
+      return String(defaultBranchId) as `${number}`;
+    }
     return fallback;
-  }, [canSelectAll, fallback, searchParams, allowedIds]);
+  }, [canSelectAll, supportsAggregate, fallback, defaultBranchId]);
 
   if (branches.length <= 1 && !canSelectAll) return null;
 
   return (
     <ControlSurfaceScopeControl
       sites={branches}
-      aggregates={canSelectAll ? ["all"] : []}
+      aggregates={canSelectAll && supportsAggregate ? ["all"] : []}
       fallback={effectiveFallback}
       allowedIds={allowedIds}
     />

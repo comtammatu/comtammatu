@@ -316,47 +316,6 @@ export function BranchStockIngredientDetail({
             </BranchOperatorPanel>
 
             <BranchOperatorPanel
-              title={detailCopy.locationTitle}
-              description={detailCopy.locationDescription}
-              icon={IconPackageCheck}
-              size="sm"
-              contentClassName="gap-2"
-            >
-              {data.locations.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  mode="no-data"
-                  icon={<IconPackageCheck />}
-                  title={detailCopy.noLocationStockTitle}
-                  description={detailCopy.noLocationStockDescription}
-                />
-              ) : (
-                <ItemGroup className="gap-2" role="list">
-                  {data.locations.map((location) => (
-                    <div key={location.locationId} role="listitem">
-                      <Item
-                        variant="outline"
-                        className="min-h-16 flex-nowrap touch-manipulation"
-                      >
-                        <ItemContent className="min-w-0 gap-1">
-                          <ItemTitle className="line-clamp-none text-sm font-semibold">
-                            {location.name}
-                          </ItemTitle>
-                          <ItemDescription className="line-clamp-none text-xs">
-                            {location.code || inventoryCommon.noValue}
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions className="shrink-0">
-                          <QuantityValue qty={location.qty} data={data} />
-                        </ItemActions>
-                      </Item>
-                    </div>
-                  ))}
-                </ItemGroup>
-              )}
-            </BranchOperatorPanel>
-
-            <BranchOperatorPanel
               title={detailCopy.movementTitle}
               headerHint={detailCopy.movementHint(data.movements.length)}
               icon={IconClipboardList}

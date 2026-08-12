@@ -5,6 +5,8 @@ import {
   groupSitesByKind,
   isAggregateControlSurfaceScope,
   parseControlSurfaceBranchScope,
+  shouldGroupSitesByKind,
+  sortSitesByKind,
   withControlSurfaceBranchScope,
 } from "../app/lib/control-surface-scope";
 
@@ -66,4 +68,35 @@ test("groupSitesByKind separates Chi nhánh from Kho Tổng and Bếp Trung Tâm
   assert.equal(groups[0]?.items.length, 2);
   assert.equal(groups[1]?.items[0]?.name, "Kho Tổng");
   assert.equal(groups[2]?.items[0]?.name, "Bếp Trung Tâm");
+});
+
+test("shouldGroupSitesByKind groups only when multiple sales branches exist", () => {
+  assert.equal(
+    shouldGroupSitesByKind([
+      { branch_kind: "branch" },
+      { branch_kind: "central_supply" },
+      { branch_kind: "central_kitchen" },
+    ]),
+    false,
+  );
+  assert.equal(
+    shouldGroupSitesByKind([
+      { branch_kind: "branch" },
+      { branch_kind: "branch" },
+      { branch_kind: "central_supply" },
+    ]),
+    true,
+  );
+});
+
+test("sortSitesByKind orders branch, central supply, then central kitchen", () => {
+  const sorted = sortSitesByKind([
+    { id: 11, name: "Bếp Trung Tâm", branch_kind: "central_kitchen" },
+    { id: 10, name: "Kho Tổng", branch_kind: "central_supply" },
+    { id: 1, name: "Nguyễn Hữu Thọ", branch_kind: "branch" },
+  ]);
+  assert.deepEqual(
+    sorted.map((site) => site.id),
+    [1, 10, 11],
+  );
 });

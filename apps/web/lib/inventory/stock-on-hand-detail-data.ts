@@ -47,6 +47,7 @@ type LocationRef = {
   name: string;
   code: string;
   location_kind: string;
+  branches?: { name: string } | { name: string }[] | null;
 };
 
 type StockLevelRow = {
@@ -103,16 +104,55 @@ function ingredientSelect(includeValuation: boolean): string {
     .join(", ");
 }
 
-function stockLevelSelect(includeValuation: boolean): string {
+function stockLevelSelect(includeValuation: boolean, withBranch = false): string {
+  const locationJoin = withBranch
+    ? "inventory_locations ( name, code, location_kind, branches!inventory_locations_branch_id_fkey ( name ) )"
+    : "inventory_locations ( name, code, location_kind )";
   return [
     "location_id",
     "current_quantity",
     includeValuation ? "avg_unit_cost" : null,
     "last_counted_at",
-    "inventory_locations ( name, code, location_kind )",
+    locationJoin,
   ]
     .filter((field): field is string => Boolean(field))
     .join(", ");
+}
+
+function mapStockLevelRows(
+  rows: StockLevelRow[],
+  canReadValuation: boolean,
+  withBranch: boolean,
+): StockIngredientDetailLocation[] {
+  return rows.map((row) => {
+    const location = relatedOne(row.inventory_locations);
+    const branch = withBranch ? relatedOne(location?.branches) : null;
+    return {
+      locationId: row.location_id,
+      name: location?.name ?? `#${row.location_id}`,
+      code: location?.code ?? "",
+      locationKind: location?.location_kind ?? "unknown",
+      branchName: branch?.name,
+      qty: Number(row.current_quantity ?? 0),
+      monetary: canReadValuation
+        ? { avgUnitCost: row.avg_unit_cost ?? null }
+        : null,
+      lastCountedAt: row.last_counted_at,
+    };
+  });
+}
+
+function sortSystemLocations(
+  rows: StockIngredientDetailLocation[],
+): StockIngredientDetailLocation[] {
+  return [...rows].sort((left, right) => {
+    const branchDelta = (left.branchName ?? "").localeCompare(
+      right.branchName ?? "",
+      "vi",
+    );
+    if (branchDelta !== 0) return branchDelta;
+    return left.name.localeCompare(right.name, "vi");
+  });
 }
 
 function movementSelect(includeValuation: boolean): string {
@@ -153,6 +193,7 @@ export async function loadStockIngredientDetailData({
 
   const branchId = scope.selectedBranchId;
   if (!branchId) notFound();
+  const isOwner = claims.user_role === "owner";
   const monetary = await loadInventoryMonetaryAccess(claims.user_role);
   const canReadValuation = includeValuation && monetary.valuation;
   const readClient = canReadValuation
@@ -161,6 +202,7 @@ export async function loadStockIngredientDetailData({
 
   const [
     stockBearingLocations,
+    tenantStockBearingLocations,
     ingredientResult,
     canCreateStockRequest,
     canReceiveGrn,
@@ -175,6 +217,12 @@ export async function loadStockIngredientDetailData({
       tenantId: claims.tenant_id,
       branchId,
     }),
+    isOwner
+      ? fetchStockBearingLocationIds({
+          supabase: readClient,
+          tenantId: claims.tenant_id,
+        })
+      : Promise.resolve({ ok: true as const, locationIds: [] }),
     readClient
       .from("ingredients")
       .select(ingredientSelect(canReadValuation))
@@ -205,8 +253,12 @@ export async function loadStockIngredientDetailData({
   const stockBearingLocationIds = stockBearingLocations.ok
     ? stockBearingLocations.locationIds
     : [];
+  const tenantStockBearingLocationIds =
+    isOwner && tenantStockBearingLocations.ok
+      ? tenantStockBearingLocations.locationIds
+      : [];
 
-  const [stockResult, movementResult] = await Promise.all([
+  const [stockResult, systemStockResult, movementResult] = await Promise.all([
     stockBearingLocations.ok && stockBearingLocationIds.length > 0
       ? readClient
           .from("stock_levels")
@@ -215,6 +267,15 @@ export async function loadStockIngredientDetailData({
           .eq("branch_id", branchId)
           .eq("ingredient_id", ingredientId)
           .in("location_id", stockBearingLocationIds)
+          .order("location_id")
+      : Promise.resolve({ data: [], error: null }),
+    isOwner && tenantStockBearingLocationIds.length > 0
+      ? readClient
+          .from("stock_levels")
+          .select(stockLevelSelect(canReadValuation, true))
+          .eq("tenant_id", claims.tenant_id)
+          .eq("ingredient_id", ingredientId)
+          .in("location_id", tenantStockBearingLocationIds)
           .order("location_id")
       : Promise.resolve({ data: [], error: null }),
     readClient
@@ -248,21 +309,14 @@ export async function loadStockIngredientDetailData({
     standardUnit?.unit_code ||
     "";
   const stockRows = (stockResult.data ?? []) as unknown as StockLevelRow[];
+  const systemStockRows = (systemStockResult.data ?? []) as unknown as StockLevelRow[];
   const movementRows = (movementResult.data ?? []) as unknown as MovementRow[];
-  const locations: StockIngredientDetailLocation[] = stockRows.map((row) => {
-    const location = relatedOne(row.inventory_locations);
-    return {
-      locationId: row.location_id,
-      name: location?.name ?? `#${row.location_id}`,
-      code: location?.code ?? "",
-      locationKind: location?.location_kind ?? "unknown",
-      qty: Number(row.current_quantity ?? 0),
-      monetary: canReadValuation
-        ? { avgUnitCost: row.avg_unit_cost ?? null }
-        : null,
-      lastCountedAt: row.last_counted_at,
-    };
-  });
+  const locations = mapStockLevelRows(stockRows, canReadValuation, false);
+  const systemLocations = isOwner
+    ? sortSystemLocations(
+        mapStockLevelRows(systemStockRows, canReadValuation, true),
+      )
+    : undefined;
   const movements: StockIngredientDetailMovement[] = movementRows.map((row) => {
     const location = relatedOne(row.inventory_locations);
     return {
@@ -326,7 +380,9 @@ export async function loadStockIngredientDetailData({
     coreDataLoadFailed:
       !stockBearingLocations.ok ||
       stockResult.error != null ||
-      movementResult.error != null,
+      movementResult.error != null ||
+      (isOwner &&
+        (!tenantStockBearingLocations.ok || systemStockResult.error != null)),
     ingredient: {
       id: ingredientRow.id,
       name: ingredientRow.name,
@@ -340,6 +396,7 @@ export async function loadStockIngredientDetailData({
       storageType: ingredientRow.storage_type,
     },
     locations,
+    systemLocations,
     movements,
     totalQty,
     latestCountedAt,

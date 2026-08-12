@@ -25,6 +25,8 @@ export type StockIngredientDetailLocation = {
   name: string;
   code: string;
   locationKind: string;
+  /** Populated on owner system-wide breakdown rows. */
+  branchName?: string;
   qty: number;
   monetary: { avgUnitCost: number | null } | null;
   lastCountedAt: string | null;
@@ -68,6 +70,8 @@ export type StockIngredientDetailData = {
   coreDataLoadFailed: boolean;
   ingredient: StockIngredientDetailIngredient;
   locations: StockIngredientDetailLocation[];
+  /** Owner-only: on-hand across every operable site in the tenant. */
+  systemLocations?: StockIngredientDetailLocation[];
   movements: StockIngredientDetailMovement[];
   totalQty: number;
   latestCountedAt: string | null;

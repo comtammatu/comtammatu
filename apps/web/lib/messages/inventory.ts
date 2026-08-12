@@ -1300,6 +1300,11 @@ export const inventory = {
       locationTitle: "Tồn theo vị trí",
       locationDescription:
         "Chỉ tính các vị trí được phép giữ tồn vận hành của chi nhánh.",
+      systemLocationTitle: "Tồn theo vị trí",
+      systemLocationDescription:
+        "Tồn toàn hệ thống theo từng site/kho vận hành.",
+      systemLocationEmptyDescription:
+        "Chưa có tồn ở site vận hành nào trong hệ thống.",
       noLocationStockTitle: "Chưa có tồn theo vị trí",
       noLocationStockDescription: "Chưa có tồn ở kho vận hành của chi nhánh.",
       movementTitle: "Lịch sử biến động",
