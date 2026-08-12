@@ -576,6 +576,7 @@ export const hr = {
     shiftLeaderClearedSuccess: "Đã bỏ trưởng ca.",
     shiftLeaderFailed: "Không thể cập nhật trưởng ca.",
     addShift: "Thêm ca",
+    removeShift: "Xóa ca",
     schedule: "Lịch cố định",
     scheduleDays: (count: number) =>
       `Lịch cố định · ${formatCount(count)} ngày`,

@@ -114,7 +114,7 @@ export function RosterDayCell({
               size={touch ? "icon-touch" : "icon-sm"}
               className="shrink-0"
               disabled={isPending}
-              aria-label="Xóa ca"
+              aria-label={copy.removeShift}
               onClick={() => onRemoveShift(employeeId, workDate, shiftId)}
             >
               <IconX className="size-4" />
