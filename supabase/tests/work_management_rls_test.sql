@@ -5,7 +5,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(11);
+SELECT plan(13);
 
 SELECT has_function(
   'public',
@@ -61,6 +61,20 @@ SELECT has_function(
   'deactivate_work_department_member',
   ARRAY['bigint'::text, 'uuid'::text],
   'deactivate_work_department_member exists'
+);
+
+SELECT has_function(
+  'public',
+  'upsert_work_department',
+  ARRAY['text'::text, 'bigint'::text],
+  'upsert_work_department exists'
+);
+
+SELECT has_function(
+  'public',
+  'deactivate_work_department',
+  ARRAY['bigint'::text],
+  'deactivate_work_department exists'
 );
 
 SELECT ok(

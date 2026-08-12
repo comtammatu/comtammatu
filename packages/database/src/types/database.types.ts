@@ -13151,6 +13151,23 @@ export type Database = {
       }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      deactivate_work_department: {
+        Args: { p_department_id: number }
+        Returns: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_departments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       deactivate_work_department_member: {
         Args: { p_department_id: number; p_user_id: string }
         Returns: {
@@ -15435,6 +15452,23 @@ export type Database = {
           p_station_id?: number
         }
         Returns: number
+      }
+      upsert_work_department: {
+        Args: { p_department_id?: number; p_name: string }
+        Returns: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_departments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       upsert_work_department_member: {
         Args: { p_department_id: number; p_role: string; p_user_id: string }

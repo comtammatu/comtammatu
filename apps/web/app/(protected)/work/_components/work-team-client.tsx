@@ -20,13 +20,14 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, SelectField } from "@/components/form";
+import { FormDialog, SelectField, TextField } from "@/components/form";
 import { AppEmptyState, AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
 import {
   deactivateWorkDepartmentMember,
   setWorkDepartmentMemberRole,
+  upsertWorkDepartment,
   upsertWorkDepartmentMember,
   type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
@@ -39,7 +40,12 @@ const addMemberSchema = z.object({
   role: z.enum(["lead", "member"]),
 });
 
+const createDepartmentSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+});
+
 type AddMemberValues = z.infer<typeof addMemberSchema>;
+type CreateDepartmentValues = z.infer<typeof createDepartmentSchema>;
 
 export function WorkTeamClient({
   departmentId,
@@ -48,7 +54,7 @@ export function WorkTeamClient({
   candidates,
   canManage,
 }: {
-  departmentId: number;
+  departmentId: number | null;
   departments: WorkDepartmentOption[];
   members: WorkDepartmentMemberRow[];
   candidates: WorkProfileOption[];
@@ -56,19 +62,89 @@ export function WorkTeamClient({
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
-  const [open, setOpen] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [departmentOpen, setDepartmentOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const departmentName = useMemo(
-    () =>
+  const departmentName = useMemo(() => {
+    if (departmentId == null) return workCopy.scopeDepartment;
+    return (
       departments.find((department) => department.id === departmentId)?.name ??
-      workCopy.pilotDept,
-    [departmentId, departments],
-  );
+      workCopy.scopeDepartment
+    );
+  }, [departmentId, departments]);
 
   function replaceDepartment(nextId: number) {
     router.replace(`/work/team?department=${nextId}`);
   }
+
+  const departmentDialog = canManage ? (
+    <FormDialog
+      open={departmentOpen}
+      onOpenChange={setDepartmentOpen}
+      title={workCopy.departmentCreateTitle}
+      schema={createDepartmentSchema}
+      defaultValues={{ name: "" }}
+      submitLabel={workCopy.departmentAdd}
+      onSubmit={async (values: CreateDepartmentValues) => {
+        const result = await upsertWorkDepartment({ name: values.name });
+        if (!result.success || !result.data) {
+          return {
+            success: false,
+            error: result.error ?? workCopy.departmentCreateFailed,
+          };
+        }
+        return { success: true, data: result.data };
+      }}
+      onSuccess={(result) => {
+        if (!result.success || result.data == null) {
+          router.refresh();
+          return;
+        }
+        router.replace(`/work/team?department=${result.data.id}`);
+      }}
+      successMessage={workCopy.save}
+    >
+      {(form) => (
+        <TextField
+          control={form.control}
+          name="name"
+          label={workCopy.departmentNameLabel}
+        />
+      )}
+    </FormDialog>
+  ) : null;
+
+  if (departments.length === 0) {
+    return (
+      <>
+        <AppListFrame
+          contentScroll
+          toolbar={
+            canManage ? (
+              <AppToolbar variant="inline" className="flex-wrap gap-2">
+                <Button
+                  size={controlSize}
+                  type="button"
+                  onClick={() => setDepartmentOpen(true)}
+                >
+                  {workCopy.departmentAdd}
+                </Button>
+              </AppToolbar>
+            ) : undefined
+          }
+        >
+          <AppEmptyState
+            mode="no-data"
+            description={workCopy.teamNoDepartment}
+          />
+        </AppListFrame>
+        {departmentDialog}
+      </>
+    );
+  }
+
+  const activeDepartmentId = departmentId ?? departments[0]!.id;
 
   return (
     <>
@@ -77,7 +153,7 @@ export function WorkTeamClient({
         toolbar={
           <AppToolbar variant="inline" className="flex-wrap gap-2">
             <Select
-              value={String(departmentId)}
+              value={String(activeDepartmentId)}
               onValueChange={(value) => replaceDepartment(Number(value))}
             >
               <SelectTrigger className="w-full max-w-xs">
@@ -92,14 +168,24 @@ export function WorkTeamClient({
               </SelectContent>
             </Select>
             {canManage ? (
-              <Button
-                size={controlSize}
-                type="button"
-                onClick={() => setOpen(true)}
-                disabled={candidates.length === 0}
-              >
-                {workCopy.teamAdd}
-              </Button>
+              <>
+                <Button
+                  size={controlSize}
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDepartmentOpen(true)}
+                >
+                  {workCopy.departmentAdd}
+                </Button>
+                <Button
+                  size={controlSize}
+                  type="button"
+                  onClick={() => setMemberOpen(true)}
+                  disabled={candidates.length === 0}
+                >
+                  {workCopy.teamAdd}
+                </Button>
+              </>
             ) : null}
           </AppToolbar>
         }
@@ -129,7 +215,7 @@ export function WorkTeamClient({
                         const role = value as WorkMemberRole;
                         startTransition(async () => {
                           const result = await setWorkDepartmentMemberRole({
-                            departmentId,
+                            departmentId: activeDepartmentId,
                             userId: member.userId,
                             role,
                           });
@@ -164,7 +250,7 @@ export function WorkTeamClient({
                       onClick={() => {
                         startTransition(async () => {
                           const result = await deactivateWorkDepartmentMember({
-                            departmentId,
+                            departmentId: activeDepartmentId,
                             userId: member.userId,
                           });
                           if (!result.success) {
@@ -190,8 +276,8 @@ export function WorkTeamClient({
 
       {canManage ? (
         <FormDialog
-          open={open}
-          onOpenChange={setOpen}
+          open={memberOpen}
+          onOpenChange={setMemberOpen}
           title={workCopy.teamAdd}
           description={departmentName}
           schema={addMemberSchema}
@@ -199,7 +285,7 @@ export function WorkTeamClient({
           submitLabel={workCopy.teamAdd}
           onSubmit={async (values: AddMemberValues) => {
             const result = await upsertWorkDepartmentMember({
-              departmentId,
+              departmentId: activeDepartmentId,
               userId: values.userId,
               role: values.role,
             });
@@ -240,6 +326,7 @@ export function WorkTeamClient({
           )}
         </FormDialog>
       ) : null}
+      {departmentDialog}
     </>
   );
 }

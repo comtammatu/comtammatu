@@ -10,7 +10,6 @@ import {
 } from "@/components/surface";
 import { workCopy } from "@lib/messages/work";
 import {
-  ensurePilotDepartment,
   listWorkCandidateProfiles,
   listWorkDepartmentMembers,
   listWorkDepartments,
@@ -62,50 +61,36 @@ export default async function WorkTeamPage({
   }
 
   let departmentsResult = await listWorkDepartments({});
-  let departments =
+  const departments =
     departmentsResult.success && departmentsResult.data
       ? departmentsResult.data.items
       : [];
 
-  if (departments.length === 0) {
-    const pilot = await ensurePilotDepartment({});
-    if (pilot.success) {
-      departmentsResult = await listWorkDepartments({});
-      departments =
-        departmentsResult.success && departmentsResult.data
-          ? departmentsResult.data.items
-          : [];
-    }
-  }
-
-  if (departments.length === 0) {
-    return (
-      <AppPage width="xwide" density="compact" scroll>
-        <AppPageHeader
-          title={workCopy.teamTitle}
-          actions={
-            <AppBackLink href="/work">{workCopy.pageTitle}</AppBackLink>
-          }
-        />
-        <AppEmptyState mode="no-data" description={workCopy.teamNoDepartment} />
-      </AppPage>
-    );
-  }
-
   const departmentId =
-    requestedDepartmentId != null &&
-    departments.some((department) => department.id === requestedDepartmentId)
-      ? requestedDepartmentId
-      : departments[0]!.id;
+    departments.length === 0
+      ? null
+      : requestedDepartmentId != null &&
+          departments.some((department) => department.id === requestedDepartmentId)
+        ? requestedDepartmentId
+        : departments[0]!.id;
 
-  if (requestedDepartmentId !== departmentId) {
+  if (
+    departments.length > 0 &&
+    requestedDepartmentId !== departmentId
+  ) {
     redirect(`/work/team?department=${departmentId}`);
   }
 
-  const [membersResult, candidatesResult] = await Promise.all([
-    listWorkDepartmentMembers({ departmentId }),
-    listWorkCandidateProfiles({ departmentId }),
-  ]);
+  const [membersResult, candidatesResult] =
+    departmentId == null
+      ? [
+          { success: true as const, data: { items: [] } },
+          { success: true as const, data: { items: [] } },
+        ]
+      : await Promise.all([
+          listWorkDepartmentMembers({ departmentId }),
+          listWorkCandidateProfiles({ departmentId }),
+        ]);
 
   return (
     <AppPage width="xwide" density="compact" scroll>

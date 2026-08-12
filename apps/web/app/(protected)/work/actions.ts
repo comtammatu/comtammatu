@@ -576,6 +576,53 @@ export type WorkProfileOption = {
 
 const workMemberRoleSchema = z.enum(["lead", "member"]);
 
+const workDepartmentNameSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  departmentId: z.number().int().positive().optional(),
+});
+
+export const upsertWorkDepartment = withAction(
+  {
+    schema: workDepartmentNameSchema,
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const { data: row, error } = await ctx.supabase.rpc("upsert_work_department", {
+      p_name: data.name,
+      p_department_id: data.departmentId ?? null,
+    } as Database["public"]["Functions"]["upsert_work_department"]["Args"]);
+    if (error) {
+      return mapRpcError(
+        error,
+        [
+          ...workRpcMappings,
+          {
+            match: includesAny("duplicate", "unique", "23505"),
+            errorCode: "work.department_duplicate",
+            userMessage: workCopy.departmentDuplicate,
+          },
+        ],
+        {
+          userMessage: workCopy.departmentCreateFailed,
+          errorCode: "work.department_upsert_failed",
+        },
+      );
+    }
+    if (!row) {
+      return { success: false, error: workCopy.departmentCreateFailed };
+    }
+    revalidatePath("/work");
+    revalidatePath("/work/team");
+    return {
+      success: true,
+      data: { id: row.id, name: row.name } satisfies WorkDepartmentOption,
+    };
+  },
+);
+
 function mapMemberRole(value: string): WorkMemberRole {
   return value === "lead" ? "lead" : "member";
 }

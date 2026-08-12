@@ -112,13 +112,19 @@ test("Work DETAIL uses StatusBadge work-task domain", () => {
 });
 
 test("Work membership admin RPCs are in migration", () => {
-  const migration = readRepo(
+  const membershipMigration = readRepo(
     "supabase/migrations/20260812140000_work_department_membership_admin.sql",
   );
-  assert.match(migration, /upsert_work_department_member/);
-  assert.match(migration, /set_work_department_member_role/);
-  assert.match(migration, /deactivate_work_department_member/);
-  assert.match(migration, /can_manage_work_membership/);
+  assert.match(membershipMigration, /upsert_work_department_member/);
+  assert.match(membershipMigration, /set_work_department_member_role/);
+  assert.match(membershipMigration, /deactivate_work_department_member/);
+  assert.match(membershipMigration, /can_manage_work_membership/);
+
+  const departmentMigration = readRepo(
+    "supabase/migrations/20260812160000_work_department_admin.sql",
+  );
+  assert.match(departmentMigration, /upsert_work_department/);
+  assert.match(departmentMigration, /deactivate_work_department/);
 });
 
 test("Work permission key is registered", () => {
@@ -130,6 +136,7 @@ test("Work deep nav exposes department team section for manage", () => {
   const nav = readWeb("app/lib/control-surface-nav.ts");
   assert.match(nav, /teamNavSection/);
   assert.match(nav, /\/work\/team/);
-  const shell = readWeb("app/components/control-surface-shell.tsx");
-  assert.match(shell, /canManageTeam/);
+  const teamClient = readWeb("app/(protected)/work/_components/work-team-client.tsx");
+  assert.match(teamClient, /upsertWorkDepartment/);
+  assert.match(teamClient, /departmentAdd/);
 });
