@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppEmptyState } from "@/components/surface";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   setWorkTaskStatus,
   type WorkTaskRow,
@@ -38,6 +39,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
   const [items, setItems] = useState(tasks);
   const [activeStatus, setActiveStatus] = useState<WorkTaskStatus>("todo");
   const [isPending, startTransition] = useTransition();
+  const controlSize = useFormControlSize();
 
   const grouped = useMemo(() => {
     const map = new Map<WorkTaskStatus, WorkTaskRow[]>();
@@ -156,7 +158,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
             key={status}
             type="button"
             variant={activeStatus === status ? "secondary" : "outline"}
-            size="sm"
+            size={controlSize}
             onClick={() => setActiveStatus(status)}
           >
             {workCopy.statusLabels[status]}

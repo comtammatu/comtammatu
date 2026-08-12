@@ -8,7 +8,7 @@
 export const WORK_LIST_ITEM_INSET = "gap-2 px-3 py-3";
 
 /** Outer shell for TASK_BOARD | TASK_CALENDAR | TASK_TIMELINE bodies. */
-export const WORK_TASK_VIEW_SHELL = "flex flex-col gap-3";
+export const WORK_TASK_VIEW_SHELL = "flex flex-col gap-3 px-3 py-3";
 
 /** Month grid weekday header row. */
 export const WORK_MONTH_WEEKDAY_ROW =

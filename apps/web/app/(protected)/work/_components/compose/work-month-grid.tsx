@@ -9,6 +9,7 @@ import {
   getVNMonthCalendarCells,
   type VNMonthCalendarCell,
 } from "@comtammatu/shared/time";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   WORK_MONTH_CELL,
   WORK_MONTH_CELL_TODAY,
@@ -31,15 +32,24 @@ export function WorkMonthGrid({
   nextHref: string;
   renderDayContent: (cell: VNMonthCalendarCell) => ReactNode;
 }) {
+  const controlSize = useFormControlSize();
   const cells = getVNMonthCalendarCells(monthStart);
 
   return (
     <>
       <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" render={<Link href={prevHref} />}>
+        <Button
+          variant="outline"
+          size={controlSize}
+          render={<Link href={prevHref} />}
+        >
           ←
         </Button>
-        <Button variant="outline" size="sm" render={<Link href={nextHref} />}>
+        <Button
+          variant="outline"
+          size={controlSize}
+          render={<Link href={nextHref} />}
+        >
           →
         </Button>
       </div>

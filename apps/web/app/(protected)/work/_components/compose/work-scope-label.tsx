@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
 import { workHref, type ParsedWorkParams } from "../../_lib/params";
 
@@ -15,6 +16,7 @@ export function WorkScopeLabel({
   departmentName?: string | null;
   projectName?: string | null;
 }) {
+  const controlSize = useFormControlSize();
   const isScoped = projectName != null || departmentName != null;
   const label =
     projectName != null
@@ -33,7 +35,7 @@ export function WorkScopeLabel({
       {showChangeScope ? (
         <Button
           variant="ghost"
-          size="sm"
+          size={controlSize}
           render={
             <Link
               href={workHref(params, {

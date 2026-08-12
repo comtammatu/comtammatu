@@ -1,6 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { Button } from "@comtammatu/ui/components/button";
+import { WorkPageHeaderActions } from "./_components/work-page-header-actions";
 import { loadAuthState } from "@/_lib/auth";
 import {
   AppEmptyState,
@@ -118,18 +117,9 @@ export default async function WorkPage({
     ) : null;
 
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-2">
-      {canManage ? (
-        <Button
-          variant="outline"
-          size="sm"
-          render={<Link href="/work/team" />}
-        >
-          {workCopy.teamNav}
-        </Button>
-      ) : null}
+    <WorkPageHeaderActions canManage={canManage}>
       {createAction}
-    </div>
+    </WorkPageHeaderActions>
   );
 
   const needsBoardScope =
@@ -248,10 +238,9 @@ export default async function WorkPage({
     <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
       {loadError ? (
-        <>
-          <div className="mb-4">{toolbar}</div>
+        <AppListFrame contentScroll toolbar={toolbar}>
           <AppEmptyState mode="error" description={loadError} />
-        </>
+        </AppListFrame>
       ) : composeArchetype != null ? (
         <WorkComposeShell archetype={composeArchetype} toolbar={toolbar}>
           {body}

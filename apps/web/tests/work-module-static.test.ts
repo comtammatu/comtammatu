@@ -118,6 +118,9 @@ test("Work create dialog and list toolbar exist", () => {
     "app/(protected)/work/_components/work-list-toolbar.tsx",
   );
   assert.match(toolbar, /variant="inline"/);
+  assert.match(toolbar, /useFormControlSize/);
+  assert.doesNotMatch(toolbar, /size="default"/);
+  assert.doesNotMatch(toolbar, /size="sm"/);
 });
 
 test("Work DETAIL uses StatusBadge work-task domain", () => {
