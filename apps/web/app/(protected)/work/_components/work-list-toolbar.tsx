@@ -37,12 +37,14 @@ const VIEW_OPTIONS: Array<{ view: WorkView; label: string }> = [
 
 export function WorkListToolbar({
   params,
-  trailing,
   showFilters = false,
+  scopeSummary,
+  onOpenScope,
 }: {
   params: ParsedWorkParams;
-  trailing?: React.ReactNode;
   showFilters?: boolean;
+  scopeSummary?: string;
+  onOpenScope?: () => void;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -73,6 +75,18 @@ export function WorkListToolbar({
       search={
         showFilters ? (
           <>
+            <Button
+              type="button"
+              variant={params.includeDone ? "secondary" : "outline"}
+              size={controlSize}
+              onClick={() => {
+                router.replace(
+                  workHref(params, { includeDone: !params.includeDone }),
+                );
+              }}
+            >
+              {workCopy.includeDone}
+            </Button>
             <Select
               value={params.status ?? "all"}
               onValueChange={(value) => {
@@ -126,7 +140,18 @@ export function WorkListToolbar({
           </>
         ) : undefined
       }
-      actions={trailing}
+      actions={
+        onOpenScope ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={controlSize}
+            onClick={onOpenScope}
+          >
+            {workCopy.scopeButton}: {scopeSummary ?? workCopy.viewMine}
+          </Button>
+        ) : undefined
+      }
     />
   );
 }

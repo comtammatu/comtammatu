@@ -1,32 +1,52 @@
 "use client";
 
-import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
+import type {
+  WorkDepartmentOption,
+  WorkProjectOption,
+} from "../actions";
+import { WorkSettingsDialog } from "./work-settings-dialog";
 
 export function WorkPageHeaderActions({
   canManage,
+  departments,
+  projects,
   children,
 }: {
   canManage: boolean;
+  departments: WorkDepartmentOption[];
+  projects: WorkProjectOption[];
   children: ReactNode;
 }) {
   const controlSize = useFormControlSize();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        {canManage ? (
+          <Button
+            type="button"
+            variant="outline"
+            size={controlSize}
+            onClick={() => setSettingsOpen(true)}
+          >
+            {workCopy.settingsOpen}
+          </Button>
+        ) : null}
+        {children}
+      </div>
       {canManage ? (
-        <Button
-          variant="outline"
-          size={controlSize}
-          render={<Link href="/work/team" />}
-        >
-          {workCopy.teamNav}
-        </Button>
+        <WorkSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          departments={departments}
+          projects={projects}
+        />
       ) : null}
-      {children}
-    </div>
+    </>
   );
 }

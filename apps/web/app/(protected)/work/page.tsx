@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
-import { WorkPageHeaderActions } from "./_components/work-page-header-actions";
 import { loadAuthState } from "@/_lib/auth";
 import {
   AppEmptyState,
-  AppListFrame,
   AppPage,
   AppPageHeader,
 } from "@/components/surface";
@@ -20,15 +18,12 @@ import { parseWorkParams, type WorkSearchParams } from "./_lib/params";
 import { canManageWorkTeam } from "./_lib/work-manage";
 import { WorkBoard } from "./_components/work-board";
 import { WorkCalendar } from "./_components/work-calendar";
-import {
-  WorkComposeShell,
-  type WorkComposeArchetype,
-} from "./_components/compose/work-compose-shell";
-import { WorkScopeLabel } from "./_components/compose/work-scope-label";
+import type { WorkComposeArchetype } from "./_components/compose/work-compose-shell";
+import type { WorkScopeDialogMode } from "./_components/compose/work-scope-dialog";
 import { WorkCreateDialog } from "./_components/work-create-dialog";
 import { WorkInboxFiltered } from "./_components/work-inbox-filtered";
-import { WorkListToolbar } from "./_components/work-list-toolbar";
-import { WorkScopePicker } from "./_components/work-scope-picker";
+import { WorkPageHeaderActions } from "./_components/work-page-header-actions";
+import { WorkPageShell } from "./_components/work-page-shell";
 import { WorkTimeline } from "./_components/work-timeline";
 
 function resolveScopeNames(
@@ -105,20 +100,21 @@ export default async function WorkPage({
     }),
   );
 
-  const createAction =
-    departments.length > 0 ? (
-      <WorkCreateDialog
-        departments={departments}
-        projects={projects}
-        membersByDepartment={membersByDepartment}
-        defaultDepartmentId={params.departmentId}
-        defaultProjectId={params.projectId}
-      />
-    ) : null;
-
   const headerActions = (
-    <WorkPageHeaderActions canManage={canManage}>
-      {createAction}
+    <WorkPageHeaderActions
+      canManage={canManage}
+      departments={departments}
+      projects={projects}
+    >
+      {departments.length > 0 ? (
+        <WorkCreateDialog
+          departments={departments}
+          projects={projects}
+          membersByDepartment={membersByDepartment}
+          defaultDepartmentId={params.departmentId}
+          defaultProjectId={params.projectId}
+        />
+      ) : null}
     </WorkPageHeaderActions>
   );
 
@@ -130,29 +126,17 @@ export default async function WorkPage({
   const needsTimelineScope =
     params.view === "timeline" && params.projectId == null;
 
-  if (needsBoardScope || needsTimelineScope) {
-    return (
-      <AppPage width="xwide" density="compact" scroll>
-        <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
-        <AppListFrame
-          contentScroll
-          toolbar={<WorkListToolbar params={params} />}
-        >
-          <WorkScopePicker
-            params={params}
-            departments={departments}
-            projects={projects}
-            targetView={needsTimelineScope ? "timeline" : "board"}
-            mode={needsTimelineScope ? "project-only" : "board-or-project"}
-          />
-        </AppListFrame>
-      </AppPage>
-    );
-  }
+  const needsScope = needsBoardScope || needsTimelineScope;
+
+  const scopeMode: WorkScopeDialogMode =
+    params.view === "timeline"
+      ? "project-only"
+      : params.view === "calendar"
+        ? "optional"
+        : "board-or-project";
 
   let body: ReactNode;
   let loadError: string | null = null;
-  const showInboxFilters = params.view === "mine";
 
   if (params.view === "mine") {
     const result = await listMyWorkTasks({ includeDone: params.includeDone });
@@ -168,15 +152,19 @@ export default async function WorkPage({
       );
     }
   } else if (params.view === "board") {
-    const scoped = await listScopedWorkTasks(
-      params.departmentId != null
-        ? { departmentId: params.departmentId }
-        : { projectId: params.projectId! },
-    );
-    if (!scoped.success || !scoped.data) {
-      loadError = scoped.error ?? workCopy.loadFailed;
+    if (needsBoardScope) {
+      body = null;
     } else {
-      body = <WorkBoard tasks={scoped.data.items} />;
+      const scoped = await listScopedWorkTasks(
+        params.departmentId != null
+          ? { departmentId: params.departmentId }
+          : { projectId: params.projectId! },
+      );
+      if (!scoped.success || !scoped.data) {
+        loadError = scoped.error ?? workCopy.loadFailed;
+      } else {
+        body = <WorkBoard tasks={scoped.data.items} />;
+      }
     }
   } else if (params.view === "calendar") {
     const hasScope =
@@ -193,6 +181,8 @@ export default async function WorkPage({
     } else {
       body = <WorkCalendar tasks={result.data.items} params={params} />;
     }
+  } else if (needsTimelineScope) {
+    body = null;
   } else {
     const scoped = await listScopedWorkTasks({
       projectId: params.projectId!,
@@ -204,27 +194,6 @@ export default async function WorkPage({
     }
   }
 
-  const showScopeLabel =
-    params.view === "board" ||
-    params.view === "calendar" ||
-    params.view === "timeline";
-
-  const toolbar = (
-    <WorkListToolbar
-      params={params}
-      showFilters={showInboxFilters}
-      trailing={
-        showScopeLabel ? (
-          <WorkScopeLabel
-            params={params}
-            departmentName={departmentName}
-            projectName={projectName}
-          />
-        ) : null
-      }
-    />
-  );
-
   const composeArchetype: WorkComposeArchetype | null =
     params.view === "board"
       ? "TASK_BOARD"
@@ -234,22 +203,29 @@ export default async function WorkPage({
           ? "TASK_TIMELINE"
           : null;
 
+  const scopeEmptyDescription = needsBoardScope
+    ? workCopy.scopeEmptyBoard
+    : needsTimelineScope
+      ? workCopy.scopeEmptyTimeline
+      : null;
+
   return (
     <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
-      {loadError ? (
-        <AppListFrame contentScroll toolbar={toolbar}>
-          <AppEmptyState mode="error" description={loadError} />
-        </AppListFrame>
-      ) : composeArchetype != null ? (
-        <WorkComposeShell archetype={composeArchetype} toolbar={toolbar}>
-          {body}
-        </WorkComposeShell>
-      ) : (
-        <AppListFrame contentScroll toolbar={toolbar}>
-          {body}
-        </AppListFrame>
-      )}
+      <WorkPageShell
+        params={params}
+        departments={departments}
+        projects={projects}
+        departmentName={departmentName}
+        projectName={projectName}
+        needsScope={needsScope}
+        scopeMode={scopeMode}
+        composeArchetype={composeArchetype}
+        loadError={loadError}
+        scopeEmptyDescription={scopeEmptyDescription}
+      >
+        {body}
+      </WorkPageShell>
     </AppPage>
   );
 }

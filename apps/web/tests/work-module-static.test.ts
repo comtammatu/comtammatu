@@ -86,15 +86,26 @@ test("Work calendar and timeline use compose shell archetypes", () => {
   assert.match(styles, /WORK_MONTH_CELL/);
 });
 
-test("Work timeline shows scope picker instead of redirect", () => {
+test("Work timeline shows scope picker dialog instead of full page", () => {
   const page = readWeb("app/(protected)/work/page.tsx");
   assert.match(page, /needsTimelineScope/);
-  assert.doesNotMatch(page, /redirect\("\/work\?view=mine"\)/);
-  const picker = readWeb(
-    "app/(protected)/work/_components/work-scope-picker.tsx",
+  assert.match(page, /WorkPageShell/);
+  assert.doesNotMatch(page, /WorkScopePicker/);
+  const shell = readWeb("app/(protected)/work/_components/work-page-shell.tsx");
+  assert.match(shell, /WorkScopeDialog/);
+});
+
+test("Work settings dialog covers department and member admin", () => {
+  const settings = readWeb(
+    "app/(protected)/work/_components/work-settings-dialog.tsx",
   );
-  assert.match(picker, /project-only/);
-  assert.match(picker, /timelineNeedsScope/);
+  assert.match(settings, /WorkSettingsDialog/);
+  assert.match(settings, /deactivateWorkDepartment/);
+  assert.match(settings, /ensurePilotDepartment/);
+  const header = readWeb(
+    "app/(protected)/work/_components/work-page-header-actions.tsx",
+  );
+  assert.match(header, /settingsOpen/);
 });
 
 test("Work compose blocks are registered", () => {
@@ -112,8 +123,7 @@ test("Work create dialog and list toolbar exist", () => {
   );
   const page = readWeb("app/(protected)/work/page.tsx");
   assert.match(page, /WorkCreateDialog/);
-  assert.match(page, /WorkListToolbar/);
-  assert.match(page, /AppToolbar|WorkListToolbar/);
+  assert.match(page, /WorkPageShell/);
   const toolbar = readWeb(
     "app/(protected)/work/_components/work-list-toolbar.tsx",
   );

@@ -623,6 +623,32 @@ export const upsertWorkDepartment = withAction(
   },
 );
 
+export const deactivateWorkDepartment = withAction(
+  {
+    schema: z.object({
+      departmentId: z.number().int().positive(),
+    }),
+    customAuth: async () => {
+      const { resolveWorkManageContext } = await import("./_lib/work-manage");
+      return resolveWorkManageContext();
+    },
+  },
+  async (data, ctx) => {
+    const { error } = await ctx.supabase.rpc("deactivate_work_department", {
+      p_department_id: data.departmentId,
+    } as Database["public"]["Functions"]["deactivate_work_department"]["Args"]);
+    if (error) {
+      return mapRpcError(error, workRpcMappings, {
+        userMessage: workCopy.departmentDeactivateFailed,
+        errorCode: "work.department_deactivate_failed",
+      });
+    }
+    revalidatePath("/work");
+    revalidatePath("/work/team");
+    return { success: true };
+  },
+);
+
 function mapMemberRole(value: string): WorkMemberRole {
   return value === "lead" ? "lead" : "member";
 }

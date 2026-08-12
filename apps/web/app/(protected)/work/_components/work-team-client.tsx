@@ -26,6 +26,7 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
 import {
   deactivateWorkDepartmentMember,
+  ensurePilotDepartment,
   setWorkDepartmentMemberRole,
   upsertWorkDepartment,
   upsertWorkDepartmentMember,
@@ -140,9 +141,42 @@ export function WorkTeamClient({
           }
         >
           <AppEmptyState
-            mode="no-data"
-            description={workCopy.teamNoDepartment}
-          />
+          mode="no-data"
+          description={workCopy.teamNoDepartment}
+        >
+          {canManage ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                size={controlSize}
+                type="button"
+                onClick={() => setDepartmentOpen(true)}
+              >
+                {workCopy.departmentAdd}
+              </Button>
+              <Button
+                size={controlSize}
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => {
+                  startTransition(async () => {
+                    const result = await ensurePilotDepartment({});
+                    if (!result.success) {
+                      toast.error(
+                        result.error ?? workCopy.departmentCreateFailed,
+                      );
+                      return;
+                    }
+                    toast.success(workCopy.save);
+                    router.refresh();
+                  });
+                }}
+              >
+                {workCopy.teamEnsurePilot}
+              </Button>
+            </div>
+          ) : null}
+        </AppEmptyState>
         </AppListFrame>
         {departmentDialog}
       </>
