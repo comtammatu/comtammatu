@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { cn } from "@comtammatu/ui";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemContent,
@@ -112,9 +113,9 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
   function renderColumn(status: WorkTaskStatus) {
     const columnTasks = grouped.get(status) ?? [];
     return (
-      <section
+      <Frame
         key={status}
-        className="flex min-h-48 flex-col gap-2 rounded-lg border bg-muted/20 p-2"
+        className="flex min-h-48 flex-col gap-2 bg-muted/30 p-2"
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
@@ -134,7 +135,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
           <Badge variant="secondary">{columnTasks.length}</Badge>
         </header>
         <div className="flex flex-col gap-2">{columnTasks.map(renderCard)}</div>
-      </section>
+      </Frame>
     );
   }
 
@@ -148,19 +149,15 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
     <div data-page-archetype="TASK_BOARD" className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-1 md:hidden">
         {BOARD_COLUMNS.map((status) => (
-          <button
+          <Button
             key={status}
             type="button"
-            className={cn(
-              "rounded-md border px-3 py-1.5 text-sm",
-              activeStatus === status
-                ? "border-primary bg-primary/10"
-                : "border-border",
-            )}
+            variant={activeStatus === status ? "secondary" : "outline"}
+            size="sm"
             onClick={() => setActiveStatus(status)}
           >
             {workCopy.statusLabels[status]}
-          </button>
+          </Button>
         ))}
       </div>
 

@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -16,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   AppBackLink,
   AppDetailFooter,
@@ -73,6 +74,7 @@ export function WorkTaskDetail({
   initialChecklist: WorkChecklistItemRow[];
 }) {
   const router = useRouter();
+  const controlSize = useFormControlSize();
   const [task, setTask] = useState(initialTask);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
@@ -255,7 +257,7 @@ export function WorkTaskDetail({
         {checklist.length === 0 ? (
           <p className="text-sm text-muted-foreground">{workCopy.checklistEmpty}</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {checklist.map((item) => (
               <li key={item.id} className="flex items-center gap-2 text-sm">
                 <input
@@ -300,7 +302,7 @@ export function WorkTaskDetail({
             placeholder={workCopy.checklistPlaceholder}
           />
           <Button
-            size="touch"
+            size={controlSize}
             variant="outline"
             disabled={isPending || checklistTitle.trim().length === 0}
             onClick={() => {
@@ -330,13 +332,15 @@ export function WorkTaskDetail({
         {comments.length === 0 ? (
           <p className="text-sm text-muted-foreground">{workCopy.commentsEmpty}</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="flex flex-col gap-3">
             {comments.map((comment) => (
-              <li key={comment.id} className="rounded-md border p-3 text-sm">
-                <p className="whitespace-pre-wrap">{comment.body}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatVNDate(comment.createdAt)}
-                </p>
+              <li key={comment.id}>
+                <Frame className="p-3 text-sm">
+                  <p className="whitespace-pre-wrap">{comment.body}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatVNDate(comment.createdAt)}
+                  </p>
+                </Frame>
               </li>
             ))}
           </ul>
@@ -349,7 +353,7 @@ export function WorkTaskDetail({
             rows={3}
           />
           <Button
-            size="touch"
+            size={controlSize}
             variant="outline"
             className="self-start"
             disabled={isPending || commentBody.trim().length === 0}
@@ -386,7 +390,7 @@ export function WorkTaskDetail({
           </div>
         }
         trailing={
-          <Button size="touch" disabled={isPending} onClick={saveFields}>
+          <Button size={controlSize} disabled={isPending} onClick={saveFields}>
             {workCopy.save}
           </Button>
         }

@@ -321,6 +321,14 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     /'serviceCharge', COALESCE\(v_order\.service_charge, 0\)/,
     "payment-time draft must preserve service charge for ADR 0034 projection",
   );
+  const snapshotServiceChargeMigration = read(
+    "supabase/migrations/20260812113334_hddt_snapshot_service_charge.sql",
+  );
+  assert.match(
+    snapshotServiceChargeMigration,
+    /CREATE OR REPLACE FUNCTION private\.snapshot_invoice_job[\s\S]*'serviceCharge', COALESCE\(v_order\.service_charge, 0\)/,
+    "profile snapshot rebuild must keep serviceCharge to avoid invoice_snapshot_immutable",
+  );
   assert.match(
     migration,
     /'subtotal', item\.subtotal,[\s\S]*'discount_amount', item\.discount_amount/,

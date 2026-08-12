@@ -10,6 +10,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
 import { workHref, type ParsedWorkParams } from "../_lib/params";
@@ -85,13 +86,13 @@ export function WorkCalendar({
           }
           const dayTasks = tasksByDate.get(cell.date) ?? [];
           return (
-            <div
+            <Frame
               key={cell.date}
               className={cn(
-                "min-h-24 rounded-md border p-1 text-left",
+                "min-h-24 p-1 text-left",
                 cell.isToday || cell.date === today
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background",
+                  ? "border-primary bg-primary/10"
+                  : "bg-background",
               )}
             >
               <div className="mb-1 text-xs font-semibold tabular-nums">
@@ -99,21 +100,23 @@ export function WorkCalendar({
               </div>
               <div className="flex flex-col gap-1">
                 {dayTasks.slice(0, 3).map((task) => (
-                  <Link
+                  <Button
                     key={task.id}
-                    href={`/work/tasks/${task.id}`}
-                    className="block truncate rounded bg-muted px-1 py-0.5 text-[11px] hover:bg-muted/80"
+                    variant="secondary"
+                    size="xs"
+                    className="h-auto w-full justify-start truncate px-1 py-0.5 text-2xs"
+                    render={<Link href={`/work/tasks/${task.id}`} />}
                   >
                     {task.title}
-                  </Link>
+                  </Button>
                 ))}
                 {dayTasks.length > 3 ? (
-                  <Badge variant="secondary" className="w-fit text-[10px]">
+                  <Badge variant="secondary" className="w-fit text-3xs">
                     +{dayTasks.length - 3}
                   </Badge>
                 ) : null}
               </div>
-            </div>
+            </Frame>
           );
         })}
       </div>
