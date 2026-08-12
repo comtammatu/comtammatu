@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatVNDate } from "@comtammatu/shared/time";
-import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { Input } from "@comtammatu/ui/components/input";
@@ -17,7 +15,6 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppDialogFooter } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppDetailFooter, AppSection } from "@/components/surface";
 import {
@@ -42,6 +39,14 @@ type AssigneeOption = {
   fullName: string;
 };
 
+export type WorkTaskDetailFormOptions = {
+  task: WorkTaskRow;
+  assigneeOptions: AssigneeOption[];
+  initialComments: WorkTaskCommentRow[];
+  initialChecklist: WorkChecklistItemRow[];
+  onSaved?: () => void;
+};
+
 function toDateTimeLocalValue(iso: string | null): string {
   if (!iso) return "";
   const date = new Date(iso);
@@ -57,21 +62,14 @@ function fromDateTimeLocalValue(value: string): string | undefined {
   return date.toISOString();
 }
 
-export function WorkTaskDetailPanel({
+export function useWorkTaskDetailForm({
   task: initialTask,
-  assigneeOptions,
+  assigneeOptions: _assigneeOptions,
   initialComments,
   initialChecklist,
   onSaved,
-}: {
-  task: WorkTaskRow;
-  assigneeOptions: AssigneeOption[];
-  initialComments: WorkTaskCommentRow[];
-  initialChecklist: WorkChecklistItemRow[];
-  onSaved?: () => void;
-}) {
+}: WorkTaskDetailFormOptions) {
   const router = useRouter();
-  const controlSize = useFormControlSize();
   const [task, setTask] = useState(initialTask);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
@@ -146,20 +144,117 @@ export function WorkTaskDetailPanel({
     });
   }
 
+  function addChecklistItem() {
+    const titleValue = checklistTitle.trim();
+    if (!titleValue) return;
+    startTransition(async () => {
+      const result = await upsertWorkChecklistItem({
+        taskId: task.id,
+        title: titleValue,
+        isDone: false,
+        sortOrder: checklist.length,
+      });
+      if (!result.success || !result.data) {
+        handleMutationError(result.error ?? workCopy.checklistFailed);
+        return;
+      }
+      setChecklist((prev) => [...prev, result.data!]);
+      setChecklistTitle("");
+    });
+  }
+
+  function toggleChecklistItem(
+    item: WorkChecklistItemRow,
+    isDone: boolean,
+  ) {
+    startTransition(async () => {
+      const result = await upsertWorkChecklistItem({
+        taskId: task.id,
+        itemId: item.id,
+        title: item.title,
+        isDone,
+        sortOrder: item.sortOrder,
+      });
+      if (!result.success || !result.data) {
+        handleMutationError(result.error ?? workCopy.checklistFailed);
+        return;
+      }
+      setChecklist((prev) =>
+        prev.map((row) => (row.id === item.id ? result.data! : row)),
+      );
+    });
+  }
+
+  function submitComment() {
+    const body = commentBody.trim();
+    if (!body) return;
+    startTransition(async () => {
+      const result = await addWorkTaskComment({
+        taskId: task.id,
+        body,
+      });
+      if (!result.success || !result.data) {
+        handleMutationError(result.error ?? workCopy.commentFailed);
+        return;
+      }
+      setComments((prev) => [...prev, result.data!]);
+      setCommentBody("");
+    });
+  }
+
+  return {
+    task,
+    assigneeOptions: _assigneeOptions,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    priority,
+    setPriority,
+    status,
+    dueAt,
+    setDueAt,
+    assigneeId,
+    setAssigneeId,
+    comments,
+    checklist,
+    commentBody,
+    setCommentBody,
+    checklistTitle,
+    setChecklistTitle,
+    isPending,
+    saveFields,
+    saveStatus,
+    addChecklistItem,
+    toggleChecklistItem,
+    submitComment,
+  };
+}
+
+export type WorkTaskDetailForm = ReturnType<typeof useWorkTaskDetailForm>;
+
+export function WorkTaskDetailBody({ form }: { form: WorkTaskDetailForm }) {
+  const controlSize = useFormControlSize();
+
   return (
-    <>
-      <AppSection title={workCopy.detailTitle}>
+    <div className="flex flex-col gap-4">
+      <AppSection>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">{workCopy.titleLabel}</span>
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+            <Input
+              value={form.title}
+              onChange={(event) => form.setTitle(event.target.value)}
+            />
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">{workCopy.priorityLabel}</span>
             <Select
-              value={priority}
-              onValueChange={(value) => setPriority(value as WorkTaskPriority)}
+              value={form.priority}
+              onValueChange={(value) =>
+                form.setPriority(value as WorkTaskPriority)
+              }
             >
               <SelectTrigger size={controlSize}>
                 <SelectValue />
@@ -177,8 +272,8 @@ export function WorkTaskDetailPanel({
           <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
             <span className="font-medium">{workCopy.descriptionLabel}</span>
             <Textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              value={form.description}
+              onChange={(event) => form.setDescription(event.target.value)}
               rows={4}
             />
           </label>
@@ -187,20 +282,23 @@ export function WorkTaskDetailPanel({
             <span className="font-medium">{workCopy.dueLabel}</span>
             <Input
               type="datetime-local"
-              value={dueAt}
-              onChange={(event) => setDueAt(event.target.value)}
+              value={form.dueAt}
+              onChange={(event) => form.setDueAt(event.target.value)}
             />
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">{workCopy.assignee}</span>
-            <Select value={assigneeId} onValueChange={setAssigneeId}>
+            <Select
+              value={form.assigneeId}
+              onValueChange={form.setAssigneeId}
+            >
               <SelectTrigger size={controlSize}>
                 <SelectValue placeholder={workCopy.assignee} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{workCopy.clearAssignee}</SelectItem>
-                {assigneeOptions.map((option) => (
+                {form.assigneeOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.fullName}
                   </SelectItem>
@@ -212,9 +310,11 @@ export function WorkTaskDetailPanel({
           <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
             <span className="font-medium">{workCopy.statusLabel}</span>
             <Select
-              value={status}
-              onValueChange={(value) => saveStatus(value as WorkTaskStatus)}
-              disabled={isPending}
+              value={form.status}
+              onValueChange={(value) =>
+                form.saveStatus(value as WorkTaskStatus)
+              }
+              disabled={form.isPending}
             >
               <SelectTrigger size={controlSize}>
                 <SelectValue />
@@ -232,41 +332,27 @@ export function WorkTaskDetailPanel({
       </AppSection>
 
       <AppSection title={workCopy.checklistTitle}>
-        {checklist.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{workCopy.checklistEmpty}</p>
+        {form.checklist.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {workCopy.checklistEmpty}
+          </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {checklist.map((item) => (
+            {form.checklist.map((item) => (
               <li key={item.id} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={item.isDone}
-                  disabled={isPending}
-                  onChange={(event) => {
-                    const isDone = event.target.checked;
-                    startTransition(async () => {
-                      const result = await upsertWorkChecklistItem({
-                        taskId: task.id,
-                        itemId: item.id,
-                        title: item.title,
-                        isDone,
-                        sortOrder: item.sortOrder,
-                      });
-                      if (!result.success || !result.data) {
-                        handleMutationError(
-                          result.error ?? workCopy.checklistFailed,
-                        );
-                        return;
-                      }
-                      setChecklist((prev) =>
-                        prev.map((row) =>
-                          row.id === item.id ? result.data! : row,
-                        ),
-                      );
-                    });
-                  }}
+                  disabled={form.isPending}
+                  onChange={(event) =>
+                    form.toggleChecklistItem(item, event.target.checked)
+                  }
                 />
-                <span className={item.isDone ? "line-through opacity-70" : undefined}>
+                <span
+                  className={
+                    item.isDone ? "line-through opacity-70" : undefined
+                  }
+                >
                   {item.title}
                 </span>
               </li>
@@ -275,31 +361,15 @@ export function WorkTaskDetailPanel({
         )}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Input
-            value={checklistTitle}
-            onChange={(event) => setChecklistTitle(event.target.value)}
+            value={form.checklistTitle}
+            onChange={(event) => form.setChecklistTitle(event.target.value)}
             placeholder={workCopy.checklistPlaceholder}
           />
           <Button
             size={controlSize}
             variant="outline"
-            disabled={isPending || checklistTitle.trim().length === 0}
-            onClick={() => {
-              const titleValue = checklistTitle.trim();
-              startTransition(async () => {
-                const result = await upsertWorkChecklistItem({
-                  taskId: task.id,
-                  title: titleValue,
-                  isDone: false,
-                  sortOrder: checklist.length,
-                });
-                if (!result.success || !result.data) {
-                  handleMutationError(result.error ?? workCopy.checklistFailed);
-                  return;
-                }
-                setChecklist((prev) => [...prev, result.data!]);
-                setChecklistTitle("");
-              });
-            }}
+            disabled={form.isPending || form.checklistTitle.trim().length === 0}
+            onClick={form.addChecklistItem}
           >
             {workCopy.checklistAdd}
           </Button>
@@ -307,11 +377,13 @@ export function WorkTaskDetailPanel({
       </AppSection>
 
       <AppSection title={workCopy.commentsTitle}>
-        {comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{workCopy.commentsEmpty}</p>
+        {form.comments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {workCopy.commentsEmpty}
+          </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {comments.map((comment) => (
+            {form.comments.map((comment) => (
               <li key={comment.id}>
                 <Frame className="p-3 text-sm">
                   <p className="whitespace-pre-wrap">{comment.body}</p>
@@ -325,8 +397,8 @@ export function WorkTaskDetailPanel({
         )}
         <div className="mt-3 flex flex-col gap-2">
           <Textarea
-            value={commentBody}
-            onChange={(event) => setCommentBody(event.target.value)}
+            value={form.commentBody}
+            onChange={(event) => form.setCommentBody(event.target.value)}
             placeholder={workCopy.commentPlaceholder}
             rows={3}
           />
@@ -334,45 +406,32 @@ export function WorkTaskDetailPanel({
             size={controlSize}
             variant="outline"
             className="self-start"
-            disabled={isPending || commentBody.trim().length === 0}
-            onClick={() => {
-              const body = commentBody.trim();
-              startTransition(async () => {
-                const result = await addWorkTaskComment({
-                  taskId: task.id,
-                  body,
-                });
-                if (!result.success || !result.data) {
-                  handleMutationError(result.error ?? workCopy.commentFailed);
-                  return;
-                }
-                setComments((prev) => [...prev, result.data!]);
-                setCommentBody("");
-              });
-            }}
+            disabled={form.isPending || form.commentBody.trim().length === 0}
+            onClick={form.submitComment}
           >
             {workCopy.commentSubmit}
           </Button>
         </div>
       </AppSection>
+    </div>
+  );
+}
 
-      <AppDialogFooter>
-        <AppDetailFooter
-          trailing={
-            <Button size={controlSize} disabled={isPending} onClick={saveFields}>
-              {workCopy.save}
-            </Button>
-          }
-          leading={
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge domain="work-task" value={task.status} />
-              <Badge variant="secondary">
-                {workCopy.priorityLabels[task.priority]}
-              </Badge>
-            </div>
-          }
-        />
-      </AppDialogFooter>
-    </>
+export function WorkTaskDetailFooter({ form }: { form: WorkTaskDetailForm }) {
+  const controlSize = useFormControlSize();
+
+  return (
+    <AppDetailFooter
+      sticky
+      trailing={
+        <Button
+          size={controlSize}
+          disabled={form.isPending}
+          onClick={form.saveFields}
+        >
+          {workCopy.save}
+        </Button>
+      }
+    />
   );
 }

@@ -150,14 +150,12 @@ test("Work create dialog and list toolbar exist", () => {
 });
 
 test("Work DETAIL uses StatusBadge work-task domain", () => {
-  const detail = readWeb(
-    "app/(protected)/work/_components/work-task-detail-panel.tsx",
-  );
-  assert.match(detail, /domain="work-task"/);
   const dialog = readWeb(
     "app/(protected)/work/_components/work-task-detail-dialog-host.tsx",
   );
+  assert.match(dialog, /domain="work-task"/);
   assert.match(dialog, /variant="document"/);
+  assert.match(dialog, /footer=\{/);
   const statusBadge = readWeb("app/components/status-badge.tsx");
   assert.match(statusBadge, /"work-task"/);
 });
