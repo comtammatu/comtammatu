@@ -156,18 +156,18 @@ by direct URL or as a redirect target.
 | `finance` | `/finance` | `Chủ sở hữu`, `Kế toán` | Control surface nav |
 | `branches` | `/branches` | `Chủ sở hữu` | Control surface nav |
 | `settings` | `/settings` | `Chủ sở hữu` | Control surface nav |
-| `pos` | `/br/*/pos` | `Chủ sở hữu`, `Thu ngân`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav |
-| `kds` | `/br/*/kds` | `Chủ sở hữu`, `Bếp`, `Quản lý chi nhánh` | Branch operation nav |
-| `pickup` | `/br/*/pickup` | `Chủ sở hữu`, `Thu ngân`, `Bếp`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav |
-| `branch_home` | `/br/*` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | (not advertised in nav — direct URL / redirect target only) |
+| `pos` | `/br/*/pos` | `Chủ sở hữu`, `Thu ngân`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `kds` | `/br/*/kds` | `Chủ sở hữu`, `Bếp`, `Quản lý chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `pickup` | `/br/*/pickup` | `Chủ sở hữu`, `Thu ngân`, `Bếp`, `Quản lý chi nhánh`, `Nhân sự chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
+| `branch_home` | `/br/*` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Bếp`, `Nhân sự chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Operator tile (my_shift) |
 | `branch_dashboard` | `/br/*/dashboard` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
 | `branch_settings` | `/br/*/settings` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
-| `branch_menu_limits` | `/br/*/menu-limits` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav |
+| `branch_menu_limits` | `/br/*/menu-limits` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav; Operator tile (sales_kitchen) |
 | `branch_pos_sessions` | `/br/*/pos-sessions` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav |
 | `branch_close_day` | `/br/*/close-day` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch operation nav |
-| `branch_team` | `/br/*/team` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
-| `branch_stock` | `/br/*/stock` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | (not advertised in nav — direct URL / redirect target only) |
-| `branch_orders` | `/br/*/orders` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Nhân sự chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
+| `branch_team` | `/br/*/team` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav; Operator tile (my_shift) |
+| `branch_stock` | `/br/*/stock` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Operator tile (approvals); Operator tile (stock) |
+| `branch_orders` | `/br/*/orders` | `Chủ sở hữu`, `Quản lý chi nhánh`, `Thu ngân`, `Nhân sự chi nhánh` | Operator tile (sales_kitchen) |
 | `branch_feedback` | `/br/*/feedback` | `Chủ sở hữu`, `Quản lý chi nhánh` | Branch management nav |
 | `employee_checkout_approvals` | `/br/*/shift/checkout-approvals` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |
 | `employee_leave_approvals` | `/br/*/shift/leave-approvals` | `Chủ sở hữu`, `Quản lý chi nhánh` | (not advertised in nav — direct URL / redirect target only) |

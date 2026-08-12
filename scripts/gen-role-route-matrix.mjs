@@ -31,7 +31,9 @@ const GENERATED_BEGIN = "<!-- GENERATED:role-route-matrix:begin -->";
 const GENERATED_END = "<!-- GENERATED:role-route-matrix:end -->";
 
 function readSource(relPath) {
-  return fs.readFileSync(path.join(REPO_ROOT, relPath), "utf8");
+  return fs
+    .readFileSync(path.join(REPO_ROOT, relPath), "utf8")
+    .replace(/\r\n/g, "\n");
 }
 
 // ---------------------------------------------------------------------------
