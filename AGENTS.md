@@ -11,8 +11,9 @@ Hierarchy: `Tenant (L0) → Branch (L1)`.
 
 1. On a fresh checkout, or when graph freshness is unknown, run
    `corepack pnpm agent:start`. It refreshes CodeGraph only when status reports
-   drift. IDE plugins and global skills are additive; they do not replace these
-   rules.
+   drift and installs the tracked `git-hooks/pre-push` hook (`core.hooksPath`).
+   `corepack pnpm install` also runs the hook installer via `prepare`. IDE plugins
+   and global skills are additive; they do not replace these rules.
 2. Read `docs/agent/rules/engineering.md`, then only the topic rule needed:
 
 | Signal | Read |
@@ -58,9 +59,12 @@ use built-in search tools; indexing remains an owner decision.
   code/docs cleanly; Git is the archive, so no tombstones or provenance notes.
 - Do not create another agent wiki, task board, memory store, or rule tree.
   Use the existing owner mapped by `references.md`.
-- Before calling implementation complete, run
-  `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`;
-  add targeted tests and `corepack pnpm verify` when the blast radius warrants it.
+- Before calling implementation complete, or before any owner-requested commit or
+  push of code outside CI `paths-ignore`, run `corepack pnpm verify` — the same
+  gate as the CI `gates` job (`deps:security`, `deps:audit`, `deps:boundaries`,
+  `typecheck`, `lint`, `build`, `test`). Read command output; Turbo cache replay
+  is not fresh proof after deletions or cross-package test reads (see
+  `tasks/lessons.md`). The tracked `pre-push` hook enforces this on push.
 
 ## Communication And Git
 
@@ -96,6 +100,7 @@ corepack pnpm typecheck    # TypeScript checks
 corepack pnpm lint         # Safety, contract, lifecycle, and ESLint gates
 corepack pnpm test         # Test suites
 corepack pnpm verify       # Dependency, boundary, type, lint, build, and test gate
-corepack pnpm agent:start  # Status-first CodeGraph refresh
+corepack pnpm agent:start  # CodeGraph refresh + git hook install
+corepack pnpm git:hooks:install  # Re-point core.hooksPath at git-hooks/
 corepack pnpm db:types     # Regenerate database types after an applied migration
 ```

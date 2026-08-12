@@ -49,11 +49,14 @@ checked actions, review transcripts, snapshots, or a `done` state.
 ## Verification
 
 1. Run targeted checks for the changed behavior and inspect the scoped diff.
-2. Before implementation completion, run
-   `corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build`.
-   Use `corepack pnpm verify` for broad/release-grade slices.
+2. Before implementation completion, or before any owner-requested commit or
+   push of code outside CI `paths-ignore`, run `corepack pnpm verify` — the same
+   gate as the CI `gates` job. Docs-only diffs may skip verify locally; the
+   tracked `pre-push` hook applies the same skip on push.
 3. Read each command's output. A background completion notice or cached Turbo
-   replay is not fresh proof.
+   replay is not fresh proof. After deletions or cross-package source reads in
+   tests, run `corepack pnpm exec turbo run test --force` when verify is green
+   but confidence is low.
 4. Keep written, review-clean, merged, applied to Production, and deployed as
    separate claims. CI must be green before calling landed work complete.
 

@@ -28,8 +28,13 @@ claims and ACL rules are owned by `database.md` and `docs/modules/auth.md`.
 - Commit subjects are English, imperative, and use a conventional prefix when
   one fits.
 - Agent-authored implementation commits include a `Verification:` line naming
-  the gates actually run.
+  the gates actually run. For any code change outside CI `paths-ignore`, that
+  line MUST include `corepack pnpm verify` with a green exit code immediately
+  before commit.
 - Do not commit or push unless the owner requested it in the current task.
+- Before push, `git-hooks/pre-push` runs `corepack pnpm verify` when the push
+  would change files outside CI `paths-ignore`. Install with
+  `corepack pnpm git:hooks:install` or `corepack pnpm agent:start`.
 - In a dirty/shared tree, snapshot status, declare owned paths, preserve
   unrelated changes, and re-read a path before editing when writers may overlap.
 - Parallel writers use isolated worktrees. Before staging, inspect the scoped

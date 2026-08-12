@@ -7,3 +7,6 @@ packages/database/src/types/database.types.ts linguist-generated=true
 
 # Generated route matrix must stay LF for cross-platform lint:route-matrix
 docs/spec/role-route-matrix.md text eol=lf
+
+# Tracked git hooks must stay LF and executable on Unix checkouts
+git-hooks/* text eol=lf

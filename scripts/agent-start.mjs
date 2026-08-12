@@ -6,6 +6,7 @@ import {
   codeGraphInvocation,
   codeGraphRefreshFailed,
 } from "./agent-start-policy.mjs";
+import { installGitHooks } from "./install-git-hooks.mjs";
 
 const INDEX_FILE_FAILURE =
   /files? could not be (?:read|parsed)|files? with errors/i;
@@ -89,4 +90,14 @@ function main() {
   }
 }
 
+function ensureGitHooks() {
+  const result = installGitHooks();
+  if (!result.ok && result.reason !== "not-a-repo") {
+    console.warn(
+      `[agent-start] Git pre-push hook install did not complete (${result.reason}); run corepack pnpm git:hooks:install manually.`,
+    );
+  }
+}
+
 main();
+ensureGitHooks();
