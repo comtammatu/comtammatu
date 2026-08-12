@@ -52,7 +52,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4 / §2.4A; LANDING hub + DASHBOARD command. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; dashboard: `…/dashboard/page.tsx` |
 | **Station** POS / KDS / Runner | Cashier / chef / runner (+ BM hỗ trợ) | Một việc realtime: bán · bump · served | Mở station → queue/cart sống → success bump/pay/serve → recall/retry khi lỡ | Hiện món/bàn/thời gian; ẩn giá (KDS/Runner), lương, tồn kho, báo cáo tháng | Parent §2.1–2.3; BOARD + blocks `pos-board` / `realtime-board` / `runner-board`. Exemplar: `pos/session-gate.tsx`, `kds/page.tsx`, `runner/page.tsx` |
 | **Public** `/login`, `/access-denied`, `/q/*`, `/r/*` | Khách hoặc người chưa vào đúng surface | Auth gate, gọi món token, HĐĐT, feedback QR | Token/URL → một CTA chính → xong hoặc fail-closed; hết hạn → trạng thái rõ, không sửa tiếp | Hiện bước giao dịch khách; ẩn shell Quản trị/CN, DataTable, dữ liệu nội bộ | Parent §2.10–2.12; `PUBLIC-WORKFLOW` / GATE. Blocks `public-transaction`, `public-feedback`, `system-gate`. Exemplar self-order: `q/[token]/page.tsx` |
-| **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Ngày làm việc cá nhân trong Control shell | Avatar → `/me` → clock/schedule/leave/profile/payslip → success punch | Hiện ca của mình; ẩn chọn NV/CN, duyệt đội, module L0 không được cấp | Parent §2.4B; block `employee-self-service` (`EmployeePage` / `EmployeePanel`) |
+| **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Hub hồ sơ / lịch / phép / lương / chấm công — không phải nơi làm việc hàng ngày | Avatar → `/me` hub → child; punch từ `/` command bar hoặc `/me/clock` | Hiện dữ liệu của mình; ẩn chọn NV/CN, duyệt đội, CTA `/work`, module L0 không được cấp | Parent §2.4B; LANDING ItemGroup. Exemplar: `me/page.tsx` |
 | **Settings** `/settings/*` (+ `/br/…/settings`) | Owner (L0); BM trên settings CN | Cấu hình ít đụng hàng ngày — không phải việc ca | LANDING settings → panel general/payments/printers; CN: bàn/POS/KDS/máy in | Hiện form cấu hình; ẩn KPI vận hành, queue bán hàng, tồn kho sống | Parent §2.11; LANDING + SETTINGS-PANEL. Exemplar L0: `settings/(tenant)/general/page.tsx`; printers LANDING: `settings/printers/page.tsx`; CN: `br/…/settings/page.tsx` |
 
 Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2.
@@ -118,12 +118,12 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ### 2.4. control_surface — `/`
 
-- **Archetype:** `LANDING`.
-- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và HR Control binding (JWT `self_service` + `hr:view_employee`). Role chi nhánh giữ `/br/...`.
+- **Archetype:** `LANDING` (queue-first, ADR 0037).
+- **Actor:** `owner`, `accountant`, `central_supply_ops`, `central_kitchen_lead`, và `self_service` có `self:access`. Role chi nhánh giữ `/br/...`.
 - **Job:** «Hôm nay / Cần xử lý» — việc đang thiếu theo ACL, rồi deep-link vào mô-đun.
-- **Goal:** Một cửa → xử lý việc hôm nay hoặc chọn đúng mô-đun.
-- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; khi `can_access_workspace()` có việc đến hạn/quá hạn thì **một** row `Việc đến hạn` → `/work`; Owner thêm launcher Điều hành / Nền tảng; role khác chỉ shortcut module được phép. **Không** KPI mosaic / doanh thu trên `/`; **không** render Kanban phòng ban trên `/`.
-- **UX:** `AppPage` + `AppSection` + `ItemGroup` + `Item` + `Badge`; không breadcrumb thừa. 1 cột phone / 2 cột tablet. Branch roles giữ `/br/...`; `self_service` thuần giữ `/me`.
+- **Goal:** Một cửa → xử lý việc hôm nay; vào mô-đun từ sidebar.
+- **Ưu tiên data:** Hàng đợi `Cần xử lý` (counts + deep-link) trước; khi `count === 1` và bucket có DETAIL thì mở chứng từ (Finance / GRN / Việc). HR duyệt, PO, in, hoàn tiền giữ LIST. Office: `AppTodayCommandBar` trên hàng đợi khi cần chấm công. **Không** lưới Điều hành / Nền tảng / Phân hệ; **không** KPI mosaic / doanh thu trên `/`; **không** Kanban phòng ban; Owner không thấy thanh chấm công.
+- **UX:** `AppPage` + `AppTodayCommandBar` (office) + một `AppSection` `Cần xử lý` + `ItemGroup` + `Item` + `Badge`. Empty: `Không có việc cần xử lý ngay` — sidebar/drawer vẫn vào mô-đun. 1 cột phone.
 
 ### 2.4A. Trung tâm vận hành Chi nhánh — `/br/[branchId]`
 
@@ -144,51 +144,26 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Nhân viên: `/shift/schedule` và `/profile` là tab riêng; QL giữ lịch dưới shortcut trong `Ca` + avatar.
   - `Đội` mở hub 2 tab (`Ca hôm nay`, `Nhân viên`). Trên board: panel **Cần duyệt** chỉ Duyệt kết ca / Duyệt nghỉ khi có pending; panel **Quản lý đội** luôn hiện Phân công đếm + Phiếu đếm (badge khi chờ duyệt) cùng Phân ca / Chấm công. Workflow sâu gắn bottom-nav Đội qua `matchPrefixes` `/shift/roster|attendance|checkout-approvals|leave-approvals`.
 
-
 ---
 
-### 2.4B. Công việc cá nhân — `/me/*`
+### 2.4B. Trang cá nhân — `/me/*`
 
-- **Gia đình:** Employee (spine §1A). Entry Avatar/`/me` → CTA adaptive clock →
-  success punch hoặc mở lịch/phép/hồ sơ/lương; recovery: camera từ chối,
-  offline, submitting lỗi — copy + đường thử lại rõ (không cấp module L0 giả).
-- **Archetype:** `EMBED-WRAPPER` mỏng vào shared staff-runtime; nội dung là cổng
-  ngày làm việc cá nhân, không phải dashboard hay mô-đun L0.
-- **Đối tượng sử dụng chính:** Kế toán, Kho Tổng, Bếp Trung Tâm và nhân viên
-  Văn phòng công ty không có Branch assignment. Nhân viên cửa hàng tiếp tục dùng
-  `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`; Owner không dùng `/me`.
-- **Mục tiêu Nghiệp vụ (Why?):** Cho mọi nhân viên ngoài Branch một nơi thống
-  nhất để chấm công, theo dõi lịch, xin nghỉ, xem hồ sơ và phiếu lương mà không
-  phải cấp quyền giả vào Tài chính, Kho hoặc Nhân sự.
-- **Mục tiêu Người dùng (Goal):** Mở đúng việc cá nhân trong một đến hai thao tác,
-  hoàn thành chấm công an toàn trên điện thoại và quay lại đúng trạng thái ngày
-  làm việc.
+- **Gia đình:** Personal plane (spine §1A). Avatar → `Trang cá nhân` → hồ sơ / lịch / phép / phiếu lương. **Không** phải nơi đăng nhập; **không** phải hub việc hôm nay.
+- **Archetype:** `LANDING` hub (profile-first). Chấm công giữ `/me/clock`, mở từ thanh lệnh trên `/`.
+- **Đối tượng sử dụng chính:** Kế toán, Kho Tổng, Bếp Trung Tâm và nhân viên Văn phòng. Nhân viên cửa hàng tiếp tục `/br/[branchId]/shift/*` và `/br/[branchId]/profile/*`. Owner không dùng `/me`.
+- **Mục tiêu Nghiệp vụ (Why?):** Một nơi tài khoản cá nhân mà không cấp quyền giả vào Tài chính, Kho hoặc Nhân sự.
+- **Mục tiêu Người dùng (Goal):** Mở đúng hồ sơ / lịch / phép / lương trong một đến hai thao tác.
 - **Luồng thao tác:**
-  1. Nhân sự có mô-đun đăng nhập vào mô-đun mặc định; mở Avatar Footer →
-     `Trang cá nhân` → `/me`.
-  2. Nhân sự Văn phòng không có mô-đun đăng nhập thẳng `/me`.
-  3. `/me` hiển thị trạng thái hôm nay và đúng một CTA thích ứng:
-     `Chấm công vào` → `Làm nhiệm vụ` → `Kết ca`.
-  4. `Lịch làm`, `Xin nghỉ`, `Hồ sơ` và `Phiếu lương` giữ route actor-only dưới
-     `/me/*`.
-- **Thông tin hiển thị:** Ca hôm nay, giờ vào/ra, tiến độ việc trong ca, lịch của
-  chính nhân viên, trạng thái phép và dữ liệu hồ sơ/phiếu lương của chính actor.
-  Khi `can_access_workspace()`: thêm CTA/list ngắn **Việc được giao** → `/work`
-  (không thay Việc trong ca).
-- **KHÔNG hiển thị:** Chọn nhân viên, chọn Branch/site, danh sách đội, hàng duyệt,
-  quyền tài khoản, dữ liệu HR nhạy cảm của người khác hoặc module không được cấp;
-  Kanban Work đầy đủ (thuộc `/work`).
+  1. Đăng nhập vào `/` (kể cả `self_service`).
+  2. Avatar Footer → `Trang cá nhân` → `/me`.
+  3. `/me` là hub liên kết `/me/profile`, `/me/schedule`, `/me/schedule/leave`, `/me/payslip`; chấm công từ `/` hoặc `/me/clock`.
+  4. Việc đến hạn nằm trên hàng đợi `/`, không CTA Work trên `/me`.
+- **Thông tin hiển thị:** Hồ sơ, lịch của chính nhân viên, trạng thái phép, phiếu lương đã phát hành. **Không** stepper ngày làm việc, **không** danh sách việc Work, **không** duyệt đội.
+- **KHÔNG hiển thị:** Chọn nhân viên, chọn Branch/site, hàng duyệt, quyền tài khoản của người khác, KPI bán hàng/kho.
 - **Quy chuẩn UX/UI:**
-  - `/me` là route ngang cấp với `/inventory`, `/finance` và `/hr`, nhưng không là
-    tab mô-đun; điểm vào nằm trong Avatar Footer.
-  - Dùng Control Surface shell. Desktop giữ Sidebar/Avatar Footer; mobile dùng
-    drawer khi có mô-đun. Khi không có mô-đun, không render bottom-nav `Mô-đun`
-    rỗng; Avatar trên header mở cùng account menu.
-  - Nội dung dùng adapter `Employee*`, cột hẹp và task-led. Không dựng dashboard,
-    KPI, hero, shell hoặc theme riêng.
-  - Một CTA chính trong viewport đầu; touch target tối thiểu 44px; trạng thái
-    loading, offline, camera bị từ chối, submitting, success và recoverable error
-    có copy và đường phục hồi rõ ràng.
+  - `/me` ngang cấp `/inventory` / `/finance` / `/hr` nhưng không phải tab mô-đun; vào từ Avatar Footer.
+  - Control Surface shell. Không bottom-nav `Phân hệ` rỗng khi không có mô-đun.
+  - Không dashboard, KPI, hero, shell hoặc theme riêng. Punch error/offline/camera giữ copy phục hồi trên `/me/clock`.
 
 ---
 

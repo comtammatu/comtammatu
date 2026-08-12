@@ -49,6 +49,35 @@ export async function countOpenGrns(branchId?: number): Promise<number> {
   return error ? 0 : (count ?? 0);
 }
 
+export async function listOpenGrnsForAttention(
+  branchId?: number,
+): Promise<{ count: number; items: { id: number; code: string }[] }> {
+  const ctx = await getAuthContextWithPermission(
+    PROCUREMENT_ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
+  if (!ctx) return { count: 0, items: [] };
+  const { supabase, claims } = ctx;
+  let query = supabase
+    .from("goods_received_notes")
+    .select("id, grn_number")
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", ["draft", "pending"])
+    .order("id")
+    .limit(2);
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { data, error } = await query;
+  if (error || !data?.length) return { count: 0, items: [] };
+  const items = data.flatMap((row) =>
+    row.id != null && row.grn_number
+      ? [{ id: row.id, code: row.grn_number }]
+      : [],
+  );
+  if (items.length === 0) return { count: 0, items: [] };
+  if (items.length === 1) return { count: 1, items };
+  return { count: await countOpenGrns(branchId), items };
+}
+
 export async function countOpenSupplierInvoices(
   branchId?: number,
 ): Promise<number> {

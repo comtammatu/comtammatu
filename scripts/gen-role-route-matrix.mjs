@@ -332,9 +332,9 @@ function derivePostLoginHomes(staffRoles, ownerRoles) {
     if (role === "self_service") {
       rows.push({
         role,
-        desktop: "/me",
-        phone: "/me",
-        note: "Active company binding grants personal self-service only; live module bindings may expose additional control-surface workspaces.",
+        desktop: '/ (Control home "Hôm nay")',
+        phone: '/ (Control home "Hôm nay")',
+        note: 'Control home "Hôm nay"; Avatar opens `Trang cá nhân` `/me`. Punch from the office command bar.',
       });
       continue;
     }

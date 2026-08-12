@@ -166,6 +166,8 @@ re-check ACL. Missing invariant = proxy gap.
 4. **Claims:** null → `/access-denied?reason=missing-auth-context`. No fabricated claims.
 5. **Company HR:** `/hr/*` requires Tenant capability; Branch grant cannot admit.
 6. **control_surface + module ACL:** `canAccess`; failure → default route or access-denied.
+   Control home `/` also admits JWT `self_service` with live `self:access` (not `hr:view_employee`).
+   Branch-floor roles never stay on `/` via capability alone.
 7. **Self canonicalization:** company staff keep `/me/*`; Branch roles map to
    `/br/[branchId]/*`. Owner / inactive `self:access` / invalid claims fail closed.
 8. **Branch scope:** mismatch → `branch-scope-mismatch`. POS/KDS reject

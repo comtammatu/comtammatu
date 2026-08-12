@@ -49,10 +49,9 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   owner: {
     path: "/",
-    // Control home («Hôm nay»): Owner + L0 ops adapters. HR Control bindings
-    // (JWT self_service + tenant hr:view_employee) reach `/` via proxy/login —
-    // not via this JWT allow-list. Branch roles with the same capability stay
-    // on `/br/[id]`.
+    // Control home («Hôm nay»): Owner + L0 ops adapters. Pure VP
+    // (JWT self_service + tenant self:access) reach `/` via proxy/login —
+    // not via this JWT allow-list. Branch roles stay on `/br/[id]`.
     allowedRoles: [
       "owner",
       "accountant",
@@ -124,7 +123,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   me: {
     path: "/me",
     allowedRoles: STAFF_ROLES.filter((role) => role !== "owner"),
-    label: "Ca của tôi",
+    label: "Trang cá nhân",
   },
   finance: {
     path: "/finance",

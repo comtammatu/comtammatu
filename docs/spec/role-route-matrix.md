@@ -226,7 +226,7 @@ no-`returnTo` case — i.e. where a fresh login actually lands.
 | Role | Desktop context | Phone / station context | Notes |
 | ---- | ------------------------- | ------------------------ | ----- |
 | `Chủ sở hữu` (`owner`) | / (Control home "Hôm nay") | / (Control home "Hôm nay") | Control L0 home: queue-first "Hôm nay"; Owner opens a branch explicitly when needed. |
-| `Nhân viên` (`self_service`) | /me | /me | Active company binding grants personal self-service only; live module bindings may expose additional control-surface workspaces. |
+| `Nhân viên` (`self_service`) | / (Control home "Hôm nay") | / (Control home "Hôm nay") | Control home "Hôm nay"; Avatar opens `Trang cá nhân` `/me`. Punch from the office command bar. |
 | `Kế toán` (`accountant`) | / (Control home "Hôm nay") | / (Control home "Hôm nay") | Control home "Hôm nay"; D091 grants Inventory GRN/PO slice via /inventory lanes. |
 | `Quản lý kho Tổng` (`central_supply_ops`) | / (Control home "Hôm nay") | / (Control home "Hôm nay") | Control home "Hôm nay"; inventory work under /inventory/*; personal attendance/leave under /me. |
 | `Bếp trưởng Bếp TT` (`central_kitchen_lead`) | / (Control home "Hôm nay") | / (Control home "Hôm nay") | Control home "Hôm nay"; inventory work under /inventory/*; personal attendance/leave under /me. |

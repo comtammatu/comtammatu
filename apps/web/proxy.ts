@@ -267,22 +267,21 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Control home (`/`): MODULE_ACL.owner JWT roles, plus HR Control bindings.
-  // HR Control = JWT `self_service` + tenant `hr:view_employee` (same as login).
-  // Branch-floor roles also hold `hr:view_employee` for `/br/.../team`, so the
-  // capability alone must never keep them on `/` (role-route-matrix L1).
+  // Control home (`/`): MODULE_ACL.owner JWT roles, plus office self_service
+  // with live `self:access`. Do not require `hr:view_employee` for pure VP.
+  // Branch-floor roles must not reach `/` via capability alone.
   if (pathname === "/" && !canAccess(claims.user_role, "owner")) {
     if (claims.user_role !== "self_service") {
       return redirectToDefaultLanding(request, response, claims);
     }
-    const { data: canOpenHrHome, error: hrHomeError } = await supabase.rpc(
+    const { data: canOpenSelfHome, error: selfHomeError } = await supabase.rpc(
       "has_permission",
       {
         p_branch_id: null as unknown as number,
-        p_key: PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
+        p_key: PERMISSION_KEYS.SELF_ACCESS,
       },
     );
-    if (hrHomeError || canOpenHrHome !== true) {
+    if (selfHomeError || canOpenSelfHome !== true) {
       return redirectToDefaultLanding(request, response, claims);
     }
   } else if (isOwnerRoutePath(pathname) && claims.user_role !== "owner") {
@@ -300,12 +299,12 @@ export async function proxy(request: NextRequest) {
   // /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
-    const homeHrBypass =
+    const homeSelfServiceBypass =
       pathname === "/" &&
       moduleKey === "owner" &&
       claims.user_role === "self_service" &&
       !canAccess(claims.user_role, "owner");
-    if (!canAccess(claims.user_role, moduleKey) && !homeHrBypass) {
+    if (!canAccess(claims.user_role, moduleKey) && !homeSelfServiceBypass) {
       if (isOwnerRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims);
       }

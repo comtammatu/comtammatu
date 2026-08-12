@@ -9,7 +9,7 @@ export function getDefaultRedirect(claims: JwtClaims): string {
   }
 
   if (claims.user_role === "self_service") {
-    return "/me";
+    return "/";
   }
 
   if (

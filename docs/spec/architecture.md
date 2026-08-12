@@ -72,6 +72,7 @@ and `docs/agent/rules/database.md`.
 | Role                | Route                                             |
 | ------------------- | ------------------------------------------------- |
 | `owner`             | `/`, then branch resolver when only one branch exists |
+| L0 adapters + `self_service` | `/` (queue-first Control home)           |
 | Branch-pinned staff | `/br/{branchId}`                                  |
 
 Root `/` uses the same resolver (multi-branch → picker). POS/KDS are not

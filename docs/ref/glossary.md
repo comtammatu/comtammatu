@@ -37,7 +37,7 @@ approved file extensions.
 
 | Drift | Use instead |
 | --- | --- |
-| `Employee Portal` | `Ca của tôi` (`employee_portal` / `/me`) |
+| `Employee Portal` | `Trang cá nhân` (`/me`); Branch shift stays `Ca của tôi` |
 | `Owner Shell` / `Owner surface` / `Ops surface` | `Quản trị` (`control_surface`) |
 | `Operations chrome` (new prose) | `station_chrome` |
 | Bare `Dashboard` | `Tổng quan` / `buồng lái` as fit |
@@ -70,7 +70,8 @@ same concept.
 | Inventory module | `Kho hàng` | — | `MODULE_LABELS_VI.inventory` |
 | Kitchen display | `KDS` | — | `MODULE_LABELS_VI.kds` |
 | Guest pickup board | `Gọi số` | `Màn gọi số` | `MODULE_LABELS_VI.pickup` |
-| Personal work surface | `Ca của tôi` | — | `APP_COPY_VI.employeePortal` |
+| Personal account plane | `Trang cá nhân` | `/me` hub | Avatar Footer `personalPage` |
+| Personal work surface | `Ca của tôi` | Branch `/shift` | `APP_COPY_VI.employeePortal` |
 | Branch home / today chip | `Hôm nay` | — | `MODULE_LABELS_VI.branch_home` |
 | Stock fulfillment workspace | `Giao nhận` | covers YCH + nhận/giao | inventory dictionary `transfers` |
 | Stock transfer document | `Điều chuyển` | `Phiếu điều chuyển` | glossary `stock_transfer` |
@@ -429,7 +430,7 @@ domain doc.
 | `inventory_ops` | điều hành kho | Inventory module on `control_surface`. |
 | `point_of_sale` / `kitchen_display_system` | POS / KDS | Order capture / kitchen display stations. |
 | `pickup_display` | Gọi số (formal: Màn gọi số) | Guest + delivery shipper read-only ready board (`/br/[branchId]/pickup`). Not a staff food-runner workflow. |
-| `employee_portal` | Ca của tôi | Personal day-flow surface (`/me/*`, Branch shift/profile). Not the shift checklist label `Việc trong ca`. |
+| `employee_portal` | Ca của tôi | Branch personal day-flow (`/br/.../shift`, `/br/.../profile`). Not `/me` (`Trang cá nhân`) and not the shift checklist label `Việc trong ca`. |
 
 ### Sales / POS / KDS
 

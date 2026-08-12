@@ -5,21 +5,6 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## ADR 0037 — Queue-first Control Home and personal plane
-
-State: doing
-Kind: feature
-Tier: T2
-Lane: control-surface/home
-Exit: Phases A–D per [`docs/plan/adr/0037-control-home-queue-first-and-personal-plane.md`](../docs/plan/adr/0037-control-home-queue-first-and-personal-plane.md); queue-only `/`; `AppTodayCommandBar`; `self_service` → `/`; `/me` = personal plane; scoped singleton DETAIL; docs + static tests green.
-Evidence: ADR 0037 Accepted 2026-08-12 — Q1 Accept (no Owner tiles), Q2 Accept scoped (Finance/GRN/Work DETAIL), Q3 Decline V1 (command bar only).
-Phase A is app-only; Phase C proxy/login needs careful static rewrite.
-
-- [ ] Phase A: remove module grids; mount `AppTodayCommandBar`
-- [ ] Phase B: scoped singleton DETAIL loaders (Finance keep, GRN, Work)
-- [ ] Phase C: `login-destination` + `proxy` gate + `/me` profile hub
-- [ ] Phase D: screen-context-map §2.4/§2.4B, role-route-matrix, page-archetypes, i18n/tests
-
 ## Prove one money day on Production
 
 State: blocked

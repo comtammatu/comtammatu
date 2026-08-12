@@ -138,7 +138,8 @@ block.
 Owner: `docs/spec/page-archetypes.md` § 1.1. control_surface pages
 (`apps/web/app/(protected)/**` excluding `br/**`) compose through one of five
 shapes — LIST, DETAIL, DOC, DASHBOARD_REPORT, REDIRECT — plus `STAFF_EMBED`
-for `/me/*`. Census: `CONTROL_SURFACE_COMPOSE` in
+for `/me/*` child routes. `/me` itself is a LANDING hub (`DASHBOARD_REPORT`).
+Census: `CONTROL_SURFACE_COMPOSE` in
 `scripts/page-archetypes.mjs`.
 
 | Shape | Adapters (thin pointer) |
@@ -208,10 +209,11 @@ one `SidebarProvider`.
   is hidden and the fixed sidebar takes over.
 - `/me/*` is a personal peer route inside this shell (`design-system.md`
   § Structural Governance A.5). It is not part of `tier1` / `tier2`; the entry
-  point is the avatar footer account menu. For office staff with no work module,
-  `/me` is the landing: desktop keeps brand, notifications, and avatar footer
-  without locked modules; mobile renders no empty "Mô-đun" tab and uses the
-  header avatar as account trigger. Content uses `Employee*` adapters.
+  point is the avatar footer account menu. Post-login landing is `/` for all
+  Control Surface roles, including `self_service`. Desktop keeps brand,
+  notifications, and avatar footer; mobile renders no empty "Mô-đun" tab and
+  uses the header avatar as account trigger. `/me` is a LANDING ItemGroup hub;
+  punch stays at `/me/clock`.
 
 Scroll model (inset panel):
 

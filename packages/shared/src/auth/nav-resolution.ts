@@ -42,8 +42,8 @@ export function resolveRoleHomeLink(
 
   if (role === "self_service") {
     return {
-      label: MODULE_ACL.me.label,
-      href: MODULE_ACL.me.path,
+      label: MODULE_ACL.owner.label,
+      href: MODULE_ACL.owner.path,
     };
   }
 

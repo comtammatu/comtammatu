@@ -5,7 +5,7 @@ import {
   type ModuleKey,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { formatCount } from "@comtammatu/shared/format";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import {
   parseFinanceParams,
@@ -13,15 +13,15 @@ import {
 } from "@/(protected)/finance/_lib/finance-params";
 import { fetchFinanceCockpit } from "@/(protected)/finance/_lib/finance-cockpit";
 import {
-  countOpenGrns,
   countOpenPurchaseOrders,
   countOpenPurchaseRequests,
   countOpenSupplierInvoices,
+  listOpenGrnsForAttention,
 } from "@/(protected)/inventory/_lib/receiving-counts";
+import { listMyWorkTasks } from "@/(protected)/work/actions";
 import { fetchHrAttentionSummary } from "@/(protected)/hr/hr-attention";
 import { getUnreadCount } from "@/(protected)/notifications/actions";
 import { countPrintJobsNeedingAttention } from "@/_lib/print-attention";
-import { countMyWorkTasksDue } from "@/(protected)/work/actions";
 import { messages } from "@lib/messages";
 
 export type ControlHomeAttentionItem = {
@@ -31,6 +31,7 @@ export type ControlHomeAttentionItem = {
   count: number;
   href: string;
   tone?: "warning" | "destructive";
+  documentTitle?: string;
 };
 
 const copy = messages.controlSurface.dashboard;
@@ -77,7 +78,7 @@ async function loadInventoryAttention(
   if (!canAccess(role, "inventory")) return [];
   const [po, grn, ycm, invoices] = await Promise.all([
     settledCount(countOpenPurchaseOrders()),
-    settledCount(countOpenGrns()),
+    listOpenGrnsForAttention().catch(() => ({ count: 0, items: [] })),
     settledCount(countOpenPurchaseRequests()),
     settledCount(countOpenSupplierInvoices()),
   ]);
@@ -92,12 +93,23 @@ async function loadInventoryAttention(
       tone: "warning",
     });
   }
-  if (grn > 0) {
+  if (grn.count === 1 && grn.items[0]) {
+    const row = grn.items[0];
     items.push({
       id: "inventory:grn",
       moduleKey: "inventory",
       label: copy.attention.grn,
-      count: grn,
+      documentTitle: row.code,
+      count: 1,
+      href: `/inventory/grn/${row.id}`,
+      tone: "warning",
+    });
+  } else if (grn.count > 1) {
+    items.push({
+      id: "inventory:grn",
+      moduleKey: "inventory",
+      label: copy.attention.grn,
+      count: grn.count,
       href: "/inventory/grn",
       tone: "warning",
     });
@@ -220,14 +232,36 @@ async function loadWorkAttention(
 ): Promise<ControlHomeAttentionItem[]> {
   if (!canAccess(role, "work")) return [];
   try {
-    const result = await countMyWorkTasksDue({});
-    if (!result.success || !result.data || result.data.count <= 0) return [];
+    const result = await listMyWorkTasks({ includeDone: false });
+    if (!result.success || !result.data) return [];
+    const { endIso } = getVNDayUtcRange(getVNDateString());
+    const beforeIso = new Date(new Date(endIso).getTime() - 1).toISOString();
+    const due = result.data.items.filter((task) => {
+      if (task.dueAt == null) return false;
+      if (task.status === "done" || task.status === "canceled") return false;
+      return task.dueAt <= beforeIso;
+    });
+    const first = due[0];
+    if (due.length === 1 && first) {
+      return [
+        {
+          id: "work:mine-due",
+          moduleKey: "work",
+          label: copy.attention.workMineDue,
+          documentTitle: first.title,
+          count: 1,
+          href: `/work/tasks/${first.id}`,
+          tone: "warning",
+        },
+      ];
+    }
+    if (due.length <= 0) return [];
     return [
       {
         id: "work:mine-due",
         moduleKey: "work",
         label: copy.attention.workMineDue,
-        count: result.data.count,
+        count: due.length,
         href: MODULE_ACL.work.path,
         tone: "warning",
       },
@@ -278,8 +312,4 @@ export async function loadControlHomeAttention(
     if (result.status === "fulfilled") items.push(...result.value);
   }
   return items.filter((item) => item.count > 0);
-}
-
-export function formatAttentionCount(count: number): string {
-  return formatCount(count);
 }

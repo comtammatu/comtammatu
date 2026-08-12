@@ -15,9 +15,9 @@ test("root route owns the Control home", () => {
   assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<ControlSurfaceOverview/);
   assert.match(rootPage, /loadControlHomeAttention/);
-  assert.match(overview, /MODULE_ACL\.finance\.path/);
-  assert.match(overview, /MODULE_ACL\.inventory\.path/);
-  assert.match(overview, /MODULE_ACL\.settings\.path/);
+  assert.match(rootPage, /getTodayWorkState/);
+  assert.doesNotMatch(overview, /MODULE_ACL\.finance\.path/);
+  assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
   assert.match(overview, /attentionTitle|AttentionQueue/);
   assert.doesNotMatch(rootPage, /redirect\(/);
 });
@@ -76,9 +76,11 @@ test("Control home root is a real responsive landing", () => {
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
   assert.match(overview, /AttentionQueue/);
-  assert.match(overview, /lg:grid-cols-\[minmax\(0,2fr\)_minmax\(18rem,1fr\)\]/);
+  assert.match(overview, /AppTodayCommandBar/);
   assert.match(overview, /<ItemGroup/);
-  assert.match(overview, /motion-safe:group-hover\/module-link:translate-x-1/);
+  assert.match(overview, /AppEmptyState/);
+  assert.doesNotMatch(overview, /lg:grid-cols-\[minmax\(0,2fr\)_minmax\(18rem,1fr\)\]/);
+  assert.doesNotMatch(overview, /module-link/);
   assert.doesNotMatch(overview, /AppLinkCard|LinkCardGrid/);
   assert.doesNotMatch(overview, /KpiCard/);
   assert.match(copy, /eyebrow: "Toàn hệ thống"/);

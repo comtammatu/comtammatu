@@ -215,7 +215,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/work/page.tsx": "LIST",
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/work/team/page.tsx": "LIST",
-  "apps/web/app/(protected)/me/page.tsx": "EMBED-WRAPPER",
+  "apps/web/app/(protected)/me/page.tsx": "LANDING",
   "apps/web/app/(protected)/me/clock/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/me/schedule/page.tsx": "EMBED-WRAPPER",
   "apps/web/app/(protected)/me/schedule/leave/page.tsx": "EMBED-WRAPPER",
@@ -560,8 +560,8 @@ export const PAGE_DISPOSITIONS = Object.fromEntries(
 /**
  * Control Surface Canonical Compose (page-archetypes.md § 1.1).
  * Every control_surface page.tsx maps to exactly one compose shape.
- * STAFF_EMBED covers /me/* and HR checkout-approvals embeds — not a
- * management LIST/DETAIL/DOC shape.
+ * STAFF_EMBED covers `/me/*` child routes and HR checkout-approvals embeds.
+ * `/me` itself is a LANDING hub (`DASHBOARD_REPORT` fold).
  */
 export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/branches/page.tsx": "LIST",
@@ -627,7 +627,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/waste/approvals/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/waste/new/page.tsx": "DOC",
   "apps/web/app/(protected)/me/clock/page.tsx": "STAFF_EMBED",
-  "apps/web/app/(protected)/me/page.tsx": "STAFF_EMBED",
+  "apps/web/app/(protected)/me/page.tsx": "DASHBOARD_REPORT",
   "apps/web/app/(protected)/me/payslip/page.tsx": "STAFF_EMBED",
   "apps/web/app/(protected)/me/profile/page.tsx": "STAFF_EMBED",
   "apps/web/app/(protected)/me/schedule/leave/page.tsx": "STAFF_EMBED",

@@ -155,8 +155,8 @@ test("getDefaultRedirect → owner enters the L0 root", () => {
   assert.equal(getDefaultRedirect(makeClaims("owner")), "/");
 });
 
-test("getDefaultRedirect → zero-module company member enters /me", () => {
-  assert.equal(getDefaultRedirect(makeClaims("self_service")), "/me");
+test("getDefaultRedirect → zero-module company member enters Control home", () => {
+  assert.equal(getDefaultRedirect(makeClaims("self_service")), "/");
 });
 
 test("getDefaultRedirect → branch_manager lands on work entry", () => {
@@ -186,8 +186,8 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
     href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("self_service"), {
-    label: "Ca của tôi",
-    href: "/me",
+    label: "Tổng quan",
+    href: "/",
   });
   assert.deepEqual(resolveRoleHomeLink("branch_manager"), {
     label: "Hôm nay",

@@ -36,8 +36,8 @@ test("D076 accountant lands at Control home", () => {
   assert.equal(getDefaultRedirect(claims("accountant", null)), "/");
 });
 
-test("zero-module company member lands on personal self-service", () => {
-  assert.equal(getDefaultRedirect(claims("self_service", null)), "/me");
+test("zero-module company member lands on Control home", () => {
+  assert.equal(getDefaultRedirect(claims("self_service", null)), "/");
 });
 
 test("central site roles land at Control home", () => {

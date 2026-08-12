@@ -65,14 +65,15 @@ test("personal workday keeps Branch and Company route families distinct", () => 
   const runtime = read("apps/web/lib/staff-runtime/page.tsx");
   const clockClient = read("apps/web/lib/staff-runtime/clock/clock-client.tsx");
 
-  assert.match(mePage, /leave: "\/me\/schedule\/leave"/);
-  assert.match(mePage, /payslip: "\/me\/payslip"/);
+  assert.match(mePage, /href: "\/me\/schedule\/leave"/);
+  assert.match(mePage, /href: "\/me\/payslip"/);
   assert.match(
     branchPage,
     /leave: `\/br\/\$\{branchId\}\/shift\/schedule\/leave`/,
   );
   assert.match(branchPage, /payslip: `\/br\/\$\{branchId\}\/profile\/payslip`/);
-  assert.match(mePage, /workflowLayout="stepper"/);
+  assert.doesNotMatch(mePage, /workflowLayout="stepper"/);
+  assert.doesNotMatch(mePage, /StaffWorkdayPageContent/);
   assert.match(branchPage, /workflowLayout="stepper"/);
   assert.doesNotMatch(branchPage, /manager-dashboard|redirect\("\/me/);
   for (const label of ["scheduleTitle", "leaveTitle", "payslipTitle"]) {

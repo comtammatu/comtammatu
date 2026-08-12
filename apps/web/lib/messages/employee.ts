@@ -125,6 +125,9 @@ export const employee = {
       "Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên.",
     profileTitle: "Hồ sơ",
     profileDescription: "Thông tin tài khoản và hồ sơ nhân viên",
+    personalHubTitle: "Trang cá nhân",
+    personalHubDescription:
+      "Hồ sơ, lịch làm, phép và phiếu lương của bạn. Chấm công hàng ngày ở Hôm nay.",
     operationToolsTitle: "Công cụ vận hành",
     operationToolsDescription:
       "Mở đúng công cụ theo vai trò và chi nhánh hiện tại.",

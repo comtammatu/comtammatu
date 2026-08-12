@@ -308,7 +308,7 @@ test("Product UI copy bans recurring EN loanwords in Hint/Description dictionari
   );
   assert.doesNotMatch(notificationsMessages, /\bhandoff\b/i);
   assert.doesNotMatch(settingsMessages, /\bhandoff\b/i);
-  assert.match(controlSurfaceMessages, /shortcutsTitle:\s*"Phân hệ"/);
+  assert.match(controlSurfaceMessages, /attentionTitle:\s*"Cần xử lý"/);
   assert.doesNotMatch(controlSurfaceMessages, /\bmô-đun\b/i);
   assert.match(
     operatorMessages,

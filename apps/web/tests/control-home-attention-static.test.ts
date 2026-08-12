@@ -17,19 +17,27 @@ const login = readFileSync(
   "utf8",
 );
 
-test("Control home page loads ACL-gated attention and role-aware overview", () => {
+test("Control home page loads ACL-gated attention and a queue-only overview", () => {
   assert.match(page, /loadControlHomeAttention/);
+  assert.match(page, /getTodayWorkState/);
   assert.match(page, /ControlSurfaceOverview/);
   assert.match(overview, /AttentionQueue|attentionTitle/);
-  assert.match(overview, /canAccess\(role/);
+  assert.match(overview, /AppTodayCommandBar/);
+  assert.match(overview, /canAccess\(role, "me"\)/);
   assert.doesNotMatch(overview, /KpiCard|KpiRow/);
+  assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
+  assert.doesNotMatch(overview, /operationsTitle|foundationTitle|shortcutsTitle/);
 });
 
 test("Control home attention covers finance inventory HR ops buckets", () => {
   assert.match(attention, /loadFinanceAttention|fetchFinanceCockpit/);
-  assert.match(attention, /countOpenPurchaseOrders|countOpenGrns/);
+  assert.match(attention, /countOpenPurchaseOrders|listOpenGrnsForAttention/);
+  assert.match(attention, /documentTitle/);
+  assert.match(attention, /\/inventory\/grn\/\$\{/);
+  assert.match(attention, /\/work\/tasks\/\$\{/);
   assert.match(attention, /fetchHrAttentionSummary/);
   assert.match(attention, /countPrintJobsNeedingAttention|getUnreadCount/);
+  assert.match(attention, /listMyWorkTasks/);
 });
 
 test("MODULE_ACL owner home includes Control L0 adapters", () => {
@@ -48,10 +56,11 @@ test("proxy keeps branch-floor roles off Control home `/`", () => {
     proxy.indexOf("// Owner-plane routes", homeGateStart),
   );
   assert.match(homeGate, /user_role !== "self_service"/);
-  assert.match(homeGate, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
+  assert.match(homeGate, /PERMISSION_KEYS\.SELF_ACCESS/);
+  assert.doesNotMatch(homeGate, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
   assert.match(homeGate, /redirectToDefaultLanding/);
   assert.match(
     proxy,
-    /homeHrBypass[\s\S]*user_role === "self_service"/,
+    /homeSelfServiceBypass[\s\S]*user_role === "self_service"/,
   );
 });

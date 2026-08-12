@@ -22,16 +22,15 @@ test("root route renders the Control home", () => {
   assert.match(protectedLayout, /<ControlSurfaceShell/);
   assert.match(rootPage, /<ControlSurfaceOverview/);
   assert.match(rootPage, /loadControlHomeAttention/);
+  assert.match(rootPage, /getTodayWorkState/);
   assert.match(overview, /<AppPageHeader/);
   assert.match(overview, /<AppSection/);
   assert.match(overview, /AttentionQueue/);
   assert.match(overview, /headingLevel="h2"/);
   assert.match(overview, /<ItemGroup/);
-  assert.match(
-    overview,
-    /<Item[\s\S]*render=\{<Link href=\{module\.href\} \/>\}/,
-  );
-  assert.match(overview, /chrome-tap/);
+  assert.match(overview, /AppTodayCommandBar/);
+  assert.doesNotMatch(overview, /operationsModules|ModuleLinks/);
+  assert.doesNotMatch(overview, /chrome-tap/);
   assert.doesNotMatch(appShell, /<header/);
   assert.doesNotMatch(inventoryLayout, /ControlSurfaceShell/);
   assert.match(

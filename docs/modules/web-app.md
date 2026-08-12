@@ -31,7 +31,7 @@ the contract changes.
 | Utility | `/notifications/*` | `returnTo` | Not a product plane |
 | Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
 | Staff day | `/br/…/shift/*`, `/profile/*` | `/br/…/shift` | Branch bottom nav; do not mix HR admin hot path |
-| Self | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip` | `/me` | Shared `staff-runtime`; site-pinned → Branch; Owner denied |
+| Self | `/me`, `/me/clock`, `/me/schedule`, `/me/profile`, `/me/payslip` | `/me` (not post-login; login → `/`) | Profile hub in Control shell; punch `/me/clock`; site-pinned → Branch; Owner denied |
 
 History: `Link` / `router.push` between pages; `router.replace` only for tab/filter
 on the same page.

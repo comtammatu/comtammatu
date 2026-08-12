@@ -20,10 +20,13 @@ test("/me personal self-service routes stay company-scoped under Control Surface
   const meProfile = read("apps/web/app/(protected)/me/profile/page.tsx");
   const meLayout = read("apps/web/app/(protected)/me/layout.tsx");
 
-  // Workday landing uses the shared actor-only runtime, never Branch ops.
-  assert.match(mePage, /StaffWorkdayPageContent/);
-  assert.match(mePage, /enableBranchOpsRefresh=\{false\}/);
-  assert.match(mePage, /plane="employee"/);
+  // Profile hub: personal routes only, never Branch ops or Work CTA.
+  assert.match(mePage, /personalHubTitle/);
+  assert.match(mePage, /href: "\/me\/profile"/);
+  assert.match(mePage, /href: "\/me\/schedule"/);
+  assert.match(mePage, /href: "\/me\/payslip"/);
+  assert.doesNotMatch(mePage, /StaffWorkdayPageContent/);
+  assert.doesNotMatch(mePage, /href: "\/work"/);
 
   // Every personal route resolves to a sibling `/me/*` destination; none
   // leaks a Branch-scoped URL or redirects back into the Branch family.
@@ -126,14 +129,14 @@ test("default post-login landing splits self_service from module-bound roles", (
   const redirect = read("packages/shared/src/auth/login-destination.ts");
   const navResolution = read("packages/shared/src/auth/nav-resolution.ts");
 
-  // Fail-closed landing: self_service gets /me; module-bound roles resolve via canAccess elsewhere.
-  assert.match(redirect, /user_role === "self_service"[\s\S]*?return "\/me"/);
+  // Fail-closed landing: self_service gets `/`; module-bound roles resolve via canAccess elsewhere.
+  assert.match(redirect, /user_role === "self_service"[\s\S]*?return "\/"/);
   assert.doesNotMatch(redirect, /user_role === "accountant"[\s\S]*?return "\/finance"/);
   assert.match(redirect, /return "\/access-denied\?reason=role-unassigned"/);
 
-  // `self_service` role home is the personal surface, not a control module.
+  // `self_service` role home is Control home; Avatar still opens `/me`.
   assert.match(
     navResolution,
-    /role === "self_service"[\s\S]*?label: MODULE_ACL\.me\.label,[\s\S]*?href: MODULE_ACL\.me\.path/,
+    /role === "self_service"[\s\S]*?label: MODULE_ACL\.owner\.label,[\s\S]*?href: MODULE_ACL\.owner\.path/,
   );
 });
