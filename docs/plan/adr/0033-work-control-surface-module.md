@@ -8,13 +8,14 @@
 
 ## Context
 
-Office staff need cross-department assigned work (inbox, later board/calendar/
+Office staff need cross-department assigned work (inbox, board, calendar,
 timeline) without a second deployable or second auth cookie domain. PR #348 /
 `codex/workspace-foundation` proposed `apps/workspace` + `work.comtammatu.com`;
 Owner rejected separate-app hosting in favor of same Control Surface.
 
-Canonical integration plan:
-`docs/plan/2026-08-11-work-module-integration.md`.
+Canonical product/IA: `docs/ref/screen-context-map.md` § 2.4C.
+Compose recipes: `docs/spec/page-archetypes.md` TASK_*.
+Control Surface module seams: `docs/modules/web-app.md`.
 
 ## Decision
 
@@ -32,32 +33,44 @@ Canonical integration plan:
 4. **Views (URL only).** `view=board|calendar|timeline` with required scope
    (`project` or `department` for board/timeline). Compose shapes `TASK_BOARD`,
    `TASK_CALENDAR`, `TASK_TIMELINE` are Control Surface recipes — not KDS
-   `BOARD` / `station_chrome`.
+   `BOARD` / `station_chrome`. Filters: `view`, `department`, `project`,
+   `status`, `assignee`, `q`, `from`, `to`. Reject unknown enums; never take
+   `tenant_id` from the client.
 
-5. **Control home `/`.** Remains module attention hub; adds one attention row
+5. **Routes.** Inbox `/work`; task DETAIL `/work/tasks/[id]`; projects
+   `/work/projects` + `/work/projects/[id]`; team `/work/team` (`work:manage`).
+
+6. **Control home `/`.** Remains module attention hub; adds one attention row
    for due-today + overdue Work tasks → `/work`. Does not become a Work shell.
 
-6. **`/me`.** Remains personal day (clock + `Việc trong ca`). When Work access
+7. **`/me`.** Remains personal day (clock + `Việc trong ca`). When Work access
    exists, expose CTA to `/work`. Never merge `work_tasks` into
    `position_shift_tasks`.
 
-7. **Domain.** Additive `work_*` tables; tasks may link to Finance/Inventory/HR
-   records later but must not copy money, stock, or payroll payloads.
+8. **Domain.** Additive `work_*` tables: `work_departments`,
+   `work_department_members`, `work_projects`, `work_project_members`,
+   `work_tasks`, `work_task_participants`, `work_task_checklist_items`,
+   `work_task_comments`, `work_task_attachments`, `work_task_events`.
+   Status: `backlog | todo | in_progress | review | done | canceled`.
+   Priority: `low | normal | high | urgent`. Tasks may link to
+   Finance/Inventory/HR records later but must not copy money, stock, or
+   payroll payloads. Mutations use atomic RPCs + `expected_revision`.
 
-8. **Permission.** Tenant `work:manage` for Owner (department/member admin in
+9. **Permission.** Tenant `work:manage` for Owner (department/member admin in
    MVP). Leads get authority from membership tables, not broad tenant grants.
+   Pilot department label: `Văn phòng`.
 
-9. **Supersession.** Separate-app design in PR #348 is not to be merged as
-   runtime. Domain ideas (`work_*`, membership, inbox-first) are retained via
-   this ADR and the 2026-08-11 plan.
+10. **Supersession.** Separate-app design in PR #348 is not to be merged as
+    runtime. Domain ideas (`work_*`, membership, inbox-first) stay in this ADR.
 
 ## Consequences
 
-- Implementation follows waves W0→W5 in the integration plan.
+- W0–W5 code is on Production; remaining proof is member/non-member pilot smoke
+  and the 7-day watch (`docs/runbooks/work-module-pilot-rollback.md`).
 - Notification `action_url` values are same-origin `/work/tasks/[id]`.
 - `login-destination` stays unchanged.
-- Page-archetype census must register Work routes under LIST/DETAIL or the new
-  TASK_* compose shapes — never under station BOARD.
+- Page-archetype census must register Work routes under LIST/DETAIL or TASK_*
+  compose shapes — never under station BOARD.
 
 ## Non-goals
 

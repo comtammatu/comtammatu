@@ -27,7 +27,7 @@ the contract changes.
 | --- | --- | --- | --- |
 | Root | `/` | Single-branch resolver | `getDefaultRedirect`; multi-branch → picker; wrong scope fails closed |
 | Public / auth | `/login`, `/access-denied`, `/br/…/pickup`, health/webhooks | `/login` or pickup display URL | No app shell; pickup page validates branch itself |
-| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
+| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/work/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
 | Utility | `/notifications/*` | `returnTo` | Not a product plane |
 | Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
 | Staff day | `/br/…/shift/*`, `/profile/*` | `/br/…/shift` | Branch bottom nav; do not mix HR admin hot path |
@@ -102,14 +102,19 @@ Browser → proxy.ts (auth + ACL) → route → layout (trusts proxy) → page
 | `"use client"` | `@comtammatu/database/supabase/client`, shared, ui |
 | `actions.ts` | Explicit server/service DB subpath, shared, security |
 
-## Adding A New Admin Page
+## Adding A Control Surface Module Or Page
 
-1. `apps/web/app/(protected)/{module}/page.tsx`
-2. `ModuleKey` + roles in `module-acl.ts`
-3. URL → ModuleKey in `route-resolution.ts`
-4. Surface/chrome in `route-map.ts`
-5. Nav in `nav-config.ts`
-6. Verify: proxy, sidebar by role, correct surface
+Same-surface only (ADR 0012 / 0033). A new **module** must hit every seam; a
+new **page** inside an existing module still needs 1–5 + proof.
+
+1. Route file under `apps/web/app/(protected)/{module}/`
+2. `ModuleKey` + roles (`module-acl.ts`) and path → module (`route-resolution.ts`)
+3. Surface/chrome (`route-map.ts`) + nav (`nav-config.ts`) + VI glossary
+4. Screen-context + archetype census (`page-archetypes.md` / `.mjs`)
+5. Role-route matrix (`gen:route-matrix`); UI contract/registry if chrome changes
+6. Permission keys + seed lint; additive RLS/RPC; `db:types` after apply
+7. Optional: control-home attention, `/me` CTA, same-origin notification URLs
+8. No new host/cookie domain. Proof: ACL±, proxy, primary viewport
 
 ## Common Failures
 

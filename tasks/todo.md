@@ -89,24 +89,14 @@ Blocker: Production baseline still exposes legacy `create_supplier_payment` to `
 - [ ] Revoke authenticated direct `UPDATE` on `payments` and drop legacy `create_supplier_payment` only after the required-key runtime proof.
 - [ ] Apply the cleanup only through the trusted registration/owner-operated Preview path; regenerate types from the explicit Production source and run repository gates plus database advisors.
 
-## Ship Work module W1 — schema + Inbox read
+## Prove Work module pilot smoke
 
 State: verify
 Kind: feature
 Tier: T2
 Lane: work/control-surface
-Exit: `work_*` migration owner-applied + `db:types`; `/work` Inbox and `/work/tasks/[id]` read for members; non-members denied; pgTAP isolation green; ADR 0033 / screen-map `/work` already Accepted (W0).
-Evidence: migration `work_management_foundation`; ACL `work`; nav `Công việc`; `/work` UI (Inbox, Board DnD, Calendar, Timeline, Detail mutations); control-home `work:mine-due`; `/me` CTA; static + pgTAP tests; runbook `docs/runbooks/work-module-pilot-rollback.md`.
+Exit: Owner member can open Inbox and task DETAIL; a user without membership is denied; 7-day `Văn phòng` pilot has no RLS leak.
+Evidence: `work_*` migrations + types; ACL `work`; nav `Công việc`; Inbox/Board/Calendar/Timeline UI; control-home `work:mine-due`; `/me` CTA; static + pgTAP; runbook `docs/runbooks/work-module-pilot-rollback.md`. ADR 0033 / screen-map `/work` Accepted.
 Pilot department seed label: **`Văn phòng`**.
 
-Progress:
-- **W0 done** — ADR 0033, screen-map, archetypes, SSOT Accepted, PR #348 superseded.
-- **W1 done (code)** — `work_*` foundation migration + pgTAP; ACL/nav/types; Inbox + Detail read.
-- **W2 done (code)** — write RPCs + checklist/comment/notify migration; control-home `work:mine-due`; `/me` CTA.
-- **W3 done (code)** — `TASK_BOARD` one-scope + HTML5 DnD status.
-- **W4 done (code)** — `TASK_CALENDAR` by `due_at` (VN day).
-- **W5 done (code)** — `TASK_TIMELINE` one project + pilot rollback runbook.
-
-- [x] Owner-delegate Production apply of Work migrations (`work_management_foundation` + `work_task_collab_notify`), then `corepack pnpm db:types`.
-- [x] Follow-up: revoke `anon` EXECUTE on Work SECURITY DEFINER helpers (`work_revoke_anon_helper_execute`).
 - [ ] Smoke Inbox as Owner member and deny path for a user without membership; 7-day pilot watch.
