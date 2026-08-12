@@ -347,7 +347,6 @@ export const ensurePilotDepartment = withAction<
         errorCode: "work.pilot_failed",
       });
     }
-    revalidatePath("/work");
     return {
       success: true,
       data: { departmentId: Number(departmentId ?? 0) },
