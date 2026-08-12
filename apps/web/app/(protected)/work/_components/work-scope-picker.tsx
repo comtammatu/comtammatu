@@ -7,7 +7,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppEmptyState, AppListFrame } from "@/components/surface";
+import { AppEmptyState } from "@/components/surface";
 import type {
   WorkDepartmentOption,
   WorkProjectOption,
@@ -25,13 +25,13 @@ export function WorkScopePicker({
   projects: WorkProjectOption[];
 }) {
   return (
-    <AppListFrame contentScroll>
+    <div className="flex flex-col gap-4 px-3 py-3">
       <AppEmptyState
         mode="no-data"
         title={workCopy.pickScope}
         description={workCopy.boardNeedsScope}
       />
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold">{workCopy.scopeDepartment}</h2>
           {departments.length === 0 ? (
@@ -88,6 +88,6 @@ export function WorkScopePicker({
           )}
         </section>
       </div>
-    </AppListFrame>
+    </div>
   );
 }

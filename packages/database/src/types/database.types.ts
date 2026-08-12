@@ -12571,6 +12571,7 @@ export type Database = {
         Returns: Json
       }
       can_access_workspace: { Args: never; Returns: boolean }
+      can_manage_work_membership: { Args: never; Returns: boolean }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
       can_read_inventory_monetary: { Args: { p_key: string }; Returns: boolean }
       can_read_work_department: {
@@ -13150,6 +13151,25 @@ export type Database = {
       }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      deactivate_work_department_member: {
+        Args: { p_department_id: number; p_user_id: string }
+        Returns: {
+          created_at: string
+          department_id: number
+          id: number
+          is_active: boolean
+          role: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_department_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_branch_revenue_target: {
         Args: { p_branch_id: number; p_year_month: string }
         Returns: Json
@@ -14987,6 +15007,25 @@ export type Database = {
         Args: { p_is_preferred: boolean; p_item_id: number }
         Returns: Json
       }
+      set_work_department_member_role: {
+        Args: { p_department_id: number; p_role: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          department_id: number
+          id: number
+          is_active: boolean
+          role: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_department_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_work_task_status: {
         Args: {
           p_expected_revision: number
@@ -15396,6 +15435,25 @@ export type Database = {
           p_station_id?: number
         }
         Returns: number
+      }
+      upsert_work_department_member: {
+        Args: { p_department_id: number; p_role: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          department_id: number
+          id: number
+          is_active: boolean
+          role: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "work_department_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       upsert_work_task_checklist_item: {
         Args: {

@@ -97,6 +97,17 @@ Tier: T2
 Lane: work/control-surface
 Exit: Owner member can open Inbox and task DETAIL; a user without membership is denied; 7-day `Văn phòng` pilot has no RLS leak.
 Evidence: `work_*` migrations + types; ACL `work`; nav `Công việc`; Inbox/Board/Calendar/Timeline UI; control-home `work:mine-due`; `/me` CTA; static + pgTAP; runbook `docs/runbooks/work-module-pilot-rollback.md`. ADR 0033 / screen-map `/work` Accepted.
-Pilot department seed label: **`Văn phòng`**.
+Pilot department seed label: **`Van phong`** (product UI keeps the Vietnamese label).
 
 - [ ] Smoke Inbox as Owner member and deny path for a user without membership; 7-day pilot watch.
+
+## Work UI compose redesign (ADR 0035)
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: work/control-surface
+Exit: Owner adds a Van phong member who then opens `/work`; create CTA + DETAIL StatusBadge + inline toolbar filters pass manual smoke.
+Evidence: ADR 0035 Accepted; W-UI-4..3 app code; Production migration `20260812140000_work_department_membership_admin.sql` applied; `db:types` regenerated; work-module-static green; RPCs verified on Production.
+
+- [ ] Manual exit: add Van phong member via `/work/team` → that user opens `/work`.
