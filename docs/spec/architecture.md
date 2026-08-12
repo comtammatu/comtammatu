@@ -29,9 +29,11 @@ flowchart LR
     agent -->|"branch presence"| web
 ```
 
-Two deployable runtimes: stateless web app + one branch-local print-agent per
-active branch. Supabase Cloud is the system of record; the print-agent adapts
-LAN printers only.
+Two deployable runtimes in this repository: stateless web app + one
+branch-local print-agent per active branch. Supabase Cloud is the system of
+record; the print-agent adapts LAN printers only. Native Android clients are
+a separate Git repository (`app`) per ADR 0038 — not a runtime of this
+monorepo.
 
 ## Technical Specifications
 
@@ -205,6 +207,7 @@ L0-gated per ADR 0012.
 
 ## Infrastructure Strategy
 
-Web + DB remain cloud-authoritative. D012 removes local-first POS / native
-rewrite from scope; D062 PWA shell and branch print adapter remain. Topology,
-secrets, CI, promotion: `docs/modules/infrastructure.md`.
+Web + DB remain cloud-authoritative. D012 still rejects local-first POS. This
+repo keeps the PWA and branch print-agent. Native Android clients (repository
+`app`) are ADR 0038 and optional per branch. Topology, secrets, CI, promotion:
+`docs/modules/infrastructure.md`.

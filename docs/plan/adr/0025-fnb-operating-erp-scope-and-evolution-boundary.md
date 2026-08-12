@@ -9,6 +9,9 @@
 **Supersedes informal wording** that treated external "Operating ERP" module
 catalogs as a target monorepo layout or a delivery backlog.
 
+**Amended by:** ADR 0038 (native Android clients in repository `app`; this
+ADR still forbids splitting `apps/web` and local-first POS).
+
 ## Context
 
 `restaurant_operations_system` is single-tenant and multi-branch for CTCP
@@ -80,7 +83,8 @@ Rejected until this ADR is superseded:
   consumer.
 - General-ledger or accounting UI inside the current Finance boundary (D020).
 - Treating the vision catalog as a sprint backlog.
-- Local-first POS or native rewrite (D012).
+- Local-first POS (D012). Native Android clients are ADR 0038 (separate
+  repository `app`); they are not a reason to split `apps/web`.
 
 ## Consequences
 

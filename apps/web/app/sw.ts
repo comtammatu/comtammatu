@@ -44,7 +44,7 @@ const isAuthedPath = (pathname: string) =>
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
-// Branch shell only (PWA-2, D062) — branch-scoped routes under
+// Branch shell only (PWA-2) — branch-scoped routes under
 // `/br/{branchId}` (dashboard/orders/profile/settings/shift/
 // stock/team), excluding the POS/KDS/pickup station apps. Stations keep their
 // existing offline handling untouched.

@@ -16,7 +16,7 @@ entry.
 **Net effect:** `apps/print-agent` supports LAN printers only; no USB or runtime transport switch. Canonical: `docs/modules/infrastructure.md`.
 
 ## D012: Lean operations
-**Net effect:** PWA is the operations client; no Local-first POS / native rewrite / non-consumer payment rail; floor role is `cashier`; shift-lead void exception per ADR 0023. Canonical: ADR 0023.
+**Net effect:** No local-first POS; no non-consumer payment rail; floor role is `cashier`; shift-lead void exception per ADR 0023. Native Android clients are allowed per ADR 0038 (PWA remains production in this repo). Canonical: ADR 0023, ADR 0038.
 
 ## D015: `main` is the Production track for CTCP Chén Sứ
 **Net effect:** `main` serves CTCP Chén Sứ only; sole Production stack is Vercel `comtammatu` / Supabase `enloyfnuerqgaqderbwb` / `web.comtammatu.com`. Canonical: `docs/agent/rules/database.md`, ADR 0016.
@@ -65,9 +65,6 @@ entry.
 
 ## D058: Two presentation planes, one contract
 **Net effect:** Management and Branch presentation differ in chrome but share domain contract, route identity, and shared records.
-
-## D062: PWA delivery
-**Net effect:** PWA is the operations client direction; native rewrite only when a hardware constraint cannot be solved with PWA.
 
 ## D064: POS capacity and quota
 **Net effect:** Manual quota and stock availability are distinct sources; NULL capacity fails open; hold tokens prevent double-count. Canonical: `docs/ref/operational-data-contract.md`.
