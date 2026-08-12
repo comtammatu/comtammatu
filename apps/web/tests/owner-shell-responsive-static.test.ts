@@ -398,10 +398,15 @@ test("Owner page-header actions use responsive named button sizes", () => {
     "apps/web/app/(protected)/hr/setup/page.tsx",
   ]) {
     const source = read(path);
-    assert.match(
+    assert.doesNotMatch(
       source,
       /<ResponsiveBackButton/,
-      `${path} must use ResponsiveBackButton for header back action`,
+      `${path} must not duplicate shell navigation with a header Back`,
+    );
+    assert.doesNotMatch(
+      source,
+      /backToHr/,
+      `${path} must not duplicate shell navigation with backToHr`,
     );
   }
 
@@ -465,9 +470,9 @@ test("Owner list-card actions use named touch variants without enlarging desktop
   );
 
   const employees = read("apps/web/app/(protected)/hr/employee-table.tsx");
-  assert.match(employees, /size=\{touch \? "touch" : "sm"\}/);
-  assert.match(employees, /renderEdit\(employee, true\)/);
-  assert.match(employees, /render: \(employee\) => renderEdit\(employee\)/);
+  assert.match(employees, /triggerSize=\{touch \? "touch" : "icon-sm"\}/);
+  assert.match(employees, /renderRowMenu\(employee, true\)/);
+  assert.match(employees, /render: \(employee\) => renderRowMenu\(employee\)/);
 
   const refunds = read("apps/web/app/(protected)/orders/refunds-client.tsx");
   assert.ok(

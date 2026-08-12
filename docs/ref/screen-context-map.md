@@ -48,7 +48,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | --- | --- | --- | --- | --- | --- |
 | **Inventory** `/inventory/*` (+ stock CN ở Branch) | Owner, Kế toán (PO/GRN), Kho Tổng, Bếp TT; BM trên `/br/…/stock` | Quyết định tồn, chứng từ mua/nhập/SX/DC/kiểm/hao — không dashboard bán hàng | Vào hub/list đúng plane → hoàn thành phiếu (nháp→chốt) → lỗi recoverable qua retry/confirm; lệch tồn qua stocktake/waste | Hiện tồn, trạng thái phiếu, ngoại lệ; ẩn doanh thu POS, lương, giá mua trên mặt Kho (giá thuộc Finance) | Parent §2.5–2.6; LIST + D1 document (`AppDialog variant="document"`); Branch touch `branch-touch-list`. Exemplar GRN list: `/inventory/grn`; stock home CN: `/br/[branchId]/stock` |
 | **Finance** `/finance/*` | Owner, Kế toán | Kết quả KD theo kỳ, AP/NCC, chi phí, ngân hàng, chỉ tiêu | Chọn kỳ/phạm vi → đọc công thức / xử lý ngoại lệ → drill `/revenue` `/expenses` `/bank-transactions` `/supplier-invoices` `/targets`; thiếu coverage → không bịa số | Hiện KPI công thức, tiền mặt, AP; ẩn POS/KDS, bảng công, tạo order | Parent §2.9 + §2.7; DASHBOARD `/finance`; REPORT exemplar `finance/revenue/page.tsx`; LIST AP §2.7 |
-| **HR** `/hr/*` | Owner (admin HR L0) | Hồ sơ · thời gian · lương · quy tắc · phân quyền | `/hr` strip việc cần xử lý → tab/profile → attendance/payroll/setup; blocker preflight trước khi chốt lương | Hiện hồ sơ/công/lương tiếng Việt; ẩn KPI bán hàng/kho, raw `pay_basis` | Parent §2.8–2.8d; LIST + SETTINGS-PANEL. Exemplar hồ sơ: `/hr` client |
+| **HR** `/hr/*` | Owner (admin HR L0) | Hồ sơ · thời gian · lương · quy tắc · phân quyền | `/hr` strip **Cần xử lý** (chỉ khi có việc) → tab/profile → attendance/payroll/setup; blocker preflight trước khi chốt lương | Hiện hồ sơ/công/lương tiếng Việt; ẩn KPI bán hàng/kho, raw `pay_basis` | Parent §2.8–2.8d; LIST + SETTINGS-PANEL. Exemplar hồ sơ: `/hr` client |
 | **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4 / §2.4A; LANDING hub + DASHBOARD command. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; dashboard: `…/dashboard/page.tsx` |
 | **Station** POS / KDS / Runner | Cashier / chef / runner (+ BM hỗ trợ) | Một việc realtime: bán · bump · served | Mở station → queue/cart sống → success bump/pay/serve → recall/retry khi lỡ | Hiện món/bàn/thời gian; ẩn giá (KDS/Runner), lương, tồn kho, báo cáo tháng | Parent §2.1–2.3; BOARD + blocks `pos-board` / `realtime-board` / `runner-board`. Exemplar: `pos/session-gate.tsx`, `kds/page.tsx`, `runner/page.tsx` |
 | **Public** `/login`, `/access-denied`, `/q/*`, `/r/*` | Khách hoặc người chưa vào đúng surface | Auth gate, gọi món token, HĐĐT, feedback QR | Token/URL → một CTA chính → xong hoặc fail-closed; hết hạn → trạng thái rõ, không sửa tiếp | Hiện bước giao dịch khách; ẩn shell Quản trị/CN, DataTable, dữ liệu nội bộ | Parent §2.10–2.12; `PUBLIC-WORKFLOW` / GATE. Blocks `public-transaction`, `public-feedback`, `system-gate`. Exemplar self-order: `q/[token]/page.tsx` |
@@ -323,7 +323,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ### 2.8. Hồ sơ nhân sự — `/hr`
 
-- **Gia đình:** HR (spine §1A). Entry → strip **Cần xử lý** / Thêm NV → success
+- **Gia đình:** HR (spine §1A). Entry → strip **Cần xử lý** (chỉ khi có việc) / Thêm NV → success
   onboard hoặc chuyển Thời gian/Lương/Quy tắc; recovery qua tab URL và deep
   link hồ sơ thiếu (không sửa lương tại attendance).
 - **Planes:** Company HR (`/hr/*`) = hồ sơ/tài khoản/công/lương/setup tenant. People ops CN = `/br/.../team` + `/shift/*`. Self-service = `/me/*` (ADR 0015).
@@ -331,9 +331,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** Owner / company HR theo ACL.
 - **Job:** Tab **Hồ sơ nhân viên** = NLĐ, HĐLĐ, chế độ lương, site/vị trí (không sửa quyền). Tab **Tài khoản & quyền** = đăng nhập, bật/tắt login, phân quyền (không sửa HĐ/lương/hồ sơ NLĐ).
 - **Goal:** Việc cần xử lý + onboard hồ sơ; chuyển **Tài khoản** để cấp quyền theo chức vụ hoặc tạo tài khoản độc lập.
-- **Workflow:** Tab hồ sơ (strip Cần xử lý → filter → bảng; **Thêm NV** gồm bước tạo đăng nhập) → tab accounts: **Cấp quyền cho hồ sơ** hoặc **Tạo tài khoản độc lập** → `/hr/staff/[id]/permissions` (`/hr/staff` redirect vào accounts).
+- **Workflow:** Tab hồ sơ (strip **Cần xử lý** chỉ khi có việc → filter → bảng; **Thêm NV** gồm bước tạo đăng nhập) → tab accounts: **Cấp quyền cho hồ sơ** hoặc **Tạo tài khoản độc lập** → `/hr/staff/[id]/permissions` (`/hr/staff` redirect vào accounts).
 - **Ưu tiên data:** Hồ sơ = tên/mã/vị trí/site/lương/HĐ/tình trạng. Tài khoản = tên/đăng nhập/quyền/trạng thái login; badge tài khoản độc lập khi chưa gắn `employees`. **Không:** KPI doanh thu/kho; bảng công tháng (`/hr/attendance`); raw `pay_basis`; sửa identity/chức vụ/CN của NV đã gắn hồ sơ từ tab Tài khoản.
-- **UX:** Desktop bảng + dialog; cùng IA mobile. Workspace = deep nav; mode = `AppPageTabs` + URL; short edit = `FormDialog`.
+- **UX:** Desktop bảng + dialog; cùng IA mobile. Workspace = deep nav; mode = `AppPageTabs` + URL; short edit = `FormDialog`. Cột hồ sơ là chữ; sửa vị trí/site/HĐ trong dialog, không Select trên hàng.
 
 ### 2.8a. Chấm công & ca — `/hr/attendance`
 
@@ -341,9 +341,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** company HR.
 - **Job:** Vào/ra hôm nay; duyệt kết ca & phép; bảng công tháng; phân ca tuần (kể cả VP).
 - **Goal:** Đầu ngày **Cần duyệt**; trong tháng **Bảng công**; gán ca trước khi NV chấm; không sửa lương.
-- **Workflow:** `today` → `approvals` → `timesheet` → `roster` (BM peer: `/br/{id}/shift/roster`).
-- **Show / NOT:** Pending trên Cần duyệt; site gồm VP; cảnh báo chưa phân ca. **Không:** phân quyền staff; chỉnh `pay_basis`; KPI bán.
-- **UX:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL.
+- **Workflow:** `today` → `approvals` → `timesheet` → `roster` (BM peer: `/br/{id}/shift/roster`). `tab=roster&branch=all` = LIST địa điểm (mở hàng ghi cùng `branch=`); site cụ thể = lưới tuần trong `AppListFrame`. `tab=approvals` = một LIST, toolbar đổi hàng đợi kết ca / phép (`panel`).
+- **Show / NOT:** Pending trên Cần duyệt; site gồm VP; cảnh báo chưa phân ca. **Không:** phân quyền staff; chỉnh `pay_basis`; KPI bán; empty-state bắt chọn Phạm vi khi `all`; selector chi nhánh thứ hai.
+- **UX:** Filter `date`/`site`/`tab`/`month`/`view`/`week` trên URL. Deep-nav đổi nhà; không Back về `/hr`.
 
 ### 2.8b. Bảng lương — `/hr/payroll`
 
@@ -351,7 +351,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Actor:** company HR có payroll capability.
 - **Job:** Tạm tính → đối soát → chốt; phân biệt Theo công vs Lương tháng. Thanh toán = Finance.
 - **Goal:** Preflight thiếu HĐ/`pay_basis`/entitlement → tính → điều chỉnh → chốt.
-- **Workflow:** Chọn tháng → blocker (chỉ khi có) → mở kỳ → điều chỉnh → chốt.
+- **Workflow:** Chọn tháng → blocker (chỉ khi có) → mở kỳ → điều chỉnh → chốt. CTA chốt trên `AppPageHeader.actions`. Preview một site được; **chốt kỳ** cần `branch=all`.
 - **Show / NOT:** Cột chế độ lương VI; khấu trừ nghỉ KL; link hồ sơ thiếu → `/hr?view=profile&salary=missing`; link công → `/hr/attendance?tab=timesheet`. **Không:** chấm giúp NV; đổi quyền; raw keys; preflight “sẵn sàng” khi không blocker.
 
 ### 2.8c. Thiết lập nhân sự — `/hr/setup`

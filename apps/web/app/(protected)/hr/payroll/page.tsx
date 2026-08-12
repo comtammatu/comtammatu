@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getVNMonthYear } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchPayrollBranches, fetchPayrollPreview } from "../payroll-actions";
@@ -96,19 +95,6 @@ export default async function PayrollPage({
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={copy.live.title}
-        description={copy.live.description}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ResponsiveBackButton
-              href={withHrBranchScope("/hr", branchScope)}
-            >
-              {copy.backToHr}
-            </ResponsiveBackButton>
-          </div>
-        }
-      />
       {previewResult.success && previewResult.data ? (
         <PayrollListClient
           preview={previewResult.data}
@@ -120,21 +106,27 @@ export default async function PayrollPage({
           selectedCalendarDay={selectedCalendarDay}
         />
       ) : (
-        <AppSection
-          tone="warning"
-          title={copy.live.loadFailedTitle}
-          description={copy.live.loadFailedDescription}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              <Link href={withHrBranchScope("/hr/payroll", branchScope)} />
-            }
+        <>
+          <AppPageHeader
+            title={copy.live.title}
+            description={copy.live.description}
+          />
+          <AppSection
+            tone="warning"
+            title={copy.live.loadFailedTitle}
+            description={copy.live.loadFailedDescription}
           >
-            {copy.live.retry}
-          </Button>
-        </AppSection>
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link href={withHrBranchScope("/hr/payroll", branchScope)} />
+              }
+            >
+              {copy.live.retry}
+            </Button>
+          </AppSection>
+        </>
       )}
     </AppPage>
   );

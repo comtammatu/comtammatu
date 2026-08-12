@@ -56,6 +56,11 @@ test("approvals leave queue has no nested leave-view tabs", () => {
   assert.match(leaveTableSource, /historyPanelOpen/);
   assert.match(leaveTableSource, /branchScope === "office"/);
   assert.match(pageSource, /historyPanelOpen=\{params\.panel === "leave-history"\}/);
+  assert.match(pageSource, /AttendanceApprovalsFrame/);
+  assert.doesNotMatch(
+    pageSource,
+    /TabsContent value="approvals"[\s\S]*<AppSection/,
+  );
 });
 
 test("calendar leaves remain visible for all employees", () => {
@@ -63,4 +68,52 @@ test("calendar leaves remain visible for all employees", () => {
     tableSource,
     /const employeeLeaves = selectedEmployeeId[\s\S]*\? calendarLeaves\.filter[\s\S]*: calendarLeaves/,
   );
+});
+
+test("approvals is one AppListFrame with a toolbar queue toggle", () => {
+  const frameSource = readFileSync(
+    new URL(
+      "../app/(protected)/hr/attendance/attendance-approvals-frame.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(
+    frameSource,
+    /<AppListFrame[\s\S]*toolbar=\{[\s\S]*<AppToolbar[\s\S]*variant="inline"/,
+  );
+  assert.match(frameSource, /ToggleGroup/);
+  assert.match(frameSource, /value === "checkout"/);
+  assert.match(frameSource, /setPanel\("leave"\)/);
+  assert.doesNotMatch(frameSource, /AppSection/);
+});
+
+test("roster when all is a site LIST that writes the same branch URL key", () => {
+  const siteListSource = readFileSync(
+    new URL("../app/(protected)/hr/attendance/roster-site-list.tsx", import.meta.url),
+    "utf8",
+  );
+  const rosterClientSource = readFileSync(
+    new URL("../lib/hr/roster/roster-week-client.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(pageSource, /RosterSiteList/);
+  assert.doesNotMatch(pageSource, /scopeRequired/);
+  assert.match(
+    pageSource,
+    /TabsContent value="roster"[\s\S]*RosterSiteList/,
+  );
+  assert.doesNotMatch(
+    pageSource,
+    /TabsContent value="roster"[\s\S]*AppEmptyState/,
+  );
+  assert.match(siteListSource, /withHrBranchScope\("\/hr\/attendance\?tab=roster"/);
+  assert.match(siteListSource, /params\.set\("week"/);
+  assert.doesNotMatch(siteListSource, /branches\[0\]/);
+  assert.doesNotMatch(siteListSource, /HrScopeSelector|siteOptions/);
+  assert.match(
+    rosterClientSource,
+    /<AppListFrame[\s\S]*toolbar=\{[\s\S]*<AppToolbar[\s\S]*variant="inline"/,
+  );
+  assert.doesNotMatch(rosterClientSource, /siteOptions|handleSiteChange/);
 });

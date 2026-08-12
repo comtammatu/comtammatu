@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ClipboardList as IconClipboardList,
+  Clock as IconClock,
   Eye as IconEye,
   EyeOff as IconEyeOff,
   Pencil as IconPencil,
@@ -12,10 +13,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
-import {
-  requiredBranchKindForPositionCode,
-  type BranchKind,
-} from "@comtammatu/shared/auth";
 import {
   ACTIONS_VI,
   BRANCH_VI,
@@ -56,17 +53,14 @@ import {
 } from "@/components/data-table/data-table";
 import { AppListFrame, AppToolbar } from "@/components/surface";
 import { useFormControlSize } from "@/components/form/control-size";
-import { AppDialog } from "@/components/form";
+import { z } from "zod";
+import { AppDialog, FormDialog, SelectField } from "@/components/form";
 import {
   RowActionsContextMenuItems,
   RowActionsMenu,
   type RowActionItem,
 } from "@/components/row-actions-menu";
-import {
-  CONTRACT_TYPE_OPTIONS,
-  EmployeeFormDialog,
-} from "./employee-form-dialog";
-import { updateEmployee } from "./actions";
+import { CONTRACT_TYPE_OPTIONS, EmployeeFormDialog } from "./employee-form-dialog";
 import {
   clearEmployeeShiftTaskOverride,
   type PositionTasksData,
@@ -95,17 +89,12 @@ const ALL_FILTER_VALUE = "all";
 const UNASSIGNED_POSITION_FILTER_VALUE = "unassigned-position";
 const SALARY_RECORDED_FILTER_VALUE = "salary-recorded";
 const SALARY_MISSING_FILTER_VALUE = "salary-missing";
-const NO_POSITION_VALUE = "__no_position__";
-const OFFICE_VALUE = "office";
 const NO_SHIFT_VALUE = "__no_shift__";
 
-interface PendingPlacement {
-  employee: EmployeeRow;
-  positionCode: string;
-  positionLabel: string;
-  requiredKind: BranchKind;
-  branchId: string;
-}
+const todayShiftSchema = z.object({
+  shiftId: z.string(),
+});
+type TodayShiftFormValues = z.infer<typeof todayShiftSchema>;
 
 export function EmployeeTable({
   employees,
@@ -129,8 +118,7 @@ export function EmployeeTable({
   const [taskEmployeeId, setTaskEmployeeId] = useState<number | null>(null);
   const [clearTaskEmployee, setClearTaskEmployee] =
     useState<EmployeeRow | null>(null);
-  const [pendingPlacement, setPendingPlacement] =
-    useState<PendingPlacement | null>(null);
+  const [shiftEmployee, setShiftEmployee] = useState<EmployeeRow | null>(null);
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [showInactive, setShowInactive] = useState(
     () => searchParams.get("inactive") === "1",
@@ -322,200 +310,19 @@ export function EmployeeTable({
     });
   }
 
-  function compatibleBranches(employee: EmployeeRow) {
-    const requiredKind = requiredBranchKindForPositionCode(
-      employee.profiles?.positions?.code,
-    );
-    if (requiredKind === null || requiredKind === "unassigned") return [];
-    return branches.filter((branch) => branch.branch_kind === requiredKind);
+  function positionLabel(employee: EmployeeRow) {
+    return employee.profiles?.positions?.label_vi ?? quickCopy.noPosition;
   }
 
-  function handlePositionChange(
-    employee: EmployeeRow,
-    positionCode: string,
-  ) {
-    const requiredKind = requiredBranchKindForPositionCode(positionCode);
-    const currentBranch = branches.find(
-      (branch) => branch.id === employee.profiles?.branch_id,
-    );
-
-    if (requiredKind === null || requiredKind === "unassigned") {
-      runQuickUpdate(
-        () =>
-          updateEmployee({
-            employeeId: employee.id,
-            positionCode,
-            branchId: null,
-          }),
-        quickCopy.positionUpdated,
-      );
-      return;
-    }
-
-    if (currentBranch?.branch_kind === requiredKind) {
-      runQuickUpdate(
-        () =>
-          updateEmployee({
-            employeeId: employee.id,
-            positionCode,
-            branchId: currentBranch.id,
-          }),
-        quickCopy.positionUpdated,
-      );
-      return;
-    }
-
-    const availableBranches = branches.filter(
-      (branch) => branch.branch_kind === requiredKind,
-    );
-    const firstBranch = availableBranches[0];
-    if (!firstBranch) {
-      toast.error(quickCopy.noCompatibleWorkplace);
-      return;
-    }
-
-    setPendingPlacement({
-      employee,
-      positionCode,
-      positionLabel:
-        positionOptions.find((position) => position.value === positionCode)
-          ?.label ?? positionCode,
-      requiredKind,
-      branchId: String(firstBranch.id),
-    });
+  function branchLabel(employee: EmployeeRow) {
+    return employee.profiles?.branches?.name ?? quickCopy.office;
   }
 
-  function renderPositionSelect(employee: EmployeeRow, touch = false) {
-    const current = employee.profiles?.positions?.code ?? NO_POSITION_VALUE;
-    const currentOption = positionOptions.find(
-      (position) => position.value === current,
-    );
-    return (
-      <Select
-        value={current}
-        onValueChange={(positionCode) =>
-          handlePositionChange(employee, positionCode)
-        }
-        disabled={!canManage || isPending}
-      >
-        <SelectTrigger
-          size={touch ? "touch" : "sm"}
-          className={touch ? "w-full" : "min-w-36"}
-          aria-label={`Chức vụ của ${employee.profiles?.full_name ?? "nhân viên"}`}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {current === NO_POSITION_VALUE ? (
-            <SelectItem value={NO_POSITION_VALUE} disabled>
-              {quickCopy.noPosition}
-            </SelectItem>
-          ) : null}
-          {currentOption &&
-          !positionOptions.some(
-            (position) => position.value === currentOption.value,
-          ) ? (
-            <SelectItem value={currentOption.value} disabled>
-              {currentOption.label}
-            </SelectItem>
-          ) : null}
-          {positionOptions.map((position) => (
-            <SelectItem key={position.value} value={position.value}>
-              {position.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  function renderBranchSelect(employee: EmployeeRow, touch = false) {
-    const requiredKind = requiredBranchKindForPositionCode(
-      employee.profiles?.positions?.code,
-    );
-    const current = employee.profiles?.branch_id?.toString() ?? OFFICE_VALUE;
-    const options = compatibleBranches(employee);
-    const currentBranch = branches.find(
-      (branch) => String(branch.id) === current,
-    );
-    return (
-      <Select
-        value={current}
-        onValueChange={(value) =>
-          runQuickUpdate(
-            () =>
-              updateEmployee({
-                employeeId: employee.id,
-                branchId: value === OFFICE_VALUE ? null : Number(value),
-              }),
-            quickCopy.branchUpdated,
-          )
-        }
-        disabled={!canManage || isPending || requiredKind === "unassigned"}
-      >
-        <SelectTrigger
-          size={touch ? "touch" : "sm"}
-          className={touch ? "w-full" : "min-w-36"}
-          aria-label={`Chi nhánh của ${employee.profiles?.full_name ?? "nhân viên"}`}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {requiredKind === null || current === OFFICE_VALUE ? (
-            <SelectItem value={OFFICE_VALUE}>{quickCopy.office}</SelectItem>
-          ) : null}
-          {currentBranch &&
-          !options.some((branch) => branch.id === currentBranch.id) ? (
-            <SelectItem value={String(currentBranch.id)} disabled>
-              {currentBranch.name}
-            </SelectItem>
-          ) : null}
-          {options.map((branch) => (
-            <SelectItem key={branch.id} value={String(branch.id)}>
-              {branch.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  function renderShiftSelect(employee: EmployeeRow, touch = false) {
+  function todayShiftLabel(employee: EmployeeRow) {
     const shiftId = assignmentByEmployee.get(employee.id);
-    return (
-      <Select
-        value={shiftId?.toString() ?? NO_SHIFT_VALUE}
-        onValueChange={(value) =>
-          runQuickUpdate(
-            () =>
-              setEmployeeTodayShiftAssignment({
-                employeeId: employee.id,
-                branchId: employee.profiles?.branch_id ?? null,
-                shiftId: value === NO_SHIFT_VALUE ? null : Number(value),
-              }),
-            quickCopy.shiftUpdated,
-          )
-        }
-        disabled={!canAssignShift || !employee.is_active || isPending}
-      >
-        <SelectTrigger
-          size={touch ? "touch" : "sm"}
-          className={touch ? "w-full" : "min-w-36"}
-          aria-label={`Ca hôm nay của ${employee.profiles?.full_name ?? "nhân viên"}`}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_SHIFT_VALUE}>{quickCopy.noShift}</SelectItem>
-          {shifts.map((shift) => (
-            <SelectItem key={shift.id} value={String(shift.id)}>
-              {shift.name} ({shift.start_time.slice(0, 5)}–
-              {shift.end_time.slice(0, 5)})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
+    const shift = shifts.find((item) => item.id === shiftId);
+    if (!shift) return quickCopy.noShift;
+    return `${shift.name} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)})`;
   }
 
   function taskRow(employee: EmployeeRow) {
@@ -535,58 +342,56 @@ export function EmployeeTable({
     };
   }
 
-  function taskActions(employee: EmployeeRow): RowActionItem[] {
+  function rowActions(employee: EmployeeRow): RowActionItem[] {
     const task = taskRow(employee);
-    return [
-      {
+    const items: RowActionItem[] = [];
+    if (canManage) {
+      items.push({
+        key: "edit",
+        label: ACTIONS_VI.edit,
+        icon: <IconPencil />,
+        onSelect: () => setEditEmployee(employee),
+      });
+    }
+    if (canAssignShift) {
+      items.push({
+        key: "today-shift",
+        label: quickCopy.todayShift,
+        icon: <IconClock />,
+        disabled: !employee.is_active || isPending,
+        onSelect: () => setShiftEmployee(employee),
+      });
+    }
+    if (canManageTasks) {
+      items.push({
         key: "configure-tasks",
         label: task.hasOverride
           ? messages.hr.client.positionTasks.editTemplate
           : messages.hr.client.positionTasks.createEmployeeTemplate,
         icon: <IconClipboardList />,
-        disabled: !canManageTasks || !positionTasksData,
+        disabled: !positionTasksData,
         onSelect: () => setTaskEmployeeId(employee.id),
-      },
-      ...(task.hasOverride
-        ? [
-            {
-              key: "clear-tasks",
-              label: quickCopy.usePositionTasks,
-              destructive: true,
-              separatorBefore: true,
-              onSelect: () => setClearTaskEmployee(employee),
-            } satisfies RowActionItem,
-          ]
-        : []),
-    ];
+      });
+      if (task.hasOverride) {
+        items.push({
+          key: "clear-tasks",
+          label: quickCopy.usePositionTasks,
+          destructive: true,
+          separatorBefore: true,
+          onSelect: () => setClearTaskEmployee(employee),
+        });
+      }
+    }
+    return items;
   }
 
-  function renderTaskMenu(employee: EmployeeRow, touch = false) {
-    const task = taskRow(employee);
+  function renderRowMenu(employee: EmployeeRow, touch = false) {
+    const items = rowActions(employee);
+    if (items.length === 0) return null;
     return (
       <RowActionsMenu
-        items={taskActions(employee)}
-        label={`Việc trong ca của ${employee.profiles?.full_name ?? "nhân viên"}`}
-        triggerSize={touch ? "touch" : "sm"}
-        triggerLabel={`${task.hasOverride ? quickCopy.employeeTemplateShort : quickCopy.positionTemplateShort} · ${task.count}`}
-        triggerClassName={touch ? "w-full justify-between" : undefined}
-        align="start"
-      />
-    );
-  }
-
-  function renderEdit(employee: EmployeeRow, touch = false) {
-    return (
-      <RowActionsMenu
-        items={[
-          {
-            key: "edit",
-            label: ACTIONS_VI.edit,
-            icon: <IconPencil />,
-            onSelect: () => setEditEmployee(employee),
-          },
-        ]}
-        label={`Thao tác với ${employee.profiles?.full_name ?? "nhân viên"}`}
+        items={items}
+        label={`${FORM_VI.action} ${employee.profiles?.full_name ?? STAFF_VI.long}`}
         triggerSize={touch ? "touch" : "icon-sm"}
         triggerLabel={touch ? ACTIONS_VI.edit : undefined}
       />
@@ -623,22 +428,25 @@ export function EmployeeTable({
     {
       key: "role",
       header: STAFF_VI.role,
-      render: (employee) => renderPositionSelect(employee),
+      render: (employee) => positionLabel(employee),
     },
     {
       key: "branch",
       header: BRANCH_VI.long,
-      render: (employee) => renderBranchSelect(employee),
+      render: (employee) => branchLabel(employee),
     },
     {
       key: "todayShift",
       header: quickCopy.todayShift,
-      render: (employee) => renderShiftSelect(employee),
+      render: (employee) => todayShiftLabel(employee),
     },
     {
       key: "shiftTasks",
       header: quickCopy.shiftTasks,
-      render: (employee) => renderTaskMenu(employee),
+      render: (employee) => {
+        const task = taskRow(employee);
+        return `${task.hasOverride ? quickCopy.employeeTemplateShort : quickCopy.positionTemplateShort} · ${task.count}`;
+      },
     },
     ...(canManage
       ? [
@@ -661,13 +469,13 @@ export function EmployeeTable({
       header: messages.hr.client.employmentStatus,
       render: renderStatus,
     },
-    ...(canManage
+    ...(canManage || canAssignShift || canManageTasks
       ? [
           {
             key: "actions",
             header: <span className="sr-only">{FORM_VI.action}</span>,
             className: "w-20 text-right",
-            render: (employee) => renderEdit(employee),
+            render: (employee) => renderRowMenu(employee),
           } satisfies DataTableColumn<EmployeeRow>,
         ]
       : []),
@@ -828,14 +636,15 @@ export function EmployeeTable({
                   #{index + 1} · {employee.profiles?.full_name ?? "—"}
                 </ItemTitle>
                 <ItemDescription className="line-clamp-none text-sm leading-6">
-                  {employee.employee_code ?? "—"}
+                  {[
+                    employee.employee_code,
+                    positionLabel(employee),
+                    branchLabel(employee),
+                    todayShiftLabel(employee),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </ItemDescription>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {renderPositionSelect(employee, true)}
-                  {renderBranchSelect(employee, true)}
-                  {renderShiftSelect(employee, true)}
-                  {renderTaskMenu(employee, true)}
-                </div>
                 <div className="flex flex-wrap gap-2">
                   {canManage ? (
                     <Badge variant="outline">
@@ -851,26 +660,17 @@ export function EmployeeTable({
               </ItemContent>
               <ItemActions className="flex flex-col items-end gap-2">
                 {renderStatus(employee)}
-                {canManage ? renderEdit(employee, true) : null}
+                {canManage || canAssignShift || canManageTasks
+                  ? renderRowMenu(employee, true)
+                  : null}
               </ItemActions>
             </Item>
           )}
-          renderRowContextMenu={
-            canManage
-              ? (employee) => (
-                  <RowActionsContextMenuItems
-                    items={[
-                      {
-                        key: "edit",
-                        label: ACTIONS_VI.edit,
-                        icon: <IconPencil />,
-                        onSelect: () => setEditEmployee(employee),
-                      },
-                    ]}
-                  />
-                )
-              : undefined
-          }
+          renderRowContextMenu={(employee) => {
+            const items = rowActions(employee);
+            if (items.length === 0) return null;
+            return <RowActionsContextMenuItems items={items} />;
+          }}
         />
       </AppListFrame>
       {canManage ? (
@@ -883,84 +683,51 @@ export function EmployeeTable({
           positionOptions={positionOptions}
         />
       ) : null}
-      <AppDialog
-        open={pendingPlacement != null}
-        onOpenChange={(open) => !open && setPendingPlacement(null)}
-        title={quickCopy.transferWorkplaceTitle}
-        description={
-          pendingPlacement
-            ? quickCopy.transferWorkplaceDescription(
-                pendingPlacement.employee.profiles?.full_name ?? "—",
-                pendingPlacement.positionLabel,
-              )
-            : undefined
-        }
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size={controlSize === "touch" ? "touch" : "default"}
-              disabled={isPending}
-              onClick={() => setPendingPlacement(null)}
-            >
-              {quickCopy.cancel}
-            </Button>
-            <Button
-              type="button"
-              size={controlSize === "touch" ? "touch" : "default"}
-              disabled={isPending || pendingPlacement == null}
-              onClick={() => {
-                if (!pendingPlacement) return;
-                const placement = pendingPlacement;
-                setPendingPlacement(null);
-                runQuickUpdate(
-                  () =>
-                    updateEmployee({
-                      employeeId: placement.employee.id,
-                      positionCode: placement.positionCode,
-                      branchId: Number(placement.branchId),
-                    }),
-                  quickCopy.positionUpdated,
-                );
-              }}
-            >
-              {quickCopy.transferWorkplaceConfirm}
-            </Button>
-          </div>
-        }
-      >
-        {pendingPlacement ? (
-          <Select
-            value={pendingPlacement.branchId}
-            onValueChange={(branchId) =>
-              setPendingPlacement((current) =>
-                current ? { ...current, branchId } : current,
-              )
-            }
-          >
-            <SelectTrigger
-              size={controlSize === "touch" ? "touch" : "default"}
-              className="w-full"
-              aria-label={quickCopy.transferWorkplaceLabel}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {branches
-                .filter(
-                  (branch) =>
-                    branch.branch_kind === pendingPlacement.requiredKind,
-                )
-                .map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-      </AppDialog>
+      {canAssignShift && shiftEmployee ? (
+        <FormDialog<TodayShiftFormValues>
+          open
+          onOpenChange={(open) => !open && setShiftEmployee(null)}
+          title={quickCopy.todayShift}
+          schema={todayShiftSchema}
+          defaultValues={{
+            shiftId:
+              assignmentByEmployee.get(shiftEmployee.id)?.toString() ??
+              NO_SHIFT_VALUE,
+          }}
+          entityKey={shiftEmployee.id}
+          submitLabel={quickCopy.saveTodayShift}
+          onSubmit={async (values) =>
+            setEmployeeTodayShiftAssignment({
+              employeeId: shiftEmployee.id,
+              branchId: shiftEmployee.profiles?.branch_id ?? null,
+              shiftId:
+                values.shiftId === NO_SHIFT_VALUE
+                  ? null
+                  : Number(values.shiftId),
+            })
+          }
+          successMessage={quickCopy.shiftUpdated}
+          onSuccess={() => {
+            setShiftEmployee(null);
+            router.refresh();
+          }}
+        >
+          {(form) => (
+            <SelectField
+              control={form.control}
+              name="shiftId"
+              label={quickCopy.todayShift}
+              options={[
+                { value: NO_SHIFT_VALUE, label: quickCopy.noShift },
+                ...shifts.map((shift) => ({
+                  value: String(shift.id),
+                  label: `${shift.name} (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)})`,
+                })),
+              ]}
+            />
+          )}
+        </FormDialog>
+      ) : null}
       {positionTasksData ? (
         <EmployeeTaskOverrideDialog
           employeeId={taskEmployeeId}

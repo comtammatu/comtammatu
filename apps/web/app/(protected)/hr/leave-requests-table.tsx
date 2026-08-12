@@ -70,6 +70,7 @@ interface LeaveRequestsTableProps {
   branches: BranchOption[];
   branchScope: HrBranchScope;
   historyPanelOpen?: boolean;
+  embedded?: boolean;
 }
 
 const copy = messages.hr.leave;
@@ -95,6 +96,7 @@ export function LeaveRequestsTable({
   branches,
   branchScope,
   historyPanelOpen = false,
+  embedded = false,
 }: LeaveRequestsTableProps) {
   const controlSize = useFormControlSize();
   const router = useRouter();
@@ -127,7 +129,7 @@ export function LeaveRequestsTable({
     (open: boolean) => {
       const params = new URLSearchParams(searchParams.toString());
       if (open) params.set("panel", "leave-history");
-      else params.delete("panel");
+      else params.set("panel", "leave");
       const q = params.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
     },
@@ -430,59 +432,66 @@ export function LeaveRequestsTable({
     );
   }
 
+  const pendingBody =
+    pendingRows.length === 0 && !isPending ? (
+      <AppEmptyState
+        title={copy.emptyPendingTitle}
+        description={copy.emptyPendingDescription}
+        icon={<IconCalendarX />}
+      />
+    ) : pendingRows.length === 0 ? (
+      <div className="flex items-center justify-center py-4">
+        <Spinner />
+      </div>
+    ) : (
+      <DataTable
+        columns={pendingColumns}
+        data={pendingRows}
+        getRowKey={(request) => request.id}
+        mobileBreakpoint={1024}
+        rowClassName={() => (isPending ? "opacity-60" : undefined)}
+        mobileCardRender={(request) =>
+          renderLeaveMobileCard(
+            request,
+            renderPendingActions(request, true),
+          )
+        }
+      />
+    );
+
   return (
     <>
-      <AppListFrame
-        contentScroll
-        toolbar={
-          <AppToolbar
-            variant="inline"
-            actions={
-              <>
-                <span className="text-sm text-muted-foreground">
-                  {copy.pendingTab(pendingRows.length)}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size={controlSize === "touch" ? "touch" : "default"}
-                  onClick={() => setHistoryPanelOpen(true)}
-                >
-                  <IconHistory data-icon="inline-start" />
-                  {copy.historyAction}
-                </Button>
-                {isPending ? <Spinner /> : null}
-              </>
-            }
-          />
-        }
-      >
-        {pendingRows.length === 0 && !isPending ? (
-          <AppEmptyState
-            title={copy.emptyPendingTitle}
-            description={copy.emptyPendingDescription}
-            icon={<IconCalendarX />}
-          />
-        ) : pendingRows.length === 0 ? (
-          <div className="flex items-center justify-center py-4">
-            <Spinner />
-          </div>
-        ) : (
-          <DataTable
-            columns={pendingColumns}
-            data={pendingRows}
-            getRowKey={(request) => request.id}
-            mobileBreakpoint={1024}
-            rowClassName={() => (isPending ? "opacity-60" : undefined)}
-            mobileCardRender={(request) =>
-              renderLeaveMobileCard(
-                request,
-                renderPendingActions(request, true),
-              )
-            }
-          />
-        )}
-      </AppListFrame>
+      {embedded ? (
+        pendingBody
+      ) : (
+        <AppListFrame
+          contentScroll
+          toolbar={
+            <AppToolbar
+              variant="inline"
+              actions={
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {copy.pendingTab(pendingRows.length)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size={controlSize === "touch" ? "touch" : "default"}
+                    onClick={() => setHistoryPanelOpen(true)}
+                  >
+                    <IconHistory data-icon="inline-start" />
+                    {copy.historyAction}
+                  </Button>
+                  {isPending ? <Spinner /> : null}
+                </>
+              }
+            />
+          }
+        >
+          {pendingBody}
+        </AppListFrame>
+      )}
 
       <AppDialog
         open={historyPanelOpen}

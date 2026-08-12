@@ -40,68 +40,66 @@ export function HrAttentionStrip({
   const hasWork =
     summary.pendingApprovals > 0 || summary.missingContractOrSalary > 0;
 
+  if (!hasWork) return null;
+
   return (
     <AppSection title={copy.title} description={copy.description}>
-      {!hasWork ? (
-        <p className="text-sm text-muted-foreground">{copy.empty}</p>
-      ) : (
-        <ItemGroup className="gap-2">
-          {summary.pendingApprovals > 0 ? (
-            <Item variant="outline" className="bg-card">
-              <IconClipboardCheck className="size-5 text-primary" />
-              <ItemContent>
-                <ItemTitle>{copy.approvals(summary.pendingApprovals)}</ItemTitle>
-                <ItemDescription>
-                  {messages.hr.client.checkoutApprovalsHint}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  size={actionSize}
-                  render={
-                    <Link
-                      href={withHrBranchScope(
-                        "/hr/attendance?tab=approvals",
-                        branchScope,
-                      )}
-                    />
-                  }
-                >
-                  {copy.approvalsAction}
-                </Button>
-              </ItemActions>
-            </Item>
-          ) : null}
-          {summary.missingContractOrSalary > 0 ? (
-            <Item variant="outline" className="bg-card">
-              <IconFileWarning className="size-5 text-destructive" />
-              <ItemContent>
-                <ItemTitle>
-                  {copy.missingContract(summary.missingContractOrSalary)}
-                </ItemTitle>
-                <ItemDescription>{copy.missingContractHint}</ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  variant="outline"
-                  size={actionSize}
-                  render={
-                    <Link
-                      href={withHrBranchScope(
-                        "/hr?salary=missing",
-                        branchScope,
-                      )}
-                    />
-                  }
-                >
-                  <IconAlertTriangle data-icon="inline-start" />
-                  {copy.missingContractAction}
-                </Button>
-              </ItemActions>
-            </Item>
-          ) : null}
-        </ItemGroup>
-      )}
+      <ItemGroup className="gap-2">
+        {summary.pendingApprovals > 0 ? (
+          <Item variant="outline" className="bg-card">
+            <IconClipboardCheck className="size-5 text-primary" />
+            <ItemContent>
+              <ItemTitle>{copy.approvals(summary.pendingApprovals)}</ItemTitle>
+              <ItemDescription>
+                {messages.hr.client.checkoutApprovalsHint}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Button
+                size={actionSize}
+                render={
+                  <Link
+                    href={withHrBranchScope(
+                      "/hr/attendance?tab=approvals",
+                      branchScope,
+                    )}
+                  />
+                }
+              >
+                {copy.approvalsAction}
+              </Button>
+            </ItemActions>
+          </Item>
+        ) : null}
+        {summary.missingContractOrSalary > 0 ? (
+          <Item variant="outline" className="bg-card">
+            <IconFileWarning className="size-5 text-destructive" />
+            <ItemContent>
+              <ItemTitle>
+                {copy.missingContract(summary.missingContractOrSalary)}
+              </ItemTitle>
+              <ItemDescription>{copy.missingContractHint}</ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <Button
+                variant="outline"
+                size={actionSize}
+                render={
+                  <Link
+                    href={withHrBranchScope(
+                      "/hr?salary=missing",
+                      branchScope,
+                    )}
+                  />
+                }
+              >
+                <IconAlertTriangle data-icon="inline-start" />
+                {copy.missingContractAction}
+              </Button>
+            </ItemActions>
+          </Item>
+        ) : null}
+      </ItemGroup>
     </AppSection>
   );
 }

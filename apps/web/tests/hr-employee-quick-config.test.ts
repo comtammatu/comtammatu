@@ -14,14 +14,20 @@ test("employee list exposes capability-gated quick configuration", () => {
   for (const key of ["role", "branch", "todayShift", "shiftTasks"]) {
     assert.match(table, new RegExp(`key: "${key}"`));
   }
-  assert.match(table, /handlePositionChange\(employee, positionCode\)/);
-  assert.match(
-    table,
-    /branchId: value === OFFICE_VALUE \? null : Number\(value\)/,
-  );
+  assert.match(table, /function positionLabel/);
+  assert.match(table, /function branchLabel/);
+  assert.match(table, /function todayShiftLabel/);
+  assert.match(table, /key: "today-shift"/);
+  assert.match(table, /setShiftEmployee\(employee\)/);
   assert.match(table, /setEmployeeTodayShiftAssignment/);
+  assert.match(table, /<FormDialog<TodayShiftFormValues>/);
   assert.match(table, /<EmployeeTaskOverrideDialog/);
   assert.match(table, /<AppDialog[\s\S]*quickCopy\.usePositionTasksTitle/);
+  assert.match(table, /function rowActions/);
+  assert.match(table, /renderRowContextMenu/);
+  assert.doesNotMatch(table, /function renderPositionSelect/);
+  assert.doesNotMatch(table, /function renderBranchSelect/);
+  assert.doesNotMatch(table, /function renderShiftSelect/);
   assert.match(tasks, /export function EmployeeTaskOverrideDialog/);
   assert.match(page, /PERMISSION_KEYS\.HR_MANAGE_EMPLOYEE/);
   assert.match(page, /PERMISSION_KEYS\.HR_ASSIGN_SHIFT/);
@@ -32,26 +38,13 @@ test("employee list exposes capability-gated quick configuration", () => {
   );
 });
 
-test("position quick change supports cross-site employee transfers", () => {
-  const table = read("app/(protected)/hr/employee-table.tsx");
-  const positionSelect = table.slice(
-    table.indexOf("function renderPositionSelect"),
-    table.indexOf("function renderBranchSelect"),
-  );
-  const positionChange = table.slice(
-    table.indexOf("function handlePositionChange"),
-    table.indexOf("function renderPositionSelect"),
-  );
-
-  assert.doesNotMatch(positionSelect, /compatiblePositions\(employee\)/);
-  assert.match(positionSelect, /positionOptions\.map/);
-  assert.match(positionSelect, /handlePositionChange\(employee, positionCode\)/);
-  assert.match(positionChange, /requiredBranchKindForPositionCode/);
+test("employee edit dialog keeps cross-site transfer on position change", () => {
+  const form = read("app/(protected)/hr/employee-form-dialog.tsx");
+  assert.match(form, /requiredBranchKindForPositionCode/);
   assert.match(
-    positionChange,
-    /updateEmployee\(\{[\s\S]*positionCode,[\s\S]*branchId:/,
+    form,
+    /updateEmployee\(\{[\s\S]*positionCode:[\s\S]*branchId:/,
   );
-  assert.match(table, /quickCopy\.transferWorkplaceTitle/);
 });
 
 test("today quick assignment preserves the rest of the week", () => {

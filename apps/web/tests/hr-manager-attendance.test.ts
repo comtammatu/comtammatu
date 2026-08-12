@@ -60,7 +60,7 @@ test("Company HR attendance is a dedicated clock and approval surface", () => {
   );
   assert.match(
     attendancePageSource,
-    /<AttendanceTable[\s\S]*branches=\{branches\}[\s\S]*\/>[\s\S]*<LeaveRequestsTable[\s\S]*branches=\{storeBranches\}[\s\S]*branchScope=\{branchScope\}[\s\S]*historyPanelOpen/,
+    /<AttendanceApprovalsFrame[\s\S]*<LeaveRequestsTable[\s\S]*branches=\{storeBranches\}[\s\S]*branchScope=\{branchScope\}[\s\S]*historyPanelOpen/,
     "day-work and leave review should share their dedicated route",
   );
   assert.match(

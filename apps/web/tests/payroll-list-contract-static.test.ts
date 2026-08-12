@@ -129,7 +129,8 @@ test("payroll calendar exposes read-only detail for a selected day", () => {
 test("snapshot remains the period action rather than a competing toolbar action", () => {
   assert.match(client, /preview\.snapshot\?\.status === "paid"/);
   assert.match(client, /const snapshotAction =/);
-  assert.match(client, /action=\{snapshotAction\}/);
+  assert.match(client, /<AppPageHeader[\s\S]*actions=\{snapshotAction\}/);
+  assert.doesNotMatch(client, /action=\{snapshotAction\}/);
   assert.match(client, /payrollCopy\.server\.snapshotUnavailable/);
 });
 

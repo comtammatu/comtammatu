@@ -56,6 +56,18 @@ test("Company HR uses one URL-owned branch scope across every workspace", () => 
   assert.match(actions, /if \(!branch\) return \{ success: true, data: \[\] \}/);
 });
 
+test("roster site LIST writes branch= and never defaults to the first site", () => {
+  const siteList = read("attendance/roster-site-list.tsx");
+  const rosterClient = readFileSync(
+    join(import.meta.dirname, "../lib/hr/roster/roster-week-client.tsx"),
+    "utf8",
+  );
+  assert.match(siteList, /withHrBranchScope\("\/hr\/attendance\?tab=roster"/);
+  assert.doesNotMatch(siteList, /branches\[0\]/);
+  assert.doesNotMatch(siteList, /HrScopeSelector|setSelectedBranch/);
+  assert.doesNotMatch(rosterClient, /siteOptions/);
+});
+
 test("HR navigation preserves the canonical branch scope", () => {
   const shell = readFileSync(
     join(import.meta.dirname, "../app/components/control-surface-shell.tsx"),

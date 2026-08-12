@@ -14,16 +14,13 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table";
-import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppListFrame,
+  AppToolbar,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import { RosterDayCell } from "./roster-day-cell";
 import {
@@ -43,14 +40,8 @@ import {
 } from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.hr.roster;
 
-export type RosterSiteOption = {
-  branchId: number | null;
-  label: string;
-};
-
 export function RosterWeekClient({
   branchId,
-  siteOptions,
   weekStart,
   data,
   canAssign,
@@ -58,7 +49,6 @@ export function RosterWeekClient({
   urlTab,
 }: {
   branchId: number | null;
-  siteOptions?: RosterSiteOption[];
   weekStart: string;
   data: RosterWeekData;
   canAssign: boolean;
@@ -78,7 +68,6 @@ export function RosterWeekClient({
     scheduleEmployee,
     selectedSchedule,
     scheduleLabel,
-    handleSiteChange,
     handleWeekShift,
     handleAddShift,
     handleRemoveShift,
@@ -163,62 +152,46 @@ export function RosterWeekClient({
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <AppToolbar>
-        {siteOptions?.length ? (
-          <Select
-            value={branchId == null ? "office" : String(branchId)}
-            onValueChange={handleSiteChange}
-            disabled={isPending}
-          >
-            <SelectTrigger className="w-full min-w-48 sm:w-auto">
-              <SelectValue placeholder={copy.siteFilterLabel} />
-            </SelectTrigger>
-            <SelectContent>
-              {siteOptions.map((site) => (
-                <SelectItem
-                  key={site.branchId ?? "office"}
-                  value={
-                    site.branchId == null ? "office" : String(site.branchId)
-                  }
+      <AppListFrame
+        title={copy.title}
+        description={copy.description}
+        contentScroll
+        toolbar={
+          <AppToolbar
+            variant="inline"
+            actions={
+              <div className="flex min-w-0 items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={isTouchLayout ? "touch" : "default"}
+                  onClick={() => handleWeekShift(-7)}
+                  disabled={isPending}
+                  aria-label={copy.previousWeek}
                 >
-                  {site.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
-
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size={isTouchLayout ? "touch" : "default"}
-            onClick={() => handleWeekShift(-7)}
-            disabled={isPending}
-            aria-label={copy.previousWeek}
-          >
-            <IconChevronLeft className="size-4" />
-          </Button>
-          <div className="min-w-0 text-center text-sm font-medium">
-            <div className="text-muted-foreground text-xs">
-              {copy.weekLabel}
-            </div>
-            <div>{formatRosterWeekRange(weekStart)}</div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size={isTouchLayout ? "touch" : "default"}
-            onClick={() => handleWeekShift(7)}
-            disabled={isPending}
-            aria-label={copy.nextWeek}
-          >
-            <IconChevronRight className="size-4" />
-          </Button>
-        </div>
-      </AppToolbar>
-
-      <AppSection contentFlush>
+                  <IconChevronLeft className="size-4" />
+                </Button>
+                <div className="min-w-0 text-center text-sm font-medium">
+                  <div className="text-muted-foreground text-xs">
+                    {copy.weekLabel}
+                  </div>
+                  <div>{formatRosterWeekRange(weekStart)}</div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={isTouchLayout ? "touch" : "default"}
+                  onClick={() => handleWeekShift(7)}
+                  disabled={isPending}
+                  aria-label={copy.nextWeek}
+                >
+                  <IconChevronRight className="size-4" />
+                </Button>
+              </div>
+            }
+          />
+        }
+      >
         {data.employees.length === 0 ? (
           <AppEmptyState
             mode="no-data"
@@ -263,7 +236,7 @@ export function RosterWeekClient({
             )}
           />
         )}
-      </AppSection>
+      </AppListFrame>
 
       {isPending ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">

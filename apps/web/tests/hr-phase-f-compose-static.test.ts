@@ -60,3 +60,19 @@ test("People profile filters bind q/position/salary/contract/inactive to URL", (
   assert.match(source, /inactive/);
   assert.match(source, /salary/);
 });
+
+test("Owner roster week grid uses AppListFrame inline toolbar", () => {
+  const roster = read("lib/hr/roster/roster-week-client.tsx");
+  assert.match(
+    roster,
+    /<AppListFrame[\s\S]*toolbar=\{[\s\S]*<AppToolbar[\s\S]*variant="inline"/,
+  );
+  assert.doesNotMatch(roster, /<AppToolbar\s+sticky\b/);
+  assert.doesNotMatch(roster, /siteOptions/);
+});
+
+test("Cần xử lý lane unmounts when there is no work", () => {
+  const strip = read("app/(protected)/hr/hr-attention-strip.tsx");
+  assert.match(strip, /if \(!hasWork\) return null/);
+  assert.doesNotMatch(strip, /copy\.empty/);
+});

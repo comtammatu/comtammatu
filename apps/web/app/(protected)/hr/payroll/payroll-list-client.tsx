@@ -48,6 +48,7 @@ import {
 } from "@/components/data-table/data-table";
 import {
   AppListFrame,
+  AppPageHeader,
   AppSection,
   AppToolbar,
 } from "@/components/surface";
@@ -641,6 +642,11 @@ export function PayrollListClient({
 
   return (
     <>
+      <AppPageHeader
+        title={copy.title}
+        description={copy.description}
+        actions={snapshotAction}
+      />
       {!isLocked && hasPreflightBlockers ? (
         <AppSection
           tone="warning"
@@ -691,7 +697,6 @@ export function PayrollListClient({
                 : payrollCopy.server.snapshotUnavailable
         }
         headerHint={isLocked ? copy.snapshotLocked : copy.snapshotOpen}
-        action={snapshotAction}
         className="motion-safe:animate-in motion-safe:fade-in"
         contentScroll
         toolbar={

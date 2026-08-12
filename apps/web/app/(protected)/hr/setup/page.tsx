@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchShifts } from "../actions";
@@ -12,7 +11,7 @@ import { HrSetupClient } from "./setup-client";
 import { fetchHrLeavePolicy } from "./leave-policy-actions";
 import { loadAuthState } from "@/_lib/auth";
 import type { BranchOption } from "../_types";
-import { resolveHrBranchScope, withHrBranchScope } from "@/lib/hr-scope";
+import { resolveHrBranchScope } from "@/lib/hr-scope";
 
 const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   positions: [],
@@ -79,15 +78,6 @@ export default async function HrSetupPage({
       <AppPageHeader
         title={copy.tabs.setup}
         description={copy.setupDescription}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ResponsiveBackButton
-              href={withHrBranchScope("/hr", branchScope)}
-            >
-              {messages.hr.payroll.backToHr}
-            </ResponsiveBackButton>
-          </div>
-        }
       />
       <Suspense>
         <HrSetupClient

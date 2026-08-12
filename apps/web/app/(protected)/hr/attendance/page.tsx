@@ -2,17 +2,17 @@ import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDateString, getVNMonthString } from "@comtammatu/shared/time";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
-import { ResponsiveBackButton } from "@/components/responsive-action-button";
 import {
   AppEmptyState,
   AppPage,
   AppPageHeader,
-  AppSection,
 } from "@/components/surface";
 import { loadAuthState, probePermission } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { StaffCheckoutApprovalsPageContent } from "@lib/staff-runtime/checkout-approvals/page";
 import { AttendanceTable } from "./attendance-table";
+import { AttendanceApprovalsFrame } from "./attendance-approvals-frame";
+import { RosterSiteList } from "./roster-site-list";
 import {
   AttendanceTabSync,
   type AttendanceTab,
@@ -171,15 +171,6 @@ export default async function HrAttendancePage({
       <AppPageHeader
         title={copy.tabs.attendance}
         description={copy.attendanceDescription}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ResponsiveBackButton
-              href={withHrBranchScope("/hr", branchScope)}
-            >
-              {messages.hr.payroll.backToHr}
-            </ResponsiveBackButton>
-          </div>
-        }
       />
       <AppPageTabs
         items={[
@@ -230,13 +221,9 @@ export default async function HrAttendancePage({
           ) : null}
           {tab === "approvals" ? (
             <TabsContent value="approvals">
-              <div className="flex flex-col gap-4">
-                <AppSection
-                  title={copy.checkoutApprovalsAction}
-                  description={copy.checkoutApprovalsHint}
-                  contentFlush
-                >
-                  {canLoadCheckoutApprovals ? (
+              <AttendanceApprovalsFrame
+                checkout={
+                  canLoadCheckoutApprovals ? (
                     <StaffCheckoutApprovalsPageContent
                       routeBranchId={branchId}
                       ownerHomeHref={withHrBranchScope(
@@ -247,20 +234,17 @@ export default async function HrAttendancePage({
                     />
                   ) : (
                     <AppEmptyState mode="no-data" />
-                  )}
-                </AppSection>
-                <AppSection
-                  title={messages.hr.leave.approvalsTitle}
-                  description={messages.hr.leave.approvalsDescription}
-                  contentFlush
-                >
+                  )
+                }
+                leave={
                   <LeaveRequestsTable
                     branches={storeBranches}
                     branchScope={branchScope}
                     historyPanelOpen={params.panel === "leave-history"}
+                    embedded
                   />
-                </AppSection>
-              </div>
+                }
+              />
             </TabsContent>
           ) : null}
           {tab === "timesheet" ? (
@@ -296,11 +280,7 @@ export default async function HrAttendancePage({
           {tab === "roster" ? (
             <TabsContent value="roster">
               {branchScope === "all" ? (
-                <AppEmptyState
-                  mode="no-results"
-                  title={messages.hr.roster.scopeRequiredTitle}
-                  description={messages.hr.roster.scopeRequiredDescription}
-                />
+                <RosterSiteList branches={branches} week={params.week} />
               ) : rosterPanel ? (
                 <RosterWeekClient
                   branchId={rosterPanel.branchId}

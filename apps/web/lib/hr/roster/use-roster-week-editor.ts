@@ -74,12 +74,6 @@ export function useRosterWeekEditor({
     [pathname, router, searchParams, startTransition, urlTab],
   );
 
-  function handleSiteChange(value: string) {
-    replaceParams((params) => {
-      params.set("branch", value === "office" ? "office" : value);
-    });
-  }
-
   function handleWeekShift(deltaDays: number) {
     const nextWeekStart = getVNWeekStartMonday(
       addVNDateDays(weekStart, deltaDays),
@@ -274,7 +268,6 @@ export function useRosterWeekEditor({
     scheduleEmployee,
     selectedSchedule,
     scheduleLabel,
-    handleSiteChange,
     handleWeekShift,
     handleAddShift,
     handleRemoveShift,

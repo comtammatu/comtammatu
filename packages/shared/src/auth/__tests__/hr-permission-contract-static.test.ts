@@ -156,7 +156,11 @@ test("HR employee salary and contract controls stay capability-gated", () => {
   assert.doesNotMatch(employeeTable, /insurance_base_salary|Lương \/ HĐ/);
   assert.match(
     employeeTable,
-    /\{canManage \? renderEdit\(employee, true\) : null\}/,
+    /if \(canManage\) \{[\s\S]*key: "edit"[\s\S]*setEditEmployee/,
+  );
+  assert.match(
+    employeeTable,
+    /canManage \|\| canAssignShift \|\| canManageTasks[\s\S]*renderRowMenu\(employee, true\)/,
   );
   assert.match(
     employeeTable,
