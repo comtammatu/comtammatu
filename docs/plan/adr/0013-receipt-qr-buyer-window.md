@@ -4,6 +4,9 @@
 
 **Decision owner:** Owner, 2026-07-25
 
+**Amended by:** ADR 0034 (zero-total orders: `not_required` invoice, no issue
+job, receipt QR still prints, buyer page read-only)
+
 ## Context
 
 POS and Self-Order must not collect HĐĐT buyer details. Payment still needs one

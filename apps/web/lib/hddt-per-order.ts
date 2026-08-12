@@ -11,8 +11,7 @@ import {
   type InvoiceResult,
 } from "@comtammatu/shared/providers";
 import {
-  applyInvoiceLineDiscount,
-  buildInvoiceLineItemsFromOrderItems,
+  buildHddtProviderLines,
 } from "@comtammatu/shared/hddt";
 import { createInvoiceProvider } from "@lib/invoice-provider-init";
 import { z } from "zod";
@@ -146,6 +145,7 @@ const preparedInvoicePayloadSchema = z
       orderNumber: z.string().trim().min(1).max(100),
       invoiceTime: z.string().datetime({ offset: true }),
       orderDiscountAmount: z.coerce.number().finite().nonnegative(),
+      serviceCharge: z.coerce.number().finite().nonnegative().optional(),
       invoiceProfile: z.object({
         id: z.coerce.number().int().positive(),
         version: z.coerce.number().int().positive(),
@@ -373,20 +373,44 @@ export async function issuePreparedTaxInvoice({
 
   let invoiceItems: InvoiceLineItem[];
   if (parsed.data.submissionSnapshot) {
-    invoiceItems = parsed.data.submissionSnapshot.items;
+    invoiceItems = parsed.data.submissionSnapshot.items.map((line) => ({
+      name: line.name,
+      unit: line.unit,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      amount: line.amount,
+      vatRate: line.vatRate,
+    }));
   } else {
     try {
-      invoiceItems = applyInvoiceLineDiscount(
-        buildInvoiceLineItemsFromOrderItems(activeItems),
-        parsed.data.draftSnapshot.orderDiscountAmount,
-      );
-    } catch {
+      invoiceItems = buildHddtProviderLines({
+        items: activeItems,
+        orderDiscountAmount: parsed.data.draftSnapshot.orderDiscountAmount,
+        serviceCharge: parsed.data.draftSnapshot.serviceCharge ?? 0,
+        totalAmount: parsed.data.draftSnapshot.totalAmount,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.startsWith("hddt_projection_total_mismatch:")) {
+        return {
+          success: false,
+          error: "Tổng dòng, thuế GTGT và số tiền thanh toán không khớp.",
+          errorCode: "invoice_total_mismatch",
+        };
+      }
       return {
         success: false,
         error: "Dòng hóa đơn thiếu thuế suất GTGT hợp lệ.",
         errorCode: "invoice_vat_invalid",
       };
     }
+  }
+  if (invoiceItems.length === 0) {
+    return {
+      success: false,
+      error: "Đơn hàng không có món nào để xuất hóa đơn.",
+      errorCode: "no_invoice_items",
+    };
   }
   const profile = parsed.data.draftSnapshot.invoiceProfile;
   const invoiceProvider = createInvoiceProvider(profile);

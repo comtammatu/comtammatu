@@ -52,7 +52,7 @@ export const cartItemSchema = z
     // or none at all — the order_items_discount_metadata_paired DB constraint
     // rejects a partial set, so the paired rule is enforced below client-side
     // before the RPC ever sees it.
-    discount_type: z.enum(["pct", "vnd"]).optional(),
+    discount_type: z.literal("vnd").optional(),
     discount_value: z.number().min(0).optional(),
     discount_note: z.string().trim().min(3).max(200).optional(),
   })
@@ -62,10 +62,10 @@ export const cartItemSchema = z
       data.discount_value !== undefined ||
       data.discount_note !== undefined;
     if (!present) return;
-    if (data.discount_type === undefined) {
+    if (data.discount_type !== "vnd") {
       ctx.addIssue({
         code: "custom",
-        message: "Thiếu loại chiết khấu",
+        message: "Chiết khấu món chỉ hỗ trợ số tiền",
         path: ["discount_type"],
       });
     }
@@ -234,19 +234,14 @@ export function calcItemSubtotal(item: CartItem): number {
 }
 
 /**
- * Per-line discount amount in VND. Mirrors the server `compute_discount_amount`
- * exactly (pct => FLOOR(subtotal*pct/100) clamped to 100%; vnd => clamp to
- * subtotal) so the cart preview matches the row the RPC will write.
+ * Per-line discount amount in VND. Item discounts are VND-only (ADR 0034).
  */
 export function calcItemDiscountAmount(item: CartItem): number {
-  if (item.discount_type === undefined || item.discount_value === undefined) {
+  if (item.discount_type !== "vnd" || item.discount_value === undefined) {
     return 0;
   }
   const gross = calcItemSubtotal(item);
   if (gross <= 0 || item.discount_value <= 0) return 0;
-  if (item.discount_type === "pct") {
-    return Math.floor((gross * Math.min(item.discount_value, 100)) / 100);
-  }
   return Math.min(item.discount_value, gross);
 }
 

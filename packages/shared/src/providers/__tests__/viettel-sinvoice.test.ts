@@ -183,12 +183,15 @@ test("mixed VAT and VAT 0 are computed per line", () => {
   assert.equal(result.totalGross, 228_000);
 });
 
-test("gross discount is allocated into net and VAT totals", () => {
-  const result = buildSinvoiceItemInfo([item("Món ăn", 1, 108_000, 8, 10_800)]);
-  assert.equal(result.sumLineNet, 100_000);
-  assert.equal(result.sumLineDiscount, 10_000);
-  assert.equal(result.sumLineTax, 7_200);
+test("post-discount gross lines send zero itemDiscount", () => {
+  // Caller already baked 10_800 GROSS discount → 97_200 post-discount.
+  const result = buildSinvoiceItemInfo([item("Món ăn", 1, 97_200, 8)]);
+  assert.equal(result.sumLineDiscount, 0);
+  assert.equal(result.itemInfo[0]?.itemDiscount, 0);
+  assert.equal(result.itemInfo[0]?.discount, 0);
   assert.equal(result.totalGross, 97_200);
+  assert.equal(result.sumLineTax, 7_200);
+  assert.equal(result.sumLineNet, 90_000);
 });
 
 test("missing or unsupported line VAT fails", () => {

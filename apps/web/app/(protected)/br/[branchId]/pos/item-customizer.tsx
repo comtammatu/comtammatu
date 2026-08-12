@@ -13,7 +13,6 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FieldLabel } from "@comtammatu/ui/components/field";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   Sheet,
   SheetClose,
@@ -48,7 +47,7 @@ interface ItemCustomizerProps {
     sides: CartSide[],
     note: string | undefined,
     quantity: number,
-    discountType: "pct" | "vnd" | undefined,
+    discountType: "vnd" | undefined,
     discountValue: number | undefined,
     discountNote: string | undefined,
   ) => void;
@@ -84,7 +83,6 @@ export function ItemCustomizer({
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [discountEnabled, setDiscountEnabled] = useState(false);
-  const [discountType, setDiscountType] = useState<"pct" | "vnd">("pct");
   const [discountValueText, setDiscountValueText] = useState("");
   const [discountNote, setDiscountNote] = useState("");
 
@@ -109,10 +107,9 @@ export function ItemCustomizer({
         setNote(cartItem.note ?? "");
         setQuantity(cartItem.quantity);
         const hasDiscount =
-          cartItem.discount_type !== undefined &&
+          cartItem.discount_type === "vnd" &&
           cartItem.discount_value !== undefined;
         setDiscountEnabled(hasDiscount);
-        setDiscountType(cartItem.discount_type ?? "pct");
         setDiscountValueText(
           hasDiscount ? String(cartItem.discount_value) : "",
         );
@@ -132,7 +129,6 @@ export function ItemCustomizer({
       setNote("");
       setQuantity(1);
       setDiscountEnabled(false);
-      setDiscountType("pct");
       setDiscountValueText("");
       setDiscountNote("");
     },
@@ -194,17 +190,13 @@ export function ItemCustomizer({
     if (trimmed === "") return 0;
     const n = Number(trimmed);
     if (!Number.isFinite(n) || n < 0) return 0;
-    if (discountType === "pct") return Math.min(n, 100);
     return Math.min(n, Math.max(totalPrice, 0));
-  }, [discountValueText, discountType, totalPrice]);
+  }, [discountValueText, totalPrice]);
 
   const discountAmount = useMemo(() => {
     if (!discountEnabled || discountValue <= 0 || totalPrice <= 0) return 0;
-    if (discountType === "pct") {
-      return Math.floor((totalPrice * discountValue) / 100);
-    }
     return Math.min(discountValue, totalPrice);
-  }, [discountEnabled, discountValue, discountType, totalPrice]);
+  }, [discountEnabled, discountValue, totalPrice]);
 
   const netTotalPrice = Math.max(0, totalPrice - discountAmount);
   const discountNoteTrimLen = discountNote.trim().length;
@@ -244,7 +236,7 @@ export function ItemCustomizer({
       sides,
       trimmedNote.length > 0 ? trimmedNote : undefined,
       quantity,
-      applyDiscount ? discountType : undefined,
+      applyDiscount ? "vnd" : undefined,
       applyDiscount ? discountValue : undefined,
       applyDiscount ? trimmedDiscountNote : undefined,
     );
@@ -260,7 +252,6 @@ export function ItemCustomizer({
     discountEnabled,
     discountValid,
     discountAmount,
-    discountType,
     discountValue,
     discountNote,
   ]);
@@ -577,33 +568,13 @@ export function ItemCustomizer({
                   </div>
                   {discountEnabled && (
                     <div className="flex flex-col gap-3">
-                      <Tabs
-                        value={discountType}
-                        onValueChange={(v) => {
-                          setDiscountType(v as "pct" | "vnd");
-                          setDiscountValueText("");
-                        }}
-                      >
-                        <TabsList size="touch" className="w-full">
-                          <TabsTrigger value="pct" className="flex-1">
-                            {messages.pos.customizer.discountByPercent}
-                          </TabsTrigger>
-                          <TabsTrigger value="vnd" className="flex-1">
-                            {messages.pos.customizer.discountByVnd}
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
                       <FormattedNumberInput
                         id="item-discount-value"
-                        maxFractionDigits={discountType === "pct" ? 2 : 0}
+                        maxFractionDigits={0}
                         value={discountValueText}
                         onValueChange={setDiscountValueText}
                         placeholder={
-                          discountType === "pct"
-                            ? messages.pos.customizer
-                                .discountValuePlaceholderPct
-                            : messages.pos.customizer
-                                .discountValuePlaceholderVnd
+                          messages.pos.customizer.discountValuePlaceholderVnd
                         }
                       />
                       <QuickReasonChips

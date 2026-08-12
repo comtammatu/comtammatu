@@ -31,6 +31,8 @@ interface DiscountSheetProps {
   subtotalLabel?: string;
   totalLabel?: string;
   clearLabel?: string;
+  /** Allowed discount modes. Item discounts are VND-only (ADR 0034). */
+  modes?: readonly DiscountType[];
   /** Subtotal trước giảm — dùng để live preview + clamp UI. */
   subtotal: number;
   /** Phụ phí trên đơn — cộng vào total preview. */
@@ -70,6 +72,7 @@ export function DiscountSheet({
   subtotalLabel = FORM_VI.subtotal,
   totalLabel = POS_VI.newTotal,
   clearLabel = POS_VI.clearDiscount,
+  modes = ["pct", "vnd"] as const,
   subtotal,
   serviceCharge,
   current,
@@ -77,7 +80,13 @@ export function DiscountSheet({
   onSubmit,
   onClear,
 }: DiscountSheetProps) {
-  const [type, setType] = useState<DiscountType>(current.type ?? "pct");
+  const allowedModes = modes.length > 0 ? modes : (["vnd"] as const);
+  const defaultType: DiscountType = allowedModes.includes("pct" as DiscountType)
+    ? ((current.type && allowedModes.includes(current.type)
+        ? current.type
+        : allowedModes[0]) ?? "vnd")
+    : "vnd";
+  const [type, setType] = useState<DiscountType>(defaultType);
   const [valueText, setValueText] = useState<string>(
     current.value != null ? String(current.value) : "",
   );
@@ -88,10 +97,14 @@ export function DiscountSheet({
   // open's values when re-opened on a different order.
   useEffect(() => {
     if (!open) return;
-    setType(current.type ?? "pct");
+    const nextType: DiscountType =
+      current.type && allowedModes.includes(current.type)
+        ? current.type
+        : (allowedModes[0] ?? "vnd");
+    setType(nextType);
     setValueText(current.value != null ? String(current.value) : "");
     setNote(current.note ?? "");
-  }, [open, current.type, current.value, current.note]);
+  }, [open, current.type, current.value, current.note, allowedModes]);
 
   const hasExistingDiscount = current.amount > 0;
 
@@ -153,24 +166,30 @@ export function DiscountSheet({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
-          <Tabs
-            value={type}
-            onValueChange={(v) => {
-              setType(v as DiscountType);
-              // Reset the value on tab switch — 10% and 10đ mean different
-              // things; keeping the old number invites mistakes.
-              setValueText("");
-            }}
-          >
-            <TabsList size="touch" className="w-full">
-              <TabsTrigger value="pct" className="flex-1">
-                {POS_VI.discountPctTab}
-              </TabsTrigger>
-              <TabsTrigger value="vnd" className="flex-1">
-                {POS_VI.discountVndTab}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {allowedModes.length > 1 ? (
+            <Tabs
+              value={type}
+              onValueChange={(v) => {
+                setType(v as DiscountType);
+                // Reset the value on tab switch — 10% and 10đ mean different
+                // things; keeping the old number invites mistakes.
+                setValueText("");
+              }}
+            >
+              <TabsList size="touch" className="w-full">
+                {allowedModes.includes("pct") ? (
+                  <TabsTrigger value="pct" className="flex-1">
+                    {POS_VI.discountPctTab}
+                  </TabsTrigger>
+                ) : null}
+                {allowedModes.includes("vnd") ? (
+                  <TabsTrigger value="vnd" className="flex-1">
+                    {POS_VI.discountVndTab}
+                  </TabsTrigger>
+                ) : null}
+              </TabsList>
+            </Tabs>
+          ) : null}
 
           <FieldGroup>
             <Field>

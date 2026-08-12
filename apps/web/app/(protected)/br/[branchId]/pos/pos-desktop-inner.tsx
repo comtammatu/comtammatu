@@ -1227,12 +1227,12 @@ export function PosDesktopInner({
       sides: CartSide[],
       note: string | undefined,
       quantity: number,
-      discountType: "pct" | "vnd" | undefined,
+      discountType: "vnd" | undefined,
       discountValue: number | undefined,
       discountNote: string | undefined,
     ) => {
       const hasDiscount =
-        discountType !== undefined && discountValue !== undefined;
+        discountType === "vnd" && discountValue !== undefined;
       if (!editingSentItem) {
         const excludeKey = editingCartItem?.key ?? editingAppendItem?.key;
         const block = getAddToCartBlock(

@@ -386,8 +386,8 @@ export async function clearOrderDiscount(
 
 const applyItemDiscountInputSchema = z.object({
   orderItemId: orderItemIdSchema,
-  type: z.enum(["pct", "vnd"], {
-    error: "Loại chiết khấu không hợp lệ",
+  type: z.literal("vnd", {
+    error: "Chiết khấu món chỉ hỗ trợ số tiền",
   }),
   value: z.coerce
     .number({ error: "Giá trị giảm không hợp lệ" })
@@ -411,7 +411,7 @@ const clearItemDiscountInputSchema = z.object({
 type ItemDiscountActionData = {
   order_id: number;
   order_item_id: number;
-  discount_type?: "pct" | "vnd" | null;
+  discount_type?: "vnd" | null;
   discount_value?: number | null;
   discount_amount?: number | null;
   discount_note?: string | null;
@@ -425,7 +425,7 @@ export async function applyOrderItemDiscount(
   branchId: number,
   input: {
     orderItemId: number;
-    type: "pct" | "vnd";
+    type: "vnd";
     value: number;
     note: string;
   },

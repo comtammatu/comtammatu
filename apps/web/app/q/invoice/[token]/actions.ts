@@ -137,6 +137,13 @@ export async function submitInvoiceBuyerDetails(
   if (submission.status === "closed") {
     return { ok: false, message: invoiceBuyer.closed, terminal: true };
   }
+  if (submission.status === "not_required") {
+    return {
+      ok: false,
+      message: invoiceBuyer.notRequiredDescription,
+      terminal: true,
+    };
+  }
   return {
     ok: false,
     message: invoiceBuyer.saveFailed,

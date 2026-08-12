@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 
 const snapshotSchema = z.object({
-  state: z.enum(["open", "submitted", "expired", "closed"]),
+  state: z.enum(["open", "submitted", "expired", "closed", "not_required"]),
   orderNumber: z.string().min(1).max(100),
   branchName: z.string().min(1).max(200),
   expiresAt: z.string().datetime({ offset: true }),
@@ -23,7 +23,10 @@ type UntypedServiceClient = {
 export type InvoiceBuyerRequestSnapshot = z.infer<typeof snapshotSchema>;
 export type SubmitInvoiceBuyerRequestResult =
   | { status: "submitted"; jobId: number | null }
-  | { status: "expired" | "closed" | "not-found" | "failed"; jobId: null };
+  | {
+      status: "expired" | "closed" | "not_required" | "not-found" | "failed";
+      jobId: null;
+    };
 
 function service(): UntypedServiceClient {
   return createServiceClient() as unknown as UntypedServiceClient;
@@ -73,7 +76,7 @@ export async function saveInvoiceBuyerRequest(
           jobId: z.coerce.number().int().positive().optional(),
         }),
         z.object({
-          status: z.enum(["expired", "closed"]),
+          status: z.enum(["expired", "closed", "not_required"]),
         }),
       ])
       .safeParse(data);

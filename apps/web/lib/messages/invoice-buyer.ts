@@ -10,6 +10,9 @@ export const invoiceBuyer = {
   closedTitle: "HĐĐT đã được xử lý",
   closedDescription:
     "Thông tin người mua của đơn hàng này không còn có thể thay đổi.",
+  notRequiredTitle: "Không phát hành HĐĐT",
+  notRequiredDescription:
+    "Đơn hàng 0đ nên hệ thống không phát hành hóa đơn điện tử. QR chỉ để xem trạng thái.",
   success:
     "Đã nhận thông tin. HĐĐT sẽ được phát hành theo dữ liệu vừa xác nhận.",
   lookupLoading: "Đang tra cứu mã số thuế…",

@@ -3,7 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withActionPositional } from "@/_lib/with-action";
-import { calcItemSubtotal, getPosLineItemDisplayName } from "./types";
+import { calcItemDiscountAmount, calcItemSubtotal, getPosLineItemDisplayName } from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 import {
@@ -78,18 +78,7 @@ function cartItemsToRpcItems(items: CartItem[]) {
  * inline-discount migration is live (old RPC silently drops the keys).
  */
 function expectedItemDiscountTotal(items: readonly CartItem[]): number {
-  return items.reduce((sum, item) => {
-    if (item.discount_type === undefined || item.discount_value === undefined) {
-      return sum;
-    }
-    const gross = calcItemSubtotal(item);
-    if (gross <= 0 || item.discount_value <= 0) return sum;
-    const amount =
-      item.discount_type === "pct"
-        ? Math.floor((gross * Math.min(item.discount_value, 100)) / 100)
-        : Math.min(item.discount_value, gross);
-    return sum + amount;
-  }, 0);
+  return items.reduce((sum, item) => sum + calcItemDiscountAmount(item), 0);
 }
 
 const ITEM_DISCOUNT_NOT_APPLIED_WARNING =
