@@ -1174,7 +1174,7 @@ export function DesignLabClient() {
             </div>
             <Frame className={WORK_TIMELINE_ROW}>
               <span className="truncate text-sm font-medium">Timeline row</span>
-              <Progress value={42} className="h-3 rounded-full" />
+              <Progress value={42} className="col-span-2 h-3 rounded-full" />
             </Frame>
             <ItemGroup className={WORK_LIST_ITEM_INSET}>
               <Item variant="outline" size="xs">

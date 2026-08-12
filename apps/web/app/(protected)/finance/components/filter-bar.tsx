@@ -28,6 +28,12 @@ import {
   serializeFinanceParams,
 } from "../_lib/finance-params";
 import { FinanceCalendarPeriodPicker } from "./finance-calendar-period-picker";
+import {
+  financeFilterCompareTriggerClassName,
+  financeFilterGranularityTriggerClassName,
+  financeFilterPeriodPickerClassName,
+  financeFilterRangeTriggerClassName,
+} from "./finance-list-filters";
 
 interface AccessibleBranch {
   id: number;
@@ -299,7 +305,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.range}
               size={controlSize}
-              className="w-full max-w-[9.5rem] sm:w-32"
+              className={financeFilterRangeTriggerClassName}
             >
               <SelectValue />
             </SelectTrigger>
@@ -323,7 +329,7 @@ export function FilterBar({
             placeholder={PERIOD_PICKER_LABEL[calendarPeriod]}
             max={today.start}
             disabled={isPending}
-            className="w-full max-w-[14rem] sm:w-64"
+            className={financeFilterPeriodPickerClassName}
             onSelectionChange={handlePeriodSelectionChange}
           />
         ) : null}
@@ -339,7 +345,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.granularity}
               size={controlSize}
-              className="w-full max-w-[9rem] sm:w-36"
+              className={financeFilterGranularityTriggerClassName}
             >
               <SelectValue />
             </SelectTrigger>
@@ -370,7 +376,7 @@ export function FilterBar({
             <SelectTrigger
               aria-label={filterCopy.compare}
               size={controlSize}
-              className="w-full max-w-[11rem] sm:w-44"
+              className={financeFilterCompareTriggerClassName}
             >
               <SelectValue />
             </SelectTrigger>

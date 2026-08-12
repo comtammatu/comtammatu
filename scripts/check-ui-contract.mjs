@@ -1393,8 +1393,12 @@ const perFileCountBudgets = [
   {
     id: "space-y-baseline",
     description:
-      "Vertical rhythm debt is frozen per file; cleanup in one file must not let another file add space-y drift.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+      "Vertical rhythm debt is frozen per file; cleanup in one file must not let another file add space-y drift. Scope includes the UI runtime lib roots so lib components cannot bypass the app gate.",
+    roots: [
+      ...uiRuntimeRoots([".tsx"]),
+      { dir: "apps/web/lib/auth", extensions: [".tsx"] },
+      { dir: "apps/web/lib/inventory", extensions: [".tsx"] },
+    ],
     pattern:
       /\bspace-y-(?:px|0|0\.5|1|1\.5|2|2\.5|3|3\.5|4|5|6|7|8|9|10|11|12|14|16|20|24|\[[^\]]+\])\b/g,
     allowlist: {},
@@ -1402,32 +1406,48 @@ const perFileCountBudgets = [
   {
     id: "raw-padding-baseline",
     description:
-      "Large local padding debt is zero; use the page, surface, empty-state, or input-group contract instead.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+      "Large local padding debt is zero; use the page, surface, empty-state, or input-group contract instead. Scope includes the UI runtime lib roots so lib components cannot bypass the app gate.",
+    roots: [
+      ...uiRuntimeRoots([".tsx"]),
+      { dir: "apps/web/lib/auth", extensions: [".tsx"] },
+      { dir: "apps/web/lib/inventory", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
-    allowlist: {},
+    allowlist: {
+      "apps/web/lib/staff-runtime/count/count-client.tsx": 1,
+    },
   },
   {
     id: "gap-atypical-baseline",
     description:
-      "Gap values outside the documented app scale are frozen per file until they are normalized.",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+      "Gap values outside the documented app scale are frozen per file until they are normalized. Scope includes the UI runtime lib roots so lib components cannot bypass the app gate.",
+    roots: [
+      ...uiRuntimeRoots([".tsx"]),
+      { dir: "apps/web/lib/auth", extensions: [".tsx"] },
+      { dir: "apps/web/lib/inventory", extensions: [".tsx"] },
+    ],
     pattern: /\bgap-(?:0|0\.5|2\.5)\b/g,
     allowlist: {
       "apps/web/app/components/sidebar.tsx": 1,
+      "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx": 1,
     },
   },
   {
     id: "inline-chrome-baseline",
     description:
-      "Hand-rolled card/inset chrome (rounded-md|lg + border on a raw element — including border-only, bg-*/N-tinted, and bg-muted|accent|secondary card-clones) is frozen per file; delegate to Card/AppSection/Item/NoteCallout/Alert instead of reimplementing surface chrome inline. The border probe counts border utilities only; the border color token inside a ring-* class (e.g. ring-sidebar-border/70) is not chrome. Multiline-tolerant (className={cn( then whitespace/newline before the literal).",
-    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+      "Hand-rolled card/inset chrome (rounded-md|lg + border on a raw element — including border-only, bg-*/N-tinted, and bg-muted|accent|secondary card-clones) is frozen per file; delegate to Card/AppSection/Item/NoteCallout/Alert instead of reimplementing surface chrome inline. The border probe counts border utilities only; the border color token inside a ring-* class (e.g. ring-sidebar-border/70) is not chrome. Multiline-tolerant (className={cn( then whitespace/newline before the literal). Scope includes the UI runtime lib roots so lib components cannot bypass the app gate.",
+    roots: [
+      ...uiRuntimeRoots([".tsx"]),
+      { dir: "apps/web/lib/auth", extensions: [".tsx"] },
+      { dir: "apps/web/lib/inventory", extensions: [".tsx"] },
+    ],
     pattern:
       /className=\{?(?:cn\()?\s*['"](?=[^'"]*\brounded-(?:md|lg)\b)(?=[^'"]*(?<!ring-\S*)\bborder\b)[^'"]*['"]/g,
     allowlist: {
       "apps/web/app/components/chart.tsx": 1,
       "apps/web/app/components/confirm-dialog.tsx": 1,
+      "apps/web/lib/auth/mfa-security-client.tsx": 2,
     },
   },
   {
@@ -1494,6 +1514,156 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/catalog-back-header.tsx": 1,
       "apps/web/app/q/[token]/self-order-client.tsx": 1,
     },
+  },
+  {
+    id: "arbitrary-dimension",
+    description:
+      "Layout dimensions use the named spacing/size scale (design-system.md § Token Contract → Forbidden for new app UI); arbitrary w-[]/h-[]/gap-[]/p-[]-style values are frozen per file — including class-string constants, which previously escaped className-anchored guards.",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    pattern:
+      /\b(?:w|h|size|min-w|min-h|max-w|max-h|gap|gap-x|gap-y|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|top|bottom|left|right|inset|basis|scroll-m|space-x|space-y|columns|grid-cols|grid-rows)-\[[^\]\r\n]*\]/g,
+    allowlist: {
+      "apps/web/app/(dev)/ds-lab/ds-lab-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/purchase-requests/branch-purchase-requests-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/reports/branch-stock-reports-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/requests/new/stock-request-editor.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/completion-history-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/focus-view.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/kds/_components/order-grid.tsx": 4,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 2,
+      "apps/web/app/(protected)/finance/components/current-funds-section.tsx": 1,
+      "apps/web/app/(protected)/finance/components/finance-money-block.tsx": 1,
+      "apps/web/app/(protected)/finance/expenses/expense-document-view.tsx": 1,
+      "apps/web/app/(protected)/finance/manual-issue-invoice-dialog.tsx": 1,
+      "apps/web/app/(protected)/finance/page.tsx": 3,
+      "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-create-fields.tsx": 2,
+      "apps/web/app/(protected)/finance/supplier-invoices/supplier-invoice-list-ui.tsx": 1,
+      "apps/web/app/(protected)/finance/targets/targets-client.tsx": 2,
+      "apps/web/app/(protected)/hr/position-tasks-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/_components/operator-flow-steps.tsx": 1,
+      "apps/web/app/(protected)/inventory/count-slips/count-slips-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredients/ingredient-dialog.tsx": 2,
+      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-requests/purchase-request-allocate-dialog.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-requests/purchase-request-form-dialog.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-requests/purchase-request-view-dialog.tsx": 1,
+      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/suppliers/[id]/items/supplier-items-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/suppliers/supplier-dialog.tsx": 1,
+      "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx": 1,
+      "apps/web/app/(protected)/settings/printers/templates/templates-client.tsx": 1,
+      "apps/web/app/(public)/(auth)/login/page.tsx": 1,
+      "apps/web/app/_components/control-surface-overview.tsx": 1,
+      "apps/web/app/components/app-shell.tsx": 1,
+      "apps/web/app/components/form/form-dialog.tsx": 7,
+      "apps/web/app/components/kpi/compare-chip.tsx": 1,
+      "apps/web/app/components/sidebar.tsx": 4,
+      "apps/web/app/components/surface/app-detail-footer.tsx": 3,
+      "apps/web/app/components/surface/app-page.tsx": 1,
+      "apps/web/app/components/surface/app-section.tsx": 2,
+      "apps/web/app/components/surface/app-sticky-filter-chrome.tsx": 4,
+      "apps/web/app/q/[token]/self-order/feedback-sheet.tsx": 2,
+      "apps/web/app/q/invoice/[token]/invoice-buyer-form.tsx": 1,
+      "apps/web/app/r/[token]/feedback-form.tsx": 1,
+      "apps/web/lib/branch-operator/components/branch-operator-page.tsx": 1,
+      "apps/web/lib/hr/roster/weekly-schedule-dialog.tsx": 1,
+      "apps/web/lib/staff-runtime/count/count-client.tsx": 1,
+      "apps/web/lib/staff-runtime/profile/page.tsx": 2,
+      "apps/web/lib/staff-runtime/schedule/schedule-client.tsx": 2,
+    },
+  },
+  {
+    id: "presentation-inline-style",
+    description:
+      "Static inline style objects are forbidden in presentation UI (design-system.md § Token Contract → Forbidden for new app UI); route geometry through tokens/classes. Frozen per file.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\bstyle=\{\{/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 3,
+      "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
+      "apps/web/app/components/chart.tsx": 1,
+      "apps/web/app/global-error.tsx": 5,
+      "apps/web/app/layout.tsx": 1,
+    },
+  },
+  {
+    id: "icon-size-tier",
+    description:
+      "Icons follow the Icon Size by Role tier (size-3/4/5/6 inside app UI; height-scale tiers are primitive-owned). Off-tier size-7/9/11 icons are frozen per file.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
+    pattern: /\bsize-(?:7|9|11)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "off-tier-radius-app",
+    description:
+      "App chrome radius stays on the locked tier (rounded-md/lg/full per design-system.md § Radius table); rounded-sm/xl/2xl/3xl are frozen per file. The ds-lab route demos the tier table itself.",
+    roots: [
+      { dir: "apps/web/app", extensions: [".tsx"] },
+      { dir: "apps/web/lib", extensions: [".tsx"] },
+    ],
+    pattern: /\brounded-(?:sm|xl|2xl|3xl)\b/g,
+    allowlist: {
+      "apps/web/app/(dev)/ds-lab/ds-lab-client.tsx": 6,
+    },
+  },
+  {
+    id: "hex-literal-app",
+    description:
+      "App UI colors come from the OKLCH token contract; hex literals are frozen at their single-source owners (browser/PWA chrome theme tokens and chart palette themes).",
+    roots: [
+      { dir: "apps/web/app", extensions: [".ts", ".tsx"] },
+      { dir: "apps/web/lib", extensions: [".ts", ".tsx"] },
+    ],
+    pattern: /#[0-9a-fA-F]{3,8}\b/g,
+    allowlist: {
+      "apps/web/app/_lib/theme-tokens.ts": 10,
+      "apps/web/app/components/chart.tsx": 5,
+    },
+  },
+  {
+    id: "font-bold-lock",
+    description:
+      "Weight emphasis outside the locked roles is frozen per file: headings stay semibold (heading-weight-lock), print-mode receipt chrome keeps its documented exception, and new UI must not add bare font-bold.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\bfont-bold\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/close-session/denomination-input.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/multi-order-table-picker.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/order-totals-summary.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-line-item-compact.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/item-customizer.tsx": 3,
+      "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx": 2,
+      "apps/web/app/q/[token]/self-order/payment-panel.tsx": 1,
+    },
+  },
+  {
+    id: "chrome-class-constant",
+    description:
+      "Exported class-string constants that bake in surface chrome (rounded-* + border) bypass every className-anchored guard; chrome must come from Card/AppSection/Item/Frame composition. Frozen per file, zero for new files.",
+    roots: uiRuntimeRoots([".ts"]),
+    pattern:
+      /\bconst\s+[A-Z][A-Z0-9_]*\s*=\s*(?:\n\s*)?["'](?=[^"']*\brounded-[a-z0-9]+\b)(?=[^"']*\bborder\b)[^"']*["']/g,
+    allowlist: {},
   },
 ];
 
@@ -1762,6 +1932,125 @@ function runLegacyDebtBudgetSelfTest() {
     ) !== 0
   ) {
     throw new Error("arbitrary font size self-test did not enforce scope");
+  }
+
+  const arbitraryDimensionCheck = perFileCountBudgets.find(
+    (check) => check.id === "arbitrary-dimension",
+  );
+  if (
+    !arbitraryDimensionCheck ||
+    countMatches(
+      'className="w-[437px] min-h-[3rem]"',
+      arbitraryDimensionCheck.pattern,
+    ) !== 2 ||
+    countMatches(
+      'export const FILTER_WIDTH = "max-w-[14rem]";',
+      arbitraryDimensionCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'className="w-44 max-w-56 gap-2 p-1.5 grid-cols-2"',
+      arbitraryDimensionCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      'className="text-[10px] bg-[#123456]"',
+      arbitraryDimensionCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("arbitrary dimension self-test did not enforce scope");
+  }
+
+  const presentationInlineStyleCheck = perFileCountBudgets.find(
+    (check) => check.id === "presentation-inline-style",
+  );
+  if (
+    !presentationInlineStyleCheck ||
+    countMatches(
+      "<div style={{ top: 4 }} />",
+      presentationInlineStyleCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      '<div className="pt-safe" styleName="x" />',
+      presentationInlineStyleCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("presentation inline style self-test did not enforce scope");
+  }
+
+  const iconSizeTierCheck = perFileCountBudgets.find(
+    (check) => check.id === "icon-size-tier",
+  );
+  if (
+    !iconSizeTierCheck ||
+    countMatches('className="size-7"', iconSizeTierCheck.pattern) !== 1 ||
+    countMatches('className="size-11"', iconSizeTierCheck.pattern) !== 1 ||
+    countMatches('className="size-4 size-10"', iconSizeTierCheck.pattern) !== 0 ||
+    countMatches('className="size-70"', iconSizeTierCheck.pattern) !== 0
+  ) {
+    throw new Error("icon size tier self-test did not enforce scope");
+  }
+
+  const offTierRadiusCheck = perFileCountBudgets.find(
+    (check) => check.id === "off-tier-radius-app",
+  );
+  if (
+    !offTierRadiusCheck ||
+    countMatches('className="rounded-xl"', offTierRadiusCheck.pattern) !== 1 ||
+    countMatches(
+      'className="rounded-2xl rounded-sm"',
+      offTierRadiusCheck.pattern,
+    ) !== 2 ||
+    countMatches(
+      'className="rounded-md rounded-lg rounded-full"',
+      offTierRadiusCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("off-tier radius self-test did not enforce scope");
+  }
+
+  const hexLiteralCheck = perFileCountBudgets.find(
+    (check) => check.id === "hex-literal-app",
+  );
+  if (
+    !hexLiteralCheck ||
+    countMatches('color: "#1a2b3c"', hexLiteralCheck.pattern) !== 1 ||
+    countMatches('href="#section"', hexLiteralCheck.pattern) !== 0
+  ) {
+    throw new Error("hex literal self-test did not enforce scope");
+  }
+
+  const fontBoldLockCheck = perFileCountBudgets.find(
+    (check) => check.id === "font-bold-lock",
+  );
+  if (
+    !fontBoldLockCheck ||
+    countMatches('className="font-bold"', fontBoldLockCheck.pattern) !== 1 ||
+    countMatches(
+      'className="font-semibold font-medium"',
+      fontBoldLockCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("font bold lock self-test did not enforce scope");
+  }
+
+  const chromeClassConstantCheck = perFileCountBudgets.find(
+    (check) => check.id === "chrome-class-constant",
+  );
+  if (
+    !chromeClassConstantCheck ||
+    countMatches(
+      'export const WORK_COLUMN = "rounded-md border bg-card";',
+      chromeClassConstantCheck.pattern,
+    ) !== 1 ||
+    countMatches(
+      'export const WORK_COLUMN = "flex gap-2 p-2";',
+      chromeClassConstantCheck.pattern,
+    ) !== 0 ||
+    countMatches(
+      'export const WORK_COLUMN = "rounded-md bg-muted/30";',
+      chromeClassConstantCheck.pattern,
+    ) !== 0
+  ) {
+    throw new Error("chrome class constant self-test did not enforce scope");
   }
 
   if (

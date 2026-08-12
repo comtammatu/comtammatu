@@ -119,6 +119,9 @@ walk the **UI Review Checklist** below.
   `corepack pnpm audit:ui-components --component <name>` for the closest shared
   component or adapter. A direct shared-component composition is valid only when its semantic job
   is not covered by an adapter; do not invent fake shared components or a second theme.
+- No module-local style-constant files: a repeated composition becomes a
+  registered adapter or a UI block recipe, not a per-module `*styles.ts` of
+  class strings (existing exemplars stay frozen until promoted).
 - Accessibility basics are non-negotiable: keyboard reachability, visible focus,
   labels/names, semantic status not conveyed by color alone, and adequate touch
   targets.

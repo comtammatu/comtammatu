@@ -26,6 +26,7 @@ const ROUTE_FAMILIES = [
       file.includes("/(protected)/inventory/") ||
       file.includes("/(protected)/menu/") ||
       file.includes("/(protected)/orders/") ||
+      file.includes("/(protected)/work/") ||
       file.includes("/(protected)/feedback/"),
   ],
   [
@@ -55,11 +56,14 @@ const ROUTE_FAMILIES = [
   ["employee-runtime", (file) => file.includes("/lib/staff-runtime/")],
   ["branch-adapters", (file) => file.includes("/lib/branch-operator/")],
   ["hr-runtime", (file) => file.includes("/lib/hr/")],
+  ["auth-lib", (file) => file.includes("/lib/auth/")],
+  ["inventory-lib", (file) => file.includes("/lib/inventory/")],
   ["finance", (file) => file.includes("/(protected)/finance/")],
   ["hr", (file) => file.includes("/(protected)/hr/")],
   ["inventory", (file) => file.includes("/(protected)/inventory/")],
   ["menu", (file) => file.includes("/(protected)/menu/")],
   ["orders", (file) => file.includes("/(protected)/orders/")],
+  ["work", (file) => file.includes("/(protected)/work/")],
   ["public", (file) => file.includes("/(public)/")],
   ["self-order", (file) => file.includes("/app/q/")],
   // Guest feedback QR tokens live at /r/[token] (public), not runner station.
@@ -709,8 +713,16 @@ if (options.component !== null) {
   }
   process.exit(0);
 }
-const appFiles = UI_RUNTIME_SOURCE_ROOTS.flatMap((root) =>
-  walkFiles(root, [".ts", ".tsx"]),
+// Report-only onboarding (design-system.md § Enforcement): lib/auth and
+// lib/inventory enter the family census before their debts earn blocking
+// ratchet budgets, so drift there is visible instead of invisible.
+const REPORT_ONLY_ROOTS = Object.freeze([
+  "apps/web/lib/auth",
+  "apps/web/lib/inventory",
+]);
+
+const appFiles = [...UI_RUNTIME_SOURCE_ROOTS, ...REPORT_ONLY_ROOTS].flatMap(
+  (root) => walkFiles(root, [".ts", ".tsx"]),
 ).map(summarizeFile);
 const actualPageFiles = appFiles
   .filter((file) => file.isPage)

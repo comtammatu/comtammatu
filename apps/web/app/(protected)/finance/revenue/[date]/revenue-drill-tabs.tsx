@@ -258,7 +258,7 @@ export function RevenueDrillTabs({
         {
           key: "total",
           content: formatVND(totalRevenue),
-          className: "text-right font-mono tabular-nums font-bold",
+          className: "text-right font-mono tabular-nums font-semibold",
         },
         { key: "invoice", content: "" },
       ],

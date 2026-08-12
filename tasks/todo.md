@@ -5,6 +5,21 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## ADR 0037 — Queue-first Control Home and personal plane
+
+State: doing
+Kind: feature
+Tier: T2
+Lane: control-surface/home
+Exit: Phases A–D per [`docs/plan/adr/0037-control-home-queue-first-and-personal-plane.md`](../docs/plan/adr/0037-control-home-queue-first-and-personal-plane.md); queue-only `/`; `AppTodayCommandBar`; `self_service` → `/`; `/me` = personal plane; scoped singleton DETAIL; docs + static tests green.
+Evidence: ADR 0037 Accepted 2026-08-12 — Q1 Accept (no Owner tiles), Q2 Accept scoped (Finance/GRN/Work DETAIL), Q3 Decline V1 (command bar only).
+Phase A is app-only; Phase C proxy/login needs careful static rewrite.
+
+- [ ] Phase A: remove module grids; mount `AppTodayCommandBar`
+- [ ] Phase B: scoped singleton DETAIL loaders (Finance keep, GRN, Work)
+- [ ] Phase C: `login-destination` + `proxy` gate + `/me` profile hub
+- [ ] Phase D: screen-context-map §2.4/§2.4B, role-route-matrix, page-archetypes, i18n/tests
+
 ## Prove one money day on Production
 
 State: blocked
@@ -111,3 +126,31 @@ Exit: Owner adds a Van phong member who then opens `/work`; create CTA + DETAIL 
 Evidence: ADR 0035 Accepted; W-UI-4..3 app code; Production migration `20260812140000_work_department_membership_admin.sql` applied; `db:types` regenerated; work-module-static green; RPCs verified on Production.
 
 - [ ] Manual exit: add Van phong member via `/work/team` → that user opens `/work`.
+
+## Burn down frozen Má Tư DS debt
+
+State: doing
+Kind: debt
+Tier: T3
+Lane: design-system/enforcement
+Exit: Every frozen budget below trends down by removing allowlist entries (ratchet only fails on growth, so burned files may be dropped); the 40 `tune` pages reach `keep`/`final` disposition through the three exemplar waves. Never raise a budget; new files start at 0.
+Evidence: `scripts/check-ui-contract.mjs` `legacy-debt-ratchet` guards (frozen 2026-08-13); `corepack pnpm audit:ui-components` Page Disposition Coverage; exemplar fixes in `finance/components/filter-bar.tsx`, `team/team-workspace-tabs.tsx`, `work/_lib/compose-styles.ts`, and the icon-tier batch.
+
+Frozen debt per guard (burn down to zero):
+
+| guard | frozen hits | files |
+| --- | --- | --- |
+| `arbitrary-dimension` | 85 | 53 |
+| `presentation-inline-style` | 13 | 7 |
+| `font-bold-lock` | 26 | 15 |
+| `hex-literal-app` | 15 | 2 |
+| `off-tier-radius-app` | 6 | 1 (ds-lab tier demo — keep until ds-lab cleanup) |
+| `icon-size-tier` | 0 | 0 |
+| `chrome-class-constant` | 0 | 0 |
+
+`audit:ui-components` tune pages (40) in three waves, each anchored to an Exemplar Matrix exemplar:
+
+- [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`. Burned so far: `inventory/production/new/production-new-client.tsx` (4 hits → flex + `max-w-44`/`w-22` named scale) and the `font-bold` → `font-semibold` batch (`finance/revenue/[date]/revenue-drill-tabs.tsx`, `finance/revenue/revenue-client.tsx`, `components/form/photo-upload-input.tsx`).
+- [ ] Wave 2 — branch `(operator)` pages follow `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`.
+- [ ] Wave 3 — station plane pages follow `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`; spot-check light + dark at the station viewport.
+

@@ -88,7 +88,7 @@ export function WorkTimeline({
                   {workCopy.due}: {formatVNDate(task.dueAt!)}
                 </p>
               </div>
-              <Progress value={widthPercent} className="h-3 rounded-full" />
+              <Progress value={widthPercent} className="col-span-2 h-3 rounded-full" />
             </Frame>
           );
         })}

@@ -245,7 +245,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
       <ItemMedia
         variant="icon"
         className={cn(
-          "size-9 rounded-md",
+          "size-10 rounded-md",
           unread ? tone.icon : "bg-muted text-muted-foreground",
         )}
         aria-hidden

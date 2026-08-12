@@ -74,11 +74,6 @@ export function TeamWorkspaceTabs({
     ? value
     : "board";
 
-  const activeIndex = Math.max(
-    0,
-    tabItems.findIndex((item) => item.value === effectiveValue),
-  );
-
   const activeContent =
     effectiveValue === "board"
       ? board
@@ -89,11 +84,15 @@ export function TeamWorkspaceTabs({
   function handleValueChange(nextValue: string) {
     const nextTab = nextValue as TeamWorkspaceTabValue;
     if (!tabItems.some((item) => item.value === nextTab)) return;
+    const currentIndex = Math.max(
+      0,
+      tabItems.findIndex((item) => item.value === effectiveValue),
+    );
     const nextIndex = Math.max(
       0,
       tabItems.findIndex((item) => item.value === nextTab),
     );
-    setDirection(nextIndex >= activeIndex ? "forward" : "backward");
+    setDirection(nextIndex >= currentIndex ? "forward" : "backward");
     setValue(nextTab);
 
     const params = new URLSearchParams();
@@ -130,30 +129,13 @@ export function TeamWorkspaceTabs({
         <TabsList
           size="touch"
           aria-label={copy.tabsAriaLabel}
-          style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-          className="grid w-full min-w-0 max-w-full items-center overflow-hidden"
+          className="grid w-full min-w-0 max-w-full grid-cols-2 items-center"
         >
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-1 left-1 right-1"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            }}
-          >
-            <span
-              className="rounded-md bg-background transition-transform duration-150 motion-reduce:transition-none"
-              style={{ transform: `translateX(${activeIndex * 100}%)` }}
-            />
-          </span>
           {tabItems.map(({ value: tabValue, shortLabel, Icon }) => (
             <TabsTrigger
               key={tabValue}
               value={tabValue}
-              className={cn(
-                "relative z-10 min-h-12 min-w-0 items-center justify-center gap-1.5 px-2 py-0 text-sm leading-none whitespace-nowrap text-muted-foreground data-active:bg-transparent dark:data-active:border-transparent dark:data-active:bg-transparent",
-                effectiveValue === tabValue && "text-foreground",
-              )}
+              className="min-w-0 px-2 text-sm leading-none"
             >
               <Icon aria-hidden="true" className="size-4 shrink-0 sm:size-5" />
               <span className="leading-none whitespace-nowrap">
@@ -168,7 +150,7 @@ export function TeamWorkspaceTabs({
         key={effectiveValue}
         value={effectiveValue}
         className={cn(
-          "mt-0 flex min-w-0 flex-col gap-3 data-open:duration-150 motion-reduce:transform-none motion-reduce:animate-none",
+          "mt-0 flex min-w-0 flex-col gap-3 motion-reduce:transform-none motion-reduce:animate-none",
           direction === "forward"
             ? "data-open:slide-in-from-right-2"
             : "data-open:slide-in-from-left-2",

@@ -79,7 +79,7 @@ export function OperatorFlowSteps({
             >
               <span
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
+                  "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
                   isDone && "border-primary bg-primary text-primary-foreground",
                   isCurrent && "border-primary text-primary",
                   !isDone &&

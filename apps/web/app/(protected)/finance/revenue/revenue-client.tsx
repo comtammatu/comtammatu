@@ -417,7 +417,7 @@ export function RevenueClient({
         {
           key: "net",
           content: formatVND(netRevenuePreVat),
-          className: "text-right font-mono tabular-nums font-bold",
+          className: "text-right font-mono tabular-nums font-semibold",
         },
         {
           key: "cash",

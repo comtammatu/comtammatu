@@ -439,17 +439,17 @@ export function StockDetailDialog({
                             {DirectionIcon ? (
                               <span
                                 className={cn(
-                                  "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
+                                  "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
                                   isInbound
                                     ? "bg-success/10 text-success"
                                     : "bg-destructive/10 text-destructive",
                                 )}
                                 aria-hidden
                               >
-                                <DirectionIcon className="size-3.5" />
+                                <DirectionIcon className="size-4" />
                               </span>
                             ) : (
-                              <span className="size-7 shrink-0" aria-hidden />
+                              <span className="size-6 shrink-0" aria-hidden />
                             )}
                             <span className="truncate text-foreground">
                               {locationDisplay}

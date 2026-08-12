@@ -16,8 +16,11 @@ test("production create drops kitchen/location ceremony and keeps compact plan f
   assert.doesNotMatch(client, /Nơi xuất nguyên liệu/);
   assert.doesNotMatch(client, /Nơi nhập thành phẩm/);
   assert.match(client, /resolveDefaultLocations/);
-  assert.match(client, /md:grid-cols-\[minmax\(0,1fr\)_11rem\]/);
-  assert.match(client, /className="w-full max-w-\[11rem\]"/);
+  // Compact plan fields: recipe flexes, quantity column stays a fixed 11rem
+  // (named scale max-w-44) — no arbitrary grid template.
+  assert.match(client, /md:flex md:items-end/);
+  assert.match(client, /className="w-full max-w-44"/);
+  assert.doesNotMatch(client, /grid-cols-\[/);
 });
 
 test("production create surfaces max producible and need-vs-stock columns", () => {

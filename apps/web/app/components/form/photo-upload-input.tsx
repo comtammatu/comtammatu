@@ -130,7 +130,7 @@ export function PhotoUploadInput({
               unoptimized
             />
           ) : (
-            <div className="flex size-14 items-center justify-center rounded-md bg-muted text-xs font-bold">
+            <div className="flex size-14 items-center justify-center rounded-md bg-muted text-xs font-semibold">
               {isPdf ? "PDF" : "FILE"}
             </div>
           )}

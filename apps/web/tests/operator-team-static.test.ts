@@ -73,7 +73,8 @@ test("operator team tabs use shared Tabs and preserve client-side switching", ()
   assert.match(tabsPrimitiveSource, /data-size=\{size\}/);
   assert.match(teamTabsSource, /whitespace-nowrap/);
   assert.match(teamTabsSource, /shortLabel/);
-  assert.match(teamTabsSource, /repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(teamTabsSource, /grid-cols-2/);
+  assert.doesNotMatch(teamTabsSource, /style=\{\{/);
   assert.doesNotMatch(teamTabsSource, /activeItem\.title/);
   assert.doesNotMatch(teamTabsSource, /activeItem\.description/);
   assert.doesNotMatch(teamPageSource, /AppPageTabs/);

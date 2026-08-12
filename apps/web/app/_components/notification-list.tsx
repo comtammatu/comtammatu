@@ -223,7 +223,7 @@ function NotificationListSkeletonFallback() {
           variant="outline"
           className="items-start gap-3 border-l-[3px] border-l-transparent bg-card p-3"
         >
-          <Skeleton className="size-9 shrink-0 rounded-md" />
+          <Skeleton className="size-10 shrink-0 rounded-md" />
           <ItemContent className="gap-2">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-3 w-full" />

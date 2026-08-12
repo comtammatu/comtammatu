@@ -229,8 +229,8 @@ export function ProductionNewClient({
             </div>
           ) : null}
 
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem] md:items-end">
-            <div className="grid min-w-0 gap-2">
+          <div className="grid gap-3 md:flex md:items-end">
+            <div className="grid min-w-0 flex-1 gap-2">
               <Label htmlFor="production-recipe">Công thức</Label>
               <Combobox
                 value={recipeSpecId?.toString() ?? ""}
@@ -244,12 +244,12 @@ export function ProductionNewClient({
                 searchPlaceholder="Tìm thành phẩm"
               />
             </div>
-            <div className="grid gap-2">
+            <div className="grid shrink-0 gap-2">
               <Label htmlFor="production-planned-quantity">Sản lượng kế hoạch</Label>
               <div className="flex items-center gap-2">
                 <QuantityInput
                   id="production-planned-quantity"
-                  className="w-full max-w-[11rem]"
+                  className="w-full max-w-44"
                   value={plannedQuantity}
                   onValueChange={setPlannedQuantity}
                   min="0"
@@ -294,21 +294,21 @@ export function ProductionNewClient({
           <AppEmptyState mode="error" title="Chưa thể tạo lệnh" description={contextError} />
         ) : ingredientRows.length ? (
           <div className="overflow-x-auto border">
-            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] gap-2 border-b px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span>Nguyên liệu</span>
-              <span className="text-right">{INVENTORY_VI.shortageNeeded}</span>
-              <span className="text-right">{INVENTORY_VI.shortageOnHand}</span>
+            <div className="flex gap-2 border-b px-3 py-2 text-xs font-medium text-muted-foreground">
+              <span className="min-w-0 flex-1">Nguyên liệu</span>
+              <span className="w-22 shrink-0 text-right">{INVENTORY_VI.shortageNeeded}</span>
+              <span className="w-22 shrink-0 text-right">{INVENTORY_VI.shortageOnHand}</span>
             </div>
             <div className="divide-y">
               {ingredientRows.map(({ ingredient, needed, onHand, short }) => (
                 <div
                   key={ingredient.ingredient_id}
-                  className="grid grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] items-baseline gap-2 px-3 py-2 text-sm"
+                  className="flex items-baseline gap-2 px-3 py-2 text-sm"
                 >
-                  <span className="min-w-0 truncate font-medium">
+                  <span className="min-w-0 flex-1 truncate font-medium">
                     {ingredient.ingredient_name}
                   </span>
-                  <span className="text-right tabular-nums">
+                  <span className="w-22 shrink-0 text-right tabular-nums">
                     {needed == null ? "—" : formatQty(needed)}{" "}
                     <span className="text-muted-foreground">
                       {ingredient.unit_name}
@@ -317,8 +317,8 @@ export function ProductionNewClient({
                   <span
                     className={
                       short
-                        ? "text-right tabular-nums text-destructive"
-                        : "text-right tabular-nums"
+                        ? "w-22 shrink-0 text-right tabular-nums text-destructive"
+                        : "w-22 shrink-0 text-right tabular-nums"
                     }
                   >
                     {formatQty(onHand)}{" "}
