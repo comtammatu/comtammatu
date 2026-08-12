@@ -97,11 +97,16 @@ export function WorkTeamClient({
         return { success: true, data: result.data };
       }}
       onSuccess={(result) => {
-        if (!result.success || result.data == null) {
+        if (!result.success) {
           router.refresh();
           return;
         }
-        router.replace(`/work/team?department=${result.data.id}`);
+        const created = result.data as WorkDepartmentOption | undefined;
+        if (created?.id != null) {
+          router.replace(`/work/team?department=${created.id}`);
+          return;
+        }
+        router.refresh();
       }}
       successMessage={workCopy.save}
     >
