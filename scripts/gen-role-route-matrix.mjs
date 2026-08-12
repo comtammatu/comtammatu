@@ -609,7 +609,9 @@ function collectGeneratedData() {
 
 function regenerateDoc() {
   const docPath = path.join(REPO_ROOT, DOC_PATH);
-  const current = fs.readFileSync(docPath, "utf8");
+  const current = fs
+    .readFileSync(docPath, "utf8")
+    .replace(/\r\n/g, "\n");
 
   const beginIndex = current.indexOf(GENERATED_BEGIN);
   const endIndex = current.indexOf(GENERATED_END);
