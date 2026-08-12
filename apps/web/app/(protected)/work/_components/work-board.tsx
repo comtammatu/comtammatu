@@ -20,8 +20,11 @@ import {
   type WorkTaskStatus,
 } from "../actions";
 import { workCopy } from "@lib/messages/work";
-
-// page-archetype: TASK_BOARD
+import {
+  WORK_KANBAN_COLUMN,
+  WORK_KANBAN_DESKTOP_GRID,
+  WORK_TASK_VIEW_SHELL,
+} from "../_lib/compose-styles";
 
 const BOARD_COLUMNS: WorkTaskStatus[] = [
   "backlog",
@@ -115,7 +118,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
     return (
       <Frame
         key={status}
-        className="flex min-h-48 flex-col gap-2 bg-muted/30 p-2"
+        className={WORK_KANBAN_COLUMN}
         onDragOver={(event) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "move";
@@ -146,7 +149,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
   }
 
   return (
-    <div data-page-archetype="TASK_BOARD" className="flex flex-col gap-3">
+    <div className={WORK_TASK_VIEW_SHELL}>
       <div className="flex flex-wrap gap-1 md:hidden">
         {BOARD_COLUMNS.map((status) => (
           <Button
@@ -163,7 +166,7 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
 
       <div className="md:hidden">{renderColumn(activeStatus)}</div>
 
-      <div className="hidden gap-3 md:grid md:grid-cols-5">
+      <div className={WORK_KANBAN_DESKTOP_GRID}>
         {BOARD_COLUMNS.map(renderColumn)}
       </div>
     </div>

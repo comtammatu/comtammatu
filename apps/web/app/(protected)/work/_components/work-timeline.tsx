@@ -12,8 +12,10 @@ import { Progress } from "@comtammatu/ui/components/progress";
 import { AppEmptyState } from "@/components/surface";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
-
-// page-archetype: TASK_TIMELINE
+import {
+  WORK_TASK_VIEW_SHELL,
+  WORK_TIMELINE_ROW,
+} from "../_lib/compose-styles";
 
 const TIMELINE_DAYS = 28;
 
@@ -38,7 +40,7 @@ export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
   }
 
   return (
-    <div data-page-archetype="TASK_TIMELINE" className="flex flex-col gap-3">
+    <div className={WORK_TASK_VIEW_SHELL}>
       <h2 className="font-heading text-lg font-semibold">
         {workCopy.timelineTitle}
       </h2>
@@ -66,10 +68,7 @@ export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
           );
 
           return (
-            <Frame
-              key={task.id}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-3 bg-background p-3"
-            >
+            <Frame key={task.id} className={WORK_TIMELINE_ROW}>
               <div className="min-w-0">
                 <Link
                   href={`/work/tasks/${task.id}`}

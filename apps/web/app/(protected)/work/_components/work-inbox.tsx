@@ -12,6 +12,7 @@ import {
 import { AppEmptyState } from "@/components/surface";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
+import { WORK_LIST_ITEM_INSET } from "../_lib/compose-styles";
 
 function statusVariant(
   status: WorkTaskRow["status"],
@@ -44,7 +45,7 @@ export function WorkInbox({ tasks }: { tasks: WorkTaskRow[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 px-3 py-3">
+    <div className={`flex flex-col ${WORK_LIST_ITEM_INSET}`}>
       {tasks.map((task) => (
         <Item
           key={task.id}

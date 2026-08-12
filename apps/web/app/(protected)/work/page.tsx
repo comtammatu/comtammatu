@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -22,11 +21,34 @@ import { parseWorkParams, type WorkSearchParams } from "./_lib/params";
 import { canManageWorkTeam } from "./_lib/work-manage";
 import { WorkBoard } from "./_components/work-board";
 import { WorkCalendar } from "./_components/work-calendar";
+import {
+  WorkComposeShell,
+  type WorkComposeArchetype,
+} from "./_components/compose/work-compose-shell";
+import { WorkScopeLabel } from "./_components/compose/work-scope-label";
 import { WorkCreateDialog } from "./_components/work-create-dialog";
 import { WorkInboxFiltered } from "./_components/work-inbox-filtered";
 import { WorkListToolbar } from "./_components/work-list-toolbar";
 import { WorkScopePicker } from "./_components/work-scope-picker";
 import { WorkTimeline } from "./_components/work-timeline";
+
+function resolveScopeNames(
+  params: ReturnType<typeof parseWorkParams>,
+  departments: Array<{ id: number; name: string }>,
+  projects: Array<{ id: number; name: string }>,
+): { departmentName: string | null; projectName: string | null } {
+  return {
+    departmentName:
+      params.departmentId != null
+        ? (departments.find((row) => row.id === params.departmentId)?.name ??
+          null)
+        : null,
+    projectName:
+      params.projectId != null
+        ? (projects.find((row) => row.id === params.projectId)?.name ?? null)
+        : null,
+  };
+}
 
 export default async function WorkPage({
   searchParams,
@@ -48,10 +70,6 @@ export default async function WorkPage({
     );
   }
 
-  if (params.view === "timeline" && params.projectId == null) {
-    redirect("/work?view=mine");
-  }
-
   const canManage = await canManageWorkTeam({ supabase, claims });
   const [departmentsResult, projectsResult] = await Promise.all([
     listWorkDepartments({}),
@@ -65,6 +83,12 @@ export default async function WorkPage({
     projectsResult.success && projectsResult.data
       ? projectsResult.data.items
       : [];
+
+  const { departmentName, projectName } = resolveScopeNames(
+    params,
+    departments,
+    projects,
+  );
 
   const membersByDepartment: Record<number, WorkProfileOption[]> = {};
   await Promise.all(
@@ -113,7 +137,10 @@ export default async function WorkPage({
     params.departmentId == null &&
     params.projectId == null;
 
-  if (needsBoardScope) {
+  const needsTimelineScope =
+    params.view === "timeline" && params.projectId == null;
+
+  if (needsBoardScope || needsTimelineScope) {
     return (
       <AppPage width="xwide" density="compact" scroll>
         <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
@@ -125,6 +152,8 @@ export default async function WorkPage({
             params={params}
             departments={departments}
             projects={projects}
+            targetView={needsTimelineScope ? "timeline" : "board"}
+            mode={needsTimelineScope ? "project-only" : "board-or-project"}
           />
         </AppListFrame>
       </AppPage>
@@ -185,24 +214,35 @@ export default async function WorkPage({
     }
   }
 
+  const showScopeLabel =
+    params.view === "board" ||
+    params.view === "calendar" ||
+    params.view === "timeline";
+
   const toolbar = (
     <WorkListToolbar
       params={params}
       showFilters={showInboxFilters}
       trailing={
-        params.view === "board" &&
-        (params.departmentId != null || params.projectId != null) ? (
-          <Button
-            variant="outline"
-            size="sm"
-            render={<Link href="/work?view=board" />}
-          >
-            {workCopy.pickScope}
-          </Button>
+        showScopeLabel ? (
+          <WorkScopeLabel
+            params={params}
+            departmentName={departmentName}
+            projectName={projectName}
+          />
         ) : null
       }
     />
   );
+
+  const composeArchetype: WorkComposeArchetype | null =
+    params.view === "board"
+      ? "TASK_BOARD"
+      : params.view === "calendar"
+        ? "TASK_CALENDAR"
+        : params.view === "timeline"
+          ? "TASK_TIMELINE"
+          : null;
 
   return (
     <AppPage width="xwide" density="compact" scroll>
@@ -212,15 +252,14 @@ export default async function WorkPage({
           <div className="mb-4">{toolbar}</div>
           <AppEmptyState mode="error" description={loadError} />
         </>
-      ) : params.view === "mine" ? (
+      ) : composeArchetype != null ? (
+        <WorkComposeShell archetype={composeArchetype} toolbar={toolbar}>
+          {body}
+        </WorkComposeShell>
+      ) : (
         <AppListFrame contentScroll toolbar={toolbar}>
           {body}
         </AppListFrame>
-      ) : (
-        <>
-          <div className="mb-4">{toolbar}</div>
-          {body}
-        </>
       )}
     </AppPage>
   );

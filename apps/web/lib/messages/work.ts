@@ -48,6 +48,7 @@ export const workCopy = {
     "Người khác vừa cập nhật việc này. Tải lại rồi thử lại.",
   boardNeedsScope:
     "Chọn phòng ban hoặc dự án để xem bảng công việc.",
+  timelineNeedsScope: "Chọn dự án để xem tiến độ công việc.",
   calendarTitle: "Lịch công việc",
   timelineTitle: "Tiến độ dự án",
   viewMine: "Việc của tôi",

@@ -35,6 +35,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { RadioGroup, RadioGroupItem } from "@comtammatu/ui/components/radio-group";
 import {
   Select,
@@ -77,6 +78,14 @@ import {
   StationSection,
 } from "@/components/surface";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  WORK_KANBAN_COLUMN,
+  WORK_LIST_ITEM_INSET,
+  WORK_MONTH_CELL,
+  WORK_TASK_CHIP,
+  WORK_TIMELINE_ROW,
+} from "../../(protected)/work/_lib/compose-styles";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { EmployeePanel } from "@lib/staff-runtime/components/staff-runtime-page";
 
@@ -1135,6 +1144,46 @@ export function DesignLabClient() {
                 </div>
               </ItemContent>
             </Item>
+          </div>
+        </AppSection>
+
+        <AppSection
+          title="13 · Work compose · TASK_*"
+          headingLevel="h2"
+          description="Công việc control_surface recipes — compose-styles SSOT; month grid is not ui/calendar DayPicker."
+        >
+          <div className="flex flex-col gap-4">
+            <Caption>
+              {`WORK_LIST_ITEM_INSET mirrors LIST_ITEM_INSET (${LIST_ITEM_INSET}). Import constants from work/_lib/compose-styles.ts — do not fork strings in route bodies.`}
+            </Caption>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Frame className={WORK_KANBAN_COLUMN}>
+                <span className="text-sm font-semibold">Kanban column</span>
+                <Item variant="outline" size="xs">
+                  <ItemContent>
+                    <ItemTitle>Task card</ItemTitle>
+                  </ItemContent>
+                </Item>
+              </Frame>
+              <Frame className={WORK_MONTH_CELL}>
+                <span className="text-xs font-semibold tabular-nums">12</span>
+                <Button variant="secondary" size="xs" className={WORK_TASK_CHIP}>
+                  Due task chip
+                </Button>
+              </Frame>
+            </div>
+            <Frame className={WORK_TIMELINE_ROW}>
+              <span className="truncate text-sm font-medium">Timeline row</span>
+              <Progress value={42} className="h-3 rounded-full" />
+            </Frame>
+            <ItemGroup className={WORK_LIST_ITEM_INSET}>
+              <Item variant="outline" size="xs">
+                <ItemContent>
+                  <ItemTitle>Inbox Item row</ItemTitle>
+                  <ItemDescription>WORK_LIST_ITEM_INSET</ItemDescription>
+                </ItemContent>
+              </Item>
+            </ItemGroup>
           </div>
         </AppSection>
       </div>

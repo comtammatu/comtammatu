@@ -72,18 +72,36 @@ test("Work board uses HTML5 drag-and-drop handlers", () => {
   const board = readWeb("app/(protected)/work/_components/work-board.tsx");
   assert.match(board, /onDragStart=/);
   assert.match(board, /onDrop=/);
-  assert.match(board, /data-page-archetype="TASK_BOARD"/);
+  assert.match(board, /WORK_KANBAN_COLUMN/);
 });
 
-test("Work calendar and timeline declare TASK_* archetypes", () => {
-  const calendar = readWeb(
-    "app/(protected)/work/_components/work-calendar.tsx",
+test("Work calendar and timeline use compose shell archetypes", () => {
+  const shell = readWeb(
+    "app/(protected)/work/_components/compose/work-compose-shell.tsx",
   );
-  const timeline = readWeb(
-    "app/(protected)/work/_components/work-timeline.tsx",
+  const styles = readWeb("app/(protected)/work/_lib/compose-styles.ts");
+  assert.match(shell, /data-page-archetype=\{archetype\}/);
+  assert.match(styles, /WORK_LIST_ITEM_INSET/);
+  assert.match(styles, /WORK_KANBAN_COLUMN/);
+  assert.match(styles, /WORK_MONTH_CELL/);
+});
+
+test("Work timeline shows scope picker instead of redirect", () => {
+  const page = readWeb("app/(protected)/work/page.tsx");
+  assert.match(page, /needsTimelineScope/);
+  assert.doesNotMatch(page, /redirect\("\/work\?view=mine"\)/);
+  const picker = readWeb(
+    "app/(protected)/work/_components/work-scope-picker.tsx",
   );
-  assert.match(calendar, /data-page-archetype="TASK_CALENDAR"/);
-  assert.match(timeline, /data-page-archetype="TASK_TIMELINE"/);
+  assert.match(picker, /project-only/);
+  assert.match(picker, /timelineNeedsScope/);
+});
+
+test("Work compose blocks are registered", () => {
+  const registry = readRepo("scripts/ui-component-registry.mjs");
+  assert.match(registry, /"work-task-inbox"/);
+  assert.match(registry, /"work-task-board"/);
+  assert.match(registry, /"work-task-calendar"/);
 });
 
 test("Work create dialog and list toolbar exist", () => {

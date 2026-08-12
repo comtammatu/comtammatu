@@ -179,6 +179,21 @@ code knows:
   (`TableHeader` + `TableEmptyStateRow`). Swapping the whole table for
   `AppEmptyState` is only for error or load failure.
 
+## Work Module Compose (`/work`)
+
+Control Surface **Work** (`/work`) uses LIST at the route census; board, calendar,
+and timeline are **TASK_*** compose recipes inside one `AppListFrame` (ADR 0035).
+
+| Constant / component | Role |
+| --- | --- |
+| `work/_lib/compose-styles.ts` | SSOT Tailwind for inbox inset, Kanban columns, month cells, timeline rows |
+| `WorkComposeShell` | `AppListFrame` + `data-page-archetype=TASK_*` wrapper |
+| `WorkMonthGrid` + `WorkTaskChip` | Vietnam month grid from `getVNMonthCalendarCells` — **not** `ui/calendar` DayPicker |
+| `WorkScopePicker` / `WorkScopeLabel` | URL scope for board (department or project), timeline (project only), calendar (optional) |
+
+Registry blocks: `work-task-inbox`, `work-task-board`, `work-task-calendar`.
+Exemplar: `/ds-lab` section 13.
+
 ## control_surface Shell Runtime
 
 `apps/web/app/components/app-shell.tsx` (historical code ids

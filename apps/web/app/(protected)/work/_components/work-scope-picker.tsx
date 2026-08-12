@@ -13,55 +13,87 @@ import type {
   WorkProjectOption,
 } from "../actions";
 import { workCopy } from "@lib/messages/work";
-import { workHref, type ParsedWorkParams } from "../_lib/params";
+import {
+  WORK_LIST_ITEM_INSET,
+  WORK_SCOPE_SECTION_TITLE,
+} from "../_lib/compose-styles";
+import {
+  workHref,
+  type ParsedWorkParams,
+  type WorkView,
+} from "../_lib/params";
 
 export function WorkScopePicker({
   params,
   departments,
   projects,
+  targetView = "board",
+  mode = "board-or-project",
 }: {
   params: ParsedWorkParams;
   departments: WorkDepartmentOption[];
   projects: WorkProjectOption[];
+  targetView?: Extract<WorkView, "board" | "timeline">;
+  mode?: "board-or-project" | "project-only";
 }) {
+  const description =
+    mode === "project-only"
+      ? workCopy.timelineNeedsScope
+      : workCopy.boardNeedsScope;
+
+  const viewLabel =
+    targetView === "timeline" ? workCopy.viewTimeline : workCopy.viewBoard;
+
   return (
-    <div className="flex flex-col gap-4 px-3 py-3">
+    <div className={`flex flex-col ${WORK_LIST_ITEM_INSET}`}>
       <AppEmptyState
         mode="no-data"
         title={workCopy.pickScope}
-        description={workCopy.boardNeedsScope}
+        description={description}
       />
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold">{workCopy.scopeDepartment}</h2>
-          {departments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{workCopy.inboxEmpty}</p>
-          ) : (
-            departments.map((department) => (
-              <Item
-                key={department.id}
-                variant="outline"
-                render={
-                  <Link
-                    href={workHref(params, {
-                      view: "board",
-                      departmentId: department.id,
-                      projectId: null,
-                    })}
-                  />
-                }
-              >
-                <ItemContent>
-                  <ItemTitle>{department.name}</ItemTitle>
-                  <ItemDescription>{workCopy.viewBoard}</ItemDescription>
-                </ItemContent>
-              </Item>
-            ))
-          )}
-        </section>
+      <div
+        className={
+          mode === "project-only"
+            ? "flex flex-col gap-2"
+            : "grid gap-4 md:grid-cols-2"
+        }
+      >
+        {mode === "board-or-project" ? (
+          <section className="flex flex-col gap-2">
+            <h2 className={WORK_SCOPE_SECTION_TITLE}>
+              {workCopy.scopeDepartment}
+            </h2>
+            {departments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {workCopy.inboxEmpty}
+              </p>
+            ) : (
+              departments.map((department) => (
+                <Item
+                  key={department.id}
+                  variant="outline"
+                  render={
+                    <Link
+                      href={workHref(params, {
+                        view: targetView,
+                        departmentId: department.id,
+                        projectId: null,
+                      })}
+                    />
+                  }
+                >
+                  <ItemContent>
+                    <ItemTitle>{department.name}</ItemTitle>
+                    <ItemDescription>{viewLabel}</ItemDescription>
+                  </ItemContent>
+                </Item>
+              ))
+            )}
+          </section>
+        ) : null}
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold">{workCopy.scopeProject}</h2>
+          <h2 className={WORK_SCOPE_SECTION_TITLE}>{workCopy.scopeProject}</h2>
           {projects.length === 0 ? (
             <p className="text-sm text-muted-foreground">{workCopy.inboxEmpty}</p>
           ) : (
@@ -72,7 +104,7 @@ export function WorkScopePicker({
                 render={
                   <Link
                     href={workHref(params, {
-                      view: "board",
+                      view: targetView,
                       projectId: project.id,
                       departmentId: null,
                     })}
@@ -81,7 +113,7 @@ export function WorkScopePicker({
               >
                 <ItemContent>
                   <ItemTitle>{project.name}</ItemTitle>
-                  <ItemDescription>{workCopy.viewBoard}</ItemDescription>
+                  <ItemDescription>{viewLabel}</ItemDescription>
                 </ItemContent>
               </Item>
             ))

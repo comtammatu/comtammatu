@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { PAGE_ARCHETYPES } from "./page-archetypes.mjs";
+import { PAGE_ARCHETYPES, CONTROL_SURFACE_COMPOSE_SHAPES } from "./page-archetypes.mjs";
 
 const VALID_ACCESS = new Set([
   "direct",
@@ -1077,6 +1077,33 @@ export const UI_BLOCK_REGISTRY = {
     "AppSection, AppShell, AppListFrame, BranchOperatorPage, control_surface LIST adapters, raw Card, or dashboard grid",
     "apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx",
   ),
+  "work-task-inbox": block(
+    ["LIST"],
+    ["control_surface"],
+    "scan assigned work tasks with URL-backed status and search filters",
+    "AppListFrame + AppToolbar inline + WorkInbox Item rows (WORK_LIST_ITEM_INSET)",
+    "DataTable when exact column sort and export are required",
+    "raw Card list, parallel mobile/desktop trees, or inventing a *Block import",
+    "apps/web/app/(protected)/work/page.tsx",
+  ),
+  "work-task-board": block(
+    ["TASK_BOARD"],
+    ["control_surface"],
+    "operate a department or project Kanban by work_tasks.status",
+    "WorkComposeShell + WorkBoard + WORK_KANBAN_* compose styles + HTML5 drag to status RPC",
+    "calendar or timeline compose for status changes",
+    "packages/ui Calendar DayPicker, raw column Card grid, or inventing a *Block import",
+    "apps/web/app/(protected)/work/_components/work-board.tsx",
+  ),
+  "work-task-calendar": block(
+    ["TASK_CALENDAR"],
+    ["control_surface"],
+    "review due dates in a Vietnam month grid for mine or scoped tasks",
+    "WorkComposeShell + WorkMonthGrid + WorkTaskChip (not ui/calendar DayPicker)",
+    "BusinessDateField date picker for editing due_at on DETAIL",
+    "ui/calendar.tsx DayPicker for task month view, hand-rolled grid strings, or inventing a *Block import",
+    "apps/web/app/(protected)/work/_components/work-calendar.tsx",
+  ),
   "employee-self-service": block(
     ["LANDING"],
     ["staff"],
@@ -1262,7 +1289,10 @@ export function validateUiComponentRegistry(repoRoot) {
     }
   }
 
-  const liveArchetypes = new Set(Object.values(PAGE_ARCHETYPES));
+  const liveArchetypes = new Set([
+    ...Object.values(PAGE_ARCHETYPES),
+    ...CONTROL_SURFACE_COMPOSE_SHAPES,
+  ]);
   for (const [name, entry] of Object.entries(UI_BLOCK_REGISTRY)) {
     validateDecisionEntry(`UI block ${name}`, entry, errors);
     if (
