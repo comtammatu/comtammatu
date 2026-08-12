@@ -5,6 +5,7 @@ import { GET as getOperatorManifest } from "../app/(protected)/br/[branchId]/(op
 import { GET as getKdsManifest } from "../app/(protected)/br/[branchId]/kds/manifest.webmanifest/route";
 import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/manifest.webmanifest/route";
 import { GET as getPickupManifest } from "../app/(protected)/br/[branchId]/pickup/manifest.webmanifest/route";
+import { normalizeEol } from "./static-source";
 
 test("protected Vercel previews do not register a service worker", () => {
   const rootLayoutSource = readFileSync(
@@ -364,9 +365,8 @@ test("SW offline fallback (PWA-2) only precaches/serves the operator shell, neve
 });
 
 test("self-order navigations never cache seating-specific SSR HTML", () => {
-  const swSource = readFileSync(
-    new URL("../app/sw.ts", import.meta.url),
-    "utf8",
+  const swSource = normalizeEol(
+    readFileSync(new URL("../app/sw.ts", import.meta.url), "utf8"),
   );
 
   assert.match(
@@ -387,9 +387,8 @@ test("self-order navigations never cache seating-specific SSR HTML", () => {
 });
 
 test("login navigation never serves a cached page shell", () => {
-  const swSource = readFileSync(
-    new URL("../app/sw.ts", import.meta.url),
-    "utf8",
+  const swSource = normalizeEol(
+    readFileSync(new URL("../app/sw.ts", import.meta.url), "utf8"),
   );
 
   assert.match(

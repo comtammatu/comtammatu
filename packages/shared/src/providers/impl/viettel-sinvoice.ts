@@ -166,45 +166,32 @@ function normalizeMoney(value: number | undefined): number {
   return Math.round(value);
 }
 
-function clampMoney(value: number, max: number): number {
-  return Math.min(Math.max(0, value), Math.max(0, max));
-}
-
-// Viettel rejects a `discount` rate carrying >2 decimal places.
-function roundDiscountRate(rate: number): number {
-  return Math.round(rate * 100) / 100;
-}
-
-function findNetDiscountForGrossTarget(
-  lineNet: number,
+/**
+ * Choose net unit price so qty×net + round(qty×net×vat%) is as close as
+ * possible to the post-discount GROSS (ADR 0034, no itemDiscount).
+ */
+function findNetUnitPriceForGrossTarget(
+  qty: number,
   vatRate: number,
-  grossBeforeDiscount: number,
-  grossDiscount: number,
+  targetGross: number,
 ): number {
-  const targetGross = Math.max(
-    0,
-    Math.round(grossBeforeDiscount - grossDiscount),
-  );
-  const candidate = clampMoney(
-    Math.round(grossDiscount / (1 + vatRate / 100)),
-    lineNet,
-  );
-  const start = Math.max(0, candidate - 50);
-  const end = Math.min(lineNet, candidate + 50);
+  const gross = Math.max(0, Math.round(targetGross));
+  const seed = Math.round(gross / qty / (1 + vatRate / 100));
+  const start = Math.max(0, seed - 50);
+  const end = seed + 50;
 
-  let best = candidate;
+  let best = Math.max(0, seed);
   let bestDiff = Number.POSITIVE_INFINITY;
-  for (let discount = start; discount <= end; discount += 1) {
-    const taxable = lineNet - discount;
-    const tax = Math.round((taxable * vatRate) / 100);
-    const grossAfterDiscount = taxable + tax;
-    const diff = Math.abs(grossAfterDiscount - targetGross);
+  for (let netUnit = start; netUnit <= end; netUnit += 1) {
+    const lineNet = netUnit * qty;
+    const tax = Math.round((lineNet * vatRate) / 100);
+    const diff = Math.abs(lineNet + tax - gross);
     if (diff < bestDiff) {
-      best = discount;
+      best = netUnit;
       bestDiff = diff;
+      if (diff === 0) break;
     }
   }
-
   return best;
 }
 
@@ -297,6 +284,8 @@ export function resolveSinvoiceBuyerInfo(
  * Compute Sinvoice itemInfo + reconciled sums.
  *
  * Template `1/...` wants net unit prices + VAT in `taxAmount`.
+ * ADR 0034: caller supplies post-discount GROSS lines; do not send
+ * `itemDiscount` / discount rate (always 0).
  *
  * Rounding order matters for Sinvoice strict validators:
  *   - 43: |qty × unitPrice − itemTotalAmountWithoutTax| < 1  (STRICT)
@@ -318,26 +307,19 @@ export function buildSinvoiceItemInfo(
     if (![0, 5, 8, 10].includes(lineVatRate)) {
       throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
     }
-    const lineGross = item.amount;
+    const lineGross = normalizeMoney(item.amount);
 
     const qty = item.quantity;
     if (!Number.isFinite(qty) || qty <= 0) {
       throw new Error("sinvoice_invalid_quantity");
     }
-    const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
-    const netUnitPrice = Math.round(grossUnitPrice / (1 + lineVatRate / 100));
-    const lineNet = netUnitPrice * qty;
-    const grossDiscount = normalizeMoney(item.discountAmount);
-    const lineDiscount = clampMoney(
-      findNetDiscountForGrossTarget(
-        lineNet,
-        lineVatRate,
-        lineGross,
-        grossDiscount,
-      ),
-      lineNet,
+    const netUnitPrice = findNetUnitPriceForGrossTarget(
+      qty,
+      lineVatRate,
+      lineGross,
     );
-    const taxableAmount = lineNet - lineDiscount;
+    const lineNet = netUnitPrice * qty;
+    const taxableAmount = lineNet;
     const lineTax = Math.round((taxableAmount * lineVatRate) / 100);
 
     return {
@@ -351,9 +333,8 @@ export function buildSinvoiceItemInfo(
       itemTotalAmountWithoutTax: lineNet,
       itemTotalAmountAfterDiscount: taxableAmount,
       itemTotalAmountWithTax: taxableAmount + lineTax,
-      discount:
-        lineNet > 0 ? roundDiscountRate((lineDiscount / lineNet) * 100) : 0,
-      itemDiscount: lineDiscount,
+      discount: 0,
+      itemDiscount: 0,
       itemNote: null,
       isIncreaseItem: null,
       taxPercentage: lineVatRate,

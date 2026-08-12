@@ -220,7 +220,28 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(form, /result && !result\.ok && result\.terminal/);
   assert.match(page, /expiresAt=\{request\.expiresAt\}/);
   assert.match(page, /export const dynamic = "force-dynamic"/);
+  assert.match(page, /request\.state === "not_required"/);
+  assert.match(page, /invoiceBuyer\.notRequiredTitle/);
+  assert.match(
+    buyerServer,
+    /state: z\.enum\(\["open", "submitted", "expired", "closed", "not_required"\]\)/,
+  );
   assert.doesNotMatch(form, /invoiceBuyer\.optional/);
+  const zeroTotalMigration = readRepo(
+    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+  );
+  assert.match(
+    zeroTotalMigration,
+    /OR EXISTS \([\s\S]*invoice\.status = 'not_required'/,
+  );
+  assert.match(
+    zeroTotalMigration,
+    /WHEN v_invoice\.status = 'not_required'[\s\S]*THEN 'not_required'/,
+  );
+  assert.match(
+    zeroTotalMigration,
+    /RETURN jsonb_build_object\('status', 'not_required'\)/,
+  );
   const buyerKindMigration = readRepo(
     "supabase/migrations/20260808130119_hddt_buyer_kind_invoice_payload.sql",
   );

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { readAttendanceTableModules } from "./helpers/read-attendance-table-modules";
+import { toPosixPath } from "./static-source";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
@@ -260,7 +261,7 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
   const toolbarSlot = /\btoolbar=\{/;
 
   for (const abs of files) {
-    const rel = abs.slice(repoRoot.length + 1);
+    const rel = toPosixPath(abs.slice(repoRoot.length + 1));
     const source = readFileSync(abs, "utf8");
     if (!filterSlotToolbar.test(source)) continue;
     if (allowlist.has(rel)) continue;

@@ -54,7 +54,7 @@ export class CartStore {
       sides?: CartSide[];
       note?: string;
       quantity?: number;
-      discountType?: "pct" | "vnd";
+      discountType?: "vnd";
       discountValue?: number;
       discountNote?: string;
     } = {},
@@ -64,7 +64,7 @@ export class CartStore {
     const price = opts.unitPrice ?? item.base_price;
     const hasNote = opts.note !== undefined && opts.note.length > 0;
     const hasDiscount =
-      opts.discountType !== undefined && opts.discountValue !== undefined;
+      opts.discountType === "vnd" && opts.discountValue !== undefined;
     const quantity = opts.quantity ?? 1;
     const baseKey = makeCartKey(item.id, opts.variantId, modifiers, sides);
     // A discounted line gets a unique key so it never quantity-merges onto an

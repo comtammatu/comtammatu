@@ -7,7 +7,8 @@ import {
   formatVNDate,
   getVNDateString,
 } from "@comtammatu/shared/time";
-import { cn } from "@comtammatu/ui";
+import { Frame } from "@comtammatu/ui/components/frame";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { AppEmptyState } from "@/components/surface";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
@@ -59,12 +60,15 @@ export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
               ),
             ),
           );
-          const widthPercent = Math.max(8, ((offsetDays + 1) / TIMELINE_DAYS) * 100);
+          const widthPercent = Math.max(
+            8,
+            ((offsetDays + 1) / TIMELINE_DAYS) * 100,
+          );
 
           return (
-            <div
+            <Frame
               key={task.id}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-3 rounded-lg border bg-background p-3"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-3 bg-background p-3"
             >
               <div className="min-w-0">
                 <Link
@@ -77,15 +81,8 @@ export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
                   {workCopy.due}: {formatVNDate(task.dueAt!)}
                 </p>
               </div>
-              <div className="relative h-3 rounded-full bg-muted">
-                <div
-                  className={cn(
-                    "absolute inset-y-0 left-0 rounded-full bg-primary/70",
-                  )}
-                  style={{ width: `${widthPercent}%` }}
-                />
-              </div>
-            </div>
+              <Progress value={widthPercent} className="h-3 rounded-full" />
+            </Frame>
           );
         })}
       </div>

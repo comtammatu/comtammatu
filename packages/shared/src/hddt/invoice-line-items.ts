@@ -12,6 +12,14 @@ export interface OrderItemForInvoiceLines {
   sides?: unknown;
 }
 
+export interface BuildHddtProviderLinesInput {
+  items: readonly OrderItemForInvoiceLines[];
+  orderDiscountAmount: number;
+  serviceCharge?: number;
+  /** Required when asserting money invariant; omit in unit helpers. */
+  totalAmount?: number;
+}
+
 type PricedOption = {
   name: string;
   unitPrice: number;
@@ -20,6 +28,7 @@ type PricedOption = {
 
 const DEFAULT_UNIT = "Phần";
 const FALLBACK_ITEM_NAME = "Món ăn";
+const SERVICE_CHARGE_LINE_NAME = "Phí dịch vụ";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -36,6 +45,10 @@ function toNumber(value: unknown): number {
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function toWholeVnd(value: number): number {
+  return Math.round(value);
 }
 
 function toVatRate(value: number | string): 0 | 5 | 8 | 10 {
@@ -125,181 +138,264 @@ function buildOptionLine(
   };
 }
 
+function withoutDiscountField(line: InvoiceLineItem): InvoiceLineItem {
+  return {
+    name: line.name,
+    unit: line.unit,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    amount: toWholeVnd(toNumber(line.amount)),
+    vatRate: line.vatRate,
+  };
+}
+
+function setLineGross(line: InvoiceLineItem, amount: number): InvoiceLineItem {
+  const nextAmount = Math.max(0, toWholeVnd(amount));
+  const qty = line.quantity;
+  return {
+    ...withoutDiscountField(line),
+    amount: nextAmount,
+    unitPrice: qty > 0 ? roundMoney(nextAmount / qty) : 0,
+  };
+}
+
+function compareCheapFirst(
+  a: { amount: number; name: string; unitPrice: number; index: number },
+  b: { amount: number; name: string; unitPrice: number; index: number },
+): number {
+  if (a.amount !== b.amount) return a.amount - b.amount;
+  const byName = a.name.localeCompare(b.name);
+  if (byName !== 0) return byName;
+  if (a.unitPrice !== b.unitPrice) return a.unitPrice - b.unitPrice;
+  return a.index - b.index;
+}
+
+/**
+ * Subtract GROSS VND discount from lines cheapest-first (ADR 0034).
+ * Bakes into `amount` / `unitPrice`; never sets `discountAmount`.
+ */
+export function bakeGrossDiscountCheapFirst(
+  lines: readonly InvoiceLineItem[],
+  discountAmount: number,
+): InvoiceLineItem[] {
+  const result = lines.map(withoutDiscountField);
+  const normalizedDiscount = Number.isFinite(discountAmount)
+    ? Math.max(0, toWholeVnd(discountAmount))
+    : 0;
+  if (normalizedDiscount <= 0 || result.length === 0) return result;
+
+  const order = result
+    .map((line, index) => ({
+      index,
+      amount: Math.max(0, toWholeVnd(toNumber(line.amount))),
+      name: line.name,
+      unitPrice: toNumber(line.unitPrice),
+    }))
+    .filter((line) => line.amount > 0)
+    .sort(compareCheapFirst);
+
+  let remaining = normalizedDiscount;
+  for (const entry of order) {
+    if (remaining <= 0) break;
+    const target = result[entry.index];
+    if (!target) continue;
+    const take = Math.min(entry.amount, remaining);
+    result[entry.index] = setLineGross(target, entry.amount - take);
+    remaining -= take;
+  }
+
+  return result;
+}
+
 function aggregateDuplicateLines(
   lines: readonly InvoiceLineItem[],
 ): InvoiceLineItem[] {
   const byKey = new Map<string, InvoiceLineItem>();
 
   for (const line of lines) {
+    const clean = withoutDiscountField(line);
     const key = JSON.stringify([
-      line.name,
-      line.unit,
-      line.unitPrice,
-      line.vatRate,
+      clean.name,
+      clean.unit,
+      clean.unitPrice,
+      clean.vatRate,
     ]);
     const existing = byKey.get(key);
     if (!existing) {
-      byKey.set(key, { ...line });
+      byKey.set(key, { ...clean });
       continue;
     }
 
-    const quantity = existing.quantity + line.quantity;
+    const quantity = existing.quantity + clean.quantity;
     existing.quantity = quantity;
-    existing.amount = roundMoney(existing.unitPrice * quantity);
-    if ((existing.discountAmount ?? 0) > 0 || (line.discountAmount ?? 0) > 0) {
-      existing.discountAmount = roundMoney(
-        (existing.discountAmount ?? 0) + (line.discountAmount ?? 0),
-      );
-    }
+    existing.amount = toWholeVnd(
+      toNumber(existing.amount) + toNumber(clean.amount),
+    );
+    existing.unitPrice =
+      quantity > 0 ? roundMoney(existing.amount / quantity) : 0;
   }
 
   return Array.from(byKey.values());
 }
 
-function cloneWithNormalizedDiscount(line: InvoiceLineItem): InvoiceLineItem {
-  const clone: InvoiceLineItem = {
-    name: line.name,
-    unit: line.unit,
-    quantity: line.quantity,
-    unitPrice: line.unitPrice,
-    amount: line.amount,
-    vatRate: line.vatRate,
-  };
-  const amount = Math.max(0, Math.round(toNumber(line.amount)));
-  const existingDiscount = Math.min(
-    amount,
-    Math.max(0, Math.round(toNumber(line.discountAmount))),
-  );
-  if (existingDiscount > 0) {
-    clone.discountAmount = existingDiscount;
-  }
-  return clone;
-}
+function expandOrderItem(item: OrderItemForInvoiceLines): InvoiceLineItem[] {
+  const itemLines: InvoiceLineItem[] = [];
+  const parentQuantity = Math.max(0, toNumber(item.quantity));
+  if (parentQuantity <= 0) return itemLines;
 
-/**
- * POS discounts must be declared to HĐĐT/CQT as line discounts. Existing
- * line discounts are preserved; the additional discount is allocated over
- * each line's remaining gross amount, with rounding remainder on the last
- * positive line so the total discount is exact in VND.
- */
-export function applyInvoiceLineDiscount(
-  lines: readonly InvoiceLineItem[],
-  discountAmount: number,
-): InvoiceLineItem[] {
-  const result = lines.map(cloneWithNormalizedDiscount);
-  const positiveLines = result
-    .map((line, index) => ({
-      index,
-      amount: Math.max(0, Math.round(toNumber(line.amount))),
-      existingDiscount: Math.min(
-        Math.max(0, Math.round(toNumber(line.discountAmount))),
-        Math.max(0, Math.round(toNumber(line.amount))),
-      ),
-    }))
-    .map((line) => ({
-      ...line,
-      discountableAmount: Math.max(0, line.amount - line.existingDiscount),
-    }))
-    .filter((line) => line.discountableAmount > 0);
-
-  const grossTotal = positiveLines.reduce(
-    (sum, line) => sum + line.discountableAmount,
+  const unitPrice = roundMoney(toNumber(item.unit_price));
+  const modifiers = normalizeModifiers(item.modifiers);
+  const sides = normalizeSides(item.sides);
+  const optionUnitTotal = [...modifiers, ...sides].reduce(
+    (sum, option) => sum + option.unitPrice * option.quantityPerParent,
     0,
   );
-  const normalizedDiscount = Number.isFinite(discountAmount)
-    ? Math.round(discountAmount)
-    : 0;
-  const discount = Math.min(Math.max(0, normalizedDiscount), grossTotal);
+  const baseUnit = roundMoney(unitPrice - optionUnitTotal);
+  const vatRate = toVatRate(item.vat_rate);
 
-  if (discount <= 0 || grossTotal <= 0 || positiveLines.length === 0) {
-    return result;
+  if (baseUnit < 0) {
+    itemLines.push(buildAggregateLine(item));
+  } else if (baseUnit > 0) {
+    itemLines.push({
+      name: formatItemName(item),
+      unit: DEFAULT_UNIT,
+      quantity: parentQuantity,
+      unitPrice: baseUnit,
+      amount: roundMoney(baseUnit * parentQuantity),
+      vatRate,
+    });
   }
 
-  let allocated = 0;
-  positiveLines.forEach((line, position) => {
-    const remaining = discount - allocated;
-    if (remaining <= 0) return;
-
-    const isLast = position === positiveLines.length - 1;
-    const proportional = isLast
-      ? remaining
-      : Math.round((discount * line.discountableAmount) / grossTotal);
-    const lineDiscount = Math.min(
-      line.discountableAmount,
-      remaining,
-      proportional,
-    );
-
-    if (lineDiscount > 0) {
-      const target = result[line.index];
-      if (target) {
-        target.discountAmount =
-          Math.round(toNumber(target.discountAmount)) + lineDiscount;
-      }
-      allocated += lineDiscount;
+  if (baseUnit >= 0) {
+    for (const modifier of modifiers) {
+      itemLines.push(buildOptionLine(modifier, parentQuantity, vatRate));
     }
-  });
+    for (const side of sides) {
+      itemLines.push(buildOptionLine(side, parentQuantity, vatRate));
+    }
 
-  return result;
+    if (baseUnit === 0 && modifiers.length === 0 && sides.length === 0) {
+      itemLines.push(buildAggregateLine(item));
+    }
+  }
+
+  return itemLines.map(withoutDiscountField);
+}
+
+/** Modal VAT among items; ties prefer 8 → 10 → 5 → 0. Fallback 8. */
+export function resolveServiceChargeVatRate(
+  items: readonly Pick<OrderItemForInvoiceLines, "vat_rate">[],
+): 0 | 5 | 8 | 10 {
+  const counts = new Map<0 | 5 | 8 | 10, number>();
+  for (const item of items) {
+    const rate = toVatRate(item.vat_rate);
+    counts.set(rate, (counts.get(rate) ?? 0) + 1);
+  }
+  if (counts.size === 0) return 8;
+
+  const preference: Array<0 | 5 | 8 | 10> = [8, 10, 5, 0];
+  let best: 0 | 5 | 8 | 10 = 8;
+  let bestCount = -1;
+  for (const rate of preference) {
+    const count = counts.get(rate) ?? 0;
+    if (count > bestCount) {
+      best = rate;
+      bestCount = count;
+    }
+  }
+  for (const [rate, count] of counts) {
+    if (count > bestCount) {
+      best = rate;
+      bestCount = count;
+    } else if (count === bestCount) {
+      const bestPref = preference.indexOf(best);
+      const ratePref = preference.indexOf(rate);
+      if (ratePref !== -1 && (bestPref === -1 || ratePref < bestPref)) {
+        best = rate;
+      }
+    }
+  }
+  return best;
 }
 
 /**
  * POS persists order_items.unit_price as base price plus priced modifiers and
- * sides. HĐĐT line items must reverse that aggregation so the provider PDF/XML
- * shows the sold components: main dish price first, then each paid topping/side.
- * Duplicate legal lines are merged by name/unit/unit price so the invoice keeps
- * one row per sold component with an aggregated quantity.
+ * sides. HĐĐT line items reverse that aggregation. Does not apply discounts —
+ * use `buildHddtProviderLines` for issuance projection (ADR 0034).
  */
 export function buildInvoiceLineItemsFromOrderItems(
   orderItems: readonly OrderItemForInvoiceLines[],
 ): InvoiceLineItem[] {
   const lines: InvoiceLineItem[] = [];
-
   for (const item of orderItems) {
-    const itemLines: InvoiceLineItem[] = [];
-    const parentQuantity = Math.max(0, toNumber(item.quantity));
-    if (parentQuantity <= 0) continue;
+    lines.push(...expandOrderItem(item));
+  }
+  return aggregateDuplicateLines(lines);
+}
 
-    const unitPrice = roundMoney(toNumber(item.unit_price));
-    const modifiers = normalizeModifiers(item.modifiers);
-    const sides = normalizeSides(item.sides);
-    const optionUnitTotal = [...modifiers, ...sides].reduce(
-      (sum, option) => sum + option.unitPrice * option.quantityPerParent,
-      0,
+/**
+ * Full HĐĐT provider projection: expand → item CK cheap-first → aggregate →
+ * order CK cheap-first → service charge line → omit zero GROSS lines.
+ */
+export function buildHddtProviderLines(
+  input: BuildHddtProviderLinesInput,
+): InvoiceLineItem[] {
+  const lines: InvoiceLineItem[] = [];
+
+  for (const item of input.items) {
+    const expanded = expandOrderItem(item);
+    const afterItemDiscount = bakeGrossDiscountCheapFirst(
+      expanded,
+      toNumber(item.discount_amount),
     );
-    const baseUnit = roundMoney(unitPrice - optionUnitTotal);
-    const vatRate = toVatRate(item.vat_rate);
-
-    if (baseUnit < 0) {
-      itemLines.push(buildAggregateLine(item));
-    } else if (baseUnit > 0) {
-      itemLines.push({
-        name: formatItemName(item),
-        unit: DEFAULT_UNIT,
-        quantity: parentQuantity,
-        unitPrice: baseUnit,
-        amount: roundMoney(baseUnit * parentQuantity),
-        vatRate,
-      });
-    }
-
-    if (baseUnit >= 0) {
-      for (const modifier of modifiers) {
-        itemLines.push(buildOptionLine(modifier, parentQuantity, vatRate));
-      }
-      for (const side of sides) {
-        itemLines.push(buildOptionLine(side, parentQuantity, vatRate));
-      }
-
-      if (baseUnit === 0 && modifiers.length === 0 && sides.length === 0) {
-        itemLines.push(buildAggregateLine(item));
-      }
-    }
-
     lines.push(
-      ...applyInvoiceLineDiscount(itemLines, toNumber(item.discount_amount)),
+      ...afterItemDiscount.filter((line) => toWholeVnd(line.amount) > 0),
     );
   }
 
-  return aggregateDuplicateLines(lines);
+  let projected = aggregateDuplicateLines(lines);
+  projected = bakeGrossDiscountCheapFirst(
+    projected,
+    toNumber(input.orderDiscountAmount),
+  );
+
+  const serviceCharge = Math.max(0, toWholeVnd(toNumber(input.serviceCharge)));
+  if (serviceCharge > 0) {
+    projected = [
+      ...projected,
+      {
+        name: SERVICE_CHARGE_LINE_NAME,
+        unit: DEFAULT_UNIT,
+        quantity: 1,
+        unitPrice: serviceCharge,
+        amount: serviceCharge,
+        vatRate: resolveServiceChargeVatRate(input.items),
+      },
+    ];
+  }
+
+  projected = projected
+    .map(withoutDiscountField)
+    .filter((line) => toWholeVnd(line.amount) > 0);
+
+  if (input.totalAmount !== undefined) {
+    const expected = toWholeVnd(toNumber(input.totalAmount));
+    const actual = projected.reduce(
+      (sum, line) => sum + toWholeVnd(line.amount),
+      0,
+    );
+    if (actual !== expected) {
+      throw new Error(`hddt_projection_total_mismatch:${actual}:${expected}`);
+    }
+  }
+
+  return projected;
+}
+
+/** Prefer bakeGrossDiscountCheapFirst / buildHddtProviderLines (ADR 0034). */
+export function applyInvoiceLineDiscount(
+  lines: readonly InvoiceLineItem[],
+  discountAmount: number,
+): InvoiceLineItem[] {
+  return bakeGrossDiscountCheapFirst(lines, discountAmount);
 }

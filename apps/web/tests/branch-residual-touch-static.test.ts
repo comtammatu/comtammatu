@@ -96,9 +96,12 @@ test("Branch waste opts into a named touch preview link without changing Owner c
   assert.match(photoInput, /previewSize\?: "default" \| "touch"/);
   assert.match(
     photoInput,
-    /previewSize === "touch"[\s\S]*?variant="link"\s+size="touch"[\s\S]*?render=\{<a href=\{value\}/,
+    /previewSize === "touch"[\s\S]*?variant="link"\s+size=\{isTouchLayout \? "touch" : "default"\}[\s\S]*?render=\{<a href=\{value\}/,
   );
   assert.match(wastePhoto, /previewSize=\{previewSize\}/);
-  assert.match(wasteForm, /<WastePhotoUpload[\s\S]*?previewSize="touch"/);
+  assert.match(
+    wasteForm,
+    /<WastePhotoUpload[\s\S]*?previewSize=\{isTouchLayout \? "touch" : "default"\}/,
+  );
   assert.doesNotMatch(ownerWaste, /previewSize=/);
 });

@@ -385,6 +385,10 @@ presenter under `/br/…/stock/grn/[id]`.
   metadata → lines/items via `DataTable` (`desktopFooter`/`mobileFooter` for
   totals) → a `Lịch sử` tab sourced from `audit_logs` filtered by
   `entity_type`/`entity_id` → `AppDetailFooter` for stage-transition actions.
+- control_surface inventory documents (stock dialog, PO, GRN gold bar): title =
+  code + `StatusBadge`; description = identity; body = `Item` KPI strip →
+  section heading + count hint → line `Item`s / DataTable; footer = Close →
+  secondary → one primary. Catalog stays LIST + FormDialog.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 

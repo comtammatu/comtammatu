@@ -1,20 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import {
   codeGraphAction,
   codeGraphErrorPaths,
   codeGraphInvocation,
   codeGraphRefreshFailed,
-  skillCheckInvocation,
 } from "./agent-start-policy.mjs";
 
 const INDEX_FILE_FAILURE =
   /files? could not be (?:read|parsed)|files? with errors/i;
-
-const scriptsDirectory = dirname(fileURLToPath(import.meta.url));
 
 function run(command, args, print = true) {
   const result = spawnSync(command, args, {
@@ -35,11 +29,6 @@ function runCodeGraph(args, print = true) {
 }
 
 function main() {
-  const skillCheck = skillCheckInvocation(scriptsDirectory);
-  const skills = run(skillCheck.command, skillCheck.args);
-  if (skills.error) throw skills.error;
-  if (skills.status !== 0) process.exit(skills.status ?? 1);
-
   if (!existsSync(".codegraph")) {
     console.log(
       "[agent-start] CodeGraph skipped: .codegraph is not initialized; indexing is an owner decision.",

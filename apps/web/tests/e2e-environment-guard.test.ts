@@ -244,7 +244,9 @@ test("ingredient round-trip handles semantic desktop rows and responsive cards",
 test("ingredient round-trip builds its graph through the UI from a base-only fixture", () => {
   const source = readWeb("e2e/inventory/ingredient-unit-conversion.spec.ts");
 
+  assert.match(source, /async function ensureUnitsSectionOpen/);
   assert.match(source, /async function addUnitThroughUi/);
+  assert.match(source, /ensureUnitsSectionOpen\(dialog\)/);
   assert.match(source, /getByRole\("listitem"\)\.filter\(\{\s*hasText: unitName/);
   assert.doesNotMatch(
     source,

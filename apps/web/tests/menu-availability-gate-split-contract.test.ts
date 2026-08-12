@@ -2,29 +2,36 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
-const gateSplitMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260705090000_menu_availability_gate_split.sql",
+const gateSplitMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260705090000_menu_availability_gate_split.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
-const path2LockdownMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260705091000_path2_lockdown_posting_idempotency.sql",
+const path2LockdownMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260705091000_path2_lockdown_posting_idempotency.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
-const refundQuotaMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260705092000_refund_quota_first_ready_boundary.sql",
+const refundQuotaMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260705092000_refund_quota_first_ready_boundary.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
 test("branch_menu_limit_availability: capacity NULL maps to NULL (unlimited), never 0", () => {

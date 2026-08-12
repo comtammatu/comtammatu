@@ -2,63 +2,40 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
-const pickupPageOnlySource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pickup/page.tsx"),
-  "utf8",
+const read = (path: string) =>
+  normalizeEol(readFileSync(join(process.cwd(), path), "utf8"));
+
+const pickupPageOnlySource = read(
+  "app/(protected)/br/[branchId]/pickup/page.tsx",
 );
-const pickupLayoutSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pickup/layout.tsx"),
-  "utf8",
+const pickupLayoutSource = read(
+  "app/(protected)/br/[branchId]/pickup/layout.tsx",
 );
-const pickupLoadingSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pickup/loading.tsx"),
-  "utf8",
+const pickupLoadingSource = read(
+  "app/(protected)/br/[branchId]/pickup/loading.tsx",
 );
-const pickupErrorSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pickup/error.tsx"),
-  "utf8",
+const pickupErrorSource = read(
+  "app/(protected)/br/[branchId]/pickup/error.tsx",
 );
-const pickupLightModeSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pickup/pickup-light-mode.tsx",
-  ),
-  "utf8",
+const pickupLightModeSource = read(
+  "app/(protected)/br/[branchId]/pickup/pickup-light-mode.tsx",
 );
-const pickupOrderBoardSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pickup/pickup-order-board-client.tsx",
-  ),
-  "utf8",
+const pickupOrderBoardSource = read(
+  "app/(protected)/br/[branchId]/pickup/pickup-order-board-client.tsx",
 );
 const pickupPageSource = `${pickupLayoutSource}\n${pickupPageOnlySource}\n${pickupOrderBoardSource}`;
-const pickupWaitTimeSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pickup/pickup-wait-time.tsx",
-  ),
-  "utf8",
+const pickupWaitTimeSource = read(
+  "app/(protected)/br/[branchId]/pickup/pickup-wait-time.tsx",
 );
-const pickupRealtimeRefreshSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pickup/pickup-realtime-refresh.tsx",
-  ),
-  "utf8",
+const pickupRealtimeRefreshSource = read(
+  "app/(protected)/br/[branchId]/pickup/pickup-realtime-refresh.tsx",
 );
-const pickupIdleVisualSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pickup/pickup-idle-visual.tsx",
-  ),
-  "utf8",
+const pickupIdleVisualSource = read(
+  "app/(protected)/br/[branchId]/pickup/pickup-idle-visual.tsx",
 );
-const uiGlobalsSource = readFileSync(
-  join(process.cwd(), "../../packages/ui/src/styles/globals.css"),
-  "utf8",
-);
+const uiGlobalsSource = read("../../packages/ui/src/styles/globals.css");
 
 test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.match(
@@ -436,10 +413,7 @@ test("Pickup idle visual renders the shared animated Cot Let status mascot", () 
   assert.doesNotMatch(pickupIdleVisualSource, /https?:\/\//);
 
   // BrandMascot remains the single source for the mascot asset.
-  const brandSource = readFileSync(
-    join(process.cwd(), "app/components/brand.tsx"),
-    "utf8",
-  );
+  const brandSource = read("app/components/brand.tsx");
   assert.match(brandSource, /src: "\/brand\/mascot\/cotlet\.png"/);
   assert.match(brandSource, /motion-safe:animate-cotlet-idle/);
   assert.match(brandSource, /motion-safe:animate-cotlet-waiting/);

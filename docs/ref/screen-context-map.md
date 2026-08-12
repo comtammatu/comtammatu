@@ -197,6 +197,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Gia đình / plane:** `control_surface` (ADR 0033). Cùng shell với `/finance` ·
   `/inventory` · `/hr` — không app/host riêng.
 - **Archetype:** `/work` Inbox = `LIST` (queue); `/work/tasks/[id]` = `DETAIL`;
+  `/work/projects` + `/work/team` = `LIST`; `/work/projects/[id]` = `DETAIL`;
   `?view=board` = compose `TASK_BOARD`; `?view=calendar` = `TASK_CALENDAR`;
   `?view=timeline` = `TASK_TIMELINE`. **Không** dùng archetype `BOARD` /
   `station_chrome` (KDS/POS).
@@ -210,7 +211,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   số tiền, tồn kho, lương; không trộn `position_shift_tasks` (Việc trong ca).
 - **UX:** View switcher URL `view=`; filter trên URL; desktop primary cho board;
   mobile board = tab trạng thái + list. Copy: **Việc được giao** ≠ **Việc trong ca**.
-- **SSOT:** `docs/plan/2026-08-11-work-module-integration.md`, ADR 0033.
+- **SSOT:** ADR 0033; compose `docs/spec/page-archetypes.md` TASK_*.
 
 ---
 
@@ -218,8 +219,8 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 > On-hand exemplar context (tests may cite as comment only) — giữ section này.
 > **Document gold bar** (control_surface): stock dialog + PO + GRN — KPI
-> `Item` strip, title + `StatusBadge`, sectioned line cards. Research/roadmap:
-> `docs/plan/2026-08-11-inventory-ux-research.md`.
+> `Item` strip, title + `StatusBadge`, sectioned line cards. Compose:
+> `docs/spec/page-archetypes.md` DETAIL.
 
 - **Gia đình:** Inventory (spine §1A). Entry → success → recovery ở mức phiếu:
   mở list/hub đúng plane → nháp/kiểm nhận → chốt chứng từ; lệch/hủy qua dialog

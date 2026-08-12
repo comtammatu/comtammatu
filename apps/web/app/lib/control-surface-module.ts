@@ -8,6 +8,7 @@ export type ControlSurfaceCoreModuleId =
   | "menu"
   | "orders"
   | "feedback"
+  | "work"
   | "branches";
 
 export type ControlSurfaceModuleId =
@@ -22,6 +23,7 @@ export const CONTROL_SURFACE_CORE_MODULE_IDS = [
   "menu",
   "orders",
   "feedback",
+  "work",
   "branches",
 ] as const satisfies readonly ControlSurfaceCoreModuleId[];
 
@@ -35,5 +37,6 @@ export const FLAT_CONTROL_SURFACE_MODULE_IDS = [
   "menu",
   "orders",
   "feedback",
+  "work",
   "branches",
 ] as const satisfies readonly ControlSurfaceCoreModuleId[];

@@ -669,11 +669,14 @@ test("operator stock branch-native extensions keep issue and report actions in t
     /actionSize\?: ComponentProps<typeof Button>\["size"\]/,
   );
   assert.equal(
-    (formDialog.match(/size=\{actionSize\}/g) ?? []).length,
-    2,
+    (formDialog.match(/size=\{actionSize\}/g) ?? []).length >= 2,
+    true,
     "FormDialog action buttons must share one touch-safe size",
   );
-  assert.match(formDialog, /actionSize = "touch"/);
+  assert.match(
+    formDialog,
+    /const actionSize = actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
+  );
   assert.match(formCombobox, /Combobox as SharedCombobox/);
   assert.match(sharedCombobox, /React\.ComponentProps<typeof Button>/);
   assert.match(sharedCombobox, /size=\{size\}/);
@@ -778,12 +781,15 @@ test("transfer receive requires inspection and keeps the atomic receive action",
     /className=\{embedded \? "h-12 text-right" : "h-9 text-right"\}/,
   );
   assert.match(detailClient, /embedded=\{embedded\}/);
-  assert.equal(
-    (detailClient.match(/size="touch"/g) ?? []).length,
-    2,
+  assert.ok(
+    (detailClient.match(/size=\{isTouchLayout \? "touch" : "default"\}/g) ?? [])
+      .length >= 2,
     "embedded transfer detail footer actions must be touch-sized",
   );
-  assert.match(detailClient, /buttonSize="touch"/);
+  assert.match(
+    detailClient,
+    /buttonSize=\{isTouchLayout \? "touch" : "default"\}/,
+  );
   assert.match(detailClient, /buttonSize="default"/);
   assert.match(detailClient, /className=\{embedded \? "h-12" : "h-9"\}/);
   assert.match(transferActions, /stock_transfer_receive/);

@@ -23,18 +23,21 @@ const branchStockClientSource = readWeb(
 test("inventory ingredients list exposes item kind visibly and as a filter", () => {
   assert.match(ingredientsClientSource, /ITEM_KIND_LABELS/);
   assert.match(ingredientsClientSource, /ITEM_KIND_OPTIONS/);
-  assert.match(ingredientsClientSource, /const \[itemKind, setItemKind\]/);
-  assert.match(ingredientsClientSource, /item\.item_kind === itemKind/);
+  assert.match(ingredientsClientSource, /filters\.itemKind/);
+  assert.match(ingredientsClientSource, /replaceListFilters\(\{ kind:/);
   assert.match(ingredientsClientSource, /itemKindLabel\(item\)/);
+
+  const listModel = readWeb("lib/inventory/ingredients-list-model.ts");
+  assert.match(listModel, /item\.item_kind === filters\.itemKind/);
 });
 
-test("inventory ingredients table separates classification and thresholds columns", () => {
+test("inventory ingredients table separates classification and readiness columns", () => {
   assert.match(ingredientsClientSource, /key: "classification"/);
   assert.match(
     ingredientsClientSource,
     /messages\.inventory\.stock\.table\.kind/,
   );
-  assert.match(ingredientsClientSource, /key: "thresholds"/);
+  assert.match(ingredientsClientSource, /key: "readiness"/);
   assert.match(ingredientsClientSource, /key: "unit_cost"/);
 });
 

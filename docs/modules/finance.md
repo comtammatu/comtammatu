@@ -130,8 +130,8 @@ removes that bank evidence; method change never rewrites `bank_transactions`.
 **Product contract (D076/D091):** authenticated `accountant` is a first-class
 role with complete `/finance` operational authority and Inventory GRN/PO slice.
 Runtime `MODULE_ACL` admits `owner` and `accountant` to `/finance`. Full
-role/route map: `docs/spec/role-route-matrix.md`. JWT central/accountant roles
-are temporary until [ADR 0015](../plan/adr/0015-authorization-model.md).
+role/route map: `docs/spec/role-route-matrix.md`. JWT central/accountant roles stay until
+[ADR 0015](../plan/adr/0015-authorization-model.md) cutover.
 
 | Actor          | Access | Must act on |
 | -------------- | ------ | ----------- |

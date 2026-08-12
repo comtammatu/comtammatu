@@ -20,6 +20,7 @@ import {
 } from "../app/lib/shell-primitives";
 import {
   CONTROL_SURFACE_CORE_MODULE_IDS,
+  CONTROL_SURFACE_MODULE_IDS,
   FLAT_CONTROL_SURFACE_MODULE_IDS,
 } from "../app/lib/control-surface-module";
 
@@ -138,6 +139,16 @@ test("primary tab hrefs and labels are deduplicated", () => {
   for (const role of ["owner", ...RESTRICTED_ROLES] as StaffRole[]) {
     const items = resolveControlSurfacePrimaryTabs(role, BRANCH_ID);
     assertUniqueTabs(items, `${role} primary tabs`);
+  }
+});
+
+test("shell module ids cover every control_surface nav moduleKey", () => {
+  const shellIds = new Set<string>(CONTROL_SURFACE_MODULE_IDS);
+  for (const key of CONTROL_SURFACE_TAB_MODULES) {
+    assert.ok(
+      shellIds.has(key),
+      `${key} must be in CONTROL_SURFACE_MODULE_IDS so /${key} keeps AppShell`,
+    );
   }
 });
 

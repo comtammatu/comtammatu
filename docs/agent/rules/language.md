@@ -8,7 +8,6 @@ everything below is file-language and identifier policy.
 Write entirely in English:
 
 - Agent entrypoints and rules: `AGENTS.md`, `CLAUDE.md`, `docs/agent/**`
-- Tracked skill prose under `.agents/skills/**`
 - Internal development docs: `docs/spec/**`, `docs/modules/**`, `docs/plan/**`,
   `docs/architecture/**`, `tasks/**`, `scripts/**` prose/comments
 - Code identifiers: files, functions, variables, classes, types, RPC/schema
@@ -39,7 +38,7 @@ Vietnamese UI terminology must follow `docs/ref/glossary.md` (`canonical_term` â
 
 | Layer | Language |
 | --- | --- |
-| Agent rules / skills / ADRs / specs / modules / tasks | English |
+| Agent rules / ADRs / specs / modules / tasks | English |
 | Code, schema, RPC, paths, commits | English identifiers / English prose |
 | Product UI and customer-facing copy | Vietnamese (or approved acronym alone) |
 | Business/owner refs (`docs/ref/**`) | Vietnamese primary; keep `canonical_term` English |
@@ -54,6 +53,6 @@ Vietnamese UI terminology must follow `docs/ref/glossary.md` (`canonical_term` â
 ## Agent workflow
 
 1. Read this file when changing copy language, glossary, or agent/docs language.
-2. For UI strings, use shared messages/labels, load `.agents/skills/product-copy`,
-   and run `lint:copy`.
+2. For UI strings, use shared messages/labels, follow the glossary, and run
+   `lint:copy`.
 3. For agent/technical docs, write English; quote `label_vi` only when needed.

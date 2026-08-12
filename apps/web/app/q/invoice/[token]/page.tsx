@@ -78,6 +78,14 @@ export default async function InvoiceBuyerPage({
       />
     );
   }
+  if (request.state === "not_required") {
+    return (
+      <StatusPage
+        title={invoiceBuyer.notRequiredTitle}
+        description={invoiceBuyer.notRequiredDescription}
+      />
+    );
+  }
 
   return (
     <AppPage

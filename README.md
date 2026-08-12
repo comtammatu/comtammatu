@@ -97,13 +97,13 @@ corepack pnpm dev                      # Turbopack dev server (http://localhost:
 ## Commands
 
 ```bash
-corepack pnpm agent:skills # Verify required tracked agent skill bundle (run on fresh checkout)
+corepack pnpm agent:start  # Status-first CodeGraph refresh (optional; indexing is an owner decision)
 corepack pnpm dev          # Turbopack dev (all apps)
 corepack pnpm dev:web      # Web only
 corepack pnpm dev:print    # Print agent only
 corepack pnpm build        # Production build (next build + Serwist service worker)
 corepack pnpm typecheck    # TS check across packages
-corepack pnpm lint         # Repo guards (copy, UI, storage, rules, skills, …) + ESLint
+corepack pnpm lint         # Repo guards (copy, UI, storage, rules, …) + ESLint
 corepack pnpm test         # Test suites (turbo test)
 corepack pnpm verify       # Full gate: deps:security → deps:audit → deps:boundaries → typecheck → lint → build → test
 corepack pnpm format       # Prettier

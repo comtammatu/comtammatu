@@ -30,7 +30,11 @@ test("Branch stock Select triggers and popup items use the named touch size", ()
     assert.ok(tagNames.has("SelectItem"), `${file}: missing SelectItem`);
 
     for (const [tag, tagName] of tags) {
-      assert.match(tag, /\bsize="touch"/, `${file}: ${tagName}`);
+      assert.match(
+        tag,
+        /\bsize=(?:"touch"|\{isTouchLayout \? "touch" : "default"\})/,
+        `${file}: ${tagName}`,
+      );
     }
   }
 });

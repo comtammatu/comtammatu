@@ -25,7 +25,6 @@ const ENGLISH_ROOTS = [
   "docs/architecture",
   "docs/CODEBASE_MAP.md",
   "tasks",
-  ".agents/skills",
 ];
 
 const ALLOWED_EXTENSIONS = new Set([".md", ".mjs", ".ts", ".tsx"]);

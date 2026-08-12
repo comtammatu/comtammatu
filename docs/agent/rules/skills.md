@@ -1,6 +1,8 @@
 # Skill And Tool Routing
 
-Project sources decide policy; skills and tools only help execute it.
+Project sources decide policy. IDE plugins, global skills, MCP, and browser
+tools only help execute it. This repository does not track a required skill
+bundle under `.agents/`.
 
 ## Authority
 
@@ -10,28 +12,23 @@ Project sources decide policy; skills and tools only help execute it.
 4. External skills, plugins, MCP/browser tooling
 5. Agent memory or local notes
 
-Load the smallest capability that closes a known gap. The tracked
-`.agents/skills` bundle is verified by `agent:start`; external/global skills
-cannot replace or modify repository authority.
+Load the smallest capability that closes a known gap. External or global
+skills cannot replace or modify repository authority. Do not recreate a
+tracked `.agents/skills` tree or a parallel agent wiki.
 
 ## Routing
 
-| Task signal | Primary capability | Add only when |
+| Task signal | Primary source | Add an IDE/plugin skill only when |
 | --- | --- | --- |
-| App Router, RSC, Server Action | `next-best-practices` | The framework boundary is in scope |
-| React/Next performance patterns | `docs/agent/rules/react.md` | A measured render or fetch hotspot exists |
-| Shared component/accessibility | `building-components` | A reusable component contract changes |
-| Vietnamese product UI copy, hints, bilingual drift | `product-copy` | Writing or reviewing user-facing wording |
-| Supabase, migration, RLS, RPC | `supabase` | Target is verified |
-| Query/index/lock performance | `supabase-postgres-best-practices` | A measured database hypothesis exists |
-| Runtime UI/workflow proof | `playwright` | Source inspection cannot prove behavior |
-| Monorepo pipeline/package graph | `turborepo` | More than one package boundary changes |
-| Registry/preset work | `shadcn` | Registry configuration is the actual task |
-
-Required bundle is exactly those eight skills under `.agents/skills`. Do not
-stack overlapping UI skills or add a specialist to routine work. External or
-global skills stay additive only and never replace `react.md` or other project
-rules. Skill folders must not contain nested `AGENTS.md` files.
+| App Router, RSC, Server Action | `engineering.md` | The framework boundary is in scope |
+| React/Next performance patterns | `react.md` | A measured render or fetch hotspot exists |
+| Shared component/accessibility | `ui.md` + design-system / archetypes | A reusable component contract changes |
+| Vietnamese product UI copy, hints, bilingual drift | `language.md`, `docs/ref/glossary.md`, `lint:copy` | Writing or reviewing user-facing wording |
+| Supabase, migration, RLS, RPC | `database.md` | Target is verified |
+| Query/index/lock performance | `database.md` | A measured database hypothesis exists |
+| Runtime UI/workflow proof | `ui.md`; Playwright when source cannot prove behavior | Browser proof is required |
+| Monorepo pipeline/package graph | Root `package.json` + lockfile + turbo | More than one package boundary changes |
+| Registry/preset work | `ui.md` + `packages/ui` | Registry configuration is the actual task |
 
 ## Safety
 

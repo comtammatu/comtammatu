@@ -58,7 +58,7 @@ export function useCartActions() {
         sides?: CartSide[];
         note?: string;
         quantity?: number;
-        discountType?: "pct" | "vnd";
+        discountType?: "vnd";
         discountValue?: number;
         discountNote?: string;
       },

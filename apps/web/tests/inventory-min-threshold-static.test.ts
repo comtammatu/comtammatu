@@ -24,8 +24,8 @@ test("ingredient surfaces expose only the minimum stock threshold", () => {
   assert.match(ingredientDialog, /name="min_stock_level"/);
   assert.doesNotMatch(ingredientDialog, /name="max_stock_level"/);
   assert.doesNotMatch(ingredientDialog, /name="reorder_point"/);
-  assert.match(ingredientList, /Min \{item\.min_stock_level \?\? 0\}/);
   assert.doesNotMatch(ingredientList, /Re \{item|Max \{item/);
+  assert.doesNotMatch(ingredientList, /Min \{item\.min_stock_level/);
 });
 
 test("threshold editor persists Min and clears unused Re and Max values", () => {

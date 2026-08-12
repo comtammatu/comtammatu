@@ -952,13 +952,13 @@ export function OrderDetailSheet({
     value: number;
     note: string;
   }) => {
-    if (discountItemId === null) return;
+    if (discountItemId === null || input.type !== "vnd") return;
     const target = data?.order_items.find((item) => item.id === discountItemId);
     if (!target) return;
     startMutation(async () => {
       const r = await applyOrderItemDiscount(branchId, {
         orderItemId: target.id,
-        type: input.type,
+        type: "vnd",
         value: input.value,
         note: input.note,
       });
@@ -1686,6 +1686,7 @@ export function OrderDetailSheet({
           subtotalLabel={messages.pos.orderDetail.itemDiscountSubtotal}
           totalLabel={messages.pos.orderDetail.itemDiscountTotal}
           clearLabel={messages.pos.orderDetail.clearItemDiscount}
+          modes={["vnd"]}
           subtotal={discountItem.subtotal}
           serviceCharge={0}
           current={{

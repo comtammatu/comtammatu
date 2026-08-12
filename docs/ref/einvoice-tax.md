@@ -53,11 +53,18 @@ HĐ đã phát hành không dựng lại từ menu/config hiện tại. Đổi t
 chỉ giao dịch mới. Provider response chưa rõ → đối soát cùng idempotency
 identity; không tự phát hành HĐ mới.
 
-**Dòng bắt buộc:** tên HH/DV thực; ĐVT, SL, đơn giá, CK; thuế suất/căn cứ theo
+**Dòng bắt buộc:** tên HH/DV thực; ĐVT, SL, đơn giá; thuế suất/căn cứ theo
 dòng khi template yêu cầu; tổng trước thuế / VAT / thanh toán theo rounding đã
 duyệt; source order/payment; seller/buyer snapshot; thời điểm; template, series,
 provider ref, số HĐ, mã CQT/retrieval. Nhiều mức thuế/đơn — không reverse-split
 bằng một `invoice_vat_rate`; tổng VAT = tổng đã làm tròn theo dòng/nhóm.
+
+**Chiết khấu (ADR 0034):** giá POS đã gồm VAT; CK trừ trên GROSS rồi bóc NET.
+Má Tư nhúng CK vào đơn giá/thành tiền sau giảm — không gửi `itemDiscount` /
+dòng “Chiết khấu” riêng. CK món chỉ VND; CK đơn `%` materialize VND rồi trừ
+món rẻ→đắt; dòng về 0đ omit khỏi payload. `total_amount = 0` →
+`not_required`, vẫn QR biên lai, trang buyer read-only. Phụ phí =
+dòng `Phí dịch vụ` khi > 0.
 
 ## 4. Hóa đơn đầu vào
 

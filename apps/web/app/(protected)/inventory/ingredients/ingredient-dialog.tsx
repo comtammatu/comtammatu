@@ -562,7 +562,7 @@ export function IngredientDialog({
           </Button>
         }
       >
-        <div className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
+        <div className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
           <Spinner className="size-4" />
           {copy.units.unitsLoading}
         </div>
@@ -970,7 +970,7 @@ function IngredientDialogFields({
               />
             }
           >
-            <span className="flex min-w-0 flex-col items-start gap-0.5 text-left">
+            <span className="flex min-w-0 flex-col items-start gap-1 text-left">
               <span className="text-sm font-medium">
                 {copy.units.sectionToggle}
               </span>

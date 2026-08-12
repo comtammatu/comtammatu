@@ -114,10 +114,23 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
   const migration = read(
     "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
+  const zeroTotalMigration = read(
+    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+  );
 
   assert.ok(
     !/status:\s*"not_required"/.test(src),
     "new tax invoice writes must not use status='not_required'",
+  );
+  assert.match(
+    zeroTotalMigration,
+    /COALESCE\(v_order\.total_amount, 0\) = 0[\s\S]*status', 'not_required'/,
+    "zero-total payment path must mark tax_invoices not_required without an issue job",
+  );
+  assert.match(
+    zeroTotalMigration,
+    /DELETE FROM public\.tax_invoice_issue_jobs[\s\S]*status IN \('pending_payment', 'queued'\)/,
+    "zero-total path must drop pending/queued issue jobs",
   );
   assert.ok(
     !/provider:\s*"skipped"/.test(src),
@@ -283,6 +296,9 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   const migration = read(
     "supabase/migration-archive/20260725160907_add_customer_invoice_qr_flow.sql",
   );
+  const projectionMigration = read(
+    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+  );
   const replaceSrc = read(
     "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
   );
@@ -296,9 +312,22 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     "payment-time draft must preserve modifier/side snapshots",
   );
   assert.match(
-    migration,
+    projectionMigration,
     /'orderDiscountAmount',[\s\S]*v_order\.order_discount_amount,[\s\S]*v_order\.discount_amount/,
     "payment-time draft must preserve the remaining order-level discount",
+  );
+  assert.match(
+    projectionMigration,
+    /'serviceCharge', COALESCE\(v_order\.service_charge, 0\)/,
+    "payment-time draft must preserve service charge for ADR 0034 projection",
+  );
+  const snapshotServiceChargeMigration = read(
+    "supabase/migrations/20260812113334_hddt_snapshot_service_charge.sql",
+  );
+  assert.match(
+    snapshotServiceChargeMigration,
+    /CREATE OR REPLACE FUNCTION private\.snapshot_invoice_job[\s\S]*'serviceCharge', COALESCE\(v_order\.service_charge, 0\)/,
+    "profile snapshot rebuild must keep serviceCharge to avoid invoice_snapshot_immutable",
   );
   assert.match(
     migration,
@@ -306,12 +335,12 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
     "payment-time draft must preserve item-level discount inputs",
   );
   assert.ok(
-    createSrc.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
-    "prepared provider payload must expand the immutable item snapshot",
+    createSrc.includes("buildHddtProviderLines("),
+    "prepared provider payload must project discounts via ADR 0034 helper",
   );
   assert.ok(
-    createSrc.includes("applyInvoiceLineDiscount("),
-    "prepared provider payload must allocate the immutable order discount",
+    !createSrc.includes("applyInvoiceLineDiscount("),
+    "prepared provider payload must not use proportional discount allocation",
   );
 
   assert.ok(
@@ -426,6 +455,9 @@ test("POS item-level discount migration and actions exist", () => {
   const migration = read(
     "supabase/migration-archive/20260609094000_pos_item_level_discount.sql",
   );
+  const vndOnlyMigration = read(
+    "supabase/migrations/20260812105224_hddt_discount_projection_zero_total.sql",
+  );
   const actions = read(
     "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",
   );
@@ -441,6 +473,21 @@ test("POS item-level discount migration and actions exist", () => {
         "CREATE OR REPLACE FUNCTION public.apply_order_item_discount",
       ),
     "order_items must persist and mutate item-level discount metadata",
+  );
+  assert.match(
+    vndOnlyMigration,
+    /order_items_discount_type_check[\s\S]*discount_type = 'vnd'/,
+    "item discount CHECK must allow only vnd",
+  );
+  assert.match(
+    vndOnlyMigration,
+    /p_type IS NULL OR p_type IS DISTINCT FROM 'vnd'/,
+    "apply_order_item_discount must reject pct",
+  );
+  assert.match(
+    actions,
+    /applyItemDiscountInputSchema[\s\S]*z\.literal\("vnd"/,
+    "POS item discount action must accept VND only",
   );
   assert.ok(
     actions.includes("applyOrderItemDiscount") &&

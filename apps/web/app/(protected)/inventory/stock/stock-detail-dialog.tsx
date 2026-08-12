@@ -340,128 +340,130 @@ export function StockDetailDialog({
             ) : (
               <Item
                 variant="outline"
-                className="flex-col flex-nowrap items-stretch gap-0 overflow-hidden p-0 text-xs"
+                className="flex-col flex-nowrap items-stretch overflow-hidden p-0 text-xs"
               >
-                <div
-                  className="grid grid-cols-3 gap-3 border-b bg-muted/40 px-3 py-2 font-medium text-muted-foreground"
-                  role="row"
-                >
-                  <span>{detailCopy.movementColOperation}</span>
-                  <span>{detailCopy.movementColWarehouse}</span>
-                  <span className="text-right">
-                    {detailCopy.movementColQuantity}
-                  </span>
-                </div>
+                <div className="w-full min-w-0">
+                  <div
+                    className="grid grid-cols-3 gap-3 border-b bg-muted/30 px-3 py-2 font-medium text-muted-foreground"
+                    role="row"
+                  >
+                    <span>{detailCopy.movementColOperation}</span>
+                    <span>{detailCopy.movementColWarehouse}</span>
+                    <span className="text-right">
+                      {detailCopy.movementColQuantity}
+                    </span>
+                  </div>
 
-                <div className="divide-y" role="list">
-                  {detailData.movements.map((movement: StockIngredientDetailMovement) => {
-                    const movementUnits = formatStockUnits(
-                      movement.quantityChange,
-                      ingredient.units,
-                      formatQty,
-                    );
-                    const withSignedPrefix = (value: string) =>
-                      movement.quantityChange > 0 ? `+${value}` : value;
-                    const movementPrimary = withSignedPrefix(
-                      movementUnits.big ?? movementUnits.base,
-                    );
-                    const movementBase =
-                      movementUnits.big !== null
-                        ? withSignedPrefix(movementUnits.base)
-                        : null;
-                    const referenceLabel = stockMovementReferenceLabel(movement);
-                    const referenceHref = stockMovementReferenceHref({
-                      movement,
-                      branchId: detailData.branchId,
-                    });
-                    const locationDisplay =
-                      movement.locationName === "main_warehouse" ||
-                      movement.locationCode === "main_warehouse"
-                        ? messages.inventory.ingredients.dialog
-                            .defaultFulfillSiteKindCentralSupply
-                        : movement.locationName || inventoryCommon.noValue;
-                    const isInbound = movement.quantityChange > 0;
-                    const isOutbound = movement.quantityChange < 0;
-                    const DirectionIcon = isInbound
-                      ? IconArrowDownToLine
-                      : isOutbound
-                        ? IconArrowUpFromLine
-                        : null;
+                  <div className="divide-y" role="list">
+                    {detailData.movements.map((movement: StockIngredientDetailMovement) => {
+                      const movementUnits = formatStockUnits(
+                        movement.quantityChange,
+                        ingredient.units,
+                        formatQty,
+                      );
+                      const withSignedPrefix = (value: string) =>
+                        movement.quantityChange > 0 ? `+${value}` : value;
+                      const movementPrimary = withSignedPrefix(
+                        movementUnits.big ?? movementUnits.base,
+                      );
+                      const movementBase =
+                        movementUnits.big !== null
+                          ? withSignedPrefix(movementUnits.base)
+                          : null;
+                      const referenceLabel = stockMovementReferenceLabel(movement);
+                      const referenceHref = stockMovementReferenceHref({
+                        movement,
+                        branchId: detailData.branchId,
+                      });
+                      const locationDisplay =
+                        movement.locationName === "main_warehouse" ||
+                        movement.locationCode === "main_warehouse"
+                          ? messages.inventory.ingredients.dialog
+                              .defaultFulfillSiteKindCentralSupply
+                          : movement.locationName || inventoryCommon.noValue;
+                      const isInbound = movement.quantityChange > 0;
+                      const isOutbound = movement.quantityChange < 0;
+                      const DirectionIcon = isInbound
+                        ? IconArrowDownToLine
+                        : isOutbound
+                          ? IconArrowUpFromLine
+                          : null;
 
-                    return (
-                      <div
-                        key={movement.id}
-                        role="listitem"
-                        className="grid grid-cols-3 items-center gap-3 px-3 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">
-                            {stockMovementLabel(movement)}
-                          </p>
-                          <p className="truncate text-muted-foreground">
-                            {formatDateTime(movement.createdAt)}
-                          </p>
-                        </div>
+                      return (
+                        <div
+                          key={movement.id}
+                          role="listitem"
+                          className="grid grid-cols-3 items-center gap-3 px-3 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">
+                              {stockMovementLabel(movement)}
+                            </p>
+                            <p className="truncate text-muted-foreground">
+                              {formatDateTime(movement.createdAt)}
+                            </p>
+                          </div>
 
-                        <div className="flex min-w-0 items-center gap-2">
-                          {DirectionIcon ? (
-                            <span
-                              className={cn(
-                                "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
-                                isInbound
-                                  ? "bg-success/10 text-success"
-                                  : "bg-destructive/10 text-destructive",
-                              )}
-                              aria-hidden
-                            >
-                              <DirectionIcon className="size-3.5" />
-                            </span>
-                          ) : (
-                            <span className="size-7 shrink-0" aria-hidden />
-                          )}
-                          <span className="truncate text-foreground">
-                            {locationDisplay}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 text-right">
-                          <p
-                            className={cn(
-                              "flex flex-col font-mono font-semibold tabular-nums",
-                              isOutbound
-                                ? "text-destructive"
-                                : isInbound
-                                  ? "text-success"
-                                  : "text-muted-foreground",
-                            )}
-                          >
-                            <span>{movementPrimary}</span>
-                            {movementBase ? (
-                              <span className="text-xs font-normal text-muted-foreground">
-                                {movementBase}
-                              </span>
-                            ) : null}
-                          </p>
-                          {referenceLabel ? (
-                            referenceHref ? (
-                              <Link
-                                href={referenceHref}
-                                className="block truncate text-primary hover:underline"
+                          <div className="flex min-w-0 items-center gap-2">
+                            {DirectionIcon ? (
+                              <span
+                                className={cn(
+                                  "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
+                                  isInbound
+                                    ? "bg-success/10 text-success"
+                                    : "bg-destructive/10 text-destructive",
+                                )}
+                                aria-hidden
                               >
-                                {referenceLabel}
-                              </Link>
-                            ) : (
-                              <span className="block truncate text-muted-foreground">
-                                {referenceLabel}
+                                <DirectionIcon className="size-3.5" />
                               </span>
-                            )
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                            ) : (
+                              <span className="size-7 shrink-0" aria-hidden />
+                            )}
+                            <span className="truncate text-foreground">
+                              {locationDisplay}
+                            </span>
+                          </div>
+
+                          <div className="min-w-0 text-right">
+                            <p
+                              className={cn(
+                                "flex flex-col font-mono font-semibold tabular-nums",
+                                isOutbound
+                                  ? "text-destructive"
+                                  : isInbound
+                                    ? "text-success"
+                                    : "text-muted-foreground",
+                              )}
+                            >
+                              <span>{movementPrimary}</span>
+                              {movementBase ? (
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  {movementBase}
+                                </span>
+                              ) : null}
+                            </p>
+                            {referenceLabel ? (
+                              referenceHref ? (
+                                <Link
+                                  href={referenceHref}
+                                  className="block truncate text-primary hover:underline"
+                                >
+                                  {referenceLabel}
+                                </Link>
+                              ) : (
+                                <span className="block truncate text-muted-foreground">
+                                  {referenceLabel}
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </Item>
             )}

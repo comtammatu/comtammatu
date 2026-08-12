@@ -306,7 +306,16 @@ async function openIngredientEditor(page: Page, ingredientName: string) {
   return dialog;
 }
 
+/** Base-only edit opens with the conversion section collapsed. */
+async function ensureUnitsSectionOpen(dialog: Locator) {
+  const addUnit = dialog.getByRole("combobox", { name: "Thêm đơn vị mới" });
+  if (await addUnit.isVisible()) return;
+  await dialog.getByRole("button", { name: /Đơn vị quy đổi/ }).click();
+  await expect(addUnit).toBeVisible();
+}
+
 async function addUnitThroughUi(page: Page, dialog: Locator, unitName: string) {
+  await ensureUnitsSectionOpen(dialog);
   await dialog.getByRole("combobox", { name: "Thêm đơn vị mới" }).click();
   await page.getByRole("option", { name: unitName, exact: true }).click();
   await expect(relationRow(dialog, unitName)).toHaveCount(1);
@@ -516,6 +525,7 @@ test("blocks dependent deletion until reassigned and keeps tablet controls reach
     const thungFactor = dialog.getByLabel(
       `Số lượng đơn vị đích trong 1 ${unitNames.thung}`,
     );
+    await ensureUnitsSectionOpen(dialog);
     await expectTouchTarget(
       dialog.getByRole("combobox", { name: "Thêm đơn vị mới" }),
     );

@@ -2,79 +2,49 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
-const posShellSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
-  ),
-  "utf8",
+const read = (path: string) =>
+  normalizeEol(readFileSync(join(process.cwd(), path), "utf8"));
+
+const posShellSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx",
 );
-const posDesktopInnerSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
-  ),
-  "utf8",
+const posDesktopInnerSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
 );
 const posDesktopSource = `${posShellSource}\n${posDesktopInnerSource}`;
 
-const appendDraftSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx",
-  ),
-  "utf8",
+const appendDraftSource = read(
+  "app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx",
 );
 
-const takeawayGateSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx",
-  ),
-  "utf8",
+const takeawayGateSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-takeaway-gate.tsx",
 );
 
-const tableGateSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-table-gate.tsx"),
-  "utf8",
+const tableGateSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-table-gate.tsx",
 );
 
-const orderListPaneSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx",
-  ),
-  "utf8",
+const orderListPaneSource = read(
+  "app/(protected)/br/[branchId]/pos/_components/order-list-pane.tsx",
 );
 
-const sidebarVariantsSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_components/pos-sidebar-variants.tsx",
-  ),
-  "utf8",
+const sidebarVariantsSource = read(
+  "app/(protected)/br/[branchId]/pos/_components/pos-sidebar-variants.tsx",
 );
 
-const sidebarPanelSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx",
-  ),
-  "utf8",
+const sidebarPanelSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-sidebar-panel.tsx",
 );
 
-const mobileActionBarSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx",
-  ),
-  "utf8",
+const mobileActionBarSource = read(
+  "app/(protected)/br/[branchId]/pos/_components/pos-mobile-action-bar.tsx",
 );
 
-const menuGridSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx"),
-  "utf8",
+const menuGridSource = read(
+  "app/(protected)/br/[branchId]/pos/pos-menu-grid.tsx",
 );
 
 const orderDetailTouchSources = [
@@ -87,13 +57,8 @@ const orderDetailTouchSources = [
 
 test("POS order-detail overlays keep their footer controls touch-sized", () => {
   for (const [file, expectedTouchControls] of orderDetailTouchSources) {
-    const source = readFileSync(
-      join(
-        process.cwd(),
-        "app/(protected)/br/[branchId]/pos/_components/order-detail",
-        file,
-      ),
-      "utf8",
+    const source = read(
+      `app/(protected)/br/[branchId]/pos/_components/order-detail/${file}`,
     );
     assert.equal(
       source.match(/size="touch"/g)?.length,
@@ -103,9 +68,8 @@ test("POS order-detail overlays keep their footer controls touch-sized", () => {
   }
 });
 
-const orderHistorySource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/order-history.tsx"),
-  "utf8",
+const orderHistorySource = read(
+  "app/(protected)/br/[branchId]/pos/order-history.tsx",
 );
 
 const orderCardSummarySource =
@@ -118,9 +82,8 @@ const activeOrdersListSource =
     orderHistorySource,
   )?.[0] ?? "";
 
-const orderReadsSource = readFileSync(
-  join(process.cwd(), "app/(protected)/br/[branchId]/pos/order-reads.ts"),
-  "utf8",
+const orderReadsSource = read(
+  "app/(protected)/br/[branchId]/pos/order-reads.ts",
 );
 
 const archivedOrdersSource =
@@ -128,20 +91,12 @@ const archivedOrdersSource =
     orderReadsSource,
   )?.[0] ?? "";
 
-const archivedHookSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_hooks/use-archived-orders.ts",
-  ),
-  "utf8",
+const archivedHookSource = read(
+  "app/(protected)/br/[branchId]/pos/_hooks/use-archived-orders.ts",
 );
 
-const orderSyncSource = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/_hooks/use-order-sync.ts",
-  ),
-  "utf8",
+const orderSyncSource = read(
+  "app/(protected)/br/[branchId]/pos/_hooks/use-order-sync.ts",
 );
 
 const serviceModeSelector =

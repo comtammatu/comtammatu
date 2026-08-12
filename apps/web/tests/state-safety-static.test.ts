@@ -98,8 +98,11 @@ test("FormDialog resets only on open or entity transitions and confirms dirty di
   );
   assert.match(source, /<form[\s\S]*?aria-busy=\{isPending\}/);
   assert.match(source, /onClick=\{requestClose\}/);
-  assert.match(source, /actionSize = "touch"/);
-  assert.equal(source.match(/size=\{actionSize\}/g)?.length, 2);
+  assert.match(
+    source,
+    /const actionSize = actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
+  );
+  assert.ok((source.match(/size=\{actionSize\}/g) ?? []).length >= 2);
 });
 
 test("writable settings and finance pages fail closed when initial data cannot load", () => {

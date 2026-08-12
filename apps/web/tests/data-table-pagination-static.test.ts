@@ -123,9 +123,12 @@ test("growth lists opted in", () => {
     ),
     "utf8",
   );
-  assert.match(ingredients, /pageSize=\{25\}/);
-  assert.match(ingredients, /currentPage=\{currentPage\}/);
-  assert.match(ingredients, /onPageChange=\{setCurrentPage\}/);
+  assert.match(ingredients, /pageSize=\{INGREDIENTS_DEFAULT_PAGE_SIZE\}/);
+  assert.match(ingredients, /currentPage=\{filters\.page\}/);
+  assert.match(
+    ingredients,
+    /onPageChange=\{\(page\) => replaceListFilters\(\{ page \}\)\}/,
+  );
   assert.match(ingredients, /useFormControlSize\(\)/);
   assert.match(ingredients, /size=\{controlSize\}/);
 

@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  OWNER_SHELL_BREAKPOINT,
+  useIsMobile,
+} from "@comtammatu/ui/hooks/use-mobile";
+import { AppToolbar } from "@/components/surface";
 import { workCopy } from "@lib/messages/work";
 import {
   type ParsedWorkParams,
@@ -17,28 +22,24 @@ const VIEW_OPTIONS: Array<{ view: WorkView; label: string }> = [
 ];
 
 export function WorkViewSwitcher({ params }: { params: ParsedWorkParams }) {
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+
   return (
-    <nav
-      aria-label={workCopy.pageTitle}
-      className="flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1"
-    >
+    <AppToolbar className="flex-wrap">
       {VIEW_OPTIONS.map((option) => {
         const active = params.view === option.view;
         return (
-          <Link
+          <Button
             key={option.view}
-            href={workHref(params, { view: option.view })}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              active
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
+            variant={active ? "secondary" : "ghost"}
+            size={isTouchLayout ? "touch" : "default"}
+            aria-current={active ? "page" : undefined}
+            render={<Link href={workHref(params, { view: option.view })} />}
           >
             {option.label}
-          </Link>
+          </Button>
         );
       })}
-    </nav>
+    </AppToolbar>
   );
 }
