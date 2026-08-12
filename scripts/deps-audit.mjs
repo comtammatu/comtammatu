@@ -14,6 +14,19 @@ import { basename, dirname, join, relative } from "node:path";
 
 const ROOT = process.cwd();
 
+const PNPM_SPAWN = {
+  encoding: "utf8",
+  stdio: "pipe",
+  shell: process.platform === "win32",
+};
+
+function runPnpm(args, { cwd = ROOT } = {}) {
+  return spawnSync("corepack", ["pnpm", ...args], {
+    ...PNPM_SPAWN,
+    cwd,
+  });
+}
+
 const SKIP_DIRS = new Set([
   ".git",
   ".next",
@@ -311,14 +324,12 @@ function runDedupeCheck() {
   let result;
   try {
     copyDedupeCheckWorkspace(tempRoot);
-    result = spawnSync("pnpm", [
+    result = runPnpm([
       "dedupe",
       "--check",
       "--config.confirmModulesPurge=false",
     ], {
       cwd: tempRoot,
-      encoding: "utf8",
-      stdio: "pipe",
     });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
@@ -331,23 +342,19 @@ function runDedupeCheck() {
 
   return [
     "pnpm dedupe --check failed. Run `pnpm dedupe` and commit the lockfile changes.",
-    result.stdout.trim(),
-    result.stderr.trim(),
+    result.stdout?.trim(),
+    result.stderr?.trim(),
   ].filter(Boolean);
 }
 
 function auditLicenses() {
-  const result = spawnSync("pnpm", ["licenses", "list", "--json"], {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: "pipe",
-  });
+  const result = runPnpm(["licenses", "list", "--json"]);
 
   if (result.status !== 0) {
     return [
       "pnpm licenses list failed.",
-      result.stdout.trim(),
-      result.stderr.trim(),
+      result.stdout?.trim(),
+      result.stderr?.trim(),
     ].filter(Boolean);
   }
 

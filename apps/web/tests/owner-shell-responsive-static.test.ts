@@ -215,6 +215,10 @@ test("Owner AppToolbar filter chrome is sticky, framed, or intentionally exempt"
       "rendered only inside AppListFrame toolbar on permission-audit-client",
     ],
     [
+      "apps/web/app/(protected)/work/_components/work-list-toolbar.tsx",
+      "rendered only inside AppListFrame toolbar on work-page-shell / work-compose-shell",
+    ],
+    [
       "apps/web/app/(protected)/finance/components/filter-bar.tsx",
       "dashboard/KPI pages — sticky would crush sections below",
     ],
