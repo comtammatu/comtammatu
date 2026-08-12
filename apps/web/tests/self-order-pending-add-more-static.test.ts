@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
 const root = process.cwd();
-const readWeb = (path: string) => readFileSync(join(root, path), "utf8");
+const readWeb = (path: string) =>
+  normalizeEol(readFileSync(join(root, path), "utf8"));
 const readRepo = (path: string) =>
-  readFileSync(join(root, "../..", path), "utf8");
+  normalizeEol(readFileSync(join(root, "../..", path), "utf8"));
 
 test("pending self-order additions merge through an idempotent operation ledger", () => {
   const migration = readRepo(

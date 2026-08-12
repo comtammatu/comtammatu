@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
 const repoRoot = resolve(process.cwd(), "../..");
-const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
+const read = (path: string) =>
+  normalizeEol(readFileSync(resolve(repoRoot, path), "utf8"));
 
 function sliceBetween(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);

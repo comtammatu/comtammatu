@@ -173,7 +173,7 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(fulfill, /AppDialogFooter/);
   assert.match(fulfill, /DataTable/);
   assert.match(fulfill, /Checkbox/);
-  assert.match(fulfill, /size="touch"/);
+  assert.match(fulfill, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(fulfill, /seedPendingSelection|pendingLineIds/);
   assert.match(fulfill, /copy\.lineQtyUnit/);
   assert.match(fulfill, /copy\.onHandColumn|AlertTitle/);
@@ -299,7 +299,7 @@ test("mixed-source requests expose source ownership without source tabs", () => 
   assert.match(fulfill, /aria-pressed=\{isActive\}/);
   assert.match(fulfill, /multiSource/);
   assert.match(fulfill, /AppDialogFooter/);
-  assert.match(fulfill, /size="touch"/);
+  assert.match(fulfill, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.match(fulfill, /activateSource/);
   assert.match(fulfill, /ItemActions/);
   assert.doesNotMatch(transfer, /IconPrinter/);
@@ -318,7 +318,7 @@ test("central kitchen request route and database authority stay supply-only", ()
   assert.match(roles, /STOCK_REQUEST_ROLES[\s\S]*central_kitchen_lead/);
   assert.match(route, /default_fulfill_site_kind", "central_supply"/);
   assert.match(route, /branch_kind !== "central_kitchen"/);
-  assert.match(route, /returnHref=.*requestId=:requestId/);
+  assert.match(route, /returnHref[\s\S]*requestId=:requestId/);
   assert.match(
     migration,
     /branch\.branch_kind IN \('branch', 'central_kitchen'\)/,

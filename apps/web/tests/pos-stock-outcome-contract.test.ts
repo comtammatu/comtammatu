@@ -2,34 +2,43 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
-const migration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
+const migration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260630082000_pos_kds_inventory_truth_g3_outcomes.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
-const sideDishConsumptionMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630142401_pos_stock_outcome_side_dish_consumption.sql",
+const sideDishConsumptionMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260630142401_pos_stock_outcome_side_dish_consumption.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
-const sideDishBackfillMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260630144333_pos_stock_outcome_side_dish_backfill.sql",
+const sideDishBackfillMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260630144333_pos_stock_outcome_side_dish_backfill.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
-const routePolicyMigration = readFileSync(
-  join(
-    process.cwd(),
-    "../../supabase/migration-archive/20260701065350_pos_kitchen_print_route_policy.sql",
+const routePolicyMigration = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "../../supabase/migration-archive/20260701065350_pos_kitchen_print_route_policy.sql",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
 function sqlFunction(name: string): string {

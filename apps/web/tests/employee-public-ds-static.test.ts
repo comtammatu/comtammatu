@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { toPosixPath } from "./static-source";
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -19,7 +20,7 @@ function walkFiles(dir: string): string[] {
 }
 
 function relativeFromCwd(file: string): string {
-  return file.slice(join(process.cwd()).length + 1);
+  return toPosixPath(file.slice(join(process.cwd()).length + 1));
 }
 
 function filesMatching(

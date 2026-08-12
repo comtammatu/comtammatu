@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
-const source = readFileSync(
-  join(
-    process.cwd(),
-    "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+const source = normalizeEol(
+  readFileSync(
+    join(
+      process.cwd(),
+      "app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx",
+    ),
+    "utf8",
   ),
-  "utf8",
 );
 
 const takeawaySubmitBlock =

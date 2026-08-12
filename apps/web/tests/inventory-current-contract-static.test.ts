@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { normalizeEol } from "./static-source";
 
 const repoRoot = join(import.meta.dirname, "../../..");
 
 function read(path: string): string {
-  return readFileSync(join(repoRoot, path), "utf8");
+  return normalizeEol(readFileSync(join(repoRoot, path), "utf8"));
 }
 
 function decision(source: string, id: string): string {

@@ -112,8 +112,10 @@ test("ingredients list wires catalog readiness filter and badges", () => {
     "app/(protected)/inventory/ingredients/ingredients-client.tsx",
   );
   assert.match(client, /resolveCatalogReadiness/);
-  assert.match(client, /catalogReadinessHasGap/);
   assert.match(client, /readinessFilter/);
+
+  const listModel = readWeb("lib/inventory/ingredients-list-model.ts");
+  assert.match(listModel, /catalogReadinessHasGap/);
 
   const actions = readWeb(
     "app/(protected)/inventory/ingredient-actions.ts",

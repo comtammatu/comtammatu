@@ -141,7 +141,7 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
     "app/(protected)/feedback/_components/feedback-sub-nav.tsx",
   );
   assert.match(subNav, /<AppToolbar/);
-  assert.match(subNav, /size="touch"/);
+  assert.match(subNav, /size=\{isTouchLayout \? "touch" : "default"\}/);
   assert.doesNotMatch(subNav, /border-b border-border/);
   assert.doesNotMatch(subNav, /cn\(/);
 

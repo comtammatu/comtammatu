@@ -16,7 +16,8 @@ test("root not-found resolves role-aware home and offers sign-in-again recovery"
   assert.match(panel, /action=["']\/api\/auth\/signout["']/);
   assert.match(panel, /ACTIONS_VI\.signInAgain/);
   assert.match(panel, /ACTIONS_VI\.goDefaultHome/);
-  assert.match(panel, /size="touch"/);
+  assert.match(panel, /const actionSize = isTouchLayout \? "touch" : "default"/);
+  assert.match(panel, /size=\{actionSize\}/);
   assert.match(panel, /aria-live="polite"/);
 });
 

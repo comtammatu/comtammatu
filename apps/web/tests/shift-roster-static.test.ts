@@ -74,8 +74,14 @@ test("roster week grid keeps the shared cell-change handler and Select", () => {
   assert.match(weekClient, /assignmentMap\.get\(key\)/);
   assert.match(weekClient, /<Select/);
   assert.match(weekClient, /EMPTY_SHIFT_VALUE/);
-  assert.match(weekClient, /SelectTrigger size="touch"/);
-  assert.match(weekClient, /size="icon-touch"/);
+  assert.match(
+    weekClient,
+    /SelectTrigger size=\{isTouchLayout \? "touch" : "default"\}/,
+  );
+  assert.match(
+    weekClient,
+    /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/,
+  );
   assert.match(weekClient, /sticky bottom-0/);
 });
 

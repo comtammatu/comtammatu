@@ -58,7 +58,10 @@ test("print-template editor fields have per-block labels and unique control ids"
 });
 
 test("print-template controls are touch-safe below lg and retain compact desktop sizing", () => {
-  assert.match(source, /const isTouchLayout = useIsMobile\(1024\)/);
+  assert.match(
+    source,
+    /const isTouchLayout = useIsMobile\((?:1024|OWNER_SHELL_BREAKPOINT)\)/,
+  );
   assert.equal(
     source.match(/size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/g)?.length,
     3,
