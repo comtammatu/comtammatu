@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -17,15 +17,9 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { AppDialogFooter } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
-import {
-  AppBackLink,
-  AppDetailFooter,
-  AppPage,
-  AppPageHeader,
-  AppSection,
-  DescriptionList,
-} from "@/components/surface";
+import { AppDetailFooter, AppSection } from "@/components/surface";
 import {
   addWorkTaskComment,
   setWorkTaskStatus,
@@ -63,16 +57,18 @@ function fromDateTimeLocalValue(value: string): string | undefined {
   return date.toISOString();
 }
 
-export function WorkTaskDetail({
+export function WorkTaskDetailPanel({
   task: initialTask,
   assigneeOptions,
   initialComments,
   initialChecklist,
+  onSaved,
 }: {
   task: WorkTaskRow;
   assigneeOptions: AssigneeOption[];
   initialComments: WorkTaskCommentRow[];
   initialChecklist: WorkChecklistItemRow[];
+  onSaved?: () => void;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -89,16 +85,11 @@ export function WorkTaskDetail({
   const [checklistTitle, setChecklistTitle] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const assigneeLabel = useMemo(() => {
-    if (!task.assigneeId) return "—";
-    const match = assigneeOptions.find((option) => option.id === task.assigneeId);
-    return match?.fullName ?? task.assigneeId;
-  }, [assigneeOptions, task.assigneeId]);
-
   function handleMutationError(message: string) {
     if (message === workCopy.revisionConflict) {
       toast.error(message);
       router.refresh();
+      onSaved?.();
       return;
     }
     toast.error(message);
@@ -131,6 +122,7 @@ export function WorkTaskDetail({
       setStatus(result.data.status);
       toast.success(workCopy.save);
       router.refresh();
+      onSaved?.();
     });
   }
 
@@ -150,34 +142,14 @@ export function WorkTaskDetail({
       setTask(result.data);
       toast.success(workCopy.statusChange);
       router.refresh();
+      onSaved?.();
     });
   }
 
   return (
-    <AppPage width="wide" density="compact" scroll>
-      <AppPageHeader
-        title={task.title}
-        description={workCopy.detailTitle}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge domain="work-task" value={task.status} />
-            <AppBackLink href="/work">{workCopy.pageTitle}</AppBackLink>
-          </div>
-        }
-      />
-
+    <>
       <AppSection title={workCopy.detailTitle}>
-        <DescriptionList
-          items={[
-            { term: workCopy.assignee, description: assigneeLabel },
-            {
-              term: workCopy.due,
-              description: task.dueAt ? formatVNDate(task.dueAt) : workCopy.noDue,
-            },
-          ]}
-        />
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">{workCopy.titleLabel}</span>
             <Input value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -189,7 +161,7 @@ export function WorkTaskDetail({
               value={priority}
               onValueChange={(value) => setPriority(value as WorkTaskPriority)}
             >
-              <SelectTrigger>
+              <SelectTrigger size={controlSize}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -223,7 +195,7 @@ export function WorkTaskDetail({
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">{workCopy.assignee}</span>
             <Select value={assigneeId} onValueChange={setAssigneeId}>
-              <SelectTrigger>
+              <SelectTrigger size={controlSize}>
                 <SelectValue placeholder={workCopy.assignee} />
               </SelectTrigger>
               <SelectContent>
@@ -244,7 +216,7 @@ export function WorkTaskDetail({
               onValueChange={(value) => saveStatus(value as WorkTaskStatus)}
               disabled={isPending}
             >
-              <SelectTrigger>
+              <SelectTrigger size={controlSize}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -384,21 +356,23 @@ export function WorkTaskDetail({
         </div>
       </AppSection>
 
-      <AppDetailFooter
-        trailing={
-          <Button size={controlSize} disabled={isPending} onClick={saveFields}>
-            {workCopy.save}
-          </Button>
-        }
-        leading={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge domain="work-task" value={task.status} />
-            <Badge variant="secondary">
-              {workCopy.priorityLabels[task.priority]}
-            </Badge>
-          </div>
-        }
-      />
-    </AppPage>
+      <AppDialogFooter>
+        <AppDetailFooter
+          trailing={
+            <Button size={controlSize} disabled={isPending} onClick={saveFields}>
+              {workCopy.save}
+            </Button>
+          }
+          leading={
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge domain="work-task" value={task.status} />
+              <Badge variant="secondary">
+                {workCopy.priorityLabels[task.priority]}
+              </Badge>
+            </div>
+          }
+        />
+      </AppDialogFooter>
+    </>
   );
 }

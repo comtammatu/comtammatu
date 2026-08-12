@@ -56,7 +56,12 @@ export function WorkCalendar({
           return (
             <>
               {dayTasks.slice(0, 3).map((task) => (
-                <WorkTaskChip key={task.id} taskId={task.id} title={task.title} />
+                <WorkTaskChip
+                  key={task.id}
+                  taskId={task.id}
+                  title={task.title}
+                  params={params}
+                />
               ))}
               {dayTasks.length > 3 ? (
                 <Badge variant="secondary" className="w-fit text-3xs">

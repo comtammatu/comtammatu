@@ -126,6 +126,7 @@ export const workCopy = {
   filterStatus: "Trạng thái",
   filterSearch: "Tìm việc",
   filterAllStatuses: "Mọi trạng thái",
+  filterAllDepartments: "Việc của tôi",
   createTitle: "Tạo việc mới",
   createSubmit: "Tạo việc",
 } as const;

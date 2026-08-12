@@ -13,6 +13,7 @@ import { AppEmptyState } from "@/components/surface";
 import type { WorkTaskRow } from "../actions";
 import { workCopy } from "@lib/messages/work";
 import { WORK_LIST_ITEM_INSET } from "../_lib/compose-styles";
+import { workHref, type ParsedWorkParams } from "../_lib/params";
 
 function statusVariant(
   status: WorkTaskRow["status"],
@@ -39,7 +40,13 @@ function priorityVariant(
   return "secondary";
 }
 
-export function WorkInbox({ tasks }: { tasks: WorkTaskRow[] }) {
+export function WorkInbox({
+  tasks,
+  params,
+}: {
+  tasks: WorkTaskRow[];
+  params: ParsedWorkParams;
+}) {
   if (tasks.length === 0) {
     return <AppEmptyState mode="no-data" description={workCopy.inboxEmpty} />;
   }
@@ -50,7 +57,9 @@ export function WorkInbox({ tasks }: { tasks: WorkTaskRow[] }) {
         <Item
           key={task.id}
           variant="outline"
-          render={<Link href={`/work/tasks/${task.id}`} />}
+          render={
+            <Link href={workHref(params, { taskId: task.id })} scroll={false} />
+          }
         >
           <ItemContent className="gap-1">
             <ItemTitle>{task.title}</ItemTitle>

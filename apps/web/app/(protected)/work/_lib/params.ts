@@ -9,21 +9,21 @@ export type WorkView = (typeof WORK_VIEWS)[number];
 export type WorkSearchParams = {
   view?: string | string[];
   department?: string | string[];
-  project?: string | string[];
   status?: string | string[];
   q?: string | string[];
   includeDone?: string | string[];
   month?: string | string[];
+  task?: string | string[];
 };
 
 export type ParsedWorkParams = {
   view: WorkView;
   departmentId: number | null;
-  projectId: number | null;
   status: WorkTaskStatusLabelKey | null;
   q: string | null;
   includeDone: boolean;
   month: string | null;
+  taskId: number | null;
 };
 
 function firstParam(
@@ -78,11 +78,11 @@ export function parseWorkParams(
   return {
     view: parseView(firstParam(params.view)),
     departmentId: parsePositiveInt(firstParam(params.department)),
-    projectId: parsePositiveInt(firstParam(params.project)),
     status: parseStatus(firstParam(params.status)),
     q: parseQuery(firstParam(params.q)),
     includeDone: parseIncludeDone(firstParam(params.includeDone)),
     month: parseMonth(firstParam(params.month)),
+    taskId: parsePositiveInt(firstParam(params.task)),
   };
 }
 
@@ -97,11 +97,11 @@ export function buildWorkSearchParams(
   if (next.departmentId != null) {
     qs.set("department", String(next.departmentId));
   }
-  if (next.projectId != null) qs.set("project", String(next.projectId));
   if (next.status != null) qs.set("status", next.status);
   if (next.q != null) qs.set("q", next.q);
   if (next.includeDone) qs.set("includeDone", "1");
   if (next.month != null) qs.set("month", next.month);
+  if (next.taskId != null) qs.set("task", String(next.taskId));
 
   return qs;
 }

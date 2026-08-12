@@ -42,7 +42,6 @@ import {
   type WorkDepartmentMemberRow,
   type WorkDepartmentOption,
   type WorkProfileOption,
-  type WorkProjectOption,
 } from "../actions";
 
 const departmentSchema = z.object({
@@ -61,12 +60,10 @@ export function WorkSettingsDialog({
   open,
   onOpenChange,
   departments,
-  projects,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   departments: WorkDepartmentOption[];
-  projects: WorkProjectOption[];
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -159,12 +156,9 @@ export function WorkSettingsDialog({
         contentClassName="max-w-lg"
       >
         <Tabs defaultValue="departments" className="flex flex-col gap-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="departments">
               {workCopy.settingsTabDepartments}
-            </TabsTrigger>
-            <TabsTrigger value="projects">
-              {workCopy.settingsTabProjects}
             </TabsTrigger>
             <TabsTrigger value="members">
               {workCopy.settingsTabMembers}
@@ -250,29 +244,6 @@ export function WorkSettingsDialog({
                 </Button>
               ) : null}
             </div>
-          </TabsContent>
-
-          <TabsContent value="projects" className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              {workCopy.projectsReadOnlyHint}
-            </p>
-            {projects.length === 0 ? (
-              <AppEmptyState
-                mode="no-data"
-                description={workCopy.scopeProjectsEmpty}
-                compact
-              />
-            ) : (
-              <div className={`flex flex-col ${WORK_LIST_ITEM_INSET}`}>
-                {projects.map((project) => (
-                  <Item key={project.id} variant="outline">
-                    <ItemContent>
-                      <ItemTitle>{project.name}</ItemTitle>
-                    </ItemContent>
-                  </Item>
-                ))}
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="members" className="flex flex-col gap-3">

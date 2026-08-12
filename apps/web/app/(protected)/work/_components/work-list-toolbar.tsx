@@ -37,17 +37,19 @@ const VIEW_OPTIONS: Array<{ view: WorkView; label: string }> = [
 
 export function WorkListToolbar({
   params,
+  departments,
   showFilters = false,
-  scopeSummary,
-  onOpenScope,
 }: {
   params: ParsedWorkParams;
+  departments: Array<{ id: number; name: string }>;
   showFilters?: boolean;
-  scopeSummary?: string;
-  onOpenScope?: () => void;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
+  const showDepartmentFilter =
+    params.view === "board" ||
+    params.view === "calendar" ||
+    params.view === "timeline";
 
   const viewFilters = (
     <>
@@ -67,6 +69,36 @@ export function WorkListToolbar({
       })}
     </>
   );
+
+  const departmentFilter =
+    showDepartmentFilter && departments.length > 0 ? (
+      <Select
+        value={params.departmentId != null ? String(params.departmentId) : "all"}
+        onValueChange={(value) => {
+          router.replace(
+            workHref(params, {
+              departmentId: value === "all" ? null : Number(value),
+            }),
+          );
+        }}
+      >
+        <SelectTrigger
+          className="w-44"
+          size={controlSize}
+          aria-label={workCopy.scopeDepartment}
+        >
+          <SelectValue placeholder={workCopy.scopeDepartment} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{workCopy.filterAllDepartments}</SelectItem>
+          {departments.map((department) => (
+            <SelectItem key={department.id} value={String(department.id)}>
+              {department.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : null;
 
   return (
     <AppToolbar
@@ -138,20 +170,9 @@ export function WorkListToolbar({
               </InputGroup>
             </form>
           </>
-        ) : undefined
+        ) : departmentFilter
       }
-      actions={
-        onOpenScope ? (
-          <Button
-            type="button"
-            variant="outline"
-            size={controlSize}
-            onClick={onOpenScope}
-          >
-            {workCopy.scopeButton}: {scopeSummary ?? workCopy.viewMine}
-          </Button>
-        ) : undefined
-      }
+      actions={showFilters ? departmentFilter : undefined}
     />
   );
 }

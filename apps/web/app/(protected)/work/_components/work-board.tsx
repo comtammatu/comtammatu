@@ -26,6 +26,7 @@ import {
   WORK_KANBAN_DESKTOP_GRID,
   WORK_TASK_VIEW_SHELL,
 } from "../_lib/compose-styles";
+import { workHref, type ParsedWorkParams } from "../_lib/params";
 
 const BOARD_COLUMNS: WorkTaskStatus[] = [
   "backlog",
@@ -35,7 +36,13 @@ const BOARD_COLUMNS: WorkTaskStatus[] = [
   "done",
 ];
 
-export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
+export function WorkBoard({
+  tasks,
+  params,
+}: {
+  tasks: WorkTaskRow[];
+  params: ParsedWorkParams;
+}) {
   const [items, setItems] = useState(tasks);
   const [activeStatus, setActiveStatus] = useState<WorkTaskStatus>("todo");
   const [isPending, startTransition] = useTransition();
@@ -96,7 +103,11 @@ export function WorkBoard({ tasks }: { tasks: WorkTaskRow[] }) {
       >
         <ItemContent className="gap-1">
           <ItemTitle className="text-sm">
-            <Link href={`/work/tasks/${task.id}`} className="hover:underline">
+            <Link
+              href={workHref(params, { taskId: task.id })}
+              scroll={false}
+              className="hover:underline"
+            >
               {task.title}
             </Link>
           </ItemTitle>

@@ -1,18 +1,20 @@
 "use client";
 
 import type { WorkTaskRow } from "../actions";
+import type { ParsedWorkParams } from "../_lib/params";
 import { WorkInbox } from "./work-inbox";
 
 export function WorkInboxFiltered({
   tasks,
+  params,
   status,
   q,
 }: {
   tasks: WorkTaskRow[];
+  params: ParsedWorkParams;
   status: string | null;
   q: string | null;
 }) {
-  // MVP: filter after list_my_work_tasks RPC — URL remains the filter SSOT.
   let filtered = tasks;
   if (status) {
     filtered = filtered.filter((task) => task.status === status);
@@ -23,5 +25,5 @@ export function WorkInboxFiltered({
       task.title.toLowerCase().includes(needle),
     );
   }
-  return <WorkInbox tasks={filtered} />;
+  return <WorkInbox tasks={filtered} params={params} />;
 }

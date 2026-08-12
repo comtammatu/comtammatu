@@ -44,7 +44,7 @@ test("Work pages and compose census exist", () => {
   );
   assert.match(
     archetypes,
-    /"apps\/web\/app\/\(protected\)\/work\/tasks\/\[id\]\/page\.tsx": "DETAIL"/,
+    /"apps\/web\/app\/\(protected\)\/work\/tasks\/\[id\]\/page\.tsx": "REDIRECT-SHIM"/,
   );
   assert.match(
     archetypes,
@@ -86,13 +86,28 @@ test("Work calendar and timeline use compose shell archetypes", () => {
   assert.match(styles, /WORK_MONTH_CELL/);
 });
 
-test("Work timeline shows scope picker dialog instead of full page", () => {
+test("Work task detail opens in dialog via ?task= URL", () => {
   const page = readWeb("app/(protected)/work/page.tsx");
-  assert.match(page, /needsTimelineScope/);
+  assert.match(page, /WorkTaskDetailDialogHost/);
+  assert.match(page, /params\.taskId/);
+  const params = readWeb("app/(protected)/work/_lib/params.ts");
+  assert.match(params, /taskId/);
+  const redirect = readWeb("app/(protected)/work/tasks/[id]/page.tsx");
+  assert.match(redirect, /redirect\(/);
+  assert.match(redirect, /\?task=/);
+});
+
+test("Work views default to mine tasks without scope dialog", () => {
+  const page = readWeb("app/(protected)/work/page.tsx");
+  assert.match(page, /listMyWorkTasks/);
   assert.match(page, /WorkPageShell/);
+  assert.doesNotMatch(page, /WorkScopeDialog/);
   assert.doesNotMatch(page, /WorkScopePicker/);
+  assert.doesNotMatch(page, /needsScope/);
   const shell = readWeb("app/(protected)/work/_components/work-page-shell.tsx");
-  assert.match(shell, /WorkScopeDialog/);
+  assert.doesNotMatch(shell, /WorkScopeDialog/);
+  const toolbar = readWeb("app/(protected)/work/_components/work-list-toolbar.tsx");
+  assert.match(toolbar, /filterAllDepartments/);
 });
 
 test("Work settings dialog covers department and member admin", () => {
@@ -102,6 +117,7 @@ test("Work settings dialog covers department and member admin", () => {
   assert.match(settings, /WorkSettingsDialog/);
   assert.match(settings, /deactivateWorkDepartment/);
   assert.match(settings, /ensurePilotDepartment/);
+  assert.doesNotMatch(settings, /settingsTabProjects/);
   const header = readWeb(
     "app/(protected)/work/_components/work-page-header-actions.tsx",
   );
@@ -135,9 +151,13 @@ test("Work create dialog and list toolbar exist", () => {
 
 test("Work DETAIL uses StatusBadge work-task domain", () => {
   const detail = readWeb(
-    "app/(protected)/work/_components/work-task-detail.tsx",
+    "app/(protected)/work/_components/work-task-detail-panel.tsx",
   );
   assert.match(detail, /domain="work-task"/);
+  const dialog = readWeb(
+    "app/(protected)/work/_components/work-task-detail-dialog-host.tsx",
+  );
+  assert.match(dialog, /variant="document"/);
   const statusBadge = readWeb("app/components/status-badge.tsx");
   assert.match(statusBadge, /"work-task"/);
 });

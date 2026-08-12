@@ -16,10 +16,17 @@ import {
   WORK_TASK_VIEW_SHELL,
   WORK_TIMELINE_ROW,
 } from "../_lib/compose-styles";
+import { workHref, type ParsedWorkParams } from "../_lib/params";
 
 const TIMELINE_DAYS = 28;
 
-export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
+export function WorkTimeline({
+  tasks,
+  params,
+}: {
+  tasks: WorkTaskRow[];
+  params: ParsedWorkParams;
+}) {
   const startDate = getVNDateString();
   const endDate = addVNDateDays(startDate, TIMELINE_DAYS - 1);
 
@@ -71,7 +78,8 @@ export function WorkTimeline({ tasks }: { tasks: WorkTaskRow[] }) {
             <Frame key={task.id} className={WORK_TIMELINE_ROW}>
               <div className="min-w-0">
                 <Link
-                  href={`/work/tasks/${task.id}`}
+                  href={workHref(params, { taskId: task.id })}
+                  scroll={false}
                   className="truncate font-medium hover:underline"
                 >
                   {task.title}

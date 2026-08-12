@@ -11,38 +11,23 @@ import {
   listScopedWorkTasks,
   listWorkDepartmentMembers,
   listWorkDepartments,
-  listWorkProjects,
   type WorkProfileOption,
 } from "./actions";
+import { loadWorkTaskDetail } from "./_lib/load-work-task-detail";
 import { parseWorkParams, type WorkSearchParams } from "./_lib/params";
 import { canManageWorkTeam } from "./_lib/work-manage";
 import { WorkBoard } from "./_components/work-board";
 import { WorkCalendar } from "./_components/work-calendar";
 import type { WorkComposeArchetype } from "./_components/compose/work-compose-shell";
-import type { WorkScopeDialogMode } from "./_components/compose/work-scope-dialog";
 import { WorkCreateDialog } from "./_components/work-create-dialog";
 import { WorkInboxFiltered } from "./_components/work-inbox-filtered";
 import { WorkPageHeaderActions } from "./_components/work-page-header-actions";
 import { WorkPageShell } from "./_components/work-page-shell";
+import {
+  WorkTaskDetailDialogHost,
+  type WorkTaskDetailPayload,
+} from "./_components/work-task-detail-dialog-host";
 import { WorkTimeline } from "./_components/work-timeline";
-
-function resolveScopeNames(
-  params: ReturnType<typeof parseWorkParams>,
-  departments: Array<{ id: number; name: string }>,
-  projects: Array<{ id: number; name: string }>,
-): { departmentName: string | null; projectName: string | null } {
-  return {
-    departmentName:
-      params.departmentId != null
-        ? (departments.find((row) => row.id === params.departmentId)?.name ??
-          null)
-        : null,
-    projectName:
-      params.projectId != null
-        ? (projects.find((row) => row.id === params.projectId)?.name ?? null)
-        : null,
-  };
-}
 
 export default async function WorkPage({
   searchParams,
@@ -65,24 +50,11 @@ export default async function WorkPage({
   }
 
   const canManage = await canManageWorkTeam({ supabase, claims });
-  const [departmentsResult, projectsResult] = await Promise.all([
-    listWorkDepartments({}),
-    listWorkProjects({}),
-  ]);
+  const departmentsResult = await listWorkDepartments({});
   const departments =
     departmentsResult.success && departmentsResult.data
       ? departmentsResult.data.items
       : [];
-  const projects =
-    projectsResult.success && projectsResult.data
-      ? projectsResult.data.items
-      : [];
-
-  const { departmentName, projectName } = resolveScopeNames(
-    params,
-    departments,
-    projects,
-  );
 
   const membersByDepartment: Record<number, WorkProfileOption[]> = {};
   await Promise.all(
@@ -100,40 +72,29 @@ export default async function WorkPage({
     }),
   );
 
+  let taskDetail: WorkTaskDetailPayload | null = null;
+  let taskDetailError: string | null = null;
+  if (params.taskId != null) {
+    const detailResult = await loadWorkTaskDetail(supabase, params.taskId);
+    if (!detailResult.success) {
+      taskDetailError = workCopy.taskNotFound;
+    } else {
+      taskDetail = detailResult.data;
+    }
+  }
+
   const headerActions = (
-    <WorkPageHeaderActions
-      canManage={canManage}
-      departments={departments}
-      projects={projects}
-    >
+    <WorkPageHeaderActions canManage={canManage} departments={departments}>
       {departments.length > 0 ? (
         <WorkCreateDialog
           departments={departments}
-          projects={projects}
           membersByDepartment={membersByDepartment}
           defaultDepartmentId={params.departmentId}
-          defaultProjectId={params.projectId}
+          params={params}
         />
       ) : null}
     </WorkPageHeaderActions>
   );
-
-  const needsBoardScope =
-    params.view === "board" &&
-    params.departmentId == null &&
-    params.projectId == null;
-
-  const needsTimelineScope =
-    params.view === "timeline" && params.projectId == null;
-
-  const needsScope = needsBoardScope || needsTimelineScope;
-
-  const scopeMode: WorkScopeDialogMode =
-    params.view === "timeline"
-      ? "project-only"
-      : params.view === "calendar"
-        ? "optional"
-        : "board-or-project";
 
   let body: ReactNode;
   let loadError: string | null = null;
@@ -146,51 +107,26 @@ export default async function WorkPage({
       body = (
         <WorkInboxFiltered
           tasks={result.data.items}
+          params={params}
           status={params.status}
           q={params.q}
         />
       );
     }
-  } else if (params.view === "board") {
-    if (needsBoardScope) {
-      body = null;
-    } else {
-      const scoped = await listScopedWorkTasks(
-        params.departmentId != null
-          ? { departmentId: params.departmentId }
-          : { projectId: params.projectId! },
-      );
-      if (!scoped.success || !scoped.data) {
-        loadError = scoped.error ?? workCopy.loadFailed;
-      } else {
-        body = <WorkBoard tasks={scoped.data.items} />;
-      }
-    }
-  } else if (params.view === "calendar") {
-    const hasScope =
-      params.departmentId != null || params.projectId != null;
-    const result = hasScope
-      ? await listScopedWorkTasks(
-          params.departmentId != null
-            ? { departmentId: params.departmentId }
-            : { projectId: params.projectId! },
-        )
-      : await listMyWorkTasks({ includeDone: params.includeDone });
-    if (!result.success || !result.data) {
-      loadError = result.error ?? workCopy.loadFailed;
-    } else {
-      body = <WorkCalendar tasks={result.data.items} params={params} />;
-    }
-  } else if (needsTimelineScope) {
-    body = null;
   } else {
-    const scoped = await listScopedWorkTasks({
-      projectId: params.projectId!,
-    });
+    const scoped =
+      params.departmentId != null
+        ? await listScopedWorkTasks({ departmentId: params.departmentId })
+        : await listMyWorkTasks({ includeDone: params.includeDone });
+
     if (!scoped.success || !scoped.data) {
       loadError = scoped.error ?? workCopy.loadFailed;
+    } else if (params.view === "board") {
+      body = <WorkBoard tasks={scoped.data.items} params={params} />;
+    } else if (params.view === "calendar") {
+      body = <WorkCalendar tasks={scoped.data.items} params={params} />;
     } else {
-      body = <WorkTimeline tasks={scoped.data.items} />;
+      body = <WorkTimeline tasks={scoped.data.items} params={params} />;
     }
   }
 
@@ -203,29 +139,22 @@ export default async function WorkPage({
           ? "TASK_TIMELINE"
           : null;
 
-  const scopeEmptyDescription = needsBoardScope
-    ? workCopy.scopeEmptyBoard
-    : needsTimelineScope
-      ? workCopy.scopeEmptyTimeline
-      : null;
-
   return (
     <AppPage width="xwide" density="compact" scroll>
       <AppPageHeader title={workCopy.pageTitle} actions={headerActions} />
       <WorkPageShell
         params={params}
         departments={departments}
-        projects={projects}
-        departmentName={departmentName}
-        projectName={projectName}
-        needsScope={needsScope}
-        scopeMode={scopeMode}
         composeArchetype={composeArchetype}
         loadError={loadError}
-        scopeEmptyDescription={scopeEmptyDescription}
       >
         {body}
       </WorkPageShell>
+      <WorkTaskDetailDialogHost
+        params={params}
+        detail={taskDetail}
+        loadError={taskDetailError}
+      />
     </AppPage>
   );
 }

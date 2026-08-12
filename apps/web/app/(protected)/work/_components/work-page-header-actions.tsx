@@ -4,21 +4,16 @@ import { useState, type ReactNode } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { useFormControlSize } from "@/components/form/control-size";
 import { workCopy } from "@lib/messages/work";
-import type {
-  WorkDepartmentOption,
-  WorkProjectOption,
-} from "../actions";
+import type { WorkDepartmentOption } from "../actions";
 import { WorkSettingsDialog } from "./work-settings-dialog";
 
 export function WorkPageHeaderActions({
   canManage,
   departments,
-  projects,
   children,
 }: {
   canManage: boolean;
   departments: WorkDepartmentOption[];
-  projects: WorkProjectOption[];
   children: ReactNode;
 }) {
   const controlSize = useFormControlSize();
@@ -44,7 +39,6 @@ export function WorkPageHeaderActions({
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
           departments={departments}
-          projects={projects}
         />
       ) : null}
     </>

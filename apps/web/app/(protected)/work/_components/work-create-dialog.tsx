@@ -14,12 +14,11 @@ import {
   createWorkTask,
   type WorkDepartmentOption,
   type WorkProfileOption,
-  type WorkProjectOption,
 } from "../actions";
+import { workHref, type ParsedWorkParams } from "../_lib/params";
 
 const createSchema = z.object({
   departmentId: z.string().min(1),
-  projectId: z.string().optional(),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(4000).optional(),
   priority: z.enum(WORK_TASK_PRIORITIES),
@@ -31,16 +30,14 @@ type CreateValues = z.infer<typeof createSchema>;
 
 export function WorkCreateDialog({
   departments,
-  projects,
   membersByDepartment,
   defaultDepartmentId,
-  defaultProjectId,
+  params,
 }: {
   departments: WorkDepartmentOption[];
-  projects: WorkProjectOption[];
   membersByDepartment: Record<number, WorkProfileOption[]>;
   defaultDepartmentId?: number | null;
-  defaultProjectId?: number | null;
+  params: ParsedWorkParams;
 }) {
   const router = useRouter();
   const controlSize = useFormControlSize();
@@ -52,16 +49,6 @@ export function WorkCreateDialog({
         ? String(departments[0].id)
         : "",
   );
-
-  const projectOptions = useMemo(() => {
-    const dept = Number(departmentId);
-    return projects
-      .filter((project) => project.departmentId === dept)
-      .map((project) => ({
-        value: String(project.id),
-        label: project.name,
-      }));
-  }, [departmentId, projects]);
 
   const assigneeOptions = useMemo(() => {
     const dept = Number(departmentId);
@@ -88,14 +75,13 @@ export function WorkCreateDialog({
             defaultDepartmentId != null
               ? String(defaultDepartmentId)
               : String(departments[0]!.id),
-          projectId: "__none__",
           title: "",
           description: "",
           priority: "normal",
           assigneeId: "__none__",
           dueAt: "",
         }}
-        entityKey={`${defaultDepartmentId ?? "d"}-${defaultProjectId ?? "p"}`}
+        entityKey={`${defaultDepartmentId ?? "d"}`}
         submitLabel={workCopy.createSubmit}
         successMessage={workCopy.createTask}
         onSubmit={async (values: CreateValues) => {
@@ -106,12 +92,6 @@ export function WorkCreateDialog({
               : undefined;
           const result = await createWorkTask({
             departmentId: Number(values.departmentId),
-            projectId:
-              values.projectId &&
-              values.projectId.length > 0 &&
-              values.projectId !== "__none__"
-                ? Number(values.projectId)
-                : undefined,
             title: values.title,
             description: values.description || undefined,
             priority: values.priority,
@@ -132,13 +112,14 @@ export function WorkCreateDialog({
           return { success: true, data: result.data };
         }}
         onSuccess={(result) => {
+          setOpen(false);
           if (!result.success || result.data == null) {
             router.refresh();
             return;
           }
           const id = Number((result.data as { id?: unknown }).id);
           if (Number.isFinite(id) && id > 0) {
-            router.push(`/work/tasks/${id}`);
+            router.push(workHref(params, { taskId: id }));
             return;
           }
           router.refresh();
@@ -154,15 +135,6 @@ export function WorkCreateDialog({
                 value: String(department.id),
                 label: department.name,
               }))}
-            />
-            <SelectField
-              control={form.control}
-              name="projectId"
-              label={workCopy.scopeProject}
-              options={[
-                { value: "__none__", label: "—" },
-                ...projectOptions,
-              ]}
             />
             <TextField
               control={form.control}
@@ -198,7 +170,6 @@ export function WorkCreateDialog({
               label={workCopy.dueLabel}
               type="datetime-local"
             />
-            {/* Keep local department filter in sync for option lists */}
             <DepartmentSync
               value={form.watch("departmentId")}
               onChange={setDepartmentId}
