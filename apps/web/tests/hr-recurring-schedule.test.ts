@@ -34,6 +34,28 @@ test("fixed weekly schedules materialize without replacing manual day overrides"
   assert.match(migration, /materialize-employee-weekly-schedules/);
 });
 
+test("recurring materialize ON CONFLICT matches multi-shift unique index", () => {
+  const followUp = readFileSync(
+    new URL(
+      "../../../supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(
+    followUp,
+    /ON CONFLICT \(tenant_id, employee_id, work_date, shift_id\)/,
+  );
+  assert.match(
+    followUp,
+    /attendance\.shift_id IS NOT DISTINCT FROM planned\.shift_id/,
+  );
+  assert.doesNotMatch(
+    followUp,
+    /ON CONFLICT \(tenant_id, employee_id, work_date\)\s/,
+  );
+});
+
 test("roster exposes presets and uses the atomic schedule RPC", () => {
   assert.match(actionSource, /STAFF_ROLES/);
   assert.match(actionSource, /save_employee_weekly_schedule/);

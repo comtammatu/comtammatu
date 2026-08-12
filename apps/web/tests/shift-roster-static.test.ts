@@ -115,3 +115,13 @@ test("ADR 0036 Phase B migration enables multi-shift roster constraints", () => 
   assert.match(migration, /multiple_shift_candidates/);
   assert.match(migration, /scheduled_start_at, scheduled_end_at/);
 });
+
+test("recurring materialize conflict target includes shift_id", () => {
+  const followUp = read(
+    "supabase/migrations/20260813000701_hrm_materialize_shift_assignments_on_conflict.sql",
+  );
+  assert.match(
+    followUp,
+    /ON CONFLICT \(tenant_id, employee_id, work_date, shift_id\)/,
+  );
+});
