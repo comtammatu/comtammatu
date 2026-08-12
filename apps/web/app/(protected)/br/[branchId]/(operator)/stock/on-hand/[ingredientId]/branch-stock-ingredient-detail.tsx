@@ -21,7 +21,6 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import {
   Item,
-  ItemActions,
   ItemContent,
   ItemDescription,
   ItemGroup,

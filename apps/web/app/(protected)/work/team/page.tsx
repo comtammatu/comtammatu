@@ -60,7 +60,7 @@ export default async function WorkTeamPage({
     );
   }
 
-  let departmentsResult = await listWorkDepartments({});
+  const departmentsResult = await listWorkDepartments({});
   const departments =
     departmentsResult.success && departmentsResult.data
       ? departmentsResult.data.items
