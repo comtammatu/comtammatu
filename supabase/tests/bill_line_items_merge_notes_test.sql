@@ -52,6 +52,9 @@ BEGIN
   IF v_helper_def ILIKE '%oi.note%' THEN
     RAISE EXCEPTION 'TEST FAILED: bill_line_items keys on item note (should be excluded)';
   END IF;
+  IF v_helper_def NOT ILIKE '%vat_rate%' THEN
+    RAISE EXCEPTION 'TEST FAILED: bill_line_items does not snapshot vat_rate';
+  END IF;
   IF v_prov_def NOT ILIKE '%bill_line_items%' THEN
     RAISE EXCEPTION 'TEST FAILED: enqueue_provisional_bill does not use bill_line_items';
   END IF;
@@ -145,6 +148,14 @@ BEGIN
   IF v_egg_sides::text NOT ILIKE '%Trung%' THEN
     RAISE EXCEPTION
       'TEST FAILED: add-on side orphaned from its portion';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(v_items) line
+    WHERE COALESCE((line->>'vat_rate')::numeric, -1) IS DISTINCT FROM 0
+  ) THEN
+    RAISE EXCEPTION 'TEST FAILED: bill lines missing snapshotted vat_rate';
   END IF;
 
   RAISE NOTICE

@@ -82,6 +82,8 @@ export type BillBase = {
     quantity: number;
     unit_price: number;
     subtotal: number;
+    /** Snapshot from order_items; POS prices are VAT-inclusive. */
+    vat_rate?: number | null;
     modifiers?: ModifierLine[] | null;
     sides?: SideLine[] | null;
     note?: string | null;

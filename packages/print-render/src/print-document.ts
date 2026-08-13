@@ -65,6 +65,7 @@ export type PrintDocumentReceiptItem = {
   quantity?: number;
   unit_price?: number;
   subtotal?: number;
+  vat_rate?: number | null;
   modifiers?: Array<{ name?: string; price?: number }> | null;
   sides?: Array<{
     name?: string;

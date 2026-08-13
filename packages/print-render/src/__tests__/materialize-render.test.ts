@@ -296,7 +296,7 @@ test("receipt hides unknown payment method keys", () => {
   assert.ok(lines.every((line) => !line.includes("new_provider_method")));
 });
 
-test("receipt render keeps compact item table with category total rows", () => {
+test("receipt render keeps compact item table with category headers", () => {
   const ops = renderDocumentToOps(
     buildFallbackDocument(SAMPLE_PAYLOADS.receipt),
   );
@@ -320,28 +320,29 @@ test("receipt render keeps compact item table with category total rows", () => {
     "receipt should not add drink section",
   );
   assert.ok(
-    lines.some(
-      (line) => line.includes("Tổng đồ ăn") && line.includes("110.000đ"),
-    ),
-    "receipt should add food subtotal",
+    lines.includes("Món ăn"),
+    "receipt should add a food section header",
   );
   assert.ok(
-    lines.some(
-      (line) => line.includes("Tổng nước uống") && line.includes("20.000đ"),
+    lines.includes("Đồ uống"),
+    "receipt should add a drink section header",
+  );
+  assert.ok(
+    lines.every(
+      (line) =>
+        !line.includes("Tổng đồ ăn") && !line.includes("Tổng nước uống"),
     ),
-    "receipt should add drink subtotal",
+    "receipt should not print category money totals",
   );
   const foodIndex = lines.findIndex((line) => line.includes("Cơm tấm"));
-  const foodTotalIndex = lines.findIndex((line) => line.includes("Tổng đồ ăn"));
+  const foodHeaderIndex = lines.findIndex((line) => line === "Món ăn");
   const drinkIndex = lines.findIndex((line) => line.includes("Nước sâm"));
-  const drinkTotalIndex = lines.findIndex((line) =>
-    line.includes("Tổng nước uống"),
-  );
+  const drinkHeaderIndex = lines.findIndex((line) => line === "Đồ uống");
   assert.ok(
-    foodTotalIndex < foodIndex &&
-      foodIndex < drinkTotalIndex &&
-      drinkTotalIndex < drinkIndex,
-    "receipt should show each category total before its items",
+    foodHeaderIndex < foodIndex &&
+      foodIndex < drinkHeaderIndex &&
+      drinkHeaderIndex < drinkIndex,
+    "receipt should show each category header before its items",
   );
   assert.ok(
     lines.some(
@@ -360,24 +361,38 @@ test("receipt render keeps compact item table with category total rows", () => {
     lines.some((line) => /^\|\s*1\|Nước sâm/.test(line)),
     "drink numbering should restart from one",
   );
+  assert.ok(
+    lines.some(
+      (line) => /^\|\s*1\|Cơm tấm/.test(line) && line.includes("83.333đ"),
+    ),
+    "food Thành tiền must be exclusive of 8% VAT",
+  );
+  assert.ok(
+    lines.some(
+      (line) => line.includes("Thêm trứng ốp") && line.includes("18.519đ"),
+    ),
+    "modifier Thành tiền must be exclusive of the parent VAT rate",
+  );
+  assert.ok(
+    lines.some(
+      (line) => /^\|\s*1\|Nước sâm/.test(line) && line.includes("18.182đ"),
+    ),
+    "drink Thành tiền must be exclusive of 10% VAT",
+  );
   assert.equal(numberedRows.length, 2, "only primary item rows are numbered");
   assert.equal(tableRules.length, 0, "receipt should not use raster rules");
   assert.equal(
     tableBorders.length,
     6,
-    "receipt should frame the columns and separate category totals",
+    "receipt should frame the columns and separate category headers",
   );
   assert.ok(
-    lines.some(
-      (line) => line.startsWith("Tổng đồ ăn") && !line.startsWith("|"),
-    ),
-    "food total should use a separate full-width row",
+    lines.some((line) => line === "Món ăn"),
+    "food header should use a separate full-width row",
   );
   assert.ok(
-    lines.some(
-      (line) => line.startsWith("Tổng nước uống") && !line.startsWith("|"),
-    ),
-    "drink total should use a separate full-width row",
+    lines.some((line) => line === "Đồ uống"),
+    "drink header should use a separate full-width row",
   );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),
@@ -406,6 +421,37 @@ test("receipt render keeps compact item table with category total rows", () => {
   assert.ok(
     !lines.includes("THÔNG TIN TÀI KHOẢN NGÂN HÀNG"),
     "receipt must not render bank account details",
+  );
+});
+
+test("receipt line amounts stay gross when vat_rate is absent", () => {
+  const receipt = SAMPLE_PAYLOADS.receipt as Extract<
+    PrintPayload,
+    { kind: "receipt" }
+  >;
+  const payload: PrintPayload = {
+    ...receipt,
+    items: receipt.items.map((item) => {
+      const next = { ...item };
+      delete next.vat_rate;
+      return next;
+    }),
+  };
+  const lines = renderDocumentToOps(buildFallbackDocument(payload)).flatMap(
+    (op) => (op.kind === "line" ? [op.text] : []),
+  );
+
+  assert.ok(
+    lines.some(
+      (line) => /^\|\s*1\|Cơm tấm/.test(line) && line.includes("90.000đ"),
+    ),
+    "missing vat_rate must keep VAT-inclusive Thành tiền",
+  );
+  assert.ok(
+    lines.some(
+      (line) => /^\|\s*1\|Nước sâm/.test(line) && line.includes("20.000đ"),
+    ),
+    "missing vat_rate must keep drink Thành tiền inclusive",
   );
 });
 
@@ -457,7 +503,7 @@ test("provisional bill fallback", () => {
   assertText(blocks, "Mang về #088", { bold: true, double: true });
   assert.ok(
     blocks.some((b) => b.type === "itemsTable" && b.group_by_category === true),
-    "provisional bill must keep category totals enabled",
+    "provisional bill must keep category grouping enabled",
   );
   assert.ok(
     blocks.some(
@@ -479,12 +525,19 @@ test("provisional bill fallback", () => {
     "provisional bill should not add drink section",
   );
   assert.ok(
-    lines.some((line) => line.includes("Tổng đồ ăn")),
-    "provisional bill should add food subtotal",
+    lines.includes("Món ăn"),
+    "provisional bill should add a food section header",
   );
   assert.ok(
-    lines.some((line) => line.includes("Tổng nước uống")),
-    "provisional bill should add drink subtotal",
+    lines.includes("Đồ uống"),
+    "provisional bill should add a drink section header",
+  );
+  assert.ok(
+    lines.every(
+      (line) =>
+        !line.includes("Tổng đồ ăn") && !line.includes("Tổng nước uống"),
+    ),
+    "provisional bill should not print category money totals",
   );
   assert.ok(
     lines.some((line) => line.includes("Phí dịch vụ") && line.includes("0đ")),

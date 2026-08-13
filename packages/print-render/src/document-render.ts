@@ -137,11 +137,7 @@ type ReceiptItem = BillBase["items"][number];
 const lineCategory = (item: ReceiptItem): "food" | "drink" =>
   item.category_type === "drink" ? "drink" : "food";
 
-function receiptLineTotals(item: ReceiptItem): {
-  baseUnit: number;
-  baseAmount: number;
-  lineAmount: number;
-} {
+function receiptLineTotals(item: ReceiptItem): { baseAmount: number } {
   const modifierSum = (item.modifiers ?? []).reduce(
     (sum, m) => sum + (m.price ?? 0),
     0,
@@ -151,26 +147,18 @@ function receiptLineTotals(item: ReceiptItem): {
     0,
   );
   const baseUnit = item.unit_price - modifierSum - sidesSum;
-  const baseAmount = baseUnit * item.quantity;
-  const modifierAmount = (item.modifiers ?? []).reduce(
-    (sum, m) => sum + Math.max(0, m.price ?? 0) * item.quantity,
-    0,
-  );
-  const sideAmount = (item.sides ?? []).reduce((sum, s) => {
-    const totalSideQty = sideTotalQuantity(s.quantity, item.quantity);
-    return sum + Math.max(0, s.price ?? 0) * totalSideQty;
-  }, 0);
-  return {
-    baseUnit,
-    baseAmount,
-    lineAmount: baseAmount + modifierAmount + sideAmount,
-  };
+  return { baseAmount: baseUnit * item.quantity };
 }
 
-function categoryTotal(items: ReceiptItem[], category: "food" | "drink"): number {
-  return items
-    .filter((item) => lineCategory(item) === category)
-    .reduce((sum, item) => sum + receiptLineTotals(item).lineAmount, 0);
+/** POS stores VAT-inclusive prices. Match bill_tax_breakdowns whole-VND net. */
+function netFromInclusiveGross(gross: number, vatRate: number): number {
+  if (!Number.isFinite(gross) || gross === 0) return 0;
+  const rate = Number.isFinite(vatRate) && vatRate > 0 ? vatRate : 0;
+  return Math.round(gross / (1 + rate / 100));
+}
+
+function fmtExVat(gross: number, vatRate: number): string {
+  return fmtMoney(netFromInclusiveGross(gross, vatRate));
 }
 
 function renderReceiptItem(
@@ -179,6 +167,7 @@ function renderReceiptItem(
   itemNumber: number,
 ): void {
   const qty = String(it.quantity);
+  const vatRate = it.vat_rate ?? 0;
   const { baseAmount } = receiptLineTotals(it);
 
   const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
@@ -189,7 +178,7 @@ function renderReceiptItem(
           i === 0 ? String(itemNumber) : "",
           chunk,
           i === 0 ? qty : "",
-          i === 0 ? fmtMoney(baseAmount) : "",
+          i === 0 ? fmtExVat(baseAmount, vatRate) : "",
         ),
       ),
     );
@@ -209,7 +198,8 @@ function renderReceiptItem(
     for (const m of it.modifiers) {
       if (!m.name) continue;
       const modPrice = m.price ?? 0;
-      const modAmt = modPrice > 0 ? fmtMoney(modPrice * it.quantity) : "";
+      const modAmt =
+        modPrice > 0 ? fmtExVat(modPrice * it.quantity, vatRate) : "";
       const modChunks = wrapText(`  + ${m.name}`, RECEIPT_COL_NAME);
       modChunks.forEach((chunk, i) => {
         out.push(
@@ -235,7 +225,7 @@ function renderReceiptItem(
       const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
       const sideAmt =
         sidePrice > 0 && totalSideQty > 0
-          ? fmtMoney(sidePrice * totalSideQty)
+          ? fmtExVat(sidePrice * totalSideQty, vatRate)
           : "";
       const sideChunks = wrapText(`  - ${sideName}`, RECEIPT_COL_NAME);
       sideChunks.forEach((chunk, i) => {
@@ -257,7 +247,7 @@ function renderReceiptItem(
 /** Each priced modifier/side renders on its own row with its own unit and
  * amount; price 0 or undefined leaves price cells blank. Variant prints on an
  * indented row under the name. Item note is hidden on bills — the kitchen
- * ticket already showed it to the chef. */
+ * ticket already showed it to the chef. Printed line amounts are exclusive of VAT. */
 function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(ops.line(RECEIPT_TABLE_BORDER));
@@ -273,23 +263,13 @@ function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
     const drinkItems = p.items.filter((item) => lineCategory(item) === "drink");
 
     if (foodItems.length > 0) {
-      out.push(
-        ops.line(
-          pair48("Tổng đồ ăn", fmtMoney(categoryTotal(foodItems, "food"))),
-          { bold: true },
-        ),
-      );
+      out.push(ops.line("Món ăn", { bold: true }));
       out.push(ops.line(RECEIPT_TABLE_BORDER));
       foodItems.forEach((it, index) => renderReceiptItem(out, it, index + 1));
       out.push(ops.line(RECEIPT_TABLE_BORDER));
     }
     if (drinkItems.length > 0) {
-      out.push(
-        ops.line(
-          pair48("Tổng nước uống", fmtMoney(categoryTotal(drinkItems, "drink"))),
-          { bold: true },
-        ),
-      );
+      out.push(ops.line("Đồ uống", { bold: true }));
       out.push(ops.line(RECEIPT_TABLE_BORDER));
       drinkItems.forEach((it, index) => renderReceiptItem(out, it, index + 1));
       out.push(ops.line(RECEIPT_TABLE_BORDER));
@@ -468,6 +448,7 @@ function normalizeReceiptItems(
     quantity: numberOrZero(item.quantity),
     unit_price: numberOrZero(item.unit_price),
     subtotal: numberOrZero(item.subtotal),
+    vat_rate: numberOrZero(item.vat_rate),
     modifiers: Array.isArray(item.modifiers) ? item.modifiers : null,
     sides: Array.isArray(item.sides) ? item.sides : null,
     note: item.note ? clampText(item.note) : null,
