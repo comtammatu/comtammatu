@@ -25,33 +25,46 @@ const itemSchema = z.object({
   item_role: z.enum(["eligible", "buy", "get"]).default("eligible"),
 });
 
-const upsertSchema = z.object({
-  id: z.number().int().positive().nullable().optional(),
-  name: z
-    .string()
-    .trim()
-    .min(1, { error: "Tên chiến dịch không được để trống" })
-    .max(80, { error: "Tên tối đa 80 ký tự" }),
-  kind: z.enum(PROMOTION_KINDS, { error: "Loại chiến dịch không hợp lệ" }),
-  status: z.enum(PROMOTION_STATUSES).default("draft"),
-  discountType: z.enum(["pct", "vnd"]).nullable().optional(),
-  discountValue: z.number().min(0).nullable().optional(),
-  minSubtotal: z.number().min(0).default(0),
-  maxDiscountAmount: z.number().positive().nullable().optional(),
-  stackWithItemDiscount: z.boolean().default(true),
-  startsAt: z.string().nullable().optional(),
-  endsAt: z.string().nullable().optional(),
-  timeWindows: z.array(timeWindowSchema).default([]),
-  serviceModes: z
-    .array(z.enum(["dine_in", "takeaway"]))
-    .min(1, { error: "Chọn ít nhất một hình thức phục vụ" })
-    .default(["dine_in", "takeaway"]),
-  bxgyBuyQty: z.number().int().min(1).nullable().optional(),
-  bxgyGetQty: z.number().int().min(1).nullable().optional(),
-  branchIds: z.array(z.number().int().positive()).default([]),
-  items: z.array(itemSchema).default([]),
-  reusableCode: z.string().trim().max(32).optional().default(""),
-});
+const upsertSchema = z
+  .object({
+    id: z.number().int().positive().nullable().optional(),
+    name: z
+      .string()
+      .trim()
+      .min(1, { error: "Tên chiến dịch không được để trống" })
+      .max(80, { error: "Tên tối đa 80 ký tự" }),
+    kind: z.enum(PROMOTION_KINDS, { error: "Loại chiến dịch không hợp lệ" }),
+    status: z.enum(PROMOTION_STATUSES).default("draft"),
+    discountType: z.enum(["pct", "vnd"]).nullable().optional(),
+    discountValue: z.number().min(0).nullable().optional(),
+    minSubtotal: z.number().min(0).default(0),
+    maxDiscountAmount: z.number().positive().nullable().optional(),
+    stackWithItemDiscount: z.boolean().default(true),
+    startsAt: z.string().nullable().optional(),
+    endsAt: z.string().nullable().optional(),
+    timeWindows: z.array(timeWindowSchema).default([]),
+    serviceModes: z
+      .array(z.enum(["dine_in", "takeaway"]))
+      .min(1, { error: "Chọn ít nhất một hình thức phục vụ" })
+      .default(["dine_in", "takeaway"]),
+    bxgyBuyQty: z.number().int().min(1).nullable().optional(),
+    bxgyGetQty: z.number().int().min(1).nullable().optional(),
+    branchIds: z.array(z.number().int().positive()).default([]),
+    items: z.array(itemSchema).default([]),
+    reusableCode: z.string().trim().max(32).optional().default(""),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      (values.kind === "order_pct" || values.kind === "order_vnd") &&
+      values.reusableCode.trim() === ""
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reusableCode"],
+        message: "Mã giảm không được để trống",
+      });
+    }
+  });
 
 const statusSchema = z.object({
   id: z.number().int().positive(),

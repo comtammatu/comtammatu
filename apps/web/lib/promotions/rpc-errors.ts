@@ -17,6 +17,9 @@ export function mapPromotionRpcError(message: string): string {
   if (msg.includes("promotion not found")) {
     return "Không tìm thấy chiến dịch.";
   }
+  if (msg.includes("promotion_reusable_code_required")) {
+    return "Mã giảm không được để trống.";
+  }
   if (msg.includes("promotion_code_invalid")) {
     return "Mã giảm không hợp lệ hoặc đã hết hạn.";
   }

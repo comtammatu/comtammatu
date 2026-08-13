@@ -113,33 +113,46 @@ const timeWindowSchema = z.object({
   end: z.string().regex(/^\d{2}:\d{2}/, { error: "Giờ không hợp lệ" }),
 });
 
-const promotionFormSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, { error: "Tên chiến dịch không được để trống" })
-    .max(80, { error: "Tên tối đa 80 ký tự" }),
-  kind: z.enum(PROMOTION_KINDS),
-  status: z.enum(PROMOTION_STATUSES),
-  discountType: z.enum(["pct", "vnd"]),
-  discountValue: z.string(),
-  minSubtotal: z.string(),
-  maxDiscountAmount: z.string(),
-  stackWithItemDiscount: z.boolean(),
-  startsDate: z.string(),
-  endsDate: z.string(),
-  startsTime: z.string(),
-  endsTime: z.string(),
-  timeWindows: z.array(timeWindowSchema),
-  serviceModes: z
-    .array(z.enum(["dine_in", "takeaway"]))
-    .min(1, { error: "Chọn ít nhất một hình thức phục vụ" }),
-  bxgyBuyQty: z.string(),
-  bxgyGetQty: z.string(),
-  branchIds: z.array(z.number().int().positive()),
-  itemIds: z.array(z.number().int().positive()),
-  reusableCode: z.string(),
-});
+const promotionFormSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, { error: "Tên chiến dịch không được để trống" })
+      .max(80, { error: "Tên tối đa 80 ký tự" }),
+    kind: z.enum(PROMOTION_KINDS),
+    status: z.enum(PROMOTION_STATUSES),
+    discountType: z.enum(["pct", "vnd"]),
+    discountValue: z.string(),
+    minSubtotal: z.string(),
+    maxDiscountAmount: z.string(),
+    stackWithItemDiscount: z.boolean(),
+    startsDate: z.string(),
+    endsDate: z.string(),
+    startsTime: z.string(),
+    endsTime: z.string(),
+    timeWindows: z.array(timeWindowSchema),
+    serviceModes: z
+      .array(z.enum(["dine_in", "takeaway"]))
+      .min(1, { error: "Chọn ít nhất một hình thức phục vụ" }),
+    bxgyBuyQty: z.string(),
+    bxgyGetQty: z.string(),
+    branchIds: z.array(z.number().int().positive()),
+    itemIds: z.array(z.number().int().positive()),
+    reusableCode: z.string(),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      (values.kind === "order_pct" || values.kind === "order_vnd") &&
+      values.reusableCode.trim() === ""
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reusableCode"],
+        message: PROMOTIONS_VI.codeRequired,
+      });
+    }
+  });
 
 type PromotionFormValues = z.infer<typeof promotionFormSchema>;
 
@@ -443,6 +456,7 @@ export function PromotionForm({
                 label={PROMOTIONS_VI.codeLabel}
                 placeholder={PROMOTIONS_VI.codePlaceholder}
                 className="font-mono uppercase"
+                required
               />
             ) : null}
           </div>

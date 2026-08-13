@@ -18,6 +18,9 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   const migration = readRepo(
     "supabase/migrations/20260813235300_promotions_and_voucher_codes.sql",
   );
+  const rotation = readRepo(
+    "supabase/migrations/20260814021821_upsert_promotion_reusable_code_rotation.sql",
+  );
 
   assert.match(migration, /CREATE TABLE public\.promotions/);
   assert.match(migration, /CREATE TABLE public\.promotion_codes/);
@@ -60,6 +63,11 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(migration, /CREATE POLICY promotions_select/);
   assert.match(migration, /has_permission\(NULL::bigint, 'promo:read'\)/);
   assert.doesNotMatch(migration, /GRANT INSERT ON TABLE public\.promotions TO authenticated/);
+
+  assert.match(rotation, /CREATE OR REPLACE FUNCTION public\.upsert_promotion\(/);
+  assert.match(rotation, /promotion_reusable_code_required/);
+  assert.match(rotation, /replaced_by_code_rotation/);
+  assert.match(rotation, /code <> v_code/);
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -113,8 +121,20 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(form, /AppSection/);
   assert.match(form, /BusinessDateField/);
   assert.match(form, /ReasonConfirmDialog/);
+  assert.match(form, /PROMOTIONS_VI\.codeRequired/);
+  assert.match(form, /superRefine/);
   assert.doesNotMatch(form, /datetime-local/);
   assert.doesNotMatch(form, /type="date"/);
+
+  const ownerActions = readWeb("app/(protected)/promotions/actions.ts");
+  assert.match(ownerActions, /superRefine/);
+  assert.match(ownerActions, /reusableCode/);
+
+  const messages = readRepo("packages/shared/src/messages/promotions.ts");
+  assert.match(messages, /codeRequired:/);
+
+  const rpcErrors = readWeb("lib/promotions/rpc-errors.ts");
+  assert.match(rpcErrors, /promotion_reusable_code_required/);
 
   const statusBadge = readWeb("app/components/status-badge.tsx");
   assert.match(statusBadge, /promotion:/);

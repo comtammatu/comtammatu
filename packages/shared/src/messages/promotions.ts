@@ -12,6 +12,7 @@ export const PROMOTIONS_VI = {
   statusLabel: "Trạng thái",
   codeLabel: "Mã giảm",
   codePlaceholder: "TET10",
+  codeRequired: "Mã giảm không được để trống",
   valueLabel: "Giá trị giảm",
   minSubtotalLabel: "Đơn tối thiểu (VNĐ)",
   maxDiscountLabel: "Trần giảm (VNĐ)",
