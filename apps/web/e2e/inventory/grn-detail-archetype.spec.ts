@@ -85,41 +85,82 @@ test.describe("GRN list-first document dialog", () => {
     });
     if (signInError) throw new Error("Failed to authenticate E2E owner.");
 
-    const { data: poResult, error: poError } = await ownerClient.rpc(
-      "save_purchase_order_group" as never,
+    const { data: demandResult, error: demandError } = await ownerClient.rpc(
+      "save_purchase_demand" as never,
       {
-        p_group_key: null,
+        p_demand_id: null,
         p_branch_id: centralSupply.id,
-        p_expected_delivery_date: null,
+        p_needed_by: null,
         p_notes: "GRN dialog E2E",
         p_lines: [
           {
             ingredient_id: ingredient.id,
             quantity: 10,
             entry_unit_id: entryUnitId,
+            notes: "",
           },
         ],
         p_submit: true,
         p_idempotency_key: crypto.randomUUID(),
       } as never,
     );
+    const demandId = Number(
+      (demandResult as { demand_id?: unknown } | null)?.demand_id,
+    );
+    if (demandError || !Number.isSafeInteger(demandId)) {
+      throw new Error("Failed to seed E2E purchase demand.");
+    }
+
+    const { data: demandItems, error: itemError } = await ownerClient
+      .from("purchase_request_items")
+      .select("id, quantity")
+      .eq("purchase_request_id", demandId);
+    const requestItemId = Number(demandItems?.[0]?.id);
+    const requestQty = Number(demandItems?.[0]?.quantity ?? 10);
+    if (itemError || !Number.isSafeInteger(requestItemId)) {
+      throw new Error("Failed to load E2E demand lines.");
+    }
+
+    const { data: reviewResult, error: reviewError } = await ownerClient.rpc(
+      "review_purchase_demand" as never,
+      {
+        p_demand_id: demandId,
+        p_action: "approve",
+        p_allocations: [
+          {
+            request_item_id: requestItemId,
+            supplier_id: supplierId,
+            quantity: requestQty,
+          },
+        ],
+        p_reason: null,
+        p_idempotency_key: crypto.randomUUID(),
+      } as never,
+    );
     const poId = Number(
       (
-        poResult as {
+        reviewResult as {
           purchase_orders?: Array<{ po_id?: unknown }>;
         } | null
       )?.purchase_orders?.[0]?.po_id,
     );
-    if (poError || !Number.isSafeInteger(poId)) {
+    if (reviewError || !Number.isSafeInteger(poId)) {
       throw new Error("Failed to seed E2E purchase order.");
     }
 
+    const { error: sentError } = await supabase
+      .from("purchase_orders")
+      .update({ status: "sent" })
+      .eq("id", poId);
+    if (sentError) {
+      throw new Error("Failed to mark E2E purchase order receivable.");
+    }
+
     const { error: grnError } = await ownerClient.rpc(
-      "review_purchase_order" as never,
+      "create_grn_draft_from_po" as never,
       {
         p_po_id: poId,
-        p_action: "approve",
-        p_reason: null,
+        p_idempotency_key: crypto.randomUUID(),
       } as never,
     );
     if (grnError) throw new Error("Failed to seed E2E GRN.");

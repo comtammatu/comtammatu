@@ -64,18 +64,16 @@ BEGIN
     RAISE EXCEPTION 'inventory_topology_retired_cron_survived';
   END IF;
 
-  SELECT pg_catalog.pg_get_functiondef(
-    'public.create_production_run_with_locations(bigint,bigint,numeric,bigint,text,bigint,jsonb,bigint,bigint)'::regprocedure
-  ) INTO v_definition;
-  IF v_definition NOT LIKE '%production_maintenance_legacy_rpc%' THEN
-    RAISE EXCEPTION 'inventory_topology_legacy_production_create_exposed';
+  IF pg_catalog.to_regprocedure(
+    'public.create_production_run_with_locations(bigint,bigint,numeric,bigint,text,bigint,jsonb,bigint,bigint)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'inventory_topology_legacy_production_create_survived';
   END IF;
 
-  SELECT pg_catalog.pg_get_functiondef(
-    'public.get_production_recipe_context_for_location(bigint,bigint,bigint)'::regprocedure
-  ) INTO v_definition;
-  IF v_definition NOT LIKE '%production_maintenance_legacy_rpc%' THEN
-    RAISE EXCEPTION 'inventory_topology_legacy_recipe_context_exposed';
+  IF pg_catalog.to_regprocedure(
+    'public.get_production_recipe_context_for_location(bigint,bigint,bigint)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'inventory_topology_legacy_recipe_context_survived';
   END IF;
 
   IF pg_catalog.to_regprocedure(

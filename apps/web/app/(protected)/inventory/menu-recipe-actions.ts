@@ -50,51 +50,153 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
   if (!monetary.purchasePrice || !monetary.client) {
     return { success: false, error: "Không có quyền" };
   }
-  const { data, error } = await monetary.client
+  const { data: menuItems, error: menuError } = await monetary.client
     .from("menu_items")
     .select(
       `
       id, name, updated_at,
-      menu_categories ( name ),
-      menu_recipes:recipes (
-        ingredient_id, quantity, entry_unit_id, note,
-        ingredients (
-          id,
-          name,
-          ingredient_units!ingredient_units_ingredient_tenant_fkey (
-            is_base,
-            units!ingredient_units_unit_tenant_fkey ( code )
-          ),
-          unit_cost
-        )
-      )
+      menu_categories ( name )
     `,
     )
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
-  if (error) {
+  if (menuError) {
     console.error("inventory.menu_recipe.fetch_failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: menuError instanceof Error ? menuError.message : String(menuError),
     });
     return { success: false, error: messages.inventory.menuRecipes.loadFailed };
   }
-  const rows = (data ?? []).map((menuItem) => ({
+
+  const headers = menuItems ?? [];
+  const menuItemIds = headers.map((item) => Number(item.id));
+  type MenuRecipeLine = {
+    menu_item_id: number;
+    ingredient_id: number;
+    quantity: number;
+    entry_unit_id: number | null;
+    note: string | null;
+  };
+  const recipeResult =
+    menuItemIds.length === 0
+      ? { data: [] as MenuRecipeLine[], error: null }
+      : await monetary.client
+          .from("recipes")
+          .select(
+            "menu_item_id, ingredient_id, quantity, entry_unit_id, note",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("menu_item_id", menuItemIds);
+  if (recipeResult.error) {
+    console.error("inventory.menu_recipe.fetch_failed", {
+      error: recipeResult.error.message,
+    });
+    return { success: false, error: messages.inventory.menuRecipes.loadFailed };
+  }
+
+  const recipes = (recipeResult.data ?? []) as MenuRecipeLine[];
+  const ingredientIds = [
+    ...new Set(
+      recipes
+        .map((recipe) => Number(recipe.ingredient_id))
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  ];
+  const [ingredientResult, unitResult] = await Promise.all([
+    ingredientIds.length === 0
+      ? { data: [] as Array<Record<string, unknown>>, error: null }
+      : monetary.client
+          .from("ingredients")
+          .select("id, name, unit_cost")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", ingredientIds),
+    ingredientIds.length === 0
+      ? { data: [] as Array<Record<string, unknown>>, error: null }
+      : monetary.client
+          .from("ingredient_units")
+          .select(
+            "ingredient_id, is_base, units!ingredient_units_unit_tenant_fkey ( code )",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_active", true)
+          .in("ingredient_id", ingredientIds),
+  ]);
+  if (ingredientResult.error || unitResult.error) {
+    console.error("inventory.menu_recipe.fetch_failed", {
+      error: ingredientResult.error?.message ?? unitResult.error?.message,
+    });
+    return { success: false, error: messages.inventory.menuRecipes.loadFailed };
+  }
+
+  const unitsByIngredient = new Map<
+    number,
+    Array<{ is_base: boolean; units: { code: string } | null }>
+  >();
+  for (const row of unitResult.data ?? []) {
+    const ingredientId = Number(row.ingredient_id);
+    const list = unitsByIngredient.get(ingredientId) ?? [];
+    const unitsEmbed = row.units as
+      | { code: string }
+      | { code: string }[]
+      | null;
+    const unit = Array.isArray(unitsEmbed) ? (unitsEmbed[0] ?? null) : unitsEmbed;
+    list.push({
+      is_base: row.is_base === true,
+      units: unit?.code ? { code: unit.code } : null,
+    });
+    unitsByIngredient.set(ingredientId, list);
+  }
+
+  const ingredientById = new Map<
+    number,
+    { id: number; name: string; unit_cost: number | null }
+  >();
+  for (const row of ingredientResult.data ?? []) {
+    ingredientById.set(Number(row.id), {
+      id: Number(row.id),
+      name: String(row.name ?? "Nguyên liệu"),
+      unit_cost: row.unit_cost == null ? null : Number(row.unit_cost),
+    });
+  }
+
+  const recipesByMenuItem = new Map<number, typeof recipes>();
+  for (const recipe of recipes) {
+    const menuItemId = Number(recipe.menu_item_id);
+    const list = recipesByMenuItem.get(menuItemId) ?? [];
+    list.push(recipe);
+    recipesByMenuItem.set(menuItemId, list);
+  }
+
+  const rows = headers.map((menuItem) => ({
     ...menuItem,
-    menu_recipes: (menuItem.menu_recipes ?? []).map((menuRecipe) => {
-      const ingredient = menuRecipe.ingredients;
-      if (!ingredient) return menuRecipe;
-      const { unit_cost, ...safeIngredient } = ingredient;
-      return {
-        ...menuRecipe,
-        ingredients: {
-          ...safeIngredient,
-          monetary: {
-            unitCost: unit_cost == null ? null : Number(unit_cost),
+    menu_recipes: (recipesByMenuItem.get(Number(menuItem.id)) ?? []).map(
+      (menuRecipe) => {
+        const ingredient = ingredientById.get(Number(menuRecipe.ingredient_id));
+        if (!ingredient) {
+          return {
+            ingredient_id: menuRecipe.ingredient_id,
+            quantity: menuRecipe.quantity,
+            entry_unit_id: menuRecipe.entry_unit_id,
+            note: menuRecipe.note,
+            ingredients: null,
+          };
+        }
+        const { unit_cost, ...safeIngredient } = ingredient;
+        return {
+          ingredient_id: menuRecipe.ingredient_id,
+          quantity: menuRecipe.quantity,
+          entry_unit_id: menuRecipe.entry_unit_id,
+          note: menuRecipe.note,
+          ingredients: {
+            ...safeIngredient,
+            ingredient_units: unitsByIngredient.get(ingredient.id) ?? [],
+            monetary: {
+              unitCost: unit_cost == null ? null : Number(unit_cost),
+            },
           },
-        },
-      };
-    }),
+        };
+      },
+    ),
   }));
   return { success: true, data: rows };
 }

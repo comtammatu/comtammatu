@@ -194,6 +194,17 @@ test("owner fulfillment detail is one URL-addressable document dialog", () => {
   assert.match(detailLoader, /toBaseFactor|ingredient_units/);
 });
 
+test("owner stock-request detail redirects to the transfers hub", () => {
+  const page = read(
+    "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx",
+  );
+  assert.match(
+    page,
+    /redirect\(`\/inventory\/transfers\?requestId=\$\{requestId\}`\)/,
+  );
+  assert.doesNotMatch(page, /loadStockRequestFulfillmentDetail/);
+});
+
 test("fulfill maps insufficient_stock ingredient id for UI feedback", () => {
   const actions = read(
     "apps/web/app/(protected)/inventory/stock-request-actions.ts",

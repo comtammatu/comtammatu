@@ -3,14 +3,13 @@
 import { z } from "zod";
 import {
   PERMISSION_KEYS,
-  PO_CREATE_ROLES,
   PO_MUTATE_ROLES,
   PO_REVIEW_ROLES,
   PROCUREMENT_ROLES,
   isProcurementBranchInScope,
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { withAction, type ActionContext } from "@/_lib/with-action";
+import { withAction } from "@/_lib/with-action";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
 import {
@@ -23,29 +22,6 @@ const poIdSchema = z.object({
   poId: z.coerce.number().int().positive(),
 });
 
-async function validateSupplierIngredients(
-  supabase: ActionContext["supabase"],
-  tenantId: number,
-  supplierId: number,
-  ingredientIds: number[],
-): Promise<string | null> {
-  const expected = new Set(ingredientIds);
-  if (expected.size === 0) return "Đơn mua chưa có nguyên liệu.";
-  const { data, error } = await supabase
-    .from("supplier_items")
-    .select("ingredient_id")
-    .eq("tenant_id", tenantId)
-    .eq("supplier_id", supplierId)
-    .eq("is_active", true)
-    .in("ingredient_id", [...expected]);
-
-  if (error) return "Không thể kiểm tra nguyên liệu theo nhà cung cấp.";
-  const allowed = new Set((data ?? []).map((item) => item.ingredient_id));
-  return [...expected].every((id) => allowed.has(id))
-    ? null
-    : "Có nguyên liệu chưa được gán cho nhà cung cấp.";
-}
-
 const createGrnDraftSchema = poIdSchema.extend({
   idempotencyKey: z.string().uuid(),
 });
@@ -56,8 +32,8 @@ const purchaseRequestLineSchema = z.object({
   entryUnitId: z.coerce.number().int().positive(),
 });
 
-const savePurchaseRequestSchema = z.object({
-  requestId: z.coerce.number().int().positive().nullable().optional(),
+const savePurchaseDemandSchema = z.object({
+  demandId: z.coerce.number().int().positive().nullable().optional(),
   branchId: z.coerce.number().int().positive(),
   neededBy: z.iso.date().nullable().optional(),
   notes: z.string().trim().max(500).optional(),
@@ -65,12 +41,6 @@ const savePurchaseRequestSchema = z.object({
   submit: z.boolean().default(true),
   idempotencyKey: z.string().uuid().optional(),
 });
-
-const savePurchaseDemandSchema = savePurchaseRequestSchema
-  .omit({ requestId: true })
-  .extend({
-    demandId: z.coerce.number().int().positive().nullable().optional(),
-  });
 
 const purchaseRequestIdSchema = z.object({
   requestId: z.coerce.number().int().positive(),
@@ -125,54 +95,6 @@ const reviewPurchaseDemandSchema = z
 
 const poReasonSchema = poIdSchema.extend(documentReasonSchema.shape);
 
-const savePurchaseOrderGroupSchema = z.object({
-  groupKey: z.string().uuid().nullable().optional(),
-  branchId: z.coerce.number().int().positive(),
-  expectedDeliveryDate: z.iso.date().nullable().optional(),
-  notes: z.string().trim().max(500).optional(),
-  lines: z
-    .array(
-      z.object({
-        ingredientId: z.coerce.number().int().positive(),
-        quantity: inventoryPositiveQuantitySchema,
-        entryUnitId: z.coerce.number().int().positive(),
-      }),
-    )
-    .min(1)
-    .max(200),
-  submit: z.boolean().default(true),
-  idempotencyKey: z.string().uuid(),
-});
-
-const reviewPurchaseOrderSchema = poIdSchema
-  .extend({
-    action: z.enum(["approve", "request_changes", "reject"]),
-    reason: z.string().trim().max(500).optional(),
-  })
-  .superRefine(({ action, reason }, context) => {
-    if (
-      action !== "approve" &&
-      (reason == null || reason.trim().length < 5)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["reason"],
-        message: "Vui lòng nhập lý do tối thiểu 5 ký tự.",
-      });
-    }
-  });
-
-type PurchaseOrderGroupActionData = {
-  groupKey: string;
-  groupCode: string;
-  purchaseOrders: Array<{
-    id: number;
-    code: string;
-    supplierId: number;
-    status: string;
-  }>;
-};
-
 function mapProcurementRpcError<T = never>(
   error: { code?: string; message: string },
   fallback: string,
@@ -182,219 +104,6 @@ function mapProcurementRpcError<T = never>(
     errorCode: INVENTORY_ERROR_CODES.PROCUREMENT_FAILED,
   });
 }
-
-export const savePurchaseOrderGroup = withAction<
-  typeof savePurchaseOrderGroupSchema,
-  PurchaseOrderGroupActionData
->(
-  {
-    roles: PO_CREATE_ROLES,
-    schema: savePurchaseOrderGroupSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async (
-    {
-      groupKey,
-      branchId,
-      expectedDeliveryDate,
-      notes,
-      lines,
-      submit,
-      idempotencyKey,
-    },
-    { supabase },
-  ) => {
-    const { data, error } = await supabase.rpc(
-      "save_purchase_order_group" as never,
-      {
-        p_group_key: groupKey ?? null,
-        p_branch_id: branchId,
-        p_expected_delivery_date: expectedDeliveryDate ?? null,
-        p_notes: notes ?? "",
-        p_lines: lines.map((line) => ({
-          ingredient_id: line.ingredientId,
-          quantity: line.quantity,
-          entry_unit_id: line.entryUnitId,
-        })),
-        p_submit: submit,
-        p_idempotency_key: idempotencyKey,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể lưu phiếu mua.");
-    }
-
-    const parsed = z
-      .discriminatedUnion("ok", [
-        z.object({
-          ok: z.literal(false),
-          error_code: z.literal("supplier_default_missing"),
-          missing_supplier_items: z.array(
-            z.object({
-              ingredient_id: z.coerce.number().int().positive(),
-              ingredient_name: z.string(),
-            }),
-          ),
-        }),
-        z.object({
-          ok: z.literal(true),
-          purchase_group_key: z.string().uuid(),
-          purchase_group_code: z.string(),
-          purchase_orders: z
-            .array(
-              z.object({
-                po_id: z.coerce.number().int().positive(),
-                po_number: z.string(),
-                supplier_id: z.coerce.number().int().positive(),
-                group_sequence: z.coerce.number().int().positive(),
-                status: z.string(),
-              }),
-            )
-            .min(1),
-        }),
-      ])
-      .safeParse(data);
-
-    if (!parsed.success) {
-      return { success: false, error: "Phản hồi lưu phiếu mua không hợp lệ." };
-    }
-    if (!parsed.data.ok) {
-      return {
-        success: false,
-        error: `Chưa có NCC mặc định: ${parsed.data.missing_supplier_items
-          .map((item) => item.ingredient_name)
-          .join(", ")}.`,
-      };
-    }
-
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return {
-      success: true,
-      data: {
-        groupKey: parsed.data.purchase_group_key,
-        groupCode: parsed.data.purchase_group_code,
-        purchaseOrders: parsed.data.purchase_orders.map((order) => ({
-          id: order.po_id,
-          code: order.po_number,
-          supplierId: order.supplier_id,
-          status: order.status,
-        })),
-      },
-    };
-  },
-);
-
-export const reviewPurchaseOrder = withAction(
-  {
-    roles: PO_REVIEW_ROLES,
-    schema: reviewPurchaseOrderSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_APPROVE,
-  },
-  async ({ poId, action, reason }, { supabase }) => {
-    const { data, error } = await supabase.rpc(
-      "review_purchase_order" as never,
-      {
-        p_po_id: poId,
-        p_action: action,
-        p_reason: reason ?? null,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể xử lý phiếu mua.");
-    }
-    const parsed = z
-      .object({
-        po_id: z.coerce.number().int().positive(),
-        status: z.string(),
-        grn: z
-          .object({
-            grn_id: z.coerce.number().int().positive(),
-            grn_number: z.string(),
-            status: z.string(),
-          })
-          .nullable(),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi xử lý phiếu mua không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return {
-      success: true,
-      data: {
-        status: parsed.data.status,
-        grnId: parsed.data.grn?.grn_id ?? null,
-      },
-    };
-  },
-);
-
-export const savePurchaseRequest = withAction(
-  {
-    roles: PROCUREMENT_ROLES,
-    schema: savePurchaseRequestSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_REQUEST_MANAGE,
-  },
-  async (
-    {
-      requestId,
-      branchId,
-      neededBy,
-      notes,
-      lines,
-      submit,
-      idempotencyKey,
-    },
-    { supabase },
-  ) => {
-    const { data, error } = await supabase.rpc(
-      "save_purchase_demand" as never,
-      {
-        p_demand_id: requestId ?? null,
-        p_branch_id: branchId,
-        p_needed_by: neededBy ?? null,
-        p_notes: notes ?? "",
-        p_lines: lines.map((line) => ({
-          ingredient_id: line.ingredientId,
-          quantity: line.quantity,
-          entry_unit_id: line.entryUnitId,
-          notes: "",
-        })),
-        p_submit: submit,
-        p_idempotency_key: idempotencyKey ?? null,
-      } as never,
-    );
-    if (error) {
-      return mapProcurementRpcError(error, "Không thể tạo yêu cầu mua.");
-    }
-    const parsed = z
-      .object({
-        demand_id: z.coerce.number().int().positive(),
-        demand_number: z.string(),
-        status: z.enum(["draft", "pending_allocation"]),
-      })
-      .safeParse(data);
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: "Phản hồi lưu nhu cầu mua không hợp lệ.",
-      };
-    }
-    revalidateSurfacePath("/inventory/purchase-requests");
-    revalidateSurfacePath("/inventory/purchase-orders");
-    return {
-      success: true,
-      data: {
-        id: parsed.data.demand_id,
-        code: parsed.data.demand_number,
-      },
-    };
-  },
-);
 
 export const savePurchaseDemand = withAction(
   {
@@ -676,72 +385,6 @@ export const createGrnDraftFromPurchaseOrder = withAction(
         code: parsed.data.grn_number,
       },
     };
-  },
-);
-
-export const sendPurchaseOrder = withAction(
-  {
-    roles: PO_MUTATE_ROLES,
-    schema: poIdSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  },
-  async ({ poId }, { supabase, claims }) => {
-    const { data: po, error: loadError } = await supabase
-      .from("purchase_orders")
-      .select(
-        "branch_id, status, supplier_id, purchase_order_items(ingredient_id)",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("id", poId)
-      .maybeSingle();
-
-    if (loadError || !po) {
-      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
-    }
-    if (
-      !isProcurementBranchInScope(
-        claims.user_role,
-        claims.branch_id,
-        po.branch_id,
-      )
-    ) {
-      return {
-        success: false,
-        error: "Đơn đặt hàng nằm ngoài phạm vi chi nhánh.",
-      };
-    }
-    if (po.status !== "draft") {
-      return {
-        success: false,
-        error: "Chỉ gửi được đơn đặt hàng đang ở trạng thái nháp.",
-      };
-    }
-    const supplierItemError = await validateSupplierIngredients(
-      supabase,
-      claims.tenant_id,
-      po.supplier_id,
-      po.purchase_order_items.map((item) => item.ingredient_id),
-    );
-    if (supplierItemError) {
-      return { success: false, error: supplierItemError };
-    }
-
-    const { error } = await supabase.rpc("send_purchase_order" as never, {
-      p_po_id: poId,
-    } as never);
-    if (error) {
-      if (error.message.includes("supplier_item_mapping_required")) {
-        return {
-          success: false,
-          error: "Có nguyên liệu chưa được gán cho nhà cung cấp.",
-        };
-      }
-      return mapProcurementRpcError(error, "Không thể gửi đơn đặt hàng.");
-    }
-
-    revalidateSurfacePath("/inventory/purchase-orders");
-    revalidateSurfacePath("/inventory/grn");
-    return { success: true };
   },
 );
 

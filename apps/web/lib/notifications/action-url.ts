@@ -113,7 +113,7 @@ function rewriteInventoryBranchStockPathForL0(
         : withBranch("/inventory/transfers");
     case "requests":
       return seg2
-        ? `/inventory/stock-requests/${seg2}${qs}${hash}`
+        ? `/inventory/transfers?requestId=${seg2}`
         : withBranch("/inventory/transfers");
     case "purchase-requests":
       return `/inventory/purchase-requests${qs}${hash}`;

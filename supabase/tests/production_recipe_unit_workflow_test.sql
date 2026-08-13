@@ -46,25 +46,22 @@ BEGIN
     RAISE EXCEPTION 'recipe_line_without_spec';
   END IF;
 
-  SELECT pg_get_functiondef(
-    'public.confirm_production_run(bigint,numeric,jsonb)'::regprocedure
-  ) INTO v_definition;
-  IF position('production_maintenance_legacy_rpc' IN v_definition) = 0 THEN
-    RAISE EXCEPTION 'legacy_confirm_not_fail_closed';
+  IF to_regprocedure(
+    'public.confirm_production_run(bigint,numeric,jsonb)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'legacy_confirm_survived';
   END IF;
 
-  SELECT pg_get_functiondef(
-    'public.record_production_run(bigint,bigint,numeric,bigint,numeric,text,bigint,jsonb,bigint,bigint)'::regprocedure
-  ) INTO v_definition;
-  IF position('production_maintenance_legacy_rpc' IN v_definition) = 0 THEN
-    RAISE EXCEPTION 'legacy_record_not_fail_closed';
+  IF to_regprocedure(
+    'public.record_production_run(bigint,bigint,numeric,bigint,numeric,text,bigint,jsonb,bigint,bigint)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'legacy_record_survived';
   END IF;
 
-  SELECT pg_get_functiondef(
-    'public.get_production_recipe_context_for_location(bigint,bigint,bigint)'::regprocedure
-  ) INTO v_definition;
-  IF position('production_maintenance_legacy_rpc' IN v_definition) = 0 THEN
-    RAISE EXCEPTION 'legacy_context_not_fail_closed';
+  IF to_regprocedure(
+    'public.get_production_recipe_context_for_location(bigint,bigint,bigint)'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'legacy_context_survived';
   END IF;
 
   SELECT pg_get_functiondef(

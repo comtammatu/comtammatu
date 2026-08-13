@@ -2,16 +2,10 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import { messages } from "@lib/messages";
-import {
-  getAuthContext,
-  getAuthContextWithPermission,
-} from "./_lib/auth";
+import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
-import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
-import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 import { getEmbeddedIngredientBaseUnitDisplayName } from "./_lib/unit-display";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
@@ -43,106 +37,6 @@ const stocktakeLineUpdateSchema = z.object({
     .nullable()
     .optional(),
 });
-
-/* ─── Stocktake Actions ─── */
-
-export async function createStocktakeSession(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Mã chi nhánh không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    INVENTORY_OPS_ROLES,
-    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
-    parsedBranch.data,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    parsedBranch.data,
-  );
-  if (scope.selectedBranchId !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  if (
-    claims.user_role === "branch_manager" &&
-    claims.branch_id !== parsedBranch.data
-  ) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { data: branchData, error: branchError } = await supabase
-    .from("branches")
-    .select("branch_kind")
-    .eq("id", parsedBranch.data)
-    .single();
-
-  if (branchError || !branchData) {
-    return { success: false, error: "Không tìm thấy chi nhánh" };
-  }
-
-  let defaultLocationId: number | null = null;
-  if (branchData.branch_kind === "branch") {
-    const { data: locData, error: locError } = await supabase
-      .from("inventory_locations")
-      .select("id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", parsedBranch.data)
-      .eq("location_kind", "warehouse")
-      .eq("is_active", true)
-      .order("is_default_receive", { ascending: false })
-      .order("is_default_issue", { ascending: false })
-      .order("sort_order", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (!locError && locData) {
-      defaultLocationId = locData.id;
-    }
-  }
-
-  if (!defaultLocationId) {
-    defaultLocationId = await resolveDefaultInventoryLocation(
-      supabase,
-      claims.tenant_id,
-      parsedBranch.data,
-      "receive",
-    );
-  }
-
-  const { data, error } = await supabase.rpc("create_stocktake_session", {
-    p_branch_id: parsedBranch.data,
-    p_location_id: defaultLocationId ?? undefined,
-  });
-
-  if (error) {
-    console.error("[inventory/actions:createStocktakeSession] RPC create_stocktake_session error:", error);
-    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
-      return {
-        success: false,
-        error: "Chi nhánh này đang có phiên kiểm kê chưa hoàn tất.",
-      };
-    }
-    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
-    return { success: false, error: "Không thể tạo phiên kiểm kê." };
-  }
-
-  const result = data as unknown as { id?: number } | null;
-  if (!result?.id) {
-    return { success: false, error: "Không thể tạo phiên kiểm kê." };
-  }
-  return { success: true, data: { id: result.id } };
-}
 
 /* ─── fetchStocktakeSessions ─── */
 

@@ -168,14 +168,24 @@ type RunQueryRow = {
   }> | null;
 };
 
-const RUN_SELECT = `
+const RUN_HEADER_SELECT = `
   id, branch_id, production_number, recipe_spec_id, recipe_output_quantity,
   finished_good_id, planned_quantity, actual_quantity, entry_unit_id,
   entry_to_base_factor, source_location_id, target_location_id, status, notes,
   cancel_reason, completed_at, created_at, started_at,
   branches!production_runs_branch_id_fkey ( name, branch_kind ),
   ingredients!production_runs_finished_good_id_fkey ( name ),
-  units!production_runs_entry_unit_id_fkey ( name ),
+  units!production_runs_entry_unit_id_fkey ( name )
+`;
+
+const RUN_LINE_SELECT = `
+  production_run_id, ingredient_id, planned_quantity, actual_quantity,
+  entry_unit_id, entry_to_base_factor,
+  ingredients!production_run_lines_ingredient_id_fkey ( name ),
+  units!production_run_lines_entry_unit_id_fkey ( name )
+`;
+
+const RUN_SELECT = `${RUN_HEADER_SELECT},
   production_run_lines (
     ingredient_id, planned_quantity, actual_quantity, entry_unit_id,
     entry_to_base_factor,
@@ -239,10 +249,11 @@ export async function fetchProductionRuns(): Promise<
 
   let query = supabase
     .from("production_runs")
-    .select(RUN_SELECT)
+    .select(RUN_HEADER_SELECT)
     .eq("tenant_id", claims.tenant_id)
     .eq("branches.branch_kind", "central_kitchen")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (isProductionSiteScopedRole(claims.user_role) && claims.branch_id != null) {
     query = query.eq("branch_id", claims.branch_id);
   }
@@ -251,9 +262,40 @@ export async function fetchProductionRuns(): Promise<
     console.error("inventory.production.runs_load_failed", error);
     return { success: false, error: productionCopy.productionRunLoadFailed };
   }
+  const headers = (data ?? []) as unknown as Array<
+    Omit<RunQueryRow, "production_run_lines">
+  >;
+  const runIds = headers.map((row) => row.id);
+  const lineResult =
+    runIds.length === 0
+      ? { data: [] as Array<NonNullable<RunQueryRow["production_run_lines"]>[number] & { production_run_id: number }>, error: null }
+      : await supabase
+          .from("production_run_lines")
+          .select(RUN_LINE_SELECT)
+          .eq("tenant_id", claims.tenant_id)
+          .in("production_run_id", runIds);
+  if (lineResult.error) {
+    console.error("inventory.production.runs_load_failed", lineResult.error);
+    return { success: false, error: productionCopy.productionRunLoadFailed };
+  }
+  const linesByRunId = new Map<number, NonNullable<RunQueryRow["production_run_lines"]>>();
+  for (const line of (lineResult.data ?? []) as Array<
+    NonNullable<RunQueryRow["production_run_lines"]>[number] & {
+      production_run_id: number;
+    }
+  >) {
+    const list = linesByRunId.get(line.production_run_id) ?? [];
+    list.push(line);
+    linesByRunId.set(line.production_run_id, list);
+  }
   return {
     success: true,
-    data: ((data ?? []) as unknown as RunQueryRow[]).map(toProductionRun),
+    data: headers.map((row) =>
+      toProductionRun({
+        ...row,
+        production_run_lines: linesByRunId.get(row.id) ?? [],
+      }),
+    ),
   };
 }
 

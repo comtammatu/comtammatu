@@ -208,32 +208,53 @@ test("PO list keeps its URL-addressable document dialog and never shows an empty
     client,
     /items\.length > 0 \? \([\s\S]*RowActionsMenu[\s\S]*\) : \([\s\S]*text-muted-foreground[\s\S]*—/,
   );
+  const loader = read("apps/web/lib/inventory/load-purchase-workspace.ts");
   assert.match(
-    page,
-    /purchase_order_items\([\s\S]*ingredients\(name\)[\s\S]*units!purchase_order_items_entry_unit_id_fkey/,
+    loader,
+    /units!purchase_order_items_entry_unit_id_fkey/,
   );
-  assert.match(
-    page,
-    /goods_received_notes!goods_received_notes_po_id_fkey\(id, grn_number, status/,
+  assert.match(loader, /ORDER_ITEM_SELECT/);
+  assert.match(loader, /from\("purchase_order_items"\)/);
+  assert.match(loader, /\.in\("po_id", poIds\)/);
+  assert.match(loader, /from\("goods_received_notes"\)/);
+  assert.match(loader, /\.in\("po_id", poIds\)/);
+  assert.match(loader, /from\("grn_items"\)/);
+  assert.match(loader, /\.in\("grn_id", grnIds\)/);
+  assert.match(loader, /purchase_group_key/);
+  assert.doesNotMatch(
+    loader,
+    /goods_received_notes!goods_received_notes_po_id_fkey/,
   );
-  assert.match(page, /purchase_group_key/);
+  assert.match(page, /loadPurchaseOrderRows/);
+  assert.match(page, /includeUnits: false/);
+  assert.match(page, /loadPurchasePickerUnits/);
 });
 
 test("demand progress converts PO receipt qty into demand entry units", () => {
   const page = read(
     "apps/web/app/(protected)/inventory/purchase-orders/page.tsx",
   );
+  const loader = read("apps/web/lib/inventory/load-purchase-workspace.ts");
   const helper = read("apps/web/lib/inventory/purchase-demand-progress.ts");
   const migration = read(
     "supabase/migration-archive/20260731212207_purchase_demand_coverage_base_units.sql",
   );
 
-  assert.match(page, /purchaseDemandLineProgress/);
-  assert.match(page, /entry_to_base_factor/);
-  assert.match(
-    page,
-    /ingredient_units!ingredient_units_ingredient_tenant_fkey\(unit_id, to_base_factor, is_active\)/,
+  assert.match(page, /loadPurchaseDemandRows/);
+  assert.match(loader, /purchaseDemandLineProgress/);
+  assert.match(loader, /entry_to_base_factor/);
+  assert.match(loader, /from\("ingredient_units"\)/);
+  assert.match(loader, /\.in\("purchase_request_id", demandIds\)/);
+  assert.doesNotMatch(
+    loader,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
   );
+  assert.doesNotMatch(
+    loader,
+    /purchase_orders\(id, po_number, display_id, status, supplier_id, purchase_order_items/,
+  );
+  assert.match(loader, /DEMAND_COVERAGE_ITEM_SELECT/);
+  assert.match(loader, /from\("purchase_order_items"\)/);
   assert.match(helper, /entryToBaseFactor/);
   assert.match(helper, /demandToBaseFactor/);
   assert.match(migration, /purchase_request_item_ordered_base/);

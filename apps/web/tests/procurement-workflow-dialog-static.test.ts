@@ -105,13 +105,11 @@ test("submitted demands remain allocatable during cutover", () => {
   const migration = read(
     "supabase/migration-archive/20260730192000_fix_purchase_demand_legacy_cutover.sql",
   );
-  const compatibilityAction = purchaseActions.slice(
-    purchaseActions.indexOf("export const savePurchaseRequest"),
-    purchaseActions.indexOf("export const savePurchaseDemand"),
-  );
 
-  assert.match(compatibilityAction, /"save_purchase_demand"/);
-  assert.doesNotMatch(compatibilityAction, /"save_purchase_request"/);
+  assert.doesNotMatch(purchaseActions, /export const savePurchaseRequest/);
+  assert.match(purchaseActions, /export const savePurchaseDemand/);
+  assert.match(purchaseActions, /"save_purchase_demand"/);
+  assert.doesNotMatch(purchaseActions, /"save_purchase_request"/);
   assert.ok((demandClient.match(/status === "submitted"/g) ?? []).length >= 2);
   assert.ok(
     (

@@ -52,7 +52,11 @@ test("Branch consumption owns a source-aware touch list and typed native detail"
   assert.match(data, /branch\?\.branch_kind === "branch"/);
   assert.match(data, /\.not\("order_id", "is", null\)/);
   assert.match(listClient, /showRecorded && requestedView !== "manual"/);
-  assert.match(data, /RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT/);
+  assert.match(data, /loadIngredientBaseUnitEmbeds/);
+  assert.doesNotMatch(
+    data,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
+  );
   assert.match(data, /RECORDED_SALE_CONSUMPTION_ORDER_LIMIT/);
   assert.match(listClient, /order\.orderNumber/);
   assert.match(listClient, /selectedOrder\.lines\.map/);
@@ -109,7 +113,11 @@ test("recorded consumption is POS-only and hidden for central sites", () => {
   );
   assert.match(page, /branch_kind === "branch"/);
   assert.match(page, /\.not\("order_id", "is", null\)/);
-  assert.match(page, /showRecordedConsumptions=\{showRecordedConsumptions\}/);
+  assert.match(page, /loadIngredientBaseUnitEmbeds/);
+  assert.doesNotMatch(
+    page,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
+  );
   assert.match(client, /showRecordedConsumptions = true/);
   assert.match(
     client,

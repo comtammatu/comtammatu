@@ -44,7 +44,7 @@ function controlPlaneHref(entityType: string, entityId: string): string | null {
     case "stock_transfer":
       return `/inventory/transfers/${entityId}`;
     case "stock_request":
-      return `/inventory/stock-requests/${entityId}`;
+      return `/inventory/transfers?requestId=${entityId}`;
     case "stock_issue":
       return `/inventory/issues/${entityId}`;
     case "stocktake_session":

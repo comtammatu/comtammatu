@@ -70,10 +70,6 @@ interface UnitMeta {
   isBase: boolean;
 }
 
-function slipLines(value: unknown): CountSlipQueryLine[] {
-  return Array.isArray(value) ? (value as CountSlipQueryLine[]) : [];
-}
-
 function unitKey(ingredientId: number, unitId: number): string {
   return `${ingredientId}:${unitId}`;
 }
@@ -114,16 +110,6 @@ export async function CountSlipsPageContent({
       employees (
         employee_code,
         profiles ( full_name )
-      ),
-      inventory_count_slip_lines (
-        id,
-        ingredient_id,
-        system_quantity,
-        counted_quantity,
-        entry_unit_id,
-        note,
-        ingredients ( name ),
-        units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
       )
     `,
     )
@@ -138,6 +124,43 @@ export async function CountSlipsPageContent({
   }
 
   const slipRows = slips ?? [];
+  const slipIds = slipRows
+    .map((slip) => Number(slip.id))
+    .filter((id) => Number.isFinite(id));
+  const lineResult =
+    slipIds.length === 0
+      ? { data: [] as Array<CountSlipQueryLine & { slip_id: number }>, error: null }
+      : await supabase
+          .from("inventory_count_slip_lines")
+          .select(
+            `
+            id,
+            slip_id,
+            ingredient_id,
+            system_quantity,
+            counted_quantity,
+            entry_unit_id,
+            note,
+            ingredients ( name ),
+            units!inventory_count_slip_lines_entry_unit_id_fkey ( code )
+          `,
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("slip_id", slipIds);
+  if (lineResult.error) {
+    console.error("inventory.count_slips.fetch_failed", {
+      code: lineResult.error.code,
+    });
+    throw new Error("inventory.count_slips.load_failed");
+  }
+  const linesBySlipId = new Map<number, CountSlipQueryLine[]>();
+  for (const line of (lineResult.data ?? []) as Array<
+    CountSlipQueryLine & { slip_id: number }
+  >) {
+    const list = linesBySlipId.get(line.slip_id) ?? [];
+    list.push(line);
+    linesBySlipId.set(line.slip_id, list);
+  }
   const employeeIds = [
     ...new Set(
       slipRows
@@ -170,9 +193,7 @@ export async function CountSlipsPageContent({
     }
   }
 
-  const allLines = slipRows.flatMap((slip) =>
-    slipLines(slip.inventory_count_slip_lines),
-  );
+  const allLines = [...linesBySlipId.values()].flat();
   const ingredientIds = [
     ...new Set(
       allLines
@@ -218,7 +239,7 @@ export async function CountSlipsPageContent({
   }
 
   const rows: CountSlipRow[] = slipRows.map((slip) => {
-    const lines = slipLines(slip.inventory_count_slip_lines);
+    const lines = linesBySlipId.get(Number(slip.id)) ?? [];
     return {
       id: slip.id,
       slipNumber:

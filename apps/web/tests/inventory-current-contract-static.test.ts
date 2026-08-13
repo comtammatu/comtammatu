@@ -101,7 +101,15 @@ test("generated database types match the final D091 catalog", () => {
   ]) {
     assert.doesNotMatch(generated, new RegExp(`\\b${retired}\\b`));
   }
-  assert.match(generated, /\bcreate_grn_from_approved_po\b/);
+  const dropOrphans = read(
+    "supabase/migrations/20260813142200_drop_inventory_orphan_rpcs.sql",
+  );
+  assert.match(
+    dropOrphans,
+    /DROP FUNCTION IF EXISTS public\.create_grn_from_approved_po\(bigint\)/,
+  );
+  assert.match(generated, /\bcreate_grn_draft_from_po\b/);
+  assert.doesNotMatch(generated, /\bcreate_grn_from_approved_po\b/);
 });
 
 test("app authority uses PO approval to GRN and omits retired QC permissions", () => {

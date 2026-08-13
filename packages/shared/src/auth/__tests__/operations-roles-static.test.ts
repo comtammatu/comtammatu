@@ -173,7 +173,7 @@ test("accountant reviews PO while invoice lines own purchase prices", () => {
     "apps/web/app/(protected)/finance/supplier-invoice-actions.ts",
   );
 
-  assert.match(action, /reviewPurchaseOrder/);
+  assert.match(action, /reviewPurchaseDemand/);
   assert.match(action, /PERMISSION_KEYS\.PROCUREMENT_PO_APPROVE/);
   assert.doesNotMatch(client, /unitPrice|savePricesAction/);
   assert.match(invoiceAction, /save_supplier_invoice_draft/);

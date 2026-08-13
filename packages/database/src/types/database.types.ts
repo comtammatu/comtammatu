@@ -12359,26 +12359,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      adjust_stock_exception:
-        | {
-            Args: {
-              p_branch_id: number
-              p_entry_quantity: number
-              p_entry_unit_id: number
-              p_ingredient_id: number
-              p_reason: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_branch_id: number
-              p_ingredient_id: number
-              p_quantity_change: number
-              p_reason: string
-            }
-            Returns: Json
-          }
+      adjust_stock_exception: {
+        Args: {
+          p_branch_id: number
+          p_entry_quantity: number
+          p_entry_unit_id: number
+          p_ingredient_id: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       aggregate_daily_b2c_invoice: {
         Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
         Returns: Json
@@ -12483,14 +12473,6 @@ export type Database = {
         Args: { p_event_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      assign_auditor: {
-        Args: {
-          p_auditor_branch_id?: number
-          p_auditor_id: string
-          p_session_id: number
-        }
-        Returns: undefined
-      }
       attach_print_document_to_payload: {
         Args: {
           p_branch_id: number
@@ -12578,10 +12560,6 @@ export type Database = {
         Args: { p_groups: Json }
         Returns: Json
       }
-      bulk_import_production_recipes: {
-        Args: { p_groups: Json }
-        Returns: Json
-      }
       can_access_workspace: { Args: never; Returns: boolean }
       can_manage_work_membership: { Args: never; Returns: boolean }
       can_read_branch_ops: { Args: { p_branch_id: number }; Returns: boolean }
@@ -12613,12 +12591,10 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      cancel_production_run:
-        | { Args: { p_run_id: number }; Returns: Json }
-        | {
-            Args: { p_branch_id: number; p_reason?: string; p_run_id: number }
-            Returns: Json
-          }
+      cancel_production_run: {
+        Args: { p_branch_id: number; p_reason?: string; p_run_id: number }
+        Returns: Json
+      }
       cancel_purchase_order: {
         Args: { p_po_id: number; p_reason: string }
         Returns: Json
@@ -12726,10 +12702,6 @@ export type Database = {
         Args: { p_reason: string; p_request_id: number }
         Returns: Json
       }
-      close_recount_round: {
-        Args: { p_round_no: number; p_session_id: number }
-        Returns: Json
-      }
       close_stock_request: {
         Args: { p_reason: string; p_request_id: number }
         Returns: Json
@@ -12798,14 +12770,6 @@ export type Database = {
             Returns: Json
           }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
-      confirm_production_run: {
-        Args: {
-          p_actual_ingredients?: Json
-          p_actual_quantity?: number
-          p_run_id: number
-        }
-        Returns: Json
-      }
       confirm_sepay_payment: {
         Args: {
           p_account_number: string
@@ -12871,18 +12835,6 @@ export type Database = {
           transfer_content: string
         }[]
       }
-      create_expiry_writeoff: {
-        Args: {
-          p_branch_id: number
-          p_grn_item_id?: number
-          p_ingredient_id: number
-          p_location_id: number
-          p_note?: string
-          p_photo_urls?: string[]
-          p_quantity: number
-        }
-        Returns: Json
-      }
       create_finance_fund_adjustment: {
         Args: {
           p_bank_delta: number
@@ -12896,7 +12848,6 @@ export type Database = {
         Args: { p_idempotency_key: string; p_po_id: number }
         Returns: Json
       }
-      create_grn_from_approved_po: { Args: { p_po_id: number }; Returns: Json }
       create_inventory_document_correction: {
         Args: {
           p_branch_id: number
@@ -12938,56 +12889,15 @@ export type Database = {
         }
         Returns: Json
       }
-      create_production_run:
-        | {
-            Args: {
-              p_branch_id: number
-              p_entry_unit_id: number
-              p_finished_good_id: number
-              p_ingredients_override?: Json
-              p_notes?: string
-              p_planned_quantity: number
-              p_target_branch_id?: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_branch_id: number
-              p_notes?: string
-              p_planned_quantity: number
-              p_recipe_spec_id: number
-              p_source_location_id?: number
-              p_target_location_id?: number
-            }
-            Returns: Json
-          }
-      create_production_run_with_locations: {
+      create_production_run: {
         Args: {
           p_branch_id: number
-          p_entry_unit_id: number
-          p_finished_good_id: number
-          p_ingredients_override?: Json
           p_notes?: string
           p_planned_quantity: number
+          p_recipe_spec_id: number
           p_source_location_id?: number
-          p_target_branch_id?: number
           p_target_location_id?: number
         }
-        Returns: Json
-      }
-      create_purchase_order_from_request: {
-        Args: {
-          p_expected_delivery_date: string
-          p_lines: Json
-          p_notes: string
-          p_request_id: number
-          p_supplier_id: number
-        }
-        Returns: Json
-      }
-      create_purchase_orders_from_grn: {
-        Args: { p_grn_id: number }
         Returns: Json
       }
       create_refund: {
@@ -13027,10 +12937,6 @@ export type Database = {
           p_transfer_number: string
           p_vehicle_info?: string
         }
-        Returns: Json
-      }
-      create_stocktake_session: {
-        Args: { p_branch_id: number; p_location_id?: number }
         Returns: Json
       }
       create_supplier_credit_allocated: {
@@ -13257,10 +13163,6 @@ export type Database = {
         }
         Returns: number
       }
-      enable_offline_for_session: {
-        Args: { p_session_id: number }
-        Returns: Json
-      }
       enqueue_cancel_ticket_print: {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
@@ -13313,15 +13215,6 @@ export type Database = {
         Returns: Json
       }
       ensure_pilot_work_department: { Args: never; Returns: number }
-      escalate_round_4: {
-        Args: {
-          p_final_qty: number
-          p_ingredient_id: number
-          p_note: string
-          p_session_id: number
-        }
-        Returns: undefined
-      }
       expire_stuck_print_jobs: {
         Args: { p_stale_after_seconds?: number }
         Returns: number
@@ -13340,7 +13233,6 @@ export type Database = {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: undefined
       }
-      finalize_stocktake: { Args: { p_session_id: number }; Returns: Json }
       finance_views_last_refresh: {
         Args: never
         Returns: {
@@ -13726,18 +13618,6 @@ export type Database = {
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
       get_pos_session_report_legacy_20260725: {
         Args: { p_session_id: number }
-        Returns: Json
-      }
-      get_production_recipe_context: {
-        Args: { p_branch_id: number; p_finished_good_id: number }
-        Returns: Json
-      }
-      get_production_recipe_context_for_location: {
-        Args: {
-          p_branch_id: number
-          p_finished_good_id: number
-          p_source_location_id?: number
-        }
         Returns: Json
       }
       get_revenue_by_cashier: {
@@ -14434,21 +14314,6 @@ export type Database = {
         Args: { p_bank_transaction_id: number }
         Returns: Json
       }
-      record_production_run: {
-        Args: {
-          p_actual_ingredients?: Json
-          p_actual_quantity: number
-          p_branch_id: number
-          p_entry_unit_id: number
-          p_finished_good_id: number
-          p_notes?: string
-          p_planned_quantity: number
-          p_source_location_id?: number
-          p_target_branch_id?: number
-          p_target_location_id?: number
-        }
-        Returns: Json
-      }
       record_sepay_cash_deposit_as_system: {
         Args: { p_event_id: number }
         Returns: Json
@@ -14640,15 +14505,6 @@ export type Database = {
           template_version: number
         }[]
       }
-      resolve_stocktake_conflict: {
-        Args: {
-          p_conflict_id: number
-          p_manual_qty?: number
-          p_note?: string
-          p_resolution: string
-        }
-        Returns: Json
-      }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
       review_completed_vietqr_bank_webhook: {
@@ -14663,10 +14519,6 @@ export type Database = {
           p_idempotency_key?: string
           p_reason?: string
         }
-        Returns: Json
-      }
-      review_purchase_order: {
-        Args: { p_action: string; p_po_id: number; p_reason?: string }
         Returns: Json
       }
       revoke_permission: {
@@ -14758,18 +14610,6 @@ export type Database = {
           p_allocations: Json
           p_demand_id: number
           p_idempotency_key: string
-        }
-        Returns: Json
-      }
-      save_purchase_order_group: {
-        Args: {
-          p_branch_id: number
-          p_expected_delivery_date: string
-          p_group_key: string
-          p_idempotency_key?: string
-          p_lines: Json
-          p_notes: string
-          p_submit?: boolean
         }
         Returns: Json
       }
@@ -14967,7 +14807,6 @@ export type Database = {
         Args: { p_done: boolean; p_item_id: number }
         Returns: undefined
       }
-      send_purchase_order: { Args: { p_po_id: number }; Returns: Json }
       set_auth_role_binding: {
         Args: {
           p_active?: boolean
@@ -15103,9 +14942,10 @@ export type Database = {
         }
         Returns: Json
       }
-      start_production_run:
-        | { Args: { p_run_id: number }; Returns: Json }
-        | { Args: { p_branch_id: number; p_run_id: number }; Returns: Json }
+      start_production_run: {
+        Args: { p_branch_id: number; p_run_id: number }
+        Returns: Json
+      }
       start_stocktake: {
         Args: {
           p_auditor_id?: string
@@ -15311,14 +15151,6 @@ export type Database = {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
       }
-      update_purchase_order_prices: {
-        Args: { p_lines: Json; p_po_id: number }
-        Returns: Json
-      }
-      update_purchase_order_prices_protected: {
-        Args: { p_lines: Json; p_po_id: number }
-        Returns: Json
-      }
       update_staff_profile: {
         Args: {
           p_branch_id?: number
@@ -15417,25 +15249,15 @@ export type Database = {
         }
         Returns: number
       }
-      upsert_production_recipe_lines:
-        | {
-            Args: {
-              p_finished_good_id: number
-              p_lines: Json
-              p_old_finished_good_id?: number
-              p_output_quantity: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_finished_good_id: number
-              p_lines: Json
-              p_output_quantity: number
-              p_output_unit_id: number
-            }
-            Returns: Json
-          }
+      upsert_production_recipe_lines: {
+        Args: {
+          p_finished_good_id: number
+          p_lines: Json
+          p_output_quantity: number
+          p_output_unit_id: number
+        }
+        Returns: Json
+      }
       upsert_recipe_lines: {
         Args: {
           p_lines: Json

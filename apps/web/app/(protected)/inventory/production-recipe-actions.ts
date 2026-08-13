@@ -369,13 +369,7 @@ export async function fetchProductionRecipes(): Promise<
       finished_good:ingredients!production_recipes_finished_good_id_fkey ( id, name ),
       ingredient:ingredients!production_recipes_ingredient_id_fkey (
         id,
-        name,
-        ingredient_units!ingredient_units_ingredient_tenant_fkey (
-          unit_id,
-          is_base,
-          is_active,
-          units!ingredient_units_unit_tenant_fkey ( code, name )
-        )
+        name
       )
     `,
     )
@@ -390,10 +384,60 @@ export async function fetchProductionRecipes(): Promise<
     };
   }
 
+  const recipeRows = data ?? [];
+  const ingredientIds = [
+    ...new Set(
+      recipeRows
+        .map((row) => Number(row.ingredient_id))
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  ];
+  const unitResult =
+    ingredientIds.length === 0
+      ? { data: [] as Array<Record<string, unknown>>, error: null }
+      : await supabase
+          .from("ingredient_units")
+          .select(
+            "ingredient_id, unit_id, is_base, is_active, units!ingredient_units_unit_tenant_fkey ( code, name )",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("ingredient_id", ingredientIds);
+  if (unitResult.error) {
+    return {
+      success: false,
+      error: messages.inventory.productionRecipes.loadFailed,
+    };
+  }
+  const unitsByIngredient = new Map<
+    number,
+    Array<{
+      unit_id: number;
+      is_base: boolean;
+      is_active: boolean;
+      units: { code: string | null; name: string | null } | null;
+    }>
+  >();
+  for (const row of unitResult.data ?? []) {
+    const ingredientId = Number(row.ingredient_id);
+    const list = unitsByIngredient.get(ingredientId) ?? [];
+    const unitsEmbed = row.units as
+      | { code: string | null; name: string | null }
+      | { code: string | null; name: string | null }[]
+      | null;
+    const unit = Array.isArray(unitsEmbed) ? (unitsEmbed[0] ?? null) : unitsEmbed;
+    list.push({
+      unit_id: Number(row.unit_id),
+      is_base: row.is_base === true,
+      is_active: row.is_active === true,
+      units: unit,
+    });
+    unitsByIngredient.set(ingredientId, list);
+  }
+
   return {
     success: true,
     data:
-      (data ?? []).map((row) => {
+      recipeRows.map((row) => {
         const finishedGood = row.finished_good as {
           id: number;
           name: string;
@@ -401,15 +445,11 @@ export async function fetchProductionRecipes(): Promise<
         const ingredient = row.ingredient as {
           id: number;
           name: string;
-          ingredient_units?: Array<{
-            unit_id: number;
-            is_base: boolean;
-            is_active: boolean;
-            units: { code: string | null; name: string | null } | null;
-          }> | null;
         } | null;
         const activeUnits =
-          ingredient?.ingredient_units?.filter((unit) => unit.is_active) ?? [];
+          unitsByIngredient
+            .get(Number(row.ingredient_id))
+            ?.filter((unit) => unit.is_active) ?? [];
         const selectedUnit =
           row.entry_unit_id != null
             ? activeUnits.find((unit) => unit.unit_id === row.entry_unit_id)

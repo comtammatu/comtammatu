@@ -28,9 +28,8 @@ test("branch operators cannot create a GRN outside the purchase workflow", () =>
     "app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
   );
   const actions = read("app/(protected)/inventory/grn-actions.ts");
-  const actionStart = actions.indexOf("export const createGrnDraft");
-  const actionEnd = actions.indexOf("/* ─── loadActiveGrnDraft", actionStart);
-  const createAction = actions.slice(actionStart, actionEnd);
+  assert.doesNotMatch(actions, /export const createGrnDraft/);
+  assert.doesNotMatch(actions, /export const loadActiveGrnDraft/);
 
   for (const route of [page, supplierPage]) {
     assert.match(
@@ -43,7 +42,7 @@ test("branch operators cannot create a GRN outside the purchase workflow", () =>
     );
   }
   assert.doesNotMatch(
-    createAction,
+    actions,
     /\.from\("goods_received_notes"\)[\s\S]*?\.insert\(/,
   );
   assert.doesNotMatch(home, /stock\/grn\/new/);

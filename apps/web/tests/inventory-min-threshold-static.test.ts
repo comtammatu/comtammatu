@@ -18,7 +18,8 @@ const thresholdClient = read(
 const thresholdActions = read(
   "app/(protected)/inventory/settings/thresholds/actions.ts",
 );
-const alertActions = read("app/(protected)/inventory/alert-actions.ts");
+const stockOnHand = read("lib/inventory/stock-on-hand-data.ts");
+const suggestedQty = read("lib/inventory/suggested-order-qty.ts");
 
 test("ingredient surfaces expose only the minimum stock threshold", () => {
   assert.match(ingredientDialog, /name="min_stock_level"/);
@@ -55,9 +56,11 @@ test("Branch threshold list edits Min only and shares the bulk clear-Re-Max acti
 });
 
 test("stock alerts use the minimum threshold", () => {
-  assert.match(alertActions, /id, name, min_stock_level, is_active/);
-  assert.match(alertActions, /sl\.current_quantity <= ing\.min_stock_level/);
-  assert.doesNotMatch(alertActions, /ingredients\.reorder_point/);
+  assert.match(stockOnHand, /min_stock_level/);
+  assert.match(suggestedQty, /min_stock_level - current/);
+  assert.doesNotMatch(suggestedQty, /row\.reorder_point|reorder_point \?\?/);
+  assert.match(stockOnHand, /status: computeStockStatus\(qty, min\)/);
+  assert.doesNotMatch(stockOnHand, /computeStockStatus\(qty, reorder\)/);
 });
 
 test("ingredient import and export publish one threshold column", () => {

@@ -15,6 +15,10 @@ import {
 } from "./stock-issue-model";
 import { type BranchRecordedConsumption } from "./branch-consumption-model";
 import {
+  attachIngredientBaseUnitEmbeds,
+  loadIngredientBaseUnitEmbeds,
+} from "./load-ingredient-base-unit-embeds";
+import {
   groupSaleConsumptionsByOrder,
   RECORDED_SALE_CONSUMPTION_MOVEMENT_FETCH_LIMIT,
   RECORDED_SALE_CONSUMPTION_ORDER_LIMIT,
@@ -39,6 +43,7 @@ type OrderRef = {
 type RecordedConsumptionRow = {
   id: number;
   order_id: number;
+  ingredient_id: number;
   quantity_change: number;
   created_at: string;
   inventory_locations:
@@ -159,7 +164,7 @@ export async function loadBranchConsumptionListData(
     ? supabase
         .from("stock_movements")
         .select(
-          "id, order_id, quantity_change, created_at, inventory_locations ( name, code ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
+          "id, order_id, ingredient_id, quantity_change, created_at, inventory_locations ( name, code ), ingredients ( name ), orders!stock_movements_order_id_fkey ( id, order_number )",
         )
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", routeBranchId)
@@ -185,6 +190,14 @@ export async function loadBranchConsumptionListData(
     .filter((issue): issue is BranchStockIssue => issue !== null);
   const recordedRows = (recordedResult?.data ??
     []) as unknown as RecordedConsumptionRow[];
+  attachIngredientBaseUnitEmbeds(
+    recordedRows,
+    await loadIngredientBaseUnitEmbeds({
+      supabase,
+      tenantId: claims.tenant_id,
+      ingredientIds: recordedRows.map((row) => Number(row.ingredient_id)),
+    }),
+  );
 
   return {
     branchId: routeBranchId,

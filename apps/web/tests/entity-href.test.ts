@@ -37,7 +37,7 @@ test("path parity: control-plane gold entity paths are stable", () => {
     ["goods_received_note", "44", "/inventory/grn/44"],
     ["grn", "44", "/inventory/grn/44"],
     ["stock_transfer", "34", "/inventory/transfers/34"],
-    ["stock_request", "9", "/inventory/stock-requests/9"],
+    ["stock_request", "9", "/inventory/transfers?requestId=9"],
   ] as const;
 
   for (const [entityType, entityId, expected] of cases) {
@@ -117,7 +117,7 @@ test("notification history URL prefers document DETAIL for L0 roles", () => {
       kind: "inventory.stock_request_submitted",
       targetBranchId: 20,
     }),
-    "/inventory/stock-requests/9",
+    "/inventory/transfers?requestId=9",
   );
   assert.equal(
     resolveNotificationHistoryUrl(claims("owner", null), {

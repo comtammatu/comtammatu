@@ -314,56 +314,6 @@ export async function fetchStockTransferDetail(
   };
 }
 
-export async function fetchStockTransfers(
-  branchId?: number,
-): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  let transferQuery = supabase
-    .from("stock_transfers")
-    .select(
-      "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
-    )
-    .eq("tenant_id", claims.tenant_id);
-
-  const requestedBranchId = branchId ?? null;
-  const involvingBranch = isBranchScopedTransferRole(claims.user_role)
-    ? claims.branch_id
-    : requestedBranchId;
-  if (isBranchScopedTransferRole(claims.user_role) && involvingBranch == null) {
-    return { success: false, error: "Tài khoản cần gắn với kho vận hành." };
-  }
-  if (involvingBranch != null) {
-    transferQuery = transferQuery.or(
-      `from_branch_id.eq.${involvingBranch},to_branch_id.eq.${involvingBranch}`,
-    );
-  }
-
-  const { data: transfers, error } = await transferQuery.order("created_at", {
-    ascending: false,
-  });
-  if (error) {
-    return { success: false, error: messages.inventory.transfer.loadFailed };
-  }
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("tenant_id", claims.tenant_id);
-  const nameById = new Map(
-    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
-  );
-  const enriched = (transfers ?? []).map((t) => ({
-    ...t,
-    from_branch_name: nameById.get(t.from_branch_id) ?? "—",
-    to_branch_name: nameById.get(t.to_branch_id) ?? "—",
-  }));
-  return { success: true, data: enriched };
-}
-
 const transferLineInputSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: inventoryPositiveQuantitySchema,

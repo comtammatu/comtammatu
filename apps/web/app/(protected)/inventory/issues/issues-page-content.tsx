@@ -24,6 +24,10 @@ import {
   type RecordedSaleConsumptionLineInput,
 } from "@lib/inventory/recorded-sale-consumption-model";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import {
+  attachIngredientBaseUnitEmbeds,
+  loadIngredientBaseUnitEmbeds,
+} from "@lib/inventory/load-ingredient-base-unit-embeds";
 
 function relatedOne<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -166,12 +170,12 @@ export async function IssuesPageContent({
           ? movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, unit_cost, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name ), orders!stock_movements_order_id_fkey ( id, order_number )",
               )
           : movementReadClient
               .from("stock_movements")
               .select(
-                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code, name)) ), orders!stock_movements_order_id_fkey ( id, order_number )",
+                "id, branch_id, location_id, ingredient_id, order_id, quantity_change, created_at, reason, branches ( name, branch_kind ), inventory_locations ( name, code, location_kind ), ingredients ( name ), orders!stock_movements_order_id_fkey ( id, order_number )",
               )
       )
         .eq("tenant_id", claims.tenant_id)
@@ -227,6 +231,16 @@ export async function IssuesPageContent({
   const recordedConsumptionRows = (recordedConsumptionRes?.data ?? []) as Array<
     Record<string, unknown>
   >;
+  attachIngredientBaseUnitEmbeds(
+    recordedConsumptionRows,
+    await loadIngredientBaseUnitEmbeds({
+      supabase,
+      tenantId: claims.tenant_id,
+      ingredientIds: recordedConsumptionRows.map((row) =>
+        Number(row.ingredient_id),
+      ),
+    }),
+  );
   const branches: IssueBranchOption[] = scope.allowedBranches.map((b) => ({
     id: b.id,
     name: b.name,

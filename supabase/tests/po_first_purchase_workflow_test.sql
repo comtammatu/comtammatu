@@ -104,6 +104,12 @@ DECLARE
   v_followup_result jsonb;
   v_followup_review jsonb;
   v_group_key uuid;
+  v_demand_id bigint;
+  v_item_a bigint;
+  v_item_b bigint;
+  v_item_missing bigint;
+  v_failed boolean;
+  v_grn jsonb;
   v_po_id bigint;
   v_grn_id bigint;
   v_po_item_id bigint;
@@ -115,12 +121,15 @@ DECLARE
   v_grn_count integer;
 BEGIN
   IF pg_catalog.to_regprocedure(
-    'public.save_purchase_order_group(uuid,bigint,date,text,jsonb,boolean,uuid)'
+    'public.save_purchase_demand(bigint,bigint,date,text,jsonb,boolean,uuid)'
   ) IS NULL
      OR pg_catalog.to_regprocedure(
-       'public.review_purchase_order(bigint,text,text)'
+       'public.review_purchase_demand(bigint,text,jsonb,text,uuid)'
+     ) IS NULL
+     OR pg_catalog.to_regprocedure(
+       'public.create_grn_draft_from_po(bigint,uuid)'
      ) IS NULL THEN
-    RAISE EXCEPTION 'PO FIRST: required RPCs are missing';
+    RAISE EXCEPTION 'PO FIRST: required demand RPCs are missing';
   END IF;
 
   SELECT profile.tenant_id, profile.id
@@ -310,7 +319,7 @@ BEGIN
     TRUE
   );
 
-  v_missing_result := public.save_purchase_order_group(
+  v_missing_result := public.save_purchase_demand(
     NULL,
     v_branch,
     CURRENT_DATE + 1,
@@ -319,28 +328,57 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_ingredient_a,
         'entry_unit_id', v_unit,
-        'quantity', 2
+        'quantity', 2,
+        'notes', ''
       ),
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_missing_ingredient,
         'entry_unit_id', v_unit,
-        'quantity', 3
+        'quantity', 3,
+        'notes', ''
       )
     ),
     TRUE,
     pg_catalog.gen_random_uuid()
   );
+  v_demand_id := (v_missing_result->>'demand_id')::bigint;
+  SELECT
+    max(item.id) FILTER (WHERE item.ingredient_id = v_ingredient_a),
+    max(item.id) FILTER (WHERE item.ingredient_id = v_missing_ingredient)
+  INTO v_item_a, v_item_missing
+  FROM public.purchase_request_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.purchase_request_id = v_demand_id;
 
-  IF (v_missing_result->>'ok')::boolean
-     OR v_missing_result->>'error_code' <> 'supplier_default_missing'
-     OR pg_catalog.jsonb_array_length(
-       v_missing_result->'missing_supplier_items'
-     ) <> 1 THEN
-    RAISE EXCEPTION 'PO FIRST: missing supplier response is invalid: %',
-      v_missing_result;
+  v_failed := FALSE;
+  BEGIN
+    PERFORM public.review_purchase_demand(
+      v_demand_id,
+      'approve',
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'request_item_id', v_item_a,
+          'supplier_id', v_supplier_a,
+          'quantity', 2
+        ),
+        pg_catalog.jsonb_build_object(
+          'request_item_id', v_item_missing,
+          'supplier_id', v_supplier_a,
+          'quantity', 3
+        )
+      ),
+      NULL,
+      pg_catalog.gen_random_uuid()
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      v_failed := TRUE;
+  END;
+  IF NOT v_failed THEN
+    RAISE EXCEPTION 'PO FIRST: missing supplier response is invalid';
   END IF;
 
-  v_result := public.save_purchase_order_group(
+  v_result := public.save_purchase_demand(
     NULL,
     v_branch,
     CURRENT_DATE + 1,
@@ -349,18 +387,20 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_ingredient_a,
         'entry_unit_id', v_unit,
-        'quantity', 2
+        'quantity', 2,
+        'notes', ''
       ),
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_ingredient_b,
         'entry_unit_id', v_unit,
-        'quantity', 3
+        'quantity', 3,
+        'notes', ''
       )
     ),
     TRUE,
     v_key
   );
-  v_replay := public.save_purchase_order_group(
+  v_replay := public.save_purchase_demand(
     NULL,
     v_branch,
     CURRENT_DATE + 1,
@@ -369,16 +409,50 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_ingredient_a,
         'entry_unit_id', v_unit,
-        'quantity', 999
+        'quantity', 999,
+        'notes', ''
       )
     ),
     TRUE,
     v_key
   );
 
-  IF v_result <> v_replay
-     OR NOT (v_result->>'ok')::boolean
-     OR pg_catalog.jsonb_array_length(v_result->'purchase_orders') <> 2 THEN
+  IF v_result->>'demand_id' IS DISTINCT FROM v_replay->>'demand_id'
+     OR v_result->>'status' <> 'pending_allocation' THEN
+    RAISE EXCEPTION 'PO FIRST: atomic group/replay contract failed: % / %',
+      v_result,
+      v_replay;
+  END IF;
+
+  v_demand_id := (v_result->>'demand_id')::bigint;
+  SELECT
+    max(item.id) FILTER (WHERE item.ingredient_id = v_ingredient_a),
+    max(item.id) FILTER (WHERE item.ingredient_id = v_ingredient_b)
+  INTO v_item_a, v_item_b
+  FROM public.purchase_request_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.purchase_request_id = v_demand_id;
+
+  v_result := public.review_purchase_demand(
+    v_demand_id,
+    'approve',
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'request_item_id', v_item_a,
+        'supplier_id', v_supplier_a,
+        'quantity', 2
+      ),
+      pg_catalog.jsonb_build_object(
+        'request_item_id', v_item_b,
+        'supplier_id', v_supplier_b,
+        'quantity', 3
+      )
+    ),
+    NULL,
+    pg_catalog.gen_random_uuid()
+  );
+
+  IF pg_catalog.jsonb_array_length(v_result->'purchase_orders') <> 2 THEN
     RAISE EXCEPTION 'PO FIRST: atomic group/replay contract failed: % / %',
       v_result,
       v_replay;
@@ -419,8 +493,21 @@ BEGIN
   ORDER BY po.group_sequence
   LIMIT 1;
 
-  v_review := public.review_purchase_order(v_po_id, 'approve', NULL);
-  PERFORM public.review_purchase_order(v_po_id, 'approve', NULL);
+  UPDATE public.purchase_orders
+  SET status = 'sent'
+  WHERE tenant_id = v_tenant
+    AND id = v_po_id
+    AND status = 'pending_approval';
+
+  v_grn := public.create_grn_draft_from_po(
+    v_po_id,
+    pg_catalog.gen_random_uuid()
+  );
+  v_review := v_grn;
+  PERFORM public.create_grn_draft_from_po(
+    v_po_id,
+    pg_catalog.gen_random_uuid()
+  );
 
   SELECT count(*)
   INTO v_grn_count
@@ -429,12 +516,12 @@ BEGIN
     AND grn.po_id = v_po_id
     AND grn.status = 'draft';
 
-  IF v_review->>'status' <> 'approved' OR v_grn_count <> 1 THEN
+  IF v_grn->>'status' <> 'draft' OR v_grn_count <> 1 THEN
     RAISE EXCEPTION 'PO FIRST: approve did not create exactly one GRN: %',
-      v_review;
+      v_grn;
   END IF;
 
-  v_grn_id := (v_review->'grn'->>'grn_id')::bigint;
+  v_grn_id := (v_grn->>'grn_id')::bigint;
 
   SELECT
     po_item.id,
@@ -529,7 +616,7 @@ BEGIN
       'PO FIRST: confirmed invoice did not publish price history';
   END IF;
 
-  v_followup_result := public.save_purchase_order_group(
+  v_followup_result := public.save_purchase_demand(
     NULL,
     v_branch,
     CURRENT_DATE + 2,
@@ -538,17 +625,50 @@ BEGIN
       pg_catalog.jsonb_build_object(
         'ingredient_id', v_line_ingredient_id,
         'entry_unit_id', v_line_unit_id,
-        'quantity', 1
+        'quantity', 1,
+        'notes', ''
       )
     ),
     TRUE,
     pg_catalog.gen_random_uuid()
   );
+  v_demand_id := (v_followup_result->>'demand_id')::bigint;
+  SELECT item.id
+  INTO v_item_a
+  FROM public.purchase_request_items AS item
+  WHERE item.tenant_id = v_tenant
+    AND item.purchase_request_id = v_demand_id
+  ORDER BY item.id
+  LIMIT 1;
 
-  v_followup_review := public.review_purchase_order(
-    (v_followup_result->'purchase_orders'->0->>'po_id')::bigint,
+  v_followup_review := public.review_purchase_demand(
+    v_demand_id,
     'approve',
-    NULL
+    pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object(
+        'request_item_id', v_item_a,
+        'supplier_id',
+        (
+          SELECT po.supplier_id
+          FROM public.purchase_orders AS po
+          WHERE po.id = v_po_id
+        ),
+        'quantity', 1
+      )
+    ),
+    NULL,
+    pg_catalog.gen_random_uuid()
+  );
+
+  UPDATE public.purchase_orders
+  SET status = 'sent'
+  WHERE tenant_id = v_tenant
+    AND id = (v_followup_review->'purchase_orders'->0->>'po_id')::bigint
+    AND status = 'pending_approval';
+
+  v_followup_review := public.create_grn_draft_from_po(
+    (v_followup_review->'purchase_orders'->0->>'po_id')::bigint,
+    pg_catalog.gen_random_uuid()
   );
 
   IF NOT EXISTS (
@@ -556,7 +676,7 @@ BEGIN
     FROM public.grn_items AS item
     WHERE item.tenant_id = v_tenant
       AND item.grn_id =
-        (v_followup_review->'grn'->>'grn_id')::bigint
+        (v_followup_review->>'grn_id')::bigint
       AND item.ingredient_id = v_line_ingredient_id
       AND item.entry_unit_id = v_line_unit_id
       AND item.unit_cost = 0

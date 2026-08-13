@@ -31,34 +31,10 @@ const multiSupplierMigration = readRepo(
   "supabase/migration-archive/20260729010000_multi_supplier_grn_split_po.sql",
 );
 
-test("GRN drafts are looked up in the selected receiving branch", () => {
-  assert.match(
-    grnActions,
-    /branchId: z\.coerce\.number\(\)\.int\(\)\.positive\(\)/,
-  );
-
-  const loadStart = grnActions.indexOf("export const loadActiveGrnDraft");
-  assert.ok(loadStart >= 0, "loadActiveGrnDraft not found");
-  const loadBody = grnActions.slice(
-    loadStart,
-    grnActions.indexOf("/* ─── listMyGrnDrafts", loadStart),
-  );
-
-  assert.match(loadBody, /\.eq\("branch_id", data\.branchId\)/);
-  assert.match(loadBody, /\.is\("po_id", null\)/);
-  assert.doesNotMatch(loadBody, /\.eq\("supplier_id"/);
-});
-
-test("GRN creation starts from the canonical PO-linked queue", () => {
-  const createStart = grnActions.indexOf("export const createGrnDraft");
-  assert.ok(createStart >= 0, "createGrnDraft not found");
-  const createBody = grnActions.slice(
-    createStart,
-    grnActions.indexOf("/* ─── loadActiveGrnDraft", createStart),
-  );
-
-  assert.match(createBody, /messages\.inventory\.po\.emptyLinkedGrnsHint/);
-  assert.doesNotMatch(createBody, /\.from\("goods_received_notes"\)/);
+test("GRN drafts are created only from a purchase order", () => {
+  assert.doesNotMatch(grnActions, /export const loadActiveGrnDraft/);
+  assert.doesNotMatch(grnActions, /export const createGrnDraft/);
+  assert.doesNotMatch(grnActions, /export async function listMyGrnDrafts/);
 });
 
 test("GRN free drafts and PO-linked drafts do not share the same unique slot", () => {

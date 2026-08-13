@@ -99,16 +99,10 @@ BEGIN
     RAISE EXCEPTION 'stocktake_session_updated_at_missing';
   END IF;
 
-  IF has_function_privilege(
-    'authenticated',
-    'public.create_expiry_writeoff(bigint,bigint,bigint,numeric,bigint,text,text[])',
-    'EXECUTE'
-  ) OR NOT has_function_privilege(
-    'service_role',
-    'public.create_expiry_writeoff(bigint,bigint,bigint,numeric,bigint,text,text[])',
-    'EXECUTE'
-  ) THEN
-    RAISE EXCEPTION 'create_expiry_writeoff_quarantine_acl_drift';
+  IF to_regprocedure(
+    'public.create_expiry_writeoff(bigint,bigint,bigint,numeric,bigint,text,text[])'
+  ) IS NOT NULL THEN
+    RAISE EXCEPTION 'create_expiry_writeoff_survived';
   END IF;
 
   SELECT pg_get_functiondef('private.canonicalize_notification()'::regprocedure)

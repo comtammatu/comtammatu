@@ -91,8 +91,8 @@ test("PO and GRN mutations delegate supplier integrity to atomic RPCs", () => {
     "apps/web/app/(protected)/inventory/grn-actions.ts",
   );
 
-  assert.match(poActions, /save_purchase_order_group/);
-  assert.match(poActions, /supplier_default_missing/);
+  assert.match(poActions, /save_purchase_demand/);
+  assert.match(poActions, /review_purchase_demand/);
   assert.match(grnActions, /confirm_goods_receipt_note/);
 });
 

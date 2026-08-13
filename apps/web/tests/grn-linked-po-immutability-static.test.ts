@@ -44,11 +44,7 @@ test("linked PO freezes GRN line and receiving-location mutations", () => {
 
 test("free-draft lookup stays isolated while PO drafts cancel through the RPC", () => {
   const actions = read("apps/web/app/(protected)/inventory/grn-actions.ts");
-  const listDrafts = between(
-    actions,
-    "export async function listMyGrnDrafts",
-    "/* ─── discardGrnDraft",
-  );
+  assert.doesNotMatch(actions, /export async function listMyGrnDrafts/);
   const discardDraft = between(
     actions,
     "export const discardGrnDraft",
@@ -58,7 +54,7 @@ test("free-draft lookup stays isolated while PO drafts cancel through the RPC", 
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/branch-grn-list-client.tsx",
   );
 
-  assert.match(listDrafts, /\.is\("po_id", null\)/);
+  assert.doesNotMatch(actions, /export async function listMyGrnDrafts/);
   assert.match(
     actions,
     /reason:\s*z\s*\.string\(\)[\s\S]*?\.trim\(\)[\s\S]*?\.min\(5\)/,

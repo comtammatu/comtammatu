@@ -23,6 +23,11 @@ const lineActionsSource = readFileSync(
 
 test("GRN detail load failures render an error state instead of inventory not-found", () => {
   assert.match(actionsSource, /\.maybeSingle\(\)/);
+  assert.match(actionsSource, /loadIngredientBaseUnitEmbeds/);
+  assert.doesNotMatch(
+    actionsSource,
+    /ingredient_units!ingredient_units_ingredient_tenant_fkey/,
+  );
   assert.match(actionsSource, /errorCode: "load_failed"/);
   assert.match(actionsSource, /errorCode: "not_found"/);
 

@@ -33,8 +33,16 @@ test("app create paths no longer mint opaque UUID document codes", () => {
     "utf8",
   );
 
+  const poClient = readFileSync(
+    join(
+      root,
+      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx",
+    ),
+    "utf8",
+  );
+
   assert.match(helper, /next_inventory_doc_number/);
-  assert.match(grn, /messages\.inventory\.po\.emptyLinkedGrnsHint/);
+  assert.match(poClient, /copy\.emptyLinkedGrnsHint/);
   assert.match(issue, /allocateInventoryDocNumber/);
   assert.doesNotMatch(grn, /randomUUID/);
   assert.doesNotMatch(issue, /randomUUID/);

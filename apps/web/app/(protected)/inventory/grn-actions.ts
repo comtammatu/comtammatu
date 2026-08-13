@@ -19,6 +19,10 @@ import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryNonnegativeQuantitySchema } from "./_lib/inventory-quantity-schema";
 import { mapInventoryRpcFailure } from "./_lib/rpc-failure";
 import {
+  attachIngredientBaseUnitEmbeds,
+  loadIngredientBaseUnitEmbeds,
+} from "@lib/inventory/load-ingredient-base-unit-embeds";
+import {
   grnConfirmRpcMappings,
   grnLineRpcFallback,
   grnLineRpcMappings,
@@ -72,167 +76,6 @@ function canAccessProcurementBranch(
     claims.branch_id,
     branchId,
   );
-}
-
-/* ─── Recent Activity (cross-domain) ─── */
-
-export type RecentActivityItem = {
-  id: number;
-  type: "po" | "grn" | "invoice";
-  code: string;
-  supplier: string;
-  date: string; // ISO datetime
-  status: string;
-  monetary: { total: number } | null;
-};
-
-export async function fetchRecentActivity(
-  branchId?: number,
-): Promise<ActionResult<RecentActivityItem[]>> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  const readClient = monetary.purchasePrice
-    ? (monetary.client ?? supabase)
-    : supabase;
-  let poQuery = (
-    monetary.purchasePrice
-      ? readClient
-          .from("purchase_orders")
-          .select(
-            "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
-          )
-      : readClient
-          .from("purchase_orders")
-          .select(
-            "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( id )",
-          )
-  )
-    .eq("tenant_id", claims.tenant_id)
-    .order("ordered_at", { ascending: false })
-    .limit(5);
-  let grnQuery = supabase
-    .from("goods_received_notes")
-    .select(
-      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( id )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("received_date", { ascending: false })
-    .limit(5);
-  const invQuery = (
-    monetary.purchasePrice
-      ? readClient
-          .from("supplier_invoices")
-          .select(
-            "id, matching_status, invoice_date, total_amount, suppliers ( name )",
-          )
-      : readClient
-          .from("supplier_invoices")
-          .select(
-            "id, matching_status, invoice_date, suppliers ( name )",
-          )
-  )
-    .eq("tenant_id", claims.tenant_id)
-    .order("invoice_date", { ascending: false })
-    .limit(5);
-
-  if (branchId != null) {
-    poQuery = poQuery.eq("branch_id", branchId);
-    grnQuery = grnQuery.eq("branch_id", branchId);
-    // supplier_invoices has no branch_id — left tenant-wide intentionally.
-  }
-
-  const [poRes, grnRes, invRes] = await Promise.all([
-    poQuery,
-    grnQuery,
-    invQuery,
-  ]);
-
-  if (poRes.error || grnRes.error || invRes.error) {
-    return {
-      success: false,
-      error: messages.inventory.grn.recentActivityLoadFailed,
-    };
-  }
-
-  const items: RecentActivityItem[] = [
-    ...(poRes.data ?? []).map((po) => {
-      const lines =
-        (po.purchase_order_items as Array<{
-          line_total: number | null;
-        }> | null) ?? [];
-      const hasAllPrices =
-        lines.length > 0 && lines.every((l) => l.line_total != null);
-      const total =
-        monetary.purchasePrice && hasAllPrices
-          ? lines.reduce((s, l) => s + Number(l.line_total), 0)
-          : null;
-      return {
-        id: po.id,
-        type: "po" as const,
-        code: po.po_number,
-        supplier:
-          (po.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
-        date: po.ordered_at ?? "",
-        status: po.status,
-        monetary: total == null ? null : { total },
-      };
-    }),
-    ...(grnRes.data ?? []).map((grn) => ({
-      id: grn.id,
-      type: "grn" as const,
-      code: grn.grn_number,
-      supplier:
-        (grn.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
-      date: grn.received_date ?? "",
-      status: grn.status,
-      monetary: null,
-    })),
-    ...(invRes.data ?? []).map((inv) => ({
-      id: inv.id,
-      type: "invoice" as const,
-      code: `#${inv.id}`,
-      supplier:
-        (inv.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
-      date: inv.invoice_date ?? "",
-      status: inv.matching_status,
-      monetary:
-        monetary.purchasePrice && "total_amount" in inv && inv.total_amount
-          ? { total: Number(inv.total_amount) }
-          : null,
-    })),
-  ];
-
-  items.sort((a, b) => (b.date > a.date ? 1 : -1));
-
-  return { success: true, data: items.slice(0, 5) };
-}
-
-/* ─── fetchGrns ─── */
-
-export async function fetchGrns(branchId?: number): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  let query = supabase
-    .from("goods_received_notes")
-    .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, branches ( id, name ), suppliers ( id, name ), purchase_orders!goods_received_notes_po_id_fkey ( id, po_number, status ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, po_number, status ), grn_items ( id, rejected_quantity, supplier_id, suppliers ( id, name ) ), supplier_invoices ( id )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("received_date", { ascending: false })
-    .limit(100);
-  if (branchId != null) query = query.eq("branch_id", branchId);
-  const { data, error } = await query;
-  if (error) return { success: false, error: grnLoadFailedError };
-  return { success: true, data: data ?? [] };
 }
 
 /* ─── fetchGrnIdsForDropdown ─── */
@@ -466,9 +309,13 @@ export async function fetchGrnIdsForDropdown(
   }
 
   const selectWithNet =
-    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ) )";
+    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
   const selectWithoutNet =
-    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id ), grn_items ( id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name ) )";
+    "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
+  const itemSelectWithNet =
+    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, unit_cost, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
+  const itemSelectWithoutNet =
+    "grn_id, id, ingredient_id, purchase_order_item_id, po_applied_quantity, entry_unit_id, received_quantity, rejected_quantity, supplier_id, suppliers ( id, name ), ingredients ( id, name ), units!grn_items_entry_unit_id_fkey ( id, code, name )";
 
   let query = readClient
     .from("goods_received_notes")
@@ -481,10 +328,35 @@ export async function fetchGrnIdsForDropdown(
   const { data, error } = await query;
   if (error) return { success: false, error: grnLoadFailedError };
 
+  const headers = (data ?? []) as GrnDropdownRow[];
+  const grnIds = headers.map((row) => row.id);
+  const itemResult =
+    grnIds.length === 0
+      ? { data: [] as Array<GrnDropdownLine & { grn_id: number }>, error: null }
+      : await readClient
+          .from("grn_items")
+          .select(monetary.purchasePrice ? itemSelectWithNet : itemSelectWithoutNet)
+          .eq("tenant_id", claims.tenant_id)
+          .in("grn_id", grnIds);
+  if (itemResult.error) return { success: false, error: grnLoadFailedError };
+
+  const itemsByGrnId = new Map<number, GrnDropdownLine[]>();
+  for (const item of (itemResult.data ?? []) as Array<
+    GrnDropdownLine & { grn_id: number }
+  >) {
+    const list = itemsByGrnId.get(item.grn_id) ?? [];
+    list.push(item);
+    itemsByGrnId.set(item.grn_id, list);
+  }
+  const rows = headers.map((row) => ({
+    ...row,
+    grn_items: itemsByGrnId.get(row.id) ?? [],
+  }));
+
   return {
     success: true,
     data: expandGrnDropdownOptions(
-      (data ?? []) as GrnDropdownRow[],
+      rows,
       billedByLine,
       includeGrnId,
       monetary.purchasePrice,
@@ -539,8 +411,8 @@ export async function fetchGrnDetail(
     .from("grn_items")
     .select(
       (monetary.purchasePrice
-        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity, unit_price_est)"
-        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name, ingredient_units!ingredient_units_ingredient_tenant_fkey(is_base, units!ingredient_units_unit_tenant_fkey(code)) ), purchase_order_items(quantity)") as never,
+        ? "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, unit_cost, total_cost, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity, unit_price_est)"
+        : "id, grn_id, tenant_id, ingredient_id, supplier_id, purchase_order_item_id, po_applied_quantity, received_quantity, rejected_quantity, rejection_reason, rejected_photo_url, entry_unit_id, cost_pending, provisional_cost_source, suppliers ( id, name ), ingredients ( id, name ), purchase_order_items(quantity)") as never,
     )
     .eq("grn_id", grn.id)
     .eq("tenant_id", claims.tenant_id);
@@ -586,7 +458,7 @@ export async function fetchGrnDetail(
   const poItemIds = lines.flatMap((line) =>
     line.purchase_order_item_id == null ? [] : [line.purchase_order_item_id],
   );
-  const [{ data: invoice }, { data: linkedPos }, previousResult] =
+  const [{ data: invoice }, { data: linkedPos }, previousResult, unitsByIngredient] =
     await Promise.all([
       supabase
         .from("supplier_invoices")
@@ -610,7 +482,13 @@ export async function fetchGrnDetail(
             .eq("tenant_id", claims.tenant_id)
             .in("purchase_order_item_id" as never, poItemIds)
             .eq("goods_received_notes.status" as never, "confirmed"),
+      loadIngredientBaseUnitEmbeds({
+        supabase: lineReadClient,
+        tenantId: claims.tenant_id,
+        ingredientIds: lines.map((line) => line.ingredient_id),
+      }),
     ]);
+  attachIngredientBaseUnitEmbeds(lines, unitsByIngredient);
   const linkedPoRows = linkedPos ?? [];
   const previouslyApplied = new Map<number, number>();
   for (const row of (previousResult.data ?? []) as unknown as Array<{
@@ -663,98 +541,6 @@ export async function fetchGrnDetail(
       linkedPos: linkedPoRows,
     },
   };
-}
-
-/* ─── createGrnDraft ─── */
-
-const grnCreateSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  locationId: z.coerce.number().int().positive().optional(),
-  notes: z.string().optional(),
-});
-
-export const createGrnDraft = withAction(
-  {
-    roles: ROLES,
-    schema: grnCreateSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-  },
-  async () => ({
-    success: false,
-    error: messages.inventory.po.emptyLinkedGrnsHint,
-  }),
-);
-
-/* ─── loadActiveGrnDraft (Sprint 6 #3) ─── */
-
-const loadActiveDraftSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-});
-
-export const loadActiveGrnDraft = withAction(
-  {
-    roles: ROLES,
-    schema: loadActiveDraftSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-  },
-  async (data, { supabase, claims, user }) => {
-    const { data: row, error } = await supabase
-      .from("goods_received_notes")
-      .select(
-        "id, branch_id, location_id, po_id, supplier_id, grn_number, notes, updated_at",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .eq("created_by", user.id)
-      .eq("branch_id", data.branchId)
-      .eq("status", "draft")
-      .is("po_id", null)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) {
-      return {
-        success: false,
-        error: messages.inventory.grn.activeDraftLoadFailed,
-      };
-    }
-    return { success: true, data: row ?? null };
-  },
-);
-
-/* ─── listMyGrnDrafts (Sprint 6 #3) ─── */
-
-export async function listMyGrnDrafts(
-  branchId?: number,
-): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims, user } = ctx;
-  let query = supabase
-    .from("goods_received_notes")
-    .select(
-      "id, supplier_id, branch_id, po_id, grn_number, updated_at, branches ( id, name ), suppliers ( id, name ), purchase_orders!goods_received_notes_po_id_fkey ( id, po_number, status ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, po_number, status ), grn_items ( id, rejected_quantity, supplier_id, suppliers ( id, name ) )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("created_by", user.id)
-    .eq("status", "draft")
-    .is("po_id", null);
-  // Branch-scope drafts on the operator plane so a multi-branch user does not
-  // see (and Continue into) another branch's draft; Owner surface (branchId omitted)
-  // keeps the cross-branch view.
-  if (branchId != null) query = query.eq("branch_id", branchId);
-  const { data, error } = await query.order("updated_at", {
-    ascending: false,
-  });
-  if (error) {
-    return {
-      success: false,
-      error: messages.inventory.grn.draftListLoadFailed,
-    };
-  }
-  return { success: true, data: data ?? [] };
 }
 
 /* ─── discardGrnDraft (Sprint 6 #3) ─── */

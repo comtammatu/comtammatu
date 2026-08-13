@@ -123,6 +123,9 @@ test("Branch purchase requests own a Sheet presenter", () => {
   );
 
   assert.match(page, /BranchPurchaseRequestsClient/);
+  assert.match(page, /loadPurchaseDemandRows/);
+  assert.match(page, /includeUnits: false/);
+  assert.match(page, /loadPurchasePickerUnits/);
   assert.doesNotMatch(page, /(?<!Branch)PurchaseRequestsClient/);
   assert.match(page, /branch_kind === "branch"/);
 
