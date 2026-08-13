@@ -4977,6 +4977,8 @@ export type Database = {
           priority_marked_at: string | null
           priority_marked_by: string | null
           priority_note: string | null
+          promotion_code_id: number | null
+          promotion_id: number | null
           service_charge: number
           split_from_order_id: number | null
           status: string
@@ -5016,6 +5018,8 @@ export type Database = {
           priority_marked_at?: string | null
           priority_marked_by?: string | null
           priority_note?: string | null
+          promotion_code_id?: number | null
+          promotion_id?: number | null
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
@@ -5055,6 +5059,8 @@ export type Database = {
           priority_marked_at?: string | null
           priority_marked_by?: string | null
           priority_note?: string | null
+          promotion_code_id?: number | null
+          promotion_id?: number | null
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
@@ -5106,6 +5112,20 @@ export type Database = {
             columns: ["priority_marked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_promotion_code_id_fkey"
+            columns: ["promotion_code_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
             referencedColumns: ["id"]
           },
           {
@@ -6925,6 +6945,324 @@ export type Database = {
           },
         ]
       }
+      promotion_branches: {
+        Row: {
+          branch_id: number
+          promotion_id: number
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          promotion_id: number
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          promotion_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "promotion_branches_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_branches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_codes: {
+        Row: {
+          code: string
+          face_value: number | null
+          id: number
+          issued_at: string
+          kind: string
+          max_redemptions: number
+          promotion_id: number
+          redeemed_count: number
+          status: string
+          tenant_id: number
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          code: string
+          face_value?: number | null
+          id?: never
+          issued_at?: string
+          kind: string
+          max_redemptions?: number
+          promotion_id: number
+          redeemed_count?: number
+          status?: string
+          tenant_id: number
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          code?: string
+          face_value?: number | null
+          id?: never
+          issued_at?: string
+          kind?: string
+          max_redemptions?: number
+          promotion_id?: number
+          redeemed_count?: number
+          status?: string
+          tenant_id?: number
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_codes_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_items: {
+        Row: {
+          item_role: string
+          menu_item_id: number
+          promotion_id: number
+          tenant_id: number
+        }
+        Insert: {
+          item_role: string
+          menu_item_id: number
+          promotion_id: number
+          tenant_id: number
+        }
+        Update: {
+          item_role?: string
+          menu_item_id?: number
+          promotion_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_redemptions: {
+        Row: {
+          applied_amount: number
+          applied_as: string
+          branch_id: number
+          cleared_at: string | null
+          cleared_reason: string | null
+          code_id: number | null
+          id: number
+          order_id: number
+          promotion_id: number
+          redeemed_at: string
+          redeemed_by: string | null
+          snapshot: Json
+          status: string
+          tenant_id: number
+        }
+        Insert: {
+          applied_amount: number
+          applied_as: string
+          branch_id: number
+          cleared_at?: string | null
+          cleared_reason?: string | null
+          code_id?: number | null
+          id?: never
+          order_id: number
+          promotion_id: number
+          redeemed_at?: string
+          redeemed_by?: string | null
+          snapshot?: Json
+          status?: string
+          tenant_id: number
+        }
+        Update: {
+          applied_amount?: number
+          applied_as?: string
+          branch_id?: number
+          cleared_at?: string | null
+          cleared_reason?: string | null
+          code_id?: number | null
+          id?: never
+          order_id?: number
+          promotion_id?: number
+          redeemed_at?: string
+          redeemed_by?: string | null
+          snapshot?: Json
+          status?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          bxgy_buy_qty: number | null
+          bxgy_get_qty: number | null
+          created_at: string
+          created_by: string | null
+          discount_type: string | null
+          discount_value: number | null
+          ends_at: string | null
+          id: number
+          kind: string
+          max_discount_amount: number | null
+          min_subtotal: number
+          name: string
+          service_modes: string[]
+          stack_with_item_discount: boolean
+          starts_at: string | null
+          status: string
+          tenant_id: number
+          time_windows: Json
+          updated_at: string
+        }
+        Insert: {
+          bxgy_buy_qty?: number | null
+          bxgy_get_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: never
+          kind: string
+          max_discount_amount?: number | null
+          min_subtotal?: number
+          name: string
+          service_modes?: string[]
+          stack_with_item_discount?: boolean
+          starts_at?: string | null
+          status: string
+          tenant_id: number
+          time_windows?: Json
+          updated_at?: string
+        }
+        Update: {
+          bxgy_buy_qty?: number | null
+          bxgy_get_qty?: number | null
+          created_at?: string
+          created_by?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: never
+          kind?: string
+          max_discount_amount?: number | null
+          min_subtotal?: number
+          name?: string
+          service_modes?: string[]
+          stack_with_item_discount?: boolean
+          starts_at?: string | null
+          status?: string
+          tenant_id?: number
+          time_windows?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_order_items: {
         Row: {
           entry_to_base_factor: number | null
@@ -7912,6 +8250,81 @@ export type Database = {
           },
           {
             foreignKeyName: "self_order_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      self_order_staff_calls: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          branch_id: number
+          client_op_id: string
+          created_at: string
+          expires_at: string
+          id: number
+          status: string
+          table_id: number
+          tenant_id: number
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          branch_id: number
+          client_op_id: string
+          created_at?: string
+          expires_at: string
+          id?: never
+          status?: string
+          table_id: number
+          tenant_id: number
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          branch_id?: number
+          client_op_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: never
+          status?: string
+          table_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "self_order_staff_calls_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_staff_calls_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_staff_calls_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "self_order_staff_calls_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "self_order_staff_calls_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -12432,6 +12845,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_promotion_code: {
+        Args: { p_code: string; p_order_id: number }
+        Returns: Json
+      }
       apply_template_to_user: {
         Args: {
           p_branch_id: number
@@ -12666,6 +13083,10 @@ export type Database = {
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       clear_order_item_discount: {
         Args: { p_order_item_id: number; p_reason: string }
+        Returns: Json
+      }
+      clear_promotion: {
+        Args: { p_order_id: number; p_reason: string }
         Returns: Json
       }
       close_branch_day: {
@@ -13215,6 +13636,7 @@ export type Database = {
         Returns: Json
       }
       ensure_pilot_work_department: { Args: never; Returns: number }
+      evaluate_order_promotions: { Args: { p_order_id: number }; Returns: Json }
       expire_stuck_print_jobs: {
         Args: { p_stale_after_seconds?: number }
         Returns: number
@@ -13889,6 +14311,10 @@ export type Database = {
         Returns: boolean
       }
       is_inventory_production_operator: { Args: never; Returns: boolean }
+      issue_promotion_codes: {
+        Args: { p_count: number; p_face_value: number; p_promotion_id: number }
+        Returns: Json
+      }
       link_sepay_transaction_to_payment: {
         Args: { p_event_id: number; p_payment_id: number }
         Returns: Json
@@ -14156,6 +14582,10 @@ export type Database = {
         Args: { p_provider_ref: string; p_tax_invoice_id: number }
         Returns: Json
       }
+      preview_promotion_code: {
+        Args: { p_code: string; p_order_id: number }
+        Returns: Json
+      }
       print_template_block_visible: {
         Args: { p_block: Json; p_payload: Json }
         Returns: boolean
@@ -14263,6 +14693,47 @@ export type Database = {
           p_description: string
         }
         Returns: string
+      }
+      promotion_apply_bxgy: {
+        Args: {
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: number
+      }
+      promotion_apply_to_order: {
+        Args: {
+          p_amount: number
+          p_code: Database["public"]["Tables"]["promotion_codes"]["Row"]
+          p_note: string
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+          p_uid: string
+        }
+        Returns: undefined
+      }
+      promotion_assert_order_mutable: {
+        Args: { p_order: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: undefined
+      }
+      promotion_is_eligible: {
+        Args: {
+          p_at: string
+          p_branch_id: number
+          p_order_type: string
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+          p_subtotal: number
+        }
+        Returns: boolean
+      }
+      promotion_normalize_code: { Args: { p_code: string }; Returns: string }
+      promotion_order_amount: {
+        Args: {
+          p_base: number
+          p_code: Database["public"]["Tables"]["promotion_codes"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: number
       }
       queue_tax_invoice_issue_job_for_completed_order: {
         Args: { p_invoice_payload: Json; p_order_id: number }
@@ -14678,6 +15149,7 @@ export type Database = {
         Args: { p_request_id: number; p_target_order_id?: number }
         Returns: Json
       }
+      self_order_ack_staff_call: { Args: { p_call_id: number }; Returns: Json }
       self_order_active_payment_lock: {
         Args: { p_order_id: number }
         Returns: number
@@ -14685,6 +15157,10 @@ export type Database = {
       self_order_branch_has_open_pos_session: {
         Args: { p_branch_id: number; p_tenant_id: number }
         Returns: boolean
+      }
+      self_order_call_staff: {
+        Args: { p_client_op_id: string; p_token: string }
+        Returns: Json
       }
       self_order_cancel_payment_request: {
         Args: { p_reason?: string; p_request_id: number }
@@ -14865,6 +15341,10 @@ export type Database = {
       }
       set_production_recipe_status: {
         Args: { p_recipe_spec_id: number; p_status: string }
+        Returns: Json
+      }
+      set_promotion_status: {
+        Args: { p_promotion_id: number; p_status: string }
         Returns: Json
       }
       set_shift_assignment_leader: {
@@ -15258,6 +15738,29 @@ export type Database = {
         }
         Returns: Json
       }
+      upsert_promotion: {
+        Args: {
+          p_branch_ids: number[]
+          p_bxgy_buy_qty: number | null
+          p_bxgy_get_qty: number | null
+          p_discount_type: string | null
+          p_discount_value: number | null
+          p_ends_at: string | null
+          p_id: number | null
+          p_items: Json
+          p_kind: string
+          p_max_discount_amount: number | null
+          p_min_subtotal: number
+          p_name: string
+          p_reusable_code: string
+          p_service_modes: string[]
+          p_stack_with_item_discount: boolean
+          p_starts_at: string | null
+          p_status: string
+          p_time_windows: Json
+        }
+        Returns: Json
+      }
       upsert_recipe_lines: {
         Args: {
           p_lines: Json
@@ -15354,6 +15857,10 @@ export type Database = {
       vietqr_payment_code_prefix: { Args: never; Returns: string }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
+        Returns: Json
+      }
+      void_promotion_code: {
+        Args: { p_code_id: number; p_reason: string }
         Returns: Json
       }
       weekly_waste_report: { Args: never; Returns: number }

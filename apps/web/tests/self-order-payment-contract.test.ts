@@ -179,6 +179,11 @@ test("Self-Order creates the selected buyer-neutral payment without a hidden con
   );
   assert.match(paymentPanel, /<QrCodeImage[\s\S]*saveVietQr/);
   assert.match(paymentPanel, /<BankAppLauncher/);
+  assert.match(paymentPanel, /PROVEN_VIETQR_BANK_APP_ID/);
+  assert.match(paymentPanel, /bankAppComingSoon/);
+  assert.match(paymentPanel, /otherBankScanHint/);
+  assert.match(paymentPanel, /getVietQrBankAppCatalogUrl/);
+  assert.match(paymentPanel, /orderedApps\.map/);
 });
 
 test("guest can cancel only the exact active VietQR request", () => {

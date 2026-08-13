@@ -10,6 +10,7 @@ import { isPosBranchInScope } from "./_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const positiveIdSchema = z.coerce.number().int().positive();
+const paymentCallKindSchema = z.enum(["cash_call", "vietqr_pending"]);
 const storedCartSchema = z
   .array(
     selfOrderCartItemSchema.extend({
@@ -29,14 +30,28 @@ export interface SelfOrderPendingRequest {
   createdAt: string;
 }
 
+export type SelfOrderPaymentCallKind = "cash_call" | "vietqr_pending";
+
 export interface SelfOrderPendingPaymentRequest {
   id: number;
   orderId: number;
+  kind: SelfOrderPaymentCallKind;
+}
+
+export interface SelfOrderPendingStaffCall {
+  id: number;
+  tableId: number;
 }
 
 export interface SelfOrderPosState {
   requests: SelfOrderPendingRequest[];
   paymentRequests: SelfOrderPendingPaymentRequest[];
+  staffCalls?: SelfOrderPendingStaffCall[];
+}
+
+function isMissingRelationError(error: { code?: string } | null): boolean {
+  const code = error?.code;
+  return code === "PGRST202" || code === "PGRST205" || code === "42P01";
 }
 
 function mapSelfOrderActionError(error: { message?: string }) {
@@ -79,27 +94,75 @@ export async function fetchSelfOrderPosState(
     return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
   }
 
-  const [requestsResult, paymentRequestsResult] = await Promise.all([
-    ctx.supabase
-      .from("self_order_requests")
-      .select("id, table_id, cart_payload, customer_note, created_at")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("branch_id", parsedBranchId.data)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true }),
-    ctx.supabase
-      .from("self_order_payment_requests")
-      .select("id, order_id")
-      .eq("tenant_id", ctx.claims.tenant_id)
-      .eq("branch_id", parsedBranchId.data)
-      .in("status", ["cash_call", "vietqr_pending"])
-      .order("created_at", { ascending: false }),
-  ]);
+  const staffCallsClient = ctx.supabase as unknown as {
+    from: (table: "self_order_staff_calls") => {
+      select: (columns: "id, table_id") => {
+        eq: (
+          column: "tenant_id" | "branch_id" | "status",
+          value: number | string,
+        ) => {
+          eq: (
+            column: "tenant_id" | "branch_id" | "status",
+            value: number | string,
+          ) => {
+            eq: (
+              column: "tenant_id" | "branch_id" | "status",
+              value: number | string,
+            ) => {
+              gt: (
+                column: "expires_at",
+                value: string,
+              ) => Promise<{
+                data: Array<{ id: number; table_id: number }> | null;
+                error: { code?: string } | null;
+              }>;
+            };
+          };
+        };
+      };
+    };
+  };
+
+  const [requestsResult, paymentRequestsResult, staffCallsResult] =
+    await Promise.all([
+      ctx.supabase
+        .from("self_order_requests")
+        .select("id, table_id, cart_payload, customer_note, created_at")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("branch_id", parsedBranchId.data)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true }),
+      ctx.supabase
+        .from("self_order_payment_requests")
+        .select("id, order_id, status")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("branch_id", parsedBranchId.data)
+        .in("status", ["cash_call", "vietqr_pending"])
+        .order("created_at", { ascending: false }),
+      staffCallsClient
+        .from("self_order_staff_calls")
+        .select("id, table_id")
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("branch_id", parsedBranchId.data)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString()),
+    ]);
 
   if (requestsResult.error || paymentRequestsResult.error) {
     console.error(
       "[self-order] POS state load failed",
       requestsResult.error?.code ?? paymentRequestsResult.error?.code,
+    );
+    return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
+  }
+  // Staff-call table ships in a later migration; keep QR/payment queues live.
+  if (
+    staffCallsResult.error &&
+    !isMissingRelationError(staffCallsResult.error)
+  ) {
+    console.error(
+      "[self-order] POS staff-call load failed",
+      staffCallsResult.error.code,
     );
     return { success: false, error: SELF_ORDER_VI.staffLoadFailed };
   }
@@ -124,10 +187,17 @@ export async function fetchSelfOrderPosState(
     success: true,
     data: {
       requests,
-      paymentRequests: (paymentRequestsResult.data ?? []).map((row) => ({
-        id: row.id,
-        orderId: row.order_id,
-      })),
+      paymentRequests: (paymentRequestsResult.data ?? []).flatMap((row) => {
+        const kind = paymentCallKindSchema.safeParse(row.status);
+        if (!kind.success) return [];
+        return [{ id: row.id, orderId: row.order_id, kind: kind.data }];
+      }),
+      staffCalls: staffCallsResult.error
+        ? []
+        : (staffCallsResult.data ?? []).map((row) => ({
+            id: row.id,
+            tableId: row.table_id,
+          })),
     },
   };
 }
@@ -240,4 +310,35 @@ export async function cancelSelfOrderPaymentRequest(input: {
     success: true,
     data: { paymentCompleted: payload.paymentCompleted === true },
   };
+}
+
+export async function acknowledgeSelfOrderStaffCall(input: {
+  callId: number;
+}): Promise<ActionResult> {
+  const parsed = z.object({ callId: positiveIdSchema }).safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: SELF_ORDER_VI.staffActionFailed };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: SELF_ORDER_VI.staffActionFailed };
+
+  const { error } = await (
+    ctx.supabase as unknown as {
+      rpc: (
+        name: "self_order_ack_staff_call",
+        args: { p_call_id: number },
+      ) => Promise<{ error: { message?: string } | null }>;
+    }
+  ).rpc("self_order_ack_staff_call", {
+    p_call_id: parsed.data.callId,
+  });
+  if (error) {
+    console.error("[self-order] ack staff call failed", error);
+    return { success: false, error: mapSelfOrderActionError(error) };
+  }
+  return { success: true };
 }

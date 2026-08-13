@@ -16,7 +16,7 @@ import {
   getPosTableTileTone,
   type PosTableOrderVisualState,
 } from "./_lib/table-order-visual-state";
-import { TABLE_VI } from "@comtammatu/shared/messages";
+import { SELF_ORDER_VI, TABLE_VI } from "@comtammatu/shared/messages";
 
 interface PosTableGateProps {
   tables: BranchTable[];
@@ -28,6 +28,8 @@ interface PosTableGateProps {
   tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
   /** Tables carrying a pending guest request from the public QR flow. */
   pendingSelfOrderTableIds?: ReadonlySet<number>;
+  /** Tables where a guest tapped Gọi nhân viên. */
+  staffCallTableIds?: ReadonlySet<number>;
   hasStackedTouchActions?: boolean;
   headerAction?: ReactNode;
   className?: string;
@@ -39,6 +41,7 @@ interface TableButtonProps {
   orderCount: number;
   orderVisualState?: PosTableOrderVisualState;
   hasPendingSelfOrderRequest: boolean;
+  hasStaffCall: boolean;
   onTableSelect: (table: BranchTable) => void;
 }
 
@@ -48,6 +51,7 @@ const TableButton = memo(function TableButton({
   orderCount,
   orderVisualState,
   hasPendingSelfOrderRequest,
+  hasStaffCall,
   onTableSelect,
 }: TableButtonProps) {
   const handleClick = useCallback(
@@ -78,7 +82,7 @@ const TableButton = memo(function TableButton({
       selected={isSelected}
       tone={tileTone}
       size="tile"
-      aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
+      aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasStaffCall ? `, ${SELF_ORDER_VI.staffCallBadge}` : ""}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
         "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
@@ -113,7 +117,11 @@ const TableButton = memo(function TableButton({
         <p className="text-2xl font-semibold leading-none tabular-nums">
           {table.number}
         </p>
-        {hasPendingSelfOrderRequest ? (
+        {hasStaffCall ? (
+          <Badge variant="warning" className="w-fit text-xs font-semibold">
+            {SELF_ORDER_VI.staffCallBadge}
+          </Badge>
+        ) : hasPendingSelfOrderRequest ? (
           <Badge variant="warning" className="w-fit text-xs font-semibold">
             QR ⏳
           </Badge>
@@ -134,6 +142,7 @@ function PosTableGateComponent({
   orderCountByTable,
   tableOrderVisualStateByTable,
   pendingSelfOrderTableIds,
+  staffCallTableIds,
   hasStackedTouchActions = false,
   headerAction,
   className,
@@ -204,6 +213,7 @@ function PosTableGateComponent({
                       hasPendingSelfOrderRequest={
                         pendingSelfOrderTableIds?.has(table.id) ?? false
                       }
+                      hasStaffCall={staffCallTableIds?.has(table.id) ?? false}
                       onTableSelect={onTableSelect}
                     />
                   ))}

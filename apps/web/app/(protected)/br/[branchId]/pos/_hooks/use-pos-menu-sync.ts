@@ -17,6 +17,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 const SELF_ORDER_OPS_TABLES = new Set([
   "self_order_requests",
   "self_order_payment_requests",
+  "self_order_staff_calls",
 ]);
 
 export interface UsePosMenuSyncArgs {

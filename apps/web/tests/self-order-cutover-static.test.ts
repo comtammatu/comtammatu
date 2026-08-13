@@ -83,8 +83,8 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /awaitingDialogOpen/);
   assert.match(client, /pendingDialogTitle/);
   assert.match(client, /pendingDialogDescription/);
-  assert.match(client, /SELF_ORDER_VI\.callMore/);
-  assert.match(client, /SELF_ORDER_VI\.paymentCompletedClose/);
+  assert.match(client, /SELF_ORDER_VI\.acknowledge/);
+  assert.match(client, /SELF_ORDER_VI\.callStaff/);
   assert.match(client, /footerClassName="flex-col gap-2 sm:flex-row"/);
   assert.match(client, /const isFirstPendingSubmit = !awaiting/);
   assert.match(
@@ -199,7 +199,14 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(payment, /ReceiptText as IconReceipt/);
   assert.match(payment, /Banknote as IconCash/);
   assert.match(payment, /QrCode as IconQrcode/);
+  assert.match(payment, /BankAppLauncher/);
+  assert.match(payment, /PROVEN_VIETQR_BANK_APP_ID/);
+  assert.match(payment, /bankAppComingSoon/);
+  assert.match(payment, /otherBankScanHint/);
   assert.doesNotMatch(payment, /CreditCard/);
+  assert.match(payment, /getVietQrBankAppCatalogUrl/);
+  assert.match(payment, /parseVietQrBankApps/);
+  assert.match(payment, /orderedApps\.map/);
   assert.match(
     cart,
     /fixed inset-x-0 bottom-0[\s\S]*?onClick=\{\(\) => setOpen\(true\)\}/,
@@ -251,6 +258,9 @@ test("self-order menu availability reuses the POS stock gate", () => {
   assert.match(contracts, /manual_limit_quantity/);
   assert.match(guestUi, /branch_menu_limit_availability/);
   assert.match(guestUi, /primary `Hoá đơn` \(terracotta/);
+  assert.match(guestUi, /Gọi nhân viên/);
+  assert.match(guestUi, /MB Bank only/);
+  assert.match(guestUi, /Sắp hỗ trợ/);
   assert.match(guestUi, /sticky category pills/);
   assert.match(guestUi, /\*\*No Tabs\*\*/);
   assert.doesNotMatch(guestUi, /fixed lower-right/);
@@ -305,6 +315,8 @@ test("S5 routes pending QR requests through the table and bill surfaces", () => 
 
   assert.match(actions, /\.from\("self_order_requests"\)/);
   assert.match(actions, /\.from\("self_order_payment_requests"\)/);
+  assert.match(actions, /\.from\("self_order_staff_calls"\)/);
+  assert.match(actions, /self_order_ack_staff_call/);
   assert.match(actions, /self_order_accept_request/);
   assert.match(actions, /self_order_reject_request/);
   assert.match(actions, /self_order_cancel_payment_request/);

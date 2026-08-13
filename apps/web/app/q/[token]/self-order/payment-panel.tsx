@@ -11,6 +11,7 @@ import {
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
@@ -18,14 +19,11 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@comtammatu/ui/components/avatar";
-
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  PublicSection,
-  AppDrawer,
-} from "@/components/surface";
+import { AppDrawer, PublicSection } from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import {
+  PROVEN_VIETQR_BANK_APP_ID,
   buildVietQrBankAppUrl,
   getVietQrBankAppCatalogUrl,
   parseVietQrBankApps,
@@ -63,6 +61,57 @@ export interface PaymentPanelProps {
   onCreatePayment: () => void;
   onCancelVietQr: () => Promise<void>;
   onBankAppHandoff?: () => void;
+}
+
+function isProvenBankApp(appId: string): boolean {
+  return appId.toLowerCase() === PROVEN_VIETQR_BANK_APP_ID;
+}
+
+function BankAppRow({
+  app,
+  href,
+  onBankAppHandoff,
+}: {
+  app: VietQrBankApp;
+  href: string | null;
+  onBankAppHandoff?: () => void;
+}) {
+  const ready = isProvenBankApp(app.id) && Boolean(href);
+  const avatar = (
+    <Avatar aria-hidden="true">
+      {app.logoUrl ? <AvatarImage src={app.logoUrl} alt="" /> : null}
+      <AvatarFallback>{app.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+    </Avatar>
+  );
+
+  if (ready && href) {
+    return (
+      <Button
+        variant="outline"
+        size="touch"
+        className="w-full justify-start"
+        render={<a href={href} />}
+        onClick={() => onBankAppHandoff?.()}
+      >
+        {avatar}
+        {app.name}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="touch"
+      className="w-full justify-start"
+      disabled
+    >
+      {avatar}
+      <span className="min-w-0 flex-1 truncate text-left">{app.name}</span>
+      <Badge variant="secondary">{SELF_ORDER_VI.bankAppComingSoon}</Badge>
+    </Button>
+  );
 }
 
 function BankAppLauncher({
@@ -114,6 +163,15 @@ function BankAppLauncher({
     return () => controller.abort();
   }, [apps, loadAttempt, open]);
 
+  const orderedApps = apps
+    ? [...apps].toSorted((left, right) => {
+        const leftReady = isProvenBankApp(left.id);
+        const rightReady = isProvenBankApp(right.id);
+        if (leftReady !== rightReady) return leftReady ? -1 : 1;
+        return 0;
+      })
+    : null;
+
   return (
     <AppDrawer
       open={open}
@@ -127,65 +185,52 @@ function BankAppLauncher({
         </Button>
       }
     >
-        <div>
-          {apps ? (
-            <ul className="grid gap-2">
-              {apps.map((app) => {
-                const href = buildVietQrBankAppUrl({
-                  appId: app.id,
-                  accountNo,
-                  bankCode,
-                  amount,
-                  paymentCode,
-                  accountName,
-                  qrData,
-                  platform,
-                });
-                if (!href) return null;
-                return (
-                  <li key={app.id}>
-                    <Button
-                      variant="outline"
-                      size="touch"
-                      className="w-full justify-start"
-                      render={<a href={href} />}
-                      onClick={() => onBankAppHandoff?.()}
-                    >
-                      <Avatar aria-hidden="true">
-                        {app.logoUrl ? (
-                          <AvatarImage src={app.logoUrl} alt="" />
-                        ) : null}
-                        <AvatarFallback>
-                          {app.name.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {app.name}
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : loadFailed ? (
-            <div className="my-6 flex flex-col items-center gap-3 text-center">
-              <p className="text-sm text-muted-foreground">
-                {SELF_ORDER_VI.bankAppsLoadFailed}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-              >
-                {SELF_ORDER_VI.retryRefresh}
-              </Button>
-            </div>
-          ) : (
-            <div className="my-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Spinner className="size-4" />
-              {SELF_ORDER_VI.bankAppsLoading}
-            </div>
-          )}
-        </div>
+      <div>
+        {orderedApps ? (
+          <ul className="grid gap-2">
+            {orderedApps.map((app) => {
+              const href = buildVietQrBankAppUrl({
+                appId: app.id,
+                accountNo,
+                bankCode,
+                amount,
+                paymentCode,
+                accountName,
+                qrData,
+                platform,
+              });
+              return (
+                <li key={app.id}>
+                  <BankAppRow
+                    app={app}
+                    href={href}
+                    onBankAppHandoff={onBankAppHandoff}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        ) : loadFailed ? (
+          <div className="my-6 flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              {SELF_ORDER_VI.bankAppsLoadFailed}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            >
+              {SELF_ORDER_VI.retryRefresh}
+            </Button>
+          </div>
+        ) : (
+          <div className="my-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="size-4" />
+            {SELF_ORDER_VI.bankAppsLoading}
+          </div>
+        )}
+      </div>
     </AppDrawer>
   );
 }
@@ -285,6 +330,9 @@ export function PaymentPanel({
                       />
                     ) : null}
                   </QrCodeImage>
+                  <p className="text-sm text-muted-foreground">
+                    {SELF_ORDER_VI.otherBankScanHint}
+                  </p>
                   <div className="flex flex-col gap-1 text-sm">
                     <p className="font-mono font-bold tabular-nums">
                       {formatVND(activePaymentRequest.amount)}

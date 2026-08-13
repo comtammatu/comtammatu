@@ -8,7 +8,11 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Clock as IconClock, ReceiptText as IconReceipt } from "lucide-react";
+import {
+  Bell as IconBell,
+  Clock as IconClock,
+  ReceiptText as IconReceipt,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -307,6 +311,9 @@ export function SelfOrderClient({
   const [isSubmitting, startSubmit] = useTransition();
   const [isPaymentPending, startPayment] = useTransition();
   const [isPaymentCancelling, startPaymentCancel] = useTransition();
+  const [isCallingStaff, startStaffCall] = useTransition();
+  const staffCallClientOpIdRef = useRef<string | null>(null);
+  const staffCallCooldownUntilRef = useRef(0);
   const batchIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const paymentIntentRef = useRef<SelfOrderClientIntent | null>(null);
   const guestToastKeyRef = useRef<string | null>(null);
@@ -804,6 +811,52 @@ export function SelfOrderClient({
     });
   }
 
+  function callStaff() {
+    if (Date.now() < staffCallCooldownUntilRef.current) {
+      toast.success(SELF_ORDER_VI.callStaffPending);
+      setAwaitingDialogOpen(false);
+      return;
+    }
+
+    // Cooldown elapsed: this tap is a new intent, not a retry of the last call.
+    if (staffCallCooldownUntilRef.current > 0) {
+      staffCallClientOpIdRef.current = null;
+      staffCallCooldownUntilRef.current = 0;
+    }
+
+    startStaffCall(async () => {
+      const nextClientOpId =
+        staffCallClientOpIdRef.current ?? crypto.randomUUID();
+      staffCallClientOpIdRef.current = nextClientOpId;
+      try {
+        const response = await postSelfOrderJson(
+          `/api/self-order/${encodeURIComponent(token)}/staff-call`,
+          { clientOpId: nextClientOpId },
+        );
+        const result = await readApiResponse(response);
+        if (!result.ok) {
+          if (result.error.code === "rate_limited") {
+            staffCallCooldownUntilRef.current = Date.now() + 45_000;
+            staffCallClientOpIdRef.current = null;
+            toast.success(
+              result.error.message ?? SELF_ORDER_VI.callStaffPending,
+            );
+            setAwaitingDialogOpen(false);
+            return;
+          }
+          toast.error(result.error.message ?? SELF_ORDER_VI.callStaffFailed);
+          return;
+        }
+        staffCallCooldownUntilRef.current = Date.now() + 45_000;
+        staffCallClientOpIdRef.current = null;
+        toast.success(SELF_ORDER_VI.callStaffOk);
+        setAwaitingDialogOpen(false);
+      } catch {
+        toast.error(SELF_ORDER_VI.callStaffFailed);
+      }
+    });
+  }
+
   return (
     <AppPage
       as="main"
@@ -833,6 +886,21 @@ export function SelfOrderClient({
                 size="icon-touch"
                 className="shrink-0"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-touch"
+                className="shrink-0"
+                aria-label={SELF_ORDER_VI.callStaff}
+                disabled={isCallingStaff}
+                onClick={callStaff}
+              >
+                {isCallingStaff ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <IconBell />
+                )}
+              </Button>
               <Button
                 type="button"
                 variant="default"
@@ -937,15 +1005,21 @@ export function SelfOrderClient({
               size="touch"
               onClick={() => setAwaitingDialogOpen(false)}
             >
-              {SELF_ORDER_VI.callMore}
+              {SELF_ORDER_VI.acknowledge}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="touch"
-              onClick={() => setAwaitingDialogOpen(false)}
+              disabled={isCallingStaff}
+              onClick={callStaff}
             >
-              {SELF_ORDER_VI.paymentCompletedClose}
+              {isCallingStaff ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconBell data-icon="inline-start" />
+              )}
+              {SELF_ORDER_VI.callStaff}
             </Button>
           </>
         }

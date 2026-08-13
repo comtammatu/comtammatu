@@ -68,6 +68,21 @@ export const selfOrderPaymentCancelRequestSchema = z
   })
   .strict();
 
+export const selfOrderStaffCallRequestSchema = z
+  .object({
+    clientOpId: selfOrderClientOpIdSchema,
+  })
+  .strict();
+
+export const selfOrderStaffCallResponseSchema = z
+  .object({
+    ok: z.literal(true),
+    callId: z.number().int().positive(),
+    status: z.enum(["pending", "acknowledged", "expired"]),
+    idempotent: z.boolean().optional(),
+  })
+  .strict();
+
 export const selfOrderFeedbackRequestSchema = z
   .object({
     clientSubmissionId: z.uuid(),

@@ -59,12 +59,13 @@ test("awaiting guests can continue ordering while the first confirmation is a di
     client,
     /toast\.warning\(SELF_ORDER_VI\.awaitingCalloutTitle/,
   );
-  assert.match(messages, /pendingDialogTitle: "Đã gửi đơn cho Thu Ngân"/);
+  assert.match(messages, /pendingDialogTitle: "Đã gửi đơn"/);
   assert.match(
     messages,
-    /pendingDialogDescription:\s*"Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món\."/,
+    /pendingDialogDescription:\s*"Vui lòng chờ nhân viên duyệt\. Món vào bếp sau khi được duyệt\."/,
   );
-  assert.match(messages, /callMore: "Gọi thêm"/);
+  assert.match(messages, /acknowledge: "Đã hiểu"/);
+  assert.match(messages, /callStaff: "Gọi nhân viên"/);
   assert.match(summary, /blur-\[2px\]/);
   assert.match(summary, /<BrandMascot decorative size="sm"/);
   assert.match(summary, /role="status"/);

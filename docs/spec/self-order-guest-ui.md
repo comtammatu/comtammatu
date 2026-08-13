@@ -55,7 +55,7 @@ Static `BrandMascot` (`animated={false}`) + title + description. Causes: invalid
 
 ### G1 Menu (only page)
 
-Header: `Cơm Tấm Má Tư` above table label (H1); `ThemeToggle` + primary `Hoá đơn` (terracotta `Button` + `Badge`: approved count or `Clock` while pending). No branch name. `Hoá đơn` opens full-viewport bottom `Sheet`, never auto-opens; unopened/multi-bill → safe empty bill, payment unavailable.
+Header: `Cơm Tấm Má Tư` above table label (H1); `ThemeToggle` + icon-touch `Gọi nhân viên` + primary `Hoá đơn` (terracotta `Button` + `Badge`: approved count or `Clock` while pending). No branch name. `Hoá đơn` opens full-viewport bottom `Sheet`, never auto-opens; unopened/multi-bill → safe empty bill, payment unavailable. `Gọi nhân viên` writes `self_order_staff_calls` (POS table badge `Gọi NV` + `pos-payment-call` beep).
 
 Body: sticky category pills; default named `Cơm` else first non-empty non-`Khác`; `Tất cả` last. Horizontal item rows (image left); one column phone / two tablet+. Sold-out from `branch_menu_limit_availability` → `Hết suất`; finite quota → `Còn N phần`. Curated badges: `Sườn Cốt Lết` → `Truyền thống`; `Sườn Một Gang` → `Nên thử` + `Chờ 20 phút`. Trailing parenthetical in name → image `Badge` if no curated badge; cart/kitchen keep raw `menu_items.name`.
 
@@ -75,7 +75,7 @@ CTA: not open → **`Gửi món`** + staff-confirm hint; awaiting / open → **`
 
 ### G4 · Awaiting confirmation
 
-One `AppDialog` after first pending submit this session: **`Đã gửi đơn cho Thu Ngân`** / **`Bạn có thể xem thực đơn trong lúc chờ và gọi thêm món.`** / **`Gọi thêm`** · **`Đóng`**. Does not remount from poll/reload/later add-more. Bill: `Clock` + blurred pending overlay + static `BrandMascot`; no payable total.
+One `AppDialog` after first pending submit this session: **`Đã gửi đơn`** / **`Vui lòng chờ nhân viên duyệt. Món vào bếp sau khi được duyệt.`** / **`Đã hiểu`** · **`Gọi nhân viên`**. Does not remount from poll/reload/later add-more. Bill: `Clock` + blurred pending overlay + static `BrandMascot`; no payable total.
 
 ### G5 · Rejected
 
@@ -87,7 +87,7 @@ One Sonner `toast.warning` + **`Gửi lại`** (reload rejected cart). No dialog
 
 ### G7 Payment step (in sheet)
 
-Replaces bill with `cash_call` | VietQR + HĐĐT buyer fields; back → G6. Exactly one live intent; locks add-more, customize, buyer fields. VietQR reload uses stored amount/code/QR/bank/expiry — never rebuilds from current settings. MoMo never a Self-Order method (only OS VietQR-app deeplink handoff; no MoMo intent/API). Guest may cancel exact active VietQR only; late verified SePay still settles. Cash cancel is staff-owned.
+Replaces bill with `cash_call` | VietQR + HĐĐT buyer fields; back → G6. Exactly one live intent; locks add-more, customize, buyer fields. VietQR reload uses stored amount/code/QR/bank/expiry — never rebuilds from current settings. Bank-app catalog stays visible. Handoff is **MB Bank only** (proven EMV payload). Other listed banks stay visible and disabled (`Sắp hỗ trợ`); guests scan the on-screen QR. MoMo never a Self-Order method. Guest may cancel exact active VietQR only; late verified SePay still settles. Cash cancel is staff-owned.
 
 ### G8 · Paid
 
@@ -97,7 +97,7 @@ Receipt in sheet for this browser session only; reload → G1 clean menu.
 
 ### P1 · Table tile badge
 
-`pos-table-gate.tsx`: pending request → `QR ⏳` badge (not a stat card).
+`pos-table-gate.tsx`: staff call → `Gọi NV`; else pending request → `QR ⏳` (not a stat card). Tapping the table acknowledges the staff call.
 
 ### P2 · Approval sheet
 
@@ -115,6 +115,7 @@ Open POS surface (device-local, ADR 0008):
 | --- | --- | --- |
 | New pending `self_order_requests` | `pos-self-order` | Distinct from ordinary POS beep |
 | New active `self_order_payment_requests` (`cash_call` / `vietqr_pending`) | `pos-payment-call` | Distinct from QR-order and POS beeps |
+| New pending `self_order_staff_calls` | `pos-payment-call` | Same “come to the table” attention as a cash call |
 
 Honor POS sound preference. First poll seeds ids without beep. Neither writes `public.notifications` nor Telegram.
 
@@ -160,6 +161,8 @@ Deleted: `self_order_sessions`, batches, session devices, capability/realtime to
 | `self_order_accept_request(req_id, target_order_id?)` | staff  | `create_order` or `append_order_items` |
 | `self_order_reject_request(req_id)`                   | staff  | `status = 'rejected'` |
 | `self_order_cancel_payment_request(...)`              | staff  | keyed by request/order |
+| `self_order_call_staff(token, op_id)`                 | guest  | one pending staff-call per table; 45s cooldown |
+| `self_order_ack_staff_call(call_id)`                  | staff  | clears the table badge |
 
 One-arg snapshot overload is compatibility only (no rejected context).
 

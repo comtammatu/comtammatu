@@ -7,6 +7,7 @@ import {
   publicSelfOrderSnapshotSchema,
   selfOrderPaymentActionResponseSchema,
   selfOrderPaymentRequestStatusResponseSchema,
+  selfOrderStaffCallResponseSchema,
   selfOrderSubmitActionResponseSchema,
   selfOrderVietQrResponseSchema,
 } from "./contracts";
@@ -52,7 +53,11 @@ export type SelfOrderActionResult<T = unknown> =
       retryAfterSeconds?: number;
     };
 
-type SelfOrderErrorContext = "default" | "payment" | "payment_cancel";
+type SelfOrderErrorContext =
+  | "default"
+  | "payment"
+  | "payment_cancel"
+  | "staff_call";
 type RateLimitPurpose = "batch" | "payment";
 type SelfOrderPaymentRequestStatus =
   | "cash_call"
@@ -164,7 +169,10 @@ function mapSelfOrderError(
       ok: false,
       status: 429,
       code: "rate_limited",
-      message: SELF_ORDER_VI.rateLimited,
+      message:
+        context === "staff_call"
+          ? SELF_ORDER_VI.callStaffPending
+          : SELF_ORDER_VI.rateLimited,
       ...(retryAfter ? { retryAfterSeconds: retryAfter } : {}),
     };
   }
@@ -276,9 +284,11 @@ function mapSelfOrderError(
     message:
       context === "payment_cancel"
         ? SELF_ORDER_VI.cancelVietQrFailed
-        : context === "payment"
-          ? SELF_ORDER_VI.paymentFailed
-          : SELF_ORDER_VI.submitFailed,
+        : context === "staff_call"
+          ? SELF_ORDER_VI.callStaffFailed
+          : context === "payment"
+            ? SELF_ORDER_VI.paymentFailed
+            : SELF_ORDER_VI.submitFailed,
   };
 }
 
@@ -483,9 +493,11 @@ function publicPayloadFailure(
     message:
       context === "payment_cancel"
         ? SELF_ORDER_VI.cancelVietQrFailed
-        : context === "payment"
-          ? SELF_ORDER_VI.paymentFailed
-          : SELF_ORDER_VI.loadFailed,
+        : context === "staff_call"
+          ? SELF_ORDER_VI.callStaffFailed
+          : context === "payment"
+            ? SELF_ORDER_VI.paymentFailed
+            : SELF_ORDER_VI.loadFailed,
   };
 }
 
@@ -794,6 +806,42 @@ export async function cancelSelfOrderVietQrPayment(input: {
       parsed.error.issues,
       "payment_cancel",
     );
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export async function callSelfOrderStaff(input: {
+  token: string;
+  clientOpId: string;
+}): Promise<
+  SelfOrderActionResult<{
+    callId: number;
+    status: "pending" | "acknowledged" | "expired";
+    idempotent?: boolean;
+  }>
+> {
+  const { data, error } = await service().rpc<Record<string, unknown>>(
+    "self_order_call_staff",
+    {
+      p_token: input.token,
+      p_client_op_id: input.clientOpId,
+    },
+  );
+  if (error) {
+    console.error("[self-order] staff call failed", error);
+    return mapSelfOrderError(error, "staff_call");
+  }
+  const payload = data ?? {};
+  const failure = dataFailure(payload, "staff_call");
+  if (failure) return failure;
+  const parsed = selfOrderStaffCallResponseSchema.safeParse({
+    ok: true,
+    callId: payload.callId ?? payload.call_id,
+    status: payload.status,
+    idempotent: payload.idempotent,
+  });
+  if (!parsed.success) {
+    return publicPayloadFailure("staff_call", parsed.error.issues, "staff_call");
   }
   return { ok: true, data: parsed.data };
 }

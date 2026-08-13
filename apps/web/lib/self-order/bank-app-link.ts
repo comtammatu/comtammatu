@@ -1,3 +1,6 @@
+/** Only MB Bank is proven to receive the full VietQR payload in production. */
+export const PROVEN_VIETQR_BANK_APP_ID = "mb";
+
 export const VIETQR_BANK_APP_CATALOG_URLS = {
   android: "https://api.vietqr.io/v2/android-app-deeplinks",
   ios: "https://api.vietqr.io/v2/ios-app-deeplinks",
