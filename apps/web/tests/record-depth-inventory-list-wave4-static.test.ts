@@ -12,7 +12,7 @@ import { test } from "node:test";
  *
  * Carve-outs (ADR-blessed, not allowlist debt):
  * - C4 zero-action LIST (transfers / production / thresholds) — no menu required
- * - Wave 5 list-first documents — YCM/PO/GRN/YCH/Transfer use query overlays
+ * - Wave 5 list-first documents — YCM/PO/GRN/production/YCH/Transfer use query overlays
  * - Dual plane: Owner AppDialog vs Branch Sheet for count slips/assignments
  */
 
@@ -54,11 +54,6 @@ const D2_DETAIL_LISTS = [
     name: "stocktake",
     path: "app/(protected)/inventory/stocktake/stocktake-list-client.tsx",
     onRowClick: /onRowClick=\{openStocktakeDetail\}/,
-  },
-  {
-    name: "production",
-    path: "app/(protected)/inventory/production/production-runs-client.tsx",
-    onRowClick: /onRowClick=\{openProductionDetail\}/,
   },
 ] as const;
 
@@ -297,4 +292,19 @@ test("Wave 5 purchase-orders uses one query-addressed document view", () => {
   assert.match(client, /mode: nextMode/);
   assert.match(client, /variant="document"/);
   assert.doesNotMatch(client, /DocumentFormFrame/);
+});
+
+test("Wave 5 production uses one query-addressed document view", () => {
+  const client = read(
+    "app/(protected)/inventory/production/production-runs-client.tsx",
+  );
+  const host = read(
+    "app/(protected)/inventory/production/production-document-dialog-host.tsx",
+  );
+  assert.match(client, /useDocumentOverlayUrl/);
+  assert.match(client, /runId:/);
+  assert.match(client, /overlay\.patchOverlay/);
+  assert.match(host, /PRODUCTION_OVERLAY_KEYS/);
+  assert.match(host, /variant="document"/);
+  assert.doesNotMatch(client, /router\.push\(`\$\{basePath\}/);
 });

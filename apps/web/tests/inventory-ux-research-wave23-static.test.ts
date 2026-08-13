@@ -12,18 +12,15 @@ function read(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-test("Wave 2 production DETAIL uses StatusBadge title and KPI strip", () => {
-  const page = read(
-    "app/(protected)/inventory/production/[id]/page.tsx",
-  );
+test("Wave 2 production document overlay uses StatusBadge title and KPI strip", () => {
   const client = read(
     "app/(protected)/inventory/production/[id]/production-detail-client.tsx",
   );
 
   assert.match(
-    page,
+    client,
     /StatusBadge[\s\S]*domain="inventory"[\s\S]*value=\{run\.status\}/,
-    "production page: code + StatusBadge",
+    "production dialog: code + StatusBadge",
   );
   assert.match(
     client,

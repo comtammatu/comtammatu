@@ -178,7 +178,6 @@ export function resolveInventoryNav({
           label: tNav("production", "navigation"),
           icon: IconToolsKitchen,
           matchPrefixes: [
-            "/inventory/production/new",
             "/inventory/production/",
           ],
           exact: true,

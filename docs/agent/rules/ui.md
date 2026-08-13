@@ -105,7 +105,7 @@ walk the **UI Review Checklist** below.
 - A row has one canonical view and one address. Legacy DETAIL routes may only
   redirect to that address; they must not render a second view (Record Depth /
   ADR 0018).
-- YCM, PO, and GRN are list-first documents opened in a URL-addressable
+- YCM, PO, GRN, and production are list-first documents opened in a URL-addressable
   `AppDialog variant="document"` on Owner/Ops. YCH and Transfer share one
   fulfillment hub and open canonical detail pages in their respective
   Owner/Ops or Branch route family. Keep queue, filters, pagination, and site

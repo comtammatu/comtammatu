@@ -23,4 +23,4 @@ export {
   cancelProductionRun,
   startProductionRun,
 } from "./production-run-actions";
-export type { ProductionRunRow } from "./production-run-actions";
+export type { ProductionRunListRow, ProductionRunRow } from "./production-run-actions";

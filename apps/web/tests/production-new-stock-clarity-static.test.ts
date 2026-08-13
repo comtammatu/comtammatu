@@ -7,7 +7,7 @@ const root = resolve(import.meta.dirname, "../../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 const client = read(
-  "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
+  "apps/web/app/(protected)/inventory/production/production-create-dialog.tsx",
 );
 const messages = read("packages/shared/src/messages/inventory.ts");
 

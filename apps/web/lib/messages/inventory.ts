@@ -42,6 +42,10 @@ export const inventory = {
     sectionLineCount: (count: number) => `${formatCount(count)} dòng`,
     startedAt: "Bắt đầu",
     completedAt: "Hoàn thành",
+    shipToBranchTitle: "Thành phẩm đã ở Bếp Trung Tâm",
+    shipToBranchDescription:
+      "Nếu cần giao về chi nhánh, mở Giao nhận và tạo chuyến từ đây.",
+    shipToBranchAction: "Giao chi nhánh",
   },
   operatorFlow: {
     stepBadge: (current: number, total: number) => `Bước ${current}/${total}`,

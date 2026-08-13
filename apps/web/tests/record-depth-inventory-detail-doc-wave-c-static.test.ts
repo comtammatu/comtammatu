@@ -11,14 +11,15 @@ function read(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-test("Wave C production DETAIL uses xwide AppPage + DescriptionList", () => {
+test("Wave C production DETAIL is a list overlay shim", () => {
   const page = read("app/(protected)/inventory/production/[id]/page.tsx");
   const client = read(
     "app/(protected)/inventory/production/[id]/production-detail-client.tsx",
   );
 
-  assert.match(page, /width="xwide"/, "production/[id] page: xwide");
-  assert.match(page, /AppPageHeader/, "production/[id] page: AppPageHeader");
+  assert.match(page, /redirect\(/, "production/[id] page: redirect");
+  assert.match(page, /runId/, "production/[id] page: overlay runId");
+  assert.doesNotMatch(page, /<AppPage[\s>]|AppPageHeader|ProductionDetailClient/);
   assert.match(
     client,
     /DescriptionList/,
@@ -26,8 +27,8 @@ test("Wave C production DETAIL uses xwide AppPage + DescriptionList", () => {
   );
   assert.match(
     client,
-    /AppDetailFooter/,
-    "production detail client: AppDetailFooter",
+    /variant="document"/,
+    "production detail client: document dialog",
   );
   assert.doesNotMatch(
     client,

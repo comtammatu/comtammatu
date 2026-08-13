@@ -15,5 +15,6 @@ test("production detail confirms cancellation and keeps state-specific actions",
   assert.match(source, /run\.status === "in_progress"/);
   assert.match(source, /completeProductionRun/);
   assert.match(source, /actualIngredients: actualRows/);
-  assert.match(source, /Tạo Điều chuyển/);
+  assert.match(source, /detailCopy\.shipToBranchAction/);
+  assert.match(source, /\/inventory\/transfers\/new\?branch=/);
 });

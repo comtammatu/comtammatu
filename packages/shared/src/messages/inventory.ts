@@ -310,6 +310,9 @@ export const INVENTORY_VI = {
   productionOrdersEmptyTitle: "Chưa có lệnh sản xuất nào",
   productionOrdersEmptyDescription:
     "Tạo lệnh khi công thức và nguyên liệu đã sẵn sàng.",
+  productionOrdersNoResultsTitle: "Không tìm thấy lệnh phù hợp",
+  productionOrdersNoResultsDescription:
+    "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh.",
   productionShortageTitle: "Thiếu nguyên liệu để sản xuất",
   productionShortageDescription: (productionNumber: string) =>
     `Lệnh ${productionNumber} chưa đủ nguyên liệu tại Bếp Trung Tâm. Bổ sung tồn rồi xác nhận lại.`,

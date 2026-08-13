@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Controller,
   useFieldArray,
+  useForm,
   useWatch,
   type UseFormReturn,
 } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Ban as IconBan,
   ClipboardList as IconClipboardList,
   Pencil as IconPencil,
   Plus as IconPlus,
+  Search as IconSearch,
 } from "lucide-react";
 import { formatQuantity } from "@comtammatu/shared/format";
+import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
@@ -27,7 +31,16 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Item,
   ItemActions,
@@ -52,7 +65,9 @@ import {
   FormDialog,
   QuantityInput,
 } from "@/components/form";
-import { AppListFrame } from "@/components/surface";
+import { AppEmptyState, AppListFrame, AppSheet, AppToolbar } from "@/components/surface";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
+import { inventoryListFilterSelectClassName } from "./_components/inventory-list-filters";
 import {
   IngredientLinesEditor,
   type IngredientLineOption,
@@ -68,6 +83,7 @@ import {
 import { ProductionRecipeImportExportMenu } from "./production-recipe-import-export-menu";
 import {
   badgeVariantFromTone,
+  RECIPE_BOM_SHEET_THRESHOLD,
   sortFinishedGoods,
   sortRawIngredients,
 } from "./production-types";
@@ -90,6 +106,7 @@ import {
 
 import {
   ACTIONS_VI,
+  ERRORS_VI,
   FORM_VI,
   INVENTORY_VI,
   PRODUCT_VI,
@@ -209,6 +226,8 @@ function toRecipeFormValues(
 
 /* ─── Main recipe panel ─── */
 
+export const RECIPE_OVERLAY_KEYS = ["recipeSpecId"] as const;
+
 interface ProductionRecipePanelProps {
   canManageCatalog: boolean;
   canManageRecipes: boolean;
@@ -216,6 +235,9 @@ interface ProductionRecipePanelProps {
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
+  recipeLoadError: string | null;
+  createOpen?: boolean;
+  onCreateOpenChange?: (open: boolean) => void;
 }
 
 function RecipeDialogFields({
@@ -483,8 +505,13 @@ export function ProductionRecipePanel({
   unitOptions,
   ingredients,
   recipes,
+  recipeLoadError,
+  createOpen = false,
+  onCreateOpenChange,
 }: ProductionRecipePanelProps) {
   const router = useRouter();
+  const { clearOverlay, patchOverlay, get: getOverlay } =
+    useDocumentOverlayUrl(RECIPE_OVERLAY_KEYS);
   const [, startTransition] = useTransition();
   const [finishedGoodsOptions, setFinishedGoodsOptions] = useState<
     FinishedGoodOption[]
@@ -599,9 +626,6 @@ export function ProductionRecipePanel({
     });
   }, [groupedRecipes, search, statusFilter]);
 
-  const needsReviewCount = groupedRecipes.filter(
-    (group) => group.status === "needs_review",
-  ).length;
   const reviewingRecipe = groupedRecipes.some(
     (group) =>
       String(group.finishedGoodId) === pendingFinishedGoodId &&
@@ -611,25 +635,44 @@ export function ProductionRecipePanel({
   const finishedGoodLocked = pendingFinishedGoodId != null;
 
   function openRecipeDialog(finishedGoodId?: number) {
+    if (finishedGoodId == null) {
+      clearOverlay(["recipeSpecId"], "replace");
+      setPendingFinishedGoodId(undefined);
+      setFormDefaults(toRecipeFormValues(null, defaultFinishedGoodId));
+      setRecipeDialogOpen(true);
+      return;
+    }
     const group =
-      finishedGoodId != null
-        ? (groupedRecipes.find(
-            (item) => item.finishedGoodId === finishedGoodId,
-          ) ?? null)
-        : null;
-    const initialFinishedGoodId =
-      finishedGoodId != null ? String(finishedGoodId) : defaultFinishedGoodId;
-    setPendingFinishedGoodId(
-      finishedGoodId != null ? String(finishedGoodId) : undefined,
-    );
-    setFormDefaults(toRecipeFormValues(group, initialFinishedGoodId));
+      groupedRecipes.find((item) => item.finishedGoodId === finishedGoodId) ??
+      null;
+    if (!group) return;
+    if (group.lines.length > RECIPE_BOM_SHEET_THRESHOLD) {
+      setRecipeDialogOpen(false);
+      patchOverlay(
+        { recipeSpecId: String(group.recipeSpecId) },
+        "push",
+      );
+      return;
+    }
+    clearOverlay(["recipeSpecId"], "replace");
+    setPendingFinishedGoodId(String(finishedGoodId));
+    setFormDefaults(toRecipeFormValues(group, String(finishedGoodId)));
     setRecipeDialogOpen(true);
   }
+
+  useEffect(() => {
+    if (!createOpen) return;
+    clearOverlay(["recipeSpecId"], "replace");
+    setPendingFinishedGoodId(undefined);
+    setFormDefaults(toRecipeFormValues(null, defaultFinishedGoodId));
+    setRecipeDialogOpen(true);
+  }, [clearOverlay, createOpen, defaultFinishedGoodId]);
 
   function handleRecipeDialogOpenChange(open: boolean) {
     setRecipeDialogOpen(open);
     if (!open) {
       setPendingFinishedGoodId(undefined);
+      onCreateOpenChange?.(false);
     }
   }
 
@@ -654,11 +697,14 @@ export function ProductionRecipePanel({
     router.refresh();
   }
 
-  async function submitRecipe(values: RecipeFormValues): Promise<ActionResult> {
+  async function submitRecipe(
+    values: RecipeFormValues,
+    oldFinishedGoodId: string | undefined = pendingFinishedGoodId,
+  ): Promise<ActionResult> {
     const result = await upsertProductionRecipeLines({
       finishedGoodId: Number(values.finished_good_id),
-      oldFinishedGoodId: pendingFinishedGoodId
-        ? Number(pendingFinishedGoodId)
+      oldFinishedGoodId: oldFinishedGoodId
+        ? Number(oldFinishedGoodId)
         : undefined,
       outputQuantity: Number(values.output_quantity),
       outputUnitId: Number(values.output_unit_id),
@@ -739,12 +785,7 @@ export function ProductionRecipePanel({
       key: "finished_good",
       header: PRODUCT_VI.finishedGood,
       render: (group) => (
-        <div className="min-w-0">
-          <div className="truncate font-medium">{group.finishedGoodName}</div>
-          <div className="text-xs text-muted-foreground">
-            {INVENTORY_VI.ingredientLineCountBadge(group.lines.length)}
-          </div>
-        </div>
+        <span className="truncate font-medium">{group.finishedGoodName}</span>
       ),
     },
     {
@@ -758,23 +799,10 @@ export function ProductionRecipePanel({
       ),
     },
     {
-      key: "ingredients",
+      key: "line_count",
       header: INVENTORY_VI.productionRecipeLinesLabel,
-      className: "min-w-72",
-      render: (group) => (
-        <div className="flex flex-col gap-1">
-          {group.lines.map((line) => (
-            <div key={line.id} className="flex min-w-0 justify-between gap-3">
-              <span className="min-w-0 truncate text-muted-foreground">
-                {line.ingredient_name}
-              </span>
-              <span className="shrink-0 whitespace-nowrap font-mono">
-                {formatQuantity(line.quantity)} {line.unitLabel}
-              </span>
-            </div>
-          ))}
-        </div>
-      ),
+      className: "font-mono",
+      render: (group) => INVENTORY_VI.ingredientLineCountBadge(group.lines.length),
     },
     {
       key: "status",
@@ -808,119 +836,130 @@ export function ProductionRecipePanel({
       : []),
   ];
 
+  const recipeSpecKey = getOverlay("recipeSpecId");
+  const sheetOpen = recipeSpecKey != null && recipeSpecKey.length > 0;
+  const sheetGroup = sheetOpen
+    ? (groupedRecipes.find(
+        (group) => String(group.recipeSpecId) === recipeSpecKey,
+      ) ?? null)
+    : null;
+  const sheetReviewing =
+    sheetGroup?.status === "needs_review";
+
+  const toolbar = (
+    <AppToolbar
+      variant="inline"
+      search={
+        <InputGroup size="field" className="min-w-0 flex-1 sm:min-w-72">
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            aria-label={INVENTORY_VI.productionRecipeSearchPlaceholder}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={INVENTORY_VI.productionRecipeSearchPlaceholder}
+          />
+        </InputGroup>
+      }
+      filters={
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger
+            size="field"
+            className={inventoryListFilterSelectClassName}
+            aria-label={FORM_VI.status}
+          >
+            <SelectValue placeholder={FORM_VI.status} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">
+              {INVENTORY_VI.productionRecipeAllStatuses}
+            </SelectItem>
+            {(["needs_review", "active", "inactive"] as const).map((status) => (
+              <SelectItem key={status} value={status}>
+                {recipeStatusLabel(status)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+      actions={
+        canManageRecipes ? (
+          <ProductionRecipeImportExportMenu onImported={() => router.refresh()} />
+        ) : null
+      }
+      reset={
+        <Badge variant="secondary">
+          {INVENTORY_VI.productionRecipeListCount(
+            filteredRecipes.length,
+            groupedRecipes.length,
+          )}
+        </Badge>
+      }
+    />
+  );
+
   return (
     <section className="flex flex-col gap-3">
-      <AppListFrame
-        title={INVENTORY_VI.productionRecipesTab}
-        description={INVENTORY_VI.productionRecipesCardDescription}
-        icon={<IconClipboardList />}
-        badge={{
-          children:
-            needsReviewCount > 0
-              ? INVENTORY_VI.productionRecipeNeedsReviewBadge(needsReviewCount)
-              : INVENTORY_VI.finishedGoodsWithRecipeBadge(groupedRecipes.length),
-          variant:
-            needsReviewCount > 0
-              ? badgeVariantFromTone("warning")
-              : badgeVariantFromTone("success"),
-        }}
-        action={
-          canManageRecipes ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <ProductionRecipeImportExportMenu
-                onImported={() => router.refresh()}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openRecipeDialog()}
-              >
-                <IconPlus data-icon="inline-start" />
-                {INVENTORY_VI.productionRecipeCreate}
-              </Button>
-            </div>
-          ) : null
-        }
-      >
-        <DataTable
-          columns={recipeColumns}
-          data={filteredRecipes}
-          pageSize={25}
-          getRowKey={(group) => group.recipeSpecId}
-          searchable
-          searchPlaceholder={INVENTORY_VI.productionRecipeSearchPlaceholder}
-          searchValue={search}
-          onSearchChange={setSearch}
-          filters={[
-            {
-              key: "status",
-              label: FORM_VI.status,
-              placeholder: FORM_VI.status,
-              options: [
-                {
-                  value: "_all",
-                  label: INVENTORY_VI.productionRecipeAllStatuses,
-                },
-                ...(["needs_review", "active", "inactive"] as const).map(
-                  (status) => ({ value: status, label: recipeStatusLabel(status) }),
-                ),
-              ],
-            },
-          ]}
-          filterValues={{ status: statusFilter }}
-          onFilterChange={(_key, value) => setStatusFilter(value)}
-          actions={
-            <Badge variant="secondary">
-              {INVENTORY_VI.productionRecipeListCount(
-                filteredRecipes.length,
-                groupedRecipes.length,
-              )}
-            </Badge>
-          }
-          emptyTitle={
-            search || statusFilter !== "_all"
-              ? INVENTORY_VI.productionRecipeNoResultsTitle
-              : INVENTORY_VI.productionRecipeEmptyTitle
-          }
-          emptyDescription={
-            search || statusFilter !== "_all"
-              ? INVENTORY_VI.productionRecipeNoResultsDescription
-              : INVENTORY_VI.productionRecipeEmptyDescription
-          }
-          emptyMode={
-            search || statusFilter !== "_all" ? "no-results" : "no-data"
-          }
-          emptyIcon={<IconClipboardList className="size-5" />}
-          onRowClick={
-            canManageRecipes
-              ? (group) => openRecipeDialog(group.finishedGoodId)
-              : undefined
-          }
-          renderRowContextMenu={
-            canManageRecipes
-              ? (group) => (
-                  <RowActionsContextMenuItems
-                    items={recipeRowActions(group)}
-                  />
-                )
-              : undefined
-          }
-          getRowAriaLabel={(group) =>
-            canManageRecipes ? recipeActionAria(group) : undefined
-          }
-          mobileCardRender={(group) => (
-            <RecipeGroupCard
-              group={group}
-              actions={recipeRowActions(group)}
-              onOpen={
-                canManageRecipes
-                  ? () => openRecipeDialog(group.finishedGoodId)
-                  : undefined
-              }
-            />
-          )}
+      {recipeLoadError ? (
+        <AppEmptyState
+          mode="error"
+          title={INVENTORY_VI.productionRecipeEmptyTitle}
+          description={recipeLoadError}
         />
-      </AppListFrame>
+      ) : (
+        <AppListFrame toolbar={toolbar}>
+          <DataTable
+            columns={recipeColumns}
+            data={filteredRecipes}
+            pageSize={25}
+            getRowKey={(group) => group.recipeSpecId}
+            emptyTitle={
+              search || statusFilter !== "_all"
+                ? INVENTORY_VI.productionRecipeNoResultsTitle
+                : INVENTORY_VI.productionRecipeEmptyTitle
+            }
+            emptyDescription={
+              search || statusFilter !== "_all"
+                ? INVENTORY_VI.productionRecipeNoResultsDescription
+                : INVENTORY_VI.productionRecipeEmptyDescription
+            }
+            emptyMode={
+              search || statusFilter !== "_all" ? "no-results" : "no-data"
+            }
+            emptyIcon={<IconClipboardList className="size-5" />}
+            onRowClick={
+              canManageRecipes
+                ? (group) => openRecipeDialog(group.finishedGoodId)
+                : undefined
+            }
+            renderRowContextMenu={
+              canManageRecipes
+                ? (group) => (
+                    <RowActionsContextMenuItems
+                      items={recipeRowActions(group)}
+                    />
+                  )
+                : undefined
+            }
+            getRowAriaLabel={(group) =>
+              canManageRecipes ? recipeActionAria(group) : undefined
+            }
+            mobileCardRender={(group) => (
+              <RecipeGroupCard
+                group={group}
+                actions={recipeRowActions(group)}
+                onOpen={
+                  canManageRecipes
+                    ? () => openRecipeDialog(group.finishedGoodId)
+                    : undefined
+                }
+              />
+            )}
+          />
+        </AppListFrame>
+      )}
 
       <FormDialog
         open={recipeDialogOpen}
@@ -962,6 +1001,33 @@ export function ProductionRecipePanel({
           />
         )}
       </FormDialog>
+
+      <RecipeSheetEditor
+        open={sheetOpen}
+        group={sheetGroup}
+        reviewing={sheetReviewing}
+        canManageCatalog={canManageCatalog}
+        finishedGoodsOptions={finishedGoodsOptions}
+        unitOptions={unitOptions}
+        groupedRecipes={groupedRecipes}
+        recipeLinesEditorIngredients={recipeLinesEditorIngredients}
+        rawIngredientsOptions={rawIngredientsOptions}
+        onFinishedGoodCreated={handleFinishedGoodCreated}
+        onRawIngredientCreated={handleRawIngredientCreated}
+        onSubmit={(values) =>
+          submitRecipe(
+            values,
+            sheetGroup ? String(sheetGroup.finishedGoodId) : undefined,
+          )
+        }
+        onSuccess={handleRecipeSaved}
+        onOpenChange={(open) => {
+          if (!open) {
+            clearOverlay(["recipeSpecId"], "replace");
+            setPendingFinishedGoodId(undefined);
+          }
+        }}
+      />
     </section>
   );
 }
@@ -1012,18 +1078,6 @@ function RecipeGroupCard({
           {group.outputUnitLabel || "—"} ·{" "}
           {INVENTORY_VI.ingredientLineCountBadge(group.lines.length)}
         </ItemDescription>
-        <div className="mt-2 flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm">
-          {group.lines.map((line) => (
-            <div key={line.id} className="flex min-w-0 justify-between gap-3">
-              <span className="min-w-0 truncate text-muted-foreground">
-                {line.ingredient_name}
-              </span>
-              <span className="shrink-0 whitespace-nowrap font-mono">
-                {formatQuantity(line.quantity)} {line.unitLabel}
-              </span>
-            </div>
-          ))}
-        </div>
       </ItemContent>
       {onOpen || overflowActions.length > 0 ? (
         <ItemFooter>
@@ -1049,3 +1103,146 @@ function RecipeGroupCard({
     </Item>
   );
 }
+
+function RecipeSheetEditor({
+  open,
+  group,
+  reviewing,
+  canManageCatalog,
+  finishedGoodsOptions,
+  unitOptions,
+  groupedRecipes,
+  recipeLinesEditorIngredients,
+  rawIngredientsOptions,
+  onFinishedGoodCreated,
+  onRawIngredientCreated,
+  onSubmit,
+  onSuccess,
+  onOpenChange,
+}: {
+  open: boolean;
+  group: ProductionRecipeGroup | null;
+  reviewing: boolean;
+  canManageCatalog: boolean;
+  finishedGoodsOptions: FinishedGoodOption[];
+  unitOptions: UnitOption[];
+  groupedRecipes: ProductionRecipeGroup[];
+  recipeLinesEditorIngredients: IngredientLineOption[];
+  rawIngredientsOptions: RawIngredientOption[];
+  onFinishedGoodCreated: (good: FinishedGoodOption) => void;
+  onRawIngredientCreated: (ingredient: RawIngredientOption) => void;
+  onSubmit: (values: RecipeFormValues) => Promise<ActionResult>;
+  onSuccess: (result: ActionResult, values: RecipeFormValues) => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const formId = useId();
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const defaultValues = useMemo(
+    () =>
+      toRecipeFormValues(
+        group,
+        group ? String(group.finishedGoodId) : undefined,
+      ),
+    [group],
+  );
+  const form = useForm<RecipeFormValues, unknown, RecipeFormValues>({
+    // Same generic escape as FormDialog — TValues is the schema output.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(recipeFormSchema as any),
+    defaultValues,
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    form.reset(defaultValues);
+    setServerError(null);
+  }, [defaultValues, form, open]);
+
+  const title = reviewing
+    ? INVENTORY_VI.productionRecipeReview
+    : INVENTORY_VI.productionRecipeUpdate;
+  const submitLabel = reviewing
+    ? INVENTORY_VI.productionRecipeReviewSave
+    : INVENTORY_VI.productionRecipeSave;
+
+  return (
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={INVENTORY_VI.productionRecipeDialogIntro}
+      size="lg"
+      footer={
+        group ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button type="submit" form={formId} disabled={isPending}>
+              {isPending ? <Spinner /> : null}
+              {submitLabel}
+            </Button>
+          </>
+        ) : (
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            {ACTIONS_VI.close}
+          </Button>
+        )
+      }
+    >
+      {group == null ? (
+        <AppEmptyState
+          mode="error"
+          title={INVENTORY_VI.productionRecipeEmptyTitle}
+          description={INVENTORY_VI.productionRecipeNoResultsDescription}
+        />
+      ) : (
+        <form
+          id={formId}
+          noValidate
+          className="min-w-0"
+          aria-busy={isPending}
+          onSubmit={form.handleSubmit((values) => {
+            startTransition(async () => {
+              setServerError(null);
+              const result = await onSubmit(values);
+              if (!result.success) {
+                setServerError(result.error ?? ERRORS_VI.fallback);
+                return;
+              }
+              onSuccess(result, values);
+              onOpenChange(false);
+            });
+          })}
+        >
+          {serverError ? (
+            <Alert variant="destructive" className="mb-3">
+              <AlertTitle>{INVENTORY_VI.productionRecipeSaveFailed}</AlertTitle>
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <RecipeDialogFields
+            form={form}
+            canManageCatalog={canManageCatalog}
+            finishedGoodLocked
+            finishedGoodsOptions={finishedGoodsOptions}
+            unitOptions={unitOptions}
+            groupedRecipes={groupedRecipes}
+            recipeLinesEditorIngredients={recipeLinesEditorIngredients}
+            rawIngredientsOptions={rawIngredientsOptions}
+            onFinishedGoodCreated={onFinishedGoodCreated}
+            onRawIngredientCreated={onRawIngredientCreated}
+            pendingFinishedGoodId={String(group.finishedGoodId)}
+          />
+        </form>
+      )}
+    </AppSheet>
+  );
+}
+

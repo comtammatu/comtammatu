@@ -265,10 +265,10 @@ Control Surface Work compose shapes (ADR 0033 — not station BOARD):
   (`design-system.md` § C.1 / ADR 0018): D2 independent workspace →
   `{basePath}/{id}`; D1 view/document → addressable overlay
   (`?<entity>Id=`); D1 task → `FormDialog` / short `AppDialog` without a URL.
-  Purchase demand, PO, GRN, and the YCH/Transfer journey are the named D1
-  document set on Owner/Ops and use `AppDialog variant="document"`. YCH and
-  linked Transfers render once in the fulfillment hub. Branch retains its
-  Page/fullscreen touch detail workflow.
+  Purchase demand, PO, GRN, production, and the YCH/Transfer journey are the
+  named D1 document set on Owner/Ops and use `AppDialog variant="document"`.
+  YCH and linked Transfers render once in the fulfillment hub. Branch retains
+  its Page/fullscreen touch detail workflow.
 - **Row actions.** Build one `RowActionItem[]` per row
   (`apps/web/app/components/row-actions-menu.tsx`). Feed it to `RowActionsMenu`
   for the visible action cell and to `RowActionsContextMenuItems` through
@@ -617,11 +617,13 @@ allowlist, not a precedent for stretching another archetype's definition:
     detail retains WAC/value, dense desktop controls, and its own presentation.
     Classified **DETAIL** (Branch touch variant).
 16. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx`
-    — Compatibility redirect shim to `/inventory/production?branchId=...`.
+    — Compatibility redirect shim to `/inventory/production?branch=...`.
     Production has one canonical control surface and only accepts `Bếp TT` scope.
+    Classified **REDIRECT-SHIM**.
 17. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx`
     and `/stock/production/[id]/page.tsx` — Compatibility redirect shims to the
-    canonical create/detail routes; detail keeps the run ID and both keep URL scope.
+    list-first overlay (`?runId=&mode=view` or the runs tab); both keep URL scope.
+    Classified **REDIRECT-SHIM**.
 18. `apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx`
     — Branch-runtime waste entry. It preserves the scoped location, tier,
     evidence, rolling-meter, and submit authority but owns a compact touch

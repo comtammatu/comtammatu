@@ -311,7 +311,7 @@ registry; routes do not hardcode new operational copy.
 | `Combobox` | Standalone searchable control; inside data entry it must sit in a `FormField` with a stable `id` |
 | `FormField` | Label/help/error anatomy for non-RHF or bespoke composition; the child control still owns `id`, `disabled`, and ARIA state |
 | `TextareaField` | Textarea + RHF |
-| `AppDialog` | Generic app dialog shell; `variant="document"` for list-first PO and GRN documents |
+| `AppDialog` | Generic app dialog shell; `variant="document"` for list-first PO, GRN, and production documents |
 | `FormDialog` | Dialog + `useForm` + `zodResolver` + `useTransition` |
 | `valuesToFormData` | Adapter for `withFormAction`-wrapped Server Actions |
 
@@ -328,9 +328,10 @@ out, and single-reason confirms where a redirect reloads state.
 The overlay decision tree is owned by `design-system.md` § C.1 (ADR 0018) and
 applied per archetype in `page-archetypes.md`. The implementation split:
 
-- Dialog-only keys (`demandId`, `poId`, `grnId`, `mode`, client-only list
-  filters) go through `useDocumentOverlayUrl` and the History API — push to
-  open, replace for mode change and close — so the list RSC does not refetch.
+- Dialog-only keys (`demandId`, `poId`, `grnId`, `runId`, `recipeSpecId`, `mode`,
+  client-only list filters) go through `useDocumentOverlayUrl` and the History
+  API — push to open, replace for mode change and close — so the list RSC does
+  not refetch.
 - Scope keys that change the server dataset (`branchId`, server-backed
   pagination and filters) still use `router.push` / `router.replace`.
 

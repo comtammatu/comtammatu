@@ -1,20 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus as IconPlus } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
-import {
-  fetchProductionRuns,
-  type ProductionRunRow,
-} from "../production-run-actions";
-import { ProductionRunsClient } from "./production-runs-client";
+import { fetchProductionRuns } from "../production-run-actions";
 import { resolveInventoryListScope } from "../_lib/inventory-scope";
-import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
-import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AppPage } from "@/components/surface";
 import { loadProductionSurfaceData } from "../production-data";
-import { ProductionRecipePanel } from "../production-recipe-panel";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
-import { messages } from "@lib/messages";
+import { ProductionWorkspaceClient } from "./production-workspace-client";
 
 interface ProductionPageProps {
   searchParams?: Promise<{ branch?: string | string[]; tab?: string }>;
@@ -43,69 +33,24 @@ export async function ProductionPageContent({
   if (!res.success) {
     throw new Error("inventory.production.load_failed");
   }
-  const rows = res.data as ProductionRunRow[];
-
-  const runsContent = (
-    <ProductionRunsClient
-      initial={rows}
-      basePath="/inventory/production"
-    />
-  );
-
-  const recipesContent = surfaceData.recipeLoadError ? (
-    <AppEmptyState
-      mode="error"
-      title={messages.inventory.operatorFlow.productionRecipeLoadFailed}
-      description={surfaceData.recipeLoadError}
-    />
-  ) : (
-    <ProductionRecipePanel
-      canManageCatalog={surfaceData.canManageCatalog}
-      canManageRecipes={surfaceData.canManageRecipes}
-      finishedGoods={surfaceData.finishedGoods}
-      unitOptions={surfaceData.unitOptions}
-      ingredients={surfaceData.ingredients}
-      recipes={surfaceData.recipes}
-    />
-  );
-
-  const tabsList = [
-    { value: "runs", label: INVENTORY_VI.productionOrdersTab },
-    { value: "recipes", label: INVENTORY_VI.productionRecipesTab },
-  ];
 
   return (
     <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={INVENTORY_VI.productionTitle}
-        actions={
-          activeTab === "runs" ? (
-            <Button
-              size="lg"
-              render={
-                <Link
-                  href={`/inventory/production/new${
-                    scope.selectedBranchId
-                      ? `?branch=${scope.selectedBranchId}`
-                      : ""
-                  }`}
-                />
-              }
-            >
-              <IconPlus data-icon="inline-start" />
-              {INVENTORY_VI.createOrderShort}
-            </Button>
-          ) : null
-        }
+      <ProductionWorkspaceClient
+        activeTab={activeTab}
+        canCreateProduction={surfaceData.canCreateProduction}
+        canManageRecipes={surfaceData.canManageRecipes}
+        canManageCatalog={surfaceData.canManageCatalog}
+        runs={res.data ?? []}
+        recipes={surfaceData.recipes}
+        recipeLoadError={surfaceData.recipeLoadError}
+        finishedGoods={surfaceData.finishedGoods}
+        unitOptions={surfaceData.unitOptions}
+        ingredients={surfaceData.ingredients}
+        productionBranches={surfaceData.productionBranches}
+        locations={surfaceData.locations}
+        selectedBranchId={scope.selectedBranchId ?? undefined}
       />
-      <AppPageTabs items={tabsList} defaultValue={activeTab}>
-        <TabsContent value="runs" className="mt-0">
-          {runsContent}
-        </TabsContent>
-        <TabsContent value="recipes" className="mt-0">
-          {recipesContent}
-        </TabsContent>
-      </AppPageTabs>
     </AppPage>
   );
 }

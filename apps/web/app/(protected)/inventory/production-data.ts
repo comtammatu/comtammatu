@@ -18,9 +18,7 @@ import {
   type ProductionOperatorRole,
 } from "./_lib/production-roles";
 import {
-  fetchProductionRuns,
   fetchProductionRecipes,
-  type ProductionRunRow,
   type ProductionRecipeRow,
 } from "./production-actions";
 import type { IngredientUnitRow, UnitOption } from "@lib/inventory/types";
@@ -86,7 +84,6 @@ export interface ProductionSurfaceData {
   unitOptions: UnitOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
-  runs: ProductionRunRow[];
   recipes: ProductionRecipeRow[];
   recipeLoadError: string | null;
 }
@@ -190,7 +187,6 @@ export async function loadProductionSurfaceData({
     branchesRes,
     locationsRes,
     ingredientsRes,
-    runsRes,
     recipesRes,
     unitOptionsRes,
   ] = await Promise.all([
@@ -210,7 +206,6 @@ export async function loadProductionSurfaceData({
       .order("sort_order", { ascending: true })
       .order("id", { ascending: true }),
     fetchIngredients(),
-    fetchProductionRuns(),
     recipesPromise,
     fetchUnitOptions(),
   ]);
@@ -313,7 +308,6 @@ export async function loadProductionSurfaceData({
     unitOptions: unitOptionsRes.success ? (unitOptionsRes.data ?? []) : [],
     ingredients,
     finishedGoods,
-    runs: runsRes.success ? (runsRes.data ?? []) : [],
     recipes: recipesRes.success ? (recipesRes.data ?? []) : [],
     recipeLoadError: recipesRes.success
       ? null

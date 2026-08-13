@@ -1041,7 +1041,7 @@ the URL. Tasks that end (short CRUD, confirm) are not views and are not
 addressable. Full decision table: ADR 0018.
 
 - **D2 (independent workspace)** — DETAIL route `{basePath}/{id}`; row click
-  navigates there. For long-running sessions such as stocktake or production.
+  navigates there. For long-running sessions such as stocktake.
 - **D1 (addressable overlay)** — no DETAIL route; the view opens bound to one
   list query parameter (`?<entity>Id=`), hydrated from the server on first load
   and cleared on close. Row open uses `router.push`; mode change and close use
@@ -1049,8 +1049,8 @@ addressable. Full decision table: ADR 0018.
   Branch may use a bottom `Sheet` / `Drawer` at the same depth.
 - **D1 document** — a list-first staged document may render lines and a
   state-transition footer in `AppDialog variant="document"` when each state
-  exposes exactly one primary action. Named tier: purchase demand, PO, GRN, and
-  the YCH/Transfer fulfillment journey.
+  exposes exactly one primary action. Named tier: purchase demand, PO, GRN,
+  production, and the YCH/Transfer fulfillment journey.
 - **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
   CRUD or one bounded decision that ends.
 - **D3** — line-array authoring only; never a row-open target.
@@ -1060,7 +1060,7 @@ addressable. Full decision table: ADR 0018.
 A record escalates from D1 to D2 when it becomes an independent, long-running
 workspace, or when a state requires more than one primary action. A line array
 or stage footer alone does not escalate an approved D1 document; recipes that
-stay D1 task escalate when BOM lines **> 12** (ADR 0018 **C3**).
+stay D1 task escalate when BOM lines **> 12** to `AppSheet` `?recipeSpecId=` (ADR 0018 **C3**).
 
 **Forbidden:** a record with two rendered views (a legacy DETAIL redirect is
 allowed); a record view reachable only from ephemeral component state; a row

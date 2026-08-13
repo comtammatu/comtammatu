@@ -55,7 +55,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Hub hồ sơ / lịch / phép / lương / chấm công — không phải nơi làm việc hàng ngày | Avatar → `/me` hub → child; punch từ `/` command bar hoặc `/me/clock` | Hiện dữ liệu của mình; ẩn chọn NV/CN, duyệt đội, CTA `/work`, module L0 không được cấp | Parent §2.4B; LANDING ItemGroup. Exemplar: `me/page.tsx` |
 | **Settings** `/settings/*` (+ `/br/…/settings`) | Owner (L0); BM trên settings CN | Cấu hình ít đụng hàng ngày — không phải việc ca | LANDING settings → panel general/payments/printers; CN: bàn/POS/KDS/máy in | Hiện form cấu hình; ẩn KPI vận hành, queue bán hàng, tồn kho sống | Parent §2.11; LANDING + SETTINGS-PANEL. Exemplar L0: `settings/(tenant)/general/page.tsx`; printers LANDING: `settings/printers/page.tsx`; CN: `br/…/settings/page.tsx` |
 
-Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2.
+Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Khuyến mãi / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2.
 
 ---
 
@@ -190,6 +190,19 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ---
 
+### 2.4D. Khuyến mãi — `/promotions`
+
+- **Gia đình / plane:** `control_surface` (ADR 0039). Owner-only catalog.
+- **Archetype:** `/promotions` = `LIST`; `/promotions/new` và `/promotions/[id]` =
+  `DOC-WORKFLOW`.
+- **Actor:** `owner` (`promo:read` / `promo:write` / `promo:issue`).
+- **Job:** Tạo chiến dịch và mã; POS thu ngân nhập `Mã giảm` (`pos:use`).
+- **Ưu tiên data:** Tên, loại, trạng thái, mã. **Không:** CRM, loyalty, SKU voucher.
+- **POS:** Chiết khấu thủ công = `pos:apply_discount`; tiền vẫn ghi cột discount
+  hiện có (ADR 0034).
+
+---
+
 ### 2.5. Kho hàng — `/inventory` & `/br/[branchId]/stock`
 
 > On-hand exemplar context (tests may cite as comment only) — giữ section này.
@@ -207,7 +220,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   `/inventory/*` (control_surface); operator stock của chi nhánh dùng
   `/br/[branchId]/stock/*`. Central roles bị khóa site theo JWT `branch_id` và
   dùng `/me/*` cho công việc cá nhân/chấm công.
-- **Archetype:** `/inventory` dùng `LANDING` (queue-first `Cần xử lý` rồi lane chứng từ, danh mục dưới); `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/issues`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/waste/new` là `DOC-WORKFLOW`; `/inventory/issues` redirect vào `/inventory/consumption?view=waste`; `/inventory/supplier-invoices` là `REDIRECT-SHIM` (→ `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Owner GRN detail là D1 document trên LIST (`/inventory/grn/[id]` = `REDIRECT-SHIM`). Branch GRN/consumption/issue detail thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
+- **Archetype:** `/inventory` dùng `LANDING` (queue-first `Cần xử lý` rồi lane chứng từ, danh mục dưới); `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/production`, `/inventory/consumption`, `/inventory/issues`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/waste/new` là `DOC-WORKFLOW`; `/inventory/issues` redirect vào `/inventory/consumption?view=waste`; `/inventory/supplier-invoices` là `REDIRECT-SHIM` (→ `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Owner GRN và production detail là D1 document trên LIST (`/inventory/grn/[id]` và `/inventory/production/[id]` / `/new` = `REDIRECT-SHIM`). Branch GRN/consumption/issue detail thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
 - **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`),
   Kế toán, `central_supply_ops` và `central_kitchen_lead`; `/br/[branchId]/stock`
   dành cho `branch_manager` — plane touch, action bị permission giới hạn.
@@ -221,7 +234,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
     PO thuộc đúng một NCC và tạo GRN theo từng lần giao.
   - **Nhập kho:** `/inventory/grn` là hàng đợi **Chờ nhập hàng**. Mở GRN được
     tạo từ PO, kiểm nhận vật lý, lưu nháp rồi xác nhận để cập nhật tồn và WAC.
-  - **Sản xuất:** Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
+  - **Sản xuất:** `/inventory/production` là LIST hai tab (Lệnh / Công thức). Tạo lệnh bằng `FormDialog`; mở lệnh bằng `AppDialog variant="document"` (`?runId=&mode=`). Công thức CRUD bằng `FormDialog`; BOM hơn 12 dòng escalate `AppSheet` (`?recipeSpecId=`). Chọn công thức đang dùng và sản lượng (kèm tồn/sản lượng tối đa) -> tạo lệnh snapshot tại Bếp TT; kho xuất/nhập lấy mặc định, không bắt chọn lại “Bếp và vị trí” -> Bắt đầu -> Nhập thực dùng và sản lượng thực tế -> Hoàn thành tại Bếp TT -> Điều chuyển riêng nếu cần giao chi nhánh.
   - **Kiểm kê (Stocktake):** Tạo đợt kiểm kê -> Nhân viên đi đếm thực tế (kiểm kê mù - blind stocktake) -> Quản lý đối chiếu chênh lệch -> Xác nhận cân đối kho.
   - **Điều chuyển (Transfer):** Chỉ chọn warehouse của site nguồn và đích;
     không có same-branch Kho↔Bếp. Kho Tổng → Bếp TT / chi nhánh; Bếp TT →

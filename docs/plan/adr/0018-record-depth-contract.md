@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 
-**Decision owner:** Owner, amended 2026-07-29
+**Decision owner:** Owner, amended 2026-07-29, production list-first 2026-08-13
 
 ## Context
 
@@ -58,15 +58,15 @@ plane (ADR 0012); prune dead helpers, keep bookmark shims until retargeted.
 
 | Record | Depth | Notes |
 | --- | --- | --- |
-| PO, GRN | D1 Document | Owner/Ops document dialog; legacy DETAIL redirects |
+| PO, GRN, production | D1 Document | Owner/Ops document dialog; legacy DETAIL redirects. Production create is a D1 task `FormDialog` (not D3). Branch `/stock/production*` shims to the same list URL. |
 | YCH, Transfer | D1 Document Owner/Ops; D2 Branch | One fulfillment journey; Branch keeps DETAIL |
-| Issue/consumption, stocktake session, production, stock card | D2 | DETAIL Page |
+| Issue/consumption, stocktake session, stock card | D2 | DETAIL Page |
 | Supplier invoice | D1 | Finance `Sheet` + `?invoiceId=` |
 | Count slips / assignments | D1 view | Owner `AppDialog` / Branch `Sheet`; Wave 3 `?slipId=` / `?assignmentId=` |
 | Waste approvals | D0 queue | Card decision surface (named LIST exception): Owner `AppPage` + `AppSection` decision cards — never `AppListFrame` / `DataTable` |
 | Waste create, GRN create, stocktake new/count | D3 | `DocumentFormFrame` / counting grid. Owner GRN create DOC: context (`Kho nhận`) → lines table + `Thêm mặt hàng` → progressive editor → sticky footer (catalog picker is overlay, not a second page section). |
 | Ingredients, units, categories, supplier edit | D1 task | `FormDialog` (no URL) |
-| Recipes | D1 task | `FormDialog` until BOM lines **> 12**, then escalate to D2/Sheet/Page |
+| Recipes | D1 task | `FormDialog` (no URL) until BOM lines **> 12**, then escalate to addressable `AppSheet` (`?recipeSpecId=`) |
 | Supplier items | D2 child LIST | `/suppliers/[id]/items` |
 
 ### Owner amendment (2026-07-29)
@@ -76,6 +76,13 @@ mode/close use replace. `AppDialog variant="document"` is the fixed document
 frame. YCH → Transfer keeps separate plane chrome with one queue model and
 canonical DETAIL pages. Legacy PO/GRN DETAIL routes redirect to query URLs.
 
+### Owner amendment (2026-08-13)
+
+Production runs are list-first D1 documents on `/inventory/production`
+(`?runId=&mode=`). Create is a non-addressable `FormDialog`; `/new` and `/[id]`
+redirect to the list overlay. Production recipes stay D1 task; BOM lines **> 12**
+open `AppSheet` bound to `?recipeSpecId=`.
+
 ## Consequences
 
 - SSOT peers: design-system § C.1, `modules/ui.md` Overlay Decision,
@@ -83,7 +90,7 @@ canonical DETAIL pages. Legacy PO/GRN DETAIL routes redirect to query URLs.
 - Adoption: three-door wiring (**C5**); remove duplicate views; count URL
   binding (**C2**); Wave 4 ratchet
   `apps/web/tests/record-depth-inventory-list-wave4-static.test.ts`; Wave 5
-  list-first documents for PO/GRN and D2 fulfillment for YCH/Transfer.
+  list-first documents for PO/GRN/production and D2 fulfillment for YCH/Transfer.
 - Does not invent a second table/theme component family.
 
 ## Verification

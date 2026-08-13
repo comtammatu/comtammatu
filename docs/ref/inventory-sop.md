@@ -61,10 +61,11 @@ Contract: [inventory.md](inventory.md) §2.1 — Đơn vị chuẩn và các đ�
 - Tạo lệnh chỉ nhập sản lượng kế hoạch và vị trí cùng Bếp TT. Bắt đầu lệnh rồi
   mới nhập sản lượng/nguyên liệu thực tế để hoàn thành.
 - Mẻ không có sản lượng: hủy lệnh, sau đó ghi vật tư hỏng qua Hao hụt.
-- Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh dùng Điều chuyển riêng.
-  Sau khi xuất kho, DC inbound hiện trên hub nhận của CN (cùng chỗ với YCH cần
-  nhận) — CN không quản lý lifecycle DC xuất. Trả nguyên liệu thừa / tồn dư về
-  Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
+- Thành phẩm hoàn thành nằm tại Bếp TT. Giao về chi nhánh từ lệnh sản xuất bằng
+  CTA **Giao chi nhánh** → `/inventory/transfers/new` (cùng form Điều chuyển
+  thủ công trên hub Giao nhận). Sau khi xuất kho, inbound hiện trên hub nhận
+  của CN (cùng chỗ với YCH cần nhận) — CN không quản lý lifecycle DC xuất. Trả
+  nguyên liệu thừa / tồn dư về Kho Tổng cũng dùng Điều chuyển (Bếp TT → Kho Tổng).
 - Tiêu hao / hao hụt theo contract hiện hành tại site được cấp.
 
 ## 5. Kiểm kê

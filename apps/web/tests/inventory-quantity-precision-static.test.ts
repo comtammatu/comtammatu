@@ -38,7 +38,7 @@ test("inventory quantity inputs allow three fraction digits", () => {
   );
 
   const productionNew = read(
-    "app/(protected)/inventory/production/new/production-new-client.tsx",
+    "app/(protected)/inventory/production/production-create-dialog.tsx",
   );
   assert.match(
     productionNew,

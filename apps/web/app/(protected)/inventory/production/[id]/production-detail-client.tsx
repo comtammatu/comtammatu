@@ -1,7 +1,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
@@ -10,16 +10,19 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { confirm } from "@/components/confirm-dialog";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
+import { AppDialog } from "@/components/form";
 import {
-  AppDetailFooter,
   AppSection,
   DescriptionList,
 } from "@/components/surface";
+import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime, formatQty } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
   cancelProductionRun,
   completeProductionRun,
+  fetchProductionRunById,
   startProductionRun,
   type ProductionRunRow,
 } from "../../production-run-actions";
@@ -27,17 +30,30 @@ import type { ProductionShortageRow } from "../../production-types";
 
 const detailCopy = messages.inventory.productionDetail;
 
-export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
+export function ProductionDetailClient({
+  run: initialRun,
+  presentation = "dialog",
+  onClose,
+  onRunReloaded,
+}: {
+  run: ProductionRunRow;
+  presentation?: "page" | "dialog";
+  onClose?: () => void;
+  onRunReloaded?: (run: ProductionRunRow) => void;
+}) {
   const router = useRouter();
+  const [run, setRun] = useState(initialRun);
   const [isPending, startTransition] = useTransition();
   const [actualOutput, setActualOutput] = useState(
-    run.actual_quantity == null ? String(run.planned_quantity) : String(run.actual_quantity),
+    initialRun.actual_quantity == null
+      ? String(initialRun.planned_quantity)
+      : String(initialRun.actual_quantity),
   );
   const [actualIngredients, setActualIngredients] = useState<
     Record<number, string>
   >(() =>
     Object.fromEntries(
-      run.lines.map((line) => [
+      initialRun.lines.map((line) => [
         line.ingredient_id,
         String(line.actual_quantity ?? line.planned_quantity),
       ]),
@@ -45,6 +61,23 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
   );
   const [shortages, setShortages] = useState<ProductionShortageRow[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRun(initialRun);
+    setActualOutput(
+      initialRun.actual_quantity == null
+        ? String(initialRun.planned_quantity)
+        : String(initialRun.actual_quantity),
+    );
+    setActualIngredients(
+      Object.fromEntries(
+        initialRun.lines.map((line) => [
+          line.ingredient_id,
+          String(line.actual_quantity ?? line.planned_quantity),
+        ]),
+      ),
+    );
+  }, [initialRun]);
 
   const actualRows = useMemo(
     () =>
@@ -55,19 +88,31 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
     [actualIngredients, run.lines],
   );
 
+  async function reloadRun() {
+    const result = await fetchProductionRunById(run.id);
+    if (result.success && result.data) {
+      setRun(result.data);
+      onRunReloaded?.(result.data);
+    }
+    router.refresh();
+  }
+
   function refreshAfter(result: { success: boolean; error?: string }) {
     if (!result.success) {
       setActionError(result.error ?? "Thao tác không thành công.");
       return false;
     }
     setActionError(null);
-    router.refresh();
+    void reloadRun();
     return true;
   }
 
   function handleStart() {
     startTransition(async () => {
-      const result = await startProductionRun({ id: run.id, branchId: run.branch_id });
+      const result = await startProductionRun({
+        id: run.id,
+        branchId: run.branch_id,
+      });
       if (refreshAfter(result)) toast.success("Đã bắt đầu sản xuất.");
     });
   }
@@ -128,7 +173,7 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
         return;
       }
       toast.success("Đã hoàn thành và nhập thành phẩm tại Bếp Trung Tâm.");
-      router.refresh();
+      void reloadRun();
     });
   }
 
@@ -138,7 +183,7 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
       ? "—"
       : `${formatQty(run.actual_quantity)} ${unit}`.trim();
 
-  return (
+  const body = (
     <div className="flex flex-col gap-6">
       <Item
         variant="outline"
@@ -279,9 +324,17 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
 
       {run.status === "completed" ? (
         <AppSection
-          title="Thành phẩm đã ở Bếp Trung Tâm"
-          description="Nếu cần giao về chi nhánh, tạo chứng từ Điều chuyển riêng."
-          action={<Button render={<Link href={`/inventory/transfers/new?branch=${run.branch_id}`} />}>Tạo Điều chuyển</Button>}
+          title={detailCopy.shipToBranchTitle}
+          description={detailCopy.shipToBranchDescription}
+          action={
+            <Button
+              render={
+                <Link href={`/inventory/transfers/new?branch=${run.branch_id}`} />
+              }
+            >
+              {detailCopy.shipToBranchAction}
+            </Button>
+          }
         >
           <div />
         </AppSection>
@@ -290,21 +343,59 @@ export function ProductionDetailClient({ run }: { run: ProductionRunRow }) {
       {run.status === "cancelled" && run.cancel_reason ? (
         <AppSection title="Lý do hủy"><p className="text-sm">{run.cancel_reason}</p></AppSection>
       ) : null}
+    </div>
+  );
 
+  const dialogFooter = (
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+      <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+        {ACTIONS_VI.close}
+      </Button>
       {run.status === "draft" || run.status === "in_progress" ? (
-        <AppDetailFooter
-          trailing={
-            <>
-              <Button variant="outline" onClick={handleCancel} disabled={isPending}>Hủy</Button>
-              {run.status === "draft" ? (
-                <Button onClick={handleStart} disabled={isPending}>Bắt đầu sản xuất</Button>
-              ) : (
-                <Button onClick={handleComplete} disabled={isPending}>Hoàn thành</Button>
-              )}
-            </>
-          }
-        />
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void handleCancel()}
+            disabled={isPending}
+          >
+            Hủy
+          </Button>
+          {run.status === "draft" ? (
+            <Button type="button" onClick={handleStart} disabled={isPending}>
+              Bắt đầu sản xuất
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleComplete} disabled={isPending}>
+              Hoàn thành
+            </Button>
+          )}
+        </>
       ) : null}
     </div>
   );
+
+  if (presentation === "dialog") {
+    return (
+      <AppDialog
+        open
+        onOpenChange={(next) => {
+          if (!next) onClose?.();
+        }}
+        variant="document"
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono">{run.production_number}</span>
+            <StatusBadge domain="inventory" value={run.status} />
+          </div>
+        }
+        description={run.finished_good_name}
+        footer={dialogFooter}
+      >
+        {body}
+      </AppDialog>
+    );
+  }
+
+  return body;
 }

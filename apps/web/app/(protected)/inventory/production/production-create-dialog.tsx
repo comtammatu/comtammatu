@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { INVENTORY_VI } from "@comtammatu/shared/messages";
+import { INVENTORY_VI, ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
@@ -17,35 +16,21 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Combobox } from "@/components/form/combobox";
+import { AppDialog } from "@/components/form/form-dialog";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
-import {
-  AppBackLink,
-  AppDetailFooter,
-  AppEmptyState,
-  AppPageHeader,
-  AppSection,
-  DocumentFormFrame,
-} from "@/components/surface";
+import { AppEmptyState, AppSection } from "@/components/surface";
 import { formatQty } from "@lib/inventory/format";
 import { messages } from "@lib/messages";
 import {
   createProductionRun,
   fetchProductionRecipeContext,
   type ProductionRecipeIngredient,
-} from "../../production-run-actions";
+} from "../production-run-actions";
 import type {
   BranchOption,
   FinishedGoodOption,
   InventoryLocationOption,
-} from "../../production-types";
-
-interface ProductionNewClientProps {
-  branches: BranchOption[];
-  locations: InventoryLocationOption[];
-  finishedGoods: FinishedGoodOption[];
-  initialBranchId?: number;
-  basePath: string;
-}
+} from "../production-types";
 
 const productionCopy = messages.inventory.operatorFlow;
 
@@ -66,14 +51,23 @@ function resolveDefaultLocations(
   };
 }
 
-export function ProductionNewClient({
+export function ProductionCreateDialog({
+  open,
+  onOpenChange,
   branches,
   locations,
   finishedGoods,
   initialBranchId,
-  basePath,
-}: ProductionNewClientProps) {
-  const router = useRouter();
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  branches: BranchOption[];
+  locations: InventoryLocationOption[];
+  finishedGoods: FinishedGoodOption[];
+  initialBranchId?: number;
+  onCreated: (runId: number) => void;
+}) {
   const [isPending, startTransition] = useTransition();
   const initialBranch =
     branches.find((branch) => branch.id === initialBranchId) ?? branches[0];
@@ -156,7 +150,8 @@ export function ProductionNewClient({
       !targetLocationId ||
       !Number.isFinite(planned) ||
       planned <= 0 ||
-      !context
+      !context ||
+      plannedExceedsStock
     ) {
       toast.error(INVENTORY_VI.productionCreateValidate);
       return;
@@ -175,7 +170,8 @@ export function ProductionNewClient({
         return;
       }
       toast.success("Đã tạo Lệnh sản xuất nháp.");
-      router.push(`${basePath}/${result.data.productionRunId}`);
+      onOpenChange(false);
+      onCreated(result.data.productionRunId);
     });
   }
 
@@ -191,18 +187,51 @@ export function ProductionNewClient({
     });
   }, [batchRatio, context]);
 
+  if (!open) return null;
+
   if (branches.length === 0) {
     return (
-      <AppEmptyState
-        mode="error"
-        title="Chưa có Bếp Trung Tâm"
-        description="Lệnh sản xuất chỉ được tạo tại site Bếp Trung Tâm."
-      />
+      <AppDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Tạo Lệnh sản xuất"
+        footer={
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {ACTIONS_VI.close}
+          </Button>
+        }
+      >
+        <AppEmptyState
+          mode="error"
+          title="Chưa có Bếp Trung Tâm"
+          description="Lệnh sản xuất chỉ được tạo tại site Bếp Trung Tâm."
+        />
+      </AppDialog>
     );
   }
 
-  const body = (
-    <>
+  return (
+    <AppDialog
+      open
+      onOpenChange={onOpenChange}
+      title="Tạo Lệnh sản xuất"
+      description="Chọn công thức đang dùng và sản lượng. Kho xuất/nhập lấy mặc định của Bếp Trung Tâm."
+      contentClassName="sm:max-w-3xl"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {ACTIONS_VI.cancel}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleCreate}
+            disabled={isPending || !context || plannedExceedsStock}
+          >
+            {isPending ? "Đang tạo…" : "Tạo lệnh nháp"}
+          </Button>
+        </>
+      }
+    >
       <AppSection
         title="Kế hoạch sản xuất"
         description="Chọn công thức đang dùng và sản lượng. Kho xuất/nhập lấy mặc định của Bếp Trung Tâm."
@@ -345,35 +374,6 @@ export function ProductionNewClient({
           placeholder="Ghi chú cho ca sản xuất"
         />
       </AppSection>
-    </>
-  );
-
-  const footer = (
-    <AppDetailFooter
-      trailing={
-        <>
-          <Button variant="outline" onClick={() => router.push(basePath)}>
-            Hủy
-          </Button>
-          <Button onClick={handleCreate} disabled={isPending || !context}>
-            {isPending ? "Đang tạo…" : "Tạo lệnh nháp"}
-          </Button>
-        </>
-      }
-    />
-  );
-
-  return (
-    <DocumentFormFrame
-      header={
-        <AppPageHeader
-          title="Tạo Lệnh sản xuất"
-          breadcrumb={<AppBackLink href={basePath}>Quay lại</AppBackLink>}
-        />
-      }
-      footer={footer}
-    >
-      {body}
-    </DocumentFormFrame>
+    </AppDialog>
   );
 }

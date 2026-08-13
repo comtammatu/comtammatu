@@ -6,10 +6,10 @@ import { test } from "node:test";
 const repoRoot = resolve(process.cwd(), "../..");
 
 const directFormImportFiles = [
-  "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx",
   "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
-  "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
+  "apps/web/app/(protected)/inventory/production/production-create-dialog.tsx",
   "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
   "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx",
   "apps/web/app/(protected)/inventory/waste/new/waste-create-client.tsx",

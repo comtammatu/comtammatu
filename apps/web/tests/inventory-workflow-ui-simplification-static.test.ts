@@ -7,12 +7,12 @@ const between = (source: string, start: string, end: string) =>
   source.slice(source.indexOf(start), source.indexOf(end));
 
 test("Inventory cancel navigation returns to its owning list", () => {
-  const productionNew = read(
-    "app/(protected)/inventory/production/new/production-new-client.tsx",
+  const productionCreate = read(
+    "app/(protected)/inventory/production/production-create-dialog.tsx",
   );
 
-  assert.doesNotMatch(productionNew, /router\.back\(\)/);
-  assert.match(productionNew, /onClick=\{\(\) => router\.push\(basePath\)\}/);
+  assert.doesNotMatch(productionCreate, /router\.back\(\)/);
+  assert.match(productionCreate, /onOpenChange\(false\)/);
 });
 
 test("stocktake list exposes one create entrypoint", () => {
@@ -189,19 +189,18 @@ test("recorded consumption toolbar keeps one baseline and separate slots", () =>
   assert.match(issues, /<RecordedConsumptionFilterBar/);
 });
 
-test("production create redirects to the created run detail", () => {
-  const client = read(
-    "app/(protected)/inventory/production/new/production-new-client.tsx",
+test("production create opens the created run overlay", () => {
+  const workspace = read(
+    "app/(protected)/inventory/production/production-workspace-client.tsx",
   );
   const action = read("app/(protected)/inventory/production-run-actions.ts");
 
   assert.match(action, /type CreateProductionRunResult/);
   assert.match(action, /production_run_id/);
   assert.match(
-    client,
-    /router\.push\(`\$\{basePath\}\/\$\{result\.data\.productionRunId\}`\)/,
+    workspace,
+    /overlay\.patchOverlay\(\{ runId, mode: "view" \}, "push"\)/,
   );
-  assert.doesNotMatch(client, /router\.push\(basePath\);/);
 });
 
 test("operations tabs use the same sectioned list chrome", () => {

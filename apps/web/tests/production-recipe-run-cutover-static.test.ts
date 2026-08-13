@@ -16,7 +16,7 @@ const runActions = read(
   "apps/web/app/(protected)/inventory/production-run-actions.ts",
 );
 const newClient = read(
-  "apps/web/app/(protected)/inventory/production/new/production-new-client.tsx",
+  "apps/web/app/(protected)/inventory/production/production-create-dialog.tsx",
 );
 const detailClient = read(
   "apps/web/app/(protected)/inventory/production/[id]/production-detail-client.tsx",
@@ -50,13 +50,18 @@ test("recipe lines accept any active unit of the correct ingredient", () => {
   assert.doesNotMatch(recipeActions, /inventory_unit_role_mismatch/);
 });
 
-test("recipe UI is list-first and keeps ingredient lines visible", () => {
+test("recipe UI is list-first and keeps ingredient lines in the editor", () => {
   assert.match(recipePanel, /<AppListFrame/);
   assert.match(recipePanel, /data=\{filteredRecipes\}/);
   assert.match(recipePanel, /renderRowContextMenu=/);
   assert.match(recipePanel, /mobileCardRender=/);
-  assert.match(recipePanel, /group\.lines\.map\(\(line\) =>/);
+  assert.match(recipePanel, /<IngredientLinesEditor/);
   assert.match(recipePanel, /unitEditable\s+bulkAdd/);
+  assert.doesNotMatch(recipePanel, /key:\s*"ingredients"/);
+  assert.doesNotMatch(
+    recipePanel,
+    /group\.lines\.map\(\(line\) =>/,
+  );
   assert.doesNotMatch(recipePanel, /groupedRecipes\.map\(\(group\) =>/);
   assert.doesNotMatch(recipePanel, /<Item variant="outline" onClick=/);
   assert.match(
@@ -107,6 +112,7 @@ test("branch production routes only redirect to the canonical surface", () => {
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx",
   );
   assert.match(list, /redirect\(`\/inventory\/production\?branch=/);
-  assert.match(create, /\/inventory\/production\/new\?branch=/);
-  assert.match(detail, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
+  assert.match(create, /redirect\(`\/inventory\/production\?branch=/);
+  assert.match(detail, /runId=\$\{encodeURIComponent\(id\)\}/);
+  assert.match(detail, /mode=view/);
 });

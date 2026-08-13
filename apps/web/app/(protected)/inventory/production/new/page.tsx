@@ -1,5 +1,4 @@
-import { loadProductionSurfaceData } from "../../production-data";
-import { ProductionNewClient } from "./production-new-client";
+import { redirect } from "next/navigation";
 
 export default async function ProductionNewPage({
   searchParams,
@@ -7,26 +6,8 @@ export default async function ProductionNewPage({
   searchParams: Promise<{ branch?: string }>;
 }) {
   const params = await searchParams;
-  const routeBranchId = params.branch
-    ? Number.parseInt(params.branch, 10)
-    : undefined;
-
-  const {
-    productionBranches,
-    locations,
-    finishedGoods,
-  } = await loadProductionSurfaceData({ routeBranchId });
-  const finishedGoodsWithRecipes = finishedGoods.filter(
-    (good) => good.recipeStatus === "active" && good.recipeSpecId != null,
-  );
-
-  return (
-    <ProductionNewClient
-      branches={productionBranches}
-      locations={locations}
-      finishedGoods={finishedGoodsWithRecipes}
-      initialBranchId={routeBranchId}
-      basePath="/inventory/production"
-    />
-  );
+  const qs = new URLSearchParams();
+  if (params.branch) qs.set("branch", params.branch);
+  const query = qs.toString();
+  redirect(query ? `/inventory/production?${query}` : "/inventory/production");
 }

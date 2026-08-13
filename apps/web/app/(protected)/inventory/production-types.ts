@@ -1,4 +1,4 @@
-import type { ProductionRunRow } from "./production-run-actions";
+import type { ProductionRunListRow, ProductionRunRow } from "./production-run-actions";
 import type { ProductionRecipeRow } from "./production-recipe-actions";
 import type { IngredientUnitRow } from "@lib/inventory/types";
 
@@ -83,4 +83,6 @@ export function badgeVariantFromTone(
   return "secondary" as const;
 }
 
-export type { ProductionRunRow, ProductionRecipeRow };
+export const RECIPE_BOM_SHEET_THRESHOLD = 12;
+
+export type { ProductionRunListRow, ProductionRunRow, ProductionRecipeRow };

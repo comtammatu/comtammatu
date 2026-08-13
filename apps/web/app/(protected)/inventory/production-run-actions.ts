@@ -132,8 +132,10 @@ export interface ProductionRunRow {
   completed_at: string | null;
   created_at: string;
   started_at: string | null;
-  lines: ProductionRunLineRow[];
+    lines: ProductionRunLineRow[];
 }
+
+export type ProductionRunListRow = Omit<ProductionRunRow, "lines">;
 
 type RunQueryRow = {
   id: number;
@@ -176,13 +178,6 @@ const RUN_HEADER_SELECT = `
   branches!production_runs_branch_id_fkey ( name, branch_kind ),
   ingredients!production_runs_finished_good_id_fkey ( name ),
   units!production_runs_entry_unit_id_fkey ( name )
-`;
-
-const RUN_LINE_SELECT = `
-  production_run_id, ingredient_id, planned_quantity, actual_quantity,
-  entry_unit_id, entry_to_base_factor,
-  ingredients!production_run_lines_ingredient_id_fkey ( name ),
-  units!production_run_lines_entry_unit_id_fkey ( name )
 `;
 
 const RUN_SELECT = `${RUN_HEADER_SELECT},
@@ -235,8 +230,13 @@ function toProductionRun(row: RunQueryRow): ProductionRunRow {
   };
 }
 
+function toProductionRunListRow(row: RunQueryRow): ProductionRunListRow {
+  const { lines: _lines, ...header } = toProductionRun(row);
+  return header;
+}
+
 export async function fetchProductionRuns(): Promise<
-  ActionResult<ProductionRunRow[]>
+  ActionResult<ProductionRunListRow[]>
 > {
   const ctx = await getAuthContextWithAnyPermission(
     PRODUCTION_ROLES,
@@ -265,35 +265,12 @@ export async function fetchProductionRuns(): Promise<
   const headers = (data ?? []) as unknown as Array<
     Omit<RunQueryRow, "production_run_lines">
   >;
-  const runIds = headers.map((row) => row.id);
-  const lineResult =
-    runIds.length === 0
-      ? { data: [] as Array<NonNullable<RunQueryRow["production_run_lines"]>[number] & { production_run_id: number }>, error: null }
-      : await supabase
-          .from("production_run_lines")
-          .select(RUN_LINE_SELECT)
-          .eq("tenant_id", claims.tenant_id)
-          .in("production_run_id", runIds);
-  if (lineResult.error) {
-    console.error("inventory.production.runs_load_failed", lineResult.error);
-    return { success: false, error: productionCopy.productionRunLoadFailed };
-  }
-  const linesByRunId = new Map<number, NonNullable<RunQueryRow["production_run_lines"]>>();
-  for (const line of (lineResult.data ?? []) as Array<
-    NonNullable<RunQueryRow["production_run_lines"]>[number] & {
-      production_run_id: number;
-    }
-  >) {
-    const list = linesByRunId.get(line.production_run_id) ?? [];
-    list.push(line);
-    linesByRunId.set(line.production_run_id, list);
-  }
   return {
     success: true,
     data: headers.map((row) =>
-      toProductionRun({
+      toProductionRunListRow({
         ...row,
-        production_run_lines: linesByRunId.get(row.id) ?? [],
+        production_run_lines: [],
       }),
     ),
   };

@@ -1,48 +1,21 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
-import { notFound } from "next/navigation";
-import {
-  fetchProductionRunById,
-} from "../../production-run-actions";
-import { ProductionDetailClient } from "./production-detail-client";
-import {
-  AppBackLink,
-  AppPage,
-  AppPageHeader,
-} from "@/components/surface";
-import { StatusBadge } from "@/components/status-badge";
+import { notFound, redirect } from "next/navigation";
 
 export default async function ProductionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branch?: string | string[] }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
   const runId = Number.parseInt(id, 10);
-  if (Number.isNaN(runId)) notFound();
+  if (Number.isNaN(runId) || runId <= 0) notFound();
 
-  const res = await fetchProductionRunById(runId);
-  if (!res.success || !res.data) {
-    notFound();
-  }
-
-  const run = res.data;
-  return (
-    <AppPage width="xwide" density="compact">
-      <AppPageHeader
-        title={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono">{run.production_number}</span>
-            <StatusBadge domain="inventory" value={run.status} />
-          </div>
-        }
-        meta={run.finished_good_name}
-        breadcrumb={
-          <AppBackLink href="/inventory/production">
-            Quay lại
-          </AppBackLink>
-        }
-      />
-      <ProductionDetailClient run={run} />
-    </AppPage>
-  );
+  const qs = new URLSearchParams();
+  qs.set("runId", String(runId));
+  qs.set("mode", "view");
+  const branch = Array.isArray(query.branch) ? query.branch[0] : query.branch;
+  if (branch) qs.set("branch", branch);
+  redirect(`/inventory/production?${qs.toString()}`);
 }

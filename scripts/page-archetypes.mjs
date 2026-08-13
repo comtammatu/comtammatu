@@ -108,11 +108,11 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx": "LANDING",
 
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/[id]/page.tsx":
-    "DETAIL",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/new/page.tsx":
-    "DOC-WORKFLOW",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/production/page.tsx":
-    "LANDING",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/page.tsx":
     "DETAIL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/page.tsx":
@@ -174,9 +174,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/inventory/issues/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/page.tsx": "LANDING",
-  "apps/web/app/(protected)/inventory/production/page.tsx": "LANDING",
-  "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC-WORKFLOW",
-  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/production/page.tsx": "LIST",
+  "apps/web/app/(protected)/inventory/production/new/page.tsx": "REDIRECT-SHIM",
+  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": "LIST",
@@ -598,9 +598,9 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/issues/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/menu-recipes/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/page.tsx": "DASHBOARD_REPORT",
-  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "DETAIL",
-  "apps/web/app/(protected)/inventory/production/new/page.tsx": "DOC",
-  "apps/web/app/(protected)/inventory/production/page.tsx": "DASHBOARD_REPORT",
+  "apps/web/app/(protected)/inventory/production/[id]/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/production/new/page.tsx": "REDIRECT",
+  "apps/web/app/(protected)/inventory/production/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/purchase-orders/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/purchase-requests/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/recipes/page.tsx": "REDIRECT",

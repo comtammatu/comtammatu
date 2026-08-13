@@ -1092,8 +1092,9 @@ test("branch production routes redirect to the canonical production surface", ()
   const navConfig = read("packages/shared/src/auth/nav-config.ts");
 
   assert.match(route, /redirect\(`\/inventory\/production\?branch=/);
-  assert.match(newRoute, /redirect\(\s*`\/inventory\/production\/new\?branch=/);
-  assert.match(detailRoute, /\/inventory\/production\/\$\{encodeURIComponent\(id\)\}/);
+  assert.match(newRoute, /redirect\(`\/inventory\/production\?branch=/);
+  assert.match(detailRoute, /runId=\$\{encodeURIComponent\(id\)\}/);
+  assert.match(detailRoute, /mode=view/);
 
   assert.match(
     navConfig,

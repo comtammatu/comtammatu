@@ -50,17 +50,14 @@ test("Wave 1 batch B transfers hub is C4 zero-action with onRowClick detail path
   assert.doesNotMatch(source, /renderRowContextMenu/);
 });
 
-test("Wave 1 batch B production is C4 zero-action with onRowClick detail path", () => {
+test("Wave 1 batch B production is C4 zero-action with onRowClick overlay path", () => {
   const source = read(
     "app/(protected)/inventory/production/production-runs-client.tsx",
   );
 
   assert.match(source, /onRowClick=\{openProductionDetail\}/);
-  assert.match(source, /router\.push\(detailHref\(row\)\)/);
-  assert.match(
-    source,
-    /ProductionRunCard[\s\S]*render=\{<Link href=\{href\}/,
-  );
+  assert.match(source, /overlay\.patchOverlay\(\{ runId: row\.id, mode: "view" \}/);
+  assert.match(source, /useDocumentOverlayUrl/);
 
   assert.doesNotMatch(source, /IconChevronRight/);
   assert.doesNotMatch(source, /<RowActionsMenu/);

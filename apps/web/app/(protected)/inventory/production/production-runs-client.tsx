@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Search as IconSearch } from "lucide-react";
 import { formatCount, formatQuantity } from "@comtammatu/shared/format";
 import { INVENTORY_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
@@ -34,25 +32,38 @@ import {
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import { AppListFrame, AppToolbar } from "@/components/surface";
 import { matchesSearch } from "@lib/search";
+import { useDocumentOverlayUrl } from "@lib/navigation/use-document-overlay-url";
 import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
-import type { ProductionRunRow } from "../production-run-actions";
+import type { ProductionRunListRow } from "../production-run-actions";
+import { PRODUCTION_OVERLAY_KEYS } from "./production-document-dialog-host";
 
 const ALL_STATUS_VALUE = "_all";
 const STATUS_LABELS: Record<string, string> = INVENTORY_STATUS_LABELS_VI;
 
 interface ProductionRunsClientProps {
-  initial: ProductionRunRow[];
-  basePath: string;
+  initial: ProductionRunListRow[];
 }
 
-export function ProductionRunsClient({
-  initial,
-  basePath,
-}: ProductionRunsClientProps) {
-  const router = useRouter();
-  const [items] = useState<ProductionRunRow[]>(initial);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(ALL_STATUS_VALUE);
+export function ProductionRunsClient({ initial }: ProductionRunsClientProps) {
+  const overlay = useDocumentOverlayUrl(PRODUCTION_OVERLAY_KEYS);
+  const filters = useDocumentOverlayUrl(["q", "status"]);
+  const [items] = useState<ProductionRunListRow[]>(initial);
+  const search = filters.get("q") ?? "";
+  const statusFilter = filters.get("status") ?? ALL_STATUS_VALUE;
+  const [searchDraft, setSearchDraft] = useState(search);
+
+  useEffect(() => {
+    setSearchDraft(search);
+  }, [search]);
+
+  useEffect(() => {
+    const trimmed = searchDraft.trim();
+    if (trimmed === search.trim()) return;
+    const timer = window.setTimeout(() => {
+      filters.patchOverlay({ q: trimmed || null }, "replace");
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [filters, search, searchDraft]);
 
   const statusOptions = useMemo(() => {
     return Array.from(new Set(items.map((item) => item.status))).sort((a, b) =>
@@ -82,15 +93,11 @@ export function ProductionRunsClient({
     });
   }, [items, search, statusFilter]);
 
-  function detailHref(row: ProductionRunRow): string {
-    return `${basePath}/${row.id}`;
+  function openProductionDetail(row: ProductionRunListRow) {
+    overlay.patchOverlay({ runId: row.id, mode: "view" }, "push");
   }
 
-  function openProductionDetail(row: ProductionRunRow) {
-    router.push(detailHref(row));
-  }
-
-  const columns = useMemo<DataTableColumn<ProductionRunRow>[]>(() => {
+  const columns = useMemo<DataTableColumn<ProductionRunListRow>[]>(() => {
     return [
       {
         key: "production_number",
@@ -144,14 +151,22 @@ export function ProductionRunsClient({
           <InputGroupInput
             type="search"
             aria-label={INVENTORY_VI.productionOrdersSearchPlaceholder}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
             placeholder={INVENTORY_VI.productionOrdersSearchPlaceholder}
           />
         </InputGroup>
       }
       filters={
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) =>
+            filters.patchOverlay(
+              { status: value === ALL_STATUS_VALUE ? null : value },
+              "replace",
+            )
+          }
+        >
           <SelectTrigger
             size="field"
             className={inventoryListFilterSelectClassName}
@@ -188,12 +203,12 @@ export function ProductionRunsClient({
         getRowKey={(row) => row.id.toString()}
         emptyTitle={
           search || statusFilter !== ALL_STATUS_VALUE
-            ? "Không tìm thấy lệnh phù hợp"
+            ? INVENTORY_VI.productionOrdersNoResultsTitle
             : INVENTORY_VI.productionOrdersEmptyTitle
         }
         emptyDescription={
           search || statusFilter !== ALL_STATUS_VALUE
-            ? "Đổi từ khóa hoặc trạng thái để xem lại danh sách lệnh."
+            ? INVENTORY_VI.productionOrdersNoResultsDescription
             : INVENTORY_VI.productionOrdersEmptyDescription
         }
         emptyMode={
@@ -204,7 +219,7 @@ export function ProductionRunsClient({
           `${INVENTORY_VI.productionNumber} ${row.production_number}`
         }
         mobileCardRender={(row) => (
-          <ProductionRunCard row={row} href={detailHref(row)} />
+          <ProductionRunCard row={row} onOpen={() => openProductionDetail(row)} />
         )}
       />
     </AppListFrame>
@@ -217,19 +232,15 @@ function statusLabel(status: string) {
 
 function ProductionRunCard({
   row,
-  href,
+  onOpen,
 }: {
-  row: ProductionRunRow;
-  href: string;
+  row: ProductionRunListRow;
+  onOpen: () => void;
 }) {
   const unit = row.entry_unit_name ?? "";
 
   return (
-    <InteractiveCard
-      minHeight="mobile"
-      padding="default"
-      render={<Link href={href} className="min-w-0" />}
-    >
+    <InteractiveCard minHeight="mobile" padding="default" onClick={onOpen}>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-start justify-between gap-2">
           <p className="truncate font-mono text-sm font-semibold">

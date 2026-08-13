@@ -77,7 +77,7 @@ test("Wave 3 burns dead Owner DETAIL/DOC embedded dual presenters", () => {
     "app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx",
     "app/(protected)/inventory/stocktake/[id]/count/count-client.tsx",
     "app/(protected)/inventory/stocktake/new/new-session-client.tsx",
-    "app/(protected)/inventory/production/new/production-new-client.tsx",
+    "app/(protected)/inventory/production/production-create-dialog.tsx",
     "app/(protected)/inventory/production-recipe-panel.tsx",
   ];
 

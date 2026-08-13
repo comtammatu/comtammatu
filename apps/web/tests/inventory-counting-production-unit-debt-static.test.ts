@@ -31,7 +31,7 @@ const productionRunActionsSource = readWeb(
   "app/(protected)/inventory/production-run-actions.ts",
 );
 const productionNewClientSource = readWeb(
-  "app/(protected)/inventory/production/new/production-new-client.tsx",
+  "app/(protected)/inventory/production/production-create-dialog.tsx",
 );
 
 test("inventory unit option helpers delegate to one shared implementation", () => {

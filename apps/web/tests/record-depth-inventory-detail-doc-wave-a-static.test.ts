@@ -16,12 +16,6 @@ function read(path: string): string {
 
 const AUTHOR_DOC = [
   {
-    name: "production/new",
-    page: "app/(protected)/inventory/production/new/page.tsx",
-    client:
-      "app/(protected)/inventory/production/new/production-new-client.tsx",
-  },
-  {
     name: "waste/new",
     page: "app/(protected)/inventory/waste/new/page.tsx",
     client: "app/(protected)/inventory/waste/new/waste-create-client.tsx",
@@ -59,33 +53,11 @@ test("Wave A Author DOC clients use DocumentFormFrame", () => {
   }
 });
 
-test("Wave A production/new page delegates chrome to DocumentFormFrame client", () => {
+test("Wave A production/new page redirects to the list", () => {
   const page = read("app/(protected)/inventory/production/new/page.tsx");
-  const client = read(
-    "app/(protected)/inventory/production/new/production-new-client.tsx",
-  );
-
-  assert.doesNotMatch(
-    page,
-    /<AppPage[\s>]/,
-    "production/new page: no outer AppPage (client owns DocumentFormFrame)",
-  );
-  assert.doesNotMatch(
-    page,
-    /<AppPageHeader[\s>]/,
-    "production/new page: no AppPageHeader (client owns header slot)",
-  );
-  assert.match(
-    client,
-    /<DocumentFormFrame[\s\S]*footer=\{footer\}/,
-    "production/new client: DocumentFormFrame footer slot",
-  );
-  assert.match(client, /AppDetailFooter/, "production/new client: AppDetailFooter");
-  assert.doesNotMatch(
-    client,
-    /\bembedded\b/,
-    "production/new client: no dead embedded dual presenter",
-  );
+  assert.match(page, /redirect\(/);
+  assert.match(page, /\/inventory\/production/);
+  assert.doesNotMatch(page, /DocumentFormFrame|AppPage|ProductionNewClient/);
 });
 
 test("Wave A GRN creation redirects to the canonical queue", () => {
