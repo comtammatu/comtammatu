@@ -1571,7 +1571,6 @@ const perFileCountBudgets = [
       "apps/web/app/components/surface/app-section.tsx": 2,
       "apps/web/app/components/surface/app-sticky-filter-chrome.tsx": 4,
       "apps/web/app/q/[token]/self-order/feedback-sheet.tsx": 2,
-      "apps/web/app/q/invoice/[token]/invoice-buyer-form.tsx": 1,
       "apps/web/app/r/[token]/feedback-form.tsx": 1,
       "apps/web/lib/branch-operator/components/branch-operator-page.tsx": 1,
       "apps/web/lib/hr/roster/weekly-schedule-dialog.tsx": 1,

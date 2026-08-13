@@ -10,6 +10,7 @@ import {
 import { getInvoiceBuyerRequest } from "@lib/hddt/invoice-buyer-request-server";
 import { invoiceBuyer } from "@lib/messages/invoice-buyer";
 import { InvoiceBuyerForm } from "./invoice-buyer-form";
+import { InvoiceBuyerOrderCard } from "./invoice-buyer-order-card";
 
 export const dynamic = "force-dynamic";
 
@@ -99,15 +100,11 @@ export default async function InvoiceBuyerPage({
       className="flex min-h-dvh flex-col bg-background"
       contentClassName="min-h-0 flex-1 gap-3 px-3 py-6"
     >
-      <Item variant="outline" className="bg-card">
-        <ItemContent className="items-center gap-2 text-center">
-          <BrandMascot decorative size="sm" />
-          <ItemTitle className="text-lg">{invoiceBuyer.title}</ItemTitle>
-          <ItemDescription>
-            {invoiceBuyer.order(request.branchName, request.orderNumber)}
-          </ItemDescription>
-        </ItemContent>
-      </Item>
+      <InvoiceBuyerOrderCard
+        branchName={request.branchName}
+        orderNumber={request.orderNumber}
+        summary={request.summary}
+      />
       <InvoiceBuyerForm token={token} expiresAt={request.expiresAt} />
     </AppPage>
   );

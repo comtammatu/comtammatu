@@ -19,6 +19,10 @@ export const invoiceBuyer = {
   lookupFound: "Đã lấy tên đơn vị và địa chỉ từ dữ liệu tra cứu.",
   lookupNotFound: "Mã số thuế chưa hợp lệ hoặc không tìm thấy.",
   lookupUnavailable: "Chưa thể tra cứu. Vui lòng thử lại.",
+  detailsTitle: "Chi tiết hóa đơn",
+  totalLabel: "Tổng cộng",
+  discountLabel: "Giảm giá",
+  serviceChargeLabel: "Phí dịch vụ",
   sectionTitle: "Thông tin xuất HĐĐT",
   sectionDescription: (expiresAt: string) =>
     `Chọn loại người mua rồi điền thông tin. Xác nhận trước ${expiresAt}.`,

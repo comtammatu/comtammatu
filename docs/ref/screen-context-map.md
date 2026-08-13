@@ -373,16 +373,17 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Archetype:** `PUBLIC-WORKFLOW`.
 - **Đối tượng sử dụng chính:** Khách hàng đã thanh toán.
 - **Mục tiêu Nghiệp vụ (Why?):** Cho khách bổ sung thông tin doanh nghiệp và email nhận HĐĐT trong thời hạn tối đa hai giờ mà không yêu cầu thu ngân nhập dữ liệu.
-- **Mục tiêu Người dùng (Goal):** Quét QR trên hoá đơn thanh toán, tra cứu MST, kiểm tra tên đơn vị và địa chỉ, nhập email rồi xác nhận xuất HĐĐT.
+- **Mục tiêu Người dùng (Goal):** Quét QR trên hoá đơn thanh toán, đối chiếu đơn và số tiền, tra cứu MST, kiểm tra tên đơn vị và địa chỉ, nhập email rồi xác nhận xuất HĐĐT.
 - **Luồng thao tác (Workflow):**
   1. Quét QR trên hoá đơn thanh toán.
-  2. Nhập MST và tra cứu thông tin doanh nghiệp.
-  3. Kiểm tra tên đơn vị, địa chỉ; nhập email bắt buộc.
-  4. Xác nhận một lần; màn hình chuyển sang trạng thái hoàn tất và không cho sửa tiếp.
-  5. Nếu quá hạn, đã xác nhận hoặc HĐĐT đã đóng, chỉ hiển thị trạng thái tương ứng.
+  2. Đối chiếu chi nhánh, mã đơn, số tiền; mở card Chi tiết hóa đơn khi cần xem món.
+  3. Chọn Doanh nghiệp hoặc Cá nhân; doanh nghiệp nhập MST rồi tra cứu.
+  4. Kiểm tra tên đơn vị, địa chỉ; nhập email bắt buộc.
+  5. Xác nhận một lần; màn hình chuyển sang trạng thái hoàn tất và không cho sửa tiếp.
+  6. Nếu quá hạn, đã xác nhận hoặc HĐĐT đã đóng, chỉ hiển thị trạng thái tương ứng.
 - **Thông tin hiển thị:**
-  - **Nên hiển thị:** Chi nhánh, mã đơn, thời hạn, MST, tên đơn vị và địa chỉ do API trả về, email nhận HĐĐT, trạng thái tra cứu và kết quả xác nhận.
-  - **KHÔNG hiển thị:** Thao tác thanh toán, dữ liệu POS/Self-Order, mã nội bộ, dữ liệu nhà cung cấp HĐĐT hoặc khả năng sửa sau khi yêu cầu đã đóng.
+  - **Nên hiển thị:** Chi nhánh, mã đơn, số tiền, dòng món thu gọn, thời hạn, MST, tên đơn vị và địa chỉ do API trả về, email nhận HĐĐT, trạng thái tra cứu và kết quả xác nhận.
+  - **KHÔNG hiển thị:** Thao tác thanh toán, dữ liệu POS/Self-Order nội bộ, mã nội bộ, dữ liệu nhà cung cấp HĐĐT hoặc khả năng sửa sau khi yêu cầu đã đóng.
 - **Quy chuẩn UX/UI:** Mobile-first, một hành động chính, control kích thước chạm, hỗ trợ bàn phím và thông báo lỗi/tra cứu bằng ngữ nghĩa truy cập được.
 
 ---

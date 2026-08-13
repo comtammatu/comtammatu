@@ -109,6 +109,8 @@ test("public invoice QR flow wires fail-safe lookup with stale-request protectio
   assert.match(invoiceBuyerForm, /setBuyerAddress\(business\.address\)/);
   assert.match(invoiceBuyerForm, /role="status"/);
   assert.match(invoiceBuyerForm, /requestRef\.current\?\.abort\(\)/);
+  assert.match(invoiceBuyerForm, /InputGroupButton/);
+  assert.match(invoiceBuyerForm, /aria-label=\{invoiceBuyer.lookupAction\}/);
 });
 
 test("supplier list opens ingredients and reuses the guarded MST lookup", () => {

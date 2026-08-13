@@ -1,24 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ReceiptText as IconReceipt } from "lucide-react";
+import { ReceiptText as IconReceipt, Search as IconSearch } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { PublicSection } from "@/components/surface";
 import {
   isBusinessTaxCode,
   lookupBusinessTaxCode,
 } from "@lib/hddt/business-tax-lookup";
-import { BUYER_KIND_TOGGLE_ITEM_CLASS } from "@lib/hddt/buyer-kind-ui";
 import { invoiceBuyer } from "@lib/messages/invoice-buyer";
 import {
   submitInvoiceBuyerDetails,
@@ -76,7 +78,7 @@ export function InvoiceBuyerForm({
     setResult(null);
   }
 
-  function handleBuyerKindChange(value: string | null) {
+  function handleBuyerKindChange(value: string | number | null) {
     if (value !== "business" && value !== "individual") return;
     setBuyerKind(value);
     resetBuyerFields();
@@ -210,28 +212,24 @@ export function InvoiceBuyerForm({
       >
         <Field>
           <FieldLabel>{invoiceBuyer.buyerKindLabel}</FieldLabel>
-          <ToggleGroup
-            type="single"
+          <Tabs
             value={buyerKind}
             onValueChange={handleBuyerKindChange}
-            variant="outline"
-            size="touch"
-            className="grid w-full grid-cols-2 gap-2"
-            aria-label={invoiceBuyer.buyerKindLabel}
+            className="w-full"
           >
-            <ToggleGroupItem
-              value="business"
-              className={`text-sm ${BUYER_KIND_TOGGLE_ITEM_CLASS}`}
+            <TabsList
+              size="touch"
+              className="w-full"
+              aria-label={invoiceBuyer.buyerKindLabel}
             >
-              {invoiceBuyer.buyerKindBusiness}
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="individual"
-              className={`text-sm ${BUYER_KIND_TOGGLE_ITEM_CLASS}`}
-            >
-              {invoiceBuyer.buyerKindIndividual}
-            </ToggleGroupItem>
-          </ToggleGroup>
+              <TabsTrigger value="business" className="flex-1">
+                {invoiceBuyer.buyerKindBusiness}
+              </TabsTrigger>
+              <TabsTrigger value="individual" className="flex-1">
+                {invoiceBuyer.buyerKindIndividual}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <p
             role="status"
             aria-live="polite"
@@ -247,13 +245,43 @@ export function InvoiceBuyerForm({
               ? invoiceBuyer.taxCodeLabel
               : invoiceBuyer.taxCodeOptionalLabel}
           </FieldLabel>
-          <div
-            className={
-              buyerKind === "business"
-                ? "grid gap-2 sm:grid-cols-[1fr_auto]"
-                : undefined
-            }
-          >
+          {buyerKind === "business" ? (
+            <InputGroup size="touch">
+              <InputGroupInput
+                id="invoice-buyer-tax-code"
+                className="font-mono"
+                inputMode="numeric"
+                maxLength={14}
+                autoComplete="off"
+                spellCheck={false}
+                value={taxCode}
+                disabled={isPending}
+                aria-invalid={taxCodeInvalid || undefined}
+                aria-describedby={
+                  lookupMessage ? "invoice-buyer-tax-lookup" : undefined
+                }
+                placeholder="0123456789"
+                onChange={(event) => handleTaxCodeChange(event.target.value)}
+                onBlur={() => {
+                  if (buyerKind === "business") void handleLookup();
+                }}
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  size="icon-sm"
+                  disabled={isPending || lookupStatus === "loading"}
+                  aria-label={invoiceBuyer.lookupAction}
+                  onClick={() => void handleLookup()}
+                >
+                  {lookupStatus === "loading" ? (
+                    <Spinner />
+                  ) : (
+                    <IconSearch />
+                  )}
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+          ) : (
             <Input
               id="invoice-buyer-tax-code"
               controlSize="touch"
@@ -265,30 +293,10 @@ export function InvoiceBuyerForm({
               value={taxCode}
               disabled={isPending}
               aria-invalid={taxCodeInvalid || undefined}
-              aria-describedby={
-                lookupMessage ? "invoice-buyer-tax-lookup" : undefined
-              }
               placeholder="0123456789"
               onChange={(event) => handleTaxCodeChange(event.target.value)}
-              onBlur={() => {
-                if (buyerKind === "business") void handleLookup();
-              }}
             />
-            {buyerKind === "business" ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                disabled={isPending || lookupStatus === "loading"}
-                onClick={() => void handleLookup()}
-              >
-                {lookupStatus === "loading" ? (
-                  <Spinner data-icon="inline-start" />
-                ) : null}
-                {invoiceBuyer.lookupAction}
-              </Button>
-            ) : null}
-          </div>
+          )}
           {taxCodeInvalid ? (
             <FieldError>{invoiceBuyer.taxCodeInvalid}</FieldError>
           ) : null}

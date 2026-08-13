@@ -135,6 +135,9 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   const form = readRepo(
     "apps/web/app/q/invoice/[token]/invoice-buyer-form.tsx",
   );
+  const orderCard = readRepo(
+    "apps/web/app/q/invoice/[token]/invoice-buyer-order-card.tsx",
+  );
   const page = readRepo("apps/web/app/q/invoice/[token]/page.tsx");
   const issuer = readRepo("apps/web/lib/hddt-per-order.ts");
   const posPaymentActions = readRepo(
@@ -205,23 +208,36 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(action, /buyerName: business\.name/);
   assert.match(action, /buyerAddress: business\.address/);
   assert.match(action, /buyerName: parsed\.data\.buyerName/);
-  assert.match(form, /BUYER_KIND_TOGGLE_ITEM_CLASS|data-pressed:bg-primary/);
+  assert.match(form, /TabsList/);
   assert.match(form, /buyerKindSelected/);
-  assert.match(form, /variant="outline"/);
-  assert.match(form, /ToggleGroup/);
+  assert.match(form, /TabsTrigger value="business"/);
+  assert.doesNotMatch(form, /ToggleGroup/);
   assert.match(form, /buyerKindBusiness|buyerKindIndividual/);
   assert.match(form, /readOnly=\{buyerKind === "business"\}/);
   assert.match(form, /id="invoice-buyer-email"[\s\S]*required/);
+  assert.match(form, /InputGroupButton/);
+  assert.match(form, /aria-label=\{invoiceBuyer.lookupAction\}/);
+  assert.doesNotMatch(form, /sm:grid-cols-\[1fr_auto\]/);
   assert.match(form, /formatVNDateTime\(expiresAt\)/);
   assert.match(
     form,
     /Date\.parse\(expiresAt\) - Date\.now\(\)[\s\S]*window\.setTimeout\(\(\) => setExpired\(true\), remaining\)/,
   );
   assert.match(form, /result && !result\.ok && result\.terminal/);
+  assert.match(page, /InvoiceBuyerOrderCard/);
   assert.match(page, /expiresAt=\{request\.expiresAt\}/);
   assert.match(page, /export const dynamic = "force-dynamic"/);
   assert.match(page, /request\.state === "not_required"/);
   assert.match(page, /invoiceBuyer\.notRequiredTitle/);
+  assert.match(orderCard, /collapsible/);
+  assert.match(orderCard, /invoiceBuyer\.detailsTitle/);
+  assert.match(orderCard, /formatVND\(summary\.totalAmount\)/);
+  assert.match(buyerServer, /from\("order_items"\)/);
+  assert.match(buyerServer, /loadOrderSummary/);
+  assert.doesNotMatch(
+    buyerServer,
+    /snapshotSchema = z\.object\([\s\S]*orderId/,
+  );
   assert.match(
     buyerServer,
     /state: z\.enum\(\["open", "submitted", "expired", "closed", "not_required"\]\)/,
