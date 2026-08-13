@@ -83,6 +83,11 @@ describe("Branch manager employee shift-task overrides", () => {
     assert.doesNotMatch(actions, /savePositionTasks/);
     assert.doesNotMatch(sheet, /upsert_position_shift_tasks/);
     assert.doesNotMatch(sheet, /savePositionTasks/);
+    assert.doesNotMatch(sheet, /EmployeeTaskOverrideDialog/);
+    assert.doesNotMatch(sheet, /rounded-md border p-3/);
+    assert.match(sheet, /<AppSheet/);
+    assert.match(sheet, /ItemGroup/);
+    assert.match(sheet, /copy\.phaseLabel/);
   });
 
   test("ADR 0022 records Company HR vs Branch people-ops split", () => {

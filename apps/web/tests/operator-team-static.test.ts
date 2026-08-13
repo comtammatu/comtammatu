@@ -30,9 +30,6 @@ const teamMembersSource = readWeb(
 const teamMembersContentSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/members/members-content.tsx",
 );
-const teamMembersActionsSource = readWeb(
-  "app/(protected)/br/[branchId]/(operator)/team/members/actions.ts",
-);
 const teamMemberTileSource = readWeb(
   "app/(protected)/br/[branchId]/(operator)/team/_components/team-member-tile.tsx",
 );
@@ -297,6 +294,8 @@ test("operator team can force-close a shift only after its scheduled end", () =>
     /isShiftEndedForBusinessDate\(shift\.businessDate/,
   );
   assert.match(teamBoardSource, /canApproveCheckoutForRow/);
+  assert.match(teamBoardSource, /canForceClose/);
+  assert.match(teamPageSource, /PERMISSION_KEYS\.HR_FORCE_CLOSE_ATTENDANCE/);
   assert.match(
     teamBoardSource,
     /row\.positionRole === "cashier"[\s\S]*?row\.positionRole === "chef"[\s\S]*?row\.positionRole === "branch_staff"/,
@@ -304,6 +303,10 @@ test("operator team can force-close a shift only after its scheduled end", () =>
   assert.match(
     teamBoardSource,
     /forceCloseStaleAttendance\(\{\s*attendanceId: shift\.attendanceId,\s*branchId,\s*note: forceCloseReason\.trim\(\),\s*\}\)/,
+  );
+  assert.match(
+    teamBoardSource,
+    /canForceClose &&[\s\S]*canApproveCheckoutForRow\(drawerRow, capabilities\) &&[\s\S]*isPastShiftEnd\(drawerRow\.shift\)/,
   );
   assert.match(operatorMessagesSource, /drawerActionForceClose/);
   assert.match(operatorMessagesSource, /forceCloseNoWorkday/);
@@ -422,32 +425,24 @@ test("operator team members use a roster grid with real profile fields", () => {
   );
   assert.match(teamMembersSource, /employeeId: number \| null/);
   assert.match(teamMembersContentSource, /employeeId: employeeId,/);
-  assert.match(teamMembersSource, /fetchTeamMemberMonthDetail/);
-  assert.match(teamMembersActionsSource, /export const fetchTeamMemberMonthDetail/);
-  assert.match(teamMembersActionsSource, /PERMISSION_KEYS\.HR_VIEW_EMPLOYEE/);
-  assert.match(teamMembersActionsSource, /requireBranchScope:\s*true/);
-  assert.match(teamMembersSource, /detailCopy\.monthSection/);
-  assert.match(teamMembersSource, /detailCopy\.monthDetailHint/);
-  assert.match(operatorMessagesSource, /memberDetail:[\s\S]*monthSection:\s*"Tháng này"/);
-  assert.match(operatorMessagesSource, /monthDetailHint:/);
+  assert.doesNotMatch(teamMembersSource, /fetchTeamMemberMonthDetail/);
+  assert.doesNotMatch(teamMembersSource, /detailCopy\.monthSection/);
+  assert.doesNotMatch(teamMembersSource, /openAttendance/);
   assert.match(operatorMessagesSource, /openShiftTasks:\s*"Việc trong ca"/);
   assert.match(teamMembersSource, /canManageEmployeeOverrides/);
   assert.match(teamMembersSource, /BranchEmployeeTasksSheet/);
-  assert.match(teamMembersSource, /shift\/attendance/);
-  // Drawer stays a short touch summary: one scroll body + sticky footer CTA.
-  // Full day lists belong on /shift/attendance, not inside the drawer.
+  // Drawer stays a short touch summary: contact + today. Month KPIs and the
+  // attendance deep-link belong on /shift/attendance, not inside the drawer.
   assert.match(teamMembersSource, /<AppDrawer/);
   assert.match(teamMembersSource, /footerClassName="shrink-0/);
-  assert.match(
+  assert.doesNotMatch(
     teamMembersSource,
-    /shift\/attendance\?view=summary&employeeId=\$\{activeMember\.employeeId\}&month=/,
+    /shift\/attendance\?view=summary/,
   );
   assert.doesNotMatch(teamMembersSource, /detail\.attendance\.map/);
   assert.doesNotMatch(teamMembersSource, /detail\.leaves\.map/);
-  assert.doesNotMatch(teamMembersActionsSource, /attendance:\s*TeamMemberMonthAttendance/);
   assert.doesNotMatch(teamMembersSource, /fetchEmployeeSummary/);
   assert.doesNotMatch(teamMembersSource, /salary|payslip|birthDate|profileId/i);
-  assert.doesNotMatch(teamMembersActionsSource, /salary|payslip|estimatedPay/i);
 });
 
 test("operator team board derives checklist progress from attendance snapshots", () => {

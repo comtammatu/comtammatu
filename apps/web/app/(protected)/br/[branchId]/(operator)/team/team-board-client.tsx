@@ -59,6 +59,7 @@ type AttendanceState = "not_started" | "working" | "checkout_pending" | "done";
 type TeamBoardFilter = "all" | "working" | "needs_action" | "count_missing";
 type TeamBoardCapabilities = {
   canApproveCheckout: boolean;
+  canForceClose: boolean;
   canApproveCount: boolean;
   approverRole: StaffRole;
 };
@@ -223,8 +224,8 @@ function rowNeedsAction(
   if (row.onApprovedLeave) return false;
   return (
     (canApproveCheckoutForRow(row, capabilities) &&
-      (isPastShiftEnd(row.shift) ||
-        attendanceState(row.shift) === "checkout_pending")) ||
+      (attendanceState(row.shift) === "checkout_pending" ||
+        (capabilities.canForceClose && isPastShiftEnd(row.shift)))) ||
     (capabilities.canApproveCount && row.countStatus === "submitted")
   );
 }
@@ -656,6 +657,7 @@ export function TeamBoardClient({
   rosterHref,
   attendanceHref,
   canApproveCheckout,
+  canForceClose,
   canApproveCount,
   approverRole,
   approvalCounts,
@@ -671,6 +673,7 @@ export function TeamBoardClient({
   rosterHref?: string;
   attendanceHref?: string;
   canApproveCheckout: boolean;
+  canForceClose: boolean;
   canApproveCount: boolean;
   approverRole: StaffRole;
   approvalCounts?: TeamBoardApprovalCounts;
@@ -678,6 +681,7 @@ export function TeamBoardClient({
   const displayRows = buildDisplayRows(rows);
   const capabilities = {
     canApproveCheckout,
+    canForceClose,
     canApproveCount,
     approverRole,
   };
@@ -737,7 +741,7 @@ export function TeamBoardClient({
 
   function requestForceClose(row: TeamBoardDisplayRow) {
     const shift = row.shift;
-    if (!shift || !isPastShiftEnd(shift)) return;
+    if (!canForceClose || !shift || !isPastShiftEnd(shift)) return;
     setForceCloseReason("");
     setForceCloseRow(row);
   }
@@ -745,7 +749,7 @@ export function TeamBoardClient({
   function confirmForceClose() {
     const row = forceCloseRow;
     const shift = row?.shift;
-    if (!row || !shift || !isPastShiftEnd(shift)) return;
+    if (!canForceClose || !row || !shift || !isPastShiftEnd(shift)) return;
 
     startForceCloseTransition(async () => {
       const result = await forceCloseStaleAttendance({
@@ -815,13 +819,15 @@ export function TeamBoardClient({
         footerClassName="shrink-0 gap-2 pt-2"
         footer={
           drawerRow &&
-          ((canApproveCheckoutForRow(drawerRow, capabilities) &&
+          ((canForceClose &&
+            canApproveCheckoutForRow(drawerRow, capabilities) &&
             isPastShiftEnd(drawerRow.shift)) ||
             (canApproveCheckoutForRow(drawerRow, capabilities) &&
               attendanceState(drawerRow.shift) === "checkout_pending") ||
             (canApproveCount && drawerRow.countStatus === "submitted")) ? (
             <>
-                  {canApproveCheckoutForRow(drawerRow, capabilities) &&
+                  {canForceClose &&
+                  canApproveCheckoutForRow(drawerRow, capabilities) &&
                   isPastShiftEnd(drawerRow.shift) ? (
                     <Button
                       variant="destructive"

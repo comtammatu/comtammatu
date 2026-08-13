@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { loadBranchRosterData } from "@lib/hr/roster/load-branch-roster-data";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
-import { RosterTab } from "../../team/_tabs/roster-tab";
+import { BranchRosterClient } from "./roster-client";
 
 /**
  * Full-page branch roster. Kept under `/shift/roster` (not a Team peer tab)
@@ -17,5 +18,15 @@ export default async function OperatorShiftRosterPage({
   const branchId = parseOperatorBranchId(rawBranchId);
   if (branchId == null) notFound();
   const { week } = searchParams ? await searchParams : {};
-  return <RosterTab branchId={branchId} week={week} />;
+  const data = await loadBranchRosterData(branchId, week);
+  return (
+    <BranchRosterClient
+      branchId={data.branchId}
+      branchName={data.branchName}
+      weekStart={data.weekStart}
+      roster={data.roster}
+      canAssign={data.canAssign}
+      loadFailed={data.loadFailed}
+    />
+  );
 }

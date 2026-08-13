@@ -34,7 +34,6 @@ import {
 import { Label } from "@comtammatu/ui/components/label";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
@@ -69,22 +68,6 @@ const copy = messages.hr.leave;
 function formatDateRange(startDate: string, endDate: string): string {
   if (startDate === endDate) return formatVNBusinessDate(startDate);
   return `${formatVNBusinessDate(startDate)} - ${formatVNBusinessDate(endDate)}`;
-}
-
-function annualBalance(request: LeaveRequestRow): string | null {
-  const balance = request.annual_leave_balance;
-  if (request.leave_type !== "annual" || !balance) return null;
-  return copy.annualBalance(
-    balance.remainingDays,
-    balance.entitlementDays,
-    balance.year,
-  );
-}
-
-function monthlyBalance(request: LeaveRequestRow): string | null {
-  const balance = request.monthly_leave_balance;
-  if (request.leave_type !== "annual" || !balance) return null;
-  return copy.monthlyBalance(balance.remainingDays, balance.entitlementDays);
 }
 
 export function BranchLeaveApprovalsClient({
@@ -256,16 +239,28 @@ export function BranchLeaveApprovalsClient({
       description={branchName}
       hideHeaderOnMobile
     >
-      <Tabs value={view} onValueChange={(value) => setView(value as QueueView)}>
-        <TabsList size="touch" className="grid w-full grid-cols-2">
-          <TabsTrigger value="pending">
+      <div className="flex flex-col gap-3">
+        {view === "pending" ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full"
+            onClick={() => setView("history")}
+          >
+            {copy.historyAction}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full"
+            onClick={() => setView("pending")}
+          >
             {copy.pendingTab(pendingRows.length)}
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            {copy.historyTab(historyRows.length)}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value={view}>
+          </Button>
+        )}
       <BranchOperatorPanel
         title={
           view === "pending"
@@ -354,8 +349,7 @@ export function BranchLeaveApprovalsClient({
           </ItemGroup>
         )}
       </BranchOperatorPanel>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <AppSheet
         open={selected != null}
@@ -472,14 +466,6 @@ export function BranchLeaveApprovalsClient({
                     selected.start_date,
                     selected.end_date,
                   )} ${copy.dayUnit}`,
-                },
-                {
-                  label: copy.table.monthlyQuota,
-                  value: monthlyBalance(selected) ?? "—",
-                },
-                {
-                  label: copy.table.annualQuota,
-                  value: annualBalance(selected) ?? "—",
                 },
                 {
                   label: "Gửi lúc",

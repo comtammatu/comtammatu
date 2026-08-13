@@ -47,7 +47,6 @@ test("toolbar Tabs keep content width and the muted track token", () => {
 test("Branch workflow tabs use the named touch contract", () => {
   for (const path of [
     "../app/(protected)/br/_shared/settings/tables/tables-client.tsx",
-    "../app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
     "../app/(protected)/br/[branchId]/(operator)/stock/count-slips/branch-count-slips-client.tsx",
     "../app/(protected)/br/[branchId]/(operator)/stock/consumption/branch-consumption-list-client.tsx",
   ]) {

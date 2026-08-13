@@ -25,7 +25,7 @@ import {
   formatRosterDayHeader,
   formatRosterWeekRange,
 } from "@lib/hr/roster/week";
-import { WeeklyScheduleDialog } from "@lib/hr/roster/weekly-schedule-dialog";
+import { WeeklyScheduleSheet } from "./weekly-schedule-sheet";
 
 const copy = messages.hr.roster;
 
@@ -221,7 +221,7 @@ export function BranchRosterWeekClient({
         </Button>
       </div>
 
-      <WeeklyScheduleDialog
+      <WeeklyScheduleSheet
         open={scheduleEmployeeId != null}
         onOpenChange={(open) => !open && setScheduleEmployeeId(null)}
         branchId={branchId}

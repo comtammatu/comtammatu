@@ -10,19 +10,13 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/page.tsx",
   );
-  const leavesTab = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/leaves-tab.tsx",
-  );
   const client = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/leave-approvals/branch-leave-approvals-client.tsx",
   );
   const data = read("apps/web/lib/hr/branch-leave-approval-data.ts");
-  assert.match(route, /import \{ LeavesTab \} from "\.\.\/\.\.\/team\/_tabs\/leaves-tab"/);
-  assert.match(route, /return <LeavesTab branchId=\{branchId\} \/>/);
-
-  assert.match(leavesTab, /loadBranchLeaveApprovalData/);
-  assert.match(leavesTab, /BranchLeaveApprovalsClient/);
-  assert.doesNotMatch(leavesTab, /LeaveApprovalsPageContent|EmployeePage/);
+  assert.match(route, /loadBranchLeaveApprovalData/);
+  assert.match(route, /BranchLeaveApprovalsClient/);
+  assert.doesNotMatch(route, /team\/_tabs|LeavesTab|LeaveApprovalsPageContent|EmployeePage/);
 
   assert.match(data, /import "server-only"/);
   assert.match(data, /resolveBranchContext/);
@@ -34,10 +28,8 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);
   assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
-  assert.match(
-    client,
-    /view === "pending"[\s\S]*copy\.historyTab\(historyRows\.length\)/,
-  );
+  assert.match(client, /copy\.historyAction/);
+  assert.doesNotMatch(client, /TabsList|TabsTrigger|monthlyQuota|annualQuota/);
   assert.match(client, /lg:grid-cols-2/);
   assert.match(client, /size="touch(?:-lg)?"/);
   assert.match(client, /sticky bottom-0/);

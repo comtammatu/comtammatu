@@ -97,6 +97,7 @@ export default async function TeamBoardPage({
   const [
     canViewTeam,
     canApproveCheckout,
+    canForceClose,
     canApproveCount,
     canAssignCount,
     canApproveLeave,
@@ -111,6 +112,11 @@ export default async function TeamBoardPage({
     probePermission(
       { supabase, claims },
       PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+      context.branchId,
+    ),
+    probePermission(
+      { supabase, claims },
+      PERMISSION_KEYS.HR_FORCE_CLOSE_ATTENDANCE,
       context.branchId,
     ),
     probePermission(
@@ -190,6 +196,7 @@ export default async function TeamBoardPage({
                   : undefined
               }
               canApproveCheckout={canApproveCheckout}
+              canForceClose={canForceClose}
               canApproveCount={canApproveCount}
               approverRole={claims.user_role as StaffRole}
               approvalCounts={

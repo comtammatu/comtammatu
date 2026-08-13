@@ -8,7 +8,10 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 - **Đếm:** 66 `page.tsx` (63 operator + 3 station). Khóa: 2026-08-08.
 - Wave 1 Đội: fork attendance + roster (xong). Wave 2 Kho: transfer /
   transfer/new / purchase-requests (xong). Wave 3: waste + ngưỡng tồn (xong).
-  Wave 4: hộp thư góp ý + QR (xong).
+  Wave 4: hộp thư góp ý + QR (xong). Wave 5 Đội+Ca interiors: gỡ
+  `team/_tabs`, drawer Nhân viên / việc trong ca / chấm công / roster /
+  duyệt nghỉ (xong). Class A không đổi — gold chrome giữ; Wave 5 diet field
+  và overlay, không fork plane.
 
 ## Rubric class
 

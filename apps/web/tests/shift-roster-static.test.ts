@@ -30,14 +30,11 @@ test("branch roster route uses leave-approvals auth gating pattern", () => {
   const page = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/roster/page.tsx",
   );
-  const rosterTab = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/roster-tab.tsx",
-  );
   const loader = read("apps/web/lib/hr/roster/load-branch-roster-data.ts");
 
-  assert.match(page, /import \{ RosterTab \} from "\.\.\/\.\.\/team\/_tabs\/roster-tab"/);
-  assert.match(page, /return <RosterTab branchId=\{branchId\} week=\{week\} \/>/);
-  assert.match(rosterTab, /loadBranchRosterData/);
+  assert.match(page, /loadBranchRosterData/);
+  assert.match(page, /BranchRosterClient/);
+  assert.doesNotMatch(page, /team\/_tabs|RosterTab/);
   assert.match(loader, /branch\.branch_kind !== "branch"/);
   assert.match(loader, /PERMISSION_KEYS\.HR_ASSIGN_SHIFT/);
 });
@@ -93,6 +90,13 @@ test("Branch roster uses week cards without Owner DataTable", () => {
   assert.match(branchWeek, /RosterDayCell/);
   assert.match(branchWeek, /useRosterWeekEditor/);
   assert.match(branchWeek, /sticky bottom-0/);
+  assert.match(branchWeek, /from "\.\/weekly-schedule-sheet"/);
+  assert.match(branchWeek, /WeeklyScheduleSheet/);
+  assert.doesNotMatch(branchWeek, /WeeklyScheduleDialog/);
+  assert.doesNotMatch(
+    branchWeek,
+    /from "@lib\/hr\/roster\/weekly-schedule-sheet"/,
+  );
   assert.doesNotMatch(
     branchWeek,
     /DataTable|from "@lib\/hr\/roster\/roster-week-client"/,

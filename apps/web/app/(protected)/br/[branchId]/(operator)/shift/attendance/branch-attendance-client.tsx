@@ -50,10 +50,6 @@ import {
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   fetchAttendance,
@@ -508,38 +504,41 @@ export function BranchAttendanceClient({
       hideHeaderOnMobile
     >
       <div className="flex flex-col gap-3">
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(value) => {
-            if (value === "clock" || value === "summary") setView(value);
-          }}
-          size="touch"
-          className="grid w-full grid-cols-2"
-          aria-label={attendanceCopy.viewSwitcher}
-        >
-          <ToggleGroupItem value="clock">
-            {attendanceCopy.clockView}
-          </ToggleGroupItem>
-          <ToggleGroupItem value="summary">
+        {view === "clock" ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full"
+            onClick={() => setView("summary")}
+          >
             {attendanceCopy.summaryView}
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        {view === "summary" ? (
-          <Select value={month} onValueChange={setMonth} disabled={isPending}>
-            <SelectTrigger size="touch" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map((option) => (
-                <SelectItem key={option} value={option} size="touch">
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
+          </Button>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              onClick={() => setView("clock")}
+            >
+              {attendanceCopy.clockView}
+            </Button>
+            <Select value={month} onValueChange={setMonth} disabled={isPending}>
+              <SelectTrigger size="touch" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((option) => (
+                  <SelectItem key={option} value={option} size="touch">
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <BranchOperatorPanel
           title={

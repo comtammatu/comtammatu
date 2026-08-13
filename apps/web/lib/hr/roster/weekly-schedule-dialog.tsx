@@ -1,60 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormDialog, SelectField, BusinessDateField } from "@/components/form";
 import { messages } from "@lib/messages";
-import { getVNDateString } from "@comtammatu/shared/time";
 import { saveEmployeeWeeklySchedule } from "./actions";
 import {
   ROSTER_WEEKDAY_KEYS,
   type EmployeeWeeklySchedule,
   type RosterEmployee,
   type RosterShift,
-  type RosterWeekdayKey,
 } from "./roster-model";
+import {
+  WEEKLY_SCHEDULE_OFF,
+  WEEKLY_SCHEDULE_WEEKDAY_LABELS,
+  weeklyScheduleDaysPayload,
+  weeklyScheduleDefaults,
+  weeklyScheduleFormSchema,
+  weeklyScheduleShiftOptions,
+  type WeeklyScheduleFormValues,
+} from "./weekly-schedule-form";
 
-const OFF = "__off__";
 const copy = messages.hr.roster;
-
-const weekdayLabels: Record<RosterWeekdayKey, string> = {
-  monday: "Thứ 2",
-  tuesday: "Thứ 3",
-  wednesday: "Thứ 4",
-  thursday: "Thứ 5",
-  friday: "Thứ 6",
-  saturday: "Thứ 7",
-  sunday: "Chủ nhật",
-};
-
-const scheduleFormSchema = z
-  .object({
-    effectiveFrom: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, copy.invalidEffectiveDate),
-    presetShift: z.string(),
-    monday: z.string(),
-    tuesday: z.string(),
-    wednesday: z.string(),
-    thursday: z.string(),
-    friday: z.string(),
-    saturday: z.string(),
-    sunday: z.string(),
-  })
-  .superRefine((values, context) => {
-    if (ROSTER_WEEKDAY_KEYS.every((day) => values[day] === OFF)) {
-      context.addIssue({
-        code: "custom",
-        path: ["monday"],
-        message: copy.selectAtLeastOneDay,
-      });
-    }
-  });
-
-type ScheduleFormValues = z.infer<typeof scheduleFormSchema>;
 
 export function WeeklyScheduleDialog({
   open,
@@ -74,37 +43,19 @@ export function WeeklyScheduleDialog({
   onSaved: () => void;
 }) {
   const shiftOptions = useMemo(
-    () =>
-      shifts.map((shift) => ({
-        value: String(shift.id),
-        label: `${shift.name} (${shift.startTime.slice(0, 5)}–${shift.endTime.slice(0, 5)})`,
-      })),
+    () => weeklyScheduleShiftOptions(shifts),
     [shifts],
   );
   const dayOptions = useMemo(
-    () => [{ value: OFF, label: copy.dayOff }, ...shiftOptions],
+    () => [{ value: WEEKLY_SCHEDULE_OFF, label: copy.dayOff }, ...shiftOptions],
     [shiftOptions],
   );
-  const defaultValues = useMemo<ScheduleFormValues>(() => {
-    const firstAssignedShift = schedule
-      ? ROSTER_WEEKDAY_KEYS.map((day) => schedule.shiftsByDay[day]).find(
-          (shiftId) => shiftId != null,
-        )
-      : null;
-    return {
-      effectiveFrom:
-        schedule?.effectiveFrom ?? employee?.startDate ?? getVNDateString(),
-      presetShift: String(firstAssignedShift ?? shifts[0]?.id ?? ""),
-      ...Object.fromEntries(
-        ROSTER_WEEKDAY_KEYS.map((day) => [
-          day,
-          String(schedule?.shiftsByDay[day] ?? OFF),
-        ]),
-      ),
-    } as ScheduleFormValues;
-  }, [employee?.startDate, schedule, shifts]);
+  const defaultValues = useMemo<WeeklyScheduleFormValues>(
+    () => weeklyScheduleDefaults(employee, shifts, schedule),
+    [employee, schedule, shifts],
+  );
 
-  async function handleSubmit(values: ScheduleFormValues) {
+  async function handleSubmit(values: WeeklyScheduleFormValues) {
     if (!employee)
       return { success: false as const, error: copy.employeeNotFound };
     if (employee.startDate && values.effectiveFrom < employee.startDate) {
@@ -117,11 +68,7 @@ export function WeeklyScheduleDialog({
       branchId,
       employeeId: employee.employeeId,
       effectiveFrom: values.effectiveFrom,
-      days: ROSTER_WEEKDAY_KEYS.flatMap((day, index) =>
-        values[day] === OFF
-          ? []
-          : [{ weekday: index + 1, shiftId: Number(values[day]) }],
-      ),
+      days: weeklyScheduleDaysPayload(values),
     });
     if (result.success) onSaved();
     return result;
@@ -158,7 +105,7 @@ export function WeeklyScheduleDialog({
       onOpenChange={onOpenChange}
       title={employee ? copy.scheduleTitle(employee.fullName) : copy.schedule}
       description={copy.scheduleDescription}
-      schema={scheduleFormSchema}
+      schema={weeklyScheduleFormSchema}
       defaultValues={defaultValues}
       entityKey={`${employee?.employeeId ?? "none"}:${schedule?.effectiveFrom ?? "new"}`}
       onSubmit={handleSubmit}
@@ -171,10 +118,14 @@ export function WeeklyScheduleDialog({
         const applyPreset = (workdayCount: 5 | 6 | 7) => {
           if (!presetShift) return;
           ROSTER_WEEKDAY_KEYS.forEach((day, index) => {
-            form.setValue(day, index < workdayCount ? presetShift : OFF, {
-              shouldDirty: true,
-              shouldValidate: true,
-            });
+            form.setValue(
+              day,
+              index < workdayCount ? presetShift : WEEKLY_SCHEDULE_OFF,
+              {
+                shouldDirty: true,
+                shouldValidate: true,
+              },
+            );
           });
         };
 
@@ -230,7 +181,7 @@ export function WeeklyScheduleDialog({
                   key={day}
                   control={form.control}
                   name={day}
-                  label={weekdayLabels[day]}
+                  label={WEEKLY_SCHEDULE_WEEKDAY_LABELS[day]}
                   options={dayOptions}
                 />
               ))}

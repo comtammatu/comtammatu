@@ -1,16 +1,8 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: branch home uses vietnamese */
 "use client";
 
+import { useMemo, useState, type ReactNode } from "react";
 import {
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
-import Link from "next/link";
-import {
-  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -18,11 +10,8 @@ import {
   Search,
   UsersRound,
 } from "lucide-react";
-import { formatCount, formatDecimal } from "@comtammatu/shared/format";
-import {
-  formatVNTime as formatTimeVN,
-  getVNMonthString,
-} from "@comtammatu/shared/time";
+import { formatCount } from "@comtammatu/shared/format";
+import { formatVNTime as formatTimeVN } from "@comtammatu/shared/time";
 import {
   Avatar,
   AvatarFallback,
@@ -44,10 +33,6 @@ import {
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { TeamMemberTile } from "../_components/team-member-tile";
-import {
-  fetchTeamMemberMonthDetail,
-  type TeamMemberMonthDetail,
-} from "./actions";
 import { BranchEmployeeTasksSheet } from "./branch-employee-tasks-sheet";
 
 const detailCopy = messages.operator.teamBoard.memberDetail;
@@ -267,66 +252,6 @@ function InfoTile({
   );
 }
 
-function MonthSummary({
-  detail,
-  loading,
-  error,
-  hasEmployee,
-}: {
-  detail: TeamMemberMonthDetail | null;
-  loading: boolean;
-  error: string | null;
-  hasEmployee: boolean;
-}) {
-  if (!hasEmployee) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        {detailCopy.noEmployeeRecord}
-      </p>
-    );
-  }
-
-  if (loading && !detail) {
-    return (
-      <p className="text-sm text-muted-foreground">{detailCopy.monthLoading}</p>
-    );
-  }
-
-  if (error && !detail) {
-    return <p className="text-sm text-destructive">{error}</p>;
-  }
-
-  if (!detail) return null;
-
-  return (
-    <MemberDetailBlock title={detailCopy.monthSection}>
-      <div className="grid grid-cols-2 gap-2">
-        <InfoTile
-          icon={<CalendarDays />}
-          label={detailCopy.workdays}
-          value={formatDecimal(detail.workdays, 1)}
-        />
-        <InfoTile
-          icon={<Clock3 />}
-          label={detailCopy.workHours}
-          value={formatDecimal(detail.workHours, 1)}
-        />
-        <InfoTile
-          icon={<CalendarDays />}
-          label={detailCopy.approvedLeaveDays}
-          value={formatDecimal(detail.approvedLeaveDays, 1)}
-        />
-        <InfoTile
-          icon={<ClipboardList />}
-          label={detailCopy.pendingLeave}
-          value={formatCount(detail.pendingLeaveCount)}
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">{detailCopy.monthDetailHint}</p>
-    </MemberDetailBlock>
-  );
-}
-
 export function MembersClient({
   branchId,
   employees,
@@ -339,42 +264,7 @@ export function MembersClient({
   const [activeMember, setActiveMember] = useState<TeamMemberRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TeamMemberFilter>("all");
-  const [monthDetail, setMonthDetail] = useState<TeamMemberMonthDetail | null>(
-    null,
-  );
-  const [monthError, setMonthError] = useState<string | null>(null);
-  const [isMonthLoading, startMonthTransition] = useTransition();
   const [tasksEmployeeId, setTasksEmployeeId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!activeMember) {
-      setMonthDetail(null);
-      setMonthError(null);
-      return;
-    }
-    if (activeMember.employeeId == null) {
-      setMonthDetail(null);
-      setMonthError(null);
-      return;
-    }
-
-    const employeeId = activeMember.employeeId;
-    setMonthDetail(null);
-    setMonthError(null);
-    startMonthTransition(async () => {
-      const result = await fetchTeamMemberMonthDetail({
-        branchId,
-        employeeId,
-      });
-      if (!result.success) {
-        setMonthError(result.error ?? detailCopy.monthLoadFailed);
-        setMonthDetail(null);
-        return;
-      }
-      setMonthDetail(result.data ?? null);
-      setMonthError(null);
-    });
-  }, [activeMember, branchId]);
 
   const stats = useMemo(
     () => ({
@@ -526,37 +416,16 @@ export function MembersClient({
         headerClassName="shrink-0 text-left"
         footerClassName="shrink-0 pt-2"
         footer={
-          activeMember?.employeeId != null ? (
-            <>
-                  {canManageEmployeeOverrides ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="touch"
-                      className="w-full"
-                      onClick={() =>
-                        setTasksEmployeeId(activeMember.employeeId)
-                      }
-                    >
-                      {detailCopy.openShiftTasks}
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="default"
-                    size="touch"
-                    className="w-full"
-                    render={
-                      <Link
-                        href={`/br/${branchId}/shift/attendance?view=summary&employeeId=${activeMember.employeeId}&month=${
-                          monthDetail?.monthStart.slice(0, 7) ??
-                          getVNMonthString()
-                        }`}
-                      />
-                    }
-                  >
-                    {detailCopy.openAttendance}
-                  </Button>
-            </>
+          activeMember?.employeeId != null && canManageEmployeeOverrides ? (
+            <Button
+              type="button"
+              variant="default"
+              size="touch"
+              className="w-full"
+              onClick={() => setTasksEmployeeId(activeMember.employeeId)}
+            >
+              {detailCopy.openShiftTasks}
+            </Button>
           ) : undefined
         }
       >
@@ -618,12 +487,11 @@ export function MembersClient({
                     </div>
                   </MemberDetailBlock>
 
-                  <MonthSummary
-                    detail={monthDetail}
-                    loading={isMonthLoading}
-                    error={monthError}
-                    hasEmployee={activeMember.employeeId != null}
-                  />
+                  {activeMember.employeeId == null ? (
+                    <p className="text-sm text-muted-foreground">
+                      {detailCopy.noEmployeeRecord}
+                    </p>
+                  ) : null}
                 </div>
           ) : null}
       </AppDrawer>

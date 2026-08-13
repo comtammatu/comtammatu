@@ -11,23 +11,14 @@ test("Branch attendance owns a fixed-scope touch presenter", () => {
   const route = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/page.tsx",
   );
-  const attendanceTab = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/team/_tabs/attendance-tab.tsx",
-  );
   const client = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/shift/attendance/branch-attendance-client.tsx",
   );
   const data = read("apps/web/lib/hr/branch-attendance-data.ts");
 
-  assert.match(
-    route,
-    /import \{ AttendanceTab \} from "\.\.\/\.\.\/team\/_tabs\/attendance-tab"/,
-  );
-  assert.match(route, /return <AttendanceTab branchId=\{branchId\} \/>/);
-
-  assert.match(attendanceTab, /loadBranchAttendanceData/);
-  assert.match(attendanceTab, /BranchAttendanceClient/);
-  assert.doesNotMatch(attendanceTab, /AttendanceTable/);
+  assert.match(route, /loadBranchAttendanceData/);
+  assert.match(route, /BranchAttendanceClient/);
+  assert.doesNotMatch(route, /team\/_tabs|AttendanceTab|AttendanceTable/);
 
   assert.match(data, /import "server-only"/);
   assert.match(data, /resolveBranchContext/);
@@ -40,7 +31,8 @@ test("Branch attendance owns a fixed-scope touch presenter", () => {
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
-  assert.match(client, /size="touch"/);
+  assert.match(client, /setView\("summary"\)/);
+  assert.doesNotMatch(client, /ToggleGroup/);
   assert.match(client, /sticky bottom-0/);
   assert.doesNotMatch(
     client,
