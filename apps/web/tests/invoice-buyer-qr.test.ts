@@ -229,11 +229,30 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(page, /export const dynamic = "force-dynamic"/);
   assert.match(page, /request\.state === "not_required"/);
   assert.match(page, /invoiceBuyer\.notRequiredTitle/);
-  assert.match(orderCard, /collapsible/);
+  assert.match(orderCard, /<Collapsible/);
+  assert.match(orderCard, /CollapsibleTrigger/);
+  assert.match(orderCard, /justify-between/);
   assert.match(orderCard, /invoiceBuyer\.detailsTitle/);
   assert.match(orderCard, /formatVND\(summary\.totalAmount\)/);
+  assert.match(orderCard, /invoiceBuyer\.quantityLabel/);
+  assert.match(orderCard, /invoiceBuyer\.unitPriceLabel/);
+  assert.match(orderCard, /invoiceBuyer\.lineTotalLabel/);
+  assert.match(orderCard, /invoiceBuyer\.vatRateLabel/);
+  assert.match(orderCard, /formatPercent\(item\.vatRate, 0\)/);
+  assert.match(orderCard, /formatQuantity\(item\.quantity\)/);
+  assert.match(orderCard, /formatVND\(item\.unitPrice\)/);
+  assert.doesNotMatch(orderCard, /formatPortionQuantity/);
+  assert.doesNotMatch(orderCard, /BrandMascot|PublicSection|DataTable/);
   assert.match(buyerServer, /from\("order_items"\)/);
+  assert.match(buyerServer, /unit_price, subtotal, discount_amount, vat_rate, modifiers, sides/);
+  assert.match(buyerServer, /buildHddtProviderLines/);
+  assert.match(buyerServer, /buildInvoiceLineItemsFromOrderItems/);
   assert.match(buyerServer, /loadOrderSummary/);
+  const buyerCopy = readRepo("apps/web/lib/messages/invoice-buyer.ts");
+  assert.match(buyerCopy, /quantityLabel: "Số lượng"/);
+  assert.match(buyerCopy, /unitPriceLabel: "Đơn giá"/);
+  assert.match(buyerCopy, /lineTotalLabel: "Thành tiền"/);
+  assert.match(buyerCopy, /vatRateLabel: "Thuế suất GTGT"/);
   assert.doesNotMatch(
     buyerServer,
     /snapshotSchema = z\.object\([\s\S]*orderId/,

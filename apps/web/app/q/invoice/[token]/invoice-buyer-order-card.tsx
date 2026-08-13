@@ -1,15 +1,27 @@
 "use client";
 
-import { formatPortionQuantity, formatVND } from "@comtammatu/shared/format";
-import { BrandMascot } from "@/components/brand";
-import { PublicSection } from "@/components/surface";
+import { ChevronDown as IconChevronDown } from "lucide-react";
+import {
+  formatPercent,
+  formatQuantity,
+  formatVND,
+} from "@comtammatu/shared/format";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
 import {
   Item,
   ItemContent,
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import type { InvoiceBuyerOrderSummary } from "@lib/hddt/invoice-buyer-types";
+import type {
+  InvoiceBuyerOrderLine,
+  InvoiceBuyerOrderSummary,
+} from "@lib/hddt/invoice-buyer-types";
 import { invoiceBuyer } from "@lib/messages/invoice-buyer";
 
 function MoneyRow({
@@ -39,6 +51,27 @@ function MoneyRow({
   );
 }
 
+function InvoiceBuyerSlipLine({ item }: { item: InvoiceBuyerOrderLine }) {
+  const lineMeta = [
+    `${invoiceBuyer.quantityLabel} ${formatQuantity(item.quantity)}`,
+    `${invoiceBuyer.unitPriceLabel} ${formatVND(item.unitPrice)}`,
+    `${invoiceBuyer.vatRateLabel} ${formatPercent(item.vatRate, 0)}`,
+  ].join(" · ");
+
+  return (
+    <li className="flex items-start justify-between gap-3 border-b border-border py-2 last:border-b-0 last:pb-0">
+      <div className="min-w-0 grid gap-1">
+        <p className="min-w-0 break-words font-medium">{item.name}</p>
+        <p className="text-xs text-muted-foreground">{lineMeta}</p>
+      </div>
+      <p className="shrink-0 text-right font-mono tabular-nums">
+        <span className="sr-only">{invoiceBuyer.lineTotalLabel} </span>
+        {formatVND(item.amount)}
+      </p>
+    </li>
+  );
+}
+
 export function InvoiceBuyerOrderCard({
   branchName,
   orderNumber,
@@ -49,71 +82,77 @@ export function InvoiceBuyerOrderCard({
   summary?: InvoiceBuyerOrderSummary;
 }) {
   return (
-    <>
-      <Item variant="outline" className="bg-card">
-        <ItemContent className="items-center gap-2 text-center">
-          <BrandMascot decorative size="sm" />
-          <ItemTitle className="text-lg">{invoiceBuyer.title}</ItemTitle>
-          <ItemDescription>
-            {invoiceBuyer.order(branchName, orderNumber)}
-          </ItemDescription>
+    <Item variant="outline" className="bg-card">
+      <ItemContent className="w-full gap-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <ItemTitle size="heading">{invoiceBuyer.title}</ItemTitle>
           {summary ? (
-            <p className="font-heading text-lg font-semibold tabular-nums">
+            <p className="shrink-0 font-heading text-sm font-semibold tabular-nums">
               {formatVND(summary.totalAmount)}
             </p>
           ) : null}
-        </ItemContent>
-      </Item>
-      {summary ? (
-        <PublicSection
-          size="sm"
-          collapsible
-          defaultOpen={false}
-          title={invoiceBuyer.detailsTitle}
-        >
-          <ul className="grid gap-2">
-            {summary.items.map((item, index) => (
-              <li
-                key={`${item.name}-${index}`}
-                className="flex items-baseline justify-between gap-3"
-              >
-                <span className="min-w-0">
-                  <span className="break-words">{item.name}</span>{" "}
-                  <span className="text-muted-foreground">
-                    {formatPortionQuantity(item.quantity)}
-                  </span>
-                </span>
-                <span className="shrink-0 font-mono tabular-nums">
-                  {formatVND(item.amount)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {summary.discountAmount > 0 || summary.serviceCharge > 0 ? (
-            <div className="grid gap-2 border-t pt-3">
-              {summary.discountAmount > 0 ? (
-                <MoneyRow
-                  label={invoiceBuyer.discountLabel}
-                  amount={-summary.discountAmount}
+        </div>
+        <ItemDescription>
+          {invoiceBuyer.order(branchName, orderNumber)}
+        </ItemDescription>
+        {summary ? (
+          <Collapsible className="pt-1">
+            <CollapsibleTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="touch"
+                  className="group w-full justify-between gap-2 px-0 font-medium"
                 />
+              }
+            >
+              <span>{invoiceBuyer.detailsTitle}</span>
+              <IconChevronDown
+                className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
+                aria-hidden
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="grid gap-2 border-t pt-2">
+              <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                <span>{invoiceBuyer.itemColumn}</span>
+                <span>{invoiceBuyer.lineTotalLabel}</span>
+              </div>
+              <ul>
+                {summary.items.map((item, index) => (
+                  <InvoiceBuyerSlipLine
+                    key={`${item.name}-${index}`}
+                    item={item}
+                  />
+                ))}
+              </ul>
+              {summary.discountAmount > 0 || summary.serviceCharge > 0 ? (
+                <div className="grid gap-2 border-t pt-2">
+                  {summary.discountAmount > 0 ? (
+                    <MoneyRow
+                      label={invoiceBuyer.discountLabel}
+                      amount={-summary.discountAmount}
+                    />
+                  ) : null}
+                  {summary.serviceCharge > 0 ? (
+                    <MoneyRow
+                      label={invoiceBuyer.serviceChargeLabel}
+                      amount={summary.serviceCharge}
+                    />
+                  ) : null}
+                </div>
               ) : null}
-              {summary.serviceCharge > 0 ? (
+              <div className="border-t pt-2">
                 <MoneyRow
-                  label={invoiceBuyer.serviceChargeLabel}
-                  amount={summary.serviceCharge}
+                  label={invoiceBuyer.totalLabel}
+                  amount={summary.totalAmount}
+                  emphasize
                 />
-              ) : null}
-            </div>
-          ) : null}
-          <div className="border-t pt-3">
-            <MoneyRow
-              label={invoiceBuyer.totalLabel}
-              amount={summary.totalAmount}
-              emphasize
-            />
-          </div>
-        </PublicSection>
-      ) : null}
-    </>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
+      </ItemContent>
+    </Item>
   );
 }

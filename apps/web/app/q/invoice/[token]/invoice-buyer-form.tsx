@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ReceiptText as IconReceipt, Search as IconSearch } from "lucide-react";
+import { Search as IconSearch } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
@@ -200,7 +200,6 @@ export function InvoiceBuyerForm({
     <PublicSection
       title={invoiceBuyer.sectionTitle}
       description={invoiceBuyer.sectionDescription(formatVNDateTime(expiresAt))}
-      icon={<IconReceipt />}
       size="sm"
     >
       <form

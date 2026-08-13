@@ -3,14 +3,32 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import type { InvoiceBuyerOrderSummary } from "./invoice-buyer-types";
+import {
+  buildHddtProviderLines,
+  buildInvoiceLineItemsFromOrderItems,
+  type OrderItemForInvoiceLines,
+} from "@comtammatu/shared/hddt";
+import type { InvoiceLineItem } from "@comtammatu/shared/providers";
+import type {
+  InvoiceBuyerOrderLine,
+  InvoiceBuyerOrderSummary,
+} from "./invoice-buyer-types";
 
 export type { InvoiceBuyerOrderSummary };
+
+const vatRateSchema = z.union([
+  z.literal(0),
+  z.literal(5),
+  z.literal(8),
+  z.literal(10),
+]);
 
 const orderLineSchema = z.object({
   name: z.string().min(1).max(200),
   quantity: z.coerce.number().finite(),
+  unitPrice: z.coerce.number().finite(),
   amount: z.coerce.number().finite(),
+  vatRate: vatRateSchema,
 });
 
 const orderSummarySchema = z.object({
@@ -54,14 +72,67 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function formatOrderLineName(
-  itemName: string,
-  variantName: string | null,
-): string {
-  const name = itemName.trim() || "Món ăn";
-  const variant = variantName?.trim();
-  if (!variant || variant === name) return name;
-  return `${name} - ${variant}`;
+function toPublicLine(line: InvoiceLineItem): InvoiceBuyerOrderLine {
+  return {
+    name: line.name,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    amount: line.amount,
+    vatRate: line.vatRate,
+  };
+}
+
+function parseOrderSummary(
+  totalAmount: unknown,
+  serviceCharge: unknown,
+  discountAmount: unknown,
+  items: InvoiceBuyerOrderLine[],
+): InvoiceBuyerOrderSummary | undefined {
+  const parsed = orderSummarySchema.safeParse({
+    totalAmount,
+    serviceCharge,
+    discountAmount,
+    items,
+  });
+  return parsed.success ? parsed.data : undefined;
+}
+
+function projectOrderSummary(
+  order: {
+    total_amount: number;
+    service_charge: number;
+    order_discount_amount: number;
+  },
+  items: OrderItemForInvoiceLines[],
+): InvoiceBuyerOrderSummary | undefined {
+  try {
+    const projected = buildHddtProviderLines({
+      items,
+      orderDiscountAmount: order.order_discount_amount,
+      serviceCharge: order.service_charge,
+      totalAmount: order.total_amount,
+    });
+    return parseOrderSummary(
+      order.total_amount,
+      0,
+      0,
+      projected.map(toPublicLine),
+    );
+  } catch {
+    console.error("[hddt-buyer] invoice line projection failed");
+  }
+
+  try {
+    return parseOrderSummary(
+      order.total_amount,
+      order.service_charge,
+      order.order_discount_amount,
+      buildInvoiceLineItemsFromOrderItems(items).map(toPublicLine),
+    );
+  } catch {
+    console.error("[hddt-buyer] invoice line expand failed");
+    return undefined;
+  }
 }
 
 async function loadOrderSummary(
@@ -88,7 +159,9 @@ async function loadOrderSummary(
       .maybeSingle(),
     supabase
       .from("order_items")
-      .select("item_name, variant_name, quantity, subtotal")
+      .select(
+        "item_name, variant_name, quantity, unit_price, subtotal, discount_amount, vat_rate, modifiers, sides",
+      )
       .eq("order_id", request.order_id)
       .eq("tenant_id", request.tenant_id)
       .neq("status", "cancelled")
@@ -106,17 +179,10 @@ async function loadOrderSummary(
   }
   if (!orderResult.data) return undefined;
 
-  const parsed = orderSummarySchema.safeParse({
-    totalAmount: orderResult.data.total_amount,
-    serviceCharge: orderResult.data.service_charge,
-    discountAmount: orderResult.data.order_discount_amount,
-    items: (itemsResult.data ?? []).map((item) => ({
-      name: formatOrderLineName(item.item_name, item.variant_name),
-      quantity: item.quantity,
-      amount: item.subtotal,
-    })),
-  });
-  return parsed.success ? parsed.data : undefined;
+  return projectOrderSummary(
+    orderResult.data,
+    itemsResult.data ?? [],
+  );
 }
 
 export async function getInvoiceBuyerRequest(

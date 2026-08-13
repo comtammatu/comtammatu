@@ -98,7 +98,7 @@ export default async function InvoiceBuyerPage({
       mobile
       padded={false}
       className="flex min-h-dvh flex-col bg-background"
-      contentClassName="min-h-0 flex-1 gap-3 px-3 py-6"
+      contentClassName="min-h-0 flex-1 gap-2 px-3 py-4"
     >
       <InvoiceBuyerOrderCard
         branchName={request.branchName}
