@@ -38,6 +38,22 @@ test("threshold editor persists Min and clears unused Re and Max values", () => 
   assert.match(thresholdActions, /max_stock_level: null/);
 });
 
+test("Branch threshold list edits Min only and shares the bulk clear-Re-Max action", () => {
+  const branchClient = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/catalog-thresholds-client.tsx",
+  );
+  const branchPage = read(
+    "app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx",
+  );
+  assert.match(
+    branchClient,
+    /type ThresholdRow = \{[\s\S]*minStock: string/,
+  );
+  assert.doesNotMatch(branchClient, /reorderPoint|maxStock/);
+  assert.match(branchClient, /bulkUpdateIngredientThresholds/);
+  assert.doesNotMatch(branchPage, /reorderPoint|maxStock/);
+});
+
 test("stock alerts use the minimum threshold", () => {
   assert.match(alertActions, /id, name, min_stock_level, is_active/);
   assert.match(alertActions, /sl\.current_quantity <= ing\.min_stock_level/);

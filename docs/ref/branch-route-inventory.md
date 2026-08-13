@@ -7,7 +7,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 - **Đếm:** 66 `page.tsx` (63 operator + 3 station). Khóa: 2026-08-08.
 - Wave 1 Đội: fork attendance + roster (xong). Wave 2 Kho: transfer /
-  transfer/new / purchase-requests (xong).
+  transfer/new / purchase-requests (xong). Wave 3: waste + ngưỡng tồn (xong).
 
 ## Rubric class
 
@@ -27,9 +27,9 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | Class | n |
 | --- | ---: |
-| A | 43 |
-| A- | 2 |
-| B | 3 |
+| A | 45 |
+| A- | 1 |
+| B | 2 |
 | C | 7 |
 | D | 8 |
 | E | 3 |
@@ -39,7 +39,6 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | URL | Body Owner | Wave |
 | --- | --- | --- |
-| `/br/[branchId]/stock/catalog/thresholds` | `ThresholdsClient` | 3 |
 | `/br/[branchId]/feedback` | `FeedbackInbox` | 4 |
 | `/br/[branchId]/feedback/qr` | `QrManagement` | 4 |
 
@@ -47,7 +46,6 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | URL | Evidence | Wave |
 | --- | --- | --- |
-| `/br/[branchId]/stock/waste` | `WasteOperationalForm` — docs §2.5 sheet-per-line DOC | 3 |
 | `/br/[branchId]/stock/stocktake/[id]/count` | `StocktakeCountWizard` shared Owner path | sau Wave 2–3 |
 
 ## C — Shim (7)
@@ -62,7 +60,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 ## Backlog fork
 
 1. ~~Wave 1 Đội~~ / ~~Wave 2 Kho hub~~ (xong).
-2. **Wave 3:** waste sheet-per-line → thresholds Branch LIST.
+2. ~~**Wave 3:** waste sheet-per-line + thresholds Branch LIST~~ (xong).
 3. **Wave 4:** feedback inbox + QR Branch touch LIST.
 
 Ngoài scope: redesign POS/KDS/Gọi số; gỡ production shim; URL-bind ADR 0018
@@ -72,7 +70,7 @@ drawers; gộp menu-limits page↔sheet.
 
 leave-approvals · checkout-approvals · attendance · roster · transfer hub ·
 transfer/new · purchase-requests · on-hand (+ detail) · receive/[id] ·
-waste-approvals · team hub.
+waste-approvals · `/stock/waste` sheet-per-line · `catalog/thresholds` · team hub.
 
 ---
 
@@ -87,8 +85,8 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **shift** | 8 | `/shift`, `/clock`, `/schedule`, `/schedule/leave`, `/checkout-approvals` → **D**; `/attendance`, `/roster`, `/leave-approvals` → **A** (gold) |
 | **stock hub / phiếu** | 12 | `/stock`, on-hand(+id), requests/new(+id), receive/[id], transfer(+new/+id), grn(+id), purchase-requests — **A**; store `/transfer` có thể shim→`/stock` (**C/A**) |
 | **stock shim** | 6 | requests, receive, grn/new(+supplier), production(+new/+id) → **C** (bảng C) |
-| **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A- fork**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id) **A**; `/waste` **A- fork** |
-| **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers) **A**; `catalog/thresholds` **B fork** |
+| **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A- fork**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
+| **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers/thresholds) **A** |
 | **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
 | **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **B fork**; profile(+payslip) **D** |
 | **station** | 3 | `/pos`, `/kds`, `/pickup` → **E** |

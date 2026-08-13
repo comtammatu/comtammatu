@@ -68,7 +68,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/suppliers/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/thresholds/page.tsx":
-    "SETTINGS-PANEL",
+    "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/catalog/units/page.tsx":
     "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/stock/consumption/page.tsx":

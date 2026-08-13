@@ -2301,6 +2301,17 @@ export const inventory = {
       slipNotesLabel: "Ghi chú phiếu",
       submit: "Ghi nhận hao hụt",
       submitting: "Đang lưu…",
+      incompleteLine: "Hoàn tất nguyên liệu, đơn vị và lý do cho từng dòng.",
+      quantityMustBePositive: "Số lượng phải lớn hơn 0.",
+      quantityExceedsStock: (name: string) =>
+        `Số lượng ${name} vượt tồn hiện tại.`,
+      evidenceRequiredToast: "Thêm ảnh bằng chứng cho các dòng cần kiểm tra.",
+      createFailed: "Không tạo được phiếu hao hụt.",
+      createdPending: "Đã tạo phiếu, đang chờ duyệt.",
+      createdRecorded: "Đã ghi nhận phiếu hao hụt.",
+      expectedValueHint: "Giá trị do hệ thống tính khi ghi nhận",
+      lineSheetTitle: "Sửa dòng hao hụt",
+      quantityPlaceholder: "Nhập số lượng",
     },
     loadFailedTitle: "Không thể tải dữ liệu phiếu hao hụt",
     loadFailedDescription:

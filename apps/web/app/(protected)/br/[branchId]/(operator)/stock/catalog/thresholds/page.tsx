@@ -1,17 +1,12 @@
 import { notFound } from "next/navigation";
 import { fetchIngredients } from "@/(protected)/inventory/ingredient-actions";
-import {
-  ThresholdsClient,
-  type ThresholdRow,
-} from "@/(protected)/inventory/settings/thresholds/thresholds-client";
 import { messages } from "@lib/messages";
-import { AppEmptyState } from "@/components/surface";
-import {
-  BranchOperatorPage,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
+import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { parseOperatorBranchId } from "../../../../_lib/parse-branch-id";
-import { CatalogBackControl } from "../catalog-back-header";
+import {
+  CatalogThresholdsClient,
+  type ThresholdRow,
+} from "./catalog-thresholds-client";
 
 const copy = messages.catalog.thresholds;
 
@@ -33,8 +28,6 @@ export default async function OperatorCatalogThresholdsPage({
         unit: string;
         is_active: boolean;
         min_stock_level: number | string | null;
-        max_stock_level: number | string | null;
-        reorder_point: number | string | null;
       }>)
     : [];
 
@@ -46,23 +39,14 @@ export default async function OperatorCatalogThresholdsPage({
       sku: row.sku,
       unit: row.unit,
       minStock: row.min_stock_level == null ? "" : String(row.min_stock_level),
-      reorderPoint: row.reorder_point == null ? "" : String(row.reorder_point),
-      maxStock: row.max_stock_level == null ? "" : String(row.max_stock_level),
     }));
 
   return (
     <BranchOperatorPage title={copy.title} hideHeaderOnMobile>
-      <CatalogBackControl
-        title={copy.title}
+      <CatalogThresholdsClient
         backHref={`/br/${branchId}/stock/catalog`}
+        rows={rows}
       />
-      {rows.length === 0 ? (
-        <AppEmptyState compact title={copy.empty} symbol="riceGrain" />
-      ) : (
-        <BranchOperatorPanel contentFlush>
-          <ThresholdsClient rows={rows} />
-        </BranchOperatorPanel>
-      )}
     </BranchOperatorPage>
   );
 }

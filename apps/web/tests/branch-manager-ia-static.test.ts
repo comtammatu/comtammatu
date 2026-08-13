@@ -659,9 +659,10 @@ test("Branch operator settings and stock navigation fallbacks stay branch-native
   );
   assert.match(
     branchWasteCreateClient,
-    /cancelHref=\{stockBasePath\}/,
+    /const cancelHref = stockBasePath/,
     "branch waste form needs an explicit cancel target back to the stock landing",
   );
+  assert.match(branchWasteCreateClient, /href=\{cancelHref\}/);
   assert.doesNotMatch(
     branchWasteCreateClient,
     /router\.back\(\)/,

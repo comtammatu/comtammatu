@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { previewWasteTier } from "../lib/inventory/waste-tier-model";
+import { previewWasteLineTierFromReason, previewWasteTier } from "../lib/inventory/waste-tier-model";
 
 const baseline = {
   value: 1,
@@ -38,4 +38,22 @@ test("waste tier preview applies the rolling evidence threshold", () => {
     }),
     { tier: 1, photoRequired: true, approvalRequired: false },
   );
+});
+
+test("reason-only line preview stays conservative without WAC", () => {
+  assert.deepEqual(previewWasteLineTierFromReason("spoiled"), {
+    tier: 0,
+    photoRequired: false,
+    approvalRequired: false,
+  });
+  assert.deepEqual(previewWasteLineTierFromReason("dropped"), {
+    tier: 1,
+    photoRequired: true,
+    approvalRequired: false,
+  });
+  assert.deepEqual(previewWasteLineTierFromReason("theft_suspected"), {
+    tier: 2,
+    photoRequired: true,
+    approvalRequired: true,
+  });
 });

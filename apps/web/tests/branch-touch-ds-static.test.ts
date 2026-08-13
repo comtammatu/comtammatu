@@ -109,6 +109,7 @@ test("Branch touch UI blocks stay registered with use/forbidden/exemplar", async
     doc?.exemplar ?? "",
     /\/stock\/waste\/page\.tsx$/,
   );
+  assert.match(doc?.use ?? "", /WasteLineSheet/);
 
   const home = registryModule.findComponentGuidance("branch-action-home")[0];
   assert.match(home?.exemplar ?? "", /\/\(operator\)\/page\.tsx$/);

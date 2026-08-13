@@ -49,6 +49,10 @@ export const catalog = {
   thresholds: {
     title: "Ngưỡng tồn",
     empty: "Chưa có nguyên liệu cần cấu hình ngưỡng",
+    searchPlaceholder: "Tìm theo tên hoặc mã hàng",
+    noResults: "Không tìm thấy nguyên liệu",
+    selectAria: (name: string) => `Chọn ${name}`,
+    invalid: "Ngưỡng tồn phải là số không âm.",
   },
   suppliers: {
     title: "Nhà cung cấp",

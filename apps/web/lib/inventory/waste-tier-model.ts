@@ -73,3 +73,16 @@ export function previewWasteTier({
     approvalRequired,
   };
 }
+
+/** Reason-only floor preview. Value/WAC gates stay server-side. */
+export function previewWasteLineTierFromReason(
+  reasonCode: string,
+): WasteTierPreview {
+  if (isAlwaysTier2WasteReason(reasonCode)) {
+    return { tier: 2, photoRequired: true, approvalRequired: true };
+  }
+  if (isRiskyWasteReason(reasonCode)) {
+    return { tier: 1, photoRequired: true, approvalRequired: false };
+  }
+  return { tier: 0, photoRequired: false, approvalRequired: false };
+}

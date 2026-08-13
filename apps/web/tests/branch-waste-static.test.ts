@@ -40,10 +40,36 @@ test("Branch waste is a native touch document workflow with an isolated Owner su
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /BranchOperatorPanel/);
-  assert.match(client, /WasteOperationalForm/);
+  assert.match(client, /WasteLineSheet/);
+  assert.match(client, /ItemGroup/);
+  assert.match(client, /AppDetailFooter/);
+  assert.match(client, /createWasteEntry/);
+  assert.match(client, /const cancelHref = stockBasePath/);
+  assert.match(client, /href=\{cancelHref\}/);
+  assert.doesNotMatch(client, /WasteOperationalForm/);
   assert.doesNotMatch(
     client,
     /\bWasteCreateClient\b|DocumentFormFrame|DataTable|embedded/,
+  );
+  assert.doesNotMatch(
+    client,
+    /unitCost|totalValue|formatVND|priceVariance|branchCap|shiftCap/,
+  );
+
+  const lineSheet = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/_components/waste-line-sheet.tsx",
+  );
+  assert.match(lineSheet, /<AppSheet/);
+  assert.match(lineSheet, /NumberPadSheet/);
+  assert.match(lineSheet, /PhotoUploadInput/);
+  assert.match(lineSheet, /size="touch"/);
+  assert.doesNotMatch(
+    lineSheet,
+    /from ["']@\/\(protected\)\/inventory\/(?!waste-actions)/,
+  );
+  assert.doesNotMatch(
+    lineSheet,
+    /unitCost|totalValue|formatVND|DocumentFormFrame|DataTable/,
   );
 
   assert.match(form, /createWasteEntry/);

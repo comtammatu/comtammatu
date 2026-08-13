@@ -55,6 +55,7 @@ export function newWasteLine(uid: string): WasteLineState {
 }
 
 export {
+  previewWasteLineTierFromReason,
   previewWasteTier,
   type WasteTierPreview,
   type WasteTierPreviewInput,

@@ -1111,7 +1111,7 @@ export const UI_BLOCK_REGISTRY = {
     ["DOC-WORKFLOW"],
     ["branch"],
     "complete a line workflow on phone or tablet",
-    "BranchOperatorPage + BranchOperatorPanel + touch line editor + AppDetailFooter",
+    "BranchOperatorPage + BranchOperatorPanel + WasteLineSheet + AppDetailFooter",
     "bottom Sheet for one line at a time",
     "AppShell, AppListFrame, DocumentFormFrame, DataTable, desktop side editor, or raw Card",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/waste/page.tsx",
