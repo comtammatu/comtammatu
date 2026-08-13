@@ -37,6 +37,23 @@ const pickupIdleVisualSource = read(
 );
 const uiGlobalsSource = read("../../packages/ui/src/styles/globals.css");
 
+test("public pickup skips staff layout auth; retired /runner redirects to pickup", () => {
+  const protectedLayout = read("app/(protected)/layout.tsx");
+  const proxy = read("proxy.ts");
+  const skipIdx = protectedLayout.indexOf("isPickupPublicDisplayPath");
+  const authIdx = protectedLayout.indexOf("await loadAuthState()");
+  const rewriteIdx = proxy.indexOf("rewriteRetiredRunnerPath");
+  const publicIdx = proxy.indexOf("isPublicAppPath(pathname)");
+
+  assert.ok(skipIdx >= 0 && authIdx > skipIdx);
+  assert.match(protectedLayout, /readRequestPathname\(await headers\(\)\)/);
+  assert.match(protectedLayout, /return children;/);
+  assert.ok(rewriteIdx >= 0 && publicIdx > rewriteIdx);
+  assert.match(proxy, /NextResponse\.redirect\(url, 308\)/);
+  assert.match(proxy, /withRequestPathname/);
+  assert.match(proxy, /passThrough\(request\)/);
+});
+
 test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.match(
     pickupPageSource,

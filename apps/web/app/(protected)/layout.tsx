@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import {
   PERMISSION_KEYS,
   canAccess,
   canonicalizeSelfServicePath,
+  isPickupPublicDisplayPath,
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import { readRequestPathname } from "@/_lib/request-pathname";
 import {
   currentUserHasAnyPermissionAny,
   currentUserHasPermission,
@@ -35,6 +38,12 @@ export default async function ProtectedLayout({
 }: {
   children: ReactNode;
 }) {
+  // Pickup lives under this route group but is a guest board. Proxy skips
+  // auth; this layout must not call loadAuthState or the public kiosk 500s.
+  if (isPickupPublicDisplayPath(readRequestPathname(await headers()))) {
+    return children;
+  }
+
   const { supabase, user, claims } = await loadAuthState();
   const role = claims.user_role;
   const isOwner = role === "owner";

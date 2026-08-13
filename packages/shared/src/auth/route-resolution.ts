@@ -64,6 +64,17 @@ export function isPickupPublicDisplayPath(pathname: string): boolean {
   return /^\/br\/\d+\/pickup\/?$/.test(pathname);
 }
 
+/**
+ * Retired staff-runner URL. Canonical guest board is `/br/{id}/pickup`.
+ * Proxy 308s these to pickup so old bookmarks never hit the staff layout.
+ */
+export function rewriteRetiredRunnerPath(pathname: string): string | null {
+  const match = pathname.match(/^\/br\/(\d+)\/runner(?:\/|$)/);
+  const branchId = match?.[1];
+  if (!branchId) return null;
+  return `/br/${branchId}/pickup`;
+}
+
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;

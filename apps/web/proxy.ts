@@ -12,11 +12,13 @@ import {
   requiredOperatorBranchKindForRole,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
+  rewriteRetiredRunnerPath,
   type BlockedStateReasonCode,
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
 import { getClientIp } from "@lib/network/client-ip";
+import { withRequestPathname } from "@/_lib/request-pathname";
 
 // Module-level flag — emit one warning per warm Edge instance when the POS
 // network gate is disabled in production. Spec: regressions.md
@@ -114,20 +116,38 @@ function redirectToDefaultLanding(
   return redirectWithCookies(url, sessionResponse);
 }
 
+function passThrough(request: NextRequest): NextResponse {
+  return NextResponse.next({
+    request: {
+      headers: withRequestPathname(request, request.nextUrl.pathname),
+    },
+  });
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const canonicalPickupPath = rewriteRetiredRunnerPath(pathname);
+  if (canonicalPickupPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = canonicalPickupPath;
+    url.search = "";
+    return NextResponse.redirect(url, 308);
+  }
+
   // Public paths — skip auth. Includes `/access-denied` so the page can render
   // for any authenticated-but-blocked user without re-entering the ACL loop.
+  // Forward the real pathname so `(protected)/layout` can skip loadAuthState
+  // for the guest pickup board without trusting a client header.
   if (isPublicAppPath(pathname)) {
-    return NextResponse.next();
+    return passThrough(request);
   }
 
   // /api/branch-presence is a Bearer-token endpoint (print-agent heartbeat).
   // Skip session-based auth so unauthenticated agent requests reach the route
   // handler's timing-safe token check instead of being redirected to /login.
   if (pathname === "/api/branch-presence") {
-    return NextResponse.next();
+    return passThrough(request);
   }
 
   // /api/cron/* are Vercel-cron entrypoints. Each handler enforces its own
@@ -135,7 +155,7 @@ export async function proxy(request: NextRequest) {
   // keeps `vercel-cron/1.0` requests (no cookies) from being 307'd to /login
   // before they reach the handler's token check.
   if (pathname.startsWith("/api/cron/")) {
-    return NextResponse.next();
+    return passThrough(request);
   }
 
   // Read session — cookie decode + auto-refresh via setAll callback when the
