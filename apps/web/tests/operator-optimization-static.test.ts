@@ -106,9 +106,11 @@ test("operator a11y: realtime regions announce, panels use headings, locked tile
   const bell = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-notification-bell.tsx",
   );
+  const sharedBell = read("apps/web/app/_components/notification-bell.tsx");
   // Unread count is merged into the bell's accessible name, not left as a stray digit.
-  assert.match(bell, /messages\.operator\.header\.notificationsAria/);
-  assert.match(bell, /\$\{unread\} chưa đọc/);
+  assert.match(bell, /<NotificationBell/);
+  assert.match(sharedBell, /messages\.notifications\.bellAriaLabel/);
+  assert.match(sharedBell, /messages\.notifications\.unreadBadge/);
 
   const tile = read(
     "apps/web/lib/branch-operator/components/branch-operator-page.tsx",

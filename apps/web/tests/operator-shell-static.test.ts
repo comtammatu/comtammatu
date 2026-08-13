@@ -156,13 +156,24 @@ test("operator header shows branch context and keeps profile and notifications",
   const bell = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/operator-notification-bell.tsx",
   );
+  const sharedBell = read("apps/web/app/_components/notification-bell.tsx");
   assert.match(layout, /<OperatorNotificationBell/);
-  assert.match(bell, /messages\.operator\.header\.notificationsAria/);
-  assert.match(bell, /aria-label=\{aria\}/);
-  assert.match(bell, /\$\{unread\} chưa đọc/);
+  assert.match(bell, /from "@\/_components\/notification-bell"/);
+  assert.match(bell, /<NotificationBell/);
+  assert.match(bell, /returnTo=\{returnTo \|\| pathname\}/);
   assert.doesNotMatch(bell, /messages\.employee\.(?:nav|header)/);
-  assert.match(bell, /encodeURIComponent/);
-  assert.match(bell, /size="icon-touch"/);
+  assert.match(sharedBell, /messages\.notifications\.bellAriaLabel/);
+  assert.match(sharedBell, /encodeURIComponent/);
+  assert.match(sharedBell, /"icon-touch"/);
+  assert.match(sharedBell, /channelSuffix: "peek"/);
+  assert.match(
+    sharedBell,
+    /subscribe: Boolean\(scope\) && !onNotificationsPage/,
+  );
+  assert.match(sharedBell, /<Popover/);
+  assert.match(sharedBell, /<AppSheet/);
+  assert.doesNotMatch(sharedBell, /onLoadMore/);
+  assert.match(sharedBell, /showFilterBar=\{false\}/);
   assert.doesNotMatch(bell, /IconBell data-icon="inline-start"/);
   assert.doesNotMatch(layout, /shift\/profile/);
 });
@@ -190,9 +201,10 @@ test("notifications page provides a safe branch return path", () => {
   );
 
   assert.match(page, /getSafeInternalReturnTo/);
-  assert.match(page, /\/br\/\$\{claims\.branch_id\}/);
+  assert.doesNotMatch(page, /\/br\/\$\{claims\.branch_id\}/);
   assert.match(page, /backHref=\{backHref\}/);
   assert.match(client, /messages\.notifications\.back/);
+  assert.match(client, /\{backHref \? \(/);
 });
 
 test("operator home label is today, not an old branch title", () => {

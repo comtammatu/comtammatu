@@ -1,26 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronDown as IconChevronDown } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@comtammatu/ui/components/collapsible";
 import { useNotifications } from "@/_hooks/use-notifications";
 import {
   NotificationFeedFilter,
   NotificationList,
 } from "@/_components/notification-list";
 import { NotificationPopupControl } from "@/_components/notification-popup-control";
-import { AppListFrame, AppPageHeader, AppSection } from "@/components/surface";
+import { AppListFrame, AppPageHeader } from "@/components/surface";
 import { messages, m } from "@lib/messages";
-
 import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
+
 export function NotificationsClient({
   tenantId,
   branchId,
@@ -86,12 +81,13 @@ export function NotificationsClient({
 
       <AppListFrame
         toolbar={
-          <div className="px-3 py-2">
+          <div className="flex flex-col gap-3 px-3 py-2">
             <NotificationFeedFilter
               feedMode={feedMode}
               unreadCount={unreadCount}
               onFeedModeChange={setFeedMode}
             />
+            <NotificationPopupControl compact />
           </div>
         }
       >
@@ -112,32 +108,6 @@ export function NotificationsClient({
           />
         </div>
       </AppListFrame>
-
-      <AppSection contentFlush>
-        <Collapsible>
-          <CollapsibleTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size={isTouchLayout ? "touch" : "lg"}
-                className="group w-full justify-between px-3 font-normal"
-              />
-            }
-          >
-            <span className="text-sm text-muted-foreground">
-              {messages.notifications.deviceToggle}
-            </span>
-            <IconChevronDown
-              className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]:rotate-180"
-              aria-hidden
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="border-t px-3 pb-3 pt-2">
-            <NotificationPopupControl compact />
-          </CollapsibleContent>
-        </Collapsible>
-      </AppSection>
     </div>
   );
 }

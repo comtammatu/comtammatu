@@ -5,6 +5,19 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Ship notification attention on Control Surface
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: notifications/attention
+Exit: Owner control-surface routes show Sonner on a visible tab and OS popup when the tab is hidden; bell peek works on desktop Popover / mobile Sheet; `/notifications` is a LIST feed with device permission in the toolbar.
+Evidence: `NotificationAttentionRuntime` mounted once from `ControlSurfaceShell`; `useForegroundNotifications` removed from `PwaRuntimeProvider`.
+
+- [ ] Mount one attention runtime for every `(protected)` route and keep POS/KDS popup-only.
+- [ ] Ship compact bell peek without colliding the full-page Realtime topic.
+- [ ] Move device notification settings onto the `/notifications` LIST toolbar.
+
 ## Prove one money day on Production
 
 State: blocked

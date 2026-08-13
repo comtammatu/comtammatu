@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { MODULE_ACL, type StaffRole } from "@comtammatu/shared/auth";
+import { NotificationAttentionRuntime } from "@/_components/notification-attention-runtime";
 import { AppShell } from "@/components/app-shell";
 import { ControlSurfaceScopeControl } from "@/components/control-surface-scope-control";
 import { InventoryBranchFilter } from "@/(protected)/inventory/_components/inventory-branch-filter";
@@ -297,9 +298,9 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
     />
   ) : null;
 
-  if (!activeModule) return children;
-
-  return (
+  const shell = !activeModule ? (
+    children
+  ) : (
     <AppShell
       user={user}
       tier1={tier1}
@@ -316,6 +317,13 @@ export function ControlSurfaceShell(props: ControlSurfaceShellProps) {
       ) : null}
       {children}
     </AppShell>
+  );
+
+  return (
+    <>
+      <NotificationAttentionRuntime />
+      {shell}
+    </>
   );
 }
 

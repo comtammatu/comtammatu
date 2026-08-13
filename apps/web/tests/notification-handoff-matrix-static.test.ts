@@ -101,6 +101,7 @@ test("gold handoff kinds keep deep-link CTA copy and labels", () => {
     "workflow.grn_pending",
     "inventory.stock_request_submitted",
     "workflow.transfer_in_transit",
+    "work.task_assigned",
   ]) {
     assert.match(
       messages,
@@ -149,6 +150,11 @@ test("ops tracking correlation migration normalizes GRN entity_type", () => {
 
 test("attention hygiene: control toast only; POS KDS stay popup-only", () => {
   const foreground = read("apps/web/app/_hooks/use-foreground-notifications.ts");
+  const shell = read("apps/web/app/components/control-surface-shell.tsx");
+  const pwa = read("apps/web/app/components/pwa-runtime.tsx");
+  const runtime = read(
+    "apps/web/app/_components/notification-attention-runtime.tsx",
+  );
   assert.match(foreground, /shouldShowInAppToast/);
   assert.match(foreground, /surface === "owner"/);
   assert.match(foreground, /surface === "branch_management"/);
@@ -157,4 +163,12 @@ test("attention hygiene: control toast only; POS KDS stay popup-only", () => {
     foreground,
     /Sonner on control surfaces; POS\/KDS\/pickup keep OS popup only/,
   );
+  assert.match(
+    foreground,
+    /showInAppToast && document\.visibilityState === "visible"/,
+  );
+  assert.match(foreground, /registration\.showNotification/);
+  assert.match(runtime, /useForegroundNotifications\(\)/);
+  assert.match(shell, /<NotificationAttentionRuntime/);
+  assert.doesNotMatch(pwa, /useForegroundNotifications/);
 });

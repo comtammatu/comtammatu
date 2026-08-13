@@ -19,7 +19,8 @@ test("control_surface routes share one persistent protected shell", () => {
   assert.match(shell, /<AppShell/);
   assert.match(shell, /usePathname/);
   assert.match(shell, /resolveActiveModule/);
-  assert.match(shell, /if \(!activeModule\) return children/);
+  assert.match(shell, /<NotificationAttentionRuntime/);
+  assert.match(shell, /!activeModule \? \(/);
   assert.match(shell, /resolveControlSurfacePrimaryTabs/);
   assert.match(shell, /flattenInventoryDeepNav/);
   assert.match(nav, /export function resolveControlSurfacePrimaryTabs/);

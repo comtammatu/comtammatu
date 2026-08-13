@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useForegroundNotifications } from "@/_hooks/use-foreground-notifications";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -59,9 +58,6 @@ export function PwaRuntimeProvider({ children }: { children: ReactNode }) {
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [hasNewVersion, setHasNewVersion] = useState(false);
-
-  // Foreground OS popups for new notifications while the PWA is open.
-  useForegroundNotifications();
 
   // The service worker uses skipWaiting + clientsClaim, so a deploy swaps
   // the SW underneath a long-lived tab; old lazy chunks then 404

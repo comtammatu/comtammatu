@@ -29,12 +29,10 @@ export default async function NotificationsPage({
   const rawReturnTo = Array.isArray(params.returnTo)
     ? params.returnTo[0]
     : params.returnTo;
-  const backHref =
-    getSafeInternalReturnTo(rawReturnTo) ??
-    (typeof claims.branch_id === "number" ? `/br/${claims.branch_id}` : null);
+  const backHref = getSafeInternalReturnTo(rawReturnTo);
 
   return (
-    <AppPage width="narrow">
+    <AppPage width="default">
       <Suspense>
         <NotificationsClient
           tenantId={claims.tenant_id}

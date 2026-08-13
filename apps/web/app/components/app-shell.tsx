@@ -4,7 +4,6 @@ import { Fragment, useMemo, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell as IconBell,
   ChevronsUpDown as IconChevronsUpDown,
   LogOut as IconLogout,
   UserRound as IconUserRound,
@@ -49,6 +48,7 @@ import {
   type ShellNavGroup,
   type ShellNavItem,
 } from "@/lib/shell-primitives";
+import { NotificationBell } from "@/_components/notification-bell";
 import { useNotificationBadges } from "@/_hooks/use-notification-badges";
 import { AppPageHeader, AppShellPaddingBoundary } from "@/components/surface";
 import { BrandLogoBox, BrandMark } from "@/components/brand";
@@ -236,7 +236,6 @@ export function AppShell({
     [pathname, tier1WithBadges],
   );
   const showBottomNav = bottomNav && tier1WithBadges.length > 0;
-  const notificationsHref = `/notifications?returnTo=${encodeURIComponent(pathname)}`;
 
   return (
     <SidebarProvider
@@ -366,18 +365,10 @@ export function AppShell({
         </SidebarContent>
 
         <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
-          <Button
-            variant="ghost"
-            size={isTouchLayout ? "touch" : "default"}
-            className="w-full justify-start gap-2 rounded-lg px-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            render={<Link href={notificationsHref} />}
-          >
-            <IconBell />
-            <span className="min-w-0 flex-1 truncate">
-              {messages.notifications.pageTitle}
-            </span>
-            <UnreadBadge count={notificationSummary.unreadCount} />
-          </Button>
+          <NotificationBell
+            variant="sidebar"
+            unreadCount={notificationSummary.unreadCount}
+          />
           <AccountMenu
             user={user}
             isTouchLayout={isTouchLayout}
@@ -401,14 +392,27 @@ export function AppShell({
               className="min-w-0 flex-1"
               titleClassName="truncate text-lg"
             />
-            <AccountMenu
-              user={user}
-              isTouchLayout={isTouchLayout}
-              personalHref={personalHref}
-              variant="mobile"
+            <div className="flex shrink-0 items-center gap-2">
+              <NotificationBell
+                variant="header"
+                unreadCount={notificationSummary.unreadCount}
+              />
+              <AccountMenu
+                user={user}
+                isTouchLayout={isTouchLayout}
+                personalHref={personalHref}
+                variant="mobile"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-14 shrink-0 items-center justify-end gap-2 border-b border-border/70 bg-background px-3 lg:hidden">
+            <NotificationBell
+              variant="header"
+              unreadCount={notificationSummary.unreadCount}
             />
           </div>
-        ) : null}
+        )}
         {mobileScopeAccessory ? (
           <div className="sticky top-0 z-20 shrink-0 border-b border-border/70 bg-background px-3 py-2 lg:hidden">
             {mobileScopeAccessory}

@@ -33,6 +33,14 @@ interface UseNotificationsArgs {
    * (unchanged behaviour).
    */
   branchId?: number | null;
+  /**
+   * Extra Realtime topic suffix so a peek panel does not evict the full-page
+   * `notifications-${tenantId}` channel.
+   */
+  channelSuffix?: string;
+  /** Skip postgres_changes when the full-page feed already owns the topic. */
+  subscribe?: boolean;
+  pageSize?: number;
   initialItems?: NotificationItem[];
   initialUnread?: number;
 }
@@ -68,6 +76,9 @@ function listArgsForMode(mode: NotificationFeedMode) {
 export function useNotifications({
   tenantId,
   branchId,
+  channelSuffix,
+  subscribe = true,
+  pageSize = PAGE_SIZE,
   initialItems = [],
   initialUnread = 0,
 }: UseNotificationsArgs): UseNotificationsResult {
@@ -91,7 +102,7 @@ export function useNotifications({
     try {
       const modeArgs = listArgsForMode(feedModeRef.current);
       const [list, count] = await Promise.all([
-        listNotifications({ limit: PAGE_SIZE, ...modeArgs }),
+        listNotifications({ limit: pageSize, ...modeArgs }),
         getUnreadCount(),
       ]);
       if (list.success && list.data) {
@@ -108,7 +119,7 @@ export function useNotifications({
       inflightRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [pageSize]);
 
   const loadMore = useCallback(async () => {
     if (inflightRef.current) return;
@@ -119,7 +130,7 @@ export function useNotifications({
     try {
       const modeArgs = listArgsForMode(feedModeRef.current);
       const list = await listNotifications({
-        limit: PAGE_SIZE,
+        limit: pageSize,
         before: cursor,
         ...modeArgs,
       });
@@ -138,7 +149,7 @@ export function useNotifications({
       inflightRef.current = false;
       setLoadingMore(false);
     }
-  }, [items]);
+  }, [items, pageSize]);
 
   const setFeedMode = useCallback((next: NotificationFeedMode) => {
     feedModeRef.current = next;
@@ -206,9 +217,13 @@ export function useNotifications({
   }, []);
 
   useRealtimeChannel(
-    (supabase) =>
-      supabase
-        .channel(`notifications-${String(tenantId)}`)
+    (supabase) => {
+      if (!subscribe) return null;
+      const topic = channelSuffix
+        ? `notifications-${channelSuffix}-${String(tenantId)}`
+        : `notifications-${String(tenantId)}`;
+      return supabase
+        .channel(topic)
         .on(
           "postgres_changes",
           {
@@ -251,8 +266,9 @@ export function useNotifications({
             return;
           }
           void refreshRef.current();
-        }),
-    [tenantId],
+        });
+    },
+    [tenantId, channelSuffix, subscribe],
   );
 
   useEffect(() => {

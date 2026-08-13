@@ -18,6 +18,7 @@ test("PWA checks for a new service worker when the app returns to foreground", (
     source,
     /document\.addEventListener\("visibilitychange", handleVisibilityChange\)/,
   );
+  assert.doesNotMatch(source, /useForegroundNotifications/);
 });
 
 test("PWA service worker bypasses the session proxy", () => {

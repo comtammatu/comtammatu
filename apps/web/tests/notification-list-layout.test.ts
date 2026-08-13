@@ -11,6 +11,10 @@ const clientSource = readFileSync(
   path.join(process.cwd(), "app/(protected)/notifications/notifications-client.tsx"),
   "utf8",
 );
+const pageSource = readFileSync(
+  path.join(process.cwd(), "app/(protected)/notifications/page.tsx"),
+  "utf8",
+);
 const itemSource = readFileSync(
   path.join(process.cwd(), "app/_components/notification-item.tsx"),
   "utf8",
@@ -26,15 +30,18 @@ test("notification page feed uses normal page flow without ScrollArea", () => {
   assert.doesNotMatch(clientSource, /scrollClassName=/);
 });
 
-test("notification feed groups rows by day and demotes device settings", () => {
+test("notification feed groups rows by day and keeps device settings in the toolbar", () => {
   assert.match(listSource, /groupNotificationsByDay/);
   assert.match(listSource, /messages\.notifications\.groups\.today/);
+  assert.match(pageSource, /width="default"/);
+  assert.doesNotMatch(pageSource, /width="narrow"/);
   assert.match(clientSource, /AppListFrame/);
   assert.match(clientSource, /NotificationFeedFilter/);
   assert.match(clientSource, /showFilterBar=\{false\}/);
-  assert.match(clientSource, /messages\.notifications\.deviceToggle/);
-  assert.match(clientSource, /Collapsible/);
+  assert.match(clientSource, /toolbar=\{/);
   assert.match(clientSource, /NotificationPopupControl compact/);
+  assert.doesNotMatch(clientSource, /Collapsible/);
+  assert.doesNotMatch(clientSource, /messages\.notifications\.deviceToggle/);
   assert.doesNotMatch(clientSource, /DataTable/);
 });
 

@@ -75,6 +75,7 @@ function iconFor(kind: string) {
     case "hr.checkout_requested":
     case "attendance.checkout_requested":
     case "pos.void_requested":
+    case "work.task_assigned":
       return IconClipboardList;
     case "inventory.count_slip_submitted":
       return IconClipboardList;

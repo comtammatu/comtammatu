@@ -140,11 +140,12 @@ test("notification shell uses one realtime summary for footer and tab badges", (
 
   assert.match(appShell, /useNotificationBadges\(\)/);
   assert.match(appShell, /getNavNotificationCount/);
-  assert.match(appShell, /href=\{notificationsHref\}/);
+  assert.match(appShell, /<NotificationBell/);
   assert.match(
     appShell,
-    /<UnreadBadge count=\{notificationSummary\.unreadCount\}/,
+    /unreadCount=\{notificationSummary\.unreadCount\}/,
   );
+  assert.doesNotMatch(appShell, /href=\{notificationsHref\}/);
   assert.match(hook, /event: "\*"[\s\S]*table: "notifications"/);
   assert.match(hook, /table: "notification_reads"/);
   assert.match(hook, /status === "SUBSCRIBED"[\s\S]*refreshRef\.current/);

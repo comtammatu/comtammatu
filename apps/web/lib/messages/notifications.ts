@@ -70,6 +70,7 @@ export const notifications = {
     "inventory.pos_stock_shortfall": "Trừ tồn bán hàng cần đối soát",
     "inventory.valuation_variance": "Chênh lệch giá mua",
     "inventory.valuation_reconciliation_failed": "Lệch sổ giá trị tồn kho",
+    "work.task_assigned": "Việc được giao",
     "system.test": "Thông báo thử",
     "system.cron_failed": "Lỗi tác vụ tự động (Cron)",
   } as Record<string, string>,
@@ -97,6 +98,7 @@ export const notifications = {
     "inventory.valuation_reconciliation_failed": "Mở khóa kỳ",
     "pos.shift_variance": "Mở ca POS",
     "order.delay_sla_breach": "Mở đơn",
+    "work.task_assigned": "Mở việc",
   } as Record<string, string>,
   time: {
     justNow: "vừa xong",

@@ -48,6 +48,7 @@ interface Props {
   showFilterBar?: boolean;
   /** Constrain the scroll viewport height; omit for normal page flow. */
   scrollClassName?: string;
+  viewAllHref?: string;
 }
 
 type DayGroup = {
@@ -251,6 +252,7 @@ export function NotificationList({
   showPanelHeader = true,
   showFilterBar,
   scrollClassName,
+  viewAllHref = "/notifications",
 }: Props) {
   const hasUnread = unreadCount > 0;
   const showFilter =
@@ -349,7 +351,7 @@ export function NotificationList({
             variant="ghost"
             size="sm"
             className="h-7 text-xs"
-            render={<Link href="/notifications" />}
+            render={<Link href={viewAllHref} onClick={onItemNavigate} />}
           >
             {messages.notifications.viewAll}
           </Button>

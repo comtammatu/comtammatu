@@ -51,6 +51,7 @@ const NOTIFICATION_KIND_TARGET_PATH: Readonly<Record<string, string>> = {
   "pos.void_resolved": "/orders",
   "pos.void_rejected": "/orders",
   "order.delay_sla_breach": "/orders",
+  "work.task_assigned": "/work",
 };
 
 /** FYI / history kinds stay in the feed but must not badge work-queue nav. */
@@ -110,6 +111,7 @@ function notificationKindTargetPath(kind: string): string | null {
   if (kind.startsWith("pos.")) return "/orders";
   if (kind.startsWith("feedback.")) return "/feedback";
   if (kind.startsWith("menu.")) return "/menu";
+  if (kind.startsWith("work.")) return "/work";
   if (kind.startsWith("system.")) return "/settings";
   return null;
 }
