@@ -3,11 +3,39 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "../../_lib/auth";
+import {
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "../../_lib/auth";
 import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
 import { createPayment } from "./payment-actions";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+
+const POS_PRINT_PERMISSIONS = [
+  PERMISSION_KEYS.POS_PRINT,
+  PERMISSION_KEYS.POS_REPRINT_RECEIPT,
+] as const;
+
+function receiptPrintError(error: { message?: string } | null): string {
+  const msg = String(error?.message ?? "").toLowerCase();
+  if (msg.includes("no active") && msg.includes("printer")) {
+    return "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.";
+  }
+  if (msg.includes("permission denied")) {
+    return "Không có quyền in hóa đơn";
+  }
+  if (msg.includes("tenant mismatch")) {
+    return "Không có quyền truy cập đơn này";
+  }
+  if (msg.includes("receipt_completed_payment_missing")) {
+    return "Đơn chưa thanh toán xong nên không in được hóa đơn.";
+  }
+  if (msg.includes("duplicate") || msg.includes("unique") || msg.includes("23505")) {
+    return "Hóa đơn đang được gửi lại. Đợi máy in rồi thử lại.";
+  }
+  return "Không thể in hóa đơn. Vui lòng thử lại.";
+}
 
 const orderIdSchema = z.coerce
   .number()
@@ -142,9 +170,9 @@ export async function printReceipt(
     return { success: false, error: "Mã đơn hàng không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_PRINT,
+    POS_PRINT_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền in" };
 
@@ -155,22 +183,9 @@ export async function printReceipt(
   });
 
   if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("no active") && msg.includes("printer")) {
-      return {
-        success: false,
-        error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
-      };
-    }
-    if (msg.includes("permission denied")) {
-      return { success: false, error: "Không có quyền in hóa đơn" };
-    }
-    if (msg.includes("tenant mismatch")) {
-      return { success: false, error: "Không có quyền truy cập đơn này" };
-    }
     return {
       success: false,
-      error: "Không thể in hóa đơn. Vui lòng thử lại.",
+      error: receiptPrintError(error),
     };
   }
 
@@ -310,12 +325,12 @@ export async function retryPrintJob(jobId: number): Promise<ActionResult> {
     return { success: false, error: "Yêu cầu in không hợp lệ" };
   }
 
-  // Same gate as printReceipt: whoever may print may also retry a failed
-  // job at the counter (D012 merged-role reality — no manager round-trip
+  // Same gate as printReceipt: whoever may print or reprint may also retry a
+  // failed job at the counter (D012 merged-role reality — no manager round-trip
   // for a paper jam).
-  const ctx = await getAuthContextWithPermission(
+  const ctx = await getAuthContextWithAnyPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_PRINT,
+    POS_PRINT_PERMISSIONS,
   );
   if (!ctx) return { success: false, error: "Không có quyền thử lại" };
 

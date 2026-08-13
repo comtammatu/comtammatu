@@ -5,6 +5,18 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Fix paid-receipt reprint and exclusive bill subtotal
+
+State: verify
+Kind: defect
+Tier: T3
+Lane: pos/print
+Exit: Cashier reprint of a paid receipt reaches the branch agent; provisional bill and payment receipt print the subtotal as item total excluding VAT, then VAT, service, discount, and grand total as the payable amount.
+Evidence: print-agent UPDATE + always-on pending drain; print-render exclusive subtotal; POS print/reprint permission OR-gate; `corepack pnpm verify`.
+
+- [ ] Redeploy print-agent 1.0.1 at Nguyen Huu Tho and reprint one paid receipt.
+- [ ] Print one provisional bill and one payment receipt; confirm subtotal is ex-VAT and grand total includes VAT, service, and discount.
+
 ## Close inventory RPC and loader cleanup
 
 State: verify

@@ -240,6 +240,14 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
   }
 }
 
+/** INSERT pending, or UPDATE into pending (cashier reprint / retry). */
+function isNewlyPending(
+  nextStatus: string | undefined,
+  prevStatus: string | undefined,
+): boolean {
+  return nextStatus === "pending" && prevStatus !== "pending";
+}
+
 /**
  * Janitor: ask the DB to revert any print_jobs stuck in 'processing' for
  * >5 min back to 'pending'. Happens when an agent crashes mid-dispatch
@@ -277,7 +285,6 @@ async function main() {
   await drainPending(supabase);
 
   let initialSubscribeSeen = false;
-  let isRealtimeSubscribed = false;
 
   const channel = supabase
     .channel(`print_jobs:branch=${config.branchId}`)
@@ -291,14 +298,29 @@ async function main() {
       },
       (payload) => {
         const row = payload.new as { id: number; status: string };
-        if (row.status === "pending") {
+        if (isNewlyPending(row.status, undefined)) {
+          void processJob(supabase, row.id);
+        }
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "print_jobs",
+        filter: `branch_id=eq.${config.branchId}`,
+      },
+      (payload) => {
+        const row = payload.new as { id: number; status: string };
+        const old = payload.old as { status?: string } | null;
+        if (isNewlyPending(row.status, old?.status)) {
           void processJob(supabase, row.id);
         }
       },
     )
     .subscribe((status) => {
       console.log(`[agent] realtime status=${status}`);
-      isRealtimeSubscribed = status === "SUBSCRIBED";
       if (status !== "SUBSCRIBED") return;
       // Skip the FIRST SUBSCRIBED — drainPending() ran on startup above.
       // Every SUBSCRIBED after that is a reconnect (CHANNEL_ERROR /
@@ -318,14 +340,10 @@ async function main() {
   // Presence: re-register every 5 min so trusted-IP row stays fresh within
   // the 30-min grace window enforced by web proxy.
   setInterval(() => void registerPresence(), 5 * 60_000);
-  // Safety-net drain: catches jobs INSERTed during a WS disconnect that
-  // reconnect-drain missed. When realtime is SUBSCRIBED, new inserts fire
-  // immediately via postgres_changes; the 60s poll is just a backstop.
-  // When the channel is down, the 60s cadence bounds worst-case latency.
-  setInterval(
-    () => void (!isRealtimeSubscribed && drainPending(supabase)),
-    60_000,
-  );
+  // Safety-net drain: catches INSERT/UPDATE-to-pending events missed during a
+  // WS gap, and reprints that only UPDATE an existing row (no INSERT event).
+  // claim_print_job is idempotent, so overlapping drain + realtime is safe.
+  setInterval(() => void drainPending(supabase), 60_000);
   // Janitor: re-pending stuck 'processing' jobs every 60s.
   setInterval(() => void reapStuckJobs(supabase), 60_000);
 

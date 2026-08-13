@@ -157,6 +157,35 @@ function netFromInclusiveGross(gross: number, vatRate: number): number {
   return Math.round(gross / (1 + rate / 100));
 }
 
+function positiveTaxBreakdowns(
+  p: BillBase,
+): Array<{ rate: number; amount: number }> {
+  return [...(p.tax_breakdowns ?? [])]
+    .filter(
+      ({ rate, amount }) =>
+        Number.isFinite(rate) &&
+        rate >= 0 &&
+        Number.isFinite(amount) &&
+        amount >= 0,
+    )
+    .sort((a, b) => b.rate - a.rate);
+}
+
+/** VAT already inside `orders.subtotal` (gross). Prefer rate lines, else tax_amount. */
+function includedVatAmount(p: BillBase): number {
+  const fromBreakdowns = positiveTaxBreakdowns(p).reduce(
+    (total, tax) => total + tax.amount,
+    0,
+  );
+  if (fromBreakdowns > 0) return fromBreakdowns;
+  const taxAmount = p.tax_amount ?? 0;
+  return Number.isFinite(taxAmount) && taxAmount > 0 ? taxAmount : 0;
+}
+
+function exclusiveItemSubtotal(p: BillBase): number {
+  return Math.max(0, (p.subtotal ?? 0) - includedVatAmount(p));
+}
+
 function fmtExVat(gross: number, vatRate: number): string {
   return fmtMoney(netFromInclusiveGross(gross, vatRate));
 }
@@ -285,11 +314,34 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(divider("="));
   out.push(
-    ops.line(pair24("Tạm tính", fmtMoney(p.subtotal)), {
+    ops.line(pair24("Tạm tính", fmtMoney(exclusiveItemSubtotal(p))), {
       bold: true,
       double: true,
     }),
   );
+  const taxBreakdowns = positiveTaxBreakdowns(p);
+  if (taxBreakdowns.length > 0) {
+    out.push(
+      ops.line(
+        pair48(
+          "Thuế GTGT",
+          fmtMoney(
+            taxBreakdowns.reduce((total, tax) => total + tax.amount, 0),
+          ),
+        ),
+      ),
+    );
+    for (const tax of taxBreakdowns) {
+      out.push(
+        ops.line(
+          pair48(
+            `- Thuế GTGT (${formatPercent(tax.rate, 2)})`,
+            fmtMoney(tax.amount),
+          ),
+        ),
+      );
+    }
+  }
   if (alwaysShowAdjustments || (p.service_charge ?? 0) > 0) {
     const label = alwaysShowAdjustments ? "Phí dịch vụ" : "Phụ phí";
     out.push(ops.line(pair48(label, fmtMoney(p.service_charge))));
@@ -308,37 +360,6 @@ function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   }
   if ((p.discount_amount ?? 0) > 0 && p.discount_note) {
     if (p.discount_note) out.push(ops.line(`  Lý do: ${p.discount_note}`));
-  }
-  const taxBreakdowns = [...(p.tax_breakdowns ?? [])]
-    .filter(
-      ({ rate, amount }) =>
-        Number.isFinite(rate) &&
-        rate >= 0 &&
-        Number.isFinite(amount) &&
-        amount >= 0,
-    )
-    .sort((a, b) => b.rate - a.rate);
-  if (taxBreakdowns.length > 0) {
-    out.push(
-      ops.line(
-        pair48(
-          "Tiền thuế GTGT (đã gồm)",
-          fmtMoney(
-            taxBreakdowns.reduce((total, tax) => total + tax.amount, 0),
-          ),
-        ),
-      ),
-    );
-  }
-  for (const tax of taxBreakdowns) {
-    out.push(
-      ops.line(
-        pair48(
-          `- Thuế GTGT (${formatPercent(tax.rate, 2)})`,
-          fmtMoney(tax.amount),
-        ),
-      ),
-    );
   }
   out.push(divider("="));
   out.push(

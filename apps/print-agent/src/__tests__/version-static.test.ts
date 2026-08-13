@@ -10,3 +10,12 @@ test("heartbeat version comes from the package manifest", () => {
   assert.match(source, /version: packageJson\.version,/);
   assert.doesNotMatch(source, /AGENT_VERSION/);
 });
+
+test("agent claims print jobs that flip back to pending", () => {
+  assert.match(source, /event: "UPDATE"/);
+  assert.match(source, /function isNewlyPending/);
+  assert.match(
+    source,
+    /setInterval\(\(\) => void drainPending\(supabase\), 60_000\)/,
+  );
+});

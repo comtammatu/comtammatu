@@ -50,9 +50,10 @@ const pwaRuntimeSource = readFileSync(
 
 test("retryPrintJob is gated for the whole POS counter, not managers only", () => {
   assert.doesNotMatch(printActionsSource, /MANAGER_ROLES/);
+  assert.match(printActionsSource, /PERMISSION_KEYS\.POS_REPRINT_RECEIPT/);
   assert.match(
     printActionsSource,
-    /getAuthContextWithPermission\(\s*POS_ROLES,\s*PERMISSION_KEYS\.POS_PRINT,\s*\);\s*\n\s*if \(!ctx\) return \{ success: false, error: "Không có quyền thử lại" \}/,
+    /getAuthContextWithAnyPermission\(\s*POS_ROLES,\s*POS_PRINT_PERMISSIONS,\s*\);\s*\n\s*if \(!ctx\) return \{ success: false, error: "Không có quyền thử lại" \}/,
   );
 });
 

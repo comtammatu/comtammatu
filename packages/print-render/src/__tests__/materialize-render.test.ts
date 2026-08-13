@@ -193,7 +193,7 @@ test("receipt fallback materializes default layout", () => {
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
 });
 
-test("bills show VAT rates only when present and after adjustments", () => {
+test("bills show VAT after exclusive subtotal and before adjustments", () => {
   for (const kind of ["receipt", "provisional_bill"] as const) {
     const payload = SAMPLE_PAYLOADS[kind] as Extract<
       PrintPayload,
@@ -204,10 +204,15 @@ test("bills show VAT rates only when present and after adjustments", () => {
     assert.ok(
       !withoutVat.some(
         (line) =>
-          line.startsWith("Tiền thuế GTGT") ||
-          line.startsWith("- Thuế GTGT"),
+          line.startsWith("Thuế GTGT") ||
+          line.startsWith("- Thuế GTGT") ||
+          line.startsWith("Tiền thuế GTGT"),
       ),
       `${kind} must hide VAT without a tax breakdown`,
+    );
+    assert.ok(
+      withoutVat.some((line) => line.startsWith("Tạm tính") && line.includes("130.000đ")),
+      `${kind} without VAT keeps Tạm tính equal to gross subtotal`,
     );
 
     const withVat = renderDocumentToOps(
@@ -220,11 +225,11 @@ test("bills show VAT rates only when present and after adjustments", () => {
         ],
       }),
     ).flatMap((op) => (op.kind === "line" ? [op.text] : []));
-    const discountIndex = withVat.findIndex((line) =>
-      line.includes("Chiết khấu"),
+    const subtotalIndex = withVat.findIndex((line) =>
+      line.startsWith("Tạm tính"),
     );
     const taxTotalIndex = withVat.findIndex((line) =>
-      line.startsWith("Tiền thuế GTGT (đã gồm)"),
+      line.startsWith("Thuế GTGT"),
     );
     const vat10Index = withVat.findIndex((line) =>
       line.startsWith("- Thuế GTGT (10%)"),
@@ -232,19 +237,32 @@ test("bills show VAT rates only when present and after adjustments", () => {
     const vat8Index = withVat.findIndex((line) =>
       line.startsWith("- Thuế GTGT (8%)"),
     );
+    const serviceIndex = withVat.findIndex((line) =>
+      line.includes("Phí dịch vụ"),
+    );
+    const discountIndex = withVat.findIndex((line) =>
+      line.includes("Chiết khấu"),
+    );
     const totalIndex = withVat.findIndex((line) =>
       line.includes("TỔNG CỘNG"),
     );
 
+    assert.ok(withVat[subtotalIndex]?.includes("120.034đ"));
     assert.ok(withVat[taxTotalIndex]?.endsWith("9.966đ"));
     assert.ok(withVat[vat10Index]?.endsWith("1.818đ"));
     assert.ok(withVat[vat8Index]?.endsWith("8.148đ"));
     assert.ok(
-      discountIndex < taxTotalIndex &&
+      subtotalIndex < taxTotalIndex &&
         taxTotalIndex < vat10Index &&
         vat10Index < vat8Index &&
-        vat8Index < totalIndex,
-      `${kind} must render VAT total and descending rates after discount`,
+        vat8Index < serviceIndex &&
+        serviceIndex < discountIndex &&
+        discountIndex < totalIndex,
+      `${kind} must render exclusive Tạm tính, then GTGT, service, discount, total`,
+    );
+    assert.ok(
+      !withVat.some((line) => line.includes("đã gồm")),
+      `${kind} must not label VAT as already included in Tạm tính`,
     );
   }
 });
