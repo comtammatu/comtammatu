@@ -226,12 +226,16 @@ test("Wave 4 Branch D1 count views: Sheet dual-plane carve-out (same depth as Ow
       /IconDotsVertical/,
       `${surface.name}: no fake overflow`,
     );
-    assert.match(
+    assert.doesNotMatch(
       source,
       /from "@comtammatu\/ui\/components\/sheet"/,
-      `${surface.name}: Branch Sheet dual-plane frame`,
+      `${surface.name}: Sheet comes from the surface adapter`,
     );
-    assert.match(source, /<Sheet[\s>]/, `${surface.name}: <Sheet`);
+    assert.match(
+      source,
+      /<(AppSheet|Sheet)[\s>]/,
+      `${surface.name}: AppSheet or Sheet`,
+    );
     assert.doesNotMatch(
       source,
       /import\s*\{[^}]*AppDialog/,

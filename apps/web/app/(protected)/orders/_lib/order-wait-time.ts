@@ -58,7 +58,7 @@ export function getOrderAlertBadgeProps(waitInfo: OrderWaitInfo): {
         label: ORDERS_COPY.badgeCritical(waitMinutes, statusSuffix),
         badgeVariant: "destructive",
         badgeClassName:
-          "border-destructive/20 bg-destructive text-destructive-foreground font-semibold shadow-xs animate-pulse",
+          "border-destructive/20 bg-destructive text-destructive-foreground font-semibold shadow-xs motion-safe:animate-pulse",
       };
     case "warning":
       return {

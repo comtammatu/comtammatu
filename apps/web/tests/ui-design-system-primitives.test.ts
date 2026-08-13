@@ -171,7 +171,7 @@ test("AppSection and AppPageHeader clamp secondary description copy", () => {
   );
   assert.match(
     compareChip,
-    /max-w-\[12rem\] truncate font-normal text-muted-foreground/,
+    /max-w-48 truncate font-normal text-muted-foreground/,
   );
   assert.match(card, /min-w-0 text-xs\/relaxed text-muted-foreground/);
   assert.doesNotMatch(

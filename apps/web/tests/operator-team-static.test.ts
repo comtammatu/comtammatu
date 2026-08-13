@@ -312,12 +312,9 @@ test("operator team can force-close a shift only after its scheduled end", () =>
 test("operator team board drawer keeps long shift details inside the drawer", () => {
   assert.match(
     teamBoardSource,
-    /<DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">/,
+    /<AppDrawer[\s\S]*contentClassName="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"/,
   );
-  assert.match(
-    teamBoardSource,
-    /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"/,
-  );
+  assert.match(teamBoardSource, /footerClassName="shrink-0 gap-2 pt-2"/);
   assert.doesNotMatch(teamBoardSource, /data-vaul-no-drag/);
   assert.match(teamBoardSource, /className="break-words"/);
 });
@@ -354,7 +351,7 @@ test("operator team shift rows open one detail drawer before focused actions", (
   );
   assert.match(teamBoardSource, /drawerActionCheckout/);
   assert.match(teamBoardSource, /drawerActionCountSubmitted/);
-  assert.match(teamBoardSource, /DrawerFooter className="shrink-0/);
+  assert.match(teamBoardSource, /footerClassName="shrink-0/);
   assert.doesNotMatch(
     teamBoardSource,
     /needsAction \? <Badge variant="warning">\{copy\.filters\.needsAction\}/,
@@ -439,11 +436,8 @@ test("operator team members use a roster grid with real profile fields", () => {
   assert.match(teamMembersSource, /shift\/attendance/);
   // Drawer stays a short touch summary: one scroll body + sticky footer CTA.
   // Full day lists belong on /shift/attendance, not inside the drawer.
-  assert.match(
-    teamMembersSource,
-    /className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4"/,
-  );
-  assert.match(teamMembersSource, /DrawerFooter className="shrink-0/);
+  assert.match(teamMembersSource, /<AppDrawer/);
+  assert.match(teamMembersSource, /footerClassName="shrink-0/);
   assert.match(
     teamMembersSource,
     /shift\/attendance\?view=summary&employeeId=\$\{activeMember\.employeeId\}&month=/,

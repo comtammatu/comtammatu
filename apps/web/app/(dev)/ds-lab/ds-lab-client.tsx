@@ -45,14 +45,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Slider } from "@comtammatu/ui/components/slider";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -76,6 +69,7 @@ import {
   AppToolbar,
   PublicSection,
   StationSection,
+  AppSheet,
 } from "@/components/surface";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -603,21 +597,17 @@ export function DesignLabClient() {
             </div>
           </AppDialog>
 
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>Sheet</SheetTitle>
-                <SheetDescription>
-                  Side panel with safe-area padding and slide enter/exit.
-                </SheetDescription>
-              </SheetHeader>
-              <SheetFooter>
-                <Button variant="outline" onClick={() => setSheetOpen(false)}>
-                  Close
-                </Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
+          <AppSheet
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            title="Sheet"
+            description="Side panel with safe-area padding and slide enter/exit."
+            footer={
+              <Button variant="outline" onClick={() => setSheetOpen(false)}>
+                Close
+              </Button>
+            }
+          />
         </AppSection>
 
         <AppSection

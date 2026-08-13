@@ -6,14 +6,11 @@ import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui/lib/utils";
+import { StationSheet } from "@/components/surface";
+
 
 export type PaidOrderFeedbackContext = {
   orderId: number;
@@ -147,22 +144,16 @@ export function SelfOrderFeedbackSheet({
     Boolean(orderContext?.branchPhone);
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="mx-auto max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl"
-      >
-        <SheetHeader>
-          <SheetTitle>{SELF_ORDER_VI.feedbackTitle}</SheetTitle>
-          {metaParts.length > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {metaParts.join(" · ")}
-            </p>
-          ) : null}
-        </SheetHeader>
-
+    <StationSheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={SELF_ORDER_VI.feedbackTitle}
+      description={metaParts.length > 0 ? metaParts.join(" · ") : undefined}
+      side="bottom"
+      contentClassName="mx-auto max-h-[90dvh] w-full max-w-lg rounded-t-2xl"
+    >
         {done ? (
-          <div className="flex flex-col gap-3 px-1 py-4 text-center">
+          <div className="flex flex-col gap-3 text-center">
             <p className="text-lg font-semibold">
               {SELF_ORDER_VI.feedbackThanksTitle}
             </p>
@@ -218,7 +209,7 @@ export function SelfOrderFeedbackSheet({
             </Button>
           </div>
         ) : (
-          <form onSubmit={onSubmit} className="flex flex-col gap-5 px-1 py-4">
+          <form onSubmit={onSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label>{SELF_ORDER_VI.feedbackRatingLabel}</Label>
               <div className="flex justify-center gap-2">
@@ -296,7 +287,6 @@ export function SelfOrderFeedbackSheet({
             </Button>
           </form>
         )}
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

@@ -369,8 +369,7 @@ test("finance supplier invoice deep links load the exact scoped invoice", () => 
     clientSource,
     /mode:\s*"view"[\s\S]*invoiceId:\s*String\(invoiceId\)/,
   );
-  assert.match(modules, /<Sheet[\s\S]*open=\{open\}/);
-  assert.match(modules, /SheetContent[\s\S]*side="right"/);
+  assert.match(modules, /<AppSheet[\s\S]*open=\{open\}/);
   assert.doesNotMatch(
     clientSource,
     /xl:grid-cols-\[minmax\(0,1\.6fr\)_minmax\(320px,1fr\)\]/,
@@ -468,7 +467,7 @@ test("supplier invoice detail opens in a right Sheet instead of a pinned pane", 
   assert.match(shell, /toolbar=\{listToolbar\}/);
   assert.doesNotMatch(shell, /<AppListFrame[\s\S]{0,400}title=\{viewMode/);
   assert.doesNotMatch(shell, /<AppListFrame[\s\S]{0,400}action=\{viewModeTabs\}/);
-  assert.match(modules, /SheetFooter/);
+  assert.match(modules, /footer=\{footer\}/);
   assert.match(modules, /sm:max-w-xl/);
   assert.match(modules, /outstandingPayable/);
   assert.match(modules, /ItemGroup className="grid grid-cols-2 gap-2"/);

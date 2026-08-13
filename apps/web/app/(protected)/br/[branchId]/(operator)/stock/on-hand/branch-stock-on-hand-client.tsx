@@ -35,19 +35,15 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { MultiSelectCombobox } from "@/components/form/multi-select-combobox";
 import { formatQty } from "@lib/inventory/format";
 import { formatStockUnits } from "@/(protected)/inventory/_lib/stock-unit-format";
@@ -553,61 +549,15 @@ export function BranchStockOnHandClient({
         )}
       </BranchOperatorPanel>
 
-      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-        <SheetContent side="bottom">
-          <SheetHeader>
-            <SheetTitle>{stockCopy.filterSheet.title}</SheetTitle>
-            <SheetDescription>
-              {stockCopy.filterSheet.description}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <MultiSelectCombobox
-                options={multiSelectOptions}
-                onConfirm={(selected) => {
-                  setDraftCategories((current) =>
-                    normalizeStockOnHandCategories([...current, ...selected]),
-                  );
-                }}
-                triggerLabel={stockCopy.filterSheet.categoryMultiLabel}
-                confirmLabel={stockCopy.filterSheet.categoryConfirm}
-                searchPlaceholder={stockCopy.filters.categoryPlaceholder}
-                triggerClassName="min-h-12 w-full"
-              />
-            </div>
-
-            {normalizeStockOnHandCategories(draftCategories).length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {stockCopy.filterSheet.selectedCategories}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {normalizeStockOnHandCategories(draftCategories).map(
-                    (value) => (
-                      <Badge
-                        key={value}
-                        variant="secondary"
-                        className="gap-2 pr-1"
-                      >
-                        {categoryLabel(value)}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={`${ACTIONS_VI.remove} ${categoryLabel(value)}`}
-                          onClick={() => removeCategory(value)}
-                        >
-                          <IconX />
-                        </Button>
-                      </Badge>
-                    ),
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <SheetFooter className="grid grid-cols-2 gap-2">
+      <AppSheet
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        title={stockCopy.filterSheet.title}
+        description={stockCopy.filterSheet.description}
+        side="bottom"
+        footerClassName="grid grid-cols-2 gap-2"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
@@ -622,37 +572,74 @@ export function BranchStockOnHandClient({
             <Button type="button" size="touch" onClick={applyFilters}>
               {stockCopy.actions.applyFilters}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={moreJobsOpen} onOpenChange={setMoreJobsOpen}>
-        <SheetContent side="bottom">
-          <SheetHeader>
-            <SheetTitle>{stockCopy.moreJobsSheet.title}</SheetTitle>
-            <SheetDescription>
-              {stockCopy.moreJobsSheet.description}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="grid grid-cols-2 gap-2 px-3 py-3 sm:px-4">
-            {secondaryJobs.map((job) => {
-              const Icon = secondaryJobIcon(job.key);
-              return (
-                <Button
-                  key={job.key}
-                  size="touch-lg"
-                  variant="outline"
-                  className="w-full whitespace-normal"
-                  render={<Link href={job.href} />}
-                >
-                  <Icon data-icon="inline-start" />
-                  {job.title}
-                </Button>
+          </>
+        }
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          <MultiSelectCombobox
+            options={multiSelectOptions}
+            onConfirm={(selected) => {
+              setDraftCategories((current) =>
+                normalizeStockOnHandCategories([...current, ...selected]),
               );
-            })}
+            }}
+            triggerLabel={stockCopy.filterSheet.categoryMultiLabel}
+            confirmLabel={stockCopy.filterSheet.categoryConfirm}
+            searchPlaceholder={stockCopy.filters.categoryPlaceholder}
+            triggerClassName="min-h-12 w-full"
+          />
+        </div>
+
+        {normalizeStockOnHandCategories(draftCategories).length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">
+              {stockCopy.filterSheet.selectedCategories}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {normalizeStockOnHandCategories(draftCategories).map((value) => (
+                <Badge key={value} variant="secondary" className="gap-2 pr-1">
+                  {categoryLabel(value)}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={`${ACTIONS_VI.remove} ${categoryLabel(value)}`}
+                    onClick={() => removeCategory(value)}
+                  >
+                    <IconX />
+                  </Button>
+                </Badge>
+              ))}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        ) : null}
+      </AppSheet>
+
+      <AppSheet
+        open={moreJobsOpen}
+        onOpenChange={setMoreJobsOpen}
+        title={stockCopy.moreJobsSheet.title}
+        description={stockCopy.moreJobsSheet.description}
+        side="bottom"
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {secondaryJobs.map((job) => {
+            const Icon = secondaryJobIcon(job.key);
+            return (
+              <Button
+                key={job.key}
+                size="touch-lg"
+                variant="outline"
+                className="w-full whitespace-normal"
+                render={<Link href={job.href} />}
+              >
+                <Icon data-icon="inline-start" />
+                {job.title}
+              </Button>
+            );
+          })}
+        </div>
+      </AppSheet>
     </BranchOperatorPage>
   );
 }

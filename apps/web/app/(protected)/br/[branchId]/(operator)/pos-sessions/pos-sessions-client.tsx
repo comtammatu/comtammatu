@@ -13,19 +13,21 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
-import { AppEmptyState } from "@/components/surface";
 import {
-  BranchOperatorControlBar,
-  BranchOperatorFrame,
-  BranchOperatorPanel,
-} from "@lib/branch-operator/components/branch-operator-page";
-import {
+  AppEmptyState,
+  AppDrawer,
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
+} from "@/components/surface";
+import {
+  BranchOperatorControlBar,
+  BranchOperatorFrame,
+  BranchOperatorPanel,
+} from "@lib/branch-operator/components/branch-operator-page";
+
 import {
   formatCount,
   formatPercent,
@@ -373,21 +375,17 @@ export function PosSessionsClient({
       </div>
 
       {selectedSession && !isTouchLayout && !isInsightRailLayout ? (
-        <Drawer open={insightsOpen} onOpenChange={setInsightsOpen}>
-          <DrawerContent className="flex h-full flex-col overflow-hidden">
-            <DrawerHeader>
-              <DrawerTitle>
-                {messages.settings.posSessions.reportTitle}
-              </DrawerTitle>
-            </DrawerHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+        <AppDrawer
+          open={insightsOpen}
+          onOpenChange={setInsightsOpen}
+          title={messages.settings.posSessions.reportTitle}
+          contentClassName="flex h-full flex-col overflow-hidden"
+        >
               <div className="flex flex-col gap-3">
                 {settlementPanel}
                 {report ? <SessionReportCard report={report} /> : null}
               </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+        </AppDrawer>
       ) : null}
 
       <OrderDetailDrawer
@@ -1242,28 +1240,23 @@ function OrderDetailDrawer({
 
   return (
     <>
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="flex h-full flex-col overflow-hidden">
-          <DrawerHeader>
-            <div className="flex flex-col gap-1">
-              <DrawerTitle className="text-base font-semibold">
-                {order?.order_number ?? ""}
-              </DrawerTitle>
-              {order ? (
-                <DrawerDescription>
-                  {order.order_type === "dine_in"
-                    ? messages.settings.posSessions.tableContext(
-                        order.tables?.number ?? "-",
-                      )
-                    : messages.settings.posSessions.takeaway}
-                  {" · "}
-                  {formatDateTime(order.created_at)}
-                </DrawerDescription>
-              ) : null}
-            </div>
-          </DrawerHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <AppDrawer
+        open={open}
+        onOpenChange={onOpenChange}
+        title={order?.order_number ?? ""}
+        description={
+          order
+            ? `${
+                order.order_type === "dine_in"
+                  ? messages.settings.posSessions.tableContext(
+                      order.tables?.number ?? "-",
+                    )
+                  : messages.settings.posSessions.takeaway
+              } · ${formatDateTime(order.created_at)}`
+            : undefined
+        }
+        contentClassName="flex h-full flex-col overflow-hidden"
+      >
             {order ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2">
@@ -1521,9 +1514,7 @@ function OrderDetailDrawer({
                 ) : null}
               </div>
             ) : null}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
 
       <ReasonConfirmDialog
         open={methodFixOpen}

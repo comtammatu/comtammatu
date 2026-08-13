@@ -17,7 +17,11 @@ export {
   WholeVndField,
   WholeVndInput,
 } from "./domain-number-inputs";
-export { BusinessDateField, BusinessDatePicker } from "./business-date-field";
+export {
+  BusinessDateField,
+  BusinessDatePicker,
+  BusinessWeekPicker,
+} from "./business-date-field";
 export { SelectField } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export { Combobox } from "./combobox";

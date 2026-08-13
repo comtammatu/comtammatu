@@ -313,3 +313,5 @@ export function AttendanceCalendar({
     </Frame>
   );
 }
+
+export { AttendanceCalendar as AttendanceMonthGrid };

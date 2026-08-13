@@ -13,14 +13,8 @@ import { WholeVndInput } from "@/components/form";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { Label } from "@comtammatu/ui/components/label";
@@ -28,7 +22,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { CircleCheck as IconCircleCheck } from "lucide-react";
 import { confirm } from "@/components/confirm-dialog";
-import { StationSection } from "@/components/surface";
+import {
+  StationSection,
+  StationSheet,
+} from "@/components/surface";
 import { closePosSession } from "./actions";
 import {
   DenominationInput,
@@ -184,22 +181,63 @@ export function CloseSessionSheet({
     Math.abs(summary.cash_difference) > summary.variance_threshold;
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full p-0 data-[side=right]:w-full"
-      >
-        <SheetHeader>
-          <SheetTitle>
-            Chốt ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
-          </SheetTitle>
-          <div className="mt-2">
-            <Progress value={step === "count" ? 50 : 100} className="h-2" />
+    <StationSheet
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={`Chốt ca · ${step === "count" ? "Đếm tiền mặt" : "Đối soát"}`}
+      side="right"
+      contentClassName="w-full data-[side=right]:w-full"
+      footer={
+        step === "count" ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+              <span>Đã đếm</span>
+              <span className="font-semibold tabular-nums text-foreground">
+                {formatVND(totalCounted)}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                className="px-4"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+              >
+                {ACTIONS_VI.cancel}
+              </Button>
+              <Button
+                type="button"
+                size="touch"
+                className="flex-1"
+                disabled={isPending}
+                onClick={() => void handleSubmit()}
+              >
+                {isPending ? (
+                  <>
+                    <Spinner data-icon="inline-start" /> Đang chốt ca
+                  </>
+                ) : (
+                  "Chốt ca"
+                )}
+              </Button>
+            </div>
           </div>
-        </SheetHeader>
-
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="px-3 py-3 sm:px-4 sm:py-4">
+        ) : (
+          <Button
+            type="button"
+            size="touch"
+            className="w-full"
+            onClick={handleConfirm}
+          >
+            <IconCircleCheck data-icon="inline-start" />
+            Xong
+          </Button>
+        )
+      }
+    >
+      <Progress value={step === "count" ? 50 : 100} className="mb-4 h-2" />
             {step === "count" && (
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-2 gap-2" role="group" aria-label="Chế độ đếm tiền mặt">
@@ -349,59 +387,6 @@ export function CloseSessionSheet({
                 </Badge>
               </div>
             )}
-          </div>
-        </ScrollArea>
-
-        <div className="border-t px-3 py-3 sm:px-4 sm:py-4">
-          {step === "count" ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                <span>Đã đếm</span>
-                <span className="font-semibold tabular-nums text-foreground">
-                  {formatVND(totalCounted)}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="px-4"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isPending}
-                >
-                  {ACTIONS_VI.cancel}
-                </Button>
-                <Button
-                  type="button"
-                  size="touch"
-                  className="flex-1"
-                  disabled={isPending}
-                  onClick={() => void handleSubmit()}
-                >
-                  {isPending ? (
-                    <>
-                      <Spinner data-icon="inline-start" /> Đang chốt ca
-                    </>
-                  ) : (
-                    "Chốt ca"
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              size="touch"
-              className="w-full"
-              onClick={handleConfirm}
-            >
-              <IconCircleCheck data-icon="inline-start" />
-              Xong
-            </Button>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

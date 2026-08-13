@@ -38,7 +38,7 @@ import {
   FormDialog,
   SelectField,
   TextareaField,
-  TextField,
+  BusinessDateField,
 } from "@/components/form";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -303,18 +303,16 @@ export function LeaveRequestClient({
           return (
             <>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="startDate"
                   label={copy.startDate}
-                  type="date"
                   min={todayIso}
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="endDate"
                   label={copy.endDate}
-                  type="date"
                   min={startDate || todayIso}
                 />
               </div>

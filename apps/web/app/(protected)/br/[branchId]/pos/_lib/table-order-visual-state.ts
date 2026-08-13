@@ -84,7 +84,8 @@ export type PosTableTileTone = "default" | "success" | "warning" | "muted";
 /**
  * Tile tone. `ready`/`served` derive from the SAME canonical status -> variant
  * map the order-list badge uses (`getPosOrderStateVariant`), so a served
- * (= awaiting-payment) or ready order is one color across tile and list.
+ * kitchen-done order is one color across tile and list. Unpaid uses the
+ * `order-payment` domain on the cashier badge.
  * `active` intentionally diverges: an occupied table stays amber as an
  * at-a-glance table-occupancy signal (a different axis from the order-status
  * badge, which is neutral for an in-progress order). `empty`/`muted` are

@@ -66,7 +66,7 @@ test("Wave 3 Branch count/waste stay branch-touch (no DataTable leakage)", () =>
     assert.doesNotMatch(source, /<DataTable[\s>]/, `${path}: no DataTable`);
     assert.doesNotMatch(source, /AppListFrame/, `${path}: no AppListFrame`);
     assert.match(source, /ItemGroup|<Item[\s>]/, `${path}: touch Item`);
-    assert.match(source, /<Sheet[\s>]|SheetContent/, `${path}: Sheet review`);
+    assert.match(source, /<AppSheet[\s>]|<Sheet[\s>]|SheetContent/, `${path}: Sheet review`);
   }
 });
 

@@ -880,8 +880,8 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /trailing=\{/);
   assert.match(table, /aria-label=\{copy\.filters\.label\}/);
   assert.match(table, /TooltipTrigger/);
-  assert.match(table, /SheetTrigger/);
-  assert.match(table, /SheetContent/);
+  assert.match(table, /<AppSheet/);
+  assert.match(table, /trigger=\{/);
   assert.match(table, /key: "date"/);
   assert.match(table, /key: "content"/);
   assert.match(table, /key: "status"/);
@@ -991,8 +991,8 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   const matchCell = read(
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
   );
-  assert.match(matchCell, /<Sheet open=\{open\}/);
-  assert.match(matchCell, /<SheetDescription>/);
+  assert.match(matchCell, /<AppSheet/);
+  assert.match(matchCell, /description=\{copy.matchSheetDescription\}/);
   assert.doesNotMatch(matchCell, /Popover(Content|Trigger)?/);
   assert.doesNotMatch(matchCell, /max-h-(48|72).*overflow-y-auto/);
   assert.match(matchCell, /htmlFor=\{checkboxId\}/);

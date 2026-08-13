@@ -35,19 +35,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormField } from "@/components/form";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { getStatusBadgeMeta, StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -404,37 +402,16 @@ export function BranchConsumptionListClient({
         </TabsContent>
       </Tabs>
 
-      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {INVENTORY_VI.manualConsumptionCreateAction}
-            </SheetTitle>
-            <p className="text-sm text-muted-foreground">
-              {INVENTORY_VI.manualConsumptionCreateDescription}
-            </p>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <FormField
-              controlId="branch-consumption-notes"
-              label={FORM_VI.notes}
-            >
-              <Textarea
-                id="branch-consumption-notes"
-                name="notes"
-                rows={4}
-                maxLength={500}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder={INVENTORY_VI.issueNotesPlaceholder}
-              />
-            </FormField>
-          </div>
-          <SheetFooter>
+      <AppSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title={INVENTORY_VI.manualConsumptionCreateAction}
+        description={INVENTORY_VI.manualConsumptionCreateDescription}
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="max-h-dvh-95 bg-background"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
@@ -453,54 +430,59 @@ export function BranchConsumptionListClient({
               {isPending ? <Spinner className="size-5" /> : null}
               {INVENTORY_VI.manualConsumptionCreateAction}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </>
+        }
+      >
+        <FormField
+          controlId="branch-consumption-notes"
+          label={FORM_VI.notes}
+        >
+          <Textarea
+            id="branch-consumption-notes"
+            name="notes"
+            rows={4}
+            maxLength={500}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={INVENTORY_VI.issueNotesPlaceholder}
+          />
+        </FormField>
+      </AppSheet>
 
-      <Sheet
+      <AppSheet
         open={selectedOrder != null}
         onOpenChange={(open) => {
           if (!open) setSelectedOrder(null);
         }}
+        title={selectedOrder?.orderNumber ?? ""}
+        description={
+          selectedOrder ? formatVNDateTime(selectedOrder.recordedAt) : undefined
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="max-h-dvh-95 bg-background"
+        headerClassName="[&_h2]:font-mono"
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={() => setSelectedOrder(null)}
+          >
+            {ACTIONS_VI.close}
+          </Button>
+        }
       >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0"
-        >
-          {selectedOrder ? (
-            <>
-              <SheetHeader>
-                <SheetTitle className="font-mono">
-                  {selectedOrder.orderNumber}
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground">
-                  {formatVNDateTime(selectedOrder.recordedAt)}
-                </p>
-              </SheetHeader>
-              <div className="px-4 pb-4">
-                <BranchOperatorDetailList
-                  columns={1}
-                  rows={selectedOrder.lines.map((line) => ({
-                    label: line.ingredientName,
-                    value: `${line.quantity} ${line.unit} · ${line.locationName}`,
-                  }))}
-                />
-              </div>
-              <SheetFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  onClick={() => setSelectedOrder(null)}
-                >
-                  {ACTIONS_VI.close}
-                </Button>
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+        {selectedOrder ? (
+          <BranchOperatorDetailList
+            columns={1}
+            rows={selectedOrder.lines.map((line) => ({
+              label: line.ingredientName,
+              value: `${line.quantity} ${line.unit} · ${line.locationName}`,
+            }))}
+          />
+        ) : null}
+      </AppSheet>
 
       {canManage ? (
         <AppDetailFooter

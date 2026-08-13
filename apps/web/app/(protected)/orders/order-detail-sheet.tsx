@@ -17,13 +17,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Item } from "@comtammatu/ui/components/item";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   fetchOrderAuditLog,
   fetchOrderItems,
@@ -63,7 +57,11 @@ import {
   getPaymentMethodLabelVi,
 } from "@comtammatu/shared/labels";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState, DescriptionList } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+  DescriptionList,
+} from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
 
 function itemStatusToneClass(status: string): string {
@@ -1161,18 +1159,15 @@ export function OrderDetailSheet({
   if (!order) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto">
-        <SheetHeader className="mb-4">
-          <SheetTitle className="font-mono text-base">
-            #{order.order_number}
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            Chi tiết đơn hàng và lịch sử thao tác.
-          </SheetDescription>
-        </SheetHeader>
-        <OrderDetailContent order={order} />
-      </SheetContent>
-    </Sheet>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`#${order.order_number}`}
+      description="Chi tiết đơn hàng và lịch sử thao tác."
+      contentClassName="w-full overflow-y-auto"
+      headerClassName="mb-4"
+    >
+      <OrderDetailContent order={order} />
+    </AppSheet>
   );
 }

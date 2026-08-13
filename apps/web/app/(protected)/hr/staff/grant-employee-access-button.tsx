@@ -7,6 +7,7 @@ import {
   Search as IconSearch,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import {
   InputGroup,
   InputGroupAddon,
@@ -133,10 +134,10 @@ export function GrantEmployeeAccessButton({
 
   return (
     <>
-      <Button variant="outline" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
+      <ResponsiveActionButton variant="outline" onClick={() => setOpen(true)}>
         <IconKeyRound data-icon="inline-start" />
         {staffCopy.grantForEmployee}
-      </Button>
+      </ResponsiveActionButton>
       <AppDialog
         open={open}
         onOpenChange={(next) => {

@@ -11,6 +11,7 @@
 - [Base UI Rule](#base-ui-rule)
 - [Product Dual Thesis](#product-dual-thesis)
 - [Token Contract](#token-contract)
+- [Color Usage](#color-usage)
 - [Contrast Targets (WCAG)](#contrast-targets-wcag)
 - [Typography Contract](#typography-contract)
 - [Rhythm Contract](#rhythm-contract)
@@ -46,18 +47,14 @@ Runtime bindings:
 Má Tư DS runtime = single CSS entry `packages/ui/src/styles/globals.css` +
 shared component source: `packages/ui/src/components/*` + app adapters under
 `apps/web/app/components/*`. Nothing else may declare itself the design system.
+No `ds.css`, per-route `theme.css`, or parallel token namespace.
 
 Resolve every decision at the concern that owns it. A lower layer never
 overrides a higher authority; a higher layer reuses the lower implementation
 before adding anything new. Shadcn and the Web Interface Guidelines are
 comparison inputs for anatomy, states, and accessibility — never a token source,
-preset, or visual authority.
-
-There is exactly one CSS entry (`globals.css`). No `ds.css`, no per-route
-`theme.css`, no second stylesheet product, no parallel token namespace.
-
-Agents must preserve this decision unless the task explicitly asks to change the
-design system itself.
+preset, or visual authority. Agents preserve this unless the task asks to change
+the design system itself.
 
 ## Artifact Ladder
 
@@ -327,6 +324,29 @@ minimum touch target.
 A genuinely new token is added to `globals.css`, documented here, and checked
 against `tasks/regressions.md`.
 
+## Color Usage
+
+Terracotta (`primary`) is the **action** color, not a status color. Dual Thesis
+halves share this map; density and chrome may differ, hues must not.
+
+| Role | Token | Use | Forbidden |
+| --- | --- | --- | --- |
+| Primary CTA | `primary` | Exactly one solid primary control per view state | Status badges, large fills, decorative chrome |
+| Safe secondary | `secondary` / `outline` / `ghost` | Cancel, back, extra actions | Destructive work |
+| Destructive | `destructive` | Delete, void, reject, refund | Brand chrome, primary CTA |
+| Done | `success` | Ready, approved, paid, printed | In-progress / waiting-on-person |
+| Needs a person | `warning` | Pending review, risk, match needed | Hard-blocked failure |
+| In flight | `info` | Sent, in transit, processing | Body text (must stay distinct from `foreground`) |
+| Neutral | `secondary` / `outline` | Draft, history, metadata | Work that needs action now |
+| Focus / trim | `ring` / `accent` | Focus ring, rice-yellow trim | Workflow meaning |
+| Series | `chart-1` … `chart-5` | Charts only | Status on a row |
+
+Dosage: status uses tint `/10` or `/15` plus token ink — never a solid
+`primary` fill. `Badge variant="default"` is metadata or a CTA chip, not
+workflow state (`StatusBadge`). Color is never the only cue. Light
+`destructive` must not share the brick hue with `primary`; light `info` must
+not equal `foreground`.
+
 ## Contrast Targets (WCAG)
 
 One token set for both halves. Non-text UI (borders, cards, focus rings) meets
@@ -340,6 +360,8 @@ for body).
 | `border` / `input` vs `background` | ≥3:1 |
 | `ring` / `background` | ≥3:1 |
 | `card` / `background` | Visible hierarchy — prefer a border when `ΔL` is small |
+| `destructive` / `background` | Distinct hue from `primary` (~25 vs ~33); ≥4.5:1 for destructive text |
+| `info` / `background` | Distinct from `foreground`; ≥4.5:1 for info text |
 
 | Pair (night `.dark`) | Target |
 | --- | --- |
@@ -371,9 +393,8 @@ those variables into Tailwind utilities.
 - `font-mono` is for tabular operational data: IDs, codes, order/receipt
   numbers, prices, quantities, timestamps, audit hashes.
 - Do not reintroduce `Inter`, `Montserrat`, `JetBrains Mono`, system-only
-  stacks, route-specific `font-family`, or per-surface typography exceptions.
-- Changing typography runtime updates `layout.tsx`, `globals.css`, this file,
-  `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
+  stacks, or route-specific `font-family`. Typography runtime owners:
+  `layout.tsx`, `globals.css`, this file, `docs/modules/ui.md`.
 
 Brand assets render through `BrandMark` / `BrandLockup` / `BrandSymbol` /
 `BrandMascot` — never a direct `/brand/*` path from a route component.
@@ -529,26 +550,22 @@ allowed.
 
 ### G. Motion Contract
 
-Motion defaults to functional feedback: loading, enter/exit, focus, state
-change. Base UI supplies the behavior beneath these recipes.
+Functional feedback only (loading, enter/exit, focus, state). Prefer
+`--motion-*` / `--ease-*`. Gate looping motion with `motion-safe:`. Never
+`transition-all`, page-transition, or list-stagger. Animate only `transform`,
+`opacity`, `filter`, `color`, and named properties. `hover:scale-*` is forbidden
+on ERP surfaces; `active:scale` ≥ `0.97` is allowed on tap targets.
 
-- **Timing/easing.** Prefer the shared `--motion-*` / `--ease-*` tokens,
-  consumed as `duration-[var(--motion-*)]` / `ease-[var(--ease-*)]`. A route may
-  add distinct timing for a clear interaction or brand-feedback role, then move
-  the recipe into the visual layer once reused.
-- **Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets.
-  `hover:scale-*` is forbidden on ERP surfaces.
-- **Reduced motion (locked).** A global
-  `@media (prefers-reduced-motion: reduce)` reset in `globals.css` neutralizes
-  every animation and transition app-wide, including one-shot primitive
-  enter/exit, `Spinner`, and `tw-animate-css` states. Looping or
-  attention-drawing motion must **also** be gated with `motion-safe:` as
-  defense-in-depth; prefer `motion-safe:` on the animated class over
-  `motion-reduce:animate-none` on the static one.
-- Prefer `transform`, `opacity`, `filter`, `color`, and named transition
-  properties; never animate layout properties on a hot operational path.
-  `transition-all` stays prohibited. Keep continuous motion off operational
-  queues and next-action controls unless it conveys live state.
+| Job | Recipe | Forbidden |
+| --- | --- | --- |
+| Press | `active:scale` ≥ `0.97`, `--motion-fast` | `hover:scale-*` |
+| Control color / border | `--motion-base`, `--ease-move` | `transition-all` |
+| Dialog / menu enter | Base UI `data-[starting-style]`, `--motion-overlay` | `animate-in` keyframes on overlays |
+| Sheet / Drawer | `--motion-drawer`, translate on the opening edge | Slide on POS/KDS ticket rows |
+| New cart / KDS ticket | one-shot `motion-safe:fade-in` at `duration-150` | List stagger, slide-in |
+| Live attention | `motion-safe:animate-pulse` + tint ring on station hot path | Pulse on management LIST |
+| Spinner / skeleton | `--motion-spinner` / pulse, always `motion-safe:` | Fake KDS tickets |
+| Cotlet mascot | `animate-cotlet-*` on pickup idle only | Mascot on POS / KDS / management |
 
 ## Elevation / Shadow
 
@@ -604,7 +621,7 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 | standard app form field | helpers from `@/components/form` |
 | short detail or list-first document | `AppDialog` (`variant="document"`) or `FormDialog` |
 | simple destructive confirmation | shared `confirm()`; `ReasonConfirmDialog` when a reason is required |
-| contextual or long overlay | `Drawer`, `Sheet`, or a Page flow per the workflow |
+| overlay (form / D1 / station / touch) | Overlay chooser below |
 | empty / no result / error | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, `NotFoundPanel` |
 | loading | `PageSkeleton`, `PageSpinner`, or the approved route wrapper |
 | list row | `Item`, `ItemGroup` |
@@ -619,6 +636,51 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 
 Toast and durable notification behavior is specified in
 `docs/spec/toast-notification-system.md`.
+
+### Date / Calendar chooser
+
+`calendar.tsx` is adapter-only internals. DayPicker is never a month heatmap.
+
+| Job | Use | Forbidden |
+| --- | --- | --- |
+| Form field (RHF) | `BusinessDateField` | `type="date"`, raw `Calendar` |
+| Filter / URL date | `BusinessDatePicker` | Native date input, cloned Popover+Calendar |
+| Week / month / year period chrome | Compose `BusinessDatePicker` / `BusinessWeekPicker` + period buttons | Duplicate `dateToBusinessDate` helpers |
+| Attendance / Work / roster month board | Named display adapter (`AttendanceMonthGrid`, `WorkMonthGrid`, `RosterWeek`) | DayPicker as a heatmap |
+
+Display `dd/mm/yyyy` via `formatVNBusinessDate`. No `type="date"` exception.
+
+### Button chooser
+
+`Button` is a command. Size comes from named variants or
+`ResponsiveActionButton` — never `className` height patches.
+
+| Job | Use | Forbidden |
+| --- | --- | --- |
+| Command / submit / cancel | `Button` with `size=` | Native `<button>` outside closed exceptions |
+| Owner LIST/DETAIL CTA | `ResponsiveActionButton` | `size="touch"` / `icon-touch` / `touch-lg` literals on `control_surface` |
+| Form field density | `useFormControlSize` | Hand-patched `h-10` / `min-h-12` on `Button` |
+| On/off chip or segmented choice | `Toggle` / `ToggleGroup` | `Button` as a chip |
+| Month-board day cell | Inside the board adapter | Page-level `Button` grid |
+| Selectable tile | `InteractiveCard` or Branch tile adapter | Raw `<button>` tile |
+
+Native `<button>` only in closed chrome (`global-error`, `sidebar` via
+`Button render={<button>}`). One-off `*Button` wrappers must wrap
+`ResponsiveActionButton` + dialog and must not restyle.
+
+### Overlay chooser
+
+| Job | Use | Forbidden |
+| --- | --- | --- |
+| Short task / create-edit form | `FormDialog` | Raw `Dialog` in a route |
+| Detail or list-first document | `AppDialog` (`variant="document"`) | Restyled Dialog clone |
+| D1 record beside a list | `AppSheet` | Raw `Sheet` in a `control_surface` route |
+| POS / KDS / guest overlay | `StationSheet` | `AppSheet` / `AppDialog` / `AppSection` on station gold |
+| Short touch task (approved adapter) | `Drawer` through that adapter | Route-authored `Drawer` |
+| Picker on a trigger | `Popover` / `Select` / `Combobox` | Sheet for a date pick |
+| Long workspace, more than one CTA | DETAIL page (D2) | Sheet that becomes a page |
+
+`sheet.tsx` / `drawer.tsx` are adapter-only. `NumberPadSheet` may import Sheet.
 
 ### List surface and the table system
 
@@ -709,9 +771,12 @@ in `docs/modules/ui.md`.
 - Variant + rendering: `apps/web/app/components/status-badge.tsx`
   (`StatusBadge`, `getStatusBadgeMeta`).
 - Unknown values render as the raw key with `outline` — never throw on DB data.
-- Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label
-  collapse; variants still match the registry), `kds/lib/status-config.ts` (hot
-  path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts`.
+- Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier may
+  collapse `new` / `confirmed` / `preparing` as age; kitchen `served` keeps
+  `Đã phục vụ` / `success`. Unpaid uses the `order-payment` domain via
+  `getStatusBadgeMeta("order-payment", …)` — “Chờ thanh toán” is payment, not
+  kitchen `served`), `kds/lib/status-config.ts` (hot path),
+  `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts`.
 
 ### Metric card role
 
@@ -803,19 +868,15 @@ explanatory copy only for temporary operational blockers.
 shell. Use the same typography, tokens, and state vocabulary as the other
 planes.
 
-**Layout baseline (all surfaces).** Mobile layout is the baseline; desktop adds
-density and faster scanning, never a different information architecture. The
-root viewport must allow user zoom (no `maximumScale: 1` / `userScalable:
-false`). Prefer one clear toolbar per workflow, keep search/filters/counts/bulk
-actions together, and never repeat the same workflow state in header, rail,
-sidebar, gate, and board.
+**Layout baseline (all surfaces).** Mobile is the baseline; desktop densifies,
+never a different IA. Root viewport must allow zoom. One toolbar per workflow;
+never repeat the same state in header, rail, sidebar, gate, and board.
 
 ## Layout UI/UX Frame
 
-Agent-operable composition ladder for every new or rebuilt screen. It does not
-replace Product Dual Thesis prefixes, page archetypes, or UI block recipes — it
-orders them. Frame law stays intact: `Frame` is the inset primitive only;
-`AppListFrame` / `DocumentFormFrame` remain legal `App*` adapters.
+Composition ladder for every new or rebuilt screen. Frame law stays intact:
+`Frame` is the inset primitive; `AppListFrame` / `DocumentFormFrame` stay legal
+`App*` adapters.
 
 ```text
 1. Shell chrome     → § Structural Governance A (exactly one approved family)
@@ -840,6 +901,18 @@ Visible recipes: `/ds-lab` (dev-only). Implementation map + gold paths:
 - Default gaps/pads: § Rhythm Contract A. Dense management uses
   `density="compact"` (and usually `width="xwide"` on LIST/REPORT); do not invent
   `*-dense` / `*-tight` utility families (§ Rhythm F).
+
+| `AppPage` width | Use |
+| --- | --- |
+| `narrow` | Staff / public task, single-column form |
+| `default` | Standard DETAIL |
+| `wide` | Comfortable management DETAIL |
+| `xwide` | LIST / REPORT on `control_surface` |
+| `full` | Station boards, edge-to-edge |
+
+Sticky stack: at most **two** sticky bands (shell chrome + one filter/footer
+band). `AppPageHeader` is not sticky. Do not stack KPI mosaics under a second
+sticky filter.
 
 ### IA slots (ordered)
 
@@ -1085,26 +1158,21 @@ improvisation.
 ## Copy Contract
 
 - Internal UI copy is Vietnamese by default. Keep established acronyms: `POS`,
-  `KDS`, `tenant`, `GRN`, `WAC`. Do not introduce new synonyms for business
-  states or workflow objects.
-- Copy source ladder: business meaning and spelling in `docs/ref/glossary.md`;
-  shared domain labels in `packages/shared/src/labels/vi.ts`; generic
-  actions/states/errors in `@comtammatu/shared/messages` (consumed by
-  `packages/ui` for primitive defaults); route- and product-specific copy in
-  `apps/web/lib/messages/*`; legal-fixed labels in
-  `packages/shared/src/labels/legal-fixed.ts`; route-specific adapters in the
-  relevant domain dictionary. Update or consume the correct source before adding
-  an inline synonym.
-- Utility copy beats marketing copy on app surfaces.
-- Secondary copy budget: page / `AppSection` description ≈ one idea, ≤ ~80
-  characters; KPI or field hint ≤ ~60. Drop the prop when it restates the title.
-  Destructive confirm copy (refund, void, SePay) keeps its risk meaning.
-- Layout safety: `AppSection` descriptions use `line-clamp-2`; `AppPageHeader`
-  descriptions clamp to two lines on `max-sm`; `CompareChip` hints truncate. Do
-  not clamp `FieldDescription` — shorten the copy. `CardDescription` stays
-  unclamped so dialogs can show full text.
+  `KDS`, `GRN`, `WAC`. Do not show `tenant` in product UI. Do not introduce new
+  synonyms for business states or workflow objects.
+- Copy source ladder: glossary spelling → `packages/shared/src/labels/vi.ts` →
+  `@comtammatu/shared/messages` → `apps/web/lib/messages/*`. Denylist terms live
+  in the glossary — do not duplicate those tables here.
+- Verb lexicon (reuse, do not synonym): `Lưu` / `Tạo` / `Xác nhận` / `Hủy` /
+  `Xóa {object}` / `Duyệt` / `Từ chối` / `Thanh toán`.
+- Toast formula: success `Đã X`; failure `Không thể X`. Severity and routing
+  stay in `docs/spec/toast-notification-system.md`.
+- Utility copy beats marketing copy. Secondary budget: page / `AppSection`
+  description ≈ one idea, ≤ ~80 characters; KPI or field hint ≤ ~60. Drop the
+  prop when it restates the title. Destructive confirm keeps its risk meaning.
 - Never put agent notes, implementation commentary, or dev history into product
-  UI.
+  UI. Layout safety: `AppSection` / `AppPageHeader` descriptions clamp; do not
+  clamp `FieldDescription` — shorten the copy. `CardDescription` stays unclamped.
 
 ## Enforcement
 
@@ -1118,23 +1186,15 @@ Machine-owned enforcement and discovery live in scripts, not in prose:
 | `scripts/ui-contract-scope.mjs` | enforced runtime source roots |
 | `scripts/page-archetypes.mjs` | route → archetype mapping and disposition |
 
-Run `corepack pnpm lint:ui-contract` for the gate and
-`corepack pnpm audit:ui-components` for the current report. This contract never
-persists dated audit results, guard inventories, exception history, or
-open-debt snapshots — the scripts, current source, task tracker, and git history
-own those facts.
+Run `corepack pnpm lint:ui-contract` and `corepack pnpm audit:ui-components`.
+This contract never persists dated audit results or open-debt snapshots.
 
-**Report-only onboarding.** A new runtime root joins report-only first: the
-audit measures and classifies it while blocking guards do not yet enforce it. It
-is promoted into `UI_RUNTIME_SOURCE_ROOTS` only after its measured debt reaches
-zero. Report-only scope never gains allowlist entries or budget increases.
-
-**Measured exception semantics.** An exception is valid only when a guard
-measures a real outcome and the source documents a reason. It is not entitlement
-to preserve an implementation.
+**Report-only onboarding.** A new runtime root is report-only until measured
+debt is zero, then it joins `UI_RUNTIME_SOURCE_ROOTS`. Report-only never gains
+allowlist entries. An exception is valid only when a guard measures a real
+outcome and the source documents a reason.
 
 **Before marking a UI task complete:** no fake shared components, no arbitrary
 Tailwind dimensions, no static presentation inline styles, no route-specific
-theme layer, no duplicated workflow state, no new vocabulary drift; the mobile
-first viewport still exposes the next action or live queue for POS/KDS; and
-`corepack pnpm typecheck && corepack pnpm lint && corepack pnpm build` passes.
+theme layer, no duplicated workflow state, no new vocabulary drift; POS/KDS
+mobile still exposes the next action; `corepack pnpm verify` passes.

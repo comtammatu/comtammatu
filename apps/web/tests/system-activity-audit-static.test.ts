@@ -45,8 +45,7 @@ test("system activity table opens evidence sheet without list JSON blobs", () =>
     "utf8",
   );
   assert.match(table, /onRowClick/);
-  assert.match(table, /SheetContent/);
-  assert.match(table, /side="right"/);
+  assert.match(table, /AppSheet/);
   assert.match(table, /size="md"/);
   assert.match(table, /getSystemActivityDetail/);
   assert.match(table, /summarizeAuditDiff/);
@@ -81,7 +80,7 @@ test("permission audit table opens evidence sheet from list rows", () => {
     "utf8",
   );
   assert.match(table, /onRowClick/);
-  assert.match(table, /<Sheet[\s\S]*side="right"/);
+  assert.match(table, /<AppSheet/);
   assert.match(table, /size="md"/);
   assert.match(table, /openPermissions|Mở hồ sơ quyền/);
   assert.match(table, /filterSameTarget|Lọc cùng đối tượng/);

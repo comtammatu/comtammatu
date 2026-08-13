@@ -2,14 +2,7 @@
 
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Frame } from "@comtammatu/ui/components/frame";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 import type {
@@ -17,7 +10,11 @@ import type {
   AttendanceCalendarLeave,
 } from "../actions";
 import { AttendanceCalendar } from "../attendance-calendar";
-import { AppSection, AppToolbar } from "@/components/surface";
+import {
+  AppSection,
+  AppSheet,
+  AppToolbar,
+} from "@/components/surface";
 import { DetailView } from "./attendance-detail-view";
 import {
   ATTENDANCE_TOOLBAR_CLASSNAME,
@@ -94,8 +91,6 @@ export function AttendanceCalendarHost({
   onSelectCalendarScope: (scope: CalendarScope) => void;
   onMutated: () => void;
 }) {
-  const isCalendarDetailTouch = useIsMobile();
-
   const toolbarFilters = (
     <AttendanceToolbarFilters
       todayMode={todayMode}
@@ -153,73 +148,66 @@ export function AttendanceCalendarHost({
           staleOpenDates={staleOpenDates}
         />
       </AppSection>
-      <Sheet
+      <AppSheet
         open={selectedDay !== null}
         onOpenChange={(open) => {
           if (!open) onSelectCalendarDay(null);
         }}
+        title={
+          selectedDay
+            ? attendanceCopy.calendarDetailTitle(
+                formatVNBusinessDate(selectedDay),
+              )
+            : attendanceCopy.calendarTitle
+        }
+        description={
+          selectedCalendarEmployee
+            ? `${selectedCalendarEmployee.full_name || selectedCalendarEmployee.employee_code} · ${attendanceCopy.calendarDetailDescription}`
+            : attendanceCopy.calendarDetailDescription
+        }
+        contentClassName="max-h-dvh-95 overflow-hidden bg-background data-[side=right]:lg:w-1/2 data-[side=right]:lg:max-w-none"
+        bodyClassName="p-3 sm:p-4"
       >
-        <SheetContent
-          side={isCalendarDetailTouch ? "bottom" : "right"}
-          className="max-h-dvh-95 overflow-hidden bg-background p-0 data-[side=right]:lg:w-1/2 data-[side=right]:lg:max-w-none"
-        >
-          {selectedDay ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>
-                  {attendanceCopy.calendarDetailTitle(
-                    formatVNBusinessDate(selectedDay),
-                  )}
-                </SheetTitle>
-                <SheetDescription>
-                  {selectedCalendarEmployee
-                    ? `${selectedCalendarEmployee.full_name || selectedCalendarEmployee.employee_code} · ${attendanceCopy.calendarDetailDescription}`
-                    : attendanceCopy.calendarDetailDescription}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
-                <div className="flex flex-col gap-3">
-                  <Frame className="flex flex-wrap items-center gap-2 px-3 py-2">
-                    <Badge variant="outline">
-                      {attendanceCopy.calendarActualSummary(
-                        selectedDayClosedShifts,
-                        selectedDayWorkdays,
-                        selectedDayWorkHours,
-                      )}
-                    </Badge>
-                    {selectedDayOpenShifts > 0 ? (
-                      <Badge variant="warning">
-                        {attendanceCopy.openShiftCount(selectedDayOpenShifts)}
-                      </Badge>
-                    ) : null}
-                    {selectedDayLeave ? (
-                      <Badge
-                        variant={
-                          selectedDayLeave.status === "approved"
-                            ? "info"
-                            : "warning"
-                        }
-                      >
-                        {selectedDayLeave.status === "approved"
-                          ? scheduleCopy.leaveApproved
-                          : scheduleCopy.leavePending}
-                      </Badge>
-                    ) : null}
-                  </Frame>
-                  <DetailView
-                    branchId={branchId}
-                    data={selectedDayRecords}
-                    compact
-                    canForceClose={canForceClose}
-                    canCorrect={canCorrect}
-                    onMutated={onMutated}
-                  />
-                </div>
-              </div>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+        {selectedDay ? (
+          <div className="flex flex-col gap-3">
+            <Frame className="flex flex-wrap items-center gap-2 px-3 py-2">
+              <Badge variant="outline">
+                {attendanceCopy.calendarActualSummary(
+                  selectedDayClosedShifts,
+                  selectedDayWorkdays,
+                  selectedDayWorkHours,
+                )}
+              </Badge>
+              {selectedDayOpenShifts > 0 ? (
+                <Badge variant="warning">
+                  {attendanceCopy.openShiftCount(selectedDayOpenShifts)}
+                </Badge>
+              ) : null}
+              {selectedDayLeave ? (
+                <Badge
+                  variant={
+                    selectedDayLeave.status === "approved"
+                      ? "info"
+                      : "warning"
+                  }
+                >
+                  {selectedDayLeave.status === "approved"
+                    ? scheduleCopy.leaveApproved
+                    : scheduleCopy.leavePending}
+                </Badge>
+              ) : null}
+            </Frame>
+            <DetailView
+              branchId={branchId}
+              data={selectedDayRecords}
+              compact
+              canForceClose={canForceClose}
+              canCorrect={canCorrect}
+              onMutated={onMutated}
+            />
+          </div>
+        ) : null}
+      </AppSheet>
     </div>
   );
 }

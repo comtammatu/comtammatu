@@ -4,13 +4,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search as IconSearch, ShieldAlert } from "lucide-react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,7 +22,10 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { QuantityInput } from "@/components/form/domain-number-inputs";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppDrawer,
+} from "@/components/surface";
 import { normalizeSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import {
@@ -179,31 +176,32 @@ export function BranchQuickMenuLimitSheet({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-dvh-80 overflow-hidden flex flex-col">
-        <DrawerHeader className="shrink-0 border-b">
-          <div className="flex items-center justify-between gap-2">
-            <DrawerTitle className="flex items-center gap-2 text-base">
-              <ShieldAlert className="size-5 text-warning" />
-              {messages.settings.branch.menuLimitsTitle}
-            </DrawerTitle>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1">
-              {disabledCount > 0 ? (
-                <Badge variant="destructive">
-                  {menuCopy.disabledCount(disabledCount)}
-                </Badge>
-              ) : null}
-              {limitedCount > 0 ? (
-                <Badge variant="secondary">
-                  {menuCopy.limitedCount(limitedCount)}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-          <DrawerDescription>
-            Tắt món hết hàng hoặc đặt trần bán trong ngày. POS/KDS cập nhật ngay.
-          </DrawerDescription>
-          <div className="mt-2">
+    <AppDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-2 text-base">
+          <ShieldAlert className="size-5 text-warning" />
+          {messages.settings.branch.menuLimitsTitle}
+          <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
+            {disabledCount > 0 ? (
+              <Badge variant="destructive">
+                {menuCopy.disabledCount(disabledCount)}
+              </Badge>
+            ) : null}
+            {limitedCount > 0 ? (
+              <Badge variant="secondary">
+                {menuCopy.limitedCount(limitedCount)}
+              </Badge>
+            ) : null}
+          </span>
+        </span>
+      }
+      description="Tắt món hết hàng hoặc đặt trần bán trong ngày. POS/KDS cập nhật ngay."
+      contentClassName="max-h-dvh-80 overflow-hidden flex flex-col"
+      headerClassName="shrink-0 border-b"
+    >
+          <div className="mb-2">
             <InputGroup className="w-full">
               <InputGroupAddon>
                 <IconSearch className="size-4" />
@@ -216,9 +214,8 @@ export function BranchQuickMenuLimitSheet({
               />
             </InputGroup>
           </div>
-        </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div>
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <Spinner className="size-6 text-muted-foreground" />
@@ -329,7 +326,6 @@ export function BranchQuickMenuLimitSheet({
             </ItemGroup>
           )}
         </div>
-      </DrawerContent>
-    </Drawer>
+    </AppDrawer>
   );
 }

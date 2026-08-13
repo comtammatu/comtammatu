@@ -30,21 +30,17 @@ import {
 } from "@comtammatu/ui/components/avatar";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemContent } from "@comtammatu/ui/components/item";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppDrawer,
+} from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
 import { TeamMemberTile } from "../_components/team-member-tile";
@@ -515,25 +511,56 @@ export function MembersClient({
         )}
       </div>
 
-      <Drawer
+      <AppDrawer
         open={activeMember !== null}
         onOpenChange={(open) => !open && setActiveMember(null)}
-      >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">
-          {activeMember ? (
+        title={activeMember?.name ?? ""}
+        description={
+          activeMember
+            ? [activeMember.code, activeMember.positionLabel]
+                .filter(Boolean)
+                .join(" · ") || detailCopy.description
+            : undefined
+        }
+        contentClassName="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
+        headerClassName="shrink-0 text-left"
+        footerClassName="shrink-0 pt-2"
+        footer={
+          activeMember?.employeeId != null ? (
             <>
-              <DrawerHeader className="shrink-0 text-left">
-                <DrawerTitle className="truncate">
-                  {activeMember.name}
-                </DrawerTitle>
-                <DrawerDescription>
-                  {[activeMember.code, activeMember.positionLabel]
-                    .filter(Boolean)
-                    .join(" · ") || detailCopy.description}
-                </DrawerDescription>
-              </DrawerHeader>
-
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
+                  {canManageEmployeeOverrides ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="touch"
+                      className="w-full"
+                      onClick={() =>
+                        setTasksEmployeeId(activeMember.employeeId)
+                      }
+                    >
+                      {detailCopy.openShiftTasks}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="default"
+                    size="touch"
+                    className="w-full"
+                    render={
+                      <Link
+                        href={`/br/${branchId}/shift/attendance?view=summary&employeeId=${activeMember.employeeId}&month=${
+                          monthDetail?.monthStart.slice(0, 7) ??
+                          getVNMonthString()
+                        }`}
+                      />
+                    }
+                  >
+                    {detailCopy.openAttendance}
+                  </Button>
+            </>
+          ) : undefined
+        }
+      >
+          {activeMember ? (
                 <div className="flex flex-col gap-4">
                   <MemberDetailBlock title={detailCopy.contactSection}>
                     <InfoTile
@@ -598,44 +625,8 @@ export function MembersClient({
                     hasEmployee={activeMember.employeeId != null}
                   />
                 </div>
-              </div>
-
-              {activeMember.employeeId != null ? (
-                <DrawerFooter className="shrink-0 pt-2">
-                  {canManageEmployeeOverrides ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="touch"
-                      className="w-full"
-                      onClick={() =>
-                        setTasksEmployeeId(activeMember.employeeId)
-                      }
-                    >
-                      {detailCopy.openShiftTasks}
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="default"
-                    size="touch"
-                    className="w-full"
-                    render={
-                      <Link
-                        href={`/br/${branchId}/shift/attendance?view=summary&employeeId=${activeMember.employeeId}&month=${
-                          monthDetail?.monthStart.slice(0, 7) ??
-                          getVNMonthString()
-                        }`}
-                      />
-                    }
-                  >
-                    {detailCopy.openAttendance}
-                  </Button>
-                </DrawerFooter>
-              ) : null}
-            </>
           ) : null}
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
 
       {canManageEmployeeOverrides ? (
         <BranchEmployeeTasksSheet

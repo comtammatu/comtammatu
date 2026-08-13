@@ -73,11 +73,11 @@ test("leave and checkout decisions use named touch action sizes", () => {
   );
   assert.match(
     checkout,
-    /<DrawerFooter className="shrink-0 flex-row gap-3 pt-2">[\s\S]*?variant="outline"\s+size="touch"[\s\S]*?<Button\s+size="touch"/,
+    /footerClassName="shrink-0 flex-row gap-3 pt-2"[\s\S]*?variant="outline"\s+size="touch"[\s\S]*?<Button[\s\S]*?size="touch"/,
   );
   assert.match(
     checkout,
-    /<DrawerFooter className="pt-2">[\s\S]*?variant="destructive"\s+size="touch"/,
+    /footerClassName="pt-2"[\s\S]*?variant="destructive"\s+size="touch"/,
   );
 });
 

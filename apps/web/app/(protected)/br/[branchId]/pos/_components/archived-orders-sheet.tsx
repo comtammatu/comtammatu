@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  StationSheet,
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -11,18 +18,8 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Item, ItemFooter, ItemGroup } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+
+
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -242,26 +239,26 @@ export function ArchivedOrdersSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        size="md"
-        className="p-0"
-      >
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {messages.pos.archivedOrders.sheetTitle}
-            {orders.length > 0 ? (
-              <Badge variant="secondary" className="text-xs">
-                {orders.length}
-                {hasMore ? "+" : ""}
-              </Badge>
-            ) : null}
-          </SheetTitle>
-        </SheetHeader>
-        {body}
-      </SheetContent>
-    </Sheet>
+    <StationSheet
+      side="right"
+      size="md"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-2">
+          {messages.pos.archivedOrders.sheetTitle}
+          {orders.length > 0 ? (
+            <Badge variant="secondary" className="text-xs">
+              {orders.length}
+              {hasMore ? "+" : ""}
+            </Badge>
+          ) : null}
+        </span>
+      }
+      bodyClassName="p-0"
+    >
+      {body}
+    </StationSheet>
   );
 }
 

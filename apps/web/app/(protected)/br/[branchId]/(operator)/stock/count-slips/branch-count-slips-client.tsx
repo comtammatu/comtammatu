@@ -26,18 +26,15 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import {
   BranchOperatorDetailList,
@@ -280,166 +277,165 @@ export function BranchCountSlipsClient({
         </TabsContent>
       </Tabs>
 
-      <Sheet
+      <AppSheet
         open={selected != null}
         onOpenChange={(open) => {
           if (!open) closeReview();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="max-h-dvh-95 overflow-hidden bg-background p-0"
-        >
-          {selected ? (
-            <>
-              <SheetHeader className="shrink-0">
-                <SheetTitle>{selected.employeeName}</SheetTitle>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span>{selected.locationName}</span>
-                  {selected.shiftName ? (
-                    <span>{selected.shiftName}</span>
-                  ) : null}
-                  <StatusBadge
-                    domain="count-slip"
-                    value={selected.status}
-                    size="sm"
-                  />
-                </div>
-              </SheetHeader>
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-4">
-                <BranchOperatorDetailList
-                  columns={2}
-                  rows={[
-                    {
-                      label: INVENTORY_VI.countDateLabel,
-                      value: formatVNDate(selected.countDate),
-                    },
-                    {
-                      label: INVENTORY_VI.lineCountLabel,
-                      value: selected.lines.length,
-                    },
-                    {
-                      label: INVENTORY_VI.submittedAtLabel,
-                      value: selected.submittedAt
-                        ? formatVNDateTime(selected.submittedAt)
-                        : "—",
-                    },
-                    {
-                      label: INVENTORY_VI.varianceShort,
-                      value: INVENTORY_VI.varianceLineCount(
-                        changedLineCount(selected),
-                      ),
-                    },
-                  ]}
-                />
-
-                <ItemGroup className="gap-2">
-                  {selected.lines.map((line) => (
-                    <CountSlipLineItem key={line.id} line={line} />
-                  ))}
-                </ItemGroup>
-
-                {selected.note ? (
-                  <p className="break-words text-sm italic text-muted-foreground">
-                    {INVENTORY_VI.employeeNoteLine(selected.note)}
-                  </p>
-                ) : null}
-                {selected.reviewNote ? (
-                  <p className="break-words text-sm italic text-warning">
-                    {INVENTORY_VI.recountReasonLine(selected.reviewNote)}
-                  </p>
-                ) : null}
-
-                {recounting ? (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="branch-count-slip-recount-note">
-                      {INVENTORY_VI.recountReasonLabel}
-                    </Label>
-                    <Textarea
-                      id="branch-count-slip-recount-note"
-                      name="recountNote"
-                      rows={3}
-                      maxLength={1000}
-                      value={recountNote}
-                      disabled={isPending}
-                      onChange={(event) => setRecountNote(event.target.value)}
-                      placeholder={INVENTORY_VI.recountReasonPlaceholder}
-                    />
-                  </div>
-                ) : null}
-              </div>
-              <SheetFooter className="shrink-0 bg-background/95 backdrop-blur">
-                {selected.status === "submitted" ? (
-                  recounting ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        disabled={isPending}
-                        onClick={() => {
-                          setRecounting(false);
-                          setRecountNote("");
-                        }}
-                      >
-                        {ACTIONS_VI.cancel}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="touch-lg"
-                        disabled={isPending || recountNote.trim().length < 3}
-                        onClick={requestRecount}
-                      >
-                        {pendingAction === "recount" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconRecount className="size-4" />
-                        )}
-                        {INVENTORY_VI.sendRecountRequest}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        disabled={isPending}
-                        onClick={() => setRecounting(true)}
-                      >
-                        <IconRecount className="size-4" />
-                        {INVENTORY_VI.requestRecount}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="touch-lg"
-                        disabled={isPending}
-                        onClick={() => void approveSelected()}
-                      >
-                        {pendingAction === "approve" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconCheck className="size-4" />
-                        )}
-                        {ACTIONS_VI.approve}
-                      </Button>
-                    </>
-                  )
-                ) : (
+        title={selected?.employeeName ?? ""}
+        description={
+          selected ? (
+            <span className="flex flex-wrap items-center gap-2">
+              <span>{selected.locationName}</span>
+              {selected.shiftName ? <span>{selected.shiftName}</span> : null}
+              <StatusBadge
+                domain="count-slip"
+                value={selected.status}
+                size="sm"
+              />
+            </span>
+          ) : undefined
+        }
+        side="bottom"
+        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        headerClassName="shrink-0"
+        footerClassName="shrink-0 bg-background/95 backdrop-blur"
+        footer={
+          selected ? (
+            selected.status === "submitted" ? (
+              recounting ? (
+                <>
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
-                    onClick={closeReview}
+                    disabled={isPending}
+                    onClick={() => {
+                      setRecounting(false);
+                      setRecountNote("");
+                    }}
                   >
-                    {ACTIONS_VI.close}
+                    {ACTIONS_VI.cancel}
                   </Button>
-                )}
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+                  <Button
+                    type="button"
+                    size="touch-lg"
+                    disabled={isPending || recountNote.trim().length < 3}
+                    onClick={requestRecount}
+                  >
+                    {pendingAction === "recount" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconRecount className="size-4" />
+                    )}
+                    {INVENTORY_VI.sendRecountRequest}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    disabled={isPending}
+                    onClick={() => setRecounting(true)}
+                  >
+                    <IconRecount className="size-4" />
+                    {INVENTORY_VI.requestRecount}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="touch-lg"
+                    disabled={isPending}
+                    onClick={() => void approveSelected()}
+                  >
+                    {pendingAction === "approve" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconCheck className="size-4" />
+                    )}
+                    {ACTIONS_VI.approve}
+                  </Button>
+                </>
+              )
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                onClick={closeReview}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+            )
+          ) : null
+        }
+      >
+        {selected ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <BranchOperatorDetailList
+              columns={2}
+              rows={[
+                {
+                  label: INVENTORY_VI.countDateLabel,
+                  value: formatVNDate(selected.countDate),
+                },
+                {
+                  label: INVENTORY_VI.lineCountLabel,
+                  value: selected.lines.length,
+                },
+                {
+                  label: INVENTORY_VI.submittedAtLabel,
+                  value: selected.submittedAt
+                    ? formatVNDateTime(selected.submittedAt)
+                    : "—",
+                },
+                {
+                  label: INVENTORY_VI.varianceShort,
+                  value: INVENTORY_VI.varianceLineCount(
+                    changedLineCount(selected),
+                  ),
+                },
+              ]}
+            />
+
+            <ItemGroup className="gap-2">
+              {selected.lines.map((line) => (
+                <CountSlipLineItem key={line.id} line={line} />
+              ))}
+            </ItemGroup>
+
+            {selected.note ? (
+              <p className="break-words text-sm italic text-muted-foreground">
+                {INVENTORY_VI.employeeNoteLine(selected.note)}
+              </p>
+            ) : null}
+            {selected.reviewNote ? (
+              <p className="break-words text-sm italic text-warning">
+                {INVENTORY_VI.recountReasonLine(selected.reviewNote)}
+              </p>
+            ) : null}
+
+            {recounting ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="branch-count-slip-recount-note">
+                  {INVENTORY_VI.recountReasonLabel}
+                </Label>
+                <Textarea
+                  id="branch-count-slip-recount-note"
+                  name="recountNote"
+                  rows={3}
+                  maxLength={1000}
+                  value={recountNote}
+                  disabled={isPending}
+                  onChange={(event) => setRecountNote(event.target.value)}
+                  placeholder={INVENTORY_VI.recountReasonPlaceholder}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </AppSheet>
     </BranchOperatorPage>
   );
 }

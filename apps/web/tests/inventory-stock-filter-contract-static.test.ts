@@ -80,7 +80,7 @@ test("branch stock facets share one model and stay touch-native", () => {
   assert.doesNotMatch(branchStockClientSource, /value="low"/);
   assert.doesNotMatch(branchStockClientSource, /StockRiskBadge/);
   assert.doesNotMatch(branchStockClientSource, /StatusBadge/);
-  assert.match(branchStockClientSource, /SheetContent[\s\S]*side="bottom"/);
+  assert.match(branchStockClientSource, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(branchStockClientSource, /normalizeStockOnHandCategories/);
   assert.doesNotMatch(branchStockClientSource, /listHint/);
   assert.doesNotMatch(branchStockClientSource, /toolbarStatus/);

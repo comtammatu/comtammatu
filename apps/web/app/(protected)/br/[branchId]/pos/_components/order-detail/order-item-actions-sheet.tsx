@@ -2,13 +2,7 @@
 
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Check as IconCheck,
@@ -24,6 +18,8 @@ import type { OrderItemRowData } from "./order-item-row";
 
 import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
 import { ORDER_ITEM_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+import { StationSheet } from "@/components/surface";
+
 
 interface OrderItemActionsSheetProps {
   item: OrderItemRowData | null;
@@ -102,27 +98,19 @@ export function OrderItemActionsSheet({
     discountAmount > 0 ? `Chiết khấu món: -${formatVND(discountAmount)}` : null;
 
   return (
-    <Sheet
+    <StationSheet
       open={item !== null}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      title={POS_VI.itemActionsTitle}
+      description={POS_VI.itemActionsDescription}
+      side="bottom"
+      showCloseButton={false}
+      contentClassName="pos-safe-bottom max-h-dvh-80 gap-1 sm:mx-auto sm:max-w-md"
     >
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        className="pos-safe-bottom max-h-dvh-80 gap-1 px-0 sm:mx-auto sm:max-w-md"
-      >
-        <SheetHeader>
-          <SheetTitle className="text-base">
-            {POS_VI.itemActionsTitle}
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            {POS_VI.itemActionsDescription}
-          </SheetDescription>
-        </SheetHeader>
         {item && (
-          <div className="border-b border-border/60 px-3 py-3 sm:px-4">
+          <div className="border-b border-border/60 pb-3">
             <PosLineItemCompact
               quantity={item.quantity}
               title={displayName}
@@ -151,7 +139,7 @@ export function OrderItemActionsSheet({
             </p>
           </div>
         )}
-        <div className="flex flex-col gap-2 px-3 py-3 sm:px-4">
+        <div className="flex flex-col gap-2">
           {canMarkServed && (
             <Button
               type="button"
@@ -264,7 +252,6 @@ export function OrderItemActionsSheet({
             {ACTIONS_VI.close}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

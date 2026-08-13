@@ -5,16 +5,12 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import type { UseFormReturn } from "react-hook-form";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
-import { Button } from "@comtammatu/ui/components/button";
 import { FormDialog, SelectField, TextField } from "@/components/form";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { createFeedbackQr } from "../actions";
 import { feedbackCopy } from "@lib/messages/feedback";
 import type { FeedbackQrTableOption } from "./qr-management";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
 const BRANCH_WIDE_TABLE = "branch";
 
 const createQrFormSchema = z.object({
@@ -36,8 +32,6 @@ export function CreateFeedbackQrButton({
   lockBranch: boolean;
   branches?: { id: number; name: string }[];
 }) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const defaultValues = useMemo<CreateQrFormValues>(
@@ -51,9 +45,9 @@ export function CreateFeedbackQrButton({
 
   return (
     <>
-      <Button type="button" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
+      <ResponsiveActionButton type="button" onClick={() => setOpen(true)}>
         {feedbackCopy.qrCreate}
-      </Button>
+      </ResponsiveActionButton>
       <FormDialog
         open={open}
         onOpenChange={setOpen}

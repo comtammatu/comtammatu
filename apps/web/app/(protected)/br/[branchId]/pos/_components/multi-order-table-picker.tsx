@@ -8,15 +8,6 @@ import {
   ItemFooter,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { formatVND } from "@comtammatu/shared/format";
 import {
   ClipboardList as IconClipboardList,
@@ -29,6 +20,10 @@ import { canAppendPosOrder } from "../_lib/table-order-visual-state";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import {
+  AppDrawer,
+} from "@/components/surface";
+
 interface MultiOrderTablePickerProps {
   open: boolean;
   tableNumber: number | null;
@@ -51,28 +46,44 @@ export function MultiOrderTablePicker({
   onClose,
 }: MultiOrderTablePickerProps) {
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent
-        className="mx-auto flex max-h-dvh-80 w-full max-w-md flex-col overflow-hidden sm:max-w-lg"
-        data-testid="pos-multi-order-picker"
-      >
-        <DrawerHeader className="shrink-0">
-          <DrawerTitle>
-            {messages.pos.multiOrderTablePicker.title(
-              tableNumber,
-              orders.length,
-            )}
-          </DrawerTitle>
-          <DrawerDescription className="sr-only">
-            {messages.pos.multiOrderTablePicker.description}
-          </DrawerDescription>
-        </DrawerHeader>
-
-        <ScrollArea
-          className="min-h-0 flex-1 px-4"
-          data-testid="pos-multi-order-list"
-        >
-          <div className="flex flex-col gap-3 pr-2 pb-2">
+    <AppDrawer
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={messages.pos.multiOrderTablePicker.title(
+        tableNumber,
+        orders.length,
+      )}
+      description={messages.pos.multiOrderTablePicker.description}
+      contentClassName="mx-auto flex max-h-dvh-80 w-full max-w-md flex-col overflow-hidden sm:max-w-lg"
+      footerClassName="pos-safe-bottom shrink-0"
+      footer={
+        <div data-testid="pos-multi-order-footer">
+          <Button
+            type="button"
+            variant="default"
+            size="touch"
+            className="w-full"
+            onClick={onCreateNew}
+          >
+            <IconPlus data-icon="inline-start" />
+            {messages.pos.multiOrderTablePicker.createNew(tableNumber)}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="touch"
+            onClick={onClose}
+          >
+            {ACTIONS_VI.close}
+          </Button>
+        </div>
+      }
+    >
+      <div data-testid="pos-multi-order-picker">
+          <div
+            className="flex flex-col gap-3 pr-2 pb-2"
+            data-testid="pos-multi-order-list"
+          >
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
               const canAppendItems = canAppendPosOrder(
@@ -144,32 +155,7 @@ export function MultiOrderTablePicker({
               );
             })}
           </div>
-        </ScrollArea>
-
-        <DrawerFooter
-          className="pos-safe-bottom shrink-0"
-          data-testid="pos-multi-order-footer"
-        >
-          <Button
-            type="button"
-            variant="default"
-            size="touch"
-            className="w-full"
-            onClick={onCreateNew}
-          >
-            <IconPlus data-icon="inline-start" />
-            {messages.pos.multiOrderTablePicker.createNew(tableNumber)}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="touch"
-            onClick={onClose}
-          >
-            {ACTIONS_VI.close}
-          </Button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+      </div>
+    </AppDrawer>
   );
 }

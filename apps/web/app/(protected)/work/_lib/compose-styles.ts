@@ -22,8 +22,8 @@ export const WORK_MONTH_DAY_GRID = "grid grid-cols-7 gap-1";
 /** Default day cell — Frame child (Frame supplies rounded/border chrome). */
 export const WORK_MONTH_CELL = "min-h-24 bg-background p-1 text-left";
 
-/** Today highlight on a month cell. */
-export const WORK_MONTH_CELL_TODAY = "border-primary bg-primary/10";
+/** Today highlight on a month cell (Frame still owns chrome). */
+export const WORK_MONTH_CELL_TODAY = "bg-primary/10";
 
 /** Desktop Kanban column grid (5 status columns). */
 export const WORK_KANBAN_DESKTOP_GRID = "hidden gap-3 md:grid md:grid-cols-5";

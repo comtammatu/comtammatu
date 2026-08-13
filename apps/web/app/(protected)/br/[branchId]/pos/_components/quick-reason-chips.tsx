@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { Button } from "@comtammatu/ui/components/button";
+import { Toggle } from "@comtammatu/ui/components/toggle";
 import { cn } from "@comtammatu/ui";
 
 interface QuickReasonChipsProps {
@@ -54,17 +54,17 @@ export function QuickReasonChips({
       {presets.map((preset) => {
         const isActive = tokenSet.has(preset.toLowerCase());
         return (
-          <Button
+          <Toggle
             key={preset}
-            type="button"
             size="touch"
-            variant={isActive ? "default" : "outline"}
-            aria-pressed={isActive}
+            variant="outline"
+            pressed={isActive}
+            aria-label={preset}
             className="shrink-0 rounded-full px-3 text-xs font-normal"
-            onClick={() => toggle(preset)}
+            onPressedChange={() => toggle(preset)}
           >
             {preset}
-          </Button>
+          </Toggle>
         );
       })}
     </div>

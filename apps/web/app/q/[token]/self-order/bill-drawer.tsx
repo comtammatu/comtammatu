@@ -5,6 +5,10 @@ import { ArrowLeft as IconArrowLeft, X as IconX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
+import { OrderSummary } from "./order-summary";
 import {
   Sheet,
   SheetClose,
@@ -12,10 +16,8 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import type { PublicSelfOrderAvailableSnapshot } from "@lib/self-order/contracts";
-import { OrderSummary } from "./order-summary";
+} from "@/components/surface";
+
 
 interface BillDrawerProps {
   open: boolean;

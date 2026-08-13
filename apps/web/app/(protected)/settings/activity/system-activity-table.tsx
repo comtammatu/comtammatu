@@ -11,14 +11,7 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   formatAuditActionLabel,
   formatAuditEntityTypeLabel,
@@ -37,6 +30,8 @@ import type {
   TenantAuditLogRow,
 } from "@/_lib/audit";
 import { getSystemActivityDetail } from "./actions";
+import { AppSheet } from "@/components/surface";
+
 
 const ACTIVITY_LOG_OVERLAY_KEYS = ["logId"] as const;
 
@@ -196,23 +191,44 @@ export function SystemActivityTable({
         )}
       />
 
-      <Sheet
+      <AppSheet
         open={open}
         onOpenChange={(next) => {
           if (!next) setSelectedId(null);
         }}
+        title={copy.detailTitle}
+        description={
+          sheetRow
+            ? formatAuditActionLabel(sheetRow.action)
+            : copy.detailLoading
+        }
+        size="md"
+        footerClassName="gap-2 sm:flex-col"
+        footer={
+          <>
+            {sheetRow?.href ? (
+              <Button render={<Link href={sheetRow.href} />}>
+                {copy.openDocument}
+              </Button>
+            ) : null}
+            {filterHref ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedId(null);
+                  router.push(filterHref);
+                }}
+              >
+                {copy.filterSameDocument}
+              </Button>
+            ) : null}
+            <Button variant="ghost" onClick={() => setSelectedId(null)}>
+              {copy.detailClose}
+            </Button>
+          </>
+        }
       >
-        <SheetContent side="right" size="md" className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{copy.detailTitle}</SheetTitle>
-            <SheetDescription>
-              {sheetRow
-                ? formatAuditActionLabel(sheetRow.action)
-                : copy.detailLoading}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex flex-col gap-4 px-4 pb-4">
+        <div className="flex flex-col gap-4">
             {isPending && !detail ? (
               <p className="text-sm text-muted-foreground">{copy.detailLoading}</p>
             ) : null}
@@ -275,31 +291,8 @@ export function SystemActivityTable({
                 )}
               </div>
             ) : null}
-          </div>
-
-          <SheetFooter className="gap-2 sm:flex-col">
-            {sheetRow?.href ? (
-              <Button render={<Link href={sheetRow.href} />}>
-                {copy.openDocument}
-              </Button>
-            ) : null}
-            {filterHref ? (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedId(null);
-                  router.push(filterHref);
-                }}
-              >
-                {copy.filterSameDocument}
-              </Button>
-            ) : null}
-            <Button variant="ghost" onClick={() => setSelectedId(null)}>
-              {copy.detailClose}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </AppSheet>
     </>
   );
 }

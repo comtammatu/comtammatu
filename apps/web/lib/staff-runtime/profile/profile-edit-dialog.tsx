@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Pencil as IconPencil } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, TextField } from "@/components/form";
+import { FormDialog, TextField, BusinessDateField } from "@/components/form";
 import { messages } from "@lib/messages";
 import { updateMyProfile } from "./actions";
 
@@ -101,12 +101,10 @@ export function ProfileEditDialog({
               inputMode="tel"
               autoComplete="tel"
             />
-            <TextField
+            <BusinessDateField
               control={form.control}
               name="birthDate"
               label={copy.birthDate}
-              type="date"
-              autoComplete="bday"
             />
           </>
         )}

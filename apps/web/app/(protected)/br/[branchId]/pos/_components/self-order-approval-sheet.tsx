@@ -33,14 +33,7 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@comtammatu/ui/components/radio-group";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -55,6 +48,9 @@ import {
   type SelfOrderPendingRequest,
   type SelfOrderStoredCartItem,
 } from "../self-order-actions";
+import {
+  StationSheet,
+} from "@/components/surface";
 
 interface SelfOrderApprovalSheetProps {
   open: boolean;
@@ -173,23 +169,20 @@ export function SelfOrderApprovalSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full p-0 sm:max-w-xl">
-        <div className="flex min-h-0 flex-1 flex-col">
-          <SheetHeader className="border-b px-4 py-4 text-left">
-            <div className="flex items-center justify-between gap-3">
-              <SheetTitle>{SELF_ORDER_VI.staffQueueTitle}</SheetTitle>
-              {requests.length > 0 ? (
-                <Badge variant="warning">{formatCount(requests.length)}</Badge>
-              ) : null}
-            </div>
-            <SheetDescription>
-              {SELF_ORDER_VI.staffQueueDescription}
-            </SheetDescription>
-          </SheetHeader>
-
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4">
+    <StationSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex items-center gap-3">
+          {SELF_ORDER_VI.staffQueueTitle}
+          {requests.length > 0 ? (
+            <Badge variant="warning">{formatCount(requests.length)}</Badge>
+          ) : null}
+        </span>
+      }
+      description={SELF_ORDER_VI.staffQueueDescription}
+      contentClassName="w-full sm:max-w-xl"
+    >
               {displayedRequests.length === 0 ? (
                 <Item variant="outline" className="border-dashed">
                   <ItemDescription>
@@ -388,10 +381,6 @@ export function SelfOrderApprovalSheet({
                   })}
                 </ItemGroup>
               )}
-            </div>
-          </ScrollArea>
-        </div>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

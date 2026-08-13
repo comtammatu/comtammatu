@@ -17,11 +17,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
 import { Frame } from "@comtammatu/ui/components/frame";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -156,6 +152,12 @@ import {
 } from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+} from "@/components/surface";
+
 
 /* ─── Inner (consumes hooks) ─── */
 

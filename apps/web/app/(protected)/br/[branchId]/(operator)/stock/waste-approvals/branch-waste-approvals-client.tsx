@@ -32,18 +32,15 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import {
   BranchOperatorControlBar,
   BranchOperatorPage,
@@ -338,148 +335,137 @@ export function BranchWasteApprovalsClient({
           )}
         </BranchOperatorPanel>
 
-        <Sheet
+        <AppSheet
           open={selectedRow !== null}
           onOpenChange={(open) => {
             if (!open) setSelectedIssueId(null);
           }}
-        >
-          <SheetContent
-            side="bottom"
-            className="max-h-dvh-95 bg-background p-0 text-foreground"
-            showCloseButton={false}
-          >
-            {selectedRow ? (
-              <>
-                <SheetHeader>
-                  <SectionLabel density="dense">
-                    Phiếu hao hụt chờ duyệt
-                  </SectionLabel>
-                  <SheetTitle className="text-lg font-semibold">
-                    {selectedRow.issueNumber}
-                  </SheetTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedRow.createdByName} ·{" "}
-                    {formatVNDateTime(selectedRow.issuedAt)}
-                  </p>
-                </SheetHeader>
-
-                <div className="min-h-0 overflow-y-auto overscroll-contain p-4">
-                  <div className="flex min-w-0 flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3 border-b pb-3">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedRow.shiftKey || "Chưa có ca"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {copy.lineCount(selectedRow.items.length)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <ItemGroup className="gap-2" role="list">
-                      {selectedRow.items.map((item) => (
-                        <Item key={item.itemId} variant="outline" size="sm">
-                          <ItemContent className="min-w-0 gap-1">
-                            <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
-                              {item.ingredientName}
-                            </ItemTitle>
-                            <ItemDescription className="line-clamp-none break-words text-xs">
-                              {formatQuantity(item.quantity)} {item.unit}
-                            </ItemDescription>
-                            <ItemDescription className="line-clamp-none break-words text-xs">
-                              {copy.reason(
-                                getWasteReasonLabelVi(item.reasonCode),
-                              )}
-                            </ItemDescription>
-                            {item.photoUrls.length > 0 ? (
-                              <div className="flex flex-wrap gap-2 pt-1">
-                                {item.photoUrls.map((url, index) => (
-                                  <a
-                                    key={url}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-xs text-primary underline"
-                                    aria-label={`Xem ảnh bằng chứng ${index + 1} cho ${item.ingredientName}`}
-                                  >
-                                    {copy.viewPhoto}
-                                  </a>
-                                ))}
-                              </div>
-                            ) : null}
-                          </ItemContent>
-                          <ItemActions className="shrink-0 flex-col items-end gap-1">
-                            <WasteTierBadge tier={item.wasteTier} compact />
-                          </ItemActions>
-                        </Item>
-                      ))}
-                    </ItemGroup>
-
-                    {selectedRow.notes ? (
-                      <p className="border-t pt-3 text-xs italic break-words text-muted-foreground">
-                        {copy.notes(selectedRow.notes)}
-                      </p>
-                    ) : null}
-                  </div>
+          title={selectedRow?.issueNumber ?? ""}
+          description={
+            selectedRow
+              ? `${selectedRow.createdByName} · ${formatVNDateTime(selectedRow.issuedAt)}`
+              : undefined
+          }
+          side="bottom"
+          showCloseButton={false}
+          contentClassName="max-h-dvh-95 bg-background text-foreground"
+          bodyClassName="overscroll-contain"
+          footer={
+            selectedRow ? (
+              selectedRow.isSelfCreated ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch-lg"
+                  className="w-full"
+                  onClick={() => setSelectedIssueId(null)}
+                >
+                  {ACTIONS_VI.close}
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="touch-lg"
+                    className="flex-1"
+                    onClick={() => setRejectingIssueId(selectedRow.issueId)}
+                    disabled={isSubmitting}
+                  >
+                    {pendingDecision?.issueId === selectedRow.issueId &&
+                    pendingDecision.decision === "rejected" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconX aria-hidden="true" data-icon="inline-start" />
+                    )}
+                    {copy.reject}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="touch-lg"
+                    className="flex-1"
+                    onClick={() =>
+                      void requestDecision(selectedRow, "approved")
+                    }
+                    disabled={isSubmitting}
+                  >
+                    {pendingDecision?.issueId === selectedRow.issueId &&
+                    pendingDecision.decision === "approved" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconCheck
+                        aria-hidden="true"
+                        data-icon="inline-start"
+                      />
+                    )}
+                    {copy.approve}
+                  </Button>
                 </div>
+              )
+            ) : null
+          }
+        >
+          {selectedRow ? (
+            <div className="flex min-w-0 flex-col gap-3">
+              <SectionLabel density="dense">
+                Phiếu hao hụt chờ duyệt
+              </SectionLabel>
+              <div className="flex items-start justify-between gap-3 border-b pb-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedRow.shiftKey || "Chưa có ca"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {copy.lineCount(selectedRow.items.length)}
+                  </p>
+                </div>
+              </div>
 
-                <SheetFooter>
-                  {selectedRow.isSelfCreated ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch-lg"
-                      className="w-full"
-                      onClick={() => setSelectedIssueId(null)}
-                    >
-                      {ACTIONS_VI.close}
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="touch-lg"
-                        className="flex-1"
-                        onClick={() => setRejectingIssueId(selectedRow.issueId)}
-                        disabled={isSubmitting}
-                      >
-                        {pendingDecision?.issueId === selectedRow.issueId &&
-                        pendingDecision.decision === "rejected" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconX aria-hidden="true" data-icon="inline-start" />
-                        )}
-                        {copy.reject}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="touch-lg"
-                        className="flex-1"
-                        onClick={() =>
-                          void requestDecision(selectedRow, "approved")
-                        }
-                        disabled={isSubmitting}
-                      >
-                        {pendingDecision?.issueId === selectedRow.issueId &&
-                        pendingDecision.decision === "approved" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconCheck
-                            aria-hidden="true"
-                            data-icon="inline-start"
-                          />
-                        )}
-                        {copy.approve}
-                      </Button>
-                    </div>
-                  )}
-                </SheetFooter>
-              </>
-            ) : null}
-          </SheetContent>
-        </Sheet>
+              <ItemGroup className="gap-2" role="list">
+                {selectedRow.items.map((item) => (
+                  <Item key={item.itemId} variant="outline" size="sm">
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle className="line-clamp-none break-words text-sm font-semibold">
+                        {item.ingredientName}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-none break-words text-xs">
+                        {formatQuantity(item.quantity)} {item.unit}
+                      </ItemDescription>
+                      <ItemDescription className="line-clamp-none break-words text-xs">
+                        {copy.reason(getWasteReasonLabelVi(item.reasonCode))}
+                      </ItemDescription>
+                      {item.photoUrls.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {item.photoUrls.map((url, index) => (
+                            <a
+                              key={url}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-primary underline"
+                              aria-label={`Xem ảnh bằng chứng ${index + 1} cho ${item.ingredientName}`}
+                            >
+                              {copy.viewPhoto}
+                            </a>
+                          ))}
+                        </div>
+                      ) : null}
+                    </ItemContent>
+                    <ItemActions className="shrink-0 flex-col items-end gap-1">
+                      <WasteTierBadge tier={item.wasteTier} compact />
+                    </ItemActions>
+                  </Item>
+                ))}
+              </ItemGroup>
+
+              {selectedRow.notes ? (
+                <p className="border-t pt-3 text-xs italic break-words text-muted-foreground">
+                  {copy.notes(selectedRow.notes)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </AppSheet>
         <ReasonConfirmDialog
           open={rejectingIssueId !== null}
           onOpenChange={(open) => {

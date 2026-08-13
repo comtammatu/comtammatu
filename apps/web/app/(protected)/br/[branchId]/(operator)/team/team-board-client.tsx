@@ -28,18 +28,14 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 
-import {
-  Drawer,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
+
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import { TeamMemberTile } from "./_components/team-member-tile";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppDrawer,
+} from "@/components/surface";
 import { StatusBadge } from "@/components/status-badge";
 import { forceCloseStaleAttendance } from "@/(protected)/hr/actions";
 import { isShiftEndedForBusinessDate } from "@lib/staff-runtime/_lib/default-shift";
@@ -803,69 +799,28 @@ export function TeamBoardClient({
         )}
       </section>
 
-      <Drawer
+      <AppDrawer
         open={!!drawerRow}
         onOpenChange={(open) => !open && setDrawerRow(null)}
-      >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl">
-          {drawerRow && (
+        title={drawerRow?.fullName ?? ""}
+        description={
+          drawerRow
+            ? `${drawerRow.positionLabel ?? copy.positionUnknown} · ${
+                drawerRow.shift?.shiftName ?? copy.shiftNone
+              }`
+            : undefined
+        }
+        contentClassName="flex max-h-dvh-80 flex-col overflow-hidden sm:mx-auto sm:max-w-2xl"
+        headerClassName="shrink-0 text-left"
+        footerClassName="shrink-0 gap-2 pt-2"
+        footer={
+          drawerRow &&
+          ((canApproveCheckoutForRow(drawerRow, capabilities) &&
+            isPastShiftEnd(drawerRow.shift)) ||
+            (canApproveCheckoutForRow(drawerRow, capabilities) &&
+              attendanceState(drawerRow.shift) === "checkout_pending") ||
+            (canApproveCount && drawerRow.countStatus === "submitted")) ? (
             <>
-              <DrawerHeader className="shrink-0 text-left">
-                <DrawerTitle className="truncate">
-                  {drawerRow.fullName}
-                </DrawerTitle>
-                <DrawerDescription className="truncate">
-                  {drawerRow.positionLabel ?? copy.positionUnknown} ·{" "}
-                  {drawerRow.shift?.shiftName ?? copy.shiftNone}
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4">
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-wrap gap-2">
-                    <AttendanceBadge shift={drawerRow.shift} />
-                    <CountBadge status={drawerRow.countStatus} />
-                    {drawerRow.onApprovedLeave ? (
-                      <StatusBadge
-                        domain="leave-request"
-                        value="approved"
-                        label={copy.leaveApproved}
-                      />
-                    ) : null}
-                  </div>
-
-                  {drawerRow.shift && (
-                    <div className="flex min-w-0 flex-col gap-2 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <IconClock className="size-4 shrink-0" />
-                        <span className="font-mono tabular-nums">
-                          {drawerRow.shift.checkIn
-                            ? formatVNTime(drawerRow.shift.checkIn)
-                            : "—"}
-                          {" - "}
-                          {formatCheckoutDisplayTime(drawerRow.shift)}
-                        </span>
-                      </div>
-                      <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
-                        <span className="break-words">
-                          {copy.phaseStart}:{" "}
-                          {checklistLabel(drawerRow.shift, "start_of_shift")}
-                        </span>
-                        <span className="break-words">
-                          {copy.phaseEnd}:{" "}
-                          {checklistLabel(drawerRow.shift, "end_of_shift")}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              </div>
-              {(canApproveCheckoutForRow(drawerRow, capabilities) &&
-                isPastShiftEnd(drawerRow.shift)) ||
-              (canApproveCheckoutForRow(drawerRow, capabilities) &&
-                attendanceState(drawerRow.shift) === "checkout_pending") ||
-              (canApproveCount && drawerRow.countStatus === "submitted") ? (
-                <DrawerFooter className="shrink-0 gap-2 pt-2">
                   {canApproveCheckoutForRow(drawerRow, capabilities) &&
                   isPastShiftEnd(drawerRow.shift) ? (
                     <Button
@@ -911,12 +866,52 @@ export function TeamBoardClient({
                       {copy.drawerActionCountSubmitted}
                     </Button>
                   ) : null}
-                </DrawerFooter>
-              ) : null}
             </>
+          ) : undefined
+        }
+      >
+          {drawerRow && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <AttendanceBadge shift={drawerRow.shift} />
+                    <CountBadge status={drawerRow.countStatus} />
+                    {drawerRow.onApprovedLeave ? (
+                      <StatusBadge
+                        domain="leave-request"
+                        value="approved"
+                        label={copy.leaveApproved}
+                      />
+                    ) : null}
+                  </div>
+
+                  {drawerRow.shift && (
+                    <div className="flex min-w-0 flex-col gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <IconClock className="size-4 shrink-0" />
+                        <span className="font-mono tabular-nums">
+                          {drawerRow.shift.checkIn
+                            ? formatVNTime(drawerRow.shift.checkIn)
+                            : "—"}
+                          {" - "}
+                          {formatCheckoutDisplayTime(drawerRow.shift)}
+                        </span>
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
+                        <span className="break-words">
+                          {copy.phaseStart}:{" "}
+                          {checklistLabel(drawerRow.shift, "start_of_shift")}
+                        </span>
+                        <span className="break-words">
+                          {copy.phaseEnd}:{" "}
+                          {checklistLabel(drawerRow.shift, "end_of_shift")}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
           )}
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
       <ReasonConfirmDialog
         open={forceCloseRow !== null}
         onOpenChange={(open) => {

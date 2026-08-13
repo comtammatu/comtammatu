@@ -28,7 +28,7 @@ test("Branch count assignment owns a keyboard and touch native presenter", () =>
     client,
     /render=\{\s*<button\s+type="button"\s+onClick=\{\(\) => openEmployee/,
   );
-  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /size="touch"/);
   assert.match(client, /lg:grid-cols-2/);
   assert.doesNotMatch(
@@ -65,7 +65,7 @@ test("Branch count slip review owns a touch queue and Branch revalidation", () =
   );
   assert.match(client, /<button type="button" onClick=\{\(\) => setSelectedId/);
   assert.match(client, /focusFirstPending[\s\S]*row\.status === "submitted"/);
-  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /approveCountSlip/);
   assert.match(client, /requestCountRecount/);
   assert.match(client, /lg:grid-cols-2/);

@@ -44,7 +44,7 @@ test("POS ready status stays distinct while served waits for payment", () => {
       payment_status: "unpaid",
       created_at: CREATED_AT,
     }),
-    { label: "Chờ thanh toán", variant: "warning" },
+    { label: "Chưa thanh toán", variant: "outline" },
   );
 });
 

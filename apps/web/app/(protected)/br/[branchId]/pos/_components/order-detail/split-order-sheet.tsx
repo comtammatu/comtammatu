@@ -14,19 +14,14 @@ import {
   ItemContent,
   ItemGroup,
 } from "@comtammatu/ui/components/item";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { getPosLineItemDisplayName } from "../../types";
 import type { OrderItemRowData } from "./order-item-row";
 
 import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
+import { StationSheet } from "@/components/surface";
+
 
 export interface SplitOrderItemPartial {
   itemId: number;
@@ -153,19 +148,63 @@ export function SplitOrderSheet({
     .join(" · ");
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
-        <SheetHeader>
-          <SheetTitle>
-            Tách hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
-          </SheetTitle>
-        </SheetHeader>
-
-        <ScrollArea className="min-h-0 flex-1">
-          <ItemGroup className="gap-2 px-3 py-3 sm:px-4">
+    <StationSheet
+      side="right"
+      size="md"
+      open={open}
+      onOpenChange={(o) => !o && handleClose()}
+      title={`Tách hóa đơn${headerSubtitle ? ` · ${headerSubtitle}` : ""}`}
+      footer={
+        <>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">
+              Đã chọn {totalUnitsSelected} phần
+              {!noneSelected
+                ? ` · còn lại ${remainingRows} món trên đơn gốc`
+                : ""}
+            </span>
+            <span className="font-semibold tabular-nums">
+              {formatVND(selectedTotal)}
+            </span>
+          </div>
+          {wouldEmptySource && !noneSelected && (
+            <Alert variant="destructive">
+              <AlertDescription>{POS_VI.splitCannotKeepOne}</AlertDescription>
+            </Alert>
+          )}
+          {noActiveItems && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng
+                đóng và tải lại.
+              </AlertDescription>
+            </Alert>
+          )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="flex-1"
+              disabled={isPending}
+              onClick={handleClose}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="button"
+              size="touch"
+              className="flex-1"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+            >
+              {POS_VI.splitConfirm}
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <ItemGroup className="gap-2">
             {items.map((item) => {
               const isCancelled = item.status === "cancelled";
               const picked = picks.get(item.id) ?? 0;
@@ -229,56 +268,6 @@ export function SplitOrderSheet({
               );
             })}
           </ItemGroup>
-        </ScrollArea>
-
-        <SheetFooter>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              Đã chọn {totalUnitsSelected} phần
-              {!noneSelected
-                ? ` · còn lại ${remainingRows} món trên đơn gốc`
-                : ""}
-            </span>
-            <span className="font-semibold tabular-nums">
-              {formatVND(selectedTotal)}
-            </span>
-          </div>
-          {wouldEmptySource && !noneSelected && (
-            <Alert variant="destructive">
-              <AlertDescription>{POS_VI.splitCannotKeepOne}</AlertDescription>
-            </Alert>
-          )}
-          {noActiveItems && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng
-                đóng và tải lại.
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="flex-1"
-              disabled={isPending}
-              onClick={handleClose}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              className="flex-1"
-              disabled={!canSubmit}
-              onClick={handleSubmit}
-            >
-              {POS_VI.splitConfirm}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

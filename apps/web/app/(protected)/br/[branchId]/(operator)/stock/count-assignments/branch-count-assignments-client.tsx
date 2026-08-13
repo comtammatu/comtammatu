@@ -36,16 +36,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import {
   BranchOperatorPage,
   BranchOperatorPanel,
@@ -372,83 +369,21 @@ export function BranchCountAssignmentsClient({
   return (
     <>
       {page}
-      <Sheet
+      <AppSheet
         open={activeEmployeeId != null}
         onOpenChange={(open) => {
           if (!open) closeEditor();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="max-h-dvh-95 overflow-hidden overscroll-contain bg-background p-0"
-        >
-          <SheetHeader>
-            <SheetTitle>{activeEmployee?.name}</SheetTitle>
-            <p className="text-sm text-muted-foreground">
-              {INVENTORY_VI.countAssignEditDescription(
-                activeEmployee?.name ?? "",
-              )}
-            </p>
-          </SheetHeader>
-          <div className="px-4 pb-3">
-            <InputGroup className="min-h-12">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
-                name="branchCountAssignmentSearch"
-                type="search"
-                autoComplete="off"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={INVENTORY_VI.countAssignSearchPlaceholder}
-                inputMode="search"
-              />
-            </InputGroup>
-          </div>
-          <ScrollArea className="min-h-0 flex-1 px-4">
-            <div className="flex flex-col gap-2 pb-4 pr-2">
-              {visibleIngredients.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  mode="no-results"
-                  title={INVENTORY_VI.countAssignNoIngredientMatches}
-                />
-              ) : (
-                visibleIngredients.map((ingredient) => {
-                  const checked = draftIds.includes(ingredient.id);
-                  const checkboxId = `branch-count-assignment-${activeEmployeeId}-${ingredient.id}`;
-                  return (
-                    <Item
-                      key={ingredient.id}
-                      variant={checked ? "muted" : "outline"}
-                      className="min-h-14 cursor-pointer"
-                      render={<Label htmlFor={checkboxId} />}
-                    >
-                      <Checkbox
-                        id={checkboxId}
-                        size="touch"
-                        checked={checked}
-                        disabled={isPending}
-                        onCheckedChange={() => toggleIngredient(ingredient.id)}
-                      />
-                      <ItemContent className="min-w-0">
-                        <span className="break-words font-medium">
-                          {ingredient.name}
-                        </span>
-                        {ingredient.unit ? (
-                          <ItemDescription>{ingredient.unit}</ItemDescription>
-                        ) : null}
-                      </ItemContent>
-                    </Item>
-                  );
-                })
-              )}
-            </div>
-          </ScrollArea>
-          <SheetFooter>
+        title={activeEmployee?.name ?? ""}
+        description={INVENTORY_VI.countAssignEditDescription(
+          activeEmployee?.name ?? "",
+        )}
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="max-h-dvh-95 overflow-hidden bg-background"
+        bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
@@ -467,9 +402,67 @@ export function BranchCountAssignmentsClient({
               {isPending ? <Spinner className="size-5" /> : null}
               {ACTIONS_VI.save}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </>
+        }
+      >
+        <div className="px-3 pb-3 sm:px-4">
+          <InputGroup className="min-h-12">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-label={INVENTORY_VI.countAssignSearchPlaceholder}
+              name="branchCountAssignmentSearch"
+              type="search"
+              autoComplete="off"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={INVENTORY_VI.countAssignSearchPlaceholder}
+              inputMode="search"
+            />
+          </InputGroup>
+        </div>
+        <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
+          <div className="flex flex-col gap-2 pb-4 pr-2">
+            {visibleIngredients.length === 0 ? (
+              <AppEmptyState
+                compact
+                mode="no-results"
+                title={INVENTORY_VI.countAssignNoIngredientMatches}
+              />
+            ) : (
+              visibleIngredients.map((ingredient) => {
+                const checked = draftIds.includes(ingredient.id);
+                const checkboxId = `branch-count-assignment-${activeEmployeeId}-${ingredient.id}`;
+                return (
+                  <Item
+                    key={ingredient.id}
+                    variant={checked ? "muted" : "outline"}
+                    className="min-h-14 cursor-pointer"
+                    render={<Label htmlFor={checkboxId} />}
+                  >
+                    <Checkbox
+                      id={checkboxId}
+                      size="touch"
+                      checked={checked}
+                      disabled={isPending}
+                      onCheckedChange={() => toggleIngredient(ingredient.id)}
+                    />
+                    <ItemContent className="min-w-0">
+                      <span className="break-words font-medium">
+                        {ingredient.name}
+                      </span>
+                      {ingredient.unit ? (
+                        <ItemDescription>{ingredient.unit}</ItemDescription>
+                      ) : null}
+                    </ItemContent>
+                  </Item>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </AppSheet>
     </>
   );
 }

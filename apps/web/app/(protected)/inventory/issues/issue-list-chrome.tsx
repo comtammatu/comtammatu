@@ -10,7 +10,6 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-  InputGroupText,
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { cn } from "@comtammatu/ui";
+import { BusinessDatePicker } from "@/components/form";
 import {
   AppToolbar,
 } from "@/components/surface";
@@ -239,36 +238,20 @@ export function RecordedConsumptionFilterBar({
               ))}
             </SelectContent>
           </Select>
-          <InputGroup
-            size={controlSize}
-            className={cn("bg-background", "w-52 shrink-0")}
-          >
-            <InputGroupAddon>
-              <InputGroupText>{FORM_VI.fromDate}</InputGroupText>
-            </InputGroupAddon>
-            <InputGroupInput
-              id="recorded-start-date"
-              type="date"
-              aria-label={FORM_VI.fromDate}
-              value={recordedStartDate}
-              onChange={(event) => onRecordedStartDateChange(event.target.value)}
-            />
-          </InputGroup>
-          <InputGroup
-            size={controlSize}
-            className={cn("bg-background", "w-52 shrink-0")}
-          >
-            <InputGroupAddon>
-              <InputGroupText>{FORM_VI.toDate}</InputGroupText>
-            </InputGroupAddon>
-            <InputGroupInput
-              id="recorded-end-date"
-              type="date"
-              aria-label={FORM_VI.toDate}
-              value={recordedEndDate}
-              onChange={(event) => onRecordedEndDateChange(event.target.value)}
-            />
-          </InputGroup>
+          <BusinessDatePicker
+            id="recorded-start-date"
+            value={recordedStartDate}
+            onValueChange={onRecordedStartDateChange}
+            aria-label={FORM_VI.fromDate}
+            className="w-52 shrink-0"
+          />
+          <BusinessDatePicker
+            id="recorded-end-date"
+            value={recordedEndDate}
+            onValueChange={onRecordedEndDateChange}
+            aria-label={FORM_VI.toDate}
+            className="w-52 shrink-0"
+          />
         </>
       }
       actions={

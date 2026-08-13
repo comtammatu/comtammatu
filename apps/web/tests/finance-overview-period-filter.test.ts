@@ -140,7 +140,7 @@ describe("Finance overview period filter", () => {
         ),
         "utf8",
       ),
-      /period === "week"[\s\S]*?<Calendar[\s\S]*?locale=\{vi\}/,
+      /period === "week"[\s\S]*?<BusinessWeekPicker/,
     );
   });
 

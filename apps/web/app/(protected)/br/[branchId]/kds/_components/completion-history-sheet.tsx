@@ -11,12 +11,9 @@ import { KDS_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import {
-  InputGroup,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
 import { Item, ItemContent, ItemGroup } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
+import { BusinessDatePicker } from "@/components/form";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import {
@@ -26,15 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  StationSheet,
+} from "@/components/surface";
 import {
   History as IconHistory,
   RefreshCcw as IconRefresh,
@@ -153,37 +147,33 @@ export function KdsCompletionHistorySheet({
   }, [loadHistory, open]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-hidden sm:max-w-xl">
-        <SheetHeader>
-          <div className="flex min-w-0 items-start gap-2">
-            <IconHistory
-              data-icon="inline-start"
-              aria-hidden
-              className="size-4 shrink-0 text-muted-foreground"
-            />
-            <div className="min-w-0">
-              <SheetTitle>{KDS_COMPLETION_HISTORY_COPY.title}</SheetTitle>
-              <SheetDescription>
-                {KDS_COMPLETION_HISTORY_COPY.description}
-              </SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
-
+    <StationSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={
+        <span className="flex min-w-0 items-center gap-2">
+          <IconHistory
+            data-icon="inline-start"
+            aria-hidden
+            className="size-4 shrink-0 text-muted-foreground"
+          />
+          {KDS_COMPLETION_HISTORY_COPY.title}
+        </span>
+      }
+      description={KDS_COMPLETION_HISTORY_COPY.description}
+      contentClassName="w-full overflow-hidden sm:max-w-xl"
+      bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+    >
         <div className="grid gap-3 border-y px-4 py-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="kds-history-date" className="text-xs">
               {KDS_COMPLETION_HISTORY_COPY.date}
             </Label>
-            <InputGroup>
-              <InputGroupInput
-                id="kds-history-date"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-              />
-            </InputGroup>
+            <BusinessDatePicker
+              id="kds-history-date"
+              value={date}
+              onValueChange={setDate}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="kds-history-event-type" className="text-xs">
@@ -378,7 +368,6 @@ export function KdsCompletionHistorySheet({
             )}
           </div>
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

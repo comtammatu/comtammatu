@@ -12,14 +12,7 @@ import {
 import { formatDecimal, formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@comtammatu/ui/components/drawer";
+
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
   CalendarX as IconCalendarX,
@@ -70,6 +63,10 @@ import {
   StatusBadge,
 } from "@/components/status-badge";
 import { sumShiftWorkdaysFromAttendanceRecords } from "../_lib/workday-math";
+import {
+  AppDrawer,
+} from "@/components/surface";
+
 
 const copy = messages.employee.schedule;
 
@@ -458,21 +455,17 @@ function SelectedDayDetail({
   dateStr,
   Frame,
   leave,
-  leaveHref,
   todayStr,
 }: {
   attendances: ScheduleAttendance[];
   dateStr: string;
   Frame: ScheduleFrameComponent;
   leave: CalendarLeaveStatus | undefined;
-  leaveHref: string;
   todayStr: string;
 }) {
-  const canRequestLeave = dateStr >= todayStr;
 
   return (
-    <>
-      <div className="px-4 pb-4">
+      <div className="pb-4">
         <Frame pad="sm" className="flex flex-col gap-3 bg-background">
           <div className="flex flex-wrap items-center gap-1.5">
             {leave ? (
@@ -519,21 +512,6 @@ function SelectedDayDetail({
           )}
         </Frame>
       </div>
-
-      {canRequestLeave ? (
-        <DrawerFooter>
-          <Button
-            variant="outline"
-            size="touch"
-            className="w-full sm:w-fit"
-            render={<Link href={leaveHref} />}
-          >
-            <IconCalendarX data-icon="inline-start" />
-            {copy.requestLeaveCta}
-          </Button>
-        </DrawerFooter>
-      ) : null}
-    </>
   );
 }
 
@@ -736,33 +714,37 @@ export function ScheduleClient({
         )}
       </Panel>
 
-      <Drawer
+      <AppDrawer
         open={selectedDate !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedDate(null);
         }}
+        title={selectedDate ? formatDate(selectedDate) : copy.dayDetailTitle}
+        description={formatMonthTitle(monthStart)}
+        footer={
+          selectedDate && selectedDate >= todayStr ? (
+            <Button
+              variant="outline"
+              size="touch"
+              className="w-full sm:w-fit"
+              render={<Link href={leaveHref} />}
+            >
+              <IconCalendarX data-icon="inline-start" />
+              {copy.requestLeaveCta}
+            </Button>
+          ) : undefined
+        }
       >
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>
-              {selectedDate ? formatDate(selectedDate) : copy.dayDetailTitle}
-            </DrawerTitle>
-            <DrawerDescription>
-              {formatMonthTitle(monthStart)}
-            </DrawerDescription>
-          </DrawerHeader>
           {selectedDate ? (
             <SelectedDayDetail
               attendances={selectedAttendance}
               dateStr={selectedDate}
               Frame={Frame}
               leave={selectedLeave}
-              leaveHref={leaveHref}
               todayStr={todayStr}
             />
           ) : null}
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
     </>
   );
 }

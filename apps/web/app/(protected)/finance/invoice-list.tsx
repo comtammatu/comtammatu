@@ -48,7 +48,8 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { FormDialog, TextareaField, TextField } from "@/components/form";
+import { FormDialog, TextareaField, TextField, BusinessDateField } from "@/components/form";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import {
   Item,
   ItemContent,
@@ -746,16 +747,15 @@ export function InvoiceList({
         />
         {hasMore ? (
           <div className="flex justify-center">
-            <Button
+            <ResponsiveActionButton
               type="button"
               variant="outline"
-              size={isTouchLayout ? "touch" : "sm"}
               onClick={handleLoadMore}
               disabled={loadingMore}
             >
               {loadingMore ? <Spinner className="size-4" /> : null}
               {messages.finance.invoiceList.loadMore}
-            </Button>
+            </ResponsiveActionButton>
           </div>
         ) : null}
       </div>
@@ -904,12 +904,11 @@ export function InvoiceList({
                   maxLength={REPLACE_AGREEMENT_MAX}
                   required
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="agreementDate"
                   id="replace-agreement-date"
                   label={FINANCE_VI.agreementDateLabel}
-                  type="date"
                   max={todayISODate()}
                   required
                 />

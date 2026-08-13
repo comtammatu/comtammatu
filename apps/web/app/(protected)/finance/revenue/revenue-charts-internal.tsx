@@ -11,7 +11,7 @@ import {
 } from "@/components/chart";
 import { formatAccountingVND as formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
-import { ChartCard } from "../components/chart-card";
+import { ChartCard } from "@/components/chart-card";
 
 const revCopy = messages.finance.revenue;
 const paceCopy = messages.finance.revenueTargets.progress;
@@ -70,6 +70,7 @@ export function RevenueCharts({
       }
       chartClassName="aspect-[3/1]"
       empty={trendData.length === 0}
+      emptyLabel={messages.finance.common.emptyInRange}
     >
       <LineChart
         data={trendData}

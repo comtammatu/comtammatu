@@ -14,6 +14,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { useFormControlSize } from "@/components/form/control-size";
+import { BusinessDatePicker } from "@/components/form";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
@@ -167,12 +168,10 @@ export function PermissionAuditFilters({
             <Label htmlFor={sinceFilterId} className="text-xs">
               {copy.filterSince}
             </Label>
-            <Input
+            <BusinessDatePicker
               id={sinceFilterId}
-              type="date"
               value={draftSince}
-              onChange={(e) => setDraftSince(e.target.value)}
-              controlSize={controlSize}
+              onValueChange={setDraftSince}
               className="min-w-40"
             />
           </div>

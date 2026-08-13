@@ -613,7 +613,6 @@ const checks = [
     pattern: /\$\{[^}]+\}%|(?<!\$)\{[^{}]+\}\s*%/g,
     allowlist: {
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/(operator)/team/team-workspace-tabs.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/pos/order-reads.ts": 1,
       "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 1,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,
@@ -1355,6 +1354,14 @@ const countBudgets = [
 
 const perFileCountBudgets = [
   {
+    id: "native-date-input",
+    description:
+      "Business dates use BusinessDateField / BusinessDatePicker; native type=date is forbidden.",
+    roots: uiRuntimeRoots([".tsx"]),
+    pattern: /\btype=["']date["']/g,
+    allowlist: {},
+  },
+  {
     id: "heading-weight-lock",
     description:
       "Headings use semibold; bold is restricted to the documented print-mode page-header exception.",
@@ -1414,9 +1421,7 @@ const perFileCountBudgets = [
     ],
     pattern:
       /className=\{?(?:cn\()?['"][^'"]*\b(?:p|px|py|pt|pb|pl|pr)-(?:5|6|7|8|9|10|11|12|14|16|20|24)\b/g,
-    allowlist: {
-      "apps/web/lib/staff-runtime/count/count-client.tsx": 1,
-    },
+    allowlist: {},
   },
   {
     id: "gap-atypical-baseline",
@@ -1559,10 +1564,8 @@ const perFileCountBudgets = [
       "apps/web/app/(protected)/inventory/transfers/create-transfer-dialog.tsx": 1,
       "apps/web/app/(protected)/settings/printers/templates/templates-client.tsx": 1,
       "apps/web/app/(public)/(auth)/login/page.tsx": 1,
-      "apps/web/app/_components/control-surface-overview.tsx": 1,
       "apps/web/app/components/app-shell.tsx": 1,
       "apps/web/app/components/form/form-dialog.tsx": 7,
-      "apps/web/app/components/kpi/compare-chip.tsx": 1,
       "apps/web/app/components/sidebar.tsx": 4,
       "apps/web/app/components/surface/app-detail-footer.tsx": 3,
       "apps/web/app/components/surface/app-page.tsx": 1,
@@ -1697,7 +1700,7 @@ const frozenPrimitiveImportBaselines = [
     id: "raw-dialog-import-file-baseline",
     component: "dialog",
     label: "Dialog",
-    replacement: "FormDialog, Sheet, Page, or an approved contextual dialog",
+    replacement: "FormDialog, AppSheet, Page, or an approved contextual dialog",
     allowlist: {
       "apps/web/app/components/form/form-dialog.tsx": 1,
       "apps/web/app/components/pwa-install-help-dialog.tsx": 1,
@@ -1714,12 +1717,45 @@ const frozenPrimitiveImportBaselines = [
       "apps/web/app/components/reason-confirm-dialog.tsx": 1,
     },
   },
+  {
+    id: "raw-calendar-import-file-baseline",
+    component: "calendar",
+    label: "Calendar",
+    replacement: "BusinessDateField, BusinessDatePicker, or BusinessWeekPicker",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    allowlist: {
+      "apps/web/app/components/form/business-date-field.tsx": 1,
+    },
+  },
+  {
+    id: "raw-sheet-import-file-baseline",
+    component: "sheet",
+    label: "Sheet",
+    replacement: "AppSheet or StationSheet",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    allowlist: {
+      "apps/web/app/components/surface/app-sheet.tsx": 1,
+      "apps/web/app/components/surface/station-sheet.tsx": 1,
+      "apps/web/app/components/form/number-pad-sheet.tsx": 1,
+      "apps/web/app/components/sidebar.tsx": 1,
+    },
+  },
+  {
+    id: "raw-drawer-import-file-baseline",
+    component: "drawer",
+    label: "Drawer",
+    replacement: "AppDrawer or StationSheet",
+    roots: uiRuntimeRoots([".ts", ".tsx"]),
+    allowlist: {
+      "apps/web/app/components/surface/app-drawer.tsx": 1,
+    },
+  },
 ];
 
 const frozenPrimitiveImportChecks = frozenPrimitiveImportBaselines.map(
   (check) => ({
     ...check,
-    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    roots: check.roots ?? [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
     pattern: new RegExp(
       String.raw`from\s+["']@comtammatu/ui/components/${check.component}["']`,
       "g",

@@ -12,6 +12,7 @@ import {
   FormDialog,
   SelectField,
   TextField,
+  BusinessDateField,
   MoneyVndField,
   NumberField,
 } from "@/components/form";
@@ -358,11 +359,10 @@ export function EmployeeFormDialog({
                   label="Mã nhân viên"
                   placeholder="NV001"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="start_date"
                   label="Ngày bắt đầu"
-                  type="date"
                 />
                 <SelectField
                   control={form.control}
@@ -392,17 +392,15 @@ export function EmployeeFormDialog({
                   label="Số HĐLĐ"
                   placeholder="HD-2026-001"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="contract_signed_date"
                   label="Ngày ký HĐ"
-                  type="date"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="contract_end_date"
                   label="Ngày hết hạn HĐ"
-                  type="date"
                 />
                 <SelectField
                   control={form.control}
@@ -687,11 +685,10 @@ export function EmployeeFormDialog({
                   label="Mã nhân viên"
                   placeholder="NV001"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="start_date"
                   label="Ngày bắt đầu"
-                  type="date"
                 />
               </FormGroupBlock>
             ) : null}
@@ -714,17 +711,15 @@ export function EmployeeFormDialog({
                   label="Số HĐLĐ"
                   placeholder="HD-2026-001"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="contract_signed_date"
                   label="Ngày ký HĐ"
-                  type="date"
                 />
-                <TextField
+                <BusinessDateField
                   control={form.control}
                   name="contract_end_date"
                   label="Ngày hết hạn HĐ"
-                  type="date"
                 />
                 <SelectField
                   control={form.control}

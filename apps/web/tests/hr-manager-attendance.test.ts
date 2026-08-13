@@ -341,17 +341,12 @@ test("calendar day detail is a responsive contextual sheet with URL recovery", (
   );
   assert.match(
     attendanceTableSource,
-    /<Sheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*onSelectCalendarDay\(null\)/,
+    /<AppSheet[\s\S]*open=\{selectedDay !== null\}[\s\S]*onOpenChange=\{\(open\) => \{[\s\S]*onSelectCalendarDay\(null\)/,
     "selected calendar days should open in an accessible Sheet that can close safely",
   );
   assert.match(
     attendanceTableSource,
-    /side=\{isCalendarDetailTouch \? "bottom" : "right"\}/,
-    "calendar detail should preserve a touch-first bottom sheet and desktop side panel",
-  );
-  assert.match(
-    attendanceTableSource,
-    /className="max-h-dvh-95 overflow-hidden bg-background p-0 data-\[side=right\]:lg:w-1\/2 data-\[side=right\]:lg:max-w-none"/,
+    /contentClassName="max-h-dvh-95 overflow-hidden bg-background data-\[side=right\]:lg:w-1\/2 data-\[side=right\]:lg:max-w-none"/,
     "desktop calendar detail should use half of the viewport instead of the shared narrow sheet cap",
   );
   assert.match(

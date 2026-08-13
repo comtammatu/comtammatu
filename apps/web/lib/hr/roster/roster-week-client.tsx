@@ -280,3 +280,5 @@ export function RosterWeekClient({
     </div>
   );
 }
+
+export { RosterWeekClient as RosterWeek };

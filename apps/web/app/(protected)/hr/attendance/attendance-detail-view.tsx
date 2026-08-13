@@ -23,13 +23,7 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { STAFF_VI, FORM_VI } from "@comtammatu/shared/messages";
 import {
@@ -46,7 +40,7 @@ import {
   correctAttendanceRecord,
 } from "../actions";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState } from "@/components/surface";
+import { AppEmptyState, AppSheet } from "@/components/surface";
 import {
   AppDialog,
   FormDialog,
@@ -611,28 +605,24 @@ export function DetailView({
       ) : null}
 
       {isTouchLayout ? (
-        <Sheet
+        <AppSheet
           open={checklistRecord !== null}
           onOpenChange={(open) => {
             if (!open) setChecklistRecord(null);
           }}
+          title="Việc trong ca"
+          description={
+            checklistRecord
+              ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
+              : ""
+          }
+          side="bottom"
+          contentClassName="max-h-dvh-80"
         >
-          <SheetContent side="bottom" className="max-h-dvh-80">
-            <SheetHeader className="text-left">
-              <SheetTitle>Việc trong ca</SheetTitle>
-              <SheetDescription>
-                {checklistRecord
-                  ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${formatVNBusinessDate(checklistRecord.date)}`
-                  : ""}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-              {checklistRecord ? (
-                <ChecklistDetail record={checklistRecord} />
-              ) : null}
-            </div>
-          </SheetContent>
-        </Sheet>
+          {checklistRecord ? (
+            <ChecklistDetail record={checklistRecord} />
+          ) : null}
+        </AppSheet>
       ) : (
         <AppDialog
           open={checklistRecord !== null}

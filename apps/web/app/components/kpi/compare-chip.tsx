@@ -60,7 +60,7 @@ export function CompareChip({
       <Icon className={cn(ICON_SIZE[size])} aria-hidden />
       <span>{label}</span>
       {hint ? (
-        <span className="max-w-[12rem] truncate font-normal text-muted-foreground">
+        <span className="max-w-48 truncate font-normal text-muted-foreground">
           · {hint}
         </span>
       ) : null}

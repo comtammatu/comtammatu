@@ -29,19 +29,15 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@/components/confirm-dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-} from "@comtammatu/ui/components/drawer";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { AppDialog } from "@/components/form/form-dialog";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppDrawer,
+} from "@/components/surface";
 import {
   approveCheckoutRequest,
   getCheckoutChecklistTaskPhotoUrl,
@@ -383,22 +379,55 @@ export function CheckoutApprovalsClient({
       </ItemGroup>
 
       {/* Details Drawer */}
-      <Drawer
+      <AppDrawer
         open={detailsTarget !== null}
         onOpenChange={(open) => {
           if (!open) setDetailsTarget(null);
         }}
+        title="Chi tiết kết ca"
+        description={
+          detailsTarget
+            ? `${detailsTarget.employeeName} · ${detailsTarget.shiftLabel} · ${detailsTarget.checkInLabel}→${detailsTarget.requestedLabel}`
+            : undefined
+        }
+        contentClassName="flex max-h-dvh-80 flex-col overflow-hidden"
+        headerClassName="shrink-0"
+        footerClassName="shrink-0 flex-row gap-3 pt-2"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              size="touch"
+              className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
+              disabled={!canApprove || isPending}
+              onClick={() => {
+                if (detailsTarget) {
+                  setRejectTarget(detailsTarget);
+                  setDetailsTarget(null);
+                }
+              }}
+            >
+              <IconX className="size-4 mr-1.5" />
+              Từ chối
+            </Button>
+            <Button
+              size="touch"
+              className="flex-1 bg-success text-success-foreground"
+              disabled={!canApprove || isPending}
+              onClick={() => {
+                if (detailsTarget) approve(detailsTarget);
+              }}
+            >
+              {pendingId === detailsTarget?.id && isPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconCheck data-icon="inline-start" />
+              )}
+              Duyệt
+            </Button>
+          </>
+        }
       >
-        <DrawerContent className="flex max-h-dvh-80 flex-col overflow-hidden">
-          <DrawerHeader className="shrink-0">
-            <DrawerTitle>Chi tiết kết ca</DrawerTitle>
-            <DrawerDescription>
-              {detailsTarget
-                ? `${detailsTarget.employeeName} · ${detailsTarget.shiftLabel} · ${detailsTarget.checkInLabel}→${detailsTarget.requestedLabel}`
-                : null}
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4">
             <div className="pb-4">
               {detailsTarget?.checklist &&
               detailsTarget.checklist.length > 0 ? (
@@ -472,41 +501,7 @@ export function CheckoutApprovalsClient({
                 </p>
               )}
             </div>
-          </div>
-          <DrawerFooter className="shrink-0 flex-row gap-3 pt-2">
-            <Button
-              variant="outline"
-              size="touch"
-              className="flex-1 border-destructive text-destructive hover:bg-destructive/10"
-              disabled={!canApprove || isPending}
-              onClick={() => {
-                if (detailsTarget) {
-                  setRejectTarget(detailsTarget);
-                  setDetailsTarget(null);
-                }
-              }}
-            >
-              <IconX className="size-4 mr-1.5" />
-              Từ chối
-            </Button>
-            <Button
-              size="touch"
-              className="flex-1 bg-success text-success-foreground"
-              disabled={!canApprove || isPending}
-              onClick={() => {
-                if (detailsTarget) approve(detailsTarget);
-              }}
-            >
-              {pendingId === detailsTarget?.id && isPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <IconCheck data-icon="inline-start" />
-              )}
-              Duyệt
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
 
       <AppDialog
         open={photoOpen}
@@ -531,7 +526,7 @@ export function CheckoutApprovalsClient({
       </AppDialog>
 
       {/* Reject Reason Drawer */}
-      <Drawer
+      <AppDrawer
         open={rejectTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -539,15 +534,23 @@ export function CheckoutApprovalsClient({
             setRejectReason("");
           }
         }}
+        title="Từ chối kết ca"
+        description="Nhập lý do từ chối để nhân viên biết và sửa lỗi."
+        footerClassName="pt-2"
+        footer={
+          <Button
+            variant="destructive"
+            size="touch"
+            className="w-full"
+            disabled={rejectReason.length < 3 || isPending}
+            onClick={handleReject}
+          >
+            {isPending ? <Spinner data-icon="inline-start" /> : null}
+            Xác nhận Từ chối
+          </Button>
+        }
       >
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Từ chối kết ca</DrawerTitle>
-            <DrawerDescription>
-              Nhập lý do từ chối để nhân viên biết và sửa lỗi.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="reject-reason">Lý do từ chối</Label>
               <Textarea
@@ -560,20 +563,7 @@ export function CheckoutApprovalsClient({
               />
             </div>
           </div>
-          <DrawerFooter className="pt-2">
-            <Button
-              variant="destructive"
-              size="touch"
-              className="w-full"
-              disabled={rejectReason.length < 3 || isPending}
-              onClick={handleReject}
-            >
-              {isPending ? <Spinner data-icon="inline-start" /> : null}
-              Xác nhận Từ chối
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
     </div>
   );
 }

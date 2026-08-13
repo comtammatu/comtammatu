@@ -40,17 +40,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox, QuantityInput } from "@/components/form";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { StatusBadge, getStatusBadgeMeta } from "@/components/status-badge";
 import { PhotoUploadInput } from "@/components/form";
 import {
@@ -218,163 +216,150 @@ function BranchStockIssueLineSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0 text-foreground"
-      >
-        <SheetHeader>
-          <SheetTitle>
-            {line ? ACTIONS_VI.edit : issuesCopy.addLineTitle}
-          </SheetTitle>
-          <p className="text-xs text-muted-foreground">
-            {line ? line.ingredientName : issuesCopy.addLineTitle}
-          </p>
-        </SheetHeader>
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={line ? ACTIONS_VI.edit : issuesCopy.addLineTitle}
+      description={line ? line.ingredientName : issuesCopy.addLineTitle}
+      side="bottom"
+      contentClassName="max-h-dvh-95 bg-background text-foreground"
+      footer={
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch-lg"
+            className="flex-1"
+            disabled={isPending}
+            onClick={() => onOpenChange(false)}
+          >
+            {ACTIONS_VI.cancel}
+          </Button>
+          <Button
+            type="button"
+            size="touch-lg"
+            className="flex-1"
+            disabled={isPending}
+            onClick={handleSave}
+          >
+            {issuesCopy.saveLineAction}
+          </Button>
+        </div>
+      }
+    >
+      <FieldGroup>
+        <Field>
+          <FieldLabel>{issuesCopy.ingredientLabel}</FieldLabel>
+          <Combobox
+            value={ingredientId}
+            onValueChange={handleIngredientChange}
+            options={ingredients
+              .filter(
+                (ingredient) =>
+                  ingredient.isActive || ingredient.id === line?.ingredientId,
+              )
+              .map((ingredient) => ({
+                value: String(ingredient.id),
+                label: ingredient.name,
+                hint:
+                  ingredient.units.find((unit) => unit.is_base)?.unit_code ??
+                  "",
+                keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+              }))}
+            placeholder={issuesCopy.ingredientPlaceholder}
+            searchPlaceholder={issuesCopy.ingredientSearchPlaceholder}
+            size="touch"
+          />
+        </Field>
 
-        <div className="p-4">
-          <FieldGroup>
-            <Field>
-              <FieldLabel>{issuesCopy.ingredientLabel}</FieldLabel>
-              <Combobox
-                value={ingredientId}
-                onValueChange={handleIngredientChange}
-                options={ingredients
-                  .filter(
-                    (ingredient) =>
-                      ingredient.isActive ||
-                      ingredient.id === line?.ingredientId,
-                  )
-                  .map((ingredient) => ({
-                    value: String(ingredient.id),
-                    label: ingredient.name,
-                    hint:
-                      ingredient.units.find((unit) => unit.is_base)
-                        ?.unit_code ?? "",
-                    keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
-                  }))}
-                placeholder={issuesCopy.ingredientPlaceholder}
-                searchPlaceholder={issuesCopy.ingredientSearchPlaceholder}
-                size="touch"
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="branch-stock-issue-quantity">
+              {issuesCopy.quantityLabel}
+            </FieldLabel>
+            <InputGroup className="min-h-12">
+              <QuantityInput
+                id="branch-stock-issue-quantity"
+                maxFractionDigits={3}
+                value={quantity}
+                onValueChange={(value) =>
+                  setQuantity(clampIssueEntryQuantity(value, maxEntryQuantity))
+                }
+                placeholder="0"
+                className="h-full"
               />
-            </Field>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="branch-stock-issue-quantity">
-                  {issuesCopy.quantityLabel}
-                </FieldLabel>
-                <InputGroup className="min-h-12">
-                  <QuantityInput
-                    id="branch-stock-issue-quantity"
-                    maxFractionDigits={3}
-                    value={quantity}
-                    onValueChange={(value) =>
-                      setQuantity(
-                        clampIssueEntryQuantity(value, maxEntryQuantity),
-                      )
-                    }
-                    placeholder="0"
-                    className="h-full"
-                  />
-                  {maxQuantityValue ? (
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton
-                        type="button"
-                        onClick={() => setQuantity(maxQuantityValue)}
-                      >
-                        {FORM_VI.max}
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  ) : null}
-                </InputGroup>
-                {selectedIngredient ? (
-                  <p className="text-xs text-muted-foreground">
-                    Tồn hiện có: {formatQty(selectedIngredient.currentQuantity)}
-                  </p>
-                ) : null}
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="branch-stock-issue-unit">
-                  {issuesCopy.unitLabel}
-                </FieldLabel>
-                <Select value={entryUnitId} onValueChange={setEntryUnitId}>
-                  <SelectTrigger
-                    id="branch-stock-issue-unit"
-                    size="touch"
-                    className="w-full"
+              {maxQuantityValue ? (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    type="button"
+                    onClick={() => setQuantity(maxQuantityValue)}
                   >
-                    <SelectValue placeholder={issuesCopy.selectUnit} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map((option) => (
-                      <SelectItem
-                        key={option.unitId}
-                        value={String(option.unitId)}
-                        size="touch"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-
-            <Field>
-              <FieldLabel htmlFor="branch-stock-issue-reason">
-                {issuesCopy.reasonLabel}
-              </FieldLabel>
-              <Textarea
-                id="branch-stock-issue-reason"
-                rows={3}
-                value={reason}
-                placeholder={issuesCopy.reasonPlaceholder}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            </Field>
-            {showConsumptionPhoto ? (
-              <Field>
-                <FieldLabel>{issuesCopy.evidencePhotoLabel}</FieldLabel>
-                <PhotoUploadInput
-                  tenantId={tenantId}
-                  folder={`stock-issues/${issueId}/consumption`}
-                  value={photoUrl}
-                  onChange={setPhotoUrl}
-                  acceptTypes="image"
-                  disabled={isPending}
-                />
-              </Field>
+                    {FORM_VI.max}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              ) : null}
+            </InputGroup>
+            {selectedIngredient ? (
+              <p className="text-xs text-muted-foreground">
+                Tồn hiện có: {formatQty(selectedIngredient.currentQuantity)}
+              </p>
             ) : null}
-          </FieldGroup>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="branch-stock-issue-unit">
+              {issuesCopy.unitLabel}
+            </FieldLabel>
+            <Select value={entryUnitId} onValueChange={setEntryUnitId}>
+              <SelectTrigger
+                id="branch-stock-issue-unit"
+                size="touch"
+                className="w-full"
+              >
+                <SelectValue placeholder={issuesCopy.selectUnit} />
+              </SelectTrigger>
+              <SelectContent>
+                {unitOptions.map((option) => (
+                  <SelectItem
+                    key={option.unitId}
+                    value={String(option.unitId)}
+                    size="touch"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
 
-        <SheetFooter>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch-lg"
-              className="flex-1"
+        <Field>
+          <FieldLabel htmlFor="branch-stock-issue-reason">
+            {issuesCopy.reasonLabel}
+          </FieldLabel>
+          <Textarea
+            id="branch-stock-issue-reason"
+            rows={3}
+            value={reason}
+            placeholder={issuesCopy.reasonPlaceholder}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </Field>
+        {showConsumptionPhoto ? (
+          <Field>
+            <FieldLabel>{issuesCopy.evidencePhotoLabel}</FieldLabel>
+            <PhotoUploadInput
+              tenantId={tenantId}
+              folder={`stock-issues/${issueId}/consumption`}
+              value={photoUrl}
+              onChange={setPhotoUrl}
+              acceptTypes="image"
               disabled={isPending}
-              onClick={() => onOpenChange(false)}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch-lg"
-              className="flex-1"
-              disabled={isPending}
-              onClick={handleSave}
-            >
-              {issuesCopy.saveLineAction}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+            />
+          </Field>
+        ) : null}
+      </FieldGroup>
+    </AppSheet>
   );
 }
 

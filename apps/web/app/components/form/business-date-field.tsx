@@ -62,6 +62,7 @@ export interface BusinessDatePickerProps {
   onValueChange: (value: string) => void;
   displayValue?: React.ReactNode;
   placeholder?: string;
+  min?: string;
   max?: string;
   captionLayout?: React.ComponentProps<typeof Calendar>["captionLayout"];
   disabled?: boolean;
@@ -72,11 +73,24 @@ export interface BusinessDatePickerProps {
   "aria-describedby"?: string;
 }
 
+function calendarDisabled(
+  disabled: boolean | undefined,
+  minDate: Date | undefined,
+  maxDate: Date | undefined,
+) {
+  if (disabled) return true;
+  const matchers: Array<{ before: Date } | { after: Date }> = [];
+  if (minDate) matchers.push({ before: minDate });
+  if (maxDate) matchers.push({ after: maxDate });
+  return matchers.length > 0 ? matchers : undefined;
+}
+
 export function BusinessDatePicker({
   value,
   onValueChange,
   displayValue,
   placeholder = "Chọn ngày",
+  min,
   max,
   captionLayout,
   disabled,
@@ -88,6 +102,7 @@ export function BusinessDatePicker({
 }: BusinessDatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedDate = businessDateToDate(value);
+  const minDate = businessDateToDate(min);
   const maxDate = businessDateToDate(max);
 
   return (
@@ -122,16 +137,82 @@ export function BusinessDatePicker({
           locale={vi}
           captionLayout={captionLayout}
           defaultMonth={selectedDate}
+          startMonth={minDate}
           endMonth={maxDate}
           selected={selectedDate}
           onSelect={(date) => {
             onValueChange(date ? dateToBusinessDate(date) : "");
             setOpen(false);
           }}
-          disabled={disabled ? true : maxDate ? { after: maxDate } : undefined}
+          disabled={calendarDisabled(disabled, minDate, maxDate)}
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function isDateInRange(date: Date, start: Date, end: Date) {
+  const t = startOfLocalDay(date);
+  return t >= startOfLocalDay(start) && t <= startOfLocalDay(end);
+}
+
+function isSameBusinessDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+export interface BusinessWeekPickerProps {
+  selectedStart?: Date;
+  selectedEnd?: Date;
+  maxDate?: Date;
+  onPickDay: (date: Date) => void;
+}
+
+export function BusinessWeekPicker({
+  selectedStart,
+  selectedEnd,
+  maxDate,
+  onPickDay,
+}: BusinessWeekPickerProps) {
+  const weekStart = selectedStart;
+  const weekEnd = selectedEnd ?? selectedStart;
+
+  return (
+    <Calendar
+      mode="single"
+      locale={vi}
+      captionLayout="dropdown"
+      defaultMonth={selectedStart}
+      endMonth={maxDate}
+      selected={selectedStart}
+      showOutsideDays
+      modifiers={
+        weekStart && weekEnd
+          ? {
+              period_week: (date) => isDateInRange(date, weekStart, weekEnd),
+            }
+          : undefined
+      }
+      modifiersClassNames={{
+        period_week:
+          "rounded-none bg-primary/15 text-foreground data-[selected-single=true]:rounded-(--cell-radius)",
+      }}
+      onSelect={(date) => {
+        if (!date) return;
+        if (maxDate && date > maxDate && !isSameBusinessDay(date, maxDate)) {
+          return;
+        }
+        onPickDay(date);
+      }}
+      disabled={maxDate ? { after: maxDate } : undefined}
+    />
   );
 }
 
@@ -142,6 +223,8 @@ export interface BusinessDateFieldProps<TFieldValues extends FieldValues> {
   description?: string;
   timezoneLabel?: string;
   placeholder?: string;
+  min?: string;
+  max?: string;
   disabled?: boolean;
   className?: string;
   id?: string;
@@ -155,6 +238,8 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
   description,
   timezoneLabel,
   placeholder = "Chọn ngày",
+  min,
+  max,
   disabled,
   className,
   id,
@@ -176,6 +261,8 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
         value={rawValue}
         onValueChange={field.onChange}
         placeholder={placeholder}
+        min={min}
+        max={max}
         disabled={disabled}
         className={className}
         aria-invalid={hasError}

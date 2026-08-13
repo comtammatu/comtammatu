@@ -11,15 +11,9 @@ import { confirm } from "@/components/confirm-dialog";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDialog } from "@/components/form";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
-import { OWNER_SHELL_BREAKPOINT, useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
@@ -37,8 +31,10 @@ import {
   AppPageHeader,
   AppSection,
   DescriptionList,
+  AppSheet,
   DocumentFormFrame,
 } from "@/components/surface";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
   DataTable,
@@ -116,8 +112,6 @@ export function GRNDetailClient({
   embedded?: boolean;
   presentation?: "page" | "dialog";
 }) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = embedded;
@@ -811,81 +805,75 @@ export function GRNDetailClient({
 
   const draftLineSheet =
     canMutateDraft && !isDesktopLineEdit ? (
-      <Sheet
+      <AppSheet
         open={editingLine != null}
         onOpenChange={(open) => {
           if (!open) closeLineEdit();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="h-auto max-h-dvh-95 gap-1 bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          {editingLine && editingIdx >= 0 ? (
+        title={editingLine?.name ?? GRN_CREATE_COPY.editItem}
+        description={
+          editingLine
+            ? `${editingLine.sku ? `${editingLine.sku} · ` : ""}${editingLine.unit}`
+            : GRN_CREATE_COPY.editItem
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        footer={
+          editingLine && editingIdx >= 0 ? (
             <>
-              <SheetHeader>
-                <SectionLabel density="dense">
-                  {GRN_CREATE_COPY.editItem}
-                </SectionLabel>
-                <SheetTitle className="text-lg font-semibold">
-                  {editingLine.name}
-                </SheetTitle>
-                <p className="text-xs text-muted-foreground">
-                  {editingLine.sku ? `${editingLine.sku} · ` : ""}
-                  {editingLine.unit}
-                </p>
-              </SheetHeader>
-              <div className="max-h-[60dvh] overflow-y-auto p-4">
-                <LineRow
-                  tenantId={grn.tenantId}
-                  grnId={grn.id}
-                  line={editingLine}
-                  idx={editingIdx}
-                  isDraft
-                  showAmendAffordance={false}
-                  chrome="plain"
-                  onChange={(p) => patch(editingIdx, p)}
-                  onDelete={
-                    canChangeLineSet
-                      ? () => {
-                          void handleDeleteLine(editingLine);
-                          closeLineEdit();
-                        }
-                      : undefined
-                  }
-                  onAmend={() => undefined}
-                />
-              </div>
-              <SheetFooter>
-                {canChangeLineSet ? (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size={isTouchLayout ? "touch-lg" : "lg"}
-                    onClick={() => {
-                      void handleDeleteLine(editingLine);
-                      closeLineEdit();
-                    }}
-                    className="w-full"
-                  >
-                    {ACTIONS_VI.delete}
-                  </Button>
-                ) : null}
-                <Button
+              {canChangeLineSet ? (
+                <ResponsiveActionButton
                   type="button"
-                  variant="outline"
-                  size={isTouchLayout ? "touch-lg" : "lg"}
-                  onClick={closeLineEdit}
+                  variant="destructive"
+                  density="hero"
+                  onClick={() => {
+                    void handleDeleteLine(editingLine);
+                    closeLineEdit();
+                  }}
                   className="w-full"
                 >
-                  {ACTIONS_VI.close}
-                </Button>
-              </SheetFooter>
+                  {ACTIONS_VI.delete}
+                </ResponsiveActionButton>
+              ) : null}
+              <ResponsiveActionButton
+                type="button"
+                variant="outline"
+                density="hero"
+                onClick={closeLineEdit}
+                className="w-full"
+              >
+                {ACTIONS_VI.close}
+              </ResponsiveActionButton>
             </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+          ) : null
+        }
+      >
+        {editingLine && editingIdx >= 0 ? (
+          <>
+            <SectionLabel density="dense">{GRN_CREATE_COPY.editItem}</SectionLabel>
+            <LineRow
+              tenantId={grn.tenantId}
+              grnId={grn.id}
+              line={editingLine}
+              idx={editingIdx}
+              isDraft
+              showAmendAffordance={false}
+              chrome="plain"
+              onChange={(p) => patch(editingIdx, p)}
+              onDelete={
+                canChangeLineSet
+                  ? () => {
+                      void handleDeleteLine(editingLine);
+                      closeLineEdit();
+                    }
+                  : undefined
+              }
+              onAmend={() => undefined}
+            />
+          </>
+        ) : null}
+      </AppSheet>
     ) : null;
 
   const dialogs = (

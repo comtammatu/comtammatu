@@ -47,14 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -74,7 +67,10 @@ import {
 } from "@/(protected)/hr/checklist-types";
 import { StatusBadge } from "@/components/status-badge";
 import { AppDialog } from "@/components/form";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import {
   BranchOperatorPage,
@@ -687,112 +683,105 @@ export function BranchAttendanceClient({
         </BranchOperatorPanel>
       </div>
 
-      <Sheet
+      <AppSheet
         open={employeeMonthOpen}
         onOpenChange={(open) => {
           if (!open) closeEmployeeMonth();
         }}
+        title={employeeSheetTitle}
+        description={[employeeSheetCode, month, attendanceCopy.employeeMonthTitle]
+          .filter(Boolean)
+          .join(" · ")}
+        side="bottom"
+        contentClassName="flex max-h-dvh-80 flex-col"
+        headerClassName="text-left"
+        bodyClassName="overscroll-contain px-4 pb-2"
+        footerClassName="sticky bottom-0 border-t bg-background"
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full"
+            onClick={closeEmployeeMonth}
+          >
+            {attendanceCopy.employeeMonthClose}
+          </Button>
+        }
       >
-        <SheetContent side="bottom" className="flex max-h-dvh-80 flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle>{employeeSheetTitle}</SheetTitle>
-            <SheetDescription>
-              {[employeeSheetCode, month, attendanceCopy.employeeMonthTitle]
-                .filter(Boolean)
-                .join(" · ")}
-            </SheetDescription>
-          </SheetHeader>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden">
+          {selectedEmployeeSummary ? (
+            <SummaryMeta
+              workdays={selectedEmployeeSummary.workdays}
+              workHours={selectedEmployeeSummary.work_hours}
+              closedShifts={selectedEmployeeSummary.closedShifts}
+              openShifts={selectedEmployeeSummary.openShifts}
+            />
+          ) : null}
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
-            {selectedEmployeeSummary ? (
-              <SummaryMeta
-                workdays={selectedEmployeeSummary.workdays}
-                workHours={selectedEmployeeSummary.work_hours}
-                closedShifts={selectedEmployeeSummary.closedShifts}
-                openShifts={selectedEmployeeSummary.openShifts}
-              />
-            ) : null}
-
-            {!summaryLoaded || isPending ? (
-              <div className="flex items-center justify-center py-4">
-                <Spinner />
-              </div>
-            ) : employeeMonthRows.length === 0 ? (
-              <AppEmptyState
-                compact
-                mode="no-data"
-                icon={<IconListChecks />}
-                title={attendanceCopy.employeeMonthEmptyTitle}
-                description={attendanceCopy.employeeMonthEmptyDescription}
-              />
-            ) : (
-              <ItemGroup className="grid gap-2">
-                {employeeMonthRows.map((record) => {
-                  const progress = attendanceChecklistProgress(record);
-                  return (
-                    <Item
-                      key={record.id}
-                      variant="outline"
-                      className="min-h-16 touch-manipulation"
-                      render={
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setChecklistOpen(false);
-                            setSelectedId(record.id);
-                          }}
-                        />
-                      }
-                    >
-                      <ItemContent className="min-w-0 gap-1 text-left">
-                        <ItemTitle>
-                          {formatVNDate(record.date)}
-                          {record.shifts?.name
-                            ? ` · ${record.shifts.name}`
-                            : ""}
-                        </ItemTitle>
-                        <ItemDescription className="font-mono">
-                          {record.check_in
-                            ? formatVNTime(record.check_in)
-                            : "—"}{" "}
-                          –{" "}
-                          {record.check_out
-                            ? formatVNTime(record.check_out)
-                            : "—"}
+          {!summaryLoaded || isPending ? (
+            <div className="flex items-center justify-center py-4">
+              <Spinner />
+            </div>
+          ) : employeeMonthRows.length === 0 ? (
+            <AppEmptyState
+              compact
+              mode="no-data"
+              icon={<IconListChecks />}
+              title={attendanceCopy.employeeMonthEmptyTitle}
+              description={attendanceCopy.employeeMonthEmptyDescription}
+            />
+          ) : (
+            <ItemGroup className="grid gap-2">
+              {employeeMonthRows.map((record) => {
+                const progress = attendanceChecklistProgress(record);
+                return (
+                  <Item
+                    key={record.id}
+                    variant="outline"
+                    className="min-h-16 touch-manipulation"
+                    render={
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChecklistOpen(false);
+                          setSelectedId(record.id);
+                        }}
+                      />
+                    }
+                  >
+                    <ItemContent className="min-w-0 gap-1 text-left">
+                      <ItemTitle>
+                        {formatVNDate(record.date)}
+                        {record.shifts?.name ? ` · ${record.shifts.name}` : ""}
+                      </ItemTitle>
+                      <ItemDescription className="font-mono">
+                        {record.check_in ? formatVNTime(record.check_in) : "—"}{" "}
+                        –{" "}
+                        {record.check_out
+                          ? formatVNTime(record.check_out)
+                          : "—"}
+                      </ItemDescription>
+                      {progress.total > 0 ? (
+                        <ItemDescription>
+                          {progress.requiredDone}/{progress.requiredTotal} bắt
+                          buộc
                         </ItemDescription>
-                        {progress.total > 0 ? (
-                          <ItemDescription>
-                            {progress.requiredDone}/{progress.requiredTotal} bắt
-                            buộc
-                          </ItemDescription>
-                        ) : null}
-                      </ItemContent>
-                      <ItemActions>
-                        {recordStateBadge(record, todayStr)}
-                        <IconChevronRight className="size-4 text-muted-foreground" />
-                      </ItemActions>
-                    </Item>
-                  );
-                })}
-              </ItemGroup>
-            )}
-          </div>
+                      ) : null}
+                    </ItemContent>
+                    <ItemActions>
+                      {recordStateBadge(record, todayStr)}
+                      <IconChevronRight className="size-4 text-muted-foreground" />
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </ItemGroup>
+          )}
+        </div>
+      </AppSheet>
 
-          <SheetFooter className="sticky bottom-0 border-t bg-background">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="w-full"
-              onClick={closeEmployeeMonth}
-            >
-              {attendanceCopy.employeeMonthClose}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet
+      <AppSheet
         open={selected != null}
         onOpenChange={(open) => {
           if (!open) {
@@ -800,111 +789,109 @@ export function BranchAttendanceClient({
             setChecklistOpen(false);
           }
         }}
+        title={selected ? employeeName(selected) : ""}
+        description={
+          selected
+            ? `${formatVNBusinessDate(selected.date)} · ${selected.shifts?.name ?? "—"}`
+            : undefined
+        }
+        side="bottom"
+        contentClassName="flex max-h-dvh-80 flex-col"
+        headerClassName="text-left"
+        footerClassName="sticky bottom-0 border-t bg-background"
+        footer={
+          checklistOpen ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              onClick={() => setChecklistOpen(false)}
+            >
+              Quay lại
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              onClick={() => setSelectedId(null)}
+            >
+              Đóng
+            </Button>
+          )
+        }
       >
-        <SheetContent side="bottom" className="flex max-h-dvh-80 flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle>{selected ? employeeName(selected) : ""}</SheetTitle>
-            <SheetDescription>
-              {selected
-                ? `${formatVNBusinessDate(selected.date)} · ${selected.shifts?.name ?? "—"}`
-                : ""}
-            </SheetDescription>
-          </SheetHeader>
+        {selected ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden">
+            <div className="flex flex-wrap gap-2">
+              {recordStateBadge(selected, todayStr)}
+            </div>
+            <div className="font-mono text-sm text-muted-foreground">
+              {attendanceCopy.checkIn}:{" "}
+              {selected.check_in ? formatVNTime(selected.check_in) : "—"} ·{" "}
+              {attendanceCopy.checkOut}:{" "}
+              {selected.check_out ? formatVNTime(selected.check_out) : "—"}
+            </div>
+            {selected.note ? (
+              <p className="text-sm text-muted-foreground">{selected.note}</p>
+            ) : null}
 
-          {selected ? (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-2">
-              <div className="flex flex-wrap gap-2">
-                {recordStateBadge(selected, todayStr)}
-              </div>
-              <div className="font-mono text-sm text-muted-foreground">
-                {attendanceCopy.checkIn}:{" "}
-                {selected.check_in ? formatVNTime(selected.check_in) : "—"} ·{" "}
-                {attendanceCopy.checkOut}:{" "}
-                {selected.check_out ? formatVNTime(selected.check_out) : "—"}
-              </div>
-              {selected.note ? (
-                <p className="text-sm text-muted-foreground">{selected.note}</p>
-              ) : null}
-
-              {checklistOpen ? (
-                <ChecklistDetail record={selected} />
-              ) : (
-                <div className="flex flex-col gap-2">
+            {checklistOpen ? (
+              <ChecklistDetail record={selected} />
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="w-full"
+                  onClick={() => setChecklistOpen(true)}
+                  disabled={
+                    (selected.attendance_checklist_items?.length ?? 0) === 0
+                  }
+                >
+                  <IconListChecks data-icon="inline-start" />
+                  Việc trong ca
+                </Button>
+                {selected.check_in_photo_path ? (
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
                     className="w-full"
-                    onClick={() => setChecklistOpen(true)}
-                    disabled={
-                      (selected.attendance_checklist_items?.length ?? 0) === 0
-                    }
+                    disabled={pendingPhotoId !== null}
+                    onClick={() => openPhoto(selected)}
                   >
-                    <IconListChecks data-icon="inline-start" />
-                    Việc trong ca
+                    {pendingPhotoId === selected.id ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : (
+                      <IconImage data-icon="inline-start" />
+                    )}
+                    {attendanceCopy.viewPhoto}
                   </Button>
-                  {selected.check_in_photo_path ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      className="w-full"
-                      disabled={pendingPhotoId !== null}
-                      onClick={() => openPhoto(selected)}
-                    >
-                      {pendingPhotoId === selected.id ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconImage data-icon="inline-start" />
-                      )}
-                      {attendanceCopy.viewPhoto}
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      {attendanceCopy.noPhoto}
-                    </p>
-                  )}
-                  {canForceCloseSelected ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="touch"
-                      className="w-full"
-                      onClick={() => setClosingRecord(selected)}
-                    >
-                      Đóng ca treo
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <SheetFooter className="sticky bottom-0 border-t bg-background">
-            {checklistOpen ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                className="w-full"
-                onClick={() => setChecklistOpen(false)}
-              >
-                Quay lại
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                className="w-full"
-                onClick={() => setSelectedId(null)}
-              >
-                Đóng
-              </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {attendanceCopy.noPhoto}
+                  </p>
+                )}
+                {canForceCloseSelected ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="touch"
+                    className="w-full"
+                    onClick={() => setClosingRecord(selected)}
+                  >
+                    Đóng ca treo
+                  </Button>
+                ) : null}
+              </div>
             )}
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </div>
+        ) : null}
+      </AppSheet>
 
       <AppDialog
         open={photoOpen}
@@ -931,43 +918,19 @@ export function BranchAttendanceClient({
         ) : null}
       </AppDialog>
 
-      <Sheet
+      <AppSheet
         open={closingRecord !== null}
         onOpenChange={(open) => {
           if (!open) setClosingRecord(null);
         }}
-      >
-        <SheetContent side="bottom" className="flex max-h-dvh-80 flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle>Đóng ca làm việc</SheetTitle>
-            <SheetDescription>
-              Ca làm việc của{" "}
-              {closingRecord ? employeeName(closingRecord) : "nhân viên"} ngày{" "}
-              {formatVNBusinessDate(closingRecord?.date, "")} đang mở.
-            </SheetDescription>
-          </SheetHeader>
-          <form
-            id={forceCloseFormId}
-            onSubmit={handleForceClose}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-2"
-          >
-            <NoteCallout tone="muted">
-              Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
-            </NoteCallout>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="branch-force-close-note">Lý do đóng ca</Label>
-              <Textarea
-                id="branch-force-close-note"
-                name="note"
-                placeholder="Nhập lý do đóng ca"
-                minLength={5}
-                maxLength={500}
-                required
-                className="min-h-24"
-              />
-            </div>
-          </form>
-          <SheetFooter className="sticky bottom-0 border-t bg-background">
+        title="Đóng ca làm việc"
+        description={`Ca làm việc của ${closingRecord ? employeeName(closingRecord) : "nhân viên"} ngày ${formatVNBusinessDate(closingRecord?.date, "")} đang mở.`}
+        side="bottom"
+        contentClassName="flex max-h-dvh-80 flex-col"
+        headerClassName="text-left"
+        footerClassName="sticky bottom-0 border-t bg-background"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
@@ -988,9 +951,31 @@ export function BranchAttendanceClient({
               {isClosing ? <Spinner data-icon="inline-start" /> : null}
               Xác nhận đóng ca
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </>
+        }
+      >
+        <form
+          id={forceCloseFormId}
+          onSubmit={handleForceClose}
+          className="flex min-h-0 flex-1 flex-col gap-4"
+        >
+          <NoteCallout tone="muted">
+            Việc đóng ca sẽ đặt giờ ra bằng giờ vào (0 giờ công).
+          </NoteCallout>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="branch-force-close-note">Lý do đóng ca</Label>
+            <Textarea
+              id="branch-force-close-note"
+              name="note"
+              placeholder="Nhập lý do đóng ca"
+              minLength={5}
+              maxLength={500}
+              required
+              className="min-h-24"
+            />
+          </div>
+        </form>
+      </AppSheet>
     </BranchOperatorPage>
   );
 }

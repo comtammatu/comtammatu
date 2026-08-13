@@ -18,14 +18,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { cn } from "@comtammatu/ui";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   formatAccountingVND as formatVND,
   formatCount,
@@ -58,6 +51,7 @@ import {
   OWNER_SHELL_BREAKPOINT,
   useIsMobile,
 } from "@comtammatu/ui/hooks/use-mobile";
+import { AppSheet } from "@/components/surface";
 const copy = messages.finance.bankTransactions;
 type MatchPurpose = "expense" | "refund" | "supplier";
 
@@ -411,23 +405,23 @@ export function MatchExpenseCell({
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        render={
-          <Button
-            variant="outline"
-            size={touch ? "touch" : "sm"}
-            className="shrink-0"
-          >
-            {triggerLabel}
-          </Button>
-        }
-      />
-      <SheetContent className="overflow-hidden">
-        <SheetHeader>
-          <SheetTitle>{copy.matchSheetTitle}</SheetTitle>
-          <SheetDescription>{copy.matchSheetDescription}</SheetDescription>
-        </SheetHeader>
+    <AppSheet
+      open={open}
+      onOpenChange={setOpen}
+      title={copy.matchSheetTitle}
+      description={copy.matchSheetDescription}
+      trigger={
+        <Button
+          variant="outline"
+          size={touch ? "touch" : "sm"}
+          className="shrink-0"
+        >
+          {triggerLabel}
+        </Button>
+      }
+      contentClassName="overflow-hidden"
+      bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+    >
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
             {matchError ? (
@@ -842,7 +836,6 @@ export function MatchExpenseCell({
             </div>
           ) : null}
         </div>
-      </SheetContent>
-    </Sheet>
+    </AppSheet>
   );
 }

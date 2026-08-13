@@ -12,14 +12,7 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { UNKNOWN_LABEL_VI } from "@comtammatu/shared/labels";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
@@ -33,6 +26,7 @@ import {
   resolveHrBranchScope,
   withHrBranchScope,
 } from "@/lib/hr-scope";
+import { AppSheet } from "@/components/surface";
 
 const AUDIT_LOG_OVERLAY_KEYS = ["logId"] as const;
 
@@ -266,80 +260,19 @@ export function PermissionAuditTable({
         )}
       />
 
-      <Sheet
+      <AppSheet
         open={open}
         onOpenChange={(next) => {
           if (!next) setSelectedId(null);
         }}
-      >
-        <SheetContent side="right" size="md" className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{copy.detailTitle}</SheetTitle>
-            <SheetDescription>
-              {sheetRow
-                ? actionLabel(copy, sheetRow.action)
-                : copy.openRowHint}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex flex-col gap-4 px-4 pb-4">
-            {sheetRow ? (
-              <dl className="grid gap-3 text-sm">
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.time}</dt>
-                  <dd>{formatVNDateTime(sheetRow.at)}</dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.action}</dt>
-                  <dd>
-                    <Badge variant={getActionVariant(sheetRow.action)}>
-                      {actionLabel(copy, sheetRow.action)}
-                    </Badge>
-                  </dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.target}</dt>
-                  <dd>
-                    <UserLabel name={sheetRow.targetName} />
-                  </dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.actor}</dt>
-                  <dd>
-                    <UserLabel name={sheetRow.actorName} />
-                  </dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.permission}</dt>
-                  <dd>{sheetRow.permissionLabel}</dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.workGroup}</dt>
-                  <dd>{sheetRow.workGroup}</dd>
-                </div>
-                {sheetRow.action === "apply_template" ? (
-                  <div className="grid gap-1">
-                    <dt className="text-muted-foreground">{copy.template}</dt>
-                    <dd>{sheetRow.templateLabel ?? UNKNOWN_LABEL_VI}</dd>
-                  </div>
-                ) : null}
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{BRANCH_VI.long}</dt>
-                  <dd>{branchLabel(sheetRow, copy)}</dd>
-                </div>
-                <div className="grid gap-1">
-                  <dt className="text-muted-foreground">{copy.expires}</dt>
-                  <dd>
-                    {sheetRow.validUntil
-                      ? formatVNDate(sheetRow.validUntil)
-                      : copy.forever}
-                  </dd>
-                </div>
-              </dl>
-            ) : null}
-          </div>
-
-          <SheetFooter className="gap-2 sm:flex-col">
+        title={copy.detailTitle}
+        description={
+          sheetRow ? actionLabel(copy, sheetRow.action) : copy.openRowHint
+        }
+        size="md"
+        footerClassName="gap-2 sm:flex-col"
+        footer={
+          <>
             {sheetRow ? (
               <Button
                 render={
@@ -369,9 +302,64 @@ export function PermissionAuditTable({
             <Button variant="ghost" onClick={() => setSelectedId(null)}>
               {copy.detailClose}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </>
+        }
+      >
+        {sheetRow ? (
+          <dl className="grid gap-3 text-sm">
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.time}</dt>
+              <dd>{formatVNDateTime(sheetRow.at)}</dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.action}</dt>
+              <dd>
+                <Badge variant={getActionVariant(sheetRow.action)}>
+                  {actionLabel(copy, sheetRow.action)}
+                </Badge>
+              </dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.target}</dt>
+              <dd>
+                <UserLabel name={sheetRow.targetName} />
+              </dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.actor}</dt>
+              <dd>
+                <UserLabel name={sheetRow.actorName} />
+              </dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.permission}</dt>
+              <dd>{sheetRow.permissionLabel}</dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.workGroup}</dt>
+              <dd>{sheetRow.workGroup}</dd>
+            </div>
+            {sheetRow.action === "apply_template" ? (
+              <div className="grid gap-1">
+                <dt className="text-muted-foreground">{copy.template}</dt>
+                <dd>{sheetRow.templateLabel ?? UNKNOWN_LABEL_VI}</dd>
+              </div>
+            ) : null}
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{BRANCH_VI.long}</dt>
+              <dd>{branchLabel(sheetRow, copy)}</dd>
+            </div>
+            <div className="grid gap-1">
+              <dt className="text-muted-foreground">{copy.expires}</dt>
+              <dd>
+                {sheetRow.validUntil
+                  ? formatVNDate(sheetRow.validUntil)
+                  : copy.forever}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+      </AppSheet>
     </>
   );
 }

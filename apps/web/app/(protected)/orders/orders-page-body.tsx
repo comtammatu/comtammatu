@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@comtammatu/ui/components/button";
 import { TabsContent } from "@comtammatu/ui/components/tabs";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { AppPageTabs } from "@/components/app-page-tabs";
 import { ORDER_VI } from "@comtammatu/shared/messages";
 import { orders as ORDERS_COPY } from "@lib/messages/orders";
@@ -12,10 +12,6 @@ import { RefundsClient } from "./refunds-client";
 import type { OrderRow, OrdersSummary } from "./actions";
 import type { RefundRow } from "./refund-actions";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
 interface OrdersPageBodyProps {
   orders: OrderRow[];
   summary: OrdersSummary;
@@ -37,8 +33,6 @@ export function OrdersPageBody({
   initialSelectedOrder = null,
   embedded = false,
 }: OrdersPageBodyProps) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-
   const pendingRefundCount = refunds.filter(
     (r) => r.status === "pending",
   ).length;
@@ -83,13 +77,13 @@ export function OrdersPageBody({
         title={ORDER_VI.long}
         description={ORDERS_COPY.description}
         actions={
-          <Button
+          <ResponsiveActionButton
             variant="outline"
-            size={isTouchLayout ? "touch" : "lg"}
+            density="header"
             render={<Link href="/finance" />}
           >
             {ORDERS_COPY.reportsAction}
-          </Button>
+          </ResponsiveActionButton>
         }
       />
       {content}

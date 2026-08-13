@@ -10,18 +10,14 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
 
 import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
+import { StationSheet } from "@/components/surface";
+
 export type DiscountType = "pct" | "vnd";
 
 interface DiscountSheetProps {
@@ -156,16 +152,53 @@ export function DiscountSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
+    <StationSheet
+      side="right"
+      size="md"
+      open={open}
+      onOpenChange={(o) => !o && handleClose()}
+      title={title}
+      footerClassName="sm:flex-row sm:justify-between"
+      footer={
+        <>
+          {hasExistingDiscount ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="touch"
+              disabled={!canClear}
+              onClick={handleClear}
+              title={!noteValid ? POS_VI.clearDiscountReasonTitle : undefined}
+              className="sm:order-first"
+            >
+              {clearLabel}
+            </Button>
+          ) : (
+            <span className="hidden sm:block" aria-hidden />
+          )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPending}
+              onClick={handleClose}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="button"
+              size="touch"
+              disabled={!canApply}
+              onClick={handleApply}
+            >
+              {POS_VI.apply}
+            </Button>
+          </div>
+        </>
+      }
+    >
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {allowedModes.length > 1 ? (
             <Tabs
               value={type}
@@ -264,44 +297,6 @@ export function DiscountSheet({
             </div>
           </Frame>
         </div>
-
-        <SheetFooter className="sm:flex-row sm:justify-between">
-          {hasExistingDiscount ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size="touch"
-              disabled={!canClear}
-              onClick={handleClear}
-              title={!noteValid ? POS_VI.clearDiscountReasonTitle : undefined}
-              className="sm:order-first"
-            >
-              {clearLabel}
-            </Button>
-          ) : (
-            <span className="hidden sm:block" aria-hidden />
-          )}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending}
-              onClick={handleClose}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              disabled={!canApply}
-              onClick={handleApply}
-            >
-              {POS_VI.apply}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

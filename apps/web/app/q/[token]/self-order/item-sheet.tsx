@@ -21,13 +21,7 @@ import {
   RadioGroupItem,
 } from "@comtammatu/ui/components/radio-group";
 import { Separator } from "@comtammatu/ui/components/separator";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   FieldLabel,
   FieldLegend,
@@ -48,6 +42,13 @@ import {
   selfOrderItemImageBadges,
   splitMenuItemDisplayName,
 } from "./menu-display";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/surface";
 
 export interface SelfOrderItemSheetProps {
   item: SelfOrderMenuItem;

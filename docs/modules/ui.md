@@ -10,7 +10,7 @@ not own policy. On any conflict the owner below wins.
 
 | Concern | Owner |
 | --- | --- |
-| Tokens, typography, rhythm, elevation, motion, Naming Standard, Base UI rule, Frame law, Dual Thesis, Structural Governance, Component Authority, record depth | `docs/spec/design-system.md` |
+| Tokens, Color Usage, typography, rhythm, elevation, motion, Naming Standard, Base UI rule, Frame law, Dual Thesis, Structural Governance, Component Authority (Date / Button / Overlay choosers), Layout UI/UX Frame, Copy Contract, record depth | `docs/spec/design-system.md` |
 | Archetypes, UI Advisor Gate template, composition workflow | `docs/spec/page-archetypes.md` |
 | Actor, device, route context, what a role may see | `docs/ref/screen-context-map.md` |
 | Adapter/block recipes (`need` / `use` / `fallback` / `forbidden` / `exemplar`) | `scripts/ui-component-registry.mjs` |
@@ -301,6 +301,11 @@ registry; routes do not hardcode new operational copy.
 | `WholeVndInput` / `WholeVndField` | Whole-dong money for menu/POS, cash, VietQR, shift count; no decimals |
 | `QuantityInput` / `QuantityField` | Inventory quantity, 3 decimals, grouped display |
 | `BusinessDateField` | RHF date picker; shows `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note |
+| `BusinessDatePicker` | Filter / URL date; same chrome as the field |
+| `BusinessWeekPicker` | Week-range highlight inside the date adapter (finance period week) |
+| `AppSheet` | D1 record beside a list; `side` right on `lg+`, bottom on touch |
+| `StationSheet` | POS / KDS / guest overlay; no `AppDialog` / `AppSection` chrome |
+| `AppDrawer` | Short touch task overlay through the approved adapter |
 | `SelectField` | Select with `options={[{ value, label }]}` |
 | `ComboboxField` | Searchable select + RHF; description and error wired to the trigger |
 | `Combobox` | Standalone searchable control; inside data entry it must sit in a `FormField` with a stable `id` |

@@ -11,13 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { QuantityInput } from "@/components/form/domain-number-inputs";
 import { FormField } from "@/components/form/form-field";
 import { formatQty } from "@lib/inventory/format";
@@ -33,10 +27,8 @@ import {
   type GrnLineEditState,
 } from "@lib/inventory/grn-create-model";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
+import { AppSheet } from "@/components/surface";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 
 type GrnLineEditorControlSize = Extract<
   ComponentProps<typeof Button>["size"],
@@ -185,86 +177,79 @@ export function GrnLineEditSheet({
   onUnitChange,
   controlSize = "touch",
 }: GrnLineEditSheetProps) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const open = edit != null;
   const valid =
     edit != null && edit.quantity > 0 && edit.supplierId != null;
 
   return (
-    <Sheet
+    <AppSheet
       open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-    >
-      <SheetContent
-        side="bottom"
-        className="h-auto max-h-dvh-95 gap-1 bg-background p-0 text-foreground"
-        showCloseButton={false}
-      >
-        {edit ? (
+      title={edit?.ingredient.name ?? ""}
+      description={
+        edit
+          ? `${edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}${GRN_CREATE_COPY.unitLabel(edit.unit)}`
+          : undefined
+      }
+      side="bottom"
+      showCloseButton={false}
+      contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+      footer={
+        edit ? (
           <>
-            <SheetHeader>
-              <SectionLabel density="dense">
-                {edit.line ? GRN_CREATE_COPY.editItem : GRN_CREATE_COPY.addItem}
-              </SectionLabel>
-              <SheetTitle className="text-lg font-semibold">
-                {edit.ingredient.name}
-              </SheetTitle>
-              <p className="text-xs text-muted-foreground">
-                {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
-                {GRN_CREATE_COPY.unitLabel(edit.unit)}
-              </p>
-            </SheetHeader>
-
-            <div className="p-4">
-              <GrnLineEditFields
-                edit={edit}
-                onPatch={onPatch}
-                onUnitChange={onUnitChange}
-                controlSize={controlSize}
-              />
-            </div>
-
-            <SheetFooter>
-              <Button
-                type="button"
-                size={isTouchLayout ? "touch-lg" : "lg"}
-                className="w-full"
-                onClick={onSave}
-                disabled={!valid}
-              >
-                {edit.line
-                  ? GRN_CREATE_COPY.updateLineOnReceipt
-                  : GRN_CREATE_COPY.addLineToReceipt}
-              </Button>
-              <div className="flex items-center gap-2">
-                {edit.line ? (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size={isTouchLayout ? "touch-lg" : "lg"}
-                    onClick={onRemove}
-                    className="flex-1"
-                  >
-                    {ACTIONS_VI.delete}
-                  </Button>
-                ) : null}
-                <Button
+            <ResponsiveActionButton
+              type="button"
+              density="hero"
+              className="w-full"
+              onClick={onSave}
+              disabled={!valid}
+            >
+              {edit.line
+                ? GRN_CREATE_COPY.updateLineOnReceipt
+                : GRN_CREATE_COPY.addLineToReceipt}
+            </ResponsiveActionButton>
+            <div className="flex items-center gap-2">
+              {edit.line ? (
+                <ResponsiveActionButton
                   type="button"
-                  variant="outline"
-                  size={isTouchLayout ? "touch-lg" : "lg"}
-                  onClick={onClose}
+                  variant="destructive"
+                  density="hero"
+                  onClick={onRemove}
                   className="flex-1"
                 >
-                  {ACTIONS_VI.close}
-                </Button>
-              </div>
-            </SheetFooter>
+                  {ACTIONS_VI.delete}
+                </ResponsiveActionButton>
+              ) : null}
+              <ResponsiveActionButton
+                type="button"
+                variant="outline"
+                density="hero"
+                onClick={onClose}
+                className="flex-1"
+              >
+                {ACTIONS_VI.close}
+              </ResponsiveActionButton>
+            </div>
           </>
-        ) : null}
-      </SheetContent>
-    </Sheet>
+        ) : undefined
+      }
+    >
+      {edit ? (
+        <>
+          <SectionLabel density="dense">
+            {edit.line ? GRN_CREATE_COPY.editItem : GRN_CREATE_COPY.addItem}
+          </SectionLabel>
+          <GrnLineEditFields
+            edit={edit}
+            onPatch={onPatch}
+            onUnitChange={onUnitChange}
+            controlSize={controlSize}
+          />
+        </>
+      ) : null}
+    </AppSheet>
   );
 }
 

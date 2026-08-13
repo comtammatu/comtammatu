@@ -16,13 +16,7 @@ import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +41,6 @@ import {
   Receipt as IconReceipt,
   Split as IconSplit,
   Trash2 as IconTrash,
-  X as IconX,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import {
@@ -112,6 +105,9 @@ import {
   canAppendPosOrder,
   isPosOrderAmountLocked,
 } from "./_lib/table-order-visual-state";
+import {
+  StationSheet,
+} from "@/components/surface";
 
 // Superset of bill's OrderData: same top-level fields, but order_items
 // carry extra UI-only fields (status, menu_item_id) used by the detail
@@ -1193,52 +1189,39 @@ export function OrderDetailSheet({
 
   return (
     <>
-      <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
-        <SheetContent
-          side="right"
-          size="md"
-          showCloseButton={false}
-          className="overflow-hidden"
-        >
-          <SheetHeader>
-            <div className="flex items-center justify-between gap-3">
-              <SheetTitle className="flex min-w-0 items-center gap-2 text-base">
-                {orderContextLabel && <span>{orderContextLabel}</span>}
-                {orderContextLabel && sheetTitle && (
-                  <span className="text-muted-foreground">·</span>
-                )}
-                <span className="truncate">
-                  {sheetTitle
-                    ? `#${sheetTitle}`
-                    : orderId !== null
-                      ? messages.pos.orderDetail.genericOrderLabel
-                      : ""}
-                </span>
-                {(data?.is_priority === true ||
-                  summaryForCurrentOrder?.is_priority === true) && (
-                  <Badge
-                    variant="warning"
-                    className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold"
-                  >
-                    {messages.pos.orderDetail.priority}
-                  </Badge>
-                )}
-              </SheetTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-touch"
-                className="shrink-0 text-muted-foreground"
-                aria-label={messages.pos.orderDetail.closeAria}
-                onClick={onClose}
+      <StationSheet
+        side="right"
+        size="md"
+        open={orderId !== null}
+        onOpenChange={handleOpenChange}
+        title={
+          <span className="flex min-w-0 items-center gap-2 text-base">
+            {orderContextLabel && <span>{orderContextLabel}</span>}
+            {orderContextLabel && sheetTitle && (
+              <span className="text-muted-foreground">·</span>
+            )}
+            <span className="truncate">
+              {sheetTitle
+                ? `#${sheetTitle}`
+                : orderId !== null
+                  ? messages.pos.orderDetail.genericOrderLabel
+                  : ""}
+            </span>
+            {(data?.is_priority === true ||
+              summaryForCurrentOrder?.is_priority === true) && (
+              <Badge
+                variant="warning"
+                className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold"
               >
-                <IconX />
-              </Button>
-            </div>
-            <SheetDescription className="sr-only">
-              {messages.pos.orderDetail.srDescription}
-            </SheetDescription>
-          </SheetHeader>
+                {messages.pos.orderDetail.priority}
+              </Badge>
+            )}
+          </span>
+        }
+        description={messages.pos.orderDetail.srDescription}
+        contentClassName="overflow-hidden"
+        bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+      >
 
           {isPending && !data && orderId !== null && (
             <AppBoneyardSkeleton
@@ -1573,8 +1556,7 @@ export function OrderDetailSheet({
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+      </StationSheet>
 
       <OrderItemActionsSheet
         item={

@@ -25,17 +25,18 @@ import {
 import { Label } from "@comtammatu/ui/components/label";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
+
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
+  AppEmptyState,
   Sheet,
   SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@comtammatu/ui/components/sheet";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Textarea } from "@comtammatu/ui/components/textarea";
-import { AppEmptyState } from "@/components/surface";
+} from "@/components/surface";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuCategory,

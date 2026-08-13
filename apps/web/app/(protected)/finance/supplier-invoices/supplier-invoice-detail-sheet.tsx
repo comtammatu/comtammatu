@@ -24,16 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import type { FormControlSize } from "@/components/form/control-size";
 import { StatusBadge } from "@/components/status-badge";
 import { formatAccountingVND as formatVND, formatPercent } from "@comtammatu/shared/format";
@@ -50,10 +46,7 @@ import {
   getPaymentMethodLabel,
 } from "./supplier-invoice-form-schema";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 export type SupplierInvoiceDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -137,29 +130,115 @@ export function SupplierInvoiceDetailSheet({
   onCredit,
   onRecomputeMatching,
 }: SupplierInvoiceDetailSheetProps) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-
   const selectedLastPayment = selectedInvoice?.lastPayment ?? null;
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        size="lg"
-        className="w-full gap-1 p-0 sm:max-w-xl"
-      >
-        <SheetHeader>
-          <SheetTitle className="font-mono">{detailTitle}</SheetTitle>
-          {detailSubtitle ? (
-            <SheetDescription>{detailSubtitle}</SheetDescription>
-          ) : null}
-        </SheetHeader>
+  const footer = selectedInvoice ? (
+    <div className="flex flex-wrap gap-2">
+      {canAcceptDiscrepancy &&
+      selectedInvoice.documentStatus === "draft" &&
+      selectedInvoice.matchStatus === "matched" ? (
+        <ResponsiveActionButton
+          type="button"
+          className="flex-1"
+          onClick={onConfirmInvoice}
+          disabled={isPending}
+        >
+          {copy.confirmInvoiceAction}
+        </ResponsiveActionButton>
+      ) : null}
+      {canCreateInvoice && selectedInvoice.documentStatus === "draft" ? (
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onEditInvoice}
+          disabled={isPending}
+        >
+          {ACTIONS_VI.edit}
+        </ResponsiveActionButton>
+      ) : null}
+      {canShowPayAction ? (
+        <ResponsiveActionButton
+          type="button"
+          className="flex-1"
+          variant={payIsPrimary ? "default" : "outline"}
+          onClick={onPay}
+          disabled={isPending || missingVatAttachment}
+        >
+          {copy.payAction}
+        </ResponsiveActionButton>
+      ) : null}
+      {canPaySupplier &&
+      parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n &&
+      parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n ? (
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onAllocateAdvance}
+          disabled={isPending}
+        >
+          {copy.allocateAdvanceAction}
+        </ResponsiveActionButton>
+      ) : null}
+      {canAcceptDiscrepancy &&
+      selectedInvoice.invoiceKind === "service" &&
+      selectedInvoice.matchStatus === "pending" ? (
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onVerifyService}
+          disabled={isPending}
+        >
+          {copy.verifyServiceAction}
+        </ResponsiveActionButton>
+      ) : null}
+      {canAcceptDiscrepancy &&
+      selectedInvoice.invoiceKind === "goods" &&
+      selectedInvoice.matchStatus === "discrepancy" ? (
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onAcceptDiscrepancy}
+          disabled={isPending}
+        >
+          {copy.acceptDiscrepancy}
+        </ResponsiveActionButton>
+      ) : null}
+      {canAcceptDiscrepancy && selectedOutstandingAmount > 0 ? (
+        <ResponsiveActionButton
+          type="button"
+          variant="outline"
+          onClick={onCredit}
+          disabled={isPending}
+        >
+          {copy.creditAction}
+        </ResponsiveActionButton>
+      ) : null}
+      {canAcceptDiscrepancy && selectedInvoice.invoiceKind === "goods" ? (
+        <ResponsiveActionButton
+          type="button"
+          className={canShowPayAction ? "flex-1" : "w-full"}
+          variant="outline"
+          onClick={onRecomputeMatching}
+          disabled={isPending}
+        >
+          {copy.recomputeMatching}
+        </ResponsiveActionButton>
+      ) : null}
+    </div>
+  ) : undefined;
 
-        {selectedInvoice ? (
-          <>
-          {selectedInvoice ? (
-            <>
-              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
+  return (
+    <AppSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={<span className="font-mono">{detailTitle}</span>}
+      description={detailSubtitle}
+      size="lg"
+      contentClassName="w-full sm:max-w-xl"
+      footer={footer}
+    >
+      {selectedInvoice ? (
+        <div className="flex flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge
                     domain="inventory"
@@ -612,133 +691,14 @@ export function SupplierInvoiceDetailSheet({
                     </Alert>
                   )
                 ) : null}
-              </div>
-
-              <SheetFooter>
-                <div className="flex flex-wrap gap-2">
-                  {canAcceptDiscrepancy &&
-                  selectedInvoice.documentStatus === "draft" &&
-                  selectedInvoice.matchStatus === "matched" ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      className="flex-1"
-                      onClick={onConfirmInvoice}
-                      disabled={isPending}
-                    >
-                      {copy.confirmInvoiceAction}
-                    </Button>
-                  ) : null}
-                  {canCreateInvoice &&
-                  selectedInvoice.documentStatus === "draft" ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      variant="outline"
-                      onClick={onEditInvoice}
-                      disabled={isPending}
-                    >
-                      {ACTIONS_VI.edit}
-                    </Button>
-                  ) : null}
-                  {canShowPayAction ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      className="flex-1"
-                      variant={payIsPrimary ? "default" : "outline"}
-                      onClick={onPay}
-                      disabled={isPending || missingVatAttachment}
-                    >
-                      {copy.payAction}
-                    </Button>
-                  ) : null}
-                  {canPaySupplier &&
-                  parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n &&
-                  parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      variant="outline"
-                      onClick={onAllocateAdvance}
-                      disabled={isPending}
-                    >
-                      {copy.allocateAdvanceAction}
-                    </Button>
-                  ) : null}
-                  {canAcceptDiscrepancy &&
-                  selectedInvoice.invoiceKind === "service" &&
-                  selectedInvoice.matchStatus === "pending" ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      variant="outline"
-                      onClick={onVerifyService}
-                      disabled={isPending}
-                    >
-                      {copy.verifyServiceAction}
-                    </Button>
-                  ) : null}
-                  {canAcceptDiscrepancy &&
-                  selectedInvoice.invoiceKind === "goods" &&
-                  selectedInvoice.matchStatus === "discrepancy" ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      variant="outline"
-                      onClick={onAcceptDiscrepancy}
-                      disabled={isPending}
-                    >
-                      {copy.acceptDiscrepancy}
-                    </Button>
-                  ) : null}
-                  {canAcceptDiscrepancy && selectedOutstandingAmount > 0 ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      variant="outline"
-                      onClick={onCredit}
-                      disabled={isPending}
-                    >
-                      {copy.creditAction}
-                    </Button>
-                  ) : null}
-                  {canAcceptDiscrepancy &&
-                  selectedInvoice.invoiceKind === "goods" ? (
-                    <Button
-                      type="button"
-                      size={isTouchLayout ? "touch" : "default"}
-                      className={canShowPayAction ? "flex-1" : "w-full"}
-                      variant="outline"
-                      onClick={onRecomputeMatching}
-                      disabled={isPending}
-                    >
-                      {copy.recomputeMatching}
-                    </Button>
-                  ) : null}
-                </div>
-              </SheetFooter>
-            </>
-          ) : (
-            <div className="px-3 py-4 sm:px-4">
-              <AppEmptyState
-                compact
-                title={copy.noAnalysisTitle}
-                description={copy.noAnalysisDescription}
-              />
-            </div>
-          )}
-          </>
-        ) : (
-          <div className="px-3 py-4 sm:px-4">
-            <AppEmptyState
-              compact
-              title={copy.noAnalysisTitle}
-              description={copy.noAnalysisDescription}
-            />
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+        </div>
+      ) : (
+        <AppEmptyState
+          compact
+          title={copy.noAnalysisTitle}
+          description={copy.noAnalysisDescription}
+        />
+      )}
+    </AppSheet>
   );
 }

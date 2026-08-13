@@ -11,15 +11,11 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { WholeVndInput } from "@/components/form";
+import { StationSheet } from "@/components/surface";
+
 
 interface ServiceChargeSheetProps {
   open: boolean;
@@ -91,16 +87,55 @@ export function ServiceChargeSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
-        <SheetHeader>
-          <SheetTitle>{POS_VI.serviceChargeTitle}</SheetTitle>
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
+    <StationSheet
+      side="right"
+      size="md"
+      open={open}
+      onOpenChange={(nextOpen) => !nextOpen && handleClose()}
+      title={POS_VI.serviceChargeTitle}
+      footerClassName="sm:flex-row sm:justify-between"
+      footer={
+        <>
+          {hasExistingCharge ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="touch"
+              disabled={!canClear}
+              onClick={handleClear}
+              title={
+                !noteValid ? POS_VI.clearServiceChargeReasonTitle : undefined
+              }
+              className="sm:order-first"
+            >
+              {POS_VI.clearServiceCharge}
+            </Button>
+          ) : (
+            <span className="hidden sm:block" aria-hidden />
+          )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPending}
+              onClick={handleClose}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            <Button
+              type="button"
+              size="touch"
+              disabled={!canApply}
+              onClick={handleApply}
+            >
+              {POS_VI.apply}
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="service-charge-amount">
@@ -162,46 +197,6 @@ export function ServiceChargeSheet({
             </div>
           </Frame>
         </div>
-
-        <SheetFooter className="sm:flex-row sm:justify-between">
-          {hasExistingCharge ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size="touch"
-              disabled={!canClear}
-              onClick={handleClear}
-              title={
-                !noteValid ? POS_VI.clearServiceChargeReasonTitle : undefined
-              }
-              className="sm:order-first"
-            >
-              {POS_VI.clearServiceCharge}
-            </Button>
-          ) : (
-            <span className="hidden sm:block" aria-hidden />
-          )}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending}
-              onClick={handleClose}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              disabled={!canApply}
-              onClick={handleApply}
-            >
-              {POS_VI.apply}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

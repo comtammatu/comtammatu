@@ -13,6 +13,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { useFormControlSize } from "@/components/form/control-size";
+import { BusinessDatePicker } from "@/components/form";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { formatAuditEntityTypeLabel } from "@comtammatu/shared/messages";
@@ -160,12 +161,11 @@ export function SystemActivityFilters({
 
         <div className="grid gap-1.5">
           <Label htmlFor={sinceFilterId}>{copy.filterSince}</Label>
-          <Input
+          <BusinessDatePicker
             id={sinceFilterId}
-            type="date"
             value={draftSince}
-            onChange={(event) => setDraftSince(event.target.value)}
-            controlSize={controlSize}
+            onValueChange={setDraftSince}
+            className="min-w-40"
           />
         </div>
 

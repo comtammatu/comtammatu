@@ -866,12 +866,11 @@ test("employee profile self-service update uses the scoped profile RPC", () => {
   assert.doesNotMatch(action, /error\.message/);
   assert.match(dialog, /FormDialog/);
   assert.match(dialog, /TextField/);
+  assert.match(dialog, /BusinessDateField/);
   assert.match(dialog, /name="birthDate"/);
-  assert.match(dialog, /type="date"/);
   assert.match(dialog, /autoComplete="name"/);
   assert.match(dialog, /type="tel"/);
   assert.match(dialog, /autoComplete="tel"/);
-  assert.match(dialog, /autoComplete="bday"/);
   assert.doesNotMatch(dialog, /avatarUrl/);
   assert.doesNotMatch(dialog, /https:\/\/\.\.\./);
   assert.match(dialog, /router\.refresh\(\)/);

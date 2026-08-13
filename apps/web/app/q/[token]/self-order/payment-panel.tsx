@@ -18,16 +18,12 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@comtammatu/ui/components/avatar";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@comtammatu/ui/components/drawer";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { PublicSection } from "@/components/surface";
+import {
+  PublicSection,
+  AppDrawer,
+} from "@/components/surface";
 import { QrCodeImage } from "@/components/qr-code-image";
 import {
   buildVietQrBankAppUrl,
@@ -119,23 +115,19 @@ function BankAppLauncher({
   }, [apps, loadAttempt, open]);
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger
-        render={
-          <Button type="button" size="touch" className="w-full">
-            <IconBank data-icon="inline-start" />
-            {SELF_ORDER_VI.openBankApp}
-          </Button>
-        }
-      />
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>{SELF_ORDER_VI.chooseBankAppTitle}</DrawerTitle>
-          <DrawerDescription>
-            {SELF_ORDER_VI.chooseBankAppDescription}
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="mx-4 mb-4 min-h-0 flex-1 overflow-y-auto">
+    <AppDrawer
+      open={open}
+      onOpenChange={setOpen}
+      title={SELF_ORDER_VI.chooseBankAppTitle}
+      description={SELF_ORDER_VI.chooseBankAppDescription}
+      trigger={
+        <Button type="button" size="touch" className="w-full">
+          <IconBank data-icon="inline-start" />
+          {SELF_ORDER_VI.openBankApp}
+        </Button>
+      }
+    >
+        <div>
           {apps ? (
             <ul className="grid gap-2">
               {apps.map((app) => {
@@ -194,8 +186,7 @@ function BankAppLauncher({
             </div>
           )}
         </div>
-      </DrawerContent>
-    </Drawer>
+    </AppDrawer>
   );
 }
 

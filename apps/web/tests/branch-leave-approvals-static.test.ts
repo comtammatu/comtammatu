@@ -32,7 +32,7 @@ test("Branch leave approvals own a fixed-scope touch presenter", () => {
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /<button[\s\S]*type="button"[\s\S]*setSelectedId/);
-  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
   assert.match(
     client,

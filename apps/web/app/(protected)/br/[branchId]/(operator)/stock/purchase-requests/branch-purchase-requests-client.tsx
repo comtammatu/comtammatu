@@ -47,13 +47,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -63,7 +57,11 @@ import {
 import { Combobox } from "@/components/form/combobox";
 import { BusinessDatePicker } from "@/components/form";
 import { NumberPadSheet } from "@/components/form/number-pad-sheet";
-import { AppDetailFooter, AppEmptyState } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import {
   BranchOperatorDetailList,
   BranchOperatorPage,
@@ -868,259 +866,289 @@ export function BranchPurchaseRequestsClient({
         />
       ) : null}
 
-      <Sheet
+      <AppSheet
         open={viewOpen}
         onOpenChange={(open) => {
           if (!open) updateUrl(null, null, "replace");
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="flex max-h-dvh-95 flex-col overflow-hidden bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          {selected ? (
+        title={selected?.code ?? ""}
+        description={
+          selected ? (
+            <span className="flex flex-wrap items-center gap-2">
+              <Badge variant={purchaseRequestStatusVariant(selected.status)}>
+                {copy.statusLabel(selected.status)}
+              </Badge>
+              <span>{selected.branchName}</span>
+            </span>
+          ) : undefined
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        headerClassName="shrink-0 [&_h2]:font-mono [&_h2]:text-lg"
+        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footer={
+          selected ? (
             <>
-              <SheetHeader className="shrink-0">
-                <SheetTitle className="font-mono text-lg">
-                  {selected.code}
-                </SheetTitle>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <Badge
-                    variant={purchaseRequestStatusVariant(selected.status)}
-                  >
-                    {copy.statusLabel(selected.status)}
-                  </Badge>
-                  <span>{selected.branchName}</span>
-                </div>
-              </SheetHeader>
-
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-                <div className="flex flex-col gap-4">
-                  {selected.statusReason ? (
-                    <Item variant="muted" size="sm">
-                      {selected.statusReason}
-                    </Item>
-                  ) : null}
-                  <BranchOperatorDetailList
-                    columns={2}
-                    rows={[
-                      {
-                        label: copy.statusColumn,
-                        value: copy.statusLabel(selected.status),
-                      },
-                      {
-                        label: copy.neededBy,
-                        value: selected.neededBy
-                          ? formatVNDate(selected.neededBy)
-                          : "—",
-                      },
-                      {
-                        label: copy.progressColumn,
-                        value: copy.orderedProgress(
-                          selected.orderedLineCount,
-                          selected.lineCount,
-                        ),
-                      },
-                      {
-                        label: copy.updatedColumn,
-                        value: formatVNDateTime(selected.updatedAt),
-                      },
-                    ]}
-                  />
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm font-medium">{copy.linesTitle}</p>
-                    <ItemGroup className="gap-2">
-                      {selected.items.map((item) => (
-                        <Item key={item.id} variant="outline" size="sm">
-                          <ItemContent className="min-w-0 gap-1">
-                            <ItemTitle className="line-clamp-none text-sm">
-                              {item.ingredientName}
-                            </ItemTitle>
-                            <ItemDescription className="font-mono tabular-nums">
-                              {item.orderedQuantity}/{item.quantity}{" "}
-                              {item.unitLabel}
-                            </ItemDescription>
-                          </ItemContent>
-                        </Item>
-                      ))}
-                    </ItemGroup>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm font-medium">
-                      {copy.purchaseOrdersTitle}
-                    </p>
-                    {selected.purchaseOrders.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        {copy.noPurchaseOrders}
-                      </p>
-                    ) : (
-                      <ItemGroup className="gap-2">
-                        {selected.purchaseOrders.map((po) => (
-                          <Item key={po.id} variant="outline" size="sm">
-                            <ItemContent className="min-w-0 gap-1">
-                              <ItemTitle className="font-mono text-sm">
-                                {po.code}
-                              </ItemTitle>
-                              <ItemDescription>
-                                {po.supplierName}
-                              </ItemDescription>
-                            </ItemContent>
-                            <ItemActions>
-                              <Badge variant="secondary">{po.status}</Badge>
-                            </ItemActions>
-                          </Item>
-                        ))}
-                      </ItemGroup>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <SheetFooter className="z-10 shrink-0 border-t bg-background/95 backdrop-blur">
-                {canReviewSelected ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() =>
-                        setReasonAction({
-                          kind: "request_changes",
-                          row: selected,
-                        })
-                      }
-                    >
-                      {copy.requestChangesAction}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="touch"
-                      disabled={isPending}
-                      onClick={() =>
-                        setReasonAction({ kind: "reject", row: selected })
-                      }
-                    >
-                      {copy.rejectAction}
-                    </Button>
-                  </>
-                ) : null}
-                {canCreateRequest &&
-                (selected.status === "draft" ||
-                  selected.status === "changes_requested" ||
-                  selected.status === "pending_allocation") ? (
+              {canReviewSelected ? (
+                <>
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
-                    onClick={() => updateUrl(selected.id, "edit", "replace")}
-                  >
-                    {ACTIONS_VI.edit}
-                  </Button>
-                ) : null}
-                {canCreateRequest &&
-                (selected.status === "draft" ||
-                  selected.status === "changes_requested") ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch"
-                    disabled={isPending || pendingId === selected.id}
+                    disabled={isPending}
                     onClick={() =>
-                      setReasonAction({ kind: "cancel", row: selected })
+                      setReasonAction({
+                        kind: "request_changes",
+                        row: selected,
+                      })
                     }
                   >
-                    Bỏ phiếu
+                    {copy.requestChangesAction}
                   </Button>
-                ) : null}
-                {selected.status === "partially_ordered" && canAllocate ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive"
                     size="touch"
+                    disabled={isPending}
                     onClick={() =>
-                      setReasonAction({ kind: "close", row: selected })
+                      setReasonAction({ kind: "reject", row: selected })
                     }
                   >
-                    Đóng phần còn lại
+                    {copy.rejectAction}
                   </Button>
-                ) : null}
-                {canCreateRequest && selected.status === "cancelled" ? (
-                  <Button
-                    type="button"
-                    size="touch"
-                    onClick={openCopyFromSelected}
-                  >
-                    {copy.copyToNewAction}
-                  </Button>
-                ) : null}
+                </>
+              ) : null}
+              {canCreateRequest &&
+              (selected.status === "draft" ||
+                selected.status === "changes_requested" ||
+                selected.status === "pending_allocation") ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="touch"
-                  onClick={() => updateUrl(null, null, "replace")}
+                  onClick={() => updateUrl(selected.id, "edit", "replace")}
                 >
-                  {ACTIONS_VI.close}
+                  {ACTIONS_VI.edit}
                 </Button>
-                {canAllocate &&
-                (selected.status === "submitted" ||
-                  selected.status === "pending_allocation" ||
-                  selected.status === "partially_ordered") ? (
-                  <Button
-                    type="button"
-                    size="touch-lg"
-                    disabled={isPending || pendingId === selected.id}
-                    onClick={() => handleSupplierDecision(selected)}
-                  >
-                    {pendingId === selected.id ? (
-                      <Spinner className="size-5" />
-                    ) : null}
-                    {buildAutomaticPurchaseDemandAllocations(
-                      selected.items,
-                      suppliers,
-                    ) == null
-                      ? copy.allocateAction
-                      : copy.approveAllocationAction}
-                  </Button>
-                ) : null}
-              </SheetFooter>
+              ) : null}
+              {canCreateRequest &&
+              (selected.status === "draft" ||
+                selected.status === "changes_requested") ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={isPending || pendingId === selected.id}
+                  onClick={() =>
+                    setReasonAction({ kind: "cancel", row: selected })
+                  }
+                >
+                  Bỏ phiếu
+                </Button>
+              ) : null}
+              {selected.status === "partially_ordered" && canAllocate ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  onClick={() =>
+                    setReasonAction({ kind: "close", row: selected })
+                  }
+                >
+                  Đóng phần còn lại
+                </Button>
+              ) : null}
+              {canCreateRequest && selected.status === "cancelled" ? (
+                <Button
+                  type="button"
+                  size="touch"
+                  onClick={openCopyFromSelected}
+                >
+                  {copy.copyToNewAction}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                onClick={() => updateUrl(null, null, "replace")}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+              {canAllocate &&
+              (selected.status === "submitted" ||
+                selected.status === "pending_allocation" ||
+                selected.status === "partially_ordered") ? (
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled={isPending || pendingId === selected.id}
+                  onClick={() => handleSupplierDecision(selected)}
+                >
+                  {pendingId === selected.id ? (
+                    <Spinner className="size-5" />
+                  ) : null}
+                  {buildAutomaticPurchaseDemandAllocations(
+                    selected.items,
+                    suppliers,
+                  ) == null
+                    ? copy.allocateAction
+                    : copy.approveAllocationAction}
+                </Button>
+              ) : null}
             </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+          ) : null
+        }
+      >
+        {selected ? (
+          <div className="flex flex-col gap-4">
+            {selected.statusReason ? (
+              <Item variant="muted" size="sm">
+                {selected.statusReason}
+              </Item>
+            ) : null}
+            <BranchOperatorDetailList
+              columns={2}
+              rows={[
+                {
+                  label: copy.statusColumn,
+                  value: copy.statusLabel(selected.status),
+                },
+                {
+                  label: copy.neededBy,
+                  value: selected.neededBy
+                    ? formatVNDate(selected.neededBy)
+                    : "—",
+                },
+                {
+                  label: copy.progressColumn,
+                  value: copy.orderedProgress(
+                    selected.orderedLineCount,
+                    selected.lineCount,
+                  ),
+                },
+                {
+                  label: copy.updatedColumn,
+                  value: formatVNDateTime(selected.updatedAt),
+                },
+              ]}
+            />
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">{copy.linesTitle}</p>
+              <ItemGroup className="gap-2">
+                {selected.items.map((item) => (
+                  <Item key={item.id} variant="outline" size="sm">
+                    <ItemContent className="min-w-0 gap-1">
+                      <ItemTitle className="line-clamp-none text-sm">
+                        {item.ingredientName}
+                      </ItemTitle>
+                      <ItemDescription className="font-mono tabular-nums">
+                        {item.orderedQuantity}/{item.quantity} {item.unitLabel}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                ))}
+              </ItemGroup>
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">{copy.purchaseOrdersTitle}</p>
+              {selected.purchaseOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {copy.noPurchaseOrders}
+                </p>
+              ) : (
+                <ItemGroup className="gap-2">
+                  {selected.purchaseOrders.map((po) => (
+                    <Item key={po.id} variant="outline" size="sm">
+                      <ItemContent className="min-w-0 gap-1">
+                        <ItemTitle className="font-mono text-sm">
+                          {po.code}
+                        </ItemTitle>
+                        <ItemDescription>{po.supplierName}</ItemDescription>
+                      </ItemContent>
+                      <ItemActions>
+                        <Badge variant="secondary">{po.status}</Badge>
+                      </ItemActions>
+                    </Item>
+                  ))}
+                </ItemGroup>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </AppSheet>
 
-      <Sheet
+      <AppSheet
         open={createOpen}
         onOpenChange={(open) => {
           if (!open) void closeRequestForm();
         }}
+        title={
+          mode === "edit" && selected
+            ? selected.code
+            : copyFromRequestId != null
+              ? copy.copyToNewAction
+              : copy.createTitle
+        }
+        description={
+          mode === "edit" && selected
+            ? copy.statusLabel(selected.status)
+            : copyFromRequestId != null
+              ? copy.copyToNewBanner
+              : copy.description
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        headerClassName="shrink-0"
+        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => void closeRequestForm()}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+            {editingPendingDemand ? (
+              <Button
+                type="button"
+                size="touch-lg"
+                disabled={isPending}
+                onClick={() => saveRequest(true)}
+              >
+                {isPending ? <Spinner className="size-5" /> : null}
+                {ACTIONS_VI.saveChanges}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="touch"
+                  disabled={isPending}
+                  onClick={() => saveRequest(false)}
+                >
+                  {copy.saveDraft}
+                </Button>
+                <Button
+                  type="button"
+                  size="touch-lg"
+                  disabled={isPending}
+                  onClick={() => saveRequest(true)}
+                >
+                  {isPending ? <Spinner className="size-5" /> : null}
+                  {copy.submitAction}
+                </Button>
+              </>
+            )}
+          </>
+        }
       >
-        <SheetContent
-          side="bottom"
-          className="flex max-h-dvh-95 flex-col overflow-hidden bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          <SheetHeader className="shrink-0">
-            <SheetTitle>
-              {mode === "edit" && selected
-                ? selected.code
-                : copyFromRequestId != null
-                  ? copy.copyToNewAction
-                  : copy.createTitle}
-            </SheetTitle>
-            <p className="text-sm text-muted-foreground">
-              {mode === "edit" && selected
-                ? copy.statusLabel(selected.status)
-                : copyFromRequestId != null
-                  ? copy.copyToNewBanner
-                  : copy.description}
-            </p>
-          </SheetHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-            <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
               {copyFromRequestId != null ? (
                 <Item variant="muted" size="sm">
                   {copy.copyToNewBanner}
@@ -1291,78 +1319,78 @@ export function BranchPurchaseRequestsClient({
                 {copy.addLine}
               </Button>
             </div>
-          </div>
+      </AppSheet>
 
-          <SheetFooter className="z-10 shrink-0 border-t bg-background/95 backdrop-blur">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              onClick={() => void closeRequestForm()}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            {editingPendingDemand ? (
-              <Button
-                type="button"
-                size="touch-lg"
-                disabled={isPending}
-                onClick={() => saveRequest(true)}
-              >
-                {isPending ? <Spinner className="size-5" /> : null}
-                {ACTIONS_VI.saveChanges}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="touch"
-                  disabled={isPending}
-                  onClick={() => saveRequest(false)}
-                >
-                  {copy.saveDraft}
-                </Button>
-                <Button
-                  type="button"
-                  size="touch-lg"
-                  disabled={isPending}
-                  onClick={() => saveRequest(true)}
-                >
-                  {isPending ? <Spinner className="size-5" /> : null}
-                  {copy.submitAction}
-                </Button>
-              </>
-            )}
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet
+      <AppSheet
         open={allocateOpen}
         onOpenChange={(open) => {
           if (!open) void closeAllocation();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="flex max-h-dvh-95 flex-col overflow-hidden bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          <SheetHeader className="shrink-0">
-            <SheetTitle>{copy.allocateTitle}</SheetTitle>
-            {selected ? (
-              <p className="text-sm text-muted-foreground">
-                {selected.code} · {selected.branchName}
-                {selected.neededBy
+        title={copy.allocateTitle}
+        description={
+          selected
+            ? `${selected.code} · ${selected.branchName}${
+                selected.neededBy
                   ? ` · Cần ${formatVNDate(selected.neededBy)}`
-                  : ""}
-              </p>
-            ) : null}
-          </SheetHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-            <div className="flex flex-col gap-3">
+                  : ""
+              }`
+            : undefined
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="flex max-h-dvh-95 flex-col overflow-hidden bg-background text-foreground"
+        headerClassName="shrink-0"
+        footerClassName="z-10 shrink-0 border-t bg-background/95 backdrop-blur"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={isPending}
+              onClick={() =>
+                selected &&
+                setReasonAction({
+                  kind: "request_changes",
+                  row: selected,
+                })
+              }
+            >
+              {copy.requestChangesAction}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="touch"
+              disabled={isPending}
+              onClick={() =>
+                selected && setReasonAction({ kind: "reject", row: selected })
+              }
+            >
+              {copy.rejectAction}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="touch"
+              disabled={isPending}
+              onClick={() => saveAllocations(false)}
+            >
+              {copy.saveAllocationAction}
+            </Button>
+            <Button
+              type="button"
+              size="touch-lg"
+              disabled={isPending || !allocationComplete}
+              onClick={() => saveAllocations(true)}
+            >
+              {isPending ? <Spinner className="size-5" /> : null}
+              {copy.approveAllocationAction}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
               {missingSupplierItems.length > 0 ? (
                 <Item variant="muted" size="sm" className="flex-col items-start">
                   <p className="font-medium">
@@ -1456,56 +1484,7 @@ export function BranchPurchaseRequestsClient({
                 );
               })}
             </div>
-          </div>
-
-          <SheetFooter className="z-10 shrink-0 border-t bg-background/95 backdrop-blur">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isPending}
-              onClick={() =>
-                selected &&
-                setReasonAction({
-                  kind: "request_changes",
-                  row: selected,
-                })
-              }
-            >
-              {copy.requestChangesAction}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="touch"
-              disabled={isPending}
-              onClick={() =>
-                selected && setReasonAction({ kind: "reject", row: selected })
-              }
-            >
-              {copy.rejectAction}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="touch"
-              disabled={isPending}
-              onClick={() => saveAllocations(false)}
-            >
-              {copy.saveAllocationAction}
-            </Button>
-            <Button
-              type="button"
-              size="touch-lg"
-              disabled={isPending || !allocationComplete}
-              onClick={() => saveAllocations(true)}
-            >
-              {isPending ? <Spinner className="size-5" /> : null}
-              {copy.approveAllocationAction}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      </AppSheet>
 
       <NumberPadSheet
         open={qtyPad != null}

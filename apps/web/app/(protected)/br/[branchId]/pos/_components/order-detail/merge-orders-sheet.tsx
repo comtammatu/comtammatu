@@ -16,19 +16,14 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@comtammatu/ui/components/radio-group";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { fetchSiblingOrdersForTable } from "../../actions";
 import type { SiblingOrderRow } from "../../discount-actions";
 
 import { ACTIONS_VI, POS_VI } from "@comtammatu/shared/messages";
+import { StationSheet } from "@/components/surface";
+
 interface MergeOrdersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -135,19 +130,37 @@ export function MergeOrdersSheet({
     .join(" · ");
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent
-        side="right"
-        size="md"
-      >
-        <SheetHeader>
-          <SheetTitle>
-            Gộp hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
-          </SheetTitle>
-        </SheetHeader>
-
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex flex-col gap-2 px-3 py-3 sm:px-4">
+    <StationSheet
+      side="right"
+      size="md"
+      open={open}
+      onOpenChange={(o) => !o && handleClose()}
+      title={`Gộp hóa đơn${headerSubtitle ? ` · ${headerSubtitle}` : ""}`}
+      footer={
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="flex-1"
+            disabled={isPending}
+            onClick={handleClose}
+          >
+            {ACTIONS_VI.cancel}
+          </Button>
+          <Button
+            type="button"
+            size="touch"
+            className="flex-1"
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+          >
+            {POS_VI.mergeConfirm}
+          </Button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-2">
             {sourceHasPctDiscount && (
               <Alert variant="destructive">
                 <AlertDescription>{POS_VI.mergePctBlock}</AlertDescription>
@@ -230,32 +243,6 @@ export function MergeOrdersSheet({
               </RadioGroup>
             )}
           </div>
-        </ScrollArea>
-
-        <SheetFooter>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              className="flex-1"
-              disabled={isPending}
-              onClick={handleClose}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button
-              type="button"
-              size="touch"
-              className="flex-1"
-              disabled={!canSubmit}
-              onClick={handleSubmit}
-            >
-              {POS_VI.mergeConfirm}
-            </Button>
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

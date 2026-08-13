@@ -257,8 +257,8 @@ test("employee task checklist stays single-column and wraps long task copy", () 
 test("employee inventory count uses a compact grid and per-ingredient sheet", () => {
   assert.match(
     employeeCountClientSource,
-    /@comtammatu\/ui\/components\/sheet/,
-    "Count entry should use the Sheet drawer primitive",
+    /@\/components\/surface/,
+    "Count entry should use the AppSheet chrome adapter",
   );
   assert.match(
     employeeCountClientSource,
@@ -272,12 +272,12 @@ test("employee inventory count uses a compact grid and per-ingredient sheet", ()
   );
   assert.match(
     employeeCountClientSource,
-    /<Sheet[\s\S]*open=\{assignment !== null\}/,
+    /<AppSheet[\s\S]*open=\{assignment !== null\}/,
     "Ingredient entry should be isolated in a drawer",
   );
   assert.match(
     employeeCountClientSource,
-    /<SheetContent(?=[^>]*side="right")(?=[^>]*size="md")(?=[^>]*className="overflow-hidden")[^>]*>/,
+    /<AppSheet[\s\S]*side="right"[\s\S]*size="md"[\s\S]*contentClassName="overflow-hidden"/,
     "The drawer should constrain overflow on mobile and desktop",
   );
 });

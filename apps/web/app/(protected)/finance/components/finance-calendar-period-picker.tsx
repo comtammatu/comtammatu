@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { Calendar, vi } from "@comtammatu/ui/components/calendar";
 import {
   Popover,
   PopoverContent,
@@ -14,6 +13,7 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
+import { BusinessWeekPicker } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
   type FinanceCalendarPeriod,
@@ -60,27 +60,6 @@ function parseSelectionYear(
   }
   const year = Number(selection.slice(0, 4));
   return Number.isFinite(year) ? year : new Date().getFullYear();
-}
-
-function isSameBusinessDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function startOfLocalDay(date: Date) {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).getTime();
-}
-
-function isDateInRange(date: Date, start: Date, end: Date) {
-  const t = startOfLocalDay(date);
-  return t >= startOfLocalDay(start) && t <= startOfLocalDay(end);
 }
 
 interface FinanceCalendarPeriodPickerProps {
@@ -171,7 +150,7 @@ export function FinanceCalendarPeriodPicker({
       />
       <PopoverContent align="start" className="w-auto p-0">
         {period === "week" ? (
-          <WeekPeriodPanel
+          <BusinessWeekPicker
             selectedStart={selectedStart}
             selectedEnd={selectedEnd}
             maxDate={maxDate}
@@ -325,58 +304,5 @@ function YearNavPanel({
       </div>
       {children}
     </div>
-  );
-}
-
-function WeekPeriodPanel({
-  selectedStart,
-  selectedEnd,
-  maxDate,
-  onPickDay,
-}: {
-  selectedStart?: Date;
-  selectedEnd?: Date;
-  maxDate?: Date;
-  onPickDay: (date: Date) => void;
-}) {
-  const weekStart = selectedStart;
-  const weekEnd = selectedEnd ?? selectedStart;
-
-  return (
-    <Calendar
-      mode="single"
-      locale={vi}
-      captionLayout="dropdown"
-      defaultMonth={selectedStart}
-      endMonth={maxDate}
-      selected={selectedStart}
-      showOutsideDays
-      modifiers={
-        weekStart && weekEnd
-          ? {
-              period_week: (date) =>
-                isDateInRange(date, weekStart, weekEnd),
-            }
-          : undefined
-      }
-      modifiersClassNames={{
-        period_week:
-          "rounded-none bg-primary/15 text-foreground data-[selected-single=true]:rounded-(--cell-radius)",
-      }}
-      onSelect={(date) => {
-        if (!date) return;
-        if (maxDate && date > maxDate && !isSameBusinessDay(date, maxDate)) {
-          return;
-        }
-        onPickDay(date);
-      }}
-      disabled={
-        maxDate
-          ? {
-              after: maxDate,
-            }
-          : undefined
-      }
-    />
   );
 }

@@ -38,7 +38,7 @@ test("Branch attendance owns a fixed-scope touch presenter", () => {
   assert.match(data, /fetchAttendance/);
 
   assert.match(client, /BranchOperatorPage/);
-  assert.match(client, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /useBranchOpsEvents\(\{[\s\S]*branchId/);
   assert.match(client, /size="touch"/);
   assert.match(client, /sticky bottom-0/);

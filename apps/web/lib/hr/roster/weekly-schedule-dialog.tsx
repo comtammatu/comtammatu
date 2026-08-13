@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormDialog, SelectField, TextField } from "@/components/form";
+import { FormDialog, SelectField, BusinessDateField } from "@/components/form";
 import { messages } from "@lib/messages";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { saveEmployeeWeeklySchedule } from "./actions";
@@ -180,11 +180,10 @@ export function WeeklyScheduleDialog({
 
         return (
           <>
-            <TextField
+            <BusinessDateField
               control={form.control}
               name="effectiveFrom"
               label={copy.effectiveFrom}
-              type="date"
               min={employee?.startDate ?? undefined}
               description={
                 employee?.startDate

@@ -28,18 +28,15 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { matchesSearch } from "@lib/search";
 import type { StockFulfillmentRow } from "@lib/inventory/stock-fulfillment-data";
 import {
@@ -396,47 +393,48 @@ export function BranchStockFulfillmentHubClient({
         )}
       </BranchOperatorPanel>
 
-      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-        <SheetContent side="bottom" className="flex max-h-dvh-80 flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle>Trạng thái</SheetTitle>
-          </SheetHeader>
-          <div className="px-4 pb-2">
-            <ToggleGroup
-              type="single"
-              value={state}
-              onValueChange={(value) => {
-                if (
-                  value === "all" ||
-                  value === "active" ||
-                  value === "completed" ||
-                  value === "cancelled"
-                ) {
-                  replaceParam("state", value, stateDefault);
-                }
-              }}
-              size="touch"
-              className="grid w-full grid-cols-2 gap-2"
-              aria-label="Lọc trạng thái hành trình"
-            >
-              <ToggleGroupItem value="all">Tất cả</ToggleGroupItem>
-              <ToggleGroupItem value="active">Đang xử lý</ToggleGroupItem>
-              <ToggleGroupItem value="completed">Hoàn tất</ToggleGroupItem>
-              <ToggleGroupItem value="cancelled">Đã hủy</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <SheetFooter className="border-t bg-background">
-            <Button
-              type="button"
-              size="touch"
-              className="w-full"
-              onClick={() => setFilterOpen(false)}
-            >
-              {ACTIONS_VI.close}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      <AppSheet
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        title="Trạng thái"
+        side="bottom"
+        contentClassName="flex max-h-dvh-80 flex-col"
+        headerClassName="text-left"
+        footerClassName="border-t bg-background"
+        footer={
+          <Button
+            type="button"
+            size="touch"
+            className="w-full"
+            onClick={() => setFilterOpen(false)}
+          >
+            {ACTIONS_VI.close}
+          </Button>
+        }
+      >
+        <ToggleGroup
+          type="single"
+          value={state}
+          onValueChange={(value) => {
+            if (
+              value === "all" ||
+              value === "active" ||
+              value === "completed" ||
+              value === "cancelled"
+            ) {
+              replaceParam("state", value, stateDefault);
+            }
+          }}
+          size="touch"
+          className="grid w-full grid-cols-2 gap-2"
+          aria-label="Lọc trạng thái hành trình"
+        >
+          <ToggleGroupItem value="all">Tất cả</ToggleGroupItem>
+          <ToggleGroupItem value="active">Đang xử lý</ToggleGroupItem>
+          <ToggleGroupItem value="completed">Hoàn tất</ToggleGroupItem>
+          <ToggleGroupItem value="cancelled">Đã hủy</ToggleGroupItem>
+        </ToggleGroup>
+      </AppSheet>
     </div>
   );
 }

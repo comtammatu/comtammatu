@@ -27,14 +27,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@comtammatu/ui/components/sheet";
+
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +40,10 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
-import { AppListFrame } from "@/components/surface";
+import {
+  AppListFrame,
+  AppSheet,
+} from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
   SEPAY_BANK_WEBHOOK_REVIEW_VALUES,
@@ -448,20 +444,18 @@ function LinkPaymentCell({
   const canRecordCashDeposit = bankTransactionId != null;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        render={
-          <Button variant="outline" size={touch ? "touch" : "sm"}>
-            {copy.matchAction}
-          </Button>
-        }
-      />
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{table.linkTitle}</SheetTitle>
-          <SheetDescription>{table.linkDescription}</SheetDescription>
-        </SheetHeader>
-        <form className="flex flex-col gap-3 p-4" onSubmit={handleSubmit}>
+    <AppSheet
+      open={open}
+      onOpenChange={setOpen}
+      title={table.linkTitle}
+      description={table.linkDescription}
+      trigger={
+        <Button variant="outline" size={touch ? "touch" : "sm"}>
+          {copy.matchAction}
+        </Button>
+      }
+    >
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <InputGroup size={touch ? "touch" : "default"}>
             <InputGroupInput
               autoCapitalize="characters"
@@ -510,8 +504,7 @@ function LinkPaymentCell({
             </div>
           ) : null}
         </form>
-      </SheetContent>
-    </Sheet>
+    </AppSheet>
   );
 }
 

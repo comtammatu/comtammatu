@@ -14,6 +14,7 @@ import {
   AppEmptyState,
   AppToolbar,
   DescriptionList,
+  AppDrawer,
 } from "@/components/surface";
 import { BranchOperatorPanel } from "@lib/branch-operator/components/branch-operator-page";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
@@ -34,14 +35,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "@comtammatu/ui/components/drawer";
+
 import {
   Field,
   FieldContent,
@@ -602,27 +596,55 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
         ))}
       </div>
 
-      <Drawer
+      <AppDrawer
         open={!!drawerRow}
         onOpenChange={(open) => !open && setDrawerRow(null)}
-      >
-        <DrawerContent className="overflow-hidden">
-          {drawerRow && (
+        title={drawerRow?.item_name ?? ""}
+        description={
+          drawerRow ? (
+            <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
+              {renderItemBadge(drawerRow)}
+              <Badge variant="outline" className="font-mono">
+                {formatVND(drawerRow.base_price)}
+              </Badge>
+            </div>
+          ) : undefined
+        }
+        contentClassName="overflow-hidden"
+        footerClassName="flex-row gap-2"
+        footer={
+          drawerRow ? (
             <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerRow.item_name}</DrawerTitle>
-                <DrawerDescription
-                  render={
-                    <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">
-                      {renderItemBadge(drawerRow)}
-                      <Badge variant="outline" className="font-mono">
-                        {formatVND(drawerRow.base_price)}
-                      </Badge>
-                    </div>
-                  }
-                ></DrawerDescription>
-              </DrawerHeader>
-              <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-2">
+                {drawerRow.manual_limit_quantity != null && (
+                  <Button
+                    variant="outline"
+                    size="touch"
+                    className="flex-1"
+                    onClick={handleClearLimit}
+                    disabled={isPending}
+                  >
+                    {messages.pos.menu.clearLimit}
+                  </Button>
+                )}
+                <Button
+                  size="touch"
+                  className="flex-1"
+                  onClick={handleSaveLimit}
+                  disabled={isPending}
+                >
+                  {isPending ? (
+                    <Spinner className="mr-2" />
+                  ) : (
+                    <IconSave className="mr-2 size-4" />
+                  )}
+                  {messages.pos.menu.saveChanges}
+                </Button>
+            </>
+          ) : undefined
+        }
+      >
+          {drawerRow && (
+                <div className="flex min-h-0 flex-col gap-4">
                 <Item variant="muted" size="sm" className="items-center">
                   <ItemContent>
                     <ItemTitle>
@@ -726,37 +748,9 @@ export function MenuLimitsClient({ branchId, rows }: Props) {
                     </FieldDescription>
                   </Field>
                 </FieldGroup>
-              </div>
-              <DrawerFooter className="flex-row gap-2">
-                {drawerRow.manual_limit_quantity != null && (
-                  <Button
-                    variant="outline"
-                    size="touch"
-                    className="flex-1"
-                    onClick={handleClearLimit}
-                    disabled={isPending}
-                  >
-                    {messages.pos.menu.clearLimit}
-                  </Button>
-                )}
-                <Button
-                  size="touch"
-                  className="flex-1"
-                  onClick={handleSaveLimit}
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <Spinner className="mr-2" />
-                  ) : (
-                    <IconSave className="mr-2 size-4" />
-                  )}
-                  {messages.pos.menu.saveChanges}
-                </Button>
-              </DrawerFooter>
-            </>
+                </div>
           )}
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
     </>
   );
 }

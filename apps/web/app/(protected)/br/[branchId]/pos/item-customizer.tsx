@@ -13,15 +13,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FieldLabel } from "@comtammatu/ui/components/field";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@comtammatu/ui/components/sheet";
+
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { X as IconX } from "lucide-react";
@@ -35,6 +27,16 @@ import {
 } from "./_components/quick-reason-presets";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/surface";
+
 interface ItemCustomizerProps {
   item: MenuItem | null;
   onClose: () => void;

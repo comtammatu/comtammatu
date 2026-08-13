@@ -11,13 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox, PhotoUploadInput } from "@/components/form";
@@ -41,6 +35,8 @@ import {
   type GrnDetail,
 } from "@lib/inventory/grn-detail-model";
 import { messages } from "@lib/messages";
+import { AppSheet } from "@/components/surface";
+
 
 function NumberPadValueField({
   id,
@@ -134,180 +130,162 @@ export function BranchGrnCreateLineSheet({
 
   return (
     <>
-      <Sheet
+      <AppSheet
         open={open}
         onOpenChange={(next) => {
           if (!next) onClose();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="h-auto max-h-dvh-95 gap-1 overflow-y-auto bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          {edit ? (
+        title={edit?.ingredient.name ?? GRN_CREATE_COPY.editItem}
+        description={
+          edit
+            ? `${edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}${GRN_CREATE_COPY.unitLabel(edit.unit)}`
+            : undefined
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        footer={
+          edit ? (
             <>
-              <SheetHeader>
-                <SheetTitle className="text-lg font-semibold">
-                  {edit.ingredient.name}
-                </SheetTitle>
-                <p className="text-xs text-muted-foreground">
-                  {edit.ingredient.sku ? `${edit.ingredient.sku} · ` : ""}
-                  {GRN_CREATE_COPY.unitLabel(edit.unit)}
-                </p>
-              </SheetHeader>
-
-              <div className="p-4">
-                <FieldGroup>
-                  {showSupplierPicker ? (
-                    <Field>
-                      <FieldLabel htmlFor="branch-grn-create-supplier">
-                        {GRN_CREATE_COPY.supplierLabel}
-                      </FieldLabel>
-                      <Select
-                        value={
-                          edit.supplierId != null
-                            ? String(edit.supplierId)
-                            : ""
-                        }
-                        onValueChange={(value) =>
-                          onPatch({ supplierId: Number(value) || null })
-                        }
-                      >
-                        <SelectTrigger
-                          id="branch-grn-create-supplier"
-                          size="touch"
-                          className="w-full"
-                        >
-                          <SelectValue
-                            placeholder={
-                              GRN_CREATE_COPY.supplierSelectPlaceholder
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {suppliers.map((supplier) => (
-                            <SelectItem
-                              key={supplier.id}
-                              value={String(supplier.id)}
-                              size="touch"
-                            >
-                              {supplier.isPreferred
-                                ? `${supplier.name} · ${GRN_CREATE_COPY.preferredSupplierSuffix}`
-                                : supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  ) : lockedSupplier ? (
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">
-                        {GRN_CREATE_COPY.supplierLabel}{" "}
-                      </span>
-                      <span className="font-semibold">
-                        {lockedSupplier.name}
-                      </span>
-                    </p>
-                  ) : null}
-
-                  <Field>
-                    <FieldLabel htmlFor="branch-grn-create-unit">
-                      {messages.inventory.grn.addDialog.unitLabel}
-                    </FieldLabel>
-                    <Select
-                      value={
-                        edit.entryUnitId != null ? String(edit.entryUnitId) : ""
-                      }
-                      onValueChange={(value) => {
-                        const option = getPurchaseUnitOptions(
-                          edit.ingredient,
-                        ).find((item) => String(item.unitId) === value);
-                        if (option) onUnitChange(option.unitId, option.label);
-                      }}
-                    >
-                      <SelectTrigger
-                        id="branch-grn-create-unit"
-                        size="touch"
-                        className="w-full"
-                      >
-                        <SelectValue
-                          placeholder={
-                            messages.inventory.grn.addDialog.selectUnit
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getPurchaseUnitOptions(edit.ingredient).map(
-                          (option) => (
-                            <SelectItem
-                              key={option.unitId}
-                              value={String(option.unitId)}
-                              size="touch"
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-
-                  <NumberPadValueField
-                    id="branch-grn-create-quantity"
-                    label={`${FORM_VI.quantity} (${edit.unit})`}
-                    value={edit.quantity > 0 ? formatQty(edit.quantity) : null}
-                    emptyLabel={messages.inventory.grn.quantityEmptyLabel}
-                    onClick={() => setNumericField("quantity")}
-                  />
-
-                  {baseConversionPreview ? (
-                    <p className="text-xs text-muted-foreground">
-                      {baseConversionPreview}
-                    </p>
-                  ) : null}
-                </FieldGroup>
-              </div>
-
-              <SheetFooter>
-                <Button
-                  type="button"
-                  size="touch-lg"
-                  className="w-full"
-                  onClick={onSave}
-                  disabled={!valid}
-                >
-                  {edit.line
-                    ? GRN_CREATE_COPY.updateLineOnReceipt
-                    : GRN_CREATE_COPY.addLineToReceipt}
-                </Button>
-                <div className="flex items-center gap-2">
-                  {edit.line ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="touch-lg"
-                      onClick={onRemove}
-                      className="flex-1"
-                    >
-                      {ACTIONS_VI.delete}
-                    </Button>
-                  ) : null}
+              <Button
+                type="button"
+                size="touch-lg"
+                className="w-full"
+                onClick={onSave}
+                disabled={!valid}
+              >
+                {edit.line
+                  ? GRN_CREATE_COPY.updateLineOnReceipt
+                  : GRN_CREATE_COPY.addLineToReceipt}
+              </Button>
+              <div className="flex items-center gap-2">
+                {edit.line ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive"
                     size="touch-lg"
-                    onClick={onClose}
+                    onClick={onRemove}
                     className="flex-1"
                   >
-                    {ACTIONS_VI.close}
+                    {ACTIONS_VI.delete}
                   </Button>
-                </div>
-              </SheetFooter>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch-lg"
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  {ACTIONS_VI.close}
+                </Button>
+              </div>
             </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+          ) : null
+        }
+      >
+        {edit ? (
+          <FieldGroup>
+            {showSupplierPicker ? (
+              <Field>
+                <FieldLabel htmlFor="branch-grn-create-supplier">
+                  {GRN_CREATE_COPY.supplierLabel}
+                </FieldLabel>
+                <Select
+                  value={
+                    edit.supplierId != null ? String(edit.supplierId) : ""
+                  }
+                  onValueChange={(value) =>
+                    onPatch({ supplierId: Number(value) || null })
+                  }
+                >
+                  <SelectTrigger
+                    id="branch-grn-create-supplier"
+                    size="touch"
+                    className="w-full"
+                  >
+                    <SelectValue
+                      placeholder={GRN_CREATE_COPY.supplierSelectPlaceholder}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem
+                        key={supplier.id}
+                        value={String(supplier.id)}
+                        size="touch"
+                      >
+                        {supplier.isPreferred
+                          ? `${supplier.name} · ${GRN_CREATE_COPY.preferredSupplierSuffix}`
+                          : supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            ) : lockedSupplier ? (
+              <p className="text-sm">
+                <span className="text-muted-foreground">
+                  {GRN_CREATE_COPY.supplierLabel}{" "}
+                </span>
+                <span className="font-semibold">{lockedSupplier.name}</span>
+              </p>
+            ) : null}
+
+            <Field>
+              <FieldLabel htmlFor="branch-grn-create-unit">
+                {messages.inventory.grn.addDialog.unitLabel}
+              </FieldLabel>
+              <Select
+                value={
+                  edit.entryUnitId != null ? String(edit.entryUnitId) : ""
+                }
+                onValueChange={(value) => {
+                  const option = getPurchaseUnitOptions(edit.ingredient).find(
+                    (item) => String(item.unitId) === value,
+                  );
+                  if (option) onUnitChange(option.unitId, option.label);
+                }}
+              >
+                <SelectTrigger
+                  id="branch-grn-create-unit"
+                  size="touch"
+                  className="w-full"
+                >
+                  <SelectValue
+                    placeholder={messages.inventory.grn.addDialog.selectUnit}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {getPurchaseUnitOptions(edit.ingredient).map((option) => (
+                    <SelectItem
+                      key={option.unitId}
+                      value={String(option.unitId)}
+                      size="touch"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <NumberPadValueField
+              id="branch-grn-create-quantity"
+              label={`${FORM_VI.quantity} (${edit.unit})`}
+              value={edit.quantity > 0 ? formatQty(edit.quantity) : null}
+              emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+              onClick={() => setNumericField("quantity")}
+            />
+
+            {baseConversionPreview ? (
+              <p className="text-xs text-muted-foreground">
+                {baseConversionPreview}
+              </p>
+            ) : null}
+          </FieldGroup>
+        ) : null}
+      </AppSheet>
 
       <NumberPadSheet
         open={numericField != null}
@@ -371,114 +349,100 @@ export function BranchGrnReviewLineSheet({
 
   return (
     <>
-      <Sheet
+      <AppSheet
         open={line != null}
         onOpenChange={(next) => {
           if (!next) onClose();
         }}
+        title={line?.name ?? GRN_DETAIL_COPY.deleteLineAction}
+        description={
+          line
+            ? `${line.sku ? `${line.sku} · ` : ""}${line.unit}`
+            : undefined
+        }
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        footer={
+          line ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                size="touch-lg"
+                className="flex-1"
+                disabled={isPending}
+                onClick={() => void handleDelete()}
+              >
+                {GRN_DETAIL_COPY.deleteLineAction}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch-lg"
+                className="flex-1"
+                onClick={onClose}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+            </div>
+          ) : null
+        }
       >
-        <SheetContent
-          side="bottom"
-          className="h-auto max-h-dvh-95 gap-1 overflow-y-auto bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          {line ? (
-            <>
-              <SheetHeader>
-                <SheetTitle className="text-lg font-semibold">
-                  {line.name}
-                </SheetTitle>
-                <p className="text-xs text-muted-foreground">
-                  {line.sku ? `${line.sku} · ` : ""}
-                  {line.unit}
-                </p>
-              </SheetHeader>
-
-              <div className="p-4">
-                <FieldGroup>
-                  <div className="grid grid-cols-2 gap-3">
-                    <NumberPadValueField
-                      id={`branch-grn-actual-${line.lineId}`}
-                      label={GRN_DETAIL_COPY.line.actualLabel(line.unit)}
-                      value={formatQty(line.actual)}
-                      emptyLabel={messages.inventory.grn.quantityEmptyLabel}
-                      onClick={() => setNumericField("actual")}
-                    />
-                    <NumberPadValueField
-                      id={`branch-grn-rejected-${line.lineId}`}
-                      label={GRN_DETAIL_COPY.line.rejectedLabel(line.unit)}
-                      value={formatQty(line.rejected)}
-                      emptyLabel={messages.inventory.grn.quantityEmptyLabel}
-                      onClick={() => setNumericField("rejected")}
-                    />
-                  </div>
-                  {needsRejectionDetails ? (
-                    <>
-                      <Field>
-                        <FieldLabel
-                          htmlFor={`branch-grn-reason-${line.lineId}`}
-                        >
-                          {GRN_DETAIL_COPY.line.rejectReasonRequired}
-                        </FieldLabel>
-                        <Textarea
-                          id={`branch-grn-reason-${line.lineId}`}
-                          rows={2}
-                          value={line.rejectionReason}
-                          placeholder={
-                            GRN_DETAIL_COPY.line.rejectReasonPlaceholder
-                          }
-                          onChange={(event) =>
-                            onPatch({ rejectionReason: event.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field>
-                        <FieldLabel>
-                          {GRN_DETAIL_COPY.line.proofPhotoLabel(true)}
-                        </FieldLabel>
-                        <PhotoUploadInput
-                          tenantId={grn.tenantId}
-                          folder={`grn/${grn.id}/rejected/${line.lineId}`}
-                          value={line.rejectedPhotoUrl || null}
-                          onChange={(url) =>
-                            onPatch({ rejectedPhotoUrl: url ?? "" })
-                          }
-                          acceptTypes="image"
-                          allowPaste={false}
-                        />
-                      </Field>
-                    </>
-                  ) : null}
-                </FieldGroup>
-              </div>
-
-              <SheetFooter>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="touch-lg"
-                    className="flex-1"
-                    disabled={isPending}
-                    onClick={() => void handleDelete()}
-                  >
-                    {GRN_DETAIL_COPY.deleteLineAction}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="touch-lg"
-                    className="flex-1"
-                    onClick={onClose}
-                  >
-                    {ACTIONS_VI.close}
-                  </Button>
-                </div>
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+        {line ? (
+          <FieldGroup>
+            <div className="grid grid-cols-2 gap-3">
+              <NumberPadValueField
+                id={`branch-grn-actual-${line.lineId}`}
+                label={GRN_DETAIL_COPY.line.actualLabel(line.unit)}
+                value={formatQty(line.actual)}
+                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                onClick={() => setNumericField("actual")}
+              />
+              <NumberPadValueField
+                id={`branch-grn-rejected-${line.lineId}`}
+                label={GRN_DETAIL_COPY.line.rejectedLabel(line.unit)}
+                value={formatQty(line.rejected)}
+                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+                onClick={() => setNumericField("rejected")}
+              />
+            </div>
+            {needsRejectionDetails ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor={`branch-grn-reason-${line.lineId}`}>
+                    {GRN_DETAIL_COPY.line.rejectReasonRequired}
+                  </FieldLabel>
+                  <Textarea
+                    id={`branch-grn-reason-${line.lineId}`}
+                    rows={2}
+                    value={line.rejectionReason}
+                    placeholder={GRN_DETAIL_COPY.line.rejectReasonPlaceholder}
+                    onChange={(event) =>
+                      onPatch({ rejectionReason: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>
+                    {GRN_DETAIL_COPY.line.proofPhotoLabel(true)}
+                  </FieldLabel>
+                  <PhotoUploadInput
+                    tenantId={grn.tenantId}
+                    folder={`grn/${grn.id}/rejected/${line.lineId}`}
+                    value={line.rejectedPhotoUrl || null}
+                    onChange={(url) =>
+                      onPatch({ rejectedPhotoUrl: url ?? "" })
+                    }
+                    acceptTypes="image"
+                    allowPaste={false}
+                  />
+                </Field>
+              </>
+            ) : null}
+          </FieldGroup>
+        ) : null}
+      </AppSheet>
 
       <NumberPadSheet
         open={numericField != null}
@@ -628,88 +592,15 @@ export function BranchGrnAddLineSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent
-          side="bottom"
-          className="h-auto max-h-dvh-95 gap-1 overflow-y-auto bg-background p-0 text-foreground"
-          showCloseButton={false}
-        >
-          <SheetHeader>
-            <SheetTitle className="text-lg font-semibold">
-              {GRN_DETAIL_COPY.addDialog.title}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="p-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel>
-                  {GRN_DETAIL_COPY.addDialog.ingredientLabel}
-                </FieldLabel>
-                <Combobox
-                  value={ingredientId}
-                  onValueChange={handleIngredientChange}
-                  options={ingredients
-                    .filter((ingredient) => ingredient.is_active)
-                    .map((ingredient) => ({
-                      value: String(ingredient.id),
-                      label: ingredient.name,
-                      hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
-                      keywords: [
-                        ingredient.sku ?? "",
-                        ingredient.category ?? "",
-                      ],
-                    }))}
-                  placeholder={GRN_DETAIL_COPY.addDialog.ingredientPlaceholder}
-                  searchPlaceholder={
-                    GRN_DETAIL_COPY.addDialog.ingredientSearchPlaceholder
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="branch-grn-add-unit">
-                  {GRN_DETAIL_COPY.addDialog.unitLabel}
-                </FieldLabel>
-                <Select
-                  value={entryUnitId != null ? String(entryUnitId) : ""}
-                  onValueChange={handleUnitChange}
-                  disabled={purchaseUnitOptions.length === 0}
-                >
-                  <SelectTrigger
-                    id="branch-grn-add-unit"
-                    size="touch"
-                    className="w-full"
-                  >
-                    <SelectValue
-                      placeholder={
-                        purchaseUnitOptions.length > 0
-                          ? GRN_DETAIL_COPY.addDialog.selectUnit
-                          : unit || GRN_DETAIL_COPY.addDialog.selectUnit
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {purchaseUnitOptions.map((option) => (
-                      <SelectItem
-                        key={option.unitId}
-                        value={String(option.unitId)}
-                        size="touch"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <NumberPadValueField
-                id="branch-grn-add-quantity"
-                label={GRN_DETAIL_COPY.addDialog.quantityLabel}
-                value={quantity === "" ? null : formatQty(Number(quantity))}
-                emptyLabel={messages.inventory.grn.quantityEmptyLabel}
-                onClick={() => setNumericField("quantity")}
-              />
-            </FieldGroup>
-          </div>
-          <SheetFooter>
+      <AppSheet
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={GRN_DETAIL_COPY.addDialog.title}
+        side="bottom"
+        showCloseButton={false}
+        contentClassName="h-auto max-h-dvh-95 gap-1 bg-background text-foreground"
+        footer={
+          <>
             <Button
               type="button"
               size="touch-lg"
@@ -728,9 +619,73 @@ export function BranchGrnAddLineSheet({
             >
               {ACTIONS_VI.cancel}
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </>
+        }
+      >
+        <FieldGroup>
+          <Field>
+            <FieldLabel>{GRN_DETAIL_COPY.addDialog.ingredientLabel}</FieldLabel>
+            <Combobox
+              value={ingredientId}
+              onValueChange={handleIngredientChange}
+              options={ingredients
+                .filter((ingredient) => ingredient.is_active)
+                .map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: ingredient.name,
+                  hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",
+                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                }))}
+              placeholder={GRN_DETAIL_COPY.addDialog.ingredientPlaceholder}
+              searchPlaceholder={
+                GRN_DETAIL_COPY.addDialog.ingredientSearchPlaceholder
+              }
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="branch-grn-add-unit">
+              {GRN_DETAIL_COPY.addDialog.unitLabel}
+            </FieldLabel>
+            <Select
+              value={entryUnitId != null ? String(entryUnitId) : ""}
+              onValueChange={handleUnitChange}
+              disabled={purchaseUnitOptions.length === 0}
+            >
+              <SelectTrigger
+                id="branch-grn-add-unit"
+                size="touch"
+                className="w-full"
+              >
+                <SelectValue
+                  placeholder={
+                    purchaseUnitOptions.length > 0
+                      ? GRN_DETAIL_COPY.addDialog.selectUnit
+                      : unit || GRN_DETAIL_COPY.addDialog.selectUnit
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {purchaseUnitOptions.map((option) => (
+                  <SelectItem
+                    key={option.unitId}
+                    value={String(option.unitId)}
+                    size="touch"
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <NumberPadValueField
+            id="branch-grn-add-quantity"
+            label={GRN_DETAIL_COPY.addDialog.quantityLabel}
+            value={quantity === "" ? null : formatQty(Number(quantity))}
+            emptyLabel={messages.inventory.grn.quantityEmptyLabel}
+            onClick={() => setNumericField("quantity")}
+          />
+        </FieldGroup>
+      </AppSheet>
 
       <NumberPadSheet
         open={numericField != null}

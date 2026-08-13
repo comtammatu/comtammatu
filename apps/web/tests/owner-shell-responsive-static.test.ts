@@ -418,7 +418,7 @@ test("Owner page-header actions use responsive named button sizes", () => {
     const actionBlock = source.slice(actionsStart, actionsStart + 900);
     assert.match(
       actionBlock,
-      /size=\{(?:isTouchLayout|controlSize === "touch") \? "touch" : "lg"\}/,
+      /<ResponsiveActionButton[\s\S]*density="header"|size=\{(?:isTouchLayout|controlSize === "touch") \? "touch" : "lg"\}/,
       `${path} must resolve header button touch|lg at Owner cutover`,
     );
   }

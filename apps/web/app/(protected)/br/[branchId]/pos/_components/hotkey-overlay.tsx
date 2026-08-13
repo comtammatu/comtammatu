@@ -1,15 +1,12 @@
 "use client";
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { SectionLabel } from "@comtammatu/ui/components/section-label";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { POS_VI } from "@comtammatu/shared/messages";
+import { StationSheet } from "@/components/surface";
+
 
 interface HotkeyRow {
   keys: string[];
@@ -56,15 +53,14 @@ interface HotkeyOverlayProps {
 
 export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-dvh p-0">
-        <div className="flex max-h-dvh flex-col overflow-hidden">
-          <SheetHeader>
-            <SheetTitle>{POS_VI.hotkeyOverlayTitle}</SheetTitle>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            <div className="grid gap-6 md:grid-cols-2">
+    <StationSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={POS_VI.hotkeyOverlayTitle}
+      side="bottom"
+      contentClassName="max-h-dvh"
+    >
+      <div className="grid gap-6 md:grid-cols-2">
               {GROUPS.map((group, idx) => (
                 <div key={group.title} className="flex flex-col gap-3">
                   <SectionLabel>
@@ -91,9 +87,6 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+    </StationSheet>
   );
 }

@@ -102,13 +102,9 @@ test("Owner order and refund controls use named touch variants below desktop", (
   );
   assert.match(refunds, /size=\{isTouchLayout \? "touch" : "default"\}/);
 
-  assert.equal(
-    (orders.match(/<InputGroup(?:\s|>)[\s\S]*?size=\{controlSize/g) ?? [])
-      .length,
-    2,
-  );
+  assert.match(orders, /size=\{controlSize\}/);
   assert.match(refunds, /actionSize=\{isTouchLayout \? "touch" : "default"\}/);
-  assert.match(pageBody, /size=\{isTouchLayout \? "touch" : "lg"\}/);
+  assert.match(pageBody, /<ResponsiveActionButton[\s\S]*density="header"/);
   assert.doesNotMatch(pageBody, /size=\{embedded \? "touch" : "sm"\}/);
 });
 
@@ -121,10 +117,7 @@ test("invoice mobile cards wrap touch actions without forcing page overflow", ()
   const source = read("apps/web/app/(protected)/finance/invoice-list.tsx");
 
   assert.match(source, /const size = dense \? "icon" : isTouchLayout \? "touch" : "default"/);
-  assert.equal(
-    source.match(/size=\{isTouchLayout \? "touch" : "sm"\}/g)?.length,
-    1,
-  );
+  assert.match(source, /<ResponsiveActionButton/);
   assert.match(
     source,
     /variant=\{methodFixMethod[\s\S]*size=\{isTouchLayout \? "touch" : "default"\}/,

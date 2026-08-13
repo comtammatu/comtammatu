@@ -14,7 +14,6 @@ import {
   CalendarCheck as IconCalendarCheck,
   UsersRound as IconUsersRound,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import {
   Tabs,
   TabsContent,
@@ -63,7 +62,6 @@ export function TeamWorkspaceTabs({
   const pathname = usePathname();
   const [isPending, startTabTransition] = useTransition();
   const [value, setValue] = useState<TeamWorkspaceTabValue>(initialValue);
-  const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,15 +82,6 @@ export function TeamWorkspaceTabs({
   function handleValueChange(nextValue: string) {
     const nextTab = nextValue as TeamWorkspaceTabValue;
     if (!tabItems.some((item) => item.value === nextTab)) return;
-    const currentIndex = Math.max(
-      0,
-      tabItems.findIndex((item) => item.value === effectiveValue),
-    );
-    const nextIndex = Math.max(
-      0,
-      tabItems.findIndex((item) => item.value === nextTab),
-    );
-    setDirection(nextIndex >= currentIndex ? "forward" : "backward");
     setValue(nextTab);
 
     const params = new URLSearchParams();
@@ -149,12 +138,7 @@ export function TeamWorkspaceTabs({
       <TabsContent
         key={effectiveValue}
         value={effectiveValue}
-        className={cn(
-          "mt-0 flex min-w-0 flex-col gap-3 motion-reduce:transform-none motion-reduce:animate-none",
-          direction === "forward"
-            ? "data-open:slide-in-from-right-2"
-            : "data-open:slide-in-from-left-2",
-        )}
+        className="mt-0 flex min-w-0 flex-col gap-3"
       >
         {activeContent ?? (isPending ? <PageSkeleton bare /> : null)}
       </TabsContent>

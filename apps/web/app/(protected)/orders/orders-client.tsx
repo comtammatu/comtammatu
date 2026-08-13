@@ -31,11 +31,8 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  InputGroup,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
+import { BusinessDatePicker } from "@/components/form";
 import {
   Select,
   SelectContent,
@@ -509,27 +506,23 @@ export function OrdersClient({
                   <Label htmlFor="date-from" className="text-xs">
                     {FORM_VI.fromDate}
                   </Label>
-                  <InputGroup size={controlSize} className="w-full sm:w-36">
-                    <InputGroupInput
-                      id="date-from"
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                    />
-                  </InputGroup>
+                  <BusinessDatePicker
+                    id="date-from"
+                    value={dateFrom}
+                    onValueChange={setDateFrom}
+                    className="w-full sm:w-36"
+                  />
                 </div>
                 <div className="flex w-full flex-col gap-1.5 sm:w-36 sm:flex-none">
                   <Label htmlFor="date-to" className="text-xs">
                     {FORM_VI.toDate}
                   </Label>
-                  <InputGroup size={controlSize} className="w-full sm:w-36">
-                    <InputGroupInput
-                      id="date-to"
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                    />
-                  </InputGroup>
+                  <BusinessDatePicker
+                    id="date-to"
+                    value={dateTo}
+                    onValueChange={setDateTo}
+                    className="w-full sm:w-36"
+                  />
                 </div>
                 <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
                   <SelectTrigger

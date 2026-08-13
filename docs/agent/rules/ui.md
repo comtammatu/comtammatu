@@ -9,8 +9,9 @@ and route workflow have separate owners; do not use one to overrule another.
 Read in order:
 
 1. `docs/spec/design-system.md` — the Má Tư Design System SSOT: artifact ladder,
-   Naming Standard, Base UI rule, tokens, typography, rhythm, elevation, motion,
-   and Structural Governance.
+   Naming Standard, Base UI rule, tokens, Color Usage, typography, rhythm,
+   elevation, motion, Date/Button/Overlay choosers, Layout UI/UX Frame, Copy
+   Contract, and Structural Governance.
 2. `docs/spec/page-archetypes.md` — page/workflow composition and UI Advisor Gate.
 3. `docs/ref/screen-context-map.md` — audience, device, route context.
 4. `docs/modules/ui.md` and `packages/ui/src/components/*` — thin
@@ -114,6 +115,11 @@ walk the **UI Review Checklist** below.
 - An overflow affordance (`⋯`) must open a real menu built from the shared
   `RowActionItem[]`. An `⋯` that is a link, or a bare icon pair standing in for
   a menu, is drift.
+- Date, command, and overlay jobs use the chooser tables in
+  `design-system.md` § Component Authority (`BusinessDateField` /
+  `BusinessDatePicker`, `ResponsiveActionButton` on `control_surface`,
+  `AppSheet` / `StationSheet`). Do not author `type="date"`, raw `Calendar`,
+  or route-level `Sheet` / `Drawer`.
 - Use Má Tư DS shared components and approved surface adapters before route-local raw
   styling. Before composing a new surface, run
   `corepack pnpm audit:ui-components --component <name>` for the closest shared

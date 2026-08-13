@@ -261,7 +261,7 @@ test("operator stock on-hand list forks Branch presentation over the shared load
   assert.match(branchClientSource, /filterStockOnHandIngredients/);
   assert.match(branchClientSource, /MultiSelectCombobox/);
   assert.match(branchClientSource, /ToggleGroup/);
-  assert.match(branchClientSource, /SheetContent[\s\S]*side="bottom"/);
+  assert.match(branchClientSource, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(branchClientSource, /moreStockJobs/);
   assert.match(
     branchClientSource,
@@ -607,7 +607,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   );
   assert.match(branchIssueDetailClient, /BranchOperatorDetailList/);
   assert.match(branchIssueDetailClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
-  assert.match(branchIssueDetailClient, /<Sheet/);
+  assert.match(branchIssueDetailClient, /<AppSheet/);
   assert.doesNotMatch(
     branchIssueDetailClient,
     /DataTable|AuditHistoryList|DocumentStockCorrectionDialog/,
@@ -829,7 +829,7 @@ test("operator waste approvals own a native Branch review queue", () => {
   assert.match(data, /currentUserHasPermission/);
   assert.match(data, /PERMISSION_KEYS\.INVENTORY_WASTE_APPROVE/);
   assert.match(branchClient, /BranchOperatorPage/);
-  assert.match(branchClient, /<SheetContent[\s\S]*side="bottom"/);
+  assert.match(branchClient, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(branchClient, /approveWaste/);
   assert.match(branchClient, /await confirm/);
   assert.doesNotMatch(
@@ -890,7 +890,7 @@ test("operator stock issues keep internal issue workflow native to Branch", () =
   );
   assert.match(detailClient, /BranchOperatorDetailList/);
   assert.match(detailClient, /<AppDetailFooter[\s\S]*\bsticky\b/);
-  assert.match(detailClient, /<Sheet/);
+  assert.match(detailClient, /<AppSheet/);
   assert.doesNotMatch(
     detailClient,
     /DataTable|AuditHistoryList|DocumentStockCorrectionDialog/,

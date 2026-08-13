@@ -152,8 +152,8 @@ test("branch orders route owns operator UI instead of wrapping Owner surface ord
   assert.match(ordersClient, /order\.status !== "cancelled"/);
   assert.match(ordersClient, /OrderDetailSheet/);
   assert.doesNotMatch(ordersClient, /OrdersPageBody|DataTable|AppPageHeader/);
-  assert.match(orderDetailSheet, /SheetDescription/);
-  assert.match(orderDetailSheet, /<SheetDescription className="sr-only">/);
+  assert.match(orderDetailSheet, /AppSheet/);
+  assert.match(orderDetailSheet, /description="Chi tiết đơn hàng/);
 });
 
 test("native branch home pages use the Branch operator interface contract", () => {

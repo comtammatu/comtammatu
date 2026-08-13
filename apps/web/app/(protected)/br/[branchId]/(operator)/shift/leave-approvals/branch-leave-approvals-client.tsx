@@ -32,19 +32,16 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { StatusBadge } from "@/components/status-badge";
-import { AppEmptyState } from "@/components/surface";
+import {
+  AppEmptyState,
+  AppSheet,
+} from "@/components/surface";
 import { useBranchOpsEvents } from "@/_hooks/use-branch-ops-events";
 import { employee } from "@lib/messages/employee";
 import {
@@ -360,177 +357,177 @@ export function BranchLeaveApprovalsClient({
         </TabsContent>
       </Tabs>
 
-      <Sheet
+      <AppSheet
         open={selected != null}
         onOpenChange={(open) => {
           if (!open) closeReview();
         }}
-      >
-        <SheetContent
-          side="bottom"
-          className="max-h-dvh-95 overflow-y-auto overscroll-contain bg-background p-0"
-        >
-          {selected ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>
-                  {getLeaveRequestEmployeeName(selected, copy.fallbackEmployee)}
-                </SheetTitle>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <span>
-                    {formatDateRange(selected.start_date, selected.end_date)}
-                  </span>
-                  <StatusBadge
-                    domain="leave-request"
-                    value={selected.status}
-                    label={copy.status[selected.status]}
-                    size="sm"
-                  />
-                </div>
-              </SheetHeader>
-
-              <div className="flex flex-col gap-4 px-4 pb-4">
-                <BranchOperatorDetailList
-                  columns={2}
-                  rows={[
-                    {
-                      label: copy.table.type,
-                      value: copy.types[selected.leave_type],
-                    },
-                    {
-                      label: copy.table.dateRange,
-                      value: `${countInclusiveDays(
-                        selected.start_date,
-                        selected.end_date,
-                      )} ${copy.dayUnit}`,
-                    },
-                    {
-                      label: copy.table.monthlyQuota,
-                      value: monthlyBalance(selected) ?? "—",
-                    },
-                    {
-                      label: copy.table.annualQuota,
-                      value: annualBalance(selected) ?? "—",
-                    },
-                    {
-                      label: "Gửi lúc",
-                      value: formatVNDateTime(selected.created_at),
-                    },
-                  ]}
-                />
-
-                <div className="rounded-md bg-muted/30 p-3">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy.table.reason}
-                  </p>
-                  <p className="mt-1 break-words text-sm leading-6">
-                    {selected.reason ?? "Không có lý do"}
-                  </p>
-                </div>
-
-                {selected.rejected_reason ? (
-                  <div className="rounded-md bg-destructive/10 p-3">
-                    <p className="text-xs font-medium text-destructive">
-                      {employee.leave.rejectedReason}
-                    </p>
-                    <p className="mt-1 break-words text-sm leading-6">
-                      {selected.rejected_reason}
-                    </p>
-                  </div>
-                ) : null}
-
-                {rejecting ? (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="branch-leave-reject-reason">
-                      {copy.rejectReasonLabel}
-                    </Label>
-                    <Textarea
-                      id="branch-leave-reject-reason"
-                      name="rejectReason"
-                      rows={3}
-                      maxLength={500}
-                      value={rejectReason}
-                      disabled={isPending}
-                      onChange={(event) => setRejectReason(event.target.value)}
-                      placeholder={copy.rejectReasonPlaceholder}
-                    />
-                  </div>
-                ) : null}
-              </div>
-
-              <SheetFooter className="sticky bottom-0 border-t bg-background/95 backdrop-blur">
-                {selected.status === "pending" ? (
-                  rejecting ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        disabled={isPending}
-                        onClick={() => {
-                          setRejecting(false);
-                          setRejectReason("");
-                        }}
-                      >
-                        {ACTIONS_VI.cancel}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="touch-lg"
-                        disabled={isPending}
-                        onClick={rejectSelected}
-                      >
-                        {pendingAction === "reject" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconX className="size-4" />
-                        )}
-                        {copy.rejectSubmit}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="touch"
-                        disabled={isPending}
-                        onClick={() => setRejecting(true)}
-                      >
-                        <IconX className="size-4" />
-                        {copy.rejectSubmit}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="touch-lg"
-                        disabled={isPending}
-                        onClick={() => void approveSelected()}
-                      >
-                        {pendingAction === "approve" ? (
-                          <Spinner className="size-5" />
-                        ) : (
-                          <IconCheck className="size-4" />
-                        )}
-                        {ACTIONS_VI.approve}
-                      </Button>
-                    </>
-                  )
-                ) : (
+        title={
+          selected
+            ? getLeaveRequestEmployeeName(selected, copy.fallbackEmployee)
+            : ""
+        }
+        description={
+          selected ? (
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                {formatDateRange(selected.start_date, selected.end_date)}
+              </span>
+              <StatusBadge
+                domain="leave-request"
+                value={selected.status}
+                label={copy.status[selected.status]}
+                size="sm"
+              />
+            </span>
+          ) : undefined
+        }
+        side="bottom"
+        contentClassName="max-h-dvh-95 bg-background"
+        footerClassName="sticky bottom-0 border-t bg-background/95 backdrop-blur"
+        footer={
+          selected ? (
+            selected.status === "pending" ? (
+              rejecting ? (
+                <>
                   <Button
                     type="button"
                     variant="outline"
                     size="touch"
-                    onClick={closeReview}
+                    disabled={isPending}
+                    onClick={() => {
+                      setRejecting(false);
+                      setRejectReason("");
+                    }}
                   >
-                    {ACTIONS_VI.close}
+                    {ACTIONS_VI.cancel}
                   </Button>
-                )}
-              </SheetFooter>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="touch-lg"
+                    disabled={isPending}
+                    onClick={rejectSelected}
+                  >
+                    {pendingAction === "reject" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconX className="size-4" />
+                    )}
+                    {copy.rejectSubmit}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="touch"
+                    disabled={isPending}
+                    onClick={() => setRejecting(true)}
+                  >
+                    <IconX className="size-4" />
+                    {copy.rejectSubmit}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="touch-lg"
+                    disabled={isPending}
+                    onClick={() => void approveSelected()}
+                  >
+                    {pendingAction === "approve" ? (
+                      <Spinner className="size-5" />
+                    ) : (
+                      <IconCheck className="size-4" />
+                    )}
+                    {ACTIONS_VI.approve}
+                  </Button>
+                </>
+              )
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                onClick={closeReview}
+              >
+                {ACTIONS_VI.close}
+              </Button>
+            )
+          ) : null
+        }
+      >
+        {selected ? (
+          <div className="flex flex-col gap-4">
+            <BranchOperatorDetailList
+              columns={2}
+              rows={[
+                {
+                  label: copy.table.type,
+                  value: copy.types[selected.leave_type],
+                },
+                {
+                  label: copy.table.dateRange,
+                  value: `${countInclusiveDays(
+                    selected.start_date,
+                    selected.end_date,
+                  )} ${copy.dayUnit}`,
+                },
+                {
+                  label: copy.table.monthlyQuota,
+                  value: monthlyBalance(selected) ?? "—",
+                },
+                {
+                  label: copy.table.annualQuota,
+                  value: annualBalance(selected) ?? "—",
+                },
+                {
+                  label: "Gửi lúc",
+                  value: formatVNDateTime(selected.created_at),
+                },
+              ]}
+            />
+
+            <div className="rounded-md bg-muted/30 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                {copy.table.reason}
+              </p>
+              <p className="mt-1 break-words text-sm leading-6">
+                {selected.reason ?? "Không có lý do"}
+              </p>
+            </div>
+
+            {selected.rejected_reason ? (
+              <div className="rounded-md bg-destructive/10 p-3">
+                <p className="text-xs font-medium text-destructive">
+                  {employee.leave.rejectedReason}
+                </p>
+                <p className="mt-1 break-words text-sm leading-6">
+                  {selected.rejected_reason}
+                </p>
+              </div>
+            ) : null}
+
+            {rejecting ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="branch-leave-reject-reason">
+                  {copy.rejectReasonLabel}
+                </Label>
+                <Textarea
+                  id="branch-leave-reject-reason"
+                  name="rejectReason"
+                  rows={3}
+                  maxLength={500}
+                  value={rejectReason}
+                  disabled={isPending}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  placeholder={copy.rejectReasonPlaceholder}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </AppSheet>
     </BranchOperatorPage>
   );
 }

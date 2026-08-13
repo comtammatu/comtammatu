@@ -5,7 +5,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { FormDialog, TextField } from "@/components/form";
 import { createSupplier, updateSupplier } from "../procurement-actions";
-import { Button } from "@comtammatu/ui/components/button";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   isBusinessTaxCode,
@@ -14,10 +14,7 @@ import {
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
+
 export interface SupplierRow {
   id: number;
   name: string;
@@ -62,7 +59,6 @@ function SupplierTaxCodeField({
 }: {
   form: UseFormReturn<SupplierFormValues>;
 }) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   const taxCode = form.watch("tax_code") ?? "";
   const [status, setStatus] = useState<TaxLookupStatus>("idle");
 
@@ -124,16 +120,15 @@ function SupplierTaxCodeField({
           autoComplete="off"
           spellCheck={false}
         />
-        <Button
+        <ResponsiveActionButton
           type="button"
           variant="outline"
-          size={isTouchLayout ? "touch" : "default"}
           disabled={!taxCode.trim() || status === "loading"}
           onClick={() => void handleLookup()}
         >
           {status === "loading" ? <Spinner /> : null}
           {taxLookupCopy.action}
-        </Button>
+        </ResponsiveActionButton>
       </div>
       {message ? (
         <p

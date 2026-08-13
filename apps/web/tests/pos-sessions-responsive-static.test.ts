@@ -65,8 +65,8 @@ test("POS session workspace keeps context visible while each desktop pane scroll
 
 test("POS session workspace keeps one touch scroll region and one mid-width insight drawer", () => {
   assert.equal((source.match(/<TabsContent/g) ?? []).length, 3);
-  assert.match(source, /<Drawer open=\{insightsOpen\}/);
-  assert.match(source, /<DrawerContent className="flex h-full flex-col overflow-hidden">/);
+  assert.match(source, /<AppDrawer[\s\S]*open=\{insightsOpen\}/);
+  assert.match(source, /contentClassName="flex h-full flex-col overflow-hidden"/);
   assert.match(source, /posSessions\.billsTab/);
   assert.doesNotMatch(source, /settlementOpen|reportOpen/);
 });

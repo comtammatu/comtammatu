@@ -8,7 +8,8 @@
  * Cashier rule of thumb: chỉ show 5 labels.
  *   - active (new/confirmed/preparing) → relative age "X phút" / "X tiếng"
  *   - ready                            → "Sẵn sàng" (floor pickup signal)
- *   - served                           → "Chờ thanh toán"
+ *   - served                           → kitchen `Đã phục vụ` / `success`
+ *   - unpaid / pending                 → `order-payment` domain
  *   - paid (any status)                → "Đã thanh toán"
  *   - cancelled                        → "Đã hủy"
  *
@@ -31,7 +32,8 @@ export interface OrderStatusInfo {
  * Canonical workflow-state -> badge variant for active/unpaid POS orders.
  * One order = one color across the table tile and the order-list badge:
  * the tile derives its tone from this same map instead of re-deriving tone.
- * Reserve `warning` for served/awaiting-payment.
+ * Kitchen `served` stays success; unpaid uses the payment domain at the
+ * call site via `getPosOrderStatusInfo`.
  */
 type PosOrderStateVariant = Extract<
   OrderStatusVariant,
@@ -44,7 +46,7 @@ const POS_ORDER_STATE_VARIANT: Record<
 > = {
   active: "default",
   ready: "success",
-  served: "warning",
+  served: "success",
 };
 
 export function getPosOrderStateVariant(
@@ -99,11 +101,20 @@ export function getPosOrderStatusInfo(
         label: "Sẵn sàng",
         variant: getPosOrderStateVariant("ready"),
       };
-    case "served":
-      return {
-        label: "Chờ thanh toán",
-        variant: getPosOrderStateVariant("served"),
-      };
+    case "served": {
+      const kitchen = getStatusBadgeMeta("order", "served");
+      if (order.payment_status === "paid") {
+        return {
+          label: kitchen.label,
+          variant: kitchen.variant,
+        };
+      }
+      const payment = getStatusBadgeMeta(
+        "order-payment",
+        order.payment_status ?? "unpaid",
+      );
+      return { label: payment.label, variant: payment.variant };
+    }
     default:
       return { label: order.status, variant: "outline" };
   }

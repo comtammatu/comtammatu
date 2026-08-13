@@ -119,7 +119,8 @@ test("branch menu-limit management remains on the manager day-control surface", 
 test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives", () => {
   assert.match(managerPageSource, /BranchOperatorPanel/);
   assert.match(managerPageSource, /icon=\{ListChecks\}/);
-  assert.match(managerTableSource, /DrawerDescription/);
+  assert.match(managerTableSource, /<AppDrawer/);
+  assert.match(managerTableSource, /description=\{/);
   assert.match(managerTableSource, /FieldGroup/);
   assert.match(managerTableSource, /FieldLabel/);
   assert.match(managerTableSource, /size="touch"/);

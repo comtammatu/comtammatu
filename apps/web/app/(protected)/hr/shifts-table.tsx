@@ -13,13 +13,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@comtammatu/ui/components/drawer";
+
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import { deactivateShift } from "./actions";
@@ -38,6 +32,9 @@ import {
   getShiftDurationMinutes,
   isUnusualShiftDuration,
 } from "@lib/hr/shift-duration";
+import {
+  AppDrawer,
+} from "@/components/surface";
 
 const shiftsCopy = messages.hr.client;
 
@@ -255,24 +252,21 @@ export function ShiftsTable({
         )}
       />
 
-      <Drawer
+      <AppDrawer
         open={!!drawerShift}
         onOpenChange={(open) => !open && setDrawerShift(null)}
+        title={drawerShift?.name ?? ""}
+        description={
+          drawerShift
+            ? `${drawerShift.start_time} – ${drawerShift.end_time} · ${formatShiftDuration(
+                drawerShift.start_time,
+                drawerShift.end_time,
+              )}`
+            : undefined
+        }
       >
-        <DrawerContent>
           {drawerShift && (
             <>
-              <DrawerHeader>
-                <DrawerTitle>{drawerShift.name}</DrawerTitle>
-                <DrawerDescription>
-                  {drawerShift.start_time} – {drawerShift.end_time} ·{" "}
-                  {formatShiftDuration(
-                    drawerShift.start_time,
-                    drawerShift.end_time,
-                  )}
-                </DrawerDescription>
-              </DrawerHeader>
-              <div className="flex flex-col gap-4 p-4">
                 <StatusBadge
                   domain="active-state"
                   value={drawerShift.is_active ? "active" : "inactive"}
@@ -303,11 +297,9 @@ export function ShiftsTable({
                     </Button>
                   </div>
                 )}
-              </div>
             </>
           )}
-        </DrawerContent>
-      </Drawer>
+      </AppDrawer>
 
       {canManage ? (
         <ShiftFormDialog

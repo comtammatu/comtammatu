@@ -128,7 +128,7 @@ test("Branch purchase requests own a Sheet presenter", () => {
 
   assert.match(client, /BranchOperatorPage/);
   assert.match(client, /NumberPadSheet/);
-  assert.match(client, /SheetContent[\s\S]*side="bottom"/);
+  assert.match(client, /<AppSheet[\s\S]*side="bottom"/);
   assert.match(client, /savePurchaseDemand/);
   assert.match(client, /reviewPurchaseDemand/);
   assert.doesNotMatch(

@@ -19,7 +19,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import { Input } from "@comtammatu/ui/components/input";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import {
   Tabs,
@@ -28,6 +27,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
+import { BusinessDatePicker } from "@/components/form";
 import {
   AppEmptyState,
   AppListFrame,
@@ -376,23 +376,19 @@ export function GrnListClient({
       }
       filters={
         <>
-          <Input
-            type="date"
+          <BusinessDatePicker
             aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateFrom}`}
             value={dateFrom}
-            onChange={(event) => {
-              const value = event.target.value;
+            onValueChange={(value) => {
               setDateFrom(value);
               navigate({ dateFrom: value || null, page: null });
             }}
             className="w-36"
           />
-          <Input
-            type="date"
+          <BusinessDatePicker
             aria-label={`${dateRangeScopeLabel} · ${grnCopy.dateTo}`}
             value={dateTo}
-            onChange={(event) => {
-              const value = event.target.value;
+            onValueChange={(value) => {
               setDateTo(value);
               navigate({ dateTo: value || null, page: null });
             }}
