@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { headers } from "next/headers";
@@ -7,11 +6,10 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { AppEmptyState } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { listFeedbackQrCodes } from "@/(protected)/feedback/actions";
-import { CreateFeedbackQrButton } from "@/(protected)/feedback/_components/create-feedback-qr-button";
-import { FeedbackSubNav } from "@/(protected)/feedback/_components/feedback-sub-nav";
-import { QrManagement } from "@/(protected)/feedback/_components/qr-management";
 import { feedbackCopy } from "@lib/messages/feedback";
 import { parseOperatorBranchId } from "../../../_lib/parse-branch-id";
+import { BranchFeedbackQrClient } from "../_components/branch-feedback-qr-client";
+import { BranchFeedbackTabs } from "../_components/branch-feedback-tabs";
 
 export default async function BranchFeedbackQrPage({
   params,
@@ -61,38 +59,31 @@ export default async function BranchFeedbackQrPage({
     branchId: table.branch_id,
   }));
 
+  const inboxHref = `/br/${branchId}/feedback`;
+  const qrHref = `/br/${branchId}/feedback/qr`;
+
   return (
-    <BranchOperatorPage
-      title={feedbackCopy.qrTitle}
-      action={
-        canManage ? (
-          <CreateFeedbackQrButton
-            branchId={branchId}
-            tables={tables}
-            lockBranch
-          />
-        ) : null
-      }
-    >
-      <FeedbackSubNav
-        inboxHref={`/br/${branchId}/feedback`}
-        qrHref={`/br/${branchId}/feedback/qr`}
-      />
-      {!qrResult.success || !qrResult.data ? (
-        <AppEmptyState
-          mode="error"
-          description={qrResult.error ?? feedbackCopy.qrEmpty}
+    <BranchOperatorPage title={feedbackCopy.qrTitle}>
+      <div className="flex flex-col gap-3">
+        <BranchFeedbackTabs
+          inboxHref={inboxHref}
+          qrHref={qrHref}
+          active="qr"
         />
-      ) : (
-        <Suspense>
-          <QrManagement
+        {!qrResult.success || !qrResult.data ? (
+          <AppEmptyState
+            mode="error"
+            description={qrResult.error ?? feedbackCopy.qrEmpty}
+          />
+        ) : (
+          <BranchFeedbackQrClient
+            branchId={branchId}
             items={qrResult.data.items}
             canManage={canManage}
-            lockBranch
-            presentation="branch"
+            tables={tables}
           />
-        </Suspense>
-      )}
+        )}
+      </div>
     </BranchOperatorPage>
   );
 }

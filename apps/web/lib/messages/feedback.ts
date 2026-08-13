@@ -52,4 +52,5 @@ export const feedbackCopy = {
   toastDeactivateFailed: "Không tắt được.",
   placeholderBranchWide: "Ví dụ: Cổng vào",
   placeholderWithTable: "Ví dụ: Bàn 5 / Cổng vào",
+  labelRequired: "Nhập nhãn mã QR.",
 } as const;

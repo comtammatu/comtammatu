@@ -200,9 +200,15 @@ test("Feedback LIST surfaces use AppToolbar section nav and AppListFrame", () =>
   assert.match(branchQr, /BranchOperatorPage/);
   assert.doesNotMatch(branchInbox, /<AppPage\b/);
   assert.doesNotMatch(branchQr, /<AppPage\b/);
-  assert.match(branchInbox, /presentation="branch"/);
-  assert.match(branchQr, /presentation="branch"/);
-  assert.match(branchQr, /CreateFeedbackQrButton/);
+  assert.match(branchInbox, /BranchFeedbackInboxList/);
+  assert.match(branchInbox, /BranchFeedbackTabs/);
+  assert.match(branchQr, /BranchFeedbackQrClient/);
+  assert.match(branchQr, /BranchFeedbackTabs/);
+  assert.doesNotMatch(branchInbox, /\bFeedbackInbox\b|presentation="branch"/);
+  assert.doesNotMatch(
+    branchQr,
+    /\bQrManagement\b|\bCreateFeedbackQrButton\b|presentation="branch"/,
+  );
 });
 
 test("Wave 1.1 self-order feedback anchors paid order with snapshot columns", () => {

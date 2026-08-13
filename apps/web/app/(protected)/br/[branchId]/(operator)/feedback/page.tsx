@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
@@ -6,10 +5,10 @@ import { resolveBranchContext } from "@/_lib/branch-context";
 import { AppEmptyState } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { listFeedbackInbox } from "@/(protected)/feedback/actions";
-import { FeedbackInbox } from "@/(protected)/feedback/_components/feedback-inbox";
-import { FeedbackSubNav } from "@/(protected)/feedback/_components/feedback-sub-nav";
 import { feedbackCopy } from "@lib/messages/feedback";
 import { parseOperatorBranchId } from "../../_lib/parse-branch-id";
+import { BranchFeedbackInboxList } from "./_components/branch-feedback-inbox-list";
+import { BranchFeedbackTabs } from "./_components/branch-feedback-tabs";
 
 function firstParam(
   value: string | string[] | undefined,
@@ -46,32 +45,31 @@ export default async function BranchFeedbackInboxPage({
     rawPage && /^\d+$/.test(rawPage) ? Math.max(1, Number(rawPage)) : 1;
 
   const inbox = await listFeedbackInbox({ branchId, page });
+  const inboxHref = `/br/${branchId}/feedback`;
+  const qrHref = `/br/${branchId}/feedback/qr`;
 
   return (
     <BranchOperatorPage title={feedbackCopy.pageTitle}>
-      <FeedbackSubNav
-        inboxHref={`/br/${branchId}/feedback`}
-        qrHref={`/br/${branchId}/feedback/qr`}
-      />
-      {!inbox.success || !inbox.data ? (
-        <AppEmptyState
-          mode="error"
-          description={inbox.error ?? feedbackCopy.inboxLoadFailed}
+      <div className="flex flex-col gap-3">
+        <BranchFeedbackTabs
+          inboxHref={inboxHref}
+          qrHref={qrHref}
+          active="inbox"
         />
-      ) : (
-        <Suspense>
-          <FeedbackInbox
+        {!inbox.success || !inbox.data ? (
+          <AppEmptyState
+            mode="error"
+            description={inbox.error ?? feedbackCopy.inboxLoadFailed}
+          />
+        ) : (
+          <BranchFeedbackInboxList
             items={inbox.data.items}
             total={inbox.data.total}
             page={inbox.data.page}
-            branches={[]}
-            selectedBranchId={branchId}
-            basePath={`/br/${branchId}/feedback`}
-            showBranchFilter={false}
-            presentation="branch"
+            basePath={inboxHref}
           />
-        </Suspense>
-      )}
+        )}
+      </div>
     </BranchOperatorPage>
   );
 }

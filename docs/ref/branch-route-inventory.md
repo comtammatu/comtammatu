@@ -8,6 +8,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 - **Đếm:** 66 `page.tsx` (63 operator + 3 station). Khóa: 2026-08-08.
 - Wave 1 Đội: fork attendance + roster (xong). Wave 2 Kho: transfer /
   transfer/new / purchase-requests (xong). Wave 3: waste + ngưỡng tồn (xong).
+  Wave 4: hộp thư góp ý + QR (xong).
 
 ## Rubric class
 
@@ -27,9 +28,9 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | Class | n |
 | --- | ---: |
-| A | 45 |
+| A | 47 |
 | A- | 1 |
-| B | 2 |
+| B | 0 |
 | C | 7 |
 | D | 8 |
 | E | 3 |
@@ -37,10 +38,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 ## B — Owner wrapper (fork ưu tiên)
 
-| URL | Body Owner | Wave |
-| --- | --- | --- |
-| `/br/[branchId]/feedback` | `FeedbackInbox` | 4 |
-| `/br/[branchId]/feedback/qr` | `QrManagement` | 4 |
+Không còn. Wave 4 đã fork hộp thư góp ý và mã QR.
 
 ## A- — False native / lệch docs
 
@@ -61,7 +59,7 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 1. ~~Wave 1 Đội~~ / ~~Wave 2 Kho hub~~ (xong).
 2. ~~**Wave 3:** waste sheet-per-line + thresholds Branch LIST~~ (xong).
-3. **Wave 4:** feedback inbox + QR Branch touch LIST.
+3. ~~**Wave 4:** feedback inbox + QR Branch touch LIST~~ (xong).
 
 Ngoài scope: redesign POS/KDS/Gọi số; gỡ production shim; URL-bind ADR 0018
 drawers; gộp menu-limits page↔sheet.
@@ -70,7 +68,8 @@ drawers; gộp menu-limits page↔sheet.
 
 leave-approvals · checkout-approvals · attendance · roster · transfer hub ·
 transfer/new · purchase-requests · on-hand (+ detail) · receive/[id] ·
-waste-approvals · `/stock/waste` sheet-per-line · `catalog/thresholds` · team hub.
+waste-approvals · `/stock/waste` sheet-per-line · `catalog/thresholds` ·
+feedback inbox + QR · team hub.
 
 ---
 
@@ -88,7 +87,7 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A- fork**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
 | **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers/thresholds) **A** |
 | **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
-| **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **B fork**; profile(+payslip) **D** |
+| **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **A**; profile(+payslip) **D** |
 | **station** | 3 | `/pos`, `/kds`, `/pickup` → **E** |
 
 Filesystem: operator dưới `(operator)/`; station `pos/`, `kds/`, `pickup/`.

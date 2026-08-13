@@ -13,7 +13,9 @@ staff/manager button.
 
 **Owner surfaces:** `/feedback` (inbox), `/feedback/qr`, `/branches` (Google
 Review URL on branch form)  
-**Branch surfaces:** `/br/[branchId]/feedback`, `/br/[branchId]/feedback/qr`  
+**Branch surfaces:** `/br/[branchId]/feedback`, `/br/[branchId]/feedback/qr`
+(native touch LIST: `ItemGroup` + `AppSheet` create; Owner
+`FeedbackInbox` / `QrManagement` stay on `/feedback`).  
 **Public:** `/r/[token]`, `POST /api/feedback/[token]`  
 **Self-Order:** CTA on payment-completed `/q/[token]` →
 `POST /api/self-order/[token]/feedback`
