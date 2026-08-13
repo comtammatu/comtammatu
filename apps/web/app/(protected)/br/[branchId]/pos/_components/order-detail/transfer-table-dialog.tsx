@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { POS_VI } from "@comtammatu/shared/messages";
-import { AppDialog } from "@/components/form/form-dialog";
+import { StationSheet } from "@/components/surface";
 import type { BranchTable } from "../../page";
 
 interface TransferTableDialogProps {
@@ -68,10 +68,11 @@ export function TransferTableDialog({
   };
 
   return (
-    <AppDialog
+    <StationSheet
       open={open}
       onOpenChange={handleOpenChange}
       title={dialogTitle}
+      side="bottom"
       footer={
         <>
           <Button
@@ -136,6 +137,6 @@ export function TransferTableDialog({
           </FieldDescription>
         </Field>
       </FieldGroup>
-    </AppDialog>
+    </StationSheet>
   );
 }

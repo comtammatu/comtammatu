@@ -23,9 +23,6 @@ test("shift schedule keeps one aligned calendar wider than narrow phone viewport
 
 test("covered swipe actions stay inert until their row is revealed", () => {
   const hook = read("lib/hooks/use-swipe-reveal.ts");
-  const menuLimits = read(
-    "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
-  );
   const checkoutApprovals = read(
     "lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
   );
@@ -36,13 +33,6 @@ test("covered swipe actions stay inert until their row is revealed", () => {
   assert.match(hook, /actionRegionProps: \(key: string\)/);
   assert.match(hook, /const hidden = revealedKey !== key/);
   assert.match(hook, /"aria-hidden": hidden,\s*inert: hidden/);
-
-  assert.match(menuLimits, /\.\.\.swipe\.actionRegionProps\(rowId\)/);
-  assert.match(menuLimits, /size="icon-touch"/);
-  assert.match(
-    menuLimits,
-    /aria-label=\{[\s\S]*?Bật món \$\{row\.item_name\}[\s\S]*?disableItemAria\(row\.item_name\)/,
-  );
 
   assert.match(
     checkoutApprovals,

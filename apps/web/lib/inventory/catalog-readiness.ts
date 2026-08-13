@@ -1,16 +1,28 @@
 /**
  * Catalog hygiene for YCH / YCM / PO fail-closed gates:
- * - YCH needs `default_fulfill_site_kind` (Nguồn hàng)
- * - YCM needs ≥1 active supplier_item on an active supplier
+ * - YCH needs `default_fulfill_site_kind` (Nguồn hàng) on every active item
+ * - YCM/PO needs ≥1 active supplier_item only on purchased kinds
+ *   (`raw_material`, and later `packaging` / `supply`). Produced
+ *   `finished_good` / `semi_finished` have no NCC gap — Bếp TT makes them.
  */
 
 export type CatalogReadinessGap = "missing_fulfill_site" | "missing_supplier_link";
+
+const PRODUCED_ITEM_KINDS = new Set(["finished_good", "semi_finished"]);
 
 export type CatalogReadinessInput = {
   isActive: boolean;
   defaultFulfillSiteKind: "central_supply" | "central_kitchen" | null | undefined;
   hasActiveSupplierLink: boolean;
+  /** When omitted, treat as purchased (fail closed). */
+  itemKind?: string | null;
 };
+
+export function catalogItemRequiresSupplierLink(
+  itemKind: string | null | undefined,
+): boolean {
+  return !PRODUCED_ITEM_KINDS.has(itemKind ?? "");
+}
 
 export type CatalogReadiness = {
   gaps: CatalogReadinessGap[];
@@ -31,7 +43,10 @@ export function resolveCatalogReadiness(
   ) {
     gaps.push("missing_fulfill_site");
   }
-  if (!input.hasActiveSupplierLink) {
+  if (
+    catalogItemRequiresSupplierLink(input.itemKind) &&
+    !input.hasActiveSupplierLink
+  ) {
     gaps.push("missing_supplier_link");
   }
 

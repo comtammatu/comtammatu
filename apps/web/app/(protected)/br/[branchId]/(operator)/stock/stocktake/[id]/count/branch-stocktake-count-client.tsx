@@ -31,7 +31,7 @@ import {
   useStocktakeDraftSaver,
 } from "@/(protected)/inventory/_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "@/(protected)/inventory/_components/zone-lock-indicator";
-import { StocktakeCountWizard } from "@/(protected)/inventory/stocktake/[id]/count/stocktake-count-wizard";
+import { BranchStocktakeCountList } from "./branch-stocktake-count-list";
 import { submitCountRound } from "@/(protected)/inventory/stocktake-actions";
 
 function pickBranchDefaultCountUnit(options: BranchStocktakeCountUnit[]) {
@@ -271,16 +271,13 @@ export function BranchStocktakeCountClient({
           </Button>
         </BranchOperatorControlBar>
 
-        <StocktakeCountWizard
+        <BranchStocktakeCountList
           lines={currentRoundLines}
           counts={counts}
           onCountChange={onCountChange}
           onUnitChange={onUnitChange}
           unitOptionsByIngredient={data.unitOptionsByIngredient}
           unitByIngredient={unitByIngredient}
-          showFooter={false}
-          onSubmit={submit}
-          submitting={isPending}
           editable={editable}
           currentRound={data.currentRound}
           unitLabelByIngredient={unitLabelByIngredient}

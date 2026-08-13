@@ -21,6 +21,11 @@ export const PERMISSION_KEYS = {
   MENU_PUBLISH: "menu:publish",
   MENU_MANAGE_CATEGORY: "menu:manage_category",
 
+  // promotions (ADR 0039)
+  PROMO_READ: "promo:read",
+  PROMO_WRITE: "promo:write",
+  PROMO_ISSUE: "promo:issue",
+
   // inventory
   INVENTORY_READ: "inventory:read",
   INVENTORY_VALUATION_READ: "inventory:valuation_read",
@@ -168,7 +173,7 @@ export type PermissionKey =
  * (some keys, e.g. crm:*, live only in the DB catalog). Static assertion guarded
  * by a string-match test; bump when a migration adds/removes a catalog key.
  */
-export const PERMISSION_KEY_COUNT = 109;
+export const PERMISSION_KEY_COUNT = 112;
 
 /**
  * Pure function: check if a permission set contains a given key.

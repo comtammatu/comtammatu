@@ -56,6 +56,54 @@ test("active ingredient without Nguồn hàng or NCC is not ready", () => {
   );
 });
 
+test("finished goods do not require an NCC catalog gap", () => {
+  assert.deepEqual(
+    resolveCatalogReadiness({
+      isActive: true,
+      defaultFulfillSiteKind: "central_kitchen",
+      hasActiveSupplierLink: false,
+      itemKind: "finished_good",
+    }),
+    { gaps: [], isReady: true },
+  );
+  assert.deepEqual(
+    resolveCatalogReadiness({
+      isActive: true,
+      defaultFulfillSiteKind: null,
+      hasActiveSupplierLink: false,
+      itemKind: "finished_good",
+    }),
+    { gaps: ["missing_fulfill_site"], isReady: false },
+  );
+  assert.equal(
+    catalogReadinessHasGap(
+      {
+        isActive: true,
+        defaultFulfillSiteKind: "central_kitchen",
+        hasActiveSupplierLink: false,
+        itemKind: "finished_good",
+      },
+      "missing_supplier_link",
+    ),
+    false,
+  );
+});
+
+test("purchased kinds still require an NCC link", () => {
+  assert.equal(
+    catalogReadinessHasGap(
+      {
+        isActive: true,
+        defaultFulfillSiteKind: "central_supply",
+        hasActiveSupplierLink: false,
+        itemKind: "raw_material",
+      },
+      "missing_supplier_link",
+    ),
+    true,
+  );
+});
+
 test("inactive ingredients are treated as ready for the ops checklist", () => {
   assert.deepEqual(
     resolveCatalogReadiness({
@@ -113,6 +161,7 @@ test("ingredients list wires catalog readiness filter and badges", () => {
   );
   assert.match(client, /resolveCatalogReadiness/);
   assert.match(client, /readinessFilter/);
+  assert.match(client, /itemKind: item\.item_kind/);
 
   const listModel = readWeb("lib/inventory/ingredients-list-model.ts");
   assert.match(listModel, /catalogReadinessHasGap/);

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-import { FormDialog, TextField, NumberField, valuesToFormData } from "@/components/form";
+import { FormSheet, TextField, NumberField, valuesToFormData } from "@/components/form";
 import { messages } from "@lib/messages";
 import { createZone, updateZone } from "./actions";
 import type { ZoneRow } from "./zone-table";
@@ -38,7 +38,7 @@ export function ZoneFormDialog({
   const isEdit = !!zone;
 
   return (
-    <FormDialog
+    <FormSheet
       open={open}
       onOpenChange={onOpenChange}
       schema={zoneSchema}
@@ -74,6 +74,6 @@ export function ZoneFormDialog({
           />
         </>
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

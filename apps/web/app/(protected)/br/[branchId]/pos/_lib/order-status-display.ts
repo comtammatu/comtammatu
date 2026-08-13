@@ -82,7 +82,7 @@ export function getPosOrderStatusInfo(
       variant: getStatusBadgeMeta("order", "cancelled").variant,
     };
   }
-  if (order.payment_status === "paid") {
+  if (order.payment_status === "paid" || order.status === "completed") {
     return {
       label: "Đã thanh toán",
       variant: getStatusBadgeMeta("order-payment", "paid").variant,
@@ -118,4 +118,20 @@ export function getPosOrderStatusInfo(
     default:
       return { label: order.status, variant: "outline" };
   }
+}
+
+/** Archived / completed list: paid vs cancelled only — never kitchen age. */
+export function getPosCompletedOrderStatusInfo(
+  order: OrderStatusInput,
+): OrderStatusInfo {
+  if (order.status === "cancelled") {
+    return {
+      label: "Đã hủy",
+      variant: getStatusBadgeMeta("order", "cancelled").variant,
+    };
+  }
+  return {
+    label: "Đã thanh toán",
+    variant: getStatusBadgeMeta("order-payment", "paid").variant,
+  };
 }

@@ -548,14 +548,14 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
     stockControlCard,
   ].join("\n");
 
-  assert.match(terminalsClient, /DataTable/);
-  assert.match(stationsClient, /DataTable/);
-  assert.match(tableTable, /DataTable/);
+  assert.match(terminalsClient, /ItemGroup/);
+  assert.match(stationsClient, /ItemGroup/);
+  assert.match(tableTable, /ItemGroup/);
   assert.match(dataTable, /mobileBreakpoint\?: number/);
   assert.match(dataTable, /useIsMobile\(mobileBreakpoint\)/);
-  assert.match(terminalsClient, /mobileBreakpoint=\{1024\}/);
-  assert.match(stationsClient, /mobileBreakpoint=\{1024\}/);
-  assert.match(tableTable, /mobileBreakpoint=\{1024\}/);
+  assert.doesNotMatch(terminalsClient, /<DataTable|mobileBreakpoint=\{1024\}/);
+  assert.doesNotMatch(stationsClient, /<DataTable|mobileBreakpoint=\{1024\}/);
+  assert.doesNotMatch(tableTable, /<DataTable|mobileBreakpoint=\{1024\}/);
   assert.doesNotMatch(
     posSessionsClient,
     /<DataTable|mobileBreakpoint=\{1024\}/,
@@ -569,7 +569,7 @@ test("Branch setup clients and POS sessions keep mobile-stable surfaces", () => 
   assert.match(terminalsClient, /size="icon-touch"/);
   assert.match(stationsClient, /size="icon-touch"/);
   assert.match(stockControlCard, /<Switch[\s\S]*?size="touch"/);
-  assert.match(sheet, /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/);
+  assert.match(sheet, /isTouchLayout \? "icon-touch" : "icon-sm"/);
   assert.match(terminalsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(stationsClient, /const canSwitchBranch = branches\.length > 1/);
   assert.match(tablesClient, /const canSwitchBranch = branches\.length > 1/);

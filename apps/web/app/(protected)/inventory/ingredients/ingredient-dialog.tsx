@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ChevronDown as IconChevronDown,
   Trash2 as IconTrash,
@@ -42,11 +42,13 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import {
   AppDialog,
   FormDialog,
+  FormSheet,
   FormattedNumberInput,
   QuantityField,
   SelectField,
   TextField,
 } from "@/components/form";
+import { AppSheet } from "@/components/surface/app-sheet";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   createIngredient,
@@ -347,6 +349,56 @@ interface IngredientDialogProps {
   /** When set, focus this field after the dialog opens (edit readiness flow). */
   focusField?: "default_fulfill_site_kind";
   onSaved: (detail: IngredientSavedDetail) => void | Promise<void>;
+  chrome?: "dialog" | "sheet";
+}
+
+function IngredientStatusOverlay({
+  chrome,
+  open,
+  onOpenChange,
+  title,
+  children,
+}: {
+  chrome: "dialog" | "sheet";
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: ReactNode;
+}) {
+  const footer = (
+    <Button
+      type="button"
+      variant="outline"
+      size={chrome === "sheet" ? "touch" : "default"}
+      onClick={() => onOpenChange(false)}
+    >
+      {ACTIONS_VI.cancel}
+    </Button>
+  );
+  if (chrome === "sheet") {
+    return (
+      <AppSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title={title}
+        side="bottom"
+        footer={footer}
+      >
+        {children}
+      </AppSheet>
+    );
+  }
+  return (
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      contentClassName="sm:max-w-2xl"
+      footer={footer}
+    >
+      {children}
+    </AppDialog>
+  );
 }
 
 export type IngredientSavedDetail = {
@@ -363,6 +415,7 @@ export function IngredientDialog({
   categoryOptions,
   focusField,
   onSaved,
+  chrome = "dialog",
 }: IngredientDialogProps) {
   const isEdit = ingredient !== null;
   const [resolvedIngredient, setResolvedIngredient] =
@@ -551,47 +604,39 @@ export function IngredientDialog({
 
   if (open && isEdit && unitsLoading) {
     return (
-      <AppDialog
+      <IngredientStatusOverlay
+        chrome={chrome}
         open={open}
         onOpenChange={onOpenChange}
         title={dialogCopy.editTitle}
-        contentClassName="sm:max-w-2xl"
-        footer={
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {ACTIONS_VI.cancel}
-          </Button>
-        }
       >
         <div className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
           <Spinner className="size-4" />
           {copy.units.unitsLoading}
         </div>
-      </AppDialog>
+      </IngredientStatusOverlay>
     );
   }
 
   if (open && isEdit && unitsLoadError) {
     return (
-      <AppDialog
+      <IngredientStatusOverlay
+        chrome={chrome}
         open={open}
         onOpenChange={onOpenChange}
         title={dialogCopy.editTitle}
-        contentClassName="sm:max-w-2xl"
-        footer={
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {ACTIONS_VI.cancel}
-          </Button>
-        }
       >
         <p className="text-sm text-destructive" role="alert">
           {unitsLoadError}
         </p>
-      </AppDialog>
+      </IngredientStatusOverlay>
     );
   }
 
+  const FormChrome = chrome === "sheet" ? FormSheet : FormDialog;
+
   return (
-    <FormDialog
+    <FormChrome
       open={open}
       onOpenChange={onOpenChange}
       schema={ingredientSchema}
@@ -613,7 +658,7 @@ export function IngredientDialog({
           defaultUnitsOpen={!isEdit || (resolvedIngredient?.units?.length ?? 0) > 1}
         />
       )}
-    </FormDialog>
+    </FormChrome>
   );
 }
 

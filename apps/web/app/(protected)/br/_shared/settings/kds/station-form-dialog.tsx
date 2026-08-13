@@ -12,7 +12,7 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
-import { FormDialog, TextField, NumberField } from "@/components/form";
+import { FormSheet, TextField, NumberField } from "@/components/form";
 import { upsertStationWithCategories } from "./actions";
 import type { CategoryOption, StationRow } from "./stations-client";
 
@@ -74,7 +74,7 @@ export function StationFormDialog({
   }
 
   return (
-    <FormDialog
+    <FormSheet
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Chỉnh sửa trạm KDS" : "Thêm trạm KDS mới"}
@@ -175,6 +175,6 @@ export function StationFormDialog({
           />
         </>
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

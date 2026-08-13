@@ -89,6 +89,35 @@ test("finance food cost action aggregates sales via SQL RPC", () => {
   assert.doesNotMatch(source, /\.range\(/);
 });
 
+test("finance food cost does not treat a missing recipe unit as factor 1", () => {
+  const rows = buildFoodCostRows({
+    periodStart: "2026-07-09",
+    saleLines: [
+      {
+        branchId: 1,
+        menuItemId: 10,
+        itemName: "Cơm tấm sườn",
+        quantity: 1,
+        revenue: 50_000,
+      },
+    ],
+    menuRecipeLines: [
+      {
+        menuItemId: 10,
+        ingredientId: 7,
+        quantity: 2,
+        entryUnitId: 99,
+        fallbackUnitCost: 0,
+        units: [unit({ unit_id: 1, unit_code: "g", to_base_factor: 1, is_base: true })],
+      },
+    ],
+    unitCosts: new Map([[foodCostUnitCostKey(1, 7), 10]]),
+  });
+
+  assert.equal(rows[0]?.unit_ingredient_cost, 0);
+  assert.equal(rows[0]?.ingredient_cost, 0);
+});
+
 test("finance food cost uses the active branch warehouse WAC", () => {
   const source = read("apps/web/app/_lib/food-cost-actions.ts");
 

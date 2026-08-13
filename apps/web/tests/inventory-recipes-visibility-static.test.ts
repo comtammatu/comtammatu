@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
-test("menu recipe list hides menu items without lines and omits Yield", () => {
+test("menu recipe list shows every active item and omits Yield", () => {
   const page = read("app/(protected)/inventory/menu-recipes/page.tsx");
   const dialog = read(
     "app/(protected)/inventory/menu-recipes/menu-recipe-line-dialog.tsx",
@@ -19,7 +19,7 @@ test("menu recipe list hides menu items without lines and omits Yield", () => {
   const foodCostActions = read("app/_lib/food-cost-actions.ts");
   const foodCostCalculation = read("app/_lib/food-cost-calculation.ts");
 
-  assert.match(
+  assert.doesNotMatch(
     page,
     /\.filter\(\(menuRecipe\) => menuRecipe\.items\.length > 0\)/,
   );
@@ -27,17 +27,34 @@ test("menu recipe list hides menu items without lines and omits Yield", () => {
   assert.match(page, /resolveMenuRecipeUnitCost/);
   assert.match(page, /resolveMenuRecipeCostSignals/);
   assert.match(page, /default_fulfill_site_kind/);
+  assert.doesNotMatch(page, /referenceUnitCost/);
+  assert.doesNotMatch(page, /wacRes\.error/);
+  assert.doesNotMatch(page, /stockCapacityRes\.error/);
   assert.match(actions, /\.gt\("avg_unit_cost", 0\)/);
   assert.match(actions, /buildSourceSiteWacMap/);
+  assert.doesNotMatch(actions, /select\("id, name, unit_cost"\)/);
   assert.match(menuRecipeCost, /buildSourceSiteWacMap/);
   assert.match(menuRecipeCost, /menuRecipeSourceWacKey/);
   assert.match(menuRecipeCost, /resolveMenuRecipeCostSignals/);
+  assert.match(menuRecipeCost, /resolveMenuRecipeListCostState/);
+  assert.match(client, /menuRecipeColIngredientCount/);
+  assert.match(client, /menuRecipeMissingLines/);
+  assert.match(client, /menuRecipeCoverageMissing/);
+  assert.match(client, /showStockCapacity/);
+  assert.match(page, /showStockCapacity=\{branchId != null\}/);
+  assert.doesNotMatch(client, /items\.map\(\(item\) => item\.ingredientName/);
   assert.match(client, /menuRecipeCostUnavailable/);
   assert.match(client, /menuRecipeMissingFulfillSite/);
+  assert.match(client, /menuRecipeSourceWacSiteMismatch|wacMapAvailable/);
+  assert.match(page, /wacMapAvailable/);
   assert.match(dialog, /menuRecipeCostSignalsHint/);
   assert.doesNotMatch(menuRecipeCost, /buildValuedWacMap/);
+  assert.doesNotMatch(menuRecipeCost, /referenceUnitCost/);
   assert.doesNotMatch(dialog, /showYield/);
   assert.doesNotMatch(dialog, /INVENTORY_VI\.yieldHint/);
+  assert.match(foodCostCalculation, /foodCostUnitCostKey\(row\.branch_id/);
+  assert.doesNotMatch(foodCostCalculation, /buildSourceSiteWacMap/);
+  assert.doesNotMatch(foodCostActions, /buildSourceSiteWacMap/);
   assert.doesNotMatch(
     [
       page,

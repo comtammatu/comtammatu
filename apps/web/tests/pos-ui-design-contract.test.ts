@@ -50,8 +50,8 @@ const menuGridSource = read(
 const orderDetailTouchSources = [
   ["split-order-sheet.tsx", 2],
   ["service-charge-sheet.tsx", 3],
-  ["discount-sheet.tsx", 4],
-  ["merge-orders-sheet.tsx", 3],
+  ["discount-sheet.tsx", 7],
+  ["merge-orders-sheet.tsx", 4],
   ["transfer-table-dialog.tsx", 3],
 ] as const;
 
@@ -330,7 +330,10 @@ test("POS order cards show compact operational sequence instead of full order co
   );
   assert.match(orderHistorySource, /showDineInSequence === true/);
   assert.match(orderHistorySource, /return contextLabel;/);
-  assert.match(orderHistorySource, /return formatTime\(order\.created_at\);/);
+  assert.match(
+    orderHistorySource,
+    /formatTime\(metaTimestamp \?\? order\.created_at\)/,
+  );
   assert.match(
     orderCardSummarySource,
     /getCompactOrderTitle\(order, \{ showDineInSequence \}\)/,

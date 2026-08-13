@@ -93,7 +93,8 @@ export function DenominationInput({
                   }
                 }}
                 placeholder="0"
-                className="h-10 w-20 text-center tabular-nums"
+                controlSize="touch"
+                className="w-20 text-center tabular-nums"
               />
               <span className="flex-1 text-right text-base tabular-nums text-muted-foreground">
                 {subtotal > 0 ? formatVND(subtotal) : "—"}

@@ -16,7 +16,7 @@ import { FieldLabel } from "@comtammatu/ui/components/field";
 
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { X as IconX } from "lucide-react";
+import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { FormattedNumberInput } from "@/components/form";
 import type { CartItem, CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
@@ -27,15 +27,7 @@ import {
 } from "./_components/quick-reason-presets";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/surface";
+import { StationSheet } from "@/components/surface";
 
 interface ItemCustomizerProps {
   item: MenuItem | null;
@@ -314,56 +306,104 @@ export function ItemCustomizer({
     setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
   }, []);
 
-  return (
-    <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        fullscreen
-        className="overflow-hidden p-0"
-      >
-        {item && (
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <SheetHeader className="shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <SheetTitle className="min-w-0 flex-1 truncate text-left">
-                  {item.name}
-                </SheetTitle>
-                <SheetClose
-                  render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0 text-muted-foreground"
-                      aria-label={messages.pos.customizer.closeAria}
-                    >
-                      <IconX />
-                    </Button>
-                  }
-                />
-              </div>
-              <SheetDescription
-                className={cn(
-                  "text-left",
-                  mode === "new" && !item.description && "sr-only",
-                  mode === "edit" && "sr-only",
-                )}
-              >
-                {mode === "append" && appendOrderLabel
-                  ? messages.pos.customizer.appendOrderDescription(
-                      appendOrderLabel,
-                    )
-                  : mode === "edit"
-                    ? messages.pos.customizer.editDescription
-                    : mode === "edit-sent"
-                      ? messages.pos.customizer.editSentDescription
-                      : (item.description ??
-                        messages.pos.customizer.defaultDescription)}
-              </SheetDescription>
-            </SheetHeader>
+  const customizerDescription =
+    item == null
+      ? undefined
+      : mode === "append" && appendOrderLabel
+        ? messages.pos.customizer.appendOrderDescription(appendOrderLabel)
+        : mode === "edit"
+          ? messages.pos.customizer.editDescription
+          : mode === "edit-sent"
+            ? messages.pos.customizer.editSentDescription
+            : (item.description ?? messages.pos.customizer.defaultDescription);
 
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
+  return (
+    <StationSheet
+      open={item !== null}
+      onOpenChange={resetAndSetItem}
+      title={item?.name ?? ""}
+      description={customizerDescription}
+      side="bottom"
+      fullscreen
+      contentClassName="overflow-hidden p-0"
+      bodyClassName="flex flex-col gap-4 px-4 py-4"
+      footerClassName="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row"
+      footer={
+        item ? (
+          <>
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {FORM_VI.subtotal}
+              </p>
+              {discountAmount > 0 ? (
+                <p className="text-xl font-bold text-primary tabular-nums">
+                  <span className="mr-2 text-sm font-normal text-muted-foreground line-through">
+                    {formatVND(totalPrice)}
+                  </span>
+                  {formatVND(netTotalPrice)}
+                </p>
+              ) : (
+                <p className="text-xl font-bold text-primary tabular-nums">
+                  {formatVND(totalPrice)}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-touch"
+                disabled={quantity <= 1}
+                aria-label={messages.pos.customizer.decreaseQuantityAria}
+                onClick={() => updateQuantity(-1)}
+              >
+                <IconMinus />
+              </Button>
+              <span className="w-7 text-center text-base font-bold tabular-nums">
+                {quantity}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-touch"
+                aria-label={messages.pos.customizer.increaseQuantityAria}
+                onClick={() => updateQuantity(1)}
+              >
+                <IconPlus />
+              </Button>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              {discountEnabled && !discountValid ? (
+                <p className="text-right text-sm text-muted-foreground">
+                  {messages.pos.customizer.discountHint}
+                </p>
+              ) : null}
+              <Button
+                size="touch"
+                className="min-w-32"
+                disabled={!discountValid}
+                title={
+                  discountEnabled && !discountValid
+                    ? messages.pos.customizer.discountHint
+                    : undefined
+                }
+                onClick={handleConfirm}
+              >
+                {mode === "append"
+                  ? messages.pos.customizer.addToOrder
+                  : mode === "edit"
+                    ? messages.pos.customizer.update
+                    : mode === "edit-sent"
+                      ? messages.pos.customizer.updateSent
+                      : messages.pos.customizer.addToCart}
+              </Button>
+            </div>
+          </>
+        ) : undefined
+      }
+    >
+      {item ? (
+        <>
               {item.menu_item_variants.length > 0 && (
                 <div>
                   <h3 className="font-heading mb-2 text-base font-semibold">
@@ -484,8 +524,7 @@ export function ItemCustomizer({
                             <Button
                               type="button"
                               variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
+                              size="icon-touch"
                               aria-label={messages.pos.customizer.decreaseSideAria(
                                 s.side_item.name,
                               )}
@@ -493,7 +532,7 @@ export function ItemCustomizer({
                                 updateSideQuantity(s.side_item.id, -1)
                               }
                             >
-                              -
+                              <IconMinus />
                             </Button>
                             <span
                               className={cn(
@@ -506,8 +545,7 @@ export function ItemCustomizer({
                             <Button
                               type="button"
                               variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
+                              size="icon-touch"
                               aria-label={messages.pos.customizer.increaseSideAria(
                                 s.side_item.name,
                               )}
@@ -515,7 +553,7 @@ export function ItemCustomizer({
                                 updateSideQuantity(s.side_item.id, 1)
                               }
                             >
-                              +
+                              <IconPlus />
                             </Button>
                           </div>
                         </Item>
@@ -614,82 +652,8 @@ export function ItemCustomizer({
                   )}
                 </div>
               )}
-            </div>
-
-            <SheetFooter className="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {FORM_VI.subtotal}
-                </p>
-                {discountAmount > 0 ? (
-                  <p className="text-xl font-bold text-primary tabular-nums">
-                    <span className="mr-2 text-sm font-normal text-muted-foreground line-through">
-                      {formatVND(totalPrice)}
-                    </span>
-                    {formatVND(netTotalPrice)}
-                  </p>
-                ) : (
-                  <p className="text-xl font-bold text-primary tabular-nums">
-                    {formatVND(totalPrice)}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="min-w-12 px-0"
-                  disabled={quantity <= 1}
-                  aria-label={messages.pos.customizer.decreaseQuantityAria}
-                  onClick={() => updateQuantity(-1)}
-                >
-                  -
-                </Button>
-                <span className="w-7 text-center text-base font-bold tabular-nums">
-                  {quantity}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="touch"
-                  className="min-w-12 px-0"
-                  aria-label={messages.pos.customizer.increaseQuantityAria}
-                  onClick={() => updateQuantity(1)}
-                >
-                  +
-                </Button>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                {discountEnabled && !discountValid ? (
-                  <p className="text-right text-sm text-muted-foreground">
-                    {messages.pos.customizer.discountHint}
-                  </p>
-                ) : null}
-                <Button
-                  size="touch"
-                  className="min-w-32"
-                  disabled={!discountValid}
-                  title={
-                    discountEnabled && !discountValid
-                      ? messages.pos.customizer.discountHint
-                      : undefined
-                  }
-                  onClick={handleConfirm}
-                >
-                  {mode === "append"
-                    ? messages.pos.customizer.addToOrder
-                    : mode === "edit"
-                      ? messages.pos.customizer.update
-                      : mode === "edit-sent"
-                        ? messages.pos.customizer.updateSent
-                        : messages.pos.customizer.addToCart}
-                </Button>
-              </div>
-            </SheetFooter>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+          </>
+        ) : null}
+    </StationSheet>
   );
 }

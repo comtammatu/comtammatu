@@ -870,6 +870,11 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.ok(
     ownerApps.some(
+      (app) => app.moduleKey === "promotions" && app.href === "/promotions",
+    ),
+  );
+  assert.ok(
+    ownerApps.some(
       (app) => app.moduleKey === "orders" && app.href === "/orders",
     ),
   );
@@ -995,6 +1000,7 @@ test("isOwnerRoutePath → classifies only tenant management families", () => {
     "/",
     "/settings",
     "/menu",
+    "/promotions",
     "/orders/history",
     "/inventory/grn",
     "/finance",

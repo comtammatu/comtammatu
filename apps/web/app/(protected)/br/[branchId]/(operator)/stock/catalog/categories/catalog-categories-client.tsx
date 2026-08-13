@@ -7,7 +7,7 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@/components/confirm-dialog";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
-import { FormDialog, NumberField, TextField } from "@/components/form";
+import { FormSheet, NumberField, TextField } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
   createCategory,
@@ -124,7 +124,7 @@ export function CatalogCategoriesClient({
         ]}
       />
 
-      <FormDialog
+      <FormSheet
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         title={editRow ? formCopy.form.editTitle : formCopy.form.addTitle}
@@ -169,7 +169,7 @@ export function CatalogCategoriesClient({
             </Field>
           </>
         )}
-      </FormDialog>
+      </FormSheet>
     </div>
   );
 }

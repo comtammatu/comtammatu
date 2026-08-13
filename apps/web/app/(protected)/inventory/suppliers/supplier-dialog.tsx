@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { FormDialog, TextField } from "@/components/form";
+import { FormDialog, FormSheet, TextField } from "@/components/form";
 import { createSupplier, updateSupplier } from "../procurement-actions";
 import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -157,6 +157,7 @@ interface SupplierDialogProps {
   onOpenChange: (open: boolean) => void;
   supplier: SupplierRow | null;
   onSaved: () => void;
+  chrome?: "dialog" | "sheet";
 }
 
 export function SupplierDialog({
@@ -164,6 +165,7 @@ export function SupplierDialog({
   onOpenChange,
   supplier,
   onSaved,
+  chrome = "dialog",
 }: SupplierDialogProps) {
   const isEdit = supplier !== null;
   const defaultValues = useMemo(() => toFormValues(supplier), [supplier]);
@@ -186,8 +188,10 @@ export function SupplierDialog({
     return result;
   }
 
+  const FormChrome = chrome === "sheet" ? FormSheet : FormDialog;
+
   return (
-    <FormDialog
+    <FormChrome
       open={open}
       onOpenChange={onOpenChange}
       schema={supplierSchema}
@@ -215,6 +219,6 @@ export function SupplierDialog({
           <TextField control={form.control} name="address" label="Địa chỉ" />
         </>
       )}
-    </FormDialog>
+    </FormChrome>
   );
 }

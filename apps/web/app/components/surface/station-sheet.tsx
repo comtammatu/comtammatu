@@ -62,6 +62,7 @@ export function StationSheet({
         size={size}
         fullscreen={fullscreen}
         showCloseButton={showCloseButton}
+        closeButtonSize="icon-touch"
         className={contentClassName}
       >
         <SheetHeader className={headerClassName}>

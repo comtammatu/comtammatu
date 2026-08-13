@@ -1,4 +1,3 @@
-/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: operator UI */
 "use client";
 
 import { useMemo, useState } from "react";
@@ -10,6 +9,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { useFormControlSize } from "@/components/form/control-size";
 import {
   InputGroup,
@@ -50,7 +56,11 @@ import type {
   IngredientOption,
   MenuRecipeLineDraft,
 } from "./menu-recipe-line-dialog";
-import type { MenuRecipeCostSignal } from "../_lib/menu-recipe-cost";
+import {
+  resolveMenuRecipeListCostState,
+  type MenuRecipeCostSignal,
+} from "../_lib/menu-recipe-cost";
+import { inventoryListFilterSelectClassName } from "../_components/inventory-list-filters";
 import { messages } from "@lib/messages";
 
 export type MenuRecipeItem = {
@@ -64,36 +74,6 @@ export type MenuRecipeItem = {
   costSignals: readonly MenuRecipeCostSignal[];
 };
 
-function menuRecipeCostSignalLabel(signal: MenuRecipeCostSignal): string {
-  switch (signal) {
-    case "missing_fulfill_site":
-      return INVENTORY_VI.menuRecipeMissingFulfillSite;
-    case "missing_source_wac":
-      return INVENTORY_VI.menuRecipeMissingSourceWac;
-    default: {
-      const _exhaustive: never = signal;
-      return _exhaustive;
-    }
-  }
-}
-
-function MenuRecipeCostSignalBadges({
-  signals,
-}: {
-  signals: readonly MenuRecipeCostSignal[];
-}) {
-  if (signals.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1">
-      {signals.map((signal) => (
-        <Badge key={signal} variant="destructive" className="text-xs">
-          {menuRecipeCostSignalLabel(signal)}
-        </Badge>
-      ))}
-    </div>
-  );
-}
-
 export type MenuRecipeRow = {
   id: number;
   menuItemId: number;
@@ -104,17 +84,74 @@ export type MenuRecipeRow = {
   items: MenuRecipeItem[];
 };
 
+type CoverageFilter = "all" | "missing" | "awaiting_cost";
+
+const COVERAGE_ALL: CoverageFilter = "all";
+
+function menuRecipeRowSignals(
+  menuRecipe: MenuRecipeRow,
+): MenuRecipeCostSignal[] {
+  return [...new Set(menuRecipe.items.flatMap((item) => item.costSignals))];
+}
+
+function menuRecipeListCostLabel(
+  menuRecipe: MenuRecipeRow,
+  wacMapAvailable: boolean,
+): string {
+  const state = resolveMenuRecipeListCostState({
+    itemCount: menuRecipe.items.length,
+    estimatedCost: menuRecipe.estimatedCost,
+    signals: menuRecipeRowSignals(menuRecipe),
+    wacMapAvailable,
+  });
+  switch (state.kind) {
+    case "amount":
+      return INVENTORY_VI.amountDong(formatVND(state.amount));
+    case "missing_recipe":
+      return INVENTORY_VI.menuRecipeMissingLines;
+    case "missing_fulfill_site":
+      return INVENTORY_VI.menuRecipeMissingFulfillSite;
+    case "missing_source_wac":
+      return INVENTORY_VI.menuRecipeMissingSourceWac;
+    case "source_wac_site_mismatch":
+      return INVENTORY_VI.menuRecipeSourceWacSiteMismatch;
+    case "unavailable":
+      return INVENTORY_VI.menuRecipeCostUnavailable;
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+function isAwaitingCost(
+  menuRecipe: MenuRecipeRow,
+  wacMapAvailable: boolean,
+): boolean {
+  const state = resolveMenuRecipeListCostState({
+    itemCount: menuRecipe.items.length,
+    estimatedCost: menuRecipe.estimatedCost,
+    signals: menuRecipeRowSignals(menuRecipe),
+    wacMapAvailable,
+  });
+  return state.kind !== "amount" && state.kind !== "missing_recipe";
+}
+
 export function MenuRecipesClient({
   menuRecipes,
   menuItems,
   ingredients,
   stockCapacityByMenuItemId = {},
+  showStockCapacity = false,
+  wacMapAvailable = true,
   loadError,
 }: {
   menuRecipes: MenuRecipeRow[];
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
   stockCapacityByMenuItemId?: Record<string, number>;
+  showStockCapacity?: boolean;
+  wacMapAvailable?: boolean;
   loadError?: string | null;
 }) {
   const router = useRouter();
@@ -125,22 +162,36 @@ export function MenuRecipesClient({
   >();
   const [editingLines, setEditingLines] = useState<MenuRecipeLineDraft[]>([]);
   const [search, setSearch] = useState("");
+  const [coverage, setCoverage] = useState<CoverageFilter>(COVERAGE_ALL);
 
   const existingMenuItemIds = useMemo(
-    () => menuRecipes.map((menuRecipe) => menuRecipe.menuItemId),
+    () =>
+      menuRecipes
+        .filter((menuRecipe) => menuRecipe.items.length > 0)
+        .map((menuRecipe) => menuRecipe.menuItemId),
     [menuRecipes],
   );
 
   const filteredMenuRecipes = useMemo(() => {
     const query = search.trim();
-    if (!query) return menuRecipes;
-    return menuRecipes.filter((menuRecipe) =>
-      matchesSearch([menuRecipe.name, menuRecipe.category], query),
-    );
-  }, [menuRecipes, search]);
+    return menuRecipes.filter((menuRecipe) => {
+      if (
+        query &&
+        !matchesSearch([menuRecipe.name, menuRecipe.category], query)
+      ) {
+        return false;
+      }
+      if (coverage === "missing") return menuRecipe.items.length === 0;
+      if (coverage === "awaiting_cost") {
+        return isAwaitingCost(menuRecipe, wacMapAvailable);
+      }
+      return true;
+    });
+  }, [menuRecipes, search, coverage, wacMapAvailable]);
 
   const showNoResults =
-    filteredMenuRecipes.length === 0 && search.trim().length > 0;
+    filteredMenuRecipes.length === 0 &&
+    (search.trim().length > 0 || coverage !== COVERAGE_ALL);
 
   function openCreate() {
     setEditingMenuItemId(undefined);
@@ -171,7 +222,10 @@ export function MenuRecipesClient({
   ): RowActionItem[] => [
     {
       key: "edit",
-      label: INVENTORY_VI.menuRecipeEditAction,
+      label:
+        menuRecipe.items.length > 0
+          ? INVENTORY_VI.menuRecipeEditAction
+          : INVENTORY_VI.menuRecipeCreateAction,
       icon: <IconPencil />,
       onSelect: () => openEdit(menuRecipe),
     },
@@ -195,68 +249,57 @@ export function MenuRecipesClient({
     },
     {
       key: "ingredients",
-      header: "Định mức",
-      className: "min-w-48",
-      render: (menuRecipe) => (
-        <div className="flex flex-col gap-1 text-sm">
-          {menuRecipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">
-              Chưa có định mức
-            </span>
-          ) : (
-            menuRecipe.items.map((item, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">
-                    {item.ingredientName}
-                  </span>
-                  <span className="font-mono">
-                    {item.qty} {item.unitLabel}
-                  </span>
-                </div>
-                <MenuRecipeCostSignalBadges signals={item.costSignals} />
-              </div>
-            ))
-          )}
-        </div>
-      ),
+      header: INVENTORY_VI.menuRecipeColIngredientCount,
+      render: (menuRecipe) =>
+        menuRecipe.items.length === 0 ? (
+          <span className="text-muted-foreground">
+            {INVENTORY_VI.menuRecipeMissingLines}
+          </span>
+        ) : (
+          INVENTORY_VI.menuRecipeLineCount(menuRecipe.items.length)
+        ),
     },
     {
       key: "cost",
       header: INVENTORY_VI.menuRecipeColUnitCost,
-      className: "font-mono",
       render: (menuRecipe) => {
-        const rowSignals = [
-          ...new Set(menuRecipe.items.flatMap((item) => item.costSignals)),
-        ];
+        const state = resolveMenuRecipeListCostState({
+          itemCount: menuRecipe.items.length,
+          estimatedCost: menuRecipe.estimatedCost,
+          signals: menuRecipeRowSignals(menuRecipe),
+          wacMapAvailable,
+        });
         return (
-          <div className="flex flex-col items-start gap-1">
-            {menuRecipe.estimatedCost == null ? (
-              <span className="text-muted-foreground">
-                {INVENTORY_VI.menuRecipeCostUnavailable}
-              </span>
-            ) : (
-              INVENTORY_VI.amountDong(formatVND(menuRecipe.estimatedCost))
-            )}
-            <MenuRecipeCostSignalBadges signals={rowSignals} />
-          </div>
+          <span
+            className={
+              state.kind === "amount"
+                ? "font-mono"
+                : "text-muted-foreground"
+            }
+          >
+            {menuRecipeListCostLabel(menuRecipe, wacMapAvailable)}
+          </span>
         );
       },
     },
-    {
-      key: "stockCapacity",
-      header: INVENTORY_VI.menuRecipeColStockCapacity,
-      className: "font-mono",
-      render: (menuRecipe) => {
-        const capacity =
-          stockCapacityByMenuItemId[String(menuRecipe.menuItemId)];
-        return capacity == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          capacity
-        );
-      },
-    },
+    ...(showStockCapacity
+      ? [
+          {
+            key: "stockCapacity",
+            header: INVENTORY_VI.menuRecipeColStockCapacity,
+            className: "font-mono",
+            render: (menuRecipe: MenuRecipeRow) => {
+              const capacity =
+                stockCapacityByMenuItemId[String(menuRecipe.menuItemId)];
+              return capacity == null ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                capacity
+              );
+            },
+          } satisfies DataTableColumn<MenuRecipeRow>,
+        ]
+      : []),
     {
       key: "actions",
       header: FORM_VI.action,
@@ -309,6 +352,31 @@ export function MenuRecipesClient({
           />
         </InputGroup>
       }
+      filters={
+        <Select
+          value={coverage}
+          onValueChange={(value) => setCoverage(value as CoverageFilter)}
+        >
+          <SelectTrigger
+            size="field"
+            className={inventoryListFilterSelectClassName}
+            aria-label={INVENTORY_VI.menuRecipeCoverageFilterAria}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              {INVENTORY_VI.menuRecipeCoverageAll}
+            </SelectItem>
+            <SelectItem value="missing">
+              {INVENTORY_VI.menuRecipeCoverageMissing}
+            </SelectItem>
+            <SelectItem value="awaiting_cost">
+              {INVENTORY_VI.menuRecipeCoverageAwaitingCost}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      }
       reset={
         <Badge variant="outline">
           {filteredMenuRecipes.length}/{menuRecipes.length}
@@ -355,6 +423,8 @@ export function MenuRecipesClient({
               stockCapacity={
                 stockCapacityByMenuItemId[String(menuRecipe.menuItemId)]
               }
+              showStockCapacity={showStockCapacity}
+              wacMapAvailable={wacMapAvailable}
               actions={getMenuRecipeRowActions(menuRecipe)}
               onOpen={openEdit}
             />
@@ -379,11 +449,15 @@ export function MenuRecipesClient({
 function MenuRecipeCard({
   menuRecipe,
   stockCapacity,
+  showStockCapacity,
+  wacMapAvailable,
   actions,
   onOpen,
 }: {
   menuRecipe: MenuRecipeRow;
   stockCapacity: number | undefined;
+  showStockCapacity: boolean;
+  wacMapAvailable: boolean;
   actions: RowActionItem[];
   onOpen: (menuRecipe: MenuRecipeRow) => void;
 }) {
@@ -399,42 +473,24 @@ function MenuRecipeCard({
       </ItemHeader>
       <ItemContent>
         <ItemDescription>
-          {menuRecipe.estimatedCost == null
-            ? INVENTORY_VI.menuRecipeCardSummaryNoCost(menuRecipe.items.length)
-            : INVENTORY_VI.menuRecipeCardSummary(
-                menuRecipe.items.length,
-                formatVND(menuRecipe.estimatedCost),
-              )}
+          {menuRecipe.items.length === 0
+            ? INVENTORY_VI.menuRecipeMissingLines
+            : INVENTORY_VI.menuRecipeLineCount(menuRecipe.items.length)}
         </ItemDescription>
-        <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-2 text-sm mt-2 mb-2">
-          {menuRecipe.items.length === 0 ? (
-            <span className="text-muted-foreground italic">
-              Chưa có định mức
-            </span>
-          ) : (
-            menuRecipe.items.map((item, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">
-                    {item.ingredientName}
-                  </span>
-                  <span className="font-mono">
-                    {item.qty} {item.unitLabel}
-                  </span>
-                </div>
-                <MenuRecipeCostSignalBadges signals={item.costSignals} />
-              </div>
-            ))
-          )}
-        </div>
         <ItemDescription>
-          {INVENTORY_VI.menuRecipeColStockCapacity}:{" "}
-          {stockCapacity == null ? (
-            <span className="text-muted-foreground">—</span>
-          ) : (
-            <span className="font-mono">{stockCapacity}</span>
-          )}
+          {INVENTORY_VI.menuRecipeColUnitCost}:{" "}
+          {menuRecipeListCostLabel(menuRecipe, wacMapAvailable)}
         </ItemDescription>
+        {showStockCapacity ? (
+          <ItemDescription>
+            {INVENTORY_VI.menuRecipeColStockCapacity}:{" "}
+            {stockCapacity == null ? (
+              <span className="text-muted-foreground">—</span>
+            ) : (
+              <span className="font-mono">{stockCapacity}</span>
+            )}
+          </ItemDescription>
+        ) : null}
       </ItemContent>
       <ItemFooter>
         <ItemActions>

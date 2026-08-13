@@ -404,8 +404,6 @@ const HARDCODED_TOUCH_EXEMPT_FILES = new Set([
   "apps/web/app/components/pwa-toolbar.tsx",
   "apps/web/app/components/form/number-pad-grid.tsx",
   "apps/web/app/components/form/number-pad-sheet.tsx",
-  // Redirect-only Owner stock detail; operations live in stock-detail-dialog.
-  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx",
 ]);
 
 function countHardcodedTouchSizeLiterals(content) {
@@ -683,6 +681,112 @@ const checks = [
     pattern:
       /\bmetric=\{|import\s+(?:type\s+)?(?:\{[^}]*\b(?:KpiCard|KpiRow)\b[^}]*\}|[\w$]+\s*,\s*\{[^}]*\b(?:KpiCard|KpiRow)\b[^}]*\}|(?:KpiCard|KpiRow)\b)\s+from\s*["'][^"']+["']|<\s*(?:KpiCard|KpiRow)\b/g,
     allowlist: {},
+  },
+  {
+    id: "branch-no-form-dialog",
+    description:
+      "Branch operator and station routes use FormSheet/AppSheet/StationSheet; FormDialog is control_surface only (design-system.md overlay chooser).",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/(operator)",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/_shared/settings",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pos",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/kds",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pickup",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern: /\bFormDialog\b/g,
+    allowlist: {},
+  },
+  {
+    id: "branch-no-data-table",
+    description:
+      "Branch operator lists use Item/ItemGroup at all widths; DataTable is control_surface only.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/(operator)",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/_shared/settings",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern: /\bDataTable\b/g,
+    allowlist: {},
+  },
+  {
+    id: "station-no-app-dialog",
+    description:
+      "Station overlays use StationSheet; AppDialog is control_surface/Branch confirm chrome.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pos",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/kds",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pickup",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern: /<(?:AppDialog)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "station-no-app-sheet",
+    description:
+      "Station overlays use StationSheet; AppSheet is Branch/Owner D1 chrome.",
+    roots: [
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pos",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/kds",
+        extensions: [".tsx"],
+      },
+      {
+        dir: "apps/web/app/(protected)/br/[branchId]/pickup",
+        extensions: [".tsx"],
+      },
+    ],
+    pattern: /<(?:AppSheet)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "route-sheet-drawer-content",
+    description:
+      "SheetContent/DrawerContent may only be composed in surface adapters (AppSheet, StationSheet, AppDrawer, NumberPadSheet, sidebar). Route files use those adapters.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /<(?:SheetContent|DrawerContent)\b/g,
+    allowlist: {
+      "apps/web/app/components/surface/app-sheet.tsx": 1,
+      "apps/web/app/components/surface/station-sheet.tsx": 1,
+      "apps/web/app/components/form/number-pad-sheet.tsx": 1,
+      "apps/web/app/components/sidebar.tsx": 1,
+      "apps/web/app/components/surface/app-drawer.tsx": 1,
+      "apps/web/app/q/[token]/self-order/cart-sheet.tsx": 1,
+      "apps/web/app/q/[token]/self-order/bill-drawer.tsx": 1,
+      "apps/web/app/q/[token]/self-order/item-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/pos-sessions-client.tsx": 1,
+    },
   },
   {
     id: "status-focus-ring-contrast",
@@ -1586,7 +1690,6 @@ const perFileCountBudgets = [
     roots: uiRuntimeRoots([".tsx"]),
     pattern: /\bstyle=\{\{/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx": 1,
       "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 3,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,

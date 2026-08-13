@@ -46,6 +46,7 @@ function toReadiness(row: (typeof rows)[number]) {
     isActive: row.is_active,
     defaultFulfillSiteKind: row.default_fulfill_site_kind,
     hasActiveSupplierLink: row.has_active_supplier_link,
+    itemKind: row.item_kind,
   };
 }
 
@@ -118,6 +119,22 @@ test("filterIngredientListRows combines active, readiness, and search", () => {
   assert.deepEqual(
     hiddenIncluded.map((row) => row.sku),
     ["SUON-01", "AN-01"],
+  );
+
+  const producedWithoutSupplier = filterIngredientListRows(
+    rows,
+    {
+      query: "",
+      category: "all",
+      itemKind: "all",
+      active: "active",
+      readiness: "missing_supplier_link",
+    },
+    toReadiness,
+  );
+  assert.deepEqual(
+    producedWithoutSupplier.map((row) => row.sku),
+    [],
   );
 });
 

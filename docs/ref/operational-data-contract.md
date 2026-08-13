@@ -80,8 +80,8 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.inventory_value.current` | Giá trị tồn cuối kỳ | `get_inventory_value_period` | fallback cost → `needs_review` |
 | `finance.inventory_value.opening` | Tồn đầu kỳ | cuối − movement kỳ; `%` tone trung tính; đầu 0 → `Mới` | cùng closing |
 | `finance.expense.operating` | Chi phí vận hành | `expenses.subtotal` nhóm operating; `amount` = gross | chưa có → `not_recorded` |
-| `finance.food_cost.recorded` | Giá vốn món | `stock_movements` consumption/`sale_consumption` × unit_cost | thiếu coverage → `needs_review` |
-| `finance.food_cost.theoretical` | Giá vốn lý thuyết | `mv_food_cost` / `get_food_cost` | `estimated` |
+| `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review` |
+| `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × WAC kho chi nhánh bán | `estimated` |
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số |
 | `finance.operating_result` | Kết quả kinh doanh | LN gộp − chi VH + (closing − opening); không gọi LN ròng | cần coverage + đã ghi chi VH |
 

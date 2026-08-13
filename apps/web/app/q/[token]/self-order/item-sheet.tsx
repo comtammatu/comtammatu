@@ -48,7 +48,7 @@ import {
   SheetContent,
   SheetDescription,
   SheetTitle,
-} from "@/components/surface";
+} from "@/components/surface/app-sheet";
 
 export interface SelfOrderItemSheetProps {
   item: SelfOrderMenuItem;

@@ -6,6 +6,7 @@ export type ControlSurfaceCoreModuleId =
   | "settings"
   | "hr"
   | "menu"
+  | "promotions"
   | "orders"
   | "feedback"
   | "work"
@@ -21,6 +22,7 @@ export const CONTROL_SURFACE_CORE_MODULE_IDS = [
   "settings",
   "hr",
   "menu",
+  "promotions",
   "orders",
   "feedback",
   "work",
@@ -35,6 +37,7 @@ export const CONTROL_SURFACE_MODULE_IDS = [
 
 export const FLAT_CONTROL_SURFACE_MODULE_IDS = [
   "menu",
+  "promotions",
   "orders",
   "feedback",
   "branches",

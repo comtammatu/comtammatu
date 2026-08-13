@@ -619,7 +619,7 @@ bordered box whose caller owns layout. Other card jobs use `AppSection`,
 | searchable responsive data | `DataTable`; raw `Table` only inside an approved adapter |
 | segmented view | `Tabs` |
 | standard app form field | helpers from `@/components/form` |
-| short detail or list-first document | `AppDialog` (`variant="document"`) or `FormDialog` |
+| short detail or list-first document | Overlay chooser (plane-specific) |
 | simple destructive confirmation | shared `confirm()`; `ReasonConfirmDialog` when a reason is required |
 | overlay (form / D1 / station / touch) | Overlay chooser below |
 | empty / no result / error | `AppEmptyState`, `TableEmptyStateRow`, `ErrorPanel`, `NotFoundPanel` |
@@ -670,17 +670,16 @@ Native `<button>` only in closed chrome (`global-error`, `sidebar` via
 
 ### Overlay chooser
 
-| Job | Use | Forbidden |
-| --- | --- | --- |
-| Short task / create-edit form | `FormDialog` | Raw `Dialog` in a route |
-| Detail or list-first document | `AppDialog` (`variant="document"`) | Restyled Dialog clone |
-| D1 record beside a list | `AppSheet` | Raw `Sheet` in a `control_surface` route |
-| POS / KDS / guest overlay | `StationSheet` | `AppSheet` / `AppDialog` / `AppSection` on station gold |
-| Short touch task (approved adapter) | `Drawer` through that adapter | Route-authored `Drawer` |
-| Picker on a trigger | `Popover` / `Select` / `Combobox` | Sheet for a date pick |
-| Long workspace, more than one CTA | DETAIL page (D2) | Sheet that becomes a page |
+Job by plane. Same tokens; chrome/density only. Dual-plane forms share schema/action in `lib`; Owner `FormDialog`; Branch `FormSheet`.
 
-`sheet.tsx` / `drawer.tsx` are adapter-only. `NumberPadSheet` may import Sheet.
+| Job | Branch | Owner | Station |
+| --- | --- | --- | --- |
+| Short create/edit | `AppSheet` bottom, touch | `FormDialog` | `StationSheet` |
+| D1 beside LIST | `AppSheet` | `AppSheet` or `AppDialog variant="document"` | `StationSheet` |
+| Long workspace | DETAIL (D2) | DETAIL (D2) | not a sheet-as-page |
+| Picker | `Popover` / `Select` / `Combobox` | same | same |
+
+Forbidden: raw `Dialog`/`Sheet`/`Drawer` in a route; `FormDialog`/`DataTable` on Branch; `AppSheet`/`AppDialog`/`AppSection` on station; hardcoded `size="touch"` on `control_surface`. `sheet.tsx`/`drawer.tsx` adapter-only.
 
 ### List surface and the table system
 
@@ -1051,8 +1050,8 @@ addressable. Full decision table: ADR 0018.
   state-transition footer in `AppDialog variant="document"` when each state
   exposes exactly one primary action. Named tier: purchase demand, PO, GRN,
   production, and the YCH/Transfer fulfillment journey.
-- **D1 task (non-addressable)** — `FormDialog` / short `AppDialog` for master
-  CRUD or one bounded decision that ends.
+- **D1 task (non-addressable)** — Overlay chooser: Owner `FormDialog` / short
+  `AppDialog`; Branch `AppSheet`; station `StationSheet`.
 - **D3** — line-array authoring only; never a row-open target.
 - **D0 queue** — named card/decision surfaces where the card is the work, not a
   tabular row open; chrome is `AppPage` + `AppSection` decision cards.

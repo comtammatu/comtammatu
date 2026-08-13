@@ -37,6 +37,7 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { AppSheet } from "@/components/surface/app-sheet";
 import {
   Dialog,
   DialogContent,
@@ -127,7 +128,20 @@ export interface FileImportDialogProps<
   onImported?: () => void;
 }
 
-export function FormDialog<TValues extends FieldValues>({
+export function FormDialog<TValues extends FieldValues>(
+  props: FormDialogProps<TValues>,
+) {
+  return <FormOverlay chrome="dialog" {...props} />;
+}
+
+export function FormSheet<TValues extends FieldValues>(
+  props: FormDialogProps<TValues>,
+) {
+  return <FormOverlay chrome="sheet" {...props} />;
+}
+
+function FormOverlay<TValues extends FieldValues>({
+  chrome,
   variant = "default",
   open,
   onOpenChange,
@@ -146,10 +160,13 @@ export function FormDialog<TValues extends FieldValues>({
   contentClassName,
   renderFooter,
   children,
-}: FormDialogProps<TValues>) {
+}: FormDialogProps<TValues> & { chrome: "dialog" | "sheet" }) {
   const formId = useId();
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-  const actionSize = actionSizeProp ?? (isTouchLayout ? "touch" : "default");
+  const actionSize =
+    chrome === "sheet"
+      ? (actionSizeProp ?? "touch")
+      : (actionSizeProp ?? (isTouchLayout ? "touch" : "default"));
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
@@ -223,8 +240,76 @@ export function FormDialog<TValues extends FieldValues>({
     requestClose();
   }
 
-  return (
+  const footer = renderFooter ? (
+    renderFooter({
+      formId,
+      isPending,
+      requestClose,
+      submitLabel,
+      submitVariant,
+      actionSize,
+      cancelLabel,
+    })
+  ) : (
     <>
+      <Button
+        type="button"
+        variant="outline"
+        size={actionSize}
+        className={chrome === "sheet" ? "flex-1" : undefined}
+        onClick={requestClose}
+        disabled={isPending}
+      >
+        {cancelLabel}
+      </Button>
+      <Button
+        type="submit"
+        form={formId}
+        variant={submitVariant}
+        size={chrome === "sheet" ? "touch-lg" : actionSize}
+        className={chrome === "sheet" ? "flex-1" : undefined}
+        disabled={isPending}
+      >
+        {isPending && <Spinner />}
+        {submitLabel}
+      </Button>
+    </>
+  );
+
+  const formBody = (
+    <form
+      id={formId}
+      onSubmit={form.handleSubmit(handleValid)}
+      noValidate
+      className="min-w-0"
+      aria-busy={isPending}
+    >
+      <FieldGroup>
+        {open ? children(form) : null}
+        {serverError && (
+          <p className="text-sm text-destructive" role="alert">
+            {serverError}
+          </p>
+        )}
+      </FieldGroup>
+    </form>
+  );
+
+  const overlay =
+    chrome === "sheet" ? (
+      <AppSheet
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={title}
+        description={description}
+        side="bottom"
+        contentClassName={cn("max-h-dvh-95 bg-background", contentClassName)}
+        footerClassName="sticky bottom-0 border-t bg-background/95 backdrop-blur"
+        footer={<div className="flex w-full gap-2">{footer}</div>}
+      >
+        {formBody}
+      </AppSheet>
+    ) : (
       <AppDialog
         variant={variant}
         open={open}
@@ -235,59 +320,15 @@ export function FormDialog<TValues extends FieldValues>({
         disablePointerDismissal={isPending}
         showCloseButton={!isPending}
         key={entityKey ?? "new"}
-        footer={
-          renderFooter ? (
-            renderFooter({
-              formId,
-              isPending,
-              requestClose,
-              submitLabel,
-              submitVariant,
-              actionSize,
-              cancelLabel,
-            })
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size={actionSize}
-                onClick={requestClose}
-                disabled={isPending}
-              >
-                {cancelLabel}
-              </Button>
-              <Button
-                type="submit"
-                form={formId}
-                variant={submitVariant}
-                size={actionSize}
-                disabled={isPending}
-              >
-                {isPending && <Spinner />}
-                {submitLabel}
-              </Button>
-            </>
-          )
-        }
+        footer={footer}
       >
-        <form
-          id={formId}
-          onSubmit={form.handleSubmit(handleValid)}
-          noValidate
-          className="min-w-0"
-          aria-busy={isPending}
-        >
-          <FieldGroup>
-            {open ? children(form) : null}
-            {serverError && (
-              <p className="text-sm text-destructive" role="alert">
-                {serverError}
-              </p>
-            )}
-          </FieldGroup>
-        </form>
+        {formBody}
       </AppDialog>
+    );
+
+  return (
+    <>
+      {overlay}
       <ConfirmDialog
         open={discardConfirmationOpen}
         onOpenChange={setDiscardConfirmationOpen}

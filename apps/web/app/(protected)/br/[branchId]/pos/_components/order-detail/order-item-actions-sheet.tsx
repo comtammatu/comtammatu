@@ -24,6 +24,7 @@ import { StationSheet } from "@/components/surface";
 interface OrderItemActionsSheetProps {
   item: OrderItemRowData | null;
   canManage: boolean;
+  canApplyDiscount?: boolean;
   isPending: boolean;
   onClose: () => void;
   onMarkServed: (itemId: number) => void;
@@ -40,6 +41,7 @@ interface OrderItemActionsSheetProps {
 export function OrderItemActionsSheet({
   item,
   canManage,
+  canApplyDiscount = false,
   isPending,
   onClose,
   onMarkServed,
@@ -62,7 +64,7 @@ export function OrderItemActionsSheet({
   // cancelled instead of leaving a zombie qty=0 row.
   const canReduce = canManage && actionable && (item?.quantity ?? 0) >= 2;
   const canDiscount =
-    canManage && actionable && item != null && onDiscountRequest != null;
+    canApplyDiscount && actionable && item != null && onDiscountRequest != null;
   // Edit gates strictly on status='pending' — mirrors the server RPC. Once
   // the chef moved to preparing/ready, changing variant/topping wastes food;
   // the cashier must void + re-add. menu_item_id must exist for the parent

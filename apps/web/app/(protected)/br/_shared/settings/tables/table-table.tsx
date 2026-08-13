@@ -20,6 +20,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
@@ -35,16 +36,12 @@ import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   ACTIONS_VI,
-  FORM_VI,
   STATES_VI,
   TABLE_VI,
 } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
 import { AppDialog } from "@/components/form";
+import { AppEmptyState } from "@/components/surface";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 import { QrCodeImage } from "@/components/qr-code-image";
 
@@ -309,77 +306,43 @@ export function DiningTableSettingsList({
     );
   }
 
-  const columns: DataTableColumn<TableRow>[] = [
-    {
-      key: "table",
-      header: TABLE_VI.long,
-      render: (table) => (
-        <span className="font-medium">
-          {messages.settings.tables.tableLabel(table.number)}
-        </span>
-      ),
-    },
-    {
-      key: "area",
-      header: TABLE_VI.area,
-      className: "text-muted-foreground",
-      render: (table) => table.zone_name ?? "—",
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      render: (table) => <StatusBadge domain="table" value={table.status} />,
-    },
-    {
-      key: "self-order-qr",
-      header: tableMessages.qrColumn,
-      render: (table) => renderSelfOrderQrBadge(table),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (table) => <TableActions table={table} />,
-    },
-  ];
-
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={tables}
-        getRowKey={(table) => table.id}
-        emptyTitle={messages.settings.tables.emptyTitle}
-        mobileBreakpoint={1024}
-        emptyIcon={
-          <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
-        }
-        rowClassName={(table) =>
-          isRowPending(table.id) ? "opacity-60" : undefined
-        }
-        mobileCardRender={(table) => (
-          <Item
-            variant="outline"
-            className={isRowPending(table.id) ? "opacity-60" : ""}
-          >
-            <ItemContent className="min-w-0">
-              <ItemTitle size="heading" className="line-clamp-none w-full">
-                {tableMessages.tableLabel(table.number)}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none text-sm leading-6">
-                {TABLE_VI.area}: {table.zone_name ?? "—"}
-              </ItemDescription>
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge domain="table" value={table.status} />
-                {renderSelfOrderQrBadge(table)}
-              </div>
-            </ItemContent>
-            <ItemActions className="self-center">
-              <TableActions table={table} touch />
-            </ItemActions>
-          </Item>
-        )}
-      />
+      {tables.length === 0 ? (
+        <AppEmptyState
+          compact
+          title={messages.settings.tables.emptyTitle}
+          icon={
+            <IconToolsKitchen className="size-8 text-muted-foreground" />
+          }
+        />
+      ) : (
+        <ItemGroup className="gap-2">
+          {tables.map((table) => (
+            <Item
+              key={table.id}
+              variant="outline"
+              className={isRowPending(table.id) ? "opacity-60" : ""}
+            >
+              <ItemContent className="min-w-0">
+                <ItemTitle size="heading" className="line-clamp-none w-full">
+                  {tableMessages.tableLabel(table.number)}
+                </ItemTitle>
+                <ItemDescription className="line-clamp-none text-sm leading-6">
+                  {TABLE_VI.area}: {table.zone_name ?? "—"}
+                </ItemDescription>
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge domain="table" value={table.status} />
+                  {renderSelfOrderQrBadge(table)}
+                </div>
+              </ItemContent>
+              <ItemActions className="self-center">
+                <TableActions table={table} touch />
+              </ItemActions>
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
 
       {editTable && (
         <TableFormDialog

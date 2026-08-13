@@ -19,6 +19,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import {
@@ -29,15 +30,11 @@ import {
 } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { messages } from "@lib/messages";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
 import { getKdsSetupWarnings } from "./setup-utils";
 
 /* ─── Types ─── */
 
-import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface StationRow {
   id: number;
   name: string;
@@ -162,47 +159,6 @@ export function StationsClient({
     );
   }
 
-  const columns: DataTableColumn<StationRow>[] = [
-    {
-      key: "name",
-      header: copy.stationName,
-      className: "font-medium",
-      render: (station) => station.name,
-    },
-    {
-      key: "position",
-      header: copy.position,
-      className: "text-center",
-      render: (station) => station.position,
-    },
-    {
-      key: "categories",
-      header: copy.categories,
-      render: (station) => <CategoryBadges station={station} />,
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      className: "text-center",
-      render: (station) => (
-        <Badge variant={station.is_active ? "success" : "secondary"}>
-          {station.is_active
-            ? messages.settings.common.active
-            : messages.settings.common.inactive}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "min-w-48",
-      render: (station) =>
-        selectedBranchId !== null ? (
-          <StationActions station={station} branchId={selectedBranchId} />
-        ) : null,
-    },
-  ];
-
   if (branches.length === 0) {
     return (
       <AppEmptyState
@@ -287,13 +243,9 @@ export function StationsClient({
           </Button>
         </AppEmptyState>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filteredStations}
-          getRowKey={(station) => station.id}
-          mobileBreakpoint={1024}
-          mobileCardRender={(station) => (
-            <Item variant="outline">
+        <ItemGroup className="gap-2">
+          {filteredStations.map((station) => (
+            <Item key={station.id} variant="outline">
               <ItemContent className="min-w-0">
                 <ItemTitle size="heading" className="line-clamp-none w-full">
                   {station.name}
@@ -319,8 +271,8 @@ export function StationsClient({
                 ) : null}
               </ItemActions>
             </Item>
-          )}
-        />
+          ))}
+        </ItemGroup>
       )}
 
       {selectedBranchId !== null && (

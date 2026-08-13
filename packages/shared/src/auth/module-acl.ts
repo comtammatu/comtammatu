@@ -9,6 +9,7 @@ import { getModuleLabelVi } from "../labels";
 export type ModuleKey =
   | "owner"
   | "menu"
+  | "promotions"
   | "inventory"
   | "inventory_operations"
   | "orders"
@@ -64,6 +65,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/menu",
     allowedRoles: ["owner"],
     label: getModuleLabelVi("menu"),
+  },
+  promotions: {
+    path: "/promotions",
+    allowedRoles: ["owner"],
+    label: getModuleLabelVi("promotions"),
   },
   inventory: {
     path: "/inventory",

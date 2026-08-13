@@ -38,8 +38,11 @@ const kdsActionsSource = readSource(
 const managerActionsSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/actions.ts",
 );
-const managerTableSource = readSource(
-  "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+const managerDrawerSource = readSource(
+  "app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
+);
+const managerHostSource = readSource(
+  "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-host.tsx",
 );
 const managerPageSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
@@ -92,12 +95,30 @@ test("branch menu-limit management remains on the manager day-control surface", 
   assert.match(managerActionsSource, /set_branch_menu_daily_limit/);
   assert.match(managerActionsSource, /clear_branch_menu_daily_limit/);
   assert.match(managerActionsSource, /set_branch_menu_stock_allowance/);
+  assert.match(managerActionsSource, /STOCK_ALLOWANCE_SWITCH_ON_QUANTITY/);
+  assert.match(managerActionsSource, /setBranchMenuStockAllowanceEnabled/);
   assert.doesNotMatch(managerActionsSource, /add_menu_item_stock_exception/);
   assert.doesNotMatch(managerActionsSource, /replenishMenuItemStock/);
-  assert.match(managerTableSource, /stockAllowanceLabel/);
-  assert.doesNotMatch(managerTableSource, /replenishStockTitle/);
-  assert.doesNotMatch(managerTableSource, /handleReplenishStock/);
-  assert.match(managerPageSource, /MenuLimitsClient/);
+  assert.match(managerDrawerSource, /stockAllowanceLabel/);
+  assert.match(managerDrawerSource, /setBranchMenuStockAllowanceEnabled/);
+  assert.doesNotMatch(managerDrawerSource, /replenishStockTitle/);
+  assert.doesNotMatch(managerDrawerSource, /handleReplenishStock/);
+  assert.match(managerPageSource, /BranchMenuLimitsHost/);
+  assert.match(managerHostSource, /BranchQuickMenuLimitSheet/);
+
+  const homePageSource = readSource(
+    "app/(protected)/br/[branchId]/(operator)/page.tsx",
+  );
+  const homeTriggerSource = readSource(
+    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-trigger.tsx",
+  );
+  assert.match(
+    homePageSource,
+    /const isManagerLike =\s*claims\.user_role === "branch_manager" \|\| claims\.user_role === "owner"/,
+  );
+  assert.match(homePageSource, /showLimitsBesideOrders/);
+  assert.match(homePageSource, /BranchQuickMenuLimitTrigger/);
+  assert.match(homeTriggerSource, /BranchQuickMenuLimitSheet/);
 
   const dropMigration = readFileSync(
     join(
@@ -116,34 +137,34 @@ test("branch menu-limit management remains on the manager day-control surface", 
   );
 });
 
-test("branch menu-limit drawer uses Ma Tu DS field and operator panel primitives", () => {
-  assert.match(managerPageSource, /BranchOperatorPanel/);
-  assert.match(managerPageSource, /icon=\{ListChecks\}/);
-  assert.match(managerTableSource, /<AppDrawer/);
-  assert.match(managerTableSource, /description=\{/);
-  assert.match(managerTableSource, /FieldGroup/);
-  assert.match(managerTableSource, /FieldLabel/);
-  assert.match(managerTableSource, /size="touch"/);
+test("branch menu-limit drawer is the single editor for home and the menu-limits route", () => {
+  assert.match(managerPageSource, /BranchOperatorPage/);
+  assert.match(managerPageSource, /BranchMenuLimitsHost/);
+  assert.doesNotMatch(managerPageSource, /BranchOperatorPanel/);
+  assert.doesNotMatch(managerPageSource, /MenuLimitsClient/);
+  assert.match(managerHostSource, /BranchQuickMenuLimitSheet/);
+  assert.match(managerDrawerSource, /<AppDrawer/);
+  assert.match(
+    managerDrawerSource,
+    /description=\{menuCopy\.drawerDescription\}/,
+  );
+  assert.match(managerDrawerSource, /QuantityInput/);
+  assert.match(managerDrawerSource, /manualLimitShortLabel/);
+  assert.match(managerDrawerSource, /stockAllowanceLabel/);
+  assert.match(managerDrawerSource, /sellingSwitchLabel/);
+  assert.match(managerDrawerSource, /size="touch"/);
+  assert.doesNotMatch(managerDrawerSource, /FieldGroup/);
+  assert.doesNotMatch(managerDrawerSource, /useSwipeReveal/);
+  assert.doesNotMatch(managerDrawerSource, /useLongPress/);
 });
 
-test("branch menu-limit list keeps touch-first scan facts and moves detailed demand into the drawer", () => {
-  assert.match(managerTableSource, /lg:flex-row/);
-  assert.match(managerTableSource, /lg:items-center/);
-  assert.match(managerTableSource, /lg:w-80/);
-  assert.match(managerTableSource, /lg:flex-none/);
-  assert.match(managerTableSource, /lg:justify-start/);
-  assert.match(managerTableSource, /grid-cols-3/);
-  assert.match(managerTableSource, /availableToSellLabel/);
-  assert.match(managerTableSource, /manualLimitShortLabel/);
-  assert.match(managerTableSource, /DescriptionList/);
-  assert.match(managerTableSource, /pendingDemandLabel/);
-  assert.match(managerTableSource, /activeHoldDemandLabel/);
-  assert.doesNotMatch(managerTableSource, /pendingDemandCount/);
-  assert.doesNotMatch(managerTableSource, /activeHoldDemandCount/);
-
-  assert.doesNotMatch(managerTableSource, /sm:flex-row/);
-  assert.doesNotMatch(managerTableSource, /sm:items-center/);
-  assert.doesNotMatch(managerTableSource, /sm:w-56/);
-  assert.doesNotMatch(managerTableSource, /sm:w-80/);
-  assert.doesNotMatch(managerTableSource, /md:justify-start/);
+test("branch menu-limit rows keep scan facts inline and edit the cap plus extra-sale switch in the same drawer", () => {
+  assert.match(managerDrawerSource, /availableToSellLabel/);
+  assert.match(managerDrawerSource, /manualLimitShortLabel/);
+  assert.match(managerDrawerSource, /soldTodayLabel/);
+  assert.match(managerDrawerSource, /setBranchMenuStockAllowanceEnabled/);
+  assert.match(managerDrawerSource, /checked=\{allowanceOn\}/);
+  assert.doesNotMatch(managerDrawerSource, /stockAllowanceQuantity/);
+  assert.doesNotMatch(managerDrawerSource, /pendingDemandCount/);
+  assert.doesNotMatch(managerDrawerSource, /activeHoldDemandCount/);
 });

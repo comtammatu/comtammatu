@@ -12,13 +12,11 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { confirm } from "@/components/confirm-dialog";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
+import { AppEmptyState } from "@/components/surface";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 import { messages } from "@lib/messages";
 import { deleteZone } from "./actions";
@@ -85,54 +83,37 @@ export function ZoneTable({ zones }: ZoneTableProps) {
     );
   }
 
-  const columns: DataTableColumn<ZoneRow>[] = [
-    {
-      key: "name",
-      header: copy.zoneName,
-      render: (zone) => <span className="font-medium">{zone.name}</span>,
-    },
-    {
-      key: "sort_order",
-      header: copy.zoneOrder,
-      className: "text-muted-foreground",
-      render: (zone) => zone.sort_order,
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (zone) => <ZoneActions zone={zone} />,
-    },
-  ];
-
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={zones}
-        getRowKey={(zone) => zone.id}
-        emptyTitle={copy.noZonesTitle}
-        mobileBreakpoint={1024}
-        emptyIcon={
-          <IconMapPin className="mx-auto size-8 text-muted-foreground" />
-        }
-        rowClassName={() => (isPending ? "opacity-60" : undefined)}
-        mobileCardRender={(zone) => (
-          <Item variant="outline" className={isPending ? "opacity-60" : ""}>
-            <ItemContent>
-              <ItemTitle size="heading" className="line-clamp-none w-full">
-                {zone.name}
-              </ItemTitle>
-              <ItemDescription className="line-clamp-none text-sm leading-6">
-                {copy.zoneOrder}: {zone.sort_order}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions>
-              <ZoneActions zone={zone} touch />
-            </ItemActions>
-          </Item>
-        )}
-      />
+      {zones.length === 0 ? (
+        <AppEmptyState
+          compact
+          title={copy.noZonesTitle}
+          icon={<IconMapPin className="size-8 text-muted-foreground" />}
+        />
+      ) : (
+        <ItemGroup className="gap-2">
+          {zones.map((zone) => (
+            <Item
+              key={zone.id}
+              variant="outline"
+              className={isPending ? "opacity-60" : ""}
+            >
+              <ItemContent>
+                <ItemTitle size="heading" className="line-clamp-none w-full">
+                  {zone.name}
+                </ItemTitle>
+                <ItemDescription className="line-clamp-none text-sm leading-6">
+                  {copy.zoneOrder}: {zone.sort_order}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <ZoneActions zone={zone} touch />
+              </ItemActions>
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
 
       {editZone && (
         <ZoneFormDialog

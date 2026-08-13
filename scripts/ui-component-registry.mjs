@@ -678,6 +678,15 @@ export const APP_ADAPTER_REGISTRY = {
     "employee CRUD",
     true,
   ),
+  FormSheet: adapter(
+    "apps/web/app/components/form/form-dialog.tsx",
+    "Branch short CRUD overlay",
+    "FormSheet",
+    "AppSheet for a non-RHF decision",
+    "FormDialog on Branch operator",
+    "branch table create",
+    true,
+  ),
   FileImportDialog: adapter(
     "apps/web/app/components/form/form-dialog.tsx",
     "file import workflow",

@@ -10,8 +10,9 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
   transfer/new / purchase-requests (xong). Wave 3: waste + ngưỡng tồn (xong).
   Wave 4: hộp thư góp ý + QR (xong). Wave 5 Đội+Ca interiors: gỡ
   `team/_tabs`, drawer Nhân viên / việc trong ca / chấm công / roster /
-  duyệt nghỉ (xong). Class A không đổi — gold chrome giữ; Wave 5 diet field
-  và overlay, không fork plane.
+  duyệt nghỉ (xong). Class A = chrome family (`BranchOperator*` + Item/Sheet);
+  interiors (field, tab, overlay Owner) vẫn được diet. Wave 6 plane-compiler:
+  settings/catalog overlay + stocktake count fork + station StationSheet.
 
 ## Rubric class
 
@@ -31,8 +32,8 @@ Bảng khóa presentation plane cho mọi `page.tsx` dưới
 
 | Class | n |
 | --- | ---: |
-| A | 47 |
-| A- | 1 |
+| A | 48 |
+| A- | 0 |
 | B | 0 |
 | C | 7 |
 | D | 8 |
@@ -45,9 +46,7 @@ Không còn. Wave 4 đã fork hộp thư góp ý và mã QR.
 
 ## A- — False native / lệch docs
 
-| URL | Evidence | Wave |
-| --- | --- | --- |
-| `/br/[branchId]/stock/stocktake/[id]/count` | `StocktakeCountWizard` shared Owner path | sau Wave 2–3 |
+Không còn. Wave 6 đã fork đếm kiểm kê Branch (`Item` + `NumberPadSheet`).
 
 ## C — Shim (7)
 
@@ -65,7 +64,7 @@ Không còn. Wave 4 đã fork hộp thư góp ý và mã QR.
 3. ~~**Wave 4:** feedback inbox + QR Branch touch LIST~~ (xong).
 
 Ngoài scope: redesign POS/KDS/Gọi số; gỡ production shim; URL-bind ADR 0018
-drawers; gộp menu-limits page↔sheet.
+drawers.
 
 ## Gold mẫu (giữ)
 
@@ -87,7 +86,7 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **shift** | 8 | `/shift`, `/clock`, `/schedule`, `/schedule/leave`, `/checkout-approvals` → **D**; `/attendance`, `/roster`, `/leave-approvals` → **A** (gold) |
 | **stock hub / phiếu** | 12 | `/stock`, on-hand(+id), requests/new(+id), receive/[id], transfer(+new/+id), grn(+id), purchase-requests — **A**; store `/transfer` có thể shim→`/stock` (**C/A**) |
 | **stock shim** | 6 | requests, receive, grn/new(+supplier), production(+new/+id) → **C** (bảng C) |
-| **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A- fork**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
+| **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
 | **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers/thresholds) **A** |
 | **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
 | **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **A**; profile(+payslip) **D** |

@@ -10,6 +10,8 @@ import {
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
   PAYROLL_PERIOD_STATUS_LABELS_VI,
+  PROMOTION_CODE_STATUS_LABELS_VI,
+  PROMOTION_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   PURCHASE_ORDER_STATUS_LABELS_VI,
@@ -241,6 +243,25 @@ const STATUS_DOMAINS = {
       expired: "destructive",
       critical: "destructive",
       warning: "warning",
+    },
+  },
+  promotion: {
+    labels: PROMOTION_STATUS_LABELS_VI,
+    fallbackVariant: "secondary",
+    variants: {
+      draft: "secondary",
+      active: "success",
+      paused: "warning",
+      ended: "outline",
+    },
+  },
+  "promotion-code": {
+    labels: PROMOTION_CODE_STATUS_LABELS_VI,
+    fallbackVariant: "outline",
+    variants: {
+      active: "success",
+      redeemed: "secondary",
+      void: "outline",
     },
   },
   "work-task": {

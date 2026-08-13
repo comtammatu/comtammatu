@@ -352,7 +352,10 @@ function PosMenuGridComponent({
   }
 
   const searchInput = (
-    <InputGroup className="h-11 w-full md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
+    <InputGroup
+      size="touch"
+      className="w-full md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72"
+    >
       <InputGroupAddon>
         <IconSearch />
       </InputGroupAddon>
@@ -445,8 +448,8 @@ function PosMenuGridComponent({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="touch"
-                    className="min-w-12 shrink-0 bg-muted/50 px-0 text-muted-foreground hover:bg-muted"
+                    size="icon-touch"
+                    className="shrink-0 bg-muted/50 text-muted-foreground hover:bg-muted"
                     aria-label={messages.pos.menu.searchAria}
                     onClick={openSearch}
                   >

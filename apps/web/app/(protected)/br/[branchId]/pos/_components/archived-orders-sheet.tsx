@@ -4,10 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   AppEmptyState,
   StationSheet,
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
 } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -31,11 +27,8 @@ import {
   RefreshCw as IconRefresh,
   Search as IconSearch,
 } from "lucide-react";
-import {
-  OrderCardSummary,
-  OrderStatePill,
-  type SessionOrder,
-} from "../order-history";
+import { OrderCardSummary, type SessionOrder } from "../order-history";
+import { getPosCompletedOrderStatusInfo } from "../_lib/order-status-display";
 import {
   useArchivedOrders,
   type ArchivedScope,
@@ -111,7 +104,7 @@ export function ArchivedOrdersSheet({
   const body = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b border-border/60 px-4 py-3 flex flex-col gap-3">
-        <InputGroup>
+        <InputGroup size="touch">
           <InputGroupAddon>
             <IconSearch aria-hidden />
           </InputGroupAddon>
@@ -163,7 +156,7 @@ export function ArchivedOrdersSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="touch"
                 className="mt-2"
                 onClick={reload}
               >
@@ -222,26 +215,11 @@ export function ArchivedOrdersSheet({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent showHandle responsiveFullscreen>
-          <DrawerTitle className="sr-only">
-            {messages.pos.archivedOrders.sheetTitle}
-          </DrawerTitle>
-          <DrawerDescription className="sr-only">
-            {messages.pos.archivedOrders.description}
-          </DrawerDescription>
-          {body}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
     <StationSheet
-      side="right"
+      side={isMobile ? "bottom" : "right"}
       size="md"
+      fullscreen={isMobile}
       open={open}
       onOpenChange={onOpenChange}
       title={
@@ -255,10 +233,28 @@ export function ArchivedOrdersSheet({
           ) : null}
         </span>
       }
+      description={messages.pos.archivedOrders.description}
       bodyClassName="p-0"
     >
       {body}
     </StationSheet>
+  );
+}
+
+function CompletedOrderStatePill({ order }: { order: SessionOrder }) {
+  const statusInfo = getPosCompletedOrderStatusInfo(order);
+
+  return (
+    <Badge
+      variant={statusInfo.variant}
+      className={
+        statusInfo.variant === "outline"
+          ? "bg-background text-sm font-semibold tabular-nums"
+          : "text-sm font-semibold tabular-nums"
+      }
+    >
+      {statusInfo.label}
+    </Badge>
   );
 }
 
@@ -279,7 +275,9 @@ function ArchivedOrderRow({
     >
       <OrderCardSummary
         order={order}
-        rightMeta={<OrderStatePill order={order} />}
+        metaTimestamp={order.updated_at}
+        amountClassName="text-foreground"
+        rightMeta={<CompletedOrderStatePill order={order} />}
       />
       <ItemFooter className="mt-2 justify-end border-t border-border/60 pt-2">
         <Button

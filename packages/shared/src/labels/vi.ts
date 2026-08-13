@@ -7,6 +7,7 @@ export const UNKNOWN_LABEL_VI = "Không xác định";
 export type ModuleLabelKey =
   | "owner"
   | "menu"
+  | "promotions"
   | "inventory"
   | "orders"
   | "feedback"
@@ -43,6 +44,7 @@ type SiteLike = {
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   owner: "Tổng quan",
   menu: "Thực đơn",
+  promotions: "Khuyến mãi",
   inventory: "Kho hàng",
   orders: "Đơn bán",
   feedback: "Phản hồi",
@@ -166,6 +168,19 @@ export const PAYROLL_PERIOD_STATUS_LABELS_VI = {
   calculated: "Đã tính",
   approved: "Đã duyệt",
   paid: "Đã trả",
+} as const;
+
+export const PROMOTION_STATUS_LABELS_VI = {
+  draft: "Nháp",
+  active: "Đang chạy",
+  paused: "Tạm dừng",
+  ended: "Kết thúc",
+} as const;
+
+export const PROMOTION_CODE_STATUS_LABELS_VI = {
+  active: "Còn hạn",
+  redeemed: "Đã dùng",
+  void: "Đã hủy",
 } as const;
 
 /** Contract compensation pay basis — never show raw enum keys in Owner UI. */

@@ -131,6 +131,7 @@ export function CatalogSuppliersClient({
         onOpenChange={setDialogOpen}
         supplier={editingSupplier}
         onSaved={reload}
+        chrome="sheet"
       />
     </div>
   );

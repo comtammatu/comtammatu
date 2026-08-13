@@ -51,8 +51,10 @@ const ORDER_LIST_SELECT = `
   item_discount_amount,
   discount_type,
   discount_value,
-  discount_note,
-  is_priority,
+      discount_note,
+      promotion_id,
+      promotion_code_id,
+      is_priority,
   total_amount,
   table_id,
   note,
@@ -289,6 +291,8 @@ export async function fetchActiveOrderForTable(
       discount_type,
       discount_value,
       discount_note,
+      promotion_id,
+      promotion_code_id,
       total_amount,
       note,
       is_priority,
@@ -397,6 +401,8 @@ export async function fetchOrderForBill(
       discount_type,
       discount_value,
       discount_note,
+      promotion_id,
+      promotion_code_id,
       total_amount,
       cash_received,
       cash_change,
@@ -477,6 +483,7 @@ export const fetchOrderDetail = withActionPositional(
       order: Record<string, unknown>;
       canManageOrders: boolean;
       canVoidPaidOrder: boolean;
+      canApplyDiscount: boolean;
     }>
   > => {
     const { supabase, claims } = ctx;
@@ -500,6 +507,8 @@ export const fetchOrderDetail = withActionPositional(
       discount_type,
       discount_value,
       discount_note,
+      promotion_id,
+      promotion_code_id,
       total_amount,
       note,
       is_priority,
@@ -555,6 +564,7 @@ export const fetchOrderDetail = withActionPositional(
       canManageOrders,
       canVoidPaidDirect,
       canUsePos,
+      canApplyDiscount,
     ] = await Promise.all([
       detailQuery.single(),
       probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
@@ -566,6 +576,11 @@ export const fetchOrderDetail = withActionPositional(
       // Cashiers without void_paid may still enqueue a leader/BM approval
       // request (ADR 0023).
       probePermission(ctx, PERMISSION_KEYS.POS_USE, claims.branch_id),
+      probePermission(
+        ctx,
+        PERMISSION_KEYS.POS_APPLY_DISCOUNT,
+        claims.branch_id,
+      ),
     ]);
     const canVoidPaidOrder = canVoidPaidDirect || canUsePos;
 
@@ -585,6 +600,7 @@ export const fetchOrderDetail = withActionPositional(
         order: order as unknown as Record<string, unknown>,
         canManageOrders,
         canVoidPaidOrder,
+        canApplyDiscount,
       },
     };
   },

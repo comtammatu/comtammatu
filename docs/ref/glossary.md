@@ -441,6 +441,9 @@ domain doc.
 | `menu_item` | món bán | Sellable menu item. |
 | `modifier` | tùy chọn món | Add/remove choice on a menu item; not a separate sellable side. |
 | `combo` | combo | Bundled sellable set under one price/promo. |
+| `promotion` | Khuyến mãi | Owner campaign that attributes a POS discount (ADR 0039). |
+| `promo_code` | Mã giảm | Reusable campaign code entered at POS. |
+| `voucher_code` | Mã voucher | One-time unique code with optional face value. |
 | `portion_quantity` | số phần (`Nx`) | Leading `Nx` = number of main portions. |
 | `side_portion_qty` | SL trên phần (`xN`) | Trailing `xN` = qty per portion, not multiplied across portions. |
 | `table_session` | phiên bàn | Dine-in table service lifecycle. |

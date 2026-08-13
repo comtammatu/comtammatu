@@ -94,7 +94,7 @@ test("D093 migration and permission keys register stock request surface", () => 
   assert.match(migration, /inventory:request_create/);
   assert.match(migration, /grn_central_site_only/);
   assert.match(permissions, /INVENTORY_REQUEST_CREATE/);
-  assert.match(permissions, /PERMISSION_KEY_COUNT = 109/);
+  assert.match(permissions, /PERMISSION_KEY_COUNT = 112/);
 });
 
 test("D093 default_fulfill_site_kind is granted to authenticated after column lockdown", () => {

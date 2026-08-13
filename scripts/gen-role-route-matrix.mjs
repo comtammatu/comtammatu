@@ -486,6 +486,9 @@ function renderActionGateTable(
       if (f.id === "finance") {
         namespaceCandidates.add("accounting");
       }
+      if (f.id === "promotions") {
+        namespaceCandidates.add("promo");
+      }
       return `| ${f.id} | ${formatPrefixes(f.matchPrefixes)} | ${formatRoles(f.moduleKeys)} | ${formatKeys(namespaceCandidates)} |`;
     });
   return [header, ...rows].join("\n");

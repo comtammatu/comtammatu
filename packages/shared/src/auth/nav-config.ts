@@ -69,6 +69,11 @@ export const CONTROL_SURFACE_NAV_GROUPS: NavGroupConfig[] = [
       },
       { moduleKey: "inventory", icon: "Package", label: MODULE_LABELS_VI.inventory },
       { moduleKey: "menu", icon: "Utensils", label: MODULE_LABELS_VI.menu },
+      {
+        moduleKey: "promotions",
+        icon: "TicketPercent",
+        label: MODULE_LABELS_VI.promotions,
+      },
       { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
       { moduleKey: "branches", icon: "Building2", label: MODULE_LABELS_VI.branches },
     ],

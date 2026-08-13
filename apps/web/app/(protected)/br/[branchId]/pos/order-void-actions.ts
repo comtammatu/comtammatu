@@ -11,6 +11,7 @@ import {
 } from "./_lib/schemas";
 import type { EditPendingOrderItemInput } from "./_lib/schemas";
 import { posVoidAuth } from "./_lib/auth";
+import { evaluateOrderPromotionsQuiet } from "@lib/promotions/evaluate-order";
 import {
   cancelRpcFallback,
   cancelRpcMappings,
@@ -67,7 +68,21 @@ export const voidOrderItem = withActionPositional(
     const rpcResult = data as unknown as {
       auto_cancelled_order?: boolean;
       was_sent_to_kitchen?: boolean;
+      order_id?: number;
     } | null;
+
+    if (typeof rpcResult?.order_id === "number") {
+      await evaluateOrderPromotionsQuiet(supabase, rpcResult.order_id);
+    } else {
+      const { data: itemRow } = await supabase
+        .from("order_items")
+        .select("order_id")
+        .eq("id", orderItemId)
+        .maybeSingle();
+      if (itemRow?.order_id) {
+        await evaluateOrderPromotionsQuiet(supabase, itemRow.order_id);
+      }
+    }
 
     // `wasSentToKitchen` rides on `meta` (not `data`) because callers do not
     // need it — only the `afterSuccess` hook reads it to decide whether the
@@ -141,6 +156,8 @@ export const reduceOrderItemQuantity = withActionPositional(
         errorCode: POS_ERROR_CODES.RPC_GENERIC,
       };
     }
+
+    await evaluateOrderPromotionsQuiet(supabase, rpcResult.order_id);
 
     // `wasSentToKitchen` rides on `meta` — internal signal for the hook,
     // not part of the caller-facing API.
@@ -255,6 +272,15 @@ export const editPendingOrderItem = withActionPositional(
         error: "Không thể sửa món. Vui lòng thử lại.",
         errorCode: POS_ERROR_CODES.RPC_GENERIC,
       };
+    }
+
+    const { data: editedItem } = await supabase
+      .from("order_items")
+      .select("order_id")
+      .eq("id", parsedData.orderItemId)
+      .maybeSingle();
+    if (editedItem?.order_id) {
+      await evaluateOrderPromotionsQuiet(supabase, editedItem.order_id);
     }
 
     let printWarning: string | undefined;

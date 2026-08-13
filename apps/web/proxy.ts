@@ -481,7 +481,13 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Exclude Vercel platform intakes from the session proxy. If middleware
+  // matches these, the request falls through to App Router `/_not-found`
+  // (or `/login` when unauthenticated) instead of the edge-served script.
+  // `_vercel/*` = classic Web Analytics / Speed Insights paths.
+  // `[16-hex]/{script.js|vitals}` = Speed Insights v2 Resilient Intake
+  // (`VERCEL_OBSERVABILITY_CLIENT_CONFIG` unique path per deployment).
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_vercel(?:/|$)|[a-f0-9]{16}/(?:script\\.js|vitals)$|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

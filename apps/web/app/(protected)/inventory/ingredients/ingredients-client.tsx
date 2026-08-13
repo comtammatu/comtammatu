@@ -133,6 +133,7 @@ function toReadinessInput(item: IngredientRow) {
     isActive: item.is_active,
     defaultFulfillSiteKind: item.default_fulfill_site_kind,
     hasActiveSupplierLink: item.has_active_supplier_link === true,
+    itemKind: item.item_kind,
   };
 }
 

@@ -35,6 +35,8 @@ export interface OrderData {
   discount_value: number | null;
   /** Discount reason note (≥ 3 chars after trim). */
   discount_note: string | null;
+  promotion_id?: number | null;
+  promotion_code_id?: number | null;
   total_amount: number;
   note: string | null;
   is_priority: boolean;

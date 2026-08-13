@@ -58,6 +58,13 @@ function filesImportingControlSurfaceChrome(dir: string): string[] {
   });
 }
 
+function filesMatching(dir: string, pattern: RegExp): string[] {
+  return walkFiles(dir).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    return pattern.test(source) ? [relativeFromApp(file)] : [];
+  });
+}
+
 const kdsDir = join(process.cwd(), "app/(protected)/br/[branchId]/kds");
 const pickupDir = join(process.cwd(), "app/(protected)/br/[branchId]/pickup");
 const operationalAdapter = join(
@@ -175,4 +182,18 @@ test("audit route family maps /app/r/ to public-feedback, not runner", () => {
   assert.match(audit, /\["public-feedback"/);
   assert.match(audit, /file\.includes\("\/app\/r\/"\)/);
   assert.doesNotMatch(audit, /\["runner-display"/);
+});
+
+test("KDS and pickup stay overlay-free of AppDialog/AppSheet/route Sheet/Drawer", () => {
+  const pattern = /\bAppDialog\b|\bAppSheet\b|<SheetContent\b|<DrawerContent\b/;
+  assert.deepEqual(
+    filesMatching(kdsDir, pattern),
+    [],
+    "KDS must use StationSheet only",
+  );
+  assert.deepEqual(
+    filesMatching(pickupDir, pattern),
+    [],
+    "Pickup stays overlay-free",
+  );
 });

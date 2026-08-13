@@ -35,10 +35,10 @@ const ingredientPoolAvailabilityMigration = readFileSync(
   "utf8",
 );
 
-const menuLimitsTable = readFileSync(
+const menuLimitsDrawer = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
   ),
   "utf8",
 );
@@ -224,26 +224,16 @@ test("stock availability reserves shared recipe ingredients across menu items", 
   );
 });
 
-test("menu-limit screen refreshes when availability inputs change", () => {
-  assert.match(menuLimitsTable, /useRealtimeRefresh/);
-  assert.match(menuLimitsTable, /branch_menu_item_daily_limits/);
-  assert.match(menuLimitsTable, /branch_menu_item_daily_holds/);
-  assert.match(menuLimitsTable, /table: "orders"/);
-  assert.match(menuLimitsTable, /table: "stock_levels"/);
-});
-
-test("menu-limit operations keep scan facts compact and show availability inputs once in the drawer", () => {
-  assert.match(menuLimitsTable, /availableToSellLabel/);
-  assert.match(menuLimitsTable, /manualLimitShortLabel/);
-  assert.match(menuLimitsTable, /stockCapacityLabel/);
-  assert.match(menuLimitsTable, /DescriptionList/);
-  assert.match(menuLimitsTable, /soldTodayLabel/);
-  assert.match(menuLimitsTable, /pendingDemandLabel/);
-  assert.match(menuLimitsTable, /activeHoldDemandLabel/);
-  assert.match(menuLimitsTable, /availabilityRuleHint/);
-  assert.doesNotMatch(menuLimitsTable, /pendingDemandCount/);
-  assert.doesNotMatch(menuLimitsTable, /activeHoldDemandCount/);
-  assert.doesNotMatch(menuLimitsTable, /getSoldProgress/);
+test("menu-limit drawer keeps scan facts compact and edits allowance as a switch", () => {
+  assert.match(menuLimitsDrawer, /availableToSellLabel/);
+  assert.match(menuLimitsDrawer, /manualLimitShortLabel/);
+  assert.match(menuLimitsDrawer, /soldTodayLabel/);
+  assert.match(menuLimitsDrawer, /stockAllowanceLabel/);
+  assert.match(menuLimitsDrawer, /setBranchMenuStockAllowanceEnabled/);
+  assert.doesNotMatch(menuLimitsDrawer, /DescriptionList/);
+  assert.doesNotMatch(menuLimitsDrawer, /pendingDemandCount/);
+  assert.doesNotMatch(menuLimitsDrawer, /activeHoldDemandCount/);
+  assert.doesNotMatch(menuLimitsDrawer, /getSoldProgress/);
   assert.doesNotMatch(menuLimitsActions, /default to stock capacity/);
   assert.doesNotMatch(menuLimitsActions, /Tồn Bếp chi nhánh/);
   assert.match(warehouseStockGateMigration, /pos_stock_outcome_posting/);

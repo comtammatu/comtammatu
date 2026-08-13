@@ -18,6 +18,7 @@ import {
 import { formatDate } from "@lib/inventory/format";
 import {
   getMenuRecipeLineBaseQuantity,
+  isMenuRecipeSourceSiteKind,
   resolveMenuRecipeCostSignals,
   resolveMenuRecipeUnitCost,
   sumMenuRecipeEstimatedCost,
@@ -45,7 +46,6 @@ type MenuItemRow = {
       id: number;
       name: string;
       ingredient_units?: { is_base: boolean; units: { code: string } | null }[];
-      monetary: { unitCost: number | null };
     } | null;
   }> | null;
 };
@@ -82,8 +82,9 @@ export default async function MenuRecipesPage({
 
   const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
 
+  const wacMapAvailable = wacRes.success;
   const wacMap = (
-    wacRes.success ? (wacRes.data?.monetary ?? {}) : {}
+    wacMapAvailable ? (wacRes.data?.monetary ?? {}) : {}
   ) as Record<string, number>;
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
@@ -92,8 +93,6 @@ export default async function MenuRecipesPage({
     !recipesRes.success ? recipesRes.error : null,
     !menuItemsRes.success ? menuItemsRes.error : null,
     !ingredientsRes.success ? ingredientsRes.error : null,
-    !wacRes.success ? wacRes.error : null,
-    !stockCapacityRes.success ? stockCapacityRes.error : null,
   ]
     .filter((value): value is string => Boolean(value))
     .join(" · ");
@@ -114,63 +113,72 @@ export default async function MenuRecipesPage({
     ingredientRows.map((ingredient) => [ingredient.id, ingredient]),
   );
 
-  const menuRecipes: MenuRecipeRow[] = dbRows
-    .map((row) => {
-      const items: MenuRecipeItem[] = (row.menu_recipes ?? []).map((line) => {
-        const qty = Number(line.quantity ?? 0);
-        const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
-        const catalogIngredient = ingredientById.get(ingredientId);
-        const unitCost = resolveMenuRecipeUnitCost({
-          ingredientId,
-          sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
-          sourceSiteWacMap: wacMap,
-          referenceUnitCost: line.ingredients?.monetary?.unitCost,
-        });
-        const entryUnitId =
-          line.entry_unit_id == null ? null : Number(line.entry_unit_id);
-        const baseQuantity = getMenuRecipeLineBaseQuantity({
-          quantity: qty,
-          entryUnitId,
-          units: catalogIngredient?.units,
-        });
-        const fallbackUnit =
-          line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units
-            ?.code ?? "";
-        return {
-          ingredientId,
-          ingredientName: line.ingredients?.name ?? "—",
-          qty,
-          unitLabel: getIngredientUnitDisplayName(
-            catalogIngredient?.units,
-            entryUnitId,
-            fallbackUnit,
-          ),
-          entryUnitId,
-          note: line.note ?? null,
-          lineCost: unitCost == null ? null : baseQuantity * unitCost,
-          costSignals: resolveMenuRecipeCostSignals({
+  const menuRecipes: MenuRecipeRow[] = dbRows.map((row) => {
+    const items: MenuRecipeItem[] = (row.menu_recipes ?? []).map((line) => {
+      const qty = Number(line.quantity ?? 0);
+      const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
+      const catalogIngredient = ingredientById.get(ingredientId);
+      const unitCost = wacMapAvailable
+        ? resolveMenuRecipeUnitCost({
             ingredientId,
             sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
             sourceSiteWacMap: wacMap,
-          }),
-        };
+          })
+        : null;
+      const entryUnitId =
+        line.entry_unit_id == null ? null : Number(line.entry_unit_id);
+      const baseQuantity = getMenuRecipeLineBaseQuantity({
+        quantity: qty,
+        entryUnitId,
+        units: catalogIngredient?.units,
       });
-
-      const estimatedCost = sumMenuRecipeEstimatedCost(
-        items.map((item) => item.lineCost),
-      );
-
+      const fallbackUnit =
+        line.ingredients?.ingredient_units?.find((u) => u.is_base)?.units
+          ?.code ?? "";
+      const costSignals = !isMenuRecipeSourceSiteKind(
+        catalogIngredient?.default_fulfill_site_kind,
+      )
+        ? (["missing_fulfill_site"] as const)
+        : wacMapAvailable
+          ? resolveMenuRecipeCostSignals({
+              ingredientId,
+              sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
+              sourceSiteWacMap: wacMap,
+            })
+          : [];
       return {
-        id: row.id,
-        menuItemId: row.id,
-        name: row.name,
-        category: row.menu_categories?.name ?? "",
-        updatedAt: row.updated_at ? formatDate(row.updated_at) : "—",
-        estimatedCost,
-        items,
+        ingredientId,
+        ingredientName: line.ingredients?.name ?? "—",
+        qty,
+        unitLabel: getIngredientUnitDisplayName(
+          catalogIngredient?.units,
+          entryUnitId,
+          fallbackUnit,
+        ),
+        entryUnitId,
+        note: line.note ?? null,
+        lineCost:
+          unitCost == null || baseQuantity == null
+            ? null
+            : baseQuantity * unitCost,
+        costSignals,
       };
-    })
-    .filter((menuRecipe) => menuRecipe.items.length > 0);
+    });
+
+    const estimatedCost = sumMenuRecipeEstimatedCost(
+      items.map((item) => item.lineCost),
+    );
+
+    return {
+      id: row.id,
+      menuItemId: row.id,
+      name: row.name,
+      category: row.menu_categories?.name ?? "",
+      updatedAt: row.updated_at ? formatDate(row.updated_at) : "—",
+      estimatedCost,
+      items,
+    };
+  });
 
   const menuItems: MenuItemOption[] = menuItemsRes.success
     ? (menuItemsRes.data as Array<{ id: number; name: string }>).map((mi) => ({
@@ -185,11 +193,15 @@ export default async function MenuRecipesPage({
         name: i.name,
         unitLabel: i.units?.find((u) => u.is_base)?.unit_code ?? "",
         units: i.units,
-        costSignals: resolveMenuRecipeCostSignals({
-          ingredientId: i.id,
-          sourceSiteKind: i.default_fulfill_site_kind,
-          sourceSiteWacMap: wacMap,
-        }),
+        costSignals: !isMenuRecipeSourceSiteKind(i.default_fulfill_site_kind)
+          ? (["missing_fulfill_site"] as const)
+          : wacMapAvailable
+            ? resolveMenuRecipeCostSignals({
+                ingredientId: i.id,
+                sourceSiteKind: i.default_fulfill_site_kind,
+                sourceSiteWacMap: wacMap,
+              })
+            : [],
       }))
     : [];
 
@@ -200,6 +212,8 @@ export default async function MenuRecipesPage({
       ingredients={ingredients}
       loadError={loadError || null}
       stockCapacityByMenuItemId={stockCapacityByMenuItemId}
+      showStockCapacity={branchId != null}
+      wacMapAvailable={wacMapAvailable}
     />
   );
 }

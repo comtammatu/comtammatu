@@ -35,10 +35,10 @@ const actionsSource = readFileSync(
   "utf8",
 );
 
-const tableSource = readFileSync(
+const drawerSource = readFileSync(
   join(
     process.cwd(),
-    "app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
+    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-quick-menu-limit-sheet.tsx",
   ),
   "utf8",
 );
@@ -98,10 +98,10 @@ test.skip("Menu-Limits admin RPC and UI expose stock_capacity", () => {
     /stock_capacity IS NOT NULL[\s\S]*RETURN jsonb_build_object/,
   );
   assert.match(actionsSource, /stock_capacity: number \| null/);
-  assert.match(tableSource, /stockCapacityLabel/);
-  assert.match(tableSource, /manual_limit_quantity/);
-  assert.match(tableSource, /getSoldProgress/);
-  assert.match(tableSource, /renderRemainingBar/);
+  assert.match(drawerSource, /stockCapacityLabel/);
+  assert.match(drawerSource, /manual_limit_quantity/);
+  assert.match(drawerSource, /getSoldProgress/);
+  assert.match(drawerSource, /renderRemainingBar/);
   assert.match(
     stockCapacityMigration,
     /limit_quantity\s+=\s+COALESCE\([\s\S]*branch_menu_item_daily_limits\.limit_quantity[\s\S]*EXCLUDED\.limit_quantity/,
@@ -113,13 +113,13 @@ test.skip("Menu-Limits manager saves raw manual limit; empty input clears withou
     actionsSource.match(/limitQuantity:[\s\S]*?isDisabled:/)?.[0] ?? "";
 
   // Client no longer clamps the input to stock capacity or blocks on empty.
-  assert.doesNotMatch(tableSource, /parsed > row\.stock_capacity/);
-  assert.doesNotMatch(tableSource, /manualLimitExceedsStock/);
-  assert.doesNotMatch(tableSource, /manualLimitRequired/);
-  assert.doesNotMatch(tableSource, /stockCapacityRequired/);
-  assert.doesNotMatch(tableSource, /max=\{row\.stock_capacity/);
-  assert.match(tableSource, /manualLimitRange/);
-  assert.match(tableSource, /manualLimitPlaceholder/);
+  assert.doesNotMatch(drawerSource, /parsed > row\.stock_capacity/);
+  assert.doesNotMatch(drawerSource, /manualLimitExceedsStock/);
+  assert.doesNotMatch(drawerSource, /manualLimitRequired/);
+  assert.doesNotMatch(drawerSource, /stockCapacityRequired/);
+  assert.doesNotMatch(drawerSource, /max=\{row\.stock_capacity/);
+  assert.match(drawerSource, /manualLimitRange/);
+  assert.match(drawerSource, /manualLimitPlaceholder/);
   assert.match(limitQuantitySchemaSource, /\.min\(0/);
   assert.doesNotMatch(limitQuantitySchemaSource, /\.positive\(/);
 
@@ -149,9 +149,19 @@ test.skip("Menu-Limits manager saves raw manual limit; empty input clears withou
   );
 });
 
-test("Menu-Limits clear-limit button is wired", () => {
-  assert.match(tableSource, /clearBranchMenuDailyLimit/);
-  assert.match(tableSource, /messages\.pos\.menu\.clearLimit/);
+test("Menu-Limits empty cap input clears the manual cap", () => {
+  assert.match(drawerSource, /function parseLimitDraft/);
+  assert.match(drawerSource, /if \(trimmed === ""\) return null;/);
+  assert.match(drawerSource, /limitQuantity: parsed/);
+  assert.match(drawerSource, /onValueBlur/);
+  assert.match(actionsSource, /nullableLimitQuantitySchema/);
+  assert.match(actionsSource, /Do not z\.coerce\.number\(\)/);
+  const limitQuantitySchemaSource =
+    actionsSource.match(
+      /const nullableLimitQuantitySchema = z\.preprocess\([\s\S]*?isDisabled:/,
+    )?.[0] ?? "";
+  assert.match(limitQuantitySchemaSource, /z\.null\(\)/);
+  assert.doesNotMatch(limitQuantitySchemaSource, /z\.coerce/);
 });
 
 test("stock capacity compute converts recipe entry units to base", () => {
@@ -304,16 +314,16 @@ test.skip("Menu-Limits availability fix is mirrored in the baseline", () => {
 
 test.skip("Menu-Limits manager table uses four requested columns and sold bar", () => {
   assert.match(
-    tableSource,
+    drawerSource,
     /key: "item"[\s\S]*key: "stockCapacity"[\s\S]*key: "limit"[\s\S]*key: "remaining"/,
   );
-  assert.doesNotMatch(tableSource, /key: "status"/);
-  assert.doesNotMatch(tableSource, /key: "disabled"/);
-  assert.doesNotMatch(tableSource, /key: "actions"/);
-  assert.match(tableSource, /messages\.pos\.menu\.soldCount\(progress\.sold\)/);
+  assert.doesNotMatch(drawerSource, /key: "status"/);
+  assert.doesNotMatch(drawerSource, /key: "disabled"/);
+  assert.doesNotMatch(drawerSource, /key: "actions"/);
+  assert.match(drawerSource, /messages\.pos\.menu\.soldCount\(progress\.sold\)/);
   assert.match(
-    tableSource,
+    drawerSource,
     /messages\.pos\.menu\.remainingCount\(progress\.remaining\)/,
   );
-  assert.match(tableSource, /tone="destructive"/);
+  assert.match(drawerSource, /tone="destructive"/);
 });

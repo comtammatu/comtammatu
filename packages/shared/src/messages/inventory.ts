@@ -522,14 +522,17 @@ export const INVENTORY_VI = {
   menuRecipeColUnitCost: "Giá vốn/phần",
   menuRecipeColStockCapacity: "Phần bán được",
   menuRecipeCostUnavailable: "Chưa có giá vốn",
+  menuRecipeMissingLines: "Chưa có định mức",
   menuRecipeMissingFulfillSite: "Thiếu Nguồn hàng",
   menuRecipeMissingSourceWac: "Chờ định giá",
+  menuRecipeSourceWacSiteMismatch: "Giá vốn BQ lệch Nguồn hàng",
+  menuRecipeCoverageAll: "Tất cả",
+  menuRecipeCoverageMissing: "Chưa có định mức",
+  menuRecipeCoverageAwaitingCost: "Chờ định giá",
+  menuRecipeCoverageFilterAria: "Lọc theo phủ định mức",
+  menuRecipeLineCount: (count: number) => `${formatCount(count)} nguyên liệu`,
   menuRecipeCostSignalsHint:
-    "Gán Nguồn hàng trên nguyên liệu và xác nhận HĐ NCC tại Kho gốc để có giá vốn/phần.",
-  menuRecipeCardSummary: (count: number, cost: string) =>
-    `${formatCount(count)} nguyên liệu · ${cost}/phần`,
-  menuRecipeCardSummaryNoCost: (count: number) =>
-    `${formatCount(count)} nguyên liệu · Chưa có giá vốn`,
+    "Giá vốn/phần = giá vốn BQ tại Kho gốc đúng Nguồn hàng (sau HĐ NCC hoặc hoàn thành sản xuất). Sửa định mức/Nguồn hàng không tự tạo giá — nếu giá vốn BQ đang ở site khác, đổi Nguồn hàng cho khớp.",
   amountDong: (amount: string) =>
     amount.trim().endsWith("đ") ? amount : `${amount} đ`,
   daysAgo: (days: number) => `${days} ngày trước`,

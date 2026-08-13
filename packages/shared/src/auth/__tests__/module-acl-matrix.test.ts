@@ -38,6 +38,7 @@ const EXPECTED_MATRIX: Record<StaffRole, ModuleKey[]> = {
     "inventory_operations",
     "kds",
     "menu",
+    "promotions",
     "notifications",
     "branch_home",
     "orders",

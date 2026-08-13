@@ -44,6 +44,7 @@ import {
 } from "./_components/pos-order-target-row";
 import { SelfOrderApprovalSheet } from "./_components/self-order-approval-sheet";
 import {
+  acknowledgeSelfOrderStaffCall,
   fetchSelfOrderPosState,
   type SelfOrderPosState,
 } from "./self-order-actions";
@@ -149,14 +150,12 @@ import { useAppendTarget } from "./_hooks/use-append-target";
 import {
   deriveTableOrderVisualStates,
   isActiveUnpaidPosOrder,
+  isPosOrderAmountLocked,
 } from "./_lib/table-order-visual-state";
+import { confirmAndCancelPendingPayment } from "./_lib/confirm-cancel-pending-payment";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTitle,
-} from "@/components/surface";
+import { StationSheet } from "@/components/surface";
 
 
 /* ─── Inner (consumes hooks) ─── */
@@ -342,6 +341,7 @@ export function PosDesktopInner({
     {
       requests: [],
       paymentRequests: [],
+      staffCalls: [],
     },
   );
   const [selfOrderSyncFailed, setSelfOrderSyncFailed] = useState(false);
@@ -351,6 +351,7 @@ export function PosDesktopInner({
   const [selfOrderApprovalOpen, setSelfOrderApprovalOpen] = useState(false);
   const knownSelfOrderRequestIdsRef = useRef<Set<number> | null>(null);
   const knownSelfOrderPaymentRequestIdsRef = useRef<Set<number> | null>(null);
+  const knownSelfOrderStaffCallIdsRef = useRef<Set<number> | null>(null);
   const selfOrderLoadGenerationRef = useRef(0);
   // Multi-order-per-table: when the user taps an occupied table, show a
   // picker listing active orders + a "Tạo đơn mới" button. The picker is the
@@ -404,15 +405,22 @@ export function PosDesktopInner({
       return;
     }
 
-    const nextState = result.data ?? { requests: [], paymentRequests: [] };
+    const nextState = result.data ?? {
+      requests: [],
+      paymentRequests: [],
+      staffCalls: [],
+    };
     const nextRequestIds = new Set(
       nextState.requests.map((request) => request.id),
     );
     const nextPaymentIds = new Set(
       nextState.paymentRequests.map((request) => request.id),
     );
+    const nextStaffCalls = nextState.staffCalls ?? [];
+    const nextStaffCallIds = new Set(nextStaffCalls.map((call) => call.id));
     const knownRequestIds = knownSelfOrderRequestIdsRef.current;
     const knownPaymentIds = knownSelfOrderPaymentRequestIdsRef.current;
+    const knownStaffCallIds = knownSelfOrderStaffCallIdsRef.current;
     // Distinct tones from the POS order ping so cashiers do not confuse
     // QR guest events with ordinary POS sync alerts.
     if (
@@ -429,8 +437,15 @@ export function PosDesktopInner({
     ) {
       if (audioModeHasBeep(audioMode)) playAppSignal("pos-payment-call");
     }
+    if (
+      knownStaffCallIds !== null &&
+      nextStaffCalls.some((call) => !knownStaffCallIds.has(call.id))
+    ) {
+      if (audioModeHasBeep(audioMode)) playAppSignal("pos-payment-call");
+    }
     knownSelfOrderRequestIdsRef.current = nextRequestIds;
     knownSelfOrderPaymentRequestIdsRef.current = nextPaymentIds;
+    knownSelfOrderStaffCallIdsRef.current = nextStaffCallIds;
     setSelfOrderSyncFailed(false);
     setSelfOrderPosState(nextState);
   }, [audioMode, branchId]);
@@ -608,6 +623,20 @@ export function PosDesktopInner({
     () => new Set(pendingSelfOrderRequestByTable.keys()),
     [pendingSelfOrderRequestByTable],
   );
+  const staffCallByTable = useMemo(
+    () =>
+      new Map(
+        (selfOrderPosState.staffCalls ?? []).map((call) => [
+          call.tableId,
+          call,
+        ]),
+      ),
+    [selfOrderPosState.staffCalls],
+  );
+  const staffCallTableIds = useMemo(
+    () => new Set(staffCallByTable.keys()),
+    [staffCallByTable],
+  );
   const selfOrderTableNumberById = useMemo(
     () => new Map(tables.map((table) => [table.id, table.number])),
     [tables],
@@ -617,7 +646,17 @@ export function PosDesktopInner({
       new Map(
         selfOrderPosState.paymentRequests.map((request) => [
           request.orderId,
-          request.id,
+          request,
+        ]),
+      ),
+    [selfOrderPosState.paymentRequests],
+  );
+  const paymentCallByOrderId = useMemo(
+    () =>
+      new Map(
+        selfOrderPosState.paymentRequests.map((request) => [
+          request.orderId,
+          request.kind,
         ]),
       ),
     [selfOrderPosState.paymentRequests],
@@ -833,6 +872,14 @@ export function PosDesktopInner({
 
   const handleTableSelect = useCallback(
     (table: BranchTable) => {
+      const staffCall = staffCallByTable.get(table.id);
+      if (staffCall) {
+        void acknowledgeSelfOrderStaffCall({ callId: staffCall.id }).then(
+          () => {
+            void refreshSelfOrderPosState();
+          },
+        );
+      }
       const pendingSelfOrderRequest = pendingSelfOrderRequestByTable.get(
         table.id,
       );
@@ -861,6 +908,16 @@ export function PosDesktopInner({
           o.table_id === table.id &&
           isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
       );
+      const paymentCallOrders = activeOrders.filter((order) =>
+        selfOrderPaymentRequestByOrder.has(order.id),
+      );
+      if (paymentCallOrders.length === 1) {
+        const paymentCallOrder = paymentCallOrders[0];
+        if (paymentCallOrder) {
+          openBill(paymentCallOrder.id, "payment");
+          return;
+        }
+      }
 
       if (activeOrders.length === 1) {
         const order = activeOrders[0];
@@ -901,8 +958,12 @@ export function PosDesktopInner({
       branchId,
       focusOrderWorkflow,
       orders,
+      openBill,
       pendingSelfOrderRequestByTable,
       refreshOperational,
+      refreshSelfOrderPosState,
+      selfOrderPaymentRequestByOrder,
+      staffCallByTable,
       selectedTableId,
       setActiveTable,
       startTransition,
@@ -932,13 +993,24 @@ export function PosDesktopInner({
 
   const handleAppendOrderFromPicker = useCallback(
     (orderId: number, orderNumber: string) => {
-      setPickerTableId(null);
-      setCartDrawerOpen(false);
-      startAppendTarget(orderId, orderNumber);
-      setShowOrders(false);
-      toast.message("Chạm món trên menu để thêm");
+      const order = orders.find((row) => row.id === orderId);
+      const locked = order != null && isPosOrderAmountLocked(order);
+      void (async () => {
+        const ok = await confirmAndCancelPendingPayment({
+          branchId,
+          orderId,
+          locked,
+        });
+        if (!ok) return;
+        setPickerTableId(null);
+        setCartDrawerOpen(false);
+        startAppendTarget(orderId, orderNumber);
+        setShowOrders(false);
+        toast.message("Chạm món trên menu để thêm");
+        if (locked) void refreshOperational();
+      })();
     },
-    [startAppendTarget],
+    [branchId, orders, refreshOperational, startAppendTarget],
   );
 
   const handleCreateNewOnOccupied = useCallback(() => {
@@ -1574,6 +1646,7 @@ export function PosDesktopInner({
       onOpenArchivedSheet: handleOpenArchivedSheet,
       onReturnToTables: handleReturnToTables,
       hideTakeawayOrders: isTakeawayGateActive,
+      paymentCallByOrderId,
     }),
     [
       showOrders,
@@ -1595,6 +1668,7 @@ export function PosDesktopInner({
       handleOpenArchivedSheet,
       handleReturnToTables,
       isTakeawayGateActive,
+      paymentCallByOrderId,
     ],
   );
 
@@ -1669,25 +1743,29 @@ export function PosDesktopInner({
     : undefined;
 
   const mobileSidebarDrawer = isTouchLayout ? (
-    <Drawer open={cartDrawerOpen} onOpenChange={setCartDrawerOpen}>
-      <DrawerContent showHandle responsiveFullscreen>
-        <DrawerTitle className="sr-only">
-          {appendTarget != null
-            ? `${messages.pos.desktop.pendingAppendTitle} ${
-                orderTargetLabel ?? ""
-              }`.trim()
-            : showOrders
-              ? "Đơn trong ca"
-              : messages.pos.desktop.pendingNewTitle}
-        </DrawerTitle>
-        <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-          <PosSidebarContent
-            {...sidebarContentProps}
-            onClosePane={() => setCartDrawerOpen(false)}
-          />
-        </div>
-      </DrawerContent>
-    </Drawer>
+    <StationSheet
+      open={cartDrawerOpen}
+      onOpenChange={setCartDrawerOpen}
+      side="bottom"
+      fullscreen
+      title={
+        appendTarget != null
+          ? `${messages.pos.desktop.pendingAppendTitle} ${
+              orderTargetLabel ?? ""
+            }`.trim()
+          : showOrders
+            ? "Đơn trong ca"
+            : messages.pos.desktop.pendingNewTitle
+      }
+      bodyClassName="p-0"
+    >
+      <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+        <PosSidebarContent
+          {...sidebarContentProps}
+          onClosePane={() => setCartDrawerOpen(false)}
+        />
+      </div>
+    </StationSheet>
   ) : null;
 
   const desktopSelfOrderAction = selfOrderActionVisible ? (
@@ -1770,6 +1848,7 @@ export function PosDesktopInner({
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
+                staffCallTableIds={staffCallTableIds}
                 hasStackedTouchActions={selfOrderActionVisible}
                 headerAction={serviceModeSelector}
                 className="min-h-0 flex-1"
@@ -1937,8 +2016,7 @@ export function PosDesktopInner({
         onOpenChange={setArchivedSheetOpen}
         onViewBill={(id) => {
           // Reprint flow: archived rows always open in receipt-only mode.
-          // Close the sheet first so we don't stack Drawer over Drawer on
-          // mobile (focus stack gets bumpy at the bottom-sheet boundary).
+          // Close the sheet first so we don't stack StationSheet over StationSheet.
           setArchivedSheetOpen(false);
           openBill(id, "receipt");
         }}
@@ -1954,9 +2032,9 @@ export function PosDesktopInner({
         initialVietQrConfig={initialVietQrConfig}
         initialHeaderSeed={billHeaderSeed}
         selfOrderPaymentRequestId={
-          billOrderId === null
+          billOrderId === null || billIntent === "receipt"
             ? null
-            : (selfOrderPaymentRequestByOrder.get(billOrderId) ?? null)
+            : (selfOrderPaymentRequestByOrder.get(billOrderId)?.id ?? null)
         }
         onOrderUpdated={() => void refreshSelfOrderWorkflow()}
         onClose={closeBill}

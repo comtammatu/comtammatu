@@ -77,7 +77,7 @@ export function VoidRequestQueue({ branchId }: { branchId: number }) {
             </ItemContent>
             <ItemActions className="flex flex-col gap-1 sm:flex-row">
               <Button
-                size="sm"
+                size="touch"
                 variant="destructive"
                 disabled={isPending}
                 onClick={() => resolve(request.id, "approved")}
@@ -85,7 +85,7 @@ export function VoidRequestQueue({ branchId }: { branchId: number }) {
                 {messages.pos.order.voidRequestApprove}
               </Button>
               <Button
-                size="sm"
+                size="touch"
                 variant="outline"
                 disabled={isPending}
                 onClick={() => resolve(request.id, "rejected")}

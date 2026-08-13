@@ -47,6 +47,7 @@ export const OWNER_ROUTE_PREFIXES = [
   "/",
   "/settings",
   "/menu",
+  "/promotions",
   "/orders",
   "/feedback",
   "/inventory",
@@ -121,6 +122,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (matchesPathPrefix(pathname, "/finance")) return "finance";
   if (matchesPathPrefix(pathname, "/branches")) return "branches";
   if (matchesPathPrefix(pathname, "/menu")) return "menu";
+  if (matchesPathPrefix(pathname, "/promotions")) return "promotions";
   if (matchesPathPrefix(pathname, "/orders")) return "orders";
   if (matchesPathPrefix(pathname, "/feedback")) return "feedback";
   if (matchesPathPrefix(pathname, "/work")) return "work";

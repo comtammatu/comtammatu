@@ -88,11 +88,12 @@ export function buildFoodCostRows({
   for (const row of rows.values()) {
     const menuRecipeRows = menuRecipesByItem.get(row.menu_item_id) ?? [];
     const costPerUnit = menuRecipeRows.reduce((sum, menuRecipe) => {
-      const baseQuantity = getMenuRecipeLineBaseQuantity({
-        quantity: menuRecipe.quantity,
-        entryUnitId: menuRecipe.entryUnitId,
-        units: menuRecipe.units,
-      });
+      const baseQuantity =
+        getMenuRecipeLineBaseQuantity({
+          quantity: menuRecipe.quantity,
+          entryUnitId: menuRecipe.entryUnitId,
+          units: menuRecipe.units,
+        }) ?? 0;
       const unitCost =
         unitCosts.get(
           foodCostUnitCostKey(row.branch_id, menuRecipe.ingredientId),

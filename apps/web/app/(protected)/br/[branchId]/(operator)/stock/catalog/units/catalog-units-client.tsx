@@ -21,7 +21,7 @@ import {
   ItemContent,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { FormDialog, TextField } from "@/components/form";
+import { FormSheet, TextField } from "@/components/form";
 import { AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
 import {
@@ -192,7 +192,7 @@ export function CatalogUnitsClient({
         {copy.add}
       </Button>
 
-      <FormDialog
+      <FormSheet
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         title={editRow ? formCopy.form.editTitle : formCopy.form.addTitle}
@@ -230,7 +230,7 @@ export function CatalogUnitsClient({
             </Field>
           </>
         )}
-      </FormDialog>
+      </FormSheet>
     </div>
   );
 }

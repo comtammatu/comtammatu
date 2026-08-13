@@ -8,6 +8,7 @@ import { getAuthContextWithPermission } from "../../_lib/auth";
 import { logAudit } from "@/_lib/audit";
 import { isPosBranchInScope } from "./_lib/auth";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
+import { mapPromotionRpcError } from "@lib/promotions/rpc-errors";
 
 /* ─── Constants ─── */
 
@@ -146,6 +147,12 @@ function mapDiscountRpcError(message: string): string {
   if (msg.includes("merge_pct_discount_blocked")) {
     return "Có chiết khấu % — vui lòng gỡ chiết khấu một trong hai đơn trước khi gộp.";
   }
+  if (
+    msg.includes("promotion") ||
+    msg.includes("manual_discount_present")
+  ) {
+    return mapPromotionRpcError(message);
+  }
 
   // Lock contention
   if (msg.includes("55p03")) {
@@ -212,7 +219,8 @@ export async function applyOrderDiscount(
 
   const ctx = await getAuthContextWithPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
+    PERMISSION_KEYS.POS_APPLY_DISCOUNT,
+    parsedBranch.data,
   );
   if (!ctx) {
     return {
@@ -306,7 +314,8 @@ export async function clearOrderDiscount(
 
   const ctx = await getAuthContextWithPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
+    PERMISSION_KEYS.POS_APPLY_DISCOUNT,
+    parsedBranch.data,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -450,7 +459,8 @@ export async function applyOrderItemDiscount(
 
   const ctx = await getAuthContextWithPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
+    PERMISSION_KEYS.POS_APPLY_DISCOUNT,
+    parsedBranch.data,
   );
   if (!ctx) {
     return {
@@ -538,7 +548,8 @@ export async function clearOrderItemDiscount(
 
   const ctx = await getAuthContextWithPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
+    PERMISSION_KEYS.POS_APPLY_DISCOUNT,
+    parsedBranch.data,
   );
   if (!ctx) {
     return {
@@ -592,6 +603,197 @@ export async function clearOrderItemDiscount(
       order_discount_amount: Number(result.order_discount_amount),
       item_discount_amount: Number(result.item_discount_amount),
       total_discount_amount: Number(result.total_discount_amount),
+      total_amount: Number(result.total_amount),
+    },
+  };
+}
+
+const promoCodeSchema = z.object({
+  orderId: orderIdSchema,
+  code: z
+    .string()
+    .trim()
+    .min(3, { error: "Mã giảm tối thiểu 3 ký tự" })
+    .max(32, { error: "Mã giảm quá dài" }),
+});
+
+const clearPromoSchema = z.object({
+  orderId: orderIdSchema,
+  reason: z
+    .string()
+    .trim()
+    .min(3, { error: "Lý do bỏ khuyến mãi tối thiểu 3 ký tự" })
+    .max(200),
+});
+
+async function posUseForBranch(branchId: number) {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return {
+      ok: false as const,
+      error: "Mã chi nhánh không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
+    };
+  }
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) {
+    return {
+      ok: false as const,
+      error: "Không có quyền",
+      errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    };
+  }
+  if (!isPosBranchInScope(ctx.claims, parsedBranch.data)) {
+    return {
+      ok: false as const,
+      error: "Không có quyền truy cập chi nhánh này",
+      errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+    };
+  }
+  return { ok: true as const, ctx, branchId: parsedBranch.data };
+}
+
+export async function previewPromotionCode(
+  branchId: number,
+  input: { orderId: number; code: string },
+): Promise<
+  ActionResult<{
+    name: string;
+    code: string;
+    amount: number;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const parsed = promoCodeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_DISCOUNT,
+    };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc(
+    "preview_promotion_code",
+    {
+      p_order_id: parsed.data.orderId,
+      p_code: parsed.data.code,
+    },
+  );
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as { name?: string; code?: string; amount?: number } | null;
+  if (!result) {
+    return { success: false, error: "Không thể xem mức giảm." };
+  }
+  return {
+    success: true,
+    data: {
+      name: String(result.name ?? ""),
+      code: String(result.code ?? parsed.data.code),
+      amount: Number(result.amount ?? 0),
+    },
+  };
+}
+
+export async function applyPromotionCode(
+  branchId: number,
+  input: { orderId: number; code: string },
+): Promise<
+  ActionResult<{
+    order_id: number;
+    name: string;
+    code: string;
+    discount_amount: number;
+    total_amount: number;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const parsed = promoCodeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_DISCOUNT,
+    };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc("apply_promotion_code", {
+    p_order_id: parsed.data.orderId,
+    p_code: parsed.data.code,
+  });
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as {
+    order_id?: number;
+    name?: string;
+    code?: string;
+    discount_amount?: number;
+    total_amount?: number;
+  } | null;
+  if (!result) {
+    return { success: false, error: "Không thể áp mã giảm." };
+  }
+  return {
+    success: true,
+    data: {
+      order_id: Number(result.order_id),
+      name: String(result.name ?? ""),
+      code: String(result.code ?? parsed.data.code),
+      discount_amount: Number(result.discount_amount ?? 0),
+      total_amount: Number(result.total_amount ?? 0),
+    },
+  };
+}
+
+export async function clearPromotion(
+  branchId: number,
+  orderId: number,
+  reason: string,
+): Promise<ActionResult<{ order_id: number; total_amount: number }>> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const parsed = clearPromoSchema.safeParse({ orderId, reason });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc("clear_promotion", {
+    p_order_id: parsed.data.orderId,
+    p_reason: parsed.data.reason,
+  });
+  if (error) {
+    return { success: false, error: mapDiscountRpcError(error.message) };
+  }
+  const result = data as { order_id?: number; total_amount?: number } | null;
+  if (!result) {
+    return { success: false, error: "Không thể bỏ khuyến mãi." };
+  }
+  return {
+    success: true,
+    data: {
+      order_id: Number(result.order_id),
       total_amount: Number(result.total_amount),
     },
   };

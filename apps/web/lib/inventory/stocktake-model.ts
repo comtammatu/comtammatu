@@ -64,6 +64,11 @@ export type BranchStocktakeCountLine = {
   isFinal: boolean;
 };
 
+export type DraftCounts = Record<
+  string,
+  { qty: number; note?: string; savedAt?: string }
+>;
+
 export type BranchStocktakeCountData = {
   sessionId: number;
   sessionNumber: string;

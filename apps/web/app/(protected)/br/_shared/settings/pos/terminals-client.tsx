@@ -15,6 +15,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -27,12 +28,8 @@ import {
 } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { messages } from "@lib/messages";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/components/data-table/data-table";
 
-import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface TerminalRow {
   id: number;
   name: string;
@@ -92,33 +89,6 @@ export function TerminalsClient({
       </Button>
     );
   }
-
-  const columns: DataTableColumn<TerminalRow>[] = [
-    {
-      key: "name",
-      header: copy.terminalName,
-      className: "font-medium",
-      render: (terminal) => terminal.name,
-    },
-    {
-      key: "status",
-      header: FORM_VI.status,
-      className: "text-center",
-      render: (terminal) => (
-        <Badge variant={terminal.is_active ? "success" : "secondary"}>
-          {terminal.is_active
-            ? messages.settings.common.active
-            : messages.settings.common.inactive}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      className: "w-12",
-      render: (terminal) => <TerminalActions terminal={terminal} />,
-    },
-  ];
 
   if (branches.length === 0) {
     return (
@@ -198,18 +168,14 @@ export function TerminalsClient({
           </Button>
         </AppEmptyState>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filteredTerminals}
-          getRowKey={(terminal) => terminal.id}
-          mobileBreakpoint={1024}
-          mobileCardRender={(terminal) => (
-            <Item variant="outline">
+        <ItemGroup className="gap-2">
+          {filteredTerminals.map((terminal) => (
+            <Item key={terminal.id} variant="outline">
               <ItemContent className="min-w-0">
-              <ItemTitle size="heading" className="line-clamp-none w-full">
-                {terminal.name}
-              </ItemTitle>
-              <div>
+                <ItemTitle size="heading" className="line-clamp-none w-full">
+                  {terminal.name}
+                </ItemTitle>
+                <div>
                   <Badge variant={terminal.is_active ? "success" : "secondary"}>
                     {terminal.is_active
                       ? messages.settings.common.active
@@ -221,8 +187,8 @@ export function TerminalsClient({
                 <TerminalActions terminal={terminal} />
               </ItemActions>
             </Item>
-          )}
-        />
+          ))}
+        </ItemGroup>
       )}
 
       {selectedBranchId !== null && (

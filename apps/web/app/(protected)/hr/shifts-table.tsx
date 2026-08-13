@@ -32,9 +32,7 @@ import {
   getShiftDurationMinutes,
   isUnusualShiftDuration,
 } from "@lib/hr/shift-duration";
-import {
-  AppDrawer,
-} from "@/components/surface";
+import { AppSheet } from "@/components/surface";
 
 const shiftsCopy = messages.hr.client;
 
@@ -252,7 +250,7 @@ export function ShiftsTable({
         )}
       />
 
-      <AppDrawer
+      <AppSheet
         open={!!drawerShift}
         onOpenChange={(open) => !open && setDrawerShift(null)}
         title={drawerShift?.name ?? ""}
@@ -299,7 +297,7 @@ export function ShiftsTable({
                 )}
             </>
           )}
-      </AppDrawer>
+      </AppSheet>
 
       {canManage ? (
         <ShiftFormDialog

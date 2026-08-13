@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import {
-  FormDialog,
+  FormSheet,
   SelectField,
   NumberField,
   valuesToFormData,
@@ -60,7 +60,7 @@ export function TableFormDialog({
   ];
 
   return (
-    <FormDialog
+    <FormSheet
       open={open}
       onOpenChange={onOpenChange}
       schema={tableSchema}
@@ -114,6 +114,6 @@ export function TableFormDialog({
           )}
         </>
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

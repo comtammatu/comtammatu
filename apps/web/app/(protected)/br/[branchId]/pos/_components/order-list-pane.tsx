@@ -10,6 +10,7 @@ import {
   X as IconX,
 } from "lucide-react";
 import { ActiveOrdersList, type SessionOrder } from "../order-history";
+import type { SelfOrderPaymentCallKind } from "../self-order-actions";
 import type { BillReceiptIntent } from "./bill/bill-receipt-types";
 import {
   usePosOperationalDispatch,
@@ -33,6 +34,7 @@ interface OrderListPaneProps {
    * pulled rows the cashier rarely touches.
    */
   onOpenArchivedSheet?: () => void;
+  paymentCallByOrderId?: ReadonlyMap<number, SelfOrderPaymentCallKind>;
 }
 
 function OrderListPaneComponent({
@@ -41,6 +43,7 @@ function OrderListPaneComponent({
   onClosePane,
   hideTakeawayOrders = false,
   onOpenArchivedSheet,
+  paymentCallByOrderId,
 }: OrderListPaneProps) {
   const orders = usePosOrders();
   const { refreshOrders } = usePosOperationalDispatch();
@@ -73,7 +76,7 @@ function OrderListPaneComponent({
           <Button
             type="button"
             variant="ghost"
-            size="icon-lg"
+            size="icon-touch"
             className="text-muted-foreground"
             aria-label={messages.pos.orderHistory.refreshOrdersAria}
             onClick={() => void refreshOrders()}
@@ -84,7 +87,7 @@ function OrderListPaneComponent({
             <Button
               type="button"
               variant="ghost"
-              size="icon-lg"
+              size="icon-touch"
               className="text-muted-foreground"
               aria-label={messages.pos.orderHistory.closeListAria}
               onClick={onClosePane}
@@ -97,6 +100,7 @@ function OrderListPaneComponent({
 
       <ActiveOrdersList
         orders={displayedOrders}
+        paymentCallByOrderId={paymentCallByOrderId}
         onViewBill={onViewBill}
         onViewDetail={onViewDetail}
       />

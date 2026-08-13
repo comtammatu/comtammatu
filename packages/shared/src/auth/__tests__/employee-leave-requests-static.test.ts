@@ -105,7 +105,7 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   for (const expected of [
     'HR_REQUEST_LEAVE: "hr:request_leave"',
     'HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request"',
-    "PERMISSION_KEY_COUNT = 109",
+    "PERMISSION_KEY_COUNT = 112",
   ]) {
     assert.ok(permissions.includes(expected), `expected ${expected}`);
   }
@@ -118,8 +118,8 @@ test("Employee leave permission and generated type mirrors are wired", () => {
   const seededKeys = [...catalogValues.matchAll(/\('([^']+)' *,/g)].map(
     (match) => match[1],
   );
-  assert.equal(seededKeys.length, 108);
-  assert.equal(new Set(seededKeys).size, 108);
+  assert.equal(seededKeys.length, 111);
+  assert.equal(new Set(seededKeys).size, 111);
 
   for (const expected of [
     "leave_requests: {",

@@ -50,7 +50,8 @@ test("KDS header keeps tablet widths in the touch layout instead of md desktop t
 test("KDS filter and mode controls use touch-sized targets", () => {
   assert.equal(boardHeaderSource.match(/size="icon-touch"/g)?.length, 4);
   assert.doesNotMatch(boardHeaderSource, /size="icon-lg"/);
-  assert.match(filterBarSource, /min-h-11 min-w-28/);
+  assert.match(filterBarSource, /size="touch"/);
+  assert.match(filterBarSource, /min-w-28/);
   assert.match(filterBarSource, /size="icon-touch"/);
   assert.match(filterBarSource, /inline-flex min-h-11/);
   assert.doesNotMatch(filterBarSource, /size="icon-sm"/);

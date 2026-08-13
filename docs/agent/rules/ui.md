@@ -118,7 +118,8 @@ walk the **UI Review Checklist** below.
 - Date, command, and overlay jobs use the chooser tables in
   `design-system.md` § Component Authority (`BusinessDateField` /
   `BusinessDatePicker`, `ResponsiveActionButton` on `control_surface`,
-  `AppSheet` / `StationSheet`). Do not author `type="date"`, raw `Calendar`,
+  overlay chooser by plane: Branch `AppSheet`, Owner `FormDialog`,
+  station `StationSheet`). Do not author `type="date"`, raw `Calendar`,
   or route-level `Sheet` / `Drawer`.
 - Use Má Tư DS shared components and approved surface adapters before route-local raw
   styling. Before composing a new surface, run

@@ -185,12 +185,12 @@ export function KdsCompletionHistorySheet({
                 setEventType(value as KdsHistoryEventType)
               }
             >
-              <SelectTrigger id="kds-history-event-type">
+              <SelectTrigger id="kds-history-event-type" size="touch">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={value} value={value} size="touch">
                     {label}
                   </SelectItem>
                 ))}

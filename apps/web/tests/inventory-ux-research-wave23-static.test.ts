@@ -76,22 +76,22 @@ test("Wave 2 hub attention deep-links and nav includes stocktake", () => {
   );
 });
 
-test("Wave 3 stock page twin mirrors dialog KPI strip and StatusBadge", () => {
+test("Wave 3 stock overlay mirrors KPI strip and StatusBadge", () => {
   const page = read(
-    "app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+    "app/(protected)/inventory/stock/stock-detail-dialog.tsx",
   );
 
   assert.match(
     page,
-    /StatusBadge[\s\S]*domain="inventory"[\s\S]*value=\{data\.status\}/,
-    "stock page: StatusBadge in title",
+    /StatusBadge[\s\S]*domain="inventory"[\s\S]*value=\{status\}/,
+    "stock overlay: StatusBadge in title",
   );
   assert.match(
     page,
     /variant="outline"[\s\S]*stockCopy\.table\.currentStock/,
-    "stock page: KPI Item strip",
+    "stock overlay: KPI Item strip",
   );
-  assert.match(page, /stockCopy\.table\.threshold/, "stock page: threshold KPI");
+  assert.match(page, /stockCopy\.table\.threshold/, "stock overlay: threshold KPI");
 });
 
 test("Wave 3 GRN invoice CTA is primary when pending invoice", () => {

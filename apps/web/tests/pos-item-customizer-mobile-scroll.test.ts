@@ -12,32 +12,18 @@ const source = readFileSync(
 );
 
 test("POS item customizer pins action footer outside the scroll body", () => {
-  assert.match(
-    source,
-    /SheetContent[\s\S]*fullscreen[\s\S]*className="overflow-hidden p-0"/,
-  );
-  assert.match(
-    source,
-    /div className="flex h-full min-h-0 flex-col overflow-hidden"/,
-  );
-  assert.match(source, /SheetHeader className="shrink-0"/);
-  assert.match(
-    source,
-    /div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4"/,
-  );
-  assert.doesNotMatch(source, /ScrollArea/);
-
-  const scrollBodyIndex = source.indexOf(
-    'className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4"',
-  );
-  const footerIndex = source.indexOf(
-    'SheetFooter className="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row"',
-  );
-  assert.ok(scrollBodyIndex > 0, "scroll body present");
-  assert.ok(footerIndex > scrollBodyIndex, "SheetFooter follows scroll body");
+  assert.match(source, /<StationSheet/);
+  assert.match(source, /fullscreen/);
+  assert.match(source, /contentClassName="overflow-hidden p-0"/);
+  assert.match(source, /footer=\{/);
+  assert.doesNotMatch(source, /ScrollArea|<SheetContent\b|<DrawerContent\b/);
   assert.match(source, /onClick=\{handleConfirm\}/);
+
+  const footerIndex = source.indexOf("footer={");
+  const confirmIndex = source.indexOf("onClick={handleConfirm}");
+  assert.ok(footerIndex > 0, "StationSheet footer present");
   assert.ok(
-    source.indexOf("onClick={handleConfirm}") > footerIndex,
-    "confirm CTA lives inside pinned SheetFooter",
+    confirmIndex > footerIndex,
+    "confirm CTA lives inside pinned StationSheet footer",
   );
 });

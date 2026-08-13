@@ -95,8 +95,7 @@ warehouse mới là luồng giảm tồn gắn giá vốn món.
 | Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
 
 Không có loại `other` / “Xuất khác”. UI: **phiếu tiêu hao** hoặc **hao hụt**.
-`mv_food_cost` là recipe/theoretical; lãi gộp dùng actual food cost bucket
-`food_cost` (sale consumption), không gồm writeoff/waste.
+Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức hiện tại × WAC kho chi nhánh bán). Lãi gộp Tổng quan dùng `Giá vốn món` từ `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover thì KPI trống. Không gồm writeoff/waste. `mv_food_cost` không còn source runtime.
 
 ### Mã chứng từ kho
 
@@ -190,11 +189,15 @@ validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
 > `/inventory/menu-recipes`). Không gọi `Recipe` trần trong source.
 > `ProductionRecipe`/“Công thức sản xuất” = BOM thành phẩm
 > (`production_recipes`, tab Công thức `/inventory/production`).
-
-Định mức theo `menu_item`; xuất kho (`consumption`) khi đơn `completed` (RPC).
-`recipes.entry_unit_id` = đơn vị active bất kỳ; quy về Đơn vị chuẩn qua
-`entry_to_base_factor`. Không có Yield; `recipes.yield_factor` luôn 1 ở app,
-không dùng cho production BOM.
+Định mức theo `menu_item`; xuất kho khi đơn `completed`. `entry_unit_id` →
+Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
+Bốn đường số không chung khóa WAC: POS `post_pos_sale_consumption_if_ready` +
+`inv_to_base_for_tenant` (WAC kho bán, ghi sổ); `/inventory/menu-recipes`
+(`getMenuRecipeLineBaseQuantity`, WAC Kho gốc, LIST mọi món đang bán, một nhãn
+`Chưa có định mức` / `Thiếu Nguồn hàng` / `Chờ định giá`); `/finance/food-cost`
+`fetchFoodCost` (định mức hiện tại × SL × WAC kho bán); `Giá vốn món` =
+allocations khi cutover `active`. Đổi quantity/factor đổi POS và lý thuyết;
+không bịa gram. Bán kính UI: Gạo `phần` 0,029 kg; Sườn 1 gang; Trà Đá / Tóp Mỡ / Canh Khổ Qua; Nguồn hàng đồ uống + Ba rọi TP; cam/khăn lạnh; Bì 9 g + 38 g.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 
@@ -363,7 +366,7 @@ chỉ deep-link/pad; notification `/br/.../stock/*` resolve về L0 khi mở fee
 Tóm tắt vai (D093):
 
 - `owner`: tenant-wide; catalog + `default_fulfill_site_kind`; WAC; oversight;
-  checklist sẵn sàng trên `/inventory/ingredients` (Nguồn hàng + NCC).
+  checklist sẵn sàng: Nguồn hàng; NCC chỉ nguyên liệu mua (không thành phẩm).
 - `accountant`: YCM đọc → PO/giá; GRN đọc (trung tâm); HĐ/AP. Không tồn/SX/
   định mức/yêu cầu CN/QC confirm.
 - `central_supply_ops` / `central_kitchen_lead`: primary L0 `/inventory`; GRN

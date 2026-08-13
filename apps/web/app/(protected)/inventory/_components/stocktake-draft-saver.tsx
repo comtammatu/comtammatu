@@ -10,11 +10,9 @@ import {
 } from "lucide-react";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { saveStocktakeDraft } from "../stocktake-actions";
+import type { DraftCounts } from "@lib/inventory/stocktake-model";
 
-export type DraftCounts = Record<
-  string,
-  { qty: number; note?: string; savedAt?: string }
->;
+export type { DraftCounts };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 

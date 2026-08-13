@@ -31,6 +31,7 @@ const BRANCH_ID = "7";
 const DEEPER_SUBPATH_BY_PREFIX: Record<string, string> = {
   "/settings": "/settings/general",
   "/menu": "/menu/categories",
+  "/promotions": "/promotions/new",
   "/orders": "/orders/history",
   "/inventory": "/inventory/stock",
   "/finance": "/finance/revenue",

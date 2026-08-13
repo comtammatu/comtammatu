@@ -297,7 +297,11 @@ test("shared primitives use Base UI behavior without Radix", () => {
     sheetSource,
     /data-\[side=bottom\]:pb-\[env\(safe-area-inset-bottom\)\]/,
   );
-  assert.match(sheetSource, /size=\{isTouchLayout \? "icon-touch" : "icon-sm"\}/);
+  assert.match(
+    sheetSource,
+    /closeButtonSize \?\?[\s\S]*isTouchLayout \? "icon-touch" : "icon-sm"/,
+  );
+  assert.match(sheetSource, /closeButtonSize\?: "icon-sm" \| "icon-touch"/);
   assert.match(sheetSource, /useIsMobile\(OWNER_SHELL_BREAKPOINT\)/);
   assert.doesNotMatch(
     sheetSource,
@@ -593,12 +597,11 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   );
   assert.match(drawerSource, /before:inset-0/);
   assert.match(drawerSource, /sm:before:inset-2/);
-  assert.match(posSource, /<DrawerContent showHandle responsiveFullscreen>/);
+  assert.match(posSource, /<StationSheet/);
   assert.match(archivedOrdersSource, /useIsMobile\(1280\)/);
-  assert.match(
-    archivedOrdersSource,
-    /<DrawerContent showHandle responsiveFullscreen>/,
-  );
+  assert.match(archivedOrdersSource, /<StationSheet/);
+  assert.doesNotMatch(posSource, /<DrawerContent/);
+  assert.doesNotMatch(archivedOrdersSource, /<DrawerContent/);
   assert.doesNotMatch(drawerSource, /vaul|data-\[vaul/);
   assert.doesNotMatch(drawerSource, /max-h-\[80dvh\]/);
   assert.doesNotMatch(posSource, /data-\[vaul/);
@@ -606,6 +609,22 @@ test("shared Drawer stays bottom-anchored across mobile viewport changes", () =>
   assert.match(
     checkoutApprovalsSource,
     /setRejectTarget\(detailsTarget\);\s*setDetailsTarget\(null\);/,
+  );
+});
+
+test("surface barrel exports adapters only, not raw Sheet or Drawer primitives", () => {
+  const surfaceBarrel = read("apps/web/app/components/surface.tsx");
+  assert.match(surfaceBarrel, /export \{ AppSheet \}/);
+  assert.match(surfaceBarrel, /export \{ StationSheet \}/);
+  assert.match(surfaceBarrel, /export \{ AppDrawer \}/);
+  assert.doesNotMatch(surfaceBarrel, /\bSheetContent\b|\bDrawerContent\b/);
+  assert.doesNotMatch(
+    surfaceBarrel,
+    /export \{[\s\S]*?\bSheet\b[\s\S]*?\} from "\.\/surface\/app-sheet"/,
+  );
+  assert.doesNotMatch(
+    surfaceBarrel,
+    /export \{[\s\S]*?\bDrawer\b[\s\S]*?\} from "\.\/surface\/app-drawer"/,
   );
 });
 

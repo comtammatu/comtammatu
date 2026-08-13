@@ -257,7 +257,7 @@ test("ingredients list does not render raw base-unit reference cost", () => {
 
 test("GRN create editor no longer seeds commercial price from reference cost (D091)", () => {
   const source = readRepo(
-    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
+    "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
 
   assert.doesNotMatch(source, /getReferenceCostForUnit/);
@@ -266,17 +266,17 @@ test("GRN create editor no longer seeds commercial price from reference cost (D0
 });
 
 test("GRN warehouse draft does not require unit price (D091)", () => {
-  const editor = readRepo(
-    "apps/web/app/(protected)/inventory/_components/grn-line-editor.tsx",
+  const dialog = readRepo(
+    "apps/web/app/(protected)/inventory/grn/[id]/views/add-grn-line-dialog.tsx",
   );
   const sheet = readRepo(
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/grn/_components/grn-line-sheet.tsx",
   );
 
-  assert.doesNotMatch(editor, /edit\.unitCost != null/);
-  assert.doesNotMatch(editor, /MoneyVndInput/);
-  assert.doesNotMatch(editor, /priceSetOnPoHint/);
-  assert.doesNotMatch(editor, /GRN_CREATE_COPY\.linePriceRequired/);
+  assert.doesNotMatch(dialog, /edit\.unitCost != null/);
+  assert.doesNotMatch(dialog, /MoneyVndInput/);
+  assert.doesNotMatch(dialog, /priceSetOnPoHint/);
+  assert.doesNotMatch(dialog, /GRN_CREATE_COPY\.linePriceRequired/);
   assert.doesNotMatch(sheet, /MoneyVndInput/);
   assert.doesNotMatch(sheet, /priceSetOnPoHint/);
 });

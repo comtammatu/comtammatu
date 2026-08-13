@@ -58,7 +58,6 @@ test("long press cards preserve vertical scrolling and composed swipe cards keep
 
   for (const path of [
     "apps/web/lib/staff-runtime/checkout-approvals/checkout-approvals-client.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/menu-limits-table.tsx",
   ]) {
     const source = read(path);
     assert.match(source, /onKeyDown: longPress\.onKeyDown/);
@@ -91,7 +90,7 @@ test("FormDialog resets only on open or entity transitions and confirms dirty di
     source,
     /<AppDialog[\s\S]*?open=\{open\}[\s\S]*?onOpenChange=\{handleOpenChange\}[\s\S]*?disablePointerDismissal=\{isPending\}[\s\S]*?showCloseButton=\{!isPending\}[\s\S]*?<ConfirmDialog\s+open=\{discardConfirmationOpen\}/,
   );
-  assert.match(source, /<\/AppDialog>\s*<ConfirmDialog/);
+  assert.match(source, /\{overlay\}\s*<ConfirmDialog/);
   assert.match(
     source,
     /<Dialog[\s\S]*?disablePointerDismissal=\{disablePointerDismissal\}[\s\S]*?<DialogContent[\s\S]*?showCloseButton=\{showCloseButton\}/,
@@ -100,7 +99,7 @@ test("FormDialog resets only on open or entity transitions and confirms dirty di
   assert.match(source, /onClick=\{requestClose\}/);
   assert.match(
     source,
-    /const actionSize = actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
+    /actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
   );
   assert.ok((source.match(/size=\{actionSize\}/g) ?? []).length >= 2);
 });

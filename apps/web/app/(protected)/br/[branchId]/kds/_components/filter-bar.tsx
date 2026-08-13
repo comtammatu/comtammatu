@@ -43,7 +43,8 @@ export function FilterBar({
           onValueChange={(v) => onOrderTypeChange(v as OrderTypeFilter)}
         >
           <SelectTrigger
-            className="w-auto min-h-11 min-w-28 shrink-0 text-sm"
+            size="touch"
+            className="w-auto min-w-28 shrink-0"
             aria-label={KDS_VI.filterOrderTypeAria}
           >
             <SelectValue placeholder={KDS_VI.filterOrderTypePlaceholder} />
@@ -51,11 +52,11 @@ export function FilterBar({
           <SelectContent>
             <SelectGroup>
               {ORDER_TYPE_OPTIONS.map((opt) => (
-                <SelectItem
-                  key={opt.value}
-                  value={opt.value}
-                  className="text-sm"
-                >
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    size="touch"
+                  >
                   {opt.label}
                 </SelectItem>
               ))}

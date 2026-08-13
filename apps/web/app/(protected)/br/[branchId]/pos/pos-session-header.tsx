@@ -18,8 +18,8 @@ import { PrinterStatusIndicator } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
   ArrowLeft as IconArrowLeft,
+  Ellipsis as IconEllipsis,
   LogIn as IconDoorEnter,
-  MoreVertical as IconMoreVertical,
   Megaphone as IconVoiceOn,
   PowerOff as IconPowerOff,
   Volume2 as IconVolume2,
@@ -58,8 +58,8 @@ function PosSessionTopBarComponent({
           <Button
             type="button"
             variant="ghost"
-            size="touch"
-            className="min-w-12 shrink-0 px-0 md:hidden"
+            size="icon-touch"
+            className="shrink-0 md:hidden"
             onClick={onBack}
             aria-label={messages.pos.sessionHeader.backAria}
           >
@@ -119,7 +119,7 @@ function PosMoreMenu({
             className="shrink-0"
             aria-label={messages.pos.sessionHeader.moreMenuAria}
           >
-            <IconMoreVertical />
+            <IconEllipsis />
           </Button>
         }
       />

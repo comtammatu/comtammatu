@@ -21,7 +21,7 @@ import {
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { confirm } from "@/components/confirm-dialog";
-import { StationSection } from "@/components/surface";
+import { StationSection, StationSheet } from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
 import {
   InputGroup,
@@ -41,7 +41,6 @@ import {
   Receipt as IconReceipt,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
-import { AppDialog } from "@/components/form/form-dialog";
 import { WholeVndInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
@@ -281,7 +280,7 @@ function PaymentQrPlaceholder({
 }) {
   return (
     <Frame className="mx-auto flex size-48 items-center justify-center bg-muted/50">
-      <Icon className="size-10 text-muted-foreground" />
+      <Icon className="size-8 text-muted-foreground" />
     </Frame>
   );
 }
@@ -891,7 +890,7 @@ export function BillReceipt({
       } else if (paymentId) {
         const result = await cancelPendingPayment(branchId, paymentId);
         if (!result.success) {
-          toast.error(result.error ?? "Không thể hủy phiên thanh toán");
+          toast.error(result.error ?? messages.pos.payment.cancelPendingFailed);
           return;
         }
       }
@@ -958,6 +957,7 @@ export function BillReceipt({
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
+    isReceiptIntent ||
     order?.payment_status === "paid" ||
     order?.status === "completed" ||
     order?.status === "cancelled";
@@ -1010,12 +1010,13 @@ export function BillReceipt({
       Number(order.subtotal) !== Number(order.total_amount));
 
   return (
-    <AppDialog
+    <StationSheet
       open={orderId !== null}
       onOpenChange={handleOpenChange}
       title={dialogTitle}
       description={<span className="sr-only">{dialogDescription}</span>}
-      contentClassName="sm:max-w-lg"
+      side="bottom"
+      size="lg"
     >
       {!order && !error ? (
         isReceiptIntent ? (
@@ -1356,6 +1357,6 @@ export function BillReceipt({
           </div>
         </>
       )}
-    </AppDialog>
+    </StationSheet>
   );
 }

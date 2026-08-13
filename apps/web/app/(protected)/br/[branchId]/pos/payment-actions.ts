@@ -25,6 +25,7 @@ import {
   posConfirmPaymentAuth,
   posUseAuth,
 } from "./_lib/auth";
+import { evaluateOrderPromotionsBlocking } from "@lib/promotions/evaluate-order";
 import {
   branchOnlyReadSchema,
   cancelPendingPaymentSchema,
@@ -534,6 +535,11 @@ export const createPayment = withActionPositional(
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
+    const evalError = await evaluateOrderPromotionsBlocking(supabase, orderId);
+    if (evalError) {
+      return { success: false, error: evalError };
+    }
+
     // Verify order exists and belongs to branch.
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -890,7 +896,7 @@ export const cancelPendingPayment = withActionPositional(
         };
       }
       console.error("[cancelPendingPayment] rpc failed:", error.code);
-      return { success: false, error: "Không thể hủy phiên thanh toán." };
+      return { success: false, error: messages.pos.payment.cancelPendingFailed };
     }
 
     return { success: true, data: { payment_id: paymentId } };
@@ -975,6 +981,11 @@ export const confirmCashPayment = withActionPositional(
         error: "Không có quyền truy cập chi nhánh này",
         errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
       };
+    }
+
+    const evalError = await evaluateOrderPromotionsBlocking(supabase, orderId);
+    if (evalError) {
+      return { success: false, error: evalError };
     }
 
     const rpc = supabase as unknown as RpcCaller;

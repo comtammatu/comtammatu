@@ -26,3 +26,10 @@ test("PWA service worker bypasses the session proxy", () => {
 
   assert.equal(source.includes("favicon.ico|sw\\\\.js|"), true);
 });
+
+test("Vercel observability intakes bypass the session proxy", () => {
+  const source = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
+
+  assert.match(source, /_vercel\(\?:\/\|\$\)/);
+  assert.match(source, /\[a-f0-9\]\{16\}\/\(\?:script\\\\\.js\|vitals\)\$/);
+});

@@ -25,6 +25,7 @@ const ROUTE_FAMILIES = [
       file.includes("/(protected)/hr/") ||
       file.includes("/(protected)/inventory/") ||
       file.includes("/(protected)/menu/") ||
+      file.includes("/(protected)/promotions/") ||
       file.includes("/(protected)/orders/") ||
       file.includes("/(protected)/work/") ||
       file.includes("/(protected)/feedback/"),
@@ -62,6 +63,7 @@ const ROUTE_FAMILIES = [
   ["hr", (file) => file.includes("/(protected)/hr/")],
   ["inventory", (file) => file.includes("/(protected)/inventory/")],
   ["menu", (file) => file.includes("/(protected)/menu/")],
+  ["promotions", (file) => file.includes("/(protected)/promotions/")],
   ["orders", (file) => file.includes("/(protected)/orders/")],
   ["work", (file) => file.includes("/(protected)/work/")],
   ["public", (file) => file.includes("/(public)/")],

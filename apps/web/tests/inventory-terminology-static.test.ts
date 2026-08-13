@@ -91,13 +91,13 @@ test("GRN entry copy keeps unit conversion and omits purchase-price helpers", ()
 test("stock value surfaces use ledger average cost without reference-price fallback", () => {
   const listSource = readWorkspaceFile("lib/inventory/stock-on-hand-data.ts");
   const detailSource = readWorkspaceFile(
-    "app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+    "app/(protected)/inventory/stock/stock-detail-dialog.tsx",
   );
 
   assert.match(listSource, /inventoryLineValue/);
   assert.match(listSource, /\(avgUnitCost \?\? 0\)/);
   assert.doesNotMatch(listSource, /ingredients \( unit_cost \)|referenceCost/);
-  assert.match(detailSource, /movementUnitCost/);
+  assert.match(detailSource, /resolveStockValuationDisplay/);
   assert.doesNotMatch(detailSource, /stockCopy\.table\.wac:\{" "\}/);
 });
 

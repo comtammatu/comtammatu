@@ -95,7 +95,7 @@ test("stock and GRN surfaces wire valuation display copy and helpers", () => {
   assert.match(stockClient, /valuationCopy\.pendingWac/);
 
   const stockDetail = readWeb(
-    "app/(protected)/inventory/stock/[ingredientId]/page.tsx",
+    "app/(protected)/inventory/stock/stock-detail-dialog.tsx",
   );
   assert.match(stockDetail, /resolveStockValuationDisplay/);
   assert.match(stockDetail, /valuationCopy\.pendingWac/);

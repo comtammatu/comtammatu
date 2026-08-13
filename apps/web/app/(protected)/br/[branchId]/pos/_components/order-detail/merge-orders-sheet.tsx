@@ -218,6 +218,7 @@ export function MergeOrdersSheet({
                           <RadioGroupItem
                             id={optionId}
                             value={String(s.id)}
+                            size="touch"
                             disabled={hasPct || isPending}
                           />
                           <ItemContent className="min-w-0">

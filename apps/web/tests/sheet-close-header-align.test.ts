@@ -66,7 +66,7 @@ test("compact right-sheet workflows use the shared size contract", () => {
     const workflow = readFileSync(join(process.cwd(), path), "utf8");
     assert.match(
       workflow,
-      /<(?:SheetContent|StationSheet|AppSheet)(?=[^>]*side="right")(?=[^>]*size="md")/,
+      /<(?:SheetContent|StationSheet|AppSheet)(?=[^>]*(?:side="right"|side=\{isMobile \? "bottom" : "right"\}))(?=[^>]*size="md")/,
     );
     assert.doesNotMatch(workflow, /data-\[side=right\]:sm:max-w-md/);
   }

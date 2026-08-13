@@ -19,7 +19,7 @@ import {
   LayoutGrid as IconLayoutGrid,
   Package as IconPackage,
   Trash as IconTrash,
-  Utensils as IconToolsKitchen,
+  Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -252,8 +252,8 @@ function CartPaneComponent({
             <Button
               type="button"
               variant="ghost"
-              size="touch"
-              className="w-12 px-0 text-muted-foreground"
+              size="icon-touch"
+              className="text-muted-foreground"
               aria-label={messages.pos.pendingDraft.closeAria}
               onClick={onClosePane}
             >
@@ -309,8 +309,8 @@ function CartPaneComponent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="touch"
-                  className="w-12 px-0 text-muted-foreground hover:text-destructive"
+                  size="icon-touch"
+                  className="text-muted-foreground hover:text-destructive"
                   aria-label={messages.pos.pendingDraft.clear}
                   onClick={() => void handleClearCart()}
                 >
@@ -321,8 +321,8 @@ function CartPaneComponent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="touch"
-                  className="w-12 px-0 text-muted-foreground"
+                  size="icon-touch"
+                  className="text-muted-foreground"
                   aria-label={messages.pos.pendingDraft.closeAria}
                   onClick={onClosePane}
                 >
@@ -357,7 +357,7 @@ function CartPaneComponent({
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
-              <IconToolsKitchen data-icon="inline-start" />
+              <IconUtensils data-icon="inline-start" />
               {messages.pos.desktop.dineIn}
               <Kbd className="hidden [@media(hover:hover)]:inline-flex">D</Kbd>
             </ToggleGroupItem>
@@ -477,8 +477,8 @@ function CartPaneComponent({
                     </Item>
                     <Button
                       variant="ghost"
-                      size="touch"
-                      className="absolute right-2 top-1/2 inline-flex min-w-12 -translate-y-1/2 px-0 text-muted-foreground hover:text-destructive"
+                      size="icon-touch"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive"
                       aria-label={messages.pos.pendingDraft.removeItemAria(
                         displayName,
                       )}

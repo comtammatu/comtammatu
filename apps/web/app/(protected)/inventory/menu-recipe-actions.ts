@@ -16,7 +16,7 @@ import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { inventoryPositiveQuantitySchema } from "./_lib/inventory-quantity-schema";
 import { buildSourceSiteWacMap } from "./_lib/menu-recipe-cost";
 
-/* ─── Menu recipes (branch WAC + menu-item ingredient consumption) ─── */
+/* ─── Menu recipes (Kho gốc WAC display + recipe line CRUD) ─── */
 
 const branchIdSchema = z.coerce.number().int().positive();
 const optionalBranchIdSchema = z.coerce
@@ -45,12 +45,8 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
     PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { claims } = ctx;
-  const monetary = await loadInventoryMonetaryAccess(claims.user_role);
-  if (!monetary.purchasePrice || !monetary.client) {
-    return { success: false, error: "Không có quyền" };
-  }
-  const { data: menuItems, error: menuError } = await monetary.client
+  const { supabase, claims } = ctx;
+  const { data: menuItems, error: menuError } = await supabase
     .from("menu_items")
     .select(
       `
@@ -80,7 +76,7 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
   const recipeResult =
     menuItemIds.length === 0
       ? { data: [] as MenuRecipeLine[], error: null }
-      : await monetary.client
+      : await supabase
           .from("recipes")
           .select(
             "menu_item_id, ingredient_id, quantity, entry_unit_id, note",
@@ -105,14 +101,14 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
   const [ingredientResult, unitResult] = await Promise.all([
     ingredientIds.length === 0
       ? { data: [] as Array<Record<string, unknown>>, error: null }
-      : monetary.client
+      : supabase
           .from("ingredients")
-          .select("id, name, unit_cost")
+          .select("id, name")
           .eq("tenant_id", claims.tenant_id)
           .in("id", ingredientIds),
     ingredientIds.length === 0
       ? { data: [] as Array<Record<string, unknown>>, error: null }
-      : monetary.client
+      : supabase
           .from("ingredient_units")
           .select(
             "ingredient_id, is_base, units!ingredient_units_unit_tenant_fkey ( code )",
@@ -147,15 +143,11 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
     unitsByIngredient.set(ingredientId, list);
   }
 
-  const ingredientById = new Map<
-    number,
-    { id: number; name: string; unit_cost: number | null }
-  >();
+  const ingredientById = new Map<number, { id: number; name: string }>();
   for (const row of ingredientResult.data ?? []) {
     ingredientById.set(Number(row.id), {
       id: Number(row.id),
       name: String(row.name ?? "Nguyên liệu"),
-      unit_cost: row.unit_cost == null ? null : Number(row.unit_cost),
     });
   }
 
@@ -181,18 +173,14 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
             ingredients: null,
           };
         }
-        const { unit_cost, ...safeIngredient } = ingredient;
         return {
           ingredient_id: menuRecipe.ingredient_id,
           quantity: menuRecipe.quantity,
           entry_unit_id: menuRecipe.entry_unit_id,
           note: menuRecipe.note,
           ingredients: {
-            ...safeIngredient,
+            ...ingredient,
             ingredient_units: unitsByIngredient.get(ingredient.id) ?? [],
-            monetary: {
-              unitCost: unit_cost == null ? null : Number(unit_cost),
-            },
           },
         };
       },

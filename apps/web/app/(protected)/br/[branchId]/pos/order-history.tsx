@@ -7,7 +7,9 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Receipt as IconReceipt } from "lucide-react";
+import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import type { SelfOrderPaymentCallKind } from "./self-order-actions";
 import {
   Item,
   ItemContent,
@@ -84,10 +86,6 @@ function getCompactOrderTitle(
   return contextLabel;
 }
 
-function getOrderMetaLabel(order: SessionOrder): string {
-  return formatTime(order.created_at);
-}
-
 function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
   const byCreatedAt = Date.parse(b.created_at) - Date.parse(a.created_at);
   if (byCreatedAt !== 0) return byCreatedAt;
@@ -154,11 +152,14 @@ export function OrderCardSummary({
   amountClassName,
   rightMeta,
   showDineInSequence = false,
+  metaTimestamp,
 }: {
   order: SessionOrder;
   amountClassName?: string;
   rightMeta: ReactNode;
   showDineInSequence?: boolean;
+  /** Defaults to created_at. Archived rows pass updated_at (closed time). */
+  metaTimestamp?: string;
 }) {
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
@@ -176,7 +177,9 @@ export function OrderCardSummary({
         </span>
       </ItemTitle>
       <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="shrink-0 tabular-nums">{getOrderMetaLabel(order)}</span>
+        <span className="shrink-0 tabular-nums">
+          {formatTime(metaTimestamp ?? order.created_at)}
+        </span>
         <span className="flex min-w-0 flex-wrap items-center gap-1">
           {rightMeta}
         </span>
@@ -196,6 +199,7 @@ export const ACTIVE_POS_STATUSES = [
 interface OrderCardProps {
   order: SessionOrder;
   showDineInSequence: boolean;
+  paymentCall?: SelfOrderPaymentCallKind;
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
   onViewDetail: (
     orderId: number,
@@ -207,6 +211,7 @@ interface OrderCardProps {
 const OrderCard = memo(function OrderCard({
   order,
   showDineInSequence,
+  paymentCall,
   onViewBill,
   onViewDetail,
 }: OrderCardProps) {
@@ -227,6 +232,15 @@ const OrderCard = memo(function OrderCard({
             {order.is_priority ? (
               <Badge variant="warning" className="text-sm font-semibold">
                 {messages.pos.orderHistory.priority}
+              </Badge>
+            ) : null}
+            {paymentCall === "cash_call" ? (
+              <Badge variant="warning" className="text-sm font-semibold">
+                {SELF_ORDER_VI.cashCallStaff}
+              </Badge>
+            ) : paymentCall === "vietqr_pending" ? (
+              <Badge variant="warning" className="text-sm font-semibold">
+                {SELF_ORDER_VI.vietQrPendingStaff}
               </Badge>
             ) : null}
             <OrderStatePill order={order} />
@@ -260,6 +274,7 @@ const OrderCard = memo(function OrderCard({
 
 interface ActiveOrdersListProps {
   orders: SessionOrder[];
+  paymentCallByOrderId?: ReadonlyMap<number, SelfOrderPaymentCallKind>;
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
   /**
    * `summary` lets the detail sheet paint header (số đơn, bàn / mang về)
@@ -282,6 +297,7 @@ interface ActiveOrdersListProps {
  */
 function ActiveOrdersListComponent({
   orders,
+  paymentCallByOrderId,
   onViewBill,
   onViewDetail,
 }: ActiveOrdersListProps) {
@@ -332,6 +348,7 @@ function ActiveOrdersListComponent({
                   order.table_id !== null &&
                   multiOrderTableIds.has(order.table_id)
                 }
+                paymentCall={paymentCallByOrderId?.get(order.id)}
                 onViewBill={onViewBill}
                 onViewDetail={onViewDetail}
               />

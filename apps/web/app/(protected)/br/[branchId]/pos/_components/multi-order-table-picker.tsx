@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { ACTIVE_POS_STATUSES, type SessionOrder } from "../order-history";
 import { getPosOrderStatusInfo } from "../_lib/order-status-display";
-import { canAppendPosOrder } from "../_lib/table-order-visual-state";
+import { canOfferPosOrderAppend } from "../_lib/table-order-visual-state";
 import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -86,7 +86,7 @@ export function MultiOrderTablePicker({
           >
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
-              const canAppendItems = canAppendPosOrder(
+              const canOfferAppend = canOfferPosOrderAppend(
                 order,
                 ACTIVE_POS_STATUSES,
               );
@@ -132,7 +132,7 @@ export function MultiOrderTablePicker({
                       variant="secondary"
                       size="touch"
                       className="px-2 text-sm"
-                      disabled={!canAppendItems}
+                      disabled={!canOfferAppend}
                       onClick={() =>
                         onAppendOrder(order.id, order.order_number)
                       }

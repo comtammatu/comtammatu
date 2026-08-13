@@ -27,7 +27,7 @@ the contract changes.
 | --- | --- | --- | --- |
 | Root | `/` | Single-branch resolver | `getDefaultRedirect`; multi-branch → picker; wrong scope fails closed |
 | Public / auth | `/login`, `/access-denied`, `/br/…/pickup`, health/webhooks | `/login` or pickup display URL | No app shell; pickup page validates branch itself |
-| control_surface | L0 `/`, `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/work/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
+| control_surface | L0 `/`, `/menu/*`, `/promotions/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/work/*`, `/branches/*`, `/settings/*`, `/feedback/*` | `/` | `ControlSurfaceShell` → `AppShell`; breadcrumb `Quản trị`; filters/tabs in URL |
 | Utility | `/notifications/*` | `returnTo` | Not a product plane |
 | Branch ops | `/br/[branchId]/*` | `/br/[branchId]` | Branch/station chrome; `branchId` in URL; proxy scope + network gate |
 | Staff day | `/br/…/shift/*`, `/profile/*` | `/br/…/shift` | Branch bottom nav; do not mix HR admin hot path |

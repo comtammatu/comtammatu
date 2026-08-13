@@ -60,6 +60,8 @@ function costSignalLabel(signal: MenuRecipeCostSignal): string {
       return INVENTORY_VI.menuRecipeMissingFulfillSite;
     case "missing_source_wac":
       return INVENTORY_VI.menuRecipeMissingSourceWac;
+    case "source_wac_site_mismatch":
+      return INVENTORY_VI.menuRecipeSourceWacSiteMismatch;
     default: {
       const _exhaustive: never = signal;
       return _exhaustive;

@@ -58,6 +58,15 @@ function filesImportingControlSurfaceChrome(dir: string): string[] {
   });
 }
 
+function filesMatching(dir: string, pattern: RegExp): string[] {
+  return walkFiles(dir).flatMap((file) => {
+    const source = readFileSync(file, "utf8");
+    return pattern.test(source) ? [relativeFromApp(file)] : [];
+  });
+}
+
+const STATION_OVERLAY_ALLOWLIST = new Set<string>([]);
+
 const posDir = join(process.cwd(), "app/(protected)/br/[branchId]/pos");
 
 test("POS station routes do not import control_surface AppSection", () => {
@@ -122,4 +131,16 @@ test("pos-board block locks StationSection composition and session-gate exemplar
   assert.match(pos[0]?.forbidden ?? "", /BranchOperatorPage/);
   assert.match(pos[0]?.forbidden ?? "", /raw Card/);
   assert.match(pos[0]?.exemplar ?? "", /\/pos\/session-gate\.tsx$/);
+});
+
+test("POS station overlays stay on StationSheet except shrinking allowlist", () => {
+  const overlay = filesMatching(
+    posDir,
+    /\bAppDialog\b|\bAppSheet\b|<SheetContent\b|<DrawerContent\b/,
+  );
+  assert.deepEqual(
+    overlay.filter((file) => !STATION_OVERLAY_ALLOWLIST.has(file)).sort(),
+    [],
+    `POS overlays outside StationSheet: ${overlay.join(", ")}`,
+  );
 });

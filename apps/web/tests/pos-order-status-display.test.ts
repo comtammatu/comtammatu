@@ -48,6 +48,25 @@ test("POS ready status stays distinct while served waits for payment", () => {
   );
 });
 
+test("POS completed orders never expose the raw English status", () => {
+  assert.deepEqual(
+    getPosOrderStatusInfo({
+      status: "completed",
+      payment_status: "unpaid",
+      created_at: CREATED_AT,
+    }),
+    { label: "Đã thanh toán", variant: "success" },
+  );
+  assert.deepEqual(
+    getPosOrderStatusInfo({
+      status: "completed",
+      payment_status: "paid",
+      created_at: CREATED_AT,
+    }),
+    { label: "Đã thanh toán", variant: "success" },
+  );
+});
+
 test("POS order-level served action is not exposed to cashier surfaces", () => {
   assert.doesNotMatch(orderDetailSource, /handleStatus\("served"\)/);
   assert.doesNotMatch(orderDetailSource, /updateOrderStatus/);

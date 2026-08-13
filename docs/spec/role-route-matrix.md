@@ -26,8 +26,9 @@ reference framing.
 - Branch Manager is a branch role, not a reduced Owner role. Branch Manager
   enters `/br/[branchId]` and never inherits an L0 route merely because the
   underlying capability is shared.
-- Top-level modules (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`, and
-  `/branches`) belong to control_surface even though their URLs remain stable.
+- Top-level modules (`/inventory`, `/orders`, `/hr`, `/finance`, `/menu`,
+  `/promotions`, and `/branches`) belong to control_surface even though their
+  URLs remain stable.
   Branch Manager and Staff use Branch-native workflows under `/br/[branchId]`.
 - Valid authenticated entries are `/` for Owner and Control L0 adapters
   (`accountant`, `central_supply_ops`, `central_kitchen_lead`) plus HR Control
@@ -40,7 +41,7 @@ reference framing.
 
 | Layer         | Meaning                                                                                  | Primary routes                                                                                   | Primary owners                              |
 | ------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------- |
-| L0 Tenant     | Chain identity, branch network, roles, finance, inventory oversight, and tenant settings | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*` | `owner`                                     |
+| L0 Tenant     | Chain identity, branch network, roles, finance, inventory oversight, and tenant settings | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/promotions/*`, `/branches/*` | `owner`                                     |
 | L1 Branch     | Store floor, POS/KDS setup, Branch staff day flow, menu limits, and local operations     | `/br/[branchId]/*`                                                                               | `branch_manager`, with Owner oversight      |
 | Staff Runtime | Profile, attendance, leave request, payslip, notifications                               | `/br/[branchId]/shift/*`, `/br/[branchId]/profile/*`, `/notifications/*`                         | Branch-pinned roles                         |
 | Self Runtime  | Personal workday in Control shell; no tenant administration                              | `/me/*`                                                                                          | Active company members without Branch scope |
@@ -49,7 +50,7 @@ reference framing.
 
 | Surface             | Route family                                                                                                                                       | Scope   | Default audience                                                       | Contract                                                                                                                                                                                                                           |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| control_surface     | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/branches/*`                                                   | L0      | `owner`                                                                | Launch and operate tenant-wide modules. `/` is the only Owner entry.                                                                                                                                                               |
+| control_surface     | `/`, `/settings/*`, `/inventory/*`, `/orders/*`, `/hr/*`, `/finance/*`, `/menu/*`, `/promotions/*`, `/branches/*`                                                   | L0      | `owner`                                                                | Launch and operate tenant-wide modules. `/` is the only Owner entry.                                                                                                                                                               |
 | Branch Command      | `/br/[branchId]/dashboard`                                                                                                                         | L1      | `branch_manager`, owner oversight                                      | Deep branch management surface for one branch: today status, POS/KDS health, staff day flow, pending local tasks, and links to branch setup.                                                                                       |
 | Branch Setup        | `/br/[branchId]/settings/*`                                                                                                                        | L1      | `branch_manager`, owner oversight                                      | Configure tables, POS terminals, KDS stations, printers, POS sessions, and branch-local operating settings.                                                                                                                        |
 | Branch Operations   | `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/br/[branchId]/orders`, `/br/[branchId]/stock`, `/br/[branchId]/menu-limits`, `/br/[branchId]/pickup` | L1      | Store operators and Branch Manager; explicit Owner oversight           | Run service within one URL-scoped branch. Owner may enter a branch explicitly; branch roles cannot cross branch scope.                                                                                                             |
@@ -144,6 +145,7 @@ by direct URL or as a redirect target.
 | ---------- | ---------- | ------------- | ------------------------------ |
 | `owner` | `/` | `Chủ sở hữu`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Control surface nav |
 | `menu` | `/menu` | `Chủ sở hữu` | Control surface nav |
+| `promotions` | `/promotions` | `Chủ sở hữu` | Control surface nav |
 | `inventory` | `/inventory` | `Chủ sở hữu`, `Kế toán`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | Control surface nav |
 | `inventory_operations` | `/inventory/stock` | `Chủ sở hữu`, `Quản lý kho Tổng`, `Bếp trưởng Bếp TT` | (not advertised in nav — direct URL / redirect target only) |
 | `orders` | `/orders` | `Chủ sở hữu` | Control surface nav |
@@ -189,6 +191,7 @@ declared before their broader siblings.
 | `owner` | owner | `/` | `/` | `owner` | no |
 | `settings` | owner | `/settings` | `/settings` | `settings` | no |
 | `menu` | owner | `/menu` | `/menu` | `menu` | no |
+| `promotions` | owner | `/promotions` | `/promotions` | `promotions` | no |
 | `orders` | owner | `/orders` | `/orders` | `orders` | no |
 | `feedback` | owner | `/feedback` | `/feedback` | `feedback` | no |
 | `work` | owner | `/work` | `/work` | `work` | no |
@@ -248,6 +251,7 @@ separate gates (route bucket here, permission key at the mutation site).
 | owner | `/` | accountant/central_kitchen_lead/central_supply_ops/owner | (module-level ACL gate only — no dedicated action-permission namespace) |
 | settings | `/settings` | owner | `settings:branch`, `settings:branch_network`, `settings:integrations`, `settings:tenant` |
 | menu | `/menu` | owner | `menu:manage_category`, `menu:publish`, `menu:read`, `menu:write` |
+| promotions | `/promotions` | owner | `promo:issue`, `promo:read`, `promo:write` |
 | orders | `/orders` | owner | `orders:read`, `orders:refund`, `orders:refund_approve`, `orders:void`, `orders:write` |
 | feedback | `/feedback` | owner | `feedback:manage_qr`, `feedback:view` |
 | work | `/work` | accountant/central_kitchen_lead/central_supply_ops/owner/self_service | `work:manage` |

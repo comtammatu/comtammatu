@@ -74,21 +74,25 @@ export async function fetchBranchMenuDailyLimits(
   return { success: true, data: rows };
 }
 
+// Do not z.coerce.number() here: Number(null) and Number("") are 0, which
+// would turn "clear the cap" into a hard zero quota.
+const nullableLimitQuantitySchema = z.preprocess(
+  (value) => (value === "" || value === undefined ? null : value),
+  z.union([
+    z.null(),
+    z
+      .number({ error: "Giới hạn bán phải là số nguyên từ 0 đến 9999." })
+      .int({ error: "Giới hạn bán phải là số nguyên từ 0 đến 9999." })
+      .min(0, { error: "Số lượng tối thiểu là 0" })
+      .max(9999, { error: "Số lượng tối đa 9999" }),
+  ]),
+);
+
 const setLimitSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
-  // null/undefined removes the manual cap; stock availability remains separate.
-  limitQuantity: z
-    .union([
-      z.coerce
-        .number()
-        .int()
-        .min(0, { error: "Số lượng tối thiểu là 0" })
-        .max(9999, { error: "Số lượng tối đa 9999" }),
-      z.null(),
-      z.undefined(),
-    ])
-    .optional(),
+  // null removes the manual cap; stock availability remains separate.
+  limitQuantity: nullableLimitQuantitySchema,
   isDisabled: z.boolean(),
 });
 
@@ -125,7 +129,7 @@ export async function setBranchMenuDailyLimit(
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
-      // The generated RPC type does not express the nullable SQL parameter.
+      // Generated Args type is non-null; SQL accepts NULL = no manual cap.
       p_limit_quantity: limitQty as number,
       p_is_disabled: parsed.data.isDisabled,
     },
@@ -221,16 +225,17 @@ export async function clearBranchMenuDailyLimit(
 const stockAllowanceSchema = z.object({
   branchId: branchIdSchema,
   menuItemId: menuItemIdSchema,
-  stockAllowanceQuantity: z
-    .union([
-      z.coerce
-        .number()
-        .int()
+  stockAllowanceQuantity: z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    z.union([
+      z.null(),
+      z
+        .number({ error: "Số phần bán thêm phải là số nguyên từ 0 đến 9999." })
+        .int({ error: "Số phần bán thêm phải là số nguyên từ 0 đến 9999." })
         .min(0, { error: "Số phần tối thiểu là 0" })
         .max(9999, { error: "Số phần tối đa 9999" }),
-      z.null(),
-    ])
-    .optional(),
+    ]),
+  ),
 });
 
 export async function setBranchMenuStockAllowance(
@@ -304,4 +309,30 @@ export async function setBranchMenuStockAllowance(
   }
 
   return { success: true, data: row };
+}
+
+/**
+ * Menu-limits UI treats stock allowance as a switch. The RPC remains an
+ * integer headroom (ADR 0026). ON writes the schema max so stock remaining
+ * plus allowance reopens the sell path; OFF clears the field.
+ */
+const STOCK_ALLOWANCE_SWITCH_ON_QUANTITY = 9999;
+
+export async function setBranchMenuStockAllowanceEnabled(input: {
+  branchId: number;
+  menuItemId: number;
+  enabled: boolean;
+}): Promise<
+  ActionResult<{
+    menu_item_id: number;
+    stock_allowance_quantity: number | null;
+  }>
+> {
+  return setBranchMenuStockAllowance({
+    branchId: input.branchId,
+    menuItemId: input.menuItemId,
+    stockAllowanceQuantity: input.enabled
+      ? STOCK_ALLOWANCE_SWITCH_ON_QUANTITY
+      : null,
+  });
 }

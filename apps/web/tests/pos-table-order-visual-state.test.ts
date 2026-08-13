@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   canAppendPosOrder,
+  canOfferPosOrderAppend,
   deriveTableOrderVisualStates,
   getPosTableTileVisualState,
   isActiveUnpaidPosOrder,
@@ -22,8 +23,10 @@ test("VietQR exposure locks amount mutations and append affordances", () => {
   };
 
   assert.equal(isPosOrderAmountLocked(activeOrder), false);
+  assert.equal(canOfferPosOrderAppend(activeOrder, ACTIVE_STATUSES), true);
   assert.equal(canAppendPosOrder(activeOrder, ACTIVE_STATUSES), true);
   assert.equal(isPosOrderAmountLocked(pendingVietQrOrder), true);
+  assert.equal(canOfferPosOrderAppend(pendingVietQrOrder, ACTIVE_STATUSES), true);
   assert.equal(canAppendPosOrder(pendingVietQrOrder, ACTIVE_STATUSES), false);
   assert.equal(
     canAppendPosOrder({ ...activeOrder, status: "completed" }, ACTIVE_STATUSES),

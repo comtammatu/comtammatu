@@ -28,15 +28,15 @@ import { Separator } from "@comtammatu/ui/components/separator";
 
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { AppEmptyState } from "@/components/surface";
 import {
-  AppEmptyState,
   Sheet,
   SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/surface";
+} from "@/components/surface/app-sheet";
 import type {
   SelfOrderCartItem,
   SelfOrderMenuCategory,

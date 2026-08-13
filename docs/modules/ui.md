@@ -303,7 +303,7 @@ registry; routes do not hardcode new operational copy.
 | `BusinessDateField` | RHF date picker; shows `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note |
 | `BusinessDatePicker` | Filter / URL date; same chrome as the field |
 | `BusinessWeekPicker` | Week-range highlight inside the date adapter (finance period week) |
-| `AppSheet` | D1 record beside a list; `side` right on `lg+`, bottom on touch |
+| `AppSheet` | Branch short CRUD and D1; `side` right on `lg+`, bottom on touch |
 | `StationSheet` | POS / KDS / guest overlay; no `AppDialog` / `AppSection` chrome |
 | `AppDrawer` | Short touch task overlay through the approved adapter |
 | `SelectField` | Select with `options={[{ value, label }]}` |
@@ -312,7 +312,8 @@ registry; routes do not hardcode new operational copy.
 | `FormField` | Label/help/error anatomy for non-RHF or bespoke composition; the child control still owns `id`, `disabled`, and ARIA state |
 | `TextareaField` | Textarea + RHF |
 | `AppDialog` | Generic app dialog shell; `variant="document"` for list-first PO, GRN, and production documents |
-| `FormDialog` | Dialog + `useForm` + `zodResolver` + `useTransition` |
+| `FormDialog` | Owner (`control_surface`) short CRUD; not Branch operator or station |
+| `FormSheet` | Branch short CRUD: same Zod/RHF contract as `FormDialog`, `AppSheet` chrome |
 | `valuesToFormData` | Adapter for `withFormAction`-wrapped Server Actions |
 
 Schemas use Zod 4 with `{ error: "..." }`, never `{ message }`. Schemas imported

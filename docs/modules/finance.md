@@ -10,6 +10,12 @@ Period-result formula (two rows):
 
 - **`Doanh thu thuần`**: paid-order merchandise value after discount, before VAT.
 - **`Giá vốn món`**: recorded ingredient cost for paid orders in the period.
+  Runtime source is `inventory_value_allocations` (`allocation_bucket = food_cost`)
+  when `inventory_valuation_cutovers.status = active`; otherwise the landing KPI
+  is empty. `/finance/food-cost` **`Định mức/phần`** is theoretical
+  (`fetchFoodCost`: current menu recipes x sold qty x selling-branch warehouse
+  WAC). Catalog `/inventory/menu-recipes` portion cost is `Kho gốc` WAC only.
+  Do not copy one WAC key onto another. See `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
 - **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables/small tools, marketing, fees/tax, other). Excludes

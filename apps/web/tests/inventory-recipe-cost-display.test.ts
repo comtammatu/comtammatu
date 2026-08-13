@@ -60,6 +60,19 @@ test("recipe display cost quantity keeps unitless lines unchanged", () => {
   );
 });
 
+test("recipe display cost quantity does not treat a missing entry unit as factor 1", () => {
+  assert.equal(
+    getMenuRecipeLineBaseQuantity({
+      quantity: 3,
+      entryUnitId: 9,
+      units: [
+        unit({ unit_id: 1, unit_code: "g", to_base_factor: 1, is_base: true }),
+      ],
+    }),
+    null,
+  );
+});
+
 test("menu recipes preserve entry units and convert quantities for cost", () => {
   assert.match(recipesPageSource, /const baseQuantity = getMenuRecipeLineBaseQuantity/);
   assert.match(recipesPageSource, /qty,[\s\S]*entryUnitId,/);
@@ -70,11 +83,12 @@ test("menu recipes preserve entry units and convert quantities for cost", () => 
   );
 });
 
-test("recipe WAC reads only active stock-bearing locations", () => {
+test("recipe WAC keys Kho gốc from stock-bearing locations", () => {
   assert.match(recipeActionsSource, /fetchStockBearingLocationIds/);
   assert.match(
     recipeActionsSource,
     /\.in\("location_id", stockBearingLocations\.locationIds\)/,
   );
-  assert.doesNotMatch(recipeActionsSource, /branches\.branch_kind/);
+  assert.match(recipeActionsSource, /select\("id, branch_kind"\)/);
+  assert.match(recipeActionsSource, /buildSourceSiteWacMap/);
 });

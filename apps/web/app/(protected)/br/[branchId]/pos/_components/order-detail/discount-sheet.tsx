@@ -15,8 +15,9 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
 
-import { ACTIONS_VI, FORM_VI, POS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, POS_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { StationSheet } from "@/components/surface";
+import { Input } from "@comtammatu/ui/components/input";
 
 export type DiscountType = "pct" | "vnd";
 
@@ -49,6 +50,16 @@ interface DiscountSheetProps {
   /** Bỏ chiết khấu (gọi clear_order_discount). Chỉ active khi đang có discount.
    * Reason ≥3 ký tự — cùng ô textarea với "Áp dụng" để giữ UX gọn. */
   onClear: (reason: string) => void;
+  promo?: {
+    enabled: boolean;
+    canManual: boolean;
+    hasPromotion: boolean;
+    onPreview: (
+      code: string,
+    ) => Promise<{ success: true; amount: number; name: string } | { success: false; error: string }>;
+    onApplyCode: (code: string) => void;
+    onClearPromo: (reason: string) => void;
+  };
 }
 
 /**
@@ -75,8 +86,14 @@ export function DiscountSheet({
   isPending = false,
   onSubmit,
   onClear,
+  promo,
 }: DiscountSheetProps) {
   const allowedModes = modes.length > 0 ? modes : (["vnd"] as const);
+  const showPromo = promo?.enabled === true;
+  const showManual = !showPromo || promo?.canManual === true;
+  const [pane, setPane] = useState<"code" | "manual">(
+    showPromo ? "code" : "manual",
+  );
   const defaultType: DiscountType = allowedModes.includes("pct" as DiscountType)
     ? ((current.type && allowedModes.includes(current.type)
         ? current.type
@@ -87,6 +104,16 @@ export function DiscountSheet({
     current.value != null ? String(current.value) : "",
   );
   const [note, setNote] = useState<string>(current.note ?? "");
+  const [codeText, setCodeText] = useState("");
+  const [preview, setPreview] = useState<{
+    amount: number;
+    name: string;
+  } | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewPending, setPreviewPending] = useState(false);
+
+  const activePane: "code" | "manual" =
+    showPromo && (!showManual || pane === "code") ? "code" : "manual";
 
   // Re-seed local state whenever the sheet (re)opens with a different
   // current discount. Skipping this caused the form to show the previous
@@ -100,7 +127,11 @@ export function DiscountSheet({
     setType(nextType);
     setValueText(current.value != null ? String(current.value) : "");
     setNote(current.note ?? "");
-  }, [open, current.type, current.value, current.note, allowedModes]);
+    setCodeText("");
+    setPreview(null);
+    setPreviewError(null);
+    setPane(showPromo ? "code" : "manual");
+  }, [open, current.type, current.value, current.note, allowedModes, showPromo]);
 
   const hasExistingDiscount = current.amount > 0;
 
@@ -135,6 +166,20 @@ export function DiscountSheet({
   const valueValid = previewDiscountAmount > 0;
   const canApply = noteValid && valueValid && !isPending;
   const canClear = hasExistingDiscount && noteValid && !isPending;
+  const codeTrim = codeText.trim().toUpperCase();
+  const canPreviewCode =
+    showPromo && codeTrim.length >= 3 && !isPending && !previewPending;
+  const canApplyCode =
+    showPromo &&
+    preview != null &&
+    preview.amount > 0 &&
+    !isPending &&
+    !promo?.hasPromotion;
+  const canClearPromo =
+    showPromo &&
+    promo?.hasPromotion === true &&
+    noteValid &&
+    !isPending;
 
   const handleClose = () => {
     if (isPending) return;
@@ -147,9 +192,39 @@ export function DiscountSheet({
   };
 
   const handleClear = () => {
+    if (activePane === "code") {
+      if (!canClearPromo || !promo) return;
+      promo.onClearPromo(note.trim());
+      return;
+    }
     if (!canClear) return;
     onClear(note.trim());
   };
+
+  const handlePreviewCode = async () => {
+    if (!canPreviewCode || !promo) return;
+    setPreviewPending(true);
+    const result = await promo.onPreview(codeTrim);
+    setPreviewPending(false);
+    if (result.success) {
+      setPreview({ amount: result.amount, name: result.name });
+      setPreviewError(null);
+    } else {
+      setPreview(null);
+      setPreviewError(result.error);
+    }
+  };
+
+  const handleApplyCode = () => {
+    if (!canApplyCode || !promo) return;
+    promo.onApplyCode(codeTrim);
+  };
+
+  const codePreviewAmount = preview?.amount ?? 0;
+  const codePreviewTotal = Math.max(
+    0,
+    subtotal + serviceCharge - codePreviewAmount,
+  );
 
   return (
     <StationSheet
@@ -161,17 +236,17 @@ export function DiscountSheet({
       footerClassName="sm:flex-row sm:justify-between"
       footer={
         <>
-          {hasExistingDiscount ? (
+          {(activePane === "code" ? canClearPromo : canClear && !promo?.hasPromotion) ? (
             <Button
               type="button"
               variant="destructive"
               size="touch"
-              disabled={!canClear}
+              disabled={activePane === "code" ? !canClearPromo : !canClear}
               onClick={handleClear}
               title={!noteValid ? POS_VI.clearDiscountReasonTitle : undefined}
               className="sm:order-first"
             >
-              {clearLabel}
+              {activePane === "code" ? PROMOTIONS_VI.posClearPromo : clearLabel}
             </Button>
           ) : (
             <span className="hidden sm:block" aria-hidden />
@@ -186,19 +261,100 @@ export function DiscountSheet({
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button
-              type="button"
-              size="touch"
-              disabled={!canApply}
-              onClick={handleApply}
-            >
-              {POS_VI.apply}
-            </Button>
+            {activePane === "code" ? (
+              <Button
+                type="button"
+                size="touch"
+                disabled={!canApplyCode}
+                onClick={handleApplyCode}
+              >
+                {PROMOTIONS_VI.posApplyCode}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="touch"
+                disabled={!canApply}
+                onClick={handleApply}
+              >
+                {POS_VI.apply}
+              </Button>
+            )}
           </div>
         </>
       }
     >
         <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {showPromo && showManual ? (
+            <Tabs
+              value={activePane}
+              onValueChange={(value) => setPane(value as "code" | "manual")}
+            >
+              <TabsList size="touch" className="w-full">
+                <TabsTrigger value="code" className="flex-1">
+                  {PROMOTIONS_VI.posCodeTab}
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="flex-1">
+                  {POS_VI.discountTitle}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          ) : null}
+
+          {activePane === "code" && promo ? (
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="promo-code-input">
+                  {PROMOTIONS_VI.posCodeLabel}
+                </FieldLabel>
+                <Input
+                  id="promo-code-input"
+                  value={codeText}
+                  onChange={(event) => {
+                    setCodeText(event.target.value.toUpperCase());
+                    setPreview(null);
+                    setPreviewError(null);
+                  }}
+                  placeholder={PROMOTIONS_VI.posCodePlaceholder}
+                  autoCapitalize="characters"
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                disabled={!canPreviewCode}
+                onClick={() => void handlePreviewCode()}
+              >
+                {PROMOTIONS_VI.posPreview}
+              </Button>
+              {previewError ? (
+                <p className="text-sm text-destructive">{previewError}</p>
+              ) : null}
+              {promo.hasPromotion && current.note ? (
+                <p className="text-sm">
+                  {PROMOTIONS_VI.posPromoChip}: {current.note}
+                </p>
+              ) : null}
+              <Field data-invalid={!noteValid && noteTrimLen > 0}>
+                <FieldLabel htmlFor="discount-note">
+                  {POS_VI.discountReasonLabel}
+                </FieldLabel>
+                <Textarea
+                  id="discount-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={POS_VI.discountReasonPlaceholder}
+                  aria-invalid={!noteValid && noteTrimLen > 0}
+                  rows={2}
+                />
+                <FieldDescription>
+                  {POS_VI.discountNoteHint(noteTrimLen)}
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          ) : (
+            <>
           {allowedModes.length > 1 ? (
             <Tabs
               value={type}
@@ -250,11 +406,11 @@ export function DiscountSheet({
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="discount-note">
+              <FieldLabel htmlFor="discount-note-manual">
                 {POS_VI.discountReasonLabel}
               </FieldLabel>
               <Textarea
-                id="discount-note"
+                id="discount-note-manual"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={POS_VI.discountReasonPlaceholder}
@@ -266,6 +422,8 @@ export function DiscountSheet({
               </FieldDescription>
             </Field>
           </FieldGroup>
+            </>
+          )}
 
           <Frame className="border-border/60 bg-muted/50 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
@@ -281,19 +439,27 @@ export function DiscountSheet({
             <div className="flex justify-between text-muted-foreground">
               <span>
                 {POS_VI.discountReduceLabel}
-                {type === "pct" && numericValue > 0
+                {activePane === "manual" && type === "pct" && numericValue > 0
                   ? ` (${formatPercent(numericValue)})`
                   : ""}
               </span>
               <span className="tabular-nums">
-                {previewDiscountAmount > 0
-                  ? `-${formatVND(previewDiscountAmount)}`
+                {(activePane === "code" ? codePreviewAmount : previewDiscountAmount) > 0
+                  ? `-${formatVND(
+                      activePane === "code"
+                        ? codePreviewAmount
+                        : previewDiscountAmount,
+                    )}`
                   : "—"}
               </span>
             </div>
             <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
               <span>{totalLabel}</span>
-              <span className="tabular-nums">{formatVND(previewTotal)}</span>
+              <span className="tabular-nums">
+                {formatVND(
+                  activePane === "code" ? codePreviewTotal : previewTotal,
+                )}
+              </span>
             </div>
           </Frame>
         </div>

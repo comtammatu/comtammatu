@@ -14,6 +14,7 @@ import {
   submitOrderSchema,
 } from "./_lib/schemas";
 import { isPosBranchInScope, posUseAuth } from "./_lib/auth";
+import { evaluateOrderPromotionsQuiet } from "@lib/promotions/evaluate-order";
 import {
   appendOrderItemsRpcFallback,
   appendOrderItemsRpcMappings,
@@ -360,6 +361,8 @@ export const submitOrder = withActionPositional(
       result.item_discount_amount,
     );
 
+    await evaluateOrderPromotionsQuiet(supabase, result.order_id);
+
     return {
       success: true,
       data: { order_id: result.order_id, order_number: result.order_number },
@@ -472,6 +475,10 @@ export const appendOrderItems = withActionPositional(
             expectedItemDiscountTotal(items),
             result.item_discount_amount,
           );
+
+    if (result.idempotent !== true) {
+      await evaluateOrderPromotionsQuiet(supabase, result.order_id);
+    }
 
     return {
       success: true,

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { FormDialog, NumberField, SelectField } from "@/components/form";
+import { FormSheet, NumberField, SelectField } from "@/components/form";
 import { bulkCreateTables } from "./actions";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -61,7 +61,7 @@ export function BulkTableFormDialog({
   ];
 
   return (
-    <FormDialog
+    <FormSheet
       open={open}
       onOpenChange={onOpenChange}
       schema={bulkTableSchema}
@@ -123,6 +123,6 @@ export function BulkTableFormDialog({
           />
         </>
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

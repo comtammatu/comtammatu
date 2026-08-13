@@ -78,7 +78,7 @@ export function VoidPaidOrderDialog({
           }
           disabled={isPending}
         >
-          <SelectTrigger id="void-paid-payout-method" className="min-h-12">
+          <SelectTrigger id="void-paid-payout-method" size="touch">
             <SelectValue
               placeholder={messages.pos.order.refundPayoutMethodPlaceholder}
             />

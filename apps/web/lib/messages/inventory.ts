@@ -2202,6 +2202,7 @@ export const inventory = {
         `${formatCount(done)}/${formatCount(total)}`,
       countSaveNext: "Lưu · món kế →",
       countTapToEnter: "Nhập",
+      countUnitAria: "Đơn vị đếm",
       countUpNext: (names: string[]) => `Kế: ${names.join(" · ")}…`,
       countSubmitRemaining: (n: number) =>
         `Gửi kết quả (còn ${formatCount(n)} mục)`,

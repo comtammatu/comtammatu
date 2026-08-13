@@ -34,7 +34,7 @@ import {
   CircleDollarSign as IconCircleDollarSign,
   CirclePlus as IconCirclePlus,
   Copy as IconCopy,
-  Ellipsis as IconDots,
+  Ellipsis as IconEllipsis,
   Flame as IconFlame,
   Merge as IconMerge,
   Printer as IconPrinter,
@@ -57,6 +57,9 @@ import {
   clearOrderDiscount,
   applyOrderItemDiscount,
   clearOrderItemDiscount,
+  previewPromotionCode,
+  applyPromotionCode,
+  clearPromotion,
   setOrderServiceCharge,
   splitOrder,
   mergeOrders,
@@ -68,6 +71,7 @@ import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES } from "./order-history";
 import { messages } from "@lib/messages";
+import { PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { OrderItemRow } from "./_components/order-detail/order-item-row";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { OrderItemActionsSheet } from "./_components/order-detail/order-item-actions-sheet";
@@ -101,8 +105,9 @@ import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
 import type { RefundPayoutMethod } from "@lib/refund-payout";
+import { confirmAndCancelPendingPayment } from "./_lib/confirm-cancel-pending-payment";
 import {
-  canAppendPosOrder,
+  canOfferPosOrderAppend,
   isPosOrderAmountLocked,
 } from "./_lib/table-order-visual-state";
 import {
@@ -211,7 +216,7 @@ function OrderDetailLoadingFixture() {
             className="shrink-0"
             aria-label={messages.pos.orderDetail.moreActionsAria}
           >
-            <IconDots />
+            <IconEllipsis />
           </Button>
         </div>
       </div>
@@ -348,6 +353,7 @@ export function OrderDetailSheet({
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [canVoidPaid, setCanVoidPaid] = useState(false);
+  const [canApplyDiscount, setCanApplyDiscount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Two transitions on purpose:
   //   - `isMutating` gates the action buttons (Confirm in dialogs, "Chuyển bàn"
@@ -408,6 +414,7 @@ export function OrderDetailSheet({
       setData(result.data.order as unknown as OrderDetailData);
       setCanManage(result.data.canManageOrders);
       setCanVoidPaid(result.data.canVoidPaidOrder);
+      setCanApplyDiscount(result.data.canApplyDiscount);
       setError(null);
     } else {
       setData(null);
@@ -790,12 +797,39 @@ export function OrderDetailSheet({
     });
   };
 
+  const runAfterPendingPaymentUnlock = useCallback(
+    (run: () => void) => {
+      if (orderId == null || data == null) return;
+      const locked = isPosOrderAmountLocked(data);
+      void (async () => {
+        const ok = await confirmAndCancelPendingPayment({
+          branchId,
+          orderId,
+          locked,
+        });
+        if (!ok) return;
+        if (locked) {
+          setData((current) =>
+            current
+              ? { ...current, payment_method: null, payment_status: "unpaid" }
+              : current,
+          );
+          void onOrderUpdated?.();
+        }
+        run();
+      })();
+    },
+    [branchId, data, onOrderUpdated, orderId],
+  );
+
   // From the per-item actions sheet → close it and open the existing
   // VoidItemDialog (which collects the void reason). Sequencing the
   // two prevents stacked focus traps from fighting on mobile.
   const handleVoidRequest = (itemId: number) => {
-    setActionsItemId(null);
-    setVoidItemId(itemId);
+    runAfterPendingPaymentUnlock(() => {
+      setActionsItemId(null);
+      setVoidItemId(itemId);
+    });
   };
 
   // From the per-item actions sheet → close it and hand off to parent for
@@ -809,15 +843,19 @@ export function OrderDetailSheet({
       notify.error("Thiếu dữ liệu món — tải lại đơn rồi thử lại.");
       return;
     }
-    setActionsItemId(null);
-    onStartEditSent?.(target);
+    runAfterPendingPaymentUnlock(() => {
+      setActionsItemId(null);
+      onStartEditSent?.(target);
+    });
   };
 
   const handleItemDiscountRequest = (itemId: number) => {
     const target = data?.order_items.find((item) => item.id === itemId);
     if (!target || target.status === "cancelled") return;
-    setActionsItemId(null);
-    setDiscountItemId(itemId);
+    runAfterPendingPaymentUnlock(() => {
+      setActionsItemId(null);
+      setDiscountItemId(itemId);
+    });
   };
 
   // From the per-item actions sheet → open ReduceQuantityDialog seeded with
@@ -826,10 +864,12 @@ export function OrderDetailSheet({
   const handleReduceRequest = (itemId: number) => {
     const target = data?.order_items.find((item) => item.id === itemId);
     if (!target || target.quantity < 2) return;
-    setActionsItemId(null);
-    setReduceItemId(itemId);
-    setReduceNewQty(Math.max(target.quantity - 1, 1));
-    setReduceReason("");
+    runAfterPendingPaymentUnlock(() => {
+      setActionsItemId(null);
+      setReduceItemId(itemId);
+      setReduceNewQty(Math.max(target.quantity - 1, 1));
+      setReduceReason("");
+    });
   };
 
   const handleReduceConfirm = () => {
@@ -939,6 +979,47 @@ export function OrderDetailSheet({
         setShowDiscount(false);
       } else {
         notify.error(r.error ?? "Không thể bỏ chiết khấu.");
+      }
+    });
+  };
+
+  const handlePreviewPromoCode = async (code: string) => {
+    if (orderId === null) {
+      return { success: false as const, error: "Không tìm thấy đơn hàng." };
+    }
+    const r = await previewPromotionCode(branchId, { orderId, code });
+    if (r.success && r.data) {
+      return {
+        success: true as const,
+        amount: r.data.amount,
+        name: r.data.name,
+      };
+    }
+    return { success: false as const, error: r.error ?? "Không thể xem mức giảm." };
+  };
+
+  const handleApplyPromoCode = (code: string) => {
+    if (orderId === null) return;
+    startMutation(async () => {
+      const r = await applyPromotionCode(branchId, { orderId, code });
+      if (r.success) {
+        notify.success(PROMOTIONS_VI.applied);
+        setShowDiscount(false);
+      } else {
+        notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
+      }
+    });
+  };
+
+  const handleClearPromo = (reason: string) => {
+    if (orderId === null) return;
+    startMutation(async () => {
+      const r = await clearPromotion(branchId, orderId, reason);
+      if (r.success) {
+        notify.success(PROMOTIONS_VI.cleared);
+        setShowDiscount(false);
+      } else {
+        notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
       }
     });
   };
@@ -1102,13 +1183,11 @@ export function OrderDetailSheet({
       .filter((item) => item.status !== "cancelled")
       .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
-  const orderAmountLocked = data != null && isPosOrderAmountLocked(data);
   const canAppendItems =
-    data != null && canAppendPosOrder(data, ACTIVE_POS_STATUSES);
+    data != null && canOfferPosOrderAppend(data, ACTIVE_POS_STATUSES);
   const canShowCancel =
     canManage &&
     data &&
-    !orderAmountLocked &&
     !["completed", "cancelled"].includes(data.status);
   const canShowVoidPaid =
     canVoidPaid &&
@@ -1137,10 +1216,12 @@ export function OrderDetailSheet({
     hasActiveKitchenItems &&
     data.payment_status !== "paid" &&
     !["completed", "cancelled"].includes(data.status);
-  // VietQR exposure locks every amount-changing path until the cashier
-  // cancels the pending payment or settlement completes.
-  const canMutateUnpaidOrder = canShowPaymentAction && !orderAmountLocked;
+  // Amount-changing actions stay offered while VietQR is pending; the
+  // confirm Dialog cancels that code before the original action continues.
+  const canMutateUnpaidOrder = canShowPaymentAction;
+  const hasPromotion = data?.promotion_id != null;
   const canShowDiscount = canMutateUnpaidOrder;
+  const canShowManualDiscount = canMutateUnpaidOrder && canApplyDiscount;
   const canShowServiceCharge = canMutateUnpaidOrder;
   const canShowSplit =
     canSplitMerge &&
@@ -1314,6 +1395,16 @@ export function OrderDetailSheet({
               </ScrollArea>
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+                {hasPromotion && data.discount_note ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="secondary">
+                      {PROMOTIONS_VI.posPromoChip}
+                    </Badge>
+                    <span className="min-w-0 truncate text-sm text-muted-foreground">
+                      {data.discount_note}
+                    </span>
+                  </div>
+                ) : null}
                 {activeItemCount > 0 && (
                   <OrderTotalsSummary
                     subtotal={data.subtotal}
@@ -1354,7 +1445,9 @@ export function OrderDetailSheet({
                         size="touch"
                         className="flex-1"
                         onClick={() => {
-                          onStartAppend(data.id, data.order_number);
+                          runAfterPendingPaymentUnlock(() => {
+                            onStartAppend(data.id, data.order_number);
+                          });
                         }}
                       >
                         {messages.pos.orderDetail.appendItems}
@@ -1367,17 +1460,13 @@ export function OrderDetailSheet({
                             <Button
                               type="button"
                               variant="outline"
-                              size="touch"
+                              size={canAppendItems ? "icon-touch" : "touch"}
                               aria-label={
                                 messages.pos.orderDetail.moreActionsAria
                               }
-                              className={
-                                canAppendItems
-                                  ? "min-w-12 shrink-0 px-0"
-                                  : "flex-1"
-                              }
+                              className={canAppendItems ? "shrink-0" : "flex-1"}
                             >
-                              <IconDots />
+                              <IconEllipsis />
                               {!canAppendItems && (
                                 <span className="ml-1.5">
                                   {messages.pos.orderDetail.moreActions}
@@ -1472,7 +1561,11 @@ export function OrderDetailSheet({
                                   <DropdownMenuItem
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
-                                    onClick={() => setShowDiscount(true)}
+                                    onClick={() =>
+                                      runAfterPendingPaymentUnlock(() =>
+                                        setShowDiscount(true),
+                                      )
+                                    }
                                   >
                                     <IconCircleDollarSign />
                                     {data.order_discount_amount > 0
@@ -1484,7 +1577,11 @@ export function OrderDetailSheet({
                                   <DropdownMenuItem
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
-                                    onClick={() => setShowServiceCharge(true)}
+                                    onClick={() =>
+                                      runAfterPendingPaymentUnlock(() =>
+                                        setShowServiceCharge(true),
+                                      )
+                                    }
                                   >
                                     <IconCirclePlus />
                                     {data.service_charge > 0
@@ -1497,7 +1594,11 @@ export function OrderDetailSheet({
                                   <DropdownMenuItem
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
-                                    onClick={() => setShowSplit(true)}
+                                    onClick={() =>
+                                      runAfterPendingPaymentUnlock(() =>
+                                        setShowSplit(true),
+                                      )
+                                    }
                                   >
                                     <IconSplit />
                                     {messages.pos.orderDetail.splitBill}
@@ -1507,7 +1608,11 @@ export function OrderDetailSheet({
                                   <DropdownMenuItem
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
-                                    onClick={() => setShowMerge(true)}
+                                    onClick={() =>
+                                      runAfterPendingPaymentUnlock(() =>
+                                        setShowMerge(true),
+                                      )
+                                    }
                                   >
                                     <IconMerge />
                                     {messages.pos.orderDetail.mergeBill}
@@ -1525,7 +1630,11 @@ export function OrderDetailSheet({
                                     variant="destructive"
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
-                                    onClick={() => setShowCancel(true)}
+                                    onClick={() =>
+                                      runAfterPendingPaymentUnlock(() =>
+                                        setShowCancel(true),
+                                      )
+                                    }
                                   >
                                     <IconTrash />
                                     {messages.pos.orderDetail.cancelOrder}
@@ -1563,6 +1672,7 @@ export function OrderDetailSheet({
           data?.order_items.find((item) => item.id === actionsItemId) ?? null
         }
         canManage={canManage && canMutateUnpaidOrder}
+        canApplyDiscount={canShowManualDiscount}
         isPending={isMutating}
         onClose={() => setActionsItemId(null)}
         onMarkServed={handleMarkItemServed}
@@ -1655,6 +1765,14 @@ export function OrderDetailSheet({
           isPending={isMutating}
           onSubmit={handleApplyDiscount}
           onClear={handleClearDiscount}
+          promo={{
+            enabled: true,
+            canManual: canShowManualDiscount,
+            hasPromotion: Boolean(hasPromotion),
+            onPreview: handlePreviewPromoCode,
+            onApplyCode: handleApplyPromoCode,
+            onClearPromo: handleClearPromo,
+          }}
         />
       )}
 

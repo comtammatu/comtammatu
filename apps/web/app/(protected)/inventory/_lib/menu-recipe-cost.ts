@@ -15,11 +15,16 @@ export type SourceSiteWacRow = {
   avgUnitCost: number | string | null;
 };
 
+/**
+ * Matches `inv_to_base_for_tenant`: null entry unit → qty unchanged; missing
+ * active conversion → null (never silent 1). SQL raises
+ * `recipe_unit_conversion_missing` on that last case.
+ */
 export function getMenuRecipeLineBaseQuantity({
   quantity,
   entryUnitId,
   units,
-}: RecipeLineBaseQuantityInput): number {
+}: RecipeLineBaseQuantityInput): number | null {
   const safeQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
 
   if (entryUnitId == null) {
@@ -35,7 +40,7 @@ export function getMenuRecipeLineBaseQuantity({
     return safeQuantity * factor;
   }
 
-  return safeQuantity;
+  return null;
 }
 
 /** Catalog food-cost treats 0 / null WAC as “not valued yet”, never as free. */
@@ -91,20 +96,15 @@ export function resolveMenuRecipeUnitCost({
   ingredientId,
   sourceSiteKind,
   sourceSiteWacMap,
-  referenceUnitCost,
 }: {
   ingredientId: number;
   sourceSiteKind: string | null | undefined;
   sourceSiteWacMap: Readonly<Record<string, number>>;
-  referenceUnitCost: number | null | undefined;
 }): number | null {
-  if (isMenuRecipeSourceSiteKind(sourceSiteKind)) {
-    const sourceWac =
-      sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
-    if (isPositiveUnitCost(sourceWac)) return sourceWac;
-  }
-  if (isPositiveUnitCost(referenceUnitCost)) return referenceUnitCost;
-  return null;
+  if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) return null;
+  const sourceWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
+  return isPositiveUnitCost(sourceWac) ? sourceWac : null;
 }
 
 /** Null when any line lacks a valued unit cost — never show a partial 0đ. */
@@ -123,7 +123,48 @@ export function sumMenuRecipeEstimatedCost(
 /** Editor/list signals — does not change the cost formula. */
 export type MenuRecipeCostSignal =
   | "missing_fulfill_site"
-  | "missing_source_wac";
+  | "missing_source_wac"
+  | "source_wac_site_mismatch";
+
+export type MenuRecipeListCostState =
+  | { kind: "amount"; amount: number }
+  | { kind: "missing_recipe" }
+  | { kind: "missing_fulfill_site" }
+  | { kind: "missing_source_wac" }
+  | { kind: "source_wac_site_mismatch" }
+  | { kind: "unavailable" };
+
+/**
+ * One list label: Kho gốc WAC or a single gap — never a VND amount plus a badge.
+ * When the WAC map failed to load, never claim “Chờ định giá”.
+ */
+export function resolveMenuRecipeListCostState({
+  itemCount,
+  estimatedCost,
+  signals,
+  wacMapAvailable = true,
+}: {
+  itemCount: number;
+  estimatedCost: number | null;
+  signals: readonly MenuRecipeCostSignal[];
+  wacMapAvailable?: boolean;
+}): MenuRecipeListCostState {
+  if (itemCount <= 0) return { kind: "missing_recipe" };
+  if (signals.includes("missing_fulfill_site")) {
+    return { kind: "missing_fulfill_site" };
+  }
+  if (!wacMapAvailable) return { kind: "unavailable" };
+  if (signals.includes("missing_source_wac")) {
+    return { kind: "missing_source_wac" };
+  }
+  if (signals.includes("source_wac_site_mismatch")) {
+    return { kind: "source_wac_site_mismatch" };
+  }
+  if (estimatedCost != null && Number.isFinite(estimatedCost)) {
+    return { kind: "amount", amount: estimatedCost };
+  }
+  return { kind: "unavailable" };
+}
 
 export function resolveMenuRecipeCostSignals({
   ingredientId,
@@ -139,8 +180,14 @@ export function resolveMenuRecipeCostSignals({
   }
   const sourceWac =
     sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
-  if (!isPositiveUnitCost(sourceWac)) {
-    return ["missing_source_wac"];
+  if (isPositiveUnitCost(sourceWac)) return [];
+
+  const otherSite: MenuRecipeSourceSiteKind =
+    sourceSiteKind === "central_supply" ? "central_kitchen" : "central_supply";
+  const otherWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey(otherSite, ingredientId)];
+  if (isPositiveUnitCost(otherWac)) {
+    return ["source_wac_site_mismatch"];
   }
-  return [];
+  return ["missing_source_wac"];
 }

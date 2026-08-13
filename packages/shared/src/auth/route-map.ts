@@ -94,6 +94,18 @@ export const ROUTE_FAMILY_CONTRACTS = [
     requiresBranchId: false,
   },
   {
+    id: "promotions",
+    label: MODULE_ACL.promotions.label,
+    surface: "owner",
+    entryPath: MODULE_ACL.promotions.path,
+    matchPrefixes: [MODULE_ACL.promotions.path],
+    moduleKeys: ["promotions"],
+    primaryNav: "owner-sidebar",
+    backBehavior: "role-home",
+    breadcrumbRoot: APP_COPY_VI.ownerTitle,
+    requiresBranchId: false,
+  },
+  {
     id: "orders",
     label: MODULE_ACL.orders.label,
     surface: "owner",

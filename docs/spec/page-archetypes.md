@@ -261,7 +261,8 @@ Control Surface Work compose shapes (ADR 0033 — not station BOARD):
 - States: `TableEmptyStateRow` / `AppEmptyState` for empty/no-results;
   `PageSkeleton` loading; `ErrorPanel` error.
 - Status/money/date: per § 1 shared vocabulary.
-- Quick create/edit: `FormDialog`. Row open follows Record Depth
+- Quick create/edit: overlay chooser (`FormDialog` on Owner; `AppSheet` on
+  Branch). Row open follows Record Depth
   (`design-system.md` § C.1 / ADR 0018): D2 independent workspace →
   `{basePath}/{id}`; D1 view/document → addressable overlay
   (`?<entity>Id=`); D1 task → `FormDialog` / short `AppDialog` without a URL.
@@ -389,7 +390,8 @@ presenter under `/br/…/stock/grn/[id]`.
   code + `StatusBadge`; description = identity; body first viewport = qty /
   current job (`Item` KPI without WAC) then line `Item`s / DataTable; money,
   audit, and linked receipts sit behind `Tabs`; footer = Close → overflow →
-  one primary. Catalog stays LIST + FormDialog.
+  one primary. Catalog stays LIST + plane overlay (Owner `FormDialog`, Branch
+  `AppSheet`).
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
@@ -542,7 +544,8 @@ badge}`).
 - Route-scoped settings frame (e.g. `SettingsPageFrame` /
   `SettingsFormSection`) + RHF + Zod `form/*` wrappers (§ 1 form layer).
 - A list-shaped setting (units, categories, thresholds) renders its list body
-  as a LIST inside the settings frame, with `FormDialog` for CRUD.
+  as a LIST inside the settings frame; CRUD overlay follows the plane chooser
+  (`FormDialog` on Owner, `AppSheet` on Branch).
 - `employee/clock` folds FORM-PAGE into this archetype: it is a single-action
   form (punch in/out) even though it is not a settings screen in the domain
   sense — its shape (one entity, one RHF form, no line array) matches this
@@ -566,7 +569,8 @@ allowlist, not a precedent for stretching another archetype's definition:
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
    master-detail pair with responsive composition. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —
-   detail half of the same pair. Classified **DETAIL**.
+   legacy DETAIL URL; redirects to the LIST D1 overlay (`?ingredientId=`).
+   Classified **REDIRECT-SHIM**.
 6. `apps/web/app/(protected)/notifications/page.tsx` — feed list without
    `DataTable` (a chronological notification feed does not have tabular
    columns to display). Classified **LIST**.

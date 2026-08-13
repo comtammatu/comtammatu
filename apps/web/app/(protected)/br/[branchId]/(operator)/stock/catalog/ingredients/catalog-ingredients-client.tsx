@@ -222,6 +222,7 @@ export function CatalogIngredientsClient({
         unitOptions={unitOptions}
         categoryOptions={categoryOptions}
         onSaved={reload}
+        chrome="sheet"
       />
     </div>
   );

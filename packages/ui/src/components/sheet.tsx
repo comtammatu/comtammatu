@@ -53,6 +53,7 @@ function SheetContent({
   size = "lg",
   showCloseButton = true,
   fullscreen = false,
+  closeButtonSize,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Popup> & {
   side?: "top" | "right" | "bottom" | "left";
@@ -60,6 +61,8 @@ function SheetContent({
   showCloseButton?: boolean;
   /** Fill the dynamic viewport for top and bottom sheets. */
   fullscreen?: boolean;
+  /** Station sheets pass `icon-touch`; control_surface keeps the 1024px split. */
+  closeButtonSize?: "icon-sm" | "icon-touch";
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
   return (
@@ -95,7 +98,10 @@ function SheetContent({
                 // notch inset only — never floor at 0.5rem (that drops the X
                 // below SheetTitle on desktop / zero-inset devices).
                 className="absolute top-[env(safe-area-inset-top,0px)] right-2"
-                size={isTouchLayout ? "icon-touch" : "icon-sm"}
+                size={
+                  closeButtonSize ??
+                  (isTouchLayout ? "icon-touch" : "icon-sm")
+                }
               >
                 <IconX />
                 <span className="sr-only">Close</span>

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Controller } from "react-hook-form";
 import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { Switch } from "@comtammatu/ui/components/switch";
-import { FormDialog, TextField, valuesToFormData } from "@/components/form";
+import { FormSheet, TextField, valuesToFormData } from "@/components/form";
 import { messages } from "@lib/messages";
 import { createTerminal, updateTerminal } from "./actions";
 import type { TerminalRow } from "./terminals-client";
@@ -41,7 +41,7 @@ export function TerminalFormDialog({
   const isEdit = !!terminal;
 
   return (
-    <FormDialog
+    <FormSheet
       open={open}
       onOpenChange={onOpenChange}
       schema={terminalSchema}
@@ -95,6 +95,6 @@ export function TerminalFormDialog({
           )}
         </>
       )}
-    </FormDialog>
+    </FormSheet>
   );
 }

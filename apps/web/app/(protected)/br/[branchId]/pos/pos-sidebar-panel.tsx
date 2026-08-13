@@ -6,6 +6,7 @@ import { CartPane, type SubmitOrderOptions } from "./_components/cart-pane";
 import { OrderListPane } from "./_components/order-list-pane";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
+import type { SelfOrderPaymentCallKind } from "./self-order-actions";
 import type { CartItem, OrderType } from "./types";
 
 interface PosSidebarContentProps {
@@ -38,6 +39,7 @@ interface PosSidebarContentProps {
   onOpenArchivedSheet?: () => void;
   onReturnToTables?: () => void;
   hideTakeawayOrders?: boolean;
+  paymentCallByOrderId?: ReadonlyMap<number, SelfOrderPaymentCallKind>;
 }
 
 function PosSidebarContentComponent({
@@ -54,6 +56,7 @@ function PosSidebarContentComponent({
   onOpenArchivedSheet,
   onReturnToTables,
   hideTakeawayOrders,
+  paymentCallByOrderId,
 }: PosSidebarContentProps) {
   if (appendDraft.target != null) {
     return (
@@ -78,6 +81,7 @@ function PosSidebarContentComponent({
         onClosePane={onClosePane}
         onOpenArchivedSheet={onOpenArchivedSheet}
         hideTakeawayOrders={hideTakeawayOrders}
+        paymentCallByOrderId={paymentCallByOrderId}
       />
     );
   }

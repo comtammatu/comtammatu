@@ -39,6 +39,8 @@ export { FINANCE_VI } from "./finance";
 export type { FinanceKey } from "./finance";
 export { MENU_VI } from "./menu";
 export type { MenuKey } from "./menu";
+export { PROMOTIONS_VI } from "./promotions";
+export type { PromotionsKey } from "./promotions";
 export { ORDERS_VI } from "./orders";
 export type { OrdersKey } from "./orders";
 export { AUTH_VI } from "./auth";

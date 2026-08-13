@@ -129,7 +129,7 @@ export function PrinterStatusIndicator({
         className="gap-1 border-destructive/20 text-destructive"
         title={FAILED_BADGE_COPY.title(failedCount)}
       >
-        <IconPrinterOff className="size-3.5" />
+        <IconPrinterOff />
         <span className="hidden sm:inline">
           {FAILED_BADGE_COPY.long(failedCount)}
         </span>
@@ -143,7 +143,7 @@ export function PrinterStatusIndicator({
         className="gap-1 text-muted-foreground"
         title={POS_VI.printerNoneTitle}
       >
-        <IconPrinter className="size-3.5" />
+        <IconPrinter />
         <span className="hidden sm:inline">
           {POS_VI.printerUnregisteredLong}
         </span>
@@ -155,7 +155,7 @@ export function PrinterStatusIndicator({
         className="gap-1 border-success/20 text-success"
         title={`Dịch vụ in ${status.agentId ?? ""} — đang kết nối`}
       >
-        <IconPrinter className="size-3.5" />
+        <IconPrinter />
         <span className="hidden sm:inline">{POS_VI.printerOnlineLong}</span>
         <span className="sm:hidden">{POS_VI.printerOnlineShort}</span>
       </Badge>
@@ -165,7 +165,7 @@ export function PrinterStatusIndicator({
         className="gap-1 border-destructive/20 text-destructive"
         title={offlineTitle}
       >
-        <IconPrinterOff className="size-3.5" />
+        <IconPrinterOff />
         <span className="hidden sm:inline">{POS_VI.printerOfflineLong}</span>
         <span className="sm:hidden">{POS_VI.printerOfflineShort}</span>
       </Badge>

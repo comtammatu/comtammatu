@@ -47,6 +47,10 @@ import {
 } from "./supplier-invoice-form-schema";
 
 import { ResponsiveActionButton } from "@/components/responsive-action-button";
+import {
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 export type SupplierInvoiceDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -132,96 +136,112 @@ export function SupplierInvoiceDetailSheet({
 }: SupplierInvoiceDetailSheetProps) {
   const selectedLastPayment = selectedInvoice?.lastPayment ?? null;
 
-  const footer = selectedInvoice ? (
-    <div className="flex flex-wrap gap-2">
-      {canAcceptDiscrepancy &&
+  const footerActions: Array<RowActionItem & { primary?: boolean }> = [];
+  if (selectedInvoice) {
+    if (
+      canAcceptDiscrepancy &&
       selectedInvoice.documentStatus === "draft" &&
-      selectedInvoice.matchStatus === "matched" ? (
-        <ResponsiveActionButton
-          type="button"
-          className="flex-1"
-          onClick={onConfirmInvoice}
-          disabled={isPending}
-        >
-          {copy.confirmInvoiceAction}
-        </ResponsiveActionButton>
-      ) : null}
-      {canCreateInvoice && selectedInvoice.documentStatus === "draft" ? (
-        <ResponsiveActionButton
-          type="button"
-          variant="outline"
-          onClick={onEditInvoice}
-          disabled={isPending}
-        >
-          {ACTIONS_VI.edit}
-        </ResponsiveActionButton>
-      ) : null}
-      {canShowPayAction ? (
-        <ResponsiveActionButton
-          type="button"
-          className="flex-1"
-          variant={payIsPrimary ? "default" : "outline"}
-          onClick={onPay}
-          disabled={isPending || missingVatAttachment}
-        >
-          {copy.payAction}
-        </ResponsiveActionButton>
-      ) : null}
-      {canPaySupplier &&
+      selectedInvoice.matchStatus === "matched"
+    ) {
+      footerActions.push({
+        key: "confirm",
+        label: copy.confirmInvoiceAction,
+        onSelect: onConfirmInvoice,
+        disabled: isPending,
+        primary: true,
+      });
+    }
+    if (canCreateInvoice && selectedInvoice.documentStatus === "draft") {
+      footerActions.push({
+        key: "edit",
+        label: ACTIONS_VI.edit,
+        onSelect: onEditInvoice,
+        disabled: isPending,
+      });
+    }
+    if (canShowPayAction) {
+      footerActions.push({
+        key: "pay",
+        label: copy.payAction,
+        onSelect: onPay,
+        disabled: isPending || missingVatAttachment,
+        primary: payIsPrimary,
+      });
+    }
+    if (
+      canPaySupplier &&
       parseMoneyToMinorUnits(selectedSupplierAdvanceAmount) > 0n &&
-      parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n ? (
-        <ResponsiveActionButton
-          type="button"
-          variant="outline"
-          onClick={onAllocateAdvance}
-          disabled={isPending}
-        >
-          {copy.allocateAdvanceAction}
-        </ResponsiveActionButton>
-      ) : null}
-      {canAcceptDiscrepancy &&
+      parseMoneyToMinorUnits(paymentOutstandingAmount) > 0n
+    ) {
+      footerActions.push({
+        key: "allocate",
+        label: copy.allocateAdvanceAction,
+        onSelect: onAllocateAdvance,
+        disabled: isPending,
+      });
+    }
+    if (
+      canAcceptDiscrepancy &&
       selectedInvoice.invoiceKind === "service" &&
-      selectedInvoice.matchStatus === "pending" ? (
-        <ResponsiveActionButton
-          type="button"
-          variant="outline"
-          onClick={onVerifyService}
-          disabled={isPending}
-        >
-          {copy.verifyServiceAction}
-        </ResponsiveActionButton>
-      ) : null}
-      {canAcceptDiscrepancy &&
+      selectedInvoice.matchStatus === "pending"
+    ) {
+      footerActions.push({
+        key: "verify",
+        label: copy.verifyServiceAction,
+        onSelect: onVerifyService,
+        disabled: isPending,
+        primary: true,
+      });
+    }
+    if (
+      canAcceptDiscrepancy &&
       selectedInvoice.invoiceKind === "goods" &&
-      selectedInvoice.matchStatus === "discrepancy" ? (
-        <ResponsiveActionButton
-          type="button"
-          variant="outline"
-          onClick={onAcceptDiscrepancy}
-          disabled={isPending}
-        >
-          {copy.acceptDiscrepancy}
-        </ResponsiveActionButton>
+      selectedInvoice.matchStatus === "discrepancy"
+    ) {
+      footerActions.push({
+        key: "accept",
+        label: copy.acceptDiscrepancy,
+        onSelect: onAcceptDiscrepancy,
+        disabled: isPending,
+        primary: true,
+      });
+    }
+    if (canAcceptDiscrepancy && selectedOutstandingAmount > 0) {
+      footerActions.push({
+        key: "credit",
+        label: copy.creditAction,
+        onSelect: onCredit,
+        disabled: isPending,
+      });
+    }
+    if (canAcceptDiscrepancy && selectedInvoice.invoiceKind === "goods") {
+      footerActions.push({
+        key: "recompute",
+        label: copy.recomputeMatching,
+        onSelect: onRecomputeMatching,
+        disabled: isPending,
+      });
+    }
+  }
+
+  const primaryAction = footerActions.find((action) => action.primary) ?? null;
+  const overflowItems = footerActions.filter((action) => action !== primaryAction);
+  const footer = selectedInvoice ? (
+    <div className="flex w-full items-center gap-2">
+      {overflowItems.length > 0 ? (
+        <RowActionsMenu
+          items={overflowItems}
+          triggerSize={controlSize === "touch" ? "icon-touch" : "icon-sm"}
+        />
       ) : null}
-      {canAcceptDiscrepancy && selectedOutstandingAmount > 0 ? (
+      {primaryAction ? (
         <ResponsiveActionButton
           type="button"
-          variant="outline"
-          onClick={onCredit}
-          disabled={isPending}
+          className="flex-1"
+          onClick={primaryAction.onSelect}
+          disabled={primaryAction.disabled}
         >
-          {copy.creditAction}
-        </ResponsiveActionButton>
-      ) : null}
-      {canAcceptDiscrepancy && selectedInvoice.invoiceKind === "goods" ? (
-        <ResponsiveActionButton
-          type="button"
-          className={canShowPayAction ? "flex-1" : "w-full"}
-          variant="outline"
-          onClick={onRecomputeMatching}
-          disabled={isPending}
-        >
-          {copy.recomputeMatching}
+          {primaryAction.label}
         </ResponsiveActionButton>
       ) : null}
     </div>

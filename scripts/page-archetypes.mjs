@@ -189,7 +189,8 @@ export const PAGE_ARCHETYPES = {
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/inventory/settings/units/page.tsx":
     "SETTINGS-PANEL",
-  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx":
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx":
@@ -212,6 +213,9 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/menu/page.tsx": "LIST",
   "apps/web/app/(protected)/notifications/page.tsx": "LIST",
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/promotions/page.tsx": "LIST",
+  "apps/web/app/(protected)/promotions/new/page.tsx": "DOC-WORKFLOW",
+  "apps/web/app/(protected)/promotions/[id]/page.tsx": "DOC-WORKFLOW",
   "apps/web/app/(protected)/work/page.tsx": "LIST",
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT-SHIM",
   "apps/web/app/(protected)/work/team/page.tsx": "LIST",
@@ -381,7 +385,7 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": {
-    status: "tune",
+    status: "keep",
     evidence: "implemented-static",
     final: false,
   },
@@ -488,6 +492,21 @@ const PAGE_DISPOSITION_OVERRIDES = {
     final: false,
   },
   "apps/web/app/(protected)/inventory/waste/new/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/promotions/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/promotions/new/page.tsx": {
+    status: "tune",
+    evidence: "implemented-static",
+    final: false,
+  },
+  "apps/web/app/(protected)/promotions/[id]/page.tsx": {
     status: "tune",
     evidence: "implemented-static",
     final: false,
@@ -612,7 +631,7 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/inventory/stock-requests/[id]/page.tsx": "DETAIL",
   "apps/web/app/(protected)/inventory/stock-requests/new/page.tsx": "DOC",
   "apps/web/app/(protected)/inventory/stock-requests/page.tsx": "REDIRECT",
-  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "DETAIL",
+  "apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/inventory/stock/page.tsx": "LIST",
   "apps/web/app/(protected)/inventory/stocktake/[id]/count/page.tsx": "DOC",
   "apps/web/app/(protected)/inventory/stocktake/[id]/page.tsx": "DETAIL",
@@ -635,6 +654,9 @@ export const CONTROL_SURFACE_COMPOSE = {
   "apps/web/app/(protected)/menu/page.tsx": "LIST",
   "apps/web/app/(protected)/notifications/page.tsx": "LIST",
   "apps/web/app/(protected)/orders/page.tsx": "LIST",
+  "apps/web/app/(protected)/promotions/page.tsx": "LIST",
+  "apps/web/app/(protected)/promotions/new/page.tsx": "DOC",
+  "apps/web/app/(protected)/promotions/[id]/page.tsx": "DOC",
   "apps/web/app/(protected)/work/page.tsx": "LIST",
   "apps/web/app/(protected)/work/tasks/[id]/page.tsx": "REDIRECT",
   "apps/web/app/(protected)/work/team/page.tsx": "LIST",

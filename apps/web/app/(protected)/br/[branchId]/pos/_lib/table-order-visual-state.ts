@@ -26,14 +26,24 @@ export function isPosOrderAmountLocked(
   return order.payment_status !== "paid" && order.payment_method === "vietqr";
 }
 
-export function canAppendPosOrder(
+/** Show append even when VietQR is pending — click-time confirm unlocks. */
+export function canOfferPosOrderAppend(
   order: PosOrderMutationStateInput,
   activeStatuses: readonly string[],
 ): boolean {
   return (
     order.payment_status !== "paid" &&
-    !isPosOrderAmountLocked(order) &&
     activeStatuses.includes(order.status)
+  );
+}
+
+export function canAppendPosOrder(
+  order: PosOrderMutationStateInput,
+  activeStatuses: readonly string[],
+): boolean {
+  return (
+    canOfferPosOrderAppend(order, activeStatuses) &&
+    !isPosOrderAmountLocked(order)
   );
 }
 

@@ -61,7 +61,7 @@ Reuse `/br/[branchId]/menu-limits` (`branch_menu_limits`, D064,
 - **1B rejected:** the former `add_menu_item_stock_exception` /
   `Bổ sung tồn kho` (+1/+2 ledger replenish) path is retired and must not
   return — it booked warehouse movements; override is allowance-only.
-- **2A:** override UI is menu-limits page / hub sheet only; no POS manager PIN.
+- **2A:** override UI is the shared menu-limits drawer only (home trigger and `/menu-limits`); allowance is a switch in UI (RPC stays integer); no POS manager PIN.
 
 ### 4. Cost fallback ladder
 

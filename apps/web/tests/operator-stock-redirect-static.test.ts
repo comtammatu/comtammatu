@@ -367,9 +367,12 @@ test("operator stock on-hand alias and detail stay inside the branch operator sh
     /routeBranchId\?: number|branchStockBasePath|embedded/,
   );
   assert.match(stockDataSource, /scope\.outOfScope/);
-  assert.match(stockDetailPageSource, /loadStockIngredientDetailData/);
-  assert.match(stockDetailPageSource, /\bStockIngredientDetail\b/);
-  assert.match(stockDetailPageSource, /formatVND/);
+  assert.match(
+    stockDetailPageSource,
+    /redirect\(\s*`\/inventory\/stock\?ingredientId=/,
+  );
+  assert.doesNotMatch(stockDetailPageSource, /\bStockIngredientDetail\b/);
+  assert.doesNotMatch(stockDetailPageSource, /formatVND/);
   assert.doesNotMatch(
     stockDetailPageSource,
     /routeBranchId\?: number|branchStockBasePath|embedded/,
@@ -675,7 +678,7 @@ test("operator stock branch-native extensions keep issue and report actions in t
   );
   assert.match(
     formDialog,
-    /const actionSize = actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
+    /actionSizeProp \?\? \(isTouchLayout \? "touch" : "default"\)/,
   );
   assert.match(formCombobox, /Combobox as SharedCombobox/);
   assert.match(sharedCombobox, /React\.ComponentProps<typeof Button>/);
@@ -965,7 +968,7 @@ test("operator stocktake routes keep session stocktake native to Branch", () => 
   assert.match(branchDetailClient, /BranchOperatorStatusStrip/);
   assert.match(branchDetailClient, /canCompleteBranchStocktake/);
   assert.doesNotMatch(branchDetailClient, /DataTable|AuditHistoryList|reports/);
-  assert.match(branchCountClient, /<StocktakeCountWizard/);
+  assert.match(branchCountClient, /<BranchStocktakeCountList/);
   assert.match(branchCountClient, /onUnitChange=\{onUnitChange\}/);
   assert.match(branchCountClient, /useStocktakeDraftSaver/);
   assert.match(branchCountClient, /ZoneLockIndicator/);
