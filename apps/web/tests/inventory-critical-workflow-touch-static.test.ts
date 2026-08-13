@@ -48,6 +48,8 @@ test("Owner stock detail dialog operations stay responsive without a two-column 
   assert.match(source, /isTouchLayout/);
   assert.match(source, /const actionSize = isTouchLayout \? "touch" : "default"/);
   assert.doesNotMatch(source, /size="sm"/);
+  assert.match(source, /RowActionsMenu/);
+  assert.match(source, /triggerSize=\{isTouchLayout \? "icon-touch" : "icon-lg"\}/);
 });
 
 test("production recipe import and export menu mirrors the responsive Inventory menu contract", () => {

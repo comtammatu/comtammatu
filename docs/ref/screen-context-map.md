@@ -193,9 +193,12 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 ### 2.5. Kho hàng — `/inventory` & `/br/[branchId]/stock`
 
 > On-hand exemplar context (tests may cite as comment only) — giữ section này.
-> **Document gold bar** (control_surface): stock dialog + PO + GRN — KPI
-> `Item` strip, title + `StatusBadge`, sectioned line cards. Compose:
-> `docs/spec/page-archetypes.md` DETAIL.
+> **Document gold bar** (control_surface): stock dialog + PO + GRN — title +
+> `StatusBadge`; first viewport = tồn/trạng thái/công việc hiện tại (qty,
+> ngưỡng, lần đếm hoặc dòng phiếu); WAC/giá trị và audit/`Lịch sử`/phiếu nhập
+> liên kết nằm sau tab. Footer = Close → overflow → **một** CTA chính.
+> Kho Tổng/Bếp TT không thấy tab Giá trị trên overlay tồn; Owner/Kế toán xem
+> WAC sau nếp gấp. Compose: `docs/spec/page-archetypes.md` DETAIL.
 
 - **Gia đình:** Inventory (spine §1A). Entry → success → recovery ở mức phiếu:
   mở list/hub đúng plane → nháp/kiểm nhận → chốt chứng từ; lệch/hủy qua dialog
@@ -204,7 +207,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   `/inventory/*` (control_surface); operator stock của chi nhánh dùng
   `/br/[branchId]/stock/*`. Central roles bị khóa site theo JWT `branch_id` và
   dùng `/me/*` cho công việc cá nhân/chấm công.
-- **Archetype:** `/inventory` dùng `DASHBOARD`; `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/issues`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/waste/new` là `DOC-WORKFLOW`; `/inventory/issues` redirect vào `/inventory/consumption?view=waste`; `/inventory/supplier-invoices` là `REDIRECT-SHIM` (→ `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Owner GRN detail là D1 document trên LIST (`/inventory/grn/[id]` = `REDIRECT-SHIM`). Branch GRN/consumption/issue detail thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
+- **Archetype:** `/inventory` dùng `LANDING` (queue-first `Cần xử lý` rồi lane chứng từ, danh mục dưới); `/br/[branchId]/stock` dùng `LANDING`; `/inventory/stock`, `/inventory/purchase-requests`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/consumption`, `/inventory/issues`, `/inventory/transfers`, `/br/[branchId]/stock/on-hand`, `/br/[branchId]/stock/issues`, `/br/[branchId]/stock/consumption`, `/br/[branchId]/stock/count-assignments`, `/br/[branchId]/stock/count-slips`, và `/br/[branchId]/stock/waste-approvals` là `LIST` nhưng khác presentation plane. `/inventory/transfers/new` và `/inventory/stock-requests/new` là `DOC-WORKFLOW`; `/inventory/waste/new` là `DOC-WORKFLOW`; `/inventory/issues` redirect vào `/inventory/consumption?view=waste`; `/inventory/supplier-invoices` là `REDIRECT-SHIM` (→ `/finance/supplier-invoices`, ADR 0018). `/inventory/operations` đã rút. Owner GRN detail là D1 document trên LIST (`/inventory/grn/[id]` = `REDIRECT-SHIM`). Branch GRN/consumption/issue detail thuộc `DETAIL`; form phiếu hao hụt Branch thuộc `DOC-WORKFLOW`; `/br/[branchId]/stock/reports` là Branch touch `REPORT` theo tín hiệu từng nguyên liệu.
 - **Đối tượng sử dụng chính:** `/inventory` dành cho Chủ cửa hàng (`owner`),
   Kế toán, `central_supply_ops` và `central_kitchen_lead`; `/br/[branchId]/stock`
   dành cho `branch_manager` — plane touch, action bị permission giới hạn.

@@ -45,6 +45,43 @@ export type PurchaseRequestIngredientOption = {
   units: Array<{ id: number; label: string; factor: number }>;
 };
 
+export type PurchaseOrderLineRow = {
+  id: number;
+  ingredientId: number;
+  ingredientName: string;
+  quantity: number;
+  receivedQuantity: number;
+  entryUnitId: number;
+  unitLabel: string;
+};
+
+export type PurchaseOrderLinkedGrn = {
+  id: number;
+  code: string;
+  status: string;
+  receivedAt: string | null;
+};
+
+export type PurchaseOrderRow = {
+  id: number;
+  code: string;
+  groupKey: string | null;
+  groupCode: string | null;
+  groupSequence: number | null;
+  status: string;
+  statusReason: string | null;
+  orderedAt: string;
+  expectedDeliveryDate: string | null;
+  notes: string | null;
+  supplierId: number;
+  supplierName: string;
+  branchId: number;
+  branchName: string;
+  lines: PurchaseOrderLineRow[];
+  linkedGrns: PurchaseOrderLinkedGrn[];
+  activeDraftGrnId: number | null;
+};
+
 export function purchaseRequestStatusVariant(status: string) {
   if (status === "ordered") return "success" as const;
   if (

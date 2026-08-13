@@ -5,6 +5,7 @@ import {
   canAccess,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Item,
@@ -197,27 +198,39 @@ export default async function InventoryPage({
       <AppPageHeader title={copy.title} />
       {attentionItems.length > 0 ? (
         <AppSection title={copy.attentionTitle} headingLevel="h2">
-          <div className="flex flex-wrap gap-2">
+          <ItemGroup>
             {attentionItems.map((item) => (
-              <Badge
+              <Item
                 key={item.id}
-                variant="warning"
+                variant="outline"
+                size="sm"
+                role="listitem"
                 render={<Link href={item.href} />}
-                className="gap-1.5 px-2.5 py-1 text-sm"
               >
-                <span>{item.label}</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {item.count}
-                </span>
-              </Badge>
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
+                </ItemContent>
+                <ItemActions className="ml-auto">
+                  <Badge variant="warning">{formatCount(item.count)}</Badge>
+                  <IconArrowRight className="size-4" aria-hidden />
+                </ItemActions>
+              </Item>
             ))}
-          </div>
+          </ItemGroup>
         </AppSection>
       ) : null}
       <div className="grid items-start gap-3">
-        {groups.map((group) => (
-          <AppSection key={group.title} title={group.title} headingLevel="h2">
-            <ItemGroup className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {groups.map((group) => {
+          const isCatalog = group.title.includes("Danh mục");
+          return (
+            <AppSection key={group.title} title={group.title} headingLevel="h2">
+              <ItemGroup
+                className={
+                  isCatalog
+                    ? "grid gap-2"
+                    : "grid gap-2 sm:grid-cols-2 xl:grid-cols-3"
+                }
+              >
               {group.items.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -245,7 +258,8 @@ export default async function InventoryPage({
               })}
             </ItemGroup>
           </AppSection>
-        ))}
+          );
+        })}
       </div>
     </AppPage>
   );

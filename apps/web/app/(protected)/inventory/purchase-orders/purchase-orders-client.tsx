@@ -18,6 +18,12 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { ReasonConfirmDialog } from "@/components/reason-confirm-dialog";
 import {
   Select,
@@ -47,6 +53,13 @@ import {
   closePurchaseOrder,
   createGrnDraftFromPurchaseOrder,
 } from "../purchase-order-actions";
+import type { PurchaseOrderRow } from "@lib/inventory/purchase-request-model";
+
+export type {
+  PurchaseOrderLineRow,
+  PurchaseOrderLinkedGrn,
+  PurchaseOrderRow,
+} from "@lib/inventory/purchase-request-model";
 
 const copy = messages.inventory.po;
 const ORDER_OVERLAY_KEYS = [
@@ -58,43 +71,6 @@ const ORDER_OVERLAY_KEYS = [
   "ordersSite",
   "ordersPage",
 ] as const;
-
-export type PurchaseOrderLineRow = {
-  id: number;
-  ingredientId: number;
-  ingredientName: string;
-  quantity: number;
-  receivedQuantity: number;
-  entryUnitId: number;
-  unitLabel: string;
-};
-
-export type PurchaseOrderLinkedGrn = {
-  id: number;
-  code: string;
-  status: string;
-  receivedAt: string | null;
-};
-
-export type PurchaseOrderRow = {
-  id: number;
-  code: string;
-  groupKey: string | null;
-  groupCode: string | null;
-  groupSequence: number | null;
-  status: string;
-  statusReason: string | null;
-  orderedAt: string;
-  expectedDeliveryDate: string | null;
-  notes: string | null;
-  supplierId: number;
-  supplierName: string;
-  branchId: number;
-  branchName: string;
-  lines: PurchaseOrderLineRow[];
-  linkedGrns: PurchaseOrderLinkedGrn[];
-  activeDraftGrnId: number | null;
-};
 
 type ReasonAction = {
   kind: "cancel" | "close";
@@ -297,6 +273,34 @@ export function PurchaseOrdersClient({
     }
     return actions;
   }
+
+  function documentOverflowActions(row: PurchaseOrderRow): RowActionItem[] {
+    const actions: RowActionItem[] = [];
+    if (
+      canManage &&
+      row.status === "approved" &&
+      !row.linkedGrns.some((grn) => grn.status === "confirmed")
+    ) {
+      actions.push({
+        key: "cancel",
+        label: copy.cancelAction,
+        destructive: true,
+        onSelect: () => setReasonAction({ kind: "cancel", row }),
+      });
+    }
+    if (canManage && row.status === "partially_received") {
+      actions.push({
+        key: "close-remaining",
+        label: copy.closeRemainingAction,
+        onSelect: () => setReasonAction({ kind: "close", row }),
+      });
+    }
+    return actions;
+  }
+
+  const documentOverflow = selectedRow
+    ? documentOverflowActions(selectedRow)
+    : [];
 
   const columns: DataTableColumn<PurchaseOrderRow>[] = [
     {
@@ -522,32 +526,6 @@ export function PurchaseOrdersClient({
         footer={
           viewOpen && selectedRow ? (
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-              {canManage &&
-              selectedRow.status === "approved" &&
-              !selectedRow.linkedGrns.some(
-                (grn) => grn.status === "confirmed",
-              ) ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() =>
-                    setReasonAction({ kind: "cancel", row: selectedRow })
-                  }
-                >
-                  {copy.cancelAction}
-                </Button>
-              ) : null}
-              {canManage && selectedRow.status === "partially_received" ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    setReasonAction({ kind: "close", row: selectedRow })
-                  }
-                >
-                  {copy.closeRemainingAction}
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -555,6 +533,9 @@ export function PurchaseOrdersClient({
               >
                 {ACTIONS_VI.close}
               </Button>
+              {documentOverflow.length > 0 ? (
+                <RowActionsMenu items={documentOverflow} />
+              ) : null}
               {canReceive &&
               (selectedRow.status === "approved" ||
                 selectedRow.status === "partially_received") ? (
@@ -624,7 +605,7 @@ function PurchaseOrderDocumentBody({
     <div className="flex flex-col gap-6">
       <Item
         variant="outline"
-        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
       >
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
@@ -652,14 +633,6 @@ function PurchaseOrderDocumentBody({
         </div>
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
-            {copy.detail.kpiReceipts}
-          </span>
-          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-            {row.linkedGrns.length}
-          </span>
-        </div>
-        <div className="min-w-0">
-          <span className="block font-medium text-muted-foreground">
             {copy.detail.kpiExpected}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
@@ -676,125 +649,130 @@ function PurchaseOrderDocumentBody({
         </Item>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="text-sm font-medium">
+      <Tabs defaultValue="lines">
+        <TabsList>
+          <TabsTrigger value="lines">
             {copy.detail.overviewLinesTitle}
-          </h4>
-          <span className="text-xs text-muted-foreground">
-            {copy.detail.sectionLineCount(row.lines.length)}
-          </span>
-        </div>
-        {row.lines.length === 0 ? (
-          <Item
-            variant="outline"
-            className="p-4 text-center text-xs text-muted-foreground"
-          >
-            {copy.emptyLinesDescription}
-          </Item>
-        ) : (
-          row.lines.map((line) => {
-            const remaining = Math.max(
-              line.quantity - line.receivedQuantity,
-              0,
-            );
-            return (
+          </TabsTrigger>
+          <TabsTrigger value="receipts">
+            {copy.detail.linkedGrnsTitle}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="lines">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs text-muted-foreground">
+              {copy.detail.sectionLineCount(row.lines.length)}
+            </span>
+            {row.lines.length === 0 ? (
               <Item
-                key={line.id}
                 variant="outline"
-                className="flex flex-col gap-3 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+                className="p-4 text-center text-xs text-muted-foreground"
               >
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground">
-                    {line.ingredientName}
-                  </p>
-                  <p className="text-muted-foreground">{line.unitLabel}</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3 sm:min-w-56">
-                  <div className="min-w-0">
-                    <span className="block text-muted-foreground">
-                      {copy.detail.orderedShort}
-                    </span>
-                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                      {line.quantity}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block text-muted-foreground">
-                      {copy.detail.receivedShort}
-                    </span>
-                    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                      {line.receivedQuantity}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block text-muted-foreground">
-                      {copy.detail.remainingShort}
-                    </span>
-                    <span
-                      className={
-                        remaining > 0
-                          ? "font-mono text-sm font-semibold tabular-nums text-destructive"
-                          : "font-mono text-sm font-semibold tabular-nums text-foreground"
-                      }
-                    >
-                      {remaining}
-                    </span>
-                  </div>
-                </div>
+                {copy.emptyLinesDescription}
               </Item>
-            );
-          })
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="text-sm font-medium">{copy.detail.linkedGrnsTitle}</h4>
-          <span className="text-xs text-muted-foreground">
-            {copy.detail.sectionReceiptCount(row.linkedGrns.length)}
-          </span>
-        </div>
-        {row.linkedGrns.length === 0 ? (
-          <Item
-            variant="outline"
-            className="p-4 text-center text-xs text-muted-foreground"
-          >
-            {copy.emptyLinkedGrnsHint}
-          </Item>
-        ) : (
-          row.linkedGrns.map((grn) => (
-            <Item
-              key={grn.id}
-              variant="outline"
-              className="flex items-center justify-between gap-3 p-3 text-xs"
-              render={
-                <Link
-                  href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${returnTo}`}
-                />
-              }
-            >
-              <div className="min-w-0">
-                <p className="font-mono font-semibold text-foreground">
-                  {grn.code}
-                </p>
-                <p className="text-muted-foreground">
-                  {grn.receivedAt ? formatVNDate(grn.receivedAt) : "—"}
-                </p>
-              </div>
-              <StatusBadge
-                domain="inventory"
-                value={grn.status}
-                label={
-                  grn.status === "draft"
-                    ? copy.detail.grnDraft
-                    : copy.detail.grnConfirmed
-                }
-              />
-            </Item>
-          ))
-        )}
-      </div>
+            ) : (
+              row.lines.map((line) => {
+                const remaining = Math.max(
+                  line.quantity - line.receivedQuantity,
+                  0,
+                );
+                return (
+                  <Item
+                    key={line.id}
+                    variant="outline"
+                    className="flex flex-col gap-3 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">
+                        {line.ingredientName}
+                      </p>
+                      <p className="text-muted-foreground">{line.unitLabel}</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 sm:min-w-56">
+                      <div className="min-w-0">
+                        <span className="block text-muted-foreground">
+                          {copy.detail.orderedShort}
+                        </span>
+                        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                          {line.quantity}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-muted-foreground">
+                          {copy.detail.receivedShort}
+                        </span>
+                        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                          {line.receivedQuantity}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-muted-foreground">
+                          {copy.detail.remainingShort}
+                        </span>
+                        <span
+                          className={
+                            remaining > 0
+                              ? "font-mono text-sm font-semibold tabular-nums text-destructive"
+                              : "font-mono text-sm font-semibold tabular-nums text-foreground"
+                          }
+                        >
+                          {remaining}
+                        </span>
+                      </div>
+                    </div>
+                  </Item>
+                );
+              })
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="receipts">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs text-muted-foreground">
+              {copy.detail.sectionReceiptCount(row.linkedGrns.length)}
+            </span>
+            {row.linkedGrns.length === 0 ? (
+              <Item
+                variant="outline"
+                className="p-4 text-center text-xs text-muted-foreground"
+              >
+                {copy.emptyLinkedGrnsHint}
+              </Item>
+            ) : (
+              row.linkedGrns.map((grn) => (
+                <Item
+                  key={grn.id}
+                  variant="outline"
+                  className="flex items-center justify-between gap-3 p-3 text-xs"
+                  render={
+                    <Link
+                      href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${returnTo}`}
+                    />
+                  }
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono font-semibold text-foreground">
+                      {grn.code}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {grn.receivedAt ? formatVNDate(grn.receivedAt) : "—"}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    domain="inventory"
+                    value={grn.status}
+                    label={
+                      grn.status === "draft"
+                        ? copy.detail.grnDraft
+                        : copy.detail.grnConfirmed
+                    }
+                  />
+                </Item>
+              ))
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -386,9 +386,10 @@ presenter under `/br/…/stock/grn/[id]`.
   totals) → a `Lịch sử` tab sourced from `audit_logs` filtered by
   `entity_type`/`entity_id` → `AppDetailFooter` for stage-transition actions.
 - control_surface inventory documents (stock dialog, PO, GRN gold bar): title =
-  code + `StatusBadge`; description = identity; body = `Item` KPI strip →
-  section heading + count hint → line `Item`s / DataTable; footer = Close →
-  secondary → one primary. Catalog stays LIST + FormDialog.
+  code + `StatusBadge`; description = identity; body first viewport = qty /
+  current job (`Item` KPI without WAC) then line `Item`s / DataTable; money,
+  audit, and linked receipts sit behind `Tabs`; footer = Close → overflow →
+  one primary. Catalog stays LIST + FormDialog.
 - Status/money/date: per § 1.
 - Navigation: per this family's `ROUTE_FAMILY_CONTRACTS` entry.
 
@@ -559,8 +560,9 @@ allowlist, not a precedent for stretching another archetype's definition:
    portal home; the same LANDING/DASHBOARD hybrid inside Branch runtime chrome.
    Classified **LANDING**.
 3. `apps/web/app/(protected)/inventory/page.tsx` — inventory capability hub
-   (`LANDING` / compose `DASHBOARD_REPORT` hub variant): link groups into stock
-   modules. Not a management LIST.
+   (`LANDING` / compose `DASHBOARD_REPORT` hub variant): queue-first attention
+   `Item` rows, then document lanes, then catalog/settings. Not a management
+   LIST or KPI mosaic.
 4. `apps/web/app/(protected)/inventory/stock/page.tsx` — master half of a
    master-detail pair with responsive composition. Classified **LIST**.
 5. `apps/web/app/(protected)/inventory/stock/[ingredientId]/page.tsx` —

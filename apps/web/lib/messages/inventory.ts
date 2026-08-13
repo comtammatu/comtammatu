@@ -1307,6 +1307,8 @@ export const inventory = {
         "Chưa có tồn ở site vận hành nào trong hệ thống.",
       noLocationStockTitle: "Chưa có tồn theo vị trí",
       noLocationStockDescription: "Chưa có tồn ở kho vận hành của chi nhánh.",
+      tabValuation: "Giá trị",
+      tabMovements: "Biến động",
       movementTitle: "Lịch sử biến động",
       movementHint: (count: number) => `${formatCount(count)}/30 gần nhất`,
       movementColOperation: "Nghiệp vụ",

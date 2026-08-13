@@ -10,10 +10,25 @@ import {
 } from "lucide-react";
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@comtammatu/ui/components/collapsible";
 import { Item } from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { AppDialog } from "@/components/form";
+import {
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import {
@@ -55,6 +70,15 @@ function stockDetailLocationLabel(
   return branchName ? `${branchName} · ${locationName}` : locationName;
 }
 
+function valuationLabel(
+  kind: ReturnType<typeof resolveStockValuationDisplay> | null,
+  valued: string | null,
+): string {
+  if (kind === "valued" && valued != null) return valued;
+  if (kind === "pending") return valuationCopy.pendingWac;
+  return inventoryCommon.noValue;
+}
+
 export interface StockDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +105,7 @@ export function StockDetailDialog({
   onQuickIssue,
 }: StockDetailDialogProps) {
   const actionSize = isTouchLayout ? "touch" : "default";
+  const tabListSize = isTouchLayout ? "touch" : "default";
 
   if (!open) return null;
 
@@ -89,6 +114,7 @@ export function StockDetailDialog({
   const systemLocations = detailData?.systemLocations
     ? visibleStockLocationRows(detailData.systemLocations)
     : [];
+  const showValuation = detailData?.valuation != null;
 
   const totalStockUnits = ingredient
     ? formatStockUnits(detailData?.totalQty ?? 0, ingredient.units, formatQty)
@@ -122,6 +148,24 @@ export function StockDetailDialog({
     ? formatStockUnits(ingredient.min, ingredient.units, formatQty)
     : { big: null, base: "" };
 
+  const overflowItems: RowActionItem[] = [];
+  if (canEditIngredient && onEditIngredient) {
+    overflowItems.push({
+      key: "edit",
+      label: stockCopy.actions.edit,
+      icon: <IconSquarePen />,
+      onSelect: onEditIngredient,
+    });
+  }
+  if (canAdjustStock && onAdjustStock) {
+    overflowItems.push({
+      key: "adjust",
+      label: stockCopy.actions.exception,
+      icon: <IconPencil />,
+      onSelect: onAdjustStock,
+    });
+  }
+
   const titleContent = (
     <div className="flex flex-wrap items-center gap-2">
       <span>{ingredient ? `Thẻ kho - ${ingredient.name}` : detailCopy.eyebrow}</span>
@@ -134,6 +178,280 @@ export function StockDetailDialog({
       {stockCopy.table.sku}: {ingredient.sku || inventoryCommon.noValue}
     </span>
   ) : undefined;
+
+  const locationQtyRows =
+    detailData?.systemLocations == null || !ingredient ? null : (
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
+          <h4 className="text-sm font-medium">
+            {detailCopy.systemLocationTitle}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {detailCopy.systemLocationDescription}
+          </p>
+        </div>
+
+        {systemLocations.length === 0 ? (
+          <Item
+            variant="outline"
+            className="p-4 text-center text-xs text-muted-foreground"
+          >
+            {detailCopy.systemLocationEmptyDescription}
+          </Item>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {systemLocations.map((location) => {
+              const locationStockUnits = formatStockUnits(
+                location.qty,
+                ingredient.units,
+                formatQty,
+              );
+
+              return (
+                <Item
+                  key={location.locationId}
+                  variant="outline"
+                  className="flex items-center justify-between p-3 text-xs"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">
+                      {stockDetailLocationLabel(location)}
+                    </p>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <p className="text-muted-foreground">{FORM_VI.quantity}</p>
+                    <p className="font-mono font-semibold tabular-nums text-foreground">
+                      {locationStockUnits.big ?? locationStockUnits.base}
+                    </p>
+                  </div>
+                </Item>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
+  const valuationPane = ingredient ? (
+    <div className="flex flex-col gap-3">
+      <Item
+        variant="outline"
+        className="grid grid-cols-2 gap-4 p-4 text-xs"
+      >
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {stockCopy.table.stockValue}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {valuationLabel(
+              valuationKind,
+              valuationKind === "valued" && totalValue != null
+                ? formatVND(totalValue)
+                : null,
+            )}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <span className="block font-medium text-muted-foreground">
+            {stockCopy.table.wac}
+          </span>
+          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
+            {valuationLabel(
+              valuationKind,
+              valuationKind === "valued" && displayWac != null
+                ? `${formatVND(displayWac)} / ${wacUnitLabel}`
+                : null,
+            )}
+          </span>
+        </div>
+      </Item>
+
+      {systemLocations.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {systemLocations.map((location) => {
+            const locationKind =
+              location.monetary == null
+                ? null
+                : resolveStockValuationDisplay({
+                    quantity: location.qty,
+                    unitCost: location.monetary.avgUnitCost,
+                  });
+            const locationStockValue =
+              locationKind === "valued" &&
+              location.monetary?.avgUnitCost != null
+                ? location.qty * location.monetary.avgUnitCost
+                : null;
+
+            return (
+              <Item
+                key={`value-${location.locationId}`}
+                variant="outline"
+                className="flex items-center justify-between p-3 text-xs"
+              >
+                <p className="min-w-0 font-medium text-foreground">
+                  {stockDetailLocationLabel(location)}
+                </p>
+                <p className="font-mono font-semibold tabular-nums text-foreground">
+                  {valuationLabel(
+                    locationKind,
+                    locationKind === "valued" && locationStockValue != null
+                      ? formatVND(locationStockValue)
+                      : null,
+                  )}
+                </p>
+              </Item>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
+  const movementPane = !ingredient || !detailData ? null : (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="text-sm font-medium">{detailCopy.movementTitle}</h4>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {detailCopy.movementHint(detailData.movements.length)}
+        </span>
+      </div>
+
+      {detailData.movements.length === 0 ? (
+        <Item variant="outline" className="p-4 text-center text-xs text-muted-foreground">
+          {detailCopy.noMovementDescription}
+        </Item>
+      ) : (
+        <Item
+          variant="outline"
+          className="flex-col flex-nowrap items-stretch overflow-hidden p-0 text-xs"
+        >
+          <div className="w-full min-w-0">
+            <div
+              className="grid grid-cols-3 gap-3 border-b bg-muted/30 px-3 py-2 font-medium text-muted-foreground"
+              role="row"
+            >
+              <span>{detailCopy.movementColOperation}</span>
+              <span>{detailCopy.movementColWarehouse}</span>
+              <span className="text-right">
+                {detailCopy.movementColQuantity}
+              </span>
+            </div>
+
+            <div className="divide-y" role="list">
+              {detailData.movements.map((movement: StockIngredientDetailMovement) => {
+                const movementUnits = formatStockUnits(
+                  movement.quantityChange,
+                  ingredient.units,
+                  formatQty,
+                );
+                const withSignedPrefix = (value: string) =>
+                  movement.quantityChange > 0 ? `+${value}` : value;
+                const movementPrimary = withSignedPrefix(
+                  movementUnits.big ?? movementUnits.base,
+                );
+                const movementBase =
+                  movementUnits.big !== null
+                    ? withSignedPrefix(movementUnits.base)
+                    : null;
+                const referenceLabel = stockMovementReferenceLabel(movement);
+                const referenceHref = stockMovementReferenceHref({
+                  movement,
+                  branchId: detailData.branchId,
+                });
+                const locationDisplay =
+                  movement.locationName === "main_warehouse" ||
+                  movement.locationCode === "main_warehouse"
+                    ? messages.inventory.ingredients.dialog
+                        .defaultFulfillSiteKindCentralSupply
+                    : movement.locationName || inventoryCommon.noValue;
+                const isInbound = movement.quantityChange > 0;
+                const isOutbound = movement.quantityChange < 0;
+                const DirectionIcon = isInbound
+                  ? IconArrowDownToLine
+                  : isOutbound
+                    ? IconArrowUpFromLine
+                    : null;
+
+                return (
+                  <div
+                    key={movement.id}
+                    role="listitem"
+                    className="grid grid-cols-3 items-center gap-3 px-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {stockMovementLabel(movement)}
+                      </p>
+                      <p className="truncate text-muted-foreground">
+                        {formatDateTime(movement.createdAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex min-w-0 items-center gap-2">
+                      {DirectionIcon ? (
+                        <span
+                          className={cn(
+                            "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
+                            isInbound
+                              ? "bg-success/10 text-success"
+                              : "bg-destructive/10 text-destructive",
+                          )}
+                          aria-hidden
+                        >
+                          <DirectionIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <span className="size-6 shrink-0" aria-hidden />
+                      )}
+                      <span className="truncate text-foreground">
+                        {locationDisplay}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 text-right">
+                      <p
+                        className={cn(
+                          "flex flex-col font-mono font-semibold tabular-nums",
+                          isOutbound
+                            ? "text-destructive"
+                            : isInbound
+                              ? "text-success"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        <span>{movementPrimary}</span>
+                        {movementBase ? (
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {movementBase}
+                          </span>
+                        ) : null}
+                      </p>
+                      {referenceLabel ? (
+                        referenceHref ? (
+                          <Link
+                            href={referenceHref}
+                            className="block truncate text-primary hover:underline"
+                          >
+                            {referenceLabel}
+                          </Link>
+                        ) : (
+                          <span className="block truncate text-muted-foreground">
+                            {referenceLabel}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Item>
+      )}
+    </div>
+  );
 
   return (
     <AppDialog
@@ -153,28 +471,12 @@ export function StockDetailDialog({
             {ACTIONS_VI.close}
           </Button>
 
-          {canEditIngredient && onEditIngredient ? (
-            <Button
-              type="button"
-              variant="outline"
-              size={actionSize}
-              onClick={onEditIngredient}
-            >
-              <IconSquarePen data-icon="inline-start" />
-              {stockCopy.actions.edit}
-            </Button>
-          ) : null}
-
-          {canAdjustStock && onAdjustStock ? (
-            <Button
-              type="button"
-              variant="outline"
-              size={actionSize}
-              onClick={onAdjustStock}
-            >
-              <IconPencil data-icon="inline-start" />
-              {stockCopy.actions.exception}
-            </Button>
+          {overflowItems.length > 0 ? (
+            <RowActionsMenu
+              items={overflowItems}
+              label={stockCopy.actions.actionsDropdown}
+              triggerSize={isTouchLayout ? "icon-touch" : "icon-lg"}
+            />
           ) : null}
 
           {onQuickIssue ? (
@@ -198,7 +500,7 @@ export function StockDetailDialog({
         <div className="flex flex-col gap-6">
           <Item
             variant="outline"
-            className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+            className="grid grid-cols-3 gap-4 p-4 text-xs"
           >
             <div className="min-w-0">
               <span className="block font-medium text-muted-foreground">
@@ -211,32 +513,6 @@ export function StockDetailDialog({
                     {totalStockUnits.base}
                   </span>
                 ) : null}
-              </span>
-            </div>
-
-            <div className="min-w-0">
-              <span className="block font-medium text-muted-foreground">
-                {stockCopy.table.stockValue}
-              </span>
-              <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-                {valuationKind === "valued" && totalValue != null
-                  ? formatVND(totalValue)
-                  : valuationKind === "pending"
-                    ? valuationCopy.pendingWac
-                    : inventoryCommon.noValue}
-              </span>
-            </div>
-
-            <div className="min-w-0">
-              <span className="block font-medium text-muted-foreground">
-                {stockCopy.table.wac}
-              </span>
-              <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-                {valuationKind === "valued" && displayWac != null
-                  ? `${formatVND(displayWac)} / ${wacUnitLabel}`
-                  : valuationKind === "pending"
-                    ? valuationCopy.pendingWac
-                    : inventoryCommon.noValue}
               </span>
             </div>
 
@@ -272,233 +548,43 @@ export function StockDetailDialog({
             </div>
           </Item>
 
-          {detailData.systemLocations != null ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col gap-1">
-                <h4 className="text-sm font-medium">
-                  {detailCopy.systemLocationTitle}
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  {detailCopy.systemLocationDescription}
-                </p>
-              </div>
+          {locationQtyRows}
 
-              {systemLocations.length === 0 ? (
-                <Item
-                  variant="outline"
-                  className="p-4 text-center text-xs text-muted-foreground"
-                >
-                  {detailCopy.systemLocationEmptyDescription}
-                </Item>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {systemLocations.map((location) => {
-                    const locationStockUnits = formatStockUnits(
-                      location.qty,
-                      ingredient.units,
-                      formatQty,
-                    );
-                    const locationKind =
-                      location.monetary == null
-                        ? null
-                        : resolveStockValuationDisplay({
-                            quantity: location.qty,
-                            unitCost: location.monetary.avgUnitCost,
-                          });
-                    const locationStockValue =
-                      locationKind === "valued" &&
-                      location.monetary?.avgUnitCost != null
-                        ? location.qty * location.monetary.avgUnitCost
-                        : null;
-
-                    return (
-                      <Item
-                        key={location.locationId}
-                        variant="outline"
-                        className="flex items-center justify-between p-3 text-xs"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground">
-                            {stockDetailLocationLabel(location)}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 sm:min-w-64">
-                          <div>
-                            <p className="text-muted-foreground">
-                              {FORM_VI.quantity}
-                            </p>
-                            <p className="font-mono font-semibold tabular-nums text-foreground">
-                              {locationStockUnits.big ?? locationStockUnits.base}
-                            </p>
-                          </div>
-                          {locationKind != null ? (
-                            <div className="text-right">
-                              <p className="text-muted-foreground">
-                                {stockCopy.table.stockValue}
-                              </p>
-                              <p className="font-mono font-semibold tabular-nums text-foreground">
-                                {locationKind === "valued" &&
-                                locationStockValue != null
-                                  ? formatVND(locationStockValue)
-                                  : locationKind === "pending"
-                                    ? valuationCopy.pendingWac
-                                    : inventoryCommon.noValue}
-                              </p>
-                            </div>
-                          ) : null}
-                        </div>
-                      </Item>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-medium">{detailCopy.movementTitle}</h4>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {detailCopy.movementHint(detailData.movements.length)}
-              </span>
-            </div>
-
-            {detailData.movements.length === 0 ? (
-              <Item variant="outline" className="p-4 text-center text-xs text-muted-foreground">
-                {detailCopy.noMovementDescription}
-              </Item>
-            ) : (
-              <Item
-                variant="outline"
-                className="flex-col flex-nowrap items-stretch overflow-hidden p-0 text-xs"
+          {showValuation ? (
+            <Tabs defaultValue="movements">
+              <TabsList size={tabListSize}>
+                <TabsTrigger value="valuation">
+                  {detailCopy.tabValuation}
+                </TabsTrigger>
+                <TabsTrigger value="movements">
+                  {detailCopy.tabMovements}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="valuation">{valuationPane}</TabsContent>
+              <TabsContent value="movements">{movementPane}</TabsContent>
+            </Tabs>
+          ) : (
+            <Collapsible>
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size={actionSize}
+                    className="w-full justify-between px-0"
+                  />
+                }
               >
-                <div className="w-full min-w-0">
-                  <div
-                    className="grid grid-cols-3 gap-3 border-b bg-muted/30 px-3 py-2 font-medium text-muted-foreground"
-                    role="row"
-                  >
-                    <span>{detailCopy.movementColOperation}</span>
-                    <span>{detailCopy.movementColWarehouse}</span>
-                    <span className="text-right">
-                      {detailCopy.movementColQuantity}
-                    </span>
-                  </div>
-
-                  <div className="divide-y" role="list">
-                    {detailData.movements.map((movement: StockIngredientDetailMovement) => {
-                      const movementUnits = formatStockUnits(
-                        movement.quantityChange,
-                        ingredient.units,
-                        formatQty,
-                      );
-                      const withSignedPrefix = (value: string) =>
-                        movement.quantityChange > 0 ? `+${value}` : value;
-                      const movementPrimary = withSignedPrefix(
-                        movementUnits.big ?? movementUnits.base,
-                      );
-                      const movementBase =
-                        movementUnits.big !== null
-                          ? withSignedPrefix(movementUnits.base)
-                          : null;
-                      const referenceLabel = stockMovementReferenceLabel(movement);
-                      const referenceHref = stockMovementReferenceHref({
-                        movement,
-                        branchId: detailData.branchId,
-                      });
-                      const locationDisplay =
-                        movement.locationName === "main_warehouse" ||
-                        movement.locationCode === "main_warehouse"
-                          ? messages.inventory.ingredients.dialog
-                              .defaultFulfillSiteKindCentralSupply
-                          : movement.locationName || inventoryCommon.noValue;
-                      const isInbound = movement.quantityChange > 0;
-                      const isOutbound = movement.quantityChange < 0;
-                      const DirectionIcon = isInbound
-                        ? IconArrowDownToLine
-                        : isOutbound
-                          ? IconArrowUpFromLine
-                          : null;
-
-                      return (
-                        <div
-                          key={movement.id}
-                          role="listitem"
-                          className="grid grid-cols-3 items-center gap-3 px-3 py-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">
-                              {stockMovementLabel(movement)}
-                            </p>
-                            <p className="truncate text-muted-foreground">
-                              {formatDateTime(movement.createdAt)}
-                            </p>
-                          </div>
-
-                          <div className="flex min-w-0 items-center gap-2">
-                            {DirectionIcon ? (
-                              <span
-                                className={cn(
-                                  "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
-                                  isInbound
-                                    ? "bg-success/10 text-success"
-                                    : "bg-destructive/10 text-destructive",
-                                )}
-                                aria-hidden
-                              >
-                                <DirectionIcon className="size-4" />
-                              </span>
-                            ) : (
-                              <span className="size-6 shrink-0" aria-hidden />
-                            )}
-                            <span className="truncate text-foreground">
-                              {locationDisplay}
-                            </span>
-                          </div>
-
-                          <div className="min-w-0 text-right">
-                            <p
-                              className={cn(
-                                "flex flex-col font-mono font-semibold tabular-nums",
-                                isOutbound
-                                  ? "text-destructive"
-                                  : isInbound
-                                    ? "text-success"
-                                    : "text-muted-foreground",
-                              )}
-                            >
-                              <span>{movementPrimary}</span>
-                              {movementBase ? (
-                                <span className="text-xs font-normal text-muted-foreground">
-                                  {movementBase}
-                                </span>
-                              ) : null}
-                            </p>
-                            {referenceLabel ? (
-                              referenceHref ? (
-                                <Link
-                                  href={referenceHref}
-                                  className="block truncate text-primary hover:underline"
-                                >
-                                  {referenceLabel}
-                                </Link>
-                              ) : (
-                                <span className="block truncate text-muted-foreground">
-                                  {referenceLabel}
-                                </span>
-                              )
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Item>
-            )}
-          </div>
+                {detailCopy.tabMovements}
+                <span className="text-xs font-normal text-muted-foreground">
+                  {detailCopy.movementHint(detailData.movements.length)}
+                </span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                {movementPane}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       )}
     </AppDialog>

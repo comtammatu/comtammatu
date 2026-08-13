@@ -37,6 +37,10 @@ import {
 import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import {
+  RowActionsMenu,
+  type RowActionItem,
+} from "@/components/row-actions-menu";
+import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-table/data-table";
@@ -737,7 +741,7 @@ export function GRNDetailClient({
 
       <Item
         variant="outline"
-        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
+        className="grid grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-4"
       >
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
@@ -771,18 +775,6 @@ export function GRNDetailClient({
         </div>
         <div className="min-w-0">
           <span className="block font-medium text-muted-foreground">
-            {grnMessages.kpiValuation}
-          </span>
-          <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
-            {valuationKind === "pending_invoice"
-              ? valuationCopy.pendingInvoice
-              : valuationKind === "settled"
-                ? valuationCopy.settled
-                : "—"}
-          </span>
-        </div>
-        <div className="min-w-0">
-          <span className="block font-medium text-muted-foreground">
             {grnMessages.kpiExpected}
           </span>
           <span className="mt-1 block font-mono text-base font-semibold tabular-nums text-foreground">
@@ -791,7 +783,24 @@ export function GRNDetailClient({
         </div>
       </Item>
 
-      {contextStrip}
+      {presentation === "dialog" ? (
+        canChangeLineSet ? (
+          <DraftReceivingSiteDialog
+            grnId={grn.id}
+            grnCode={grn.code}
+            currentLocationId={grn.locationId}
+            locationOptions={receivingLocationOptions}
+            buttonSize="default"
+            disabledReason={
+              dirtyLines.length > 0
+                ? grnCopy.draftReceiving.saveBeforeSwitch
+                : undefined
+            }
+          />
+        ) : null
+      ) : (
+        contextStrip
+      )}
 
       {isDraft ? (
         <div className="flex min-w-0 flex-col gap-3">
@@ -1001,6 +1010,107 @@ export function GRNDetailClient({
       closeOwnerDialogUrl();
     };
 
+    const invoiceIsPrimary =
+      !isDraft &&
+      canManageSupplierInvoice &&
+      valuationKind === "pending_invoice";
+    const dialogOverflowItems: RowActionItem[] = [];
+    if (isDraft && canMutateDraft) {
+      dialogOverflowItems.push({
+        key: "cancel",
+        label: grnMessages.cancelAction,
+        destructive: true,
+        disabled: isCancelling,
+        onSelect: () => setCancelOpen(true),
+      });
+    }
+    if (!isDraft && canManageSupplierInvoice && !invoiceIsPrimary) {
+      dialogOverflowItems.push({
+        key: "invoice",
+        label: grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice,
+        href: supplierInvoiceHrefForGrn({
+          basePath: supplierInvoicesBasePath,
+          grnId: grn.id,
+          invoiceId: grn.invoiceId,
+        }),
+      });
+    }
+
+    const dialogFooter = (
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          onClick={() => void closeDialog()}
+        >
+          {ACTIONS_VI.close}
+        </Button>
+        {dialogOverflowItems.length > 0 ? (
+          <RowActionsMenu items={dialogOverflowItems} />
+        ) : null}
+        {!isDraft && canAdjustStock && lines.length > 0 && !invoiceIsPrimary ? (
+          <DocumentStockCorrectionDialog
+            documentType="grn"
+            documentId={grn.id}
+            documentCode={grn.code}
+            branchOptions={[
+              {
+                id: grn.branchId,
+                name: grn.branchName,
+              },
+            ]}
+            itemOptions={lines.map((line) => ({
+              ingredientId: line.ingredientId,
+              name: line.name,
+              unit: line.unit,
+            }))}
+          />
+        ) : null}
+        {isDraft && canMutateDraft && dirtyLines.length > 0 ? (
+          <Button
+            type="button"
+            size="default"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            <IconDeviceFloppy className="size-5" />
+            {grnCopy.saveChanges(dirtyLines.length)}
+          </Button>
+        ) : null}
+        {isDraft && !(canMutateDraft && dirtyLines.length > 0) ? (
+          <Button
+            type="button"
+            size="default"
+            disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
+            aria-disabled={!canConfirm || isConfirming || !hasAcceptedQuantity}
+            onClick={handleConfirmGrn}
+          >
+            <IconCircleCheck className="size-5" />
+            {grnCopy.confirmGrnAction}
+          </Button>
+        ) : null}
+        {invoiceIsPrimary ? (
+          <Button
+            variant="default"
+            size="default"
+            render={
+              <Link
+                href={supplierInvoiceHrefForGrn({
+                  basePath: supplierInvoicesBasePath,
+                  grnId: grn.id,
+                  invoiceId: grn.invoiceId,
+                })}
+              />
+            }
+          >
+            <IconReceipt className="size-5" />
+            {grn.invoiceId ? grnCopy.viewInvoice : grnCopy.createInvoice}
+          </Button>
+        ) : null}
+      </div>
+    );
+
     return (
       <>
         <AppDialog
@@ -1032,7 +1142,7 @@ export function GRNDetailClient({
               </span>
             </span>
           }
-          footer={footer}
+          footer={dialogFooter}
         >
           {tabs}
         </AppDialog>
