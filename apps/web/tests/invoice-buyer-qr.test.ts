@@ -234,6 +234,8 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.match(orderCard, /justify-between/);
   assert.match(orderCard, /invoiceBuyer\.detailsTitle/);
   assert.match(orderCard, /formatVND\(summary\.totalAmount\)/);
+  assert.match(orderCard, /grid-cols-6/);
+  assert.match(orderCard, /col-span-2/);
   assert.match(orderCard, /invoiceBuyer\.quantityLabel/);
   assert.match(orderCard, /invoiceBuyer\.unitPriceLabel/);
   assert.match(orderCard, /invoiceBuyer\.lineTotalLabel/);
@@ -245,14 +247,15 @@ test("POS and Self-Order defer buyer details to the receipt QR", () => {
   assert.doesNotMatch(orderCard, /BrandMascot|PublicSection|DataTable/);
   assert.match(buyerServer, /from\("order_items"\)/);
   assert.match(buyerServer, /unit_price, subtotal, discount_amount, vat_rate, modifiers, sides/);
-  assert.match(buyerServer, /buildHddtProviderLines/);
   assert.match(buyerServer, /buildInvoiceLineItemsFromOrderItems/);
+  assert.match(buyerServer, /bakeGrossDiscountCheapFirst/);
+  assert.doesNotMatch(buyerServer, /buildHddtProviderLines/);
   assert.match(buyerServer, /loadOrderSummary/);
   const buyerCopy = readRepo("apps/web/lib/messages/invoice-buyer.ts");
-  assert.match(buyerCopy, /quantityLabel: "Số lượng"/);
+  assert.match(buyerCopy, /quantityLabel: "SL"/);
   assert.match(buyerCopy, /unitPriceLabel: "Đơn giá"/);
   assert.match(buyerCopy, /lineTotalLabel: "Thành tiền"/);
-  assert.match(buyerCopy, /vatRateLabel: "Thuế suất GTGT"/);
+  assert.match(buyerCopy, /vatRateLabel: "GTGT"/);
   assert.doesNotMatch(
     buyerServer,
     /snapshotSchema = z\.object\([\s\S]*orderId/,

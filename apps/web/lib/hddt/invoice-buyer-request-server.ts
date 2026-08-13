@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
-  buildHddtProviderLines,
+  bakeGrossDiscountCheapFirst,
   buildInvoiceLineItemsFromOrderItems,
   type OrderItemForInvoiceLines,
 } from "@comtammatu/shared/hddt";
@@ -76,8 +76,8 @@ function toPublicLine(line: InvoiceLineItem): InvoiceBuyerOrderLine {
   return {
     name: line.name,
     quantity: line.quantity,
-    unitPrice: line.unitPrice,
-    amount: line.amount,
+    unitPrice: Math.round(line.unitPrice),
+    amount: Math.round(line.amount),
     vatRate: line.vatRate,
   };
 }
@@ -106,28 +106,23 @@ function projectOrderSummary(
   items: OrderItemForInvoiceLines[],
 ): InvoiceBuyerOrderSummary | undefined {
   try {
-    const projected = buildHddtProviderLines({
-      items,
-      orderDiscountAmount: order.order_discount_amount,
-      serviceCharge: order.service_charge,
-      totalAmount: order.total_amount,
-    });
-    return parseOrderSummary(
-      order.total_amount,
-      0,
-      0,
-      projected.map(toPublicLine),
-    );
-  } catch {
-    console.error("[hddt-buyer] invoice line projection failed");
-  }
-
-  try {
+    const lines: InvoiceBuyerOrderLine[] = [];
+    for (const item of items) {
+      const expanded = buildInvoiceLineItemsFromOrderItems([item]);
+      const afterItemDiscount = bakeGrossDiscountCheapFirst(
+        expanded,
+        Number(item.discount_amount ?? 0),
+      );
+      for (const line of afterItemDiscount) {
+        if (Math.round(line.amount) <= 0) continue;
+        lines.push(toPublicLine(line));
+      }
+    }
     return parseOrderSummary(
       order.total_amount,
       order.service_charge,
       order.order_discount_amount,
-      buildInvoiceLineItemsFromOrderItems(items).map(toPublicLine),
+      lines,
     );
   } catch {
     console.error("[hddt-buyer] invoice line expand failed");
@@ -179,10 +174,7 @@ async function loadOrderSummary(
   }
   if (!orderResult.data) return undefined;
 
-  return projectOrderSummary(
-    orderResult.data,
-    itemsResult.data ?? [],
-  );
+  return projectOrderSummary(orderResult.data, itemsResult.data ?? []);
 }
 
 export async function getInvoiceBuyerRequest(
@@ -238,7 +230,7 @@ export async function saveInvoiceBuyerRequest(
         return { status: result.data.status, jobId: null };
       }
       return {
-        status: "submitted",
+        status: result.data.status,
         jobId: result.data.jobId ?? null,
       };
     }

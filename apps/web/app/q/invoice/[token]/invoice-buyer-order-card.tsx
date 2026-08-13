@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown as IconChevronDown } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import {
   formatPercent,
   formatQuantity,
@@ -16,6 +17,7 @@ import {
   Item,
   ItemContent,
   ItemDescription,
+  ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import type {
@@ -51,24 +53,55 @@ function MoneyRow({
   );
 }
 
-function InvoiceBuyerSlipLine({ item }: { item: InvoiceBuyerOrderLine }) {
-  const lineMeta = [
-    `${invoiceBuyer.quantityLabel} ${formatQuantity(item.quantity)}`,
-    `${invoiceBuyer.unitPriceLabel} ${formatVND(item.unitPrice)}`,
-    `${invoiceBuyer.vatRateLabel} ${formatPercent(item.vatRate, 0)}`,
-  ].join(" · ");
+function SlipCells({
+  name,
+  quantity,
+  unitPrice,
+  vatRate,
+  amount,
+  header = false,
+}: {
+  name: string;
+  quantity: string;
+  unitPrice: string;
+  vatRate: string;
+  amount: string;
+  header?: boolean;
+}) {
+  const numericClass = cn(
+    "text-right font-mono tabular-nums",
+    header ? "text-xs text-muted-foreground" : "text-xs",
+  );
 
   return (
-    <li className="flex items-start justify-between gap-3 border-b border-border py-2 last:border-b-0 last:pb-0">
-      <div className="min-w-0 grid gap-1">
-        <p className="min-w-0 break-words font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">{lineMeta}</p>
-      </div>
-      <p className="shrink-0 text-right font-mono tabular-nums">
-        <span className="sr-only">{invoiceBuyer.lineTotalLabel} </span>
-        {formatVND(item.amount)}
-      </p>
-    </li>
+    <>
+      <span
+        className={cn(
+          "col-span-2 min-w-0 break-words",
+          header
+            ? "text-xs text-muted-foreground"
+            : "text-xs font-medium",
+        )}
+      >
+        {name}
+      </span>
+      <span className={numericClass}>{quantity}</span>
+      <span className={numericClass}>{unitPrice}</span>
+      <span className={numericClass}>{vatRate}</span>
+      <span className={numericClass}>{amount}</span>
+    </>
+  );
+}
+
+function InvoiceBuyerSlipLine({ item }: { item: InvoiceBuyerOrderLine }) {
+  return (
+    <SlipCells
+      name={item.name}
+      quantity={formatQuantity(item.quantity)}
+      unitPrice={formatVND(item.unitPrice)}
+      vatRate={formatPercent(item.vatRate, 0)}
+      amount={formatVND(item.amount)}
+    />
   );
 }
 
@@ -81,22 +114,29 @@ export function InvoiceBuyerOrderCard({
   orderNumber: string;
   summary?: InvoiceBuyerOrderSummary;
 }) {
+  const lineSubtotal = summary
+    ? summary.items.reduce((sum, item) => sum + item.amount, 0)
+    : 0;
+  const showAdjustments =
+    summary != null &&
+    (summary.discountAmount > 0 || summary.serviceCharge > 0);
+
   return (
-    <Item variant="outline" className="bg-card">
-      <ItemContent className="w-full gap-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <ItemTitle size="heading">{invoiceBuyer.title}</ItemTitle>
-          {summary ? (
-            <p className="shrink-0 font-heading text-sm font-semibold tabular-nums">
-              {formatVND(summary.totalAmount)}
-            </p>
-          ) : null}
-        </div>
+    <Item variant="outline" className="w-full min-w-0 bg-card">
+      <ItemHeader>
+        <ItemTitle size="heading">{invoiceBuyer.title}</ItemTitle>
+        {summary ? (
+          <p className="shrink-0 font-heading text-sm font-semibold tabular-nums">
+            {formatVND(summary.totalAmount)}
+          </p>
+        ) : null}
+      </ItemHeader>
+      <ItemContent className="w-full min-w-0 gap-1">
         <ItemDescription>
           {invoiceBuyer.order(branchName, orderNumber)}
         </ItemDescription>
         {summary ? (
-          <Collapsible className="pt-1">
+          <Collapsible className="min-w-0 pt-1">
             <CollapsibleTrigger
               render={
                 <Button
@@ -113,21 +153,29 @@ export function InvoiceBuyerOrderCard({
                 aria-hidden
               />
             </CollapsibleTrigger>
-            <CollapsibleContent className="grid gap-2 border-t pt-2">
-              <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
-                <span>{invoiceBuyer.itemColumn}</span>
-                <span>{invoiceBuyer.lineTotalLabel}</span>
-              </div>
-              <ul>
+            <CollapsibleContent className="grid min-w-0 gap-2 border-t pt-2">
+              <div className="grid min-w-0 grid-cols-6 gap-x-2 gap-y-2">
+                <SlipCells
+                  header
+                  name={invoiceBuyer.itemColumn}
+                  quantity={invoiceBuyer.quantityLabel}
+                  unitPrice={invoiceBuyer.unitPriceLabel}
+                  vatRate={invoiceBuyer.vatRateLabel}
+                  amount={invoiceBuyer.lineTotalLabel}
+                />
                 {summary.items.map((item, index) => (
                   <InvoiceBuyerSlipLine
                     key={`${item.name}-${index}`}
                     item={item}
                   />
                 ))}
-              </ul>
-              {summary.discountAmount > 0 || summary.serviceCharge > 0 ? (
+              </div>
+              {showAdjustments ? (
                 <div className="grid gap-2 border-t pt-2">
+                  <MoneyRow
+                    label={invoiceBuyer.subtotalLabel}
+                    amount={lineSubtotal}
+                  />
                   {summary.discountAmount > 0 ? (
                     <MoneyRow
                       label={invoiceBuyer.discountLabel}
