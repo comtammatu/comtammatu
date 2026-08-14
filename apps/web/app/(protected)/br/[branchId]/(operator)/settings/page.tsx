@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
+import type { ElementType } from "react";
 import {
   Armchair as IconArmchair,
   ChefHat as IconChefHat,
   Monitor as IconDeviceDesktop,
   Printer as IconPrinter,
+  Shield as IconShield,
 } from "lucide-react";
-import { canAccess } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  canManageTenantStrategySettings,
+} from "@comtammatu/shared/auth";
 import { AppEmptyState } from "@/components/surface";
 import {
   BranchOperatorActionSection,
@@ -14,6 +19,14 @@ import {
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { buildSettingsLinks } from "./_lib/settings-links";
+
+type SettingsTile = {
+  key: string;
+  href: string;
+  icon: ElementType;
+  title: string;
+  description?: string;
+};
 
 export default async function BranchSettingsPage({
   params,
@@ -46,7 +59,28 @@ export default async function BranchSettingsPage({
     printers: IconPrinter,
     kds: IconChefHat,
   });
-  const visibleLinks = links.filter((link) => canAccess(role, link.moduleKey));
+
+  const visibleLinks: SettingsTile[] = links
+    .filter((link) => canAccess(role, link.moduleKey))
+    .map((link) => ({
+      key: `${link.moduleKey}-${link.href}`,
+      href: link.href,
+      icon: link.icon,
+      title: link.title,
+      description: link.description || undefined,
+    }));
+
+  // Owner-only network gate: emergency bypass + trusted egress IPs.
+  if (canManageTenantStrategySettings(role)) {
+    visibleLinks.push({
+      key: "network",
+      href: `/br/${branchId}/settings/network`,
+      icon: IconShield,
+      title: copy.networkSetupTitle,
+      description: copy.networkSetupDescription,
+    });
+  }
+
   const hasContent = visibleLinks.length > 0;
 
   return (
@@ -55,12 +89,7 @@ export default async function BranchSettingsPage({
         <BranchOperatorActionSection
           presentation="plain"
           mobileColumns={2}
-          links={visibleLinks.map((link) => ({
-            key: `${link.moduleKey}-${link.href}`,
-            href: link.href,
-            icon: link.icon,
-            title: link.title,
-          }))}
+          links={visibleLinks}
         />
       ) : (
         <AppEmptyState

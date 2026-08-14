@@ -85,6 +85,7 @@ export const settings = {
     printBranchConfigTitle: "Cấu hình theo chi nhánh",
     tablesTitle: "Sơ đồ bàn",
     posTitle: "Đăng ký POS",
+    networkTitle: "Cổng mạng POS/KDS",
     posSessionsTitle: "Đối soát ca POS",
     posSessionsDescription:
       "Lịch sử ca, đơn đã bán, doanh thu và chênh lệch quỹ.",
@@ -755,6 +756,9 @@ export const settings = {
     menuLimitsLoadFailed: "Không tải được dữ liệu giới hạn bán.",
     printersDescription: (branchName: string) =>
       `Máy in và cấu hình nhận phiếu của ${branchName}.`,
+    networkSetupTitle: "Cổng mạng POS/KDS",
+    networkSetupDescription:
+      "Tin cậy wifi quán hoặc tạm mở POS/KDS khi mất mạng cửa hàng.",
   },
   branchTable: {
     operationPoint: "Điểm vận hành",
@@ -768,7 +772,10 @@ export const settings = {
       "Điểm vận hành sẽ ngừng hoạt động cho đến khi được kích hoạt lại.",
     deactivate: "Tạm ngừng",
     activate: "Kích hoạt",
-    networkGateway: "Cổng mạng POS/KDS",
+    networkGateway: {
+      long: "Cổng mạng POS/KDS",
+      short: "Cổng mạng",
+    },
     openBranch: { long: "Mở trung tâm điều hành", short: "Điều hành" },
     openSettings: { long: "Mở thiết lập chi nhánh", short: "Thiết lập" },
     selfOrder: { long: "Quản lý mã QR gọi món", short: "QR gọi món" },

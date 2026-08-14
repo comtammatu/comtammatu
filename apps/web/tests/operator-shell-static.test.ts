@@ -588,8 +588,10 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
 
   assert.match(settingsHub, /<BranchOperatorPage/);
   assert.match(settingsHub, /BranchOperatorActionSection/);
-  assert.match(settingsHub, /visibleLinks\.map/);
+  assert.match(settingsHub, /links=\{visibleLinks\}/);
   assert.match(settingsHub, /canAccess\(role, link\.moduleKey\)/);
+  assert.match(settingsHub, /canManageTenantStrategySettings\(role\)/);
+  assert.match(settingsHub, /settings\/network/);
   assert.doesNotMatch(settingsHub, /columns=\{1\}/);
   assert.doesNotMatch(
     settingsHub,
@@ -605,6 +607,11 @@ test("branch settings landing stays a setup-only Branch operator surface", () =>
   assert.ok(posIndex > tableIndex, "POS setup follows tables");
   assert.ok(kdsIndex > posIndex, "KDS setup follows POS");
   assert.ok(printersIndex > kdsIndex, "printers setup follows KDS");
+  assert.doesNotMatch(
+    settingsLinks,
+    /settings\/network/,
+    "network tile is owner-gated on the landing page, not shared setup links",
+  );
   assert.doesNotMatch(
     settingsLinks,
     /branch_dashboard|branch_pos_sessions|moduleKey: "hr"|\/hr/,
@@ -647,6 +654,26 @@ test("branch settings detail routes stay inside the Branch operator plane", () =
       path,
     );
   }
+
+  const networkPage = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/network/page.tsx",
+  );
+  assert.match(
+    networkPage,
+    /@lib\/branch-operator\/components\/branch-operator-page/,
+  );
+  assert.match(networkPage, /<BranchOperatorPage/);
+  assert.match(networkPage, /<BranchOperatorPanel/);
+  assert.match(
+    networkPage,
+    /canManageTenantStrategySettings\(claims\.user_role\)/,
+  );
+  assert.match(networkPage, /NetworkConfigPanel/);
+  assert.match(networkPage, /redirect\(`\/br\/\$\{branchId\}\/settings`\)/);
+  assert.doesNotMatch(
+    networkPage,
+    /<AppPage\b|AppPageHeader|BranchManagementShell|OwnerModuleShell|ControlSurfaceShell|ManagementShell|KpiCard/,
+  );
 
   assert.match(
     read(

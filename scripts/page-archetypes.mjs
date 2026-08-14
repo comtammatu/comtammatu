@@ -29,6 +29,8 @@ export const PAGE_ARCHETYPES = {
     "EMBED-WRAPPER",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/kds/page.tsx":
     "SETTINGS-PANEL",
+  "apps/web/app/(protected)/br/[branchId]/(operator)/settings/network/page.tsx":
+    "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx":

@@ -146,6 +146,30 @@ test("emergency bypass actions allowlist duration kinds and require settings:bra
   );
 });
 
+test("owner network gate UI is reachable from branch cards and branch settings", () => {
+  const branchTable = readRepoFile(
+    "apps/web/app/(protected)/branches/branch-table.tsx",
+  );
+  const settingsLanding = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
+  );
+  const networkPage = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/settings/network/page.tsx",
+  );
+  const networkDialog = readRepoFile(
+    "apps/web/app/(protected)/branches/network-config-dialog.tsx",
+  );
+
+  assert.match(branchTable, /copy\.networkGateway\.short/);
+  assert.match(branchTable, /NetworkConfigDialog/);
+  assert.match(settingsLanding, /settings\/network/);
+  assert.match(settingsLanding, /canManageTenantStrategySettings/);
+  assert.match(networkPage, /canManageTenantStrategySettings/);
+  assert.match(networkPage, /NetworkConfigPanel/);
+  assert.match(networkDialog, /export function NetworkConfigPanel/);
+  assert.match(networkDialog, /export function NetworkConfigDialog/);
+});
+
 test("register_branch_presence enforces durable 30s rate limit and 60s noisy-write skip", () => {
   assert.match(migration, /last_attempt_at <= v_now - INTERVAL '30 seconds'/);
   assert.match(migration, /RETURN QUERY SELECT false, 'rate_limited'/);

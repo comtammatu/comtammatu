@@ -331,48 +331,17 @@ test("Branch operator routes do not import management shell chrome", () => {
   }
 });
 
-test("Branch command dashboard is a branch-native command surface", () => {
+test("Branch command dashboard redirects into Hôm nay", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
   const commandConfig = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
   );
-  const commandSections = read(
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_components/command-sections.tsx",
-  );
-  const actionItem = read(
-    "apps/web/app/(protected)/br/[branchId]/_components/branch-action-item.tsx",
-  );
   const settingsMessages = read("apps/web/lib/messages/settings.ts");
 
-  assert.match(dashboard, /<BranchOperatorPage/);
-  assert.match(dashboard, /hideHeaderOnMobile/);
-  assert.match(dashboard, /branch\.branch_kind !== "branch"/);
-  assert.doesNotMatch(dashboard, /<AppPage|<AppLinkCard|<LinkCardGrid|<KpiRow/);
-
-  for (const expected of [
-    "liveOperationsTitle",
-    "readinessTitle",
-    "endDayTitle",
-    "filterReadinessExceptions",
-  ]) {
-    assert.ok(
-      dashboard.includes(expected) || commandConfig.includes(expected),
-      `expected ${expected}`,
-    );
-  }
-
-  assert.match(
-    dashboard,
-    /filterReadinessExceptions/,
-    "Command readiness should show exception rows only",
-  );
-  assert.doesNotMatch(
-    dashboard,
-    /drilldownTitle/,
-    "Command should not duplicate Kho drilldown (bottom nav owns Kho)",
-  );
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(dashboard, /BranchOperatorPage|BranchReadinessList/);
 
   for (const expected of [
     "/br/${branchId}/pos",
@@ -389,63 +358,10 @@ test("Branch command dashboard is a branch-native command surface", () => {
     /\/br\/\$\{branchId\}\/pickup/,
     "Pickup (Gọi số) stays off Branch Command — station chrome only",
   );
-
-  assert.match(
-    commandSections,
-    /<BranchActionItem/,
-    "Branch Command lanes should render mobile-first action rows",
-  );
-  assert.match(
-    commandSections,
-    /<ItemGroup className="grid grid-cols-2 gap-2"/,
-    "Branch Command lanes should group action rows consistently",
-  );
-  assert.doesNotMatch(
-    commandSections,
-    /<AppLinkCard|<LinkCardGrid/,
-    "Branch Command lanes must not reintroduce card-grid navigation",
-  );
-  assert.match(
-    dashboard,
-    /<BranchReadinessList/,
-    "Branch Command page should mount the readiness lane",
-  );
-  assert.match(
-    dashboard,
-    /const floorHref =[\s\S]*day\.tablesTotal <= 0[\s\S]*day\.setupActiveTerminals <= 0/,
-    "Bàn & máy POS readiness CTA must route to the missing setup part",
-  );
-  assert.match(
-    dashboard,
-    /<BranchCommandTileGrid/,
-    "Branch Command page should mount the nav-lane tile grids",
-  );
-  assert.match(
-    actionItem,
-    /line-clamp-none/,
-    "Branch Command must not clamp critical readiness/action descriptions",
-  );
-  assert.match(actionItem, /size="touch"/);
-  assert.match(actionItem, /className="w-full sm:w-auto"/);
-  assert.match(
-    settingsMessages,
-    /commandPosSessionsTitle: "Đối soát ca POS"/,
-    "Branch Command reconciliation tile should not duplicate the readiness Ca POS label",
-  );
-  assert.doesNotMatch(
-    settingsMessages,
-    /setupLaneTitle|commandBranchSetup/,
-    "Branch Command must not keep a Settings doorway lane; Settings is already the setup landing",
-  );
-  assert.doesNotMatch(
-    commandConfig,
-    /href:\s*`\/br\/\$\{branchId\}\/settings`/,
-  );
-  assert.doesNotMatch(commandConfig, /IconSettings/);
   assert.match(
     settingsMessages,
     /readinessMenuTitle: "Giới hạn bán"/,
-    "Branch Command readiness row links to menu-limits, not the menu catalog",
+    "Readiness copy still points at menu-limits vocabulary",
   );
   assert.doesNotMatch(
     settingsMessages,
@@ -458,7 +374,10 @@ test("Branch command dashboard is a branch-native command surface", () => {
   assert.match(settingsMessages, /readinessKdsTitle: "Bếp \(KDS\)"/);
   assert.match(settingsMessages, /readinessKdsSetupTitle: "Trạm bếp"/);
   assert.match(settingsMessages, /readinessPosClosed: "Chưa mở ca\."/);
-  assert.doesNotMatch(settingsMessages, /Mở POS[^/]|Mở KDS|Trạm KDS|3 máy in|Agent in| POS active|trạm bếp active|nhân sự active/);
+  assert.doesNotMatch(
+    settingsMessages,
+    /Mở POS[^/]|Mở KDS|Trạm KDS|3 máy in|Agent in| POS active|trạm bếp active|nhân sự active/,
+  );
   assert.doesNotMatch(settingsMessages, /Thực đơn bán|Mở thực đơn/);
   assert.doesNotMatch(settingsMessages, /Chưa có món active/);
 });
@@ -491,9 +410,16 @@ test("Branch settings landing exposes setup controls only", () => {
   assert.match(settingsLinks, /settings\/pos/);
   assert.match(settingsLinks, /settings\/printers/);
   assert.match(settingsLinks, /settings\/kds/);
+  assert.doesNotMatch(settingsLinks, /settings\/network/);
   assert.doesNotMatch(settingsLinks, /settings\/pos-sessions/);
   assert.doesNotMatch(settingsLinks, /menu-limits/);
   assert.doesNotMatch(settingsLinks, /href:\s*"\/menu"/);
+  assert.match(
+    settingsLanding,
+    /canManageTenantStrategySettings\(role\)/,
+    "owner-only network tile must stay outside branch_settings module ACL",
+  );
+  assert.match(settingsLanding, /settings\/network/);
   assert.doesNotMatch(settingsLanding, /AttendanceSettingsCard/);
   assert.doesNotMatch(settingsLanding, /\/hr/);
   assert.doesNotMatch(settingsLanding, /className="md:p-6"/);

@@ -149,7 +149,7 @@ export function BranchTable({ branches }: BranchTableProps) {
           },
           {
             key: "network",
-            label: copy.networkGateway,
+            label: copy.networkGateway.long,
             icon: <IconShield data-icon="inline-start" />,
             separatorBefore: true,
             onSelect: () => setNetworkBranch(branch),
@@ -261,6 +261,17 @@ export function BranchTable({ branches }: BranchTableProps) {
                         >
                           <IconSliders data-icon="inline-start" />
                           {copy.openSettings.short}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size={controlSize === "touch" ? "touch" : "default"}
+                          className="w-full"
+                          aria-label={`${copy.networkGateway.long}: ${branch.name}`}
+                          disabled={!isActive}
+                          onClick={() => setNetworkBranch(branch)}
+                        >
+                          <IconShield data-icon="inline-start" />
+                          {copy.networkGateway.short}
                         </Button>
                         <Button
                           variant="outline"

@@ -44,13 +44,21 @@ import {
   type TrustedIpRow,
 } from "./network-config-actions";
 
+interface NetworkBranchRef {
+  id: number;
+  name: string;
+}
+
 interface NetworkConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  branch: {
-    id: number;
-    name: string;
-  };
+  branch: NetworkBranchRef;
+}
+
+interface NetworkConfigPanelProps {
+  branch: NetworkBranchRef;
+  /** When false, skip the initial fetch until the parent is ready (dialog open). */
+  active?: boolean;
 }
 
 const GRACE_MS = 30 * 60 * 1000;
@@ -98,11 +106,10 @@ function bypassUntilLabel(row: NetworkGateBypassRow): string {
   return formatVNDateTime(row.expires_at);
 }
 
-export function NetworkConfigDialog({
-  open,
-  onOpenChange,
+export function NetworkConfigPanel({
   branch,
-}: NetworkConfigDialogProps) {
+  active = true,
+}: NetworkConfigPanelProps) {
   const [rows, setRows] = useState<TrustedIpRow[]>([]);
   const [bypass, setBypass] = useState<NetworkGateBypassRow | null>(null);
   const [loading, setLoading] = useState(false);
@@ -132,13 +139,13 @@ export function NetworkConfigDialog({
   }, [branch.id]);
 
   useEffect(() => {
-    if (open) {
+    if (active) {
       void refresh();
     } else {
       setRows([]);
       setBypass(null);
     }
-  }, [open, refresh]);
+  }, [active, refresh]);
 
   function handleTrustCurrent() {
     startTrustTransition(async () => {
@@ -217,6 +224,217 @@ export function NetworkConfigDialog({
   const hasFreshTrust = activeRows.some((r) => isFresh(r.last_seen_at));
 
   return (
+    <div className="flex flex-col gap-4">
+      <Alert className="border-warning/20 bg-warning/10">
+        <IconSiren className="size-4 text-warning" />
+        <AlertTitle>{messages.settings.network.emergencyTitle}</AlertTitle>
+        <AlertDescription>
+          {messages.settings.network.emergencyDescription}
+        </AlertDescription>
+      </Alert>
+
+      {bypass ? (
+        <Item variant="outline" className="sm:flex-nowrap">
+          <ItemContent className="min-w-0">
+            <ItemTitle className="text-sm">
+              {messages.settings.network.emergencyActiveTitle}
+              <Badge
+                variant="outline"
+                className="border-warning/20 text-warning"
+              >
+                {durationLabel(bypass.duration_kind)}
+              </Badge>
+            </ItemTitle>
+            <ItemDescription>
+              {messages.settings.network.emergencyActiveUntil(
+                bypassUntilLabel(bypass),
+              )}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleRevokeBypass()}
+              disabled={revokeBypassPending}
+            >
+              {revokeBypassPending ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconShieldOff />
+              )}
+              {messages.settings.network.emergencyClose}
+            </Button>
+          </ItemActions>
+        </Item>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {DURATION_PRESETS.map((preset) => (
+            <Button
+              key={preset.kind}
+              size="sm"
+              variant="outline"
+              disabled={bypassPendingKind !== null || loading}
+              onClick={() => void handleActivateBypass(preset.kind)}
+            >
+              {bypassPendingKind === preset.kind ? (
+                <Spinner data-icon="inline-start" />
+              ) : null}
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {!loading && activeRows.length === 0 && (
+        <Alert className="border-warning/20 bg-warning/10">
+          <IconAlertTriangle className="size-4 text-warning" />
+          <AlertTitle>{messages.settings.network.noTrustedTitle}</AlertTitle>
+          <AlertDescription>
+            {messages.settings.network.noTrustedDescription}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!loading && activeRows.length > 0 && !hasFreshTrust && (
+        <Alert className="border-warning/20 bg-warning/10">
+          <IconAlertTriangle className="size-4 text-warning" />
+          <AlertTitle>{messages.settings.network.staleTitle}</AlertTitle>
+          <AlertDescription>
+            {messages.settings.network.staleDescription}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Item variant="muted" className="sm:flex-nowrap">
+        <ItemContent>
+          <ItemTitle className="text-sm">
+            {messages.settings.network.trustCurrentTitle}
+          </ItemTitle>
+          <ItemDescription>
+            {messages.settings.network.trustCurrentDescription}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="ml-auto">
+          <Button
+            size="sm"
+            onClick={handleTrustCurrent}
+            disabled={trustPending}
+          >
+            {trustPending ? <Spinner data-icon="inline-start" /> : <IconPlus />}
+            {messages.settings.network.trustCurrentButton}
+          </Button>
+        </ItemActions>
+      </Item>
+
+      <div>
+        <h3 className="font-heading mb-2 text-sm font-medium">
+          {messages.settings.network.activeTitle(activeRows.length)}
+        </h3>
+        {loading ? (
+          <div className="flex min-h-16 items-center justify-center text-sm text-muted-foreground">
+            <Spinner className="mr-2" />
+            {STATES_VI.loading}
+          </div>
+        ) : activeRows.length === 0 ? (
+          <AppEmptyState
+            className="border-dashed bg-transparent"
+            title={messages.settings.network.emptyTrusted}
+            compact
+          />
+        ) : (
+          <ItemGroup>
+            {activeRows.map((row) => (
+              <Item key={row.id} variant="outline" className="sm:flex-nowrap">
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="line-clamp-none flex-wrap text-sm">
+                    <IconGlobe className="size-4 text-muted-foreground" />
+                    <span className="font-mono text-sm font-medium">
+                      {row.ip_address}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={
+                        row.registered_via === "agent"
+                          ? "border-success/20 text-success"
+                          : "border-border"
+                      }
+                    >
+                      {row.registered_via === "agent"
+                        ? "agent"
+                        : messages.settings.network.manual}
+                    </Badge>
+                    {!isFresh(row.last_seen_at) && (
+                      <Badge
+                        variant="outline"
+                        className="border-warning/20 text-warning"
+                      >
+                        {messages.settings.network.expired}
+                      </Badge>
+                    )}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {messages.settings.network.activeMeta(
+                      formatAge(row.last_seen_at),
+                      row.registered_by_agent_id,
+                    )}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions className="ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRevoke(row.id)}
+                    disabled={revokePendingId === row.id}
+                  >
+                    {revokePendingId === row.id ? (
+                      <Spinner data-icon="inline-start" />
+                    ) : (
+                      <IconShieldOff />
+                    )}
+                    {messages.settings.network.revoke}
+                  </Button>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </div>
+
+      {revokedRows.length > 0 && (
+        <div>
+          <h3 className="font-heading mb-2 text-sm font-medium text-muted-foreground">
+            {messages.settings.network.revokedTitle(revokedRows.length)}
+          </h3>
+          <ItemGroup data-size="xs">
+            {revokedRows.slice(0, 5).map((row) => (
+              <Item key={row.id} variant="muted" size="xs">
+                <ItemContent className="flex-row items-center gap-2">
+                  <span className="font-mono">{row.ip_address}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">
+                    {messages.settings.network.revokedMeta(
+                      row.revoked_at
+                        ? formatAge(row.revoked_at)
+                        : messages.settings.network.unknown,
+                    )}
+                  </span>
+                </ItemContent>
+              </Item>
+            ))}
+          </ItemGroup>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function NetworkConfigDialog({
+  open,
+  onOpenChange,
+  branch,
+}: NetworkConfigDialogProps) {
+  return (
     <AppDialog
       open={open}
       onOpenChange={onOpenChange}
@@ -234,212 +452,7 @@ export function NetworkConfigDialog({
         </Button>
       }
     >
-      <div className="flex flex-col gap-4">
-        <Alert className="border-warning/20 bg-warning/10">
-          <IconSiren className="size-4 text-warning" />
-          <AlertTitle>{messages.settings.network.emergencyTitle}</AlertTitle>
-          <AlertDescription>
-            {messages.settings.network.emergencyDescription}
-          </AlertDescription>
-        </Alert>
-
-        {bypass ? (
-          <Item variant="outline" className="sm:flex-nowrap">
-            <ItemContent className="min-w-0">
-              <ItemTitle className="text-sm">
-                {messages.settings.network.emergencyActiveTitle}
-                <Badge
-                  variant="outline"
-                  className="border-warning/20 text-warning"
-                >
-                  {durationLabel(bypass.duration_kind)}
-                </Badge>
-              </ItemTitle>
-              <ItemDescription>
-                {messages.settings.network.emergencyActiveUntil(
-                  bypassUntilLabel(bypass),
-                )}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions className="ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleRevokeBypass()}
-                disabled={revokeBypassPending}
-              >
-                {revokeBypassPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconShieldOff />
-                )}
-                {messages.settings.network.emergencyClose}
-              </Button>
-            </ItemActions>
-          </Item>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {DURATION_PRESETS.map((preset) => (
-              <Button
-                key={preset.kind}
-                size="sm"
-                variant="outline"
-                disabled={bypassPendingKind !== null || loading}
-                onClick={() => void handleActivateBypass(preset.kind)}
-              >
-                {bypassPendingKind === preset.kind ? (
-                  <Spinner data-icon="inline-start" />
-                ) : null}
-                {preset.label}
-              </Button>
-            ))}
-          </div>
-        )}
-
-        {!loading && activeRows.length === 0 && (
-          <Alert className="border-warning/20 bg-warning/10">
-            <IconAlertTriangle className="size-4 text-warning" />
-            <AlertTitle>{messages.settings.network.noTrustedTitle}</AlertTitle>
-            <AlertDescription>
-              {messages.settings.network.noTrustedDescription}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!loading && activeRows.length > 0 && !hasFreshTrust && (
-          <Alert className="border-warning/20 bg-warning/10">
-            <IconAlertTriangle className="size-4 text-warning" />
-            <AlertTitle>{messages.settings.network.staleTitle}</AlertTitle>
-            <AlertDescription>
-              {messages.settings.network.staleDescription}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Item variant="muted" className="sm:flex-nowrap">
-          <ItemContent>
-            <ItemTitle className="text-sm">
-              {messages.settings.network.trustCurrentTitle}
-            </ItemTitle>
-            <ItemDescription>
-              {messages.settings.network.trustCurrentDescription}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions className="ml-auto">
-            <Button
-              size="sm"
-              onClick={handleTrustCurrent}
-              disabled={trustPending}
-            >
-              {trustPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <IconPlus />
-              )}
-              {messages.settings.network.trustCurrentButton}
-            </Button>
-          </ItemActions>
-        </Item>
-
-        <div>
-          <h3 className="font-heading mb-2 text-sm font-medium">
-            {messages.settings.network.activeTitle(activeRows.length)}
-          </h3>
-          {loading ? (
-            <div className="flex min-h-16 items-center justify-center text-sm text-muted-foreground">
-              <Spinner className="mr-2" />
-              {STATES_VI.loading}
-            </div>
-          ) : activeRows.length === 0 ? (
-            <AppEmptyState
-              className="border-dashed bg-transparent"
-              title={messages.settings.network.emptyTrusted}
-              compact
-            />
-          ) : (
-            <ItemGroup>
-              {activeRows.map((row) => (
-                <Item key={row.id} variant="outline" className="sm:flex-nowrap">
-                  <ItemContent className="min-w-0">
-                    <ItemTitle className="line-clamp-none flex-wrap text-sm">
-                      <IconGlobe className="size-4 text-muted-foreground" />
-                      <span className="font-mono text-sm font-medium">
-                        {row.ip_address}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={
-                          row.registered_via === "agent"
-                            ? "border-success/20 text-success"
-                            : "border-border"
-                        }
-                      >
-                        {row.registered_via === "agent"
-                          ? "agent"
-                          : messages.settings.network.manual}
-                      </Badge>
-                      {!isFresh(row.last_seen_at) && (
-                        <Badge
-                          variant="outline"
-                          className="border-warning/20 text-warning"
-                        >
-                          {messages.settings.network.expired}
-                        </Badge>
-                      )}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {messages.settings.network.activeMeta(
-                        formatAge(row.last_seen_at),
-                        row.registered_by_agent_id,
-                      )}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions className="ml-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRevoke(row.id)}
-                      disabled={revokePendingId === row.id}
-                    >
-                      {revokePendingId === row.id ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconShieldOff />
-                      )}
-                      {messages.settings.network.revoke}
-                    </Button>
-                  </ItemActions>
-                </Item>
-              ))}
-            </ItemGroup>
-          )}
-        </div>
-
-        {revokedRows.length > 0 && (
-          <div>
-            <h3 className="font-heading mb-2 text-sm font-medium text-muted-foreground">
-              {messages.settings.network.revokedTitle(revokedRows.length)}
-            </h3>
-            <ItemGroup data-size="xs">
-              {revokedRows.slice(0, 5).map((row) => (
-                <Item key={row.id} variant="muted" size="xs">
-                  <ItemContent className="flex-row items-center gap-2">
-                    <span className="font-mono">{row.ip_address}</span>
-                    <span className="text-muted-foreground">•</span>
-                    <span className="text-muted-foreground">
-                      {messages.settings.network.revokedMeta(
-                        row.revoked_at
-                          ? formatAge(row.revoked_at)
-                          : messages.settings.network.unknown,
-                      )}
-                    </span>
-                  </ItemContent>
-                </Item>
-              ))}
-            </ItemGroup>
-          </div>
-        )}
-      </div>
+      <NetworkConfigPanel branch={branch} active={open} />
     </AppDialog>
   );
 }

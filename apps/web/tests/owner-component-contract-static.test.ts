@@ -224,6 +224,9 @@ test("Owner monitors use DataTable while the branch launcher keeps a responsive,
   );
   assert.match(branchLauncher, /copy\.openBranch\.short/);
   assert.match(branchLauncher, /copy\.openBranch\.long/);
+  assert.match(branchLauncher, /copy\.networkGateway\.short/);
+  assert.match(branchLauncher, /copy\.networkGateway\.long/);
+  assert.match(branchLauncher, /setNetworkBranch\(branch\)/);
   assert.doesNotMatch(branchLauncher, /@comtammatu\/ui\/components\/table/);
 
   assert.doesNotMatch(read(STAFF_AUDIT), /@comtammatu\/ui\/components\/card/);
