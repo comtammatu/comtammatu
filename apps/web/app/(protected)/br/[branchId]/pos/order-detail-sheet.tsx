@@ -357,6 +357,8 @@ export function OrderDetailSheet({
     promotionId: number;
     name: string;
     freeQty: number;
+    needsSideSelection: boolean;
+    amountHint: number;
     candidates: Array<{
       order_item_id: number;
       side_item_id: number;
@@ -445,6 +447,8 @@ export function OrderDetailSheet({
                 promotionId: first.promotion_id,
                 name: first.name,
                 freeQty: first.free_qty,
+                needsSideSelection: first.needs_side_selection,
+                amountHint: first.amount_hint,
                 candidates: first.candidates,
               }
             : null,
@@ -1882,6 +1886,8 @@ export function OrderDetailSheet({
                     promotionId: freeSideOffer.promotionId,
                     name: freeSideOffer.name,
                     freeQty: freeSideOffer.freeQty,
+                    needsSideSelection: freeSideOffer.needsSideSelection,
+                    amountHint: freeSideOffer.amountHint,
                     candidates: freeSideOffer.candidates,
                   }
                 : null,

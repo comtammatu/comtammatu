@@ -176,6 +176,8 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(sheet, /PROMOTIONS_VI\.posCodeTab/);
   assert.match(sheet, /POS_VI\.discountTitle/);
   assert.match(sheet, /needsSideSelection/);
+  assert.match(sheet, /amountHint/);
+  assert.match(sheet, /autoPreviewAmount/);
   assert.match(sheet, /posPickSidesTitle/);
   assert.match(sheet, /initialOffer/);
   assert.match(sheet, /onApplyFreeSide/);
@@ -207,6 +209,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(actions, /apply_free_side_selection/);
   assert.match(actions, /p_side_selections/);
   assert.match(actions, /needsSideSelection/);
+  assert.match(actions, /needs_side_selection/);
   assert.match(actions, /evaluateOrderPromotionOffers/);
   assert.match(actions, /clear_promotion/);
   assert.match(actions, /preview_promotion_code/);
@@ -214,7 +217,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
 
   const evaluateOrder = readWeb("lib/promotions/evaluate-order.ts");
   assert.match(evaluateOrder, /parseFreeSideOffers/);
-  assert.match(evaluateOrder, /EvaluateOrderPromotionsResult/);
+  assert.match(evaluateOrder, /needs_side_selection/);
   assert.match(
     evaluateOrder,
     /evaluateOrderPromotionsQuiet[\s\S]*offers:/,

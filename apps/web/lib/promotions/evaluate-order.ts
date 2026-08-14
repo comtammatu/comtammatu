@@ -18,6 +18,7 @@ export type FreeSideOffer = {
   free_qty: number;
   candidates: FreeSideCandidate[];
   amount_hint: number;
+  needs_side_selection: boolean;
   allow_code: boolean;
   allow_auto: boolean;
 };
@@ -78,6 +79,7 @@ export function parseFreeSideOffers(raw: unknown): FreeSideOffer[] {
       free_qty: freeQty,
       candidates,
       amount_hint: Number(r.amount_hint ?? 0),
+      needs_side_selection: r.needs_side_selection === true,
       allow_code: r.allow_code === true,
       allow_auto: r.allow_auto === true,
     });

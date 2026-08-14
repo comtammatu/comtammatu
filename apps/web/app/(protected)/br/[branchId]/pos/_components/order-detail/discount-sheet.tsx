@@ -88,6 +88,8 @@ interface DiscountSheetProps {
       promotionId: number;
       name: string;
       freeQty: number;
+      needsSideSelection: boolean;
+      amountHint: number;
       candidates: PromoSideCandidate[];
       code?: string | null;
     } | null;
@@ -194,13 +196,13 @@ export function DiscountSheet({
     setPane(showPromo ? "code" : "manual");
     if (promo?.initialOffer) {
       setPreview({
-        amount: 0,
+        amount: promo.initialOffer.amountHint,
         name: promo.initialOffer.name,
         kind: "free_side",
-        needsSideSelection: true,
+        needsSideSelection: promo.initialOffer.needsSideSelection,
         freeQty: promo.initialOffer.freeQty,
         candidates: promo.initialOffer.candidates,
-        amountHint: null,
+        amountHint: promo.initialOffer.amountHint,
         promotionId: promo.initialOffer.promotionId,
       });
     } else {
@@ -266,13 +268,17 @@ export function DiscountSheet({
   const pickComplete =
     !needsPick ||
     (preview?.freeQty != null && selectedUnitsTotal === preview.freeQty);
+  const autoPreviewAmount =
+    (preview?.amount ?? 0) > 0
+      ? (preview?.amount ?? 0)
+      : (preview?.amountHint ?? 0);
   const canApplyCode =
     showPromo &&
     preview != null &&
     !isPending &&
     !promo?.hasPromotion &&
     pickComplete &&
-    (needsPick ? selectedAmount > 0 : preview.amount > 0);
+    (needsPick ? selectedAmount > 0 : autoPreviewAmount > 0);
   const canClearPromo =
     showPromo && promo?.hasPromotion === true && noteValid && !isPending;
 
@@ -348,9 +354,7 @@ export function DiscountSheet({
     promo.onApplyCode(codeTrim, selections);
   };
 
-  const codePreviewAmount = needsPick
-    ? selectedAmount
-    : (preview?.amount ?? 0);
+  const codePreviewAmount = needsPick ? selectedAmount : autoPreviewAmount;
   const codePreviewTotal = Math.max(
     0,
     subtotal + serviceCharge - codePreviewAmount,
@@ -519,7 +523,6 @@ export function DiscountSheet({
                                 next[key] = Math.min(
                                   Math.max(remaining, 0),
                                   c.max_units,
-                                  1,
                                 );
                                 if (next[key] < 1) delete next[key];
                               } else {

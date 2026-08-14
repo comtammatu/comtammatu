@@ -894,6 +894,7 @@ export async function evaluateOrderPromotionOffers(
         parent_name: string;
       }>;
       amount_hint: number;
+      needs_side_selection: boolean;
     }>;
   }>
 > {
@@ -940,6 +941,7 @@ export async function evaluateOrderPromotionOffers(
         free_qty: Number(r.free_qty ?? 0),
         candidates,
         amount_hint: Number(r.amount_hint ?? 0),
+        needs_side_selection: r.needs_side_selection === true,
       },
     ];
   });
