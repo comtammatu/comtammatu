@@ -14,7 +14,7 @@ function readMigrationBySuffix(suffix: string): string {
   return readFileSync(path.join(migrationsRoot, filename), "utf8");
 }
 
-test("bill_line_items snapshots vat_rate for ex-VAT print amounts", () => {
+test("bill_line_items snapshots vat_rate for bill tax lines", () => {
   const migration = readMigrationBySuffix(
     "_receipt_print_ex_vat_line_amounts.sql",
   );

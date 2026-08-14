@@ -193,76 +193,49 @@ test("receipt fallback materializes default layout", () => {
   assertTextOrder(blocks, "HÓA ĐƠN THANH TOÁN", "Bàn 5 #087");
 });
 
-test("bills show VAT after exclusive subtotal and before adjustments", () => {
+test("bills omit GTGT rate lines after inclusive Tạm tính", () => {
   for (const kind of ["receipt", "provisional_bill"] as const) {
     const payload = SAMPLE_PAYLOADS[kind] as Extract<
       PrintPayload,
       { kind: "receipt" | "provisional_bill" }
     >;
-    const withoutVat = renderDocumentToOps(buildFallbackDocument(payload))
+    const withVatPayload = {
+      ...payload,
+      tax_amount: 9966,
+      tax_breakdowns: [
+        { rate: 10, amount: 1818 },
+        { rate: 8, amount: 8148 },
+      ],
+    };
+    const lines = renderDocumentToOps(buildFallbackDocument(withVatPayload))
       .flatMap((op) => (op.kind === "line" ? [op.text] : []));
+
     assert.ok(
-      !withoutVat.some(
+      lines.some((line) => line.startsWith("Tạm tính") && line.includes("130.000đ")),
+      `${kind} Tạm tính stays VAT-inclusive gross`,
+    );
+    assert.ok(
+      !lines.some(
         (line) =>
+          line.startsWith("Thuế suất GTGT") ||
+          line.startsWith("- Thuế suất GTGT") ||
           line.startsWith("Thuế GTGT") ||
           line.startsWith("- Thuế GTGT") ||
-          line.startsWith("Tiền thuế GTGT"),
+          line.startsWith("Tiền thuế GTGT") ||
+          line.includes("đã gồm"),
       ),
-      `${kind} must hide VAT without a tax breakdown`,
-    );
-    assert.ok(
-      withoutVat.some((line) => line.startsWith("Tạm tính") && line.includes("130.000đ")),
-      `${kind} without VAT keeps Tạm tính equal to gross subtotal`,
+      `${kind} must not print GTGT rate lines on customer bills`,
     );
 
-    const withVat = renderDocumentToOps(
-      buildFallbackDocument({
-        ...payload,
-        tax_amount: 9966,
-        tax_breakdowns: [
-          { rate: 10, amount: 1818 },
-          { rate: 8, amount: 8148 },
-        ],
-      }),
-    ).flatMap((op) => (op.kind === "line" ? [op.text] : []));
-    const subtotalIndex = withVat.findIndex((line) =>
-      line.startsWith("Tạm tính"),
-    );
-    const taxTotalIndex = withVat.findIndex((line) =>
-      line.startsWith("Thuế GTGT"),
-    );
-    const vat10Index = withVat.findIndex((line) =>
-      line.startsWith("- Thuế GTGT (10%)"),
-    );
-    const vat8Index = withVat.findIndex((line) =>
-      line.startsWith("- Thuế GTGT (8%)"),
-    );
-    const serviceIndex = withVat.findIndex((line) =>
-      line.includes("Phí dịch vụ"),
-    );
-    const discountIndex = withVat.findIndex((line) =>
-      line.includes("Chiết khấu"),
-    );
-    const totalIndex = withVat.findIndex((line) =>
-      line.includes("TỔNG CỘNG"),
-    );
-
-    assert.ok(withVat[subtotalIndex]?.includes("120.034đ"));
-    assert.ok(withVat[taxTotalIndex]?.endsWith("9.966đ"));
-    assert.ok(withVat[vat10Index]?.endsWith("1.818đ"));
-    assert.ok(withVat[vat8Index]?.endsWith("8.148đ"));
+    const subtotalIndex = lines.findIndex((line) => line.startsWith("Tạm tính"));
+    const serviceIndex = lines.findIndex((line) => line.includes("Phí dịch vụ"));
+    const discountIndex = lines.findIndex((line) => line.includes("Chiết khấu"));
+    const totalIndex = lines.findIndex((line) => line.includes("TỔNG CỘNG"));
     assert.ok(
-      subtotalIndex < taxTotalIndex &&
-        taxTotalIndex < vat10Index &&
-        vat10Index < vat8Index &&
-        vat8Index < serviceIndex &&
+      subtotalIndex < serviceIndex &&
         serviceIndex < discountIndex &&
         discountIndex < totalIndex,
-      `${kind} must render exclusive Tạm tính, then GTGT, service, discount, total`,
-    );
-    assert.ok(
-      !withVat.some((line) => line.includes("đã gồm")),
-      `${kind} must not label VAT as already included in Tạm tính`,
+      `${kind} must render inclusive Tạm tính, then service, discount, total`,
     );
   }
 });
@@ -381,21 +354,21 @@ test("receipt render keeps compact item table with category headers", () => {
   );
   assert.ok(
     lines.some(
-      (line) => /^\|\s*1\|Cơm tấm/.test(line) && line.includes("83.333đ"),
+      (line) => /^\|\s*1\|Cơm tấm/.test(line) && line.includes("90.000đ"),
     ),
-    "food Thành tiền must be exclusive of 8% VAT",
+    "food Thành tiền must be menu selling price including 8% VAT",
   );
   assert.ok(
     lines.some(
-      (line) => line.includes("Thêm trứng ốp") && line.includes("18.519đ"),
+      (line) => line.includes("Thêm trứng ốp") && line.includes("20.000đ"),
     ),
-    "modifier Thành tiền must be exclusive of the parent VAT rate",
+    "modifier Thành tiền must stay VAT-inclusive with the parent item",
   );
   assert.ok(
     lines.some(
-      (line) => /^\|\s*1\|Nước sâm/.test(line) && line.includes("18.182đ"),
+      (line) => /^\|\s*1\|Nước sâm/.test(line) && line.includes("20.000đ"),
     ),
-    "drink Thành tiền must be exclusive of 10% VAT",
+    "drink Thành tiền must be menu selling price including 10% VAT",
   );
   assert.equal(numberedRows.length, 2, "only primary item rows are numbered");
   assert.equal(tableRules.length, 0, "receipt should not use raster rules");

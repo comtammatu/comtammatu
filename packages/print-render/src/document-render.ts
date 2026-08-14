@@ -150,53 +150,12 @@ function receiptLineTotals(item: ReceiptItem): { baseAmount: number } {
   return { baseAmount: baseUnit * item.quantity };
 }
 
-/** POS stores VAT-inclusive prices. Match bill_tax_breakdowns whole-VND net. */
-function netFromInclusiveGross(gross: number, vatRate: number): number {
-  if (!Number.isFinite(gross) || gross === 0) return 0;
-  const rate = Number.isFinite(vatRate) && vatRate > 0 ? vatRate : 0;
-  return Math.round(gross / (1 + rate / 100));
-}
-
-function positiveTaxBreakdowns(
-  p: BillBase,
-): Array<{ rate: number; amount: number }> {
-  return [...(p.tax_breakdowns ?? [])]
-    .filter(
-      ({ rate, amount }) =>
-        Number.isFinite(rate) &&
-        rate >= 0 &&
-        Number.isFinite(amount) &&
-        amount >= 0,
-    )
-    .sort((a, b) => b.rate - a.rate);
-}
-
-/** VAT already inside `orders.subtotal` (gross). Prefer rate lines, else tax_amount. */
-function includedVatAmount(p: BillBase): number {
-  const fromBreakdowns = positiveTaxBreakdowns(p).reduce(
-    (total, tax) => total + tax.amount,
-    0,
-  );
-  if (fromBreakdowns > 0) return fromBreakdowns;
-  const taxAmount = p.tax_amount ?? 0;
-  return Number.isFinite(taxAmount) && taxAmount > 0 ? taxAmount : 0;
-}
-
-function exclusiveItemSubtotal(p: BillBase): number {
-  return Math.max(0, (p.subtotal ?? 0) - includedVatAmount(p));
-}
-
-function fmtExVat(gross: number, vatRate: number): string {
-  return fmtMoney(netFromInclusiveGross(gross, vatRate));
-}
-
 function renderReceiptItem(
   out: RenderOp[],
   it: ReceiptItem,
   itemNumber: number,
 ): void {
   const qty = String(it.quantity);
-  const vatRate = it.vat_rate ?? 0;
   const { baseAmount } = receiptLineTotals(it);
 
   const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
@@ -207,7 +166,7 @@ function renderReceiptItem(
           i === 0 ? String(itemNumber) : "",
           chunk,
           i === 0 ? qty : "",
-          i === 0 ? fmtExVat(baseAmount, vatRate) : "",
+          i === 0 ? fmtMoney(baseAmount) : "",
         ),
       ),
     );
@@ -227,8 +186,7 @@ function renderReceiptItem(
     for (const m of it.modifiers) {
       if (!m.name) continue;
       const modPrice = m.price ?? 0;
-      const modAmt =
-        modPrice > 0 ? fmtExVat(modPrice * it.quantity, vatRate) : "";
+      const modAmt = modPrice > 0 ? fmtMoney(modPrice * it.quantity) : "";
       const modChunks = wrapText(`  + ${m.name}`, RECEIPT_COL_NAME);
       modChunks.forEach((chunk, i) => {
         out.push(
@@ -254,7 +212,7 @@ function renderReceiptItem(
       const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
       const sideAmt =
         sidePrice > 0 && totalSideQty > 0
-          ? fmtExVat(sidePrice * totalSideQty, vatRate)
+          ? fmtMoney(sidePrice * totalSideQty)
           : "";
       const sideChunks = wrapText(`  - ${sideName}`, RECEIPT_COL_NAME);
       sideChunks.forEach((chunk, i) => {
@@ -276,7 +234,8 @@ function renderReceiptItem(
 /** Each priced modifier/side renders on its own row with its own unit and
  * amount; price 0 or undefined leaves price cells blank. Variant prints on an
  * indented row under the name. Item note is hidden on bills — the kitchen
- * ticket already showed it to the chef. Printed line amounts are exclusive of VAT. */
+ * ticket already showed it to the chef. Printed line amounts are menu selling
+ * prices (VAT-inclusive); do not reverse-extract net. */
 function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(ops.line(RECEIPT_TABLE_BORDER));
@@ -313,35 +272,14 @@ function renderItemsTable(p: BillBase, groupByCategory = false): RenderOp[] {
 function renderTotals(p: BillBase, alwaysShowAdjustments = false): RenderOp[] {
   const out: RenderOp[] = [];
   out.push(divider("="));
+  // `orders.subtotal` is VAT-inclusive menu total. Do not print GTGT rate lines —
+  // Thành tiền / Tạm tính already include VAT; adjustments follow directly.
   out.push(
-    ops.line(pair24("Tạm tính", fmtMoney(exclusiveItemSubtotal(p))), {
+    ops.line(pair24("Tạm tính", fmtMoney(p.subtotal)), {
       bold: true,
       double: true,
     }),
   );
-  const taxBreakdowns = positiveTaxBreakdowns(p);
-  if (taxBreakdowns.length > 0) {
-    out.push(
-      ops.line(
-        pair48(
-          "Thuế GTGT",
-          fmtMoney(
-            taxBreakdowns.reduce((total, tax) => total + tax.amount, 0),
-          ),
-        ),
-      ),
-    );
-    for (const tax of taxBreakdowns) {
-      out.push(
-        ops.line(
-          pair48(
-            `- Thuế GTGT (${formatPercent(tax.rate, 2)})`,
-            fmtMoney(tax.amount),
-          ),
-        ),
-      );
-    }
-  }
   if (alwaysShowAdjustments || (p.service_charge ?? 0) > 0) {
     const label = alwaysShowAdjustments ? "Phí dịch vụ" : "Phụ phí";
     out.push(ops.line(pair48(label, fmtMoney(p.service_charge))));
