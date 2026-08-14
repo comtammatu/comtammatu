@@ -98,6 +98,8 @@ export const PROMOTIONS_VI = {
   posPickSidesTitle: "Chọn ăn kèm được tặng",
   posPickSidesHint: (n: number) =>
     `Chọn đúng ${String(n)} phần ăn kèm trên toàn đơn (theo từng phần món chính)`,
+  posAutoFreeSideHint: (n: number, amount: string) =>
+    `Tự động miễn phí ${String(n)} phần ăn kèm (giảm ${amount})`,
   posPickSidesApply: "Áp dụng",
   posPreviewName: "Chiến dịch",
   posNeedsSidePick: "Chọn phần ăn kèm để áp mã",

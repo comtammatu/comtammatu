@@ -87,6 +87,13 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(perMain, /line_need/);
   assert.match(perMain, /needs_side_selection/);
   assert.match(perMain, /per qualifying main unit/);
+
+  const recalc = readRepo(
+    "supabase/migrations/20260814164500_promotion_free_side_recalc_on_evaluate.sql",
+  );
+  assert.match(recalc, /promotion_free_side_applied_amount/);
+  assert.match(recalc, /Tính lại miễn phí ăn kèm/);
+  assert.match(recalc, /'code', v_code/);
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -178,6 +185,8 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(sheet, /needsSideSelection/);
   assert.match(sheet, /amountHint/);
   assert.match(sheet, /autoPreviewAmount/);
+  assert.match(sheet, /posAutoFreeSideHint/);
+  assert.match(sheet, /resolvedCode/);
   assert.match(sheet, /posPickSidesTitle/);
   assert.match(sheet, /initialOffer/);
   assert.match(sheet, /onApplyFreeSide/);
@@ -218,6 +227,7 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   const evaluateOrder = readWeb("lib/promotions/evaluate-order.ts");
   assert.match(evaluateOrder, /parseFreeSideOffers/);
   assert.match(evaluateOrder, /needs_side_selection/);
+  assert.match(evaluateOrder, /code:/);
   assert.match(
     evaluateOrder,
     /evaluateOrderPromotionsQuiet[\s\S]*offers:/,

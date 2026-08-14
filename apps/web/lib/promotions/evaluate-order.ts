@@ -21,6 +21,7 @@ export type FreeSideOffer = {
   needs_side_selection: boolean;
   allow_code: boolean;
   allow_auto: boolean;
+  code: string | null;
 };
 
 export type EvaluateOrderPromotionsResult = {
@@ -82,6 +83,8 @@ export function parseFreeSideOffers(raw: unknown): FreeSideOffer[] {
       needs_side_selection: r.needs_side_selection === true,
       allow_code: r.allow_code === true,
       allow_auto: r.allow_auto === true,
+      code:
+        typeof r.code === "string" && r.code.trim() !== "" ? r.code.trim() : null,
     });
   }
   return out;

@@ -359,6 +359,7 @@ export function OrderDetailSheet({
     freeQty: number;
     needsSideSelection: boolean;
     amountHint: number;
+    code: string | null;
     candidates: Array<{
       order_item_id: number;
       side_item_id: number;
@@ -368,7 +369,6 @@ export function OrderDetailSheet({
       parent_name: string;
     }>;
   } | null>(null);
-  const [discountOfferMode, setDiscountOfferMode] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [canVoidPaid, setCanVoidPaid] = useState(false);
   const [canApplyDiscount, setCanApplyDiscount] = useState(false);
@@ -449,6 +449,7 @@ export function OrderDetailSheet({
                 freeQty: first.free_qty,
                 needsSideSelection: first.needs_side_selection,
                 amountHint: first.amount_hint,
+                code: first.code,
                 candidates: first.candidates,
               }
             : null,
@@ -1036,6 +1037,7 @@ export function OrderDetailSheet({
         name: r.data.name,
         kind: r.data.kind,
         needsSideSelection: r.data.needsSideSelection,
+        promotionId: r.data.promotionId,
         freeQty: r.data.freeQty,
         candidates: r.data.candidates,
         amountHint: r.data.amountHint,
@@ -1062,7 +1064,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
-        setDiscountOfferMode(false);
         load();
       } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
@@ -1090,7 +1091,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
-        setDiscountOfferMode(false);
         setFreeSideOffer(null);
         load();
       } else {
@@ -1106,7 +1106,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.cleared);
         setShowDiscount(false);
-        setDiscountOfferMode(false);
         load();
       } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
@@ -1502,7 +1501,6 @@ export function OrderDetailSheet({
                     size="touch"
                     className="w-full justify-between"
                     onClick={() => {
-                      setDiscountOfferMode(true);
                       setShowDiscount(true);
                     }}
                   >
@@ -1670,7 +1668,6 @@ export function OrderDetailSheet({
                                     disabled={isMutating}
                                     onClick={() =>
                                       runAfterPendingPaymentUnlock(() => {
-                                        setDiscountOfferMode(false);
                                         setShowDiscount(true);
                                       })
                                     }
@@ -1858,7 +1855,6 @@ export function OrderDetailSheet({
           open={showDiscount}
           onOpenChange={(open) => {
             setShowDiscount(open);
-            if (!open) setDiscountOfferMode(false);
           }}
           subtotal={orderDiscountBase}
           subtotalLabel={
@@ -1880,14 +1876,14 @@ export function OrderDetailSheet({
             enabled: true,
             canManual: canShowManualDiscount,
             hasPromotion: Boolean(hasPromotion),
-            initialOffer:
-              discountOfferMode && freeSideOffer
+            initialOffer: freeSideOffer
                 ? {
                     promotionId: freeSideOffer.promotionId,
                     name: freeSideOffer.name,
                     freeQty: freeSideOffer.freeQty,
                     needsSideSelection: freeSideOffer.needsSideSelection,
                     amountHint: freeSideOffer.amountHint,
+                    code: freeSideOffer.code,
                     candidates: freeSideOffer.candidates,
                   }
                 : null,

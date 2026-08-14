@@ -51,6 +51,7 @@ export type PromoPreviewResult =
       name: string;
       kind?: string;
       needsSideSelection?: boolean;
+      promotionId?: number | null;
       freeQty?: number | null;
       candidates?: PromoSideCandidate[];
       amountHint?: number | null;
@@ -90,8 +91,8 @@ interface DiscountSheetProps {
       freeQty: number;
       needsSideSelection: boolean;
       amountHint: number;
-      candidates: PromoSideCandidate[];
       code?: string | null;
+      candidates: PromoSideCandidate[];
     } | null;
     onPreview: (code: string) => Promise<PromoPreviewResult>;
     onApplyCode: (
@@ -166,7 +167,7 @@ export function DiscountSheet({
     freeQty: number | null;
     candidates: PromoSideCandidate[];
     amountHint: number | null;
-    promotionId?: number;
+    promotionId?: number | null;
   } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewPending, setPreviewPending] = useState(false);
@@ -316,6 +317,7 @@ export function DiscountSheet({
         freeQty: result.freeQty ?? null,
         candidates: result.candidates ?? [],
         amountHint: result.amountHint ?? null,
+        promotionId: result.promotionId ?? null,
       });
       setSideUnits({});
       setPreviewError(null);
@@ -343,15 +345,15 @@ export function DiscountSheet({
   const handleApplyCode = () => {
     if (!canApplyCode || !promo || !preview) return;
     const selections = needsPick ? buildSelections() : undefined;
-    if (preview.promotionId != null && promo.onApplyFreeSide) {
-      promo.onApplyFreeSide(
-        preview.promotionId,
-        selections ?? [],
-        codeTrim || promo.initialOffer?.code || null,
-      );
+    const resolvedCode =
+      codeTrim || promo.initialOffer?.code?.trim().toUpperCase() || "";
+    if (resolvedCode) {
+      promo.onApplyCode(resolvedCode, selections);
       return;
     }
-    promo.onApplyCode(codeTrim, selections);
+    if (preview.promotionId != null && promo.onApplyFreeSide) {
+      promo.onApplyFreeSide(preview.promotionId, selections ?? [], null);
+    }
   };
 
   const codePreviewAmount = needsPick ? selectedAmount : autoPreviewAmount;
@@ -441,7 +443,7 @@ export function DiscountSheet({
 
         {activePane === "code" && promo ? (
           <FieldGroup>
-            {!promo.initialOffer ? (
+            {!promo.initialOffer?.code ? (
               <>
                 <Field>
                   <FieldLabel htmlFor="promo-code-input">
@@ -488,6 +490,14 @@ export function DiscountSheet({
                 {needsPick && preview.freeQty != null ? (
                   <p className="text-muted-foreground">
                     {PROMOTIONS_VI.posPickSidesHint(preview.freeQty)}
+                  </p>
+                ) : null}
+                {!needsPick && preview.freeQty != null && autoPreviewAmount > 0 ? (
+                  <p className="text-muted-foreground">
+                    {PROMOTIONS_VI.posAutoFreeSideHint(
+                      preview.freeQty,
+                      formatVND(autoPreviewAmount),
+                    )}
                   </p>
                 ) : null}
               </div>

@@ -666,6 +666,7 @@ export async function previewPromotionCode(
     amount: number;
     kind: string;
     needsSideSelection: boolean;
+    promotionId: number | null;
     freeQty: number | null;
     candidates: Array<{
       order_item_id: number;
@@ -710,6 +711,7 @@ export async function previewPromotionCode(
     amount?: number;
     kind?: string;
     needs_side_selection?: boolean;
+    promotion_id?: number;
     free_qty?: number;
     candidates?: unknown;
     amount_hint?: number;
@@ -741,6 +743,8 @@ export async function previewPromotionCode(
       amount: Number(result.amount ?? 0),
       kind: String(result.kind ?? ""),
       needsSideSelection: result.needs_side_selection === true,
+      promotionId:
+        result.promotion_id == null ? null : Number(result.promotion_id),
       freeQty:
         result.free_qty == null ? null : Number(result.free_qty),
       candidates,
@@ -895,6 +899,7 @@ export async function evaluateOrderPromotionOffers(
       }>;
       amount_hint: number;
       needs_side_selection: boolean;
+      code: string | null;
     }>;
   }>
 > {
@@ -942,9 +947,28 @@ export async function evaluateOrderPromotionOffers(
         candidates,
         amount_hint: Number(r.amount_hint ?? 0),
         needs_side_selection: r.needs_side_selection === true,
+        code:
+          typeof r.code === "string" && r.code.trim() !== ""
+            ? r.code.trim()
+            : null,
       },
     ];
   });
+
+  if (offers[0] && offers[0].code == null) {
+    const { data: codeRow } = await scoped.ctx.supabase
+      .from("promotion_codes")
+      .select("code")
+      .eq("promotion_id", offers[0].promotion_id)
+      .eq("kind", "reusable")
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (codeRow?.code) {
+      offers[0] = { ...offers[0], code: codeRow.code };
+    }
+  }
+
   return { success: true, data: { offers } };
 }
 
