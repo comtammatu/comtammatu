@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { BrandMascot } from "@/components/brand";
+import { ForceLightMode } from "@/components/force-light-mode";
 import { AppPage } from "@/components/surface";
 import {
   Item,
@@ -30,9 +31,10 @@ function StatusPage({
       density="compact"
       mobile
       padded={false}
-      className="flex min-h-dvh flex-col bg-background"
+      className="theme-light-only flex min-h-dvh flex-col bg-background text-foreground"
       contentClassName="min-h-0 flex-1 justify-center px-3 py-6"
     >
+      <ForceLightMode />
       <Item variant="outline" className="bg-card">
         <ItemContent className="items-center gap-3 text-center">
           <BrandMascot decorative size="sm" />
@@ -97,9 +99,10 @@ export default async function InvoiceBuyerPage({
       density="compact"
       mobile
       padded={false}
-      className="flex min-h-dvh flex-col bg-background"
+      className="theme-light-only flex min-h-dvh flex-col bg-background text-foreground"
       contentClassName="min-h-0 flex-1 gap-2 px-3 py-4"
     >
+      <ForceLightMode />
       <InvoiceBuyerOrderCard
         branchName={request.branchName}
         orderNumber={request.orderNumber}

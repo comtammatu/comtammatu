@@ -21,6 +21,9 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   const rotation = readRepo(
     "supabase/migrations/20260814021821_upsert_promotion_reusable_code_rotation.sql",
   );
+  const freeSide = readRepo(
+    "supabase/migrations/20260814114800_promotion_free_side.sql",
+  );
 
   assert.match(migration, /CREATE TABLE public\.promotions/);
   assert.match(migration, /CREATE TABLE public\.promotion_codes/);
@@ -68,6 +71,13 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(rotation, /promotion_reusable_code_required/);
   assert.match(rotation, /replaced_by_code_rotation/);
   assert.match(rotation, /code <> v_code/);
+
+  assert.match(freeSide, /free_side/);
+  assert.match(freeSide, /apply_free_side_selection/);
+  assert.match(freeSide, /promotion_free_side_candidates/);
+  assert.match(freeSide, /needs_side_selection/);
+  assert.match(freeSide, /allow_code/);
+  assert.match(freeSide, /allow_auto/);
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
@@ -119,6 +129,10 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   assert.match(form, /DocumentFormFrame/);
   assert.match(form, /footer=\{/);
   assert.match(form, /AppSection/);
+  assert.match(form, /kindConfigSection/);
+  assert.match(form, /freeSideQty/);
+  assert.match(form, /buyItemIds/);
+  assert.match(form, /getItemIds/);
   assert.match(form, /BusinessDateField/);
   assert.match(form, /ReasonConfirmDialog/);
   assert.match(form, /PROMOTIONS_VI\.codeRequired/);
@@ -132,9 +146,16 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
 
   const messages = readRepo("packages/shared/src/messages/promotions.ts");
   assert.match(messages, /codeRequired:/);
+  assert.match(messages, /kindFreeSide:/);
+  assert.match(messages, /posOfferChip:/);
+  assert.match(messages, /posPickSidesTitle:/);
+
+  const kinds = readWeb("lib/promotions/kinds.ts");
+  assert.match(kinds, /"free_side"/);
 
   const rpcErrors = readWeb("lib/promotions/rpc-errors.ts");
   assert.match(rpcErrors, /promotion_reusable_code_required/);
+  assert.match(rpcErrors, /promotion_side_selection_required/);
 
   const statusBadge = readWeb("app/components/status-badge.tsx");
   assert.match(statusBadge, /promotion:/);
@@ -145,6 +166,15 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   );
   assert.match(sheet, /PROMOTIONS_VI\.posCodeTab/);
   assert.match(sheet, /POS_VI\.discountTitle/);
+  assert.match(sheet, /needsSideSelection/);
+  assert.match(sheet, /posPickSidesTitle/);
+  assert.match(sheet, /initialOffer/);
+  assert.match(sheet, /onApplyFreeSide/);
+  assert.match(sheet, /Item[\s\S]*variant="outline"/);
+  assert.doesNotMatch(
+    sheet,
+    /className="flex items-start gap-3 rounded-md border/,
+  );
   const promoCodeInput =
     /id="promo-code-input"[\s\S]*?\/>/.exec(sheet)?.[0] ?? "";
   assert.match(promoCodeInput, /controlSize="touch"/);
@@ -165,9 +195,21 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   );
   assert.match(actions, /PERMISSION_KEYS\.POS_APPLY_DISCOUNT/);
   assert.match(actions, /apply_promotion_code/);
+  assert.match(actions, /apply_free_side_selection/);
+  assert.match(actions, /p_side_selections/);
+  assert.match(actions, /needsSideSelection/);
+  assert.match(actions, /evaluateOrderPromotionOffers/);
   assert.match(actions, /clear_promotion/);
   assert.match(actions, /preview_promotion_code/);
   assert.doesNotMatch(actions, /error:\s*error\.message/);
+
+  const evaluateOrder = readWeb("lib/promotions/evaluate-order.ts");
+  assert.match(evaluateOrder, /parseFreeSideOffers/);
+  assert.match(evaluateOrder, /EvaluateOrderPromotionsResult/);
+  assert.match(
+    evaluateOrder,
+    /evaluateOrderPromotionsQuiet[\s\S]*offers:/,
+  );
 
   const archetypes = readRepo("scripts/page-archetypes.mjs");
   assert.match(archetypes, /promotions\/page\.tsx": "LIST"/);
@@ -194,5 +236,7 @@ test("POS evaluate runs on cart change and before pay", () => {
   assert.match(lifecycle, /evaluateOrderPromotionsQuiet/);
   assert.match(payment, /evaluateOrderPromotionsBlocking/);
   assert.match(detail, /PROMOTIONS_VI\.posPromoChip/);
+  assert.match(detail, /PROMOTIONS_VI\.posOfferChip/);
+  assert.match(detail, /evaluateOrderPromotionOffers/);
   assert.match(detail, /canApplyDiscount/);
 });

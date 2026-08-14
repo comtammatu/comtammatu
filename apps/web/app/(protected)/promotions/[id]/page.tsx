@@ -34,7 +34,7 @@ export default async function EditPromotionPage({
     supabase
       .from("promotions")
       .select(
-        "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, stack_with_item_discount, starts_at, ends_at, time_windows, service_modes, bxgy_buy_qty, bxgy_get_qty",
+        "id, name, kind, status, discount_type, discount_value, min_subtotal, max_discount_amount, stack_with_item_discount, starts_at, ends_at, time_windows, service_modes, bxgy_buy_qty, bxgy_get_qty, free_side_qty, allow_code, allow_auto",
       )
       .eq("id", id)
       .eq("tenant_id", claims.tenant_id)
@@ -72,7 +72,7 @@ export default async function EditPromotionPage({
   const reusable = (codeRes.data ?? []).find((code) => code.kind === "reusable");
   const itemTargets = await supabase
     .from("promotion_items")
-    .select("menu_item_id")
+    .select("menu_item_id, item_role")
     .eq("promotion_id", id);
 
   const timeWindows = Array.isArray(promo.time_windows)
@@ -135,8 +135,19 @@ export default async function EditPromotionPage({
           serviceModes.length > 0 ? serviceModes : ["dine_in", "takeaway"],
         bxgyBuyQty: promo.bxgy_buy_qty,
         bxgyGetQty: promo.bxgy_get_qty,
+        freeSideQty: promo.free_side_qty,
+        allowCode: promo.allow_code,
+        allowAuto: promo.allow_auto,
         branchIds: (targetRes.data ?? []).map((row) => row.branch_id),
-        itemIds: (itemTargets.data ?? []).map((row) => row.menu_item_id),
+        itemIds: (itemTargets.data ?? [])
+          .filter((row) => row.item_role === "eligible")
+          .map((row) => row.menu_item_id),
+        buyItemIds: (itemTargets.data ?? [])
+          .filter((row) => row.item_role === "buy")
+          .map((row) => row.menu_item_id),
+        getItemIds: (itemTargets.data ?? [])
+          .filter((row) => row.item_role === "get")
+          .map((row) => row.menu_item_id),
         reusableCode: reusable?.code ?? "",
       }}
     />

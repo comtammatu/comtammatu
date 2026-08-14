@@ -49,13 +49,18 @@ const upsertSchema = z
       .default(["dine_in", "takeaway"]),
     bxgyBuyQty: z.number().int().min(1).nullable().optional(),
     bxgyGetQty: z.number().int().min(1).nullable().optional(),
+    freeSideQty: z.number().int().min(1).nullable().optional(),
+    allowCode: z.boolean().default(true),
+    allowAuto: z.boolean().default(false),
     branchIds: z.array(z.number().int().positive()).default([]),
     items: z.array(itemSchema).default([]),
     reusableCode: z.string().trim().max(32).optional().default(""),
   })
   .superRefine((values, ctx) => {
     if (
-      (values.kind === "order_pct" || values.kind === "order_vnd") &&
+      (values.kind === "order_pct" ||
+        values.kind === "order_vnd" ||
+        (values.kind === "free_side" && values.allowCode)) &&
       values.reusableCode.trim() === ""
     ) {
       ctx.addIssue({
@@ -63,6 +68,22 @@ const upsertSchema = z
         path: ["reusableCode"],
         message: "Mã giảm không được để trống",
       });
+    }
+    if (values.kind === "free_side") {
+      if (!values.allowCode && !values.allowAuto) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["allowCode"],
+          message: "Chọn ít nhất một cách kích hoạt",
+        });
+      }
+      if ((values.freeSideQty ?? 0) < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["freeSideQty"],
+          message: "Số phần tặng phải từ 1",
+        });
+      }
     }
   });
 
@@ -114,6 +135,9 @@ export const upsertPromotion = withAction(
       p_service_modes: input.serviceModes,
       p_bxgy_buy_qty: input.bxgyBuyQty ?? null,
       p_bxgy_get_qty: input.bxgyGetQty ?? null,
+      p_free_side_qty: input.freeSideQty ?? null,
+      p_allow_code: input.allowCode,
+      p_allow_auto: input.allowAuto,
       p_branch_ids: input.branchIds,
       p_items: input.items,
       p_reusable_code: input.reusableCode.trim().toUpperCase(),

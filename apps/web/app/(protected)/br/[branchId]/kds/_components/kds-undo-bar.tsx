@@ -50,10 +50,7 @@ export function KdsUndoBar({ action, onRecall, onDismiss }: KdsUndoBarProps) {
     }
   };
 
-  const itemText =
-    action.itemCount > 1
-      ? `${String(action.itemCount)} món`
-      : "1 món";
+  const itemText = KDS_VI.undoItemCount(action.itemCount);
 
   return (
     <div

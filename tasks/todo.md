@@ -7,18 +7,14 @@
 
 ## Redesign promotions create + apply (free side)
 
-State: ready
+State: verify
 Kind: feature
 Tier: T3
 Lane: promotions/pos
 Exit: Owner creates any promo kind via kind-first DOC-WORKFLOW; cashiers/waiters apply codes and complete free-side selection; auto free-side offers appear without code; money lands on existing discount columns (ADR 0034); `corepack pnpm verify` green after Owner Accept of this design.
-Evidence: Amended ADR 0039; migration + RPCs; Owner form + DiscountSheet/picker; static + RPC tests.
+Evidence: Amended ADR 0039 / module / screen-map; migration `20260814114800_promotion_free_side.sql` applied on Production `enloyfnuerqgaqderbwb`; `corepack pnpm db:types`; Owner form + POS flow; `promotions-static` 4/4; `corepack pnpm verify` green.
 
-- [ ] Owner Accept design below (1B + code&auto free_side).
-- [ ] Amend ADR 0039 / module / screen-map; add `free_side` kind + selection RPCs.
-- [ ] Redesign Owner `/promotions` form (kind-first sections for all kinds).
-- [ ] Redesign POS `Mã giảm` flow + free-side picker + auto offer chip.
-- [ ] Targeted tests + `corepack pnpm verify`.
+- [ ] Live smoke: Owner create free_side (Com suon buy + Bi/Cha/Trung get, N=1, Code+Auto) -> POS code pick side -> auto offer chip pick side.
 
 ## Fix paid-receipt reprint and VAT-inclusive bill print
 

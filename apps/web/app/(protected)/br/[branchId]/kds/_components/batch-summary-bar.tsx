@@ -75,7 +75,7 @@ export function BatchSummaryBar({ orders, className }: BatchSummaryBarProps) {
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 shrink-0 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          className="shrink-0 gap-1.5 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-label={

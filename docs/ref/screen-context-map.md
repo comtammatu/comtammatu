@@ -191,12 +191,15 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 - **Gia đình / plane:** `control_surface` (ADR 0039). Owner-only catalog.
 - **Archetype:** `/promotions` = `LIST`; `/promotions/new` và `/promotions/[id]` =
-  `DOC-WORKFLOW`.
+  `DOC-WORKFLOW` (kind-first sections).
 - **Actor:** `owner` (`promo:read` / `promo:write` / `promo:issue`).
-- **Job:** Tạo chiến dịch và mã; POS thu ngân nhập `Mã giảm` (`pos:use`).
-- **Ưu tiên data:** Tên, loại, trạng thái, mã. **Không:** CRM, loyalty, SKU voucher.
+- **Job:** Tạo chiến dịch và mã (kể cả miễn phí ăn kèm); POS thu ngân/phục vụ
+  nhập `Mã giảm` hoặc chọn ăn kèm từ offer tự động (`pos:use`).
+- **Ưu tiên data:** Tên, loại, trạng thái, mã, món điều kiện / ăn kèm tặng.
+  **Không:** CRM, loyalty, SKU voucher.
 - **POS:** Chiết khấu thủ công = `pos:apply_discount`; tiền vẫn ghi cột discount
-  hiện có (ADR 0034).
+  hiện có (ADR 0034). `free_side` = StationSheet chọn N phần ăn kèm rồi mới ghi
+  chiết khấu món.
 
 ---
 

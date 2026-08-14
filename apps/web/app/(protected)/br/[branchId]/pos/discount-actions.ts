@@ -664,6 +664,18 @@ export async function previewPromotionCode(
     name: string;
     code: string;
     amount: number;
+    kind: string;
+    needsSideSelection: boolean;
+    freeQty: number | null;
+    candidates: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      name: string;
+      unit_price: number;
+      max_units: number;
+      parent_name: string;
+    }>;
+    amountHint: number | null;
   }>
 > {
   const scoped = await posUseForBranch(branchId);
@@ -692,23 +704,63 @@ export async function previewPromotionCode(
       errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }
-  const result = data as { name?: string; code?: string; amount?: number } | null;
+  const result = data as {
+    name?: string;
+    code?: string;
+    amount?: number;
+    kind?: string;
+    needs_side_selection?: boolean;
+    free_qty?: number;
+    candidates?: unknown;
+    amount_hint?: number;
+  } | null;
   if (!result) {
     return { success: false, error: "Không thể xem mức giảm." };
   }
+  const candidates = Array.isArray(result.candidates)
+    ? result.candidates.flatMap((row) => {
+        if (!row || typeof row !== "object") return [];
+        const r = row as Record<string, unknown>;
+        return [
+          {
+            order_item_id: Number(r.order_item_id),
+            side_item_id: Number(r.side_item_id),
+            name: String(r.name ?? ""),
+            unit_price: Number(r.unit_price ?? 0),
+            max_units: Number(r.max_units ?? 0),
+            parent_name: String(r.parent_name ?? ""),
+          },
+        ];
+      })
+    : [];
   return {
     success: true,
     data: {
       name: String(result.name ?? ""),
       code: String(result.code ?? parsed.data.code),
       amount: Number(result.amount ?? 0),
+      kind: String(result.kind ?? ""),
+      needsSideSelection: result.needs_side_selection === true,
+      freeQty:
+        result.free_qty == null ? null : Number(result.free_qty),
+      candidates,
+      amountHint:
+        result.amount_hint == null ? null : Number(result.amount_hint),
     },
   };
 }
 
 export async function applyPromotionCode(
   branchId: number,
-  input: { orderId: number; code: string },
+  input: {
+    orderId: number;
+    code: string;
+    sideSelections?: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      units: number;
+    }>;
+  },
 ): Promise<
   ActionResult<{
     order_id: number;
@@ -733,6 +785,7 @@ export async function applyPromotionCode(
   const { data, error } = await scoped.ctx.supabase.rpc("apply_promotion_code", {
     p_order_id: parsed.data.orderId,
     p_code: parsed.data.code,
+    p_side_selections: input.sideSelections ?? null,
   });
   if (error) {
     return {
@@ -761,6 +814,136 @@ export async function applyPromotionCode(
       total_amount: Number(result.total_amount ?? 0),
     },
   };
+}
+
+export async function applyFreeSideSelection(
+  branchId: number,
+  input: {
+    orderId: number;
+    promotionId: number;
+    code?: string | null;
+    selections: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      units: number;
+    }>;
+  },
+): Promise<
+  ActionResult<{
+    order_id: number;
+    name: string;
+    total_amount: number;
+    applied_amount: number;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc(
+    "apply_free_side_selection",
+    {
+      p_order_id: input.orderId,
+      p_promotion_id: input.promotionId,
+      p_code: input.code?.trim() ? input.code.trim().toUpperCase() : null,
+      p_selections: input.selections,
+    },
+  );
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as {
+    order_id?: number;
+    name?: string;
+    total_amount?: number;
+    applied_amount?: number;
+  } | null;
+  if (!result) {
+    return { success: false, error: "Không thể áp khuyến mãi ăn kèm." };
+  }
+  return {
+    success: true,
+    data: {
+      order_id: Number(result.order_id),
+      name: String(result.name ?? ""),
+      total_amount: Number(result.total_amount ?? 0),
+      applied_amount: Number(result.applied_amount ?? 0),
+    },
+  };
+}
+
+export async function evaluateOrderPromotionOffers(
+  branchId: number,
+  orderId: number,
+): Promise<
+  ActionResult<{
+    offers: Array<{
+      promotion_id: number;
+      name: string;
+      free_qty: number;
+      candidates: Array<{
+        order_item_id: number;
+        side_item_id: number;
+        name: string;
+        unit_price: number;
+        max_units: number;
+        parent_name: string;
+      }>;
+      amount_hint: number;
+    }>;
+  }>
+> {
+  const scoped = await posUseForBranch(branchId);
+  if (!scoped.ok) {
+    return { success: false, error: scoped.error, errorCode: scoped.errorCode };
+  }
+  const { data, error } = await scoped.ctx.supabase.rpc(
+    "evaluate_order_promotions",
+    { p_order_id: orderId },
+  );
+  if (error) {
+    return {
+      success: false,
+      error: mapDiscountRpcError(error.message),
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    };
+  }
+  const result = data as { offers?: unknown } | null;
+  const offersRaw = Array.isArray(result?.offers) ? result.offers : [];
+  const offers = offersRaw.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const r = row as Record<string, unknown>;
+    const candidates = Array.isArray(r.candidates)
+      ? r.candidates.flatMap((c) => {
+          if (!c || typeof c !== "object") return [];
+          const side = c as Record<string, unknown>;
+          return [
+            {
+              order_item_id: Number(side.order_item_id),
+              side_item_id: Number(side.side_item_id),
+              name: String(side.name ?? ""),
+              unit_price: Number(side.unit_price ?? 0),
+              max_units: Number(side.max_units ?? 0),
+              parent_name: String(side.parent_name ?? ""),
+            },
+          ];
+        })
+      : [];
+    return [
+      {
+        promotion_id: Number(r.promotion_id),
+        name: String(r.name ?? ""),
+        free_qty: Number(r.free_qty ?? 0),
+        candidates,
+        amount_hint: Number(r.amount_hint ?? 0),
+      },
+    ];
+  });
+  return { success: true, data: { offers } };
 }
 
 export async function clearPromotion(

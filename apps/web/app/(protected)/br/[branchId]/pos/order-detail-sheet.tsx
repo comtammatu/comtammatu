@@ -59,7 +59,9 @@ import {
   clearOrderItemDiscount,
   previewPromotionCode,
   applyPromotionCode,
+  applyFreeSideSelection,
   clearPromotion,
+  evaluateOrderPromotionOffers,
   setOrderServiceCharge,
   splitOrder,
   mergeOrders,
@@ -351,6 +353,20 @@ export function OrderDetailSheet({
   onCreateOrderOnTable,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
+  const [freeSideOffer, setFreeSideOffer] = useState<{
+    promotionId: number;
+    name: string;
+    freeQty: number;
+    candidates: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      name: string;
+      unit_price: number;
+      max_units: number;
+      parent_name: string;
+    }>;
+  } | null>(null);
+  const [discountOfferMode, setDiscountOfferMode] = useState(false);
   const [canManage, setCanManage] = useState(false);
   const [canVoidPaid, setCanVoidPaid] = useState(false);
   const [canApplyDiscount, setCanApplyDiscount] = useState(false);
@@ -416,11 +432,32 @@ export function OrderDetailSheet({
       setCanVoidPaid(result.data.canVoidPaidOrder);
       setCanApplyDiscount(result.data.canApplyDiscount);
       setError(null);
+      const offerResult = await evaluateOrderPromotionOffers(
+        branchId,
+        targetOrderId,
+      );
+      if (orderIdRef.current !== targetOrderId) return;
+      if (offerResult.success && offerResult.data) {
+        const first = offerResult.data.offers[0];
+        setFreeSideOffer(
+          first && first.free_qty > 0 && first.candidates.length > 0
+            ? {
+                promotionId: first.promotion_id,
+                name: first.name,
+                freeQty: first.free_qty,
+                candidates: first.candidates,
+              }
+            : null,
+        );
+      } else {
+        setFreeSideOffer(null);
+      }
     } else {
       setData(null);
+      setFreeSideOffer(null);
       setError(result.error ?? messages.pos.order.loadFailed);
     }
-  }, []);
+  }, [branchId]);
 
   // Mount + refresh-token + post-mutation paths: wrap in the REFETCH
   // transition only. Action buttons stay enabled while the background
@@ -993,18 +1030,65 @@ export function OrderDetailSheet({
         success: true as const,
         amount: r.data.amount,
         name: r.data.name,
+        kind: r.data.kind,
+        needsSideSelection: r.data.needsSideSelection,
+        freeQty: r.data.freeQty,
+        candidates: r.data.candidates,
+        amountHint: r.data.amountHint,
       };
     }
     return { success: false as const, error: r.error ?? "Không thể xem mức giảm." };
   };
 
-  const handleApplyPromoCode = (code: string) => {
+  const handleApplyPromoCode = (
+    code: string,
+    sideSelections?: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      units: number;
+    }>,
+  ) => {
     if (orderId === null) return;
     startMutation(async () => {
-      const r = await applyPromotionCode(branchId, { orderId, code });
+      const r = await applyPromotionCode(branchId, {
+        orderId,
+        code,
+        sideSelections,
+      });
       if (r.success) {
         notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
+        setDiscountOfferMode(false);
+        load();
+      } else {
+        notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
+      }
+    });
+  };
+
+  const handleApplyFreeSide = (
+    promotionId: number,
+    selections: Array<{
+      order_item_id: number;
+      side_item_id: number;
+      units: number;
+    }>,
+    code?: string | null,
+  ) => {
+    if (orderId === null) return;
+    startMutation(async () => {
+      const r = await applyFreeSideSelection(branchId, {
+        orderId,
+        promotionId,
+        code,
+        selections,
+      });
+      if (r.success) {
+        notify.success(PROMOTIONS_VI.applied);
+        setShowDiscount(false);
+        setDiscountOfferMode(false);
+        setFreeSideOffer(null);
+        load();
       } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
       }
@@ -1018,6 +1102,8 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.cleared);
         setShowDiscount(false);
+        setDiscountOfferMode(false);
+        load();
       } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
       }
@@ -1405,6 +1491,23 @@ export function OrderDetailSheet({
                     </span>
                   </div>
                 ) : null}
+                {!hasPromotion && freeSideOffer ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="touch"
+                    className="w-full justify-between"
+                    onClick={() => {
+                      setDiscountOfferMode(true);
+                      setShowDiscount(true);
+                    }}
+                  >
+                    <span>{PROMOTIONS_VI.posOfferChip}</span>
+                    <span className="truncate text-muted-foreground">
+                      {freeSideOffer.name}
+                    </span>
+                  </Button>
+                ) : null}
                 {activeItemCount > 0 && (
                   <OrderTotalsSummary
                     subtotal={data.subtotal}
@@ -1562,9 +1665,10 @@ export function OrderDetailSheet({
                                     className="min-h-12 text-sm"
                                     disabled={isMutating}
                                     onClick={() =>
-                                      runAfterPendingPaymentUnlock(() =>
-                                        setShowDiscount(true),
-                                      )
+                                      runAfterPendingPaymentUnlock(() => {
+                                        setDiscountOfferMode(false);
+                                        setShowDiscount(true);
+                                      })
                                     }
                                   >
                                     <IconCircleDollarSign />
@@ -1748,7 +1852,10 @@ export function OrderDetailSheet({
       {data && (
         <DiscountSheet
           open={showDiscount}
-          onOpenChange={setShowDiscount}
+          onOpenChange={(open) => {
+            setShowDiscount(open);
+            if (!open) setDiscountOfferMode(false);
+          }}
           subtotal={orderDiscountBase}
           subtotalLabel={
             data.item_discount_amount > 0
@@ -1769,8 +1876,18 @@ export function OrderDetailSheet({
             enabled: true,
             canManual: canShowManualDiscount,
             hasPromotion: Boolean(hasPromotion),
+            initialOffer:
+              discountOfferMode && freeSideOffer
+                ? {
+                    promotionId: freeSideOffer.promotionId,
+                    name: freeSideOffer.name,
+                    freeQty: freeSideOffer.freeQty,
+                    candidates: freeSideOffer.candidates,
+                  }
+                : null,
             onPreview: handlePreviewPromoCode,
             onApplyCode: handleApplyPromoCode,
+            onApplyFreeSide: handleApplyFreeSide,
             onClearPromo: handleClearPromo,
           }}
         />

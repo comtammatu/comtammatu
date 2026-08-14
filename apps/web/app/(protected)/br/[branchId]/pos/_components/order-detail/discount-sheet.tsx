@@ -14,6 +14,14 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 
 import { ACTIONS_VI, FORM_VI, POS_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
 import { StationSheet } from "@/components/surface";
@@ -27,6 +35,28 @@ const FALLBACK_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
 /** Item-level discount is VND-only (ADR 0034). Stable identity for callers. */
 export const ITEM_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
 
+export type PromoSideCandidate = {
+  order_item_id: number;
+  side_item_id: number;
+  name: string;
+  unit_price: number;
+  max_units: number;
+  parent_name: string;
+};
+
+export type PromoPreviewResult =
+  | {
+      success: true;
+      amount: number;
+      name: string;
+      kind?: string;
+      needsSideSelection?: boolean;
+      freeQty?: number | null;
+      candidates?: PromoSideCandidate[];
+      amountHint?: number | null;
+    }
+  | { success: false; error: string };
+
 interface DiscountSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,13 +64,9 @@ interface DiscountSheetProps {
   subtotalLabel?: string;
   totalLabel?: string;
   clearLabel?: string;
-  /** Allowed discount modes. Item discounts are VND-only (ADR 0034). */
   modes?: readonly DiscountType[];
-  /** Subtotal trước giảm — dùng để live preview + clamp UI. */
   subtotal: number;
-  /** Phụ phí trên đơn — cộng vào total preview. */
   serviceCharge: number;
-  /** Discount hiện tại trên đơn (để pre-fill khi mở edit). */
   current: {
     type: DiscountType | null;
     value: number | null;
@@ -53,31 +79,44 @@ interface DiscountSheetProps {
     value: number;
     note: string;
   }) => void;
-  /** Bỏ chiết khấu (gọi clear_order_discount). Chỉ active khi đang có discount.
-   * Reason ≥3 ký tự — cùng ô textarea với "Áp dụng" để giữ UX gọn. */
   onClear: (reason: string) => void;
   promo?: {
     enabled: boolean;
     canManual: boolean;
     hasPromotion: boolean;
-    onPreview: (
+    initialOffer?: {
+      promotionId: number;
+      name: string;
+      freeQty: number;
+      candidates: PromoSideCandidate[];
+      code?: string | null;
+    } | null;
+    onPreview: (code: string) => Promise<PromoPreviewResult>;
+    onApplyCode: (
       code: string,
-    ) => Promise<{ success: true; amount: number; name: string } | { success: false; error: string }>;
-    onApplyCode: (code: string) => void;
+      sideSelections?: Array<{
+        order_item_id: number;
+        side_item_id: number;
+        units: number;
+      }>,
+    ) => void;
+    onApplyFreeSide?: (
+      promotionId: number,
+      selections: Array<{
+        order_item_id: number;
+        side_item_id: number;
+        units: number;
+      }>,
+      code?: string | null,
+    ) => void;
     onClearPromo: (reason: string) => void;
   };
 }
 
-/**
- * Apply / edit / clear an order-level discount. Two tabs (% vs VND); the
- * input clamps live to the max for that tab (UI auto-correct per Q1 owner
- * decision: cashier nhập 150 → ô % tự về 100). Server clamps again as
- * defense-in-depth.
- *
- * Sheet (not Dialog) so the cashier on a mobile terminal sees the full
- * keyboard above the content. Dialog patterns work too but Sheet keeps the
- * footer pinned which matters when previewing the new total.
- */
+function candidateKey(c: PromoSideCandidate): string {
+  return `${String(c.order_item_id)}:${String(c.side_item_id)}`;
+}
+
 export function DiscountSheet({
   open,
   onOpenChange,
@@ -94,8 +133,6 @@ export function DiscountSheet({
   onClear,
   promo,
 }: DiscountSheetProps) {
-  // Stabilize mode list identity — inline `modes={["vnd"]}` / default arrays
-  // would otherwise churn every parent render and re-seed (wiping typed codes).
   const modesKey = modes.join("|");
   const allowedModes = useMemo((): readonly DiscountType[] => {
     const parts = modesKey
@@ -117,21 +154,26 @@ export function DiscountSheet({
   const [valueText, setValueText] = useState<string>(
     current.value != null ? String(current.value) : "",
   );
-  const [note, setNote] = useState<string>(current.note ?? "");
+  const [note, setNote] = useState(current.note ?? "");
   const [codeText, setCodeText] = useState("");
   const [preview, setPreview] = useState<{
     amount: number;
     name: string;
+    kind: string;
+    needsSideSelection: boolean;
+    freeQty: number | null;
+    candidates: PromoSideCandidate[];
+    amountHint: number | null;
+    promotionId?: number;
   } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewPending, setPreviewPending] = useState(false);
+  const [sideUnits, setSideUnits] = useState<Record<string, number>>({});
   const wasOpenRef = useRef(false);
 
   const activePane: "code" | "manual" =
     showPromo && (!showManual || pane === "code") ? "code" : "manual";
 
-  // Seed only on open rising edge. Re-seeding while open (realtime refetch,
-  // unstable modes array) cleared promo codeText on every keystroke.
   useEffect(() => {
     if (!open) {
       wasOpenRef.current = false;
@@ -146,10 +188,24 @@ export function DiscountSheet({
     setType(nextType);
     setValueText(current.value != null ? String(current.value) : "");
     setNote(current.note ?? "");
-    setCodeText("");
-    setPreview(null);
+    setCodeText(promo?.initialOffer?.code ?? "");
     setPreviewError(null);
+    setSideUnits({});
     setPane(showPromo ? "code" : "manual");
+    if (promo?.initialOffer) {
+      setPreview({
+        amount: 0,
+        name: promo.initialOffer.name,
+        kind: "free_side",
+        needsSideSelection: true,
+        freeQty: promo.initialOffer.freeQty,
+        candidates: promo.initialOffer.candidates,
+        amountHint: null,
+        promotionId: promo.initialOffer.promotionId,
+      });
+    } else {
+      setPreview(null);
+    }
   }, [
     open,
     current.type,
@@ -157,12 +213,11 @@ export function DiscountSheet({
     current.note,
     allowedModes,
     showPromo,
+    promo?.initialOffer,
   ]);
 
   const hasExistingDiscount = current.amount > 0;
 
-  // Parse + clamp the typed value so the preview always reflects what the
-  // server will accept. Empty / NaN / negative => 0.
   const numericValue = useMemo(() => {
     const trimmed = valueText.trim();
     if (trimmed === "") return 0;
@@ -172,8 +227,6 @@ export function DiscountSheet({
     return Math.min(n, Math.max(subtotal, 0));
   }, [valueText, type, subtotal]);
 
-  // Mirror server's compute_discount_amount so the cashier preview matches
-  // the row that lands in the DB. FLOOR for pct → integer VND.
   const previewDiscountAmount = useMemo(() => {
     if (numericValue <= 0 || subtotal <= 0) return 0;
     if (type === "pct") {
@@ -187,6 +240,20 @@ export function DiscountSheet({
     subtotal + serviceCharge - previewDiscountAmount,
   );
 
+  const selectedUnitsTotal = useMemo(() => {
+    return Object.values(sideUnits).reduce((sum, n) => sum + n, 0);
+  }, [sideUnits]);
+
+  const selectedAmount = useMemo(() => {
+    if (!preview?.candidates) return 0;
+    let sum = 0;
+    for (const c of preview.candidates) {
+      const units = sideUnits[candidateKey(c)] ?? 0;
+      if (units > 0) sum += units * c.unit_price;
+    }
+    return sum;
+  }, [preview, sideUnits]);
+
   const noteTrimLen = note.trim().length;
   const noteValid = noteTrimLen >= 3;
   const valueValid = previewDiscountAmount > 0;
@@ -195,17 +262,19 @@ export function DiscountSheet({
   const codeTrim = codeText.trim().toUpperCase();
   const canPreviewCode =
     showPromo && codeTrim.length >= 3 && !isPending && !previewPending;
+  const needsPick = preview?.needsSideSelection === true;
+  const pickComplete =
+    !needsPick ||
+    (preview?.freeQty != null && selectedUnitsTotal === preview.freeQty);
   const canApplyCode =
     showPromo &&
     preview != null &&
-    preview.amount > 0 &&
     !isPending &&
-    !promo?.hasPromotion;
+    !promo?.hasPromotion &&
+    pickComplete &&
+    (needsPick ? selectedAmount > 0 : preview.amount > 0);
   const canClearPromo =
-    showPromo &&
-    promo?.hasPromotion === true &&
-    noteValid &&
-    !isPending;
+    showPromo && promo?.hasPromotion === true && noteValid && !isPending;
 
   const handleClose = () => {
     if (isPending) return;
@@ -233,7 +302,16 @@ export function DiscountSheet({
     const result = await promo.onPreview(codeTrim);
     setPreviewPending(false);
     if (result.success) {
-      setPreview({ amount: result.amount, name: result.name });
+      setPreview({
+        amount: result.amount,
+        name: result.name,
+        kind: result.kind ?? "",
+        needsSideSelection: result.needsSideSelection === true,
+        freeQty: result.freeQty ?? null,
+        candidates: result.candidates ?? [],
+        amountHint: result.amountHint ?? null,
+      });
+      setSideUnits({});
       setPreviewError(null);
     } else {
       setPreview(null);
@@ -241,12 +319,38 @@ export function DiscountSheet({
     }
   };
 
-  const handleApplyCode = () => {
-    if (!canApplyCode || !promo) return;
-    promo.onApplyCode(codeTrim);
+  const buildSelections = () => {
+    if (!preview?.candidates) return [];
+    return preview.candidates.flatMap((c) => {
+      const units = sideUnits[candidateKey(c)] ?? 0;
+      if (units < 1) return [];
+      return [
+        {
+          order_item_id: c.order_item_id,
+          side_item_id: c.side_item_id,
+          units,
+        },
+      ];
+    });
   };
 
-  const codePreviewAmount = preview?.amount ?? 0;
+  const handleApplyCode = () => {
+    if (!canApplyCode || !promo || !preview) return;
+    const selections = needsPick ? buildSelections() : undefined;
+    if (preview.promotionId != null && promo.onApplyFreeSide) {
+      promo.onApplyFreeSide(
+        preview.promotionId,
+        selections ?? [],
+        codeTrim || promo.initialOffer?.code || null,
+      );
+      return;
+    }
+    promo.onApplyCode(codeTrim, selections);
+  };
+
+  const codePreviewAmount = needsPick
+    ? selectedAmount
+    : (preview?.amount ?? 0);
   const codePreviewTotal = Math.max(
     0,
     subtotal + serviceCharge - codePreviewAmount,
@@ -262,7 +366,9 @@ export function DiscountSheet({
       footerClassName="sm:flex-row sm:justify-between"
       footer={
         <>
-          {(activePane === "code" ? canClearPromo : canClear && !promo?.hasPromotion) ? (
+          {(activePane === "code"
+            ? canClearPromo
+            : canClear && !promo?.hasPromotion) ? (
             <Button
               type="button"
               variant="destructive"
@@ -294,7 +400,9 @@ export function DiscountSheet({
                 disabled={!canApplyCode}
                 onClick={handleApplyCode}
               >
-                {PROMOTIONS_VI.posApplyCode}
+                {needsPick
+                  ? PROMOTIONS_VI.posPickSidesApply
+                  : PROMOTIONS_VI.posApplyCode}
               </Button>
             ) : (
               <Button
@@ -310,138 +418,149 @@ export function DiscountSheet({
         </>
       }
     >
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
-          {showPromo && showManual ? (
-            <Tabs
-              value={activePane}
-              onValueChange={(value) => setPane(value as "code" | "manual")}
-            >
-              <TabsList size="touch" className="w-full">
-                <TabsTrigger value="code" className="flex-1">
-                  {PROMOTIONS_VI.posCodeTab}
-                </TabsTrigger>
-                <TabsTrigger value="manual" className="flex-1">
-                  {POS_VI.discountTitle}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          ) : null}
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        {showPromo && showManual ? (
+          <Tabs
+            value={activePane}
+            onValueChange={(value) => setPane(value as "code" | "manual")}
+          >
+            <TabsList size="touch" className="w-full">
+              <TabsTrigger value="code" className="flex-1">
+                {PROMOTIONS_VI.posCodeTab}
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex-1">
+                {POS_VI.discountTitle}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : null}
 
-          {activePane === "code" && promo ? (
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="promo-code-input">
-                  {PROMOTIONS_VI.posCodeLabel}
-                </FieldLabel>
-                <Input
-                  id="promo-code-input"
-                  value={codeText}
-                  onChange={(event) => {
-                    setCodeText(event.target.value);
-                    setPreview(null);
-                    setPreviewError(null);
-                  }}
-                  placeholder={PROMOTIONS_VI.posCodePlaceholder}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  controlSize="touch"
-                  className="font-mono"
-                  inputMode="text"
-                />
-              </Field>
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                disabled={!canPreviewCode}
-                onClick={() => void handlePreviewCode()}
-              >
-                {PROMOTIONS_VI.posPreview}
-              </Button>
-              {previewError ? (
-                <p className="text-sm text-destructive">{previewError}</p>
-              ) : null}
-              {promo.hasPromotion && current.note ? (
-                <p className="text-sm">
-                  {PROMOTIONS_VI.posPromoChip}: {current.note}
-                </p>
-              ) : null}
-              <Field data-invalid={!noteValid && noteTrimLen > 0}>
-                <FieldLabel htmlFor="discount-note">
-                  {POS_VI.discountReasonLabel}
-                </FieldLabel>
-                <Textarea
-                  id="discount-note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={POS_VI.discountReasonPlaceholder}
-                  aria-invalid={!noteValid && noteTrimLen > 0}
-                  rows={2}
-                />
-                <FieldDescription>
-                  {POS_VI.discountNoteHint(noteTrimLen)}
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          ) : (
-            <>
-          {allowedModes.length > 1 ? (
-            <Tabs
-              value={type}
-              onValueChange={(v) => {
-                setType(v as DiscountType);
-                // Reset the value on tab switch — 10% and 10đ mean different
-                // things; keeping the old number invites mistakes.
-                setValueText("");
-              }}
-            >
-              <TabsList size="touch" className="w-full">
-                {allowedModes.includes("pct") ? (
-                  <TabsTrigger value="pct" className="flex-1">
-                    {POS_VI.discountPctTab}
-                  </TabsTrigger>
-                ) : null}
-                {allowedModes.includes("vnd") ? (
-                  <TabsTrigger value="vnd" className="flex-1">
-                    {POS_VI.discountVndTab}
-                  </TabsTrigger>
-                ) : null}
-              </TabsList>
-            </Tabs>
-          ) : null}
-
+        {activePane === "code" && promo ? (
           <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="discount-value">
-                {type === "pct"
-                  ? POS_VI.discountPctLabel
-                  : POS_VI.discountVndLabel}
-              </FieldLabel>
-              <FormattedNumberInput
-                id="discount-value"
-                maxFractionDigits={type === "pct" ? 2 : 0}
-                value={valueText}
-                onValueChange={setValueText}
-                placeholder={
-                  type === "pct"
-                    ? POS_VI.discountPctPlaceholder
-                    : POS_VI.discountVndPlaceholder
-                }
-              />
-              <FieldDescription>
-                {type === "pct"
-                  ? POS_VI.discountPctMaxHint
-                  : `Tối đa ${formatVND(subtotal)} (tự giới hạn nếu nhập quá).`}
-              </FieldDescription>
-            </Field>
-
+            {!promo.initialOffer ? (
+              <>
+                <Field>
+                  <FieldLabel htmlFor="promo-code-input">
+                    {PROMOTIONS_VI.posCodeLabel}
+                  </FieldLabel>
+                  <Input
+                    id="promo-code-input"
+                    value={codeText}
+                    onChange={(event) => {
+                      setCodeText(event.target.value);
+                      setPreview(null);
+                      setPreviewError(null);
+                      setSideUnits({});
+                    }}
+                    placeholder={PROMOTIONS_VI.posCodePlaceholder}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    controlSize="touch"
+                    className="font-mono"
+                    inputMode="text"
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  disabled={!canPreviewCode}
+                  onClick={() => void handlePreviewCode()}
+                >
+                  {PROMOTIONS_VI.posPreview}
+                </Button>
+              </>
+            ) : null}
+            {previewError ? (
+              <p className="text-sm text-destructive">{previewError}</p>
+            ) : null}
+            {preview ? (
+              <div className="flex flex-col gap-1 text-sm">
+                <p>
+                  {PROMOTIONS_VI.posPreviewName}:{" "}
+                  <span className="font-medium">{preview.name}</span>
+                </p>
+                {needsPick && preview.freeQty != null ? (
+                  <p className="text-muted-foreground">
+                    {PROMOTIONS_VI.posPickSidesHint(preview.freeQty)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {needsPick && preview?.candidates ? (
+              <div className="flex flex-col gap-2">
+                <FieldLabel>{PROMOTIONS_VI.posPickSidesTitle}</FieldLabel>
+                <ItemGroup className="gap-2">
+                  {preview.candidates.map((c) => {
+                    const key = candidateKey(c);
+                    const units = sideUnits[key] ?? 0;
+                    const checked = units > 0;
+                    return (
+                      <Item
+                        key={key}
+                        variant="outline"
+                        className="items-start gap-3"
+                        render={<label />}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => {
+                            setSideUnits((prev) => {
+                              const next = { ...prev };
+                              if (value === true) {
+                                const used = Object.entries(next).reduce(
+                                  (sum, [k, n]) =>
+                                    k === key ? sum : sum + n,
+                                  0,
+                                );
+                                const remaining =
+                                  (preview.freeQty ?? 1) - used;
+                                next[key] = Math.min(
+                                  Math.max(remaining, 0),
+                                  c.max_units,
+                                  1,
+                                );
+                                if (next[key] < 1) delete next[key];
+                              } else {
+                                delete next[key];
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                        <ItemContent className="min-w-0">
+                          <ItemTitle>{c.name}</ItemTitle>
+                          {c.parent_name ? (
+                            <ItemDescription>{c.parent_name}</ItemDescription>
+                          ) : null}
+                          <ItemDescription className="tabular-nums">
+                            {formatVND(c.unit_price)} ·{" "}
+                            {PROMOTIONS_VI.posMaxUnits(c.max_units)}
+                          </ItemDescription>
+                        </ItemContent>
+                      </Item>
+                    );
+                  })}
+                </ItemGroup>
+                {!pickComplete ? (
+                  <p className="text-sm text-muted-foreground">
+                    {PROMOTIONS_VI.posNeedsSidePick}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {promo.hasPromotion && current.note ? (
+              <p className="text-sm">
+                {PROMOTIONS_VI.posPromoChip}: {current.note}
+              </p>
+            ) : null}
             <Field data-invalid={!noteValid && noteTrimLen > 0}>
-              <FieldLabel htmlFor="discount-note-manual">
+              <FieldLabel htmlFor="discount-note">
                 {POS_VI.discountReasonLabel}
               </FieldLabel>
               <Textarea
-                id="discount-note-manual"
+                id="discount-note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={POS_VI.discountReasonPlaceholder}
@@ -453,47 +572,115 @@ export function DiscountSheet({
               </FieldDescription>
             </Field>
           </FieldGroup>
-            </>
-          )}
+        ) : (
+          <>
+            {allowedModes.length > 1 ? (
+              <Tabs
+                value={type}
+                onValueChange={(v) => {
+                  setType(v as DiscountType);
+                  setValueText("");
+                }}
+              >
+                <TabsList size="touch" className="w-full">
+                  {allowedModes.includes("pct") ? (
+                    <TabsTrigger value="pct" className="flex-1">
+                      {POS_VI.discountPctTab}
+                    </TabsTrigger>
+                  ) : null}
+                  {allowedModes.includes("vnd") ? (
+                    <TabsTrigger value="vnd" className="flex-1">
+                      {POS_VI.discountVndTab}
+                    </TabsTrigger>
+                  ) : null}
+                </TabsList>
+              </Tabs>
+            ) : null}
 
-          <Frame className="border-border/60 bg-muted/50 p-3 text-sm">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="discount-value">
+                  {type === "pct"
+                    ? POS_VI.discountPctLabel
+                    : POS_VI.discountVndLabel}
+                </FieldLabel>
+                <FormattedNumberInput
+                  id="discount-value"
+                  maxFractionDigits={type === "pct" ? 2 : 0}
+                  value={valueText}
+                  onValueChange={setValueText}
+                  placeholder={
+                    type === "pct"
+                      ? POS_VI.discountPctPlaceholder
+                      : POS_VI.discountVndPlaceholder
+                  }
+                />
+                <FieldDescription>
+                  {type === "pct"
+                    ? POS_VI.discountPctMaxHint
+                    : `Tối đa ${formatVND(subtotal)} (tự giới hạn nếu nhập quá).`}
+                </FieldDescription>
+              </Field>
+
+              <Field data-invalid={!noteValid && noteTrimLen > 0}>
+                <FieldLabel htmlFor="discount-note-manual">
+                  {POS_VI.discountReasonLabel}
+                </FieldLabel>
+                <Textarea
+                  id="discount-note-manual"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={POS_VI.discountReasonPlaceholder}
+                  aria-invalid={!noteValid && noteTrimLen > 0}
+                  rows={2}
+                />
+                <FieldDescription>
+                  {POS_VI.discountNoteHint(noteTrimLen)}
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          </>
+        )}
+
+        <Frame className="border-border/60 bg-muted/50 p-3 text-sm">
+          <div className="flex justify-between text-muted-foreground">
+            <span>{subtotalLabel}</span>
+            <span className="tabular-nums">{formatVND(subtotal)}</span>
+          </div>
+          {serviceCharge > 0 && (
             <div className="flex justify-between text-muted-foreground">
-              <span>{subtotalLabel}</span>
-              <span className="tabular-nums">{formatVND(subtotal)}</span>
+              <span>{POS_VI.serviceChargeTitle}</span>
+              <span className="tabular-nums">{formatVND(serviceCharge)}</span>
             </div>
-            {serviceCharge > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>{POS_VI.serviceChargeTitle}</span>
-                <span className="tabular-nums">{formatVND(serviceCharge)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-muted-foreground">
-              <span>
-                {POS_VI.discountReduceLabel}
-                {activePane === "manual" && type === "pct" && numericValue > 0
-                  ? ` (${formatPercent(numericValue)})`
-                  : ""}
-              </span>
-              <span className="tabular-nums">
-                {(activePane === "code" ? codePreviewAmount : previewDiscountAmount) > 0
-                  ? `-${formatVND(
-                      activePane === "code"
-                        ? codePreviewAmount
-                        : previewDiscountAmount,
-                    )}`
-                  : "—"}
-              </span>
-            </div>
-            <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
-              <span>{totalLabel}</span>
-              <span className="tabular-nums">
-                {formatVND(
-                  activePane === "code" ? codePreviewTotal : previewTotal,
-                )}
-              </span>
-            </div>
-          </Frame>
-        </div>
+          )}
+          <div className="flex justify-between text-muted-foreground">
+            <span>
+              {POS_VI.discountReduceLabel}
+              {activePane === "manual" && type === "pct" && numericValue > 0
+                ? ` (${formatPercent(numericValue)})`
+                : ""}
+            </span>
+            <span className="tabular-nums">
+              {(activePane === "code" ? codePreviewAmount : previewDiscountAmount) >
+              0
+                ? `-${formatVND(
+                    activePane === "code"
+                      ? codePreviewAmount
+                      : previewDiscountAmount,
+                  )}`
+                : "—"}
+            </span>
+          </div>
+          <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
+            <span>{totalLabel}</span>
+            <span className="tabular-nums">
+              {formatVND(
+                activePane === "code" ? codePreviewTotal : previewTotal,
+              )}
+            </span>
+          </div>
+        </Frame>
+      </div>
     </StationSheet>
   );
 }

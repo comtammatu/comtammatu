@@ -6,7 +6,8 @@
 
 **Review tier:** T3 — money, multi-row RPC, RLS, HĐĐT totals
 
-**Amends:** none. Money projection remains ADR 0034.
+**Amends:** 2026-08-14 — `free_side` kind, code/auto activation flags, staff
+side selection before money write. Money projection remains ADR 0034.
 
 ## Context
 
@@ -44,9 +45,13 @@ Item-level VND discounts may coexist unless the campaign sets
 | `voucher_face` | Cashier enters unique `voucher_code` | Order-level VND, clamped to payable; code burns atomically |
 | `auto_order` | `evaluate_order_promotions` when eligible and no order-level discount exists | Order-level `%` or VND; a cashier code wins over auto |
 | `bxgy` | Same evaluate RPC | Item-level VND on cheapest qualifying lines (ADR 0034) |
+| `free_side` | Code and/or auto offer (`allow_code` / `allow_auto`); staff picks N side portions | Item-level VND on parent lines = selected `side.price × units`; do not mutate `sides` JSON |
 
-Buy X get Y never uses order `%`. Kitchen still sees full qty (commercial
-comp, not a void).
+Buy X get Y and free-side never use order `%`. Kitchen still sees full qty and
+full side lists (commercial comp, not a void). `free_side` quota is N portions
+per order redemption. `promotion_items` roles: `buy` = trigger mains, `get` =
+freeable side menu items. Auto path returns offers only; money writes through
+`apply_free_side_selection` (or `apply_promotion_code` with selections).
 
 ### 4. Schedule, lock, zero-total, restructure
 
@@ -62,10 +67,11 @@ comp, not a void).
   `promo:issue` (tenant scope, not delegable). Empty `promotion_branches` means
   every selling branch.
 - Manual `chiết khấu`: `pos:apply_discount`.
-- Published code, unique voucher, and auto: `pos:use` (amount is Owner-configured).
+- Published code, unique voucher, auto, and free-side selection: `pos:use`
+  (amount is Owner-configured).
 
-Cashiers never write catalog tables. Apply/clear/evaluate/preview are
-`SECURITY DEFINER` RPCs.
+Cashiers never write catalog tables. Apply/clear/evaluate/preview/
+`apply_free_side_selection` are `SECURITY DEFINER` RPCs.
 
 ### 6. Unique voucher restore
 
@@ -84,8 +90,10 @@ stays a menu price), selling vouchers as inventory SKUs.
 ## Consequences
 
 - HĐĐT/print/finance keep their current discount readers.
-- POS discount sheet gains a **`Mã giảm`** path beside **`Chiết khấu`**.
-- Owner LIST `/promotions` and DOC-WORKFLOW `/promotions/new` + `/promotions/[id]`.
+- POS discount sheet gains a **`Mã giảm`** path beside **`Chiết khấu`**, with a
+  multi-step side picker for `free_side` and an auto offer chip on order detail.
+- Owner LIST `/promotions` and kind-first DOC-WORKFLOW `/promotions/new` +
+  `/promotions/[id]`.
 
 ## Canonical
 

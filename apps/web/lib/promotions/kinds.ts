@@ -10,6 +10,7 @@ export const PROMOTION_KINDS = [
   "voucher_face",
   "auto_order",
   "bxgy",
+  "free_side",
 ] as const;
 
 export type PromotionKind = (typeof PROMOTION_KINDS)[number];
@@ -35,6 +36,8 @@ export function promotionKindLabel(kind: string): string {
       return PROMOTIONS_VI.kindAuto;
     case "bxgy":
       return PROMOTIONS_VI.kindBxgy;
+    case "free_side":
+      return PROMOTIONS_VI.kindFreeSide;
     default:
       return kind;
   }

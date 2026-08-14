@@ -35,6 +35,8 @@ export const KDS_VI = {
   undoAction: "Hoàn tác",
   undoDismissAria: "Đóng thông báo",
   undoFallbackOrder: "Đơn hàng",
+  undoItemCount: (count: number) =>
+    count > 1 ? `${String(count)} món` : "1 món",
 } as const;
 
 export type KdsKey = keyof typeof KDS_VI;

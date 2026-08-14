@@ -44,8 +44,13 @@ export default async function NewPromotionPage() {
         serviceModes: ["dine_in", "takeaway"],
         bxgyBuyQty: 2,
         bxgyGetQty: 1,
+        freeSideQty: 1,
+        allowCode: true,
+        allowAuto: false,
         branchIds: [],
         itemIds: [],
+        buyItemIds: [],
+        getItemIds: [],
         reusableCode: "",
       }}
     />

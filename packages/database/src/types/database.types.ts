@@ -7191,6 +7191,8 @@ export type Database = {
       }
       promotions: {
         Row: {
+          allow_auto: boolean
+          allow_code: boolean
           bxgy_buy_qty: number | null
           bxgy_get_qty: number | null
           created_at: string
@@ -7198,6 +7200,7 @@ export type Database = {
           discount_type: string | null
           discount_value: number | null
           ends_at: string | null
+          free_side_qty: number | null
           id: number
           kind: string
           max_discount_amount: number | null
@@ -7212,6 +7215,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_auto?: boolean
+          allow_code?: boolean
           bxgy_buy_qty?: number | null
           bxgy_get_qty?: number | null
           created_at?: string
@@ -7219,6 +7224,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           ends_at?: string | null
+          free_side_qty?: number | null
           id?: never
           kind: string
           max_discount_amount?: number | null
@@ -7233,6 +7239,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_auto?: boolean
+          allow_code?: boolean
           bxgy_buy_qty?: number | null
           bxgy_get_qty?: number | null
           created_at?: string
@@ -7240,6 +7248,7 @@ export type Database = {
           discount_type?: string | null
           discount_value?: number | null
           ends_at?: string | null
+          free_side_qty?: number | null
           id?: never
           kind?: string
           max_discount_amount?: number | null
@@ -12827,6 +12836,15 @@ export type Database = {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
       }
+      apply_free_side_selection: {
+        Args: {
+          p_code: string
+          p_order_id: number
+          p_promotion_id: number
+          p_selections: Json
+        }
+        Returns: Json
+      }
       apply_order_discount: {
         Args: {
           p_note: string
@@ -12846,7 +12864,7 @@ export type Database = {
         Returns: Json
       }
       apply_promotion_code: {
-        Args: { p_code: string; p_order_id: number }
+        Args: { p_code: string; p_order_id: number; p_side_selections?: Json }
         Returns: Json
       }
       apply_template_to_user: {
@@ -14701,6 +14719,16 @@ export type Database = {
         }
         Returns: number
       }
+      promotion_apply_free_side_core: {
+        Args: {
+          p_code: Database["public"]["Tables"]["promotion_codes"]["Row"]
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+          p_selections: Json
+          p_uid: string
+        }
+        Returns: number
+      }
       promotion_apply_to_order: {
         Args: {
           p_amount: number
@@ -14715,6 +14743,20 @@ export type Database = {
       promotion_assert_order_mutable: {
         Args: { p_order: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: undefined
+      }
+      promotion_free_side_candidates: {
+        Args: {
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: Json
+      }
+      promotion_free_side_offer_json: {
+        Args: {
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+          p_promo: Database["public"]["Tables"]["promotions"]["Row"]
+        }
+        Returns: Json
       }
       promotion_is_eligible: {
         Args: {
@@ -15740,22 +15782,25 @@ export type Database = {
       }
       upsert_promotion: {
         Args: {
+          p_allow_auto?: boolean
+          p_allow_code?: boolean
           p_branch_ids: number[]
-          p_bxgy_buy_qty: number | null
-          p_bxgy_get_qty: number | null
-          p_discount_type: string | null
-          p_discount_value: number | null
-          p_ends_at: string | null
-          p_id: number | null
+          p_bxgy_buy_qty: number
+          p_bxgy_get_qty: number
+          p_discount_type: string
+          p_discount_value: number
+          p_ends_at: string
+          p_free_side_qty?: number
+          p_id: number
           p_items: Json
           p_kind: string
-          p_max_discount_amount: number | null
+          p_max_discount_amount: number
           p_min_subtotal: number
           p_name: string
           p_reusable_code: string
           p_service_modes: string[]
           p_stack_with_item_discount: boolean
-          p_starts_at: string | null
+          p_starts_at: string
           p_status: string
           p_time_windows: Json
         }
