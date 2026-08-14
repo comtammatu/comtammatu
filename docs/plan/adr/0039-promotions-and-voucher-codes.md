@@ -48,8 +48,9 @@ Item-level VND discounts may coexist unless the campaign sets
 | `free_side` | Code and/or auto offer (`allow_code` / `allow_auto`); staff picks N side portions | Item-level VND on parent lines = selected `side.price × units`; do not mutate `sides` JSON |
 
 Buy X get Y and free-side never use order `%`. Kitchen still sees full qty and
-full side lists (commercial comp, not a void). `free_side` quota is N portions
-per order redemption. `promotion_items` roles: `buy` = trigger mains, `get` =
+full side lists (commercial comp, not a void). `free_side` quota is N free side
+portions **per qualifying main unit** (`free_side_qty × order_item.quantity`, summed
+across buy lines). `promotion_items` roles: `buy` = trigger mains, `get` =
 freeable side menu items. Auto path returns offers only; money writes through
 `apply_free_side_selection` (or `apply_promotion_code` with selections).
 

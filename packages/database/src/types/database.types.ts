@@ -14744,6 +14744,10 @@ export type Database = {
         Args: { p_order: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: undefined
       }
+      promotion_free_side_auto_selections: {
+        Args: { p_candidates: Json }
+        Returns: Json
+      }
       promotion_free_side_candidates: {
         Args: {
           p_order: Database["public"]["Tables"]["orders"]["Row"]
@@ -14751,12 +14755,24 @@ export type Database = {
         }
         Returns: Json
       }
+      promotion_free_side_lines_eligible: {
+        Args: { p_candidates: Json }
+        Returns: boolean
+      }
+      promotion_free_side_needs_manual_selection: {
+        Args: { p_candidates: Json }
+        Returns: boolean
+      }
       promotion_free_side_offer_json: {
         Args: {
           p_order: Database["public"]["Tables"]["orders"]["Row"]
           p_promo: Database["public"]["Tables"]["promotions"]["Row"]
         }
         Returns: Json
+      }
+      promotion_free_side_total_need: {
+        Args: { p_candidates: Json }
+        Returns: number
       }
       promotion_is_eligible: {
         Args: {

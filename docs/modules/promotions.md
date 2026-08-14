@@ -13,7 +13,7 @@ Apply and side selection use `pos:use`; manual `Chiết khấu` uses
 `evaluate_order_promotions`, `preview_promotion_code`, `issue_promotion_codes`,
 `void_promotion_code`.
 **Kinds:** `order_pct`, `order_vnd`, `voucher_face`, `auto_order`, `bxgy`,
-`free_side` (N free side portions; `buy`/`get` items; `allow_code` /
-`allow_auto`).
+`free_side` (N free side portions **per qualifying main unit**; `buy`/`get` items;
+`allow_code` / `allow_auto`).
 **Out of scope:** loyalty, platform codes, combo engine, voucher SKUs, mutating
 `order_items.sides` prices.

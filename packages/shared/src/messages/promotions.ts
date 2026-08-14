@@ -31,7 +31,7 @@ export const PROMOTIONS_VI = {
   bxgyGetLabel: "Tặng (số phần)",
   bxgyBuyItemsLabel: "Món mua (điều kiện)",
   bxgyGetItemsLabel: "Món được tặng",
-  freeSideQtyLabel: "Số phần ăn kèm tặng",
+  freeSideQtyLabel: "Số phần ăn kèm tặng / phần món chính",
   freeSideBuyLabel: "Món chính điều kiện",
   freeSideGetLabel: "Ăn kèm được tặng",
   activationLabel: "Cách kích hoạt",
@@ -96,7 +96,8 @@ export const PROMOTIONS_VI = {
   posClearPromo: "Bỏ khuyến mãi",
   posOfferChip: "Chọn ăn kèm miễn phí",
   posPickSidesTitle: "Chọn ăn kèm được tặng",
-  posPickSidesHint: (n: number) => `Chọn đúng ${String(n)} phần ăn kèm`,
+  posPickSidesHint: (n: number) =>
+    `Chọn đúng ${String(n)} phần ăn kèm trên toàn đơn (theo từng phần món chính)`,
   posPickSidesApply: "Áp dụng",
   posPreviewName: "Chiến dịch",
   posNeedsSidePick: "Chọn phần ăn kèm để áp mã",

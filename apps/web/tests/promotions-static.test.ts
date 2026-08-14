@@ -78,6 +78,15 @@ test("promotions migration writes existing discount columns via SECURITY DEFINER
   assert.match(freeSide, /needs_side_selection/);
   assert.match(freeSide, /allow_code/);
   assert.match(freeSide, /allow_auto/);
+
+  const perMain = readRepo(
+    "supabase/migrations/20260814135200_promotion_free_side_per_main_qty.sql",
+  );
+  assert.match(perMain, /promotion_free_side_total_need/);
+  assert.match(perMain, /promotion_free_side_auto_selections/);
+  assert.match(perMain, /line_need/);
+  assert.match(perMain, /needs_side_selection/);
+  assert.match(perMain, /per qualifying main unit/);
 });
 
 test("promotions ACL is Owner-only with promo keys", () => {
