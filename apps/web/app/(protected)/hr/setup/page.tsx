@@ -12,6 +12,7 @@ import { fetchHrLeavePolicy } from "./leave-policy-actions";
 import { loadAuthState } from "@/_lib/auth";
 import type { BranchOption } from "../_types";
 import { resolveHrBranchScope } from "@/lib/hr-scope";
+import type { SetupTab } from "./setup-tab-sync";
 
 const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   positions: [],
@@ -20,8 +21,6 @@ const EMPTY_POSITION_TASKS_DATA: PositionTasksData = {
   employees: [],
   employeeTemplates: [],
 };
-
-type SetupTab = "leave" | "shifts" | "tasks";
 
 function resolveSetupTab(value: string | undefined): SetupTab {
   if (value === "shifts" || value === "tasks" || value === "leave") {
@@ -80,8 +79,11 @@ export default async function HrSetupPage({
         description={copy.setupDescription}
       />
       <Suspense>
+        {/* Remount per tab so server-fetched panel props seed client state. */}
         <HrSetupClient
+          key={tab}
           initialShifts={shifts}
+          shiftsLoadFailed={tab === "shifts" && !shiftsResult.success}
           positionTasksData={positionTasksData}
           leavePolicy={
             leavePolicyResult.success ? leavePolicyResult.data : null
