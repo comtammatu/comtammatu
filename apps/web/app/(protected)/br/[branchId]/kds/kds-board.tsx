@@ -38,6 +38,7 @@ import {
   type KdsNewTicketAlertGroup,
 } from "./_lib/sound-alerts";
 import { isKdsActiveTicketStatus } from "./_lib/order-status";
+import { KDS_VI } from "@comtammatu/shared/messages";
 import { KdsBoardTopBar } from "./_components/board-header";
 import { StationToggleBar } from "./_components/station-toggle-bar";
 import { FilterBar } from "./_components/filter-bar";
@@ -45,6 +46,8 @@ import { FocusView } from "./_components/focus-view";
 import { OrderGrid } from "./_components/order-grid";
 import { KdsCompletionHistorySheet } from "./_components/completion-history-sheet";
 import { UnassignedBanner } from "./_components/unassigned-banner";
+import { BatchSummaryBar } from "./_components/batch-summary-bar";
+import { KdsUndoBar, type KdsUndoAction } from "./_components/kds-undo-bar";
 import type { KdsBoardProps, KdsOrder, KdsOrderItem, KdsTicket } from "./types";
 
 /* ─── Helpers ─── */
@@ -179,6 +182,7 @@ export function KdsBoard({
   }, [audioModeKey]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [completionHistoryOpen, setCompletionHistoryOpen] = useState(false);
+  const [lastUndoAction, setLastUndoAction] = useState<KdsUndoAction | null>(null);
   const boardRootRef = useRef<HTMLDivElement | null>(null);
   const lastMissingItemRefreshRef = useRef<string | null>(null);
 
@@ -189,6 +193,51 @@ export function KdsBoard({
       setTickets,
       refreshBoardSnapshot,
     });
+
+  const handleCompleteTicketsWithUndo = useCallback(
+    async (ticketIds: number[]) => {
+      if (ticketIds.length === 0) return;
+      const firstTicket = tickets.find((t) => t.id === ticketIds[0]);
+      let orderLabel = "";
+      if (firstTicket) {
+        const orderInfo = orders.get(firstTicket.order_id);
+        const batch =
+          firstTicket.kitchen_send_batch_id !== null
+            ? kitchenBatches.get(firstTicket.kitchen_send_batch_id)
+            : null;
+        if (orderInfo?.order_type === "dine_in" && orderInfo.tables?.number) {
+          orderLabel = `Bàn ${String(orderInfo.tables.number)}`;
+        } else if (batch?.kitchen_ticket_number) {
+          orderLabel = `Phiếu #${batch.kitchen_ticket_number}`;
+        } else if (orderInfo?.order_number) {
+          orderLabel = `Đơn #${orderInfo.order_number}`;
+        } else {
+          orderLabel = `Đơn #${String(firstTicket.order_id)}`;
+        }
+      }
+
+      setLastUndoAction({
+        ticketIds,
+        orderLabel: orderLabel || KDS_VI.undoFallbackOrder,
+        itemCount: ticketIds.length,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 6000,
+      });
+
+      await handleCompleteTickets(ticketIds);
+    },
+    [handleCompleteTickets, kitchenBatches, orders, tickets],
+  );
+
+  const handleUndoRecall = useCallback(
+    async (ticketIds: number[]) => {
+      for (const id of ticketIds) {
+        await handleRecall(id);
+      }
+      setLastUndoAction(null);
+    },
+    [handleRecall],
+  );
 
   const fallbackStationSet = useMemo(
     () => new Set(fallbackStationIds),
@@ -542,6 +591,8 @@ export function KdsBoard({
             branchId={branchId}
             onFilter={filterUnassigned}
           />
+
+          <BatchSummaryBar orders={displayOrders} />
         </div>
 
         <KdsRowEffectsProvider value={rowEffects}>
@@ -554,7 +605,7 @@ export function KdsBoard({
                 canMarkReady={canMarkReady}
                 canRecall={canRecall}
                 onRecall={handleRecall}
-                onCompleteTickets={handleCompleteTickets}
+                onCompleteTickets={handleCompleteTicketsWithUndo}
               />
             ) : (
               <OrderGrid
@@ -564,7 +615,7 @@ export function KdsBoard({
                 canMarkReady={canMarkReady}
                 canRecall={canRecall}
                 onRecall={handleRecall}
-                onCompleteTickets={handleCompleteTickets}
+                onCompleteTickets={handleCompleteTicketsWithUndo}
               />
             )}
           </KdsNewTicketSignalProvider>
@@ -575,6 +626,14 @@ export function KdsBoard({
           open={completionHistoryOpen}
           onOpenChange={setCompletionHistoryOpen}
         />
+
+        {canRecall && (
+          <KdsUndoBar
+            action={lastUndoAction}
+            onRecall={handleUndoRecall}
+            onDismiss={() => setLastUndoAction(null)}
+          />
+        )}
       </div>
     </TickProvider>
   );

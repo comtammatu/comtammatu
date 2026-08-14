@@ -27,6 +27,14 @@ export const KDS_VI = {
   printEnqueueFailed:
     "Đã hoàn thành món, nhưng chưa tạo đủ phiếu in bếp. Kiểm tra máy in bếp hoặc báo trực tiếp.",
   unitOrder: "đơn",
+  batchSummaryAria: "Tổng hợp món cần làm",
+  batchSummary: "Gom mẻ",
+  batchSummaryCollapse: "Thu gọn thanh tổng hợp món",
+  batchSummaryExpand: "Mở rộng thanh tổng hợp món",
+  undoDone: "Đã xong",
+  undoAction: "Hoàn tác",
+  undoDismissAria: "Đóng thông báo",
+  undoFallbackOrder: "Đơn hàng",
 } as const;
 
 export type KdsKey = keyof typeof KDS_VI;
