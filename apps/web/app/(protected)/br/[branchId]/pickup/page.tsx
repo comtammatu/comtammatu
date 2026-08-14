@@ -448,10 +448,6 @@ function PickupOrderScreen({
 function PickupFooter() {
   return (
     <footer className="shrink-0">
-      <div
-        aria-hidden="true"
-        className="brand-strip brand-pattern-hat-gao w-full"
-      />
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/50 px-4 py-2 font-heading text-pickup-footer font-semibold text-foreground xl:gap-x-16 xl:py-4">
         <span>{PICKUP_COPY.footer.wifi}</span>
         <span>{PICKUP_COPY.footer.password}</span>
