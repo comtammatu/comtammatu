@@ -54,19 +54,15 @@ test("operator home shows manager revenue strip with month, day, and milestones"
   assert.match(strip, /netRevenueToday/);
   assert.match(strip, /rewardTiers/);
   assert.match(strip, /isRevenueRewardTierAchieved/);
+  assert.match(strip, /progressTrackPosition/);
+  assert.match(strip, /progressTrackScale/);
   assert.match(strip, /<Progress\b/);
   assert.match(strip, /formatVND/);
-  // One panel: target progress + collapsed reward milestones (not a second card).
   assert.match(strip, /BranchOperatorPanel/);
-  assert.match(strip, /progressCopy\.targetLabel/);
-  assert.match(strip, /<Collapsible>/);
-  assert.match(strip, /CollapsibleTrigger/);
-  assert.match(strip, /CollapsibleContent/);
-  assert.match(strip, /rewardCopy\.trackingTitle/);
-  assert.ok(
-    strip.indexOf("<Collapsible>") < strip.indexOf("rewardTiers.map"),
-    "milestones render inside Collapsible",
-  );
+  assert.match(strip, /homeCopy\.revenueTargetTitle/);
+  assert.match(strip, /style=\{\{ left:/);
+  assert.doesNotMatch(strip, /<Collapsible>|CollapsibleTrigger|CollapsibleContent/);
+  assert.doesNotMatch(strip, /mtdHint|dayHint|progressCopy\.targetLabel/);
   assert.doesNotMatch(strip, /\b(?:KpiCard|KpiRow)\b/);
 });
 
@@ -99,10 +95,28 @@ test("revenue strip copy is localized through finance messages", () => {
   const financeCopy = read("apps/web/lib/messages/finance.ts");
   assert.match(financeCopy, /monthRevenueLabel: "Doanh thu tháng"/);
   assert.match(financeCopy, /dayRevenueLabel: "Doanh thu ngày"/);
-  assert.match(financeCopy, /trackingTitle: "Các mốc chỉ tiêu"/);
+  assert.match(financeCopy, /targetLabel: "Chỉ tiêu doanh thu"/);
   assert.match(financeCopy, /milestone: \(threshold: string\) => `Mốc \$\{threshold\}`/);
+
+  const operatorCopy = read("apps/web/lib/messages/operator.ts");
+  assert.match(operatorCopy, /revenueTargetTitle: "Chỉ tiêu doanh thu"/);
+  assert.match(operatorCopy, /stationsTitle: "Trạm"/);
+  assert.match(operatorCopy, /posStation: "POS"/);
+  assert.match(operatorCopy, /kdsStation: "KDS"/);
 
   const strip = read(STRIP);
   assert.doesNotMatch(strip, /"Doanh thu tháng"/);
   assert.doesNotMatch(strip, /"Các mốc chỉ tiêu"/);
+
+  const today = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-today-status.tsx",
+  );
+  assert.match(today, /status === "not_required"\) return null/);
+
+  const queueList = read(
+    "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-list.tsx",
+  );
+  assert.match(queueList, /PREVIEW_COUNT = 3/);
+  assert.match(queueList, /queueShowMore/);
+  assert.doesNotMatch(queueList, /ItemDescription/);
 });

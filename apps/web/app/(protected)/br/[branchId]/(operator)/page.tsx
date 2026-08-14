@@ -158,7 +158,12 @@ export default async function OperatorHomePage({
           key: `${group.id}-${tile.moduleKey}-${tile.href}`,
           href: tile.href,
           icon: resolveOperatorTileIcon(tile.icon),
-          title: tile.label,
+          title:
+            tile.moduleKey === "pos"
+              ? homeCopy.posStation
+              : tile.moduleKey === "kds"
+                ? homeCopy.kdsStation
+                : tile.label,
           disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
           disabledReason:
             tilesLockedBeforeClockIn && group.id === "sales_kitchen"

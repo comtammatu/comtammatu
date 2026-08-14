@@ -164,7 +164,6 @@ test("native branch home pages use the Branch operator interface contract", () =
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/stock/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx",
-    "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx",

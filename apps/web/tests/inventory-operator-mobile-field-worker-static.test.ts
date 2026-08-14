@@ -32,8 +32,12 @@ test("branch home queue only renders positive pending work", () => {
     /buildQueueRows\(basePath, queueCounts\)\.filter\(\s*\(row\) => row\.count > 0/,
   );
   assert.match(branchQueueSource, /if \(queueRows\.length === 0\) return null/);
-  assert.match(branchQueueSource, /\{rows\.map\(\(row\) => \(/);
-  assert.match(branchQueueSource, /<Badge variant="warning">/);
+  assert.match(branchQueueSource, /<BranchQueueList rows=\{queueRows\} \/>/);
+  const queueList = readWeb(
+    "app/(protected)/br/[branchId]/(operator)/_components/home/branch-queue-list.tsx",
+  );
+  assert.match(queueList, /visible\.map\(\(row\) =>/);
+  assert.match(queueList, /<Badge variant="warning">/);
 });
 
 test("operator transfer receive auto-starts inspection and requires shortage notes", () => {

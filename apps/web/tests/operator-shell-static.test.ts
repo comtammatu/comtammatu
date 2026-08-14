@@ -131,24 +131,31 @@ test("operator header shows branch context and keeps profile and notifications",
   assert.match(appHeader, /showThemeToggle\?: boolean/);
   assert.match(appHeader, /<Link[\s\S]*href=\{href\}/);
   assert.match(appHeader, /"min-h-11 min-w-11 shrink-0 justify-center"/);
-  assert.match(layout, /IconLayoutDashboard/);
+  assert.doesNotMatch(layout, /IconLayoutDashboard|IconShieldAlert/);
   assert.match(
     layout,
-    /const usesHeaderOverflow =\s*canOpenOwnerHome \|\| canManageBranch \|\| canOpenFeedback/,
+    /const usesHeaderOverflow =\s*canOpenOwnerHome \|\| canCloseDay \|\| canOpenFeedback/,
   );
   assert.match(layout, /canAccess\(claims\.user_role, "branch_feedback"\)/);
   assert.match(layout, /showThemeToggle=\{!usesHeaderOverflow\}/);
   assert.match(layout, /<DropdownMenu>/);
   assert.match(layout, /<ThemeMenuItem className="min-h-12 text-sm" \/>/);
   assert.match(layout, /\{usesHeaderOverflow \? \(/);
-  assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/);
+  assert.doesNotMatch(
+    layout,
+    /href=\{`\/br\/\$\{context\.branchId\}\/dashboard`\}/,
+  );
+  assert.doesNotMatch(
+    layout,
+    /href=\{`\/br\/\$\{context\.branchId\}\/menu-limits`\}/,
+  );
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/feedback`\}/);
   assert.doesNotMatch(
     layout,
     /href=\{`\/br\/\$\{context\.branchId\}\/team`\}/,
   );
   assert.doesNotMatch(layout, /IconUsersRound/);
-  assert.match(layout, /\{APP_COPY_VI\.branchCommand\}/);
+  assert.doesNotMatch(layout, /\{APP_COPY_VI\.branchCommand\}/);
   assert.match(layout, /MODULE_ACL\.branch_feedback\.label/);
   assert.match(layout, /IconUser/);
   assert.match(layout, /href=\{`\/br\/\$\{context\.branchId\}\/profile`\}/);
@@ -248,7 +255,8 @@ test("operator home keeps visible mobile identity while detail pages may compact
   assert.match(home, /hideHeaderOnMobile/);
   assert.match(stock, /hideHeaderOnMobile/);
   assert.match(settings, /hideHeaderOnMobile/);
-  assert.match(dashboard, /hideHeaderOnMobile/);
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(dashboard, /hideHeaderOnMobile|BranchOperatorPage/);
 });
 
 test("operator home renders MODULE_ACL-backed capability tiles", () => {
@@ -464,11 +472,11 @@ test("branch management roots use Branch operator shell adapters", () => {
   assert.match(branchOperatorPage, /"xl:grid-cols-3 2xl:grid-cols-4"/);
   assert.match(
     branchOperatorPage,
-    /presentation === "stations" && itemCount === 2 && "sm:grid-cols-2"/,
+    /presentation === "stations" && itemCount === 2 && "grid grid-cols-2"/,
   );
   assert.match(
     branchOperatorPage,
-    /presentation === "stations" && itemCount >= 3 && "sm:grid-cols-3"/,
+    /presentation === "stations" && itemCount >= 3 && "grid grid-cols-3"/,
   );
   assert.match(branchOperatorPage, /active:scale-\[0\.97\]/);
   assert.match(branchOperatorPage, /"min-h-14 lg:items-center"/);
@@ -490,8 +498,13 @@ test("branch management roots use Branch operator shell adapters", () => {
     /\bEmployee(?:Page|Panel|Frame|Action|Badge|Status|Detail|Inline|Control)/,
   );
 
-  for (const path of [
+  const dashboardShim = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
+  );
+  assert.match(dashboardShim, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(dashboardShim, /BranchOperatorPage/);
+
+  for (const path of [
     "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
     "apps/web/app/(protected)/br/[branchId]/(operator)/team/page.tsx",
@@ -543,7 +556,7 @@ test("operator home keeps KPI overview out of the Landing", () => {
   assert.doesNotMatch(home, /KpiCard|fetchBranchDayStatus/);
 });
 
-test("branch dashboard renders command lanes instead of Owner surface-style KPI summary", () => {
+test("branch dashboard redirects into Hôm nay instead of mounting a command surface", () => {
   const dashboard = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
@@ -551,15 +564,10 @@ test("branch dashboard renders command lanes instead of Owner surface-style KPI 
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/_lib/command-config.tsx",
   );
 
-  assert.match(dashboard, /tileGroups\.liveOperations/);
-  assert.ok(
-    dashboard.indexOf("tileGroups.liveOperations") <
-      dashboard.indexOf("copy.readinessTitle"),
-    "Live operation lane should render before readiness status",
-  );
+  assert.match(dashboard, /redirect\(`\/br\/\$\{branchId\}`\)/);
   assert.doesNotMatch(
     dashboard,
-    /KpiRow|KpiCard|formatVND|dayRevenueLabel|dayPaidOrdersLabel|dayTablesLabel|dayKitchenLabel/,
+    /BranchOperatorPage|tileGroups\.liveOperations|BranchReadinessList/,
   );
   assert.match(commandConfig, /liveOperations:/);
   for (const moduleKey of [

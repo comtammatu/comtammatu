@@ -22,7 +22,6 @@ function getWorkTitle(state: TodayWorkState): string {
 
   if (status === "missing_profile") return copy.statusNoProfile;
   if (status === "missing_branch") return copy.statusNoBranch;
-  if (status === "not_required") return copy.statusNotRequired;
   if (status === "not_started") return copy.statusNotStarted;
   if (status === "working") return copy.statusWorking;
   if (status === "checkout_pending") return copy.statusCheckoutPending;
@@ -35,6 +34,8 @@ export async function BranchTodayStatus({
   branchId: number;
 }) {
   const state = await getTodayWorkState();
+  if (state.status === "not_required") return null;
+
   const title = getWorkTitle(state);
   const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime

@@ -231,7 +231,7 @@ test("branch stock landing has no serious or critical axe violations", async ({
   }
 });
 
-test("branch command dashboard has no serious or critical axe violations", async ({
+test("branch home via dashboard shim has no serious or critical axe violations", async ({
   browser,
 }) => {
   const { branchId } = await getManagerProfile();
@@ -244,7 +244,7 @@ test("branch command dashboard has no serious or critical axe violations", async
     await verifyAtRepresentativeViewports(
       page,
       `/br/${branchId}/dashboard`,
-      "branch command dashboard",
+      "branch home via dashboard shim",
     );
   } finally {
     await context.close();

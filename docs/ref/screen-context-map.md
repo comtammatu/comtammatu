@@ -49,7 +49,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | **Inventory** `/inventory/*` (+ stock CN ở Branch) | Owner, Kế toán (PO/GRN), Kho Tổng, Bếp TT; BM trên `/br/…/stock` | Quyết định tồn, chứng từ mua/nhập/SX/DC/kiểm/hao — không dashboard bán hàng | Vào hub/list đúng plane → hoàn thành phiếu (nháp→chốt) → lỗi recoverable qua retry/confirm; lệch tồn qua stocktake/waste | Hiện tồn, trạng thái phiếu, ngoại lệ; ẩn doanh thu POS, lương, giá mua trên mặt Kho (giá thuộc Finance) | Parent §2.5–2.6; LIST + D1 document (`AppDialog variant="document"`); Branch touch `branch-touch-list`. Exemplar GRN list: `/inventory/grn`; stock home CN: `/br/[branchId]/stock` |
 | **Finance** `/finance/*` | Owner, Kế toán | Kết quả KD theo kỳ, AP/NCC, chi phí, ngân hàng, chỉ tiêu | Chọn kỳ/phạm vi → đọc công thức / xử lý ngoại lệ → drill `/revenue` `/expenses` `/bank-transactions` `/supplier-invoices` `/targets`; thiếu coverage → không bịa số | Hiện KPI công thức, tiền mặt, AP; ẩn POS/KDS, bảng công, tạo order | Parent §2.9 + §2.7; DASHBOARD `/finance`; REPORT exemplar `finance/revenue/page.tsx`; LIST AP §2.7 |
 | **HR** `/hr/*` | Owner (admin HR L0) | Hồ sơ · thời gian · lương · quy tắc · phân quyền | `/hr` strip **Cần xử lý** (chỉ khi có việc) → tab/profile → attendance/payroll/setup; blocker preflight trước khi chốt lương | Hiện hồ sơ/công/lương tiếng Việt; ẩn KPI bán hàng/kho, raw `pay_basis` | Parent §2.8–2.8d; LIST + SETTINGS-PANEL. Exemplar hồ sơ: `/hr` client |
-| **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4 / §2.4A; LANDING hub + DASHBOARD command. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; dashboard: `…/dashboard/page.tsx` |
+| **Branch operator** `/br/[branchId]/*` (trừ station) | BM, staff theo bottom-nav; Owner khi vào shell CN | Việc ca: hub → đội/kho/shift/settings CN | `/br/[id]` → đúng tab/workflow → duyệt/hoàn thành; deep link recovery về owning route | Hiện queue ca, readiness, stock touch; ẩn mosaic KPI L0, `DataTable` control_surface trên phone | Parent §2.4A; LANDING hub. Exemplar hub: `br/[branchId]/(operator)/page.tsx`; `/dashboard` = REDIRECT-SHIM |
 | **Station** POS / KDS / Runner | Cashier / chef / runner (+ BM hỗ trợ) | Một việc realtime: bán · bump · served | Mở station → queue/cart sống → success bump/pay/serve → recall/retry khi lỡ | Hiện món/bàn/thời gian; ẩn giá (KDS/Runner), lương, tồn kho, báo cáo tháng | Parent §2.1–2.3; BOARD + blocks `pos-board` / `realtime-board` / `runner-board`. Exemplar: `pos/session-gate.tsx`, `kds/page.tsx`, `runner/page.tsx` |
 | **Public** `/login`, `/access-denied`, `/q/*`, `/r/*` | Khách hoặc người chưa vào đúng surface | Auth gate, gọi món token, HĐĐT, feedback QR | Token/URL → một CTA chính → xong hoặc fail-closed; hết hạn → trạng thái rõ, không sửa tiếp | Hiện bước giao dịch khách; ẩn shell Quản trị/CN, DataTable, dữ liệu nội bộ | Parent §2.10–2.12; `PUBLIC-WORKFLOW` / GATE. Blocks `public-transaction`, `public-feedback`, `system-gate`. Exemplar self-order: `q/[token]/page.tsx` |
 | **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Hub hồ sơ / lịch / phép / lương / chấm công — không phải nơi làm việc hàng ngày | Avatar → `/me` hub → child; punch từ `/` command bar hoặc `/me/clock` | Hiện dữ liệu của mình; ẩn chọn NV/CN, duyệt đội, CTA `/work`, module L0 không được cấp | Parent §2.4B; LANDING ItemGroup. Exemplar: `me/page.tsx` |
@@ -106,13 +106,10 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 
 ### 2.4. Branch Dashboard — `/br/[branchId]/dashboard`
 
-- **Archetype:** `DASHBOARD`.
-- **Actor:** `branch_manager`, `owner`.
-- **Job:** Ngoại lệ/readiness trong ngày — không phải dashboard tài chính thu nhỏ.
-- **Goal:** Biết ổn định hay sự cố (lệch két, thiếu NL, chưa mở ca).
-- **Workflow:** Đọc việc ưu tiên → mở workflow sở hữu (in/POS/NV/kho) → chốt ngày.
-- **Ưu tiên data:** Lanes công việc + drill-down. **Không:** `KpiRow`/`KpiCard`, biểu đồ, doanh thu chuỗi, công nợ L0, phân quyền hệ thống.
-- **UX:** Task queue first.
+- **Archetype:** `REDIRECT-SHIM` → `/br/[branchId]` (Hôm nay).
+- **Actor:** legacy deep links / bookmarks only.
+- **Job:** Không còn cockpit riêng; ngoại lệ ngày sống trên hub §2.4A.
+- **Note:** `dashboard/_lib/command-config.tsx` + `data.ts` vẫn phục vụ readiness/queue helpers; không mount UI command.
 
 ---
 
@@ -138,9 +135,9 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   - Bottom nav **chi nhánh** (`branch_kind=branch`) theo vai trò:
     - Nhân viên (`cashier` / `chef` / `branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
     - Quản lý (`branch_manager`; owner khi vào shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa hàng hóa trước (Kho hàng / Yêu cầu hàng / Kiểm kê phiên / Hao hụt) rồi list phiếu giao nhận (YCH + nhận). Phân công đếm / Phiếu đếm vào từ **Đội**. Không Tiêu Hao SX. Badge queue live.
-    - Chuông = unread inbox. `Điều hành`, `Phản hồi`, `Giới hạn bán` trong `⋯` (QL/owner). Avatar header vẫn mở Hồ sơ cho mọi role.
-  - Hub CN thứ tự: trạng thái ca → **Cần duyệt** (khi > 0) → trạm **POS** / **KDS** → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits`); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
-  - **Exception hẹp (manager-like CN):** panel KPI Doanh thu tháng | ngày + tiến độ chỉ tiêu + các mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
+    - Chuông = unread inbox. `Phản hồi` / `Kết ngày` trong `⋯` (theo ACL). **Không** `Điều hành` / `Giới hạn bán` trong overflow — giới hạn bán là CTA trên Hôm nay (cùng Drawer với `/menu-limits`). Avatar header vẫn mở Hồ sơ cho mọi role.
+  - Hub CN thứ tự: trạng thái ca (ẩn khi `not_required`) → **Chỉ tiêu doanh thu** (manager-like; mốc = chấm trên Progress) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits`); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
+  - **Exception hẹp (manager-like CN):** panel Doanh thu tháng | ngày + tiến độ chỉ tiêu với chấm mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Nhân viên: `/shift/schedule` và `/profile` là tab riêng; QL giữ lịch dưới shortcut trong `Ca` + avatar.
   - `Đội` mở hub 2 tab (`Ca hôm nay`, `Nhân viên`). Trên board: panel **Cần duyệt** chỉ Duyệt kết ca / Duyệt nghỉ khi có pending; panel **Quản lý đội** luôn hiện Phân công đếm + Phiếu đếm (badge khi chờ duyệt) cùng Phân ca / Chấm công. Workflow sâu gắn bottom-nav Đội qua `matchPrefixes` `/shift/roster|attendance|checkout-approvals|leave-approvals`.
 

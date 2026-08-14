@@ -23,11 +23,17 @@ export const operator = {
     clockIn: "Chấm công vào",
   },
   home: {
-    stationsTitle: "Trạm vận hành",
+    stationsTitle: "Trạm",
     stationsDescription: "",
+    posStation: "POS",
+    kdsStation: "KDS",
     posDescription: "Nhận món và thanh toán",
     kdsDescription: "Làm món theo hàng chờ",
     pickupDescription: "Gọi số cho khách và người giao hàng",
+    revenueTargetTitle: "Chỉ tiêu doanh thu",
+    queueShowMore: (count: number) =>
+      `Xem thêm ${formatCount(count)} việc`,
+    queueShowLess: "Thu gọn",
     shiftControlTitle: "Theo dõi trong ca",
     shiftControlDescription: "",
     lockedBeforeClockIn: "Cần chấm công để mở",

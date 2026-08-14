@@ -89,7 +89,7 @@ URL bỏ prefix `/br/[branchId]`. Class mặc định **A / keep** trừ khi ghi
 | **stocktake / count / waste** | 9 | stocktake list/new/[id] **A**; `[id]/count` **A**; `/count` **D**; count-assignments/slips, waste-approvals, consumption(+id), issues(+id), `/waste` **A** (`DOC-WORKFLOW`, `branch-touch-document`, GRN line sheet exemplar) |
 | **stock catalog / reports** | 7 | reports, catalog(+ingredients/categories/units/suppliers/thresholds) **A** |
 | **settings** | 5 | `/settings` + tables/pos/kds/printers — shared `br/_shared` **A** |
-| **dashboard / feedback / ops** | 8 | `/dashboard`, orders, menu-limits, pos-sessions, close-day **A**; feedback(+qr) **A**; profile(+payslip) **D** |
+| **dashboard / feedback / ops** | 8 | `/dashboard` **C** shim→`/`; orders, menu-limits (Drawer host), pos-sessions, close-day **A**; feedback(+qr) **A**; profile(+payslip) **D** |
 | **station** | 3 | `/pos`, `/kds`, `/pickup` → **E** |
 
 Filesystem: operator dưới `(operator)/`; station `pos/`, `kds/`, `pickup/`.

@@ -9,6 +9,8 @@ import {
   normalizeRevenueRewardTiers,
   paceTargetAmount,
   previewTargetProgress,
+  progressTrackPosition,
+  progressTrackScale,
   targetProgressTone,
 } from "../app/(protected)/finance/_lib/revenue-target";
 
@@ -26,6 +28,14 @@ describe("revenue-target helpers", () => {
     assert.equal(targetProgressTone(100), "success");
     assert.equal(clampProgressValue(150), 100);
     assert.equal(clampProgressValue(-5), 0);
+  });
+
+  it("scales the progress track for markers above 100%", () => {
+    assert.equal(progressTrackScale(90, [80, 100]), 100);
+    assert.equal(progressTrackScale(120, [80, 110]), 120);
+    assert.equal(progressTrackPosition(50, 100), 50);
+    assert.equal(progressTrackPosition(110, 110), 100);
+    assert.equal(progressTrackPosition(55, 110), 50);
   });
 
   it("builds linear monthly pace without inventing 0% when target missing", () => {

@@ -121,14 +121,12 @@ test("operator a11y: realtime regions announce, panels use headings, locked tile
   assert.match(tile, /headingLevel=\{headingLevel\}/);
 });
 
-test("operator dashboard streams readiness behind Suspense while tiles render immediately", () => {
+test("operator dashboard is a redirect shim into Hôm nay", () => {
   const source = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx",
   );
-  assert.match(source, /<Suspense/);
-  assert.match(source, /BranchCockpitSection/);
-  assert.match(source, /BranchOperatorPanelSkeleton/);
-  assert.match(source, /await fetchBranchDayStatus/);
+  assert.match(source, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(source, /Suspense|BranchCockpitSection|fetchBranchDayStatus/);
 });
 
 test("POS menu sync coalesces event bursts before refetching the full menu", () => {

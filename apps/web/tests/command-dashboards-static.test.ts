@@ -258,23 +258,16 @@ test("print job monitor keeps the owner recovery filter", () => {
   );
 });
 
-test("branch command landing surfaces operations and readiness", () => {
+test("branch command landing redirects into Hôm nay while helpers stay available", () => {
   const page = read(BRANCH_PAGE);
-  // Per-row readiness config (buildReadinessItems) is extracted into the
-  // co-located command-config; assert readiness keys against both sources.
-  const surface = page + read(BRANCH_COMMAND_CONFIG);
+  const surface = read(BRANCH_COMMAND_CONFIG);
 
-  assert.doesNotMatch(page, /\bKpi(?:Row|Card)\b/);
-  assert.match(page, /fetchBranchDayStatus/);
-  assert.match(page, /readinessTitle/);
+  assert.match(page, /redirect\(`\/br\/\$\{branchId\}`\)/);
+  assert.doesNotMatch(page, /\bKpi(?:Row|Card)\b|fetchBranchDayStatus|readinessTitle/);
   assert.match(surface, /readinessPosTitle/);
   assert.match(surface, /readinessPrinterTitle/);
   assert.match(surface, /readinessCheckoutTitle/);
   assert.match(surface, /checkoutApprovalsHref/);
-  assert.match(page, /branch\.branch_kind !== "branch"/);
-  assert.match(page, /const floorHref =[\s\S]*day\.tablesTotal <= 0/);
-  assert.match(page, /day\.setupActiveTerminals <= 0/);
-  assert.match(page, /\/br\/\$\{branchId\}\/shift\/checkout-approvals/);
   assert.doesNotMatch(surface, /\/employee\/checkout-approvals/);
 });
 

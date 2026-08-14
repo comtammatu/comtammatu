@@ -1690,6 +1690,7 @@ const perFileCountBudgets = [
     roots: uiRuntimeRoots([".tsx"]),
     pattern: /\bstyle=\{\{/g,
     allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/(operator)/_components/home/branch-revenue-target-strip.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/(operator)/stock/receive/[id]/transfer-receive-client.tsx": 1,
       "apps/web/app/(protected)/inventory/_lib/chart-primitives.tsx": 3,
       "apps/web/app/(protected)/inventory/reports/reports-client.tsx": 1,

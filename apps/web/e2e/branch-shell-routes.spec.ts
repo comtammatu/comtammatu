@@ -106,7 +106,8 @@ async function expectHealthyRoute(
 
 function expectedControlSurfaceBottomNavCurrentCount(path: string, branchId: number) {
   const base = `/br/${branchId}`;
-  if (path === base) return 1;
+  // `/dashboard` redirects into Hôm nay — bottom-nav current stays on home.
+  if (path === base || path === `${base}/dashboard`) return 1;
   if (path.startsWith(`${base}/team`)) return 1;
   if (path.startsWith(`${base}/stock`)) return 1;
   return 0;
@@ -287,9 +288,8 @@ test.describe("branch route shell ownership", () => {
         ownerLinkCount: path === `/br/${branchId}` ? 1 : 0,
       });
       if (path === `/br/${branchId}`) {
-        await expect(page.getByText("Cần xử lý")).toBeVisible();
-        await expect(page.getByText("Trạm vận hành")).toBeVisible();
-        await expect(page.getByText("Cấu hình chi nhánh")).toBeVisible();
+        await expect(page.getByText("Trạm", { exact: true })).toBeVisible();
+        await expect(page.getByText("POS", { exact: true })).toBeVisible();
         await expect(page.locator('a[href="/"]')).toHaveCount(1);
         await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
         await expect(page.locator('a[href="/hr"]')).toHaveCount(0);

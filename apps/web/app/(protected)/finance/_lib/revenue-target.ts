@@ -73,6 +73,28 @@ export function clampProgressValue(
   return Math.max(0, Math.min(100, progressPct));
 }
 
+/** Domain for a target bar that can show reward markers above 100%. */
+export function progressTrackScale(
+  progressPct: number | null | undefined,
+  thresholds: readonly number[] = [],
+): number {
+  const values = [100];
+  if (progressPct != null && Number.isFinite(progressPct)) {
+    values.push(progressPct);
+  }
+  for (const threshold of thresholds) {
+    if (Number.isFinite(threshold) && threshold > 0) values.push(threshold);
+  }
+  return Math.max(...values);
+}
+
+export function progressTrackPosition(valuePct: number, scale: number): number {
+  if (!Number.isFinite(valuePct) || !Number.isFinite(scale) || scale <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, (valuePct / scale) * 100));
+}
+
 export function isRevenueRewardTierAchieved(
   progressPct: number | null | undefined,
   thresholdPct: number,

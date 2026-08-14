@@ -217,7 +217,7 @@ test("Owner monitors use DataTable while the branch launcher keeps a responsive,
   );
   assert.match(branchLauncher, /resolveSiteKind\(branch\)/);
   assert.match(branchLauncher, /\.\.\.\(isActive && isBranchSite/);
-  assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}\/dashboard`\}/);
+  assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}`\}/);
   assert.match(
     branchLauncher,
     /href=\{`\/inventory\?branch=\$\{branch\.id\}`\}/,

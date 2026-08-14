@@ -361,7 +361,7 @@ export const finance = {
       revenueLabel: "Doanh thu thuần",
       monthRevenueLabel: "Doanh thu tháng",
       dayRevenueLabel: "Doanh thu ngày",
-      targetLabel: "Chỉ tiêu doanh thu thuần",
+      targetLabel: "Chỉ tiêu doanh thu",
       mtdHint: "Đã đạt trong tháng",
       dayHint: "Hôm nay (lịch VN)",
       noTarget: "Chưa đặt chỉ tiêu",

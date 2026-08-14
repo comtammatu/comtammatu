@@ -20,7 +20,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/settings/printers/templates/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/dashboard/page.tsx":
-    "DASHBOARD",
+    "REDIRECT-SHIM",
   "apps/web/app/(protected)/br/[branchId]/(operator)/orders/page.tsx": "LIST",
   "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx": "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/profile/page.tsx":
@@ -32,7 +32,7 @@ export const PAGE_ARCHETYPES = {
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/network/page.tsx":
     "SETTINGS-PANEL",
   "apps/web/app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx":
-    "SETTINGS-PANEL",
+    "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/settings/page.tsx":
     "LANDING",
   "apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/page.tsx":

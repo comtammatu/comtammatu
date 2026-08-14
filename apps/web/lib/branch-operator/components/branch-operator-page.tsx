@@ -474,9 +474,9 @@ function BranchOperatorActionList({
     <ItemGroup
       className={cn(
         "gap-2",
-        presentation === "stations" && "grid grid-cols-1",
-        presentation === "stations" && itemCount === 2 && "sm:grid-cols-2",
-        presentation === "stations" && itemCount >= 3 && "sm:grid-cols-3",
+        presentation === "stations" && itemCount <= 1 && "grid grid-cols-1",
+        presentation === "stations" && itemCount === 2 && "grid grid-cols-2",
+        presentation === "stations" && itemCount >= 3 && "grid grid-cols-3",
         presentation !== "stations" &&
           columns === 2 &&
           (mobileColumns === 2
@@ -524,7 +524,7 @@ function BranchOperatorActionItem({
         className={cn(
           "items-start bg-card opacity-50",
           presentation === "stations"
-            ? "min-h-20 items-center sm:min-h-24 sm:items-start"
+            ? "min-h-14 items-center"
             : "min-h-14 lg:items-center",
           presentation !== "stations" && size === "sm" && "min-h-12",
         )}
@@ -573,7 +573,7 @@ function BranchOperatorActionItem({
       className={cn(
         "group/branch-operator-action chrome-tap items-start bg-card transition-[background-color,border-color,box-shadow,transform] duration-150 select-none hover:bg-muted/50 hover:shadow-effect-card-hover active:scale-[0.97]",
         presentation === "stations"
-          ? "min-h-20 items-center sm:min-h-24 sm:items-start"
+          ? "min-h-14 items-center"
           : "min-h-14 lg:items-center",
         presentation !== "stations" && size === "sm" && "min-h-12",
       )}
@@ -605,9 +605,11 @@ function BranchOperatorActionItem({
           </ItemDescription>
         ) : null}
       </ItemContent>
-      <ItemActions className="self-center text-muted-foreground">
-        <IconChevronRight />
-      </ItemActions>
+      {presentation === "stations" ? null : (
+        <ItemActions className="self-center text-muted-foreground">
+          <IconChevronRight />
+        </ItemActions>
+      )}
     </Item>
   );
 }
