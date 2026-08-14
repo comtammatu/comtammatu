@@ -526,20 +526,17 @@ test("branch management roots use Branch operator shell adapters", () => {
   }
 });
 
-test("pre-clock-in gate disables floor tiles instead of hiding them", () => {
+test("operator home does not gate POS/KDS tiles on attendance clock-in", () => {
   const page = read(
     "apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx",
   );
 
-  assert.match(
-    page,
-    /tilesLockedBeforeClockIn && group\.id === "sales_kitchen"/,
-  );
-  assert.match(
+  assert.doesNotMatch(page, /tilesLockedBeforeClockIn/);
+  assert.doesNotMatch(page, /lockedBeforeClockIn/);
+  assert.doesNotMatch(
     page,
     /const workState = isFloorRole \? await getTodayWorkState\(\) : null/,
   );
-  assert.doesNotMatch(page, /tiles: \[\]/);
 });
 
 test("operator home keeps KPI overview out of the Landing", () => {

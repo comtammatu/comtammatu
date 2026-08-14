@@ -36,7 +36,6 @@ export const operator = {
     queueShowLess: "Thu gọn",
     shiftControlTitle: "Theo dõi trong ca",
     shiftControlDescription: "",
-    lockedBeforeClockIn: "Cần chấm công để mở",
   },
   shift: {
     title: "Ca hôm nay",

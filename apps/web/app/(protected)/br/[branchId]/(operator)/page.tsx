@@ -13,7 +13,6 @@ import {
   BranchOperatorPage,
   BranchOperatorPanel,
 } from "@lib/branch-operator/components/branch-operator-page";
-import { getTodayWorkState } from "@lib/staff-runtime/_lib/today-work-state";
 import { messages } from "@lib/messages";
 import { loadAuthState } from "@/_lib/auth";
 import { resolveBranchContext } from "@/_lib/branch-context";
@@ -59,18 +58,6 @@ export default async function OperatorHomePage({
     context.branchId,
     branchKind,
   );
-  // Pre-clock-in gate for floor operators (includes waiter → branch_staff).
-  const isFloorRole =
-    claims.user_role === "cashier" ||
-    claims.user_role === "chef" ||
-    claims.user_role === "branch_staff";
-
-  const workState = isFloorRole ? await getTodayWorkState() : null;
-  const beforeClockIn = workState?.status === "not_started";
-
-  // Pre-clock-in tiles stay visible so the operator understands what unlocks.
-  const tilesLockedBeforeClockIn = isFloorRole && beforeClockIn;
-
   const canManageBranch = canAccess(claims.user_role, "branch_settings");
 
   const branchTodayGroup = getBranchPrimaryHomeGroup(rawGroups);
@@ -164,11 +151,6 @@ export default async function OperatorHomePage({
               : tile.moduleKey === "kds"
                 ? homeCopy.kdsStation
                 : tile.label,
-          disabled: tilesLockedBeforeClockIn && group.id === "sales_kitchen",
-          disabledReason:
-            tilesLockedBeforeClockIn && group.id === "sales_kitchen"
-              ? homeCopy.lockedBeforeClockIn
-              : undefined,
         });
         const showLimitsBesideOrders =
           group.id === "sales_kitchen" && isManagerLike;
@@ -206,11 +188,8 @@ export default async function OperatorHomePage({
                         key={link.key}
                         variant="outline"
                         size="touch"
-                        disabled={link.disabled}
                         className="w-full justify-start font-medium"
-                        render={
-                          link.disabled ? undefined : <Link href={link.href} />
-                        }
+                        render={<Link href={link.href} />}
                       >
                         {Icon ? (
                           <Icon data-icon="inline-start" className="size-4" />
