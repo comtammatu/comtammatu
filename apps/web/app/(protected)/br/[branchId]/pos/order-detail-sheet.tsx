@@ -80,7 +80,7 @@ import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { VoidPaidOrderDialog } from "./_components/order-detail/void-paid-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
-import { DiscountSheet } from "./_components/order-detail/discount-sheet";
+import { DiscountSheet, ITEM_DISCOUNT_MODES } from "./_components/order-detail/discount-sheet";
 import { ServiceChargeSheet } from "./_components/order-detail/service-charge-sheet";
 // Dynamic imports — both sheets are tap-gated overflow actions ("Tách đơn"
 // / "Ghép đơn"), not on the hot cashier path. Keeping them out of the
@@ -1786,7 +1786,7 @@ export function OrderDetailSheet({
           subtotalLabel={messages.pos.orderDetail.itemDiscountSubtotal}
           totalLabel={messages.pos.orderDetail.itemDiscountTotal}
           clearLabel={messages.pos.orderDetail.clearItemDiscount}
-          modes={["vnd"]}
+          modes={ITEM_DISCOUNT_MODES}
           subtotal={discountItem.subtotal}
           serviceCharge={0}
           current={{

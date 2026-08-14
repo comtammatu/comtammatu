@@ -148,12 +148,17 @@ test("Owner promotions LIST/DOC and POS Mã giảm surfaces exist", () => {
   const promoCodeInput =
     /id="promo-code-input"[\s\S]*?\/>/.exec(sheet)?.[0] ?? "";
   assert.match(promoCodeInput, /controlSize="touch"/);
-  assert.match(promoCodeInput, /className="font-mono uppercase"/);
+  assert.match(promoCodeInput, /className="font-mono"/);
+  assert.doesNotMatch(promoCodeInput, /uppercase/);
+  assert.doesNotMatch(promoCodeInput, /autoCapitalize/);
   assert.doesNotMatch(
     promoCodeInput,
     /setCodeText\(event\.target\.value\.toUpperCase\(\)\)/,
   );
   assert.match(sheet, /codeText\.trim\(\)\.toUpperCase\(\)/);
+  assert.match(sheet, /wasOpenRef/);
+  assert.match(sheet, /if \(wasOpenRef\.current\) return;/);
+  assert.match(sheet, /modesKey/);
 
   const actions = readWeb(
     "app/(protected)/br/[branchId]/pos/discount-actions.ts",

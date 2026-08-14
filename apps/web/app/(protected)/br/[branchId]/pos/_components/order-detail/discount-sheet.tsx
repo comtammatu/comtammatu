@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -20,6 +20,12 @@ import { StationSheet } from "@/components/surface";
 import { Input } from "@comtammatu/ui/components/input";
 
 export type DiscountType = "pct" | "vnd";
+
+const DEFAULT_DISCOUNT_MODES: readonly DiscountType[] = ["pct", "vnd"];
+const FALLBACK_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
+
+/** Item-level discount is VND-only (ADR 0034). Stable identity for callers. */
+export const ITEM_DISCOUNT_MODES: readonly DiscountType[] = ["vnd"];
 
 interface DiscountSheetProps {
   open: boolean;
@@ -79,7 +85,7 @@ export function DiscountSheet({
   subtotalLabel = FORM_VI.subtotal,
   totalLabel = POS_VI.newTotal,
   clearLabel = POS_VI.clearDiscount,
-  modes = ["pct", "vnd"] as const,
+  modes = DEFAULT_DISCOUNT_MODES,
   subtotal,
   serviceCharge,
   current,
@@ -88,13 +94,21 @@ export function DiscountSheet({
   onClear,
   promo,
 }: DiscountSheetProps) {
-  const allowedModes = modes.length > 0 ? modes : (["vnd"] as const);
+  // Stabilize mode list identity — inline `modes={["vnd"]}` / default arrays
+  // would otherwise churn every parent render and re-seed (wiping typed codes).
+  const modesKey = modes.join("|");
+  const allowedModes = useMemo((): readonly DiscountType[] => {
+    const parts = modesKey
+      .split("|")
+      .filter((part): part is DiscountType => part === "pct" || part === "vnd");
+    return parts.length > 0 ? parts : FALLBACK_DISCOUNT_MODES;
+  }, [modesKey]);
   const showPromo = promo?.enabled === true;
   const showManual = !showPromo || promo?.canManual === true;
   const [pane, setPane] = useState<"code" | "manual">(
     showPromo ? "code" : "manual",
   );
-  const defaultType: DiscountType = allowedModes.includes("pct" as DiscountType)
+  const defaultType: DiscountType = allowedModes.includes("pct")
     ? ((current.type && allowedModes.includes(current.type)
         ? current.type
         : allowedModes[0]) ?? "vnd")
@@ -111,15 +125,20 @@ export function DiscountSheet({
   } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewPending, setPreviewPending] = useState(false);
+  const wasOpenRef = useRef(false);
 
   const activePane: "code" | "manual" =
     showPromo && (!showManual || pane === "code") ? "code" : "manual";
 
-  // Re-seed local state whenever the sheet (re)opens with a different
-  // current discount. Skipping this caused the form to show the previous
-  // open's values when re-opened on a different order.
+  // Seed only on open rising edge. Re-seeding while open (realtime refetch,
+  // unstable modes array) cleared promo codeText on every keystroke.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
+    if (wasOpenRef.current) return;
+    wasOpenRef.current = true;
     const nextType: DiscountType =
       current.type && allowedModes.includes(current.type)
         ? current.type
@@ -131,7 +150,14 @@ export function DiscountSheet({
     setPreview(null);
     setPreviewError(null);
     setPane(showPromo ? "code" : "manual");
-  }, [open, current.type, current.value, current.note, allowedModes, showPromo]);
+  }, [
+    open,
+    current.type,
+    current.value,
+    current.note,
+    allowedModes,
+    showPromo,
+  ]);
 
   const hasExistingDiscount = current.amount > 0;
 
@@ -316,11 +342,12 @@ export function DiscountSheet({
                     setPreviewError(null);
                   }}
                   placeholder={PROMOTIONS_VI.posCodePlaceholder}
-                  autoCapitalize="characters"
                   autoComplete="off"
+                  autoCorrect="off"
                   spellCheck={false}
                   controlSize="touch"
-                  className="font-mono uppercase"
+                  className="font-mono"
+                  inputMode="text"
                 />
               </Field>
               <Button
