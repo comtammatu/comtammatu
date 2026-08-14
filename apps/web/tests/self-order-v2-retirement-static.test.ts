@@ -24,7 +24,7 @@ const hardeningMigration = readFileSync(
 const databaseTypes = readFileSync(
   join(root, "../..", "packages/database/src/types/database.types.ts"),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 function readFunction(source: string, name: string): string {
   return (
