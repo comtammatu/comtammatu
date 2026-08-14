@@ -386,9 +386,10 @@ export default async function PickupPage({
   const orderItemIdByTicketId = new Map(
     tickets.map((ticket) => [ticket.id, ticket.order_item_id]),
   );
-  const rows = queue.map((item) =>
+  const rows = queue.map((item, index) =>
     toPickupListRow({
       item,
+      index,
       orderItemIdByTicketId,
       quantityByOrderItemId,
     }),
@@ -461,10 +462,12 @@ function PickupFooter() {
 
 function toPickupListRow({
   item,
+  index,
   orderItemIdByTicketId,
   quantityByOrderItemId,
 }: {
   item: PickupQueueItem;
+  index: number;
   orderItemIdByTicketId: Map<number, number>;
   quantityByOrderItemId: Map<number, number>;
 }): PickupListRow {
@@ -476,7 +479,7 @@ function toPickupListRow({
       orderItemIdByTicketId,
       quantityByOrderItemId,
     }),
-    status: resolvePickupListStatus(item),
+    status: resolvePickupListStatus(index),
     sortAt: item.sortAt,
   };
 }
@@ -506,8 +509,8 @@ function countItemQuantity({
   return total > 0 ? total : item.ticketCount;
 }
 
-function resolvePickupListStatus(_item: PickupQueueItem): PickupListStatus {
-  return "pending";
+function resolvePickupListStatus(index: number): PickupListStatus {
+  return index === 0 ? "in_progress" : "pending";
 }
 
 function normalizeQuantity(value: number | string | null): number {

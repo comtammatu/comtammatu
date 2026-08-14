@@ -21,7 +21,8 @@ const PICKUP_COLUMN_CLASS = {
   wait: "col-span-1 max-sm:border-l max-sm:border-t sm:col-span-1",
 } as const;
 const PICKUP_BOARD_COPY = {
-  pending: "Đang chờ",
+  inProgress: "Đang làm",
+  pending: "Chờ",
   idleEmptyTitle: "Chưa có món cần phục vụ.",
   idleDoneTitle: "Đã phục vụ hết món đang chờ.",
   idleBrandLine: "Món mới sẽ hiện ngay khi bếp gọi phục vụ.",
@@ -36,7 +37,7 @@ const PICKUP_BOARD_COPY = {
   },
 } as const;
 
-export type PickupBoardStatus = "pending";
+export type PickupBoardStatus = "in_progress" | "pending";
 
 export type PickupBoardRow = {
   key: string;
@@ -118,6 +119,7 @@ export function PickupOrderBoardClient({
             key={row.key}
             row={row}
             featured={!row.exiting && index === 0}
+            queueIndex={index + 1}
             nowMs={nowMs}
           />
         ))}
@@ -297,10 +299,12 @@ function PickupColumnHeading({
 function PickupOrderListRow({
   row,
   featured,
+  queueIndex,
   nowMs,
 }: {
   row: DisplayPickupBoardRow;
   featured: boolean;
+  queueIndex: number;
   nowMs: number;
 }) {
   const statusLabel = getPickupStatusLabel(row.status);
@@ -313,7 +317,7 @@ function PickupOrderListRow({
       data-pickup-featured={featured ? "true" : undefined}
       className={cn(
         "grid h-full min-h-0 w-full grid-cols-2 items-stretch border-b border-l-4 p-0 rounded-none border-x-0 motion-safe:transition-[background-color,border-color,opacity,transform] motion-safe:duration-300 motion-safe:ease-out sm:grid-cols-12",
-        getPickupRowClass(),
+        getPickupRowClass(row.status),
         featured && "border-l-primary",
         featured && "bg-warning/15 ring-1 ring-inset ring-warning/20",
         row.exiting &&
@@ -321,7 +325,12 @@ function PickupOrderListRow({
       )}
     >
       <PickupOrderCell column="order" mono>
-        {row.orderLabel}
+        <span className="inline-flex items-center gap-2">
+          <span className="text-muted-foreground font-mono text-pickup-header">
+            #{queueIndex}
+          </span>
+          <span>{row.orderLabel}</span>
+        </span>
       </PickupOrderCell>
       <PickupOrderCell column="quantity" mono>
         {formatCount(row.itemQuantity)} {PICKUP_BOARD_COPY.itemUnit}
@@ -368,10 +377,16 @@ function PickupOrderCell({
   );
 }
 
-function getPickupStatusLabel(_status: PickupBoardStatus): "Đang chờ" {
+function getPickupStatusLabel(status: PickupBoardStatus): string {
+  if (status === "in_progress") {
+    return PICKUP_BOARD_COPY.inProgress;
+  }
   return PICKUP_BOARD_COPY.pending;
 }
 
-function getPickupRowClass(): string {
+function getPickupRowClass(status?: PickupBoardStatus): string {
+  if (status === "in_progress") {
+    return "border-warning/20 bg-warning/15";
+  }
   return "border-warning/20 bg-warning/10";
 }

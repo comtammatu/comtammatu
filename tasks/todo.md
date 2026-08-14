@@ -5,17 +5,32 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Fix paid-receipt reprint and exclusive bill subtotal
+## Redesign promotions create + apply (free side)
+
+State: ready
+Kind: feature
+Tier: T3
+Lane: promotions/pos
+Exit: Owner creates any promo kind via kind-first DOC-WORKFLOW; cashiers/waiters apply codes and complete free-side selection; auto free-side offers appear without code; money lands on existing discount columns (ADR 0034); `corepack pnpm verify` green after Owner Accept of this design.
+Evidence: Amended ADR 0039; migration + RPCs; Owner form + DiscountSheet/picker; static + RPC tests.
+
+- [ ] Owner Accept design below (1B + code&auto free_side).
+- [ ] Amend ADR 0039 / module / screen-map; add `free_side` kind + selection RPCs.
+- [ ] Redesign Owner `/promotions` form (kind-first sections for all kinds).
+- [ ] Redesign POS `Mã giảm` flow + free-side picker + auto offer chip.
+- [ ] Targeted tests + `corepack pnpm verify`.
+
+## Fix paid-receipt reprint and VAT-inclusive bill print
 
 State: verify
 Kind: defect
 Tier: T3
 Lane: pos/print
-Exit: Cashier reprint of a paid receipt reaches the branch agent; provisional bill and payment receipt print the subtotal as item total excluding VAT, then VAT, service, discount, and grand total as the payable amount.
-Evidence: print-agent UPDATE + always-on pending drain; print-render exclusive subtotal; POS print/reprint permission OR-gate; `corepack pnpm verify`.
+Exit: Cashier reprint of a paid receipt reaches the branch agent; provisional bill and payment receipt print menu line amounts and subtotal as VAT-inclusive, omit GTGT rate lines, then service/discount and grand total as the payable amount.
+Evidence: print-agent UPDATE + always-on pending drain; print-render VAT-inclusive subtotal; POS print/reprint permission OR-gate; `corepack pnpm verify`.
 
-- [ ] Redeploy print-agent 1.0.1 at Nguyen Huu Tho and reprint one paid receipt.
-- [ ] Print one provisional bill and one payment receipt; confirm subtotal is ex-VAT and grand total includes VAT, service, and discount.
+- [ ] Redeploy print-agent 1.0.4 at Nguyen Huu Tho and reprint one paid receipt.
+- [ ] Print one provisional bill and one payment receipt; confirm line amounts/subtotal are VAT-inclusive and grand total applies service/discount only.
 
 ## Close inventory RPC and loader cleanup
 

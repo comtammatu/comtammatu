@@ -97,7 +97,8 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(pickupPageSource, /PICKUP_READY_WINDOW_MS/);
   assert.doesNotMatch(pickupPageSource, /PICKUP_FEATURED_STATUS/);
   assert.doesNotMatch(pickupPageSource, /ready: "Sẵn sàng"/);
-  assert.match(pickupPageSource, /pending: "Đang chờ"/);
+  assert.match(pickupPageSource, /inProgress: "Đang làm"/);
+  assert.match(pickupPageSource, /pending: "Chờ"/);
   assert.doesNotMatch(pickupPageSource, /preparing: "Chuẩn bị"/);
   assert.match(pickupPageSource, /order: "Đơn"/);
   assert.match(pickupPageSource, /quantity: "Số món"/);
@@ -305,7 +306,7 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
   );
   assert.match(
     pickupPageSource,
-    /<PickupOrderCell column="order" mono>\s*\{row\.orderLabel\}\s*<\/PickupOrderCell>/,
+    /<PickupOrderCell column="order" mono>[\s\S]*?#\{queueIndex\}[\s\S]*?\{row\.orderLabel\}[\s\S]*?<\/PickupOrderCell>/,
   );
   assert.match(
     pickupPageSource,
@@ -353,7 +354,6 @@ test("Pickup page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(pickupPageSource, /chúc quý khách dùng bữa ngon miệng/);
   assert.doesNotMatch(pickupPageSource, /Mời nhận món/);
   assert.doesNotMatch(pickupPageSource, /Đang mời/);
-  assert.doesNotMatch(pickupPageSource, /Đang làm/);
   assert.doesNotMatch(pickupPageSource, /Chưa có món sẵn sàng/);
   assert.doesNotMatch(pickupPageSource, /Chưa có đơn trong KDS/);
   assert.doesNotMatch(pickupPageSource, /Khi POS gửi món vào bếp/);
