@@ -37,7 +37,7 @@ export function BranchRevenueTargetStrip({
     <BranchOperatorPanel title={homeCopy.revenueTargetTitle} size="sm">
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
-          <div className="flex min-w-0 flex-col gap-0.5 rounded-md bg-muted/50 px-3 py-2.5">
+          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 px-3 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">
               {progressCopy.monthRevenueLabel}
             </span>
@@ -45,7 +45,7 @@ export function BranchRevenueTargetStrip({
               {formatVND(progress.netRevenueMtd)}
             </span>
           </div>
-          <div className="flex min-w-0 flex-col gap-0.5 rounded-md bg-muted/50 px-3 py-2.5">
+          <div className="flex min-w-0 flex-col gap-1 rounded-md bg-muted/50 px-3 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">
               {progressCopy.dayRevenueLabel}
             </span>
@@ -95,7 +95,7 @@ export function BranchRevenueTargetStrip({
                           ? "pointer-events-none absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-success ring-2 ring-background"
                           : "pointer-events-none absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background ring-2 ring-border"
                       }
-                      style={{ left: `${left}%` }}
+                      style={{ left: left + "%" }}
                     />
                   );
                 })}
