@@ -1,5 +1,6 @@
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { BrandMascot } from "@/components/brand";
+import { ForceLightMode } from "@/components/force-light-mode";
 import {
   Item,
   ItemContent,
@@ -18,9 +19,10 @@ export default function SelfOrderNotFound() {
       density="compact"
       mobile
       padded={false}
-      className="flex min-h-dvh flex-col bg-background"
+      className="theme-light-only flex min-h-dvh flex-col bg-background"
       contentClassName="min-h-0 flex-1 justify-center px-3 py-6"
     >
+      <ForceLightMode />
       <Item variant="outline" className="bg-card">
         <ItemContent className="items-center gap-3 text-center">
           <BrandMascot decorative size="sm" />

@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { AppHeaderBrand } from "@/components/app-header";
-import { ThemeMenuItem } from "@/components/theme-toggle";
 import { PrinterStatusIndicator } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
@@ -153,8 +152,6 @@ function PosMoreMenu({
                 ? "Âm báo POS: đọc"
                 : "Âm báo POS: chuông + đọc"}
         </DropdownMenuItem>
-
-        <ThemeMenuItem className="min-h-12 text-sm" />
 
         {canCloseShift ? (
           <>

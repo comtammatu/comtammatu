@@ -45,7 +45,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /padded=\{false\}/);
   assert.match(
     client,
-    /className="h-dvh min-h-0 overflow-hidden bg-background"/,
+    /className="theme-light-only h-dvh min-h-0 overflow-hidden bg-background"/,
   );
   assert.match(
     client,
@@ -55,8 +55,9 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.doesNotMatch(surface, /mobile && "pb-28"/);
   assert.match(client, /SELF_ORDER_VI\.branchFallback/);
   assert.match(client, /SELF_ORDER_VI\.billTab/);
-  assert.match(client, /from "@\/components\/theme-toggle"/);
-  assert.match(client, /<ThemeToggle/);
+  assert.match(client, /from "@\/components\/force-light-mode"/);
+  assert.match(client, /<ForceLightMode/);
+  assert.doesNotMatch(client, /<ThemeToggle/);
   assert.match(client, /size="icon-touch"/);
   assert.doesNotMatch(client, /billAvailable/);
   assert.match(client, /variant="default"/);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ForceLightMode } from "@/components/force-light-mode";
 import { OperationalPwaProvider } from "../_components/operational-pwa/provider";
 import { KdsPwaToolbar } from "../_components/operational-pwa/toolbar";
 
@@ -32,8 +33,9 @@ export default async function KdsLayout({
     <main
       id="main-content"
       tabIndex={-1}
-      className="chrome-safe-pt flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
+      className="theme-light-only chrome-safe-pt flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation"
     >
+      <ForceLightMode />
       <OperationalPwaProvider>
         <KdsPwaToolbar branchId={branchId} />
         {children}

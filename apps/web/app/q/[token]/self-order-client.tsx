@@ -30,7 +30,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppPage } from "@/components/surface";
 import { BrandMascot } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ForceLightMode } from "@/components/force-light-mode";
 import {
   publicSelfOrderSnapshotSchema,
   type PublicSelfOrderAvailableSnapshot,
@@ -866,9 +866,10 @@ export function SelfOrderClient({
       density="compact"
       mobile
       padded={false}
-      className="h-dvh min-h-0 overflow-hidden bg-background"
+      className="theme-light-only h-dvh min-h-0 overflow-hidden bg-background"
       contentClassName="h-full min-h-0 p-0"
     >
+      <ForceLightMode />
       <div className="flex h-full min-h-0 flex-col">
         <header className="workflow-safe-pt sticky top-0 z-30 shrink-0 border-b border-border bg-background/95 px-3 py-2 backdrop-blur">
           <div className="flex items-start gap-2">
@@ -881,11 +882,6 @@ export function SelfOrderClient({
               </h1>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <ThemeToggle
-                variant="outline"
-                size="icon-touch"
-                className="shrink-0"
-              />
               <Button
                 type="button"
                 variant="outline"

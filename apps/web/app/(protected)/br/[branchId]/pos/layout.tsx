@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { loadAuthState } from "@/_lib/auth";
+import { ForceLightMode } from "@/components/force-light-mode";
 import { PosPwaProvider } from "./_components/pwa/online-status-provider";
 import { PosPwaToolbar } from "./_components/pwa/pos-pwa-toolbar";
 
@@ -37,8 +38,9 @@ export default async function PosLayout({
     <main
       id="main-content"
       tabIndex={-1}
-      className="chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
+      className="theme-light-only chrome-safe-pt flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
+      <ForceLightMode />
       <PosPwaProvider>
         <PosPwaToolbar branchId={branchId} />
         {children}

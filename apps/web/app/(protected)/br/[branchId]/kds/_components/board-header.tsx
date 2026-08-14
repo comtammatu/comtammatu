@@ -4,17 +4,10 @@ import { formatCount } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
-import { ThemeMenuItem } from "@/components/theme-toggle";
-import {
   History as IconHistory,
   Maximize2 as IconMaximize,
   Megaphone as IconVoiceOn,
   Minimize2 as IconMinimize,
-  MoreVertical as IconMoreVertical,
   Volume2 as IconVolumeOn,
   VolumeX as IconVolumeOff,
 } from "lucide-react";
@@ -127,23 +120,6 @@ export function KdsBoardTopBar({
           )}
         </Button>
         <ViewModeToggle mode={mode} onChange={onModeChange} />
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-touch"
-                aria-label={KDS_HEADER_COPY.moreMenu}
-              >
-                <IconMoreVertical />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end" className="w-56">
-            <ThemeMenuItem className="min-h-12 text-sm" />
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
