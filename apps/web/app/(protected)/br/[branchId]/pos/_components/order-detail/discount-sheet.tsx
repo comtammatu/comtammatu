@@ -311,12 +311,16 @@ export function DiscountSheet({
                   id="promo-code-input"
                   value={codeText}
                   onChange={(event) => {
-                    setCodeText(event.target.value.toUpperCase());
+                    setCodeText(event.target.value);
                     setPreview(null);
                     setPreviewError(null);
                   }}
                   placeholder={PROMOTIONS_VI.posCodePlaceholder}
                   autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  controlSize="touch"
+                  className="font-mono uppercase"
                 />
               </Field>
               <Button
