@@ -12838,7 +12838,7 @@ export type Database = {
       }
       apply_free_side_selection: {
         Args: {
-          p_code: string | null
+          p_code: string
           p_order_id: number
           p_promotion_id: number
           p_selections: Json
@@ -12985,6 +12985,10 @@ export type Database = {
           stock_allowance_quantity: number
           stock_capacity: number
         }[]
+      }
+      branch_network_gate_bypass_active: {
+        Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: boolean
       }
       bulk_create_supplier_items: {
         Args: { p_items: Json; p_supplier_id: number }
@@ -14744,6 +14748,10 @@ export type Database = {
         Args: { p_order: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: undefined
       }
+      promotion_free_side_applied_amount: {
+        Args: { p_order_id: number; p_promotion_id: number }
+        Returns: number
+      }
       promotion_free_side_auto_selections: {
         Args: { p_candidates: Json }
         Returns: Json
@@ -15801,22 +15809,22 @@ export type Database = {
           p_allow_auto?: boolean
           p_allow_code?: boolean
           p_branch_ids: number[]
-          p_bxgy_buy_qty: number | null
-          p_bxgy_get_qty: number | null
-          p_discount_type: string | null
-          p_discount_value: number | null
-          p_ends_at: string | null
-          p_free_side_qty?: number | null
-          p_id: number | null
+          p_bxgy_buy_qty: number
+          p_bxgy_get_qty: number
+          p_discount_type: string
+          p_discount_value: number
+          p_ends_at: string
+          p_free_side_qty?: number
+          p_id: number
           p_items: Json
           p_kind: string
-          p_max_discount_amount: number | null
+          p_max_discount_amount: number
           p_min_subtotal: number
           p_name: string
           p_reusable_code: string
           p_service_modes: string[]
           p_stack_with_item_discount: boolean
-          p_starts_at: string | null
+          p_starts_at: string
           p_status: string
           p_time_windows: Json
         }

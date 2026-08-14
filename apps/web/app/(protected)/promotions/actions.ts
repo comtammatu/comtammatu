@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import type { Database } from "@comtammatu/database/types";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -141,7 +142,7 @@ export const upsertPromotion = withAction(
       p_branch_ids: input.branchIds,
       p_items: input.items,
       p_reusable_code: input.reusableCode.trim().toUpperCase(),
-    });
+    } as Database["public"]["Functions"]["upsert_promotion"]["Args"]);
 
     if (error) {
       return { success: false, error: mapPromotionRpcError(error.message) };

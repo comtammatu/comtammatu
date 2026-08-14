@@ -849,7 +849,7 @@ export async function applyFreeSideSelection(
     {
       p_order_id: input.orderId,
       p_promotion_id: input.promotionId,
-      p_code: input.code?.trim() ? input.code.trim().toUpperCase() : null,
+      p_code: input.code?.trim() ? input.code.trim().toUpperCase() : "",
       p_selections: input.selections,
     },
   );
