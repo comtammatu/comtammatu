@@ -413,34 +413,21 @@ export async function proxy(request: NextRequest) {
         }
 
         if (networkGateEnabled) {
-          const nowIso = new Date().toISOString();
-          let allowed = false;
-
           // Per-branch emergency bypass (owner-activated TTL / Ca POS / Ngày).
           // Checked before trusted-IP deny — never use global POS_NETWORK_GATE
-          // for a single-branch outage.
-          const { data: bypassRow } = await supabase
-            .from("branch_network_gate_bypasses")
-            .select("id, bound_pos_session_id")
-            .eq("branch_id", routeBranchId)
-            .eq("tenant_id", claims.tenant_id)
-            .is("revoked_at", null)
-            .gt("expires_at", nowIso)
-            .maybeSingle();
-
-          if (bypassRow) {
-            if (bypassRow.bound_pos_session_id == null) {
-              allowed = true;
-            } else {
-              const { data: openSession } = await supabase
-                .from("pos_sessions")
-                .select("id")
-                .eq("id", bypassRow.bound_pos_session_id)
-                .eq("status", "open")
-                .maybeSingle();
-              allowed = openSession !== null;
-            }
+          // for a single-branch outage. RPC is SECURITY DEFINER so middleware
+          // does not depend on bypass-table RLS visibility for floor staff.
+          const { data: bypassActive, error: bypassError } = await supabase.rpc(
+            "branch_network_gate_bypass_active",
+            {
+              p_tenant_id: claims.tenant_id,
+              p_branch_id: routeBranchId,
+            },
+          );
+          if (bypassError) {
+            console.warn("[network-gate] bypass lookup failed:", bypassError);
           }
+          let allowed = bypassActive === true;
 
           if (!allowed) {
             const clientIp = getClientIp(request.headers);

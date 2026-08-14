@@ -34,6 +34,9 @@ const migration = readRepoFile(
 const emergencyBypassMigration = readRepoFile(
   "supabase/migrations/20260810020844_branch_network_gate_emergency_bypass.sql",
 );
+const bypassActiveRpcMigration = readRepoFile(
+  "supabase/migrations/20260814163500_branch_network_gate_bypass_active_rpc.sql",
+);
 const networkActions = readRepoFile(
   "apps/web/app/(protected)/branches/network-config-actions.ts",
 );
@@ -96,11 +99,27 @@ test("owner bypasses station network gate while other roles still use it", () =>
 test("proxy checks per-branch emergency bypass before trusted-IP deny", () => {
   assert.match(
     proxy,
-    /\.from\("branch_network_gate_bypasses"\)[\s\S]*\.from\("branch_trusted_egress_ips"\)/,
+    /\.rpc\(\s*"branch_network_gate_bypass_active"[\s\S]*\.from\("branch_trusted_egress_ips"\)/,
+  );
+  assert.doesNotMatch(
+    proxy,
+    /\.from\("branch_network_gate_bypasses"\)/,
+  );
+});
+
+test("branch_network_gate_bypass_active RPC is SECURITY DEFINER and pos_shift aware", () => {
+  assert.match(
+    bypassActiveRpcMigration,
+    /CREATE OR REPLACE FUNCTION public\.branch_network_gate_bypass_active/,
+  );
+  assert.match(bypassActiveRpcMigration, /SECURITY DEFINER/);
+  assert.match(
+    bypassActiveRpcMigration,
+    /bound_pos_session_id[\s\S]*pos_sessions[\s\S]*status = 'open'/,
   );
   assert.match(
-    proxy,
-    /bound_pos_session_id[\s\S]*\.from\("pos_sessions"\)[\s\S]*status", "open"/,
+    bypassActiveRpcMigration,
+    /GRANT EXECUTE ON FUNCTION public\.branch_network_gate_bypass_active\(bigint, bigint\)\s+TO authenticated, service_role/,
   );
 });
 

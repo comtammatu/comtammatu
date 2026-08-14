@@ -286,7 +286,7 @@ export function NetworkConfigPanel({
         </div>
       )}
 
-      {!loading && activeRows.length === 0 && (
+      {!loading && !bypass && activeRows.length === 0 && (
         <Alert className="border-warning/20 bg-warning/10">
           <IconAlertTriangle className="size-4 text-warning" />
           <AlertTitle>{messages.settings.network.noTrustedTitle}</AlertTitle>
@@ -296,7 +296,7 @@ export function NetworkConfigPanel({
         </Alert>
       )}
 
-      {!loading && activeRows.length > 0 && !hasFreshTrust && (
+      {!loading && !bypass && activeRows.length > 0 && !hasFreshTrust && (
         <Alert className="border-warning/20 bg-warning/10">
           <IconAlertTriangle className="size-4 text-warning" />
           <AlertTitle>{messages.settings.network.staleTitle}</AlertTitle>
