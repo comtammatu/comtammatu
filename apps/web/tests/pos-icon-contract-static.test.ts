@@ -171,9 +171,9 @@ test("POS session chrome and sheets lock icon-touch plus touch search fields", (
   assert.match(sessionHeader, /size="icon-touch"/);
   assert.equal(sessionHeader.match(/size="icon-touch"/g)?.length, 2);
   assert.match(orderListPane, /size="icon-touch"/);
-  assert.equal(orderListPane.match(/size="icon-touch"/g)?.length, 2);
+  assert.equal(orderListPane.match(/size="icon-touch"/g)?.length, 1);
   assert.match(cartPane, /Utensils as IconUtensils/);
-  assert.equal(cartPane.match(/size="icon-touch"/g)?.length, 4);
+  assert.equal(cartPane.match(/size="icon-touch"/g)?.length, 2);
   assert.match(itemCustomizer, /Minus as IconMinus/);
   assert.match(itemCustomizer, /Plus as IconPlus/);
   assert.equal(itemCustomizer.match(/size="icon-touch"/g)?.length, 4);

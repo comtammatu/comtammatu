@@ -20,6 +20,7 @@ import {
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { Kbd } from "@comtammatu/ui/components/kbd";
 import { confirm } from "@/components/confirm-dialog";
 import { StationSection, StationSheet } from "@/components/surface";
 import { Frame } from "@comtammatu/ui/components/frame";
@@ -830,62 +831,99 @@ export function BillReceipt({
           orderId,
           cashReceived,
         );
-        if (!result.success) {
-          toast.error(result.error ?? "Không thể xác nhận thanh toán");
-          // Stale total: re-pull the order so the cashier sees the new
-          // amount and can re-confirm in one tap. Keep the sheet open.
-          if (isAmountMismatchError(result.error)) {
-            await onOrderUpdated?.();
+          if (!result.success) {
+            toast.error(result.error ?? "Không thể xác nhận thanh toán");
+            // Stale total: re-pull the order so the cashier sees the new
+            // amount and can re-confirm in one tap. Keep the sheet open.
+            if (isAmountMismatchError(result.error)) {
+              await onOrderUpdated?.();
+            }
+            return;
           }
+          const change = result.data?.cash_change ?? 0;
+          const inv = result.data?.invoice ?? null;
+          const printWarning = result.data?.print_warning;
+          const invoiceQueued = inv?.status === "queued";
+          const invoiceNeedsReconcile = inv?.status === "reconcile_required";
+          const successTitle =
+            inv == null
+              ? "Đã thanh toán"
+              : invoiceQueued
+                ? "Đã thu tiền — HĐĐT đang xử lý"
+                : "Đã thu tiền — HĐĐT cần đối soát";
+          const successDescription =
+            inv == null
+              ? `Tiền trả khách: ${formatVND(change)}`
+              : invoiceQueued
+                ? `Tiền trả khách: ${formatVND(change)} · Bộ phận tài chính sẽ đối soát nếu cần.`
+                : invoiceNeedsReconcile
+                  ? "HĐĐT đã được chuyển sang bộ phận tài chính để đối soát với Viettel."
+                  : "HĐĐT đang chờ bộ phận tài chính kiểm tra.";
+          // Receipt enqueue is fail-soft inside confirm_cash_payment. With a
+          // 1-slot toaster a separate print warning would evict the success
+          // toast, so fold the printer error into one warning that supersedes
+          // and stays longer; otherwise keep the plain success/warning toast.
+          if (printWarning) {
+            toast.warning(`${successTitle} — không in được hóa đơn`, {
+              description: `${successDescription} · ${printWarning} — bấm "in lại" sau khi sửa máy in.`,
+              duration: 8000,
+            });
+          } else if (invoiceNeedsReconcile) {
+            toast.warning(successTitle, { description: successDescription });
+          } else {
+            toast.success(successTitle, { description: successDescription });
+          }
+          await onOrderUpdated?.();
+          onClose();
           return;
         }
-        const change = result.data?.cash_change ?? 0;
-        const inv = result.data?.invoice ?? null;
-        const printWarning = result.data?.print_warning;
-        const invoiceQueued = inv?.status === "queued";
-        const invoiceNeedsReconcile = inv?.status === "reconcile_required";
-        const successTitle =
-          inv == null
-            ? "Đã thanh toán"
-            : invoiceQueued
-              ? "Đã thu tiền — HĐĐT đang xử lý"
-              : "Đã thu tiền — HĐĐT cần đối soát";
-        const successDescription =
-          inv == null
-            ? `Tiền trả khách: ${formatVND(change)}`
-            : invoiceQueued
-              ? `Tiền trả khách: ${formatVND(change)} · Bộ phận tài chính sẽ đối soát nếu cần.`
-              : invoiceNeedsReconcile
-                ? "HĐĐT đã được chuyển sang bộ phận tài chính để đối soát với Viettel."
-                : "HĐĐT đang chờ bộ phận tài chính kiểm tra.";
-        // Receipt enqueue is fail-soft inside confirm_cash_payment. With a
-        // 1-slot toaster a separate print warning would evict the success
-        // toast, so fold the printer error into one warning that supersedes
-        // and stays longer; otherwise keep the plain success/warning toast.
-        if (printWarning) {
-          toast.warning(`${successTitle} — không in được hóa đơn`, {
-            description: `${successDescription} · ${printWarning} — bấm "in lại" sau khi sửa máy in.`,
-            duration: 8000,
-          });
-        } else if (invoiceNeedsReconcile) {
-          toast.warning(successTitle, { description: successDescription });
-        } else {
-          toast.success(successTitle, { description: successDescription });
+      });
+    },
+    [
+      branchId,
+      cashReceived,
+      isOnline,
+      onClose,
+      onOrderUpdated,
+      order,
+      orderId,
+      selectedMethod,
+      totalAmount,
+    ],
+  );
+
+  useEffect(() => {
+    if (orderId === null || !order || order.payment_status === "paid") return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "F9") {
+        e.preventDefault();
+        if (isOnline && !actionPending) {
+          if (selectedMethod !== "cash") setSelectedMethod("cash");
+          setCashInput(String(totalAmount));
         }
-        await onOrderUpdated?.();
-        onClose();
-        return;
+      } else if (
+        e.key === "Enter" &&
+        selectedMethod === "cash" &&
+        canConfirmPaid &&
+        !actionPending
+      ) {
+        e.preventDefault();
+        void handleConfirmPaid();
       }
-    });
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    branchId,
-    canConfirmPaid,
-    cashReceived,
-    onClose,
-    onOrderUpdated,
-    order,
     orderId,
+    order,
+    canConfirmPaid,
+    isOnline,
+    actionPending,
     selectedMethod,
+    totalAmount,
+    handleConfirmPaid,
   ]);
 
   const handleCancelPendingPayment = useCallback(async () => {
@@ -1212,18 +1250,38 @@ export function BillReceipt({
                     </InputGroup>
 
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {cashSuggestions.map((amount) => (
-                        <Button
-                          key={amount}
-                          type="button"
-                          variant="outline"
-                          size="touch"
-                          onClick={() => setCashInput(String(amount))}
-                          disabled={actionPending}
-                        >
-                          {formatVND(amount)}
-                        </Button>
-                      ))}
+                      <Button
+                        type="button"
+                        variant={cashReceived === totalAmount ? "default" : "outline"}
+                        size="touch"
+                        className={cn(
+                          "col-span-2 font-semibold sm:col-span-1",
+                          cashReceived === totalAmount
+                            ? "bg-primary text-primary-foreground"
+                            : "border-primary/20 text-primary hover:bg-primary/10",
+                        )}
+                        onClick={() => setCashInput(String(totalAmount))}
+                        disabled={actionPending}
+                      >
+                        {messages.pos.payment.exactCash(formatVND(totalAmount))}
+                        <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs">
+                          F9
+                        </Kbd>
+                      </Button>
+                      {cashSuggestions
+                        .filter((amount) => amount !== totalAmount)
+                        .map((amount) => (
+                          <Button
+                            key={amount}
+                            type="button"
+                            variant="outline"
+                            size="touch"
+                            onClick={() => setCashInput(String(amount))}
+                            disabled={actionPending}
+                          >
+                            {formatVND(amount)}
+                          </Button>
+                        ))}
                     </div>
 
                     <div className="flex items-center justify-between gap-3 rounded-md bg-muted/50 p-3">
@@ -1373,6 +1431,9 @@ export function BillReceipt({
               >
                 {actionPending ? <Spinner data-icon="inline-start" /> : null}
                 {messages.pos.payment.paidConfirm}
+                <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit text-3xs ml-2">
+                  Enter
+                </Kbd>
               </Button>
             ) : isWaitingForVietQr ? (
               <Button

@@ -46,6 +46,40 @@ export function SelfOrderFeedbackSheet({
   const [isPending, startTransition] = useTransition();
   const [clientSubmissionId] = useState(() => crypto.randomUUID());
 
+  const quickTags =
+    rating != null
+      ? rating >= 4
+        ? [
+            "Món ăn ngon",
+            "Phục vụ chu đáo",
+            "Lên món nhanh",
+            "Không gian sạch sẽ",
+            "Giá cả hợp lý",
+          ]
+        : [
+            "Lên món chậm",
+            "Thức ăn nguội",
+            "Phục vụ chưa tốt",
+            "Bàn chưa dọn sạch",
+            "Sai món",
+          ]
+      : [];
+
+  function handleToggleTag(tag: string) {
+    setComment((current) => {
+      const trimmed = current.trim();
+      if (!trimmed) return tag;
+      if (trimmed.includes(tag)) {
+        return trimmed
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s !== tag && s.length > 0)
+          .join(", ");
+      }
+      return `${trimmed}, ${tag}`;
+    });
+  }
+
   function resetLocal() {
     setRating(null);
     setComment("");
@@ -236,6 +270,34 @@ export function SelfOrderFeedbackSheet({
                   );
                 })}
               </div>
+
+              {rating != null && quickTags.length > 0 ? (
+                <div
+                  className="flex flex-wrap justify-center gap-1.5 pt-1"
+                  role="group"
+                  aria-label={SELF_ORDER_VI.feedbackTagsAria}
+                >
+                  {quickTags.map((tag) => {
+                    const isSelected = comment.includes(tag);
+                    return (
+                      <Button
+                        key={tag}
+                        type="button"
+                        variant={isSelected ? "secondary" : "outline"}
+                        size="sm"
+                        className={cn(
+                          "h-7 rounded-full px-3 text-xs font-normal",
+                          isSelected &&
+                            "border-primary/20 bg-primary/10 font-medium text-primary hover:bg-primary/15",
+                        )}
+                        onClick={() => handleToggleTag(tag)}
+                      >
+                        {tag}
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-2">

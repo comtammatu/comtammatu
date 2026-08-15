@@ -7,7 +7,6 @@ import {
   ChevronRight as IconChevronRight,
   Clock as IconClock,
   RefreshCw as IconRefresh,
-  X as IconX,
 } from "lucide-react";
 import { ActiveOrdersList, type SessionOrder } from "../order-history";
 import type { SelfOrderPaymentCallKind } from "../self-order-actions";
@@ -55,48 +54,40 @@ function OrderListPaneComponent({
     ? messages.pos.orderHistory.dineInSessionOrders
     : messages.pos.orderHistory.sessionOrders;
 
+  const isMobileDrawer = onClosePane != null;
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="text-base font-semibold">
-            {title}
-          </p>
-          <Badge
-            variant={activeOrderCount > 0 ? "secondary" : "outline"}
-            className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
-            aria-label={messages.pos.orderHistory.activeCountAria(
-              activeOrderCount,
-            )}
-          >
-            {activeOrderCount}
-          </Badge>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-touch"
-            className="text-muted-foreground"
-            aria-label={messages.pos.orderHistory.refreshOrdersAria}
-            onClick={() => void refreshOrders()}
-          >
-            <IconRefresh />
-          </Button>
-          {onClosePane ? (
+      {!isMobileDrawer ? (
+        <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="text-base font-semibold">
+              {title}
+            </p>
+            <Badge
+              variant={activeOrderCount > 0 ? "secondary" : "outline"}
+              className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
+              aria-label={messages.pos.orderHistory.activeCountAria(
+                activeOrderCount,
+              )}
+            >
+              {activeOrderCount}
+            </Badge>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               type="button"
               variant="ghost"
               size="icon-touch"
               className="text-muted-foreground"
-              aria-label={messages.pos.orderHistory.closeListAria}
-              onClick={onClosePane}
+              aria-label={messages.pos.orderHistory.refreshOrdersAria}
+              onClick={() => void refreshOrders()}
             >
-              <IconX />
+              <IconRefresh />
             </Button>
-          ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <ActiveOrdersList
         orders={displayedOrders}

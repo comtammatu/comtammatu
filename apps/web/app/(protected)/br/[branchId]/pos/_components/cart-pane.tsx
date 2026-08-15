@@ -241,116 +241,99 @@ function CartPaneComponent({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div
-        className={cn(
-          "shrink-0 border-b border-border/60",
-          shouldShowOrderTypeSelector ? "p-0" : "px-3 py-3 sm:px-4 sm:py-4",
-        )}
-      >
-        {isMobileDrawer && shouldShowOrderTypeSelector ? (
-          <div className="mb-2 flex items-center justify-end">
+      {isMobileDrawer ? (
+        shouldShowOrderTypeSelector ? (
+          <div className="shrink-0 border-b border-border/60 p-0">
+            {/* Type selector rendered inside ToggleGroup below */}
+          </div>
+        ) : cart.items.length > 0 ? (
+          <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-3 py-2">
+            <Badge variant="outline" className="max-w-full truncate">
+              {contextLabel}
+            </Badge>
             <Button
               type="button"
               variant="ghost"
               size="icon-touch"
-              className="text-muted-foreground"
-              aria-label={messages.pos.pendingDraft.closeAria}
-              onClick={onClosePane}
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={messages.pos.pendingDraft.clear}
+              onClick={() => void handleClearCart()}
             >
-              <IconX />
+              <IconTrash />
             </Button>
           </div>
-        ) : null}
-
-        {!shouldShowOrderTypeSelector && (
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                {messages.pos.desktop.pendingNewTitle}
-              </h2>
-              <Badge variant="outline" className="mt-1 max-w-full truncate">
-                {contextLabel}
-              </Badge>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {!isMobileDrawer &&
-                cart.orderType === "dine_in" &&
-                selectedTableNumber != null && (
+        ) : null
+      ) : (
+        <div
+          className={cn(
+            "shrink-0 border-b border-border/60",
+            shouldShowOrderTypeSelector ? "p-0" : "px-3 py-3 sm:px-4 sm:py-4",
+          )}
+        >
+          {!shouldShowOrderTypeSelector && (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                  {messages.pos.desktop.pendingNewTitle}
+                </h2>
+                <Badge variant="outline" className="mt-1 max-w-full truncate">
+                  {contextLabel}
+                </Badge>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {cart.orderType === "dine_in" &&
+                  selectedTableNumber != null && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      className="min-w-12 px-3 text-sm text-muted-foreground"
+                      onClick={() => {
+                        if (onReturnToTables) {
+                          onReturnToTables();
+                        } else {
+                          activeTable.setTable(null);
+                        }
+                      }}
+                    >
+                      <IconLayoutGrid data-icon="inline-start" />
+                      {messages.pos.desktop.changeTarget}
+                    </Button>
+                  )}
+                {cart.items.length > 0 && (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="touch"
-                    className="min-w-12 px-3 text-sm text-muted-foreground"
-                    onClick={() => {
-                      if (onReturnToTables) {
-                        onReturnToTables();
-                      } else {
-                        activeTable.setTable(null);
-                      }
-                    }}
+                    className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
+                    onClick={() => void handleClearCart()}
                   >
-                    <IconLayoutGrid data-icon="inline-start" />
-                    {messages.pos.desktop.changeTarget}
+                    <IconTrash data-icon="inline-start" />
+                    {messages.pos.pendingDraft.clear}
                   </Button>
                 )}
-              {!isMobileDrawer && cart.items.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="touch"
-                  className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
-                  onClick={() => void handleClearCart()}
-                >
-                  <IconTrash data-icon="inline-start" />
-                  {messages.pos.pendingDraft.clear}
-                </Button>
-              )}
-              {isMobileDrawer && cart.items.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-touch"
-                  className="text-muted-foreground hover:text-destructive"
-                  aria-label={messages.pos.pendingDraft.clear}
-                  onClick={() => void handleClearCart()}
-                >
-                  <IconTrash />
-                </Button>
-              )}
-              {isMobileDrawer && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-touch"
-                  className="text-muted-foreground"
-                  aria-label={messages.pos.pendingDraft.closeAria}
-                  onClick={onClosePane}
-                >
-                  <IconX />
-                </Button>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {shouldShowOrderTypeSelector && (
-          <ToggleGroup
-            type="single"
-            value={cart.orderType}
-            variant="outline"
-            size="touch"
-            spacing={0}
-            className="grid w-full grid-cols-2"
-            aria-label={messages.pos.desktop.serviceModeAria}
-            onValueChange={(value) => {
-              if (
-                !modeLocked &&
-                (value === "dine_in" || value === "takeaway")
-              ) {
-                onOrderTypeChange(value);
-              }
-            }}
-          >
+          {shouldShowOrderTypeSelector && (
+            <ToggleGroup
+              type="single"
+              value={cart.orderType}
+              variant="outline"
+              size="touch"
+              spacing={0}
+              className="grid w-full grid-cols-2"
+              aria-label={messages.pos.desktop.serviceModeAria}
+              onValueChange={(value) => {
+                if (
+                  !modeLocked &&
+                  (value === "dine_in" || value === "takeaway")
+                ) {
+                  onOrderTypeChange(value);
+                }
+              }}
+            >
             <ToggleGroupItem
               value="dine_in"
               className="min-w-0 justify-center gap-2 text-base font-semibold"
@@ -374,6 +357,7 @@ function CartPaneComponent({
           </ToggleGroup>
         )}
       </div>
+    )}
 
       {cart.items.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-4">

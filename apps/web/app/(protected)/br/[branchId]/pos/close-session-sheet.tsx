@@ -277,10 +277,6 @@ export function CloseSessionSheet({
                       placeholder="0"
                       className="text-base"
                     />
-                    <p className="text-sm text-muted-foreground">
-                      Nhanh nhất: nhập một tổng. Chuyển “Theo mệnh giá” nếu cần
-                      phân loại từng tờ để kiểm toán.
-                    </p>
                   </StationSection>
                 ) : (
                   <DenominationInput
@@ -304,10 +300,6 @@ export function CloseSessionSheet({
                     rows={3}
                     className="resize-none text-base"
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Nếu lệch quỹ vượt ngưỡng, hệ thống sẽ tự động gửi cảnh báo
-                    cho quản lý. Ca vẫn đóng bình thường.
-                  </p>
                 </div>
               </div>
             )}
@@ -377,8 +369,7 @@ export function CloseSessionSheet({
 
                 <Alert>
                   <AlertDescription>
-                    Tiền đếm và lệch lúc chốt đã được ghi lại, không cộng doanh
-                    thu lần hai. Nhấn Xong để quay về trang nhân viên.
+                    Tiền đếm và lệch lúc chốt đã được ghi lại, không cộng doanh thu lần hai.
                   </AlertDescription>
                 </Alert>
 

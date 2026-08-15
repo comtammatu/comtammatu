@@ -313,6 +313,11 @@ export const SELF_ORDER_VI = {
     `${itemName} chỉ còn ${String(remaining)} suất, giỏ đang cần ${String(requested)} — giảm số lượng hoặc đổi món.`,
   itemOutOfStockBlocked: (itemName: string) =>
     `${itemName} hết nguyên liệu — đổi món khác.`,
+  orderProgressAria: "Tiến trình món ăn",
+  feedbackTagsAria: "Gợi ý đánh giá nhanh",
+  stepSent: "Gửi yêu cầu",
+  stepCooking: "Bếp chế biến",
+  stepServing: "Phục vụ tại bàn",
 } as const;
 
 export type SelfOrderKey = keyof typeof SELF_ORDER_VI;

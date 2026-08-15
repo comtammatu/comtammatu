@@ -73,32 +73,30 @@ function AppendDraftPaneComponent({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-2 sm:px-4">
-        <div className="min-w-0">
-          <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
-            {messages.pos.appendDraft.title}
-          </h2>
-          {/* Menu target row already shows the table/order label from md up. */}
-          <p className="truncate text-sm text-muted-foreground md:sr-only">
-            {targetLabel}
-          </p>
+      {!onClosePane ? (
+        <div className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 py-2 sm:px-4">
+          <div className="min-w-0">
+            <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground">
+              {messages.pos.appendDraft.title}
+            </h2>
+            {/* Menu target row already shows the table/order label from md up. */}
+            <p className="truncate text-sm text-muted-foreground md:sr-only">
+              {targetLabel}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-touch"
+            className="shrink-0 text-muted-foreground"
+            aria-label={messages.pos.appendDraft.cancelAria}
+            disabled={isSubmitting}
+            onClick={onCancel}
+          >
+            <IconX />
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-touch"
-          className="shrink-0 text-muted-foreground"
-          aria-label={
-            onClosePane
-              ? messages.pos.appendDraft.closeAria
-              : messages.pos.appendDraft.cancelAria
-          }
-          disabled={isSubmitting}
-          onClick={onClosePane ?? onCancel}
-        >
-          <IconX />
-        </Button>
-      </div>
+      ) : null}
 
       {items.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-4">

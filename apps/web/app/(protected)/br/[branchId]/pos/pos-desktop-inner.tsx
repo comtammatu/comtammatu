@@ -1778,12 +1778,24 @@ export function PosDesktopInner({
       fullscreen
       title={
         appendTarget != null
-          ? `${messages.pos.desktop.pendingAppendTitle} ${
-              orderTargetLabel ?? ""
+          ? `${messages.pos.desktop.pendingAppendTitle}${
+              orderTargetLabel ? ` · ${orderTargetLabel}` : ""
             }`.trim()
           : showOrders
-            ? "Đơn trong ca"
-            : messages.pos.desktop.pendingNewTitle
+            ? (
+              <span className="flex items-center gap-2">
+                <span>{messages.pos.orderHistory.sessionOrders}</span>
+                <Badge
+                  variant={orders.length > 0 ? "secondary" : "outline"}
+                  className="h-5 min-w-5 px-1.5 text-xs font-semibold tabular-nums"
+                >
+                  {orders.length}
+                </Badge>
+              </span>
+            )
+            : orderTargetLabel
+              ? `${messages.pos.desktop.pendingNewTitle} · ${orderTargetLabel}`
+              : messages.pos.desktop.pendingNewTitle
       }
       bodyClassName="p-0"
     >

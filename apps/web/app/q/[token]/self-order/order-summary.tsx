@@ -1,8 +1,10 @@
 "use client";
 
-import { Clock as IconClock } from "lucide-react";
+import { Check as IconCheck, Clock as IconClock } from "lucide-react";
 import { formatSidePortionLabel, formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import { cn } from "@comtammatu/ui";
+import { Frame } from "@comtammatu/ui/components/frame";
 import {
   Item,
   ItemContent,
@@ -270,6 +272,74 @@ function PendingRequestLines({
   );
 }
 
+export function OrderStatusTracker({
+  hasPending,
+  hasConfirmedItems,
+}: {
+  hasPending: boolean;
+  hasConfirmedItems: boolean;
+}) {
+  const steps = [
+    {
+      label: SELF_ORDER_VI.stepSent,
+      done: true,
+      active: hasPending,
+    },
+    {
+      label: SELF_ORDER_VI.stepCooking,
+      done: hasConfirmedItems && !hasPending,
+      active: hasConfirmedItems && !hasPending,
+    },
+    {
+      label: SELF_ORDER_VI.stepServing,
+      done: false,
+      active: false,
+    },
+  ];
+
+  return (
+    <Frame
+      className="flex items-center justify-between bg-muted/30 p-2.5 text-xs"
+      aria-label={SELF_ORDER_VI.orderProgressAria}
+    >
+      <div className="flex w-full items-center justify-between">
+        {steps.map((step, idx) => (
+          <div key={step.label} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-full text-3xs font-semibold tabular-nums",
+                step.done
+                  ? "bg-primary text-primary-foreground"
+                  : step.active
+                    ? "bg-primary/15 text-primary ring-1 ring-primary/20"
+                    : "bg-muted text-muted-foreground",
+              )}
+            >
+              {step.done ? <IconCheck className="size-3" /> : idx + 1}
+            </span>
+            <span
+              className={cn(
+                "font-medium",
+                step.done || step.active
+                  ? "text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {step.label}
+            </span>
+            {idx < steps.length - 1 ? (
+              <span
+                className="mx-1 h-px w-3 bg-border/80 sm:mx-2 sm:w-6"
+                aria-hidden
+              />
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </Frame>
+  );
+}
+
 export function OrderSummary({
   pendingItems = [],
   items = [],
@@ -286,7 +356,12 @@ export function OrderSummary({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
+      <OrderStatusTracker
+        hasPending={pendingItems.length > 0}
+        hasConfirmedItems={items.length > 0}
+      />
+
       {pendingItems.length > 0 ? (
         <Item variant="outline" className="relative overflow-hidden">
           <div className="pointer-events-none flex flex-col gap-2 p-2 opacity-50 blur-[2px] select-none">

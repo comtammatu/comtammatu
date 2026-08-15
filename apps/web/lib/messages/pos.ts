@@ -135,6 +135,7 @@ export const pos = {
     offlineWillSelect: "Mất mạng — sẽ tự chọn",
     offlineWhenOnline: "khi có mạng lại.",
     cashReceived: "Tổng nhận",
+    exactCash: (amount: string) => `Đủ tiền (${amount})`,
     cashChange: "Tiền trả khách",
     cashShort: (amount: string) => `Thiếu ${amount}`,
     printProvisional: "In tạm tính",
