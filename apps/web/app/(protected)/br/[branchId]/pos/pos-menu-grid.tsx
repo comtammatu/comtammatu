@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { type MenuCategory, type MenuItem } from "./pos-menu-types";
 import { useDailyLimit } from "./_providers/pos-desktop-provider";
+import { useCartItemQuantity } from "./_hooks/use-cart";
 import { remainingDailyQuotaAfterDemand } from "./_utils/daily-limit-draft";
 
 interface PosMenuGridProps {
@@ -122,6 +123,7 @@ const MenuItemButton = memo(function MenuItemButton({
   onItemTap,
 }: MenuItemButtonProps) {
   const dailyLimit = useDailyLimit(item.id);
+  const inCartQuantity = useCartItemQuantity(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
   const status = getMenuCardStatus(dailyLimit, draftDemand);
   const blocked = status.blocked;
@@ -138,12 +140,12 @@ const MenuItemButton = memo(function MenuItemButton({
       aria-disabled={blocked}
       aria-label={`${item.name}, ${formatVND(item.base_price)}`}
       className={cn(
-        // aspect-[4/5] keeps the card scaling with width — a fixed min-h
-        // gets too tall on mobile (390px width → 2-col gap-3 → ~181×226px
-        // per card).
-        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-effect-card-hover active:scale-[0.97]",
+        // aspect-[1/1] on mobile gives compact square cards, displaying 6-8 items
+        // per viewport instead of 3, while preserving sm/md landscape layout.
+        "group relative aspect-[1/1] sm:aspect-[4/3] md:aspect-[4/3] h-auto min-w-0 w-full overflow-hidden p-0 text-left transition-transform hover:shadow-effect-card-hover active:scale-[0.97]",
         sparseMenu && "md:aspect-[3/2]",
         blocked && "opacity-60 grayscale",
+        inCartQuantity > 0 && "ring-2 ring-primary",
       )}
       onClick={handleClick}
     >
@@ -171,27 +173,37 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Bottom-up black gradient keeps the white item name readable on bright photos. */}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
 
-      {/* Remaining-quota / block-reason badge — top left, opposite the price. */}
-      {status.reasonLabel !== null ? (
-        <Badge
-          variant="destructive"
-          className="absolute left-2 top-2 z-10 md:left-3 md:top-3"
-        >
-          {status.reasonLabel}
-        </Badge>
-      ) : status.remainingLabel !== null ? (
-        <Badge
-          variant="secondary"
-          className="absolute left-2 top-2 z-10 md:left-3 md:top-3"
-        >
-          {status.remainingLabel}
-        </Badge>
-      ) : null}
+      {/* Badges — top left: In-cart quantity badge + remaining quota/block reason */}
+      <div className="absolute left-1.5 top-1.5 z-10 flex max-w-xs flex-col items-start gap-1 sm:left-2 sm:top-2 md:left-3 md:top-3">
+        {inCartQuantity > 0 ? (
+          <Badge
+            variant="default"
+            className="border border-primary-foreground/30 bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground sm:text-sm"
+          >
+            {inCartQuantity}
+          </Badge>
+        ) : null}
+        {status.reasonLabel !== null ? (
+          <Badge
+            variant="destructive"
+            className="truncate text-xs font-semibold"
+          >
+            {status.reasonLabel}
+          </Badge>
+        ) : status.remainingLabel !== null ? (
+          <Badge
+            variant="secondary"
+            className="truncate text-xs font-semibold"
+          >
+            {status.remainingLabel}
+          </Badge>
+        ) : null}
+      </div>
 
-      {/* Price — top right, primary badge with shadow. */}
+      {/* Price — top right, primary badge. */}
       <span
         className={cn(
-          "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground md:right-3 md:top-3 md:text-base",
+          "absolute right-1.5 top-1.5 z-10 inline-flex items-center rounded bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground sm:right-2 sm:top-2 sm:px-2 sm:py-1 sm:text-sm md:right-3 md:top-3 md:text-base",
           sparseMenu && "md:text-lg",
         )}
       >
@@ -201,7 +213,7 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Item name — overlaid at the photo bottom; white text + drop shadow for contrast. */}
       <span
         className={cn(
-          "pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white md:inset-x-4 md:bottom-4 md:text-lg",
+          "pos-text-overlay absolute inset-x-2 bottom-1.5 z-10 line-clamp-2 text-xs font-bold leading-tight text-white sm:inset-x-3 sm:bottom-2.5 sm:text-sm md:inset-x-4 md:bottom-3 md:text-base",
           sparseMenu && "md:text-2xl",
         )}
       >
@@ -220,7 +232,7 @@ const MenuItemGrid = memo(function MenuItemGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-3",
+        "grid grid-cols-2 gap-2 sm:gap-3",
         sparseMenu
           ? "md:grid-cols-1"
           : "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4",
@@ -389,7 +401,7 @@ function PosMenuGridComponent({
   // TabsList width) — `!flex-none` is required so chips keep content width
   // and overflow scrolls horizontally.
   const tabPillClassName =
-    "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:gap-2 md:px-4";
+    "group/tab !flex-none gap-1 bg-muted/50 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:gap-1.5 sm:px-3 sm:py-2 sm:text-sm md:gap-2 md:px-4";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
@@ -427,7 +439,7 @@ function PosMenuGridComponent({
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-3 py-3 md:px-4 md:py-4">
+        <div className="border-b border-border/60 bg-background px-2 py-2 sm:px-3 sm:py-2.5 md:px-4 md:py-3">
           {isCompactMenu ? (
             <div className="flex items-center gap-1.5">
               {isSearchActive ? (
@@ -471,20 +483,20 @@ function PosMenuGridComponent({
           {visibleItems.length > 0 && isAllMenuActive ? (
             <div
               className={cn(
-                "flex flex-col gap-4 px-2 pt-2 md:gap-6 md:px-3 md:pt-3 lg:px-4",
+                "flex flex-col gap-3 px-2 pt-2 md:gap-5 md:px-3 md:pt-3 lg:px-4",
                 hasStackedTouchActions ? "pb-40 xl:pb-4" : "pb-32 xl:pb-4",
               )}
             >
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}
-                  className="flex min-w-0 flex-col gap-3"
+                  className="flex min-w-0 flex-col gap-2 sm:gap-3"
                 >
-                  <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
-                    <h2 className="font-heading truncate text-base font-semibold text-foreground">
+                  <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-1.5 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
+                    <h2 className="font-heading truncate text-sm font-semibold text-foreground sm:text-base">
                       {category.name}
                     </h2>
-                    <Badge variant="outline" className="shrink-0 text-sm">
+                    <Badge variant="outline" className="shrink-0 text-xs sm:text-sm">
                       {category.menu_items.length}
                     </Badge>
                   </div>

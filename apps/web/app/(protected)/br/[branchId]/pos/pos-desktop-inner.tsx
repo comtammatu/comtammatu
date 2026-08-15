@@ -144,6 +144,7 @@ import {
   useCartOrderType,
   useCartQuantity,
   useCartSnapshot,
+  useCartTotal,
 } from "./_hooks/use-cart";
 import { useActiveTable } from "./_hooks/use-active-table";
 import { useAppendTarget } from "./_hooks/use-append-target";
@@ -198,6 +199,7 @@ export function PosDesktopInner({
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
   const cartQuantity = useCartQuantity();
+  const cartTotal = useCartTotal();
   const {
     addItem: addCartItem,
     clear: clearCart,
@@ -1877,6 +1879,7 @@ export function PosDesktopInner({
         isAppendingToOrder={isAppendingToOrder}
         menuContextReady={menuContextReady}
         cartQuantity={cartQuantity}
+        cartTotal={cartTotal}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
         canSubmitNewOrder={canSubmit}

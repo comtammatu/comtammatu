@@ -10,10 +10,13 @@ export const ORDER_NOTE_PRESETS = [
 
 export const ITEM_NOTE_PRESETS = [
   "Không mỡ hành",
+  "Nhiều mỡ hành",
   "Không đồ chua",
   "Ít cơm",
-  "Để riêng",
-  "Mang về",
+  "Nhiều cơm",
+  "Sườn nướng kỹ",
+  "Để riêng canh",
+  "Để riêng mắm",
 ] as const;
 
 export const VOID_ITEM_PRESETS = [

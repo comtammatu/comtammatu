@@ -44,6 +44,26 @@ export function useCartQuantity(): number {
   return useSyncExternalStore(store.subscribe, getQuantity, getQuantity);
 }
 
+export function useCartTotal(): number {
+  const store = usePosCartStore();
+  const getTotal = useCallback(
+    () => calcCartTotal(store.getSnapshot().items),
+    [store],
+  );
+  return useSyncExternalStore(store.subscribe, getTotal, getTotal);
+}
+
+export function useCartItemQuantity(menuItemId: number): number {
+  const store = usePosCartStore();
+  const getItemQuantity = useCallback(() => {
+    return store
+      .getSnapshot()
+      .items.filter((i) => i.menu_item_id === menuItemId)
+      .reduce((sum, i) => sum + i.quantity, 0);
+  }, [store, menuItemId]);
+  return useSyncExternalStore(store.subscribe, getItemQuantity, getItemQuantity);
+}
+
 export function useCartActions() {
   const store = usePosCartStore();
 

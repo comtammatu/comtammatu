@@ -327,60 +327,62 @@ export function ItemCustomizer({
       fullscreen
       contentClassName="overflow-hidden p-0"
       bodyClassName="flex flex-col gap-4 px-4 py-4"
-      footerClassName="shrink-0 flex-row items-center justify-between gap-3 pos-safe-bottom sm:flex-row"
+      footerClassName="shrink-0 flex-col gap-2 p-3 pos-safe-bottom sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-3"
       footer={
         item ? (
           <>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {FORM_VI.subtotal}
-              </p>
-              {discountAmount > 0 ? (
-                <p className="text-xl font-bold text-primary tabular-nums">
-                  <span className="mr-2 text-sm font-normal text-muted-foreground line-through">
+            <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground sm:text-sm">
+                  {FORM_VI.subtotal}
+                </p>
+                {discountAmount > 0 ? (
+                  <p className="text-base font-bold text-primary tabular-nums sm:text-xl">
+                    <span className="mr-1.5 text-xs font-normal text-muted-foreground line-through sm:text-sm">
+                      {formatVND(totalPrice)}
+                    </span>
+                    {formatVND(netTotalPrice)}
+                  </p>
+                ) : (
+                  <p className="text-base font-bold text-primary tabular-nums sm:text-xl">
                     {formatVND(totalPrice)}
-                  </span>
-                  {formatVND(netTotalPrice)}
-                </p>
-              ) : (
-                <p className="text-xl font-bold text-primary tabular-nums">
-                  {formatVND(totalPrice)}
-                </p>
-              )}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-touch"
+                  disabled={quantity <= 1}
+                  aria-label={messages.pos.customizer.decreaseQuantityAria}
+                  onClick={() => updateQuantity(-1)}
+                >
+                  <IconMinus />
+                </Button>
+                <span className="w-7 text-center text-base font-bold tabular-nums">
+                  {quantity}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-touch"
+                  aria-label={messages.pos.customizer.increaseQuantityAria}
+                  onClick={() => updateQuantity(1)}
+                >
+                  <IconPlus />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-touch"
-                disabled={quantity <= 1}
-                aria-label={messages.pos.customizer.decreaseQuantityAria}
-                onClick={() => updateQuantity(-1)}
-              >
-                <IconMinus />
-              </Button>
-              <span className="w-7 text-center text-base font-bold tabular-nums">
-                {quantity}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-touch"
-                aria-label={messages.pos.customizer.increaseQuantityAria}
-                onClick={() => updateQuantity(1)}
-              >
-                <IconPlus />
-              </Button>
-            </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex w-full flex-col items-stretch gap-1 sm:w-auto sm:items-end">
               {discountEnabled && !discountValid ? (
-                <p className="text-right text-sm text-muted-foreground">
+                <p className="text-right text-xs text-destructive sm:text-sm">
                   {messages.pos.customizer.discountHint}
                 </p>
               ) : null}
               <Button
                 size="touch"
-                className="min-w-32"
+                className="w-full font-semibold sm:w-auto sm:min-w-36"
                 disabled={!discountValid}
                 title={
                   discountEnabled && !discountValid
