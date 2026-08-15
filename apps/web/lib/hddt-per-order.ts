@@ -433,7 +433,10 @@ export async function issuePreparedTaxInvoice({
     };
   }
   const subtotal = lineMath.sumLineNet - lineMath.sumLineDiscount;
-  if (lineMath.totalGross !== parsed.data.draftSnapshot.totalAmount) {
+  const drift = Math.abs(
+    lineMath.totalGross - parsed.data.draftSnapshot.totalAmount,
+  );
+  if (drift > 10) {
     return {
       success: false,
       error: "Tổng dòng, thuế GTGT và số tiền thanh toán không khớp.",

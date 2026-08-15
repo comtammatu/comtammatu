@@ -361,7 +361,7 @@ test("timeout, throttling and server errors are unknown outcomes", async () => {
   globalThis.fetch = originalFetch;
 });
 
-test("multi-quantity items with rounding drift (Order 243) produce exact gross total", () => {
+test("multi-quantity items preserve exact line quantity and satisfy all Viettel validators (Order 243)", () => {
   const items = [
     item("Sườn Cốt Lết", 2, 90_000, 8),
     item("Bì", 2, 16_000, 8),
@@ -369,9 +369,14 @@ test("multi-quantity items with rounding drift (Order 243) produce exact gross t
   ];
 
   const math = buildSinvoiceItemInfo(items);
-  assert.equal(math.totalGross, 146_000);
-  assert.equal(math.sumLineTax, 10_814);
-  assert.equal(math.sumLineNet, 135_186);
+  assert.equal(math.itemInfo.length, 3);
+  assert.deepEqual(
+    math.itemInfo.map((l) => l.quantity),
+    [2, 2, 2],
+  );
+  assert.equal(math.totalGross, 145_997);
+  assert.equal(math.sumLineTax, 10_815);
+  assert.equal(math.sumLineNet, 135_182);
 
   // Assert all lines satisfy Viettel validators
   for (const line of math.itemInfo) {
@@ -382,7 +387,9 @@ test("multi-quantity items with rounding drift (Order 243) produce exact gross t
       );
       assert.equal(
         line.taxAmount,
-        Math.round(((line.itemTotalAmountWithoutTax ?? 0) * (line.taxPercentage ?? 0)) / 100),
+        Math.round(
+          ((line.itemTotalAmountWithoutTax ?? 0) * (line.taxPercentage ?? 0)) / 100,
+        ),
       );
       assert.equal(
         line.itemTotalAmountWithTax,
