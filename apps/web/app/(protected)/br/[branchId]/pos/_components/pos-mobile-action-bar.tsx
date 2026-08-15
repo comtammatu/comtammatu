@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, type ReactNode } from "react";
-import { formatCount } from "@comtammatu/shared/format";
+import { formatCount, formatVND } from "@comtammatu/shared/format";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -20,6 +20,7 @@ export interface PosMobileActionBarProps {
   isAppendingToOrder: boolean;
   menuContextReady: boolean;
   cartQuantity: number;
+  cartTotal?: number;
   appendDraftQuantity: number;
   ordersCount: number;
   canSubmitNewOrder: boolean;
@@ -72,6 +73,7 @@ function PosMobileActionBarComponent({
   isAppendingToOrder,
   menuContextReady,
   cartQuantity,
+  cartTotal = 0,
   appendDraftQuantity,
   ordersCount,
   canSubmitNewOrder,
@@ -111,7 +113,7 @@ function PosMobileActionBarComponent({
             }
           >
             <IconBell data-icon="inline-start" />
-            <span>
+            <span className="truncate">
               {retrySelfOrderOnly
                 ? messages.pos.selfOrderSync.failed
                 : SELF_ORDER_VI.staffApprove}
@@ -171,7 +173,9 @@ function PosMobileActionBarComponent({
             {isSubmittingAppendDraft ? (
               <Spinner data-icon="inline-start" />
             ) : null}
-            <span>{messages.pos.mobileActionBar.submitAppend}</span>
+            <span className="truncate">
+              {messages.pos.mobileActionBar.submitAppend}
+            </span>
           </Button>
         </div>,
       );
@@ -245,8 +249,14 @@ function PosMobileActionBarComponent({
             aria-label={messages.pos.mobileActionBar.openNewCartAria}
           >
             <IconShoppingCart data-icon="inline-start" />
-            <span>{messages.pos.mobileActionBar.newCart}</span>
-            <span className="tabular-nums">{formatCount(cartQuantity)}</span>
+            <span className="min-w-0 truncate">
+              {messages.pos.mobileActionBar.newCart} ({formatCount(cartQuantity)})
+            </span>
+            {cartTotal > 0 ? (
+              <span className="shrink-0 font-mono text-xs font-semibold tabular-nums text-primary sm:text-sm">
+                {formatVND(cartTotal)}
+              </span>
+            ) : null}
           </Button>
           <Button
             type="button"
@@ -256,7 +266,9 @@ function PosMobileActionBarComponent({
             onClick={onSubmitNewOrder}
           >
             {isSubmittingNewOrder ? <Spinner data-icon="inline-start" /> : null}
-            <span>{messages.pos.mobileActionBar.submitNew}</span>
+            <span className="truncate">
+              {messages.pos.mobileActionBar.submitNew}
+            </span>
           </Button>
         </>
       ) : (

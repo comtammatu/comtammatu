@@ -302,34 +302,132 @@ export function resolveSinvoiceBuyerInfo(
 export function buildSinvoiceItemInfo(
   items: InvoiceLineItem[],
 ): SinvoiceLineMath {
-  const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
+  type RawLine = {
+    itemName: string;
+    unitName: string;
+    unitPrice: number;
+    quantity: number;
+    vatRate: 0 | 5 | 8 | 10;
+    targetGross: number;
+  };
+
+  const rawLines: RawLine[] = [];
+
+  for (const item of items) {
     const lineVatRate = item.vatRate;
     if (![0, 5, 8, 10].includes(lineVatRate)) {
       throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
     }
     const lineGross = normalizeMoney(item.amount);
-
     const qty = item.quantity;
     if (!Number.isFinite(qty) || qty <= 0) {
       throw new Error("sinvoice_invalid_quantity");
     }
+
     const netUnitPrice = findNetUnitPriceForGrossTarget(
       qty,
       lineVatRate,
       lineGross,
     );
     const lineNet = netUnitPrice * qty;
+    const lineTax = Math.round((lineNet * lineVatRate) / 100);
+    const singleLineGross = lineNet + lineTax;
+
+    if (singleLineGross === lineGross || qty === 1) {
+      rawLines.push({
+        itemName: item.name,
+        unitName: item.unit || "Phần",
+        unitPrice: netUnitPrice,
+        quantity: qty,
+        vatRate: lineVatRate,
+        targetGross: lineGross,
+      });
+    } else {
+      // Split into qty units of 1 to eliminate multi-quantity compounding rounding drift
+      const baseGross = Math.floor(lineGross / qty);
+      let remainder = Math.round(lineGross - baseGross * qty);
+
+      for (let q = 0; q < qty; q++) {
+        const uGross = baseGross + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder--;
+
+        const uNetPrice = findNetUnitPriceForGrossTarget(
+          1,
+          lineVatRate,
+          uGross,
+        );
+        rawLines.push({
+          itemName: item.name,
+          unitName: item.unit || "Phần",
+          unitPrice: uNetPrice,
+          quantity: 1,
+          vatRate: lineVatRate,
+          targetGross: uGross,
+        });
+      }
+    }
+  }
+
+  const expectedTotalGross = items.reduce(
+    (sum, item) => sum + normalizeMoney(item.amount),
+    0,
+  );
+
+  function evalGross(lines: RawLine[]): number {
+    return lines.reduce((sum, line) => {
+      const net = line.unitPrice * line.quantity;
+      const tax = Math.round((net * line.vatRate) / 100);
+      return sum + net + tax;
+    }, 0);
+  }
+
+  let delta = expectedTotalGross - evalGross(rawLines);
+  let safety = 0;
+  while (delta !== 0 && safety < 50) {
+    safety++;
+    const step = delta > 0 ? 1 : -1;
+    let adjusted = false;
+
+    for (const line of rawLines) {
+      if (line.quantity === 1) {
+        const currentNet = line.unitPrice;
+        const currentTax = Math.round((currentNet * line.vatRate) / 100);
+        const currentGross = currentNet + currentTax;
+
+        const nextPrice = line.unitPrice + step;
+        if (nextPrice < 0) continue;
+        const nextTax = Math.round((nextPrice * line.vatRate) / 100);
+        const nextGross = nextPrice + nextTax;
+        const change = nextGross - currentGross;
+
+        if (
+          (delta > 0 && change > 0 && change <= delta) ||
+          (delta < 0 && change < 0 && change >= delta)
+        ) {
+          line.unitPrice = nextPrice;
+          delta -= change;
+          adjusted = true;
+          if (delta === 0) break;
+        }
+      }
+    }
+
+    if (!adjusted) break;
+  }
+
+  const itemInfo: SinvoiceItemInfo[] = rawLines.map((line, index) => {
+    const lineNet = line.unitPrice * line.quantity;
     const taxableAmount = lineNet;
-    const lineTax = Math.round((taxableAmount * lineVatRate) / 100);
+    const lineTax = Math.round((taxableAmount * line.vatRate) / 100);
 
     return {
       lineNumber: index + 1,
       selection: 1,
       itemCode: "",
-      itemName: item.name,
-      unitName: item.unit || "Phần",
-      unitPrice: netUnitPrice,
-      quantity: qty,
+      itemName: line.itemName,
+      unitName: line.unitName,
+      unitPrice: line.unitPrice,
+      quantity: line.quantity,
       itemTotalAmountWithoutTax: lineNet,
       itemTotalAmountAfterDiscount: taxableAmount,
       itemTotalAmountWithTax: taxableAmount + lineTax,
@@ -337,7 +435,7 @@ export function buildSinvoiceItemInfo(
       itemDiscount: 0,
       itemNote: null,
       isIncreaseItem: null,
-      taxPercentage: lineVatRate,
+      taxPercentage: line.vatRate,
       taxAmount: lineTax,
     };
   });

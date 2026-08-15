@@ -360,3 +360,35 @@ test("timeout, throttling and server errors are unknown outcomes", async () => {
   }
   globalThis.fetch = originalFetch;
 });
+
+test("multi-quantity items with rounding drift (Order 243) produce exact gross total", () => {
+  const items = [
+    item("Sườn Cốt Lết", 2, 90_000, 8),
+    item("Bì", 2, 16_000, 8),
+    item("Trà Tắc", 2, 40_000, 8),
+  ];
+
+  const math = buildSinvoiceItemInfo(items);
+  assert.equal(math.totalGross, 146_000);
+  assert.equal(math.sumLineTax, 10_814);
+  assert.equal(math.sumLineNet, 135_186);
+
+  // Assert all lines satisfy Viettel validators
+  for (const line of math.itemInfo) {
+    if (line.selection === 1) {
+      assert.equal(
+        line.itemTotalAmountWithoutTax,
+        (line.unitPrice ?? 0) * (line.quantity ?? 1),
+      );
+      assert.equal(
+        line.taxAmount,
+        Math.round(((line.itemTotalAmountWithoutTax ?? 0) * (line.taxPercentage ?? 0)) / 100),
+      );
+      assert.equal(
+        line.itemTotalAmountWithTax,
+        line.itemTotalAmountWithoutTax + (line.taxAmount ?? 0),
+      );
+    }
+  }
+});
+

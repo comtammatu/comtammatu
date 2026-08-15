@@ -80,42 +80,42 @@ function TakeawayOrderTile({
               formatVND(order.total_amount),
             )
       }
-      className="w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4"
+      className="w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 sm:p-3.5 lg:p-4"
       onClick={() => onViewDetail(order.id, order.order_number, order)}
     >
-      <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
+      <div className="flex w-full min-w-0 items-center justify-between gap-1">
         <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
           {messages.pos.takeawayGate.orderLabel}
         </p>
         <Badge
           variant={statusInfo.variant}
-          className="min-w-0 truncate text-xs font-semibold"
+          className="min-w-0 shrink truncate text-xs font-semibold"
         >
           {statusInfo.label}
         </Badge>
       </div>
 
-      <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-2xl font-semibold leading-none tabular-nums">
+      <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-1.5">
+        <div className="min-w-0 flex-1">
+          <p className="shrink-0 text-xl font-semibold leading-none tabular-nums sm:text-2xl">
             {displayNumber}
           </p>
           {customerName ? (
-            <p className="mt-1 truncate text-sm font-medium text-foreground">
+            <p className="mt-1 truncate text-xs font-medium text-foreground sm:text-sm">
               {customerName}
             </p>
           ) : null}
-          <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+          <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
             {formatVNTime(order.created_at)}
           </p>
         </div>
-        <div className="flex min-w-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1">
           {order.is_priority ? (
-            <Badge variant="warning" className="text-xs font-semibold">
+            <Badge variant="warning" className="shrink-0 text-xs font-semibold">
               {messages.pos.takeawayGate.priority}
             </Badge>
           ) : null}
-          <p className="font-mono text-sm font-semibold tabular-nums text-primary">
+          <p className="font-mono text-xs font-semibold tabular-nums text-primary sm:text-sm">
             {formatVND(order.total_amount)}
           </p>
         </div>

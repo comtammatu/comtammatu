@@ -84,12 +84,12 @@ const TableButton = memo(function TableButton({
       size="tile"
       aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasStaffCall ? `, ${SELF_ORDER_VI.staffCallBadge}` : ""}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
-        "w-full min-w-0 flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 lg:p-4",
+        "w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 sm:p-3.5 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
       )}
       onClick={handleClick}
     >
-      <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
+      <div className="flex w-full min-w-0 items-center justify-between gap-1">
         <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
           {TABLE_VI.long}
         </p>
@@ -104,7 +104,7 @@ const TableButton = memo(function TableButton({
                   : "secondary"
           }
           className={cn(
-            "min-w-0 truncate text-xs font-semibold",
+            "min-w-0 shrink truncate text-xs font-semibold",
             isSelected &&
               "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
           )}
@@ -113,20 +113,20 @@ const TableButton = memo(function TableButton({
         </Badge>
       </div>
 
-      <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
-        <p className="text-2xl font-semibold leading-none tabular-nums">
+      <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-1.5">
+        <p className="shrink-0 text-xl font-semibold leading-none tabular-nums sm:text-2xl">
           {table.number}
         </p>
         {hasStaffCall ? (
-          <Badge variant="warning" className="w-fit text-xs font-semibold">
+          <Badge variant="warning" className="shrink-0 truncate text-xs font-semibold">
             {SELF_ORDER_VI.staffCallBadge}
           </Badge>
         ) : hasPendingSelfOrderRequest ? (
-          <Badge variant="warning" className="w-fit text-xs font-semibold">
+          <Badge variant="warning" className="shrink-0 truncate text-xs font-semibold">
             QR ⏳
           </Badge>
         ) : orderCount >= 2 ? (
-          <Badge variant="secondary" className="w-fit text-xs font-semibold">
+          <Badge variant="secondary" className="shrink-0 truncate text-xs font-semibold">
             {messages.pos.tableGate.multiBill(orderCount)}
           </Badge>
         ) : null}
