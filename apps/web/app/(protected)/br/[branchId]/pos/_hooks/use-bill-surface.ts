@@ -62,7 +62,7 @@ export interface UseBillSurfaceReturn {
  *
  * The raw setters are exposed alongside `openBill`/`closeBill` because the
  * orchestrator's `handlePayOrderFromPicker` and `handleSubmitOrder` paths still
- * write them directly (toast action + takeaway branch).
+ * write them directly (toast action).
  */
 export function useBillSurface(args: UseBillSurfaceArgs): UseBillSurfaceReturn {
   const { orders, closeCartDrawer } = args;

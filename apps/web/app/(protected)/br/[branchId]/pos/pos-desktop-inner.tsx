@@ -1105,7 +1105,6 @@ export function PosDesktopInner({
         if (!reserved) return;
 
         const dailyLimitHoldToken = getDailyLimitHoldToken("pos_cart");
-        const submittedOrderType = cartSnapshot.orderType;
         const result = await submitPosOrderWithRetry({
           branchId,
           sessionId: session.id,
@@ -1143,28 +1142,12 @@ export function PosDesktopInner({
           resetDailyLimitHoldToken("pos_cart");
           clearCart();
           setTakeawayDraftActive(false);
-          if (submittedOrderType === "takeaway") {
-            setPostSubmitPaymentOrderId(null);
-            setBillIntent("payment");
-            setBillInitialOrder(null);
-            setBillOrderId(orderId);
-            setShowOrders(false);
-            setCartDrawerOpen(false);
-            setOrderDetailId(null);
-            setOrderDetailNumber(null);
-            setOrderDetailSeed(null);
-            setOrderDetailSummary(null);
-            setActiveTable(null);
-            // Reset orderType to home (dine_in when tables exist, else keep
-            // takeaway) → jump back to "Chọn bàn | Mang về", symmetric with dine_in.
-            setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
-            void refreshOperational();
-            return;
-          }
-
           setPostSubmitPaymentOrderId(null);
           focusOrderWorkflow(orderId, orderNumber);
           setActiveTable(null);
+          // Reset orderType to home (dine_in when tables exist, else keep
+          // takeaway) → jump back to "Chọn bàn | Mang về", symmetric with dine_in.
+          setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
           void refreshOperational();
         } else {
           // Stale session prop (RSC snapshot held the old session.id after

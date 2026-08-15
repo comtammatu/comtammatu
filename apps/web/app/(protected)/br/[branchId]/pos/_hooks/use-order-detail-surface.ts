@@ -51,10 +51,10 @@ export interface UseOrderDetailSurfaceReturn {
  * own fetch resolves, and the refresh token that forces a refetch.
  *
  * The raw setters are exposed alongside `openDetail`/`closeOrderDetail` because
- * the orchestrator's `focusOrderWorkflow`, `handleSubmitOrder` takeaway branch,
- * table-tap fallback, and the customizer reopen bridge still write them
- * directly. `bumpDetailRefresh` is returned so the orchestrator's broader
- * operational refresh can drive the detail refetch alongside the orders fetch.
+ * the orchestrator's `focusOrderWorkflow`, table-tap fallback, and the customizer
+ * reopen bridge still write them directly. `bumpDetailRefresh` is returned so
+ * the orchestrator's broader operational refresh can drive the detail refetch
+ * alongside the orders fetch.
  */
 export function useOrderDetailSurface(
   args: UseOrderDetailSurfaceArgs,

@@ -14,30 +14,29 @@ const source = normalizeEol(
   ),
 );
 
-const takeawaySubmitBlock =
-  /if \(submittedOrderType === "takeaway"\) \{([\s\S]*?)\n\s*return;\n\s*\}/.exec(
+const submitSuccessBlock =
+  /if \(result\.success && result\.data\) \{([\s\S]*?)\n\s*\} else \{/.exec(
     source,
   )?.[1] ?? "";
 
-const dineInSubmitBlock =
-  /setPostSubmitPaymentOrderId\(null\);\n\s*focusOrderWorkflow\(orderId, orderNumber\);/.exec(
-    source,
-  )?.[0] ?? "";
-
-test("takeaway submit opens the payment dialog immediately after sending kitchen", () => {
-  assert.match(takeawaySubmitBlock, /setBillIntent\("payment"\);/);
-  assert.match(takeawaySubmitBlock, /setBillInitialOrder\(null\);/);
-  assert.match(takeawaySubmitBlock, /setBillOrderId\(orderId\);/);
-  assert.doesNotMatch(
-    takeawaySubmitBlock,
-    /setPostSubmitPaymentOrderId\(orderId\);/,
+test("order submit focuses order workflow without auto-opening payment dialog", () => {
+  assert.match(
+    submitSuccessBlock,
+    /focusOrderWorkflow\(orderId, orderNumber\);/,
   );
-  assert.doesNotMatch(takeawaySubmitBlock, /focusOrderWorkflow/);
+  assert.doesNotMatch(
+    submitSuccessBlock,
+    /submittedOrderType === "takeaway"/,
+  );
+  assert.doesNotMatch(
+    submitSuccessBlock,
+    /setBillIntent\("payment"\);\s*setBillInitialOrder\(null\);\s*setBillOrderId\(orderId\);/,
+  );
 });
 
-test("dine-in submit still opens the order workflow instead of payment", () => {
+test("order submit provides payment quick-action in success toast instead of auto-jump", () => {
   assert.match(
-    dineInSubmitBlock,
-    /focusOrderWorkflow\(orderId, orderNumber\);/,
+    submitSuccessBlock,
+    /toast\.success\([\s\S]*action:\s*\{[\s\S]*label:\s*"Thanh toán"/,
   );
 });
