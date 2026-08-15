@@ -359,7 +359,7 @@ function CartPaneComponent({
             >
               <IconUtensils data-icon="inline-start" />
               {messages.pos.desktop.dineIn}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex">D</Kbd>
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">D</Kbd>
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
@@ -369,7 +369,7 @@ function CartPaneComponent({
             >
               <IconPackage data-icon="inline-start" />
               {messages.pos.desktop.takeaway}
-              <Kbd className="hidden [@media(hover:hover)]:inline-flex">T</Kbd>
+              <Kbd className="hidden [@media(hover:hover)]:inline-flex border-current/20 bg-current/10 text-inherit">T</Kbd>
             </ToggleGroupItem>
           </ToggleGroup>
         )}
