@@ -122,7 +122,7 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(summary, /<DataTable/);
   assert.match(summary, /mobileCardRender/);
   assert.doesNotMatch(summary, /grid-cols-\[minmax\(0,1fr\)_auto_auto_auto\]/);
-  assert.match(summary, /items\.flatMap\(buildBillRows\)/);
+  assert.match(summary, /items\.map\(buildBillRow\)/);
   assert.match(summary, /formatVND\(row\.unitPrice\)/);
   assert.match(summary, /formatVND\(row\.lineTotal\)/);
   assert.match(summary, /import \{ BrandMascot \} from "@\/components\/brand"/);

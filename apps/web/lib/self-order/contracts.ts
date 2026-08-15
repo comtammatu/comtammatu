@@ -32,13 +32,13 @@ export const selfOrderCartItemSchema = z
     key: z.string().trim().min(1).max(120),
     menu_item_id: z.number().int().positive(),
     item_name: z.string().trim().min(1).max(200),
-    variant_id: z.number().int().positive().optional(),
-    variant_name: z.string().trim().min(1).max(200).optional(),
+    variant_id: z.number().int().positive().nullable().optional(),
+    variant_name: z.string().trim().min(1).max(200).nullable().optional(),
     quantity: z.number().int().min(1).max(99),
     unit_price: z.number().min(0).max(100_000_000),
     modifiers: z.array(selfOrderModifierSchema).max(20).default([]),
     sides: z.array(selfOrderSideSchema).max(20).default([]),
-    note: z.string().trim().max(300).optional(),
+    note: z.string().trim().max(300).nullable().optional(),
   })
   .strict();
 
@@ -51,7 +51,7 @@ export const selfOrderSubmitRequestSchema = z
   .object({
     clientOpId: selfOrderClientOpIdSchema,
     items: selfOrderCartSchema,
-    customerNote: z.string().trim().max(500).optional(),
+    customerNote: z.string().trim().max(500).nullable().optional(),
   })
   .strict();
 

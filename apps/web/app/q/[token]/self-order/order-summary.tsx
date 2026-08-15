@@ -28,57 +28,34 @@ interface OrderSummaryProps {
   items?: SelfOrderOrderLine[];
 }
 
-interface BillRow {
+export interface BillRow {
   key: string;
   label: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
-  option: boolean;
+  modifiers: SelfOrderOrderLine["modifiers"];
+  sides: SelfOrderOrderLine["sides"];
   note: string | null;
 }
 
-export function buildBillRows(item: SelfOrderOrderLine): BillRow[] {
-  const optionRows: BillRow[] = [
-    ...item.modifiers.map((modifier) => ({
-      key: `item-${String(item.id)}-modifier-${String(modifier.modifier_id)}`,
-      label: modifier.name,
-      quantity: item.quantity,
-      unitPrice: modifier.price,
-      lineTotal: modifier.price * item.quantity,
-      option: true,
-      note: null,
-    })),
-    ...item.sides.map((side) => {
-      const quantity = side.quantity * item.quantity;
-      return {
-        key: `item-${String(item.id)}-side-${String(side.side_item_id)}`,
-        label: side.name,
-        quantity,
-        unitPrice: side.price,
-        lineTotal: side.price * quantity,
-        option: true,
-        note: null,
-      };
-    }),
-  ];
-  const optionTotal = optionRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const lineTotal = Math.max(0, item.lineTotal - optionTotal);
+export function buildBillRow(item: SelfOrderOrderLine): BillRow {
+  return {
+    key: `item-${String(item.id)}`,
+    label: item.variantName
+      ? `${item.itemName} ${item.variantName}`
+      : item.itemName,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    lineTotal: item.lineTotal,
+    modifiers: item.modifiers,
+    sides: item.sides,
+    note: item.note,
+  };
+}
 
-  return [
-    {
-      key: `item-${String(item.id)}`,
-      label: item.variantName
-        ? `${item.itemName} ${item.variantName}`
-        : item.itemName,
-      quantity: item.quantity,
-      unitPrice: lineTotal / item.quantity,
-      lineTotal,
-      option: false,
-      note: item.note,
-    },
-    ...optionRows,
-  ];
+export function buildBillRows(item: SelfOrderOrderLine): BillRow[] {
+  return [buildBillRow(item)];
 }
 
 function optionSummary(item: {
@@ -103,13 +80,49 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
     header: SELF_ORDER_VI.billItemColumn,
     className: "min-w-0 text-xs",
     render: (row) => (
-      <div
-        className={`min-w-0 break-words leading-snug ${row.option ? "pl-3 text-muted-foreground" : "font-medium"}`}
-      >
-        {row.option ? "+ " : ""}
-        {row.label}
-        {!row.option && row.note ? (
-          <p className="max-h-20 overflow-y-auto break-words pr-1 text-xs font-normal text-muted-foreground">
+      <div className="min-w-0 break-words leading-snug">
+        <div className="font-medium text-foreground">{row.label}</div>
+        {row.modifiers.length > 0 || row.sides.length > 0 ? (
+          <div className="mt-1 flex flex-col gap-1 border-l-2 border-border/50 pl-2 text-2xs text-muted-foreground">
+            {row.modifiers.map((modifier) => (
+              <div
+                key={`mod-${modifier.modifier_id}`}
+                className="flex items-center justify-between gap-2"
+              >
+                <span>+ {modifier.name}</span>
+                {modifier.price > 0 ? (
+                  <span className="font-mono tabular-nums">
+                    +{formatVND(modifier.price * row.quantity)}
+                  </span>
+                ) : null}
+              </div>
+            ))}
+            {row.sides.map((side) => {
+              const totalSideQty = side.quantity * row.quantity;
+              const sideAmt =
+                side.price > 0 && totalSideQty > 0
+                  ? side.price * totalSideQty
+                  : 0;
+              return (
+                <div
+                  key={`side-${side.side_item_id}`}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span>
+                    + {formatSidePortionLabel(side.name, side.quantity)}
+                  </span>
+                  {sideAmt > 0 ? (
+                    <span className="font-mono tabular-nums">
+                      +{formatVND(sideAmt)}
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        {row.note ? (
+          <p className="mt-1 max-h-20 overflow-y-auto break-words pr-1 text-xs font-normal italic text-muted-foreground">
             {SELF_ORDER_VI.itemNoteLabel}: {row.note}
           </p>
         ) : null}
@@ -133,9 +146,7 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
     header: SELF_ORDER_VI.billLineTotalColumn,
     className: "whitespace-nowrap text-right text-xs font-mono tabular-nums",
     render: (row) => (
-      <span
-        className={row.option ? "text-muted-foreground" : "text-primary"}
-      >
+      <span className="font-semibold text-primary">
         {formatVND(row.lineTotal)}
       </span>
     ),
@@ -143,7 +154,7 @@ const BILL_COLUMNS: DataTableColumn<BillRow>[] = [
 ];
 
 function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
-  const rows = items.flatMap(buildBillRows);
+  const rows = items.map(buildBillRow);
 
   return (
     <DataTable
@@ -153,26 +164,73 @@ function FlatOrderLines({ items }: { items: SelfOrderOrderLine[] }) {
       emptyTitle={SELF_ORDER_VI.billEmptyTitle}
       className="text-xs"
       mobileCardRender={(row) => (
-        <Item variant="outline" size="xs">
-          <ItemContent>
-            <ItemTitle className="break-words">
-              {row.option ? "+ " : ""}
-              {row.label}
-            </ItemTitle>
-            {!row.option && row.note ? (
-              <ItemDescription className="break-words">
+        <Item variant="outline" size="sm" className="items-start gap-2">
+          <ItemContent className="min-w-0 flex-1 gap-1">
+            <div className="flex items-start justify-between gap-2">
+              <ItemTitle className="min-w-0 break-words text-sm font-semibold">
+                <span className="mr-1.5 font-semibold text-foreground">
+                  {row.quantity}x
+                </span>
+                <span>{row.label}</span>
+              </ItemTitle>
+              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-primary">
+                {formatVND(row.lineTotal)}
+              </span>
+            </div>
+
+            {row.modifiers.length > 0 || row.sides.length > 0 ? (
+              <div className="mt-1 flex flex-col gap-1 border-l-2 border-border/50 pl-2.5 text-xs text-muted-foreground">
+                {row.modifiers.map((modifier) => (
+                  <div
+                    key={`mod-${modifier.modifier_id}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span>+ {modifier.name}</span>
+                    {modifier.price > 0 ? (
+                      <span className="font-mono tabular-nums text-2xs">
+                        +{formatVND(modifier.price * row.quantity)}
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+                {row.sides.map((side) => {
+                  const totalSideQty = side.quantity * row.quantity;
+                  const sideAmt =
+                    side.price > 0 && totalSideQty > 0
+                      ? side.price * totalSideQty
+                      : 0;
+                  return (
+                    <div
+                      key={`side-${side.side_item_id}`}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span>
+                        + {formatSidePortionLabel(side.name, side.quantity)}
+                      </span>
+                      {sideAmt > 0 ? (
+                        <span className="font-mono tabular-nums text-2xs">
+                          +{formatVND(sideAmt)}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {row.note ? (
+              <p className="mt-1 max-h-20 overflow-y-auto break-words pr-1 text-xs font-normal italic text-muted-foreground">
                 {SELF_ORDER_VI.itemNoteLabel}: {row.note}
-              </ItemDescription>
+              </p>
             ) : null}
           </ItemContent>
-          <ItemFooter className="font-mono tabular-nums">
-            <span className="text-muted-foreground">
-              {row.quantity} x {formatVND(row.unitPrice)}
-            </span>
-            <span className={row.option ? "text-muted-foreground" : "text-primary"}>
-              {formatVND(row.lineTotal)}
-            </span>
-          </ItemFooter>
+          {row.quantity > 1 ? (
+            <ItemFooter className="justify-end border-t border-border/40 pt-1.5 font-mono text-2xs tabular-nums text-muted-foreground">
+              <span>
+                {row.quantity} x {formatVND(row.unitPrice)}
+              </span>
+            </ItemFooter>
+          ) : null}
         </Item>
       )}
     />

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildBillRows } from "../app/q/[token]/self-order/order-summary";
+import { buildBillRow, buildBillRows } from "../app/q/[token]/self-order/order-summary";
 
-test("Self-Order bill splits the main dish, modifiers, and sides into priced rows", () => {
-  const rows = buildBillRows({
+test("Self-Order bill consolidates main dish, modifiers, and sides in a unified row structure", () => {
+  const line = {
     id: 1,
     menuItemId: 10,
     itemName: "Sườn Cốt Lết",
@@ -22,29 +22,18 @@ test("Self-Order bill splits the main dish, modifiers, and sides into priced row
         is_default: false,
       },
     ],
-    note: null,
-  });
+    note: "Không mỡ hành",
+  };
 
-  assert.deepEqual(
-    rows.map(({ label, quantity, unitPrice, lineTotal }) => ({
-      label,
-      quantity,
-      unitPrice,
-      lineTotal,
-    })),
-    [
-      {
-        label: "Sườn Cốt Lết",
-        quantity: 2,
-        unitPrice: 35_000,
-        lineTotal: 70_000,
-      },
-      { label: "Trứng", quantity: 2, unitPrice: 5_000, lineTotal: 10_000 },
-      { label: "Chả", quantity: 4, unitPrice: 7_000, lineTotal: 28_000 },
-    ],
-  );
-  assert.equal(
-    rows.reduce((sum, row) => sum + row.lineTotal, 0),
-    108_000,
-  );
+  const row = buildBillRow(line);
+  const rows = buildBillRows(line);
+
+  assert.equal(rows.length, 1);
+  assert.equal(row.label, "Sườn Cốt Lết");
+  assert.equal(row.quantity, 2);
+  assert.equal(row.unitPrice, 54_000);
+  assert.equal(row.lineTotal, 108_000);
+  assert.equal(row.note, "Không mỡ hành");
+  assert.equal(row.modifiers.length, 1);
+  assert.equal(row.sides.length, 1);
 });

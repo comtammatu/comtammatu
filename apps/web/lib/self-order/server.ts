@@ -660,7 +660,7 @@ export async function submitSelfOrderRequest(input: {
   ipHash: string | null;
   clientOpId: string;
   items: SelfOrderCartItem[];
-  customerNote?: string;
+  customerNote?: string | null;
 }): Promise<SelfOrderActionResult<Record<string, unknown>>> {
   const rateLimit = await consumeSelfOrderRateLimit({
     purpose: "batch",
