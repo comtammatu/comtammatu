@@ -17,8 +17,6 @@ import { FormattedNumberInput } from "@/components/form";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Item,
-  ItemContent,
-  ItemDescription,
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
@@ -327,6 +325,61 @@ export function DiscountSheet({
     }
   };
 
+  const candidateGroups = useMemo(() => {
+    if (!preview?.candidates || preview.candidates.length === 0) return [];
+    const map = new Map<
+      number,
+      {
+        orderItemId: number;
+        parentName: string;
+        candidates: PromoSideCandidate[];
+      }
+    >();
+    for (const c of preview.candidates) {
+      let group = map.get(c.order_item_id);
+      if (!group) {
+        group = {
+          orderItemId: c.order_item_id,
+          parentName: c.parent_name || "Phần ăn",
+          candidates: [],
+        };
+        map.set(c.order_item_id, group);
+      }
+      group.candidates.push(c);
+    }
+    return Array.from(map.values());
+  }, [preview?.candidates]);
+
+  const handleToggleSide = (c: PromoSideCandidate, isChecked: boolean) => {
+    const targetKey = candidateKey(c);
+    setSideUnits((prev) => {
+      const next = { ...prev };
+      if (!isChecked) {
+        delete next[targetKey];
+        return next;
+      }
+      for (const key of Object.keys(next)) {
+        if (key.startsWith(`${String(c.order_item_id)}:`) && key !== targetKey) {
+          delete next[key];
+        }
+      }
+      const usedInOtherGroups = Object.entries(next).reduce(
+        (sum, [k, n]) =>
+          k.startsWith(`${String(c.order_item_id)}:`) ? sum : sum + n,
+        0,
+      );
+      const remaining = Math.max(
+        0,
+        (preview?.freeQty ?? 1) - usedInOtherGroups,
+      );
+      const allocated = Math.min(c.max_units, Math.max(1, remaining));
+      if (allocated > 0) {
+        next[targetKey] = allocated;
+      }
+      return next;
+    });
+  };
+
   const buildSelections = () => {
     if (!preview?.candidates) return [];
     return preview.candidates.flatMap((c) => {
@@ -487,11 +540,6 @@ export function DiscountSheet({
                   {PROMOTIONS_VI.posPreviewName}:{" "}
                   <span className="font-medium">{preview.name}</span>
                 </p>
-                {needsPick && preview.freeQty != null ? (
-                  <p className="text-muted-foreground">
-                    {PROMOTIONS_VI.posPickSidesHint(preview.freeQty)}
-                  </p>
-                ) : null}
                 {!needsPick && preview.freeQty != null && autoPreviewAmount > 0 ? (
                   <p className="text-muted-foreground">
                     {PROMOTIONS_VI.posAutoFreeSideHint(
@@ -502,65 +550,48 @@ export function DiscountSheet({
                 ) : null}
               </div>
             ) : null}
-            {needsPick && preview?.candidates ? (
+            {needsPick && candidateGroups.length > 0 ? (
               <div className="flex flex-col gap-2">
                 <FieldLabel>{PROMOTIONS_VI.posPickSidesTitle}</FieldLabel>
-                <ItemGroup className="gap-2">
-                  {preview.candidates.map((c) => {
-                    const key = candidateKey(c);
-                    const units = sideUnits[key] ?? 0;
-                    const checked = units > 0;
-                    return (
-                      <Item
-                        key={key}
-                        variant="outline"
-                        className="items-start gap-3"
-                        render={<label />}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) => {
-                            setSideUnits((prev) => {
-                              const next = { ...prev };
-                              if (value === true) {
-                                const used = Object.entries(next).reduce(
-                                  (sum, [k, n]) =>
-                                    k === key ? sum : sum + n,
-                                  0,
-                                );
-                                const remaining =
-                                  (preview.freeQty ?? 1) - used;
-                                next[key] = Math.min(
-                                  Math.max(remaining, 0),
-                                  c.max_units,
-                                );
-                                if (next[key] < 1) delete next[key];
-                              } else {
-                                delete next[key];
-                              }
-                              return next;
-                            });
-                          }}
-                        />
-                        <ItemContent className="min-w-0">
-                          <ItemTitle>{c.name}</ItemTitle>
-                          {c.parent_name ? (
-                            <ItemDescription>{c.parent_name}</ItemDescription>
-                          ) : null}
-                          <ItemDescription className="tabular-nums">
-                            {formatVND(c.unit_price)} ·{" "}
-                            {PROMOTIONS_VI.posMaxUnits(c.max_units)}
-                          </ItemDescription>
-                        </ItemContent>
-                      </Item>
-                    );
-                  })}
-                </ItemGroup>
-                {!pickComplete ? (
-                  <p className="text-sm text-muted-foreground">
-                    {PROMOTIONS_VI.posNeedsSidePick}
-                  </p>
-                ) : null}
+                <div className="flex flex-col gap-2">
+                  {candidateGroups.map((group) => (
+                    <Frame
+                      key={group.orderItemId}
+                      className="flex flex-col gap-2 p-2.5"
+                    >
+                      <span className="text-xs font-semibold text-foreground/80">
+                        {group.parentName}
+                      </span>
+                      <ItemGroup className="gap-2">
+                        {group.candidates.map((c) => {
+                          const key = candidateKey(c);
+                          const units = sideUnits[key] ?? 0;
+                          const checked = units > 0;
+                          return (
+                            <Item
+                              key={key}
+                              variant="outline"
+                              className="cursor-pointer items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 transition-colors"
+                              render={<label />}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(value) => {
+                                    handleToggleSide(c, value === true);
+                                  }}
+                                />
+                                <ItemTitle className="text-sm font-medium">
+                                  {c.name}
+                                </ItemTitle>
+                              </div>
+                            </Item>
+                          );
+                        })}
+                      </ItemGroup>
+                    </Frame>
+                  ))}
+                </div>
               </div>
             ) : null}
             {promo.hasPromotion && current.note ? (
