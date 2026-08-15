@@ -494,7 +494,7 @@ export async function issuePreparedTaxInvoice({
     logPrefix,
     reservedInvoiceId: taxInvoiceId,
     request: {
-      orderId: parsed.data.orderId,
+      orderId: taxInvoiceId,
       orderNumber: parsed.data.draftSnapshot.orderNumber,
       invoiceIssuedAt: parsed.data.draftSnapshot.invoiceTime,
       sellerName: profile.sellerName,

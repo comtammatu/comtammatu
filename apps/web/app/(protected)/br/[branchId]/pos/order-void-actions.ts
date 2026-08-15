@@ -71,16 +71,18 @@ export const voidOrderItem = withActionPositional(
       order_id?: number;
     } | null;
 
-    if (typeof rpcResult?.order_id === "number") {
-      await evaluateOrderPromotionsQuiet(supabase, rpcResult.order_id);
-    } else {
-      const { data: itemRow } = await supabase
-        .from("order_items")
-        .select("order_id")
-        .eq("id", orderItemId)
-        .maybeSingle();
-      if (itemRow?.order_id) {
-        await evaluateOrderPromotionsQuiet(supabase, itemRow.order_id);
+    if (rpcResult?.auto_cancelled_order !== true) {
+      if (typeof rpcResult?.order_id === "number") {
+        await evaluateOrderPromotionsQuiet(supabase, rpcResult.order_id);
+      } else {
+        const { data: itemRow } = await supabase
+          .from("order_items")
+          .select("order_id")
+          .eq("id", orderItemId)
+          .maybeSingle();
+        if (itemRow?.order_id) {
+          await evaluateOrderPromotionsQuiet(supabase, itemRow.order_id);
+        }
       }
     }
 

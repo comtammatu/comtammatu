@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
@@ -423,22 +424,49 @@ export const createEmployeeAccount = withAction(
       }
     }
 
+    const provisioningToken = randomUUID();
+    const { error: prepareError } = await service.rpc(
+      "prepare_staff_user_provisioning" as never,
+      {
+        p_token: provisioningToken,
+        p_email: data.email,
+        p_tenant_id: claims.tenant_id,
+        p_branch_id: effectiveBranchId ?? null,
+        p_position_code: data.positionCode,
+        p_full_name: data.fullName,
+        p_provisioned_by: user.id,
+      } as never,
+    );
+
+    if (prepareError) {
+      console.error(
+        "[hr/actions:createEmployeeAccount] Prepare provisioning error:",
+        prepareError,
+      );
+      return {
+        success: false,
+        error: "Không thể chuẩn bị tài khoản. Vui lòng thử lại.",
+      };
+    }
+
     const { data: created, error: authError } =
       await service.auth.admin.createUser({
         email: data.email,
         password: data.password,
         email_confirm: true,
-        app_metadata: {
-          tenant_id: claims.tenant_id,
-          branch_id: effectiveBranchId ?? null,
-          position_code: data.positionCode,
+        user_metadata: {
           full_name: data.fullName,
-          provisioned_by: user.id,
+          provisioning_token: provisioningToken,
         },
-        user_metadata: { full_name: data.fullName },
       });
 
     if (authError || !created?.user) {
+      await service.rpc(
+        "cancel_staff_user_provisioning" as never,
+        {
+          p_token: provisioningToken,
+        } as never,
+      );
       if (authError) {
         console.error(
           "[hr/actions:createEmployeeAccount] Auth createUser error:",

@@ -98,7 +98,12 @@ export async function evaluateOrderPromotionsQuiet(
     p_order_id: orderId,
   });
   if (error) {
-    console.error("[evaluate_order_promotions]", error.message);
+    if (
+      !error.message?.includes("order terminal") &&
+      !error.message?.includes("order already paid")
+    ) {
+      console.error("[evaluate_order_promotions]", error.message);
+    }
     return null;
   }
   const result = data as {

@@ -912,6 +912,12 @@ export async function evaluateOrderPromotionOffers(
     { p_order_id: orderId },
   );
   if (error) {
+    if (
+      error.message?.includes("order terminal") ||
+      error.message?.includes("order already paid")
+    ) {
+      return { success: true, data: { offers: [] } };
+    }
     return {
       success: false,
       error: mapDiscountRpcError(error.message),
