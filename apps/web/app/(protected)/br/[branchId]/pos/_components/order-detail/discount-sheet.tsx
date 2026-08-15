@@ -659,11 +659,6 @@ export function DiscountSheet({
                       : POS_VI.discountVndPlaceholder
                   }
                 />
-                <FieldDescription>
-                  {type === "pct"
-                    ? POS_VI.discountPctMaxHint
-                    : `Tối đa ${formatVND(subtotal)} (tự giới hạn nếu nhập quá).`}
-                </FieldDescription>
               </Field>
 
               <Field data-invalid={!noteValid && noteTrimLen > 0}>

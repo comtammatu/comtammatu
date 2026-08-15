@@ -315,7 +315,7 @@ export function ItemCustomizer({
           ? messages.pos.customizer.editDescription
           : mode === "edit-sent"
             ? messages.pos.customizer.editSentDescription
-            : (item.description ?? messages.pos.customizer.defaultDescription);
+            : (item.description ?? undefined);
 
   return (
     <StationSheet

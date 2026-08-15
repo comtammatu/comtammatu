@@ -147,7 +147,6 @@ export function ServiceChargeSheet({
                 onValueChange={setAmountText}
                 placeholder={POS_VI.serviceChargeAmountPlaceholder}
               />
-              <FieldDescription>{POS_VI.serviceChargeHint}</FieldDescription>
             </Field>
 
             <Field data-invalid={!noteValid && noteTrimLen > 0}>

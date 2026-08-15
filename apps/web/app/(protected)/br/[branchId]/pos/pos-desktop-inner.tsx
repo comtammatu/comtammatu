@@ -11,6 +11,7 @@ import {
 } from "react";
 import { BellRing as IconBell } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
+import { formatVNElapsedCompact } from "@comtammatu/shared/time";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -614,6 +615,31 @@ export function PosDesktopInner({
     () => deriveTableOrderVisualStates(orders, ACTIVE_POS_STATUSES),
     [orders],
   );
+  const tableSeatingTimeByTable = useMemo(() => {
+    const earliestByTable = new Map<number, string>();
+    const now = Date.now();
+    for (const order of orders) {
+      if (
+        order.table_id === null ||
+        !isActiveUnpaidPosOrder(order, ACTIVE_POS_STATUSES)
+      ) {
+        continue;
+      }
+      const existing = earliestByTable.get(order.table_id);
+      if (
+        !existing ||
+        new Date(order.created_at).getTime() < new Date(existing).getTime()
+      ) {
+        earliestByTable.set(order.table_id, order.created_at);
+      }
+    }
+    const formatted = new Map<number, string>();
+    for (const [tableId, createdAt] of earliestByTable.entries()) {
+      const elapsed = formatVNElapsedCompact(createdAt, now);
+      if (elapsed) formatted.set(tableId, elapsed);
+    }
+    return formatted;
+  }, [orders]);
   const pendingSelfOrderRequestByTable = useMemo(
     () =>
       new Map(
@@ -1849,6 +1875,7 @@ export function PosDesktopInner({
                 onTableSelect={handleTableSelect}
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
+                tableSeatingTimeByTable={tableSeatingTimeByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
                 staffCallTableIds={staffCallTableIds}
                 hasStackedTouchActions={selfOrderActionVisible}
@@ -1909,6 +1936,7 @@ export function PosDesktopInner({
       <SelfOrderApprovalSheet
         open={selfOrderApprovalOpen}
         requests={selfOrderPosState.requests}
+        staffCalls={selfOrderPosState.staffCalls ?? []}
         focusedRequestId={selectedSelfOrderRequestId}
         tableNumberById={selfOrderTableNumberById}
         orders={orders}
@@ -1917,6 +1945,10 @@ export function PosDesktopInner({
           if (!open) setSelectedSelfOrderRequestId(null);
         }}
         onUpdated={refreshSelfOrderWorkflow}
+        onAcknowledgeStaffCall={async (callId) => {
+          await acknowledgeSelfOrderStaffCall({ callId });
+          void refreshSelfOrderPosState();
+        }}
       />
       {mobileSidebarDrawer}
 

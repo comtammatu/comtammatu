@@ -26,6 +26,8 @@ interface PosTableGateProps {
   orderCountByTable?: Map<number, number>;
   /** Map<table_id, visual state derived from active unpaid orders. */
   tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
+  /** Map<table_id, formatted seating elapsed duration (e.g. "25p", "1h 15p")> */
+  tableSeatingTimeByTable?: ReadonlyMap<number, string>;
   /** Tables carrying a pending guest request from the public QR flow. */
   pendingSelfOrderTableIds?: ReadonlySet<number>;
   /** Tables where a guest tapped Gọi nhân viên. */
@@ -40,6 +42,7 @@ interface TableButtonProps {
   isSelected: boolean;
   orderCount: number;
   orderVisualState?: PosTableOrderVisualState;
+  seatingDuration?: string;
   hasPendingSelfOrderRequest: boolean;
   hasStaffCall: boolean;
   onTableSelect: (table: BranchTable) => void;
@@ -50,6 +53,7 @@ const TableButton = memo(function TableButton({
   isSelected,
   orderCount,
   orderVisualState,
+  seatingDuration,
   hasPendingSelfOrderRequest,
   hasStaffCall,
   onTableSelect,
@@ -82,7 +86,7 @@ const TableButton = memo(function TableButton({
       selected={isSelected}
       tone={tileTone}
       size="tile"
-      aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${hasStaffCall ? `, ${SELF_ORDER_VI.staffCallBadge}` : ""}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
+      aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${seatingDuration ? `, ${seatingDuration}` : ""}${hasStaffCall ? `, ${SELF_ORDER_VI.staffCallBadge}` : ""}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
         "w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 sm:p-3.5 lg:p-4",
         tileVisualState === "ready" && !isSelected && "bg-success/20",
@@ -90,9 +94,16 @@ const TableButton = memo(function TableButton({
       onClick={handleClick}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1">
-        <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
-          {TABLE_VI.long}
-        </p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
+            {TABLE_VI.long}
+          </p>
+          {seatingDuration ? (
+            <span className="text-xs font-medium tabular-nums opacity-75">
+              · {seatingDuration}
+            </span>
+          ) : null}
+        </div>
         <Badge
           variant={
             isSelected
@@ -141,6 +152,7 @@ function PosTableGateComponent({
   onTableSelect,
   orderCountByTable,
   tableOrderVisualStateByTable,
+  tableSeatingTimeByTable,
   pendingSelfOrderTableIds,
   staffCallTableIds,
   hasStackedTouchActions = false,
@@ -210,6 +222,7 @@ function PosTableGateComponent({
                       orderVisualState={tableOrderVisualStateByTable?.get(
                         table.id,
                       )}
+                      seatingDuration={tableSeatingTimeByTable?.get(table.id)}
                       hasPendingSelfOrderRequest={
                         pendingSelfOrderTableIds?.has(table.id) ?? false
                       }

@@ -101,37 +101,33 @@ export function BillDrawer({
           </div>
         </ScrollArea>
         {!paymentView && order?.totalAmount != null ? (
-          <SheetFooter className="shrink-0">
-            <div className="flex flex-col gap-1.5 text-sm">
-              <p className="font-semibold">{SELF_ORDER_VI.total}</p>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {SELF_ORDER_VI.subtotal}
-                </span>
+          <SheetFooter className="shrink-0 border-t border-border bg-card p-4">
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                <span>{SELF_ORDER_VI.subtotal}</span>
                 <span className="font-mono tabular-nums">
                   {formatVND(order.subtotal)}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {SELF_ORDER_VI.serviceCharge}
-                </span>
-                <span className="font-mono tabular-nums">
-                  {formatVND(order.serviceCharge)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  {SELF_ORDER_VI.discount}
-                </span>
-                <span className="font-mono tabular-nums">
-                  {order.discountAmount > 0 ? "-" : ""}
-                  {formatVND(order.discountAmount)}
-                </span>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-3 border-t pt-2 font-semibold">
+              {Number(order.serviceCharge) > 0 ? (
+                <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                  <span>{SELF_ORDER_VI.serviceCharge}</span>
+                  <span className="font-mono tabular-nums">
+                    {formatVND(order.serviceCharge)}
+                  </span>
+                </div>
+              ) : null}
+              {Number(order.discountAmount) > 0 ? (
+                <div className="flex items-center justify-between gap-3 text-success">
+                  <span>{SELF_ORDER_VI.discount}</span>
+                  <span className="font-mono tabular-nums">
+                    -{formatVND(order.discountAmount)}
+                  </span>
+                </div>
+              ) : null}
+              <div className="mt-1 flex items-center justify-between gap-3 border-t border-border/60 pt-2 text-base font-semibold">
                 <span>{SELF_ORDER_VI.totalAmount}</span>
-                <span className="font-mono tabular-nums text-primary">
+                <span className="font-mono text-xl tabular-nums text-primary">
                   {formatVND(order.totalAmount)}
                 </span>
               </div>
@@ -139,8 +135,8 @@ export function BillDrawer({
             {canPay ? (
               <Button
                 type="button"
-                size="touch"
-                className="w-full"
+                size="touch-lg"
+                className="w-full shadow-xs"
                 onClick={onOpenPayment}
               >
                 {SELF_ORDER_VI.paymentTitle}

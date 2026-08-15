@@ -42,7 +42,8 @@ export const SELF_ORDER_VI = {
   pendingApprovalDescription: "Vui lòng chờ nhân viên duyệt đơn.",
   pendingDialogTitle: "Đã gửi đơn",
   pendingDialogDescription:
-    "Vui lòng chờ nhân viên duyệt. Món vào bếp sau khi được duyệt.",
+    "Đơn đã được gửi tới quầy thu ngân. Món sẽ được đưa vào bếp ngay sau khi duyệt.",
+  continueBrowsing: "Tiếp tục xem thực đơn",
   callStaff: "Gọi nhân viên",
   callStaffOk: "Đã gọi nhân viên. Vui lòng đợi tại bàn.",
   callStaffPending: "Nhân viên đã được gọi. Vui lòng đợi tại bàn.",
@@ -234,6 +235,12 @@ export const SELF_ORDER_VI = {
     "Thiết bị sẽ mất quyền xem hoá đơn, gọi thêm và thanh toán cho đến khi lượt bàn này kết thúc.",
   staffDeviceRevoked: "Đã thu hồi quyền thiết bị.",
   staffPaymentRequests: "Yêu cầu thanh toán",
+  staffCallsTitle: (count: number) => `Khách gọi phục vụ (${count})`,
+  staffCallServed: "Đã phục vụ",
+  staffNewTable: "Mở bàn mới",
+  staffAddMore: "Gọi thêm",
+  staffAutoMergeIntoOrder: (orderNumber: string) =>
+    `Tự động gộp vào Đơn #${orderNumber}`,
   staffCustomerNote: "Ghi chú của khách",
   staffDestinationLabel: "Chọn đơn nhận món",
   staffOrderLabel: (orderNumber: string) => `Đơn #${orderNumber}`,

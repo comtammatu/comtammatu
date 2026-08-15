@@ -445,15 +445,92 @@ export function SelfOrderItemSheet({
                 </FieldSet>
               ) : null}
 
+              {item.menu_item_available_sides.length > 0 ? (
+                <FieldSet className="gap-2">
+                  <FieldLegend className="text-base font-semibold text-foreground">
+                    {SELF_ORDER_VI.sidesLabel}
+                  </FieldLegend>
+                  <ItemGroup className="gap-2">
+                    {item.menu_item_available_sides.map((side) => {
+                      const sideQuantity =
+                        selectedSideQuantities.get(side.side_item.id) ?? 0;
+                      const selected = sideQuantity > 0;
+                      return (
+                        <Item
+                          key={side.id}
+                          variant="outline"
+                          className="flex-nowrap items-center gap-3 rounded-lg p-3 transition-colors hover:bg-accent"
+                        >
+                          <Checkbox
+                            id={`self-order-side-${item.id}-${side.id}`}
+                            size="touch"
+                            checked={selected}
+                            onCheckedChange={() =>
+                              toggleSide(side.side_item.id)
+                            }
+                          />
+                          <ItemContent className="min-w-0">
+                            <FieldLabel
+                              htmlFor={`self-order-side-${item.id}-${side.id}`}
+                              className="cursor-pointer text-base font-medium leading-snug"
+                            >
+                              {side.side_item.name}
+                            </FieldLabel>
+                            <span className="font-mono text-sm font-semibold tabular-nums text-primary">
+                              +{formatVND(Number(side.side_item.base_price))}
+                            </span>
+                          </ItemContent>
+                          <ItemActions className="shrink-0 gap-1 self-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-touch"
+                              disabled={!selected}
+                              aria-label={SELF_ORDER_VI.decreaseSideAria(
+                                side.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(side.side_item.id, -1)
+                              }
+                            >
+                              <IconMinus className="size-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm font-semibold tabular-nums">
+                              {sideQuantity}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-touch"
+                              disabled={sideQuantity >= 20}
+                              aria-label={SELF_ORDER_VI.increaseSideAria(
+                                side.side_item.name,
+                              )}
+                              onClick={() =>
+                                updateSideQuantity(side.side_item.id, 1)
+                              }
+                            >
+                              <IconPlus className="size-3" />
+                            </Button>
+                          </ItemActions>
+                        </Item>
+                      );
+                    })}
+                  </ItemGroup>
+                </FieldSet>
+              ) : null}
+
               {item.menu_item_modifiers.length > 0 ? (
                 <FieldSet className="gap-2">
-                  <FieldLegend>{SELF_ORDER_VI.modifierLabel}</FieldLegend>
+                  <FieldLegend className="text-base font-semibold text-foreground">
+                    {SELF_ORDER_VI.modifierLabel}
+                  </FieldLegend>
                   <ItemGroup className="gap-2">
                     {item.menu_item_modifiers.map((modifier) => (
                       <Item
                         key={modifier.id}
                         variant="outline"
-                        className="cursor-pointer hover:bg-accent"
+                        className="cursor-pointer rounded-lg p-3 hover:bg-accent"
                         render={
                           <FieldLabel
                             htmlFor={`self-order-modifier-${item.id}-${modifier.id}`}
@@ -468,12 +545,14 @@ export function SelfOrderItemSheet({
                           onCheckedChange={() => toggleModifier(modifier.id)}
                         />
                         <ItemContent>
-                          <ItemTitle className="text-base">
+                          <ItemTitle className="text-base font-medium">
                             {modifier.name}
                           </ItemTitle>
                         </ItemContent>
-                        <ItemActions className="shrink-0 text-base text-muted-foreground">
-                          +{formatVND(Number(modifier.price))}
+                        <ItemActions className="shrink-0 font-mono text-sm font-semibold tabular-nums text-primary">
+                          {Number(modifier.price) > 0
+                            ? `+${formatVND(Number(modifier.price))}`
+                            : null}
                         </ItemActions>
                       </Item>
                     ))}
@@ -481,85 +560,10 @@ export function SelfOrderItemSheet({
                 </FieldSet>
               ) : null}
 
-              {item.menu_item_available_sides.length > 0 ? (
-                <FieldSet className="gap-2">
-                  <FieldLegend>{SELF_ORDER_VI.sidesLabel}</FieldLegend>
-                  <ItemGroup className="gap-2">
-                    {item.menu_item_available_sides.map((side) => {
-                      const sideQuantity =
-                        selectedSideQuantities.get(side.side_item.id) ?? 0;
-                      const selected = sideQuantity > 0;
-                      return (
-                        <Item
-                          key={side.id}
-                          variant="outline"
-                          className="flex-nowrap items-start gap-3"
-                        >
-                          <Checkbox
-                            id={`self-order-side-${item.id}-${side.id}`}
-                            className="mt-1.5"
-                            size="touch"
-                            checked={selected}
-                            onCheckedChange={() =>
-                              toggleSide(side.side_item.id)
-                            }
-                          />
-                          <ItemContent>
-                            <FieldLabel
-                              htmlFor={`self-order-side-${item.id}-${side.id}`}
-                              className="cursor-pointer text-base leading-snug font-normal"
-                            >
-                              {side.side_item.name}
-                            </FieldLabel>
-                            <ItemTitle className="text-sm font-normal text-muted-foreground">
-                              +{formatVND(Number(side.side_item.base_price))}
-                            </ItemTitle>
-                          </ItemContent>
-                          <ItemActions className="shrink-0 gap-1 self-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
-                              disabled={!selected}
-                              aria-label={SELF_ORDER_VI.decreaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, -1)
-                              }
-                            >
-                              <IconMinus />
-                            </Button>
-                            <span className="w-7 text-center text-base font-semibold tabular-nums">
-                              {sideQuantity}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="touch"
-                              className="min-w-12 px-0"
-                              aria-label={SELF_ORDER_VI.increaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, 1)
-                              }
-                            >
-                              <IconPlus />
-                            </Button>
-                          </ItemActions>
-                        </Item>
-                      );
-                    })}
-                  </ItemGroup>
-                </FieldSet>
-              ) : null}
-
               <FieldSet className="gap-2">
                 <FieldLabel
                   htmlFor={`self-order-item-note-${item.id}`}
-                  className="text-base font-semibold"
+                  className="text-base font-semibold text-foreground"
                 >
                   {SELF_ORDER_VI.itemNoteLabel}
                 </FieldLabel>
@@ -594,7 +598,7 @@ export function SelfOrderItemSheet({
                 aria-label={SELF_ORDER_VI.decreaseQuantityAria}
                 onClick={() => updateQuantity(-1)}
               >
-                <IconMinus />
+                <IconMinus className="size-4" />
               </Button>
               <span className="w-7 text-center text-base font-semibold tabular-nums">
                 {quantity}
@@ -607,7 +611,7 @@ export function SelfOrderItemSheet({
                 aria-label={SELF_ORDER_VI.increaseQuantityAria}
                 onClick={() => updateQuantity(1)}
               >
-                <IconPlus />
+                <IconPlus className="size-4" />
               </Button>
             </div>
             <Button

@@ -924,9 +924,39 @@ export function SelfOrderClient({
           onActiveCategoryChange={setActiveCategoryValue}
           onAdd={addCartItem}
           hasCartItems={cartItems.length > 0}
-          disabled={paymentPending}
+          disabled={false}
           cartDemandByMenuItemId={cartDemandByMenuItemId}
         />
+
+        {cartItems.length === 0 && (itemCount > 0 || awaiting) ? (
+          <div className="workflow-safe-pb fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-2xl border-t border-border bg-background/95 px-3 py-2 shadow-xs backdrop-blur">
+            <Button
+              type="button"
+              variant="outline"
+              size="touch-lg"
+              className="w-full justify-between bg-card"
+              onClick={() => {
+                setBillView("bill");
+                setBillOpen(true);
+              }}
+            >
+              <span className="flex items-center gap-2 font-medium">
+                <IconReceipt className="size-4 text-primary" />
+                <span>
+                  {awaiting
+                    ? SELF_ORDER_VI.statusPendingApproval
+                    : `${itemCount} ${SELF_ORDER_VI.quantity.toLowerCase()}`}
+                </span>
+                <Badge variant={awaiting ? "warning" : "secondary"}>
+                  {awaiting ? SELF_ORDER_VI.statusPendingApproval : itemCount}
+                </Badge>
+              </span>
+              <span className="font-semibold text-primary">
+                {SELF_ORDER_VI.viewBill} →
+              </span>
+            </Button>
+          </div>
+        ) : null}
 
         <CartSheet
           categories={available.menu}
@@ -934,7 +964,7 @@ export function SelfOrderClient({
           total={cartTotal}
           quantity={cartQuantity}
           isSubmitting={isSubmitting}
-          isEditingLocked={paymentPending}
+          isEditingLocked={false}
           canSubmit={cartItems.length > 0}
           ctaLabel={ctaLabel}
           ctaDisabled={ctaDisabled}
@@ -986,32 +1016,16 @@ export function SelfOrderClient({
         title={SELF_ORDER_VI.pendingDialogTitle}
         description={SELF_ORDER_VI.pendingDialogDescription}
         footer={
-          <>
-            <Button
-              type="button"
-              variant="default"
-              size="touch"
-              onClick={() => setAwaitingDialogOpen(false)}
-            >
-              {SELF_ORDER_VI.acknowledge}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="touch"
-              disabled={isCallingStaff}
-              onClick={callStaff}
-            >
-              {isCallingStaff ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <IconBell data-icon="inline-start" />
-              )}
-              {SELF_ORDER_VI.callStaff}
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="default"
+            size="touch"
+            className="w-full"
+            onClick={() => setAwaitingDialogOpen(false)}
+          >
+            {SELF_ORDER_VI.continueBrowsing}
+          </Button>
         }
-        footerClassName="flex-col gap-2 sm:flex-row"
       />
     </AppPage>
   );

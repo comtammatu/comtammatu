@@ -10,6 +10,7 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNElapsedCompact, formatVNTime } from "@comtammatu/shared/time";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
@@ -1492,14 +1493,28 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              {data.profiles?.full_name && (
-                <p className="px-3 pt-2 text-xs text-muted-foreground sm:px-4">
-                  {messages.pos.orderDetail.orderedByLabel}{" "}
-                  <span className="font-medium text-foreground">
-                    {data.profiles.full_name}
-                  </span>
-                </p>
-              )}
+              <div className="flex items-center justify-between px-3 pt-2 text-xs text-muted-foreground sm:px-4">
+                {data.profiles?.full_name ? (
+                  <p>
+                    {messages.pos.orderDetail.orderedByLabel}{" "}
+                    <span className="font-medium text-foreground">
+                      {data.profiles.full_name}
+                    </span>
+                  </p>
+                ) : (
+                  <span />
+                )}
+                {data.created_at ? (
+                  <p className="tabular-nums">
+                    {formatVNTime(data.created_at)}
+                    {formatVNElapsedCompact(data.created_at) ? (
+                      <span className="ml-1 font-normal opacity-80">
+                        ({formatVNElapsedCompact(data.created_at)})
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
+              </div>
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"

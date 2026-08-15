@@ -19,7 +19,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
-import { formatVNTime } from "@comtammatu/shared/time";
+import { formatVNElapsedCompact, formatVNTime } from "@comtammatu/shared/time";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
 
@@ -59,6 +59,16 @@ function cleanOrderNumber(orderNumber: string): string {
 function extractOrderSequence(orderNumber: string): string | null {
   const match = ORDER_SEQUENCE_RE.exec(cleanOrderNumber(orderNumber));
   return match?.[1] ?? null;
+}
+
+function getOrderContextLabel(order: SessionOrder): string {
+  if (order.order_type === "takeaway") {
+    return messages.pos.orderHistory.takeaway;
+  }
+  if (order.tables?.number != null) {
+    return messages.pos.orderHistory.dineIn(order.tables.number);
+  }
+  return messages.pos.orderDetail.genericOrderLabel;
 }
 
 function getCompactOrderTitle(
@@ -119,16 +129,8 @@ export function compareOrdersByNextAction(
   return compareOrdersNewestFirst(a, b);
 }
 
-function formatTime(dateStr: string): string {
-  return formatVNTime(dateStr);
-}
-
-function getOrderContextLabel(order: SessionOrder): string {
-  if (order.order_type === "dine_in") {
-    return messages.pos.orderHistory.dineIn(order.tables?.number ?? "—");
-  }
-
-  return messages.pos.orderHistory.takeaway;
+function formatTime(timestamp: string): string {
+  return formatVNTime(timestamp, "--:--");
 }
 
 export function OrderStatePill({ order }: { order: SessionOrder }) {
@@ -161,6 +163,8 @@ export function OrderCardSummary({
   /** Defaults to created_at. Archived rows pass updated_at (closed time). */
   metaTimestamp?: string;
 }) {
+  const elapsed = metaTimestamp ? null : formatVNElapsedCompact(order.created_at);
+
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
       <ItemTitle className="w-full min-w-0 max-w-full justify-between gap-3 text-base">
@@ -179,6 +183,11 @@ export function OrderCardSummary({
       <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className="shrink-0 tabular-nums">
           {formatTime(metaTimestamp ?? order.created_at)}
+          {elapsed ? (
+            <span className="ml-1 font-normal opacity-80">
+              ({elapsed})
+            </span>
+          ) : null}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-1">
           {rightMeta}

@@ -10,6 +10,7 @@ import {
   formatVNDayMonth,
   formatVNDuration,
   formatVNDurationMinutes,
+  formatVNElapsedCompact,
   formatVNTime,
   formatVNWeekdayShort,
   getVNDateString,
@@ -55,6 +56,22 @@ test("VN display helpers pin timestamps and clock ranges to the contract", () =>
   assert.equal(
     formatVNDuration("2026-05-22T01:00:00Z", "2026-05-22T02:05:00Z"),
     "1 giờ 05 phút",
+  );
+  assert.equal(
+    formatVNElapsedCompact("2026-05-22T01:00:00Z", "2026-05-22T01:00:30Z"),
+    "Vừa xong",
+  );
+  assert.equal(
+    formatVNElapsedCompact("2026-05-22T01:00:00Z", "2026-05-22T01:25:00Z"),
+    "25p",
+  );
+  assert.equal(
+    formatVNElapsedCompact("2026-05-22T01:00:00Z", "2026-05-22T02:15:00Z"),
+    "1h 15p",
+  );
+  assert.equal(
+    formatVNElapsedCompact("2026-05-22T01:00:00Z", "2026-05-22T03:00:00Z"),
+    "2h",
   );
 });
 

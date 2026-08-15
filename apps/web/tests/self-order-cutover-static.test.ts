@@ -84,9 +84,8 @@ test("S4 is one responsive menu page with pending-state feedback and adaptive po
   assert.match(client, /awaitingDialogOpen/);
   assert.match(client, /pendingDialogTitle/);
   assert.match(client, /pendingDialogDescription/);
-  assert.match(client, /SELF_ORDER_VI\.acknowledge/);
+  assert.match(client, /SELF_ORDER_VI\.continueBrowsing/);
   assert.match(client, /SELF_ORDER_VI\.callStaff/);
-  assert.match(client, /footerClassName="flex-col gap-2 sm:flex-row"/);
   assert.match(client, /const isFirstPendingSubmit = !awaiting/);
   assert.match(
     client,

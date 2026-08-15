@@ -62,9 +62,9 @@ test("awaiting guests can continue ordering while the first confirmation is a di
   assert.match(messages, /pendingDialogTitle: "Đã gửi đơn"/);
   assert.match(
     messages,
-    /pendingDialogDescription:\s*"Vui lòng chờ nhân viên duyệt\. Món vào bếp sau khi được duyệt\."/,
+    /pendingDialogDescription:\s*"Đơn đã được gửi tới quầy thu ngân\. Món sẽ được đưa vào bếp ngay sau khi duyệt\."/,
   );
-  assert.match(messages, /acknowledge: "Đã hiểu"/);
+  assert.match(messages, /continueBrowsing: "Tiếp tục xem thực đơn"/);
   assert.match(messages, /callStaff: "Gọi nhân viên"/);
   assert.match(summary, /blur-\[2px\]/);
   assert.match(summary, /<BrandMascot decorative size="sm"/);

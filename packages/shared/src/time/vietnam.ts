@@ -410,6 +410,28 @@ export function formatVNDuration(
   );
 }
 
+/**
+ * Compact elapsed duration for POS tables, order cards, and pending queues.
+ * Examples: "Vừa xong", "25p", "1h 15p", "2h".
+ */
+export function formatVNElapsedCompact(
+  start: string | number | Date | null | undefined,
+  now: string | number | Date = new Date(),
+): string | null {
+  const startDate = toDate(start);
+  const nowDate = toDate(now);
+  if (!startDate || !nowDate) return null;
+  const diffMinutes = Math.max(
+    0,
+    Math.floor((nowDate.getTime() - startDate.getTime()) / 60_000),
+  );
+  if (diffMinutes < 1) return "Vừa xong";
+  if (diffMinutes < 60) return `${diffMinutes}p`;
+  const hours = Math.floor(diffMinutes / 60);
+  const remainder = diffMinutes % 60;
+  return remainder > 0 ? `${hours}h ${remainder}p` : `${hours}h`;
+}
+
 /** Wall-clock minutes since VN midnight (0–1439) for the given instant. */
 export function getVNMinutesOfDay(
   value: string | number | Date = new Date(),
