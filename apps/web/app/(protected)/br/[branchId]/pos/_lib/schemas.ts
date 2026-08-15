@@ -207,3 +207,22 @@ export const releaseDailyLimitHoldsSchema = z.object({
     .positive({ error: "Mã chi nhánh không hợp lệ" }),
   holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
 });
+
+/**
+ * Schema for `updatePosOrderNote(branchId, orderId, note)`.
+ * `note`: max 300 chars.
+ */
+export const updateOrderNoteSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Mã chi nhánh không hợp lệ" }),
+  orderId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Mã đơn hàng không hợp lệ" }),
+  note: z.string().trim().max(300, { error: "Ghi chú tối đa 300 ký tự" }),
+});
+
+export type UpdateOrderNoteInput = z.infer<typeof updateOrderNoteSchema>;
+

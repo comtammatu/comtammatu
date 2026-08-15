@@ -694,6 +694,32 @@ export function mapPriorityError(
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/*  updatePosOrderNote — RPC error vocabulary                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export function mapOrderNoteError(message: string): string {
+  const msg = message.toLowerCase();
+  if (msg.includes("forbidden") || msg.includes("permission")) {
+    return "Không có quyền sửa ghi chú đơn.";
+  }
+  if (
+    msg.includes("terminal") ||
+    msg.includes("completed") ||
+    msg.includes("cancelled")
+  ) {
+    return "Đơn đã đóng hoặc hủy, không thể sửa ghi chú.";
+  }
+  if (msg.includes("not found")) {
+    return "Không tìm thấy đơn.";
+  }
+  if (msg.includes("branch mismatch") || msg.includes("tenant mismatch")) {
+    return "Đơn không thuộc chi nhánh hiện tại.";
+  }
+  return "Không thể cập nhật ghi chú đơn.";
+}
+
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /*  transferOrderTable — RPC error vocabulary                                 */
 /* ────────────────────────────────────────────────────────────────────────── */
 

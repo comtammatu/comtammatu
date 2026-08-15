@@ -2,9 +2,14 @@
 
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withActionPositional } from "@/_lib/with-action";
-import { priorityInputSchema, transferTableSchema } from "./_lib/schemas";
+import {
+  priorityInputSchema,
+  transferTableSchema,
+  updateOrderNoteSchema,
+} from "./_lib/schemas";
 import { posUseAuth } from "./_lib/auth";
 import {
+  mapOrderNoteError,
   mapPriorityError,
   mapRpcError,
   transferRpcFallback,
@@ -114,3 +119,47 @@ export const transferOrderTable = withActionPositional(
       : { success: true };
   },
 );
+
+/* ─── updatePosOrderNote ─── */
+
+/**
+ * Update the general note on an active POS order. Auth: POS_USE.
+ */
+export const updatePosOrderNote = withActionPositional(
+  {
+    argsToInput: (branchId: number, orderId: number, note: string) => ({
+      branchId,
+      orderId,
+      note,
+    }),
+    schema: updateOrderNoteSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { orderId, note },
+    { supabase },
+  ): Promise<ActionResult<{ order_id: number; note: string | null }>> => {
+    const trimmedNote = note.trim();
+    const { data, error } = await supabase.rpc("update_pos_order_note", {
+      p_order_id: orderId,
+      p_note: trimmedNote.length > 0 ? trimmedNote : undefined,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        error: mapOrderNoteError(error.message),
+      };
+    }
+
+    const result = data as { order_id: number; note: string | null } | null;
+    return {
+      success: true,
+      data: result ?? {
+        order_id: orderId,
+        note: trimmedNote.length > 0 ? trimmedNote : null,
+      },
+    };
+  },
+);
+

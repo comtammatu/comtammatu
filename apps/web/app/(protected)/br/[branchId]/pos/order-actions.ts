@@ -32,4 +32,5 @@ export {
   setOrderPriority,
   setOrderItemPriority,
   transferOrderTable,
+  updatePosOrderNote,
 } from "./order-adjust-actions";

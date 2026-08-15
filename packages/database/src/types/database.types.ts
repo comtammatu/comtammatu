@@ -15693,6 +15693,10 @@ export type Database = {
         }
         Returns: Json
       }
+      update_pos_order_note: {
+        Args: { p_note?: string; p_order_id: number }
+        Returns: Json
+      }
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json

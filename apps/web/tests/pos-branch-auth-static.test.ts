@@ -42,6 +42,18 @@ test("POS ID-only lifecycle actions carry branchId into custom auth", () => {
     /transferOrderTable\(\s*branchId,\s*orderId,\s*tid,\s*idempotencyKey,\s*\)/,
   );
   assert.match(
+    schemasSource,
+    /export const updateOrderNoteSchema = z\.object\(\{[\s\S]*?branchId: z\.coerce[\s\S]*?orderId:/,
+  );
+  assert.match(
+    adjustActionsSource,
+    /argsToInput: \(\s*branchId: number,\s*orderId: number,\s*note: string,\?\s*\) => \(\{ branchId, orderId, note \}\)|argsToInput: \(branchId: number, orderId: number, note: string\) => \(\{[\s\S]*?branchId,[\s\S]*?orderId,[\s\S]*?note,[\s\S]*?\}\)/,
+  );
+  assert.match(
+    detailSheetSource,
+    /updatePosOrderNote\(branchId, orderId, newNote\)/,
+  );
+  assert.match(
     detailSheetSource,
     /markOrderItemServed\(branchId, itemId\)/,
   );

@@ -1,3 +1,13 @@
+export const ORDER_NOTE_PRESETS = [
+  "Ít cay",
+  "Không ớt",
+  "Mang ra cùng lúc",
+  "Giao trước 1 phần",
+  "Khách vội",
+  "Để riêng nước mắm",
+  "Thêm rau/dưa",
+] as const;
+
 export const ITEM_NOTE_PRESETS = [
   "Không mỡ hành",
   "Không đồ chua",

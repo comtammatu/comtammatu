@@ -37,6 +37,8 @@ import {
   Ellipsis as IconEllipsis,
   Flame as IconFlame,
   Merge as IconMerge,
+  NotebookPen as IconNotebookPen,
+  Plus as IconPlus,
   Printer as IconPrinter,
   Receipt as IconReceipt,
   Split as IconSplit,
@@ -49,6 +51,7 @@ import {
   reduceOrderItemQuantity,
   cancelOrder,
   transferOrderTable,
+  updatePosOrderNote,
   markOrderItemServed,
   fetchOrderItemsForReorder,
   setOrderPriority,
@@ -82,6 +85,7 @@ import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { VoidPaidOrderDialog } from "./_components/order-detail/void-paid-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
+import { EditOrderNoteDialog } from "./_components/order-detail/edit-order-note-dialog";
 import { DiscountSheet, ITEM_DISCOUNT_MODES } from "./_components/order-detail/discount-sheet";
 import { ServiceChargeSheet } from "./_components/order-detail/service-charge-sheet";
 // Dynamic imports — both sheets are tap-gated overflow actions ("Tách đơn"
@@ -400,6 +404,7 @@ export function OrderDetailSheet({
     useState<RefundPayoutMethod | null>(null);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
+  const [showEditNote, setShowEditNote] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [discountItemId, setDiscountItemId] = useState<number | null>(null);
   const [showServiceCharge, setShowServiceCharge] = useState(false);
@@ -835,6 +840,29 @@ export function OrderDetailSheet({
         load();
       } else {
         notify.error(r.error ?? "Không thể cập nhật ưu tiên món.");
+      }
+    });
+  };
+
+  const handleUpdateOrderNote = (newNote: string) => {
+    if (orderId === null || data === null) return;
+    startMutation(async () => {
+      const r = await updatePosOrderNote(branchId, orderId, newNote);
+      if (r.success) {
+        notify.success(messages.pos.orderDetail.noteUpdated);
+        setShowEditNote(false);
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                note: r.data?.note ?? (newNote.trim() || null),
+              }
+            : null,
+        );
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? messages.pos.orderDetail.noteUpdateFailed);
       }
     });
   };
@@ -1325,6 +1353,8 @@ export function OrderDetailSheet({
     data?.order_type === "dine_in" &&
     data?.table_id != null &&
     tableSiblingCount >= 2;
+  const canEditNote =
+    data != null && !["completed", "cancelled"].includes(data.status);
   // "Chuyển bàn" lives in the ⋮ dropdown instead of its own full-width
   // button — keeps the footer short and the cashier's thumb near the main
   // CTAs ("Thanh toán" / "Thêm món").
@@ -1333,6 +1363,7 @@ export function OrderDetailSheet({
     canShowReorder ||
     canPrioritizeOrder ||
     canShowTransfer ||
+    canEditNote ||
     canShowCancel ||
     canShowVoidPaid ||
     canShowDiscount ||
@@ -1473,14 +1504,41 @@ export function OrderDetailSheet({
                     />
                   ))}
                 </ul>
-                {data.note && (
-                  <NoteCallout
-                    label={messages.pos.orderDetail.noteLabel}
-                    className="mx-3 sm:mx-4"
-                  >
-                    {data.note}
-                  </NoteCallout>
-                )}
+                {data.note ? (
+                  <div className="mx-3 my-2 flex flex-col gap-1 sm:mx-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {messages.pos.orderDetail.noteLabel}
+                      </span>
+                      {canEditNote && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowEditNote(true)}
+                          className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <IconNotebookPen className="size-3" />
+                          <span>{messages.pos.orderDetail.editNote}</span>
+                        </Button>
+                      )}
+                    </div>
+                    <NoteCallout tone="muted">{data.note}</NoteCallout>
+                  </div>
+                ) : canEditNote ? (
+                  <div className="mx-3 my-2 sm:mx-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="touch"
+                      onClick={() => setShowEditNote(true)}
+                      className="w-full justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <IconPlus className="size-3.5" />
+                      <span>{messages.pos.orderDetail.addNote}</span>
+                    </Button>
+                  </div>
+                ) : null}
               </ScrollArea>
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
@@ -1624,6 +1682,18 @@ export function OrderDetailSheet({
                                 {data.is_priority === true
                                   ? messages.pos.orderDetail.removePriority
                                   : messages.pos.orderDetail.kitchenPriority}
+                              </DropdownMenuItem>
+                            )}
+                            {canEditNote && (
+                              <DropdownMenuItem
+                                className="min-h-12 text-sm"
+                                disabled={isMutating}
+                                onClick={() => setShowEditNote(true)}
+                              >
+                                <IconNotebookPen />
+                                {data.note
+                                  ? messages.pos.orderDetail.editNote
+                                  : messages.pos.orderDetail.addNote}
                               </DropdownMenuItem>
                             )}
                             {canShowReorder && (
@@ -1848,6 +1918,15 @@ export function OrderDetailSheet({
         orderNumber={data?.order_number ?? orderNumber}
         currentTableNumber={data?.tables?.number ?? null}
         isPending={isMutating}
+      />
+
+      <EditOrderNoteDialog
+        open={showEditNote}
+        onOpenChange={setShowEditNote}
+        currentNote={data?.note ?? null}
+        orderNumber={data?.order_number ?? orderNumber}
+        isPending={isMutating}
+        onSubmit={handleUpdateOrderNote}
       />
 
       {data && (
