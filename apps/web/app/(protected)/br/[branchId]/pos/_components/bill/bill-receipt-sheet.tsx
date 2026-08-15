@@ -627,10 +627,15 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
 
+      const isAmountStale =
+        pendingExtras?.qr_info?.amount != null &&
+        Number(pendingExtras.qr_info.amount) !== Number(order.total_amount);
+
       if (
         method === selectedMethod &&
         pendingExtras?.payment_id !== undefined &&
-        (pendingExtras.qr_data || pendingExtras.redirect_url)
+        (pendingExtras.qr_data || pendingExtras.redirect_url) &&
+        !isAmountStale
       ) {
         return;
       }
@@ -786,6 +791,32 @@ export function BillReceipt({
     pendingExtras,
     methodPending,
     isOnline,
+    handleSelectMethod,
+  ]);
+
+  // Auto-refresh QR when order total changes while VietQR is selected
+  useEffect(() => {
+    if (orderId === null || !order) return;
+    if (selectedMethod !== "vietqr" || !isOnline) return;
+    if (
+      order.payment_status === "paid" ||
+      order.status === "completed" ||
+      order.status === "cancelled"
+    ) {
+      return;
+    }
+    if (
+      pendingExtras?.qr_info?.amount != null &&
+      Number(pendingExtras.qr_info.amount) !== Number(order.total_amount)
+    ) {
+      handleSelectMethod("vietqr");
+    }
+  }, [
+    orderId,
+    order,
+    selectedMethod,
+    isOnline,
+    pendingExtras?.qr_info?.amount,
     handleSelectMethod,
   ]);
 

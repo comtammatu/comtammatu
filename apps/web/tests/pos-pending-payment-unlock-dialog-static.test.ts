@@ -16,40 +16,22 @@ const picker = read(
 );
 const inner = read("app/(protected)/br/[branchId]/pos/pos-desktop-inner.tsx");
 const posMessages = read("lib/messages/pos.ts");
-const confirmDialog = read("app/components/confirm-dialog.tsx");
 
-test("pending QR unlock uses the shared confirm Dialog, not a custom overlay", () => {
-  assert.match(helper, /from "@\/components\/confirm-dialog"/);
-  assert.match(helper, /await confirm\(pendingPaymentUnlockConfirmOptions\(\)\)/);
-  assert.match(confirmDialog, /from "@comtammatu\/ui\/components\/alert-dialog"/);
+test("pending QR unlock performs non-blocking silent unlock without modal disruption", () => {
   assert.doesNotMatch(helper, /window\.confirm|window\.alert/);
   assert.doesNotMatch(helper, /StationSheet|AppSheet|AppDialog/);
   assert.match(helper, /if \(!input\.locked\) return true/);
-  assert.match(helper, /if \(!confirmed\) return false/);
-});
-
-test("confirm cancels the pending payment; dismiss keeps the lock", () => {
   assert.match(helper, /fetchPendingRemotePaymentForBill/);
   assert.match(helper, /cancelPendingPayment/);
-  assert.match(
-    helper,
-    /const confirmed = await confirm\([\s\S]*if \(!confirmed\) return false/,
-  );
-  assert.match(
-    helper,
-    /if \(!confirmed\) return false[\s\S]*cancelPendingPayment/,
-  );
 });
 
-test("POS copy asks to cancel the waiting payment code and continue", () => {
+test("POS copy retains pending payment message definitions", () => {
   assert.match(
     posMessages,
     /cancelPendingConfirmDescription:\s*"Đơn đã có mã thanh toán đang chờ, bạn có chắc hủy và tiếp tục\?"/,
   );
   assert.match(posMessages, /cancelPendingConfirmAction: "Hủy và tiếp tục"/);
   assert.match(posMessages, /cancelPendingKeep: "Giữ mã"/);
-  assert.match(helper, /messages\.pos\.payment\.cancelPendingConfirmDescription/);
-  assert.match(helper, /variant: "destructive"/);
 });
 
 test("locked amount mutations stay offered and continue after unlock", () => {

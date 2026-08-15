@@ -47,7 +47,7 @@ test("awaiting guests can continue ordering while the first confirmation is a di
   const messages = readRepo("packages/shared/src/messages/self-order.ts");
   const summary = readWeb("app/q/[token]/self-order/order-summary.tsx");
 
-  assert.match(client, /const ctaDisabled = paymentPending/);
+  assert.match(client, /const ctaDisabled = false;/);
   assert.match(client, /const ctaLabel =\s*open \|\| awaiting/);
   assert.match(client, /const isFirstPendingSubmit = !awaiting/);
   assert.match(

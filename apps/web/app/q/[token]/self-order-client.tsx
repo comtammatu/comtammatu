@@ -17,7 +17,6 @@ import dynamic from "next/dynamic";
 import { SELF_ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@/components/confirm-dialog";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { AppDialog } from "@/components/form";
 import {
@@ -549,12 +548,10 @@ export function SelfOrderClient({
     open || awaiting
       ? SELF_ORDER_VI.submitAddMore
       : SELF_ORDER_VI.submitFirstBatch;
-  const ctaDisabled = paymentPending;
-  const ctaDisabledHint = paymentPending
-    ? SELF_ORDER_VI.activePaymentIntent
-    : !open && !awaiting
-      ? SELF_ORDER_VI.firstSubmitHint
-      : null;
+  const ctaDisabled = false;
+  const ctaDisabledHint = !open && !awaiting
+    ? SELF_ORDER_VI.firstSubmitHint
+    : null;
 
   if (paymentCompleted) {
     return (
@@ -651,6 +648,9 @@ export function SelfOrderClient({
         }
         setClientOpId(intent.clientOpId);
         setSnapshot(parsedSnapshot.data);
+        setLocalPaymentRequest(null);
+        setPaymentStatusClientOpId(null);
+        paymentIntentRef.current = null;
         setCartItems([]);
         setCustomerNote("");
         batchIntentRef.current = clearClientIntent(
@@ -741,14 +741,6 @@ export function SelfOrderClient({
     ) {
       return;
     }
-    const confirmed = await confirm({
-      title: SELF_ORDER_VI.cancelVietQrTitle,
-      description: SELF_ORDER_VI.cancelVietQrDescription,
-      confirmText: SELF_ORDER_VI.cancelVietQr,
-      cancelText: SELF_ORDER_VI.paymentConfirmBack,
-      variant: "destructive",
-    });
-    if (!confirmed) return;
 
     const currentClientOpId = activePaymentRequest.clientOpId;
     setPaymentError(null);

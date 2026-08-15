@@ -1,27 +1,16 @@
 "use client";
 
 import { toast } from "@comtammatu/ui/components/sonner";
-import { confirm, type ConfirmOptions } from "@/components/confirm-dialog";
 import { messages } from "@lib/messages";
 import {
   cancelPendingPayment,
   fetchPendingRemotePaymentForBill,
 } from "../payment-actions";
 
-export function pendingPaymentUnlockConfirmOptions(): ConfirmOptions {
-  return {
-    title: messages.pos.payment.cancelPendingConfirmTitle,
-    description: messages.pos.payment.cancelPendingConfirmDescription,
-    confirmText: messages.pos.payment.cancelPendingConfirmAction,
-    cancelText: messages.pos.payment.cancelPendingKeep,
-    variant: "destructive",
-  };
-}
-
 /**
- * When a pending VietQR / payment code locks amount mutations, ask via the
- * shared confirm Dialog. Confirm cancels that pending row then returns true
- * so the caller can continue the original UI action. Dismiss keeps the lock.
+ * When a pending VietQR / payment code is active, silently cancel that pending
+ * row in the background so the caller can continue the original UI action
+ * seamlessly without blocking the operator with modal dialogs.
  */
 export async function confirmAndCancelPendingPayment(input: {
   branchId: number;
@@ -29,9 +18,6 @@ export async function confirmAndCancelPendingPayment(input: {
   locked: boolean;
 }): Promise<boolean> {
   if (!input.locked) return true;
-
-  const confirmed = await confirm(pendingPaymentUnlockConfirmOptions());
-  if (!confirmed) return false;
 
   const pending = await fetchPendingRemotePaymentForBill(
     input.branchId,
@@ -51,7 +37,6 @@ export async function confirmAndCancelPendingPayment(input: {
       toast.error(cancelled.error ?? messages.pos.payment.cancelPendingFailed);
       return false;
     }
-    toast.success(messages.pos.payment.pendingCancelled);
   }
 
   return true;

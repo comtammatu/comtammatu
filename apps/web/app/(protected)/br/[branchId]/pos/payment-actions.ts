@@ -600,7 +600,10 @@ export const createPayment = withActionPositional(
             "Đơn hàng đang có thanh toán chờ xử lý. Vui lòng hủy phiên hiện tại trước khi đổi phương thức.",
         };
       }
-      return resumePendingPayment(pendingBeforeProvider.data);
+      const existingAmount = Number(pendingBeforeProvider.data.qr_info?.amount);
+      if (existingAmount === amount && pendingBeforeProvider.data.qr_data) {
+        return resumePendingPayment(pendingBeforeProvider.data);
+      }
     }
 
     const provider = await resolvePaymentProviderForMethod(

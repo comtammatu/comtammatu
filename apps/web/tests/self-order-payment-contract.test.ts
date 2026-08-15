@@ -205,7 +205,7 @@ test("guest can cancel only the exact active VietQR request", () => {
     false,
   );
   assert.match(paymentPanel, /hasRecoverableVietQr[\s\S]*cancelVietQr/);
-  assert.match(client, /await confirm\([\s\S]*cancelVietQrTitle/);
+  assert.match(client, /cancelVietQrPayment/);
   assert.match(
     client,
     /method: "DELETE"[\s\S]*JSON\.stringify\(\{ clientOpId: currentClientOpId \}\)/,
