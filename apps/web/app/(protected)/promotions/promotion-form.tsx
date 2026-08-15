@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { X as IconX } from "lucide-react";
 import { z } from "zod";
 import { ACTIONS_VI, FORM_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
-import { formatVND } from "@comtammatu/shared/format";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import {
   formatVNClockTime,
   formatVNTime,
@@ -15,6 +15,7 @@ import {
 } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import {
   Item,
   ItemActions,
@@ -576,118 +577,202 @@ export function PromotionForm({
         </AppSection>
 
         <AppSection title={PROMOTIONS_VI.kindConfigSection}>
-          <div className="flex flex-col gap-3">
-            {needsAmount && kind !== "order_pct" ? (
-              <SelectField
-                control={control}
-                name="discountType"
-                label={PROMOTIONS_VI.discountTypeLabel}
-                options={[
-                  { value: "pct", label: PROMOTIONS_VI.kindOrderPct },
-                  { value: "vnd", label: PROMOTIONS_VI.kindOrderVnd },
-                ]}
-              />
+          <div className="flex flex-col gap-4">
+            {kind === "order_pct" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <NumberField
+                  control={control}
+                  name="discountValue"
+                  label={PROMOTIONS_VI.pctValueLabel}
+                  placeholder="10"
+                  maxFractionDigits={2}
+                  required
+                />
+                <WholeVndField
+                  control={control}
+                  name="maxDiscountAmount"
+                  label={PROMOTIONS_VI.maxDiscountLabel}
+                  placeholder={PROMOTIONS_VI.maxDiscountPlaceholder}
+                  description={PROMOTIONS_VI.maxDiscountHint}
+                />
+              </div>
             ) : null}
-            {needsAmount ? (
-              <NumberField
+
+            {kind === "order_vnd" ? (
+              <WholeVndField
                 control={control}
                 name="discountValue"
-                label={PROMOTIONS_VI.valueLabel}
-                maxFractionDigits={discountType === "pct" ? 2 : 0}
+                label={PROMOTIONS_VI.vndValueLabel}
+                placeholder="20.000"
+                required
               />
             ) : null}
+
+            {kind === "voucher_face" ? (
+              <WholeVndField
+                control={control}
+                name="discountValue"
+                label={PROMOTIONS_VI.voucherFaceValueLabel}
+                placeholder="50.000"
+                required
+              />
+            ) : null}
+
+            {kind === "auto_order" ? (
+              <div className="flex flex-col gap-3">
+                <SelectField
+                  control={control}
+                  name="discountType"
+                  label={PROMOTIONS_VI.discountTypeLabel}
+                  options={[
+                    { value: "pct", label: PROMOTIONS_VI.kindOrderPct },
+                    { value: "vnd", label: PROMOTIONS_VI.kindOrderVnd },
+                  ]}
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <NumberField
+                    control={control}
+                    name="discountValue"
+                    label={
+                      discountType === "pct"
+                        ? PROMOTIONS_VI.pctValueLabel
+                        : PROMOTIONS_VI.vndValueLabel
+                    }
+                    placeholder={discountType === "pct" ? "10" : "20.000"}
+                    maxFractionDigits={discountType === "pct" ? 2 : 0}
+                    required
+                  />
+                  {discountType === "pct" ? (
+                    <WholeVndField
+                      control={control}
+                      name="maxDiscountAmount"
+                      label={PROMOTIONS_VI.maxDiscountLabel}
+                      placeholder={PROMOTIONS_VI.maxDiscountPlaceholder}
+                      description={PROMOTIONS_VI.maxDiscountHint}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
             {needsBxgy ? (
-              <>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <NumberField
                   control={control}
                   name="bxgyBuyQty"
                   label={PROMOTIONS_VI.bxgyBuyLabel}
+                  placeholder="2"
                   maxFractionDigits={0}
+                  required
                 />
                 <NumberField
                   control={control}
                   name="bxgyGetQty"
                   label={PROMOTIONS_VI.bxgyGetLabel}
+                  placeholder="1"
                   maxFractionDigits={0}
+                  required
                 />
-              </>
+              </div>
             ) : null}
+
             {needsFreeSide ? (
-              <>
+              <div className="flex flex-col gap-3">
                 <NumberField
                   control={control}
                   name="freeSideQty"
                   label={PROMOTIONS_VI.freeSideQtyLabel}
+                  placeholder="1"
                   maxFractionDigits={0}
+                  required
                 />
                 <ActivationFields control={control} />
-              </>
+              </div>
             ) : null}
+
             {needsCode ? (
               <TextField
                 control={control}
                 name="reusableCode"
                 label={PROMOTIONS_VI.codeLabel}
                 placeholder={PROMOTIONS_VI.codePlaceholder}
+                description={PROMOTIONS_VI.codeHint}
                 className="font-mono uppercase"
                 required
               />
             ) : null}
-            <WholeVndField
-              control={control}
-              name="minSubtotal"
-              label={PROMOTIONS_VI.minSubtotalLabel}
-            />
-            {needsAmount ? (
+
+            <div className="flex flex-col gap-3 border-t border-border pt-3">
               <WholeVndField
                 control={control}
-                name="maxDiscountAmount"
-                label={PROMOTIONS_VI.maxDiscountLabel}
+                name="minSubtotal"
+                label={PROMOTIONS_VI.minSubtotalLabel}
+                placeholder="0"
+                description={PROMOTIONS_VI.minSubtotalHint}
               />
-            ) : null}
-            <StackCheckbox control={control} />
+              <StackCheckbox control={control} />
+            </div>
 
             {needsEligibleItems ? (
+              <div className="border-t border-border pt-3">
                 <MenuItemPicker
                   control={control}
                   name="itemIds"
                   label={PROMOTIONS_VI.itemsLabel}
+                  description={PROMOTIONS_VI.itemsAllMenuHint}
                   query={itemQuery}
                   onQueryChange={setItemQuery}
                   options={filteredItems}
                   allItems={menuItems}
                 />
-              ) : null}
-              {needsSplitItems ? (
-                <>
-                  <MenuItemPicker
-                    control={control}
-                    name="buyItemIds"
-                    label={
-                      needsFreeSide
-                        ? PROMOTIONS_VI.freeSideBuyLabel
-                        : PROMOTIONS_VI.bxgyBuyItemsLabel
-                    }
-                    query={buyQuery}
-                    onQueryChange={setBuyQuery}
-                    options={filteredBuy}
-                    allItems={menuItems}
-                  />
-                  <MenuItemPicker
-                    control={control}
-                    name="getItemIds"
-                    label={
-                      needsFreeSide
-                        ? PROMOTIONS_VI.freeSideGetLabel
-                        : PROMOTIONS_VI.bxgyGetItemsLabel
-                    }
-                    query={getQuery}
-                    onQueryChange={setGetQuery}
-                    options={filteredGet}
-                    allItems={menuItems}
-                  />
-                </>
-              ) : null}
+              </div>
+            ) : null}
+
+            {needsSplitItems ? (
+              <div className="flex flex-col gap-3 border-t border-border pt-3">
+                <MenuItemPicker
+                  control={control}
+                  name="buyItemIds"
+                  label={
+                    needsFreeSide
+                      ? PROMOTIONS_VI.freeSideBuyLabel
+                      : PROMOTIONS_VI.bxgyBuyItemsLabel
+                  }
+                  query={buyQuery}
+                  onQueryChange={setBuyQuery}
+                  options={filteredBuy}
+                  allItems={menuItems}
+                />
+                <MenuItemPicker
+                  control={control}
+                  name="getItemIds"
+                  label={
+                    needsFreeSide
+                      ? PROMOTIONS_VI.freeSideGetLabel
+                      : PROMOTIONS_VI.bxgyGetItemsLabel
+                  }
+                  query={getQuery}
+                  onQueryChange={setGetQuery}
+                  options={filteredGet}
+                  allItems={menuItems}
+                />
+              </div>
+            ) : null}
+
+            <PromotionRuleSummary
+              kind={kind}
+              discountType={discountType}
+              discountValue={watch("discountValue")}
+              maxDiscountAmount={watch("maxDiscountAmount")}
+              minSubtotal={watch("minSubtotal")}
+              reusableCode={watch("reusableCode")}
+              itemIds={watch("itemIds")}
+              bxgyBuyQty={watch("bxgyBuyQty")}
+              bxgyGetQty={watch("bxgyGetQty")}
+              freeSideQty={watch("freeSideQty")}
+              allowCode={watch("allowCode")}
+              allowAuto={watch("allowAuto")}
+            />
           </div>
         </AppSection>
 
@@ -957,6 +1042,7 @@ function MenuItemPicker({
   control,
   name,
   label,
+  description,
   query,
   onQueryChange,
   options,
@@ -965,6 +1051,7 @@ function MenuItemPicker({
   control: Control<PromotionFormValues>;
   name: "itemIds" | "buyItemIds" | "getItemIds";
   label: string;
+  description?: string;
   query: string;
   onQueryChange: (value: string) => void;
   options: PromotionFormMenuItem[];
@@ -985,6 +1072,9 @@ function MenuItemPicker({
   return (
     <Field data-invalid={!!fieldState.error}>
       <FieldLabel>{label}</FieldLabel>
+      {description ? (
+        <FieldDescription>{description}</FieldDescription>
+      ) : null}
       {selected.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {selected.map((item) => (
@@ -1000,7 +1090,11 @@ function MenuItemPicker({
           ))}
         </div>
       ) : (
-        <FieldDescription>{PROMOTIONS_VI.itemsSelectedLabel}: 0</FieldDescription>
+        <FieldDescription className="italic">
+          {name === "itemIds"
+            ? PROMOTIONS_VI.itemsAllMenuSelected
+            : `${PROMOTIONS_VI.itemsSelectedLabel}: 0`}
+        </FieldDescription>
       )}
       <Input
         value={query}
@@ -1021,6 +1115,114 @@ function MenuItemPicker({
       </div>
       {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
     </Field>
+  );
+}
+
+function PromotionRuleSummary({
+  kind,
+  discountType,
+  discountValue,
+  maxDiscountAmount,
+  minSubtotal,
+  reusableCode,
+  itemIds,
+  bxgyBuyQty,
+  bxgyGetQty,
+  freeSideQty,
+  allowCode,
+  allowAuto,
+}: {
+  kind: PromotionKind;
+  discountType: "pct" | "vnd" | null;
+  discountValue: string;
+  maxDiscountAmount: string;
+  minSubtotal: string;
+  reusableCode: string;
+  itemIds: number[];
+  bxgyBuyQty: string;
+  bxgyGetQty: string;
+  freeSideQty: string;
+  allowCode: boolean;
+  allowAuto: boolean;
+}) {
+  const codeDisplay = reusableCode.trim()
+    ? reusableCode.trim().toUpperCase()
+    : "…";
+  const minNum = parseAmount(minSubtotal) ?? 0;
+  const minText =
+    minNum > 0
+      ? PROMOTIONS_VI.summaryOrderFrom(formatVND(minNum))
+      : PROMOTIONS_VI.summaryAllOrders;
+  const itemsText =
+    itemIds.length > 0
+      ? PROMOTIONS_VI.summarySelectedItems(itemIds.length)
+      : PROMOTIONS_VI.summaryAllMenu;
+
+  let summary = "";
+
+  if (kind === "order_pct") {
+    const val = parseAmount(discountValue) ?? 0;
+    const maxNum = parseAmount(maxDiscountAmount);
+    const maxText =
+      maxNum != null && maxNum > 0
+        ? PROMOTIONS_VI.summaryMaxLimit(formatVND(maxNum))
+        : "";
+    summary = PROMOTIONS_VI.summaryOrderPct(
+      codeDisplay,
+      formatPercent(val),
+      maxText,
+      itemsText,
+      minText,
+    );
+  } else if (kind === "order_vnd") {
+    const val = parseAmount(discountValue) ?? 0;
+    summary = PROMOTIONS_VI.summaryOrderVnd(
+      codeDisplay,
+      formatVND(val),
+      itemsText,
+      minText,
+    );
+  } else if (kind === "voucher_face") {
+    const val = parseAmount(discountValue) ?? 0;
+    const faceText =
+      val > 0 ? formatVND(val) : PROMOTIONS_VI.summaryVoucherPerCode;
+    summary = PROMOTIONS_VI.summaryVoucherFace(faceText, minText);
+  } else if (kind === "auto_order") {
+    const val = parseAmount(discountValue) ?? 0;
+    const isPct = discountType === "pct";
+    const maxNum = parseAmount(maxDiscountAmount);
+    const maxText =
+      isPct && maxNum != null && maxNum > 0
+        ? PROMOTIONS_VI.summaryMaxAuto(formatVND(maxNum))
+        : "";
+    const valText = isPct ? formatPercent(val) : formatVND(val);
+    summary = PROMOTIONS_VI.summaryAutoOrder(valText, maxText, minText);
+  } else if (kind === "bxgy") {
+    summary = PROMOTIONS_VI.summaryBxgy(
+      bxgyBuyQty || "2",
+      bxgyGetQty || "1",
+      minText,
+    );
+  } else if (kind === "free_side") {
+    const actParts = [
+      allowCode ? PROMOTIONS_VI.summaryActCode(codeDisplay) : null,
+      allowAuto ? PROMOTIONS_VI.summaryActAuto : null,
+    ].filter(Boolean);
+    const actText =
+      actParts.length > 0
+        ? actParts.join(PROMOTIONS_VI.summaryOr)
+        : PROMOTIONS_VI.summaryActNone;
+    summary = PROMOTIONS_VI.summaryFreeSide(
+      freeSideQty || "1",
+      actText,
+      minText,
+    );
+  }
+
+  return (
+    <NoteCallout label={PROMOTIONS_VI.summaryTitle} tone="muted">
+      {summary}
+    </NoteCallout>
   );
 }
 

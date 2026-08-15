@@ -26,12 +26,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import { Input } from "@comtammatu/ui/components/input";
 import { Item } from "@comtammatu/ui/components/item";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { notify } from "@comtammatu/ui/lib/notify";
+import { cn } from "@comtammatu/ui";
 import {
   ArrowRightLeft as IconArrowRightLeft,
+  Check as IconCheck,
   CircleDollarSign as IconCircleDollarSign,
   CirclePlus as IconCirclePlus,
   Copy as IconCopy,
@@ -44,6 +47,7 @@ import {
   Receipt as IconReceipt,
   Split as IconSplit,
   Trash2 as IconTrash,
+  X as IconX,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import {
@@ -411,6 +415,7 @@ export function OrderDetailSheet({
   const [showServiceCharge, setShowServiceCharge] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
+  const [inlinePromoCode, setInlinePromoCode] = useState("");
   // Tap-to-open per-item actions sheet. Reset on orderId change so a sheet
   // opened on order A doesn't leak into order B (item ids don't overlap
   // but visual state should be transient per-detail-session).
@@ -423,6 +428,7 @@ export function OrderDetailSheet({
   useEffect(() => {
     setActionsItemId(null);
     setDiscountItemId(null);
+    setInlinePromoCode("");
   }, [orderId]);
 
   const loadAsync = useCallback(async (): Promise<void> => {
@@ -1102,8 +1108,15 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
+        setInlinePromoCode("");
         load();
       } else {
+        if (
+          r.errorCode === "promotion_side_selection_required" ||
+          r.error?.includes("ăn kèm")
+        ) {
+          setShowDiscount(true);
+        }
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
       }
     });
@@ -1129,6 +1142,7 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
+        setInlinePromoCode("");
         setFreeSideOffer(null);
         load();
       } else {
@@ -1144,6 +1158,7 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success(PROMOTIONS_VI.cleared);
         setShowDiscount(false);
+        setInlinePromoCode("");
         load();
       } else {
         notify.error(r.error ?? PROMOTIONS_VI.loadFailed);
@@ -1566,14 +1581,73 @@ export function OrderDetailSheet({
               </ScrollArea>
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
-                {hasPromotion && data.discount_note ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="secondary">
-                      {PROMOTIONS_VI.posPromoChip}
-                    </Badge>
-                    <span className="min-w-0 truncate text-sm text-muted-foreground">
-                      {data.discount_note}
-                    </span>
+                {canShowDiscount && activeItemCount > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      controlSize="touch"
+                      value={
+                        hasPromotion
+                          ? (data.discount_note || PROMOTIONS_VI.posPromoChip)
+                          : inlinePromoCode
+                      }
+                      onChange={(e) => setInlinePromoCode(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          !hasPromotion &&
+                          inlinePromoCode.trim().length >= 3 &&
+                          !isMutating
+                        ) {
+                          e.preventDefault();
+                          handleApplyPromoCode(inlinePromoCode.trim());
+                        }
+                      }}
+                      disabled={isMutating}
+                      readOnly={hasPromotion}
+                      placeholder={PROMOTIONS_VI.inlinePromoPlaceholder}
+                      className={cn(
+                        "font-mono text-sm",
+                        hasPromotion
+                          ? "bg-muted text-foreground select-none"
+                          : "uppercase",
+                      )}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                    {hasPromotion ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-touch"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          handleClearPromo(PROMOTIONS_VI.inlinePromoClearReason)
+                        }
+                        disabled={isMutating}
+                        aria-label={PROMOTIONS_VI.posClearPromo}
+                      >
+                        <IconX className="size-5" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon-touch"
+                        onClick={() => {
+                          if (inlinePromoCode.trim().length >= 3) {
+                            handleApplyPromoCode(inlinePromoCode.trim());
+                          }
+                        }}
+                        disabled={
+                          isMutating || inlinePromoCode.trim().length < 3
+                        }
+                        aria-label={PROMOTIONS_VI.posApplyCode}
+                      >
+                        <IconCheck className="size-5" />
+                      </Button>
+                    )}
                   </div>
                 ) : null}
                 {!hasPromotion && freeSideOffer ? (
