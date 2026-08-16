@@ -5,6 +5,28 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## POS convert completed cash orders to VietQR
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: pos/payment
+Exit: From POS `Đơn hoàn thành`, a cashier can convert a paid cash order to VietQR, stamp a payment code, and print the VietQR receipt; money remains on `payments.method` with closed-session cash recalc.
+Evidence: RPC `pos_convert_cash_payment_to_vietqr` applied on Production `enloyfnuerqgaqderbwb` with `20260815170000_vietqr_auto_refresh_and_self_order_unblock` and `20260816084532_waiter_revoke_provisional_print`; `corepack pnpm db:types`; POS completed-order + receipt actions; static tests; `corepack pnpm verify` green after apply.
+
+- [ ] Cashier converts one paid cash order in `Đơn hoàn thành` and prints VietQR.
+
+UI Advisor Gate
+- Surface: `/br/[branchId]/pos` completed-order sheet + receipt; route family station POS; plane: `station_chrome`; change: flow
+- Context: screen-context-map §2.1 POS; actor: cashier (`pos:confirm_payment`); job: reclassify cash → VietQR and print QR
+- Journey: open `Đơn hoàn thành` → cash paid row or receipt → confirm → convert + print; recovery: reprint / Finance bidirectional correction
+- Information order: 1) completed list 2) bill amount + current method 3) convert/print; exclude: Finance vietqr→cash
+- Pattern: BOARD; exemplar: `apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx`; data display: station list + StationSheet
+- States: loading, empty, confirm, pending, success, print failsoft, permission, vietqr unconfigured
+- Block: `pos-board`; components: `StationSheet`, `Button`, `confirm` dialog; fallback: receipt sheet actions
+- Responsive/accessibility: touch targets; labels on convert/print; keyboard via confirm dialog
+- Verification: static contract tests; `corepack pnpm verify` after implementation
+
 ## Redesign promotions create + apply (free side)
 
 State: verify

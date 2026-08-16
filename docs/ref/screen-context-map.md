@@ -72,7 +72,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
 - **Goal:** Order → thanh toán → in hóa đơn dưới ~30s.
 - **Workflow:** Mở ca (tiền đầu) → chọn món/modifier → hình thức phục vụ → gửi KDS → thanh toán (tiền mặt/VietQR, mã giảm nếu có quyền) → kết ca & đối chiếu `cash variance`.
 - **Ưu tiên data:** Grid món + cart + trạng thái in/két + CTA thanh toán touch. **Không:** báo cáo tháng, ca khác, lương, tồn nguyên liệu.
-- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn. **In tạm tính** chỉ Thu ngân / Quản lý / Chủ sở hữu — Phục vụ không thấy nút và server từ chối. **Giới hạn bán** (cùng drawer với `/menu-limits`) mở từ header POS, chỉ `branch_manager` và `owner` — chỉnh trần bán, cho phép bán thêm, bật/tắt món.
+- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn. **In tạm tính** chỉ Thu ngân / Quản lý / Chủ sở hữu — Phục vụ không thấy nút và server từ chối. **Đơn hoàn thành:** tìm theo số đơn hoặc mã thanh toán; đơn tiền mặt đã thu có thể đổi sang VietQR (`pos:confirm_payment`) rồi in mã QR thanh toán; đảo VietQR→tiền mặt ở Tài chính. **Giới hạn bán** (cùng drawer với `/menu-limits`) mở từ header POS, chỉ `branch_manager` và `owner` — chỉnh trần bán, cho phép bán thêm, bật/tắt món.
 
 ---
 

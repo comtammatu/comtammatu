@@ -195,3 +195,56 @@ export const createPaymentRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể tạo thanh toán.",
   errorCode: POS_ERROR_CODES.RPC_GENERIC,
 };
+
+export const convertCashToVietQrRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("permission denied"),
+    errorCode: POS_ERROR_CODES.DB_PERMISSION_DENIED,
+    userMessage: "Không có quyền đổi phương thức thanh toán.",
+  },
+  {
+    match: includesAny("order_not_found", "order not found"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không tìm thấy đơn hàng.",
+  },
+  {
+    match: includesAny("order_cancelled"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã hủy nên không đổi phương thức được.",
+  },
+  {
+    match: includesAny("order_not_paid"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Chỉ đổi được đơn đã thanh toán.",
+  },
+  {
+    match: includesAny("payment_not_completed"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn chưa có thanh toán hoàn tất để đổi.",
+  },
+  {
+    match: includesAny("method_unchanged"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã thanh toán bằng VietQR.",
+  },
+  {
+    match: includesAny("method_not_cash"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Chỉ đổi được đơn thanh toán tiền mặt sang VietQR.",
+  },
+  {
+    match: includesAny("vietqr_not_configured"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Chi nhánh chưa cấu hình VietQR. Liên hệ quản lý.",
+  },
+  {
+    match: includesAny("payment_code_missing"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không thể tạo mã chuyển khoản cho đơn này.",
+  },
+];
+
+export const convertCashToVietQrRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể đổi sang VietQR. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};

@@ -112,6 +112,7 @@ cho đến khi đủ source/formula/exclusions/confidence/drilldown.
 | Công nợ NCC | `supplier_invoices` / payments | AP queue; không = chi VH nếu chưa qua contract |
 | Lệch ca / desync | `get_cash_variance_*`, `find_payment_order_desync` | exception; không sửa KPI chính |
 | Sửa method | `correct_payment_method`; `payments.method` SoT | VietQR có NH evidence không đổi cash đến khi gỡ |
+| Đổi TM→VietQR tại POS | `pos_convert_cash_payment_to_vietqr` | Thu ngân `pos:confirm_payment`; gắn `payment_code`; in QR |
 
 Chi tiết triển khai từng số cockpit: `apps/web` finance fetchers + RPCs trên.
 Không thêm KPI tài chính mới nếu không trả lời daily operator hoặc accountant export bắt buộc.

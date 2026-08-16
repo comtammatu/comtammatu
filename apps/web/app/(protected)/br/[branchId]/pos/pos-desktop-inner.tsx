@@ -11,7 +11,6 @@ import {
 } from "react";
 import { BellRing as IconBell } from "lucide-react";
 import { formatCount } from "@comtammatu/shared/format";
-import { formatVNElapsedCompact } from "@comtammatu/shared/time";
 import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -81,8 +80,8 @@ const MultiOrderTablePicker = dynamic(
     })),
   { ssr: false },
 );
-// Archived orders is a lookup-only tool (reprint / dispute / scroll-back),
-// off the cash hot path. Lazy-loaded for the same reason as CloseSessionSheet.
+// Archived orders is off the cash hot path (reprint / cash→VietQR / scroll-back).
+// Lazy-loaded for the same reason as CloseSessionSheet.
 const ArchivedOrdersSheet = dynamic(
   () =>
     import("./_components/archived-orders-sheet").then((m) => ({
@@ -130,6 +129,7 @@ import {
   compareOrdersByNextAction,
   type SessionOrder,
 } from "./order-history";
+import { deriveTableTimingMap } from "./_lib/table-timing";
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
   usePosOperationalDispatch,
@@ -619,31 +619,27 @@ export function PosDesktopInner({
     () => deriveTableOrderVisualStates(orders, ACTIVE_POS_STATUSES),
     [orders],
   );
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const tableTimingByTable = useMemo(
+    () => deriveTableTimingMap(orders, ACTIVE_POS_STATUSES, nowMs),
+    [orders, nowMs],
+  );
   const tableSeatingTimeByTable = useMemo(() => {
-    const earliestByTable = new Map<number, string>();
-    const now = Date.now();
-    for (const order of orders) {
-      if (
-        order.table_id === null ||
-        !isActiveUnpaidPosOrder(order, ACTIVE_POS_STATUSES)
-      ) {
-        continue;
-      }
-      const existing = earliestByTable.get(order.table_id);
-      if (
-        !existing ||
-        new Date(order.created_at).getTime() < new Date(existing).getTime()
-      ) {
-        earliestByTable.set(order.table_id, order.created_at);
-      }
-    }
     const formatted = new Map<number, string>();
-    for (const [tableId, createdAt] of earliestByTable.entries()) {
-      const elapsed = formatVNElapsedCompact(createdAt, now);
-      if (elapsed) formatted.set(tableId, elapsed);
+    for (const [tableId, timing] of tableTimingByTable.entries()) {
+      if (timing.seatingDuration) {
+        formatted.set(tableId, timing.seatingDuration);
+      }
     }
     return formatted;
-  }, [orders]);
+  }, [tableTimingByTable]);
   const pendingSelfOrderRequestByTable = useMemo(
     () =>
       new Map(
@@ -1877,6 +1873,7 @@ export function PosDesktopInner({
                 orderCountByTable={orderCountByTable}
                 tableOrderVisualStateByTable={tableOrderVisualStateByTable}
                 tableSeatingTimeByTable={tableSeatingTimeByTable}
+                tableTimingByTable={tableTimingByTable}
                 pendingSelfOrderTableIds={pendingSelfOrderTableIds}
                 staffCallTableIds={staffCallTableIds}
                 hasStackedTouchActions={selfOrderActionVisible}
@@ -2050,6 +2047,8 @@ export function PosDesktopInner({
         sessionId={session.id}
         open={archivedSheetOpen}
         onOpenChange={setArchivedSheetOpen}
+        canConfirmCash={canConfirmCash}
+        vietQrEnabled={initialPaymentMethods.includes("vietqr")}
         onViewBill={(id) => {
           // Reprint flow: archived rows always open in receipt-only mode.
           // Close the sheet first so we don't stack StationSheet over StationSheet.

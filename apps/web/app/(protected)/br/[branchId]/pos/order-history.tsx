@@ -22,6 +22,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { formatVNElapsedCompact, formatVNTime } from "@comtammatu/shared/time";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
+import { deriveOrderTimingInfo } from "./_lib/table-timing";
 
 export interface SessionOrder {
   id: number;
@@ -224,6 +225,8 @@ const OrderCard = memo(function OrderCard({
   onViewBill,
   onViewDetail,
 }: OrderCardProps) {
+  const timing = deriveOrderTimingInfo(order);
+
   return (
     <Item
       data-testid={`pos-order-card-${order.id}`}
@@ -250,6 +253,19 @@ const OrderCard = memo(function OrderCard({
             ) : paymentCall === "vietqr_pending" ? (
               <Badge variant="warning" className="text-sm font-semibold">
                 {SELF_ORDER_VI.vietQrPendingStaff}
+              </Badge>
+            ) : null}
+            {timing.kitchenLatencyTone === "urgent" && timing.elapsedDuration ? (
+              <Badge variant="destructive" className="text-sm font-semibold">
+                {messages.pos.orderHistory.overdueElapsed(timing.elapsedDuration)}
+              </Badge>
+            ) : timing.kitchenLatencyTone === "warning" && timing.elapsedDuration ? (
+              <Badge variant="warning" className="text-sm font-semibold">
+                {messages.pos.orderHistory.waitingElapsed(timing.elapsedDuration)}
+              </Badge>
+            ) : timing.isReadyOverdue && timing.elapsedDuration ? (
+              <Badge variant="warning" className="text-sm font-semibold">
+                {messages.pos.orderHistory.readyPassElapsed(timing.elapsedDuration)}
               </Badge>
             ) : null}
             <OrderStatePill order={order} />

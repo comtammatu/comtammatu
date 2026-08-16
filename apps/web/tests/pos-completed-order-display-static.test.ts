@@ -21,6 +21,8 @@ test("POS completed list uses one hóa đơn vocabulary", () => {
   assert.match(messages, /trigger: "Đơn hoàn thành"/);
   assert.match(messages, /sheetTitle: "Đơn hoàn thành"/);
   assert.match(messages, /viewReceipt: "Xem hóa đơn"/);
+  assert.match(messages, /convertCashToVietQr: "Đổi sang VietQR"/);
+  assert.match(messages, /printVietQr: "In VietQR"/);
   assert.match(messages, /empty: "Chưa có đơn hoàn thành"/);
   assert.doesNotMatch(messages, /sheetTitle: "Đơn đã xử lý"/);
   assert.doesNotMatch(messages, /viewReceipt: "Xem biên nhận"/);

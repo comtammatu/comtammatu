@@ -30,12 +30,15 @@ import {
   branchOnlyReadSchema,
   cancelPendingPaymentSchema,
   cashConfirmSchema,
+  convertCashToVietQrSchema,
   createPaymentSchema,
   fetchPendingRemotePaymentSchema,
 } from "./_lib/payment-schemas";
 import {
   confirmCashPaymentRpcFallback,
   confirmCashPaymentRpcMappings,
+  convertCashToVietQrRpcFallback,
+  convertCashToVietQrRpcMappings,
   createPaymentRpcFallback,
   createPaymentRpcMappings,
 } from "./_lib/payment-messages";
@@ -1140,6 +1143,92 @@ export const fetchVietQrConfig = withActionPositional(
     return {
       success: true,
       data: { bankCode, accountNo, accountName },
+    };
+  },
+);
+
+export interface ConvertCashToVietQrResult {
+  order_id: number;
+  payment_id: number;
+  payment_code: string;
+}
+
+/**
+ * Reclassify a completed cash payment as VietQR from POS completed orders.
+ * Auth matches cash confirm (`pos:confirm_payment`). Reverse VietQR→cash
+ * stays on Finance. The caller prints the VietQR receipt after success.
+ */
+export const convertCashPaymentToVietQr = withActionPositional(
+  {
+    argsToInput: (branchId: number, orderId: number) => ({
+      branchId,
+      orderId,
+    }),
+    schema: convertCashToVietQrSchema,
+    customAuth: posConfirmPaymentAuth,
+  },
+  async (
+    { branchId, orderId },
+    { supabase, claims },
+  ): Promise<ActionResult<ConvertCashToVietQrResult>> => {
+    if (!isPosBranchInScope(claims, branchId)) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
+    }
+
+    const allowedMethods = await resolveAllowedPaymentMethods(
+      supabase,
+      claims.tenant_id,
+    );
+    if (!allowedMethods.includes("vietqr")) {
+      return {
+        success: false,
+        error: "Chi nhánh chưa cấu hình VietQR. Liên hệ quản lý.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    const rpc = supabase as unknown as RpcCaller;
+    const { data, error } = await rpc.rpc<{
+      status?: string;
+      payment_id?: number;
+      order_id?: number;
+      payment_code?: string;
+    }>("pos_convert_cash_payment_to_vietqr", {
+      p_order_id: orderId,
+    });
+
+    if (error) {
+      return mapRpcError<ConvertCashToVietQrResult>(
+        error,
+        convertCashToVietQrRpcMappings,
+        convertCashToVietQrRpcFallback,
+      );
+    }
+
+    if (
+      data?.status !== "converted" ||
+      data.payment_id == null ||
+      data.order_id == null ||
+      !data.payment_code
+    ) {
+      return {
+        success: false,
+        error: messages.pos.payment.convertCashToVietQrFailed,
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        order_id: data.order_id,
+        payment_id: data.payment_id,
+        payment_code: data.payment_code,
+      },
     };
   },
 );

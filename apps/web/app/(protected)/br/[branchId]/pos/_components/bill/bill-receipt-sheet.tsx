@@ -64,6 +64,15 @@ import type {
   PendingExtras,
 } from "./bill-receipt-types";
 import { PaymentQrCode } from "./payment-qr-code";
+import {
+  canConvertPosCashToVietQr,
+  canPrintPosVietQrPayment,
+} from "../../_lib/cash-to-vietqr";
+import {
+  confirmConvertCashToVietQr,
+  convertCashToVietQrAndPrint,
+  printPaidVietQr,
+} from "../../_lib/cash-to-vietqr-flow";
 
 import { ACTIONS_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 interface BillReceiptProps {
@@ -1029,6 +1038,33 @@ export function BillReceipt({
     });
   }, [orderId]);
 
+  const handleConvertCashToVietQr = useCallback(() => {
+    if (orderId === null || !order) return;
+    startPrintTransition(async () => {
+      const confirmed = await confirmConvertCashToVietQr({
+        orderNumber: order.order_number,
+        amount: Number(order.total_amount),
+      });
+      if (!confirmed) return;
+      const result = await convertCashToVietQrAndPrint(branchId, orderId);
+      if (result.type === "success") toast.success(result.message);
+      else if (result.type === "warning") toast.warning(result.message);
+      else toast.error(result.message);
+      refetchOrderRef.current();
+      await onOrderUpdated?.();
+    });
+  }, [branchId, onOrderUpdated, order, orderId]);
+
+  const handlePrintVietQr = useCallback(() => {
+    if (orderId === null) return;
+    startPrintTransition(async () => {
+      const result = await printPaidVietQr(orderId);
+      if (result.type === "success") toast.success(result.message);
+      else if (result.type === "warning") toast.warning(result.message);
+      else toast.error(result.message);
+    });
+  }, [orderId]);
+
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
@@ -1036,6 +1072,22 @@ export function BillReceipt({
     order?.payment_status === "paid" ||
     order?.status === "completed" ||
     order?.status === "cancelled";
+  const canConvertCashToVietQr =
+    order != null &&
+    canConvertPosCashToVietQr({
+      status: order.status,
+      paymentStatus: order.payment_status,
+      paymentMethod: order.payment_method,
+      canConfirmCash,
+      vietQrEnabled: methods.includes("vietqr"),
+    });
+  const showVietQrPrint =
+    order != null &&
+    canPrintPosVietQrPayment({
+      status: order.status,
+      paymentStatus: order.payment_status,
+      paymentMethod: order.payment_method,
+    });
   const dialogTitleLabel =
     isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Thanh toán";
   // Header preview: the full `order` wins when present; otherwise use the
@@ -1125,11 +1177,30 @@ export function BillReceipt({
         <div className="flex flex-col gap-3">
           <BillReceiptSummary order={order} />
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t bg-popover px-4 py-3 sm:flex-row sm:justify-end">
+            {canConvertCashToVietQr ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="touch"
+                data-testid="pos-receipt-convert-vietqr"
+                onClick={handleConvertCashToVietQr}
+                disabled={printPending}
+              >
+                {printPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconQrcode data-icon="inline-start" />
+                )}
+                {messages.pos.archivedOrders.convertCashToVietQr}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
               size="touch"
-              onClick={handleReprintReceipt}
+              onClick={
+                showVietQrPrint ? handlePrintVietQr : handleReprintReceipt
+              }
               disabled={printPending}
             >
               {printPending ? (
@@ -1137,7 +1208,9 @@ export function BillReceipt({
               ) : (
                 <IconPrinter data-icon="inline-start" />
               )}
-              {messages.pos.payment.reprint}
+              {showVietQrPrint
+                ? messages.pos.archivedOrders.printVietQr
+                : messages.pos.payment.reprint}
             </Button>
             <Button type="button" size="touch-lg" onClick={onClose}>
               {ACTIONS_VI.close}

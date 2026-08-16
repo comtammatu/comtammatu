@@ -14533,6 +14533,10 @@ export type Database = {
         Args: { p_at: string; p_tenant_id: number }
         Returns: string
       }
+      pos_convert_cash_payment_to_vietqr: {
+        Args: { p_order_id: number }
+        Returns: Json
+      }
       pos_daily_limit_item_quantities: {
         Args: { p_items: Json }
         Returns: {

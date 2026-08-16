@@ -367,3 +367,15 @@ test("POS archived orders sort by archived transition time, not order creation t
   assert.doesNotMatch(archivedHookSource, /createdAt/);
   assert.match(orderSyncSource, /next\.updated_at = payload\.updated_at/);
 });
+
+test("POS archived orders search matches order_number or payment_code", () => {
+  assert.match(
+    archivedOrdersSource,
+    /order_number\.ilike\."\$\{pattern\}",payment_code\.ilike\."\$\{pattern\}"/,
+  );
+  assert.match(archivedOrdersSource, /q: z\.string\(\)\.trim\(\)\.max\(80\)/);
+  assert.match(
+    read("lib/messages/pos.ts"),
+    /searchPlaceholder: "Tìm số đơn hoặc mã thanh toán\.\.\."/,
+  );
+});

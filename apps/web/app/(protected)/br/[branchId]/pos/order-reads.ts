@@ -121,7 +121,8 @@ const fetchArchivedOrdersSchema = z.object({
   sessionId: sessionIdSchema.nullable().optional(),
   pageSize: z.coerce.number().int().min(10).max(100).default(30),
   cursor: archivedCursorSchema,
-  q: z.string().trim().max(50).optional(),
+  // Prefix ≤40 + space + 12-char suffix; leave headroom for pasted memos.
+  q: z.string().trim().max(80).optional(),
 });
 
 /**
@@ -174,14 +175,17 @@ export async function fetchArchivedOrders(
   }
 
   if (typeof q === "string" && q.length > 0) {
-    // ILIKE prefix-or-suffix match on order_number. Cashiers cite the
-    // last 3 digits of the order most of the time; ILIKE %q% covers that.
-    // Wildcard escape: PostgREST `ilike` value is the literal pattern
-    // string — caller's q is sanitized by Zod max-length only. Strip
-    // PostgREST reserved chars so no operator injection is possible.
-    const safeQ = q.replace(/[(),]/g, "");
+    // ILIKE substring match on order_number OR payment_code. Cashiers usually
+    // cite the last digits of the order; reverse lookup from a VietQR transfer
+    // memo uses payment_code (prefix + space + suffix). Strip PostgREST
+    // reserved chars so the or-list cannot be injected. Quote the pattern so
+    // spaces inside payment codes stay inside one filter value.
+    const safeQ = q.replace(/[(),."]/g, "");
     if (safeQ.length > 0) {
-      query = query.ilike("order_number", `%${safeQ}%`);
+      const pattern = `%${safeQ}%`;
+      query = query.or(
+        `order_number.ilike."${pattern}",payment_code.ilike."${pattern}"`,
+      );
     }
   }
 

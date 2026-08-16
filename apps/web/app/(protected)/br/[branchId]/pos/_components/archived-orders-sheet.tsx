@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   AppEmptyState,
   StationSheet,
@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Item, ItemFooter, ItemGroup } from "@comtammatu/ui/components/item";
+import { toast } from "@comtammatu/ui/components/sonner";
 
 
 import {
@@ -23,12 +24,24 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
+  Printer as IconPrinter,
+  QrCode as IconQrcode,
   Receipt as IconReceipt,
   RefreshCw as IconRefresh,
   Search as IconSearch,
 } from "lucide-react";
+import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import { OrderCardSummary, type SessionOrder } from "../order-history";
 import { getPosCompletedOrderStatusInfo } from "../_lib/order-status-display";
+import {
+  canConvertPosCashToVietQr,
+  canPrintPosVietQrPayment,
+} from "../_lib/cash-to-vietqr";
+import {
+  confirmConvertCashToVietQr,
+  convertCashToVietQrAndPrint,
+  printPaidVietQr,
+} from "../_lib/cash-to-vietqr-flow";
 import {
   useArchivedOrders,
   type ArchivedScope,
@@ -42,6 +55,8 @@ interface ArchivedOrdersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onViewBill: (orderId: number, intent: "receipt") => void;
+  canConfirmCash: boolean;
+  vietQrEnabled: boolean;
 }
 
 export function ArchivedOrdersSheet({
@@ -50,10 +65,12 @@ export function ArchivedOrdersSheet({
   open,
   onOpenChange,
   onViewBill,
+  canConfirmCash,
+  vietQrEnabled,
 }: ArchivedOrdersSheetProps) {
   const isMobile = useIsMobile(1280);
   const [scope, setScope] = useState<ArchivedScope>("session");
-  // Debounced search — Zod tolerates max 50, but we throttle keystrokes so a
+  // Debounced search — Zod tolerates max 80, but we throttle keystrokes so a
   // long search string doesn't fire one query per character.
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -82,6 +99,8 @@ export function ArchivedOrdersSheet({
       scope,
       query: debouncedQuery,
     });
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+  const [, startAction] = useTransition();
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -100,6 +119,34 @@ export function ArchivedOrdersSheet({
     observer.observe(el);
     return () => observer.disconnect();
   }, [open, loadMore]);
+
+  const handleConvert = (order: SessionOrder) => {
+    startAction(async () => {
+      const confirmed = await confirmConvertCashToVietQr({
+        orderNumber: order.order_number,
+        amount: Number(order.total_amount),
+      });
+      if (!confirmed) return;
+      setPendingOrderId(order.id);
+      const result = await convertCashToVietQrAndPrint(branchId, order.id);
+      setPendingOrderId(null);
+      if (result.type === "success") toast.success(result.message);
+      else if (result.type === "warning") toast.warning(result.message);
+      else toast.error(result.message);
+      reload();
+    });
+  };
+
+  const handlePrintVietQr = (order: SessionOrder) => {
+    startAction(async () => {
+      setPendingOrderId(order.id);
+      const result = await printPaidVietQr(order.id);
+      setPendingOrderId(null);
+      if (result.type === "success") toast.success(result.message);
+      else if (result.type === "warning") toast.warning(result.message);
+      else toast.error(result.message);
+    });
+  };
 
   const body = (
     <div className="flex h-full min-h-0 flex-col">
@@ -188,7 +235,22 @@ export function ArchivedOrdersSheet({
                 <ArchivedOrderRow
                   key={order.id}
                   order={order}
+                  pending={pendingOrderId === order.id}
+                  canConvert={canConvertPosCashToVietQr({
+                    status: order.status,
+                    paymentStatus: order.payment_status,
+                    paymentMethod: order.payment_method,
+                    canConfirmCash,
+                    vietQrEnabled,
+                  })}
+                  canPrintVietQr={canPrintPosVietQrPayment({
+                    status: order.status,
+                    paymentStatus: order.payment_status,
+                    paymentMethod: order.payment_method,
+                  })}
                   onViewBill={onViewBill}
+                  onConvert={() => handleConvert(order)}
+                  onPrintVietQr={() => handlePrintVietQr(order)}
                 />
               ))}
             </ItemGroup>
@@ -243,28 +305,52 @@ export function ArchivedOrdersSheet({
 
 function CompletedOrderStatePill({ order }: { order: SessionOrder }) {
   const statusInfo = getPosCompletedOrderStatusInfo(order);
+  const methodLabel =
+    order.status !== "cancelled" &&
+    (order.payment_method === "cash" || order.payment_method === "vietqr")
+      ? PAYMENT_METHOD_LABELS_VI[order.payment_method]
+      : null;
 
   return (
-    <Badge
-      variant={statusInfo.variant}
-      className={
-        statusInfo.variant === "outline"
-          ? "bg-background text-sm font-semibold tabular-nums"
-          : "text-sm font-semibold tabular-nums"
-      }
-    >
-      {statusInfo.label}
-    </Badge>
+    <span className="flex flex-wrap items-center justify-end gap-1">
+      {methodLabel ? (
+        <Badge variant="outline" className="text-sm font-semibold">
+          {methodLabel}
+        </Badge>
+      ) : null}
+      <Badge
+        variant={statusInfo.variant}
+        className={
+          statusInfo.variant === "outline"
+            ? "bg-background text-sm font-semibold tabular-nums"
+            : "text-sm font-semibold tabular-nums"
+        }
+      >
+        {statusInfo.label}
+      </Badge>
+    </span>
   );
 }
 
 function ArchivedOrderRow({
   order,
+  pending,
+  canConvert,
+  canPrintVietQr,
   onViewBill,
+  onConvert,
+  onPrintVietQr,
 }: {
   order: SessionOrder;
+  pending: boolean;
+  canConvert: boolean;
+  canPrintVietQr: boolean;
   onViewBill: (orderId: number, intent: "receipt") => void;
+  onConvert: () => void;
+  onPrintVietQr: () => void;
 }) {
+  const hasMoneyAction = canConvert || canPrintVietQr;
+
   return (
     <Item
       data-testid={`pos-archived-bill-${order.id}`}
@@ -279,11 +365,61 @@ function ArchivedOrderRow({
         amountClassName="text-foreground"
         rightMeta={<CompletedOrderStatePill order={order} />}
       />
-      <ItemFooter className="mt-2 justify-end border-t border-border/60 pt-2">
+      <ItemFooter
+        className={
+          hasMoneyAction
+            ? "mt-2 grid w-full grid-cols-2 gap-2 border-t border-border/60 pt-2"
+            : "mt-2 justify-end border-t border-border/60 pt-2"
+        }
+      >
+        {canConvert ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full min-w-0"
+            disabled={pending}
+            data-testid={`pos-archived-convert-vietqr-${order.id}`}
+            aria-label={messages.pos.archivedOrders.convertCashToVietQrAria(
+              order.order_number,
+            )}
+            onClick={onConvert}
+          >
+            {pending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconQrcode data-icon="inline-start" />
+            )}
+            {messages.pos.archivedOrders.convertCashToVietQr}
+          </Button>
+        ) : null}
+        {canPrintVietQr ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="w-full min-w-0"
+            disabled={pending}
+            data-testid={`pos-archived-print-vietqr-${order.id}`}
+            aria-label={messages.pos.archivedOrders.printVietQrAria(
+              order.order_number,
+            )}
+            onClick={onPrintVietQr}
+          >
+            {pending ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconPrinter data-icon="inline-start" />
+            )}
+            {messages.pos.archivedOrders.printVietQr}
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="outline"
           size="touch"
+          className={hasMoneyAction ? "w-full min-w-0" : undefined}
+          disabled={pending}
           aria-label={messages.pos.archivedOrders.openReceiptAria(
             order.order_number,
           )}

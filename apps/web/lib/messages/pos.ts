@@ -112,8 +112,8 @@ export const pos = {
   },
   archivedOrders: {
     trigger: "Đơn hoàn thành",
-    searchPlaceholder: "Tìm số đơn...",
-    searchAria: "Tìm theo số đơn",
+    searchPlaceholder: "Tìm số đơn hoặc mã thanh toán...",
+    searchAria: "Tìm theo số đơn hoặc mã thanh toán",
     currentSession: "Ca này",
     branchToday: "Cả chi nhánh",
     loadFailed: "Không tải được lịch sử",
@@ -125,6 +125,12 @@ export const pos = {
     description: "Đơn đã thanh toán hoặc đã hủy.",
     openReceiptAria: (orderNumber: string) => `Mở hóa đơn #${orderNumber}`,
     viewReceipt: "Xem hóa đơn",
+    convertCashToVietQr: "Đổi sang VietQR",
+    convertCashToVietQrAria: (orderNumber: string) =>
+      `Đổi đơn #${orderNumber} từ tiền mặt sang VietQR`,
+    printVietQr: "In VietQR",
+    printVietQrAria: (orderNumber: string) =>
+      `In mã VietQR thanh toán đơn #${orderNumber}`,
   },
   payment: {
     stepTitle: "Bước thanh toán",
@@ -153,6 +159,24 @@ export const pos = {
       "Không thể tải cấu hình thanh toán. Vui lòng thử lại.",
     pendingSessionLoadFailed: "Không thể tải phiên thanh toán.",
     vietQrConfigLoadFailed: "Không thể tải cấu hình VietQR. Vui lòng thử lại.",
+    convertCashToVietQrTitle: "Đổi sang VietQR?",
+    convertCashToVietQrDescription:
+      "Đơn sẽ ghi VietQR thay cho tiền mặt. Tiền mặt ca giảm theo số đơn. Hệ thống in mã QR thanh toán.",
+    convertCashToVietQrConfirm: "Đổi và in",
+    convertCashToVietQrDetailOrder: "Đơn",
+    convertCashToVietQrDetailAmount: "Số tiền",
+    convertCashToVietQrDetailFrom: "Từ",
+    convertCashToVietQrDetailTo: "Sang",
+    convertCashToVietQrSuccess: "Đã đổi sang VietQR và gửi in",
+    convertCashToVietQrSuccessPrintOffline:
+      "Đã đổi sang VietQR — máy in đang mất kết nối, sẽ in khi kết nối lại",
+    convertCashToVietQrSuccessPrintFailed:
+      "Đã đổi sang VietQR nhưng chưa in được. Bấm In VietQR để thử lại.",
+    convertCashToVietQrFailed: "Không thể đổi sang VietQR.",
+    printVietQrSuccess: "Đã gửi phiếu VietQR tới máy in",
+    printVietQrSuccessOffline:
+      "Máy in đang mất kết nối — phiếu VietQR sẽ in khi kết nối lại",
+    printVietQrFailed: "Không thể in VietQR.",
   },
   receipt: {
     paymentCancelled: "Đã hủy",
@@ -322,6 +346,10 @@ export const pos = {
     loadFailed: "Không thể tải danh sách bàn. Vui lòng thử lại.",
     tableCount: (count: number) => `${formatCount(count)} bàn`,
     availableCount: (count: number) => `${formatCount(count)} trống`,
+    diningElapsed: (time: string) => `Ngồi ${time}`,
+    waitingElapsed: (time: string) => `Chờ ${time}`,
+    overdueElapsed: (time: string) => `Trễ ${time}`,
+    readyToServe: "Chờ bưng",
   },
   takeawayGate: {
     title: "Mang về",
@@ -366,6 +394,9 @@ export const pos = {
     priority: "Ưu tiên",
     handleOrder: "Mở đơn",
     payment: "Thanh toán",
+    waitingElapsed: (time: string) => `Chờ ${time}`,
+    overdueElapsed: (time: string) => `Trễ ${time}`,
+    readyPassElapsed: (time: string) => `Chờ bưng ${time}`,
     sections: {
       ready: (count: number) => `Sẵn sàng (${formatCount(count)})`,
       pay: (count: number) => `Chờ thanh toán (${formatCount(count)})`,
