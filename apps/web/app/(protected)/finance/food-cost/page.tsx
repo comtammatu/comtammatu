@@ -6,7 +6,7 @@ import {
 import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { fetchFoodCost } from "@/_lib/food-cost-actions";
-import { fetchAccessibleBranches, fetchRevenueKpis } from "../actions";
+import { fetchAccessibleBranches } from "../actions";
 import { fetchActualFoodCostSummary } from "../expense-actions";
 import {
   parseFinanceParams,
@@ -24,7 +24,7 @@ export default async function FoodCostPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const [branchesRes, foodRes, actualRes, revenueRes] = await Promise.all([
+  const [branchesRes, foodRes, actualRes] = await Promise.all([
     fetchAccessibleBranches(),
     fetchFoodCost({
       startDate: resolved.start,
@@ -36,7 +36,6 @@ export default async function FoodCostPage({
       endDate: resolved.end,
       ...(params.branch != null ? { branchId: params.branch } : {}),
     }),
-    fetchRevenueKpis(params.branch, resolved.start, resolved.end),
   ]);
 
   const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
@@ -45,20 +44,10 @@ export default async function FoodCostPage({
   }[];
   const rows = (foodRes.success ? (foodRes.data ?? []) : []) as FoodCostRow[];
   const actualSummary = actualRes.success
-    ? (actualRes.data ?? {
-        total: 0,
-        operatingConsumption: 0,
-        orderCount: 0,
-      })
-    : { total: 0, operatingConsumption: 0, orderCount: 0 };
-  const revenueKpis = revenueRes.success
-    ? (revenueRes.data as { order_count?: number | null } | null)
-    : null;
+    ? (actualRes.data ?? { total: 0 })
+    : { total: 0 };
   const loadFailed =
-    !branchesRes.success ||
-    !foodRes.success ||
-    !actualRes.success ||
-    !revenueRes.success;
+    !branchesRes.success || !foodRes.success || !actualRes.success;
 
   return (
     <AppPage width="xwide" density="compact">
@@ -75,9 +64,6 @@ export default async function FoodCostPage({
           branches={branches}
           rows={rows}
           actualFoodCost={actualSummary.total}
-          operatingConsumption={actualSummary.operatingConsumption}
-          coveredOrderCount={actualSummary.orderCount}
-          totalOrderCount={Number(revenueKpis?.order_count ?? 0)}
         />
       )}
     </AppPage>

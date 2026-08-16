@@ -227,21 +227,16 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   const financeMessages = read("apps/web/lib/messages/finance.ts");
 
   assert.match(page, /fetchActualFoodCostSummary/);
-  assert.match(
-    page,
-    /fetchRevenueKpis\(params\.branch, resolved\.start, resolved\.end\)/,
-  );
+  assert.doesNotMatch(page, /fetchRevenueKpis/);
   assert.match(page, /actualFoodCost=\{actualSummary\.total\}/);
-  assert.match(
-    page,
-    /operatingConsumption=\{actualSummary\.operatingConsumption\}/,
-  );
-  assert.match(page, /coveredOrderCount=\{actualSummary\.orderCount\}/);
+  assert.doesNotMatch(page, /operatingConsumption=\{actualSummary\.operatingConsumption\}/);
+  assert.doesNotMatch(page, /coveredOrderCount=/);
   assert.match(client, /label=\{foodCopy\.actualFoodCost\}/);
-  assert.match(client, /label=\{foodCopy\.operatingConsumption\}/);
-  assert.match(client, /foodCopy\.coverageValue/);
-  assert.match(client, /foodCopy\.unitSellingPriceCurrency/);
-  assert.equal((client.match(/<KpiCard/g) ?? []).length, 3);
+  assert.doesNotMatch(client, /label=\{foodCopy\.operatingConsumption\}/);
+  assert.doesNotMatch(client, /foodCopy\.coverage/);
+  assert.doesNotMatch(client, /hint=\{foodCopy\./);
+  assert.doesNotMatch(client, /foodCopy\.unitSellingPriceCurrency/);
+  assert.equal((client.match(/<KpiCard/g) ?? []).length, 1);
   assert.match(client, /title=\{foodCopy\.tableTitle\}[\s\S]*<DataTable/);
   assert.doesNotMatch(client, /const estimatedFoodCost = rows\.reduce/);
   assert.match(
@@ -252,16 +247,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(expenseActions, /operatingConsumptionTotal/);
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
-  assert.match(financeMessages, /operatingConsumption: "Tiêu hao vận hành"/);
-  assert.match(financeMessages, /unitSellingPriceCurrency: "Giá thuần\/phần"/);
-  assert.match(
-    financeMessages,
-    /actualFoodCostHint:\s*"Nguyên liệu đã trừ kho theo đơn đã thanh toán\. Khác giá vốn định mức theo món\."/,
-  );
-  assert.match(
-    financeMessages,
-    /operatingConsumptionHint:\s*"Phiếu tiêu hao ghi tay tại chi nhánh, không gắn đơn bán\. Không tính vào giá vốn món\."/,
-  );
+  assert.match(financeMessages, /tableTitle: "Theo món"/);
   assert.doesNotMatch(financeMessages, /\bbucket\b/i);
   assert.doesNotMatch(
     financeMessages,

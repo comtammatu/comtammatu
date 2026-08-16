@@ -34,23 +34,16 @@ interface Props {
   branches: { id: number; name: string }[];
   rows: FoodCostRow[];
   actualFoodCost: number;
-  operatingConsumption: number;
-  coveredOrderCount: number;
-  totalOrderCount: number;
 }
 
 const foodCopy = messages.finance.foodCost;
 const filterCopy = messages.finance.filterBar;
 
-// Margin tone thresholds — kept consistent with existing rule:
-//   ≥60% green, 40-60% warn, <40% destructive. The owner Q4 conflict
-//   resolution defers per-category thresholds to v2 so we use the
-//   global default here.
 const MARGIN_GREEN = 60;
 const MARGIN_WARN = 40;
 
-function marginPct(r: FoodCostRow): number | null {
-  return r.gross_margin_pct == null ? null : Number(r.gross_margin_pct);
+function marginPct(row: FoodCostRow): number | null {
+  return row.gross_margin_pct == null ? null : Number(row.gross_margin_pct);
 }
 
 function marginToneClass(pct: number | null): string {
@@ -58,12 +51,6 @@ function marginToneClass(pct: number | null): string {
   if (pct >= MARGIN_GREEN) return "text-success";
   if (pct >= MARGIN_WARN) return "text-warning";
   return "text-destructive";
-}
-
-function unitSellingPrice(row: FoodCostRow): number {
-  const qty = Number(row.quantity_sold ?? 0);
-  if (qty <= 0) return 0;
-  return Number(row.revenue ?? 0) / qty;
 }
 
 function formatCostAmount(value: number | null | undefined): string {
@@ -76,9 +63,6 @@ export function FoodCostClient({
   branches,
   rows,
   actualFoodCost,
-  operatingConsumption,
-  coveredOrderCount,
-  totalOrderCount,
 }: Props) {
   const range = getPresetRange(params.range, new Date(), {
     from: params.from,
@@ -96,25 +80,17 @@ export function FoodCostClient({
       header: [
         PRODUCT_VI.posItem,
         foodCopy.quantitySold,
-        foodCopy.unitSellingPriceCurrency,
         foodCopy.revenueCurrency,
-        foodCopy.unitFoodCostCurrency,
         foodCopy.foodCostCurrency,
-        foodCopy.grossProfitCurrency,
         foodCopy.grossMargin,
       ],
       rows: rows.map((row) => [
         row.item_name ?? "—",
         Number(row.quantity_sold ?? 0),
-        Math.round(unitSellingPrice(row)),
         Math.round(Number(row.revenue ?? 0)),
-        row.unit_ingredient_cost == null
-          ? "—"
-          : Math.round(Number(row.unit_ingredient_cost)),
         row.ingredient_cost == null
           ? "—"
           : Math.round(Number(row.ingredient_cost)),
-        row.gross_profit == null ? "—" : Math.round(Number(row.gross_profit)),
         marginPct(row) == null ? "—" : Number(marginPct(row)?.toFixed(2)),
       ]),
     },
@@ -129,14 +105,8 @@ export function FoodCostClient({
     {
       key: "quantity_sold",
       header: foodCopy.quantitySold,
-      className: "w-24 text-right font-mono tabular-nums",
+      className: "w-20 text-right font-mono tabular-nums",
       render: (row) => formatCount(Number(row.quantity_sold ?? 0)),
-    },
-    {
-      key: "unit_selling_price",
-      header: foodCopy.unitSellingPriceCurrency,
-      className: "text-right font-mono tabular-nums",
-      render: (row) => formatVND(unitSellingPrice(row)),
     },
     {
       key: "revenue",
@@ -145,22 +115,10 @@ export function FoodCostClient({
       render: (row) => formatVND(Number(row.revenue ?? 0)),
     },
     {
-      key: "unit_cost",
-      header: foodCopy.unitFoodCostCurrency,
-      className: "text-right font-mono tabular-nums",
-      render: (row) => formatCostAmount(row.unit_ingredient_cost),
-    },
-    {
       key: "food_cost",
       header: foodCopy.foodCostCurrency,
       className: "text-right font-mono tabular-nums",
       render: (row) => formatCostAmount(row.ingredient_cost),
-    },
-    {
-      key: "gross_profit",
-      header: foodCopy.grossProfitCurrency,
-      className: "text-right font-mono tabular-nums",
-      render: (row) => formatCostAmount(row.gross_profit),
     },
     {
       key: "margin",
@@ -203,32 +161,7 @@ export function FoodCostClient({
           label={foodCopy.actualFoodCost}
           value={formatVND(actualFoodCost)}
           shortValue={formatCompactVND(actualFoodCost)}
-          hint={foodCopy.actualFoodCostHint}
-          tone={
-            totalOrderCount > 0 && coveredOrderCount < totalOrderCount
-              ? "warning"
-              : "primary"
-          }
-        />
-        <KpiCard
-          label={foodCopy.operatingConsumption}
-          value={formatVND(operatingConsumption)}
-          shortValue={formatCompactVND(operatingConsumption)}
-          hint={foodCopy.operatingConsumptionHint}
-          tone={operatingConsumption > 0 ? "warning" : "neutral"}
-        />
-        <KpiCard
-          label={foodCopy.coverage}
-          value={foodCopy.coverageValue(
-            formatCount(coveredOrderCount),
-            formatCount(totalOrderCount),
-          )}
-          hint={foodCopy.coverageHint}
-          tone={
-            totalOrderCount > 0 && coveredOrderCount < totalOrderCount
-              ? "warning"
-              : "success"
-          }
+          tone="primary"
         />
       </KpiRow>
 
@@ -246,11 +179,7 @@ export function FoodCostClient({
           columns={columns}
           data={rows}
           getRowKey={(row) =>
-            [
-              row.period_start ?? "period",
-              row.branch_id ?? "branch",
-              row.menu_item_id ?? row.item_name ?? "item",
-            ].join(":")
+            String(row.menu_item_id ?? row.item_name ?? "item")
           }
           emptyMode="no-results"
           emptyTitle={foodCopy.emptyTitle}
@@ -262,22 +191,14 @@ export function FoodCostClient({
                 <ItemContent>
                   <ItemTitle>{row.item_name ?? "—"}</ItemTitle>
                   <ItemDescription>
-                    {foodCopy.quantitySold}:{" "}
+                    {foodCopy.quantitySold}{" "}
                     {formatCount(Number(row.quantity_sold ?? 0))} ·{" "}
-                    {foodCopy.unitSellingPriceCurrency}:{" "}
-                    {formatVND(unitSellingPrice(row))}
-                  </ItemDescription>
-                  <ItemDescription>
-                    {foodCopy.unitFoodCostCurrency}:{" "}
-                    {formatCostAmount(row.unit_ingredient_cost)} ·{" "}
-                    {foodCopy.foodCostCurrency}:{" "}
-                    {formatCostAmount(row.ingredient_cost)}
+                    {formatVND(Number(row.revenue ?? 0))}
                   </ItemDescription>
                 </ItemContent>
                 <ItemFooter>
                   <span className="text-xs font-medium">
-                    {foodCopy.grossProfitCurrency}:{" "}
-                    {formatCostAmount(row.gross_profit)}
+                    {formatCostAmount(row.ingredient_cost)}
                   </span>
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}

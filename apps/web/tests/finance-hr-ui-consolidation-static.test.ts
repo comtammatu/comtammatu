@@ -49,10 +49,18 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.match(expenses, /copy\.needsActionLabel/);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
 
-  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 3);
+  assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 1);
+  assert.match(foodCost, /label=\{foodCopy\.actualFoodCost\}/);
+  assert.doesNotMatch(foodCost, /foodCopy\.coverage/);
+  assert.doesNotMatch(foodCost, /foodCopy\.operatingConsumption/);
+  assert.doesNotMatch(foodCost, /hint=\{foodCopy\./);
   assert.match(foodCost, /title=\{foodCopy\.tableTitle\}/);
-  assert.match(foodCost, /foodCopy\.unitSellingPriceCurrency/);
   assert.match(foodCost, /foodCopy\.revenueCurrency/);
+  assert.match(foodCost, /foodCopy\.foodCostCurrency/);
+  assert.match(foodCost, /foodCopy\.grossMargin/);
+  assert.doesNotMatch(foodCost, /foodCopy\.unitSellingPriceCurrency/);
+  assert.doesNotMatch(foodCost, /foodCopy\.unitFoodCostCurrency/);
+  assert.doesNotMatch(foodCost, /foodCopy\.grossProfitCurrency/);
   assert.match(foodCost, /<DataTable/);
 
   assert.match(revenue, /<AppPageTabs/);

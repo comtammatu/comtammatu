@@ -130,7 +130,7 @@ test("writable settings and finance pages fail closed when initial data cannot l
   assert.match(foodCost, /!branchesRes\.success/);
   assert.match(foodCost, /!foodRes\.success/);
   assert.match(foodCost, /!actualRes\.success/);
-  assert.match(foodCost, /!revenueRes\.success/);
+  assert.doesNotMatch(foodCost, /revenueRes/);
   assert.match(categories, /\{res\.success \? \(/);
   assert.match(units, /\{res\.success \? \(/);
   assert.match(thresholds, /!res\.success \? \(/);

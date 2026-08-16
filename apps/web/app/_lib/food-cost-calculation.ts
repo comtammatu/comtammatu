@@ -21,7 +21,7 @@ export interface FoodCostMenuRecipeLine {
 
 export interface FoodCostResultRow {
   period_start: string | null;
-  branch_id: number;
+  branch_id: number | null;
   menu_item_id: number;
   item_name: string | null;
   quantity_sold: number;
@@ -126,6 +126,58 @@ export function buildFoodCostRows({
   }
 
   return Array.from(rows.values()).sort(
+    (a, b) => (b.food_cost_pct ?? -1) - (a.food_cost_pct ?? -1),
+  );
+}
+
+/** One row per sold item — never repeat the same món across Chi nhánh. */
+export function aggregateFoodCostRowsByMenuItem(
+  rows: readonly FoodCostResultRow[],
+): FoodCostResultRow[] {
+  const byItem = new Map<string, FoodCostResultRow>();
+  for (const row of rows) {
+    const key =
+      row.menu_item_id > 0
+        ? `id:${row.menu_item_id}`
+        : `name:${row.item_name ?? ""}`;
+    const current = byItem.get(key);
+    if (!current) {
+      byItem.set(key, { ...row });
+      continue;
+    }
+    current.branch_id = null;
+    current.quantity_sold += row.quantity_sold;
+    current.revenue += row.revenue;
+    if (current.ingredient_cost == null || row.ingredient_cost == null) {
+      current.ingredient_cost = null;
+      current.unit_ingredient_cost = null;
+      current.food_cost_pct = null;
+      current.gross_profit = null;
+      current.gross_margin_pct = null;
+      continue;
+    }
+    current.ingredient_cost = round2(
+      current.ingredient_cost + row.ingredient_cost,
+    );
+    current.unit_ingredient_cost =
+      current.quantity_sold > 0
+        ? round2(current.ingredient_cost / current.quantity_sold)
+        : current.unit_ingredient_cost;
+    if (current.gross_profit != null && row.gross_profit != null) {
+      current.gross_profit = round2(current.gross_profit + row.gross_profit);
+    } else {
+      current.gross_profit = null;
+    }
+    current.food_cost_pct =
+      current.revenue > 0
+        ? round2((current.ingredient_cost / current.revenue) * 100)
+        : null;
+    current.gross_margin_pct =
+      current.gross_profit != null && current.revenue > 0
+        ? round2((current.gross_profit / current.revenue) * 100)
+        : null;
+  }
+  return Array.from(byItem.values()).sort(
     (a, b) => (b.food_cost_pct ?? -1) - (a.food_cost_pct ?? -1),
   );
 }

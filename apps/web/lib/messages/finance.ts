@@ -1141,21 +1141,19 @@ export const finance = {
   },
   foodCost: {
     eyebrow: "Tài chính",
-    description:
-      "Giá vốn theo phần bán. Định mức/phần cùng số catalog. Giá thuần/phần là doanh thu thuần chia SL, đã tách món kèm và phân bổ giảm giá.",
+    description: "Giá vốn định mức theo công thức món. Khác số đã trừ kho ở trên.",
     actualFoodCost: "Giá vốn thực tế",
-    actualFoodCostHint:
-      "Nguyên liệu đã trừ kho theo đơn đã thanh toán. Khác giá vốn định mức theo món.",
+    actualFoodCostHint: "Đã trừ kho theo đơn thanh toán.",
     operatingConsumption: "Tiêu hao vận hành",
     operatingConsumptionHint:
       "Phiếu tiêu hao ghi tay tại chi nhánh, không gắn đơn bán. Không tính vào giá vốn món.",
     coverage: "Độ phủ",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,
-    coverageHint: "Số đơn đã thanh toán và đã trừ đủ nguyên liệu kho.",
-    tableTitle: "Giá vốn món theo phần bán",
+    coverageHint: "Đơn thanh toán đã có giá vốn.",
+    tableTitle: "Theo món",
     itemCount: (count: string) => `${count} món`,
-    quantitySold: "SL bán",
+    quantitySold: "SL",
     revenueCurrency: "Doanh thu thuần",
     unitSellingPriceCurrency: "Giá thuần/phần",
     unitFoodCostCurrency: "Định mức/phần",

@@ -8,6 +8,7 @@ import { messages } from "@lib/messages";
 import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { getAuthContextWithPermission } from "./auth";
 import {
+  aggregateFoodCostRowsByMenuItem,
   buildFoodCostRows,
   type FoodCostMenuRecipeLine,
   type FoodCostResultRow,
@@ -277,10 +278,12 @@ export async function fetchFoodCost(
 
   return {
     success: true,
-    data: buildFoodCostRows({
-      saleLines,
-      menuRecipeLines,
-      periodStart: parsed.data.startDate ?? null,
-    }),
+    data: aggregateFoodCostRowsByMenuItem(
+      buildFoodCostRows({
+        saleLines,
+        menuRecipeLines,
+        periodStart: parsed.data.startDate ?? null,
+      }),
+    ),
   };
 }

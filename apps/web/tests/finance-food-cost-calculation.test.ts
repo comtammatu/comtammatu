@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { buildFoodCostRows } from "../app/_lib/food-cost-calculation";
+import {
+  aggregateFoodCostRowsByMenuItem,
+  buildFoodCostRows,
+} from "../app/_lib/food-cost-calculation";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
 const repoRoot = resolve(process.cwd(), "../..");
@@ -70,12 +73,21 @@ test("finance food cost uses one catalog unit cost across branches", () => {
   assert.equal(branchTwo?.food_cost_pct, 8.33);
   assert.equal(branchTwo?.gross_profit, 55_000);
   assert.equal(branchTwo?.gross_margin_pct, 91.67);
+
+  const combined = aggregateFoodCostRowsByMenuItem(rows);
+  assert.equal(combined.length, 1);
+  assert.equal(combined[0]?.quantity_sold, 3);
+  assert.equal(combined[0]?.revenue, 160_000);
+  assert.equal(combined[0]?.ingredient_cost, 15_000);
+  assert.equal(combined[0]?.gross_profit, 145_000);
+  assert.equal(combined[0]?.branch_id, null);
 });
 
 test("finance food cost action aggregates sales via SQL RPC", () => {
   const source = read("apps/web/app/_lib/food-cost-actions.ts");
 
   assert.match(source, /\.rpc\(\s*\n?\s*"get_menu_item_sales_agg"/);
+  assert.match(source, /aggregateFoodCostRowsByMenuItem/);
   assert.match(source, /resolveMenuRecipeUnitCost/);
   assert.match(source, /buildSourceSiteWacMap/);
   assert.doesNotMatch(source, /FOOD_COST_PAGE_SIZE/);
