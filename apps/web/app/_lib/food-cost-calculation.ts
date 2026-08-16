@@ -14,7 +14,8 @@ export interface FoodCostMenuRecipeLine {
   ingredientId: number;
   quantity: number;
   entryUnitId: number | null;
-  fallbackUnitCost: number;
+  /** Catalog resolver; null means the line is unvalued. */
+  resolvedUnitCost: number | null;
   units: IngredientUnitRow[];
 }
 
@@ -25,18 +26,11 @@ export interface FoodCostResultRow {
   item_name: string | null;
   quantity_sold: number;
   revenue: number;
-  unit_ingredient_cost: number;
-  ingredient_cost: number;
+  unit_ingredient_cost: number | null;
+  ingredient_cost: number | null;
   food_cost_pct: number | null;
-  gross_profit: number;
+  gross_profit: number | null;
   gross_margin_pct: number | null;
-}
-
-export function foodCostUnitCostKey(
-  branchId: number,
-  ingredientId: number,
-): string {
-  return `${branchId}:${ingredientId}`;
 }
 
 function round2(value: number): number {
@@ -46,12 +40,10 @@ function round2(value: number): number {
 export function buildFoodCostRows({
   saleLines,
   menuRecipeLines,
-  unitCosts,
   periodStart,
 }: {
   saleLines: FoodCostSaleLine[];
   menuRecipeLines: FoodCostMenuRecipeLine[];
-  unitCosts: ReadonlyMap<string, number>;
   periodStart: string | null;
 }): FoodCostResultRow[] {
   const menuRecipesByItem = new Map<number, FoodCostMenuRecipeLine[]>();
@@ -87,19 +79,40 @@ export function buildFoodCostRows({
 
   for (const row of rows.values()) {
     const menuRecipeRows = menuRecipesByItem.get(row.menu_item_id) ?? [];
+    if (menuRecipeRows.length === 0) {
+      row.unit_ingredient_cost = 0;
+      row.ingredient_cost = 0;
+      row.food_cost_pct =
+        row.revenue > 0 ? round2((0 / row.revenue) * 100) : null;
+      row.gross_profit = round2(row.revenue);
+      row.gross_margin_pct =
+        row.revenue > 0 ? round2((row.revenue / row.revenue) * 100) : null;
+      continue;
+    }
+
+    let missingCost = false;
     const costPerUnit = menuRecipeRows.reduce((sum, menuRecipe) => {
+      if (menuRecipe.resolvedUnitCost == null) {
+        missingCost = true;
+        return sum;
+      }
       const baseQuantity =
         getMenuRecipeLineBaseQuantity({
           quantity: menuRecipe.quantity,
           entryUnitId: menuRecipe.entryUnitId,
           units: menuRecipe.units,
         }) ?? 0;
-      const unitCost =
-        unitCosts.get(
-          foodCostUnitCostKey(row.branch_id, menuRecipe.ingredientId),
-        ) ?? menuRecipe.fallbackUnitCost;
-      return sum + baseQuantity * unitCost;
+      return sum + baseQuantity * menuRecipe.resolvedUnitCost;
     }, 0);
+
+    if (missingCost) {
+      row.unit_ingredient_cost = null;
+      row.ingredient_cost = null;
+      row.food_cost_pct = null;
+      row.gross_profit = null;
+      row.gross_margin_pct = null;
+      continue;
+    }
 
     row.unit_ingredient_cost = round2(costPerUnit);
     row.ingredient_cost = round2(row.quantity_sold * row.unit_ingredient_cost);

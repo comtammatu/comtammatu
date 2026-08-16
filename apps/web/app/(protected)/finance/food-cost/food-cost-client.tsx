@@ -66,6 +66,11 @@ function unitSellingPrice(row: FoodCostRow): number {
   return Number(row.revenue ?? 0) / qty;
 }
 
+function formatCostAmount(value: number | null | undefined): string {
+  if (value == null) return "—";
+  return formatVND(Number(value));
+}
+
 export function FoodCostClient({
   params,
   branches,
@@ -103,9 +108,13 @@ export function FoodCostClient({
         Number(row.quantity_sold ?? 0),
         Math.round(unitSellingPrice(row)),
         Math.round(Number(row.revenue ?? 0)),
-        Math.round(Number(row.unit_ingredient_cost ?? 0)),
-        Math.round(Number(row.ingredient_cost ?? 0)),
-        Math.round(Number(row.gross_profit ?? 0)),
+        row.unit_ingredient_cost == null
+          ? "—"
+          : Math.round(Number(row.unit_ingredient_cost)),
+        row.ingredient_cost == null
+          ? "—"
+          : Math.round(Number(row.ingredient_cost)),
+        row.gross_profit == null ? "—" : Math.round(Number(row.gross_profit)),
         marginPct(row) == null ? "—" : Number(marginPct(row)?.toFixed(2)),
       ]),
     },
@@ -139,19 +148,19 @@ export function FoodCostClient({
       key: "unit_cost",
       header: foodCopy.unitFoodCostCurrency,
       className: "text-right font-mono tabular-nums",
-      render: (row) => formatVND(Number(row.unit_ingredient_cost ?? 0)),
+      render: (row) => formatCostAmount(row.unit_ingredient_cost),
     },
     {
       key: "food_cost",
       header: foodCopy.foodCostCurrency,
       className: "text-right font-mono tabular-nums",
-      render: (row) => formatVND(Number(row.ingredient_cost ?? 0)),
+      render: (row) => formatCostAmount(row.ingredient_cost),
     },
     {
       key: "gross_profit",
       header: foodCopy.grossProfitCurrency,
       className: "text-right font-mono tabular-nums",
-      render: (row) => formatVND(Number(row.gross_profit ?? 0)),
+      render: (row) => formatCostAmount(row.gross_profit),
     },
     {
       key: "margin",
@@ -225,6 +234,7 @@ export function FoodCostClient({
 
       <AppSection
         title={foodCopy.tableTitle}
+        description={foodCopy.description}
         badge={{
           children: foodCopy.itemCount(formatCount(rows.length)),
           variant: "secondary",
@@ -259,15 +269,15 @@ export function FoodCostClient({
                   </ItemDescription>
                   <ItemDescription>
                     {foodCopy.unitFoodCostCurrency}:{" "}
-                    {formatVND(Number(row.unit_ingredient_cost ?? 0))} ·{" "}
+                    {formatCostAmount(row.unit_ingredient_cost)} ·{" "}
                     {foodCopy.foodCostCurrency}:{" "}
-                    {formatVND(Number(row.ingredient_cost ?? 0))}
+                    {formatCostAmount(row.ingredient_cost)}
                   </ItemDescription>
                 </ItemContent>
                 <ItemFooter>
                   <span className="text-xs font-medium">
                     {foodCopy.grossProfitCurrency}:{" "}
-                    {formatVND(Number(row.gross_profit ?? 0))}
+                    {formatCostAmount(row.gross_profit)}
                   </span>
                   <span
                     className={`font-mono text-sm font-semibold tabular-nums ${marginToneClass(pct)}`}

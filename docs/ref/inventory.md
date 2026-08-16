@@ -95,7 +95,7 @@ warehouse mới là luồng giảm tồn gắn giá vốn món.
 | Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
 
 Không có loại `other` / “Xuất khác”. UI: **phiếu tiêu hao** hoặc **hao hụt**.
-Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức × WAC kho CN bán). Lãi gộp / Giá vốn món = chỉ POS `sale_consumption` tại `branch_kind=branch` (có `order_id`) khi cutover `active`. Không gồm phiếu tay, Kho Tổng, Bếp TT, writeoff/waste.
+Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức catalog × SL). Lãi gộp / Giá vốn món = chỉ POS `sale_consumption` tại `branch_kind=branch` (có `order_id`) khi cutover `active`. Không gồm phiếu tay, Kho Tổng, Bếp TT, writeoff/waste. Gửi hàng giữa site = điều chuyển.
 
 ### Mã chứng từ kho
 
@@ -178,8 +178,9 @@ validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
 
 - **Khóa:** `(tenant_id, branch_id, location_id, ingredient_id)` — tồn từ stock-bearing locations.
 - **`current_quantity`:** theo **Đơn vị chuẩn** (`is_base`).
-- **`avg_unit_cost`:** giá vốn BQ theo Đơn vị chuẩn, cập nhật từ sổ định giá khi
-  Hóa đơn NCC được xác nhận; dùng làm đơn giá ghi sổ khi transfer (mặc định: WAC lúc xuất).
+- **`avg_unit_cost`:** **Giá vốn kho này** — WAC theo Đơn vị chuẩn của đúng
+  location. Qty > 0: `book_value / quantity`. Qty 0/âm: giữ giá dương cuối;
+  nhập giá khác thì tính lại WAC. Điều chuyển mang WAC lúc xuất. Không gộp 3 site.
 
 ---
 
@@ -191,12 +192,11 @@ validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
 > (`production_recipes`, tab Công thức `/inventory/production`).
 Định mức theo `menu_item`; xuất kho khi đơn `completed`. `entry_unit_id` →
 Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
-Bốn đường số không chung khóa WAC: POS `post_pos_sale_consumption_if_ready` +
-`inv_to_base_for_tenant` (WAC kho bán, ghi sổ); `/inventory/menu-recipes`
-(`getMenuRecipeLineBaseQuantity`, WAC Kho gốc rồi fallback CN / last-known,
-LIST mọi món đang bán); `/finance/food-cost` `fetchFoodCost` (định mức × SL ×
-WAC kho bán); `Giá vốn món` = POS `sale_consumption` tại chi nhánh khi cutover
-`active`. Đổi quantity/factor đổi POS và lý thuyết; không bịa gram.
+Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC kho bán
+(thang ADR 0026: location → tenant → GRN → last-known movement → 0);
+catalog + Finance **Định mức/phần** cùng resolver (Kho gốc rồi CN / last-known).
+`Giá vốn món` = POS `sale_consumption` tại CN khi cutover `active`. Không bịa
+gram. Gửi hàng Bếp/Kho Tổng → CN = điều chuyển, không phiếu tiêu hao.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 

@@ -52,9 +52,11 @@ test("menu recipe list shows every active item and omits Yield", () => {
   assert.doesNotMatch(menuRecipeCost, /referenceUnitCost/);
   assert.doesNotMatch(dialog, /showYield/);
   assert.doesNotMatch(dialog, /INVENTORY_VI\.yieldHint/);
-  assert.match(foodCostCalculation, /foodCostUnitCostKey\(row\.branch_id/);
+  assert.match(foodCostCalculation, /resolvedUnitCost/);
+  assert.doesNotMatch(foodCostCalculation, /foodCostUnitCostKey\(row\.branch_id/);
   assert.doesNotMatch(foodCostCalculation, /buildSourceSiteWacMap/);
-  assert.doesNotMatch(foodCostActions, /buildSourceSiteWacMap/);
+  assert.match(foodCostActions, /buildSourceSiteWacMap/);
+  assert.match(foodCostActions, /resolveMenuRecipeUnitCost/);
   assert.doesNotMatch(
     [
       page,

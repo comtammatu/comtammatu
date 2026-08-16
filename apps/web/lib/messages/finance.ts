@@ -1142,7 +1142,7 @@ export const finance = {
   foodCost: {
     eyebrow: "Tài chính",
     description:
-      "Giá vốn theo phần bán. Đối chiếu tiêu hao bán với tiêu hao vận hành.",
+      "Giá vốn theo phần bán. Định mức/phần cùng số catalog. Giá thuần/phần là doanh thu thuần chia SL, đã tách món kèm và phân bổ giảm giá.",
     actualFoodCost: "Giá vốn thực tế",
     actualFoodCostHint:
       "Nguyên liệu đã trừ kho theo đơn đã thanh toán. Khác giá vốn định mức theo món.",
@@ -1157,7 +1157,7 @@ export const finance = {
     itemCount: (count: string) => `${count} món`,
     quantitySold: "SL bán",
     revenueCurrency: "Doanh thu thuần",
-    unitSellingPriceCurrency: "Giá bán/phần",
+    unitSellingPriceCurrency: "Giá thuần/phần",
     unitFoodCostCurrency: "Định mức/phần",
     foodCostCurrency: "Định mức",
     grossProfitCurrency: "Lợi nhuận gộp",

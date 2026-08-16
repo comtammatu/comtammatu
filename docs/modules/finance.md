@@ -14,11 +14,11 @@ Period-result formula (two rows):
   `inventory_value_allocations` (`allocation_bucket = food_cost`) when
   `inventory_valuation_cutovers.status = active`; otherwise the landing KPI is
   empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, and `Bếp Trung Tâm`.
-  `/finance/food-cost` **`Định mức/phần`** is theoretical (`fetchFoodCost`:
-  current menu recipes x sold qty x selling-branch warehouse WAC). Catalog
-  `/inventory/menu-recipes` portion cost prefers `Kho gốc` WAC, then `Chi nhánh` /
-  last-known movement. Do not copy one WAC key onto POS/Finance. See
-  `docs/ref/inventory.md` § 3.
+  `/finance/food-cost` **`Định mức/phần`** uses the same catalog resolver as
+  `/inventory/menu-recipes` (`Kho gốc` then `Chi nhánh` / last-known; missing WAC
+  is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
+  qty after side split and discount, not `menu_price`. Site WAC is
+  `Giá vốn kho này`, not this column. See `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
 - **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables/small tools, marketing, fees/tax, other). Excludes

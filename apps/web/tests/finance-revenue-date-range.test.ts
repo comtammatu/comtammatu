@@ -251,7 +251,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
   assert.match(financeMessages, /operatingConsumption: "Tiêu hao vận hành"/);
-  assert.match(financeMessages, /unitSellingPriceCurrency: "Giá bán\/phần"/);
+  assert.match(financeMessages, /unitSellingPriceCurrency: "Giá thuần\/phần"/);
   assert.match(
     financeMessages,
     /actualFoodCostHint:\s*"Nguyên liệu đã trừ kho theo đơn đã thanh toán\. Khác giá vốn định mức theo món\."/,

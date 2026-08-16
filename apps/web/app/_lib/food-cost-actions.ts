@@ -9,12 +9,16 @@ import { loadInventoryMonetaryAccess } from "@lib/inventory/monetary-access";
 import { getAuthContextWithPermission } from "./auth";
 import {
   buildFoodCostRows,
-  foodCostUnitCostKey,
   type FoodCostMenuRecipeLine,
   type FoodCostResultRow,
   type FoodCostSaleLine,
 } from "./food-cost-calculation";
 import type { IngredientUnitRow } from "@lib/inventory/types";
+import { fetchStockBearingLocationIds } from "../(protected)/inventory/_lib/stock-bearing-locations";
+import {
+  buildSourceSiteWacMap,
+  resolveMenuRecipeUnitCost,
+} from "../(protected)/inventory/_lib/menu-recipe-cost";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner"];
 const foodCostCopy = messages.finance.foodCost;
@@ -92,6 +96,7 @@ export async function fetchFoodCost(
       quantity,
       entry_unit_id,
       ingredients (
+        default_fulfill_site_kind,
         ingredient_units!ingredient_units_ingredient_tenant_fkey (
           id,
           unit_id,
@@ -122,6 +127,7 @@ export async function fetchFoodCost(
     units: UnitRelation | UnitRelation[];
   };
   type IngredientRelation = {
+    default_fulfill_site_kind?: string | null;
     ingredient_units: IngredientUnitData[] | null;
   } | null;
   type MenuRecipeDataRow = {
@@ -132,7 +138,106 @@ export async function fetchFoodCost(
     ingredients: IngredientRelation | IngredientRelation[];
   };
 
-  const ingredientIds = new Set<number>();
+  const stockBearing = await fetchStockBearingLocationIds({
+    supabase,
+    tenantId,
+  });
+  if (!stockBearing.ok) {
+    return { success: false, error: foodCostCopy.loadWacFailed };
+  }
+
+  let sourceSiteWacMap: Record<string, number> = {};
+  const branchFallbackWacMap: Record<number, number> = {};
+  const lastKnownSourceWacMap: Record<string, number> = {};
+
+  if (stockBearing.locationIds.length > 0) {
+    const [stockResult, branchesResult, lastKnownResult] = await Promise.all([
+      monetaryClient
+        .from("stock_levels")
+        .select("ingredient_id, avg_unit_cost, branch_id")
+        .eq("tenant_id", tenantId)
+        .in("location_id", stockBearing.locationIds)
+        .not("avg_unit_cost", "is", null)
+        .gt("avg_unit_cost", 0),
+      supabase
+        .from("branches")
+        .select("id, branch_kind")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true),
+      monetaryClient
+        .from("stock_movements")
+        .select("ingredient_id, unit_cost, branch_id, created_at")
+        .eq("tenant_id", tenantId)
+        .gt("unit_cost", 0)
+        .order("created_at", { ascending: false })
+        .limit(3000),
+    ]);
+
+    if (stockResult.error || branchesResult.error) {
+      return { success: false, error: foodCostCopy.loadWacFailed };
+    }
+
+    type WacRow = {
+      ingredient_id: number;
+      avg_unit_cost: number | string | null;
+      branch_id: number;
+    };
+    const branchKindById = new Map(
+      (branchesResult.data ?? []).map((branch) => [
+        Number(branch.id),
+        branch.branch_kind as string | null,
+      ]),
+    );
+    const stockRows = ((stockResult.data ?? []) as WacRow[]).map((row) => ({
+      ingredientId: row.ingredient_id,
+      branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
+      avgUnitCost: row.avg_unit_cost,
+    }));
+    sourceSiteWacMap = buildSourceSiteWacMap(stockRows);
+
+    const branchFallbackAccum = new Map<
+      number,
+      { sum: number; count: number }
+    >();
+    for (const row of stockRows) {
+      if (row.branchKind !== "branch") continue;
+      const cost = Number(row.avgUnitCost);
+      if (!(typeof cost === "number" && Number.isFinite(cost) && cost > 0)) {
+        continue;
+      }
+      const id = Number(row.ingredientId);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      const entry = branchFallbackAccum.get(id) ?? { sum: 0, count: 0 };
+      entry.sum += cost;
+      entry.count += 1;
+      branchFallbackAccum.set(id, entry);
+    }
+    for (const [id, entry] of branchFallbackAccum) {
+      branchFallbackWacMap[id] = entry.sum / entry.count;
+    }
+
+    if (!lastKnownResult.error) {
+      type MoveRow = {
+        ingredient_id: number;
+        unit_cost: number | string | null;
+        branch_id: number;
+      };
+      for (const row of (lastKnownResult.data ?? []) as MoveRow[]) {
+        const kind = branchKindById.get(Number(row.branch_id));
+        if (kind !== "central_supply" && kind !== "central_kitchen") continue;
+        const id = Number(row.ingredient_id);
+        const cost = Number(row.unit_cost);
+        if (!Number.isFinite(id) || id <= 0) continue;
+        if (!(typeof cost === "number" && Number.isFinite(cost) && cost > 0)) {
+          continue;
+        }
+        const key = `${kind}:${id}`;
+        if (lastKnownSourceWacMap[key] != null) continue;
+        lastKnownSourceWacMap[key] = cost;
+      }
+    }
+  }
+
   const menuRecipeLines: FoodCostMenuRecipeLine[] = [];
   for (const row of (menuRecipeData ?? []) as unknown as MenuRecipeDataRow[]) {
     if (row.menu_item_id == null || row.ingredient_id == null) continue;
@@ -154,68 +259,20 @@ export async function fetchFoodCost(
         };
       },
     );
-    ingredientIds.add(row.ingredient_id);
     menuRecipeLines.push({
       menuItemId: row.menu_item_id,
       ingredientId: row.ingredient_id,
       quantity: Number(row.quantity ?? 0),
       entryUnitId: row.entry_unit_id,
-      fallbackUnitCost: 0,
+      resolvedUnitCost: resolveMenuRecipeUnitCost({
+        ingredientId: row.ingredient_id,
+        sourceSiteKind: ingredient?.default_fulfill_site_kind,
+        sourceSiteWacMap,
+        branchFallbackWacMap,
+        lastKnownSourceWacMap,
+      }),
       units,
     });
-  }
-
-  const unitCosts = new Map<string, number>();
-  const branchIds = [...new Set(saleLines.map((row) => row.branchId))];
-  if (ingredientIds.size > 0 && branchIds.length > 0) {
-    const { data: locationData, error: locationError } = await supabase
-      .from("inventory_locations")
-      .select("id, branch_id")
-      .eq("tenant_id", tenantId)
-      .eq("location_kind", "warehouse")
-      .eq("is_active", true)
-      .in("branch_id", branchIds);
-
-    if (locationError) {
-      return { success: false, error: foodCostCopy.loadWacFailed };
-    }
-
-    const warehouseLocationIds = (locationData ?? []).map((row) => row.id);
-    if (warehouseLocationIds.length === 0) {
-      return {
-        success: true,
-        data: buildFoodCostRows({
-          saleLines,
-          menuRecipeLines,
-          unitCosts,
-          periodStart: parsed.data.startDate ?? null,
-        }),
-      };
-    }
-
-    const { data: stockData, error: stockError } = await monetaryClient
-      .from("stock_levels")
-      .select("branch_id, ingredient_id, avg_unit_cost")
-      .eq("tenant_id", tenantId)
-      .in("branch_id", branchIds)
-      .in("location_id", warehouseLocationIds)
-      .in("ingredient_id", [...ingredientIds])
-      .not("avg_unit_cost", "is", null);
-
-    if (stockError) {
-      return { success: false, error: foodCostCopy.loadWacFailed };
-    }
-
-    type StockCostRow = {
-      branch_id: number | null;
-      ingredient_id: number | null;
-      avg_unit_cost: number | string | null;
-    };
-    for (const row of (stockData ?? []) as StockCostRow[]) {
-      if (row.branch_id == null || row.ingredient_id == null) continue;
-      const key = foodCostUnitCostKey(row.branch_id, row.ingredient_id);
-      unitCosts.set(key, Number(row.avg_unit_cost ?? 0));
-    }
   }
 
   return {
@@ -223,7 +280,6 @@ export async function fetchFoodCost(
     data: buildFoodCostRows({
       saleLines,
       menuRecipeLines,
-      unitCosts,
       periodStart: parsed.data.startDate ?? null,
     }),
   };

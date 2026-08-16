@@ -67,7 +67,9 @@ Reuse `/br/[branchId]/menu-limits` (`branch_menu_limits`, D064,
 
 Book the first available value and record the rung: (1) location
 `avg_unit_cost`; (2) same-ingredient WAC elsewhere in the tenant; (3) latest
-settled purchase unit cost; (4) zero — only with a follow-up flag.
+settled purchase unit cost; (4) last-known `stock_movements.unit_cost`
+(`production_output` first); (5) zero — only with a follow-up flag. Empty or
+negative on-hand keeps the last positive location WAC.
 
 ### 5. Honest result contract
 
