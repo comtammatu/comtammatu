@@ -73,7 +73,8 @@ negative on-hand keeps the last positive location WAC.
 
 ### 5. Honest result contract
 
-`consumed: true` only when every recipe line posted a movement. Rejected:
+`consumed: true` only when every recipe line posted a movement. Paid items
+without a KDS ticket post without kitchen dispatch. Rejected:
 blocking completed-order posting on shortfall; all-or-nothing posting; silent
 skip; advisory pre-order for cashiers/floor; POS-only force-sell outside
 menu-limits; stock-exception replenish as BM override; POS PIN at hard-block.

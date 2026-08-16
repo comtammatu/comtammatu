@@ -353,6 +353,7 @@ test("Finance gates gross profit and operating result on data coverage", () => {
     /const costAvailable =\s*orderCount === 0 \|\| costCoverageOrderCount >= orderCount/,
     "gross profit must not be trusted when only a subset of paid orders has posted consumption",
   );
+  assert.match(cockpit, /addPaidOrdersWithoutRecipeNeed/);
   assert.match(cockpit, /missingCostCoverageHint/);
   assert.match(page, /basic\.kpis\.grossProfit/);
   assert.match(page, /basic\.kpis\.operatingResult/);

@@ -29,6 +29,7 @@ import type {
 import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
 import { isOperatingExpenseCategory } from "./expense-categories";
+import { addPaidOrdersWithoutRecipeNeed } from "./food-cost-coverage";
 import {
   applySalesBranchesFilter,
   fetchSalesBranchIds,
@@ -795,6 +796,14 @@ async function fetchActualFoodCostSnapshot({
       );
     }
   }
+  await addPaidOrdersWithoutRecipeNeed({
+    supabase,
+    tenantId,
+    allowedBranchIds,
+    startIso,
+    endIso,
+    coveredOrderIds: orderIds,
+  });
   return { rows: Array.from(rows.values()), orderCount: orderIds.size };
 }
 

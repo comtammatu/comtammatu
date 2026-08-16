@@ -31,6 +31,7 @@ import {
   EXPENSE_PAYMENT_METHODS,
 } from "./_lib/expense-categories";
 import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
+import { addPaidOrdersWithoutRecipeNeed } from "./_lib/food-cost-coverage";
 import {
   applySalesBranchesFilter,
   fetchSalesBranchIds,
@@ -806,6 +807,14 @@ export async function fetchActualFoodCostSummary(params: {
   // Invoice/credit reprice adjusts inventory that already flowed to food cost;
   // attribute it to sale food cost (not operating slips).
   const total = saleFoodCostTotal + scopedRepriceTotal;
+  await addPaidOrdersWithoutRecipeNeed({
+    supabase,
+    tenantId: claims.tenant_id,
+    allowedBranchIds,
+    startIso,
+    endIso,
+    coveredOrderIds: orderIds,
+  });
   return {
     success: true,
     data: {
