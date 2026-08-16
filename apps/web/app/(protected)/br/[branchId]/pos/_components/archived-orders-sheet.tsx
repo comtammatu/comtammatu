@@ -134,9 +134,8 @@ export function ArchivedOrdersSheet({
         setPendingOrderId(order.id);
         try {
           const result = await convertCashToVietQrAndPrint(branchId, order.id);
-          if (result.type === "success") toast.success(result.message);
-          else if (result.type === "warning") toast.warning(result.message);
-          else toast.error(result.message);
+          if (result.type === "warning") toast.warning(result.message);
+          else if (result.type === "error") toast.error(result.message);
         } finally {
           setPendingOrderId(null);
           reload();
@@ -150,9 +149,8 @@ export function ArchivedOrdersSheet({
       setPendingOrderId(order.id);
       const result = await printPaidVietQr(order.id);
       setPendingOrderId(null);
-      if (result.type === "success") toast.success(result.message);
-      else if (result.type === "warning") toast.warning(result.message);
-      else toast.error(result.message);
+      if (result.type === "warning") toast.warning(result.message);
+      else if (result.type === "error") toast.error(result.message);
     });
   };
 

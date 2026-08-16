@@ -1,9 +1,10 @@
 import { formatVNElapsedCompact } from "@comtammatu/shared/time";
+import { KITCHEN_SLA } from "@lib/operational-sla";
 import type { PosTableOrderVisualState } from "./table-order-visual-state";
 import { isActiveUnpaidPosOrder } from "./table-order-visual-state";
 
-export const KITCHEN_WAIT_WARNING_MINUTES = 12;
-export const KITCHEN_WAIT_URGENT_MINUTES = 20;
+export const KITCHEN_WAIT_WARNING_MINUTES = KITCHEN_SLA.WARNING_MINUTES;
+export const KITCHEN_WAIT_URGENT_MINUTES = KITCHEN_SLA.URGENT_MINUTES;
 
 export type KitchenLatencyTone = "normal" | "warning" | "urgent";
 

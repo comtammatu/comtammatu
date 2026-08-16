@@ -398,6 +398,18 @@ export const pos = {
     waitingElapsed: (time: string) => `Chờ ${time}`,
     overdueElapsed: (time: string) => `Trễ ${time}`,
     readyPassElapsed: (time: string) => `Chờ bưng ${time}`,
+    tabs: {
+      all: "Tất cả",
+      cooking: "Chờ bếp",
+      takeaway: "Mang về",
+      dining: "Đang ăn",
+    },
+    tabEmpty: {
+      all: "Không có đơn",
+      cooking: "Không có đơn đang chờ bếp",
+      takeaway: "Không có đơn mang về",
+      dining: "Không có bàn đang ăn",
+    },
     sections: {
       ready: (count: number) => `Sẵn sàng (${formatCount(count)})`,
       pay: (count: number) => `Chờ thanh toán (${formatCount(count)})`,

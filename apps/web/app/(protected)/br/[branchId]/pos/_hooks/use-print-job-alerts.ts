@@ -55,9 +55,7 @@ export function usePrintJobAlerts({
 
   const handleRetry = useCallback(async (jobId: number) => {
     const result = await retryPrintJob(jobId);
-    if (result.success) {
-      toast.success("Đã gửi lại lệnh in");
-    } else {
+    if (!result.success) {
       toast.error(result.error ?? "Không thể thử lại. Kiểm tra máy in.");
     }
   }, []);

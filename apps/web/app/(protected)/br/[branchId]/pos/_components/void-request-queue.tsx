@@ -44,7 +44,6 @@ export function VoidRequestQueue({ branchId }: { branchId: number }) {
         branchId,
       });
       if (result.success) {
-        notify.success(messages.pos.order.voidRequestResolved);
         refresh();
       } else {
         notify.error(

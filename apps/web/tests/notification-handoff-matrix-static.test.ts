@@ -148,7 +148,7 @@ test("ops tracking correlation migration normalizes GRN entity_type", () => {
   );
 });
 
-test("attention hygiene: control toast only; POS KDS stay popup-only", () => {
+test("attention hygiene: control toast; visible POS KDS mute durable attention", () => {
   const foreground = read("apps/web/app/_hooks/use-foreground-notifications.ts");
   const shell = read("apps/web/app/components/control-surface-shell.tsx");
   const pwa = read("apps/web/app/components/pwa-runtime.tsx");
@@ -156,12 +156,17 @@ test("attention hygiene: control toast only; POS KDS stay popup-only", () => {
     "apps/web/app/_components/notification-attention-runtime.tsx",
   );
   assert.match(foreground, /shouldShowInAppToast/);
+  assert.match(foreground, /muteVisibleFloorAttention/);
   assert.match(foreground, /surface === "owner"/);
   assert.match(foreground, /surface === "branch_management"/);
   assert.match(foreground, /pos\|kds\|pickup/);
   assert.match(
     foreground,
-    /Sonner on control surfaces; POS\/KDS\/pickup keep OS popup only/,
+    /Visible POS\/KDS\/pickup mute durable attention/,
+  );
+  assert.match(
+    foreground,
+    /muteVisibleFloorAttention &&\s*document\.visibilityState === "visible"/,
   );
   assert.match(
     foreground,

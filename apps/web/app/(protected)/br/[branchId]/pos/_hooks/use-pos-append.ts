@@ -70,8 +70,6 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
           return;
         }
 
-        toast.success(`Đã thêm món vào đơn #${target.orderNumber}`);
-
         if (typeof result.data?.discountWarning === "string") {
           toast.warning(result.data.discountWarning);
         }

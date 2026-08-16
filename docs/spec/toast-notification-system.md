@@ -16,7 +16,7 @@ The system has these feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. On a visible control-surface route, it is also the transient attention layer for a newly arrived durable notification; the durable row remains the source of truth. Use `toast` from `@comtammatu/ui/components/sonner`.
 - In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, `Cổng nhân viên`, or an approved bell/entry point.
-- Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for every new unread durable notification the user can see, across `info`, `warning`, and `critical`. A visible control-surface route uses Sonner instead to avoid duplicate foreground alerts. The OS popup links back to `/notifications` or the action URL and fires only while the app is open; there is no closed-app delivery.
+- Foreground popup: device-level OS notification fired by the open PWA via the `Notification` API for new unread durable notifications the user can see, across `info`, `warning`, and `critical`. A visible control-surface route uses Sonner instead to avoid duplicate foreground alerts. A visible POS/KDS/pickup route mutes durable Sonner and OS popup so the live board owns attention; backgrounded floor tabs still use the OS popup. The OS popup links back to `/notifications` or the action URL and fires only while the app is open; there is no closed-app delivery.
 - External outbox: delivery attempt queue in `public.notification_outbox` for configured webhook-style workers.
 - Operational audio (POS/KDS): device-local beep and optional pre-recorded voice on the open board/terminal. Not durable, not role-feed, not Telegram. Contract: `docs/spec/operational-audio-alerts.md`.
 
@@ -55,7 +55,8 @@ Foreground attention (PWA open)
   -> Realtime INSERT on notifications triggers an RLS-scoped refetch
   -> visible control surface (Owner L0, branch_management, non-POS/KDS
      branch_operation chrome): Sonner toast
-  -> POS/KDS/pickup or backgrounded tab: Notification API popup via SW
+  -> visible POS/KDS/pickup: no durable Sonner/OS popup (board owns attention)
+  -> backgrounded POS/KDS/pickup tab: Notification API popup via SW
   -> notification click focuses or opens the action URL
 
 Unread / badge freshness

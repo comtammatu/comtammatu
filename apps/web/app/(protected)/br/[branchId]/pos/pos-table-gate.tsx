@@ -84,9 +84,6 @@ const TableButton = memo(function TableButton({
   } else if (tileVisualState === "empty") {
     statusLabel = messages.pos.tableGate.available;
     statusVariant = "secondary";
-  } else if (tileVisualState === "ready" || tileVisualState === "served") {
-    statusLabel = messages.pos.tableGate.diningTime(displaySeatingDuration ?? "1p");
-    statusVariant = "secondary";
   } else if (orderVisualState === "active" || tileVisualState === "active") {
     const waitDuration =
       tableTiming?.kitchenWaitDuration ?? displaySeatingDuration ?? "1p";
@@ -100,6 +97,9 @@ const TableButton = memo(function TableButton({
       statusLabel = messages.pos.tableGate.waitingElapsed(waitDuration);
       statusVariant = "outline";
     }
+  } else if (tileVisualState === "ready" || tileVisualState === "served") {
+    statusLabel = messages.pos.tableGate.diningTime(displaySeatingDuration ?? "1p");
+    statusVariant = "secondary";
   } else {
     statusLabel = messages.pos.tableGate.reserved;
     statusVariant = "secondary";
@@ -127,16 +127,9 @@ const TableButton = memo(function TableButton({
       onClick={handleClick}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
-            {TABLE_VI.long}
-          </p>
-          {displaySeatingDuration ? (
-            <span className="text-xs font-medium tabular-nums opacity-75">
-              · {messages.pos.tableGate.diningElapsed(displaySeatingDuration)}
-            </span>
-          ) : null}
-        </div>
+        <p className="shrink-0 text-xs font-medium uppercase tracking-wide opacity-60">
+          {TABLE_VI.long}
+        </p>
         <Badge
           variant={statusVariant}
           className={cn(

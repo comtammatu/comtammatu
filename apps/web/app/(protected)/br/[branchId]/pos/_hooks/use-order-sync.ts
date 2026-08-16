@@ -144,9 +144,6 @@ function notifyOrderTransition(
     } else if (beepEnabled) {
       playAppSignal("pos");
     }
-    toast.success(`Đã thanh toán #${orderNumber}`, {
-      description: getOrderContextDescription(currentOrder),
-    });
     return;
   }
 
@@ -154,20 +151,6 @@ function notifyOrderTransition(
     if (beepEnabled) playAppSignal("pos");
     toast.success(`Bếp hoàn thành #${orderNumber}`, {
       description: "Món đã xong — có thể thanh toán",
-    });
-    return;
-  }
-
-  if (nextStatus === "served" && currentOrder.status !== "served") {
-    toast.info(`Đơn #${orderNumber} chờ thanh toán`, {
-      description: getOrderContextDescription(currentOrder),
-    });
-    return;
-  }
-
-  if (nextStatus === "completed" && currentOrder.status !== "completed") {
-    toast.success(`Hoàn thành đơn #${orderNumber}`, {
-      description: getOrderContextDescription(currentOrder),
     });
     return;
   }

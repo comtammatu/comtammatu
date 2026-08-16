@@ -11,7 +11,6 @@ import {
   resolveAudioMode,
   type OperationalAudioMode,
 } from "@lib/operational-audio";
-import { toast } from "@comtammatu/ui/components/sonner";
 import { TickProvider } from "./_hooks/use-board-tick";
 import { useKdsRealtime } from "./_hooks/use-kds-realtime";
 import { useKdsFilters } from "./_hooks/use-kds-filters";
@@ -33,7 +32,6 @@ import { getKdsTicketSequenceSortKey } from "./_lib/status-config";
 import {
   collectReadyKdsNewTicketAlertGroups,
   getKdsNewTicketAlertGroupKey,
-  getKdsNewTicketToastTitle,
   pickHigherPriorityKdsSignalTone,
   type KdsNewTicketAlertGroup,
 } from "./_lib/sound-alerts";
@@ -58,29 +56,6 @@ function orderHasKitchenWork(tickets: KdsTicket[]): boolean {
 
 function isActiveKitchenTicket(ticket: KdsTicket): boolean {
   return isKdsActiveTicketStatus(ticket.status);
-}
-
-function getTicketOrderLabel(
-  ticket: Pick<KdsTicket, "order_id">,
-  orders: Map<number, { order_number: string }>,
-): string {
-  return orders.get(ticket.order_id)?.order_number ?? String(ticket.order_id);
-}
-
-function getTicketAlertDescription(
-  ticket: Pick<KdsTicket, "order_id" | "kitchen_send_batch_id">,
-  orders: Map<number, { order_number: string }>,
-  kitchenBatches: ReadonlyMap<number, { kitchen_ticket_number: string }>,
-): string {
-  const orderLabel = getTicketOrderLabel(ticket, orders);
-  const batch =
-    ticket.kitchen_send_batch_id === null
-      ? null
-      : (kitchenBatches.get(ticket.kitchen_send_batch_id) ?? null);
-  if (batch) {
-    return `Phiếu ${batch.kitchen_ticket_number} - đơn #${orderLabel}`;
-  }
-  return `Đơn #${orderLabel}`;
 }
 
 function getTicketBaseGroupKey(ticket: KdsTicket): string {
@@ -363,14 +338,6 @@ export function KdsBoard({
       if (nextAlertGroup === null || winningTone !== nextAlertGroup.tone) {
         nextAlertGroup = alertGroup;
       }
-      const title = getKdsNewTicketToastTitle(alertGroup.tone);
-      toast.info(title, {
-        description: getTicketAlertDescription(
-          alertGroup.ticket,
-          orders,
-          kitchenBatches,
-        ),
-      });
       alertedAlertGroupKeys.add(alertGroup.groupKey);
       for (const ticketId of alertGroup.ticketIds) {
         pendingAlertTicketIds.delete(ticketId);

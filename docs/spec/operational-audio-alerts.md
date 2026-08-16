@@ -46,7 +46,7 @@ server-synced prefs; `public.notifications` inserts; Pickup display audio (needs
 | `kds.append` | Append batch | `kds-append` | “Gọi thêm{location}” | 1 |
 | `kds.add_on` | Add-on item category | `kds-add-on` | “Món thêm{location}” | 2 |
 
-Align with `getKdsNewTicketSignalTone` / toast titles in `sound-alerts.ts`.
+Align with `getKdsNewTicketSignalTone` / alert kinds in `sound-alerts.ts`.
 `{location}` = “ bàn {table}” only with a real table number; never invent labels.
 
 ### POS
@@ -93,7 +93,7 @@ Engine: `speechSynthesis` + `SpeechSynthesisUtterance`; `lang = "vi-VN"`; first
 `vi-*` when list loaded (empty → speak; loaded no `vi-*` → skip). Templates
 pure/unit-tested; volume `1`. Kinds stable if brand pack replaces engine later.
 
-- **KDS:** board = SoT; bell cycles mode; toast titles align with voice kind.
+- **KDS:** board = SoT; bell cycles mode; voice kind aligns with signal tone (no new-ticket Sonner).
 - **POS:** only four catalog kinds speak; payment request beep-only; confirmed payment needs real table.
 - **Other:** Owner / inventory / employee / pickup display — no operational audio.
 

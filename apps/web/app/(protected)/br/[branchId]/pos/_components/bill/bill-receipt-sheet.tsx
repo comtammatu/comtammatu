@@ -1010,8 +1010,6 @@ export function BillReceipt({
           toast.warning(
             "Máy in đang mất kết nối — phiếu tạm tính sẽ in khi kết nối lại",
           );
-        } else {
-          toast.success("Đã gửi phiếu tạm tính tới máy in");
         }
       } else {
         toast.error(result.error ?? "Không thể in phiếu tạm tính");
@@ -1029,8 +1027,6 @@ export function BillReceipt({
       if (result.success) {
         if (result.data?.agent_offline) {
           toast.warning("Máy in đang mất kết nối — hóa đơn sẽ in khi kết nối lại");
-        } else {
-          toast.success("Đã gửi hóa đơn tới máy in");
         }
       } else {
         toast.error(result.error ?? "Không thể in hóa đơn");
@@ -1051,9 +1047,8 @@ export function BillReceipt({
       if (!confirmed) return;
       startPrintTransition(async () => {
         const result = await convertCashToVietQrAndPrint(branchId, orderId);
-        if (result.type === "success") toast.success(result.message);
-        else if (result.type === "warning") toast.warning(result.message);
-        else toast.error(result.message);
+        if (result.type === "warning") toast.warning(result.message);
+        else if (result.type === "error") toast.error(result.message);
         refetchOrderRef.current();
         await onOrderUpdated?.();
       });
@@ -1064,9 +1059,8 @@ export function BillReceipt({
     if (orderId === null) return;
     startPrintTransition(async () => {
       const result = await printPaidVietQr(orderId);
-      if (result.type === "success") toast.success(result.message);
-      else if (result.type === "warning") toast.warning(result.message);
-      else toast.error(result.message);
+      if (result.type === "warning") toast.warning(result.message);
+      else if (result.type === "error") toast.error(result.message);
     });
   }, [orderId]);
 

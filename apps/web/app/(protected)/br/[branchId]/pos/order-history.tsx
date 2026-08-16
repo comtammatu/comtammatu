@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, type ReactNode } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import { AppEmptyState } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -19,7 +19,7 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
-import { formatVNElapsedCompact, formatVNTime } from "@comtammatu/shared/time";
+import { formatVNTime } from "@comtammatu/shared/time";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
 import { deriveOrderTimingInfo } from "./_lib/table-timing";
@@ -97,35 +97,35 @@ function getCompactOrderTitle(
   return contextLabel;
 }
 
-function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
-  const byCreatedAt = Date.parse(b.created_at) - Date.parse(a.created_at);
-  if (byCreatedAt !== 0) return byCreatedAt;
-
-  return b.id - a.id;
-}
-
-// Kitchen-done (`ready`/`served`) outranks cooking: food is out, bill next.
-function getOrderActionPriority(order: SessionOrder): number {
-  if (order.payment_status === "paid") return 99;
-  if (order.status === "ready" || order.status === "served") return 0;
-  if (order.order_type === "takeaway") return 1;
-  if (order.status === "preparing") return 2;
-  if (order.status === "confirmed") return 3;
-  if (order.status === "new") return 4;
-  return 5;
-}
+const KITCHEN_WAITING_STATUSES = new Set(["new", "confirmed", "preparing"]);
 
 export function compareOrdersByNextAction(
   a: SessionOrder,
   b: SessionOrder,
 ): number {
-  const byKitchenPriority = Number(b.is_priority) - Number(a.is_priority);
-  if (byKitchenPriority !== 0) return byKitchenPriority;
+  // 1. Cờ ưu tiên (Khách giục / ưu tiên phục vụ)
+  const byPriorityFlag = (b.is_priority ? 1 : 0) - (a.is_priority ? 1 : 0);
+  if (byPriorityFlag !== 0) return byPriorityFlag;
 
-  const byPriority = getOrderActionPriority(a) - getOrderActionPriority(b);
-  if (byPriority !== 0) return byPriority;
+  const aIsKitchenWaiting = KITCHEN_WAITING_STATUSES.has(a.status);
+  const bIsKitchenWaiting = KITCHEN_WAITING_STATUSES.has(b.status);
 
-  return compareOrdersNewestFirst(a, b);
+  // 2. Nhóm đang chờ Bếp làm luôn xếp TRƯỚC nhóm đã ra món/đang ăn
+  if (aIsKitchenWaiting && !bIsKitchenWaiting) return -1;
+  if (!aIsKitchenWaiting && bIsKitchenWaiting) return 1;
+
+  // 3. Trong nhóm đang chờ Bếp: đơn mang về ưu tiên nhẹ nếu cùng thời điểm
+  if (aIsKitchenWaiting && bIsKitchenWaiting) {
+    if (a.order_type === "takeaway" && b.order_type !== "takeaway") return -1;
+    if (a.order_type !== "takeaway" && b.order_type === "takeaway") return 1;
+  }
+
+  // 4. Trong cùng nhóm: đơn vào lâu nhất xếp LÊN TRÊN (created_at cũ nhất trước - FIFO)
+  const byCreatedAtOldestFirst =
+    Date.parse(a.created_at) - Date.parse(b.created_at);
+  if (byCreatedAtOldestFirst !== 0) return byCreatedAtOldestFirst;
+
+  return a.id - b.id;
 }
 
 function formatTime(timestamp: string): string {
@@ -162,8 +162,6 @@ export function OrderCardSummary({
   /** Defaults to created_at. Archived rows pass updated_at (closed time). */
   metaTimestamp?: string;
 }) {
-  const elapsed = metaTimestamp ? null : formatVNElapsedCompact(order.created_at);
-
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
       <ItemTitle className="w-full min-w-0 max-w-full justify-between gap-3 text-base">
@@ -179,16 +177,11 @@ export function OrderCardSummary({
           {formatVND(order.total_amount)}
         </span>
       </ItemTitle>
-      <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="shrink-0 tabular-nums">
+      <ItemDescription className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-sm">
+        <span className="shrink-0 tabular-nums text-muted-foreground">
           {formatTime(metaTimestamp ?? order.created_at)}
-          {elapsed ? (
-            <span className="ml-1 font-normal opacity-80">
-              ({elapsed})
-            </span>
-          ) : null}
         </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           {rightMeta}
         </span>
       </ItemDescription>
@@ -224,6 +217,7 @@ const OrderCard = memo(function OrderCard({
   onViewDetail,
 }: OrderCardProps) {
   const timing = deriveOrderTimingInfo(order);
+  const isCooking = KITCHEN_WAITING_STATUSES.has(order.status);
 
   return (
     <Item
@@ -240,29 +234,41 @@ const OrderCard = memo(function OrderCard({
         rightMeta={
           <>
             {order.is_priority ? (
-              <Badge variant="warning" className="text-sm font-semibold">
+              <Badge variant="warning" className="text-xs font-semibold">
                 {messages.pos.orderHistory.priority}
               </Badge>
             ) : null}
             {paymentCall === "cash_call" ? (
-              <Badge variant="warning" className="text-sm font-semibold">
+              <Badge variant="warning" className="text-xs font-semibold">
                 {SELF_ORDER_VI.cashCallStaff}
               </Badge>
             ) : paymentCall === "vietqr_pending" ? (
-              <Badge variant="warning" className="text-sm font-semibold">
+              <Badge variant="warning" className="text-xs font-semibold">
                 {SELF_ORDER_VI.vietQrPendingStaff}
               </Badge>
             ) : null}
-            {timing.kitchenLatencyTone === "urgent" && timing.elapsedDuration ? (
-              <Badge variant="destructive" className="text-sm font-semibold">
-                {messages.pos.orderHistory.overdueElapsed(timing.elapsedDuration)}
+            {isCooking ? (
+              timing.kitchenLatencyTone === "urgent" && timing.elapsedDuration ? (
+                <Badge variant="destructive" className="text-xs font-semibold">
+                  {messages.pos.orderHistory.overdueElapsed(timing.elapsedDuration)}
+                </Badge>
+              ) : timing.kitchenLatencyTone === "warning" && timing.elapsedDuration ? (
+                <Badge variant="warning" className="text-xs font-semibold">
+                  {messages.pos.orderHistory.waitingElapsed(timing.elapsedDuration)}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="border-warning/20 bg-warning/10 text-xs font-semibold text-warning"
+                >
+                  {messages.pos.orderHistory.waitingElapsed(timing.elapsedDuration ?? "1p")}
+                </Badge>
+              )
+            ) : (
+              <Badge variant="secondary" className="text-xs font-semibold">
+                {messages.pos.tableGate.diningTime(timing.elapsedDuration ?? "1p")}
               </Badge>
-            ) : timing.kitchenLatencyTone === "warning" && timing.elapsedDuration ? (
-              <Badge variant="warning" className="text-sm font-semibold">
-                {messages.pos.orderHistory.waitingElapsed(timing.elapsedDuration)}
-              </Badge>
-            ) : null}
-            <OrderStatePill order={order} />
+            )}
           </>
         }
       />
@@ -307,6 +313,8 @@ interface ActiveOrdersListProps {
   ) => void;
 }
 
+export type ActiveOrderFilterTab = "all" | "cooking" | "takeaway" | "dining";
+
 /**
  * Sidebar list of orders the cashier still needs to act on (kitchen flow
  * + payment). Provider holds active rows only; archived ("Đơn hoàn thành") lives
@@ -320,7 +328,9 @@ function ActiveOrdersListComponent({
   onViewBill,
   onViewDetail,
 }: ActiveOrdersListProps) {
-  const activeOrders = useMemo(
+  const [activeTab, setActiveTab] = useState<ActiveOrderFilterTab>("all");
+
+  const allActiveOrders = useMemo(
     () =>
       orders
         .filter(
@@ -331,6 +341,49 @@ function ActiveOrdersListComponent({
         .sort(compareOrdersByNextAction),
     [orders],
   );
+
+  const tabCounts = useMemo(() => {
+    let cooking = 0;
+    let takeaway = 0;
+    let dining = 0;
+    for (const order of allActiveOrders) {
+      if (KITCHEN_WAITING_STATUSES.has(order.status)) {
+        cooking += 1;
+      } else if (order.order_type === "dine_in") {
+        dining += 1;
+      }
+      if (order.order_type === "takeaway") {
+        takeaway += 1;
+      }
+    }
+    return {
+      all: allActiveOrders.length,
+      cooking,
+      takeaway,
+      dining,
+    };
+  }, [allActiveOrders]);
+
+  const activeOrders = useMemo(() => {
+    switch (activeTab) {
+      case "cooking":
+        return allActiveOrders.filter((order) =>
+          KITCHEN_WAITING_STATUSES.has(order.status),
+        );
+      case "takeaway":
+        return allActiveOrders.filter((order) => order.order_type === "takeaway");
+      case "dining":
+        return allActiveOrders.filter(
+          (order) =>
+            order.order_type === "dine_in" &&
+            !KITCHEN_WAITING_STATUSES.has(order.status),
+        );
+      case "all":
+      default:
+        return allActiveOrders;
+    }
+  }, [allActiveOrders, activeTab]);
+
   const multiOrderTableIds = useMemo(() => {
     const counts = new Map<number, number>();
     for (const order of activeOrders) {
@@ -344,7 +397,7 @@ function ActiveOrdersListComponent({
     );
   }, [activeOrders]);
 
-  if (activeOrders.length === 0) {
+  if (allActiveOrders.length === 0) {
     return (
       <AppEmptyState
         title={messages.pos.orderHistory.empty}
@@ -356,25 +409,102 @@ function ActiveOrdersListComponent({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-      <ScrollArea className="min-h-0 min-w-0 w-full flex-1 overflow-hidden">
-        <div className="flex w-full min-w-0 max-w-full flex-col gap-3 px-3 pb-4 pt-2 md:p-2">
-          <ItemGroup className="w-full min-w-0 gap-2">
-            {activeOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                showDineInSequence={
-                  order.table_id !== null &&
-                  multiOrderTableIds.has(order.table_id)
-                }
-                paymentCall={paymentCallByOrderId?.get(order.id)}
-                onViewBill={onViewBill}
-                onViewDetail={onViewDetail}
-              />
-            ))}
-          </ItemGroup>
+      <div className="shrink-0 border-b border-border/60 p-2">
+        <div className="grid grid-cols-4 gap-1 rounded-md bg-muted p-0.5 text-xs font-medium">
+          <Button
+            type="button"
+            variant={activeTab === "all" ? "default" : "ghost"}
+            size="sm"
+            data-testid="pos-order-tab-all"
+            className={cn(
+              "h-8 px-1 text-xs font-medium",
+              activeTab === "all"
+                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("all")}
+          >
+            <span>{messages.pos.orderHistory.tabs.all}</span>
+            <span className="tabular-nums opacity-75">({tabCounts.all})</span>
+          </Button>
+          <Button
+            type="button"
+            variant={activeTab === "cooking" ? "default" : "ghost"}
+            size="sm"
+            data-testid="pos-order-tab-cooking"
+            className={cn(
+              "h-8 px-1 text-xs font-medium",
+              activeTab === "cooking"
+                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("cooking")}
+          >
+            <span>{messages.pos.orderHistory.tabs.cooking}</span>
+            <span className="tabular-nums opacity-75">({tabCounts.cooking})</span>
+          </Button>
+          <Button
+            type="button"
+            variant={activeTab === "takeaway" ? "default" : "ghost"}
+            size="sm"
+            data-testid="pos-order-tab-takeaway"
+            className={cn(
+              "h-8 px-1 text-xs font-medium",
+              activeTab === "takeaway"
+                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("takeaway")}
+          >
+            <span>{messages.pos.orderHistory.tabs.takeaway}</span>
+            <span className="tabular-nums opacity-75">({tabCounts.takeaway})</span>
+          </Button>
+          <Button
+            type="button"
+            variant={activeTab === "dining" ? "default" : "ghost"}
+            size="sm"
+            data-testid="pos-order-tab-dining"
+            className={cn(
+              "h-8 px-1 text-xs font-medium",
+              activeTab === "dining"
+                ? "bg-background font-semibold text-foreground shadow-2xs hover:bg-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("dining")}
+          >
+            <span>{messages.pos.orderHistory.tabs.dining}</span>
+            <span className="tabular-nums opacity-75">({tabCounts.dining})</span>
+          </Button>
         </div>
-      </ScrollArea>
+      </div>
+
+      {activeOrders.length === 0 ? (
+        <AppEmptyState
+          title={messages.pos.orderHistory.tabEmpty[activeTab]}
+          icon={<IconReceipt />}
+          className="flex-1"
+        />
+      ) : (
+        <ScrollArea className="min-h-0 min-w-0 w-full flex-1 overflow-hidden">
+          <div className="flex w-full min-w-0 max-w-full flex-col gap-3 px-3 pb-4 pt-2 md:p-2">
+            <ItemGroup className="w-full min-w-0 gap-2">
+              {activeOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  showDineInSequence={
+                    order.table_id !== null &&
+                    multiOrderTableIds.has(order.table_id)
+                  }
+                  paymentCall={paymentCallByOrderId?.get(order.id)}
+                  onViewBill={onViewBill}
+                  onViewDetail={onViewDetail}
+                />
+              ))}
+            </ItemGroup>
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }

@@ -823,7 +823,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await setOrderPriority(data.id, next);
       if (r.success) {
-        notify.success(next ? "Đã ưu tiên đơn" : "Đã bỏ ưu tiên đơn");
         await onOrderUpdated?.();
         load();
       } else {
@@ -836,7 +835,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await setOrderItemPriority(itemId, next);
       if (r.success) {
-        notify.success(next ? "Đã ưu tiên món" : "Đã bỏ ưu tiên món");
         setActionsItemId(null);
         load();
       } else {
@@ -850,7 +848,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await updatePosOrderNote(branchId, orderId, newNote);
       if (r.success) {
-        notify.success(messages.pos.orderDetail.noteUpdated);
         setShowEditNote(false);
         setData((prev) =>
           prev
@@ -960,9 +957,6 @@ export function OrderDetailSheet({
       const id = reduceItemId;
       const r = await reduceOrderItemQuantity(id, reduceNewQty, reason);
       if (r.success) {
-        notify.success(
-          `Đã giảm SL: ${target.quantity} → ${r.data?.newQuantity ?? reduceNewQty}`,
-        );
         // Partial-cancel print warning lives on r.meta.warning (set by
         // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts).
         const reduceWarning = r.meta?.warning;
@@ -1002,8 +996,6 @@ export function OrderDetailSheet({
       if (r.success) {
         if (r.data?.agent_offline) {
           notify.warning("Máy in đang mất kết nối — hóa đơn sẽ in khi kết nối lại");
-        } else {
-          notify.success("Đã gửi hóa đơn tới máy in");
         }
       } else {
         notify.error(r.error ?? "Không thể in hóa đơn");
@@ -1033,7 +1025,6 @@ export function OrderDetailSheet({
         note: input.note,
       });
       if (r.success) {
-        notify.success("Đã áp chiết khấu");
         setShowDiscount(false);
       } else {
         notify.error(r.error ?? "Không thể áp chiết khấu.");
@@ -1046,7 +1037,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await clearOrderDiscount(branchId, orderId, reason);
       if (r.success) {
-        notify.success("Đã bỏ chiết khấu");
         setShowDiscount(false);
       } else {
         notify.error(r.error ?? "Không thể bỏ chiết khấu.");
@@ -1091,7 +1081,6 @@ export function OrderDetailSheet({
         sideSelections,
       });
       if (r.success) {
-        notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
         setInlinePromoCode("");
         load();
@@ -1125,7 +1114,6 @@ export function OrderDetailSheet({
         selections,
       });
       if (r.success) {
-        notify.success(PROMOTIONS_VI.applied);
         setShowDiscount(false);
         setInlinePromoCode("");
         setFreeSideOffer(null);
@@ -1141,7 +1129,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await clearPromotion(branchId, orderId, reason);
       if (r.success) {
-        notify.success(PROMOTIONS_VI.cleared);
         setShowDiscount(false);
         setInlinePromoCode("");
         load();
@@ -1167,7 +1154,6 @@ export function OrderDetailSheet({
         note: input.note,
       });
       if (r.success) {
-        notify.success("Đã áp chiết khấu món");
         setDiscountItemId(null);
         load();
       } else {
@@ -1183,7 +1169,6 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await clearOrderItemDiscount(branchId, target.id, reason);
       if (r.success) {
-        notify.success("Đã bỏ chiết khấu món");
         setDiscountItemId(null);
         load();
       } else {
@@ -1201,7 +1186,6 @@ export function OrderDetailSheet({
         note: input.note,
       });
       if (r.success) {
-        notify.success("Đã cập nhật phụ phí");
         setShowServiceCharge(false);
       } else {
         notify.error(r.error ?? "Không thể cập nhật phụ phí.");
@@ -1218,7 +1202,6 @@ export function OrderDetailSheet({
         note: reason,
       });
       if (r.success) {
-        notify.success("Đã bỏ phụ phí");
         setShowServiceCharge(false);
       } else {
         notify.error(r.error ?? "Không thể bỏ phụ phí.");

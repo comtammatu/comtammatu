@@ -5,7 +5,6 @@ import {
   collectReadyKdsNewTicketAlertGroups,
   getKdsNewTicketAlertGroupKey,
   getKdsNewTicketSignalTone,
-  getKdsNewTicketToastTitle,
   hasKdsNewTicketSignalMetadata,
   pickHigherPriorityKdsSignalTone,
 } from "../app/(protected)/br/[branchId]/kds/_lib/sound-alerts";
@@ -65,7 +64,7 @@ function makeItem(overrides: Partial<KdsOrderItem> = {}): KdsOrderItem {
   };
 }
 
-test("KDS new-ticket sound follows the visible toast taxonomy", () => {
+test("KDS new-ticket sound follows the audible kind taxonomy", () => {
   const initialBatches = new Map([[1, makeBatch("initial")]]);
   const appendBatches = new Map([[1, makeBatch("append")]]);
 
@@ -86,11 +85,8 @@ test("KDS new-ticket sound follows the visible toast taxonomy", () => {
   });
 
   assert.equal(normalTone, "kds-new");
-  assert.equal(getKdsNewTicketToastTitle(normalTone), "Phiếu bếp mới");
   assert.equal(appendTone, "kds-append");
-  assert.equal(getKdsNewTicketToastTitle(appendTone), "Phiếu gọi thêm mới");
   assert.equal(addOnTone, "kds-add-on");
-  assert.equal(getKdsNewTicketToastTitle(addOnTone), "Món thêm mới");
 });
 
 test("KDS add-on sound wins over append when multiple ticket types arrive together", () => {

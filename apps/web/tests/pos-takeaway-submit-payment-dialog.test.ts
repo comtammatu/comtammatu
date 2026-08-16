@@ -15,7 +15,7 @@ const source = normalizeEol(
 );
 
 const submitSuccessBlock =
-  /if \(result\.success && result\.data\) \{([\s\S]*?)\n\s*\} else \{/.exec(
+  /handleSubmitOrder[\s\S]*?if \(result\.success && result\.data\) \{([\s\S]*?)\n\s*\} else \{/.exec(
     source,
   )?.[1] ?? "";
 

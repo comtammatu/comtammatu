@@ -21,7 +21,10 @@ import { messages } from "@lib/messages";
 const SCAN_LIMIT = 10;
 const MAX_POPUPS = 3;
 
-/** Sonner on control surfaces; POS/KDS/pickup keep OS popup only. */
+const FLOOR_OPS_PATH =
+  /^\/br\/\d+\/(pos|kds|pickup)(?:\/|$)/;
+
+/** Sonner on control surfaces; POS/KDS/pickup never use arrival Sonner. */
 function shouldShowInAppToast(pathname: string): boolean {
   const family = resolveRouteFamilyContract(pathname);
   if (!family) return false;
@@ -29,9 +32,14 @@ function shouldShowInAppToast(pathname: string): boolean {
     return true;
   }
   if (family.surface === "branch_operation") {
-    return !/^\/br\/\d+\/(pos|kds|pickup)(?:\/|$)/.test(pathname);
+    return !FLOOR_OPS_PATH.test(pathname);
   }
   return false;
+}
+
+/** Floor boards: swallow durable attention while the tab is visible. */
+function isFloorOpsPath(pathname: string): boolean {
+  return FLOOR_OPS_PATH.test(pathname);
 }
 
 function openCtaLabel(kind: string): string {
@@ -44,6 +52,7 @@ async function showPopupsForNewNotifications(
   highWaterRef: { current: number | null },
   inFlightRef: { current: boolean },
   showInAppToast: boolean,
+  muteVisibleFloorAttention: boolean,
   navigate: (url: string) => void,
 ): Promise<void> {
   if (typeof window === "undefined") return;
@@ -62,6 +71,15 @@ async function showPopupsForNewNotifications(
     if (fresh.length === 0) return;
 
     highWaterRef.current = Math.max(seen, ...fresh.map((item) => item.id));
+
+    // POS/KDS/pickup: live board owns attention while visible. Advance
+    // high-water so durable manager feed does not OS-popup mid-service.
+    if (
+      muteVisibleFloorAttention &&
+      document.visibilityState === "visible"
+    ) {
+      return;
+    }
 
     if (showInAppToast && document.visibilityState === "visible") {
       for (const item of fresh.slice(-MAX_POPUPS)) {
@@ -120,8 +138,9 @@ function showArrivalToast(
 /**
  * Foreground notification attention while the PWA is open. A Realtime INSERT
  * triggers an RLS-scoped refetch. Visible control-surface routes use Sonner
- * with an optional Open CTA; other states keep the permission-gated
- * service-worker popup whose click handler routes to the action_url.
+ * with an optional Open CTA. Visible POS/KDS/pickup mute durable attention
+ * (board + operational audio own the floor); backgrounded floor tabs keep the
+ * permission-gated service-worker popup.
  */
 export function useForegroundNotifications(): void {
   const highWaterRef = useRef<number | null>(null);
@@ -136,6 +155,7 @@ export function useForegroundNotifications(): void {
   };
   const disabled = isPickupPublicDisplayPath(pathname ?? "");
   const showInAppToast = shouldShowInAppToast(pathname ?? "");
+  const muteVisibleFloorAttention = isFloorOpsPath(pathname ?? "");
 
   useEffect(() => {
     if (disabled) {
@@ -178,6 +198,7 @@ export function useForegroundNotifications(): void {
               highWaterRef,
               inFlightRef,
               showInAppToast,
+              muteVisibleFloorAttention,
               (url) => navigateRef.current(url),
             ),
         )
@@ -191,11 +212,12 @@ export function useForegroundNotifications(): void {
             highWaterRef,
             inFlightRef,
             showInAppToast,
+            muteVisibleFloorAttention,
             (url) => navigateRef.current(url),
           );
         });
     },
-    [disabled, showInAppToast],
+    [disabled, muteVisibleFloorAttention, showInAppToast],
   );
 
   useEffect(() => {
@@ -206,6 +228,7 @@ export function useForegroundNotifications(): void {
           highWaterRef,
           inFlightRef,
           showInAppToast,
+          muteVisibleFloorAttention,
           (url) => navigateRef.current(url),
         );
       }
@@ -214,5 +237,5 @@ export function useForegroundNotifications(): void {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [disabled, showInAppToast]);
+  }, [disabled, muteVisibleFloorAttention, showInAppToast]);
 }

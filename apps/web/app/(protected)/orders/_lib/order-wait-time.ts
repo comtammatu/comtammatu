@@ -1,4 +1,5 @@
 import { orders as ORDERS_COPY } from "@lib/messages/orders";
+import { KITCHEN_SLA } from "@lib/operational-sla";
 
 export type OrderAlertLevel = "normal" | "warning" | "critical";
 
@@ -30,9 +31,9 @@ export function computeOrderWaitInfo(
       : Math.max(0, Math.floor((endMs - startMs) / 60000));
 
   let alertLevel: OrderAlertLevel = "normal";
-  if (diffMinutes > 15) {
+  if (diffMinutes >= KITCHEN_SLA.URGENT_MINUTES) {
     alertLevel = "critical";
-  } else if (diffMinutes > 10) {
+  } else if (diffMinutes >= KITCHEN_SLA.WARNING_MINUTES) {
     alertLevel = "warning";
   }
 

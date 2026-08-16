@@ -56,14 +56,6 @@ export function hasKdsNewTicketSignalMetadata(args: {
   return batchId === null || args.kitchenBatches.has(batchId);
 }
 
-export function getKdsNewTicketToastTitle(
-  tone: KdsNewTicketSignalTone,
-): string {
-  if (tone === "kds-add-on") return "Món thêm mới";
-  if (tone === "kds-append") return "Phiếu gọi thêm mới";
-  return "Phiếu bếp mới";
-}
-
 export function pickHigherPriorityKdsSignalTone(
   current: KdsNewTicketSignalTone | null,
   next: KdsNewTicketSignalTone,
