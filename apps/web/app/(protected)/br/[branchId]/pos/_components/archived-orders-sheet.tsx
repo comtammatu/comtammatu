@@ -121,20 +121,28 @@ export function ArchivedOrdersSheet({
   }, [open, loadMore]);
 
   const handleConvert = (order: SessionOrder) => {
-    startAction(async () => {
+    // Confirm must stay outside useTransition. ConfirmDialogProvider setState
+    // in the same transition as printPending never paints, so the button
+    // spins and the dialog never appears.
+    void (async () => {
       const confirmed = await confirmConvertCashToVietQr({
         orderNumber: order.order_number,
         amount: Number(order.total_amount),
       });
       if (!confirmed) return;
-      setPendingOrderId(order.id);
-      const result = await convertCashToVietQrAndPrint(branchId, order.id);
-      setPendingOrderId(null);
-      if (result.type === "success") toast.success(result.message);
-      else if (result.type === "warning") toast.warning(result.message);
-      else toast.error(result.message);
-      reload();
-    });
+      startAction(async () => {
+        setPendingOrderId(order.id);
+        try {
+          const result = await convertCashToVietQrAndPrint(branchId, order.id);
+          if (result.type === "success") toast.success(result.message);
+          else if (result.type === "warning") toast.warning(result.message);
+          else toast.error(result.message);
+        } finally {
+          setPendingOrderId(null);
+          reload();
+        }
+      });
+    })();
   };
 
   const handlePrintVietQr = (order: SessionOrder) => {

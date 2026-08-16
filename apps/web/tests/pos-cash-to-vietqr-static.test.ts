@@ -157,6 +157,25 @@ test("paid VietQR receipts print transfer QR; cash receipts do not", () => {
   assert.match(receiptPrint, /v_keep_payment_qr/);
 });
 
+test("cash→VietQR confirm is outside the pending transition", () => {
+  assert.match(
+    bill,
+    /const confirmed = await confirmConvertCashToVietQr[\s\S]*startPrintTransition\(async/,
+  );
+  assert.doesNotMatch(
+    bill,
+    /startPrintTransition\(async \(\) => \{[\s\S]{0,240}confirmConvertCashToVietQr/,
+  );
+  assert.match(
+    archived,
+    /const confirmed = await confirmConvertCashToVietQr[\s\S]*startAction\(async/,
+  );
+  assert.doesNotMatch(
+    archived,
+    /startAction\(async \(\) => \{[\s\S]{0,240}confirmConvertCashToVietQr/,
+  );
+});
+
 test("Đơn hoàn thành exposes cash→VietQR convert and VietQR print", () => {
   assert.match(messages, /convertCashToVietQr: "Đổi sang VietQR"/);
   assert.match(messages, /printVietQr: "In VietQR"/);
