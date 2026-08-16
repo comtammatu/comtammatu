@@ -48,11 +48,11 @@ const managerPageSource = readSource(
   "app/(protected)/br/[branchId]/(operator)/menu-limits/page.tsx",
 );
 
-test("POS no longer exposes branch menu-limit management", () => {
-  assert.doesNotMatch(sessionActionsSource, /canManageMenuLimits/);
-  assert.doesNotMatch(sessionActionsSource, /branch_menu_limits/);
+test("POS header reuses the shared menu-limits drawer for manager and owner", () => {
+  assert.match(sessionActionsSource, /canManageMenuLimits: canManagePosMenuLimits\(role\)/);
+  assert.match(posHeaderSource, /canManageMenuLimits/);
+  assert.match(posHeaderSource, /BranchQuickMenuLimitSheet/);
   assert.doesNotMatch(posHeaderSource, /MenuLimitsSheet/);
-  assert.doesNotMatch(posHeaderSource, /canManageMenuLimits/);
   assert.doesNotMatch(posDesktopInnerSource, /menuLimitRows/);
   assert.doesNotMatch(posDesktopInnerSource, /MenuLimitRow/);
 });
@@ -137,7 +137,7 @@ test("branch menu-limit management remains on the manager day-control surface", 
   );
 });
 
-test("branch menu-limit drawer is the single editor for home and the menu-limits route", () => {
+test("branch menu-limit drawer is the single editor for home, menu-limits, and POS", () => {
   assert.match(managerPageSource, /BranchOperatorPage/);
   assert.match(managerPageSource, /BranchMenuLimitsHost/);
   assert.doesNotMatch(managerPageSource, /BranchOperatorPanel/);

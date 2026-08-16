@@ -67,12 +67,12 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
   → chọn món → thanh toán/in → success; recovery: lịch sử đơn (không sửa cart
   đã gửi), đóng ca khi lệch tiền.
 - **Archetype:** `BOARD`.
-- **Actor:** `cashier`; `branch_manager` khi hỗ trợ.
+- **Actor:** `cashier`; `branch_staff` (Phục vụ) gần-thu-ngân; `branch_manager` / `owner` khi hỗ trợ.
 - **Job:** Ghi đơn đúng, thu tiền đúng, đẩy KDS; kiểm soát ca & tiền mặt két.
 - **Goal:** Order → thanh toán → in hóa đơn dưới ~30s.
 - **Workflow:** Mở ca (tiền đầu) → chọn món/modifier → hình thức phục vụ → gửi KDS → thanh toán (tiền mặt/VietQR, mã giảm nếu có quyền) → kết ca & đối chiếu `cash variance`.
 - **Ưu tiên data:** Grid món + cart + trạng thái in/két + CTA thanh toán touch. **Không:** báo cáo tháng, ca khác, lương, tồn nguyên liệu.
-- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn.
+- **UX:** Mobile/tablet touch `≥44px`. Cart chỉ tạo đơn mới; sửa sau gửi/thanh toán qua Lịch sử đơn. **In tạm tính** chỉ Thu ngân / Quản lý / Chủ sở hữu — Phục vụ không thấy nút và server từ chối. **Giới hạn bán** (cùng drawer với `/menu-limits`) mở từ header POS, chỉ `branch_manager` và `owner` — chỉnh trần bán, cho phép bán thêm, bật/tắt món.
 
 ---
 
@@ -136,7 +136,7 @@ Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-in
     - Nhân viên (`cashier` / `chef` / `branch_staff`): `Hôm nay` · `Ca` · `Lịch ca` · `Hồ sơ`.
     - Quản lý (`branch_manager`; owner khi vào shell CN): `Hôm nay` · `Ca` · `Đội` · `Kho`. Tab **Kho** land `/stock` = 4 cửa hàng hóa trước (Kho hàng / Yêu cầu hàng / Kiểm kê phiên / Hao hụt) rồi list phiếu giao nhận (YCH + nhận). Phân công đếm / Phiếu đếm vào từ **Đội**. Không Tiêu Hao SX. Badge queue live.
     - Chuông = unread inbox. `Phản hồi` / `Kết ngày` trong `⋯` (theo ACL). **Không** `Điều hành` / `Giới hạn bán` trong overflow — giới hạn bán là CTA trên Hôm nay (cùng Drawer với `/menu-limits`). Avatar header vẫn mở Hồ sơ cho mọi role.
-  - Hub CN thứ tự: trạng thái ca (ẩn khi `not_required`) → **Chỉ tiêu doanh thu** (manager-like; mốc = chấm trên Progress) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits`); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
+  - Hub CN thứ tự: trạng thái ca (ẩn khi `not_required`) → **Chỉ tiêu doanh thu** (manager-like; mốc = chấm trên Progress) → **Cần duyệt** (khi > 0; preview + Xem thêm) → trạm **POS** / **KDS** (2 cột phone) → hàng **Giới hạn bán** + **Đơn hàng**. Không Màn gọi số trên home. Queue **không** GRN/SX (D093). **Giới hạn bán** là một `AppDrawer` (home + `/menu-limits` + header POS cho QL/Owner); Trần bán = nhập số, Cho phép bán thêm = Switch. Chỉ `branch_manager` và `owner` thấy và áp dụng.
   - **Exception hẹp (manager-like CN):** panel Doanh thu tháng | ngày + tiến độ chỉ tiêu với chấm mốc thưởng (sau trạng thái ca, trước queue). Cashier/chef/staff không thấy. Hub trung tâm không hiện doanh thu. Không badge chỉ tiêu trên hàng Đơn hàng.
   - `Ca` sở hữu ngày làm việc cá nhân (CN). Owner không thấy tab này; truy cập trực tiếp route gốc chuyển về `Đội`. Nhân viên: `/shift/schedule` và `/profile` là tab riêng; QL giữ lịch dưới shortcut trong `Ca` + avatar.
   - `Đội` mở hub 2 tab (`Ca hôm nay`, `Nhân viên`). Trên board: panel **Cần duyệt** chỉ Duyệt kết ca / Duyệt nghỉ khi có pending; panel **Quản lý đội** luôn hiện Phân công đếm + Phiếu đếm (badge khi chờ duyệt) cùng Phân ca / Chấm công. Workflow sâu gắn bottom-nav Đội qua `matchPrefixes` `/shift/roster|attendance|checkout-approvals|leave-approvals`.

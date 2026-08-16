@@ -304,6 +304,7 @@ export const pos = {
     closeShiftAria: "Chốt ca POS",
     closeShift: "Chốt ca",
     moreMenuAria: "Mở menu POS",
+    menuLimitsAria: "Giới hạn bán",
     employeePortal: "Ca của tôi",
   },
   tableGate: {

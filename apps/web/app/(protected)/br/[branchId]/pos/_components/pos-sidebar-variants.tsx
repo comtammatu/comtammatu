@@ -11,6 +11,7 @@ type SidebarContentProps = ComponentProps<typeof PosSidebarContent>;
 
 interface SidebarHeaderInputs {
   canCloseShift: boolean;
+  canManageMenuLimits: boolean;
   onShowCloseSession: () => void;
 }
 
@@ -23,6 +24,7 @@ export interface SplitSidebarProps extends SidebarHeaderInputs {
 /** Wide layout (xl+): cart + order-list side by side. */
 function SplitSidebarComponent({
   canCloseShift,
+  canManageMenuLimits,
   onShowCloseSession,
   isContextGate,
   sidebarContentProps,
@@ -45,6 +47,7 @@ function SplitSidebarComponent({
   const sessionTopBar = (
     <PosSessionTopBar
       canCloseShift={canCloseShift}
+      canManageMenuLimits={canManageMenuLimits}
       onShowCloseSession={onShowCloseSession}
     />
   );

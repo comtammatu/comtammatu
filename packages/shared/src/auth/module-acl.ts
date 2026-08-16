@@ -149,7 +149,8 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   pos: {
     path: "/br/*/pos",
-    // Waiter (branch_staff) is near-cashier on POS: order + pay + print, no void/cashbox/close.
+    // Waiter (branch_staff) is near-cashier on POS: order + pay, no
+    // provisional print / void / cashbox / close.
     allowedRoles: ["owner", "cashier", "branch_manager", "branch_staff"],
     label: getModuleLabelVi("pos"),
   },

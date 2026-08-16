@@ -110,7 +110,7 @@ test("local seed mirrors the canonical position template set", () => {
   );
   assert.match(
     devSeed,
-    /\('waiter', 'waiter', ARRAY\['hr:request_leave','orders:read','orders:write','pos:confirm_payment','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use'\]\)/,
+    /\('waiter', 'waiter', ARRAY\['hr:request_leave','orders:read','orders:write','pos:confirm_payment','pos:reprint_receipt','pos:send_kitchen','pos:use'\]\)/,
   );
   assert.match(
     devSeed,

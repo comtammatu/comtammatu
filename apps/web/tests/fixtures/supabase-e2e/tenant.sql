@@ -408,7 +408,7 @@ CROSS JOIN (VALUES
   ('kitchen_counter', 'kitchen_counter', ARRAY['hr:request_leave','kds:mark_ready','kds:use']),
   ('kitchen_helper', 'kitchen_helper', ARRAY['hr:request_leave']),
   ('grill_counter', 'grill_counter', ARRAY['hr:request_leave']),
-  ('waiter', 'waiter', ARRAY['hr:request_leave','orders:read','orders:write','pos:confirm_payment','pos:print','pos:reprint_receipt','pos:send_kitchen','pos:use']),
+  ('waiter', 'waiter', ARRAY['hr:request_leave','orders:read','orders:write','pos:confirm_payment','pos:reprint_receipt','pos:send_kitchen','pos:use']),
   ('cleaner', 'cleaner', ARRAY['hr:request_leave']),
   ('guard', 'guard', ARRAY['hr:request_leave']),
   ('accountant', 'accountant', ARRAY['finance:ap_pay','finance:expense_approve','finance:expense_create','finance:view','procurement:invoice_create','procurement:invoice_match','procurement:po_approve','procurement:po_create','procurement:price_list_read','procurement:read']),

@@ -12,7 +12,11 @@ import {
   probePermission,
 } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
-import { isPosBranchInScope } from "./_lib/auth";
+import {
+  canManagePosMenuLimits,
+  canPrintProvisionalBill,
+  isPosBranchInScope,
+} from "./_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -226,12 +230,18 @@ export async function fetchActiveSession(
 /* ─── fetchPosPermissionFlags ─── */
 
 /**
- * POS permission flags for the user on a branch (3 RPCs in parallel).
+ * POS permission flags for the user on a branch (permission RPCs in parallel).
  *
  * - `canOpenShift` (`pos:open_cashbox`): gates SessionGate at page level.
  * - `canCloseShift` (`pos:close_shift`): gates the close-shift button.
  * - `canConfirmCash` (`pos:confirm_payment`): gates the cash method on the
  *   bill — cash touches the physical drawer; e-wallets stay available.
+ * - `canPrintProvisional` (`pos:print` + cashier-counter role): gates
+ *   "In tạm tính". Waiter (`branch_staff`) is excluded even if a stale
+ *   grant remains.
+ * - `canManageMenuLimits` (owner / branch_manager): opens the daily
+ *   sales-limit drawer from the POS header. Mutations stay on the
+ *   menu-limits actions/RPC.
  * - `canSplitMerge` (tenant `pos_split_merge_enabled` setting): hides the
  *   split/merge entries when the feature is off, mirroring the split/merge RPC
  *   gate so the cashier never taps into a server reject.
@@ -241,12 +251,16 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canOpenShift: boolean;
   canCloseShift: boolean;
   canConfirmCash: boolean;
+  canPrintProvisional: boolean;
+  canManageMenuLimits: boolean;
   canSplitMerge: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
+    canPrintProvisional: false,
+    canManageMenuLimits: false,
     canSplitMerge: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
@@ -256,7 +270,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   if (!ctx) return deny;
   if (!isPosBranchInScope(ctx.claims, parsedBranchId.data)) return deny;
 
-  const [openRes, closeRes, cashRes, splitMergeRes] = await Promise.all([
+  const [openRes, closeRes, cashRes, printRes, splitMergeRes] = await Promise.all([
     ctx.supabase.rpc("has_permission", {
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
@@ -269,6 +283,10 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
     }),
+    ctx.supabase.rpc("has_permission", {
+      p_branch_id: parsedBranchId.data,
+      p_key: PERMISSION_KEYS.POS_PRINT,
+    }),
     ctx.supabase
       .from("system_settings")
       .select("value")
@@ -277,10 +295,16 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
       .maybeSingle(),
   ]);
 
+  const role = ctx.claims.user_role;
   return {
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
+    canPrintProvisional:
+      !printRes.error &&
+      printRes.data === true &&
+      canPrintProvisionalBill(role),
+    canManageMenuLimits: canManagePosMenuLimits(role),
     // Default ON when no row exists (matches the RPC COALESCE(...,'true')) but
     // fail CLOSED on a read error, like the sibling flags — the RPC stays the hard gate.
     canSplitMerge:

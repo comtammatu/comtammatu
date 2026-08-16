@@ -249,6 +249,8 @@ async function PosDesktopData({
       initialOpenOrderId={initialOpenOrderId}
       canCloseShift={permFlags.canCloseShift}
       canConfirmCash={permFlags.canConfirmCash}
+      canPrintProvisional={permFlags.canPrintProvisional}
+      canManageMenuLimits={permFlags.canManageMenuLimits}
       canSplitMerge={permFlags.canSplitMerge}
       initialPaymentMethods={initialPaymentMethods}
       initialVietQrConfig={initialVietQrConfig}

@@ -50,6 +50,20 @@ export function isPosBranchInScope(
   return claims.user_role === "owner" || claims.branch_id === branchId;
 }
 
+/** Counter roles that may print a provisional bill. Waiter (`branch_staff`) is excluded. */
+export function canPrintProvisionalBill(role: StaffRole): boolean {
+  return (
+    role === "owner" || role === "branch_manager" || role === "cashier"
+  );
+}
+
+/** Daily sales-limit editor on POS. Same roles as `branch_menu_limits`. */
+export function canManagePosMenuLimits(role: StaffRole): boolean {
+  return (MODULE_ACL.branch_menu_limits.allowedRoles as readonly StaffRole[]).includes(
+    role,
+  );
+}
+
 /**
  * POS operators allowed to void / cancel / reduce order flows. Mirrors
  * `MODULE_ACL.pos.allowedRoles` — kept as a named alias so refactoring the
@@ -107,9 +121,9 @@ export async function posUseAuth(
 
 /**
  * `customAuth` resolver for the cash confirm step. POS_CONFIRM_PAYMENT is
- * a tighter gate than POS_USE — staff with POS_USE + POS_PRINT but without POS_CONFIRM_PAYMENT can print
- * provisional bills but MUST NOT touch the cash drawer. Cashier and
- * branch_manager+ hold POS_CONFIRM_PAYMENT.
+ * a tighter gate than POS_USE — waiter (`branch_staff`) may confirm VietQR
+ * but MUST NOT touch the cash drawer. Cashier and branch_manager+ hold
+ * POS_CONFIRM_PAYMENT. Provisional print is a separate cashier-counter gate.
  *
  * VietQR paths keep `posUseAuth` instead because bank settlement does not
  * touch the physical cash drawer.

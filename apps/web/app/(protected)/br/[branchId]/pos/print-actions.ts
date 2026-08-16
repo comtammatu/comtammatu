@@ -7,6 +7,7 @@ import {
   getAuthContextWithAnyPermission,
   getAuthContextWithPermission,
 } from "../../_lib/auth";
+import { canPrintProvisionalBill } from "./_lib/auth";
 import { KITCHEN_PARTIAL_SEND_WARNING } from "./_lib/messages";
 import { createPayment } from "./payment-actions";
 
@@ -227,7 +228,9 @@ export async function printProvisionalBill(
     POS_ROLES,
     PERMISSION_KEYS.POS_PRINT,
   );
-  if (!ctx) return { success: false, error: "Không có quyền in" };
+  if (!ctx || !canPrintProvisionalBill(ctx.claims.user_role)) {
+    return { success: false, error: "Không có quyền in" };
+  }
 
   const { supabase, claims } = ctx;
 

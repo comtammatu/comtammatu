@@ -166,6 +166,8 @@ export function PosDesktopInner({
   categories: initialCategories,
   canCloseShift,
   canConfirmCash,
+  canPrintProvisional,
+  canManageMenuLimits,
   canSplitMerge,
   initialPaymentMethods,
   initialVietQrConfig,
@@ -175,6 +177,8 @@ export function PosDesktopInner({
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
+  canPrintProvisional: boolean;
+  canManageMenuLimits: boolean;
   canSplitMerge: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
@@ -1823,6 +1827,7 @@ export function PosDesktopInner({
   const sidebars = isTouchLayout ? null : (
     <SplitSidebar
       canCloseShift={canCloseShift}
+      canManageMenuLimits={canManageMenuLimits}
       onShowCloseSession={openCloseSession}
       isContextGate={!menuContextReady}
       sidebarContentProps={sidebarContentProps}
@@ -1835,6 +1840,7 @@ export function PosDesktopInner({
       {isTouchLayout ? (
         <PosSessionTopBar
           canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
           onBack={
@@ -2058,6 +2064,7 @@ export function PosDesktopInner({
         intent={billIntent}
         initialOrder={billInitialOrder}
         canConfirmCash={canConfirmCash}
+        canPrintProvisional={canPrintProvisional}
         initialPaymentMethods={initialPaymentMethods}
         initialVietQrConfig={initialVietQrConfig}
         initialHeaderSeed={billHeaderSeed}

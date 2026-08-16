@@ -81,6 +81,11 @@ interface BillReceiptProps {
    */
   canConfirmCash: boolean;
   /**
+   * Cashier-counter `pos:print`. Waiter (`branch_staff`) must not see
+   * "In tạm tính" even when a stale grant remains.
+   */
+  canPrintProvisional: boolean;
+  /**
    * Tenant-stable payment methods (cash + enabled e-wallets) seeded from RSC
    * `fetchPaymentMethodsForPos`. Stable for the entire shift — admin changes
    * trigger `revalidatePath('/br/[branchId]/pos', 'page')` to refresh seeds.
@@ -392,6 +397,7 @@ export function BillReceipt({
   intent = "payment",
   initialOrder,
   canConfirmCash,
+  canPrintProvisional,
   initialPaymentMethods,
   initialHeaderSeed,
   selfOrderPaymentRequestId = null,
@@ -1384,23 +1390,25 @@ export function BillReceipt({
 
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-popover px-4 py-3">
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="touch"
-                className="flex-1"
-                onClick={() => void handlePrintProvisional()}
-                disabled={
-                  isPending || methodPending || actionPending || printPending
-                }
-              >
-                {printPending ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconReceipt data-icon="inline-start" />
-                )}
-                {messages.pos.payment.printProvisional}
-              </Button>
+              {canPrintProvisional ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="touch"
+                  className="flex-1"
+                  onClick={() => void handlePrintProvisional()}
+                  disabled={
+                    isPending || methodPending || actionPending || printPending
+                  }
+                >
+                  {printPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <IconReceipt data-icon="inline-start" />
+                  )}
+                  {messages.pos.payment.printProvisional}
+                </Button>
+              ) : null}
               {!isWaitingForVietQr ? (
                 <Button
                   type="button"
