@@ -113,6 +113,7 @@ test("Finance cockpit actual food cost follows the VN business-day window", () =
     /\.lt\("inventory_valuation_events\.effective_at",\s*endIso\)/,
   );
   assert.match(cockpit, /const period = getVNDateString\(event\.effective_at\)/);
+  assert.match(cockpit, /fetchAllPagedRows/);
   assert.doesNotMatch(cockpit, /\.gte\("created_at",\s*startIso\)/);
   assert.doesNotMatch(cockpit, /function nextDate/);
 });
@@ -129,6 +130,7 @@ test("Finance expenses actual food cost follows the VN business-day window", () 
     expenseActions,
     /\.gte\("inventory_valuation_events\.effective_at",\s*startIso\)/,
   );
+  assert.match(expenseActions, /fetchAllPagedRows/);
   assert.doesNotMatch(expenseActions, /function nextDate/);
 });
 

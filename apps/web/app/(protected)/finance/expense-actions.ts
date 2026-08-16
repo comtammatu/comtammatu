@@ -32,6 +32,7 @@ import {
 } from "./_lib/expense-categories";
 import { FINANCE_LOCATIONS, type FinanceLocation } from "./_lib/finance-params";
 import { addPaidOrdersWithoutRecipeNeed } from "./_lib/food-cost-coverage";
+import { fetchAllPagedRows } from "./_lib/supabase-page";
 import {
   applySalesBranchesFilter,
   fetchSalesBranchIds,
@@ -656,11 +657,12 @@ export async function fetchActualFoodCostSummary(params: {
   if (!monetary.client) {
     return { success: false, error: "Không có quyền xem giá vốn." };
   }
+  const client = monetary.client;
   const { startIso, endIso } = getVNDateRangeUtc(
     params.startDate,
     params.endDate,
   );
-  const { data: cutover, error: cutoverError } = await monetary.client
+  const { data: cutover, error: cutoverError } = await client
     .from("inventory_valuation_cutovers")
     .select("status")
     .eq("tenant_id", claims.tenant_id)
@@ -676,7 +678,7 @@ export async function fetchActualFoodCostSummary(params: {
   }
 
   const salesBranchIds = await fetchSalesBranchIds(
-    monetary.client as never,
+    client as never,
     claims.tenant_id,
   );
   const allowedBranchIds =
@@ -693,33 +695,38 @@ export async function fetchActualFoodCostSummary(params: {
   }
   const allowedBranchSet = new Set(allowedBranchIds);
 
-  const eventQuery = monetary.client
-    .from("inventory_valuation_events")
-    .select(
-      "value_delta, stock_movements!inner ( order_id, issue_id, branch_id )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("terminal_bucket", "food_cost")
-    .gte("effective_at", startIso)
-    .lt("effective_at", endIso)
-    .in("stock_movements.branch_id", allowedBranchIds);
-
-  const repriceQuery = monetary.client
-    .from("inventory_value_allocations")
-    .select(
-      "source_origin_id, allocated_value, inventory_valuation_events!inner ( effective_at, event_type )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("allocation_bucket", "food_cost")
-    .in("inventory_valuation_events.event_type", [
-      "invoice_reprice",
-      "credit_reprice",
-    ])
-    .gte("inventory_valuation_events.effective_at", startIso)
-    .lt("inventory_valuation_events.effective_at", endIso);
   const [eventsResult, repriceResult] = await Promise.all([
-    eventQuery,
-    repriceQuery,
+    fetchAllPagedRows((from, to) =>
+      client
+        .from("inventory_valuation_events")
+        .select(
+          "value_delta, stock_movements!inner ( order_id, issue_id, branch_id )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("terminal_bucket", "food_cost")
+        .gte("effective_at", startIso)
+        .lt("effective_at", endIso)
+        .in("stock_movements.branch_id", allowedBranchIds)
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAllPagedRows((from, to) =>
+      client
+        .from("inventory_value_allocations")
+        .select(
+          "source_origin_id, allocated_value, inventory_valuation_events!inner ( effective_at, event_type )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("allocation_bucket", "food_cost")
+        .in("inventory_valuation_events.event_type", [
+          "invoice_reprice",
+          "credit_reprice",
+        ])
+        .gte("inventory_valuation_events.effective_at", startIso)
+        .lt("inventory_valuation_events.effective_at", endIso)
+        .order("id")
+        .range(from, to),
+    ),
   ]);
   if (eventsResult.error || repriceResult.error) {
     return { success: false, error: "Không tải được giá vốn món." };
@@ -754,14 +761,19 @@ export async function fetchActualFoodCostSummary(params: {
     const originIds = [
       ...new Set((repriceResult.data ?? []).map((row) => row.source_origin_id)),
     ];
-    const { data: lineageRows, error: lineageError } = await monetary.client
-      .from("inventory_value_allocations")
-      .select(
-        "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id, order_id ) )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .in("source_origin_id", originIds)
-      .eq("inventory_valuation_events.terminal_bucket", "food_cost");
+    const { data: lineageRows, error: lineageError } = await fetchAllPagedRows(
+      (from, to) =>
+        client
+          .from("inventory_value_allocations")
+          .select(
+            "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id, order_id ) )",
+          )
+          .eq("tenant_id", claims.tenant_id)
+          .in("source_origin_id", originIds)
+          .eq("inventory_valuation_events.terminal_bucket", "food_cost")
+          .order("id")
+          .range(from, to),
+    );
     if (lineageError) {
       return { success: false, error: "Không tải được giá vốn món." };
     }

@@ -12,6 +12,7 @@ test("paid orders with no recipe lines count as covered food cost", () => {
   );
   assert.match(source, /itemMenuItemIds\.every\(\(id\) => !recipeMenuItemIds\.has\(id\)\)/);
   assert.match(source, /addPaidOrdersWithoutRecipeNeed/);
+  assert.match(source, /fetchAllPagedRows/);
 });
 
 test("paid sale consumption no longer waits for kitchen dispatch", () => {

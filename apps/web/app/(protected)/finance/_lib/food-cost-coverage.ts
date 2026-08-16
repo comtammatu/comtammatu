@@ -1,3 +1,5 @@
+import { fetchAllPagedRows } from "./supabase-page";
+
 /** Paid orders with no recipe lines are 0đ food cost — they still cover the KPI. */
 export function orderHasNoRecipeNeed(
   itemMenuItemIds: readonly number[],
@@ -17,6 +19,8 @@ type FilterBuilder<T> = {
   in: (column: string, values: readonly unknown[]) => FilterBuilder<T>;
   gte: (column: string, value: unknown) => FilterBuilder<T>;
   lt: (column: string, value: unknown) => FilterBuilder<T>;
+  order: (column: string) => FilterBuilder<T>;
+  range: (from: number, to: number) => FilterBuilder<T>;
 };
 
 function asFilter<T>(query: unknown): FilterBuilder<T> {
@@ -51,24 +55,28 @@ export async function addPaidOrdersWithoutRecipeNeed({
 }): Promise<void> {
   if (allowedBranchIds.length === 0) return;
 
-  const { data: payments, error: payError } = await asResult(
-    asFilter<{
-      order_id: number | null;
-      orders: { id: number } | Array<{ id: number }> | null;
-    }>(
-      supabase
-        .from("payments")
-        .select(
-          "order_id, orders!inner(id, branch_id, status, payment_status, tenant_id)",
-        ),
-    )
-      .eq("status", "completed")
-      .eq("orders.tenant_id", tenantId)
-      .eq("orders.payment_status", "paid")
-      .neq("orders.status", "cancelled")
-      .in("orders.branch_id", allowedBranchIds)
-      .gte("paid_at", startIso)
-      .lt("paid_at", endIso),
+  const { data: payments, error: payError } = await fetchAllPagedRows((from, to) =>
+    asResult(
+      asFilter<{
+        order_id: number | null;
+        orders: { id: number } | Array<{ id: number }> | null;
+      }>(
+        supabase
+          .from("payments")
+          .select(
+            "order_id, orders!inner(id, branch_id, status, payment_status, tenant_id)",
+          ),
+      )
+        .eq("status", "completed")
+        .eq("orders.tenant_id", tenantId)
+        .eq("orders.payment_status", "paid")
+        .neq("orders.status", "cancelled")
+        .in("orders.branch_id", allowedBranchIds)
+        .gte("paid_at", startIso)
+        .lt("paid_at", endIso)
+        .order("id")
+        .range(from, to),
+    ),
   );
   if (payError || !payments) return;
 
@@ -82,13 +90,17 @@ export async function addPaidOrdersWithoutRecipeNeed({
   if (missing.size === 0) return;
 
   const missingIds = [...missing];
-  const { data: items, error: itemError } = await asResult(
-    asFilter<{ order_id: number; menu_item_id: number }>(
-      supabase.from("order_items").select("order_id, menu_item_id"),
-    )
-      .eq("tenant_id", tenantId)
-      .in("order_id", missingIds)
-      .neq("status", "cancelled"),
+  const { data: items, error: itemError } = await fetchAllPagedRows((from, to) =>
+    asResult(
+      asFilter<{ order_id: number; menu_item_id: number }>(
+        supabase.from("order_items").select("order_id, menu_item_id"),
+      )
+        .eq("tenant_id", tenantId)
+        .in("order_id", missingIds)
+        .neq("status", "cancelled")
+        .order("id")
+        .range(from, to),
+    ),
   );
   if (itemError) return;
 

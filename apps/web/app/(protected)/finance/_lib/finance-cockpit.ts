@@ -30,6 +30,7 @@ import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
 import { isOperatingExpenseCategory } from "./expense-categories";
 import { addPaidOrdersWithoutRecipeNeed } from "./food-cost-coverage";
+import { fetchAllPagedRows } from "./supabase-page";
 import {
   applySalesBranchesFilter,
   fetchSalesBranchIds,
@@ -658,10 +659,11 @@ async function fetchActualFoodCostSnapshot({
   if (allowedBranchIds.length === 0) return { rows: [], orderCount: 0 };
   const allowedBranchSet = new Set(allowedBranchIds);
 
-  const { data, error } = await supabase
-    .from("inventory_value_allocations")
-    .select(
-      `
+  const { data, error } = await fetchAllPagedRows((from, to) =>
+    supabase
+      .from("inventory_value_allocations")
+      .select(
+        `
         source_origin_id,
         allocated_value,
         inventory_valuation_events!inner (
@@ -671,11 +673,14 @@ async function fetchActualFoodCostSnapshot({
           stock_movements ( branch_id, order_id )
         )
       `,
-    )
-    .eq("tenant_id", tenantId)
-    .eq("allocation_bucket", "food_cost")
-    .gte("inventory_valuation_events.effective_at", startIso)
-    .lt("inventory_valuation_events.effective_at", endIso);
+      )
+      .eq("tenant_id", tenantId)
+      .eq("allocation_bucket", "food_cost")
+      .gte("inventory_valuation_events.effective_at", startIso)
+      .lt("inventory_valuation_events.effective_at", endIso)
+      .order("id")
+      .range(from, to),
+  );
   if (error) return { rows: [], orderCount: 0 };
 
   const repriceRows = (data ?? []).filter((row) => {
@@ -699,10 +704,12 @@ async function fetchActualFoodCostSnapshot({
           .filter((id): id is number => id != null),
       ),
     ];
-    const { data: lineage, error: lineageError } = await supabase
-      .from("inventory_value_allocations")
-      .select(
-        `
+    const { data: lineage, error: lineageError } = await fetchAllPagedRows(
+      (from, to) =>
+        supabase
+          .from("inventory_value_allocations")
+          .select(
+            `
           source_origin_id,
           allocated_quantity,
           inventory_valuation_events!inner (
@@ -710,10 +717,13 @@ async function fetchActualFoodCostSnapshot({
             stock_movements!inner ( branch_id, order_id )
           )
         `,
-      )
-      .eq("tenant_id", tenantId)
-      .in("source_origin_id", originIds)
-      .eq("inventory_valuation_events.terminal_bucket", "food_cost");
+          )
+          .eq("tenant_id", tenantId)
+          .in("source_origin_id", originIds)
+          .eq("inventory_valuation_events.terminal_bucket", "food_cost")
+          .order("id")
+          .range(from, to),
+    );
     if (lineageError) return { rows: [], orderCount: 0 };
     for (const allocation of lineage ?? []) {
       if (allocation.source_origin_id == null) continue;
