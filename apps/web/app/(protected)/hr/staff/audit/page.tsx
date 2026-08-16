@@ -16,6 +16,8 @@ import {
   withHrBranchScope,
 } from "@/lib/hr-scope";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
   searchParams: Promise<{
     action?: string;

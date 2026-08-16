@@ -16,6 +16,8 @@ import {
 } from "@/(protected)/br/[branchId]/(operator)/stock/requests/new/stock-request-editor";
 import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested-order-qty";
 
+export const dynamic = "force-dynamic";
+
 type IngredientJoin = {
   id: number;
   name: string;

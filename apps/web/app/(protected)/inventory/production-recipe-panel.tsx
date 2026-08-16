@@ -442,34 +442,35 @@ function RecipeDialogFields({
           }
           required
         />
-        <div className="flex flex-col gap-2 md:col-span-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                {INVENTORY_VI.productionRecipeLinesLabel}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {INVENTORY_VI.ingredientCountBadge(recipeLineFields.length)}
-              </span>
-            </div>
-            {canManageCatalog ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickRawIngredientDialogOpen(true)}
-              >
-                <IconPlus data-icon="inline-start" />
-                {INVENTORY_VI.createRawIngredient}
-              </Button>
-            ) : null}
+      </div>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-foreground">
+              {INVENTORY_VI.productionRecipeLinesLabel}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {INVENTORY_VI.ingredientCountBadge(recipeLineFields.length)}
+            </span>
           </div>
-          {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {INVENTORY_VI.noRawIngredientInCatalog}
-            </p>
+          {canManageCatalog ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setQuickRawIngredientDialogOpen(true)}
+            >
+              <IconPlus data-icon="inline-start" />
+              {INVENTORY_VI.createRawIngredient}
+            </Button>
           ) : null}
         </div>
+        {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {INVENTORY_VI.noRawIngredientInCatalog}
+          </p>
+        ) : null}
       </div>
 
       <IngredientLinesEditor

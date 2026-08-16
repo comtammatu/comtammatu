@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
+import { Frame } from "@comtammatu/ui/components/frame";
 import { Item } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Alert, AlertDescription, AlertTitle } from "@comtammatu/ui/components/alert";
 import { confirm } from "@/components/confirm-dialog";
@@ -184,7 +186,7 @@ export function ProductionDetailClient({
       : `${formatQty(run.actual_quantity)} ${unit}`.trim();
 
   const body = (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <Item
         variant="outline"
         className="grid shrink-0 grid-cols-2 gap-4 p-4 text-xs sm:grid-cols-3 lg:grid-cols-5"
@@ -256,38 +258,60 @@ export function ProductionDetailClient({
         title="Định mức đã chốt theo lệnh"
         description={detailCopy.sectionLineCount(run.lines.length)}
         headerHint="Lệnh giữ nguyên định mức này dù công thức được sửa sau đó."
+        contentFlush
       >
-        <div className="divide-y border">
-          {run.lines.map((line) => (
-            <div
-              key={line.ingredient_id}
-              className="grid items-center gap-2 px-3 py-2 text-sm sm:grid-cols-[1fr_auto_auto]"
-            >
-              <span className="font-medium">{line.ingredient_name}</span>
-              <span className="text-muted-foreground">
-                Kế hoạch {formatQty(line.planned_quantity)} {line.entry_unit_name}
-              </span>
-              {run.status === "in_progress" ? (
-                <div className="flex w-40 items-center gap-2">
-                  <QuantityInput
-                    value={actualIngredients[line.ingredient_id] ?? ""}
-                    onValueChange={(value) =>
-                      setActualIngredients((current) => ({
-                        ...current,
-                        [line.ingredient_id]: value,
-                      }))
-                    }
-                    min="0"
-                    maxFractionDigits={3}
-                  />
-                  <span className="text-xs text-muted-foreground">{line.entry_unit_name}</span>
+        <Frame className="border-0 rounded-none overflow-hidden">
+          <div className="flex gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="min-w-0 flex-1">Nguyên liệu</span>
+            <span className="w-36 shrink-0 text-right">Kế hoạch</span>
+            <span className="w-36 shrink-0 text-right">Thực tế</span>
+          </div>
+          <ScrollArea className="h-72">
+            <div className="divide-y">
+              {run.lines.map((line) => (
+                <div
+                  key={line.ingredient_id}
+                  className="flex flex-col gap-2 px-3 py-2.5 text-sm sm:flex-row sm:items-center"
+                >
+                  <span className="min-w-0 flex-1 font-medium text-foreground">
+                    {line.ingredient_name}
+                  </span>
+                  <span className="w-36 shrink-0 text-left sm:text-right tabular-nums text-muted-foreground text-xs sm:text-sm">
+                    {formatQty(line.planned_quantity)} {line.entry_unit_name}
+                  </span>
+                  <div className="w-36 shrink-0 flex items-center justify-start sm:justify-end gap-1.5">
+                    {run.status === "in_progress" ? (
+                      <div className="flex w-full items-center gap-1.5">
+                        <QuantityInput
+                          value={actualIngredients[line.ingredient_id] ?? ""}
+                          onValueChange={(value) =>
+                            setActualIngredients((current) => ({
+                              ...current,
+                              [line.ingredient_id]: value,
+                            }))
+                          }
+                          min="0"
+                          maxFractionDigits={3}
+                          className="h-8 text-xs"
+                          aria-label={`Thực tế ${line.ingredient_name}`}
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {line.entry_unit_name}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="tabular-nums font-medium text-foreground">
+                        {line.actual_quantity == null
+                          ? "—"
+                          : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <span>{line.actual_quantity == null ? "—" : `${formatQty(line.actual_quantity)} ${line.entry_unit_name}`}</span>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          </ScrollArea>
+        </Frame>
       </AppSection>
 
       {run.status === "in_progress" ? (
@@ -303,7 +327,7 @@ export function ProductionDetailClient({
               min="0"
               maxFractionDigits={3}
             />
-            <span className="text-sm text-muted-foreground">{run.entry_unit_name}</span>
+            <span className="text-sm font-medium text-muted-foreground">{run.entry_unit_name}</span>
           </div>
         </AppSection>
       ) : null}
@@ -336,7 +360,9 @@ export function ProductionDetailClient({
             </Button>
           }
         >
-          <div />
+          <p className="text-sm text-muted-foreground">
+            Lệnh sản xuất đã hoàn tất. Bạn có thể tạo phiếu điều chuyển để xuất thành phẩm tới các chi nhánh bán hàng.
+          </p>
         </AppSection>
       ) : null}
 
@@ -347,31 +373,33 @@ export function ProductionDetailClient({
   );
 
   const dialogFooter = (
-    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-      <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-        {ACTIONS_VI.close}
-      </Button>
-      {run.status === "draft" || run.status === "in_progress" ? (
-        <>
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div>
+        {run.status === "draft" || run.status === "in_progress" ? (
           <Button
             type="button"
-            variant="outline"
+            variant="destructive"
             onClick={() => void handleCancel()}
             disabled={isPending}
           >
-            Hủy
+            Hủy lệnh
           </Button>
-          {run.status === "draft" ? (
-            <Button type="button" onClick={handleStart} disabled={isPending}>
-              Bắt đầu sản xuất
-            </Button>
-          ) : (
-            <Button type="button" onClick={handleComplete} disabled={isPending}>
-              Hoàn thành
-            </Button>
-          )}
-        </>
-      ) : null}
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+          {ACTIONS_VI.close}
+        </Button>
+        {run.status === "draft" ? (
+          <Button type="button" onClick={handleStart} disabled={isPending}>
+            Bắt đầu sản xuất
+          </Button>
+        ) : run.status === "in_progress" ? (
+          <Button type="button" onClick={handleComplete} disabled={isPending}>
+            Hoàn thành
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 

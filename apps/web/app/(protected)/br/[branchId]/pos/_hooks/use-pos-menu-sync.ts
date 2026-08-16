@@ -12,7 +12,6 @@ import {
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { fetchMenuForPos } from "../actions";
 import type { MenuCategory } from "../pos-menu-types";
-import { toast } from "@comtammatu/ui/components/sonner";
 
 const SELF_ORDER_OPS_TABLES = new Set([
   "self_order_requests",
@@ -55,14 +54,11 @@ export function usePosMenuSync({
         return null;
       }
 
-      const runMenuRefetch = async ({ notify = true } = {}) => {
+      const runMenuRefetch = async () => {
         try {
           const res = await fetchMenuForPos(branchId, true);
           if (res.success && Array.isArray(res.data)) {
             setCategoriesRef.current(res.data as MenuCategory[]);
-            if (notify) {
-              toast.success("Thực đơn POS đã được cập nhật tự động.");
-            }
           }
         } catch (err) {
           console.error("Refetch POS menu failed:", err);
@@ -71,7 +67,7 @@ export function usePosMenuSync({
       // Coalesce bursts (a pos + stock_levels event storm) to <=2 full-menu
       // refetches, since the menu is the heaviest POS fetch.
       const handleMenuRefetch = makeRealtimeCoalescer(
-        () => runMenuRefetch({ notify: true }),
+        runMenuRefetch,
         undefined,
         { metricName: "pos.menu.refresh" },
       );
@@ -105,7 +101,7 @@ export function usePosMenuSync({
           return;
         }
         // Reconnect catch-up: menu silent re-sync + self-order snapshot refresh.
-        void runMenuRefetch({ notify: false });
+        void runMenuRefetch();
         onSelfOrderSignalRef.current?.();
       });
       return channel;

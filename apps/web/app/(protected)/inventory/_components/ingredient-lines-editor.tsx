@@ -31,6 +31,7 @@ import {
   MultiSelectCombobox,
   QuantityInput,
 } from "@/components/form";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   getDefaultIngredientUnit,
   getIngredientUnitOptions,
@@ -237,26 +238,28 @@ export function IngredientLinesEditor<T extends FieldValues>({
           <div />
         </div>
 
-        <div className="divide-y">
-          {rows.map((row, index) => (
-            <IngredientLineRow<T>
-              key={row.id}
-              control={control}
-              setValue={setValue}
-              name={name}
-              index={index}
-              ingredients={ingredients}
-              ingredientMap={ingredientMap}
-              rowError={lineErrors?.[index]}
-              canRemove={rows.length > 1}
-              unitEditable={unitEditable}
-              onRemove={() => remove(index)}
-              onIngredientChange={(value) =>
-                handleIngredientChange(index, value)
-              }
-            />
-          ))}
-        </div>
+        <ScrollArea className="h-80">
+          <div className="divide-y">
+            {rows.map((row, index) => (
+              <IngredientLineRow<T>
+                key={row.id}
+                control={control}
+                setValue={setValue}
+                name={name}
+                index={index}
+                ingredients={ingredients}
+                ingredientMap={ingredientMap}
+                rowError={lineErrors?.[index]}
+                canRemove={rows.length > 1}
+                unitEditable={unitEditable}
+                onRemove={() => remove(index)}
+                onIngredientChange={(value) =>
+                  handleIngredientChange(index, value)
+                }
+              />
+            ))}
+          </div>
+        </ScrollArea>
       </Frame>
     </div>
   );
@@ -301,9 +304,26 @@ function IngredientLineRow<T extends FieldValues>({
   const unitOptions = getLineUnitOptions(selectedIngredient);
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 p-2 md:p-0">
+      <div className="flex items-center justify-between gap-2 px-1 text-xs font-medium text-muted-foreground md:hidden">
+        <span>#{index + 1}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label={INVENTORY_VI.removeRow}
+        >
+          <IconTrash className="size-4 text-muted-foreground" />
+        </Button>
+      </div>
+
       <div className={cn("grid items-center gap-2 px-3 py-2", GRID_TEMPLATE)}>
         <div className="min-w-0 md:col-span-3">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {PRODUCT_VI.rawIngredient}
+          </span>
           <Controller
             control={control}
             name={ingredientName}
@@ -333,6 +353,9 @@ function IngredientLineRow<T extends FieldValues>({
         </div>
 
         <div className="min-w-0 md:col-span-2">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {FORM_VI.quantity}
+          </span>
           <Controller
             control={control}
             name={quantityName}
@@ -357,6 +380,9 @@ function IngredientLineRow<T extends FieldValues>({
         </div>
 
         <div className="min-w-0 md:col-span-2">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {FORM_VI.unit}
+          </span>
           {unitEditable && unitOptions.length > 0 ? (
             <Controller
               control={control}
@@ -424,6 +450,9 @@ function IngredientLineRow<T extends FieldValues>({
         </div>
 
         <div className="min-w-0 md:col-span-4">
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {FORM_VI.notes}
+          </span>
           <Controller
             control={control}
             name={noteName}
@@ -446,6 +475,7 @@ function IngredientLineRow<T extends FieldValues>({
           onClick={onRemove}
           disabled={!canRemove}
           aria-label={INVENTORY_VI.removeRow}
+          className="hidden md:inline-flex"
         >
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>

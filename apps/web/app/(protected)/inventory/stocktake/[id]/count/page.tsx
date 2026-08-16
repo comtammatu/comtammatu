@@ -18,7 +18,7 @@ interface StocktakeCountPageContentProps {
   routeBase?: string;
 }
 
-export async function StocktakeCountPageContent({
+async function StocktakeCountPageContent({
   stocktakeId,
   searchParams,
   routeBranchId,

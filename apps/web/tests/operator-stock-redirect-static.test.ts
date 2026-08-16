@@ -1068,7 +1068,7 @@ test("operator count assignments render branch-native inside the branch operator
   assert.match(branchData, /resolveInventoryListScope/);
   assert.match(branchData, /PERMISSION_KEYS\.INVENTORY_COUNT_ASSIGN/);
 
-  assert.match(ownerPage, /export async function CountAssignmentsPageContent/);
+  assert.match(ownerPage, /async function CountAssignmentsPageContent/);
   assert.doesNotMatch(ownerPage, /routeBranchId|embedded/);
   assert.doesNotMatch(client, /embedded/);
   assert.match(client, /<AppPage width="xwide"/);

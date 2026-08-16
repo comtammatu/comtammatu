@@ -1118,19 +1118,6 @@ export function PosDesktopInner({
           const orderId = result.data.order_id;
           const orderNumber = result.data.order_number;
           const priorityWarning = result.meta?.priorityWarning;
-          const prioritySet = result.meta?.prioritySet === true;
-          toast.success(
-            `${prioritySet ? "Đã gửi bếp ưu tiên" : "Đã gửi bếp"} — #${orderNumber}`,
-            {
-              action: {
-                label: "Thanh toán",
-                onClick: () => {
-                  setBillIntent("payment");
-                  setBillOrderId(orderId);
-                },
-              },
-            },
-          );
           if (typeof priorityWarning === "string") {
             toast.warning(priorityWarning);
           }
@@ -1138,6 +1125,12 @@ export function PosDesktopInner({
           if (typeof discountWarning === "string") {
             toast.warning(discountWarning);
           }
+          toast.success(`Đã tạo đơn ${orderNumber}`, {
+            action: {
+              label: "Thanh toán",
+              onClick: () => openBill(orderId, "payment"),
+            },
+          });
 
           resetDailyLimitHoldToken("pos_cart");
           clearCart();
@@ -1351,13 +1344,8 @@ export function PosDesktopInner({
             quantity,
           });
           if (r.success) {
-            toast.success("Đã cập nhật món");
             if (r.data?.printWarning) {
               toast.warning(r.data.printWarning);
-            } else if (r.data?.quantityPrintQueued) {
-              toast.success("Đã in phiếu báo bếp", { duration: 2000 });
-            } else if (r.data?.wasSentToKitchen) {
-              toast.message("Phiếu bếp đã in trước đó — báo bếp cập nhật");
             }
             void refreshOperational();
             // closeCustomizerAndMaybeReopenDetail clears editing state +
@@ -2021,8 +2009,6 @@ export function PosDesktopInner({
             toast.message(
               `Bỏ qua ${String(skippedCount)} món đã rời thực đơn.`,
             );
-          } else {
-            toast.success("Đã sao chép vào giỏ");
           }
           if (priceChangedCount > 0) {
             toast.warning(

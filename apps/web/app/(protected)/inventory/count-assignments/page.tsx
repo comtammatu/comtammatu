@@ -52,7 +52,7 @@ function countLocationLabel(
   return `${branchName} - ${suffix}`;
 }
 
-export async function CountAssignmentsPageContent({
+async function CountAssignmentsPageContent({
   searchParams,
   initialAssignmentId = null,
 }: CountAssignmentsPageContentProps) {
