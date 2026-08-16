@@ -55,7 +55,7 @@ Mỗi hàng là *gia đình* — chi tiết màn con nằm ở §2.x được tr
 | **Employee** `/me/*` | NV company không gắn Branch (Owner denied) | Hub hồ sơ / lịch / phép / lương / chấm công — không phải nơi làm việc hàng ngày | Avatar → `/me` hub → child; punch từ `/` command bar hoặc `/me/clock` | Hiện dữ liệu của mình; ẩn chọn NV/CN, duyệt đội, CTA `/work`, module L0 không được cấp | Parent §2.4B; LANDING ItemGroup. Exemplar: `me/page.tsx` |
 | **Settings** `/settings/*` (+ `/br/…/settings`) | Owner (L0); BM trên settings CN | Cấu hình ít đụng hàng ngày — không phải việc ca | LANDING settings → panel general/payments/printers; CN: bàn/POS/KDS/máy in | Hiện form cấu hình; ẩn KPI vận hành, queue bán hàng, tồn kho sống | Parent §2.11; LANDING + SETTINGS-PANEL. Exemplar L0: `settings/(tenant)/general/page.tsx`; printers LANDING: `settings/printers/page.tsx`; CN: `br/…/settings/page.tsx` |
 
-Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Khuyến mãi / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2.
+Chi tiết inventory routing CN: [`branch-route-inventory.md`](./branch-route-inventory.md). Menu / Khuyến mãi / Orders / Branches / Feedback L0 là sibling `control_surface` — cùng spine Quản trị; không nhân bản bảng ở đây trừ khi màn có contract riêng trong §2. `/branches` chỉ quản lý Chi nhánh (`branch_kind=branch`); không liệt kê Kho Tổng hay Bếp Trung Tâm.
 
 ---
 

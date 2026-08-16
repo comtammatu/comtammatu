@@ -32,11 +32,7 @@ import {
   ItemHeader,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  ACTIVE_STATE_LABELS_VI,
-  getSiteKindLabelVi,
-  resolveSiteKind,
-} from "@comtammatu/shared/labels";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { matchesSearch } from "@lib/search";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
@@ -49,6 +45,7 @@ import { useFormControlSize } from "@/components/form/control-size";
 import { RowActionsMenu } from "@/components/row-actions-menu";
 
 import { messages } from "@lib/messages";
+
 export interface BranchRow {
   id: number;
   name: string;
@@ -57,7 +54,6 @@ export interface BranchRow {
   phone: string | null;
   google_review_url: string | null;
   is_active: boolean | null;
-  branch_kind: string | null;
 }
 
 interface BranchTableProps {
@@ -101,13 +97,12 @@ export function BranchTable({ branches }: BranchTableProps) {
 
   function renderBranchActions(branch: BranchRow) {
     const isActive = branch.is_active !== false;
-    const isBranchSite = resolveSiteKind(branch) === "branch";
 
     return (
       <RowActionsMenu
         triggerSize={controlSize === "touch" ? "icon-touch" : "icon"}
         items={[
-          ...(isActive && isBranchSite
+          ...(isActive
             ? [
                 {
                   key: "pos",
@@ -195,8 +190,6 @@ export function BranchTable({ branches }: BranchTableProps) {
           >
             {filtered.map((branch) => {
               const isActive = branch.is_active !== false;
-              const siteKind = resolveSiteKind(branch);
-              const isBranchSite = siteKind === "branch";
 
               return (
                 <Item
@@ -218,9 +211,6 @@ export function BranchTable({ branches }: BranchTableProps) {
                   </ItemHeader>
                   <ItemContent className="basis-full gap-2">
                     <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline">
-                        {getSiteKindLabelVi(siteKind)}
-                      </Badge>
                       <Badge variant={isActive ? "default" : "outline"}>
                         {isActive
                           ? ACTIVE_STATE_LABELS_VI.active
@@ -231,95 +221,76 @@ export function BranchTable({ branches }: BranchTableProps) {
                     <ItemDescription>{branch.phone || "—"}</ItemDescription>
                   </ItemContent>
                   <ItemFooter className="grid grid-cols-2 gap-2 border-t pt-3">
-                    {isBranchSite ? (
-                      <>
-                        <Button
-                          size={controlSize === "touch" ? "touch" : "default"}
-                          className="w-full"
-                          aria-label={`${copy.openBranch.long}: ${branch.name}`}
-                          disabled={!isActive}
-                          render={
-                            isActive ? (
-                              <Link href={`/br/${branch.id}`} />
-                            ) : undefined
-                          }
-                        >
-                          <IconArrowUpRight data-icon="inline-start" />
-                          {copy.openBranch.short}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size={controlSize === "touch" ? "touch" : "default"}
-                          className="w-full"
-                          aria-label={`${copy.openSettings.long}: ${branch.name}`}
-                          disabled={!isActive}
-                          render={
-                            isActive ? (
-                              <Link href={`/br/${branch.id}/settings`} />
-                            ) : undefined
-                          }
-                        >
-                          <IconSliders data-icon="inline-start" />
-                          {copy.openSettings.short}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size={controlSize === "touch" ? "touch" : "default"}
-                          className="w-full"
-                          aria-label={`${copy.networkGateway.long}: ${branch.name}`}
-                          disabled={!isActive}
-                          onClick={() => setNetworkBranch(branch)}
-                        >
-                          <IconShield data-icon="inline-start" />
-                          {copy.networkGateway.short}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size={controlSize === "touch" ? "touch" : "default"}
-                          className="w-full"
-                          aria-label={`${copy.selfOrder.long}: ${branch.name}`}
-                          disabled={!isActive}
-                          render={
-                            isActive ? (
-                              <Link href={`/br/${branch.id}/settings/tables`} />
-                            ) : undefined
-                          }
-                        >
-                          <IconQrCode data-icon="inline-start" />
-                          {copy.selfOrder.short}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size={controlSize === "touch" ? "touch" : "default"}
-                          className="w-full"
-                          aria-label={`${copy.feedback.long}: ${branch.name}`}
-                          disabled={!isActive}
-                          render={
-                            isActive ? (
-                              <Link href={`/br/${branch.id}/feedback`} />
-                            ) : undefined
-                          }
-                        >
-                          <IconMessageCircle data-icon="inline-start" />
-                          {copy.feedback.short}
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size={controlSize === "touch" ? "touch" : "default"}
-                        className="col-span-2 w-full"
-                        aria-label={`${copy.openInventory.long}: ${branch.name}`}
-                        disabled={!isActive}
-                        render={
-                          isActive ? (
-                            <Link href={`/inventory?branch=${branch.id}`} />
-                          ) : undefined
-                        }
-                      >
-                        <IconArrowUpRight data-icon="inline-start" />
-                        {copy.openInventory.short}
-                      </Button>
-                    )}
+                    <Button
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="w-full"
+                      aria-label={`${copy.openBranch.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      render={
+                        isActive ? (
+                          <Link href={`/br/${branch.id}`} />
+                        ) : undefined
+                      }
+                    >
+                      <IconArrowUpRight data-icon="inline-start" />
+                      {copy.openBranch.short}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="w-full"
+                      aria-label={`${copy.openSettings.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      render={
+                        isActive ? (
+                          <Link href={`/br/${branch.id}/settings`} />
+                        ) : undefined
+                      }
+                    >
+                      <IconSliders data-icon="inline-start" />
+                      {copy.openSettings.short}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="w-full"
+                      aria-label={`${copy.networkGateway.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      onClick={() => setNetworkBranch(branch)}
+                    >
+                      <IconShield data-icon="inline-start" />
+                      {copy.networkGateway.short}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="w-full"
+                      aria-label={`${copy.selfOrder.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      render={
+                        isActive ? (
+                          <Link href={`/br/${branch.id}/settings/tables`} />
+                        ) : undefined
+                      }
+                    >
+                      <IconQrCode data-icon="inline-start" />
+                      {copy.selfOrder.short}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size={controlSize === "touch" ? "touch" : "default"}
+                      className="w-full"
+                      aria-label={`${copy.feedback.long}: ${branch.name}`}
+                      disabled={!isActive}
+                      render={
+                        isActive ? (
+                          <Link href={`/br/${branch.id}/feedback`} />
+                        ) : undefined
+                      }
+                    >
+                      <IconMessageCircle data-icon="inline-start" />
+                      {copy.feedback.short}
+                    </Button>
                   </ItemFooter>
                 </Item>
               );

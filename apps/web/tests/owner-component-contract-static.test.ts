@@ -201,7 +201,7 @@ test("shared recovery navigation owns touch targets and focus visibility", () =>
   assert.match(globalError, /minHeight: "44px"/);
 });
 
-test("Owner monitors use DataTable while the branch launcher keeps a responsive, site-aware action grid", () => {
+test("Owner monitors use DataTable while the branch launcher keeps a responsive sales-branch action grid", () => {
   for (const file of [PRINT_JOBS, STAFF_AUDIT_TABLE]) {
     const source = read(file);
     assert.match(source, /@\/components\/data-table\/data-table/);
@@ -215,10 +215,12 @@ test("Owner monitors use DataTable while the branch launcher keeps a responsive,
     branchLauncher,
     /grid grid-cols-1 gap-3(?: p-3)? md:grid-cols-2 xl:grid-cols-3/,
   );
-  assert.match(branchLauncher, /resolveSiteKind\(branch\)/);
-  assert.match(branchLauncher, /\.\.\.\(isActive && isBranchSite/);
+  assert.match(branchLauncher, /\.\.\.\(isActive/);
   assert.match(branchLauncher, /href=\{`\/br\/\$\{branch\.id\}`\}/);
-  assert.match(
+  assert.doesNotMatch(branchLauncher, /resolveSiteKind/);
+  assert.doesNotMatch(branchLauncher, /getSiteKindLabelVi/);
+  assert.doesNotMatch(branchLauncher, /isBranchSite/);
+  assert.doesNotMatch(
     branchLauncher,
     /href=\{`\/inventory\?branch=\$\{branch\.id\}`\}/,
   );
@@ -238,6 +240,7 @@ test("Owner branch administration distinguishes load failure from an empty list"
   const source = read(BRANCHES_PAGE);
 
   assert.match(source, /const \{ data: branches, error \} = await supabase/);
+  assert.match(source, /\.eq\("branch_kind", "branch"\)/);
   assert.match(
     source,
     /if \(error\)[\s\S]*<AppEmptyState[\s\S]*mode="error"[\s\S]*branchesLoadFailed/,

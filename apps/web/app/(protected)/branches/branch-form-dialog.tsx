@@ -13,7 +13,7 @@ const branchSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, { error: "Tên điểm vận hành không được trống" }),
+    .min(1, { error: "Tên chi nhánh không được trống" }),
   code: branchCodeSchema,
   address: z
     .string()

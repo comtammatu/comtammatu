@@ -6,5 +6,5 @@ export const branchCodeSchema = z
   .string()
   .trim()
   .regex(BRANCH_CODE_PATTERN, {
-    error: "Mã điểm vận hành gồm 2–4 chữ cái in hoa",
+    error: "Mã chi nhánh gồm 2–4 chữ cái in hoa",
   });

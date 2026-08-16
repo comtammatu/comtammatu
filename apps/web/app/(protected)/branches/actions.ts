@@ -18,7 +18,7 @@ const optionalText = z.preprocess(
 );
 
 const branchSchema = z.object({
-  name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
+  name: z.string().min(1, { error: "Tên chi nhánh không được để trống" }),
   address: optionalText,
   phone: optionalText,
   googleReviewUrl: optionalText,
@@ -84,19 +84,18 @@ export const createBranch = withFormAction(
       if (error.code === "23505") {
         return {
           success: false,
-          error: "Tên hoặc mã điểm vận hành đã tồn tại",
+          error: "Tên hoặc mã chi nhánh đã tồn tại",
         };
       }
       if (error.code === "42703") {
         return {
           success: false,
-          error:
-            "Hệ thống chưa sẵn sàng để tạo hoặc sửa loại điểm vận hành.",
+          error: "Hệ thống chưa sẵn sàng để tạo hoặc sửa chi nhánh.",
         };
       }
       return {
         success: false,
-        error: "Không thể tạo điểm vận hành. Vui lòng thử lại.",
+        error: "Không thể tạo chi nhánh. Vui lòng thử lại.",
       };
     }
 
@@ -128,31 +127,36 @@ export const updateBranch = withFormAction(
       };
     }
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("branches")
       .update({
         name: data.name,
         address: data.address || null,
         phone: data.phone || null,
         google_review_url: googleReviewUrl,
-        branch_kind: "branch",
       })
       .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch")
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       console.error("[branches/actions:updateBranch] Update branch error:", error);
       if (error.code === "23505") {
-        return { success: false, error: "Tên điểm vận hành đã tồn tại" };
+        return { success: false, error: "Tên chi nhánh đã tồn tại" };
       }
       if (error.code === "42703") {
         return {
           success: false,
-          error:
-            "Hệ thống chưa sẵn sàng để tạo hoặc sửa loại điểm vận hành.",
+          error: "Hệ thống chưa sẵn sàng để tạo hoặc sửa chi nhánh.",
         };
       }
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
+    }
+
+    if (!updated) {
+      return { success: false, error: "Chi nhánh không tồn tại" };
     }
 
     revalidateSurfacePath("/branches");
@@ -173,17 +177,19 @@ export const toggleBranchActive = withAction(
       .select("is_active")
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id)
-      .single();
+      .eq("branch_kind", "branch")
+      .maybeSingle();
 
     if (!branch) {
-      return { success: false, error: "Điểm vận hành không tồn tại" };
+      return { success: false, error: "Chi nhánh không tồn tại" };
     }
 
     const { error } = await supabase
       .from("branches")
       .update({ is_active: !(branch.is_active ?? true) })
       .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch");
 
     if (error) {
       console.error("[branches/actions:toggleBranchActive] Update branch is_active status error:", error);
