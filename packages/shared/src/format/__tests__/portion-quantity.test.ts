@@ -12,10 +12,10 @@ test("formatPortionQuantity prefixes portion count as Nx", () => {
   assert.equal(formatPortionQuantity(null), "1x");
 });
 
-test("formatSidePortionLabel always shows per-portion suffix xN", () => {
-  assert.equal(formatSidePortionLabel("Trứng", 1), "Trứng x1");
+test("formatSidePortionLabel returns clean name for quantity <= 1 and xN suffix for quantity > 1", () => {
+  assert.equal(formatSidePortionLabel("Trứng", 1), "Trứng");
   assert.equal(formatSidePortionLabel("Trứng", 4), "Trứng x4");
-  assert.equal(formatSidePortionLabel("Trứng"), "Trứng x1");
+  assert.equal(formatSidePortionLabel("Trứng"), "Trứng");
 });
 
 test("sidePortionQuantity falls back to one for missing or invalid values", () => {

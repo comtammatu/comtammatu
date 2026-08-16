@@ -27,7 +27,8 @@ test("TicketRowMeta renders side badges with distinct semantic chart tones", () 
     }),
   );
 
-  assert.match(html, /Canh thêm x1/);
+  assert.match(html, /Canh thêm/);
+  assert.doesNotMatch(html, /Canh thêm x1/);
   assert.match(html, /Trứng ốp la x2/);
   assert.match(html, /bg-chart-1\/15/);
   assert.match(html, /border-chart-1\/40/);

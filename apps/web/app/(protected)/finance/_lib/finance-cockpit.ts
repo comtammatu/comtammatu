@@ -624,6 +624,7 @@ async function fetchActualFoodCostSnapshot({
   startDate,
   endDate,
   valuationActive,
+  salesBranchIds,
 }: {
   supabase: SupabaseClient | null;
   tenantId: number;
@@ -631,6 +632,8 @@ async function fetchActualFoodCostSnapshot({
   startDate: string;
   endDate: string;
   valuationActive?: boolean;
+  /** Chi nhánh bán only — never Kho Tổng / Bếp Trung Tâm. */
+  salesBranchIds: readonly number[];
 }): Promise<ActualFoodCostSnapshot> {
   if (!supabase) return { rows: [], orderCount: 0 };
   const { startIso, endIso } = getVNDateRangeUtc(startDate, endDate);
@@ -643,6 +646,16 @@ async function fetchActualFoodCostSnapshot({
     );
     return { rows: [], orderCount: 0 };
   }
+
+  // Giá vốn món = POS sale_consumption at sales Chi nhánh only.
+  const allowedBranchIds =
+    branchId != null
+      ? salesBranchIds.includes(branchId)
+        ? [branchId]
+        : []
+      : [...salesBranchIds];
+  if (allowedBranchIds.length === 0) return { rows: [], orderCount: 0 };
+  const allowedBranchSet = new Set(allowedBranchIds);
 
   const { data, error } = await supabase
     .from("inventory_value_allocations")
@@ -693,7 +706,7 @@ async function fetchActualFoodCostSnapshot({
           allocated_quantity,
           inventory_valuation_events!inner (
             terminal_bucket,
-            stock_movements!inner ( branch_id )
+            stock_movements!inner ( branch_id, order_id )
           )
         `,
       )
@@ -716,10 +729,15 @@ async function fetchActualFoodCostSnapshot({
       };
       const quantity = toNumber(allocation.allocated_quantity);
       weight.total += quantity;
-      weight.byBranch.set(
-        movement.branch_id,
-        (weight.byBranch.get(movement.branch_id) ?? 0) + quantity,
-      );
+      if (
+        movement.order_id != null &&
+        allowedBranchSet.has(movement.branch_id)
+      ) {
+        weight.byBranch.set(
+          movement.branch_id,
+          (weight.byBranch.get(movement.branch_id) ?? 0) + quantity,
+        );
+      }
       branchWeights.set(allocation.source_origin_id, weight);
     }
   }
@@ -727,7 +745,7 @@ async function fetchActualFoodCostSnapshot({
   const rows = new Map<string, FoodCostRow>();
   const orderIds = new Set<number>();
   const addCost = (period: string, rowBranchId: number, value: number) => {
-    if (branchId != null && rowBranchId !== branchId) return;
+    if (!allowedBranchSet.has(rowBranchId)) return;
     const key = `${period}:${rowBranchId}`;
     const current =
       rows.get(key) ??
@@ -755,8 +773,10 @@ async function fetchActualFoodCostSnapshot({
       event.event_type !== "invoice_reprice" &&
       event.event_type !== "credit_reprice"
     ) {
-      if (movement?.branch_id == null) continue;
-      if (movement.order_id != null) orderIds.add(movement.order_id);
+      // POS-only at sales Chi nhánh — skip manual slips and Kho Tổng / Bếp TT.
+      if (movement?.branch_id == null || movement.order_id == null) continue;
+      if (!allowedBranchSet.has(movement.branch_id)) continue;
+      orderIds.add(movement.order_id);
       addCost(
         period,
         movement.branch_id,
@@ -934,7 +954,7 @@ export async function fetchFinanceCockpit(
   const monetaryClient = canReadRequestedValuation ? monetary.client : null;
 
   const [salesBranchIds, valuationActive] = await Promise.all([
-    params.location === "branches"
+    includesBranchData
       ? fetchSalesBranchIds(supabase as never, claims.tenant_id)
       : Promise.resolve(null),
     includesBranchData && monetaryClient
@@ -994,6 +1014,7 @@ export async function fetchFinanceCockpit(
           startDate: resolved.start,
           endDate: resolved.end,
           valuationActive,
+          salesBranchIds: salesBranchIds ?? [],
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
     includesBranchData && resolved.compare
@@ -1004,6 +1025,7 @@ export async function fetchFinanceCockpit(
           startDate: resolved.compare.start,
           endDate: resolved.compare.end,
           valuationActive,
+          salesBranchIds: salesBranchIds ?? [],
         })
       : Promise.resolve({ rows: [], orderCount: 0 }),
     canReadRequestedValuation && includesBranchData

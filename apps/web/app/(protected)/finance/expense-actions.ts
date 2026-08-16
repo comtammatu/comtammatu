@@ -631,9 +631,9 @@ export async function fetchActualFoodCostSummary(params: {
   endDate: string;
 }): Promise<
   ActionResult<{
-    /** Sale-linked food cost (order_id) + sale-lineage reprice. */
+    /** POS sale_consumption at sales Chi nhánh only (+ sale-lineage reprice). */
     total: number;
-    /** Manual phiếu tiêu hao / ops consumption without a paid order. */
+    /** Manual phiếu tiêu hao at Chi nhánh — not Giá vốn món. */
     operatingConsumption: number;
     orderCount: number;
   }>
@@ -674,7 +674,25 @@ export async function fetchActualFoodCostSummary(params: {
     };
   }
 
-  let eventQuery = monetary.client
+  const salesBranchIds = await fetchSalesBranchIds(
+    monetary.client as never,
+    claims.tenant_id,
+  );
+  const allowedBranchIds =
+    params.branchId != null
+      ? salesBranchIds.includes(params.branchId)
+        ? [params.branchId]
+        : []
+      : salesBranchIds;
+  if (allowedBranchIds.length === 0) {
+    return {
+      success: true,
+      data: { total: 0, operatingConsumption: 0, orderCount: 0 },
+    };
+  }
+  const allowedBranchSet = new Set(allowedBranchIds);
+
+  const eventQuery = monetary.client
     .from("inventory_valuation_events")
     .select(
       "value_delta, stock_movements!inner ( order_id, issue_id, branch_id )",
@@ -682,11 +700,8 @@ export async function fetchActualFoodCostSummary(params: {
     .eq("tenant_id", claims.tenant_id)
     .eq("terminal_bucket", "food_cost")
     .gte("effective_at", startIso)
-    .lt("effective_at", endIso);
-
-  if (params.branchId != null) {
-    eventQuery = eventQuery.eq("stock_movements.branch_id", params.branchId);
-  }
+    .lt("effective_at", endIso)
+    .in("stock_movements.branch_id", allowedBranchIds);
 
   const repriceQuery = monetary.client
     .from("inventory_value_allocations")
@@ -716,11 +731,13 @@ export async function fetchActualFoodCostSummary(params: {
     const movement = Array.isArray(row.stock_movements)
       ? row.stock_movements[0]
       : row.stock_movements;
+    if (movement?.branch_id == null || !allowedBranchSet.has(movement.branch_id)) {
+      continue;
+    }
     const amount = Math.abs(Number(row.value_delta));
-    // Paid-order POS consumption stays in Giá vốn món; manual phiếu tiêu hao
-    // (issue without order) is Tiêu hao vận hành — same food_cost bucket,
-    // different owner-facing card.
-    if (movement?.order_id != null) {
+    // Giá vốn món = POS (order_id). Manual phiếu tiêu hao = tiêu hao vận hành,
+    // never folded into Giá vốn món / lãi gộp.
+    if (movement.order_id != null) {
       orderIds.add(movement.order_id);
       saleFoodCostTotal += amount;
     } else {
@@ -731,15 +748,15 @@ export async function fetchActualFoodCostSummary(params: {
     (sum, row) => sum + Number(row.allocated_value),
     0,
   );
-  let scopedRepriceTotal = repriceTotal;
-  if (params.branchId != null && (repriceResult.data?.length ?? 0) > 0) {
+  let scopedRepriceTotal: number;
+  if ((repriceResult.data?.length ?? 0) > 0) {
     const originIds = [
       ...new Set((repriceResult.data ?? []).map((row) => row.source_origin_id)),
     ];
     const { data: lineageRows, error: lineageError } = await monetary.client
       .from("inventory_value_allocations")
       .select(
-        "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id ) )",
+        "source_origin_id, allocated_quantity, inventory_valuation_events!inner ( terminal_bucket, stock_movements!inner ( branch_id, order_id ) )",
       )
       .eq("tenant_id", claims.tenant_id)
       .in("source_origin_id", originIds)
@@ -765,7 +782,11 @@ export async function fetchActualFoodCostSummary(params: {
       };
       const quantity = Number(row.allocated_quantity);
       current.total += quantity;
-      if (movement?.branch_id === params.branchId) {
+      if (
+        movement?.branch_id != null &&
+        movement.order_id != null &&
+        allowedBranchSet.has(movement.branch_id)
+      ) {
         current.selectedBranch += quantity;
       }
       quantities.set(originId, current);
@@ -773,11 +794,14 @@ export async function fetchActualFoodCostSummary(params: {
     scopedRepriceTotal = (repriceResult.data ?? []).reduce((sum, row) => {
       const quantity = quantities.get(Number(row.source_origin_id));
       if (!quantity || quantity.total <= 0) return sum;
+      // Only the POS/sales-CN share of reprice counts as Giá vốn món.
       return (
         sum +
         (Number(row.allocated_value) * quantity.selectedBranch) / quantity.total
       );
     }, 0);
+  } else {
+    scopedRepriceTotal = repriceTotal;
   }
   // Invoice/credit reprice adjusts inventory that already flowed to food cost;
   // attribute it to sale food cost (not operating slips).

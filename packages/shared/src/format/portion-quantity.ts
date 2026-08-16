@@ -16,12 +16,17 @@ export function formatPortionQuantity(quantity: QuantityValue): string {
 }
 
 /**
- * Side label with per-portion suffix: `Trứng x1` means one egg on each
- * portion, never a line total.
+ * Side label with per-portion suffix: only shows `xN` when quantity > 1.
+ * When quantity is 1 (or omitted), returns the clean side item name.
  */
 export function formatSidePortionLabel(
   name: string,
   quantityPerPortion?: QuantityValue,
 ): string {
-  return `${name} x${String(sidePortionQuantity(quantityPerPortion))}`;
+  const qty = sidePortionQuantity(quantityPerPortion);
+  if (qty <= 1) {
+    return name;
+  }
+  return `${name} x${String(qty)}`;
 }
+

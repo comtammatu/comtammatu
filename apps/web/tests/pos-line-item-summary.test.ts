@@ -28,12 +28,13 @@ function buildItem(overrides: Partial<CartItem> = {}): CartItem {
   };
 }
 
-test("POS side summary does not multiply per-portion side quantity by parent item quantity", () => {
+test("POS side summary displays clean side name for single portion without multiplying", () => {
   const summary = getPosLineItemSummary(buildItem());
 
-  assert.deepEqual(summary.sides, ["Trứng x1"]);
-  assert.equal(summary.options, "+ Trứng x1");
+  assert.deepEqual(summary.sides, ["Trứng"]);
+  assert.equal(summary.options, "+ Trứng");
   assert.ok(!summary.sides.includes("Trứng x5"));
+  assert.ok(!summary.sides.includes("Trứng x1"));
 });
 
 test("POS side summary keeps side quantity as per portion when greater than one", () => {

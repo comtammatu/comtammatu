@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Minus as IconMinus, Plus as IconPlus, X as IconX } from "lucide-react";
-import { SELF_ORDER_VI } from "@comtammatu/shared/messages";
+import { MENU_VI, SELF_ORDER_VI } from "@comtammatu/shared/messages";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -68,7 +68,7 @@ function hydrateFromDraft(
 ): {
   variant: SelfOrderMenuVariant | null;
   modifierIds: Set<number>;
-  sideQuantities: Map<number, number>;
+  sideIds: Set<number>;
   note: string;
   quantity: number;
 } {
@@ -76,10 +76,10 @@ function hydrateFromDraft(
     return {
       variant: item.menu_item_variants[0] ?? null,
       modifierIds: new Set(),
-      sideQuantities: new Map(
+      sideIds: new Set(
         item.menu_item_available_sides
           .filter((side) => side.is_default)
-          .map((side) => [side.side_item.id, 1] as const),
+          .map((side) => side.side_item.id),
       ),
       note: "",
       quantity: 1,
@@ -104,14 +104,14 @@ function hydrateFromDraft(
           item.menu_item_modifiers.some((modifier) => modifier.id === id),
         ),
     ),
-    sideQuantities: new Map(
+    sideIds: new Set(
       draft.sides
         .filter((side) =>
           item.menu_item_available_sides.some(
             (available) => available.side_item.id === side.side_item_id,
           ),
         )
-        .map((side) => [side.side_item_id, side.quantity] as const),
+        .map((side) => side.side_item_id),
     ),
     note: draft.note ?? "",
     quantity: draft.quantity,
@@ -132,9 +132,9 @@ export function SelfOrderItemSheet({
   const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
     new Set(),
   );
-  const [selectedSideQuantities, setSelectedSideQuantities] = useState<
-    Map<number, number>
-  >(new Map());
+  const [selectedSideIds, setSelectedSideIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
   const wasOpenRef = useRef(false);
@@ -159,7 +159,7 @@ export function SelfOrderItemSheet({
       const hydrated = hydrateFromDraft(item, initialDraft);
       setSelectedVariant(hydrated.variant);
       setSelectedModifierIds(hydrated.modifierIds);
-      setSelectedSideQuantities(hydrated.sideQuantities);
+      setSelectedSideIds(hydrated.sideIds);
       setNote(hydrated.note);
       setQuantity(Math.min(hydrated.quantity, effectiveMaxQuantity));
       return;
@@ -194,9 +194,9 @@ export function SelfOrderItemSheet({
     const availableSideIds = new Set(
       item.menu_item_available_sides.map((side) => side.side_item.id),
     );
-    setSelectedSideQuantities((current) => {
-      const next = new Map(
-        [...current].filter(([id]) => availableSideIds.has(id)),
+    setSelectedSideIds((current) => {
+      const next = new Set(
+        [...current].filter((id) => availableSideIds.has(id)),
       );
       return next.size === current.size ? current : next;
     });
@@ -224,15 +224,12 @@ export function SelfOrderItemSheet({
   const sideTotal = useMemo(
     () =>
       item.menu_item_available_sides
-        .filter((side) => selectedSideQuantities.has(side.side_item.id))
+        .filter((side) => selectedSideIds.has(side.side_item.id))
         .reduce(
-          (sum, side) =>
-            sum +
-            Number(side.side_item.base_price) *
-              (selectedSideQuantities.get(side.side_item.id) ?? 1),
+          (sum, side) => sum + Number(side.side_item.base_price),
           0,
         ),
-    [item.menu_item_available_sides, selectedSideQuantities],
+    [item.menu_item_available_sides, selectedSideIds],
   );
   const total = (unitPrice + modifierTotal + sideTotal) * quantity;
   const isEditing = initialDraft != null;
@@ -258,30 +255,12 @@ export function SelfOrderItemSheet({
   }
 
   function toggleSide(id: number) {
-    setSelectedSideQuantities((current) => {
-      const next = new Map(current);
+    setSelectedSideIds((current) => {
+      const next = new Set(current);
       if (next.has(id)) {
         next.delete(id);
       } else {
-        next.set(id, 1);
-      }
-      return next;
-    });
-  }
-
-  function updateSideQuantity(id: number, delta: number) {
-    setSelectedSideQuantities((current) => {
-      const existing = current.get(id);
-      if (existing == null) {
-        if (delta <= 0) return current;
-        return new Map(current).set(id, 1);
-      }
-      const nextQuantity = Math.min(20, Math.max(0, existing + delta));
-      const next = new Map(current);
-      if (nextQuantity === 0) {
-        next.delete(id);
-      } else {
-        next.set(id, nextQuantity);
+        next.add(id);
       }
       return next;
     });
@@ -303,12 +282,12 @@ export function SelfOrderItemSheet({
         price: Number(modifier.price),
       }));
     const sides = item.menu_item_available_sides
-      .filter((side) => selectedSideQuantities.has(side.side_item.id))
+      .filter((side) => selectedSideIds.has(side.side_item.id))
       .map((side) => ({
         side_item_id: side.side_item.id,
         name: side.side_item.name,
         price: Number(side.side_item.base_price),
-        quantity: selectedSideQuantities.get(side.side_item.id) ?? 1,
+        quantity: 1,
         is_default: side.is_default,
       }));
     const trimmedNote = note.trim();
@@ -452,14 +431,18 @@ export function SelfOrderItemSheet({
                   </FieldLegend>
                   <ItemGroup className="gap-2">
                     {item.menu_item_available_sides.map((side) => {
-                      const sideQuantity =
-                        selectedSideQuantities.get(side.side_item.id) ?? 0;
-                      const selected = sideQuantity > 0;
+                      const selected = selectedSideIds.has(side.side_item.id);
                       return (
                         <Item
                           key={side.id}
                           variant="outline"
-                          className="flex-nowrap items-center gap-3 rounded-lg p-3 transition-colors hover:bg-accent"
+                          className="cursor-pointer rounded-lg p-3 hover:bg-accent"
+                          render={
+                            <FieldLabel
+                              htmlFor={`self-order-side-${item.id}-${side.id}`}
+                              className="w-full items-center gap-3 font-normal"
+                            />
+                          }
                         >
                           <Checkbox
                             id={`self-order-side-${item.id}-${side.id}`}
@@ -470,48 +453,17 @@ export function SelfOrderItemSheet({
                             }
                           />
                           <ItemContent className="min-w-0">
-                            <FieldLabel
-                              htmlFor={`self-order-side-${item.id}-${side.id}`}
-                              className="cursor-pointer text-base font-medium leading-snug"
-                            >
+                            <ItemTitle className="text-base font-medium">
                               {side.side_item.name}
-                            </FieldLabel>
-                            <span className="font-mono text-sm font-semibold tabular-nums text-primary">
-                              +{formatVND(Number(side.side_item.base_price))}
-                            </span>
+                              {side.is_default ? (
+                                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                                  ({MENU_VI.sideDefault})
+                                </span>
+                              ) : null}
+                            </ItemTitle>
                           </ItemContent>
-                          <ItemActions className="shrink-0 gap-1 self-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-touch"
-                              disabled={!selected}
-                              aria-label={SELF_ORDER_VI.decreaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, -1)
-                              }
-                            >
-                              <IconMinus className="size-3" />
-                            </Button>
-                            <span className="w-6 text-center text-sm font-semibold tabular-nums">
-                              {sideQuantity}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-touch"
-                              disabled={sideQuantity >= 20}
-                              aria-label={SELF_ORDER_VI.increaseSideAria(
-                                side.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(side.side_item.id, 1)
-                              }
-                            >
-                              <IconPlus className="size-3" />
-                            </Button>
+                          <ItemActions className="shrink-0 font-mono text-sm font-semibold tabular-nums text-primary">
+                            +{formatVND(Number(side.side_item.base_price))}
                           </ItemActions>
                         </Item>
                       );

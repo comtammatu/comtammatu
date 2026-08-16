@@ -6,7 +6,7 @@ import {
   sidePortionQuantity,
 } from "../app/(protected)/br/[branchId]/kds/_lib/side-format";
 
-test("formatSideLabel shows default side quantity per main item portion", () => {
+test("formatSideLabel shows clean side name for default side quantity <= 1", () => {
   assert.equal(
     formatSideLabel({
       side_item_id: 10,
@@ -14,7 +14,7 @@ test("formatSideLabel shows default side quantity per main item portion", () => 
       price: 0,
       is_default: false,
     }),
-    "Canh thêm x1",
+    "Canh thêm",
   );
 });
 

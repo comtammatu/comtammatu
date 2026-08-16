@@ -9,13 +9,16 @@ Finance Basic is the default `/finance` experience (`Tổng quan tài chính`).
 Period-result formula (two rows):
 
 - **`Doanh thu thuần`**: paid-order merchandise value after discount, before VAT.
-- **`Giá vốn món`**: recorded ingredient cost for paid orders in the period.
-  Runtime source is `inventory_value_allocations` (`allocation_bucket = food_cost`)
-  when `inventory_valuation_cutovers.status = active`; otherwise the landing KPI
-  is empty. `/finance/food-cost` **`Định mức/phần`** is theoretical
-  (`fetchFoodCost`: current menu recipes x sold qty x selling-branch warehouse
-  WAC). Catalog `/inventory/menu-recipes` portion cost is `Kho gốc` WAC only.
-  Do not copy one WAC key onto another. See `docs/ref/inventory.md` § 3.
+- **`Giá vốn món`**: recorded POS ingredient cost for paid orders at sales
+  `Chi nhánh` only (`branch_kind = branch`, `order_id` present). Runtime source is
+  `inventory_value_allocations` (`allocation_bucket = food_cost`) when
+  `inventory_valuation_cutovers.status = active`; otherwise the landing KPI is
+  empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, and `Bếp Trung Tâm`.
+  `/finance/food-cost` **`Định mức/phần`** is theoretical (`fetchFoodCost`:
+  current menu recipes x sold qty x selling-branch warehouse WAC). Catalog
+  `/inventory/menu-recipes` portion cost prefers `Kho gốc` WAC, then `Chi nhánh` /
+  last-known movement. Do not copy one WAC key onto POS/Finance. See
+  `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
 - **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
   repairs, consumables/small tools, marketing, fees/tax, other). Excludes
@@ -41,7 +44,7 @@ Opening cannot be edited/deleted; corrections use
 `create_finance_fund_adjustment`. Legacy `cash_opening_*` / `bank_opening_*`
 settings are frozen evidence only — never a calculation fallback; their
 presence blocks interactive init. Operator UI must not say "cutover": default
-boundary is "Ngay bây giờ"; "Từ 0 giờ ngày bắt đầu" only when evidence proves
+boundary is `Ngay bây giờ`; `Từ 0 giờ ngày bắt đầu` only when evidence proves
 that boundary.
 
 `bank_transactions` is bank-ledger source of truth. Signed SePay webhooks and

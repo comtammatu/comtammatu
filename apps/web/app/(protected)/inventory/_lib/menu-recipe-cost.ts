@@ -96,15 +96,35 @@ export function resolveMenuRecipeUnitCost({
   ingredientId,
   sourceSiteKind,
   sourceSiteWacMap,
+  branchFallbackWacMap,
+  lastKnownSourceWacMap,
 }: {
   ingredientId: number;
   sourceSiteKind: string | null | undefined;
   sourceSiteWacMap: Readonly<Record<string, number>>;
+  /** Live positive WAC at sales Chi nhánh when Kho gốc is depleted to 0. */
+  branchFallbackWacMap?: Readonly<Record<number, number>>;
+  /** Last positive movement unit_cost at Kho gốc (site × ingredient). */
+  lastKnownSourceWacMap?: Readonly<Record<string, number>>;
 }): number | null {
   if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) return null;
-  const sourceWac =
-    sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
-  return isPositiveUnitCost(sourceWac) ? sourceWac : null;
+  const sourceKey = menuRecipeSourceWacKey(sourceSiteKind, ingredientId);
+  const sourceWac = sourceSiteWacMap[sourceKey];
+  if (isPositiveUnitCost(sourceWac)) return sourceWac;
+
+  const otherSite: MenuRecipeSourceSiteKind =
+    sourceSiteKind === "central_supply" ? "central_kitchen" : "central_supply";
+  const otherWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey(otherSite, ingredientId)];
+  if (isPositiveUnitCost(otherWac)) return otherWac;
+
+  const branchWac = branchFallbackWacMap?.[ingredientId];
+  if (isPositiveUnitCost(branchWac)) return branchWac;
+
+  const lastKnown = lastKnownSourceWacMap?.[sourceKey];
+  if (isPositiveUnitCost(lastKnown)) return lastKnown;
+
+  return null;
 }
 
 /** Null when any line lacks a valued unit cost — never show a partial 0đ. */
@@ -135,8 +155,9 @@ export type MenuRecipeListCostState =
   | { kind: "unavailable" };
 
 /**
- * One list label: Kho gốc WAC or a single gap — never a VND amount plus a badge.
- * When the WAC map failed to load, never claim “Chờ định giá”.
+ * One list label: Kho gốc WAC (or fallback) or a single gap — never a VND
+ * amount plus a badge. When the WAC map failed to load, never claim
+ * “Chờ định giá”. Prefer a valued amount over a mismatch-only gap.
  */
 export function resolveMenuRecipeListCostState({
   itemCount,
@@ -154,14 +175,14 @@ export function resolveMenuRecipeListCostState({
     return { kind: "missing_fulfill_site" };
   }
   if (!wacMapAvailable) return { kind: "unavailable" };
+  if (estimatedCost != null && Number.isFinite(estimatedCost)) {
+    return { kind: "amount", amount: estimatedCost };
+  }
   if (signals.includes("missing_source_wac")) {
     return { kind: "missing_source_wac" };
   }
   if (signals.includes("source_wac_site_mismatch")) {
     return { kind: "source_wac_site_mismatch" };
-  }
-  if (estimatedCost != null && Number.isFinite(estimatedCost)) {
-    return { kind: "amount", amount: estimatedCost };
   }
   return { kind: "unavailable" };
 }
@@ -170,16 +191,20 @@ export function resolveMenuRecipeCostSignals({
   ingredientId,
   sourceSiteKind,
   sourceSiteWacMap,
+  branchFallbackWacMap,
+  lastKnownSourceWacMap,
 }: {
   ingredientId: number;
   sourceSiteKind: string | null | undefined;
   sourceSiteWacMap: Readonly<Record<string, number>>;
+  branchFallbackWacMap?: Readonly<Record<number, number>>;
+  lastKnownSourceWacMap?: Readonly<Record<string, number>>;
 }): MenuRecipeCostSignal[] {
   if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) {
     return ["missing_fulfill_site"];
   }
-  const sourceWac =
-    sourceSiteWacMap[menuRecipeSourceWacKey(sourceSiteKind, ingredientId)];
+  const sourceKey = menuRecipeSourceWacKey(sourceSiteKind, ingredientId);
+  const sourceWac = sourceSiteWacMap[sourceKey];
   if (isPositiveUnitCost(sourceWac)) return [];
 
   const otherSite: MenuRecipeSourceSiteKind =
@@ -189,5 +214,7 @@ export function resolveMenuRecipeCostSignals({
   if (isPositiveUnitCost(otherWac)) {
     return ["source_wac_site_mismatch"];
   }
+  if (isPositiveUnitCost(branchFallbackWacMap?.[ingredientId])) return [];
+  if (isPositiveUnitCost(lastKnownSourceWacMap?.[sourceKey])) return [];
   return ["missing_source_wac"];
 }

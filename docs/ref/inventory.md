@@ -91,11 +91,11 @@ warehouse mới là luồng giảm tồn gắn giá vốn món.
 
 | Việc vận hành | Surface tạo | `stock_issues.issue_type` | Finance |
 | --- | --- | --- | --- |
-| Tiêu hao | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao) | `consumption` | Giá vốn món |
+| Tiêu hao | `/stock/consumption` (Branch) hoặc `/inventory/consumption` (Owner; tab Đã ghi nhận / Phiếu tiêu hao) | `consumption` | Tiêu hao vận hành — không vào Giá vốn món |
 | Hao hụt | `/stock/waste` (Branch) hoặc `/inventory/waste/new` (Owner); Owner lịch sử trên tab Hao hụt của `/inventory/consumption?view=waste` (`/inventory/issues` redirect vào tab này) | `writeoff` | Waste — không vào giá vốn món |
 
 Không có loại `other` / “Xuất khác”. UI: **phiếu tiêu hao** hoặc **hao hụt**.
-Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức hiện tại × WAC kho chi nhánh bán). Lãi gộp Tổng quan dùng `Giá vốn món` từ `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover thì KPI trống. Không gồm writeoff/waste. `mv_food_cost` không còn source runtime.
+Giá vốn lý thuyết `/finance/food-cost` = `fetchFoodCost` (định mức × WAC kho CN bán). Lãi gộp / Giá vốn món = chỉ POS `sale_consumption` tại `branch_kind=branch` (có `order_id`) khi cutover `active`. Không gồm phiếu tay, Kho Tổng, Bếp TT, writeoff/waste.
 
 ### Mã chứng từ kho
 
@@ -193,11 +193,10 @@ validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
 Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
 Bốn đường số không chung khóa WAC: POS `post_pos_sale_consumption_if_ready` +
 `inv_to_base_for_tenant` (WAC kho bán, ghi sổ); `/inventory/menu-recipes`
-(`getMenuRecipeLineBaseQuantity`, WAC Kho gốc, LIST mọi món đang bán, một nhãn
-`Chưa có định mức` / `Thiếu Nguồn hàng` / `Chờ định giá`); `/finance/food-cost`
-`fetchFoodCost` (định mức hiện tại × SL × WAC kho bán); `Giá vốn món` =
-allocations khi cutover `active`. Đổi quantity/factor đổi POS và lý thuyết;
-không bịa gram. Bán kính UI: Gạo `phần` 0,029 kg; Sườn 1 gang; Trà Đá / Tóp Mỡ / Canh Khổ Qua; Nguồn hàng đồ uống + Ba rọi TP; cam/khăn lạnh; Bì 9 g + 38 g.
+(`getMenuRecipeLineBaseQuantity`, WAC Kho gốc rồi fallback CN / last-known,
+LIST mọi món đang bán); `/finance/food-cost` `fetchFoodCost` (định mức × SL ×
+WAC kho bán); `Giá vốn món` = POS `sale_consumption` tại chi nhánh khi cutover
+`active`. Đổi quantity/factor đổi POS và lý thuyết; không bịa gram.
 
 ### 3b. Công thức sản xuất & mẻ sản xuất (`production_runs`)
 

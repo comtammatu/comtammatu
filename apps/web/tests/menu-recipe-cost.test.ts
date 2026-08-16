@@ -162,6 +162,35 @@ test("resolveMenuRecipeCostSignals flags missing Nguồn hàng, Kho gốc WAC, o
     }),
     [],
   );
+  assert.deepEqual(
+    resolveMenuRecipeUnitCost({
+      ingredientId: 67,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      branchFallbackWacMap: { 67: 7386 },
+    }),
+    7386,
+  );
+  assert.deepEqual(
+    resolveMenuRecipeCostSignals({
+      ingredientId: 67,
+      sourceSiteKind: "central_supply",
+      sourceSiteWacMap,
+      branchFallbackWacMap: { 67: 7386 },
+    }),
+    [],
+  );
+  assert.equal(
+    resolveMenuRecipeUnitCost({
+      ingredientId: 55,
+      sourceSiteKind: "central_kitchen",
+      sourceSiteWacMap,
+      lastKnownSourceWacMap: {
+        [menuRecipeSourceWacKey("central_kitchen", 55)]: 32766.64,
+      },
+    }),
+    32766.64,
+  );
 });
 
 test("list cost state is WAC or one gap, never an amount plus a signal", () => {
@@ -187,12 +216,28 @@ test("list cost state is WAC or one gap, never an amount plus a signal", () => {
       estimatedCost: 1200,
       signals: ["missing_source_wac"],
     }),
-    { kind: "missing_source_wac" },
+    { kind: "amount", amount: 1200 },
   );
   assert.deepEqual(
     resolveMenuRecipeListCostState({
       itemCount: 1,
       estimatedCost: 1200,
+      signals: ["source_wac_site_mismatch"],
+    }),
+    { kind: "amount", amount: 1200 },
+  );
+  assert.deepEqual(
+    resolveMenuRecipeListCostState({
+      itemCount: 1,
+      estimatedCost: null,
+      signals: ["missing_source_wac"],
+    }),
+    { kind: "missing_source_wac" },
+  );
+  assert.deepEqual(
+    resolveMenuRecipeListCostState({
+      itemCount: 1,
+      estimatedCost: null,
       signals: ["source_wac_site_mismatch"],
     }),
     { kind: "source_wac_site_mismatch" },

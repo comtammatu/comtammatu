@@ -258,7 +258,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   );
   assert.match(
     financeMessages,
-    /operatingConsumptionHint:\s*"Phiếu tiêu hao ghi tay, không gắn đơn bán\. Vẫn tính vào giá vốn món\."/,
+    /operatingConsumptionHint:\s*"Phiếu tiêu hao ghi tay tại chi nhánh, không gắn đơn bán\. Không tính vào giá vốn món\."/,
   );
   assert.doesNotMatch(financeMessages, /\bbucket\b/i);
   assert.doesNotMatch(
@@ -333,6 +333,12 @@ test("Finance gates gross profit and operating result on data coverage", () => {
   );
   assert.match(cockpit, /const orderIds = new Set<number>\(\)/);
   assert.match(cockpit, /orderIds\.add\(movement\.order_id\)/);
+  assert.match(
+    cockpit,
+    /POS-only at sales Chi nhánh/,
+    "recorded food cost must exclude manual slips and central sites",
+  );
+  assert.match(cockpit, /salesBranchIds/);
   assert.match(
     cockpit,
     /inventory valuation cutover is not active/,

@@ -71,9 +71,9 @@ export function ItemCustomizer({
   const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
     new Set(),
   );
-  const [selectedSideQuantities, setSelectedSideQuantities] = useState<
-    Map<number, number>
-  >(new Map());
+  const [selectedSideIds, setSelectedSideIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -91,12 +91,8 @@ export function ItemCustomizer({
         setSelectedModifierIds(
           new Set(cartItem.modifiers.map((modifier) => modifier.modifier_id)),
         );
-        setSelectedSideQuantities(
-          new Map(
-            cartItem.sides.map(
-              (side) => [side.side_item_id, side.quantity] as const,
-            ),
-          ),
+        setSelectedSideIds(
+          new Set(cartItem.sides.map((side) => side.side_item_id)),
         );
         setNote(cartItem.note ?? "");
         setQuantity(cartItem.quantity);
@@ -113,11 +109,11 @@ export function ItemCustomizer({
 
       setSelectedVariant(nextItem.menu_item_variants[0] ?? null);
       setSelectedModifierIds(new Set());
-      setSelectedSideQuantities(
-        new Map(
+      setSelectedSideIds(
+        new Set(
           nextItem.menu_item_available_sides
             .filter((s) => s.is_default)
-            .map((s) => [s.side_item.id, 1] as const),
+            .map((s) => s.side_item.id),
         ),
       );
       setNote("");
@@ -164,15 +160,9 @@ export function ItemCustomizer({
   const sideTotal = useMemo(() => {
     if (!item) return 0;
     return item.menu_item_available_sides
-      .filter((s) => selectedSideQuantities.has(s.side_item.id))
-      .reduce(
-        (sum, s) =>
-          sum +
-          s.side_item.base_price *
-            (selectedSideQuantities.get(s.side_item.id) ?? 1),
-        0,
-      );
-  }, [item, selectedSideQuantities]);
+      .filter((s) => selectedSideIds.has(s.side_item.id))
+      .reduce((sum, s) => sum + s.side_item.base_price, 0);
+  }, [item, selectedSideIds]);
 
   const lineUnitPrice = unitPrice + modifierTotal + sideTotal;
   const totalPrice = lineUnitPrice * quantity;
@@ -208,12 +198,12 @@ export function ItemCustomizer({
       .map((m) => ({ modifier_id: m.id, name: m.name, price: m.price }));
 
     const sides: CartSide[] = item.menu_item_available_sides
-      .filter((s) => selectedSideQuantities.has(s.side_item.id))
+      .filter((s) => selectedSideIds.has(s.side_item.id))
       .map((s) => ({
         side_item_id: s.side_item.id,
         name: s.side_item.name,
         price: s.side_item.base_price,
-        quantity: selectedSideQuantities.get(s.side_item.id) ?? 1,
+        quantity: 1,
         is_default: s.is_default,
       }));
 
@@ -238,7 +228,7 @@ export function ItemCustomizer({
     item,
     selectedVariant,
     selectedModifierIds,
-    selectedSideQuantities,
+    selectedSideIds,
     unitPrice,
     note,
     quantity,
@@ -263,44 +253,16 @@ export function ItemCustomizer({
   }, []);
 
   const toggleSide = useCallback((sideItemId: number) => {
-    setSelectedSideQuantities((prev) => {
-      const next = new Map(prev);
+    setSelectedSideIds((prev) => {
+      const next = new Set(prev);
       if (next.has(sideItemId)) {
         next.delete(sideItemId);
       } else {
-        next.set(sideItemId, 1);
+        next.add(sideItemId);
       }
       return next;
     });
   }, []);
-
-  const updateSideQuantity = useCallback(
-    (sideItemId: number, delta: number) => {
-      setSelectedSideQuantities((prev) => {
-        const current = prev.get(sideItemId);
-        if (current == null) {
-          if (delta <= 0) return prev;
-
-          const next = new Map(prev);
-          next.set(sideItemId, 1);
-          return next;
-        }
-
-        const nextQuantity = Math.min(99, current + delta);
-        if (nextQuantity <= 0) {
-          const next = new Map(prev);
-          next.delete(sideItemId);
-          return next;
-        }
-        if (nextQuantity === current) return prev;
-
-        const next = new Map(prev);
-        next.set(sideItemId, nextQuantity);
-        return next;
-      });
-    },
-    [],
-  );
 
   const updateQuantity = useCallback((delta: number) => {
     setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
@@ -482,85 +444,41 @@ export function ItemCustomizer({
                     {messages.pos.customizer.sides}
                   </h3>
                   <ItemGroup className="gap-2">
-                    {item.menu_item_available_sides.map((s) => {
-                      const sideQuantity = selectedSideQuantities.get(
-                        s.side_item.id,
-                      );
-                      const isSelected = sideQuantity != null;
-                      const displaySideQuantity = sideQuantity ?? 0;
-                      const sideLineTotal =
-                        s.side_item.base_price * displaySideQuantity;
-
-                      return (
-                        <Item
-                          key={s.id}
-                          variant="outline"
-                          className="flex-nowrap items-start gap-3 hover:bg-accent"
-                        >
-                          <Checkbox
-                            id={`side-${String(s.id)}`}
-                            className="mt-1.5"
-                            size="touch"
-                            checked={isSelected}
-                            onCheckedChange={() => toggleSide(s.side_item.id)}
+                    {item.menu_item_available_sides.map((s) => (
+                      <Item
+                        key={s.id}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-accent"
+                        render={
+                          <FieldLabel
+                            htmlFor={`side-${String(s.id)}`}
+                            className="flex items-center gap-3 w-full font-normal cursor-pointer"
                           />
-                          <div className="min-w-0 flex-1">
-                            <FieldLabel
-                              htmlFor={`side-${String(s.id)}`}
-                              className="block cursor-pointer text-base leading-snug font-normal whitespace-normal"
-                            >
-                              <span className="break-words">
-                                {s.side_item.name}
+                        }
+                      >
+                        <Checkbox
+                          id={`side-${String(s.id)}`}
+                          size="touch"
+                          checked={selectedSideIds.has(s.side_item.id)}
+                          onCheckedChange={() => toggleSide(s.side_item.id)}
+                        />
+                        <ItemContent>
+                          <ItemTitle className="text-base">
+                            <span>{s.side_item.name}</span>
+                            {s.is_default && (
+                              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+                                {messages.pos.customizer.defaultSide}
                               </span>
-                              {s.is_default && (
-                                <span className="ml-1 text-sm text-muted-foreground">
-                                  {messages.pos.customizer.defaultSide}
-                                </span>
-                              )}
-                            </FieldLabel>
-                            <span className="mt-1 block text-base font-medium tabular-nums text-muted-foreground">
-                              +{formatVND(sideLineTotal)}
-                            </span>
-                          </div>
-                          <div className="flex shrink-0 items-center justify-end gap-1 self-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-touch"
-                              aria-label={messages.pos.customizer.decreaseSideAria(
-                                s.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(s.side_item.id, -1)
-                              }
-                            >
-                              <IconMinus />
-                            </Button>
-                            <span
-                              className={cn(
-                                "w-6 text-center text-base font-semibold tabular-nums",
-                                !isSelected && "text-muted-foreground",
-                              )}
-                            >
-                              {displaySideQuantity}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-touch"
-                              aria-label={messages.pos.customizer.increaseSideAria(
-                                s.side_item.name,
-                              )}
-                              onClick={() =>
-                                updateSideQuantity(s.side_item.id, 1)
-                              }
-                            >
-                              <IconPlus />
-                            </Button>
-                          </div>
-                        </Item>
-                      );
-                    })}
+                            )}
+                          </ItemTitle>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="text-base text-muted-foreground">
+                            +{formatVND(s.side_item.base_price)}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    ))}
                   </ItemGroup>
                 </div>
               )}

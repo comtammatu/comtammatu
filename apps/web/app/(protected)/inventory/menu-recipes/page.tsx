@@ -86,6 +86,12 @@ export default async function MenuRecipesPage({
   const wacMap = (
     wacMapAvailable ? (wacRes.data?.monetary ?? {}) : {}
   ) as Record<string, number>;
+  const branchFallbackWacMap = (
+    wacMapAvailable ? (wacRes.data?.branchFallback ?? {}) : {}
+  ) as Record<number, number>;
+  const lastKnownSourceWacMap = (
+    wacMapAvailable ? (wacRes.data?.lastKnownSource ?? {}) : {}
+  ) as Record<string, number>;
   const stockCapacityByMenuItemId = (
     stockCapacityRes.success ? stockCapacityRes.data : {}
   ) as Record<string, number>;
@@ -123,6 +129,8 @@ export default async function MenuRecipesPage({
             ingredientId,
             sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
             sourceSiteWacMap: wacMap,
+            branchFallbackWacMap,
+            lastKnownSourceWacMap,
           })
         : null;
       const entryUnitId =
@@ -144,6 +152,8 @@ export default async function MenuRecipesPage({
               ingredientId,
               sourceSiteKind: catalogIngredient?.default_fulfill_site_kind,
               sourceSiteWacMap: wacMap,
+              branchFallbackWacMap,
+              lastKnownSourceWacMap,
             })
           : [];
       return {
@@ -200,6 +210,8 @@ export default async function MenuRecipesPage({
                 ingredientId: i.id,
                 sourceSiteKind: i.default_fulfill_site_kind,
                 sourceSiteWacMap: wacMap,
+                branchFallbackWacMap,
+                lastKnownSourceWacMap,
               })
             : [],
       }))

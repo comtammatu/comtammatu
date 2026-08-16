@@ -193,10 +193,17 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
  * Valued WAC for menu-recipe portion cost, keyed by Kho gốc
  * (`central_supply` / `central_kitchen` × ingredient). Zero placeholders are
  * dropped. Callers resolve with ingredients.default_fulfill_site_kind.
+ * Fallbacks: live Chi nhánh WAC, then last positive movement at Kho gốc.
  */
 export async function fetchBranchWacMap(
   branchId?: number | null,
-): Promise<ActionResult<{ monetary: Record<string, number> }>> {
+): Promise<
+  ActionResult<{
+    monetary: Record<string, number>;
+    branchFallback: Record<number, number>;
+    lastKnownSource: Record<string, number>;
+  }>
+> {
   const parsedBranchId = optionalBranchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Chi nhánh không hợp lệ." };
@@ -225,7 +232,10 @@ export async function fetchBranchWacMap(
     };
   }
   if (stockBearingLocations.locationIds.length === 0) {
-    return { success: true, data: { monetary: {} } };
+    return {
+      success: true,
+      data: { monetary: {}, branchFallback: {}, lastKnownSource: {} },
+    };
   }
 
   let query = monetary.client
@@ -240,13 +250,20 @@ export async function fetchBranchWacMap(
     query = query.eq("branch_id", parsedBranchId.data);
   }
 
-  const [stockResult, branchesResult] = await Promise.all([
+  const [stockResult, branchesResult, lastKnownResult] = await Promise.all([
     query,
     supabase
       .from("branches")
       .select("id, branch_kind")
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true),
+    monetary.client
+      .from("stock_movements")
+      .select("ingredient_id, unit_cost, branch_id, created_at")
+      .eq("tenant_id", claims.tenant_id)
+      .gt("unit_cost", 0)
+      .order("created_at", { ascending: false })
+      .limit(3000),
   ]);
 
   if (stockResult.error) {
@@ -285,14 +302,58 @@ export async function fetchBranchWacMap(
       branch.branch_kind as string | null,
     ]),
   );
-  const map = buildSourceSiteWacMap(
-    ((stockResult.data ?? []) as WacRow[]).map((row) => ({
-      ingredientId: row.ingredient_id,
-      branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
-      avgUnitCost: row.avg_unit_cost,
-    })),
-  );
-  return { success: true, data: { monetary: map } };
+  const stockRows = ((stockResult.data ?? []) as WacRow[]).map((row) => ({
+    ingredientId: row.ingredient_id,
+    branchKind: branchKindById.get(Number(row.branch_id)) ?? null,
+    avgUnitCost: row.avg_unit_cost,
+  }));
+  const map = buildSourceSiteWacMap(stockRows);
+
+  const branchFallbackAccum = new Map<number, { sum: number; count: number }>();
+  for (const row of stockRows) {
+    if (row.branchKind !== "branch") continue;
+    const cost = Number(row.avgUnitCost);
+    if (!(typeof cost === "number" && Number.isFinite(cost) && cost > 0)) {
+      continue;
+    }
+    const id = Number(row.ingredientId);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    const entry = branchFallbackAccum.get(id) ?? { sum: 0, count: 0 };
+    entry.sum += cost;
+    entry.count += 1;
+    branchFallbackAccum.set(id, entry);
+  }
+  const branchFallback: Record<number, number> = {};
+  for (const [id, entry] of branchFallbackAccum) {
+    branchFallback[id] = entry.sum / entry.count;
+  }
+
+  const lastKnownSource: Record<string, number> = {};
+  if (!lastKnownResult.error) {
+    type MoveRow = {
+      ingredient_id: number;
+      unit_cost: number | string | null;
+      branch_id: number;
+    };
+    for (const row of (lastKnownResult.data ?? []) as MoveRow[]) {
+      const kind = branchKindById.get(Number(row.branch_id));
+      if (kind !== "central_supply" && kind !== "central_kitchen") continue;
+      const id = Number(row.ingredient_id);
+      const cost = Number(row.unit_cost);
+      if (!Number.isFinite(id) || id <= 0) continue;
+      if (!(typeof cost === "number" && Number.isFinite(cost) && cost > 0)) {
+        continue;
+      }
+      const key = `${kind}:${id}`;
+      if (lastKnownSource[key] != null) continue;
+      lastKnownSource[key] = cost;
+    }
+  }
+
+  return {
+    success: true,
+    data: { monetary: map, branchFallback, lastKnownSource },
+  };
 }
 
 // Live menu recipe × warehouse stock = sellable portions per dish.

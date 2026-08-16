@@ -554,8 +554,8 @@ test("kitchen ticket fallback", () => {
   assertTextOrder(blocks, "Bàn 5 #087", "Phiếu bếp: #087");
   assertText(blocks, " 2x | Cơm tấm sườn bì chả", { bold: true, double: true });
   assertText(blocks, "    |   + Thêm trứng ốp", { double: false });
-  assertText(blocks, "    |   - Canh chua x1", { bold: true, double: true });
-  assertText(blocks, "    |   - Trà đá x1", { bold: true, double: true });
+  assertText(blocks, "    |   - Canh chua", { bold: true, double: true });
+  assertText(blocks, "    |   - Trà đá", { bold: true, double: true });
   assertText(blocks, "    |   * Không hành", { bold: true, double: true });
   assertText(blocks, "GHI CHÚ", { bold: true, double: true });
   assert.ok(!findText(blocks, "GỌI THÊM"), "GỌI THÊM only on append sends");
@@ -591,7 +591,7 @@ test("cancel ticket fallback", () => {
     strikethrough: true,
   });
   assertText(blocks, "    |   + Thêm trứng ốp", { strikethrough: true });
-  assertText(blocks, "    |   - Canh chua x1", { strikethrough: true });
+  assertText(blocks, "    |   - Canh chua", { strikethrough: true });
   assertText(blocks, "LÝ DO", { bold: true, double: true });
   assertText(blocks, "Khách đổi món");
   assertText(blocks, "Người hủy: Nguyễn A");

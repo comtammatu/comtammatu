@@ -1148,7 +1148,7 @@ export const finance = {
       "Nguyên liệu đã trừ kho theo đơn đã thanh toán. Khác giá vốn định mức theo món.",
     operatingConsumption: "Tiêu hao vận hành",
     operatingConsumptionHint:
-      "Phiếu tiêu hao ghi tay, không gắn đơn bán. Vẫn tính vào giá vốn món.",
+      "Phiếu tiêu hao ghi tay tại chi nhánh, không gắn đơn bán. Không tính vào giá vốn món.",
     coverage: "Độ phủ",
     coverageValue: (covered: string, total: string) =>
       `${covered}/${total} đơn`,
