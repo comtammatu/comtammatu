@@ -308,7 +308,9 @@ export function materializeDocument(
         break;
       }
       case "paymentQr": {
-        if (kind !== "provisional_bill") continue;
+        const allowPaidVietQr =
+          kind === "receipt" && rawText(payload, "payment_method") === "vietqr";
+        if (kind !== "provisional_bill" && !allowPaidVietQr) continue;
         const qr = payload.payment_qr;
         if (
           typeof qr !== "object" ||

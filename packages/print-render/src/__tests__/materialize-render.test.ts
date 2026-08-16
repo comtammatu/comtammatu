@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import type { PrintDocumentBlock } from "../print-document";
-import type { PrintPayload } from "../payloads";
+import type { PaymentQR, PrintPayload } from "../payloads";
 import { buildFallbackDocument } from "../fallback-document";
 import { materializeDocument } from "../materialize";
 import { renderDocumentToOps } from "../document-render";
@@ -472,14 +472,36 @@ test("receipt render wraps long branch address", () => {
   );
 });
 
-test("receipt ignores payment QR data", () => {
+test("receipt ignores payment QR data on cash receipts", () => {
+  const receipt = SAMPLE_PAYLOADS.receipt as Extract<
+    PrintPayload,
+    { kind: "receipt" }
+  >;
   const blocks = blocksOf({
-    ...SAMPLE_PAYLOADS.receipt,
+    ...receipt,
     payment_qr: (
-      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: unknown }
+      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: PaymentQR }
     ).payment_qr,
-  } as PrintPayload);
+  });
   assert.ok(!blocks.some((b) => b.type === "paymentQr"));
+});
+
+test("paid VietQR receipt prints the transfer QR", () => {
+  const receipt = SAMPLE_PAYLOADS.receipt as Extract<
+    PrintPayload,
+    { kind: "receipt" }
+  >;
+  const blocks = blocksOf({
+    ...receipt,
+    payment_method: "vietqr",
+    payment_qr: (
+      SAMPLE_PAYLOADS.provisional_bill as { payment_qr: PaymentQR }
+    ).payment_qr,
+  });
+  assert.ok(
+    blocks.some((b) => b.type === "paymentQr"),
+    "vietqr receipt must include paymentQr",
+  );
 });
 
 test("provisional bill fallback", () => {

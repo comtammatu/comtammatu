@@ -130,6 +130,33 @@ test("POS convert action uses cash-confirm auth and does not import print-action
   assert.doesNotMatch(action, /from "\.\/print-actions"/);
 });
 
+test("paid VietQR receipts print transfer QR; cash receipts do not", () => {
+  const render = readFileSync(
+    join(repoRoot, "packages/print-render/src/materialize.ts"),
+    "utf8",
+  );
+  const receiptPrint = readFileSync(
+    join(
+      repoRoot,
+      "supabase/migrations/20260816113818_receipt_print_vietqr_for_paid_orders.sql",
+    ),
+    "utf8",
+  );
+  assert.match(render, /kind === "receipt" && rawText\(payload, "payment_method"\) === "vietqr"/);
+  assert.match(receiptPrint, /v_order\.payment_method = 'vietqr'/);
+  assert.match(receiptPrint, /AND method = 'vietqr'/);
+  assert.match(receiptPrint, /AND status = 'completed'/);
+  assert.match(
+    receiptPrint,
+    /NEW\.payload->>'payment_method' IS DISTINCT FROM 'vietqr'/,
+  );
+  assert.doesNotMatch(
+    receiptPrint,
+    /NEW\.payload := NEW\.payload - 'payment_qr' - 'invoice_qr'/,
+  );
+  assert.match(receiptPrint, /v_keep_payment_qr/);
+});
+
 test("Đơn hoàn thành exposes cash→VietQR convert and VietQR print", () => {
   assert.match(messages, /convertCashToVietQr: "Đổi sang VietQR"/);
   assert.match(messages, /printVietQr: "In VietQR"/);

@@ -111,6 +111,8 @@ export type ReceiptPayload = BillBase & {
   kind: "receipt";
   /** Unknown values pass through and render as the raw key. */
   payment_method?: "cash" | "vietqr" | "bank_transfer" | string | null;
+  /** Present on paid VietQR receipts; cash receipts omit or ignore this. */
+  payment_qr?: PaymentQR | null;
   invoice_qr?: InvoiceQR | null;
   /** Cash only; non-cash methods send total_amount. Rows skipped when omitted. */
   cash_received?: number | null;

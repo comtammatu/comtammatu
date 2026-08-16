@@ -12,9 +12,9 @@ Kind: feature
 Tier: T3
 Lane: pos/payment
 Exit: From POS `Đơn hoàn thành`, a cashier can convert a paid cash order to VietQR, stamp a payment code, and print the VietQR receipt; money remains on `payments.method` with closed-session cash recalc.
-Evidence: RPC `pos_convert_cash_payment_to_vietqr` applied on Production `enloyfnuerqgaqderbwb` with `20260815170000_vietqr_auto_refresh_and_self_order_unblock` and `20260816084532_waiter_revoke_provisional_print`; `corepack pnpm db:types`; POS completed-order + receipt actions; static tests; `corepack pnpm verify` green after apply.
+Evidence: RPC `pos_convert_cash_payment_to_vietqr` applied on Production `enloyfnuerqgaqderbwb`; `20260816113818_receipt_print_vietqr_for_paid_orders.sql` applied (ledger `20260816113818`); `corepack pnpm db:types` (no generated-type diff); advisors only the pre-existing `enqueue_receipt_print` SECURITY DEFINER grant; `corepack pnpm verify` green on the print-render + trigger fix.
 
-- [ ] Cashier converts one paid cash order in `Đơn hoàn thành` and prints VietQR.
+- [ ] Reload POS, convert one paid cash order in completed orders, and confirm the VietQR slip has a scannable transfer QR.
 
 UI Advisor Gate
 - Surface: `/br/[branchId]/pos` completed-order sheet + receipt; route family station POS; plane: `station_chrome`; change: flow

@@ -126,7 +126,7 @@ Book-fund gains/losses use `create_finance_fund_adjustment` separately.
 Payment-method correction: Finance bill drawer / HĐĐT queue (Owner, Accountant)
 uses `correct_payment_method`; POS completed-order cash→VietQR conversion uses
 `pos_convert_cash_payment_to_vietqr` (`pos:confirm_payment`, stamps `payment_code`).
-Both update `payments.method`, the order mirror, and closed-session expected cash; reverse VietQR→cash stays on Finance.
+Both update `payments.method`, the order mirror, and closed-session expected cash; reverse VietQR→cash stays on Finance. Paid VietQR receipts keep the transfer QR (HDDT buyer QR still attaches beside it); cash receipts stay QR-free.
 
 Unmatched expense methods (`cash`/`transfer`/`unpaid`) may be corrected by
 Owner/Accountant with `finance:expense_create` via `transition_expense_payment`.
