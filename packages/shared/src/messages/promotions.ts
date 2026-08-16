@@ -148,6 +148,29 @@ export const PROMOTIONS_VI = {
   posMaxUnits: (max: number) => `tối đa ${String(max)}`,
   applied: "Đã áp mã giảm",
   cleared: "Đã bỏ khuyến mãi",
+  benefitLabel: "Mức ưu đãi",
+  benefitOrderPct: (pct: string, max?: string) =>
+    `Giảm ${pct}${max ? ` (tối đa ${max})` : ""}`,
+  benefitOrderVnd: (vnd: string) => `Giảm ${vnd}`,
+  benefitVoucherFace: (vnd: string) => `Mệnh giá ${vnd}`,
+  benefitAutoOrder: (val: string, max?: string) =>
+    `Tự động giảm ${val}${max ? ` (tối đa ${max})` : ""}`,
+  benefitBxgy: (buy: number, get: number) =>
+    `Mua ${String(buy)} tặng ${String(get)}`,
+  benefitFreeSide: (qty: number) => `Tặng ${String(qty)} món ăn kèm`,
+  searchPlaceholder: "Tìm theo tên hoặc mã…",
+  filterAll: "Tất cả",
+  filterActive: "Đang chạy",
+  filterPaused: "Tạm dừng",
+  filterEnded: "Kết thúc",
+  filterDraft: "Nháp",
+  codesCountLabel: (total: number, redeemed?: number) =>
+    `${String(total)} mã${redeemed && redeemed > 0 ? ` (${String(redeemed)} đã dùng)` : ""}`,
+  periodLabel: "Thời gian",
+  periodUnlimited: "Không giới hạn",
+  minOrderCond: (amount: string) => `Đơn từ ${amount}`,
+  noCodeRequired: "Tự động",
+  codeColumnTitle: "Mã / Voucher",
 } as const;
 
 export type PromotionsKey = keyof typeof PROMOTIONS_VI;

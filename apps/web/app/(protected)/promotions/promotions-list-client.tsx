@@ -1,13 +1,21 @@
 "use client";
 
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { TicketPercent as IconTicket } from "lucide-react";
+import { Search as IconSearch, TicketPercent as IconTicket } from "lucide-react";
 import { FORM_VI, PROMOTIONS_VI } from "@comtammatu/shared/messages";
+import { formatPercent, formatVND } from "@comtammatu/shared/format";
 import { formatVNDate } from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   OWNER_SHELL_BREAKPOINT,
@@ -23,7 +31,7 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
-import { AppListFrame } from "@/components/surface";
+import { AppListFrame, AppToolbar } from "@/components/surface";
 import { promotionKindLabel } from "@lib/promotions/kinds";
 import { setPromotionStatus } from "./actions";
 
@@ -34,14 +42,90 @@ export type PromotionListRow = {
   status: string;
   discountType: string | null;
   discountValue: number | null;
+  minSubtotal: number;
+  maxDiscountAmount: number | null;
+  bxgyBuyQty: number | null;
+  bxgyGetQty: number | null;
+  freeSideQty: number | null;
   reusableCode: string | null;
+  totalCodesCount: number;
+  uniqueCodesCount: number;
+  activeCodesCount: number;
+  redeemedCodesCount: number;
   startsAt: string | null;
   endsAt: string | null;
 };
 
+function getPromotionBenefit(row: PromotionListRow): string {
+  if (row.kind === "order_pct") {
+    const val = row.discountValue ?? 0;
+    const maxText =
+      row.maxDiscountAmount != null && row.maxDiscountAmount > 0
+        ? formatVND(row.maxDiscountAmount)
+        : undefined;
+    return PROMOTIONS_VI.benefitOrderPct(formatPercent(val), maxText);
+  }
+  if (row.kind === "order_vnd") {
+    const val = row.discountValue ?? 0;
+    return PROMOTIONS_VI.benefitOrderVnd(formatVND(val));
+  }
+  if (row.kind === "voucher_face") {
+    const val = row.discountValue ?? 0;
+    return PROMOTIONS_VI.benefitVoucherFace(formatVND(val));
+  }
+  if (row.kind === "auto_order") {
+    const val = row.discountValue ?? 0;
+    const isPct = row.discountType === "pct";
+    const valText = isPct ? formatPercent(val) : formatVND(val);
+    const maxText =
+      isPct && row.maxDiscountAmount != null && row.maxDiscountAmount > 0
+        ? formatVND(row.maxDiscountAmount)
+        : undefined;
+    return PROMOTIONS_VI.benefitAutoOrder(valText, maxText);
+  }
+  if (row.kind === "bxgy") {
+    return PROMOTIONS_VI.benefitBxgy(row.bxgyBuyQty ?? 2, row.bxgyGetQty ?? 1);
+  }
+  if (row.kind === "free_side") {
+    return PROMOTIONS_VI.benefitFreeSide(row.freeSideQty ?? 1);
+  }
+  return "—";
+}
+
 export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const controlSize = isTouchLayout ? "touch" : "default";
+
+  const counts = useMemo(() => {
+    return {
+      all: rows.length,
+      active: rows.filter((r) => r.status === "active").length,
+      paused: rows.filter((r) => r.status === "paused").length,
+      ended: rows.filter((r) => r.status === "ended").length,
+      draft: rows.filter((r) => r.status === "draft").length,
+    };
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    let list = rows;
+    if (statusFilter !== "all") {
+      list = list.filter((r) => r.status === statusFilter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((r) => {
+        const nameMatch = r.name.toLowerCase().includes(q);
+        const codeMatch = r.reusableCode?.toLowerCase().includes(q);
+        const kindMatch = promotionKindLabel(r.kind).toLowerCase().includes(q);
+        return nameMatch || codeMatch || kindMatch;
+      });
+    }
+    return list;
+  }, [rows, statusFilter, search]);
 
   function setStatus(
     row: PromotionListRow,
@@ -99,32 +183,93 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
       key: "name",
       header: PROMOTIONS_VI.nameLabel,
       render: (row) => (
-        <Button
-          variant="link"
-          className="h-auto p-0 font-medium"
-          render={<Link href={`/promotions/${String(row.id)}`} />}
-        >
-          {row.name}
-        </Button>
+        <div className="flex flex-col gap-1">
+          <Button
+            variant="link"
+            className="h-auto justify-start p-0 font-medium text-foreground"
+            render={<Link href={`/promotions/${String(row.id)}`} />}
+          >
+            {row.name}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {promotionKindLabel(row.kind)}
+          </span>
+        </div>
       ),
     },
     {
-      key: "kind",
-      header: PROMOTIONS_VI.kindLabel,
-      render: (row) => promotionKindLabel(row.kind),
+      key: "benefit",
+      header: PROMOTIONS_VI.benefitLabel,
+      render: (row) => {
+        const benefit = getPromotionBenefit(row);
+        const minNum = row.minSubtotal;
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-foreground">{benefit}</span>
+            {minNum > 0 ? (
+              <span className="text-xs text-muted-foreground">
+                {PROMOTIONS_VI.minOrderCond(formatVND(minNum))}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "code",
-      header: PROMOTIONS_VI.codeLabel,
-      className: "font-mono",
-      render: (row) => row.reusableCode ?? "—",
+      header: PROMOTIONS_VI.codeColumnTitle,
+      render: (row) => {
+        if (row.reusableCode) {
+          return (
+            <Badge variant="outline" className="font-mono text-xs uppercase">
+              {row.reusableCode}
+            </Badge>
+          );
+        }
+        if (row.uniqueCodesCount > 0) {
+          return (
+            <Badge variant="secondary" className="text-xs">
+              {PROMOTIONS_VI.codesCountLabel(
+                row.uniqueCodesCount,
+                row.redeemedCodesCount,
+              )}
+            </Badge>
+          );
+        }
+        if (row.kind === "auto_order") {
+          return (
+            <span className="text-xs text-muted-foreground">
+              {PROMOTIONS_VI.noCodeRequired}
+            </span>
+          );
+        }
+        return <span className="text-muted-foreground">—</span>;
+      },
+    },
+    {
+      key: "schedule",
+      header: PROMOTIONS_VI.periodLabel,
+      render: (row) => {
+        if (!row.startsAt && !row.endsAt) {
+          return (
+            <span className="text-xs text-muted-foreground">
+              {PROMOTIONS_VI.periodUnlimited}
+            </span>
+          );
+        }
+        return (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {row.startsAt ? formatVNDate(row.startsAt) : "—"}
+            {" → "}
+            {row.endsAt ? formatVNDate(row.endsAt) : "—"}
+          </span>
+        );
+      },
     },
     {
       key: "status",
       header: PROMOTIONS_VI.statusLabel,
-      render: (row) => (
-        <StatusBadge domain="promotion" value={row.status} />
-      ),
+      render: (row) => <StatusBadge domain="promotion" value={row.status} />,
     },
     {
       key: "actions",
@@ -146,10 +291,60 @@ export function PromotionsListClient({ rows }: { rows: PromotionListRow[] }) {
   ];
 
   return (
-    <AppListFrame>
+    <AppListFrame
+      toolbar={
+        <AppToolbar
+          variant="inline"
+          className="flex-wrap"
+          search={
+            <InputGroup size={controlSize} className="w-full sm:w-72">
+              <InputGroupAddon>
+                <IconSearch className="size-4" />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder={PROMOTIONS_VI.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </InputGroup>
+          }
+          filters={
+            <Tabs
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val)}
+            >
+              <TabsList size={controlSize} className="flex-wrap">
+                <TabsTrigger value="all">
+                  {PROMOTIONS_VI.filterAll}
+                  {counts.all > 0 ? ` (${String(counts.all)})` : ""}
+                </TabsTrigger>
+                <TabsTrigger value="active">
+                  {PROMOTIONS_VI.filterActive}
+                  {counts.active > 0 ? ` (${String(counts.active)})` : ""}
+                </TabsTrigger>
+                <TabsTrigger value="paused">
+                  {PROMOTIONS_VI.filterPaused}
+                  {counts.paused > 0 ? ` (${String(counts.paused)})` : ""}
+                </TabsTrigger>
+                <TabsTrigger value="ended">
+                  {PROMOTIONS_VI.filterEnded}
+                  {counts.ended > 0 ? ` (${String(counts.ended)})` : ""}
+                </TabsTrigger>
+                {counts.draft > 0 ? (
+                  <TabsTrigger value="draft">
+                    {PROMOTIONS_VI.filterDraft} ({String(counts.draft)})
+                  </TabsTrigger>
+                ) : null}
+              </TabsList>
+            </Tabs>
+          }
+        />
+      }
+    >
       <DataTable
         columns={columns}
-        data={rows}
+        data={filteredRows}
         getRowKey={(row) => row.id}
         emptyTitle={PROMOTIONS_VI.emptyTitle}
         emptyDescription={PROMOTIONS_VI.emptyDescription}
@@ -181,6 +376,7 @@ function PromotionMobileCard({
   onOpen: () => void;
 }) {
   const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const benefit = getPromotionBenefit(row);
 
   return (
     <InteractiveCard
@@ -188,7 +384,7 @@ function PromotionMobileCard({
       padding="default"
       role="button"
       tabIndex={0}
-      className="w-full flex-col items-stretch gap-3 text-left"
+      className="w-full flex-col items-stretch gap-2 text-left"
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -200,12 +396,13 @@ function PromotionMobileCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">{row.name}</span>
+            <span className="text-sm font-semibold text-foreground">
+              {row.name}
+            </span>
             <StatusBadge domain="promotion" value={row.status} />
           </div>
-          <p className="mt-1 truncate text-sm text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {promotionKindLabel(row.kind)}
-            {row.reusableCode ? ` · ${row.reusableCode}` : ""}
           </p>
         </div>
         <div
@@ -219,23 +416,32 @@ function PromotionMobileCard({
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="min-w-0">
-          <span className="block text-xs text-muted-foreground">
-            {PROMOTIONS_VI.startsLabel}
-          </span>
-          <span className="font-mono text-sm tabular-nums">
-            {row.startsAt ? formatVNDate(row.startsAt) : "—"}
-          </span>
-        </div>
-        <div className="min-w-0">
-          <span className="block text-xs text-muted-foreground">
-            {PROMOTIONS_VI.endsLabel}
-          </span>
-          <span className="font-mono text-sm tabular-nums">
-            {row.endsAt ? formatVNDate(row.endsAt) : "—"}
-          </span>
-        </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-foreground">{benefit}</span>
+        {row.reusableCode ? (
+          <Badge variant="outline" className="font-mono text-xs uppercase">
+            {row.reusableCode}
+          </Badge>
+        ) : row.uniqueCodesCount > 0 ? (
+          <Badge variant="secondary" className="text-xs">
+            {PROMOTIONS_VI.codesCountLabel(
+              row.uniqueCodesCount,
+              row.redeemedCodesCount,
+            )}
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">
+        <span>
+          {row.startsAt || row.endsAt
+            ? `${row.startsAt ? formatVNDate(row.startsAt) : "—"} → ${row.endsAt ? formatVNDate(row.endsAt) : "—"}`
+            : PROMOTIONS_VI.periodUnlimited}
+        </span>
+        {row.minSubtotal > 0 ? (
+          <span>{PROMOTIONS_VI.minOrderCond(formatVND(row.minSubtotal))}</span>
+        ) : null}
       </div>
     </InteractiveCard>
   );
