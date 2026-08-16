@@ -104,17 +104,15 @@ function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
   return b.id - a.id;
 }
 
-// `ready` outranks `served`: a ready order has food cooling at the pass,
-// a served order is only waiting for the bill.
+// Kitchen-done (`ready`/`served`) outranks cooking: food is out, bill next.
 function getOrderActionPriority(order: SessionOrder): number {
   if (order.payment_status === "paid") return 99;
-  if (order.status === "ready") return 0;
-  if (order.status === "served") return 1;
-  if (order.order_type === "takeaway") return 2;
-  if (order.status === "preparing") return 3;
-  if (order.status === "confirmed") return 4;
-  if (order.status === "new") return 5;
-  return 6;
+  if (order.status === "ready" || order.status === "served") return 0;
+  if (order.order_type === "takeaway") return 1;
+  if (order.status === "preparing") return 2;
+  if (order.status === "confirmed") return 3;
+  if (order.status === "new") return 4;
+  return 5;
 }
 
 export function compareOrdersByNextAction(
@@ -262,10 +260,6 @@ const OrderCard = memo(function OrderCard({
             ) : timing.kitchenLatencyTone === "warning" && timing.elapsedDuration ? (
               <Badge variant="warning" className="text-sm font-semibold">
                 {messages.pos.orderHistory.waitingElapsed(timing.elapsedDuration)}
-              </Badge>
-            ) : timing.isReadyOverdue && timing.elapsedDuration ? (
-              <Badge variant="warning" className="text-sm font-semibold">
-                {messages.pos.orderHistory.readyPassElapsed(timing.elapsedDuration)}
               </Badge>
             ) : null}
             <OrderStatePill order={order} />

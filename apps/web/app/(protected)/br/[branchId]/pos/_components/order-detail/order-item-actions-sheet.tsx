@@ -5,7 +5,6 @@ import { Button } from "@comtammatu/ui/components/button";
 
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
-  Check as IconCheck,
   CircleDollarSign as IconCircleDollarSign,
   Flame as IconFlame,
   Minus as IconMinus,
@@ -27,7 +26,6 @@ interface OrderItemActionsSheetProps {
   canApplyDiscount?: boolean;
   isPending: boolean;
   onClose: () => void;
-  onMarkServed: (itemId: number) => void;
   onVoidRequest: (itemId: number) => void;
   onReduceRequest: (itemId: number) => void;
   /** Mở "Sửa món" flow — chỉ available khi status='pending' (chef chưa làm)
@@ -44,7 +42,6 @@ export function OrderItemActionsSheet({
   canApplyDiscount = false,
   isPending,
   onClose,
-  onMarkServed,
   onVoidRequest,
   onReduceRequest,
   onEditRequest,
@@ -52,13 +49,11 @@ export function OrderItemActionsSheet({
   onPriorityRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
-  const served = item?.status === "served";
   const actionable =
     item != null &&
     !cancelled &&
     ["pending", "preparing", "ready"].includes(item.status);
   const canVoid = canManage && actionable;
-  const canMarkServed = actionable && !served;
   // Reduce gates on canManage + qty>=2 + actionable. qty=1 means there's
   // nothing to reduce — force the cashier into "Hủy món" so KDS card flips
   // cancelled instead of leaving a zombie qty=0 row.
@@ -89,9 +84,13 @@ export function OrderItemActionsSheet({
         note: null,
         isPriority: false,
       };
+  // Kitchen complete (`ready`) already means food left the pass — POS never
+  // exposes a separate waiter `served` confirmation. Collapse both labels.
   const statusLabel = item
-    ? ((ORDER_ITEM_STATUS_LABELS_VI as Record<string, string>)[item.status] ??
-      item.status)
+    ? item.status === "served"
+      ? ORDER_ITEM_STATUS_LABELS_VI.ready
+      : ((ORDER_ITEM_STATUS_LABELS_VI as Record<string, string>)[item.status] ??
+        item.status)
     : "";
   const discountAmount = Math.max(0, Number(item?.discount_amount ?? 0));
   const netSubtotal =
@@ -142,20 +141,6 @@ export function OrderItemActionsSheet({
           </div>
         )}
         <div className="flex flex-col gap-2">
-          {canMarkServed && (
-            <Button
-              type="button"
-              size="touch"
-              className="w-full bg-success text-success-foreground hover:bg-success"
-              disabled={isPending}
-              onClick={() => {
-                if (item) onMarkServed(item.id);
-              }}
-            >
-              <IconCheck data-icon="inline-start" />
-              {POS_VI.markServed}
-            </Button>
-          )}
           {canEdit && (
             <Button
               type="button"
@@ -234,8 +219,7 @@ export function OrderItemActionsSheet({
               {POS_VI.voidItem}
             </Button>
           )}
-          {!canMarkServed &&
-            !canVoid &&
+          {!canVoid &&
             !canReduce &&
             !canEdit &&
             !canDiscount &&

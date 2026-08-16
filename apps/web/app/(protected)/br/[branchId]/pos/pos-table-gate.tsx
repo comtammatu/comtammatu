@@ -72,32 +72,57 @@ const TableButton = memo(function TableButton({
     orderCount,
     orderVisualState,
   });
-  const tileTone = getPosTableTileTone(tileVisualState);
-  const statusLabel = isSelected
-    ? messages.pos.tableGate.selected
-    : tileVisualState === "empty"
-      ? messages.pos.tableGate.available
-      : tileVisualState === "ready"
-        ? messages.pos.tableGate.ready
-        : tileVisualState === "served"
-          ? messages.pos.tableGate.served
-          : tileVisualState === "active"
-            ? messages.pos.tableGate.occupied
-            : messages.pos.tableGate.reserved;
-
   const displaySeatingDuration =
     tableTiming?.seatingDuration ?? seatingDuration;
+
+  let statusLabel: string;
+  let statusVariant: "outline" | "success" | "warning" | "destructive" | "secondary";
+
+  if (isSelected) {
+    statusLabel = messages.pos.tableGate.selected;
+    statusVariant = "outline";
+  } else if (tileVisualState === "empty") {
+    statusLabel = messages.pos.tableGate.available;
+    statusVariant = "secondary";
+  } else if (tileVisualState === "ready" || tileVisualState === "served") {
+    statusLabel = messages.pos.tableGate.diningTime(displaySeatingDuration ?? "1p");
+    statusVariant = "secondary";
+  } else if (orderVisualState === "active" || tileVisualState === "active") {
+    const waitDuration =
+      tableTiming?.kitchenWaitDuration ?? displaySeatingDuration ?? "1p";
+    if (tableTiming?.kitchenLatencyTone === "urgent") {
+      statusLabel = messages.pos.tableGate.overdueElapsed(waitDuration);
+      statusVariant = "destructive";
+    } else if (tableTiming?.kitchenLatencyTone === "warning") {
+      statusLabel = messages.pos.tableGate.waitingElapsed(waitDuration);
+      statusVariant = "warning";
+    } else {
+      statusLabel = messages.pos.tableGate.waitingElapsed(waitDuration);
+      statusVariant = "outline";
+    }
+  } else {
+    statusLabel = messages.pos.tableGate.reserved;
+    statusVariant = "secondary";
+  }
+
+  const tileTone = getPosTableTileTone(tileVisualState);
+  const effectiveTileTone =
+    tileVisualState === "empty"
+      ? "default"
+      : statusVariant === "destructive" || statusVariant === "warning"
+        ? "warning"
+        : tileTone;
 
   return (
     <OperationalTile
       type="button"
       selected={isSelected}
-      tone={tileTone}
+      tone={effectiveTileTone}
       size="tile"
       aria-label={`${messages.pos.tableGate.tableAria(table.number, statusLabel)}${displaySeatingDuration ? `, ${displaySeatingDuration}` : ""}${hasStaffCall ? `, ${SELF_ORDER_VI.staffCallBadge}` : ""}${hasPendingSelfOrderRequest ? ", QR đang chờ duyệt" : ""}`}
       className={cn(
         "w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2.5 text-left whitespace-normal hover:shadow-effect-card-hover sm:gap-3 sm:p-3.5 lg:p-4",
-        tileVisualState === "ready" && !isSelected && "bg-success/20",
+        tileVisualState === "served" && !isSelected && "bg-success/10",
       )}
       onClick={handleClick}
     >
@@ -108,24 +133,20 @@ const TableButton = memo(function TableButton({
           </p>
           {displaySeatingDuration ? (
             <span className="text-xs font-medium tabular-nums opacity-75">
-              · {displaySeatingDuration}
+              · {messages.pos.tableGate.diningElapsed(displaySeatingDuration)}
             </span>
           ) : null}
         </div>
         <Badge
-          variant={
-            isSelected
-              ? "outline"
-              : tileTone === "success"
-                ? "success"
-                : tileTone === "warning"
-                  ? "warning"
-                  : "secondary"
-          }
+          variant={statusVariant}
           className={cn(
             "min-w-0 shrink truncate text-xs font-semibold",
             isSelected &&
               "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
+            statusVariant === "outline" &&
+              tileVisualState === "active" &&
+              !isSelected &&
+              "border-warning/20 bg-warning/10 text-warning",
           )}
         >
           {statusLabel}
@@ -143,18 +164,6 @@ const TableButton = memo(function TableButton({
         ) : hasPendingSelfOrderRequest ? (
           <Badge variant="warning" className="shrink-0 truncate text-xs font-semibold">
             QR ⏳
-          </Badge>
-        ) : tableTiming?.kitchenLatencyTone === "urgent" && tableTiming.kitchenWaitDuration ? (
-          <Badge variant="destructive" className="shrink-0 truncate text-xs font-semibold">
-            {messages.pos.tableGate.overdueElapsed(tableTiming.kitchenWaitDuration)}
-          </Badge>
-        ) : tableTiming?.kitchenLatencyTone === "warning" && tableTiming.kitchenWaitDuration ? (
-          <Badge variant="warning" className="shrink-0 truncate text-xs font-semibold">
-            {messages.pos.tableGate.waitingElapsed(tableTiming.kitchenWaitDuration)}
-          </Badge>
-        ) : tableTiming?.isReadyOverdue ? (
-          <Badge variant="warning" className="shrink-0 truncate text-xs font-semibold">
-            {messages.pos.tableGate.readyToServe}
           </Badge>
         ) : orderCount >= 2 ? (
           <Badge variant="secondary" className="shrink-0 truncate text-xs font-semibold">

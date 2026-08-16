@@ -4,7 +4,6 @@ import { isActiveUnpaidPosOrder } from "./table-order-visual-state";
 
 export const KITCHEN_WAIT_WARNING_MINUTES = 12;
 export const KITCHEN_WAIT_URGENT_MINUTES = 20;
-export const READY_PASS_OVERDUE_MINUTES = 5;
 
 export type KitchenLatencyTone = "normal" | "warning" | "urgent";
 
@@ -52,8 +51,6 @@ export function deriveTableTimingMap<T extends PosOrderTimingInput>(
   interface TableAccumulator {
     earliestDiningTime: number;
     earliestKitchenWaitTime: number | null;
-    hasReadyOrder: boolean;
-    earliestReadyTime: number | null;
     orderVisualState: PosTableOrderVisualState | null;
   }
 
@@ -68,17 +65,11 @@ export function deriveTableTimingMap<T extends PosOrderTimingInput>(
     const orderCreatedMs = new Date(order.created_at).getTime();
     if (Number.isNaN(orderCreatedMs)) continue;
 
-    const orderUpdatedMs = order.updated_at
-      ? new Date(order.updated_at).getTime()
-      : orderCreatedMs;
-
     let acc = accumulators.get(tableId);
     if (!acc) {
       acc = {
         earliestDiningTime: orderCreatedMs,
         earliestKitchenWaitTime: null,
-        hasReadyOrder: false,
-        earliestReadyTime: null,
         orderVisualState: null,
       };
       accumulators.set(tableId, acc);
@@ -94,18 +85,9 @@ export function deriveTableTimingMap<T extends PosOrderTimingInput>(
         acc.earliestKitchenWaitTime = orderCreatedMs;
       }
       acc.orderVisualState = "active";
-    } else if (order.status === "ready") {
-      acc.hasReadyOrder = true;
-      if (
-        acc.earliestReadyTime === null ||
-        orderUpdatedMs < acc.earliestReadyTime
-      ) {
-        acc.earliestReadyTime = orderUpdatedMs;
-      }
-      if (acc.orderVisualState !== "active") {
-        acc.orderVisualState = "ready";
-      }
-    } else if (order.status === "served") {
+    } else if (order.status === "ready" || order.status === "served") {
+      // Kitchen complete already means food left the pass — no ready-pass
+      // overdue / "Chờ bưng" signal on the POS floor.
       if (acc.orderVisualState === null) {
         acc.orderVisualState = "served";
       }
@@ -144,15 +126,6 @@ export function deriveTableTimingMap<T extends PosOrderTimingInput>(
       }
     }
 
-    let isReadyOverdue = false;
-    if (acc.earliestReadyTime !== null) {
-      const readyMinutes = Math.max(
-        0,
-        Math.floor((now - acc.earliestReadyTime) / 60_000),
-      );
-      isReadyOverdue = readyMinutes >= READY_PASS_OVERDUE_MINUTES;
-    }
-
     map.set(tableId, {
       tableId,
       seatingDuration,
@@ -160,7 +133,7 @@ export function deriveTableTimingMap<T extends PosOrderTimingInput>(
       kitchenWaitMinutes,
       kitchenWaitDuration,
       kitchenLatencyTone,
-      isReadyOverdue,
+      isReadyOverdue: false,
       orderVisualState: acc.orderVisualState,
     });
   }
@@ -197,16 +170,7 @@ export function deriveOrderTimingInfo<T extends PosOrderTimingInput>(
     }
   }
 
-  let isReadyOverdue = false;
-  if (order.status === "ready") {
-    const updatedMs = order.updated_at
-      ? new Date(order.updated_at).getTime()
-      : createdMs;
-    const readyMinutes = Number.isNaN(updatedMs)
-      ? 0
-      : Math.max(0, Math.floor((now - updatedMs) / 60_000));
-    isReadyOverdue = readyMinutes >= READY_PASS_OVERDUE_MINUTES;
-  }
+  const isReadyOverdue = false;
 
   return {
     orderId: order.id,

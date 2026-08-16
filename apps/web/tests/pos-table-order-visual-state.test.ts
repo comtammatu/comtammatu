@@ -61,7 +61,7 @@ test("deriveTableOrderVisualStates marks active unready table orders as active",
   assert.equal(states.get(2), "active");
 });
 
-test("deriveTableOrderVisualStates marks a table ready when all active orders are ready or served", () => {
+test("deriveTableOrderVisualStates treats kitchen-ready as dining/served", () => {
   const states = deriveTableOrderVisualStates(
     [
       { table_id: 1, status: "ready", payment_status: "unpaid" },
@@ -73,12 +73,12 @@ test("deriveTableOrderVisualStates marks a table ready when all active orders ar
     ACTIVE_STATUSES,
   );
 
-  assert.equal(states.get(1), "ready");
-  assert.equal(states.get(2), "ready");
+  assert.equal(states.get(1), "served");
+  assert.equal(states.get(2), "served");
   assert.equal(states.get(3), "active");
 });
 
-test("deriveTableOrderVisualStates marks a table served only when all active orders are served", () => {
+test("deriveTableOrderVisualStates marks a table served only when all active orders are kitchen-done", () => {
   const states = deriveTableOrderVisualStates(
     [
       { table_id: 1, status: "served", payment_status: "unpaid" },
@@ -137,7 +137,7 @@ test("getPosTableTileVisualState maps POS table backgrounds by order state", () 
       orderCount: 1,
       orderVisualState: "ready",
     }),
-    "ready",
+    "served",
   );
   assert.equal(
     getPosTableTileVisualState({

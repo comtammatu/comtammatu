@@ -65,7 +65,9 @@ test("deriveTableTimingMap classifies table dining and wait latency correctly", 
 
   const t4 = timingMap.get(4);
   assert.ok(t4);
-  assert.equal(t4.isReadyOverdue, true); // ready 6 mins ago >= 5
+  assert.equal(t4.orderVisualState, "served");
+  assert.equal(t4.isReadyOverdue, false);
+  assert.equal(t4.kitchenWaitMinutes, null);
 });
 
 test("deriveOrderTimingInfo computes order timing metrics", () => {

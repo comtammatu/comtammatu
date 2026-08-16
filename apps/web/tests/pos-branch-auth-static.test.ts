@@ -53,8 +53,5 @@ test("POS ID-only lifecycle actions carry branchId into custom auth", () => {
     detailSheetSource,
     /updatePosOrderNote\(branchId, orderId, newNote\)/,
   );
-  assert.match(
-    detailSheetSource,
-    /markOrderItemServed\(branchId, itemId\)/,
-  );
+  assert.doesNotMatch(detailSheetSource, /markOrderItemServed\(/);
 });

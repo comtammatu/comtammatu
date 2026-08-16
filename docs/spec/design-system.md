@@ -771,10 +771,10 @@ in `docs/modules/ui.md`.
   (`StatusBadge`, `getStatusBadgeMeta`).
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier may
-  collapse `new` / `confirmed` / `preparing` as age; kitchen `served` keeps
-  `Đã phục vụ` / `success`. Unpaid uses the `order-payment` domain via
-  `getStatusBadgeMeta("order-payment", …)` — “Chờ thanh toán” is payment, not
-  kitchen `served`), `kds/lib/status-config.ts` (hot path),
+  collapse `new` / `confirmed` / `preparing` as age; kitchen `ready` /
+  `served` collapse to the unpaid `order-payment` domain via
+  `getStatusBadgeMeta("order-payment", …)` — payment labels, never the
+  waiter served `label_vi`), `kds/lib/status-config.ts` (hot path),
   `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts`.
 
 ### Metric card role

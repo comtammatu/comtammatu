@@ -28,14 +28,14 @@ const billSheetSource = readFileSync(
   "utf8",
 );
 
-test("POS ready status stays distinct while served waits for payment", () => {
+test("POS kitchen-done statuses wait for payment without served wording", () => {
   assert.deepEqual(
     getPosOrderStatusInfo({
       status: "ready",
       payment_status: "unpaid",
       created_at: CREATED_AT,
     }),
-    { label: "Sẵn sàng", variant: "success" },
+    { label: "Chưa thanh toán", variant: "outline" },
   );
 
   assert.deepEqual(
@@ -71,6 +71,9 @@ test("POS order-level served action is not exposed to cashier surfaces", () => {
   assert.doesNotMatch(orderDetailSource, /handleStatus\("served"\)/);
   assert.doesNotMatch(orderDetailSource, /updateOrderStatus/);
   assert.doesNotMatch(orderDetailSource, /messages\.pos\.order\.markedServed/);
+  assert.doesNotMatch(orderDetailSource, /handleMarkItemServed/);
+  assert.doesNotMatch(orderDetailSource, /markOrderItemServed/);
+  assert.doesNotMatch(orderDetailSource, /onMarkServed/);
 
   assert.doesNotMatch(orderHistorySource, /pos-order-serve/);
   assert.doesNotMatch(orderHistorySource, /onServeOrder/);
@@ -81,4 +84,20 @@ test("POS order-level served action is not exposed to cashier surfaces", () => {
 
   assert.doesNotMatch(billSheetSource, /showUnservedWarning/);
   assert.doesNotMatch(billSheetSource, /unservedTitle|unservedDescription/);
+});
+
+test("POS item actions sheet does not expose per-item served confirmation", () => {
+  const itemActionsSource = readFileSync(
+    join(
+      process.cwd(),
+      posSourcePath,
+      "_components/order-detail/order-item-actions-sheet.tsx",
+    ),
+    "utf8",
+  );
+
+  assert.doesNotMatch(itemActionsSource, /onMarkServed/);
+  assert.doesNotMatch(itemActionsSource, /canMarkServed/);
+  assert.doesNotMatch(itemActionsSource, /POS_VI\.markServed/);
+  assert.doesNotMatch(itemActionsSource, /Đã phục vụ/);
 });

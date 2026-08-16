@@ -145,7 +145,10 @@ function getRowChangeToneClass(tone: RowChangeTone): string | false {
 export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const cancelled = row.status === "cancelled";
   const displayName = getPosLineItemDisplayName(row);
-  const statusInfo = getStatusBadgeMeta("order-item", row.status);
+  const statusInfo =
+    row.status === "served"
+      ? getStatusBadgeMeta("order-item", "ready")
+      : getStatusBadgeMeta("order-item", row.status);
   const summary = getPosLineItemSummary(row);
   const changeTone = useOrderItemChangeTone(row);
   const discountAmount = Math.max(0, Number(row.discount_amount ?? 0));

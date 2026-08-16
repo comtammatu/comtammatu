@@ -71,16 +71,12 @@ export function deriveTableOrderVisualStates(
     if (tableId === null || map.get(tableId) === "active") continue;
 
     const nextState =
-      order.status === "served"
+      order.status === "ready" || order.status === "served"
         ? "served"
-        : order.status === "ready"
-          ? "ready"
-          : "active";
+        : "active";
 
     if (nextState === "active") {
       map.set(tableId, "active");
-    } else if (nextState === "ready") {
-      map.set(tableId, "ready");
     } else if (!map.has(tableId)) {
       map.set(tableId, "served");
     }
@@ -93,10 +89,10 @@ export type PosTableTileTone = "default" | "success" | "warning" | "muted";
 
 /**
  * Tile tone. `ready`/`served` derive from the SAME canonical status -> variant
- * map the order-list badge uses (`getPosOrderStateVariant`), so a served
- * kitchen-done order is one color across tile and list. Unpaid uses the
- * `order-payment` domain on the cashier badge.
- * `active` intentionally diverges: an occupied table stays amber as an
+ * map the order-list badge uses (`getPosOrderStateVariant`). Kitchen complete
+ * collapses to dining (`served`) on the floor — POS never waits for a separate
+ * waiter serve tap. Unpaid uses the `order-payment` domain on the cashier
+ * badge. `active` intentionally diverges: an occupied table stays amber as an
  * at-a-glance table-occupancy signal (a different axis from the order-status
  * badge, which is neutral for an in-progress order). `empty`/`muted` are
  * tile-only presentation states.
@@ -128,8 +124,11 @@ export function getPosTableTileVisualState({
 }): PosTableTileVisualState {
   const hasActiveOrder = orderVisualState != null || orderCount > 0;
   if (tableStatus === "available" && !hasActiveOrder) return "empty";
-  if (orderVisualState === "ready") return "ready";
-  if (orderVisualState === "served") return "served";
+  // Kitchen `ready` and waiter `served` are the same floor signal: dining /
+  // waiting for payment. Prefer `served` so tiles never show "Chờ bưng".
+  if (orderVisualState === "ready" || orderVisualState === "served") {
+    return "served";
+  }
   if (tableStatus === "occupied" || hasActiveOrder) return "active";
   return "muted";
 }

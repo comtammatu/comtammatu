@@ -153,7 +153,7 @@ function notifyOrderTransition(
   if (nextStatus === "ready" && currentOrder.status !== "ready") {
     if (beepEnabled) playAppSignal("pos");
     toast.success(`Bếp hoàn thành #${orderNumber}`, {
-      description: "Sẵn sàng gọi khách hoặc thanh toán",
+      description: "Món đã xong — có thể thanh toán",
     });
     return;
   }

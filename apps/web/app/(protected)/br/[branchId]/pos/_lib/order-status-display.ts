@@ -5,13 +5,14 @@
  * (new/confirmed/preparing/ready/served/completed/cancelled) — chef KDS +
  * reports + audit need that granularity.
  *
- * Cashier rule of thumb: chỉ show 5 labels.
+ * Cashier rule of thumb: chỉ show 4 labels.
  *   - active (new/confirmed/preparing) → relative age "X phút" / "X tiếng"
- *   - ready                            → "Sẵn sàng" (floor pickup signal)
- *   - served                           → kitchen `Đã phục vụ` / `success`
- *   - unpaid / pending                 → `order-payment` domain
+ *   - ready / served (kitchen done)    → `order-payment` domain while unpaid
  *   - paid (any status)                → "Đã thanh toán"
  *   - cancelled                        → "Đã hủy"
+ *
+ * Kitchen complete (`ready`) already means food left the pass — POS does not
+ * expose a separate waiter `served` confirmation or "Đã phục vụ" badge.
  *
  * NEVER expose this to KDS chef view, admin reports, or audit trail —
  * those keep full granularity by design.
@@ -32,8 +33,8 @@ export interface OrderStatusInfo {
  * Canonical workflow-state -> badge variant for active/unpaid POS orders.
  * One order = one color across the table tile and the order-list badge:
  * the tile derives its tone from this same map instead of re-deriving tone.
- * Kitchen `served` stays success; unpaid uses the payment domain at the
- * call site via `getPosOrderStatusInfo`.
+ * Kitchen-done (`ready`/`served`) collapses to dining `served` tone; unpaid
+ * uses the payment domain at the call site via `getPosOrderStatusInfo`.
  */
 type PosOrderStateVariant = Extract<
   OrderStatusVariant,
@@ -73,6 +74,16 @@ function formatOrderAge(createdAtIso: string): string {
   return `${hours} tiếng`;
 }
 
+function getUnpaidKitchenDoneStatusInfo(
+  paymentStatus: string | null,
+): OrderStatusInfo {
+  const payment = getStatusBadgeMeta(
+    "order-payment",
+    paymentStatus ?? "unpaid",
+  );
+  return { label: payment.label, variant: payment.variant };
+}
+
 export function getPosOrderStatusInfo(
   order: OrderStatusInput,
 ): OrderStatusInfo {
@@ -97,24 +108,8 @@ export function getPosOrderStatusInfo(
         variant: getPosOrderStateVariant("active"),
       };
     case "ready":
-      return {
-        label: "Sẵn sàng",
-        variant: getPosOrderStateVariant("ready"),
-      };
-    case "served": {
-      const kitchen = getStatusBadgeMeta("order", "served");
-      if (order.payment_status === "paid") {
-        return {
-          label: kitchen.label,
-          variant: kitchen.variant,
-        };
-      }
-      const payment = getStatusBadgeMeta(
-        "order-payment",
-        order.payment_status ?? "unpaid",
-      );
-      return { label: payment.label, variant: payment.variant };
-    }
+    case "served":
+      return getUnpaidKitchenDoneStatusInfo(order.payment_status);
     default:
       return { label: order.status, variant: "outline" };
   }

@@ -57,7 +57,6 @@ import {
   cancelOrder,
   transferOrderTable,
   updatePosOrderNote,
-  markOrderItemServed,
   fetchOrderItemsForReorder,
   setOrderPriority,
   setOrderItemPriority,
@@ -814,20 +813,6 @@ export function OrderDetailSheet({
         // emitted by the RPC commit. Saves ~400-600ms in `isPending` window.
       } else {
         notify.error(r.error ?? messages.pos.order.transferFailed);
-      }
-    });
-  };
-
-  const handleMarkItemServed = (itemId: number) => {
-    startMutation(async () => {
-      const r = await markOrderItemServed(branchId, itemId);
-      if (r.success) {
-        notify.success("Đã phục vụ món");
-        setActionsItemId(null);
-        await onOrderUpdated?.();
-        load();
-      } else {
-        notify.error(r.error ?? messages.pos.order.statusUpdateFailed);
       }
     });
   };
@@ -1948,7 +1933,6 @@ export function OrderDetailSheet({
         canApplyDiscount={canShowManualDiscount}
         isPending={isMutating}
         onClose={() => setActionsItemId(null)}
-        onMarkServed={handleMarkItemServed}
         onVoidRequest={handleVoidRequest}
         onReduceRequest={handleReduceRequest}
         onEditRequest={onStartEditSent ? handleEditRequest : undefined}
