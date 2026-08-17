@@ -51,11 +51,9 @@ Payment hoàn tất
 
 HĐ đã phát hành không dựng lại từ menu/config hiện tại. Đổi thuế/template/series
 chỉ giao dịch mới. Provider response chưa rõ → đối soát cùng idempotency
-identity; không tự phát hành HĐ mới.
-
-Cửa sổ QR người mua là `min(paid_at + 2 giờ, 23:55 cùng ngày VN)`. Viettel MTT
-từ chối ngày lập khác ngày bán (`INVOICE_ISSUE_DATE_INVALID_TT78`). Worker
-không gọi Viettel khi ngày lập (giờ VN) đã sang ngày mới.
+identity; không tự phát hành HĐ mới. Cửa sổ QR: `min(paid_at + 2 giờ, 23:55
+cùng ngày VN)`. Viettel MTT từ chối ngày lập khác ngày bán; worker không gửi
+khi ngày lập (giờ VN) đã sang ngày mới.
 
 **Dòng bắt buộc:** tên HH/DV thực; ĐVT, SL, đơn giá; thuế suất/căn cứ theo
 dòng khi template yêu cầu; tổng trước thuế / VAT / thanh toán theo rounding đã
@@ -119,5 +117,4 @@ Chỉ hiện `thuế TNDN ước tính` khi có version quy tắc + nguồn + `e
 
 ## 7. Nguồn pháp lý
 
-Danh mục văn bản và ngày hiệu lực:
-[legal-framework-2026.md](legal-framework-2026.md).
+Danh mục văn bản và ngày hiệu lực: [legal-framework-2026.md](legal-framework-2026.md).
