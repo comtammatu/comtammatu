@@ -42,3 +42,26 @@ test("ADR 0040 treats FG site WAC spread as a bug", () => {
   assert.match(adr, /Finished-good provisional ignores [`]grn_receipt[`]/);
   assert.match(inventory, /không GRN, điều chuyển không/);
 });
+
+test("sườn một gang restatement uses append-only provisional reprice", () => {
+  const sql = read(
+    "supabase/migrations/20260817201330_reprice_suon_mot_gang_zero_origins.sql",
+  );
+  const cockpit = read(
+    "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts",
+  );
+  const expenses = read(
+    "apps/web/app/(protected)/finance/expense-actions.ts",
+  );
+
+  assert.match(sql, /private\.reprice_zero_value_origins/);
+  assert.match(sql, /private\.project_company_wac/);
+  assert.match(sql, /private\.ingredient_company_wac/);
+  assert.match(sql, /Thịt một gang/);
+  assert.match(sql, /Sườn một gang/);
+  assert.match(sql, /pos_sale_shortfall/);
+  assert.match(sql, /provisional_reprice/);
+  assert.doesNotMatch(sql, /UPDATE public\.stock_movements/);
+  assert.match(cockpit, /eventType === "provisional_reprice"/);
+  assert.match(expenses, /"provisional_reprice"/);
+});

@@ -30,6 +30,7 @@ const before = new Set(await readdir(migrationsDir));
 const result = spawnSync("corepack", ["pnpm", "exec", "supabase", "migration", "new", name], {
   cwd: process.cwd(),
   stdio: "inherit",
+  shell: process.platform === "win32",
 });
 if (result.status !== 0) process.exit(result.status ?? 1);
 

@@ -5,6 +5,22 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
+## Backfill sale consumption after today's recipe add
+
+State: verify
+Kind: fix
+Tier: T3
+Lane: inventory/finance
+Exit: Paid sales-CN orders consume newly added recipe ingredients (cups, takeaway pack, crackling); `/finance` MTD food cost is a number, not missing-data; already-posted ingredients are not deducted twice.
+Evidence: Production `enloyfnuerqgaqderbwb` applied `20260817200004`. MTD coverage 753/753. Today's recipe ingredients have zero missing sale_consumption. Order 29 posted 2 cups at 613. Branch crackling on-hand is negative pending transfer.
+
+- [ ] Owner reload `/finance` MTD and confirm food cost shows a number
+
+UI Advisor Gate
+- Surface: none (ledger backfill; `/finance` landing copy unchanged)
+- Block: none
+- Verification: SQL + static tests, then Production apply proof
+
 ## Redo bank LIST match for accountants
 
 State: verify
@@ -56,9 +72,9 @@ Kind: feature
 Tier: T3
 Lane: inventory/valuation
 Exit: Pending GRN uses last-invoice/WAC provisional so site WAC does not collapse to 0; purchased SKUs share one company WAC; finished goods skip GRN and share one production WAC after transfer; production output equals consumed input value; owner-only `repair_company_wac_valuation` restates without rewriting movement snapshots.
-Evidence: ADR 0040 + glossary/inventory copy; migration `20260817183130_company_wac_and_cost_restatement.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17; SQL + static tests. Remaining: confirm pending invoices then `repair_company_wac_valuation`.
+Evidence: ADR 0040 + glossary/inventory copy; migration `20260817183130_company_wac_and_cost_restatement.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17; SQL + static tests. Scoped 17 Aug restatement `20260817201330` (one-gang raw meat and finished good only): origin 2125 provisional 2982000 VND; FG WAC 51611 VND/portion; 13 sold portions food_cost 51611 VND. Remaining: other 17 Aug pending invoices, then company-wide `repair_company_wac_valuation`.
 
-- [ ] Confirm remaining 17 Aug pending invoices, then `repair_company_wac_valuation` dry-run then apply.
+- [ ] Confirm remaining 17 Aug pending invoices (chop, spare-rib, produce), then `repair_company_wac_valuation` dry-run then apply.
 
 UI Advisor Gate
 - Surface: inventory stock/issue/transfer + GRN pending hint; plane: `control_surface`; change: copy

@@ -228,6 +228,16 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function isFoodCostRepriceEvent(
+  eventType: string | null | undefined,
+): boolean {
+  return (
+    eventType === "invoice_reprice" ||
+    eventType === "credit_reprice" ||
+    eventType === "provisional_reprice"
+  );
+}
+
 async function isInventoryValuationActive(
   supabase: SupabaseClient,
   tenantId: number,
@@ -755,10 +765,7 @@ async function fetchActualFoodCostSnapshot({
     const event = Array.isArray(row.inventory_valuation_events)
       ? row.inventory_valuation_events[0]
       : row.inventory_valuation_events;
-    return (
-      event?.event_type === "invoice_reprice" ||
-      event?.event_type === "credit_reprice"
-    );
+    return isFoodCostRepriceEvent(event?.event_type);
   });
   const branchWeights = new Map<
     number,
@@ -848,10 +855,7 @@ async function fetchActualFoodCostSnapshot({
     const movement = Array.isArray(event.stock_movements)
       ? event.stock_movements[0]
       : event.stock_movements;
-    if (
-      event.event_type !== "invoice_reprice" &&
-      event.event_type !== "credit_reprice"
-    ) {
+    if (!isFoodCostRepriceEvent(event.event_type)) {
       // POS-only at sales Chi nhánh — skip manual slips and Kho Tổng / Bếp TT.
       if (movement?.branch_id == null || movement.order_id == null) continue;
       if (!allowedBranchSet.has(movement.branch_id)) continue;

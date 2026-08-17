@@ -29,6 +29,7 @@ DECLARE
   v_ingredient bigint;
   v_side_ingredient bigint;
   v_drink_ingredient bigint;
+  v_delta_ingredient bigint;
   v_part_unit bigint;
   v_pack_unit bigint;
   v_limit_menu bigint;
@@ -375,6 +376,67 @@ BEGIN
 
   IF v_count <> 2 OR v_result ->> 'reason' <> 'already_posted' THEN
     RAISE EXCEPTION 'TEST 5 FAILED: sale idempotency failed, count=% result=%',
+      v_count, v_result;
+  END IF;
+
+  INSERT INTO public.ingredients (
+    tenant_id, name, sku, unit_cost, item_kind,
+    receipt_unit_id, issue_unit_id, production_unit_id
+  )
+  VALUES (
+    v_tenant,
+    '__g5_recipe_delta_' || gen_random_uuid()::text,
+    '__G5-DELTA-' || floor(random() * 1000000)::text,
+    500,
+    'raw_material',
+    v_part_unit, v_part_unit, v_part_unit
+  )
+  RETURNING id INTO v_delta_ingredient;
+
+  INSERT INTO public.ingredient_units
+    (tenant_id, ingredient_id, unit_id, to_base_factor, is_base)
+  VALUES (v_tenant, v_delta_ingredient, v_part_unit, 1, true);
+
+  INSERT INTO public.stock_levels (
+    tenant_id, branch_id, ingredient_id, location_id, current_quantity, avg_unit_cost
+  )
+  VALUES (v_tenant, v_branch, v_delta_ingredient, v_location, 10, 500);
+
+  INSERT INTO public.recipes
+    (tenant_id, menu_item_id, ingredient_id, quantity, entry_unit_id, yield_factor)
+  VALUES (v_tenant, v_limit_menu, v_delta_ingredient, 1, v_part_unit, 1);
+
+  v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
+  SELECT count(*) INTO v_count
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_count <> 3
+     OR COALESCE((v_result ->> 'consumed')::boolean, false) IS DISTINCT FROM true
+     OR COALESCE((v_result ->> 'movements_created')::int, 0) <> 1 THEN
+    RAISE EXCEPTION 'TEST 5C FAILED: recipe-delta post failed, count=% result=%',
+      v_count, v_result;
+  END IF;
+
+  SELECT quantity_change INTO v_qty
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND ingredient_id = v_delta_ingredient
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_qty <> -2 THEN
+    RAISE EXCEPTION 'TEST 5C FAILED: expected delta quantity_change=-2, got %', v_qty;
+  END IF;
+
+  v_result := public.post_pos_sale_consumption_if_ready(v_order, v_profile);
+  SELECT count(*) INTO v_count
+  FROM public.stock_movements
+  WHERE tenant_id = v_tenant AND order_id = v_order
+    AND movement_subtype = 'sale_consumption';
+
+  IF v_count <> 3 OR v_result ->> 'reason' <> 'already_posted' THEN
+    RAISE EXCEPTION 'TEST 5C FAILED: delta idempotency failed, count=% result=%',
       v_count, v_result;
   END IF;
 

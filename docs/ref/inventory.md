@@ -235,7 +235,8 @@ Append-only. `type` như §1b. Liên kết: `order_id`, `grn_id`, `transfer_id`,
 
 POS: Sale Runtime ghi `consumption/sale_consumption` tại Kho CN khi đơn `paid` +
 `completed` (KDS chờ `first_ready_at`; không KDS chờ dispatch phiếu bếp).
-`pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
+Gọi lại sau khi thêm định mức chỉ trừ NL chưa có dòng `sale_consumption` của đơn
+đó. `pos_stock_outcome_posting` = switch Owner-only tắt trừ/rào tồn theo CN. Báo cáo
 tiêu hao thủ công không ghi lại NL đã trừ từ POS.
 
 ---

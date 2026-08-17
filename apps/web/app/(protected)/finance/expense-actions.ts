@@ -782,6 +782,7 @@ export async function fetchActualFoodCostSummary(params: {
         .in("inventory_valuation_events.event_type", [
           "invoice_reprice",
           "credit_reprice",
+          "provisional_reprice",
         ])
         .gte("inventory_valuation_events.effective_at", startIso)
         .lt("inventory_valuation_events.effective_at", endIso)
@@ -877,8 +878,8 @@ export async function fetchActualFoodCostSummary(params: {
   } else {
     scopedRepriceTotal = repriceTotal;
   }
-  // Invoice/credit reprice adjusts inventory that already flowed to food cost;
-  // attribute it to sale food cost (not operating slips).
+  // Invoice, credit, and provisional reprice adjust inventory that already
+  // flowed to food cost; attribute it to sale food cost (not operating slips).
   const total = saleFoodCostTotal + scopedRepriceTotal;
   await addPaidOrdersWithoutRecipeNeed({
     supabase,

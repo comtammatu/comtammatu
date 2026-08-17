@@ -168,5 +168,6 @@ test("finance cockpit does not fold writeoff or adjustments into operating expen
 
   assert.match(actualFoodCost, /\.from\("inventory_value_allocations"\)/);
   assert.match(actualFoodCost, /\.eq\("allocation_bucket", "food_cost"\)/);
+  assert.match(actualFoodCost, /isFoodCostRepriceEvent/);
   assert.doesNotMatch(actualFoodCost, /writeoff|adjustment|count_adjustment/);
 });
