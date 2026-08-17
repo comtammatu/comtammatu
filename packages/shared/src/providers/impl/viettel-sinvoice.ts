@@ -166,9 +166,47 @@ function normalizeMoney(value: number | undefined): number {
   return Math.round(value);
 }
 
+/** Viettel 43/44: |diff| < 1 VND. Integer form of |net × rate/100 − tax| < 1. */
+function passesValidator43(
+  qty: number,
+  unitPrice: number,
+  lineNet: number,
+): boolean {
+  return Math.abs(qty * unitPrice - lineNet) < 1;
+}
+
+function passesValidator44(
+  lineNet: number,
+  vatRate: number,
+  taxAmount: number,
+): boolean {
+  return Math.abs(lineNet * vatRate - taxAmount * 100) < 100;
+}
+
+function roundedLineTax(lineNet: number, vatRate: number): number {
+  return Math.round((lineNet * vatRate) / 100);
+}
+
 /**
- * Choose net unit price so qty×net + round(qty×net×vat%) is as close as
- * possible to the post-discount GROSS (ADR 0034, no itemDiscount).
+ * Prefer residual tax (GROSS − NET) so the line stays additive in whole VND.
+ * Fall back to rounded tax when residual would break validator 44.
+ */
+function chooseLineTax(
+  lineNet: number,
+  vatRate: number,
+  lineGross: number,
+): number {
+  const residual = lineGross - lineNet;
+  if (residual >= 0 && passesValidator44(lineNet, vatRate, residual)) {
+    return residual;
+  }
+  return roundedLineTax(lineNet, vatRate);
+}
+
+/**
+ * Choose integer net unit price so qty×net is as close as possible to the
+ * post-discount GROSS (ADR 0034, no itemDiscount), preferring a unit that
+ * lets residual VAT pass validator 44.
  */
 function findNetUnitPriceForGrossTarget(
   qty: number,
@@ -182,17 +220,99 @@ function findNetUnitPriceForGrossTarget(
 
   let best = Math.max(0, seed);
   let bestDiff = Number.POSITIVE_INFINITY;
+  let bestResidualOk = false;
   for (let netUnit = start; netUnit <= end; netUnit += 1) {
     const lineNet = netUnit * qty;
-    const tax = Math.round((lineNet * vatRate) / 100);
-    const diff = Math.abs(lineNet + tax - gross);
-    if (diff < bestDiff) {
+    const residualTax = gross - lineNet;
+    const residualOk =
+      residualTax >= 0 && passesValidator44(lineNet, vatRate, residualTax);
+    const diff = Math.abs(lineNet * (1 + vatRate / 100) - gross);
+    if (residualOk && !bestResidualOk) {
       best = netUnit;
       bestDiff = diff;
+      bestResidualOk = true;
       if (diff === 0) break;
+      continue;
+    }
+    if (residualOk === bestResidualOk && diff < bestDiff) {
+      best = netUnit;
+      bestDiff = diff;
+      if (diff === 0 && residualOk) break;
     }
   }
   return best;
+}
+
+function applySaleLineAmounts(
+  line: SinvoiceSaleItemInfo,
+  lineNet: number,
+  taxAmount: number,
+): void {
+  line.itemTotalAmountWithoutTax = lineNet;
+  line.itemTotalAmountAfterDiscount = lineNet;
+  line.taxAmount = taxAmount;
+  line.itemTotalAmountWithTax = lineNet + taxAmount;
+}
+
+function tryShiftLineTax(line: SinvoiceSaleItemInfo, delta: number): boolean {
+  const nextTax = line.taxAmount + delta;
+  if (nextTax < 0) return false;
+  if (
+    !passesValidator44(line.itemTotalAmountWithoutTax, line.taxPercentage, nextTax)
+  ) {
+    return false;
+  }
+  applySaleLineAmounts(line, line.itemTotalAmountWithoutTax, nextTax);
+  return true;
+}
+
+function tryShiftQtyOneNet(line: SinvoiceSaleItemInfo, delta: number): boolean {
+  if (line.quantity !== 1) return false;
+  const nextNet = line.itemTotalAmountWithoutTax + delta;
+  if (nextNet < 0) return false;
+  const nextUnit = nextNet;
+  if (!passesValidator43(1, nextUnit, nextNet)) return false;
+  const keptTax = line.taxAmount;
+  const nextTax = passesValidator44(nextNet, line.taxPercentage, keptTax)
+    ? keptTax
+    : chooseLineTax(nextNet, line.taxPercentage, nextNet + keptTax + delta);
+  if (!passesValidator44(nextNet, line.taxPercentage, nextTax)) return false;
+  if (nextNet + nextTax !== line.itemTotalAmountWithTax + delta) return false;
+  line.unitPrice = nextUnit;
+  applySaleLineAmounts(line, nextNet, nextTax);
+  return true;
+}
+
+/**
+ * Keep invoice GROSS on the POS whole-VND total. Per-line integer NET/VAT can
+ * drift ±1₫; absorb the leftover onto another line without breaking 43/44.
+ */
+function absorbWholeVndGrossResidual(
+  itemInfo: SinvoiceSaleItemInfo[],
+  targetGross: number,
+): void {
+  const currentGross = () =>
+    itemInfo.reduce((sum, line) => sum + line.itemTotalAmountWithTax, 0);
+
+  let drift = targetGross - currentGross();
+  const maxSteps = Math.max(8, itemInfo.length * 4);
+  for (let step = 0; step < maxSteps && drift !== 0; step += 1) {
+    const delta = drift > 0 ? 1 : -1;
+    const candidates = [...itemInfo].sort(
+      (a, b) => b.itemTotalAmountWithTax - a.itemTotalAmountWithTax,
+    );
+    const moved =
+      candidates.some((line) => tryShiftLineTax(line, delta)) ||
+      candidates.some((line) => tryShiftQtyOneNet(line, delta));
+    if (!moved) {
+      throw new Error(`sinvoice_gross_residual_unresolved:${drift}`);
+    }
+    drift = targetGross - currentGross();
+  }
+
+  if (drift !== 0) {
+    throw new Error(`sinvoice_gross_residual_unresolved:${drift}`);
+  }
 }
 
 export type SinvoiceBuyerInfo = {
@@ -293,16 +413,17 @@ export function resolveSinvoiceBuyerInfo(
  *   - 87: |sumOfTotalLineAmountWithoutTax − Σ(itemInfo.itemTotalAmountWithoutTax)| < 1
  *   - 49: |totalTaxAmount − Σ(itemInfo.taxAmount)| < 1
  *
- * Derive netUnitPrice first (rounded), then lineNet = qty × netUnitPrice
- * (always exact integer). Independently rounding lineNet and netUnitPrice
- * — as the previous impl did — can drift by up to qty/2 and break validator
- * 43 in cases like qty=7, lineGross=100, vatRate=8 (lineNet=93,
- * netUnitPrice=13, qty×unitPrice=91, diff=2 ≥ 1 → reject).
+ * Derive netUnitPrice first (whole VND), then lineNet = qty × netUnitPrice
+ * (exact integer). Independently rounding lineNet and netUnitPrice can drift
+ * by up to qty/2 and break validator 43 (qty=7, lineGross=100, vatRate=8).
+ * Tax is residual GROSS−NET when 44 holds, else rounded. Invoice GROSS is
+ * forced back onto Σ POS line GROSS by absorbing leftover ±1₫ onto another
+ * line that still passes 43/44.
  */
 export function buildSinvoiceItemInfo(
   items: InvoiceLineItem[],
 ): SinvoiceLineMath {
-  const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
+  const saleItems: SinvoiceSaleItemInfo[] = items.map((item, index) => {
     const lineVatRate = item.vatRate;
     if (![0, 5, 8, 10].includes(lineVatRate)) {
       throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
@@ -319,20 +440,19 @@ export function buildSinvoiceItemInfo(
       lineGross,
     );
     const lineNet = netUnitPrice * qty;
-    const taxableAmount = lineNet;
-    const lineTax = Math.round((taxableAmount * lineVatRate) / 100);
+    const lineTax = chooseLineTax(lineNet, lineVatRate, lineGross);
 
     return {
       lineNumber: index + 1,
-      selection: 1,
+      selection: 1 as const,
       itemCode: "",
       itemName: item.name,
       unitName: item.unit || "Phần",
       unitPrice: netUnitPrice,
       quantity: qty,
       itemTotalAmountWithoutTax: lineNet,
-      itemTotalAmountAfterDiscount: taxableAmount,
-      itemTotalAmountWithTax: taxableAmount + lineTax,
+      itemTotalAmountAfterDiscount: lineNet,
+      itemTotalAmountWithTax: lineNet + lineTax,
       discount: 0,
       itemDiscount: 0,
       itemNote: null,
@@ -342,6 +462,13 @@ export function buildSinvoiceItemInfo(
     };
   });
 
+  const targetGross = items.reduce(
+    (sum, item) => sum + normalizeMoney(item.amount),
+    0,
+  );
+  absorbWholeVndGrossResidual(saleItems, targetGross);
+
+  const itemInfo: SinvoiceItemInfo[] = saleItems;
   const sumLineNet = itemInfo.reduce(
     (s, l) => s + l.itemTotalAmountWithoutTax,
     0,

@@ -425,7 +425,15 @@ export async function issuePreparedTaxInvoice({
   let lineMath: ReturnType<typeof buildSinvoiceItemInfo>;
   try {
     lineMath = buildSinvoiceItemInfo(invoiceItems);
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.startsWith("sinvoice_gross_residual_unresolved:")) {
+      return {
+        success: false,
+        error: "Tổng dòng, thuế GTGT và số tiền thanh toán không khớp.",
+        errorCode: "invoice_total_mismatch",
+      };
+    }
     return {
       success: false,
       error: "Không thể tính và đối soát các dòng HĐĐT.",
@@ -436,7 +444,7 @@ export async function issuePreparedTaxInvoice({
   const drift = Math.abs(
     lineMath.totalGross - parsed.data.draftSnapshot.totalAmount,
   );
-  if (drift > 10) {
+  if (drift !== 0) {
     return {
       success: false,
       error: "Tổng dòng, thuế GTGT và số tiền thanh toán không khớp.",

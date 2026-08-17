@@ -30,8 +30,11 @@ item `%` discounts that drift under qty changes, and left
    POS/`order_items` retain full history.
 6. Fail closed if `Σ` projected GROSS `!== orders.total_amount`.
 7. Viettel body: each line is **already post-discount GROSS**. Reverse NET with
-   existing Sinvoice order (`netUnitPrice = round(grossUnit/(1+r))`,
-   `lineNet = qty × netUnitPrice`, then tax). Send `itemDiscount = 0` and
+   existing Sinvoice order (`netUnitPrice` whole VND first,
+   `lineNet = qty * netUnitPrice`). VAT is residual `GROSS - NET` when
+   validator 44 holds; leftover +/- 1 VND is absorbed onto another eligible
+   line so `totalAmountWithTax === orders.total_amount`. Send
+   `itemDiscount = 0` and
    `discount = 0` — no separate discount line and no provider discount fields.
 
 VAT basis: discounts subtract from **VAT-inclusive** amounts, then NET/VAT are

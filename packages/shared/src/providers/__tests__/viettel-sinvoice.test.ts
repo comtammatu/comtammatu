@@ -361,7 +361,33 @@ test("timeout, throttling and server errors are unknown outcomes", async () => {
   globalThis.fetch = originalFetch;
 });
 
-test("multi-quantity items preserve exact line quantity and satisfy all Viettel validators (Order 243)", () => {
+function assertViettelLineValidators(
+  math: ReturnType<typeof buildSinvoiceItemInfo>,
+  expectedGross: number,
+) {
+  assert.equal(math.totalGross, expectedGross);
+  assert.equal(math.sumLineNet + math.sumLineTax, expectedGross);
+  for (const line of math.itemInfo) {
+    if (line.selection !== 1) continue;
+    assert.equal(
+      line.itemTotalAmountWithoutTax,
+      (line.unitPrice ?? 0) * (line.quantity ?? 1),
+    );
+    assert.ok(
+      Math.abs(
+        (line.itemTotalAmountWithoutTax ?? 0) * (line.taxPercentage ?? 0) -
+          (line.taxAmount ?? 0) * 100,
+      ) < 100,
+      `validator 44 failed for ${line.itemName}`,
+    );
+    assert.equal(
+      line.itemTotalAmountWithTax,
+      line.itemTotalAmountWithoutTax + (line.taxAmount ?? 0),
+    );
+  }
+}
+
+test("multi-quantity items keep POS GROSS and satisfy Viettel validators (Order 243)", () => {
   const items = [
     item("Sườn Cốt Lết", 2, 90_000, 8),
     item("Bì", 2, 16_000, 8),
@@ -374,28 +400,15 @@ test("multi-quantity items preserve exact line quantity and satisfy all Viettel 
     math.itemInfo.map((l) => l.quantity),
     [2, 2, 2],
   );
-  assert.equal(math.totalGross, 145_997);
-  assert.equal(math.sumLineTax, 10_815);
-  assert.equal(math.sumLineNet, 135_182);
+  assertViettelLineValidators(math, 146_000);
+});
 
-  // Assert all lines satisfy Viettel validators
-  for (const line of math.itemInfo) {
-    if (line.selection === 1) {
-      assert.equal(
-        line.itemTotalAmountWithoutTax,
-        (line.unitPrice ?? 0) * (line.quantity ?? 1),
-      );
-      assert.equal(
-        line.taxAmount,
-        Math.round(
-          ((line.itemTotalAmountWithoutTax ?? 0) * (line.taxPercentage ?? 0)) / 100,
-        ),
-      );
-      assert.equal(
-        line.itemTotalAmountWithTax,
-        line.itemTotalAmountWithoutTax + (line.taxAmount ?? 0),
-      );
-    }
-  }
+test("whole-VND residual keeps invoice total on POS GROSS for typical 8% lines", () => {
+  const items = [
+    item("Cơm sườn", 1, 45_000, 8),
+    item("Trứng", 1, 5_000, 8),
+    item("Trà tắc", 3, 60_000, 8),
+  ];
+  assertViettelLineValidators(buildSinvoiceItemInfo(items), 110_000);
 });
 

@@ -58,6 +58,8 @@ dòng khi template yêu cầu; tổng trước thuế / VAT / thanh toán theo r
 duyệt; source order/payment; seller/buyer snapshot; thời điểm; template, series,
 provider ref, số HĐ, mã CQT/retrieval. Nhiều mức thuế/đơn — không reverse-split
 bằng một `invoice_vat_rate`; tổng VAT = tổng đã làm tròn theo dòng/nhóm.
+VND không thập phân: bóc NET nguyên đồng, VAT = GROSS − NET khi validator
+cho phép, lệch ±1₫ hấp thụ vào dòng khác; tổng HĐ = `orders.total_amount`.
 
 **Chiết khấu (ADR 0034):** giá POS đã gồm VAT; CK trừ trên GROSS rồi bóc NET.
 Má Tư nhúng CK vào đơn giá/thành tiền sau giảm — không gửi `itemDiscount` /
