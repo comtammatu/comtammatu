@@ -64,9 +64,35 @@ export function menuRecipeSourceWacKey(
 }
 
 /**
+ * Company WAC per ingredient (ADR 0040). Averages every positive
+ * `avg_unit_cost` across stock-bearing sites — Kho Tổng, Bếp TT, and CN.
+ */
+export function buildCompanyWacMap(
+  rows: readonly SourceSiteWacRow[],
+): Record<number, number> {
+  const accum = new Map<number, { sum: number; count: number }>();
+  for (const row of rows) {
+    const cost = Number(row.avgUnitCost);
+    if (!isPositiveUnitCost(cost)) continue;
+    const id = Number(row.ingredientId);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    const entry = accum.get(id) ?? { sum: 0, count: 0 };
+    entry.sum += cost;
+    entry.count += 1;
+    accum.set(id, entry);
+  }
+  const map: Record<number, number> = {};
+  for (const [id, entry] of accum) {
+    map[id] = entry.sum / entry.count;
+  }
+  return map;
+}
+
+/**
  * WAC keyed by Kho gốc (`branch_kind` × ingredient). Only positive costs;
  * multiple stock-bearing locations at the same source site are averaged.
- * Never mixes central_supply with central_kitchen.
+ * Catalog cost prefers `buildCompanyWacMap`; this map remains for last-known
+ * movement keys.
  */
 export function buildSourceSiteWacMap(
   rows: readonly SourceSiteWacRow[],
@@ -92,12 +118,56 @@ export function buildSourceSiteWacMap(
   return map;
 }
 
+function resolveCompanyMenuRecipeUnitCost({
+  ingredientId,
+  companyWacMap,
+  sourceSiteWacMap,
+  branchFallbackWacMap,
+  lastKnownSourceWacMap,
+}: {
+  ingredientId: number;
+  companyWacMap?: Readonly<Record<number, number>>;
+  sourceSiteWacMap: Readonly<Record<string, number>>;
+  branchFallbackWacMap?: Readonly<Record<number, number>>;
+  lastKnownSourceWacMap?: Readonly<Record<string, number>>;
+}): number | null {
+  const companyWac = companyWacMap?.[ingredientId];
+  if (isPositiveUnitCost(companyWac)) return companyWac;
+
+  const supplyWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey("central_supply", ingredientId)];
+  const kitchenWac =
+    sourceSiteWacMap[menuRecipeSourceWacKey("central_kitchen", ingredientId)];
+  const siteCosts = [supplyWac, kitchenWac].filter(isPositiveUnitCost);
+  if (siteCosts.length === 1) return siteCosts[0] ?? null;
+  if (siteCosts.length > 1) {
+    return siteCosts.reduce((sum, cost) => sum + cost, 0) / siteCosts.length;
+  }
+
+  const branchWac = branchFallbackWacMap?.[ingredientId];
+  if (isPositiveUnitCost(branchWac)) return branchWac;
+
+  const lastSupply =
+    lastKnownSourceWacMap?.[
+      menuRecipeSourceWacKey("central_supply", ingredientId)
+    ];
+  if (isPositiveUnitCost(lastSupply)) return lastSupply;
+  const lastKitchen =
+    lastKnownSourceWacMap?.[
+      menuRecipeSourceWacKey("central_kitchen", ingredientId)
+    ];
+  if (isPositiveUnitCost(lastKitchen)) return lastKitchen;
+
+  return null;
+}
+
 export function resolveMenuRecipeUnitCost({
   ingredientId,
   sourceSiteKind,
   sourceSiteWacMap,
   branchFallbackWacMap,
   lastKnownSourceWacMap,
+  companyWacMap,
 }: {
   ingredientId: number;
   sourceSiteKind: string | null | undefined;
@@ -106,25 +176,16 @@ export function resolveMenuRecipeUnitCost({
   branchFallbackWacMap?: Readonly<Record<number, number>>;
   /** Last positive movement unit_cost at Kho gốc (site × ingredient). */
   lastKnownSourceWacMap?: Readonly<Record<string, number>>;
+  companyWacMap?: Readonly<Record<number, number>>;
 }): number | null {
   if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) return null;
-  const sourceKey = menuRecipeSourceWacKey(sourceSiteKind, ingredientId);
-  const sourceWac = sourceSiteWacMap[sourceKey];
-  if (isPositiveUnitCost(sourceWac)) return sourceWac;
-
-  const otherSite: MenuRecipeSourceSiteKind =
-    sourceSiteKind === "central_supply" ? "central_kitchen" : "central_supply";
-  const otherWac =
-    sourceSiteWacMap[menuRecipeSourceWacKey(otherSite, ingredientId)];
-  if (isPositiveUnitCost(otherWac)) return otherWac;
-
-  const branchWac = branchFallbackWacMap?.[ingredientId];
-  if (isPositiveUnitCost(branchWac)) return branchWac;
-
-  const lastKnown = lastKnownSourceWacMap?.[sourceKey];
-  if (isPositiveUnitCost(lastKnown)) return lastKnown;
-
-  return null;
+  return resolveCompanyMenuRecipeUnitCost({
+    ingredientId,
+    companyWacMap,
+    sourceSiteWacMap,
+    branchFallbackWacMap,
+    lastKnownSourceWacMap,
+  });
 }
 
 /** Null when any line lacks a valued unit cost — never show a partial 0đ. */
@@ -193,28 +254,28 @@ export function resolveMenuRecipeCostSignals({
   sourceSiteWacMap,
   branchFallbackWacMap,
   lastKnownSourceWacMap,
+  companyWacMap,
 }: {
   ingredientId: number;
   sourceSiteKind: string | null | undefined;
   sourceSiteWacMap: Readonly<Record<string, number>>;
   branchFallbackWacMap?: Readonly<Record<number, number>>;
   lastKnownSourceWacMap?: Readonly<Record<string, number>>;
+  companyWacMap?: Readonly<Record<number, number>>;
 }): MenuRecipeCostSignal[] {
   if (!isMenuRecipeSourceSiteKind(sourceSiteKind)) {
     return ["missing_fulfill_site"];
   }
-  const sourceKey = menuRecipeSourceWacKey(sourceSiteKind, ingredientId);
-  const sourceWac = sourceSiteWacMap[sourceKey];
-  if (isPositiveUnitCost(sourceWac)) return [];
-
-  const otherSite: MenuRecipeSourceSiteKind =
-    sourceSiteKind === "central_supply" ? "central_kitchen" : "central_supply";
-  const otherWac =
-    sourceSiteWacMap[menuRecipeSourceWacKey(otherSite, ingredientId)];
-  if (isPositiveUnitCost(otherWac)) {
-    return ["source_wac_site_mismatch"];
+  if (
+    resolveCompanyMenuRecipeUnitCost({
+      ingredientId,
+      companyWacMap,
+      sourceSiteWacMap,
+      branchFallbackWacMap,
+      lastKnownSourceWacMap,
+    }) != null
+  ) {
+    return [];
   }
-  if (isPositiveUnitCost(branchFallbackWacMap?.[ingredientId])) return [];
-  if (isPositiveUnitCost(lastKnownSourceWacMap?.[sourceKey])) return [];
   return ["missing_source_wac"];
 }

@@ -33,6 +33,15 @@ test("supplier item batch mapping is atomic and tenant-scoped", () => {
   assert.doesNotMatch(databaseTypes, /supplier_sku_code/);
 });
 
+test("later FG purchase guard still lives in bulk_create_supplier_items", () => {
+  const migration = read(
+    "supabase/migrations/20260817191420_finished_good_produced_recipe_only.sql",
+  );
+  assert.match(migration, /bulk_create_supplier_items/);
+  assert.match(migration, /finished_good_not_purchased/);
+  assert.match(migration, /item_kind = 'finished_good'/);
+});
+
 test("supplier UI supports bulk selection and displays active ingredient counts", () => {
   const supplierActions = read(
     "apps/web/app/(protected)/inventory/supplier-actions.ts",

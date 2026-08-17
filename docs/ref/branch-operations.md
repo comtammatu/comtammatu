@@ -47,9 +47,9 @@ không void trực tiếp.
 
 ## Việc trong ca và KDS
 
-- SSOT việc theo vị trí: `position_shift_tasks` (`allows_photo` = bắt buộc ảnh minh chứng khi hoàn thành).
+- SSOT việc theo vị trí: `position_shift_tasks` (`allows_photo` = bắt buộc ảnh minh chứng khi hoàn thành; không tick xong khi thiếu `photo_path`).
 - Không dùng `shift_checklist_template_items` cho photo evidence ca.
-- Seed tối thiểu đầu/cuối ca theo vị trí; HR có thể chỉnh sau.
+- Seed ngắn đầu/cuối ca theo vị trí (3–5 việc); HR có thể chỉnh sau.
 - KDS mặc định một station “Quầy lên món” khi chi nhánh chưa có station; typography
   theo token Geist (D069).
 
@@ -57,12 +57,14 @@ không void trực tiếp.
 
 | Vị trí | Đầu ca | Cuối ca |
 | --- | --- | --- |
-| Thu ngân | Đăng nhập POS, đếm quỹ lẻ, kiểm tra máy in | Đếm tiền mặt, chốt ca POS |
-| Quầy lên món | Bật KDS, kiểm tra thố nguyên liệu | Tắt KDS, dọn quầy, bàn giao thừa |
-| Người nướng | Chuẩn bị bếp/khay sườn | Tắt bếp, vệ sinh vỉ/khay |
-| Phụ bếp | Cơm, canh, đĩa cơm gối đầu | Vệ sinh nồi/tủ hấp/quầy |
-| Phục vụ | Lau sảnh, kiểm tra dụng cụ; hỗ trợ POS (order/thu/in) | Lau sảnh, gom đĩa dơ; không chốt ca/void |
-| Tạp vụ | Chuẩn bị rửa + hũ dự phòng | Rửa tồn, đổ rác, lau sàn |
+| Thu ngân | Đếm quỹ lẻ, mở ca POS; setup sảnh; lau sàn chống ruồi | Đếm tiền, chốt ca POS; dọn khu phụ trách (ảnh) |
+| Quầy lên món | Bật KDS; setup quầy | Cất thừa; tắt KDS, dọn quầy; dọn khu phụ trách (ảnh) |
+| Quầy nướng | Nhóm than, lấy sườn | Rửa vỉ, vệ sinh lò; dọn khu phụ trách (ảnh) |
+| Phụ bếp | Bật điện; nấu cơm/canh; sơ chế topping | Vệ sinh nồi/tủ/bếp; dọn khu phụ trách (ảnh) |
+| Phục vụ | Setup sảnh; lau sàn chống ruồi | Dọn sảnh, quầy nước; dọn khu phụ trách (ảnh). Không chốt ca/void |
+| Tạp vụ | Vệ sinh WC; chuẩn bị khu rửa | Rửa hết chén dĩa; đổ rác, lau sàn; dọn khu phụ trách (ảnh) |
+| Bảo vệ | Quét sân trước; trông xe | Kéo bạt, dọn khu phụ trách (ảnh) |
+| Quản lý chi nhánh | Điểm danh; kiểm tra sẵn sàng bán | Đối chiếu doanh thu; duyệt kiểm kê / đặt hàng; dọn khu phụ trách (ảnh) |
 
 ## Màn hình liên quan
 

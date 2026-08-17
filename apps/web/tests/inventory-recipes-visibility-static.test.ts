@@ -34,6 +34,7 @@ test("menu recipe list shows every active item and omits Yield", () => {
   assert.match(actions, /buildSourceSiteWacMap/);
   assert.doesNotMatch(actions, /select\("id, name, unit_cost"\)/);
   assert.match(menuRecipeCost, /buildSourceSiteWacMap/);
+  assert.match(menuRecipeCost, /buildCompanyWacMap/);
   assert.match(menuRecipeCost, /menuRecipeSourceWacKey/);
   assert.match(menuRecipeCost, /resolveMenuRecipeCostSignals/);
   assert.match(menuRecipeCost, /resolveMenuRecipeListCostState/);

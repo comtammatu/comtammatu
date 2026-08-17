@@ -388,7 +388,7 @@ test("Owner page-header actions use responsive named button sizes", () => {
   );
   assert.match(
     importDialog,
-    /size=\{isTouchLayout \? "touch" : "default"\}/,
+    /<ResponsiveActionButton[\s\S]*density="header"/,
     "bank Import trigger resolves touch below Owner shell cutover",
   );
 

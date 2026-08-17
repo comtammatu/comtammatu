@@ -12,6 +12,7 @@ import {
   formatVNDurationMinutes,
   formatVNElapsedCompact,
   formatVNTime,
+  formatVNTimeSeconds,
   formatVNWeekdayShort,
   getVNDateString,
   getVNDateStringDaysAgo,
@@ -49,6 +50,7 @@ test("VN display helpers pin timestamps and clock ranges to the contract", () =>
   assert.equal(formatVNDayMonth(timestamp), "22-05");
   assert.equal(formatVNWeekdayShort(timestamp), "Thứ 6");
   assert.equal(formatVNTime(timestamp), "08:30");
+  assert.equal(formatVNTimeSeconds(timestamp), "08:30:45");
   assert.equal(formatVNDateTime(timestamp), "08:30 22/05/2026");
   assert.equal(formatVNClockTime("8:05:33"), "08:05");
   assert.equal(formatVNClockTime("08:60"), "—");

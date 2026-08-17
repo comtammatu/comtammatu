@@ -18,6 +18,8 @@ export const EXPENSE_CATEGORY_VALUES = [
   "marketing",
   "fees_tax",
   "hospitality",
+  "capital",
+  "deposit",
   "bank_deposit",
   "other",
 ] as const;
@@ -27,11 +29,13 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORY_VALUES)[number];
 /**
  * Display grouping for the expenses ledger ("gom nhóm, giữ chi tiết"): every
  * category still exists and is stored as-is; this only buckets them into
- * operating overhead vs raw-material cost for the capture form + reporting.
- * Labels live in `messages.finance.expenses.categoryGroupLabels`.
+ * monthly operating overhead, opening capital, raw-material cost, or internal
+ * transfer for the capture form + reporting. Labels live in
+ * `messages.finance.expenses.categoryGroupLabels`.
  */
 export const EXPENSE_CATEGORY_GROUPS = [
   "operating",
+  "startup",
   "materials",
   "transfer",
 ] as const;
@@ -52,6 +56,8 @@ export const EXPENSE_CATEGORY_GROUP: Record<
   fees_tax: "operating",
   hospitality: "operating",
   other: "operating",
+  capital: "startup",
+  deposit: "startup",
   cogs_manual: "materials",
   bank_deposit: "transfer",
 };
@@ -60,12 +66,24 @@ export function isOperatingExpenseCategory(category: string): boolean {
   return EXPENSE_CATEGORY_GROUP[category as ExpenseCategory] === "operating";
 }
 
+export function isStartupCapitalCategory(category: string): boolean {
+  return EXPENSE_CATEGORY_GROUP[category as ExpenseCategory] === "startup";
+}
+
+export function isExpenseLedgerCategory(category: string): boolean {
+  const group = EXPENSE_CATEGORY_GROUP[category as ExpenseCategory];
+  return group === "operating" || group === "startup";
+}
+
 export const EXPENSE_CATEGORIES_BY_GROUP: Record<
   ExpenseCategoryGroup,
   readonly ExpenseCategory[]
 > = {
   operating: EXPENSE_CATEGORY_VALUES.filter(
     (c) => EXPENSE_CATEGORY_GROUP[c] === "operating",
+  ),
+  startup: EXPENSE_CATEGORY_VALUES.filter(
+    (c) => EXPENSE_CATEGORY_GROUP[c] === "startup",
   ),
   materials: EXPENSE_CATEGORY_VALUES.filter(
     (c) => EXPENSE_CATEGORY_GROUP[c] === "materials",
@@ -156,7 +174,7 @@ export function canCorrectExpensePaymentMethod(expense: {
   matchedEventIds?: readonly number[];
   matchedBankTransactionIds?: readonly number[];
 }): boolean {
-  if (!isOperatingExpenseCategory(expense.category)) return false;
+  if (!isExpenseLedgerCategory(expense.category)) return false;
   if (
     (expense.matchedEventIds?.length ?? 0) > 0 ||
     (expense.matchedBankTransactionIds?.length ?? 0) > 0
@@ -189,7 +207,7 @@ export function isExpenseVisibleForBankMatch(
   if (
     expense.matchedEventIds.length > 0 ||
     matchedBankTransactionIds.length > 0 ||
-    !isOperatingExpenseCategory(expense.category)
+    !isExpenseLedgerCategory(expense.category)
   ) {
     return false;
   }

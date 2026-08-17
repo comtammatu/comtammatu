@@ -20,6 +20,7 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "@lib/inventory/purchase-units";
+import { filterPurchasedIngredientRows } from "@lib/inventory/catalog-readiness";
 import type { IngredientRow } from "@lib/inventory/types";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import {
@@ -211,9 +212,9 @@ export function AddGrnLineDialog({
           <Combobox
             value={ingredientId}
             onValueChange={handleIngredientChange}
-            options={ingredients
-              .filter((ingredient) => ingredient.is_active)
-              .map((ingredient) => ({
+            options={filterPurchasedIngredientRows(
+              ingredients.filter((ingredient) => ingredient.is_active),
+            ).map((ingredient) => ({
                 value: String(ingredient.id),
                 label: ingredient.name,
                 hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",

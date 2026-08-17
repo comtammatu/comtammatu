@@ -29,6 +29,9 @@ test("Finance analysis routes use compact Design System composition", () => {
   const expenses = read(
     "apps/web/app/(protected)/finance/expenses/expenses-client.tsx",
   );
+  const bank = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
+  );
   const foodCost = read(
     "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx",
   );
@@ -45,9 +48,19 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.match(expenses, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
   assert.match(expenses, /<FilterBar[\s\S]{0,120}variant="inline"/);
   assert.match(expenses, /<DataTable/);
-  assert.doesNotMatch(expenses, /<KpiRow|<KpiCard/);
-  assert.match(expenses, /copy\.needsActionLabel/);
+  assert.equal((expenses.match(/<KpiCard/g) ?? []).length, 2);
+  assert.match(expenses, /label=\{copy\.monthLabel\}/);
+  assert.match(expenses, /label=\{copy\.startupLabel\}/);
+  assert.match(expenses, /copy\.needsActionFilter/);
   assert.match(expenses, /expensePaymentMethod\(row\)/);
+
+  assert.match(bank, /<AppListFrame[\s\S]*title=\{copy\.listTitle\}/);
+  assert.match(bank, /<FilterBar[\s\S]{0,120}variant="inline"/);
+  assert.match(bank, /contentScroll/);
+  assert.match(bank, /<DataTable/);
+  assert.match(bank, /<ItemHeader>/);
+  assert.doesNotMatch(bank, /<KpiRow|<KpiCard/);
+  assert.doesNotMatch(bank, /variant=\{openQueueCount > 0 \? "warning"/);
 
   assert.equal((foodCost.match(/<KpiCard/g) ?? []).length, 1);
   assert.match(foodCost, /label=\{foodCopy\.actualFoodCost\}/);
@@ -55,9 +68,14 @@ test("Finance analysis routes use compact Design System composition", () => {
   assert.doesNotMatch(foodCost, /foodCopy\.operatingConsumption/);
   assert.doesNotMatch(foodCost, /hint=\{foodCopy\./);
   assert.match(foodCost, /title=\{foodCopy\.tableTitle\}/);
+  assert.match(foodCost, /foodCopy\.tableTotal/);
+  assert.match(foodCost, /FinanceAmountCell/);
   assert.match(foodCost, /foodCopy\.revenueCurrency/);
   assert.match(foodCost, /foodCopy\.unitFoodCostCurrency/);
+  assert.match(foodCost, /foodCopy\.unitCostPerPortion/);
   assert.match(foodCost, /foodCopy\.foodCostCurrency/);
+  assert.match(foodCost, /function RecipeCostCell/);
+  assert.doesNotMatch(foodCost, /key: "unit_food_cost"/);
   assert.match(foodCost, /foodCopy\.grossMargin/);
   assert.doesNotMatch(foodCost, /foodCopy\.unitSellingPriceCurrency/);
   assert.doesNotMatch(foodCost, /foodCopy\.grossProfitCurrency/);

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import {
+  buildCompanyWacMap,
   buildSourceSiteWacMap,
   getMenuRecipeLineBaseQuantity,
   menuRecipeSourceWacKey,
@@ -62,7 +63,35 @@ test("buildSourceSiteWacMap keys by Kho gốc and never mixes site kinds", () =>
   assert.equal(map["branch:72"], undefined);
 });
 
-test("resolveMenuRecipeUnitCost uses Kho gốc WAC only and never catalog unit_cost", () => {
+test("buildCompanyWacMap averages every site into one SKU cost", () => {
+  const map = buildCompanyWacMap([
+    {
+      ingredientId: 72,
+      branchKind: "central_supply",
+      avgUnitCost: 2500,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "central_kitchen",
+      avgUnitCost: 2400,
+    },
+    {
+      ingredientId: 72,
+      branchKind: "branch",
+      avgUnitCost: 2600,
+    },
+    {
+      ingredientId: 67,
+      branchKind: "central_kitchen",
+      avgUnitCost: 0,
+    },
+  ]);
+
+  assert.equal(map[72], 2500);
+  assert.equal(map[67], undefined);
+});
+
+test("resolveMenuRecipeUnitCost uses company WAC from any site", () => {
   const sourceSiteWacMap = buildSourceSiteWacMap([
     {
       ingredientId: 72,
@@ -82,7 +111,7 @@ test("resolveMenuRecipeUnitCost uses Kho gốc WAC only and never catalog unit_c
       sourceSiteKind: "central_supply",
       sourceSiteWacMap,
     }),
-    2500,
+    2450,
   );
   assert.equal(
     resolveMenuRecipeUnitCost({
@@ -90,7 +119,7 @@ test("resolveMenuRecipeUnitCost uses Kho gốc WAC only and never catalog unit_c
       sourceSiteKind: "central_kitchen",
       sourceSiteWacMap,
     }),
-    2400,
+    2450,
   );
   assert.equal(
     resolveMenuRecipeUnitCost({
@@ -116,7 +145,7 @@ test("sumMenuRecipeEstimatedCost stays null until every line is valued", () => {
   assert.equal(sumMenuRecipeEstimatedCost([]), null);
 });
 
-test("resolveMenuRecipeCostSignals flags missing Nguồn hàng, Kho gốc WAC, or wrong site", () => {
+test("resolveMenuRecipeCostSignals flags missing Nguồn hàng or company WAC", () => {
   const sourceSiteWacMap = buildSourceSiteWacMap([
     {
       ingredientId: 72,
@@ -152,7 +181,7 @@ test("resolveMenuRecipeCostSignals flags missing Nguồn hàng, Kho gốc WAC, o
       sourceSiteKind: "central_supply",
       sourceSiteWacMap,
     }),
-    ["source_wac_site_mismatch"],
+    [],
   );
   assert.deepEqual(
     resolveMenuRecipeCostSignals({

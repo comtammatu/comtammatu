@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import {
   catalogReadinessHasGap,
+  filterPurchasedIngredientRows,
   resolveCatalogReadiness,
   summarizeCatalogReadiness,
 } from "../lib/inventory/catalog-readiness";
@@ -101,6 +102,18 @@ test("purchased kinds still require an NCC link", () => {
       "missing_supplier_link",
     ),
     true,
+  );
+});
+
+test("purchase pickers keep only purchased catalog rows", () => {
+  const rows = filterPurchasedIngredientRows([
+    { id: 1, item_kind: "raw_material" },
+    { id: 2, item_kind: "finished_good" },
+    { id: 3, item_kind: "semi_finished" },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    [1],
   );
 });
 

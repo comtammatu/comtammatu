@@ -10,6 +10,25 @@ import { SEPAY_BANK_WEBHOOK_REVIEW_VALUES } from "./_lib/sepay-bank-transaction-
 
 const FINANCE_ROLES = MODULE_ACL.finance.allowedRoles;
 
+const LIKE_WILDCARD = String.fromCharCode(37);
+const MATCHABLE_PAYMENT_PAGE_SIZE = 8;
+
+const searchSepayMatchablePaymentsSchema = z.object({
+  query: z.string().trim().max(64).default(""),
+  amount: z.number().positive().optional(),
+});
+
+export type SepayMatchablePayment = {
+  paymentId: number;
+  paymentCode: string;
+  orderId: number;
+  orderNumber: string;
+  amount: number;
+  status: "pending" | "completed";
+  createdAt: string;
+  branchName: string | null;
+};
+
 const reviewMissingBankWebhookPaymentSchema = z.object({
   paymentId: z.coerce.number().int().positive(),
   status: z.enum(SEPAY_BANK_WEBHOOK_REVIEW_VALUES),
@@ -162,6 +181,213 @@ function mapCashDepositError(error: LinkPaymentRpcError): string {
   return "Không thể ghi nhận nộp tiền mặt.";
 }
 
+type FinanceSupabase = NonNullable<
+  Awaited<ReturnType<typeof getAuthContextWithPermission>>
+>["supabase"];
+
+type BankMatchOrder = { id: number; paymentCode: string };
+
+type MatchablePaymentRow = {
+  id: number;
+  amount: number;
+  status: string;
+  created_at: string;
+  order_id: number;
+  orders:
+    | {
+        order_number: string;
+        payment_code: string;
+        status: string;
+        branches: { name: string } | { name: string }[] | null;
+      }
+    | Array<{
+        order_number: string;
+        payment_code: string;
+        status: string;
+        branches: { name: string } | { name: string }[] | null;
+      }>
+    | null;
+};
+
+function escapeIlike(value: string): string {
+  return value
+    .replaceAll(LIKE_WILDCARD, `\\${LIKE_WILDCARD}`)
+    .replaceAll("_", "\\_");
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+async function resolveOrderForBankMatch(
+  supabase: FinanceSupabase,
+  tenantId: number,
+  token: string,
+): Promise<ActionResult<BankMatchOrder>> {
+  const byNumber = await supabase
+    .from("orders")
+    .select("id, payment_code")
+    .eq("tenant_id", tenantId)
+    .ilike("order_number", token)
+    .limit(2);
+
+  if (byNumber.error) {
+    console.error(
+      "[finance:bank-webhook-review] failed to resolve order number",
+      byNumber.error.code,
+    );
+    return { success: false, error: "Không tìm thấy đơn theo mã đơn." };
+  }
+
+  if ((byNumber.data?.length ?? 0) > 1) {
+    return {
+      success: false,
+      error: "Nhiều đơn trùng mã. Chọn đúng đơn trong danh sách.",
+    };
+  }
+
+  const numbered = byNumber.data?.[0];
+  if (numbered != null) {
+    return {
+      success: true,
+      data: { id: numbered.id, paymentCode: numbered.payment_code },
+    };
+  }
+
+  const byCode = await supabase
+    .from("orders")
+    .select("id, payment_code")
+    .eq("tenant_id", tenantId)
+    .eq("payment_code", token)
+    .maybeSingle();
+
+  if (byCode.error || byCode.data == null) {
+    return { success: false, error: "Không tìm thấy đơn theo mã đơn." };
+  }
+
+  return {
+    success: true,
+    data: { id: byCode.data.id, paymentCode: byCode.data.payment_code },
+  };
+}
+
+export async function searchSepayMatchablePayments(
+  input: z.infer<typeof searchSepayMatchablePaymentsSchema>,
+): Promise<ActionResult<{ items: SepayMatchablePayment[] }>> {
+  const parsed = searchSepayMatchablePaymentsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Từ khóa tìm đơn không hợp lệ." };
+  }
+
+  const query = parsed.data.query;
+  const amount = parsed.data.amount;
+  if (query === "" && amount == null) {
+    return { success: false, error: "Nhập mã đơn trên phiếu." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) {
+    return { success: false, error: "Không có quyền đối soát thanh toán." };
+  }
+
+  const { supabase, claims } = ctx;
+  const select =
+    "id, amount, status, created_at, order_id, orders!inner ( order_number, payment_code, status, branches ( name ) )";
+
+  const runQuery = (column: "orders.order_number" | "orders.payment_code") => {
+    let request = supabase
+      .from("payments")
+      .select(select)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("method", "vietqr")
+      .in("status", ["pending", "completed"])
+      .neq("orders.status", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(MATCHABLE_PAYMENT_PAGE_SIZE + 1);
+
+    if (query !== "") {
+      request = request.ilike(column, `${LIKE_WILDCARD}${escapeIlike(query)}${LIKE_WILDCARD}`);
+    } else if (amount != null) {
+      request = request.eq("amount", amount);
+    }
+
+    return request;
+  };
+
+  const primary = await runQuery("orders.order_number");
+  let rows = (primary.data ?? []) as unknown as MatchablePaymentRow[];
+  if (primary.error) {
+    console.error(
+      "[finance:bank-match-search] failed to search orders",
+      primary.error.code,
+    );
+    return { success: false, error: "Không tải được đơn chờ đối soát." };
+  }
+
+  if (rows.length === 0 && query !== "") {
+    const fallback = await runQuery("orders.payment_code");
+    if (fallback.error) {
+      console.error(
+        "[finance:bank-match-search] failed to search payment codes",
+        fallback.error.code,
+      );
+      return { success: false, error: "Không tải được đơn chờ đối soát." };
+    }
+    rows = (fallback.data ?? []) as unknown as MatchablePaymentRow[];
+  }
+
+  const pageRows = rows.slice(0, MATCHABLE_PAYMENT_PAGE_SIZE);
+  const paymentIds = pageRows.map((row) => row.id);
+  const { data: matchRows, error: matchError } =
+    paymentIds.length === 0
+      ? { data: [], error: null }
+      : await supabase
+          .from("bank_transaction_reconciliation_matches")
+          .select("payment_id")
+          .eq("tenant_id", claims.tenant_id)
+          .in("payment_id", paymentIds);
+
+  if (matchError) {
+    console.error(
+      "[finance:bank-match-search] failed to load existing matches",
+      matchError.code,
+    );
+    return { success: false, error: "Không tải được đơn chờ đối soát." };
+  }
+
+  const matchedIds = new Set(
+    (matchRows ?? []).flatMap((row) =>
+      row.payment_id == null ? [] : [row.payment_id],
+    ),
+  );
+
+  const items: SepayMatchablePayment[] = pageRows.flatMap((row) => {
+    if (matchedIds.has(row.id)) return [];
+    if (row.status !== "pending" && row.status !== "completed") return [];
+    const order = firstRelation(row.orders);
+    if (order == null || order.status === "cancelled") return [];
+    const branch = firstRelation(order.branches);
+    return [
+      {
+        paymentId: row.id,
+        paymentCode: order.payment_code,
+        orderId: row.order_id,
+        orderNumber: order.order_number,
+        amount: Number(row.amount),
+        status: row.status,
+        createdAt: row.created_at,
+        branchName: branch?.name ?? null,
+      },
+    ];
+  });
+
+  return { success: true, data: { items } };
+}
+
 export async function linkSepayTransactionToPayment(
   input: z.infer<typeof linkSepayTransactionToPaymentSchema>,
 ): Promise<ActionResult> {
@@ -179,22 +405,20 @@ export async function linkSepayTransactionToPayment(
   }
 
   const { supabase, claims, user } = ctx;
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("payment_code", parsed.data.paymentCode)
-    .maybeSingle();
-
-  if (orderError || order == null) {
-    return { success: false, error: "Không tìm thấy đơn theo mã thanh toán." };
+  const order = await resolveOrderForBankMatch(
+    supabase,
+    claims.tenant_id,
+    parsed.data.paymentCode,
+  );
+  if (!order.success || order.data == null) {
+    return { success: false, error: order.error };
   }
 
   const { data: payments, error: paymentsError } = await supabase
     .from("payments")
     .select("id, status")
     .eq("tenant_id", claims.tenant_id)
-    .eq("order_id", order.id)
+    .eq("order_id", order.data.id)
     .eq("method", "vietqr")
     .in("status", ["pending", "completed"])
     .limit(2);
@@ -230,7 +454,7 @@ export async function linkSepayTransactionToPayment(
       {
         p_actor_id: user.id,
         p_event_id: parsed.data.eventId,
-        p_payment_code: parsed.data.paymentCode,
+        p_payment_code: order.data.paymentCode,
         p_payment_id: paymentId,
       },
     );

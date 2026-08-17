@@ -9,7 +9,11 @@ import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import {
   EXPENSE_CATEGORIES_BY_GROUP,
+  EXPENSE_CATEGORY_GROUP,
   EXPENSE_PAYMENT_METHODS,
+  isOperatingExpenseCategory,
+  isStartupCapitalCategory,
+  type ExpenseCategory,
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import {
@@ -115,13 +119,16 @@ export function expenseCategoryGroups(currentCategory: string) {
       label: copy.categoryLabels[value],
     }),
   );
-  const isOperating =
-    currentCategory !== "" &&
-    (EXPENSE_CATEGORIES_BY_GROUP.operating as readonly string[]).includes(
-      currentCategory,
-    );
+  const startupOptions = EXPENSE_CATEGORIES_BY_GROUP.startup.map((value) => ({
+    value,
+    label: copy.categoryLabels[value],
+  }));
+  const selectable = new Set<string>([
+    ...operatingOptions.map((option) => option.value),
+    ...startupOptions.map((option) => option.value),
+  ]);
   const extraOptions =
-    currentCategory && !isOperating
+    currentCategory && !selectable.has(currentCategory)
       ? [
           {
             value: currentCategory,
@@ -132,14 +139,22 @@ export function expenseCategoryGroups(currentCategory: string) {
           },
         ]
       : [];
-  const options = [
-    ...operatingOptions,
-    ...extraOptions.filter(
-      (option) =>
-        !operatingOptions.some((existing) => existing.value === option.value),
-    ),
+  return [
+    { label: copy.monthLabel, options: operatingOptions },
+    { label: copy.startupLabel, options: startupOptions },
+    ...(extraOptions.length > 0
+      ? [{ label: copy.categoryGroupLabels.other, options: extraOptions }]
+      : []),
   ];
-  return [{ label: copy.categoryGroupLabels.operating, options }];
+}
+
+export function expenseCategoryBucketLabel(category: string): string {
+  if (isStartupCapitalCategory(category)) return copy.startupLabel;
+  if (isOperatingExpenseCategory(category)) return copy.monthLabel;
+  const group = EXPENSE_CATEGORY_GROUP[category as ExpenseCategory];
+  if (group === "materials") return copy.categoryGroupLabels.materials;
+  if (group === "transfer") return copy.categoryGroupLabels.transfer;
+  return copy.categoryGroupLabels.other;
 }
 
 export const METHOD_OPTIONS = EXPENSE_PAYMENT_METHODS.map((value) => ({

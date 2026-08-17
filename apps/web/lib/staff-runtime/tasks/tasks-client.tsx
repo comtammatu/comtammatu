@@ -25,6 +25,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSheet } from "@/components/surface";
 import { messages } from "@lib/messages";
+import { isRequiredChecklistItemComplete } from "../_lib/checklist-complete";
 import type { TodayChecklistItem } from "../_lib/today-work-state";
 import {
   MAX_CLOCK_PHOTO_BYTES,
@@ -338,7 +339,7 @@ export function TasksClient({
   }
 
   const requiredRemaining = localItems.filter(
-    (item) => item.isRequired && !item.done,
+    (item) => !isRequiredChecklistItemComplete(item),
   ).length;
   const visibleItems = hideCountTask
     ? localItems.filter((item) => item.taskKind !== "inventory_count")

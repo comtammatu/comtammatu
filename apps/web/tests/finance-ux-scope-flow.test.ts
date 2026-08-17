@@ -99,16 +99,12 @@ describe("Finance UX scope flow", () => {
     assert.equal(targets.linkHref, undefined);
   });
 
-  it("parses bank reconciliation filter from the URL with needs_review default", () => {
-    assert.equal(
-      parseBankReconciliationFilter(null),
-      BANK_RECONCILIATION_FILTER_DEFAULT,
-    );
+  it("parses bank reconciliation filter from the URL with all default", () => {
+    assert.equal(BANK_RECONCILIATION_FILTER_DEFAULT, "all");
+    assert.equal(parseBankReconciliationFilter(null), "all");
     assert.equal(parseBankReconciliationFilter("matched"), "matched");
-    assert.equal(
-      parseBankReconciliationFilter("not-a-filter"),
-      BANK_RECONCILIATION_FILTER_DEFAULT,
-    );
+    assert.equal(parseBankReconciliationFilter("needs_review"), "needs_review");
+    assert.equal(parseBankReconciliationFilter("not-a-filter"), "all");
     assert.equal(BANK_RECONCILIATION_FILTER_PARAM, "recon");
   });
 

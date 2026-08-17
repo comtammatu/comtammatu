@@ -5,6 +5,7 @@ import {
   FINANCE_LOCATIONS,
   FINANCE_OVERVIEW_PERIODS,
   getFinanceCalendarPeriodSelection,
+  getPresetRange,
   parseFinanceParams,
   resolveFinanceCalendarPeriod,
   serializeFinanceParams,
@@ -96,7 +97,7 @@ describe("Finance overview period filter", () => {
     );
   });
 
-  it("offers the six approved period choices on the overview", () => {
+  it("offers the seven approved period choices on the overview", () => {
     assert.deepEqual(FINANCE_OVERVIEW_PERIODS, [
       "today",
       "yesterday",
@@ -104,6 +105,7 @@ describe("Finance overview period filter", () => {
       "month",
       "quarter",
       "year",
+      "custom",
     ]);
 
     const page = readFileSync(
@@ -121,7 +123,12 @@ describe("Finance overview period filter", () => {
     assert.match(filterBar, /FINANCE_OVERVIEW_PERIODS\.map/);
     assert.match(filterBar, /lg:flex-row lg:flex-nowrap lg:items-center/);
     assert.match(filterBar, /<FinanceCalendarPeriodPicker/);
+    assert.match(filterBar, /selectedPeriod === "custom"/);
+    assert.match(filterBar, /<BusinessDatePicker/);
+    assert.match(filterBar, /filterCopy\.rangeCustom/);
+    assert.match(filterBar, /captionLayout="dropdown"/);
     assert.doesNotMatch(filterBar, /type="(?:date|month|week)"/);
+    assert.doesNotMatch(filterBar, /datetime-local|type="time"/);
     assert.match(
       readFileSync(
         new URL(
@@ -227,6 +234,33 @@ describe("Finance overview period filter", () => {
         end: params.to ?? "",
       }),
       "2026-Q2",
+    );
+  });
+
+  it("keeps a custom day range in the URL without a calendar period", () => {
+    const params = parseFinanceParams({
+      range: "custom",
+      from: "2026-03-01",
+      to: "2026-03-15",
+    });
+
+    assert.equal(params.period, null);
+    assert.equal(params.from, "2026-03-01");
+    assert.equal(params.to, "2026-03-15");
+    assert.equal(
+      serializeFinanceParams(params).toString(),
+      "range=custom&from=2026-03-01&to=2026-03-15",
+    );
+    assert.deepEqual(
+      getPresetRange("custom", now, { from: params.from, to: params.to }),
+      { start: "2026-03-01", end: "2026-03-15" },
+    );
+    assert.deepEqual(
+      getPresetRange("custom", now, {
+        from: "2026-03-15",
+        to: "2026-03-01",
+      }),
+      { start: "2026-03-01", end: "2026-03-15" },
     );
   });
 });

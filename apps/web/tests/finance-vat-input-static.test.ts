@@ -28,7 +28,7 @@ test("VAT cockpit sums supplier and operating-expense input VAT, and issued HÄÄ
   );
   assert.match(
     cockpit,
-    /sumVat\(\s*expenseRows\.filter\(\s*\(row\): row is PeriodExpenseRow & \{ category: string \} =>\s*row\.category != null &&\s*isOperatingExpenseCategory\(row\.category\)/,
+    /sumVat\(\s*expenseRows\.filter\(\s*\(row\): row is PeriodExpenseRow & \{ category: string \} =>\s*row\.category != null &&\s*isExpenseLedgerCategory\(row\.category\)/,
   );
   assert.match(
     cockpit,

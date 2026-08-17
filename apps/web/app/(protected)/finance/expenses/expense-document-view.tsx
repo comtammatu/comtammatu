@@ -19,7 +19,7 @@ import {
   type ExpensePaymentMethod,
 } from "../_lib/expense-categories";
 import type { ExpenseRow } from "../expense-actions";
-import { copy, expensePaymentMethod } from "./expense-form-schema";
+import { copy, expenseCategoryBucketLabel, expensePaymentMethod } from "./expense-form-schema";
 
 export function ExpenseDocumentView({
   expense,
@@ -77,6 +77,9 @@ export function ExpenseDocumentView({
             {copy.form.category}
           </span>
           <span className="mt-1 block font-semibold">{categoryLabel}</span>
+          <span className="mt-1 block text-xs font-medium text-muted-foreground">
+            {expenseCategoryBucketLabel(expense.category)}
+          </span>
         </div>
 
         <div>

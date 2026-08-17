@@ -33,7 +33,10 @@ item `%` discounts that drift under qty changes, and left
    existing Sinvoice order (`netUnitPrice` whole VND first,
    `lineNet = qty * netUnitPrice`). VAT is residual `GROSS - NET` when
    validator 44 holds; leftover +/- 1 VND is absorbed onto another eligible
-   line so `totalAmountWithTax === orders.total_amount`. Send
+   line so `totalAmountWithTax === orders.total_amount`. If absorb cannot move
+   because every line has `qty > 1`, split 1 unit of the same real item onto a
+   qty=1 sibling and retry (same name, VAT rate, conserved GROSS and qty).
+   Never invent a rounding SKU and never issue with silent 1–10 VND drift. Send
    `itemDiscount = 0` and
    `discount = 0` — no separate discount line and no provider discount fields.
 
@@ -68,6 +71,8 @@ buyer window unchanged.
 - Cheap-first waterfill + omit-zero line tests; `Σ` matches `total_amount`
   including service charge.
 - Sinvoice payload has zero `itemDiscount` / discount rate on issue lines.
+- Aggregated qty>1 residuals peel one real-item unit (Orders 691/695) and still
+  match `orders.total_amount`; qty=2 lines that already hit GROSS are not split.
 - Item discount `%` rejected at action and RPC; order `%` still works.
 - Zero-total: `not_required`, no issue job, QR opens read-only page, submit
   blocked.

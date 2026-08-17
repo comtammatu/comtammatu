@@ -21,6 +21,7 @@ import {
 } from "@comtammatu/ui/components/collapsible";
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldLabel,
   FieldSet,
@@ -986,21 +987,24 @@ function IngredientDialogFields({
             ) : null}
           </Field>
         ) : null}
-        <Field orientation="horizontal" className="sm:col-span-2">
-          <FieldLabel htmlFor="item-kind-finished-good">
-            {dialogCopy.finishedGoodLabel}
-          </FieldLabel>
-          <Switch
-            id="item-kind-finished-good"
-            checked={itemKind === "finished_good"}
-            onCheckedChange={(checked) =>
-              form.setValue(
-                "item_kind",
-                checked ? "finished_good" : "raw_material",
-              )
-            }
-          />
-        </Field>
+        <div className="sm:col-span-2">
+          <Field orientation="horizontal">
+            <FieldLabel htmlFor="item-kind-finished-good">
+              {dialogCopy.finishedGoodLabel}
+            </FieldLabel>
+            <Switch
+              id="item-kind-finished-good"
+              checked={itemKind === "finished_good"}
+              onCheckedChange={(checked) =>
+                form.setValue(
+                  "item_kind",
+                  checked ? "finished_good" : "raw_material",
+                )
+              }
+            />
+          </Field>
+          <FieldDescription>{dialogCopy.finishedGoodHint}</FieldDescription>
+        </div>
       </div>
 
       <Collapsible open={unitsOpen} onOpenChange={setUnitsOpen}>

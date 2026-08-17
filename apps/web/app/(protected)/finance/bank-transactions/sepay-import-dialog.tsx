@@ -11,21 +11,19 @@ import {
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppDialog } from "@/components/form";
+import { useFormControlSize } from "@/components/form/control-size";
+import { ResponsiveActionButton } from "@/components/responsive-action-button";
 import { messages } from "@lib/messages";
 import {
   importSepayBankTransactions,
   type SepayImportState,
 } from "./import-actions";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
 const copy = messages.finance.bankTransactions;
 const initialState: SepayImportState = { status: "idle" };
 
 export function SepayImportDialog() {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
+  const controlSize = useFormControlSize();
 
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -48,9 +46,13 @@ export function SepayImportDialog() {
 
   return (
     <>
-      <Button variant="outline" size={isTouchLayout ? "touch" : "default"} onClick={() => setOpen(true)}>
+      <ResponsiveActionButton
+        variant="outline"
+        density="header"
+        onClick={() => setOpen(true)}
+      >
         {copy.importAction}
-      </Button>
+      </ResponsiveActionButton>
       <AppDialog
         open={open}
         onOpenChange={setOpen}
@@ -60,7 +62,7 @@ export function SepayImportDialog() {
           <Button
             type="submit"
             form="sepay-export-import-form"
-             size={isTouchLayout ? "touch" : "default"}
+            size={controlSize === "touch" ? "touch" : "default"}
             disabled={pending}
           >
             {pending ? copy.importPending : copy.importSubmit}
@@ -85,7 +87,7 @@ export function SepayImportDialog() {
           ) : null}
           <div className="grid gap-2">
             <Label htmlFor="sepay-export-file">{copy.importFileLabel}</Label>
-            <InputGroup size={isTouchLayout ? "touch" : "default"}>
+            <InputGroup size={controlSize === "touch" ? "touch" : "default"}>
               <InputGroupInput
                 id="sepay-export-file"
                 name="file"

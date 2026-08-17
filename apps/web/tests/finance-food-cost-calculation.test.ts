@@ -5,6 +5,8 @@ import { test } from "node:test";
 import {
   aggregateFoodCostRowsByMenuItem,
   buildFoodCostRows,
+  overlayCatalogItemNames,
+  summarizeFoodCostRows,
 } from "../app/_lib/food-cost-calculation";
 import type { IngredientUnitRow } from "../lib/inventory/types";
 
@@ -88,10 +90,54 @@ test("finance food cost action aggregates sales via SQL RPC", () => {
 
   assert.match(source, /\.rpc\(\s*\n?\s*"get_menu_item_sales_agg"/);
   assert.match(source, /aggregateFoodCostRowsByMenuItem/);
+  assert.match(source, /overlayCatalogItemNames/);
+  assert.match(source, /from\("menu_items"\)/);
   assert.match(source, /resolveMenuRecipeUnitCost/);
   assert.match(source, /buildSourceSiteWacMap/);
   assert.doesNotMatch(source, /FOOD_COST_PAGE_SIZE/);
   assert.doesNotMatch(source, /\.range\(/);
+});
+
+test("finance food cost prefers current catalog names over order snapshots", () => {
+  const lines = overlayCatalogItemNames(
+    [
+      {
+        branchId: 1,
+        menuItemId: 10,
+        itemName: "Dụng cụ ăn uống",
+        quantity: 2,
+        revenue: 10_000,
+      },
+      {
+        branchId: 1,
+        menuItemId: 11,
+        itemName: "Trà Đá",
+        quantity: 1,
+        revenue: 3_000,
+      },
+    ],
+    new Map([[10, "Muỗng đũa"]]),
+  );
+
+  assert.equal(lines[0]?.itemName, "Muỗng đũa");
+  assert.equal(lines[1]?.itemName, "Trà Đá");
+});
+
+test("finance food cost keeps the snapshot name when the catalog item is gone", () => {
+  const lines = overlayCatalogItemNames(
+    [
+      {
+        branchId: 1,
+        menuItemId: 10,
+        itemName: "Dụng cụ ăn uống",
+        quantity: 1,
+        revenue: 5_000,
+      },
+    ],
+    new Map(),
+  );
+
+  assert.equal(lines[0]?.itemName, "Dụng cụ ăn uống");
 });
 
 test("finance food cost does not treat a missing recipe unit as factor 1", () => {
@@ -204,5 +250,51 @@ test("finance food cost keeps the resolved period in its filter, not the header"
   assert.doesNotMatch(page, /meta=\{messages\.finance\.basic\.periodMeta/);
   assert.match(client, /<FilterBar/);
   assert.doesNotMatch(client, /description=\{foodCopy\.tableDescription\}/);
+  assert.doesNotMatch(client, /description=\{foodCopy\.description\}/);
   assert.match(client, /hide=\{\["compare", "granularity"\]\}/);
+  assert.match(client, /FinanceAmountCell/);
+  assert.match(client, /desktopFooterRows/);
+  assert.match(client, /summarizeFoodCostRows/);
+  assert.match(client, /density="compact"/);
+  assert.match(client, /function RecipeCostCell/);
+  assert.match(client, /foodCopy\.unitCostPerPortion/);
+  assert.doesNotMatch(client, /key: "unit_food_cost"/);
+});
+
+test("finance food cost table totals skip định mức when any row is unvalued", () => {
+  const complete = summarizeFoodCostRows([
+    {
+      quantity_sold: 2,
+      revenue: 100_000,
+      ingredient_cost: 20_000,
+    },
+    {
+      quantity_sold: 1,
+      revenue: 50_000,
+      ingredient_cost: 10_000,
+    },
+  ]);
+  assert.equal(complete.quantitySold, 3);
+  assert.equal(complete.revenue, 150_000);
+  assert.equal(complete.ingredientCost, 30_000);
+  assert.equal(complete.unitIngredientCost, 10_000);
+  assert.equal(complete.grossMarginPct, 80);
+
+  const partial = summarizeFoodCostRows([
+    {
+      quantity_sold: 2,
+      revenue: 100_000,
+      ingredient_cost: 20_000,
+    },
+    {
+      quantity_sold: 1,
+      revenue: 50_000,
+      ingredient_cost: null,
+    },
+  ]);
+  assert.equal(partial.quantitySold, 3);
+  assert.equal(partial.revenue, 150_000);
+  assert.equal(partial.ingredientCost, null);
+  assert.equal(partial.unitIngredientCost, null);
+  assert.equal(partial.grossMarginPct, null);
 });

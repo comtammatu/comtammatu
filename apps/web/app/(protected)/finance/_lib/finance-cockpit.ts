@@ -28,7 +28,11 @@ import type {
 } from "./finance-params";
 import { financeHref } from "./finance-params";
 import { calculateFinanceResult } from "./finance-result";
-import { isOperatingExpenseCategory } from "./expense-categories";
+import {
+  isExpenseLedgerCategory,
+  isOperatingExpenseCategory,
+  isStartupCapitalCategory,
+} from "./expense-categories";
 import { addPaidOrdersWithoutRecipeNeed } from "./food-cost-coverage";
 import { fetchAllPagedRows } from "./supabase-page";
 import {
@@ -69,6 +73,11 @@ interface ActualFoodCostSnapshot {
 }
 
 interface OperatingExpenseSummary {
+  total: number;
+  recorded: boolean;
+}
+
+interface StartupCapitalSummary {
   total: number;
   recorded: boolean;
 }
@@ -119,6 +128,8 @@ interface FinanceCockpitKpis {
   inventoryChange: number;
   operatingExpense: number;
   operatingExpenseRecorded: boolean;
+  startupCapital: number;
+  startupCapitalRecorded: boolean;
   ingredientCost: number;
   grossProfit: number | null;
   grossMargin: number | null;
@@ -239,6 +250,7 @@ function buildKpis({
   inventoryValue,
   inventoryOpeningValue = inventoryValue,
   operatingExpense,
+  startupCapital,
   includeInventoryChange = true,
 }: {
   kpis: KpiBundle | null;
@@ -246,6 +258,7 @@ function buildKpis({
   inventoryValue: number;
   inventoryOpeningValue?: number;
   operatingExpense: OperatingExpenseSummary;
+  startupCapital: StartupCapitalSummary;
   includeInventoryChange?: boolean;
 }): FinanceCockpitKpis {
   const totalCollected = toNumber(kpis?.net_revenue);
@@ -281,6 +294,8 @@ function buildKpis({
     inventoryOpeningValue,
     operatingExpense: operatingExpense.total,
     operatingExpenseRecorded: operatingExpense.recorded,
+    startupCapital: startupCapital.total,
+    startupCapitalRecorded: startupCapital.recorded,
     ingredientCost,
     ...financeResult,
     costAvailable,
@@ -289,6 +304,59 @@ function buildKpis({
     cashRevenue: toNumber(kpis?.cash_revenue),
     vietqrRevenue: toNumber(kpis?.vietqr_revenue),
   };
+}
+
+function summarizeStartupCapital(
+  rows: Array<{ amount: number | string | null; category: string | null }>,
+): StartupCapitalSummary {
+  const capitalRows = rows.filter(
+    (row): row is { amount: number | string | null; category: string } =>
+      row.category != null && isStartupCapitalCategory(row.category),
+  );
+
+  return {
+    total: toNumber(addMoney(capitalRows.map((row) => String(row.amount)))),
+    recorded: capitalRows.length > 0,
+  };
+}
+
+async function fetchStartupCapitalSummary({
+  supabase,
+  tenantId,
+  location,
+  branchId,
+  salesBranchIds,
+}: {
+  supabase: SupabaseClient;
+  tenantId: number;
+  location: FinanceLocation;
+  branchId: number | null;
+  salesBranchIds?: number[] | null;
+}): Promise<StartupCapitalSummary> {
+  let query = supabase
+    .from("expenses")
+    .select("amount, category")
+    .eq("tenant_id", tenantId)
+    .in("category", ["capital", "deposit"]);
+
+  if (location === "company") {
+    query = query.is("branch_id", null);
+  } else if (location === "branches") {
+    const branchIds =
+      salesBranchIds ?? (await fetchSalesBranchIds(supabase as never, tenantId));
+    query = applySalesBranchesFilter(query, "branch_id", branchIds);
+  } else if (location === "branch" && branchId != null) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) return { total: 0, recorded: false };
+  return summarizeStartupCapital(
+    (data ?? []) as Array<{
+      amount: number | string | null;
+      category: string | null;
+    }>,
+  );
 }
 
 function summarizeOperatingExpenses(
@@ -501,7 +569,7 @@ async function fetchFinanceVatSummary({
             expenseRows.filter(
               (row): row is PeriodExpenseRow & { category: string } =>
                 row.category != null &&
-                isOperatingExpenseCategory(row.category),
+                isExpenseLedgerCategory(row.category),
             ),
           ),
         ]),
@@ -1053,6 +1121,8 @@ export async function fetchFinanceAttentionExceptions(
       inventoryChange: 0,
       operatingExpense: 0,
       operatingExpenseRecorded: true,
+      startupCapital: 0,
+      startupCapitalRecorded: false,
       ingredientCost: 0,
       grossProfit: null,
       grossMargin: null,
@@ -1101,12 +1171,13 @@ export async function fetchFinanceCockpit(
       : Promise.resolve(false),
   ]);
 
-  // Hub loader keys (distinct fetches, max 18 when compare + cash):
+  // Hub loader keys (distinct fetches, max 19 when compare + cash):
   // prefetch: salesBranchIds, valuationActive (2, before parallel batch)
-  // parallel (max 17): branches, revenueKpis, compareRevenueKpis, foodCost,
+  // parallel (max 18): branches, revenueKpis, compareRevenueKpis, foodCost,
   // actualFoodCost, compareActualFoodCost, inventoryByBranch, inventoryPeriod,
   // cashVariance, cashVarianceTarget, reconciliation, dashboardSummary,
-  // periodExpenses, comparePeriodExpenses, unpaidAp, paymentDesync, currentFunds.
+  // periodExpenses, comparePeriodExpenses, startupCapital, unpaidAp,
+  // paymentDesync, currentFunds.
   // sequential (1): vatSummary (reuses periodExpenses rows).
   const [
     branchesRes,
@@ -1123,6 +1194,7 @@ export async function fetchFinanceCockpit(
     dashboardSummaryRes,
     periodExpenseRows,
     comparePeriodExpenseRows,
+    startupCapitalSummary,
     unpaidSupplierInvoices,
     paymentDesync,
     cash,
@@ -1222,6 +1294,13 @@ export async function fetchFinanceCockpit(
           salesBranchIds,
         })
       : Promise.resolve([]),
+    fetchStartupCapitalSummary({
+      supabase,
+      tenantId: claims.tenant_id,
+      location: params.location,
+      branchId: params.branch,
+      salesBranchIds,
+    }),
     fetchUnpaidSupplierInvoiceRisk({
       supabase,
       tenantId: claims.tenant_id,
@@ -1290,6 +1369,7 @@ export async function fetchFinanceCockpit(
     inventoryValue,
     inventoryOpeningValue,
     operatingExpense: operatingExpenseSummary,
+    startupCapital: startupCapitalSummary,
     includeInventoryChange: canViewInventoryValuation,
   });
 
@@ -1301,6 +1381,7 @@ export async function fetchFinanceCockpit(
         actualFoodCost: compareActualFoodCost,
         inventoryValue,
         operatingExpense: compareOperatingExpenseSummary,
+        startupCapital: { total: 0, recorded: false },
         includeInventoryChange: canViewInventoryValuation,
       })
     : null;

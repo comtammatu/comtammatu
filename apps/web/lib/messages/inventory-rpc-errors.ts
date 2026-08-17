@@ -314,6 +314,11 @@ export const issueConfirmRpcFallback: RpcErrorFallback = {
 
 export const grnLineRpcMappings: readonly RpcErrorMapping[] = [
   {
+    match: includesAny("finished_good_not_purchased"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Thành phẩm không mua từ nhà cung cấp.",
+  },
+  {
     match: includesAny("supplier_item_mapping_required"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
     userMessage: "Nguyên liệu chưa được gán cho nhà cung cấp.",
@@ -414,6 +419,11 @@ export const stockRequestRpcFallback: RpcErrorFallback = {
 /* ─── Procurement (PR / PO / demand) ─── */
 
 export const procurementRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("finished_good_not_purchased"),
+    errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,
+    userMessage: "Thành phẩm không mua từ nhà cung cấp.",
+  },
   {
     match: includesAny("purchase_request_central_site_required"),
     errorCode: INVENTORY_ERROR_CODES.INVALID_INPUT,

@@ -355,6 +355,21 @@ export function formatVNTime(
   });
 }
 
+export function formatVNTimeSeconds(
+  value: string | number | Date | null | undefined,
+  dash = "—",
+): string {
+  const date = toDate(value);
+  if (!date) return dash;
+  return date.toLocaleTimeString(VN_LOCALE, {
+    timeZone: VN_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
 export function formatVNClockTime(
   value: string | null | undefined,
   dash = "—",

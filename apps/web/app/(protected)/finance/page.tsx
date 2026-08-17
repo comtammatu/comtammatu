@@ -488,6 +488,30 @@ export default async function FinancePage({
         />
       </AppSection>
 
+      <AppSection size="sm" title={financeCopy.basic.sections.startupCapital}>
+        <KpiRow
+          density="compact"
+          className="grid-cols-1 sm:grid-cols-1 lg:grid-cols-1 xl:grid-cols-1"
+        >
+          <KpiCard
+            density="compact"
+            label={financeCopy.basic.kpis.startupCapital}
+            value={
+              cockpit.kpis.startupCapitalRecorded
+                ? formatVND(cockpit.kpis.startupCapital)
+                : financeCopy.basic.kpis.notRecorded
+            }
+            shortValue={
+              cockpit.kpis.startupCapitalRecorded
+                ? formatCompactVND(cockpit.kpis.startupCapital)
+                : undefined
+            }
+            hint={financeCopy.basic.kpis.startupCapitalHint}
+            href={financeHref("/finance/expenses", params)}
+          />
+        </KpiRow>
+      </AppSection>
+
       <CurrentFundsSection cash={cash} />
 
       {cockpit.canViewInventoryValuation ? (

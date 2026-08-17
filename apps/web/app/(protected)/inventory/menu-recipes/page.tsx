@@ -73,7 +73,7 @@ export default async function MenuRecipesPage({
       fetchMenuRecipes(),
       fetchMenuItemsForMenuRecipes(),
       fetchIngredients(),
-      // Portion cost uses WAC at each ingredient's Kho gốc (Nguồn hàng).
+      // Portion cost uses company WAC (ADR 0040), not a per-site Kho gốc price.
       fetchBranchWacMap(null),
       branchId != null
         ? fetchBranchMenuStockCapacity(branchId)

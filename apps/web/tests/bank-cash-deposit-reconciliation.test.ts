@@ -16,6 +16,9 @@ const action = read(
 const table = read(
   "apps/web/app/(protected)/finance/bank-transactions/bank-transactions-table.tsx",
 );
+const matchPayment = read(
+  "apps/web/app/(protected)/finance/bank-transactions/match-payment-sheet.tsx",
+);
 
 test("cash deposit reconciliation is an Owner-only atomic classification", () => {
   assert.match(
@@ -64,8 +67,9 @@ test("the bank transactions UI offers cash deposit beside payment reconciliation
     action,
     /revalidateSurfacePath\("\/finance\/bank-transactions"\)/,
   );
-  assert.match(table, /recordBankTransactionCashDeposit/);
-  assert.match(table, /confirm\(/);
-  assert.match(table, /bankTransactionId == null/);
-  assert.match(table, /table\.cashDepositAction/);
+  assert.match(matchPayment, /recordBankTransactionCashDeposit/);
+  assert.match(matchPayment, /confirm\(/);
+  assert.match(matchPayment, /bankTransactionId == null/);
+  assert.match(matchPayment, /table\.cashDepositAction/);
+  assert.match(table, /MatchPaymentSheet/);
 });

@@ -11,14 +11,12 @@ import {
   formatAccountingVND as formatVND,
   formatCount,
 } from "@comtammatu/shared/format";
-import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import { confirm } from "@/components/confirm-dialog";
 import {
-  InputGroup,
-  InputGroupInput,
-} from "@comtammatu/ui/components/input-group";
+  formatVNDate,
+  formatVNDateTime,
+  formatVNTimeSeconds,
+} from "@comtammatu/shared/time";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Select,
   SelectContent,
@@ -34,8 +32,15 @@ import {
   TooltipTrigger,
 } from "@comtammatu/ui/components/tooltip";
 import { cn } from "@comtammatu/ui/lib/utils";
-import { Item, ItemContent } from "@comtammatu/ui/components/item";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { useFormControlSize } from "@/components/form/control-size";
 import {
   DataTable,
   type DataTableColumn,
@@ -60,8 +65,6 @@ import {
   type SepayUnmatchedMoneyInReason,
 } from "../_lib/sepay-bank-transaction-model";
 import {
-  linkSepayTransactionToPayment,
-  recordBankTransactionCashDeposit,
   reviewMissingBankWebhookPayment,
 } from "../bank-webhook-review-actions";
 import type { ExpenseMatchOption } from "../expense-actions";
@@ -74,7 +77,9 @@ import {
   type BankReconciliationFilter,
 } from "../_lib/bank-reconciliation-filter";
 import { FilterBar } from "../components/filter-bar";
+import { financeFilterReconTriggerClassName } from "../components/finance-list-filters";
 import { MatchExpenseCell } from "./match-expense-cell";
+import { MatchPaymentSheet } from "./match-payment-sheet";
 import { displayBankContent } from "../_lib/display-bank-content";
 
 export { displayBankContent };
@@ -132,6 +137,27 @@ function isReviewStatus(value: string): value is SepayBankWebhookReviewStatus {
   return SEPAY_BANK_WEBHOOK_REVIEW_VALUES.some((status) => status === value);
 }
 
+function rowPrimaryLabel(row: BankReconciliationRow): string {
+  if (row.kind === "missing_webhook") {
+    return `${copy.missingWebhookTable.payment} ${formatPaymentId(
+      row.payment.paymentId,
+    )}`;
+  }
+  return displayBankContent(row.tx.content);
+}
+
+function rowSecondaryLabel(row: BankReconciliationRow): string {
+  const instant = rowOccurredAt(row);
+  const date = formatVNDate(instant);
+  const time = formatVNTimeSeconds(instant);
+  const when = time !== "—" ? `${date} ${time}` : date;
+  const reference =
+    row.kind === "missing_webhook"
+      ? formatProviderRef(row.payment.providerRef)
+      : referenceCode(row.tx);
+  return reference !== "—" ? `${when} · ${reference}` : when;
+}
+
 function AmountCell({ tx }: { tx: SepayBankTransaction }) {
   return (
     <TransactionAmount amount={tx.amount} transferType={tx.transferType} />
@@ -181,23 +207,102 @@ function reviewStatusLabel(
   return copy.missingWebhookTable.reviewStatusLabels[status];
 }
 
+function StatusBadgeButton({
+  label,
+  variant,
+  clickable,
+}: {
+  label: string;
+  variant: "success" | "warning" | "destructive" | "secondary";
+  clickable: boolean;
+}) {
+  if (!clickable) {
+    return <Badge variant={variant}>{label}</Badge>;
+  }
+
+  return (
+    <Badge
+      variant={variant}
+      render={<button type="button" />}
+      className="cursor-pointer hover:opacity-90"
+      aria-haspopup="dialog"
+    >
+      {label}
+    </Badge>
+  );
+}
+
 function MissingWebhookStatusCell({
   payment,
+  touch,
 }: {
   payment: SepayMissingBankWebhookPayment;
+  touch: boolean;
 }) {
   const status = payment.bankWebhookReviewStatus ?? REVIEW_PENDING_VALUE;
   const variant =
     status === "resolved" || status === "ignored" ? "secondary" : "warning";
+  const badge = (
+    <StatusBadgeButton
+      label={reviewStatusLabel(status)}
+      variant={variant}
+      clickable
+    />
+  );
 
-  return <Badge variant={variant}>{reviewStatusLabel(status)}</Badge>;
+  return (
+    <AppSheet
+      title={copy.missingWebhookTable.reviewStatus}
+      description={copy.missingWebhookListDescription}
+      trigger={badge}
+    >
+      <ReviewStatusSelect payment={payment} touch={touch} />
+    </AppSheet>
+  );
 }
 
-function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
+function hasPersistedTransferIntent(
+  tx: SepayBankTransaction,
+  expenseOptions: ExpenseMatchOption[],
+): boolean {
+  return expenseOptions.some(
+    (expense) =>
+      tx.expenseIds.includes(expense.id) &&
+      expense.transfer_content != null &&
+      ((tx.eventId != null && expense.matchedEventIds.includes(tx.eventId)) ||
+        (tx.bankTransactionId != null &&
+          expense.matchedBankTransactionIds.includes(tx.bankTransactionId))),
+  );
+}
+
+function canOpenMoneyOutMatch(
+  tx: SepayBankTransaction,
+  expenseOptions: ExpenseMatchOption[],
+): boolean {
+  if (tx.bankTransactionId == null && tx.eventId == null) return false;
+  if (tx.paymentId != null) return false;
+  if (tx.transferType === "in") return false;
+  if (hasPersistedTransferIntent(tx, expenseOptions)) return false;
+  return true;
+}
+
+function BankRowStatus({
+  tx,
+  expenseOptions,
+  canLinkPayments,
+  touch,
+}: {
+  tx: SepayBankTransaction;
+  expenseOptions: ExpenseMatchOption[];
+  canLinkPayments: boolean;
+  touch: boolean;
+}) {
   const state = classifySepayReconciliationState(tx);
   const meta = reconciliationStateBadgeMeta(state);
-  const badge = <Badge variant={meta.variant}>{meta.label}</Badge>;
-
+  const moneyInMatchable =
+    canLinkPayments && canManuallyLinkSepayPayment(tx);
+  const moneyOutMatchable = canOpenMoneyOutMatch(tx, expenseOptions);
+  const clickable = moneyInMatchable || moneyOutMatchable;
   const hasPaymentConflictDetail =
     tx.transferType === "in" && isSepayPaymentConflictReviewCode(tx.errorCode);
   const conflictOrder =
@@ -216,22 +321,65 @@ function ReconciliationStatusCell({ tx }: { tx: SepayBankTransaction }) {
       : reasonLabel(classifySepayUnmatchedMoneyIn(tx));
   }
 
+  const statusBadge = (
+    <StatusBadgeButton
+      label={meta.label}
+      variant={meta.variant}
+      clickable={clickable}
+    />
+  );
+  const badge =
+    tip && !clickable ? (
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex outline-none focus-visible:ring-1 focus-visible:ring-foreground" />
+          }
+        >
+          {statusBadge}
+        </TooltipTrigger>
+        <TooltipContent side="top">{tip}</TooltipContent>
+      </Tooltip>
+    ) : (
+      statusBadge
+    );
+
+  const matchControl = moneyInMatchable ? (
+    <MatchPaymentSheet
+      tx={tx}
+      canLinkPayments={canLinkPayments}
+      touch={touch}
+      trigger={statusBadge}
+    />
+  ) : moneyOutMatchable ? (
+    <MatchExpenseCell
+      bankTransactionId={tx.bankTransactionId ?? null}
+      eventId={tx.eventId}
+      amount={tx.amount}
+      paymentId={tx.paymentId}
+      expenseIds={tx.expenseIds}
+      supplierPaymentMatches={tx.supplierPaymentMatches}
+      supplierPaymentMatchConfirmed={tx.supplierPaymentMatchConfirmed}
+      refundMatches={tx.refundMatches}
+      refundMatchConfirmed={tx.refundMatchConfirmed}
+      transferType={tx.transferType}
+      expenseOptions={expenseOptions}
+      touch={touch}
+      trigger={statusBadge}
+      evidence={{
+        content: tx.content,
+        reference: referenceCode(tx),
+        occurredAt: resolveSepayTransactionInstant(tx),
+        accountNumber: tx.accountNumber,
+      }}
+    />
+  ) : (
+    badge
+  );
+
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
-      {tip ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <span className="inline-flex outline-none focus-visible:ring-1 focus-visible:ring-foreground" />
-            }
-          >
-            {badge}
-          </TooltipTrigger>
-          <TooltipContent side="top">{tip}</TooltipContent>
-        </Tooltip>
-      ) : (
-        badge
-      )}
+      {matchControl}
       {conflictOrder ? (
         <Link
           href={`/orders?orderId=${String(conflictOrder.id)}`}
@@ -261,13 +409,16 @@ function rowOccurredAt(row: BankReconciliationRow): string | null {
 
 function DateCell({ row }: { row: BankReconciliationRow }) {
   const instant = rowOccurredAt(row);
+  const date = formatVNDate(instant);
+  const time = formatVNTimeSeconds(instant);
   return (
     <time
       dateTime={instant ?? undefined}
-      className="font-mono text-sm tabular-nums text-muted-foreground"
+      className="flex flex-col items-end gap-1 font-mono tabular-nums"
       title={formatVNDateTime(instant)}
     >
-      {formatVNDate(instant)}
+      <span className="text-sm text-foreground">{date}</span>
+      <span className="text-xs text-muted-foreground">{time}</span>
     </time>
   );
 }
@@ -322,189 +473,6 @@ function RowContentCell({ row }: { row: BankReconciliationRow }) {
         {reference}
       </span>
     </div>
-  );
-}
-
-function MatchCell({
-  tx,
-  expenseOptions,
-  touch,
-}: {
-  tx: SepayBankTransaction;
-  expenseOptions: ExpenseMatchOption[];
-  touch: boolean;
-}) {
-  if (tx.bankTransactionId == null && tx.eventId == null) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-
-  return (
-    <MatchExpenseCell
-      bankTransactionId={tx.bankTransactionId ?? null}
-      eventId={tx.eventId}
-      amount={tx.amount}
-      paymentId={tx.paymentId}
-      expenseIds={tx.expenseIds}
-      supplierPaymentMatches={tx.supplierPaymentMatches}
-      supplierPaymentMatchConfirmed={tx.supplierPaymentMatchConfirmed}
-      refundMatches={tx.refundMatches}
-      refundMatchConfirmed={tx.refundMatchConfirmed}
-      transferType={tx.transferType}
-      expenseOptions={expenseOptions}
-      touch={touch}
-      evidence={{
-        content: tx.content,
-        reference: referenceCode(tx),
-        occurredAt: formatVNDateTime(resolveSepayTransactionInstant(tx)),
-        accountNumber: tx.accountNumber,
-      }}
-    />
-  );
-}
-
-function LinkPaymentCell({
-  tx,
-  canLinkPayments,
-  touch,
-}: {
-  tx: SepayBankTransaction;
-  canLinkPayments: boolean;
-  touch: boolean;
-}) {
-  const router = useRouter();
-  const [paymentCode, setPaymentCode] = React.useState(tx.code ?? "");
-  const [open, setOpen] = React.useState(false);
-  const [isPaymentPending, startPaymentTransition] = React.useTransition();
-  const [isDepositPending, startDepositTransition] = React.useTransition();
-  const table = copy.unmatchedMoneyInTable;
-  const bankTransactionId = tx.bankTransactionId ?? null;
-  const eventId = tx.eventId;
-
-  if (
-    !canLinkPayments ||
-    (bankTransactionId == null && eventId == null) ||
-    !canManuallyLinkSepayPayment(tx)
-  ) {
-    return null;
-  }
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const normalizedPaymentCode = paymentCode.trim();
-    if (normalizedPaymentCode === "") {
-      toast.error(table.linkInvalid);
-      return;
-    }
-
-    startPaymentTransition(async () => {
-      const res = await linkSepayTransactionToPayment({
-        bankTransactionId,
-        eventId,
-        paymentCode: normalizedPaymentCode,
-      });
-
-      if (!res.success) {
-        toast.error(res.error ?? table.linkError);
-        return;
-      }
-
-      toast.success(table.linkSuccess);
-      setPaymentCode(tx.code ?? "");
-      setOpen(false);
-      router.refresh();
-    });
-  };
-
-  const handleCashDeposit = async () => {
-    if (bankTransactionId == null) return;
-
-    const approved = await confirm({
-      title: table.cashDepositConfirmTitle,
-      description: table.cashDepositConfirm(formatVND(tx.amount)),
-      confirmText: table.cashDepositAction,
-    });
-    if (!approved) return;
-
-    startDepositTransition(async () => {
-      const res = await recordBankTransactionCashDeposit({
-        bankTransactionId,
-      });
-
-      if (!res.success) {
-        toast.error(res.error ?? table.cashDepositError);
-        return;
-      }
-
-      toast.success(table.cashDepositSuccess);
-      setOpen(false);
-      router.refresh();
-    });
-  };
-
-  const canRecordCashDeposit = bankTransactionId != null;
-
-  return (
-    <AppSheet
-      open={open}
-      onOpenChange={setOpen}
-      title={table.linkTitle}
-      description={table.linkDescription}
-      trigger={
-        <Button variant="outline" size={touch ? "touch" : "sm"}>
-          {copy.matchAction}
-        </Button>
-      }
-    >
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-          <InputGroup size={touch ? "touch" : "default"}>
-            <InputGroupInput
-              autoCapitalize="characters"
-              autoComplete="off"
-              aria-label={table.linkInputLabel}
-              aria-describedby="bank-payment-code-help"
-              placeholder={table.linkInputPlaceholder}
-              value={paymentCode}
-              onChange={(event) => setPaymentCode(event.target.value)}
-              disabled={isPaymentPending || isDepositPending}
-              className="font-mono"
-            />
-          </InputGroup>
-          <p
-            id="bank-payment-code-help"
-            className="text-sm text-muted-foreground"
-          >
-            {table.linkInputHelp}
-          </p>
-          <Button
-            type="submit"
-            size={touch ? "touch" : "default"}
-            disabled={isPaymentPending || isDepositPending}
-          >
-            {isPaymentPending ? table.linkPending : table.linkPaymentAction}
-          </Button>
-          {canRecordCashDeposit ? (
-            <div className="flex flex-col gap-3 border-t pt-4">
-              <div>
-                <p className="font-medium">{table.cashDepositTitle}</p>
-                <p className="text-sm text-muted-foreground">
-                  {table.cashDepositDescription}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size={touch ? "touch" : "default"}
-                disabled={isPaymentPending || isDepositPending}
-                onClick={() => void handleCashDeposit()}
-              >
-                {isDepositPending
-                  ? table.cashDepositPending
-                  : table.cashDepositAction}
-              </Button>
-            </div>
-          ) : null}
-        </form>
-    </AppSheet>
   );
 }
 
@@ -566,34 +534,6 @@ function ReviewStatusSelect({
   );
 }
 
-function ReconciliationActionCell({
-  tx,
-  expenseOptions,
-  canLinkPayments,
-  touch,
-}: {
-  tx: SepayBankTransaction;
-  expenseOptions: ExpenseMatchOption[];
-  canLinkPayments: boolean;
-  touch: boolean;
-}) {
-  const state = classifySepayReconciliationState(tx);
-
-  if (state === "matched" && tx.paymentId != null) return null;
-
-  if (tx.transferType === "in" && state !== "matched") {
-    return (
-      <LinkPaymentCell
-        tx={tx}
-        canLinkPayments={canLinkPayments}
-        touch={touch}
-      />
-    );
-  }
-
-  return <MatchCell tx={tx} expenseOptions={expenseOptions} touch={touch} />;
-}
-
 function rowMatchesFilter(
   row: BankReconciliationRow,
   filter: BankReconciliationFilter,
@@ -636,8 +576,9 @@ export function BankTransactionsTable({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isFilterPending, startFilterTransition] = React.useTransition();
-  const isTouchLayout = useIsMobile(1024);
-  const controlSize = isTouchLayout ? "touch" : "field";
+  const controlSize = useFormControlSize();
+  const optionSize = controlSize === "touch" ? "touch" : "default";
+  const isTouchLayout = controlSize === "touch";
   const filter = parseBankReconciliationFilter(
     searchParams.get(BANK_RECONCILIATION_FILTER_PARAM),
   );
@@ -688,7 +629,7 @@ export function BankTransactionsTable({
     {
       key: "date",
       header: copy.table.date,
-      className: "w-28 font-mono tabular-nums",
+      className: "w-28 text-right font-mono tabular-nums",
       render: (row) => <DateCell row={row} />,
     },
     {
@@ -714,25 +655,17 @@ export function BankTransactionsTable({
       className: "w-36",
       render: (row) =>
         row.kind === "bank" ? (
-          <ReconciliationStatusCell tx={row.tx} />
-        ) : (
-          <MissingWebhookStatusCell payment={row.payment} />
-        ),
-    },
-    {
-      key: "action",
-      header: copy.table.action,
-      className: "w-28",
-      render: (row) =>
-        row.kind === "bank" ? (
-          <ReconciliationActionCell
+          <BankRowStatus
             tx={row.tx}
             expenseOptions={expenseOptions}
             canLinkPayments={canLinkPayments}
             touch={isTouchLayout}
           />
         ) : (
-          <ReviewStatusSelect payment={row.payment} touch={isTouchLayout} />
+          <MissingWebhookStatusCell
+            payment={row.payment}
+            touch={isTouchLayout}
+          />
         ),
     },
   ];
@@ -775,37 +708,34 @@ export function BankTransactionsTable({
             bankRowNeedsHighlight(row) && "border-l-2 border-l-warning",
           )}
         >
-          <ItemContent className="min-w-0 gap-3">
-            <div className="flex items-start justify-between gap-3">
-              <DateCell row={row} />
-              {row.kind === "bank" ? (
-                <AmountCell tx={row.tx} />
-              ) : (
-                <PaymentAmountCell payment={row.payment} />
-              )}
-            </div>
-            <RowContentCell row={row} />
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              {row.kind === "bank" ? (
-                <ReconciliationStatusCell tx={row.tx} />
-              ) : (
-                <MissingWebhookStatusCell payment={row.payment} />
-              )}
-              {row.kind === "bank" ? (
-                <ReconciliationActionCell
-                  tx={row.tx}
-                  expenseOptions={expenseOptions}
-                  canLinkPayments={canLinkPayments}
-                  touch={isTouchLayout}
-                />
-              ) : (
-                <ReviewStatusSelect
-                  payment={row.payment}
-                  touch={isTouchLayout}
-                />
-              )}
-            </div>
-          </ItemContent>
+          <ItemHeader>
+            <ItemContent className="min-w-0">
+              <ItemTitle className="line-clamp-2">
+                {rowPrimaryLabel(row)}
+              </ItemTitle>
+              <ItemDescription>{rowSecondaryLabel(row)}</ItemDescription>
+            </ItemContent>
+            {row.kind === "bank" ? (
+              <AmountCell tx={row.tx} />
+            ) : (
+              <PaymentAmountCell payment={row.payment} />
+            )}
+          </ItemHeader>
+          <ItemFooter className="items-center justify-between gap-2">
+            {row.kind === "bank" ? (
+              <BankRowStatus
+                tx={row.tx}
+                expenseOptions={expenseOptions}
+                canLinkPayments={canLinkPayments}
+                touch={isTouchLayout}
+              />
+            ) : (
+              <MissingWebhookStatusCell
+                payment={row.payment}
+                touch={isTouchLayout}
+              />
+            )}
+          </ItemFooter>
         </Item>
       )}
     />
@@ -813,6 +743,8 @@ export function BankTransactionsTable({
 
   return (
     <AppListFrame
+      title={copy.listTitle}
+      contentScroll
       toolbar={
         <FilterBar
           variant="inline"
@@ -822,8 +754,8 @@ export function BankTransactionsTable({
           hide={["branch", "granularity", "compare"]}
           trailing={
             <>
-              <span className="text-xs font-medium text-muted-foreground">
-                {copy.filters.label}
+              <span className="text-xs text-muted-foreground">
+                {copy.queueCount(formatCount(openQueueCount))}
               </span>
               <Select
                 value={filter}
@@ -834,29 +766,19 @@ export function BankTransactionsTable({
               >
                 <SelectTrigger
                   size={controlSize}
-                  className="min-w-36"
+                  className={financeFilterReconTriggerClassName}
                   aria-label={copy.filters.label}
                 >
                   <SelectValue placeholder={copy.filters.placeholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {filterOptions.map(([value, label]) => (
-                    <SelectItem
-                      key={value}
-                      value={value}
-                      size={controlSize === "touch" ? "touch" : "default"}
-                    >
+                    <SelectItem key={value} value={value} size={optionSize}>
                       {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Badge
-                variant={openQueueCount > 0 ? "warning" : "success"}
-                className="font-mono"
-              >
-                {copy.queueCount(formatCount(openQueueCount))}
-              </Badge>
             </>
           }
         />

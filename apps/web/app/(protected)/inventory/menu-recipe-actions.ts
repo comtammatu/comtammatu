@@ -190,10 +190,9 @@ export async function fetchMenuRecipes(): Promise<ActionResult> {
 }
 
 /**
- * Valued WAC for menu-recipe portion cost, keyed by Kho gốc
- * (`central_supply` / `central_kitchen` × ingredient). Zero placeholders are
- * dropped. Callers resolve with ingredients.default_fulfill_site_kind.
- * Fallbacks: live Chi nhánh WAC, then last positive movement at Kho gốc.
+ * Tenant-wide company WAC for menu-recipe portion cost (ADR 0040).
+ * Zero placeholders are dropped. Callers still pass
+ * ingredients.default_fulfill_site_kind for Nguồn hàng; cost is one number.
  */
 export async function fetchBranchWacMap(
   branchId?: number | null,
@@ -223,7 +222,6 @@ export async function fetchBranchWacMap(
   const stockBearingLocations = await fetchStockBearingLocationIds({
     supabase,
     tenantId: claims.tenant_id,
-    branchId: parsedBranchId.data ?? undefined,
   });
   if (!stockBearingLocations.ok) {
     return {
@@ -238,17 +236,13 @@ export async function fetchBranchWacMap(
     };
   }
 
-  let query = monetary.client
+  const query = monetary.client
     .from("stock_levels")
     .select("ingredient_id, avg_unit_cost, branch_id")
     .eq("tenant_id", claims.tenant_id)
     .in("location_id", stockBearingLocations.locationIds)
     .not("avg_unit_cost", "is", null)
     .gt("avg_unit_cost", 0);
-
-  if (parsedBranchId.data != null) {
-    query = query.eq("branch_id", parsedBranchId.data);
-  }
 
   const [stockResult, branchesResult, lastKnownResult] = await Promise.all([
     query,

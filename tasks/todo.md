@@ -5,27 +5,115 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Shorten shift punch, tasks, and checkout
+## Redo bank LIST match for accountants
+
+State: verify
+Kind: feature
+Tier: T2
+Lane: finance
+Exit: `/finance/bank-transactions` date column shows date + `HH:MM:SS`; status and processing are one clickable `Chưa khớp` badge that opens `AppSheet`; money-in match searches `mã đơn`; money-out sheet is compact.
+Evidence: Shared `formatVNTimeSeconds` unit test; sepay-bank / cash-deposit / command-dashboard static tests green; `@comtammatu/web` tsc green; `lint:copy` green; eslint on changed bank files green.
+
+- [ ] Authenticated smoke: tap `Chưa khớp` → search `mã đơn` → confirm; money-out sheet stays compact
+
+UI Advisor Gate
+- Surface: `/finance/bank-transactions`; route family: control finance; plane: `control_surface`; change: visual + flow
+- Context: screen-context-map Finance; actor: Owner/Kế toán; job: classify unmatched bank rows
+- Journey: open LIST → read date+time → tap `Chưa khớp` → search `mã đơn` or pick `chứng từ` → confirm; recovery: toast + keep sheet open
+- Information order: 1) date/time 2) amount 3) content 4) status-as-action; exclude: payment_code as the primary accountant input
+- Pattern: LIST; exemplar: `apps/web/app/(protected)/finance/bank-transactions/page.tsx`; data display: DataTable
+- States: unmatched, matched, webhook_error, missing_webhook, search empty
+- Block: none — LIST + AppSheet D1 beside the table; no new UI block
+- Responsive/accessibility: same IA; badge is a button with `aria-haspopup`; primary viewport Owner desktop, cards below 1024
+- Verification: static tests, `lint:copy`, targeted web tests
+
+## Finished goods are recipe-produced only
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/catalog
+Exit: `finished_good` is only a kitchen-produced SKU with a production recipe; purchased bottles/lids stay `raw_material`; PO/YCM/GRN/NCC cannot add FG; YCH/transfer of FG still allowed.
+Evidence: Applied Production `enloyfnuerqgaqderbwb` 2026-08-17 with `20260817191830` (owner-authorized batch). Coca/Fanta/Sprite/bottled water/PET lids are `raw_material`. Remaining `finished_good` rows all have a production recipe spec. Zero active FG `supplier_items`. Four purchase-line triggers live. Types regenerated (`repair_company_wac_valuation` now in generated RPC types).
+
+- [ ] Smoke: PO/YCM/GRN/NCC pickers omit FG; YCH still lists kitchen FG.
+
+UI Advisor Gate
+- Surface: ingredient dialog + PO/YCM/GRN/NCC pickers; plane: `control_surface`; change: copy + picker filter
+- Context: screen-context-map inventory; actor: warehouse/owner; job: buy ingredients, produce FG
+- Journey: create SKU → purchased vs produced; PO/GRN/NCC pickers show purchased only; recovery: DB `finished_good_not_purchased`
+- Information order: 1) kind 2) recipe requirement; exclude: purchased bottles/lids as FG
+- Pattern: FORM existing; exemplar: `ingredient-dialog.tsx`
+- States: raw_material, finished_good
+- Block: none
+- Responsive/accessibility: same switch + FieldDescription
+- Verification: SQL + static tests, `lint:copy`, `corepack pnpm verify`
+
+## Company WAC and cost restatement
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: inventory/valuation
+Exit: Pending GRN uses last-invoice/WAC provisional so site WAC does not collapse to 0; purchased SKUs share one company WAC; finished goods skip GRN and share one production WAC after transfer; production output equals consumed input value; owner-only `repair_company_wac_valuation` restates without rewriting movement snapshots.
+Evidence: ADR 0040 + glossary/inventory copy; migration `20260817183130_company_wac_and_cost_restatement.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17; SQL + static tests. Remaining: confirm pending invoices then `repair_company_wac_valuation`.
+
+- [ ] Confirm remaining 17 Aug pending invoices, then `repair_company_wac_valuation` dry-run then apply.
+
+UI Advisor Gate
+- Surface: inventory stock/issue/transfer + GRN pending hint; plane: `control_surface`; change: copy
+- Context: screen-context-map inventory; actor: warehouse/owner; job: read one company cost
+- Journey: open stock/document → one company WAC; GRN confirmed pending → provisional hint; recovery: supplier invoice then repair RPC
+- Information order: 1) qty 2) company WAC 3) invoice pending; exclude: dual Central Supply vs branch prices
+- Pattern: LIST/DETAIL existing; exemplar: `stock-client.tsx`
+- States: valued, pending invoice, missing provisional
+- Block: none
+- Responsive/accessibility: same columns
+- Verification: static copy tests, SQL valuation test, `corepack pnpm verify`
+
+## Split opening capital from monthly operating expense
+
+State: verify
+Kind: feature
+Tier: T3
+Lane: finance
+Exit: `/finance` shows the opening-capital card after period result and outside the P&L formula; operating expense excludes `capital`/`deposit`; migration CHECK + RPC allowlist + backfill exist and are applied on Production.
+Evidence: Targeted finance tests green; `@comtammatu/web` typecheck + eslint green; `lint:copy` / `lint:language-policy` / `lint:migration-lineage` / `lint:docs-budget` green. Production apply `enloyfnuerqgaqderbwb` 2026-08-17: `20260817181500` + `20260817183130` (owner-authorized batch). CHECK includes `capital`/`deposit`; NHT sample `#37` rent, `#20`/`#67` deposit, `#42`/`#57`/`#58`/`#59` capital. Full `corepack pnpm verify` blocked by unrelated dirty `food-cost-client.tsx` `gap-0.5`.
+
+- [ ] `corepack pnpm verify` (blocked by unrelated food-cost UI contract hit)
+
+UI Advisor Gate
+- Surface: `/finance` + `/finance/expenses`; route family: control finance; plane: `control_surface`; change: visual + copy
+- Context: screen-context-map Finance Basic; actor: Owner/Accountant; job: see shop opening capital vs monthly opex
+- Journey: open `/finance` → period formula (opex only) → opening-capital card → funds; recovery: drill to `/finance/expenses`
+- Information order: 1) period result 2) cumulative opening capital 3) funds; exclude: depreciation, deductible VAT, net profit
+- Pattern: DASHBOARD_REPORT on `/finance`; LIST on `/finance/expenses` with `KpiRow` above `AppListFrame` (not REPORT compose). Exemplar: `food-cost-client.tsx` KPI strip + `expenses-client.tsx` LIST frame; data display: KpiCard
+- States: recorded / not_recorded
+- Block: none — reuse `KpiCard` / `AppSection` / `KpiRow`; no new formula operators
+- Responsive/accessibility: same compact KpiRow as inventory/VAT
+- Verification: static finance tests, `lint:copy`, `corepack pnpm verify`
+
+## Compact floor shift tasks and require photo evidence
 
 State: verify
 Kind: feature
 Tier: T3
 Lane: hr/self-service
-Exit: Clock-in is one camera tap; in-shift tasks show short start/end phase rows; photo tasks cannot be marked done without a live photo; checkout is one tap on the personal shift page.
-Evidence: Migration `20260817141000_shift_task_photo_required.sql` applied on Production `enloyfnuerqgaqderbwb` 2026-08-17 (batch with GRN). Catalog: toggle/checkout raise `photo_required`; attach sets `is_done = true`. Types unchanged. Static + SQL tests; `lint:copy`; `corepack pnpm verify` green 2026-08-17.
+Exit: Each floor position has 3–5 start/end-of-shift tasks; photo tasks cannot be marked done without `photo_path`; waiter has no cash close; open unchecked-out checklists refresh to the new templates.
+Evidence: Migration `20260817191830_compact_position_shift_tasks_photo_required.sql` on Production `enloyfnuerqgaqderbwb`; live templates are 3–5 tasks/position; CHECK `attendance_checklist_items_photo_required_when_done` exists; static tests green. Full `corepack pnpm verify` blocked by unrelated bank LIST UI-contract hits.
 
-- [ ] Smoke: clock-in one tap; photo task rejects done without photo; capture marks done; checkout from `/br/.../shift`.
+- [ ] Smoke: photo task rejects tick without photo; capture marks done; waiter list has no cash close.
 
 UI Advisor Gate
-- Surface: `/br/[branchId]/shift` + `/shift/clock` + `/me/clock`; route family Branch personal day-flow / staff; plane: `branch` / `staff`; change: flow
-- Context: screen-context-map §2.4A personal shift tab; actor: cashier/chef/branch_staff; job: punch, complete shift tasks, request checkout
-- Journey: open shift page → camera → one tap clock-in → compact start then end tasks (photo = capture to complete) → one tap checkout; recovery: retake/upload if camera denied
-- Information order: 1) current step action 2) task title 3) one-line hint; exclude: long done-definition walls, extra clock page hops, optional photo
-- Pattern: LANDING; exemplar: `apps/web/lib/staff-runtime/page.tsx`; data display: Item list + live camera
-- States: not_started, working, photo capture, checkout ready, pending, offline, camera denied
-- Block: `employee-self-service`; components: Employee*/BranchOperator* + AppSheet; fallback: none
-- Responsive/accessibility: phone primary; `playsInline` camera; labels on capture/checkout
-- Verification: static UI + SQL functiondef tests, `lint:copy`, `lint:ui-contract`, `corepack pnpm verify`
+- Surface: `/br/[branchId]/shift` (`Việc trong ca`); route family Branch personal day-flow; plane: `branch` / `staff`; change: copy + data
+- Context: screen-context-map §2.4A; actor: cashier/chef/branch_staff/BM/guard; job: complete short shift tasks with photo proof
+- Journey: clock-in → 3–5 start/end rows → camera completes photo task → checkout; recovery: retake if camera denied
+- Information order: 1) phase 2) title 3) photo hint; exclude: uniform/clock-in/stock-report rows, waiter cash close
+- Pattern: LANDING; exemplar: `apps/web/lib/staff-runtime/tasks/tasks-client.tsx`; data display: Item list
+- States: todo, photo required, done
+- Block: none — existing task list; no layout compose
+- Responsive/accessibility: phone primary; camera button labeled
+- Verification: static seed + CHECK tests, `lint:copy`, `corepack pnpm verify`
 
 ## GRN partial, over-receipt, pack+loose units
 

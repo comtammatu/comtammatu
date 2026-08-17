@@ -6,7 +6,7 @@ import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchAccessibleBranches } from "../actions";
-import { fetchExpenseById, fetchExpenses } from "../expense-actions";
+import { fetchExpenseById, fetchExpenses, fetchStartupCapitalSummary } from "../expense-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -43,7 +43,7 @@ export default async function ExpensesPage({
   // Racing loadAuthState with finance actions on the shared GoTrue client
   // yields false-null ctx and the expenses soft load-error empty state.
   const { claims } = await loadAuthState();
-  const [branchesRes, expensesRes, canManageExpenses, targetExpenseRes] =
+  const [branchesRes, expensesRes, startupRes, canManageExpenses, targetExpenseRes] =
     await Promise.all([
       fetchAccessibleBranches(),
       fetchExpenses({
@@ -52,13 +52,17 @@ export default async function ExpensesPage({
         endDate: resolved.end,
         ...(params.branch != null ? { branchId: params.branch } : {}),
       }),
+      fetchStartupCapitalSummary({
+        location: params.location,
+        ...(params.branch != null ? { branchId: params.branch } : {}),
+      }),
       currentUserHasPermissionAny(PERMISSION_KEYS.FINANCE_EXPENSE_CREATE),
       targetExpenseId != null
         ? fetchExpenseById(targetExpenseId)
         : Promise.resolve({ success: true, data: null }),
     ]);
 
-  if (!branchesRes.success || !expensesRes.success) {
+  if (!branchesRes.success || !expensesRes.success || !startupRes.success) {
     return (
       <AppPage width="xwide" density="compact">
         <AppPageHeader
@@ -107,6 +111,8 @@ export default async function ExpensesPage({
     {
       operatingTotal: "0.00",
       operatingCount: 0,
+      startupTotal: startupRes.data?.total ?? "0.00",
+      startupCount: startupRes.data?.count ?? 0,
       needsActionTotal: "0.00",
       needsActionCount: 0,
     },

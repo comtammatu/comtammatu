@@ -5,6 +5,7 @@ import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item, ItemHeader, ItemTitle } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { AppDialog, QuantityInput } from "@/components/form";
 import {
   purchaseRequestStatusVariant,
@@ -197,71 +198,75 @@ export function PurchaseRequestAllocateDialog({
             </p>
           </div>
         ) : null}
-        {selected?.items.map((item) => {
-          const supplierDrafts = allocationDrafts
-            .map((draft) => ({
-              ...draft,
-              lines: draft.lines.filter(
-                (line) => line.requestItemId === item.id,
-              ),
-            }))
-            .filter((draft) => draft.lines.length > 0);
-          const allocated = totals.get(item.id) ?? 0;
-          const remaining = item.remainingQuantity - allocated;
-          return (
-            <Item key={item.id} variant="outline" className="items-stretch">
-              <ItemHeader>
-                <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
-                <Badge
-                  variant={
-                    Math.abs(remaining) <= 0.0005 ? "success" : "warning"
-                  }
-                >
-                  {allocated}/{item.remainingQuantity} {item.unitLabel}
-                </Badge>
-              </ItemHeader>
-              <div className="flex basis-full flex-col gap-2">
-                {supplierDrafts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {copy.noActiveSuppliers}
-                  </p>
-                ) : (
-                  supplierDrafts.map((draft) => {
-                    const line = draft.lines[0];
-                    if (!line) return null;
-                    return (
-                      <div
-                        key={draft.supplierId}
-                        className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]"
-                      >
-                        <span className="text-sm">{draft.supplierName}</span>
-                        <QuantityInput
-                          controlSize="field"
-                          value={line.quantity}
-                          onValueChange={(value) =>
-                            onPatchAllocation(draft.supplierId, line.key, {
-                              quantity: value,
-                            })
-                          }
-                          maxFractionDigits={3}
-                          placeholder={copy.quantity}
-                          aria-label={`${draft.supplierName}: ${copy.quantity}`}
-                        />
-                      </div>
-                    );
-                  })
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {copy.allocationProgress(
-                    allocated,
-                    remaining,
-                    item.unitLabel,
-                  )}
-                </p>
-              </div>
-            </Item>
-          );
-        })}
+        <ScrollArea className="h-80">
+          <div className="flex flex-col gap-3 pr-2">
+            {selected?.items.map((item) => {
+              const supplierDrafts = allocationDrafts
+                .map((draft) => ({
+                  ...draft,
+                  lines: draft.lines.filter(
+                    (line) => line.requestItemId === item.id,
+                  ),
+                }))
+                .filter((draft) => draft.lines.length > 0);
+              const allocated = totals.get(item.id) ?? 0;
+              const remaining = item.remainingQuantity - allocated;
+              return (
+                <Item key={item.id} variant="outline" className="items-stretch">
+                  <ItemHeader>
+                    <ItemTitle size="heading">{item.ingredientName}</ItemTitle>
+                    <Badge
+                      variant={
+                        Math.abs(remaining) <= 0.0005 ? "success" : "warning"
+                      }
+                    >
+                      {allocated}/{item.remainingQuantity} {item.unitLabel}
+                    </Badge>
+                  </ItemHeader>
+                  <div className="flex basis-full flex-col gap-2">
+                    {supplierDrafts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        {copy.noActiveSuppliers}
+                      </p>
+                    ) : (
+                      supplierDrafts.map((draft) => {
+                        const line = draft.lines[0];
+                        if (!line) return null;
+                        return (
+                          <div
+                            key={draft.supplierId}
+                            className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]"
+                          >
+                            <span className="text-sm">{draft.supplierName}</span>
+                            <QuantityInput
+                              controlSize="field"
+                              value={line.quantity}
+                              onValueChange={(value) =>
+                                onPatchAllocation(draft.supplierId, line.key, {
+                                  quantity: value,
+                                })
+                              }
+                              maxFractionDigits={3}
+                              placeholder={copy.quantity}
+                              aria-label={`${draft.supplierName}: ${copy.quantity}`}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {copy.allocationProgress(
+                        allocated,
+                        remaining,
+                        item.unitLabel,
+                      )}
+                    </p>
+                  </div>
+                </Item>
+              );
+            })}
+          </div>
+        </ScrollArea>
       </div>
     </AppDialog>
   );

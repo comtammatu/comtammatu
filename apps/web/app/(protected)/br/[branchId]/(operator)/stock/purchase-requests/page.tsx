@@ -7,6 +7,7 @@ import { AppEmptyState } from "@/components/surface";
 import { BranchOperatorPage } from "@lib/branch-operator/components/branch-operator-page";
 import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
+import { filterPurchasedIngredientRows } from "@lib/inventory/catalog-readiness";
 import type { PurchaseRequestIngredientOption } from "@lib/inventory/purchase-request-model";
 import {
   loadPurchaseDemandRows,
@@ -131,7 +132,9 @@ export default async function OperatorPurchaseRequestsPage({
 
   const demandRows = demandLoad.rows;
 
-  const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
+  const ingredientRows = filterPurchasedIngredientRows(
+    (ingredientResult.data ?? []) as IngredientRow[],
+  );
   const pickerUnits = await loadPurchasePickerUnits({
     supabase,
     tenantId: claims.tenant_id,

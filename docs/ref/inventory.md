@@ -16,7 +16,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 
 | Nội dung                        | Current contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Boundary                                                                                               |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Nguyên liệu `ingredients`       | Master data nguyên liệu phục vụ GRN, tồn kho, production recipe và menu recipe                                                                                                                                                                                                                                                                                                                                                                                                        | Không mở item master ERP nhiều lớp                                                                     |
+| Nguyên liệu `ingredients`       | Master: hàng mua (`raw_material`) phục vụ PO/GRN/NCC; thành phẩm (`finished_good`) chỉ SKU Bếp TT sản xuất có công thức                                                                                                                                                                                                                                                                                                | Không mở item master ERP nhiều lớp                                                                     |
 | Tồn kho `stock_levels`          | `current_quantity`, `avg_unit_cost`; valuation account giữ book value chính xác và chiếu WAC hiện tại sang stock level                                                                                                                                                                                                                                                                                                                                                                | Không chuyển sang FIFO engine                                                                          |
 | Biến động `stock_movements`     | Append-only quantity ledger; valuation events append-only giữ value adjustment và lineage qua receipt, transfer, production, consumption, waste và stocktake                                                                                                                                                                                                                                                                                                                          | Không mở lot-first ledger / batch accounting                                                           |
 | Mô hình site                    | `branches` là site table Production; kinds active: `branch`, `central_supply` (Kho Tổng), `central_kitchen` (Bếp Trung Tâm). Mỗi site active có đúng một active `warehouse`, đồng thời là default receive/issue/consumption; Branch không có stock location Bếp.                                                                                                                                                                                                                      | `production_storage` chỉ dùng tường minh cho production trung tâm; V1 chưa đổi sang `operational_site` |
@@ -25,7 +25,7 @@ Contract vận hành Inventory hiện tại, không phải roadmap. Ý tưởng 
 | Luân chuyển nội bộ              | Transfer có chủ đích chỉ đi giữa các warehouse hợp lệ. Tiêu hao, write-off và production không được mô phỏng bằng transfer cùng site.                                                                                                                                                                                                                                                                                                                                                 | Không có target Kho↔Bếp trong cùng branch                                                              |
 | HĐ NCC                          | `supplier_invoices` + đối soát GRN + thanh toán NCC là Finance handoff; thanh toán bắt buộc có file HĐ GTGT đính kèm (ADR 0017)                                                                                                                                                                                                                                                                                                                                                       | Không mở payment proposal engine trong Inventory                                                       |
 | Định mức món bán (`recipes`)    | Menu recipe theo món bán + RPC tiêu hao theo order                                                                                                                                                                                                                                                                                                                                                                                                                                    | Không mở multi-level BOM                                                                               |
-| Thành phẩm + production landing | `item_kind`, `production_recipes`, `production_runs`; branch dùng warehouse duy nhất, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                                                                                                                                                                                                                                                 | Không thực hiện central-production cutover trong lát D091                                              |
+| Thành phẩm + production landing | `finished_good` chỉ SKU có công thức sản xuất; `production_recipes`, `production_runs`; branch dùng warehouse duy nhất, production trung tâm chỉ dùng `production_storage` khi workflow chọn tường minh                                                                                                                                                                                                               | Không thực hiện central-production cutover trong lát D091                                              |
 | Hao hụt / sự cố                 | Waste/write-off + approvals và issue log; supplier return không còn daily surface                                                                                                                                                                                                                                                                                                                                                                                                     | Không mở claim/insurance workflow                                                                      |
 
 ## Scope Boundary
@@ -171,17 +171,18 @@ gỡ đơn vị vẫn được BOM/production recipe tham chiếu.
 Master theo tenant. `unit_cost` trên `ingredients` không phải nguồn giá kho;
 **giá vốn bình quân** ở `stock_levels.avg_unit_cost` (theo Đơn vị chuẩn).
 `units.code` = mã kỹ thuật; `units.name` = nhãn. Cần ít nhất một
-`ingredient_units` base. `item_kind` phân loại tồn (`raw_material | finished_good`
-validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
+`ingredient_units` base. `item_kind`: `raw_material` = hàng mua (PO/GRN);
+`finished_good` = chỉ SKU Bếp TT sản xuất có công thức (kind khác: mục tiêu);
 `category` / `category_id` là nhóm vận hành — đổi category cập nhật cả hai.
 
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** `(tenant_id, branch_id, location_id, ingredient_id)` — tồn từ stock-bearing locations.
 - **`current_quantity`:** theo **Đơn vị chuẩn** (`is_base`).
-- **`avg_unit_cost`:** **Giá vốn kho này** — WAC theo Đơn vị chuẩn của đúng
-  location. Qty > 0: `book_value / quantity`. Qty 0/âm: giữ giá dương cuối;
-  nhập giá khác thì tính lại WAC. Điều chuyển mang WAC lúc xuất. Không gộp 3 site.
+- **`avg_unit_cost`:** **Giá vốn** — `company_wac` một số / NL mua (mọi
+  site). Qty > 0: `book_value = qty × company_wac`. Qty 0/âm: giữ giá dương
+  cuối. TP: **Giá vốn mẻ** một số mọi site — không GRN, điều chuyển không
+  tạo giá thứ hai. ADR 0040.
 
 ---
 
@@ -193,9 +194,9 @@ validate hiện tại; `semi_finished` / `packaging` / `supply` mục tiêu);
 > (`production_recipes`, tab Công thức `/inventory/production`).
 Định mức theo `menu_item`; xuất kho khi đơn `completed`. `entry_unit_id` →
 Đơn vị chuẩn qua `to_base_factor` / `inv_to_base_for_tenant` (không Yield).
-Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC kho bán
-(thang ADR 0026: location → tenant → GRN → last-known movement → 0);
-catalog + Finance **Định mức/phần** cùng resolver (Kho gốc rồi CN / last-known).
+Ba đường số: POS `post_pos_sale_consumption_if_ready` ghi sổ theo WAC công ty
+(thang ADR 0026/0040: company WAC → last-known movement → 0);
+catalog + Finance **Định mức/phần** cùng `company_wac` (không hai giá Kho gốc / CN).
 `Giá vốn món` = POS `sale_consumption` tại CN khi cutover `active`. Không bịa
 gram. Gửi hàng Bếp/Kho Tổng → CN = điều chuyển, không phiếu tiêu hao.
 
@@ -213,7 +214,7 @@ Bảng: `production_recipe_specs` (header, `needs_review | active | inactive`);
    trên `branch_id`; lệnh `in_progress`, actual `> 0`, đủ snapshot; location cùng
    Bếp TT; tồn đủ sau quy đổi Đơn vị chuẩn → atomic `production_consumption` /
    `production_output` / `stock_levels` / `completed`.
-5. Giao CN qua Điều chuyển riêng.
+5. Giao CN qua Điều chuyển riêng — cùng Giá vốn mẻ, không phiếu nhập NCC.
 
 Kế hoạch (“Định làm”) điền sẵn tiêu hao; thực tế (“Thực ra”) chỉ điều khiển giá
 vốn đầu ra — không co giãn tiêu hao đã ghi. Hao hụt tăng giá vốn TP, không tự
@@ -288,17 +289,12 @@ evidence hoặc quyết định review.
 
 ## 6. Phương pháp tính giá xuất kho
 
-**Current:** WAC trên từng `stock_levels`, cập nhật từ sổ định giá khi Hóa đơn
-NCC được xác nhận. FIFO/FEFO theo lô = mở rộng sau; v1 dùng WAC.
-
-```
-Q_new = Q_old + Q_recv_base
-WAC_new = (Q_old × WAC_old + Q_recv_base × đơn_giá_nhập_quy_đổi_về_tồn_chuẩn) / Q_new   (khi Q_new > 0)
-```
-
-Kế toán/Owner nhập và xác nhận đơn giá trên Hóa đơn NCC. Inventory không tính
-ngưỡng lệch giá, không bắt Kho giải trình giá, không approval thứ hai tại GRN /
-price-QC.
+**Current:** `company_wac` / NL mua trên mọi location (ADR 0040). GRN không
+mang giá thương mại; origin **giá tạm** = HĐ `finalized` gần nhất, không có
+thì WAC dương cuối. Xác nhận HĐ: `invoice_reprice` = `net_HĐ − provisional`,
+propagate tồn / TP / `food_cost` / hao. TP: giá mẻ = Σ NL vừa trừ. SKU chưa
+có giá tạm thì không nấu/chuyển. FIFO/FEFO theo lô = mở rộng sau. Kế toán
+xác nhận đơn giá trên HĐ NCC; không price-QC tại GRN.
 
 ---
 

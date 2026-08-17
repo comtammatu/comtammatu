@@ -18,6 +18,7 @@ import {
 } from "@comtammatu/ui/components/input-group";
 import { InteractiveCard } from "@comtammatu/ui/components/interactive-card";
 import { Item } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Tabs,
   TabsContent,
@@ -671,58 +672,62 @@ function PurchaseOrderDocumentBody({
                 {copy.emptyLinesDescription}
               </Item>
             ) : (
-              row.lines.map((line) => {
-                const remaining = Math.max(
-                  line.quantity - line.receivedQuantity,
-                  0,
-                );
-                return (
-                  <Item
-                    key={line.id}
-                    variant="outline"
-                    className="flex flex-col gap-3 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground">
-                        {line.ingredientName}
-                      </p>
-                      <p className="text-muted-foreground">{line.unitLabel}</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 sm:min-w-56">
-                      <div className="min-w-0">
-                        <span className="block text-muted-foreground">
-                          {copy.detail.orderedShort}
-                        </span>
-                        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                          {line.quantity}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="block text-muted-foreground">
-                          {copy.detail.receivedShort}
-                        </span>
-                        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                          {line.receivedQuantity}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="block text-muted-foreground">
-                          {copy.detail.remainingShort}
-                        </span>
-                        <span
-                          className={
-                            remaining > 0
-                              ? "font-mono text-sm font-semibold tabular-nums text-destructive"
-                              : "font-mono text-sm font-semibold tabular-nums text-foreground"
-                          }
-                        >
-                          {remaining}
-                        </span>
-                      </div>
-                    </div>
-                  </Item>
-                );
-              })
+              <ScrollArea className="h-80">
+                <div className="flex flex-col gap-2 pr-2">
+                  {row.lines.map((line) => {
+                    const remaining = Math.max(
+                      line.quantity - line.receivedQuantity,
+                      0,
+                    );
+                    return (
+                      <Item
+                        key={line.id}
+                        variant="outline"
+                        className="flex flex-col gap-3 p-3 text-xs sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">
+                            {line.ingredientName}
+                          </p>
+                          <p className="text-muted-foreground">{line.unitLabel}</p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 sm:min-w-56">
+                          <div className="min-w-0">
+                            <span className="block text-muted-foreground">
+                              {copy.detail.orderedShort}
+                            </span>
+                            <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                              {line.quantity}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-muted-foreground">
+                              {copy.detail.receivedShort}
+                            </span>
+                            <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                              {line.receivedQuantity}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-muted-foreground">
+                              {copy.detail.remainingShort}
+                            </span>
+                            <span
+                              className={
+                                remaining > 0
+                                  ? "font-mono text-sm font-semibold tabular-nums text-destructive"
+                                  : "font-mono text-sm font-semibold tabular-nums text-foreground"
+                              }
+                            >
+                              {remaining}
+                            </span>
+                          </div>
+                        </div>
+                      </Item>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             )}
           </div>
         </TabsContent>
@@ -739,36 +744,40 @@ function PurchaseOrderDocumentBody({
                 {copy.emptyLinkedGrnsHint}
               </Item>
             ) : (
-              row.linkedGrns.map((grn) => (
-                <Item
-                  key={grn.id}
-                  variant="outline"
-                  className="flex items-center justify-between gap-3 p-3 text-xs"
-                  render={
-                    <Link
-                      href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${returnTo}`}
-                    />
-                  }
-                >
-                  <div className="min-w-0">
-                    <p className="font-mono font-semibold text-foreground">
-                      {grn.code}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {grn.receivedAt ? formatVNDate(grn.receivedAt) : "—"}
-                    </p>
-                  </div>
-                  <StatusBadge
-                    domain="inventory"
-                    value={grn.status}
-                    label={
-                      grn.status === "draft"
-                        ? copy.detail.grnDraft
-                        : copy.detail.grnConfirmed
-                    }
-                  />
-                </Item>
-              ))
+              <ScrollArea className="h-60">
+                <div className="flex flex-col gap-2 pr-2">
+                  {row.linkedGrns.map((grn) => (
+                    <Item
+                      key={grn.id}
+                      variant="outline"
+                      className="flex items-center justify-between gap-3 p-3 text-xs"
+                      render={
+                        <Link
+                          href={`/inventory/grn?grnId=${grn.id}&mode=view&returnTo=${returnTo}`}
+                        />
+                      }
+                    >
+                      <div className="min-w-0">
+                        <p className="font-mono font-semibold text-foreground">
+                          {grn.code}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {grn.receivedAt ? formatVNDate(grn.receivedAt) : "—"}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        domain="inventory"
+                        value={grn.status}
+                        label={
+                          grn.status === "draft"
+                            ? copy.detail.grnDraft
+                            : copy.detail.grnConfirmed
+                        }
+                      />
+                    </Item>
+                  ))}
+                </div>
+              </ScrollArea>
             )}
           </div>
         </TabsContent>

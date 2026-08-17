@@ -286,6 +286,8 @@ function tryShiftQtyOneNet(line: SinvoiceSaleItemInfo, delta: number): boolean {
 /**
  * Keep invoice GROSS on the POS whole-VND total. Per-line integer NET/VAT can
  * drift ±1₫; absorb the leftover onto another line without breaking 43/44.
+ * qty>1 cannot move NET by 1₫ (`lineNet = qty × unit`), so tax-shift is the
+ * only move until a qty=1 sibling exists.
  */
 function absorbWholeVndGrossResidual(
   itemInfo: SinvoiceSaleItemInfo[],
@@ -295,7 +297,7 @@ function absorbWholeVndGrossResidual(
     itemInfo.reduce((sum, line) => sum + line.itemTotalAmountWithTax, 0);
 
   let drift = targetGross - currentGross();
-  const maxSteps = Math.max(8, itemInfo.length * 4);
+  const maxSteps = Math.max(8, itemInfo.length * 4, Math.abs(drift) + 2);
   for (let step = 0; step < maxSteps && drift !== 0; step += 1) {
     const delta = drift > 0 ? 1 : -1;
     const candidates = [...itemInfo].sort(
@@ -313,6 +315,100 @@ function absorbWholeVndGrossResidual(
   if (drift !== 0) {
     throw new Error(`sinvoice_gross_residual_unresolved:${drift}`);
   }
+}
+
+function cloneInvoiceLines(items: InvoiceLineItem[]): InvoiceLineItem[] {
+  return items.map((item) => ({ ...item }));
+}
+
+/**
+ * Split 1 unit off the coarsest integer-qty line so absorb can nudge NET by
+ * 1₫. Same real item name/VAT; GROSS is conserved. Legal content stays the
+ * sold goods — this is not a rounding SKU.
+ */
+function peelOneQtyUnit(lines: InvoiceLineItem[]): boolean {
+  let bestIndex: number | null = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line === undefined) continue;
+    if (!Number.isInteger(line.quantity) || line.quantity < 2) continue;
+    const best = bestIndex === null ? undefined : lines[bestIndex];
+    if (
+      best === undefined ||
+      line.quantity > best.quantity ||
+      (line.quantity === best.quantity &&
+        normalizeMoney(line.amount) > normalizeMoney(best.amount))
+    ) {
+      bestIndex = i;
+    }
+  }
+  if (bestIndex === null) return false;
+  const line = lines[bestIndex];
+  if (line === undefined) return false;
+
+  const qty = line.quantity;
+  const gross = normalizeMoney(line.amount);
+  const peeledGross = Math.trunc(gross / qty);
+  const remainQty = qty - 1;
+  const remainGross = gross - peeledGross;
+  if (peeledGross <= 0 || remainGross <= 0) return false;
+
+  line.quantity = remainQty;
+  line.amount = remainGross;
+  line.unitPrice = remainGross / remainQty;
+
+  lines.push({
+    name: line.name,
+    unit: line.unit,
+    quantity: 1,
+    unitPrice: peeledGross,
+    amount: peeledGross,
+    vatRate: line.vatRate,
+  });
+  return true;
+}
+
+function saleItemsFromGrossLines(
+  items: InvoiceLineItem[],
+): SinvoiceSaleItemInfo[] {
+  return items.map((item, index) => {
+    const lineVatRate = item.vatRate;
+    if (![0, 5, 8, 10].includes(lineVatRate)) {
+      throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
+    }
+    const lineGross = normalizeMoney(item.amount);
+    const qty = item.quantity;
+    if (!Number.isFinite(qty) || qty <= 0) {
+      throw new Error("sinvoice_invalid_quantity");
+    }
+
+    const netUnitPrice = findNetUnitPriceForGrossTarget(
+      qty,
+      lineVatRate,
+      lineGross,
+    );
+    const lineNet = netUnitPrice * qty;
+    const lineTax = chooseLineTax(lineNet, lineVatRate, lineGross);
+
+    return {
+      lineNumber: index + 1,
+      selection: 1 as const,
+      itemCode: "",
+      itemName: item.name,
+      unitName: item.unit || "Phần",
+      unitPrice: netUnitPrice,
+      quantity: qty,
+      itemTotalAmountWithoutTax: lineNet,
+      itemTotalAmountAfterDiscount: lineNet,
+      itemTotalAmountWithTax: lineNet + lineTax,
+      discount: 0,
+      itemDiscount: 0,
+      itemNote: null,
+      isIncreaseItem: null,
+      taxPercentage: lineVatRate,
+      taxAmount: lineTax,
+    };
+  });
 }
 
 export type SinvoiceBuyerInfo = {
@@ -418,55 +514,45 @@ export function resolveSinvoiceBuyerInfo(
  * by up to qty/2 and break validator 43 (qty=7, lineGross=100, vatRate=8).
  * Tax is residual GROSS−NET when 44 holds, else rounded. Invoice GROSS is
  * forced back onto Σ POS line GROSS by absorbing leftover ±1₫ onto another
- * line that still passes 43/44.
+ * line that still passes 43/44. When every line has qty>1, split 1 unit of
+ * the same item onto a sibling line and retry — do not invent a rounding SKU
+ * and do not issue with silent drift.
  */
 export function buildSinvoiceItemInfo(
   items: InvoiceLineItem[],
 ): SinvoiceLineMath {
-  const saleItems: SinvoiceSaleItemInfo[] = items.map((item, index) => {
-    const lineVatRate = item.vatRate;
-    if (![0, 5, 8, 10].includes(lineVatRate)) {
-      throw new Error(`sinvoice_invalid_vat_rate:${lineVatRate}`);
-    }
-    const lineGross = normalizeMoney(item.amount);
-    const qty = item.quantity;
-    if (!Number.isFinite(qty) || qty <= 0) {
-      throw new Error("sinvoice_invalid_quantity");
-    }
-
-    const netUnitPrice = findNetUnitPriceForGrossTarget(
-      qty,
-      lineVatRate,
-      lineGross,
-    );
-    const lineNet = netUnitPrice * qty;
-    const lineTax = chooseLineTax(lineNet, lineVatRate, lineGross);
-
-    return {
-      lineNumber: index + 1,
-      selection: 1 as const,
-      itemCode: "",
-      itemName: item.name,
-      unitName: item.unit || "Phần",
-      unitPrice: netUnitPrice,
-      quantity: qty,
-      itemTotalAmountWithoutTax: lineNet,
-      itemTotalAmountAfterDiscount: lineNet,
-      itemTotalAmountWithTax: lineNet + lineTax,
-      discount: 0,
-      itemDiscount: 0,
-      itemNote: null,
-      isIncreaseItem: null,
-      taxPercentage: lineVatRate,
-      taxAmount: lineTax,
-    };
-  });
-
-  const targetGross = items.reduce(
+  const working = cloneInvoiceLines(items);
+  const targetGross = working.reduce(
     (sum, item) => sum + normalizeMoney(item.amount),
     0,
   );
-  absorbWholeVndGrossResidual(saleItems, targetGross);
+  const maxPeels = working.reduce((sum, item) => {
+    if (!Number.isInteger(item.quantity) || item.quantity < 2) return sum;
+    return sum + (item.quantity - 1);
+  }, 0);
+
+  let saleItems: SinvoiceSaleItemInfo[] | null = null;
+  let lastResidual: Error | null = null;
+  for (let peels = 0; peels <= maxPeels; peels += 1) {
+    const nextItems = saleItemsFromGrossLines(working);
+    try {
+      absorbWholeVndGrossResidual(nextItems, targetGross);
+      saleItems = nextItems;
+      break;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!message.startsWith("sinvoice_gross_residual_unresolved:")) {
+        throw error;
+      }
+      lastResidual = error instanceof Error ? error : new Error(message);
+      if (peels === maxPeels || !peelOneQtyUnit(working)) {
+        throw lastResidual;
+      }
+    }
+  }
+  if (saleItems === null) {
+    throw lastResidual ?? new Error("sinvoice_gross_residual_unresolved");
+  }
 
   const itemInfo: SinvoiceItemInfo[] = saleItems;
   const sumLineNet = itemInfo.reduce(

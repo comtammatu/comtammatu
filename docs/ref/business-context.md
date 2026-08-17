@@ -56,6 +56,9 @@ Kết quả kinh doanh
   + Biến động tồn kho (Tồn cuối kỳ - Tồn đầu kỳ)
 ```
 
+`Chi phí ban đầu` (vốn thi công/máy/xe/nội thất và đặt cọc) là tiền đã bỏ ra
+cho quán, không trừ vào kết quả tháng.
+
 Chỉ dùng **lợi nhuận sau thuế TNDN** khi kỳ đã có đầy đủ doanh thu, giá vốn,
 chi phí, kết quả tài chính/khác, thuế TNDN, bút toán phân bổ và khóa sổ:
 

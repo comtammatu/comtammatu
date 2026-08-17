@@ -14950,6 +14950,10 @@ export type Database = {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
       }
+      repair_company_wac_valuation: {
+        Args: { p_dry_run?: boolean; p_idempotency_key: string }
+        Returns: Json
+      }
       replay_signed_sepay_payment_evidence: {
         Args: {
           p_actor_id: string

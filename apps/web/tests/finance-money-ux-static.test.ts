@@ -85,7 +85,7 @@ test("bank match sheet uses stacked money summary and ToggleGroup", () => {
   assert.match(source, /FinanceMoneySummary/);
   assert.match(source, /ToggleGroup/);
   assert.match(source, /formatSignedDelta/);
-  assert.match(source, /displayBankContent/);
+  assert.match(source, /BankMatchEvidence/);
   assert.match(source, /sticky bottom-0/);
   assert.doesNotMatch(source, /grid grid-cols-3 gap-2 text-xs/);
 });

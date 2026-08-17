@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { getEmployeeContext } from "./staff-runtime-context";
 import { pickAssignedShiftInWindow } from "./default-shift";
+import { isRequiredChecklistItemComplete } from "./checklist-complete";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   addVNDateDays,
@@ -505,7 +506,9 @@ async function loadTodayWorkState(): Promise<TodayWorkState> {
   const remaining = Math.max(total - done, 0);
   const requiredItems = checklistItems.filter((item) => item.isRequired);
   const requiredTotal = requiredItems.length;
-  const requiredDone = requiredItems.filter((item) => item.done).length;
+  const requiredDone = requiredItems.filter((item) =>
+    isRequiredChecklistItemComplete(item),
+  ).length;
   const requiredRemaining = Math.max(requiredTotal - requiredDone, 0);
   const attendanceRequired =
     Boolean(attendance) ||

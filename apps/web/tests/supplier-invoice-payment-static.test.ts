@@ -646,6 +646,11 @@ test("supplier invoice form supports goods, services, multiple GRNs and line VAT
   assert.match(grnActions, /from\("supplier_invoices"\)/);
   assert.match(grnActions, /expandGrnDropdownOptions/);
   assert.match(grnActions, /purchase_order_item_id/);
+  assert.match(
+    grnActions,
+    /from\("goods_received_notes"\)[\s\S]*from\("supplier_invoice_receipt_allocations"\)[\s\S]*\.in\("grn_id", grnIds\)/,
+    "GRN dropdown must load allocations only for the dropdown GRN ids",
+  );
   assert.match(client, /option\.optionKey/);
   assert.match(client, /purchaseOrderItemId/);
   assert.match(

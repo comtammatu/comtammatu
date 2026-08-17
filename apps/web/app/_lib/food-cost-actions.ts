@@ -10,6 +10,7 @@ import { getAuthContextWithPermission } from "./auth";
 import {
   aggregateFoodCostRowsByMenuItem,
   buildFoodCostRows,
+  overlayCatalogItemNames,
   type FoodCostMenuRecipeLine,
   type FoodCostResultRow,
   type FoodCostSaleLine,
@@ -75,7 +76,7 @@ export async function fetchFoodCost(
     return { success: false, error: foodCostCopy.loadSalesFailed };
   }
 
-  const saleLines: FoodCostSaleLine[] = (salesRows ?? [])
+  const snapshotSaleLines: FoodCostSaleLine[] = (salesRows ?? [])
     .filter((row) => row.branch_id != null && row.menu_item_id != null)
     .map((row) => ({
       branchId: row.branch_id as number,
@@ -85,13 +86,21 @@ export async function fetchFoodCost(
       revenue: Number(row.revenue ?? 0),
     }));
 
-  const menuItemIds = [...new Set(saleLines.map((row) => row.menuItemId))];
+  const menuItemIds = [
+    ...new Set(snapshotSaleLines.map((row) => row.menuItemId)),
+  ];
   if (menuItemIds.length === 0) return { success: true, data: [] };
 
-  const { data: menuRecipeData, error: menuRecipeError } = await monetaryClient
-    .from("recipes")
-    .select(
-      `
+  const [catalogResult, menuRecipeResult] = await Promise.all([
+    supabase
+      .from("menu_items")
+      .select("id, name")
+      .eq("tenant_id", tenantId)
+      .in("id", menuItemIds),
+    monetaryClient
+      .from("recipes")
+      .select(
+        `
       menu_item_id,
       ingredient_id,
       quantity,
@@ -109,13 +118,25 @@ export async function fetchFoodCost(
         )
       )
     `,
-    )
-    .eq("tenant_id", tenantId)
-    .in("menu_item_id", menuItemIds);
+      )
+      .eq("tenant_id", tenantId)
+      .in("menu_item_id", menuItemIds),
+  ]);
 
+  const { data: menuRecipeData, error: menuRecipeError } = menuRecipeResult;
   if (menuRecipeError) {
     return { success: false, error: foodCostCopy.loadRecipeFailed };
   }
+
+  const catalogNames = new Map<number, string>();
+  if (!catalogResult.error) {
+    for (const row of catalogResult.data ?? []) {
+      const name = row.name.trim();
+      if (!name) continue;
+      catalogNames.set(row.id, name);
+    }
+  }
+  const saleLines = overlayCatalogItemNames(snapshotSaleLines, catalogNames);
 
   type UnitRelation = { code: string | null; name: string | null } | null;
   type IngredientUnitData = {

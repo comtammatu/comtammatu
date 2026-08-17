@@ -9,6 +9,7 @@ import {
   expenseNeedsAction,
   isExpenseVisibleForBankMatch,
   isOperatingExpenseCategory,
+  isStartupCapitalCategory,
 } from "../app/(protected)/finance/_lib/expense-categories";
 import { parseExpenseListState } from "../app/(protected)/finance/expenses/expense-list-state";
 
@@ -176,6 +177,51 @@ test("bank deposits stay out of operating expense totals", () => {
   assert.equal(isOperatingExpenseCategory("hospitality"), true);
   assert.equal(isOperatingExpenseCategory("bank_deposit"), false);
   assert.equal(isOperatingExpenseCategory("cogs_manual"), false);
+  assert.equal(isOperatingExpenseCategory("capital"), false);
+  assert.equal(isOperatingExpenseCategory("deposit"), false);
+  assert.equal(isStartupCapitalCategory("capital"), true);
+  assert.equal(isStartupCapitalCategory("deposit"), true);
+  assert.equal(isStartupCapitalCategory("rent"), false);
+});
+
+test("startup capital is selectable and excluded from operating cash movement", () => {
+  const client = readExpenseClientBundle();
+  const messages = readWeb("lib/messages/finance.ts");
+  const migration = readFileSync(
+    resolve(
+      import.meta.dirname,
+      "../../../supabase/migrations/20260817181500_expense_startup_capital_category.sql",
+    ),
+    "utf8",
+  );
+
+  assert.equal(EXPENSE_CATEGORY_VALUES.includes("capital"), true);
+  assert.equal(EXPENSE_CATEGORY_VALUES.includes("deposit"), true);
+  assert.match(client, /EXPENSE_CATEGORIES_BY_GROUP\.startup/);
+  assert.match(client, /label: copy\.monthLabel/);
+  assert.match(client, /label: copy\.startupLabel/);
+  assert.match(client, /expenseCategoryBucketLabel/);
+  assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("capital"), true);
+  assert.equal(EXPENSE_CATEGORIES_BY_GROUP.startup.includes("deposit"), true);
+  assert.match(messages, /capital: "Thi công \/ tài sản"/);
+  assert.match(messages, /deposit: "Đặt cọc \/ ký quỹ"/);
+  assert.match(
+    migration,
+    /ADD CONSTRAINT expenses_category_check[\s\S]*'capital'[\s\S]*'deposit'/,
+  );
+  assert.match(
+    migration,
+    /create_expense_transfer_intent\(bigint,date,text,jsonb,text,text,text\)/,
+  );
+  assert.match(migration, /startup_capital_expense_category_boundary_not_found/);
+  assert.match(
+    migration,
+    /SET LOCAL session_replication_role = replica/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /get_operating_cash_movement_for_period/,
+  );
 });
 
 test("hospitality is selectable and accepted across expense boundaries", () => {
@@ -216,6 +262,21 @@ test("expense LIST loader bounds first paint and fails closed on missing evidenc
     actions,
     /export async function fetchExpenses[\s\S]*?\.range\(0, EXPENSE_LIST_PAGE_SIZE - 1\)/,
   );
+  assert.match(
+    actions,
+    /export async function fetchExpenses[\s\S]*?EXPENSE_CATEGORIES_BY_GROUP\.startup/,
+  );
+  assert.match(
+    actions,
+    /export async function fetchStartupCapitalSummary[\s\S]*?EXPENSE_CATEGORIES_BY_GROUP\.startup/,
+  );
+  assert.doesNotMatch(
+    actions.slice(
+      actions.indexOf("export async function fetchStartupCapitalSummary"),
+      actions.indexOf("export async function fetchExpenseById"),
+    ),
+    /expense_date/,
+  );
   assert.doesNotMatch(
     actions,
     /export async function fetchExpenses[\s\S]{0,2500}for\s*\(\s*let\s+offset\s*=\s*0;\s*;/,
@@ -247,18 +308,28 @@ test("expenses page settles session before parallel finance getAuthContext loade
   assert.match(financeActions, /MODULE_ACL\.finance\.allowedRoles/);
 });
 
-test("expense list separates its KPI summary from the data table", () => {
+test("expense list shows period opex and startup capital as sibling KPI cards", () => {
   const client = readWeb(
     "app/(protected)/finance/expenses/expenses-client.tsx",
   );
   const page = readWeb("app/(protected)/finance/expenses/page.tsx");
+  const messages = readWeb("lib/messages/finance.ts");
   const successPage = page.slice(page.indexOf("const todayBusinessDate"));
+  const headerEnd = client.indexOf("<AppListFrame");
+  const kpiBlock = client.slice(client.indexOf("<KpiRow"), headerEnd);
 
-  assert.doesNotMatch(client, /<KpiRow|<KpiCard/);
-  assert.match(client, /listSummaryMeta/);
-  assert.match(client, /copy\.totalLabel/);
-  assert.match(client, /copy\.needsActionLabel/);
-  assert.match(client, /trailing=\{/);
+  assert.ok(client.indexOf("<KpiRow") < headerEnd);
+  assert.equal((kpiBlock.match(/<KpiCard/g) ?? []).length, 2);
+  assert.match(kpiBlock, /label=\{copy\.monthLabel\}/);
+  assert.match(kpiBlock, /label=\{copy\.startupLabel\}/);
+  assert.match(client, /expenseCategoryBucketLabel/);
+  assert.match(client, /function categoryCell/);
+  assert.match(kpiBlock, /hint=\{copy\.monthHint\(formatCount\(summary\.operatingCount\)\)\}/);
+  assert.match(kpiBlock, /hint=\{copy\.startupHint\(formatCount\(summary\.startupCount\)\)\}/);
+  assert.match(messages, /monthLabel: "Chi phí tháng"/);
+  assert.match(messages, /startupLabel: "Chi phí ban đầu"/);
+  assert.doesNotMatch(client, /listSummaryMeta/);
+  assert.match(client, /trailing=\{needsActionFilterButton\}/);
   assert.doesNotMatch(client, /<AppSection[\s\S]*?headerHint=/);
   assert.doesNotMatch(successPage, /meta=/);
 });
@@ -273,6 +344,12 @@ test("operating KPI uses pre-VAT totals while action totals keep gross cash", ()
     page,
     /if \(isOperatingExpenseCategory\(row\.category\)\) \{[\s\S]*?acc\.operatingTotal = addMoney\(\[[\s\S]*?String\(row\.subtotal\),?[\s\S]*?\]\);[\s\S]*?acc\.operatingCount \+= 1;/,
   );
+  assert.match(page, /fetchStartupCapitalSummary\(/);
+  assert.match(
+    page,
+    /startupTotal: startupRes\.data\?\.total \?\? "0\.00"/,
+  );
+  assert.doesNotMatch(page, /isStartupCapitalCategory/);
   assert.match(cockpit, /\.select\("subtotal, vat_amount, category"\)/);
   assert.match(cockpit, /String\(row\.subtotal\)/);
   assert.match(

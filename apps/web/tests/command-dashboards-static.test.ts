@@ -62,6 +62,7 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.ingredientCost\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.grossProfit\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingExpense\}/);
+  assert.match(page, /label=\{financeCopy\.basic\.kpis\.startupCapital\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.inventoryChange\}/);
   assert.match(page, /label=\{financeCopy\.basic\.kpis\.operatingResult\}/);
   assert.match(
@@ -84,8 +85,13 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(page, /item\.tone !== "neutral"/);
   assert.ok(
     pageBody.indexOf("basic.sections.periodResult") <
+      pageBody.indexOf("basic.sections.startupCapital"),
+    "Period results must appear before startup capital",
+  );
+  assert.ok(
+    pageBody.indexOf("basic.sections.startupCapital") <
       pageBody.indexOf("<CurrentFundsSection"),
-    "Period results must appear before current funds",
+    "Startup capital must appear before current funds",
   );
   assert.ok(
     pageBody.indexOf("<CurrentFundsSection") <
@@ -102,7 +108,9 @@ test("finance overview presents period results, current funds, and inventory in 
   assert.match(copy, /netRevenue: "Doanh thu thuần"/);
   assert.match(copy, /ingredientCost: "Giá vốn món"/);
   assert.match(copy, /grossProfit: "Lợi nhuận gộp"/);
-  assert.match(copy, /operatingExpense: "Chi phí"/);
+  assert.match(copy, /operatingExpense: "Chi phí vận hành"/);
+  assert.match(copy, /startupCapital: "Chi phí ban đầu"/);
+  assert.match(copy, /startupCapital: "Vốn đã bỏ ra"/);
   assert.match(copy, /inventoryChange: "Biến động tồn kho"/);
   assert.match(copy, /operatingResult: "Kết quả kinh doanh"/);
   assert.match(copy, /inventory: "Tồn kho"/);
@@ -196,9 +204,9 @@ test("finance subroutes share the compact surface and operational vocabulary", (
   }
   assert.doesNotMatch(copy, literalWith(String.raw`\bpayment\b`));
   assert.doesNotMatch(copy, literalWith(String.raw`\bwebhook\b`));
-  assert.match(bankTable, /copy\.matchAction/);
+  assert.match(bankTable, /BankRowStatus/);
   assert.match(bankTable, /key: "date"/);
-  assert.match(bankTable, /key: "action"/);
+  assert.doesNotMatch(bankTable, /key: "action"/);
   assert.match(copy, /title: "Giao dịch"/);
   assert.doesNotMatch(copy, /Đối soát NH/);
 });

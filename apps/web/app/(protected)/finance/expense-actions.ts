@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getVNDayUtcRange } from "@comtammatu/shared/time";
-import { parseMoneyToMinorUnits } from "@comtammatu/shared/money";
+import { addMoney, parseMoneyToMinorUnits } from "@comtammatu/shared/money";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -58,6 +58,11 @@ const fetchExpensesSchema = z
     endDate: z.string().regex(BUSINESS_DATE),
   })
   .refine((value) => value.startDate <= value.endDate);
+
+const fetchStartupCapitalSchema = z.object({
+  location: z.enum(FINANCE_LOCATIONS),
+  branchId: z.number().int().positive().nullable().optional(),
+});
 
 export type {
   ExpenseMatchOption,
@@ -466,7 +471,10 @@ export async function fetchExpenses(params: {
       "id, branch_id, expense_date, category, amount, subtotal, vat_amount, vat_breakdown, payment_method, paid_at, transfer_content, vendor_name, note, invoice_attachment_url, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
-    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.operating])
+    .in("category", [
+      ...EXPENSE_CATEGORIES_BY_GROUP.operating,
+      ...EXPENSE_CATEGORIES_BY_GROUP.startup,
+    ])
     .gte("expense_date", parsed.data.startDate)
     .lte("expense_date", parsed.data.endDate)
     .order("expense_date", { ascending: false })
@@ -533,6 +541,59 @@ export async function fetchExpenses(params: {
       matchedEventIds: matchedByExpense.get(row.id) ?? [],
       matchedBankTransactionIds: matchedByBankTransaction.get(row.id) ?? [],
     })),
+  };
+}
+
+export async function fetchStartupCapitalSummary(params: {
+  location: FinanceLocation;
+  branchId?: number | null;
+}): Promise<ActionResult<{ total: string; count: number }>> {
+  const parsed = fetchStartupCapitalSchema.safeParse(params);
+  if (!parsed.success) {
+    return { success: false, error: "Bộ lọc chi phí không hợp lệ." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền xem chi phí." };
+
+  const { supabase, claims } = ctx;
+
+  let query = supabase
+    .from("expenses")
+    .select("amount, category")
+    .eq("tenant_id", claims.tenant_id)
+    .in("category", [...EXPENSE_CATEGORIES_BY_GROUP.startup]);
+
+  if (parsed.data.location === "company") {
+    query = query.is("branch_id", null);
+  } else if (parsed.data.location === "branches") {
+    const salesBranchIds = await fetchSalesBranchIds(
+      supabase as never,
+      claims.tenant_id,
+    );
+    query = applySalesBranchesFilter(query, "branch_id", salesBranchIds);
+  } else if (
+    parsed.data.location === "branch" &&
+    parsed.data.branchId != null
+  ) {
+    query = query.eq("branch_id", parsed.data.branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return { success: false, error: "Không tải được chi phí ban đầu." };
+  }
+
+  const rows = data ?? [];
+  return {
+    success: true,
+    data: {
+      total: addMoney(rows.map((row) => String(row.amount ?? 0))),
+      count: rows.length,
+    },
   };
 }
 

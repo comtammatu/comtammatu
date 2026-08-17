@@ -198,10 +198,11 @@ test("D101 requires invoice valuation settlement instead of price history only",
     "supabase/migration-archive/20260730155938_inventory_valuation_subledger.sql",
   );
 
-  assert.match(current, /moving WAC/i);
+  assert.match(current, /company WAC/i);
   assert.match(current, /Valuation subledger append-only/);
-  assert.match(current, /không tăng số lượng lần hai/);
+  assert.match(current, /never a second quantity/);
   assert.match(current, /legacy_purchase_price_variance/);
+  assert.match(current, /ADR 0040/);
   assert.match(migration, /CREATE TABLE public\.inventory_valuation_events/);
   assert.match(migration, /CREATE TABLE public\.inventory_value_allocations/);
   assert.match(migration, /inventory_valuation_events_immutable/);

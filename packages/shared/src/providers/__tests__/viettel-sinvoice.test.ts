@@ -412,3 +412,56 @@ test("whole-VND residual keeps invoice total on POS GROSS for typical 8% lines",
   assertViettelLineValidators(buildSinvoiceItemInfo(items), 110_000);
 });
 
+function qtyByName(
+  math: ReturnType<typeof buildSinvoiceItemInfo>,
+): Record<string, number> {
+  const sums: Record<string, number> = {};
+  for (const line of math.itemInfo) {
+    if (line.selection !== 1) continue;
+    const name = line.itemName ?? "";
+    sums[name] = (sums[name] ?? 0) + (line.quantity ?? 0);
+  }
+  return sums;
+}
+
+test("peels one unit when aggregated qty>1 lines cannot absorb 1₫ (Order 691)", () => {
+  const items = [
+    item("Sườn Cọng", 8, 520_000, 8),
+    item("Trứng", 7, 56_000, 8),
+    item("Tóp Mỡ", 4, 20_000, 8),
+    item("Sườn Cốt Lết", 2, 90_000, 8),
+    item("Bì", 2, 20_000, 8),
+  ];
+  const math = buildSinvoiceItemInfo(items);
+  assertViettelLineValidators(math, 706_000);
+  assert.deepEqual(qtyByName(math), {
+    "Sườn Cọng": 8,
+    Trứng: 7,
+    "Tóp Mỡ": 4,
+    "Sườn Cốt Lết": 2,
+    Bì: 2,
+  });
+  assert.equal(
+    math.itemInfo.some((line) => line.selection === 1 && line.quantity === 1),
+    true,
+  );
+});
+
+test("peels a qty=4 post-discount line so NET can move 1₫ (Order 695)", () => {
+  const math = buildSinvoiceItemInfo([item("Sườn Cốt Lết", 4, 138_600, 8)]);
+  assertViettelLineValidators(math, 138_600);
+  assert.deepEqual(qtyByName(math), { "Sườn Cốt Lết": 4 });
+  assert.ok(math.itemInfo.length >= 2);
+  assert.equal(
+    math.itemInfo.some((line) => line.selection === 1 && line.quantity === 1),
+    true,
+  );
+});
+
+test("does not peel when residual tax already hits POS GROSS (qty=2 90k)", () => {
+  const math = buildSinvoiceItemInfo([item("Sườn Cốt Lết", 2, 90_000, 8)]);
+  assert.equal(math.itemInfo.length, 1);
+  assert.equal(math.itemInfo[0]?.quantity, 2);
+  assertViettelLineValidators(math, 90_000);
+});
+

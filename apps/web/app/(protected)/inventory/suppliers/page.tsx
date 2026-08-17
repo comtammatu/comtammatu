@@ -1,4 +1,5 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { catalogItemRequiresSupplierLink } from "@lib/inventory/catalog-readiness";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import { fetchSuppliers } from "../procurement-actions";
@@ -41,7 +42,7 @@ export default async function SuppliersPage({
     const [ingredientResult, itemResult] = await Promise.all([
       supabase
         .from("ingredients")
-        .select("id, name, sku")
+        .select("id, name, sku, item_kind")
         .eq("tenant_id", claims.tenant_id)
         .eq("is_active", true)
         .order("name")
@@ -59,8 +60,18 @@ export default async function SuppliersPage({
       throw new Error("inventory.supplier_items.load_failed");
     }
 
-    ingredients = ingredientResult.data ?? [];
-    const ingredientById = new Map(ingredients.map((item) => [item.id, item]));
+    const catalogIngredients = (ingredientResult.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      sku: row.sku,
+      itemKind: row.item_kind,
+    }));
+    ingredients = catalogIngredients
+      .filter((row) => catalogItemRequiresSupplierLink(row.itemKind))
+      .map(({ id, name, sku }) => ({ id, name, sku }));
+    const ingredientById = new Map(
+      catalogIngredients.map((item) => [item.id, item]),
+    );
     for (const item of itemResult.data ?? []) {
       const ingredient = ingredientById.get(item.ingredient_id);
       if (!ingredient) continue;

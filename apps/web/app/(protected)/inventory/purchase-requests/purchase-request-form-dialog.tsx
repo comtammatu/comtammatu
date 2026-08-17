@@ -4,6 +4,7 @@ import { Trash as IconTrash, Plus as IconPlus } from "lucide-react";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
@@ -158,79 +159,83 @@ export function PurchaseRequestFormDialog({
             />
           </div>
           <div className="flex flex-col gap-2">
-            {requestLines.map((line) => {
-              const ingredient = ingredients.find(
-                (item) => item.id === Number(line.ingredientId),
-              );
-              const hasSupplier = mappedIngredientIds.includes(
-                Number(line.ingredientId),
-              );
-              return (
-                <Item
-                  key={line.key}
-                  variant="outline"
-                  size="sm"
-                  className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
-                >
-                  <div className="min-w-0">
-                    <Combobox
-                      size="field"
-                      value={line.ingredientId}
-                      onValueChange={(value) => onChooseIngredient(line, value)}
-                      options={ingredientOptions}
-                      placeholder={copy.ingredient}
-                      searchPlaceholder={copy.searchPlaceholder}
-                    />
-                    {line.ingredientId && !hasSupplier ? (
-                      <span className="mt-1 block text-xs text-warning-foreground">
-                        {copy.missingSupplierShort}
-                      </span>
-                    ) : null}
-                  </div>
-                  <QuantityInput
-                    controlSize="field"
-                    value={line.quantity}
-                    onValueChange={(value) =>
-                      onPatchRequestLine(line.key, { quantity: value })
-                    }
-                    maxFractionDigits={3}
-                    placeholder={copy.quantity}
-                    aria-label={copy.quantity}
-                  />
-                  <Select
-                    value={line.entryUnitId}
-                    onValueChange={(value) =>
-                      onPatchRequestLine(line.key, { entryUnitId: value })
-                    }
-                  >
-                    <SelectTrigger
-                      size="field"
-                      className="w-full"
-                      aria-label={copy.unit}
+            <ScrollArea className="h-80">
+              <div className="flex flex-col gap-2 pr-2">
+                {requestLines.map((line) => {
+                  const ingredient = ingredients.find(
+                    (item) => item.id === Number(line.ingredientId),
+                  );
+                  const hasSupplier = mappedIngredientIds.includes(
+                    Number(line.ingredientId),
+                  );
+                  return (
+                    <Item
+                      key={line.key}
+                      variant="outline"
+                      size="sm"
+                      className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_8rem_10rem_auto]"
                     >
-                      <SelectValue placeholder={copy.unit} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(ingredient?.units ?? []).map((unit) => (
-                        <SelectItem key={unit.id} value={String(unit.id)}>
-                          {unit.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-lg"
-                    disabled={requestLines.length === 1}
-                    onClick={() => onRemoveLine(line.key)}
-                    aria-label={ACTIONS_VI.delete}
-                  >
-                    <IconTrash />
-                  </Button>
-                </Item>
-              );
-            })}
+                      <div className="min-w-0">
+                        <Combobox
+                          size="field"
+                          value={line.ingredientId}
+                          onValueChange={(value) => onChooseIngredient(line, value)}
+                          options={ingredientOptions}
+                          placeholder={copy.ingredient}
+                          searchPlaceholder={copy.searchPlaceholder}
+                        />
+                        {line.ingredientId && !hasSupplier ? (
+                          <span className="mt-1 block text-xs text-warning-foreground">
+                            {copy.missingSupplierShort}
+                          </span>
+                        ) : null}
+                      </div>
+                      <QuantityInput
+                        controlSize="field"
+                        value={line.quantity}
+                        onValueChange={(value) =>
+                          onPatchRequestLine(line.key, { quantity: value })
+                        }
+                        maxFractionDigits={3}
+                        placeholder={copy.quantity}
+                        aria-label={copy.quantity}
+                      />
+                      <Select
+                        value={line.entryUnitId}
+                        onValueChange={(value) =>
+                          onPatchRequestLine(line.key, { entryUnitId: value })
+                        }
+                      >
+                        <SelectTrigger
+                          size="field"
+                          className="w-full"
+                          aria-label={copy.unit}
+                        >
+                          <SelectValue placeholder={copy.unit} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(ingredient?.units ?? []).map((unit) => (
+                            <SelectItem key={unit.id} value={String(unit.id)}>
+                              {unit.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-lg"
+                        disabled={requestLines.length === 1}
+                        onClick={() => onRemoveLine(line.key)}
+                        aria-label={ACTIONS_VI.delete}
+                      >
+                        <IconTrash />
+                      </Button>
+                    </Item>
+                  );
+                })}
+              </div>
+            </ScrollArea>
             <Button
               type="button"
               variant="outline"

@@ -15,21 +15,25 @@ Period-result formula (two rows):
   `inventory_valuation_cutovers.status = active`; otherwise the landing KPI is
   empty. Excludes manual `phiếu tiêu hao`, `Kho Tổng`, and `Bếp Trung Tâm`.
   `/finance/food-cost` **`Định mức/phần`** uses the same catalog resolver as
-  `/inventory/menu-recipes` (`Kho gốc` then `Chi nhánh` / last-known; missing WAC
+  `/inventory/menu-recipes` (company WAC, then last-known; missing WAC
   is empty, not `0đ`; no-recipe is `0đ`). **`Giá thuần/phần`** is net revenue /
-  qty after side split and discount, not `menu_price`. Site WAC is
-  `Giá vốn kho này`, not this column. See `docs/ref/inventory.md` § 3.
+  qty after side split and discount, not `menu_price`. Company WAC is
+  `Giá vốn`, not this column. See `docs/ref/inventory.md` § 3.
 - **`Lợi nhuận gộp`**: net revenue minus recorded food cost.
 - **`Chi phí vận hành`**: posted period expense (rent, utilities, payroll,
-  repairs, consumables/small tools, marketing, fees/tax, other). Excludes
-  equipment that must be capitalized or allocated over time.
+  repairs, consumables, marketing, fees/tax, hospitality, other). Excludes
+  `capital`/`deposit`, capitalized equipment, ingredient COGS, cash↔bank.
 - **`Biến động tồn kho`**: closing minus opening inventory value (when readable).
 - **`Kết quả kinh doanh`**: gross profit − operating expense + inventory change.
 
 Missing food-cost coverage makes gross profit and period result unavailable.
 No recorded operating expense keeps period result unavailable (not zero).
 
-Below the period result, tenant-wide current funds (not period/branch filtered):
+After the period result, outside the formula: **`Chi phí ban đầu`**
+(`Vốn đã bỏ ra`) — all-time gross `capital`+`deposit`; ignores the period
+filter. Branch filter matches opex (selected branch only, never tenant-level).
+
+Below that, tenant-wide current funds (not period/branch filtered):
 `Tiền mặt + Tiền tài khoản = Tổng tiền`:
 
 - **`Tiền mặt`**: immutable opening cash + completed cash collections − cash
@@ -93,11 +97,11 @@ Landing cards (formulas in Product Boundary):
    `resolved.start→end`; `order_items.sides` are own `món` (parent revenue reduced).
 2. **Food cost** — sale-consumption for paid orders; incomplete → missing-data.
 3. **Gross profit** — net revenue − food cost; margin only when coverage complete.
-4. **Operating expense** — `rent|utilities|gas_fuel|salary|repair|supplies|
-   marketing|fees_tax|other`. Exclude COGS, supplier payments, cash↔bank.
-   None → `Chưa ghi nhận`.
+4. **Operating expense** — operating categories only. Exclude COGS,
+   `capital`, `deposit`, supplier payments, cash↔bank. None → `Chưa ghi nhận`.
 5. **Period result** — gross − opex + inventory change. Not "net profit".
-   Unavailable if food cost incomplete or no opex recorded.
+6. **Startup capital** — all-time `capital|deposit` gross; ignores period
+   dates; outside the formula.
 
 Then: unfiltered funds, filtered period-end inventory, attention queue.
 Layout: desktop two rows; tablet two cols; mobile one. Supporting (not first):
@@ -193,7 +197,7 @@ the actions above. RLS remains final enforcement.
 | Route family                 | Role                         | Decision |
 | ---------------------------- | ---------------------------- | -------- |
 | `/finance`                   | Finance Basic landing        | Period formula + funds + inventory card + attention |
-| `/finance/revenue`           | Revenue analytics            | Keep; not sole money-control entry |
+| `/finance/bank-transactions` | Bank LIST | Manual match by `order_number` (`mã đơn`); classify only, never change bank balance |
 | `/finance/targets`           | Monthly revenue targets      | Finance-managed targets + non-cumulative reward tiers; no auto payroll |
 | `/finance/food-cost`         | Gross profit / margin        | Read-only analysis |
 | `/finance/supplier-invoices` | Supplier payable             | Thin AP entry; not expenses |
@@ -259,22 +263,18 @@ register in product → no equipment-value card until full source/recon contract
 
 ## Current Gaps
 
-- `/finance/expenses` = operating record, not statutory journal.
-- Deductible input VAT / VAT payable / equipment value / period close app UI
-  unavailable until evidence or owner decision (see D020, schema, Viettel ops).
+- `/finance/expenses` is operating + opening-capital ledger, not a statutory
+  journal. Deductible VAT / equipment value / period close stay blocked (D020).
 
 ## Source Files
 
 - `apps/web/app/(protected)/finance/*`
-- `apps/web/app/(protected)/finance/supplier-invoices/*`
 - `apps/web/app/(protected)/br/[branchId]/(operator)/pos-sessions/*`
 - `apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts`
-- `apps/web/app/(protected)/finance/supplier-invoice-actions.ts`
 - `apps/web/app/(protected)/inventory/supplier-invoices/page.tsx` (REDIRECT-SHIM)
 - `apps/web/app/(protected)/inventory/report-actions.ts`
 - `packages/shared/src/auth/module-acl.ts`
 - `packages/shared/src/auth/nav-config.ts`
 - `packages/shared/src/auth/permissions.ts`
 - `supabase/migrations/*finance*.sql`
-- `supabase/migrations/*hddt*.sql`
-- `supabase/migrations/*supplier*.sql`
+- `supabase/migrations/*hddt*.sql` / `*supplier*.sql`

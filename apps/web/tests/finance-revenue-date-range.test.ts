@@ -154,13 +154,30 @@ test("Finance operating expense excludes food-cost and transfer categories", () 
 
   assert.match(categories, /cogs_manual: "materials"/);
   assert.match(categories, /bank_deposit: "transfer"/);
+  assert.match(categories, /capital: "startup"/);
+  assert.match(categories, /deposit: "startup"/);
   assert.match(categories, /isOperatingExpenseCategory/);
+  assert.match(categories, /isStartupCapitalCategory/);
   assert.match(cockpit, /select\("subtotal, vat_amount, category"\)/);
   assert.match(cockpit, /isOperatingExpenseCategory\(row\.category\)/);
+  assert.match(cockpit, /\.in\("category", \["capital", "deposit"\]\)/);
+  assert.doesNotMatch(
+    cockpit.slice(
+      cockpit.indexOf("async function fetchStartupCapitalSummary"),
+      cockpit.indexOf("function summarizeOperatingExpenses"),
+    ),
+    /expense_date/,
+  );
+  assert.doesNotMatch(
+    cockpit,
+    /branch_id\.eq\.\$\{branchId\},branch_id\.is\.null/,
+  );
   assert.match(expenseActions, /parsed\.data\.category === "cogs_manual"/);
   assert.match(expenseFormSchema, /EXPENSE_CATEGORIES_BY_GROUP\.operating/);
+  assert.match(expenseFormSchema, /EXPENSE_CATEGORIES_BY_GROUP\.startup/);
   assert.match(expensesClient, /categoryLabel\(row\.category\)/);
   assert.match(dataContract, /expenses\.subtotal` nhóm operating/);
+  assert.match(dataContract, /finance\.expense\.startup_capital/);
   assert.doesNotMatch(dataContract, /category='bank_deposit'/);
 });
 
@@ -248,6 +265,7 @@ test("Finance food-cost page shows actual cost coverage before estimate rows", (
   assert.match(expenseActions, /allocation_bucket", "food_cost"/);
   assert.match(financeMessages, /actualFoodCost: "Giá vốn thực tế"/);
   assert.match(financeMessages, /tableTitle: "Theo món"/);
+  assert.match(financeMessages, /tableTotal: "Tổng"/);
   assert.doesNotMatch(financeMessages, /\bbucket\b/i);
   assert.doesNotMatch(
     financeMessages,

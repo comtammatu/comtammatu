@@ -37,9 +37,18 @@ export function formatVND(amount: DecimalLike): string {
   )}đ`;
 }
 
+/**
+ * Accounting money display. Keeps two fraction digits when they are non-zero
+ * and omits `,00` for whole dong.
+ *
+ * Examples:
+ *   formatAccountingVND(12400)   → "12.400đ"
+ *   formatAccountingVND(1234.5)  → "1.234,50đ"
+ *   formatAccountingVND(0)       → "0đ"
+ */
 export function formatAccountingVND(amount: DecimalLike): string {
   const canonical = toCanonicalMoney(amount);
-  if (canonical == null) return "0,00đ";
+  if (canonical == null) return "0đ";
   return `${formatCanonicalDecimal(canonical, true)}đ`;
 }
 
@@ -87,6 +96,9 @@ function formatCanonicalDecimal(value: string, fixedFraction = false): string {
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   if (fraction == null) return `${sign}${grouped}`;
   const displayFraction = fixedFraction ? fraction.padEnd(2, "0") : fraction;
+  if (fixedFraction && /^0+$/.test(displayFraction)) {
+    return `${sign}${grouped}`;
+  }
   return `${sign}${grouped},${displayFraction}`;
 }
 

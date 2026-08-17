@@ -9,6 +9,18 @@ export interface FoodCostSaleLine {
   revenue: number;
 }
 
+/** Live recipes; live catalog names. POS `order_items.item_name` is a sale snapshot. */
+export function overlayCatalogItemNames(
+  saleLines: readonly FoodCostSaleLine[],
+  catalogNames: ReadonlyMap<number, string>,
+): FoodCostSaleLine[] {
+  return saleLines.map((line) => {
+    const catalogName = catalogNames.get(line.menuItemId)?.trim();
+    if (!catalogName || catalogName === line.itemName) return line;
+    return { ...line, itemName: catalogName };
+  });
+}
+
 export interface FoodCostMenuRecipeLine {
   menuItemId: number;
   ingredientId: number;
@@ -35,6 +47,56 @@ export interface FoodCostResultRow {
 
 function round2(value: number): number {
   return Number(value.toFixed(2));
+}
+
+export function summarizeFoodCostRows(
+  rows: readonly {
+    quantity_sold: number | null;
+    revenue: number | null;
+    ingredient_cost: number | null;
+  }[],
+): {
+  quantitySold: number;
+  revenue: number;
+  ingredientCost: number | null;
+  unitIngredientCost: number | null;
+  grossMarginPct: number | null;
+} {
+  let quantitySold = 0;
+  let revenue = 0;
+  let ingredientCost = 0;
+  let missingCost = false;
+  for (const row of rows) {
+    quantitySold += Number(row.quantity_sold ?? 0);
+    revenue += Number(row.revenue ?? 0);
+    if (row.ingredient_cost == null) {
+      missingCost = true;
+      continue;
+    }
+    ingredientCost += Number(row.ingredient_cost);
+  }
+  if (missingCost) {
+    return {
+      quantitySold,
+      revenue: round2(revenue),
+      ingredientCost: null,
+      unitIngredientCost: null,
+      grossMarginPct: null,
+    };
+  }
+  const roundedCost = round2(ingredientCost);
+  const roundedRevenue = round2(revenue);
+  return {
+    quantitySold,
+    revenue: roundedRevenue,
+    ingredientCost: roundedCost,
+    unitIngredientCost:
+      quantitySold > 0 ? round2(roundedCost / quantitySold) : null,
+    grossMarginPct:
+      roundedRevenue > 0
+        ? round2(((roundedRevenue - roundedCost) / roundedRevenue) * 100)
+        : null,
+  };
 }
 
 export function buildFoodCostRows({

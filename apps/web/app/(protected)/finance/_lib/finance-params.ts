@@ -32,11 +32,12 @@ export const FINANCE_OVERVIEW_PERIODS = [
   "month",
   "quarter",
   "year",
+  "custom",
 ] as const;
 export type FinanceOverviewPeriod = (typeof FINANCE_OVERVIEW_PERIODS)[number];
 export type FinanceCalendarPeriod = Exclude<
   FinanceOverviewPeriod,
-  "today" | "yesterday"
+  "today" | "yesterday" | "custom"
 >;
 
 export const FINANCE_LOCATIONS = [

@@ -91,7 +91,7 @@ entry.
 **Net effect:** Warehouse drafts Nhu cầu mua without NCC/price; when chỉ có một NCC active then auto PO; Kế toán chỉ chọn hoặc chia số lượng khi có nhiều NCC; lines bị chặn để bổ sung mapping before creating PO/NCC; GRN nháp/PO carry no price; Hóa đơn NCC is the price authority. Canonical: `docs/ref/inventory.md`, ADR 0017.
 
 ## D101: Inventory valuation settlement
-**Net effect:** Moving WAC continues; Valuation subledger append-only settles Hóa đơn NCC and không tăng số lượng lần hai; legacy variance posts as `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017.
+**Net effect:** Purchased SKUs share one company WAC across stock-bearing sites (ADR 0040); finished goods are recipe-produced only and keep a production pool. GRN documents stay unpriced until the supplier invoice; origin provisional uses last invoice/WAC. Valuation subledger append-only settles the invoice delta (never a second quantity, never a movement snapshot rewrite); legacy variance posts as `legacy_purchase_price_variance`. Canonical: `docs/ref/inventory.md`, ADR 0017, ADR 0040.
 
 ## D103: Food-delivery platform onboarding before adapters
 **Net effect:** Food-delivery adapters ship only after partner approval and a signed contract; until then, onboarding/readiness only. Canonical: `docs/runbooks/food-delivery-platform-onboarding.md`, `docs/ref/branch-operations.md`.

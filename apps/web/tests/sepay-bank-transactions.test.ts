@@ -729,8 +729,15 @@ test("SePay money-in manual link stays guarded by RPC", () => {
   assert.match(action, /linkSepayTransactionToPayment/);
   assert.match(action, /link_sepay_transaction_to_payment/);
   assert.match(action, /reconcile_bank_transaction_targets/);
-  assert.match(table, /LinkPaymentCell/);
-  assert.match(table, /linkSepayTransactionToPayment/);
+  assert.match(action, /searchSepayMatchablePayments/);
+  assert.match(action, /ilike\("order_number"/);
+  assert.match(table, /MatchPaymentSheet/);
+  assert.match(
+    read(
+      "apps/web/app/(protected)/finance/bank-transactions/match-payment-sheet.tsx",
+    ),
+    /linkSepayTransactionToPayment/,
+  );
   assert.match(
     canonicalMigration,
     /CREATE TABLE public\.bank_transaction_reconciliation_matches/,
@@ -885,14 +892,17 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /key: "date"/);
   assert.match(table, /key: "content"/);
   assert.match(table, /key: "status"/);
-  assert.match(table, /key: "action"/);
+  assert.doesNotMatch(table, /key: "action"/);
   assert.match(table, /copy\.table\.date/);
   assert.match(table, /formatVNDate/);
+  assert.match(table, /formatVNTimeSeconds/);
+  assert.match(table, /BankRowStatus/);
   assert.doesNotMatch(table, /key: "index"/);
   assert.doesNotMatch(table, /header: "#"/);
   assert.doesNotMatch(table, /sticky left-/);
   assert.doesNotMatch(table, /bg-background/);
-  assert.match(table, /<AppListFrame[\s\S]*?toolbar=\{/);
+  assert.match(table, /<AppListFrame[\s\S]*?title=\{copy\.listTitle\}/);
+  assert.match(table, /contentScroll/);
   assert.match(table, /variant="inline"/);
   assert.doesNotMatch(table, /<AppSection/);
   assert.doesNotMatch(table, /rounded-lg border bg-card/);
@@ -916,11 +926,27 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(table, /copy\.queueEmptyTitle/);
   assert.match(table, /emptyMode=\{hasRows \? "no-results" : "no-data"\}/);
   assert.match(table, /mobileBreakpoint=\{1024\}/);
-  assert.match(table, /const isTouchLayout = useIsMobile\(1024\)/);
-  assert.match(table, /InputGroup size=\{touch \? "touch" : "default"\}/);
+  assert.match(table, /useFormControlSize\(\)/);
+  assert.match(table, /const isTouchLayout = controlSize === "touch"/);
+  assert.match(table, /financeFilterReconTriggerClassName/);
+  assert.match(table, /<ItemHeader>/);
+  assert.match(table, /<ItemTitle/);
+  assert.match(table, /<ItemFooter/);
+  assert.doesNotMatch(table, /useIsMobile\(1024\)/);
+  assert.doesNotMatch(
+    table,
+    /text-xs font-medium text-muted-foreground[\s\S]*copy\.filters\.label/,
+  );
+  const matchPayment = read(
+    "apps/web/app/(protected)/finance/bank-transactions/match-payment-sheet.tsx",
+  );
+  assert.match(matchPayment, /InputGroup size=\{touch \? "touch" : "default"\}/);
   assert.match(table, /size=\{touch \? "touch" : "sm"\}/);
   assert.ok(
-    (table.match(/size=\{touch \? "touch" : "default"\}/g)?.length ?? 0) >= 4,
+    ((table.match(/size=\{touch \? "touch" : "default"\}/g)?.length ?? 0) +
+      (matchPayment.match(/size=\{touch \? "touch" : "default"\}/g)?.length ??
+        0)) >=
+      4,
   );
   assert.doesNotMatch(table, /className="h-8 w-(?:24|40)/);
   assert.match(table, /formatVNDateTime/);
@@ -986,10 +1012,13 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.match(messages, /title: "Giao dịch"/);
   assert.match(messages, /bankTransactions: "Giao dịch"/);
   assert.match(messages, /Thanh toán #\$\{id\}/);
-  assert.match(messages, /linkTitle: "Khớp giao dịch tiền vào"/);
+  assert.match(messages, /linkTitle: "Khớp đơn"/);
 
   const matchCell = read(
     "apps/web/app/(protected)/finance/bank-transactions/match-expense-cell.tsx",
+  );
+  const matchEvidence = read(
+    "apps/web/app/(protected)/finance/bank-transactions/bank-match-evidence.tsx",
   );
   assert.match(matchCell, /<AppSheet/);
   assert.match(matchCell, /description=\{copy.matchSheetDescription\}/);
@@ -997,9 +1026,11 @@ test("SePay bank page uses one filtered reconciliation table", () => {
   assert.doesNotMatch(matchCell, /max-h-(48|72).*overflow-y-auto/);
   assert.match(matchCell, /htmlFor=\{checkboxId\}/);
   assert.match(matchCell, /formatVNBusinessDate/);
-  assert.match(matchCell, /displayBankContent/);
+  assert.match(matchEvidence, /displayBankContent/);
   assert.match(matchCell, /FinanceMoneySummary/);
   assert.match(matchCell, /ToggleGroup/);
+  assert.match(matchPayment, /searchSepayMatchablePayments/);
+  assert.match(matchPayment, /table\.linkInputLabel/);
   assert.match(messages, /Hoàn tiền \$\{order\}/);
   assert.match(messages, /Thiếu bằng chứng NH/);
   assert.match(messages, /Nộp tiền mặt vào tài khoản/);

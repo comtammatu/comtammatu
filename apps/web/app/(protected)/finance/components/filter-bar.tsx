@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
+import { BusinessDatePicker } from "@/components/form";
 import { useFormControlSize } from "@/components/form/control-size";
 import { AppToolbar } from "@/components/surface";
 import { messages } from "@lib/messages";
@@ -30,6 +31,7 @@ import {
 import { FinanceCalendarPeriodPicker } from "./finance-calendar-period-picker";
 import {
   financeFilterCompareTriggerClassName,
+  financeFilterDatePickerClassName,
   financeFilterGranularityTriggerClassName,
   financeFilterPeriodPickerClassName,
   financeFilterRangeTriggerClassName,
@@ -69,6 +71,7 @@ const PERIOD_LABEL: Record<FinanceOverviewPeriod, string> = {
   month: filterCopy.rangeMonth,
   quarter: filterCopy.rangeQuarter,
   year: filterCopy.rangeYear,
+  custom: filterCopy.rangeCustom,
 };
 
 const PERIOD_PICKER_LABEL: Record<FinanceCalendarPeriod, string> = {
@@ -106,6 +109,7 @@ function resolveSelectedPeriod(params: FinanceParams): FinanceOverviewPeriod {
     return params.range;
   }
   if (params.range === "custom" && params.period) return params.period;
+  if (params.range === "custom") return "custom";
   if (params.range === "7d") return "week";
   if (params.range === "qtd") return "quarter";
   if (params.range === "ytd") return "year";
@@ -133,7 +137,9 @@ export function FilterBar({
   const [isPending, startTransition] = useTransition();
   const selectedPeriod = resolveSelectedPeriod(params);
   const calendarPeriod: FinanceCalendarPeriod | null =
-    selectedPeriod === "today" || selectedPeriod === "yesterday"
+    selectedPeriod === "today" ||
+    selectedPeriod === "yesterday" ||
+    selectedPeriod === "custom"
       ? null
       : selectedPeriod;
   const resolvedRange = getPresetRange(params.range, new Date(), {
@@ -181,6 +187,15 @@ export function FilterBar({
       pushParams({ range: period, period: null, from: null, to: null });
       return;
     }
+    if (period === "custom") {
+      pushParams({
+        range: "custom",
+        period: null,
+        from: resolvedRange.start,
+        to: resolvedRange.end,
+      });
+      return;
+    }
     const selection = getFinanceCalendarPeriodSelection(period, today);
     const range = resolveFinanceCalendarPeriod(period, selection);
     if (!range) return;
@@ -201,6 +216,21 @@ export function FilterBar({
       period: calendarPeriod,
       from: range.start,
       to: range.end,
+    });
+  }
+
+  function handleCustomDateChange(next: { from?: string; to?: string }) {
+    const from = next.from ?? resolvedRange.start;
+    const to = next.to ?? resolvedRange.end;
+    if (!from || !to) return;
+    const start = from <= to ? from : to;
+    const end = from <= to ? to : from;
+    const todayStr = today.start;
+    pushParams({
+      range: "custom",
+      period: null,
+      from: start > todayStr ? todayStr : start,
+      to: end > todayStr ? todayStr : end,
     });
   }
 
@@ -332,6 +362,44 @@ export function FilterBar({
             className={financeFilterPeriodPickerClassName}
             onSelectionChange={handlePeriodSelectionChange}
           />
+        ) : null}
+
+        {showRange && selectedPeriod === "custom" ? (
+          <>
+            <BusinessDatePicker
+              id="finance-range-from"
+              aria-label={filterCopy.fromDate}
+              placeholder={filterCopy.fromDate}
+              value={resolvedRange.start}
+              max={
+                resolvedRange.end > today.start
+                  ? today.start
+                  : resolvedRange.end
+              }
+              captionLayout="dropdown"
+              disabled={isPending}
+              className={financeFilterDatePickerClassName}
+              onValueChange={(value) => {
+                if (!value) return;
+                handleCustomDateChange({ from: value });
+              }}
+            />
+            <BusinessDatePicker
+              id="finance-range-to"
+              aria-label={filterCopy.toDate}
+              placeholder={filterCopy.toDate}
+              value={resolvedRange.end}
+              min={resolvedRange.start}
+              max={today.start}
+              captionLayout="dropdown"
+              disabled={isPending}
+              className={financeFilterDatePickerClassName}
+              onValueChange={(value) => {
+                if (!value) return;
+                handleCustomDateChange({ to: value });
+              }}
+            />
+          </>
         ) : null}
 
         {showGranularity ? (

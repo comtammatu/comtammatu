@@ -3,7 +3,8 @@
  * - YCH needs `default_fulfill_site_kind` (Nguồn hàng) on every active item
  * - YCM/PO needs ≥1 active supplier_item only on purchased kinds
  *   (`raw_material`, and later `packaging` / `supply`). Produced
- *   `finished_good` / `semi_finished` have no NCC gap — Bếp TT makes them.
+ *   `finished_good` / `semi_finished` have no NCC gap — kitchen produces
+ *   them with a production recipe. Purchased goods stay `raw_material`.
  */
 
 export type CatalogReadinessGap = "missing_fulfill_site" | "missing_supplier_link";
@@ -22,6 +23,12 @@ export function catalogItemRequiresSupplierLink(
   itemKind: string | null | undefined,
 ): boolean {
   return !PRODUCED_ITEM_KINDS.has(itemKind ?? "");
+}
+
+export function filterPurchasedIngredientRows<T extends { item_kind: string }>(
+  rows: readonly T[],
+): T[] {
+  return rows.filter((row) => catalogItemRequiresSupplierLink(row.item_kind));
 }
 
 export type CatalogReadiness = {

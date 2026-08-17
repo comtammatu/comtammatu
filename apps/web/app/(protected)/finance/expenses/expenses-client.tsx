@@ -12,7 +12,11 @@ import {
   Trash2 as IconTrash,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
-import { formatAccountingVND } from "@comtammatu/shared/format";
+import {
+  formatAccountingVND,
+  formatCompactVND,
+  formatCount,
+} from "@comtammatu/shared/format";
 import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
@@ -39,7 +43,8 @@ import {
   type RowActionItem,
 } from "@/components/row-actions-menu";
 import { StatusBadge } from "@/components/status-badge";
-import { AppListFrame, AppPageHeader } from "@/components/surface";
+import { KpiCard } from "@/components/kpi/kpi-card";
+import { AppListFrame, AppPageHeader, KpiRow } from "@/components/surface";
 import {
   DataTable,
   type DataTableColumn,
@@ -74,6 +79,7 @@ import {
   canDeleteExpense,
   copy,
   EMPTY_EXPENSE_LINE,
+  expenseCategoryBucketLabel,
   expenseDetail,
   expenseFormSchema,
   expensePaymentMethod,
@@ -93,6 +99,8 @@ interface Branch {
 interface ExpenseListSummary {
   operatingTotal: string;
   operatingCount: number;
+  startupTotal: string;
+  startupCount: number;
   needsActionTotal: string;
   needsActionCount: number;
 }
@@ -132,11 +140,9 @@ export function ExpensesClient({
 
   const mode = overlay.get("mode");
   const expenseIdRaw = overlay.get("expenseId");
-  const parsedExpenseId = expenseIdRaw ? Number(expenseIdRaw) : null;
+  const parsedExpenseId = expenseIdRaw ? Number(expenseIdRaw) : NaN;
   const expenseId =
-    parsedExpenseId != null &&
-    Number.isInteger(parsedExpenseId) &&
-    parsedExpenseId > 0
+    Number.isInteger(parsedExpenseId) && parsedExpenseId > 0
       ? parsedExpenseId
       : null;
   const selectedExpense = useMemo(
@@ -189,22 +195,27 @@ export function ExpensesClient({
     if (showOnlyNeedsAction) next.delete(EXPENSE_LIST_STATE_PARAM);
     else next.set(EXPENSE_LIST_STATE_PARAM, "pending");
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, {
-      scroll: false,
-    });
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   function categoryLabel(category: string) {
+    return (copy.categoryLabels as Record<string, string>)[category] ?? category;
+  }
+
+  function categoryCell(category: string) {
     return (
-      (copy.categoryLabels as Record<string, string>)[category] ?? category
+      <div className="min-w-0">
+        <div>{categoryLabel(category)}</div>
+        <div className="text-xs text-muted-foreground">
+          {expenseCategoryBucketLabel(category)}
+        </div>
+      </div>
     );
   }
 
   function methodLabel(row: ExpenseRow) {
     const method = expensePaymentMethod(row);
-    return (
-      (copy.paymentMethodLabels as Record<string, string>)[method] ?? method
-    );
+    return (copy.paymentMethodLabels as Record<string, string>)[method] ?? method;
   }
 
   const branchOptions = [
@@ -265,9 +276,7 @@ export function ExpensesClient({
     });
     if (!result.success) return result;
 
-    const previousMethod = expensePaymentMethod(
-      editingExpense,
-    ) as ExpensePaymentMethod;
+    const previousMethod = expensePaymentMethod(editingExpense) as ExpensePaymentMethod;
     if (
       nextMethod !== previousMethod &&
       canCorrectExpensePaymentMethod(editingExpense)
@@ -505,7 +514,7 @@ export function ExpensesClient({
     {
       key: "category",
       header: copy.table.category,
-      render: (row) => categoryLabel(row.category),
+      render: (row) => categoryCell(row.category),
     },
     {
       key: "branch",
@@ -568,14 +577,6 @@ export function ExpensesClient({
       : []),
   ];
 
-  const listSummaryMeta = (
-    <span className="text-xs text-muted-foreground">
-      {copy.totalLabel}: {formatAccountingVND(summary.operatingTotal)}
-      {" · "}
-      {copy.needsActionLabel}: {formatAccountingVND(summary.needsActionTotal)}
-    </span>
-  );
-
   const needsActionFilterButton = (
     <Button
       type="button"
@@ -606,6 +607,26 @@ export function ExpensesClient({
         }
       />
 
+      <KpiRow
+        density="compact"
+        className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2"
+      >
+        <KpiCard
+          density="compact"
+          label={copy.monthLabel}
+          value={formatAccountingVND(summary.operatingTotal)}
+          shortValue={formatCompactVND(summary.operatingTotal)}
+          hint={copy.monthHint(formatCount(summary.operatingCount))}
+        />
+        <KpiCard
+          density="compact"
+          label={copy.startupLabel}
+          value={formatAccountingVND(summary.startupTotal)}
+          shortValue={formatCompactVND(summary.startupTotal)}
+          hint={copy.startupHint(formatCount(summary.startupCount))}
+        />
+      </KpiRow>
+
       <AppListFrame
         title={copy.listTitle}
         contentScroll
@@ -616,12 +637,7 @@ export function ExpensesClient({
             branches={branches}
             basePath="/finance/expenses"
             hide={["branch", "compare", "granularity"]}
-            trailing={
-              <>
-                {listSummaryMeta}
-                {needsActionFilterButton}
-              </>
-            }
+            trailing={needsActionFilterButton}
           />
         }
       >
@@ -681,6 +697,7 @@ export function ExpensesClient({
                   <ItemContent>
                     <ItemTitle>{categoryLabel(row.category)}</ItemTitle>
                     <ItemDescription>
+                      {expenseCategoryBucketLabel(row.category)} ·{" "}
                       {formatVNBusinessDate(row.expense_date)} ·{" "}
                       {branchLabel(row.branch_id)} · {methodLabel(row)}
                     </ItemDescription>

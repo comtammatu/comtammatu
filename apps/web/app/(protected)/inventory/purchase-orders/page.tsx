@@ -6,6 +6,7 @@ import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { messages } from "@lib/messages";
 import type { IngredientRow } from "@lib/inventory/types";
+import { filterPurchasedIngredientRows } from "@lib/inventory/catalog-readiness";
 import { loadSuggestedOrderQtyByIngredient } from "@lib/inventory/load-suggested-order-qty";
 import { suggestedOrderQtyInEntryUnit } from "@lib/inventory/suggested-order-qty";
 import { fetchProcurementBranches } from "../_lib/procurement-branches";
@@ -157,7 +158,9 @@ export default async function PurchaseOrdersPage({
   const demandRows = demandLoad.rows;
   const poRows = poLoad.rows;
 
-  const ingredientRows = (ingredientResult.data ?? []) as IngredientRow[];
+  const ingredientRows = filterPurchasedIngredientRows(
+    (ingredientResult.data ?? []) as IngredientRow[],
+  );
   const pickerUnits = await loadPurchasePickerUnits({
     supabase,
     tenantId: claims.tenant_id,

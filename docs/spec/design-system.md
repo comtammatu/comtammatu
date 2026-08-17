@@ -795,7 +795,8 @@ items, setup tasks, and narrative states are not KPI surfaces.
 
 Money renders through `formatVND` (`@comtammatu/shared/format`) on
 POS/menu/receipt surfaces and `formatAccountingVND` on Finance/VAT/HĐĐT
-surfaces. Accounting entry uses `MoneyVndInput` / `MoneyVndField`; whole-VND
+surfaces (two digits when non-zero; omit `,00`). Accounting entry uses
+`MoneyVndInput` / `MoneyVndField`; whole-VND
 menu, POS, cash, VietQR, and shift settlement use `WholeVndInput` /
 `WholeVndField`. Counts use `formatCount`, quantities `formatQuantity` /
 `formatDecimal`, percentages `formatPercent`. Typed drafts use

@@ -21,6 +21,7 @@ import {
   getDefaultPurchaseUnit,
   getPurchaseUnitOptions,
 } from "@lib/inventory/purchase-units";
+import { filterPurchasedIngredientRows } from "@lib/inventory/catalog-readiness";
 import type { IngredientRow } from "@lib/inventory/types";
 import { upsertGrnLine } from "@/(protected)/inventory/grn-actions";
 import { GRN_CREATE_COPY } from "@lib/inventory/grn-create-copy";
@@ -691,9 +692,9 @@ export function BranchGrnAddLineSheet({
             <Combobox
               value={ingredientId}
               onValueChange={handleIngredientChange}
-              options={ingredients
-                .filter((ingredient) => ingredient.is_active)
-                .map((ingredient) => ({
+              options={filterPurchasedIngredientRows(
+                ingredients.filter((ingredient) => ingredient.is_active),
+              ).map((ingredient) => ({
                   value: String(ingredient.id),
                   label: ingredient.name,
                   hint: getDefaultPurchaseUnit(ingredient)?.label ?? "",

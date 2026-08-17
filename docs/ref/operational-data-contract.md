@@ -57,7 +57,8 @@ Thiếu đủ trường → chỉ hiện việc cần xử lý / chưa đủ d�
 | HĐĐT đã phát hành | HĐĐT bán ra đã provider/CQT xử lý | Doanh thu vận hành nếu chưa/không xuất HĐĐT |
 | Giá trị tồn kho | Đầu/cuối kỳ từ stock ledger + giá vốn | Chi phí kỳ, tiền đã chi NCC |
 | Giá vốn món / food cost | Nguyên liệu đã duyệt/apply từ tiêu hao bán | Recipe theoretical, chi vận hành, HĐ NCC, PO chưa nhận |
-| Chi phí vận hành | Thuê, điện nước, gas, lương, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ, marketing, phí/thuế, khác | Giá vốn món, nguyên giá TSCĐ, NL/vật tư kho, thanh toán NCC, nộp tiền mặt NH |
+| Chi phí vận hành | Thuê, điện nước, gas, lương, sửa chữa, vật tư tiêu hao, khấu hao/phân bổ, marketing, phí/thuế, tiếp khách, khác | Giá vốn món, Chi phí ban đầu, nguyên giá TSCĐ, NL/vật tư kho, thanh toán NCC, nộp tiền mặt NH |
+| Chi phí ban đầu | Vốn đã bỏ ra cho quán/chi nhánh: thi công, máy, xe, nội thất, đặt cọc. Toàn bộ, không theo kỳ, gồm GTGT | Chi phí vận hành tháng, giá vốn món, HĐ NCC, khấu hao kỳ |
 | Lợi nhuận gộp | Doanh thu thuần − giá vốn món | Kết quả KD, dòng tiền, LN ròng |
 | Kết quả kinh doanh | LN gộp − chi vận hành + biến động tồn | LN ròng hoặc kết quả kê khai thuế |
 
@@ -80,6 +81,7 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `finance.inventory_value.current` | Giá trị tồn cuối kỳ | `get_inventory_value_period` | fallback cost → `needs_review` |
 | `finance.inventory_value.opening` | Tồn đầu kỳ | cuối − movement kỳ; `%` tone trung tính; đầu 0 → `Mới` | cùng closing |
 | `finance.expense.operating` | Chi phí vận hành | `expenses.subtotal` nhóm operating; `amount` = gross | chưa có → `not_recorded` |
+| `finance.expense.startup_capital` | Chi phí ban đầu | `expenses.amount` (gross, gồm GTGT) `capital`+`deposit`, không theo kỳ; chi nhánh = `branch_id` khớp, không gồm `NULL` | chưa có → `not_recorded`; không trừ `Kết quả kinh doanh` |
 | `finance.food_cost.recorded` | Giá vốn món | `inventory_value_allocations` bucket `food_cost` khi cutover `active`; chưa cutover → trống | thiếu coverage / chưa cutover → `needs_review` |
 | `finance.food_cost.theoretical` | Giá vốn lý thuyết | `fetchFoodCost` / `buildFoodCostRows`: định mức hiện tại × SL bán × resolver catalog (cùng `/inventory/menu-recipes`) | `estimated` |
 | `finance.gross_profit.readonly` | Lợi nhuận gộp | Doanh thu thuần − food cost recorded | thiếu coverage → không hiện số |
@@ -92,7 +94,7 @@ cần xử lý cuối trang. Section UI chỉ title — không mô tả theo/kh�
 | `supplier_invoices.vat_breakdown` / `expenses.vat_breakdown` | GTGT đầu vào đã ghi nhận | GTGT được khấu trừ |
 | HĐĐT bán ra hiệu lực | GTGT đầu ra theo HĐĐT | GTGT phải nộp |
 | `stock_levels` / ledger | Giá trị tồn kho | Tổng tài sản |
-| Chi mua thiết bị trong `expenses` | Cần phân loại | Chi phí vận hành kỳ |
+| Chi mua thiết bị / thi công trong `expenses` | `capital` (Chi phí ban đầu) | Chi phí vận hành kỳ |
 
 Chưa thêm KPI `GTGT phải nộp`, `GTGT đầu vào được khấu trừ`, `Giá trị thiết bị`
 cho đến khi đủ source/formula/exclusions/confidence/drilldown.
@@ -105,7 +107,8 @@ cho đến khi đủ source/formula/exclusions/confidence/drilldown.
 | Top món | `get_top_items` | tách cancelled/side theo contract |
 | Food cost thật | `sale_consumption` movements | thiếu `order_id` coverage → không LN gộp |
 | Giá trị tồn | `get_inventory_value_period` | không phải chi phí kỳ |
-| Chi VH | `expenses` nhóm operating | không suy từ PO/GRN/NCC |
+| Chi VH | `expenses` nhóm operating | không suy từ PO/GRN/NCC; không gồm `capital`/`deposit` |
+| Chi phí ban đầu | `expenses` `capital`+`deposit` | all-time gross, ignores period; ngoài công thức kết quả |
 | Quỹ TM/NH | `get_finance_current_funds` | Owner nhập số dư đầu; “Chưa mở sổ”; không = đếm ca POS |
 | Giao dịch / VietQR | `bank_transactions` + matches | `needs_review`; không sửa doanh thu/số dư tự động |
 | HĐĐT queue | `get_finance_dashboard_summary` | workflow, không thay doanh thu VH |

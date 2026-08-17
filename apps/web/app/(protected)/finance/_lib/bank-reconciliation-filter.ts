@@ -1,5 +1,5 @@
 export const BANK_RECONCILIATION_FILTER_PARAM = "recon";
-export const BANK_RECONCILIATION_FILTER_DEFAULT = "needs_review" as const;
+export const BANK_RECONCILIATION_FILTER_DEFAULT = "all" as const;
 export const BANK_RECONCILIATION_FILTER_VALUES = [
   "all",
   "needs_review",

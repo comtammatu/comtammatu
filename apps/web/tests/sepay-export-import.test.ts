@@ -113,10 +113,15 @@ test("canonical bank ledger import is atomic and idempotent", () => {
   assert.match(action, /\.rpc\(\s*"import_sepay_bank_transactions"/);
   assert.match(action, /revalidateSurfacePath\("\/finance"\)/);
   assert.match(page, /canLinkPayments \? <SepayImportDialog \/>/);
+  assert.match(dialog, /<ResponsiveActionButton[\s\S]*density="header"/);
   assert.equal(
-    dialog.match(/size=\{isTouchLayout \? "touch" : "default"\}/g)?.length,
-    3,
+    dialog.match(/size=\{controlSize === "touch" \? "touch" : "default"\}/g)
+      ?.length,
+    2,
   );
-  assert.match(dialog, /<InputGroup size=\{isTouchLayout \? "touch" : "default"\}/);
+  assert.match(
+    dialog,
+    /<InputGroup size=\{controlSize === "touch" \? "touch" : "default"\}/,
+  );
   assert.match(dialog, /<InputGroupInput[\s\S]*type="file"/);
 });

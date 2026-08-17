@@ -253,6 +253,8 @@ Lợi nhuận gộp vận hành − Chi phí vận hành đã ghi nhận
   + Biến động tồn kho (cuối − đầu) = Kết quả kinh doanh
 ```
 
+`Chi phí ban đầu` (vốn mở quán, đặt cọc) không nằm trong công thức trên.
+
 Giữ tên `Kết quả kinh doanh`; hiển thị coverage/confidence; không đổi nhãn
 `Lợi nhuận ròng`; chỉ cộng **biến động** tồn. Thang đầy đủ (DT → LNST) chỉ khi
 Accounting close đủ — xem `docs/modules/finance.md`. Không hard-code suất

@@ -18,6 +18,7 @@ import {
   InputGroupAddon,
 } from "@comtammatu/ui/components/input-group";
 import { Item, ItemActions, ItemContent } from "@comtammatu/ui/components/item";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
@@ -235,105 +236,107 @@ export function CreateTransferForm({
             description={copy.emptyIngredientsDescription}
           />
         ) : (
-          <div className="flex flex-col gap-2">
-            {controller.draftLines.map((line) => {
-              const lineUnitOptions = controller.getLineUnitOptions(line);
-              const maxQuantityValue = controller.getLineMaxQuantityValue(line);
-              return (
-                <Item
-                  key={line.key}
-                  variant="outline"
-                  size="sm"
-                  className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between"
-                >
-                  <ItemContent className="w-full min-w-0 flex-1 sm:w-auto">
-                    <span className="truncate text-sm font-medium">
-                      {line.name}
-                    </span>
-                  </ItemContent>
-                  <ItemActions className="grid w-full grid-cols-[minmax(0,1fr)_3rem] items-center gap-2 sm:flex sm:w-auto sm:shrink-0">
-                    <InputGroup
-                      size={controlSize}
-                      className="col-span-2 w-full sm:w-40"
-                    >
-                      <QuantityInput
-                        className="h-full"
-                        placeholder={messages.inventory.common.quantityShort}
-                        aria-label={copy.createNative.quantityLabel}
-                        value={line.quantity}
-                        onValueChange={(value) =>
-                          controller.updateLineQuantity(line, value)
-                        }
-                        maxFractionDigits={3}
-                        required
-                      />
-                      {maxQuantityValue ? (
-                        <InputGroupAddon align="inline-end" className="py-0">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size={isTouchLayout ? "touch" : "sm"}
-                            className="shadow-none"
-                            onClick={() => controller.fillLineMax(line)}
-                          >
-                            {FORM_VI.max}
-                          </Button>
-                        </InputGroupAddon>
-                      ) : null}
-                    </InputGroup>
-                    {lineUnitOptions.length > 0 ? (
-                      <Select
-                        value={line.entryUnitId}
-                        onValueChange={(value) =>
-                          controller.updateLineUnit(line, value)
-                        }
+          <ScrollArea className="h-80">
+            <div className="flex flex-col gap-2 pr-2">
+              {controller.draftLines.map((line) => {
+                const lineUnitOptions = controller.getLineUnitOptions(line);
+                const maxQuantityValue = controller.getLineMaxQuantityValue(line);
+                return (
+                  <Item
+                    key={line.key}
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex-col items-stretch gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between"
+                  >
+                    <ItemContent className="w-full min-w-0 flex-1 sm:w-auto">
+                      <span className="truncate text-sm font-medium">
+                        {line.name}
+                      </span>
+                    </ItemContent>
+                    <ItemActions className="grid w-full grid-cols-[minmax(0,1fr)_3rem] items-center gap-2 sm:flex sm:w-auto sm:shrink-0">
+                      <InputGroup
+                        size={controlSize}
+                        className="col-span-2 w-full sm:w-40"
                       >
-                        <SelectTrigger
-                          size={controlSize}
-                          className="w-full sm:w-24"
-                          aria-label={copy.unit}
+                        <QuantityInput
+                          className="h-full"
+                          placeholder={messages.inventory.common.quantityShort}
+                          aria-label={copy.createNative.quantityLabel}
+                          value={line.quantity}
+                          onValueChange={(value) =>
+                            controller.updateLineQuantity(line, value)
+                          }
+                          maxFractionDigits={3}
+                          required
+                        />
+                        {maxQuantityValue ? (
+                          <InputGroupAddon align="inline-end" className="py-0">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size={isTouchLayout ? "touch" : "sm"}
+                              className="shadow-none"
+                              onClick={() => controller.fillLineMax(line)}
+                            >
+                              {FORM_VI.max}
+                            </Button>
+                          </InputGroupAddon>
+                        ) : null}
+                      </InputGroup>
+                      {lineUnitOptions.length > 0 ? (
+                        <Select
+                          value={line.entryUnitId}
+                          onValueChange={(value) =>
+                            controller.updateLineUnit(line, value)
+                          }
                         >
-                          <SelectValue placeholder={copy.selectUnit} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {lineUnitOptions.map((option) => (
-                              <SelectItem
-                                key={option.unitId}
-                                value={String(option.unitId)}
-                                size={optionSize}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        controlSize={controlSize}
-                        className="w-full sm:w-20"
-                        value={line.unit}
-                        readOnly
-                        aria-readonly="true"
-                        required
-                      />
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size={removeActionSize}
-                      className="shrink-0"
-                      onClick={() => controller.removeLine(line.key)}
-                      aria-label={copy.removeLineAria}
-                    >
-                      <IconTrash />
-                    </Button>
-                  </ItemActions>
-                </Item>
-              );
-            })}
-          </div>
+                          <SelectTrigger
+                            size={controlSize}
+                            className="w-full sm:w-24"
+                            aria-label={copy.unit}
+                          >
+                            <SelectValue placeholder={copy.selectUnit} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {lineUnitOptions.map((option) => (
+                                <SelectItem
+                                  key={option.unitId}
+                                  value={String(option.unitId)}
+                                  size={optionSize}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          controlSize={controlSize}
+                          className="w-full sm:w-20"
+                          value={line.unit}
+                          readOnly
+                          aria-readonly="true"
+                          required
+                        />
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size={removeActionSize}
+                        className="shrink-0"
+                        onClick={() => controller.removeLine(line.key)}
+                        aria-label={copy.removeLineAria}
+                      >
+                        <IconTrash />
+                      </Button>
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </div>
+          </ScrollArea>
         )}
       </AppSection>
 

@@ -16,7 +16,7 @@ export const inventory = {
     pendingInvoice: "Chờ HĐ NCC",
     settled: "Đã định giá",
     hintReceivedAwaitingInvoice:
-      "Đã nhận hàng. Giá vốn bình quân cập nhật sau khi xác nhận hóa đơn NCC.",
+      "Giá tạm theo HĐ gần nhất — chờ HĐ.",
   },
   shell: {
     brandName: "Cơm Tấm Má Tư",
@@ -396,6 +396,8 @@ export const inventory = {
       referenceCostLabel: "Giá nhập tham chiếu (VND)",
       itemKindLabel: "Loại hàng",
       finishedGoodLabel: "Là thành phẩm",
+      finishedGoodHint:
+        "Chỉ hàng Bếp Trung Tâm sản xuất, có công thức sản xuất. Hàng mua là nguyên liệu.",
       minStockLabel: "Tồn tối thiểu",
       maxStockLabel: "Tồn tối đa",
       reorderPointLabel: "Điểm đặt hàng",
@@ -1315,9 +1317,9 @@ export const inventory = {
       history: "Lịch sử",
       noRecentHistory: "Chưa có biến động gần đây cho nguyên liệu này.",
       chooseIngredientDetail: "Chọn một nguyên liệu để xem chi tiết thao tác.",
-      wac: "Giá vốn bình quân",
-      wacPerUnit: (unit: string) => `Giá vốn bình quân / ${unit}`,
-      wacValue: (amount: string) => `Giá vốn bình quân: ${amount}`,
+      wac: "Giá vốn",
+      wacPerUnit: (unit: string) => `Giá vốn / ${unit}`,
+      wacValue: (amount: string) => `Giá vốn: ${amount}`,
       movementUnitCost: "Đơn giá ghi sổ",
       filteredSummary: (count: number, value: string) =>
         `Tổng theo bộ lọc: ${formatCount(count)} mặt hàng · ${value}`,
@@ -1450,8 +1452,8 @@ export const inventory = {
     cancelKeepAction: "Không hủy",
     cancelFailed: "Không thể hủy phiếu xuất.",
     cancelOk: "Đã hủy phiếu xuất.",
-    unitCostWac: "Giá vốn kho này",
-    unitCostWacPerUnit: (unit: string) => `Giá vốn kho này / ${unit}`,
+    unitCostWac: "Giá vốn",
+    unitCostWacPerUnit: (unit: string) => `Giá vốn / ${unit}`,
     entryBaseQtyHint: (
       entryQty: string,
       entryUnit: string,
@@ -1699,8 +1701,8 @@ export const inventory = {
     sentQty: "SL gửi",
     receivedQty: "SL nhận",
     notReceived: "Chưa nhận",
-    wacCost: "Giá vốn kho này",
-    wacCostPerUnit: (unit: string) => `Giá vốn kho này / ${unit}`,
+    wacCost: "Giá vốn",
+    wacCostPerUnit: (unit: string) => `Giá vốn / ${unit}`,
     unit: "Đơn vị",
     selectUnit: "Chọn ĐV",
     lineAmount: "Thành tiền",

@@ -8,7 +8,6 @@ import {
   Alert,
   AlertDescription,
 } from "@comtammatu/ui/components/alert";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
@@ -45,12 +44,8 @@ import {
 } from "../expense-actions";
 import { FinanceAmountCell } from "../components/finance-amount-cell";
 import { FinanceMoneySummary } from "../components/finance-money-summary";
-import { displayBankContent } from "../_lib/display-bank-content";
+import { BankMatchEvidence } from "./bank-match-evidence";
 
-import {
-  OWNER_SHELL_BREAKPOINT,
-  useIsMobile,
-} from "@comtammatu/ui/hooks/use-mobile";
 import { AppSheet } from "@/components/surface";
 const copy = messages.finance.bankTransactions;
 type MatchPurpose = "expense" | "refund" | "supplier";
@@ -68,10 +63,11 @@ interface MatchExpenseCellProps {
   transferType: "in" | "out";
   expenseOptions: ExpenseMatchOption[];
   touch: boolean;
+  trigger: React.ReactElement;
   evidence: {
     content: string | null;
     reference: string;
-    occurredAt: string;
+    occurredAt: string | null;
     accountNumber: string | null;
   };
 }
@@ -105,10 +101,9 @@ export function MatchExpenseCell({
   transferType,
   expenseOptions,
   touch,
+  trigger,
   evidence,
 }: MatchExpenseCellProps) {
-  const isTouchLayout = useIsMobile(OWNER_SHELL_BREAKPOINT);
-
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [isRefundSearchPending, startRefundSearchTransition] =
@@ -133,6 +128,7 @@ export function MatchExpenseCell({
     Record<number, SepayRefundMatchOption>
   >({});
   const [matchError, setMatchError] = React.useState<string | null>(null);
+  const [expenseQuery, setExpenseQuery] = React.useState("");
   const matchKey = bankTransactionId ?? eventId;
 
   React.useEffect(() => {
@@ -265,29 +261,77 @@ export function MatchExpenseCell({
 
   if (supplierPaymentMatchConfirmed && supplierPaymentMatches.length > 0) {
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        size={touch ? "touch" : "sm"}
-        disabled={isPending}
-        onClick={() => handleSupplierPaymentMatch([])}
+      <AppSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={copy.matchSheetTitle}
+        description={copy.matchSheetDescription}
+        trigger={trigger}
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            size={touch ? "touch" : "default"}
+            className="w-full"
+            disabled={isPending}
+            onClick={() => handleSupplierPaymentMatch([])}
+          >
+            {copy.clearSupplierPaymentMatch}
+          </Button>
+        }
       >
-        {copy.clearSupplierPaymentMatch}
-      </Button>
+        <div className="grid gap-3">
+          <BankMatchEvidence
+            transferType={transferType}
+            amount={amount}
+            content={evidence.content}
+            occurredAt={evidence.occurredAt}
+            reference={evidence.reference}
+            accountNumber={evidence.accountNumber}
+          />
+          <p className="text-sm">
+            {copy.matchedSupplierPaymentDetail(
+              supplierPaymentMatches[0]?.supplierName ?? "—",
+              formatVND(supplierPaymentMatches[0]?.amount ?? 0),
+            )}
+          </p>
+        </div>
+      </AppSheet>
     );
   }
 
   if (refundMatchConfirmed && refundMatches.length > 0) {
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        size={touch ? "touch" : "sm"}
-        disabled={isPending}
-        onClick={() => handleRefundMatch([])}
+      <AppSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={copy.refundMatchTitle}
+        description={copy.refundMatchHint}
+        trigger={trigger}
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            size={touch ? "touch" : "default"}
+            className="w-full"
+            disabled={isPending}
+            onClick={() => handleRefundMatch([])}
+          >
+            {copy.clearRefundMatch}
+          </Button>
+        }
       >
-        {copy.clearRefundMatch}
-      </Button>
+        <div className="grid gap-3">
+          <BankMatchEvidence
+            transferType={transferType}
+            amount={amount}
+            content={evidence.content}
+            occurredAt={evidence.occurredAt}
+            reference={evidence.reference}
+            accountNumber={evidence.accountNumber}
+          />
+        </div>
+      </AppSheet>
     );
   }
 
@@ -308,6 +352,11 @@ export function MatchExpenseCell({
     .filter((expense) =>
       isExpenseVisibleForBankMatch(expense, eventId, bankTransactionId),
     )
+    .filter((expense) => {
+      const needle = expenseQuery.trim().toLowerCase();
+      if (needle === "") return true;
+      return expenseDetail(expense).toLowerCase().includes(needle);
+    })
     .sort(
       (left, right) =>
         Math.abs(left.amount - amount) - Math.abs(right.amount - amount),
@@ -354,8 +403,6 @@ export function MatchExpenseCell({
     selectedRefundTotal,
     selectedRefundIds.length,
   );
-
-  const triggerLabel = copy.matchAction;
 
   const toggleExpense = (expense: ExpenseMatchOption) => {
     setSelectedIds((current) =>
@@ -410,15 +457,7 @@ export function MatchExpenseCell({
       onOpenChange={setOpen}
       title={copy.matchSheetTitle}
       description={copy.matchSheetDescription}
-      trigger={
-        <Button
-          variant="outline"
-          size={touch ? "touch" : "sm"}
-          className="shrink-0"
-        >
-          {triggerLabel}
-        </Button>
-      }
+      trigger={trigger}
       contentClassName="overflow-hidden"
       bodyClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
     >
@@ -429,28 +468,14 @@ export function MatchExpenseCell({
                 <AlertDescription>{matchError}</AlertDescription>
               </Alert>
             ) : null}
-            <NoteCallout label={copy.bankEvidenceTitle}>
-              <div className="grid gap-1.5">
-                <div className="flex items-center justify-between gap-3">
-                  <Badge variant="outline">{copy.moneyOut}</Badge>
-                  <span className="font-mono font-medium text-warning">
-                    -{formatVND(amount)}
-                  </span>
-                </div>
-                <p className="break-words text-sm font-medium">
-                  {displayBankContent(evidence.content)}
-                </p>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span>{evidence.occurredAt}</span>
-                  <span className="break-all font-mono">
-                    {evidence.reference}
-                  </span>
-                  <span className="break-all">
-                    {copy.account}: {evidence.accountNumber ?? "—"}
-                  </span>
-                </div>
-              </div>
-            </NoteCallout>
+            <BankMatchEvidence
+              transferType={transferType}
+              amount={amount}
+              content={evidence.content}
+              occurredAt={evidence.occurredAt}
+              reference={evidence.reference}
+              accountNumber={evidence.accountNumber}
+            />
             <div className="grid gap-2 border-b pb-3">
               <p className="text-xs font-medium text-muted-foreground">
                 {copy.matchPurposeTitle}
@@ -459,7 +484,7 @@ export function MatchExpenseCell({
                 type="single"
                 value={purpose ?? ""}
                 variant="outline"
-                size={isTouchLayout ? "touch" : "default"}
+                size={touch ? "touch" : "default"}
                 spacing={0}
                 className="grid w-full grid-cols-1 min-[360px]:grid-cols-3"
                 aria-label={copy.matchPurposeTitle}
@@ -559,7 +584,7 @@ export function MatchExpenseCell({
                   />
                   <Button
                     type="submit"
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={touch ? "touch" : "default"}
                     variant="outline"
                     className="w-full min-[360px]:w-auto"
                     disabled={isRefundSearchPending}
@@ -589,7 +614,7 @@ export function MatchExpenseCell({
                           className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md py-2 hover:bg-muted/30"
                         >
                           <Checkbox
-                            size={isTouchLayout ? "touch" : "default"}
+                            size={touch ? "touch" : "default"}
                             id={checkboxId}
                             checked={selectedRefundSet.has(refund.id)}
                             onCheckedChange={() => toggleRefund(refund)}
@@ -633,7 +658,7 @@ export function MatchExpenseCell({
                 <Button
                   type="button"
                   variant="ghost"
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={touch ? "touch" : "default"}
                   onClick={() =>
                     loadRefundOptions({
                       append: true,
@@ -691,6 +716,16 @@ export function MatchExpenseCell({
                       : copy.transferIntentExclusiveHint}
                   </NoteCallout>
                 ) : null}
+                <Input
+                  type="search"
+                  value={expenseQuery}
+                  onChange={(event) => setExpenseQuery(event.target.value)}
+                  placeholder={copy.expenseSearchPlaceholder}
+                  aria-label={copy.expenseSearchLabel}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={isPending}
+                />
                 <div>
                   <div className="flex flex-col gap-1 pr-1">
                     {availableExpenses.map((exp) => {
@@ -713,7 +748,7 @@ export function MatchExpenseCell({
                           )}
                         >
                           <Checkbox
-                            size={isTouchLayout ? "touch" : "default"}
+                            size={touch ? "touch" : "default"}
                             id={checkboxId}
                             checked={checked}
                             onCheckedChange={() => toggleExpense(exp)}
@@ -758,7 +793,7 @@ export function MatchExpenseCell({
             <div className="sticky bottom-0 shrink-0 border-t bg-background p-4 pt-3">
               <Button
                 type="button"
-                size={isTouchLayout ? "touch" : "default"}
+                size={touch ? "touch" : "default"}
                 className="w-full"
                 disabled={isPending}
                 onClick={() =>
@@ -777,7 +812,7 @@ export function MatchExpenseCell({
                 <Button
                   type="button"
                   variant="ghost"
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={touch ? "touch" : "default"}
                   onClick={() => setSelectedRefundsById({})}
                   disabled={isPending || selectedRefundIds.length === 0}
                 >
@@ -785,7 +820,7 @@ export function MatchExpenseCell({
                 </Button>
                 <Button
                   type="button"
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={touch ? "touch" : "default"}
                   onClick={() => handleRefundMatch(selectedRefundIds)}
                   disabled={
                     isPending ||
@@ -806,7 +841,7 @@ export function MatchExpenseCell({
                   <Button
                     type="button"
                     variant="ghost"
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={touch ? "touch" : "default"}
                     className="w-full sm:w-auto"
                     render={<Link href="/finance/expenses" />}
                   >
@@ -815,7 +850,7 @@ export function MatchExpenseCell({
                   <Button
                     type="button"
                     variant="ghost"
-                    size={isTouchLayout ? "touch" : "default"}
+                    size={touch ? "touch" : "default"}
                     className="w-full sm:w-auto"
                     onClick={() => setSelectedIds([])}
                     disabled={isPending || selectedIds.length === 0}
@@ -825,7 +860,7 @@ export function MatchExpenseCell({
                 </div>
                 <Button
                   type="button"
-                  size={isTouchLayout ? "touch" : "default"}
+                  size={touch ? "touch" : "default"}
                   className="w-full sm:w-auto"
                   onClick={handleSave}
                   disabled={isPending || !hasChanges || !allocationBalanced}

@@ -281,33 +281,6 @@ export async function fetchGrnIdsForDropdown(
     ? (monetary.client ?? supabase)
     : supabase;
 
-  const { data: linkedRows, error: linkedError } = await supabase
-    .from("supplier_invoice_receipt_allocations")
-    .select(
-      "supplier_invoice_id, grn_id, purchase_order_item_id, billed_quantity",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .not("purchase_order_item_id", "is", null);
-  if (linkedError) return { success: false, error: grnLoadFailedError };
-  const billedByLine = new Map<string, number>();
-  for (const row of linkedRows ?? []) {
-    if (Number(row.supplier_invoice_id) === excludeInvoiceId) continue;
-    const grnId = Number(row.grn_id);
-    const poItemId = Number(row.purchase_order_item_id);
-    const quantity = Number(row.billed_quantity);
-    if (
-      !Number.isSafeInteger(grnId) ||
-      grnId <= 0 ||
-      !Number.isSafeInteger(poItemId) ||
-      poItemId <= 0 ||
-      !Number.isFinite(quantity)
-    ) {
-      continue;
-    }
-    const key = `${grnId}:${poItemId}`;
-    billedByLine.set(key, (billedByLine.get(key) ?? 0) + quantity);
-  }
-
   const selectWithNet =
     "id, grn_number, supplier_id, po_id, suppliers ( id, name ), purchase_orders_source:purchase_orders!purchase_orders_source_grn_id_fkey ( id, supplier_id )";
   const selectWithoutNet =
@@ -330,6 +303,44 @@ export async function fetchGrnIdsForDropdown(
 
   const headers = (data ?? []) as GrnDropdownRow[];
   const grnIds = headers.map((row) => row.id);
+  if (
+    includeGrnId != null &&
+    Number.isSafeInteger(includeGrnId) &&
+    includeGrnId > 0 &&
+    !grnIds.includes(includeGrnId)
+  ) {
+    grnIds.push(includeGrnId);
+  }
+
+  const billedByLine = new Map<string, number>();
+  if (grnIds.length > 0) {
+    const { data: linkedRows, error: linkedError } = await supabase
+      .from("supplier_invoice_receipt_allocations")
+      .select(
+        "supplier_invoice_id, grn_id, purchase_order_item_id, billed_quantity",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("grn_id", grnIds)
+      .not("purchase_order_item_id", "is", null);
+    if (linkedError) return { success: false, error: grnLoadFailedError };
+    for (const row of linkedRows ?? []) {
+      if (Number(row.supplier_invoice_id) === excludeInvoiceId) continue;
+      const grnId = Number(row.grn_id);
+      const poItemId = Number(row.purchase_order_item_id);
+      const quantity = Number(row.billed_quantity);
+      if (
+        !Number.isSafeInteger(grnId) ||
+        grnId <= 0 ||
+        !Number.isSafeInteger(poItemId) ||
+        poItemId <= 0 ||
+        !Number.isFinite(quantity)
+      ) {
+        continue;
+      }
+      const key = `${grnId}:${poItemId}`;
+      billedByLine.set(key, (billedByLine.get(key) ?? 0) + quantity);
+    }
+  }
   const itemResult =
     grnIds.length === 0
       ? { data: [] as Array<GrnDropdownLine & { grn_id: number }>, error: null }

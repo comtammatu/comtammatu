@@ -65,11 +65,11 @@ Reuse `/br/[branchId]/menu-limits` (`branch_menu_limits`, D064,
 
 ### 4. Cost fallback ladder
 
-Book the first available value and record the rung: (1) location
-`avg_unit_cost`; (2) same-ingredient WAC elsewhere in the tenant; (3) latest
-settled purchase unit cost; (4) last-known `stock_movements.unit_cost`
-(`production_output` first); (5) zero — only with a follow-up flag. Empty or
-negative on-hand keeps the last positive location WAC.
+Book the first available value and record the rung: (1) **company WAC**
+for the SKU (ADR 0040; `stock_levels.avg_unit_cost` is that number on every
+site); (2) last-known `stock_movements.unit_cost` (`production_output`
+first); (3) zero — only with a follow-up flag. Empty or negative on-hand
+keeps the last positive company WAC.
 
 ### 5. Honest result contract
 
